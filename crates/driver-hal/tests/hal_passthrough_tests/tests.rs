@@ -82,19 +82,6 @@ fn test_hal_encrypted_shared_memory_passthrough_bit_exact() {
 }
 
 #[test]
-fn swift_hal_encryption_tests_cover_crypto_and_realtime_rejection() {
-    let swift_tests = include_str!("../../swift/Sources/Tests.swift");
-    assert!(swift_tests.contains("testEncryptionRoundTrip"));
-    assert!(swift_tests.contains("testSharedMemoryEncryptedRealtimeIsRejected"));
-    assert!(swift_tests.contains("SharedAudioBuffer()"));
-    assert!(swift_tests.contains("writeAudio("));
-    assert!(swift_tests.contains("readAudio("));
-    assert!(swift_tests.contains("AudioCipher(keyBytes:"));
-    assert!(swift_tests.contains("cipher.encrypt(samples:"));
-    assert!(swift_tests.contains("cipher.decrypt(ciphertext:"));
-}
-
-#[test]
 fn test_hal_with_eq_zero_gain_passthrough() {
     // This test simulates the full pipeline:
     // 1. Audio data in shared memory

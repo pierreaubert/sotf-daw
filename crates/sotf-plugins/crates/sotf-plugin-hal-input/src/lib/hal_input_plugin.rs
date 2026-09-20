@@ -214,6 +214,9 @@ impl HalInputPlugin {
         }
     }
 
+    // Callers are cfg-gated (`hal` feature) plus tests; keep the lint quiet
+    // on non-HAL builds like the `buffer_capacity_frames` field above.
+    #[cfg_attr(not(all(target_os = "macos", feature = "hal")), allow(dead_code))]
     fn build_parameters(channels: usize) -> Vec<Parameter> {
         vec![
             Parameter::new_int("input_channels", "Input Channels", channels as i32, 1, 16)
@@ -225,6 +228,8 @@ impl HalInputPlugin {
         ]
     }
 
+    // Only reached via the cfg-gated `refresh_transport` plus tests.
+    #[cfg_attr(not(all(target_os = "macos", feature = "hal")), allow(dead_code))]
     fn activate_reader(&mut self, reader: Box<dyn HalAudioSource>) -> Result<(), String> {
         let format = reader.current_format()?;
         if format.channels != self.channels {

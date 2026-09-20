@@ -360,7 +360,7 @@ fn find_by_key_panics_when_missing() {
 
 #[test]
 fn choice_label_from_index_maps_positions() {
-    use super::types::{choice_index_from_label, choice_label_from_index};
+    use super::types::choice_label_from_index;
     const LABELS: &[&str] = &["Disabled", "Pre", "Post"];
     assert_eq!(choice_label_from_index(LABELS, 0), Some("Disabled"));
     assert_eq!(choice_label_from_index(LABELS, 2), Some("Post"));

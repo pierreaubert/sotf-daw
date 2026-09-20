@@ -41,10 +41,13 @@ This workspace must stay independent of `sotf` and `sotf-systemwide`:
 ## Testing
 
 ```bash
-cargo check --workspace --exclude plugins-ffi
+just check    # workspace check (excludes plugins-ffi, see Justfile)
+just lint     # workspace clippy, warnings denied
+just test     # workspace tests (excludes plugins-ffi)
+just qa       # qa-plugins + qa-engine gates
 cargo test -p driver-common --lib
 cargo test -p driver-hal --lib
-just --list   # engine/plugin recipe gates (plugins-check, qa-engine, ...)
+just --list   # full recipe list, incl. plugins-check, qa-engine, ...
 ```
 
 `plugins-ffi`'s build script shells out to a nested `cargo metadata`, which

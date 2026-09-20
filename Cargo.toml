@@ -262,10 +262,10 @@ codegen-units = 1
 incremental = false
 strip = "symbols"
 
-# Vendored forks (same sources as sotf; paths relative to sotf-daw root).
+# Vendored forks (mirrored under crates/3rdparties; paths relative to sotf-daw root).
 [patch.crates-io]
-nnnoiseless = { path = "../sotf/crates/3rdparties/nnnoiseless" }
-coreaudio-rs = { path = "../sotf/crates/3rdparties/coreaudio-rs" }
+nnnoiseless = { path = "crates/3rdparties/nnnoiseless" }
+coreaudio-rs = { path = "crates/3rdparties/coreaudio-rs" }
 
 # Keep Vello's crates.io wgpu dependency on the same Zed fork used by GPUI.
 # Dependency patches are root-workspace configuration and are not inherited
