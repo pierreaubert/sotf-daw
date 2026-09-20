@@ -1,0 +1,17 @@
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExternalPluginSandboxStatus {
+    Disabled,
+    Enforced {
+        backend: &'static str,
+    },
+    Unsupported {
+        backend: &'static str,
+        reason: String,
+    },
+}
+
+impl ExternalPluginSandboxStatus {
+    pub fn is_enforced(&self) -> bool {
+        matches!(self, Self::Enforced { .. })
+    }
+}

@@ -1,0 +1,11 @@
+pub(super) fn default_crossover_type() -> String {
+    "LR24".to_string()
+}
+
+pub(super) fn default_frequency() -> f64 {
+    1000.0
+}
+
+pub(super) fn default_num_bands() -> usize {
+    2
+}

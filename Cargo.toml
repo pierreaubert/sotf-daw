@@ -1,0 +1,275 @@
+[workspace]
+members = [
+    "crates/sotf-plugins/crates/sotf-host",
+    "crates/sotf-plugins/crates/sotf-plugin-ambisonics",
+    "crates/sotf-plugins/crates/sotf-plugin-ab-compare",
+    "crates/sotf-plugins/crates/sotf-plugin-aae",
+    "crates/sotf-plugins/crates/sotf-plugin-aec",
+    "crates/sotf-plugins/crates/sotf-plugin-band-merge",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer",
+    "crates/sotf-plugins/crates/sotf-plugin-band-split",
+    "crates/sotf-plugins/crates/sotf-plugin-binaural",
+    "crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution",
+    "crates/sotf-plugins/crates/sotf-plugin-crossfeed",
+    "crates/sotf-plugins/crates/sotf-plugin-crossover",
+    "crates/sotf-plugins/crates/sotf-plugin-delay",
+    "crates/sotf-plugins/crates/sotf-plugin-de-esser",
+    "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser",
+    "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer",
+    "crates/sotf-plugins/crates/sotf-plugin-declick",
+    "crates/sotf-plugins/crates/sotf-plugin-dither",
+    "crates/sotf-plugins/crates/sotf-plugin-downmix",
+    "crates/sotf-plugins/crates/sotf-plugin-eq",
+    "crates/sotf-plugins/crates/sotf-plugin-gain",
+    "crates/sotf-plugins/crates/sotf-plugin-gate",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-output",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq",
+    "crates/sotf-plugins/crates/sotf-plugin-limiter",
+    "crates/sotf-plugins/crates/sotf-plugin-loudness-compensation",
+    "crates/sotf-plugins/crates/sotf-plugin-matrix",
+    "crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo",
+    "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor",
+    "crates/sotf-plugins/crates/sotf-plugin-multiband-expander",
+    "crates/sotf-plugins/crates/sotf-plugin-pnd",
+    "crates/sotf-plugins/crates/sotf-plugin-resampler",
+    "crates/sotf-plugins/crates/sotf-plugin-saturation",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor",
+    "crates/sotf-plugins/crates/sotf-plugin-stereo-imager",
+    "crates/sotf-plugins/crates/sotf-plugin-transient-shaper",
+    "crates/sotf-plugins/crates/sotf-plugin-upmixer",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc",
+    "crates/sotf-plugins",
+    "crates/sotf-engine",
+    "crates/sotf-midi",
+    "crates/sotf-plugins/crates/plugins-bridge",
+    "crates/sotf-plugins/crates/plugins-denoiser",
+    "crates/sotf-plugins/crates/plugins-ffi",
+    "crates/sotf-plugins/crates/plugins-gpui",
+    "crates/sotf-plugins/crates/plugins-nih",
+    "crates/sotf-plugins/crates/plugins-spatial",
+    "crates/sotf-iamf",
+    "crates/driver-common",
+    "crates/driver-hal",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Pierre F. Aubert pierre@spinorama.org"]
+description = "SOTF DAW core: engine, plugins, MIDI, IAMF, and driver transport"
+edition = "2024"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/pierreaubert/all_of_sotf"
+keywords = ["audio", "dsp", "eq"]
+categories = ["multimedia::audio"]
+readme = "README.md"
+
+[workspace.dependencies]
+driver-common = { path = "crates/driver-common" }
+driver-hal = { path = "crates/driver-hal" }
+plugins-denoiser = { path = "crates/sotf-plugins/crates/plugins-denoiser" }
+plugins-gpui = { path = "crates/sotf-plugins/crates/plugins-gpui" }
+plugins-spatial = { path = "crates/sotf-plugins/crates/plugins-spatial" }
+sotf-engine = { path = "crates/sotf-engine", default-features = false }
+sotf-host = { path = "crates/sotf-plugins/crates/sotf-host", default-features = false }
+sotf-iamf = { path = "crates/sotf-iamf" }
+sotf-midi = { path = "crates/sotf-midi" }
+sotf-plugin-aae = { path = "crates/sotf-plugins/crates/sotf-plugin-aae" }
+sotf-plugin-ab-compare = { path = "crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
+sotf-plugin-aec = { path = "crates/sotf-plugins/crates/sotf-plugin-aec" }
+sotf-plugin-ambisonics = { path = "crates/sotf-plugins/crates/sotf-plugin-ambisonics" }
+sotf-plugin-band-merge = { path = "crates/sotf-plugins/crates/sotf-plugin-band-merge" }
+sotf-plugin-band-split = { path = "crates/sotf-plugins/crates/sotf-plugin-band-split" }
+sotf-plugin-beamformer = { path = "crates/sotf-plugins/crates/sotf-plugin-beamformer" }
+sotf-plugin-binaural = { path = "crates/sotf-plugins/crates/sotf-plugin-binaural" }
+sotf-plugin-channel-mute-solo = { path = "crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo" }
+sotf-plugin-convolution = { path = "crates/sotf-plugins/crates/sotf-plugin-convolution" }
+sotf-plugin-crossfeed = { path = "crates/sotf-plugins/crates/sotf-plugin-crossfeed" }
+sotf-plugin-crossover = { path = "crates/sotf-plugins/crates/sotf-plugin-crossover" }
+sotf-plugin-de-esser = { path = "crates/sotf-plugins/crates/sotf-plugin-de-esser" }
+sotf-plugin-declick = { path = "crates/sotf-plugins/crates/sotf-plugin-declick" }
+sotf-plugin-delay = { path = "crates/sotf-plugins/crates/sotf-plugin-delay" }
+sotf-plugin-denoiser = { path = "crates/sotf-plugins/crates/sotf-plugin-denoiser" }
+sotf-plugin-dither = { path = "crates/sotf-plugins/crates/sotf-plugin-dither" }
+sotf-plugin-downmix = { path = "crates/sotf-plugins/crates/sotf-plugin-downmix" }
+sotf-plugin-dynamic-eq = { path = "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq" }
+sotf-plugin-eq = { path = "crates/sotf-plugins/crates/sotf-plugin-eq" }
+sotf-plugin-gain = { path = "crates/sotf-plugins/crates/sotf-plugin-gain" }
+sotf-plugin-gate = { path = "crates/sotf-plugins/crates/sotf-plugin-gate" }
+sotf-plugin-hal-input = { path = "crates/sotf-plugins/crates/sotf-plugin-hal-input" }
+sotf-plugin-hal-output = { path = "crates/sotf-plugins/crates/sotf-plugin-hal-output" }
+sotf-plugin-hiss-reducer = { path = "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer" }
+sotf-plugin-limiter = { path = "crates/sotf-plugins/crates/sotf-plugin-limiter" }
+sotf-plugin-linear-phase-eq = { path = "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq" }
+sotf-plugin-loudness-compensation = { path = "crates/sotf-plugins/crates/sotf-plugin-loudness-compensation" }
+sotf-plugin-matrix = { path = "crates/sotf-plugins/crates/sotf-plugin-matrix" }
+sotf-plugin-mono-to-stereo = { path = "crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo" }
+sotf-plugin-multiband-compressor = { path = "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor" }
+sotf-plugin-multiband-expander = { path = "crates/sotf-plugins/crates/sotf-plugin-multiband-expander" }
+sotf-plugin-pnd = { path = "crates/sotf-plugins/crates/sotf-plugin-pnd" }
+sotf-plugin-resampler = { path = "crates/sotf-plugins/crates/sotf-plugin-resampler" }
+sotf-plugin-saturation = { path = "crates/sotf-plugins/crates/sotf-plugin-saturation" }
+sotf-plugin-spectral-compressor = { path = "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor" }
+sotf-plugin-speech-denoiser = { path = "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser" }
+sotf-plugin-stereo-imager = { path = "crates/sotf-plugins/crates/sotf-plugin-stereo-imager" }
+sotf-plugin-transient-shaper = { path = "crates/sotf-plugins/crates/sotf-plugin-transient-shaper" }
+sotf-plugin-upmixer = { path = "crates/sotf-plugins/crates/sotf-plugin-upmixer", default-features = false }
+sotf-plugin-xtc = { path = "crates/sotf-plugins/crates/sotf-plugin-xtc" }
+sotf-plugins = { path = "crates/sotf-plugins", default-features = false }
+
+# Sibling `sotf` checkout (all_of_sotf layout). Optional/dev-only edges:
+# engine[streaming] -> sotf-streaming, engine/plugins tests -> testkit/test.
+sotf-streaming = { path = "../sotf/crates/sotf-server/crates/sotf-streaming" }
+sotf-test = { path = "../sotf/crates/sotf-test-macros" }
+sotf-testkit = { path = "../sotf/crates/sotf-testkit" }
+
+# External dependencies (definitions copied verbatim from sotf).
+anyhow = { version = "1.0" }
+approx = "0.5"
+arc-swap = "1"
+audioadapter-buffers = "2.0"
+bincode = { version = "2.0.1", features = ["serde"] }
+bytemuck = { version = "1.14", features = ["derive"] }
+cbindgen = "0.28"
+chacha20poly1305 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
+coreaudio-rs = "0.13"
+cpal = "0.17"
+criterion = "0.8.1"
+crossbeam = "0.8"
+crossterm = "0.29"
+ctrlc = { version = "3.5", features = ["termination"] }
+directories = "6"
+env_logger = "0.11"
+gpui = { package = "gpui-toolkit-gpui", version = "0.2.3", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-au = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-audio-kit = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-builder = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-design = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-px = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+gpui-ui-kit = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
+hex = "0.4"
+hound = "3.5"
+id3 = "1.16.3"
+insta = { version = "1.42", features = ["json"] }
+libc = "0.2"
+libloading = { version = "0.8" }
+log = "0.4.28"
+math-dsp = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
+math-iir-fir = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
+math-rir = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
+memmap2 = "0.9"
+midir = "0.10"
+nalgebra = { version = "0.33", default-features = false, features = ["std"] }
+ndarray = { version = "0.17", default-features = false, features = ["rayon", "serde"] }
+nnnoiseless = "0.1"
+notify = { version = "8.2" }
+num-complex = "0.4"
+parking_lot = { version = "0.12", features = ["deadlock_detection"] }
+proptest = "1.9"
+rand = "0.10.2"
+ratatui = "0.30"
+rayon = "1.11"
+realfft = "3.5"
+rtrb = "0.4"
+rubato = "1.0"
+rusqlite = { version = "0.38" }
+rustfft = "6.4"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+serial_test = "3"
+sha2 = "0.10"
+signal-hook = "0.4"
+sofa-reader = { git = "https://github.com/pierreaubert/sofa-reader", version = "0.2" }
+symphonia = { version = "0.6", default-features = false }
+symphonia-bundle-flac = "0.6"
+symphonia-bundle-mp3 = "0.6"
+symphonia-codec-aac = "0.6"
+symphonia-codec-alac = "0.6"
+symphonia-codec-pcm = "0.6"
+symphonia-codec-vorbis = "0.6"
+symphonia-codec-wavpack = { git = "https://github.com/pierreaubert/symphonia-add-ons", version = "0.1.0" }
+symphonia-core = "0.6"
+symphonia-format-isomp4 = "0.6"
+symphonia-format-ogg = "0.6"
+symphonia-format-riff = "0.6"
+symphonia-metadata = "0.6"
+tempfile = "3.23"
+thiserror = "2.0.17"
+tokio = { version = "1", features = ["rt-multi-thread", "fs", "macros", "io-util", "process", "signal"] }
+toml = "0.8"
+tract-onnx = "0.22"
+walkdir = "2"
+which = "8"
+windows-sys = "0.61"
+
+[profile.dev]
+opt-level = 1
+split-debuginfo= "packed"
+debug = 1
+codegen-units = 256
+
+[profile.release]
+# `release` is the everyday optimised profile — used by CI, `just prod-*`,
+# benchmarks, and local release iteration. Thin LTO keeps cross-crate inlining
+# without the serial bottleneck of fat LTO, and 14 codegen units balance
+# parallelism with optimiser visibility. Compile time stays in the few-minute
+# range on typical hardware.
+lto = "thin"
+codegen-units = 14
+panic = "unwind"  # Changed from "abort" to allow tests to run
+# debug = true # Keeps debug symbols for profiling
+
+# `dist` is the "cut a release" profile. Inherits everything from `release`
+# (including panic=unwind) and tightens for maximum runtime performance at the
+# cost of much longer compile time. Use via `cargo build --profile dist` —
+# artifacts land in `target/dist/` instead of `target/release/`. The Justfile
+# `dist-*` recipes wrap this for the shipping binaries.
+#
+# Tradeoffs vs `release`:
+#   - lto = "fat"           — whole-program LTO across all crates. Serial,
+#                             single-threaded final link; typically 5-10x
+#                             slower than thin LTO. Worth it for the binary
+#                             that ships to users.
+#   - codegen-units = 1     — single codegen unit per crate maximises the
+#                             optimiser's view, enables aggressive inlining
+#                             and dead-code elimination.
+#   - incremental = false   — incremental cache is useless for a release cut
+#                             and can suppress some optimisations.
+#   - strip is intentionally NOT set; macOS distribution scripts run
+#     `dsymutil` before stripping so they can ship .dSYM bundles for crash
+#     symbolication. Linux scripts strip with `strip -v` post-build.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+incremental = false
+
+# Explicit size-optimised profile for measuring and shipping small desktop
+# binaries. It preserves unwind semantics for plugin/host panic boundaries,
+# but strips the final executable and lets LLVM optimise for size.
+[profile.size]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+incremental = false
+strip = "symbols"
+
+# Vendored forks (same sources as sotf; paths relative to sotf-daw root).
+[patch.crates-io]
+nnnoiseless = { path = "../sotf/crates/3rdparties/nnnoiseless" }
+coreaudio-rs = { path = "../sotf/crates/3rdparties/coreaudio-rs" }
+
+# Keep Vello's crates.io wgpu dependency on the same Zed fork used by GPUI.
+# Dependency patches are root-workspace configuration and are not inherited
+# from the gpui-toolkit git dependency.
+wgpu = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }
+wgpu-core = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }
+wgpu-hal = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }

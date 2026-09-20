@@ -1,0 +1,22 @@
+use super::phase_vocoder_channel::PhaseVocoderChannel;
+
+/// Multi-channel phase vocoder.
+pub(super) struct PhaseVocoder {
+    pub(super) channels: Vec<PhaseVocoderChannel>,
+}
+
+impl PhaseVocoder {
+    pub(super) fn new(num_channels: usize) -> Self {
+        Self {
+            channels: (0..num_channels)
+                .map(|_| PhaseVocoderChannel::new())
+                .collect(),
+        }
+    }
+
+    pub(super) fn reset(&mut self) {
+        for ch in &mut self.channels {
+            ch.reset();
+        }
+    }
+}
