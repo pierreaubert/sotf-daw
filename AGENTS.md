@@ -29,9 +29,11 @@ This workspace must stay independent of `sotf` and `sotf-systemwide`:
 - Normal (non-dev, non-optional) dependencies: daw crates only, plus
   external crates.io/git dependencies. No `../sotf` or `../sotf-systemwide`
   paths.
-- Allowed exceptions, both resolving from the sibling `../sotf` checkout in
-  the `all_of_sotf` layout: the optional `sotf-engine[streaming]` edge to
-  `sotf-streaming`, and dev-dependencies on `sotf-testkit`/`sotf-test`.
+- Allowed exception resolving from the sibling `../sotf` checkout in the
+  `all_of_sotf` layout: the optional `sotf-engine[streaming]` edge to
+  `sotf-streaming`. The test crates (`crates/sotf-testkit`,
+  `crates/sotf-test-macros`, vendored from `sotf` history) are local
+  members, so `cargo metadata` resolves with no sibling checkout present.
 - `[patch.crates-io]` mirrors the vendored forks (`nnnoiseless`,
   `coreaudio-rs`) and the Zed `wgpu` fork pins from `sotf`; patches are
   root-workspace configuration and must be repeated here, not inherited.

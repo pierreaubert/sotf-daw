@@ -45,6 +45,8 @@ members = [
     "crates/sotf-plugins",
     "crates/sotf-engine",
     "crates/sotf-midi",
+    "crates/sotf-testkit",
+    "crates/sotf-test-macros",
     "crates/sotf-plugins/crates/plugins-bridge",
     "crates/sotf-plugins/crates/plugins-denoiser",
     "crates/sotf-plugins/crates/plugins-ffi",
@@ -121,11 +123,11 @@ sotf-plugin-upmixer = { path = "crates/sotf-plugins/crates/sotf-plugin-upmixer",
 sotf-plugin-xtc = { path = "crates/sotf-plugins/crates/sotf-plugin-xtc" }
 sotf-plugins = { path = "crates/sotf-plugins", default-features = false }
 
-# Sibling `sotf` checkout (all_of_sotf layout). Optional/dev-only edges:
-# engine[streaming] -> sotf-streaming, engine/plugins tests -> testkit/test.
+# Sibling `sotf` checkout (all_of_sotf layout). Optional streaming edge only;
+# the test crates are vendored below so the workspace resolves standalone.
 sotf-streaming = { path = "../sotf/crates/sotf-server/crates/sotf-streaming" }
-sotf-test = { path = "../sotf/crates/sotf-test-macros" }
-sotf-testkit = { path = "../sotf/crates/sotf-testkit" }
+sotf-test = { path = "crates/sotf-test-macros" }
+sotf-testkit = { path = "crates/sotf-testkit" }
 
 # External dependencies (definitions copied verbatim from sotf).
 anyhow = { version = "1.0" }
@@ -171,7 +173,9 @@ nnnoiseless = "0.1"
 notify = { version = "8.2" }
 num-complex = "0.4"
 parking_lot = { version = "0.12", features = ["deadlock_detection"] }
+proc-macro2 = "1.0"
 proptest = "1.9"
+quote = "1.0"
 rand = "0.10.2"
 ratatui = "0.30"
 rayon = "1.11"
