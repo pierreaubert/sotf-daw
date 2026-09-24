@@ -10,8 +10,8 @@ _lib_name := "libplugins_nih"
 
 [group('lint')]
 lint-nih:
-	cargo check -p plugins-nih --features eq
-	cargo clippy -p plugins-nih --features eq
+	{{cargo}} check -p plugins-nih --features eq
+	{{cargo}} clippy -p plugins-nih --features eq
 
 [group('lint')]
 lint-nih-all:
@@ -19,7 +19,7 @@ lint-nih-all:
 	set -euo pipefail
 	for feat in {{NIH_FEATURES}}; do
 		echo "Checking $feat..."
-		cargo check -p plugins-nih --features "$feat" --no-default-features
+		{{cargo}} check -p plugins-nih --features "$feat" --no-default-features
 	done
 
 # Build all feature-gated plugin cdylibs (release)
@@ -28,12 +28,12 @@ build-nih-all:
 	#!/usr/bin/env bash
 	set -uo pipefail
 	# Find workspace root
-	ROOT=$(cargo metadata --no-deps --format-version=1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace_root'])" 2>/dev/null || echo "$(pwd)/../../../..")
+	ROOT=$({{cargo}} metadata --no-deps --format-version=1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace_root'])" 2>/dev/null || echo "$(pwd)/../../../..")
 	mkdir -p dist/nih
 	failed=0
 	for feat in {{NIH_FEATURES}}; do
 		echo "Building $feat..."
-		cargo build --release -p plugins-nih --features "$feat" --no-default-features 2>&1 | tail -1
+		{{cargo}} build --release -p plugins-nih --features "$feat" --no-default-features 2>&1 | tail -1
 		lib_name="sotf_${feat//-/_}"
 		dylib="$ROOT/target/release/{{_lib_name}}.dylib"
 		if [ -f "$dylib" ]; then

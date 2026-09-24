@@ -8,7 +8,7 @@ qa-engine-16:
 	AEQ_E2E_SEND_CH=0 \
 	AEQ_E2E_RECORD_CH=0 \
 	AEQ_E2E_SR=16000 \
-	cargo test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
+	{{cargo}} test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
 
 [group('qa')]
 qa-engine-441:
@@ -16,7 +16,7 @@ qa-engine-441:
 	AEQ_E2E_SEND_CH=0 \
 	AEQ_E2E_RECORD_CH=0 \
 	AEQ_E2E_SR=44100 \
-	cargo test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
+	{{cargo}} test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
 
 [group('qa')]
 qa-engine-48:
@@ -24,7 +24,7 @@ qa-engine-48:
 	AEQ_E2E_SEND_CH=0 \
 	AEQ_E2E_RECORD_CH=0 \
 	AEQ_E2E_SR=48000 \
-	cargo test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
+	{{cargo}} test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
 
 [group('qa')]
 qa-engine-96:
@@ -32,8 +32,8 @@ qa-engine-96:
 	AEQ_E2E_SEND_CH=0 \
 	AEQ_E2E_RECORD_CH=0 \
 	AEQ_E2E_SR=96000 \
-	cargo test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
+	{{cargo}} test -p sotf-engine --no-default-features --test e2e_audio --release -- --test-threads=1
 
 [group('fuzzer')]
 qa-engine-fuzzer:
-	cargo run -p sotf-engine --features playback-runtime-harness --bin playback-runtime-fuzzer --release
+	{{cargo}} run -p sotf-engine --features playback-runtime-harness --bin playback-runtime-fuzzer --release

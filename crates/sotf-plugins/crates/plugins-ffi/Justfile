@@ -21,7 +21,7 @@ test-ffi:
     fi
     CLANG_CACHE_DIR="${TMPDIR:-/tmp}/sotf-clang-module-cache"
     mkdir -p "$CLANG_CACHE_DIR"
-    CLANG_MODULE_CACHE_PATH="$CLANG_CACHE_DIR" cargo test -p plugins-ffi
+    CLANG_MODULE_CACHE_PATH="$CLANG_CACHE_DIR" {{cargo}} test -p plugins-ffi
 
 [group('lint')]
 lint-ffi:
@@ -43,8 +43,8 @@ lint-ffi:
     CLANG_CACHE_DIR="${TMPDIR:-/tmp}/sotf-clang-module-cache"
     mkdir -p "$CLANG_CACHE_DIR"
     export CLANG_MODULE_CACHE_PATH="$CLANG_CACHE_DIR"
-    cargo check -p plugins-ffi
-    cargo clippy -p plugins-ffi
+    {{cargo}} check -p plugins-ffi
+    {{cargo}} clippy -p plugins-ffi
 
 [group('qa-plugins')]
 qa-ffi: lint-ffi test-ffi
@@ -66,13 +66,13 @@ build-spm-xcframework:
     rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR/macos-arm64" "$OUT_DIR/ios-arm64" "$OUT_DIR/ios-simulator-arm64"
 
-    cargo build --release -p plugins-ffi --target aarch64-apple-darwin
+    {{cargo}} build --release -p plugins-ffi --target aarch64-apple-darwin
     cp target/aarch64-apple-darwin/release/libplugins_ffi.a "$OUT_DIR/macos-arm64/libsotf_audio_plugins_ffi.a"
 
-    cargo build --release -p plugins-ffi --target aarch64-apple-ios
+    {{cargo}} build --release -p plugins-ffi --target aarch64-apple-ios
     cp target/aarch64-apple-ios/release/libplugins_ffi.a "$OUT_DIR/ios-arm64/libsotf_audio_plugins_ffi.a"
 
-    cargo build --release -p plugins-ffi --target aarch64-apple-ios-sim
+    {{cargo}} build --release -p plugins-ffi --target aarch64-apple-ios-sim
     cp target/aarch64-apple-ios-sim/release/libplugins_ffi.a "$OUT_DIR/ios-simulator-arm64/libsotf_audio_plugins_ffi.a"
 
     xcodebuild -create-xcframework \

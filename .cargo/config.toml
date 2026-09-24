@@ -1,3 +1,6 @@
+# Performance build configuration, mirrored from ../math-audio.
+# Keep the two files in step when tuning: native CPU optimisations,
+# parallel mold linking on Linux x86_64, static-link configs for musl.
 [env]
 # macOS-specific configuration
 MACOSX_DEPLOYMENT_TARGET = "15.0"

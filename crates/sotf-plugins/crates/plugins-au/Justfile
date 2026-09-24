@@ -16,6 +16,7 @@
 au_dir := "crates/sotf-plugins/crates/plugins-au"
 plugin_crates_dir := "crates/sotf-plugins/crates"
 
+
 # Sync AU Info.plist versions from Cargo.toml (called automatically before builds)
 [group('build-macos')]
 sync-au-versions:
@@ -77,7 +78,7 @@ build-au-gpui-arm64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building gpui-au for aarch64..."
-	cargo build --release -p gpui-au --target aarch64-apple-darwin
+	{{cargo}} build --release -p gpui-au --target aarch64-apple-darwin
 	mkdir -p {{au_dir}}/Resources
 	cp target/aarch64-apple-darwin/release/libgpui_au.a \
 		{{au_dir}}/Resources/libsotf_gpui_au.a
@@ -89,7 +90,7 @@ build-au-gpui-x86_64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building gpui-au for x86_64..."
-	cargo build --release -p gpui-au --target x86_64-apple-darwin
+	{{cargo}} build --release -p gpui-au --target x86_64-apple-darwin
 	mkdir -p {{au_dir}}/Resources
 	cp target/x86_64-apple-darwin/release/libgpui_au.a \
 		{{au_dir}}/Resources/libsotf_gpui_au.a
@@ -108,7 +109,7 @@ build-au-ffi-arm64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building plugins-ffi for aarch64..."
-	cargo build --release -p plugins-ffi --target aarch64-apple-darwin
+	{{cargo}} build --release -p plugins-ffi --target aarch64-apple-darwin
 	mkdir -p {{au_dir}}/Resources
 	cp target/aarch64-apple-darwin/release/libplugins_ffi.a \
 		{{au_dir}}/Resources/libsotf_audio_plugins_ffi.a
@@ -120,7 +121,7 @@ build-au-ffi-x86_64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building plugins-ffi for x86_64..."
-	cargo build --release -p plugins-ffi --target x86_64-apple-darwin
+	{{cargo}} build --release -p plugins-ffi --target x86_64-apple-darwin
 	mkdir -p {{au_dir}}/Resources
 	cp target/x86_64-apple-darwin/release/libplugins_ffi.a \
 		{{au_dir}}/Resources/libsotf_audio_plugins_ffi.a
@@ -132,7 +133,7 @@ build-au-ffi-ios-arm64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building plugins-ffi for iOS device arm64..."
-	cargo build --release -p plugins-ffi --target aarch64-apple-ios
+	{{cargo}} build --release -p plugins-ffi --target aarch64-apple-ios
 	mkdir -p {{au_dir}}/Resources
 	cp target/aarch64-apple-ios/release/libplugins_ffi.a \
 		{{au_dir}}/Resources/libsotf_audio_plugins_ffi.a
@@ -144,7 +145,7 @@ build-au-ffi-ios-simulator-arm64:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	echo "Building plugins-ffi for iOS simulator arm64..."
-	cargo build --release -p plugins-ffi --target aarch64-apple-ios-sim
+	{{cargo}} build --release -p plugins-ffi --target aarch64-apple-ios-sim
 	mkdir -p {{au_dir}}/Resources
 	cp target/aarch64-apple-ios-sim/release/libplugins_ffi.a \
 		{{au_dir}}/Resources/libsotf_audio_plugins_ffi.a

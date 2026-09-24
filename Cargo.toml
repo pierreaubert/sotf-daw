@@ -209,6 +209,9 @@ walkdir = "2"
 which = "8"
 windows-sys = "0.61"
 
+[workspace.lints.clippy]
+perf = { level = "warn", priority = -1 }
+
 [profile.dev]
 opt-level = 1
 split-debuginfo= "packed"
