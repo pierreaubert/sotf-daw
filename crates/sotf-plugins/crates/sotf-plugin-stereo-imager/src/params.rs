@@ -35,13 +35,13 @@ pub const PARAMS: &[ParamSpec] = &[
         "Crossover",
     )
     .doc("Low/mid crossover frequency"),
-    // 2: Mid-high crossover
+    // 2: Mid-high crossover (max matches try_new/set_parameter validation).
     ParamSpec::float(
         "Mid-High",
         "mid_high_freq",
         4000.0,
         1000.0,
-        16000.0,
+        10000.0,
         10.0,
         "Hz",
         "Crossover",

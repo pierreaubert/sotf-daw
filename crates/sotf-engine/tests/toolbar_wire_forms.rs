@@ -51,6 +51,28 @@ fn needs_live_resources(plugin_type: &str) -> bool {
     )
 }
 
+/// Engine keys the plugin layout hides from the toolbar UI (the renderer
+/// skips them entirely). The toolbar can never send these — e.g. compressor
+/// legacy detector fields that remain serializable but have no DSP effect
+/// and are rejected outright when explicitly present — so the wire-form
+/// audit skips them instead of probing values the factory must reject.
+fn layout_hidden_keys(settings: &PluginSettings) -> std::collections::HashSet<&'static str> {
+    let Some(layout) = settings.layout() else {
+        return std::collections::HashSet::new();
+    };
+    let specs = settings.param_specs();
+    layout
+        .config
+        .iter()
+        .chain(layout.output.iter())
+        .chain(layout.main.iter().flat_map(|group| group.controls.iter()))
+        .chain(layout.tabs.iter().flat_map(|tab| tab.controls.iter()))
+        .filter(|control| control.hidden)
+        .filter_map(|control| specs.get(control.param_index))
+        .map(|spec| spec.engine_key)
+        .collect()
+}
+
 #[test]
 fn toolbar_choice_forms_survive_factory_create_for_all_plugins() {
     let mut failures = Vec::new();
@@ -84,10 +106,18 @@ fn toolbar_choice_forms_survive_factory_create_for_all_plugins() {
         }
         audited_types += 1;
 
+        let hidden_keys = layout_hidden_keys(&settings);
         for spec in settings.param_specs() {
             let ParamType::Choice { labels, .. } = spec.param_type else {
                 continue;
             };
+            if hidden_keys.contains(spec.engine_key) {
+                eprintln!(
+                    "skipping {plugin_type}.{}: hidden from toolbar layout",
+                    spec.engine_key
+                );
+                continue;
+            }
             audited_fields += 1;
             // The toolbar sends whatever JSON type the daemon defaults carry
             // for this field, so report it: a failure only breaks the UI

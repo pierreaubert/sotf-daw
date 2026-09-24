@@ -48,7 +48,6 @@ fn roundtrip_serde() {
 }
 
 #[test]
-#[test]
 fn mix_displays_as_percent_of_full_wet() {
     let mix = pk(PARAMS, "mix");
     assert_eq!(mix.display_scale, 100.0);

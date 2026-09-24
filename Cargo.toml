@@ -58,7 +58,7 @@ members = [
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.7.14"
 authors = ["Pierre F. Aubert pierre@spinorama.org"]
 description = "SOTF DAW core: engine, plugins, MIDI, IAMF, and driver transport"
 edition = "2024"

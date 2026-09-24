@@ -9,6 +9,8 @@ mod consts;
 mod generate;
 mod measurement;
 mod misc;
+#[cfg(not(target_os = "ios"))]
+pub mod multi_capture;
 mod probe;
 mod quality;
 mod record;
