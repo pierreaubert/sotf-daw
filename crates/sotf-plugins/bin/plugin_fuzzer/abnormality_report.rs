@@ -199,6 +199,11 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
     }
     println!();
 
+    // Fail closed on unknown plugin names: otherwise every iteration
+    // silently skips fuzzer creation and the summary reports a vacuous
+    // "no issues detected" with a success exit code.
+    get_fuzzer(&args.plugin, 48_000).map(|_| ())?;
+
     // Load audio file
     println!("Loading audio file...");
     let (mut audio_data, channels, sample_rate) = load_audio_file(&args.file)?;

@@ -13,12 +13,12 @@ use super::plugin_sandbox_policy_support_issue::PluginSandboxPolicySupportIssue;
 use super::types::PluginSandboxBackendCapabilities;
 use super::types::PluginSandboxBrokerPolicy;
 use super::types::PluginSandboxFileGrant;
-#[cfg(target_os = "linux")]
-use super::types::platform;
 use crate::external_plugin_process::ExternalPluginWorkerCommand;
 use std::path::PathBuf;
 
 mod misc;
+#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod seccomp;
 
 #[test]
 fn trust_maps_to_expected_sandbox_timing() {

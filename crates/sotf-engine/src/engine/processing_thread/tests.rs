@@ -829,6 +829,8 @@ fn test_isolated_external_plugin_event_and_status_mappings() {
         worker_start_count: 4,
         worker_exit_count: 2,
         worker_launch_failure_count: 1,
+        worker_quarantined: true,
+        worker_quarantine_reason: Some("quarantined".into()),
         block_timeout_count: 3,
         block_worker_failure_count: 4,
         block_wrong_sequence_count: 5,
@@ -844,6 +846,8 @@ fn test_isolated_external_plugin_event_and_status_mappings() {
     assert_eq!(status.worker_start_count, 4);
     assert_eq!(status.worker_exit_count, 2);
     assert_eq!(status.worker_launch_failure_count, 1);
+    assert!(status.worker_quarantined);
+    assert_eq!(status.worker_quarantine_reason, Some("quarantined".into()));
     assert_eq!(status.block_timeout_count, 3);
     assert_eq!(status.block_worker_failure_count, 4);
     assert_eq!(status.block_wrong_sequence_count, 5);

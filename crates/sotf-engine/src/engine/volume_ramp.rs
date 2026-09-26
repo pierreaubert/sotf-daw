@@ -55,7 +55,16 @@ impl VolumeRampState {
             self.target_bits.store(target_bits, Ordering::Relaxed);
         }
 
-        for frame in samples.chunks_mut(channels) {
+        // Split the ramp head (gain advances per frame) from the steady tail
+        // (constant gain). The tail is a plain multiply loop the optimizer can
+        // vectorize; it dominates once the 10 ms ramp has settled, which is
+        // the common case when the gain is static.
+        let total_frames = samples.len().div_ceil(channels);
+        let ramp_chunks = remaining.min(total_frames as u64) as usize;
+        let head_len = (ramp_chunks * channels).min(samples.len());
+        let (head, tail) = samples.split_at_mut(head_len);
+
+        for frame in head.chunks_mut(channels) {
             if remaining > 0 {
                 current += step;
                 remaining -= 1;
@@ -67,6 +76,9 @@ impl VolumeRampState {
             for sample in frame {
                 *sample *= current;
             }
+        }
+        for sample in tail {
+            *sample *= current;
         }
 
         self.current_bits

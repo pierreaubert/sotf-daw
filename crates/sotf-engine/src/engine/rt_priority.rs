@@ -23,6 +23,8 @@ pub enum RtPriority {
 ///
 /// Returns `Ok(true)` if priority was successfully set, `Ok(false)` if the
 /// platform doesn't support it, or `Err` on failure.
+// `audio_timing` is consumed only by the macOS priority path.
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
 pub fn set_realtime_priority(
     level: RtPriority,
     audio_timing: Option<(u32, usize)>,

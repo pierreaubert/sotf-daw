@@ -7,7 +7,10 @@ pub(super) struct CrossoverFuzzer;
 
 impl PluginFuzzer for CrossoverFuzzer {
     fn create_plugin(&self, channels: usize, rng: &mut StdRng) -> (Box<dyn Plugin>, String) {
-        let crossover_types = ["LR24", "LR48", "Butterworth24", "Butterworth12"];
+        // Only types the plugin accepts (`CrossoverKind::parse` rejects the
+        // rest by contract); rejection itself is unit-tested, the fuzzer
+        // covers valid-parameter robustness.
+        let crossover_types = ["LR24", "LR4", "LinearPhase", "FIR"];
         let crossover_type =
             crossover_types[rng.random_range(0..crossover_types.len())].to_string();
         let frequency = rng.random_range(20.0..20000.0);

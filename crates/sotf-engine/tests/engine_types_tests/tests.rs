@@ -463,6 +463,8 @@ fn test_thread_event_isolated_external_plugin_worker_statuses() {
         worker_start_count: 1,
         worker_exit_count: 0,
         worker_launch_failure_count: 2,
+        worker_quarantined: false,
+        worker_quarantine_reason: None,
         block_timeout_count: 3,
         block_worker_failure_count: 4,
         block_wrong_sequence_count: 5,

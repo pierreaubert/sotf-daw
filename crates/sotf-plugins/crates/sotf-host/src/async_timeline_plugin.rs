@@ -1396,6 +1396,12 @@ mod tests {
 
         adapter.enqueue_input(&[11.0; Q], &context);
         wait_for(&adapter, ((BLOCK_POOL_SIZE + 3) * Q) as u64);
+        // `wait_for` only proves the worker consumed the input; the processed
+        // block still has to land in the output queue before emitting.
+        wait_until(
+            || adapter.queues.ready_output.slots() != 0,
+            "worker did not publish the recovery block",
+        );
         let mut recovered = [f32::NAN; Q];
         adapter.emit_output(&mut recovered, Q);
         assert_eq!(recovered, [11.0; Q]);

@@ -35,3 +35,46 @@ pub fn join_timeout(handle: JoinHandle<()>, timeout: Duration) -> Result<(), ()>
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn join_timeout_returns_ok_when_thread_finishes() {
+        let handle = std::thread::spawn(|| {});
+        assert_eq!(
+            join_timeout(handle, Duration::from_secs(5)),
+            Ok(()),
+            "a finished thread must join cleanly"
+        );
+    }
+
+    #[test]
+    fn join_timeout_returns_ok_when_thread_panics() {
+        let handle = std::thread::spawn(|| panic!("intentional test panic"));
+        assert_eq!(
+            join_timeout(handle, Duration::from_secs(5)),
+            Ok(()),
+            "a panicked thread must not propagate the panic to the joiner"
+        );
+    }
+
+    #[test]
+    fn join_timeout_returns_err_without_blocking_on_stuck_thread() {
+        let handle = std::thread::spawn(|| std::thread::sleep(Duration::from_secs(30)));
+        let started = Instant::now();
+        let result = join_timeout(handle, Duration::from_millis(100));
+        let elapsed = started.elapsed();
+        assert_eq!(
+            result,
+            Err(()),
+            "a stuck thread must time out instead of blocking shutdown"
+        );
+        assert!(
+            elapsed < Duration::from_secs(10),
+            "join_timeout blocked {elapsed:?} on a stuck thread"
+        );
+    }
+}

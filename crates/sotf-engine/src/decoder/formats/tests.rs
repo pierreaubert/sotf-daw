@@ -90,6 +90,31 @@ mod tests_decoder {
         assert_eq!(dest.frame_position, decoder.position());
     }
 
+    #[test]
+    fn test_check_error_limit_fails_closed_after_threshold() {
+        // A corrupted stream must fail with an explicit error after a bounded
+        // number of consecutive decode errors, never spin forever.
+        let wav = create_test_wav();
+        let mut decoder = SymphoniaDecoder::new(wav.path()).unwrap();
+        let mut consecutive_errors = 0u32;
+        for _ in 0..49 {
+            assert!(
+                decoder
+                    .check_error_limit(&mut consecutive_errors, "boom", "corrupted frame")
+                    .is_ok()
+            );
+        }
+        assert_eq!(consecutive_errors, 49);
+        let err = decoder
+            .check_error_limit(&mut consecutive_errors, "boom", "corrupted frame")
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("Too many consecutive decode errors"),
+            "unexpected error: {err}"
+        );
+        assert!(decoder.is_eof());
+    }
+
     // Integration tests would go here with actual audio files:
     /*
     #[test]

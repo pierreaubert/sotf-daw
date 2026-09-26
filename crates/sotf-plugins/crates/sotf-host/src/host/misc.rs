@@ -61,6 +61,25 @@ pub(super) fn sandbox_reason_text(
     }
 }
 
+/// Worker-side detail for an `Unsupported` sandbox status, capped to a
+/// UI-sized first line. The supervisor captures worker stderr, which is
+/// where sandbox entry failures (e.g. the exact Landlock/seccomp denial)
+/// are reported; other statuses ignore it.
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+pub(super) fn sandbox_unsupported_detail(
+    status: PluginSandboxStatusCode,
+    worker_stderr: Option<&str>,
+) -> Option<String> {
+    if status != PluginSandboxStatusCode::Unsupported {
+        return None;
+    }
+    let first = worker_stderr?.lines().next()?.trim();
+    if first.is_empty() {
+        return None;
+    }
+    Some(first.chars().take(256).collect())
+}
+
 #[cfg(all(
     test,
     any(target_os = "linux", target_os = "macos", target_os = "windows")
@@ -89,5 +108,43 @@ mod sandbox_reason_tests {
             reason.as_deref(),
             Some("sandbox is required but not enforced")
         );
+    }
+
+    #[test]
+    fn unsupported_detail_prefers_first_worker_stderr_line() {
+        let reason = sandbox_unsupported_detail(
+            PluginSandboxStatusCode::Unsupported,
+            Some("failed to enter pre-load worker sandbox: EPERM\nsecond line"),
+        );
+        assert_eq!(
+            reason.as_deref(),
+            Some("failed to enter pre-load worker sandbox: EPERM")
+        );
+    }
+
+    #[test]
+    fn unsupported_detail_ignores_other_statuses_and_blank_stderr() {
+        assert_eq!(
+            sandbox_unsupported_detail(
+                PluginSandboxStatusCode::Enforced,
+                Some("failed to enter pre-load worker sandbox: EPERM"),
+            ),
+            None
+        );
+        assert_eq!(
+            sandbox_unsupported_detail(PluginSandboxStatusCode::Unsupported, None),
+            None
+        );
+        assert_eq!(
+            sandbox_unsupported_detail(
+                PluginSandboxStatusCode::Unsupported,
+                Some("   \n"),
+            ),
+            None
+        );
+        let long = format!("a{}\nsecond", "b".repeat(300));
+        let capped = sandbox_unsupported_detail(PluginSandboxStatusCode::Unsupported, Some(&long))
+            .expect("long line must truncate, not vanish");
+        assert_eq!(capped.chars().count(), 256);
     }
 }

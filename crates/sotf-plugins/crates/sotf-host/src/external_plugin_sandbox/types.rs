@@ -56,7 +56,6 @@ pub struct PluginSandboxBackendCapabilities {
 
 #[cfg(target_os = "linux")]
 pub(super) mod platform {
-    use super::*;
     use std::ffi::CString;
     use std::mem;
     use std::os::fd::RawFd;
@@ -134,12 +133,9 @@ pub(super) mod platform {
         if abi < 4 && !policy.allow_network {
             unsupported_reasons.push("network denial requires Landlock ABI 4 or newer".to_string());
         }
-        if !policy.allow_child_processes {
-            unsupported_reasons.push(
-                "child-process denial requires a seccomp/job-control backend not present in this build"
-                    .to_string(),
-            );
-        }
+        // Installed after `restrict_self` below: the seccomp filter needs
+        // `no_new_privs`, which `restrict_self` sets first.
+        let deny_child_processes = !policy.allow_child_processes;
         let ruleset_attr = LandlockRulesetAttr {
             handled_access_fs,
             handled_access_net,
@@ -174,6 +170,12 @@ pub(super) mod platform {
         }
         result?;
 
+        if deny_child_processes
+            && let Err(err) = super::super::seccomp_child_process::deny_child_processes()
+        {
+            unsupported_reasons.push(format!("child-process denial unavailable: {err}"));
+        }
+
         if !unsupported_reasons.is_empty() {
             return Ok(ExternalPluginSandboxStatus::Unsupported {
                 backend: "linux-landlock",
@@ -186,6 +188,18 @@ pub(super) mod platform {
         })
     }
 
+    /// Read/execute rights for a bundle or granted path. Landlock rejects
+    /// directory-only rights on non-directories, so single-file bundles
+    /// (`.clap`, `.so`) get no `FS_READ_DIR` while bundle directories
+    /// (`.vst3`, `.component`) keep it.
+    fn bundle_read_access(path: &Path) -> u64 {
+        if canonicalize_if_possible(path).is_dir() {
+            FS_READ_FILE | FS_READ_DIR | FS_EXECUTE
+        } else {
+            FS_READ_FILE | FS_EXECUTE
+        }
+    }
+
     fn apply_rules(
         policy: &ExternalPluginSandboxPolicy,
         descriptor: &PluginDescriptor,
@@ -196,7 +210,7 @@ pub(super) mod platform {
         add_path_rule(
             ruleset_fd,
             &descriptor.path,
-            (FS_READ_FILE | FS_READ_DIR | FS_EXECUTE) & handled_access_fs,
+            bundle_read_access(&descriptor.path) & handled_access_fs,
         )?;
 
         add_path_rule(
@@ -209,7 +223,7 @@ pub(super) mod platform {
             add_path_rule(
                 ruleset_fd,
                 path,
-                (FS_READ_FILE | FS_READ_DIR | FS_EXECUTE) & handled_access_fs,
+                bundle_read_access(path) & handled_access_fs,
             )?;
         }
         for path in &policy.extra_write_paths {
@@ -347,6 +361,47 @@ pub(super) mod platform {
             ));
         }
         Ok(())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::mem::size_of;
+
+        #[test]
+        fn ruleset_attr_layout_matches_kernel_abi() {
+            // Passed by reference to landlock_create_ruleset; any padding or
+            // field drift silently corrupts enforcement, so pin the layout.
+            assert_eq!(size_of::<LandlockRulesetAttr>(), 3 * size_of::<u64>());
+            assert_eq!(size_of::<LandlockPathBeneathAttr>(), 2 * size_of::<u64>());
+        }
+
+        #[test]
+        fn access_mask_tracks_landlock_abi() {
+            let full = writable_access() | FS_EXECUTE;
+            // ABI 1: no REFER, no TRUNCATE.
+            assert_eq!(
+                fs_access_mask_for_abi(1),
+                full & !FS_REFER & !FS_TRUNCATE
+            );
+            // ABI 2: REFER added, TRUNCATE still absent.
+            assert_eq!(fs_access_mask_for_abi(2), full & !FS_TRUNCATE);
+            // ABI 3+: full filesystem mask; ABI 4 additionally gates TCP.
+            assert_eq!(fs_access_mask_for_abi(3), full);
+            assert_eq!(fs_access_mask_for_abi(4), full);
+            assert_eq!(fs_access_mask_for_abi(99), full);
+        }
+
+        #[test]
+        fn abi_probe_is_consistent() {
+            // Probing never changes kernel state; a real syscall here keeps
+            // the reported ABI honest instead of trusting the constants.
+            let abi = landlock_abi().expect("ABI probe must not fail outright");
+            assert!(
+                abi >= 0,
+                "negative ABI other than unsupported is a probe bug"
+            );
+        }
     }
 }
 

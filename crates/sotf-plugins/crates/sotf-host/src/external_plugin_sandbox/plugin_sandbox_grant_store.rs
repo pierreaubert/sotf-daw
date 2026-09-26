@@ -104,9 +104,12 @@ impl PluginSandboxGrantStore {
         media_read_paths: impl IntoIterator<Item = PathBuf>,
     ) -> PluginSandboxPolicy {
         let identity = PluginSandboxIdentity::from_descriptor(descriptor);
-        PluginSandboxPolicy::authorized_runtime_with_preset_dir_and_media_paths(
-            preset_root.into().join(identity.stable_preset_component()),
-            media_read_paths,
-        )
+        let mut policy =
+            PluginSandboxPolicy::authorized_runtime_with_preset_dir_and_media_paths(
+                preset_root.into().join(identity.stable_preset_component()),
+                media_read_paths,
+            );
+        policy.apply_user_grants(self.grants_for(&identity));
+        policy
     }
 }

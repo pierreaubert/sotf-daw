@@ -24,6 +24,8 @@ pub(super) fn isolated_external_plugin_status(
         worker_start_count: report.worker_start_count,
         worker_exit_count: report.worker_exit_count,
         worker_launch_failure_count: report.worker_launch_failure_count,
+        worker_quarantined: report.worker_quarantined,
+        worker_quarantine_reason: report.worker_quarantine_reason,
         block_timeout_count: report.block_timeout_count,
         block_worker_failure_count: report.block_worker_failure_count,
         block_wrong_sequence_count: report.block_wrong_sequence_count,

@@ -22,6 +22,8 @@ use super::misc::PARAMETER_EVENT_QUEUE_CAPACITY;
 use super::misc::panic_payload_description;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::misc::sandbox_reason_text;
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+use super::misc::sandbox_unsupported_detail;
 use super::node_buffer::NodeBuffer;
 use super::parameter_event::ParameterEvent;
 use super::parameter_event_sender::ParameterEventSender;
@@ -993,7 +995,15 @@ impl DawHost {
         error: Option<String>,
     ) -> IsolatedExternalPluginWorkerReport {
         let sandbox = plugin.worker_sandbox_status();
-        let sandbox_reason = sandbox_reason_text(sandbox.status, sandbox.backend, error.as_deref());
+        // Prefer the worker's own diagnostic (captured stderr) over the
+        // canned backend message when it reports itself unsupported.
+        let worker_detail =
+            sandbox_unsupported_detail(sandbox.status, plugin.last_worker_stderr().as_deref());
+        let sandbox_reason = sandbox_reason_text(
+            sandbox.status,
+            sandbox.backend,
+            error.as_deref().or(worker_detail.as_deref()),
+        );
         IsolatedExternalPluginWorkerReport {
             plugin_index,
             node_id,
@@ -1003,6 +1013,8 @@ impl DawHost {
             worker_start_count: plugin.worker_start_count(),
             worker_exit_count: plugin.worker_exit_count(),
             worker_launch_failure_count: plugin.worker_launch_failure_count(),
+            worker_quarantined: plugin.is_worker_quarantined(),
+            worker_quarantine_reason: plugin.worker_quarantine_reason().map(str::to_string),
             block_timeout_count: plugin.block_timeout_count(),
             block_worker_failure_count: plugin.block_worker_failure_count(),
             block_wrong_sequence_count: plugin.block_wrong_sequence_count(),

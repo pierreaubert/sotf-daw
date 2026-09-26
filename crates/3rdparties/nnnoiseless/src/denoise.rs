@@ -109,43 +109,24 @@ struct DenoiseScratch {
 }
 
 impl DenoiseScratch {
-    fn new() -> Self {
-        Self {
-            analysis_window: [0.0; WINDOW_SIZE],
-            pitch_window: [0.0; WINDOW_SIZE],
-            pitch_downsample: [0.0; PITCH_BUF_SIZE / 2],
-            pitch_search_x: [0.0; PITCH_FRAME_SIZE / 4],
-            pitch_search_y: [0.0; PITCH_BUF_SIZE / 4],
-            pitch_xcorr: [0.0; PITCH_MAX_PERIOD / 2],
-            pitch_yy: [0.0; PITCH_MAX_PERIOD / 2 + 1],
-            pitch_refine: [0.0; 3],
-            pitch_ac: [0.0; 5],
-            pitch_lpc: [0.0; 4],
-            pitch_mem: [0.0; 5],
-            pitch_lpc2: [0.0; 5],
-            pitch_copy: [0.0; PITCH_BUF_SIZE / 2],
-            synthesis_window: [0.0; WINDOW_SIZE],
-            x_freq: [Complex::new(0.0, 0.0); FREQ_SIZE],
-            pitch_freq: [Complex::new(0.0, 0.0); WINDOW_SIZE],
-            x_time: [0.0; FRAME_SIZE],
-            ex: [0.0; NB_BANDS],
-            ep: [0.0; NB_BANDS],
-            exp: [0.0; NB_BANDS],
-            features: [0.0; NB_FEATURES],
-            gains: [0.0; NB_BANDS],
-            interpolated_gains: [1.0; FREQ_SIZE],
-            vad: [0.0; 1],
-            ly: [0.0; NB_BANDS],
-            tmp: [0.0; NB_BANDS],
-            pitch_filter_r: [0.0; NB_BANDS],
-            pitch_filter_rf: [0.0; FREQ_SIZE],
-            pitch_filter_energy: [0.0; NB_BANDS],
-            pitch_filter_norm: [0.0; NB_BANDS],
-            pitch_filter_normf: [0.0; FREQ_SIZE],
-            fft_input: [Complex::new(0.0, 0.0); WINDOW_SIZE],
-            fft_output: [Complex::new(0.0, 0.0); WINDOW_SIZE],
-        }
+    /// Allocate the workspace directly on the heap. Every field is plain
+    /// sample data defaulting to zero except `interpolated_gains` (unity),
+    /// so zeroed allocation plus that single patch initializes every field
+    /// correctly — without materializing ~45 KiB of arrays as a stack
+    /// temporary first, which blows bounded audio-thread stacks (and fatter
+    /// unoptimized frames) inside `Box::new(...)`.
+    ///
+    /// If a field with a non-zero default is ever added, patch it here:
+    /// there is deliberately no plain-value constructor to compare against.
+    fn new_boxed() -> Box<Self> {
+        // SAFETY: `DenoiseScratch` holds only `f32`/`Complex<f32>` sample
+        // data with no validity invariants; all-zero bit patterns are valid
+        // values, and the box is patched before publication.
+        let mut scratch: Box<Self> = unsafe { Box::new_zeroed().assume_init() };
+        scratch.interpolated_gains.fill(1.0);
+        scratch
     }
+
 }
 
 pub struct DenoiseState {
@@ -173,7 +154,7 @@ impl DenoiseState {
                 lastg: [0.0; NB_BANDS],
             },
             rnn: crate::rnn::RnnState::new(),
-            scratch: Box::new(DenoiseScratch::new()),
+            scratch: DenoiseScratch::new_boxed(),
         })
     }
 

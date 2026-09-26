@@ -460,6 +460,52 @@ fn isolated_external_plugin_quarantines_after_repeated_block_failures() {
     assert_eq!(output, input);
 }
 
+#[cfg(unix)]
+#[test]
+fn isolated_external_plugin_propagates_supervisor_crash_loop_quarantine() {
+    let mut plugin = IsolatedExternalPlugin::new(
+        descriptor(),
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new("/bin/true"),
+            start_worker: false,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    let mut quarantined = false;
+    for _ in 0..500 {
+        let _ = plugin.ensure_worker_running_event();
+        if plugin.is_worker_quarantined() {
+            quarantined = true;
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert!(
+        quarantined,
+        "crash-looping worker must quarantine the plugin"
+    );
+
+    let reason = plugin
+        .worker_quarantine_reason()
+        .expect("quarantine must record a reason");
+    assert!(reason.contains("quarantined"), "unexpected reason: {reason}");
+    assert!(plugin.ensure_worker_running_event().is_err());
+
+    // A quarantined plugin renders the local fallback instead of touching
+    // the dead worker: no restart is attempted.
+    let starts_before = plugin.worker_start_count();
+    let input = vec![0.25, -0.5, 1.0, -1.0];
+    let mut output = vec![0.0; input.len()];
+    let frames = plugin
+        .process(&input, &mut output, &ProcessContext::new(48_000, 2))
+        .unwrap();
+    assert_eq!(frames, 2);
+    assert_eq!(plugin.worker_start_count(), starts_before);
+}
+
 #[test]
 fn isolated_external_plugin_placeholder_state_round_trips() {
     let plugin_file = tempfile::Builder::new().suffix(".clap").tempfile().unwrap();

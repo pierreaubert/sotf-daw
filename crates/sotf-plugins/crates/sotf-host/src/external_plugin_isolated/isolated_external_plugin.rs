@@ -287,16 +287,47 @@ impl IsolatedExternalPlugin {
         let Some(supervisor) = self.supervisor.as_mut() else {
             return Ok(ExternalPluginProcessEvent::NotRunning);
         };
-        supervisor.ensure_running().inspect_err(|err| {
-            self.launch_error = Some(err.clone());
-        })
+        let result = supervisor.ensure_running();
+        let supervisor_quarantined = supervisor.quarantined();
+        if let Err(err) = &result {
+            if supervisor_quarantined {
+                self.quarantine_worker(format!(
+                    "isolated external plugin '{}' worker quarantined: {err}",
+                    self.descriptor.name
+                ));
+            } else {
+                self.launch_error = Some(err.clone());
+            }
+        }
+        result
     }
 
     pub fn poll_worker(&mut self) -> Result<Option<ExternalPluginProcessEvent>, String> {
         let Some(supervisor) = self.supervisor.as_mut() else {
             return Ok(Some(ExternalPluginProcessEvent::NotRunning));
         };
-        supervisor.poll()
+        let result = supervisor.poll();
+        if supervisor.quarantined() {
+            self.sync_supervisor_quarantine();
+        }
+        result
+    }
+
+    /// Engage plugin-level quarantine when the supervisor stopped restarting a
+    /// crash-looping worker, so the engine-visible state and audio fallback
+    /// reflect the supervisor decision even when only the poll path runs.
+    fn sync_supervisor_quarantine(&mut self) {
+        if self.quarantined {
+            return;
+        }
+        let exit_count = self
+            .supervisor
+            .as_ref()
+            .map_or(0, ExternalPluginProcessSupervisor::exit_count);
+        self.quarantine_worker(format!(
+            "isolated external plugin '{}' worker quarantined after repeated quick exits ({exit_count} observed)",
+            self.descriptor.name
+        ));
     }
 
     pub fn worker_start_count(&self) -> u64 {
@@ -315,6 +346,27 @@ impl IsolatedExternalPlugin {
         self.supervisor
             .as_ref()
             .map_or(0, ExternalPluginProcessSupervisor::launch_failure_count)
+    }
+
+    pub fn is_worker_quarantined(&self) -> bool {
+        self.quarantined
+            || self
+                .supervisor
+                .as_ref()
+                .is_some_and(ExternalPluginProcessSupervisor::quarantined)
+    }
+
+    pub fn worker_quarantine_reason(&self) -> Option<&str> {
+        self.launch_error.as_deref()
+    }
+
+    /// Latest stderr captured from the worker process, if any. This is where
+    /// worker-side sandbox entry failures are reported.
+    pub fn last_worker_stderr(&self) -> Option<String> {
+        self.supervisor
+            .as_ref()
+            .and_then(ExternalPluginProcessSupervisor::last_stderr)
+            .map(|stderr| stderr.to_string())
     }
 
     pub fn block_timeout_count(&self) -> u64 {

@@ -1,6 +1,10 @@
 use super::super::deny_plugin_sandbox_permission_broker::DenyPluginSandboxPermissionBroker;
+// Only used by the non-Linux fail-closed tests at the bottom of this file.
+#[cfg(not(target_os = "linux"))]
 use super::super::external_plugin_sandbox_policy::ExternalPluginSandboxPolicy;
+#[cfg(not(target_os = "linux"))]
 use super::super::external_plugin_sandbox_policy::enter_external_plugin_sandbox;
+#[cfg(not(target_os = "linux"))]
 use super::super::external_plugin_trust::ExternalPluginTrust;
 use super::super::plugin_sandbox_authorization_grant::PluginSandboxAuthorizationGrant;
 use super::super::plugin_sandbox_child_process_grant::PluginSandboxChildProcessGrant;
@@ -18,6 +22,8 @@ use crate::external_plugin::PluginDescriptor;
 use std::path::PathBuf;
 
 use crate::external_plugin::PluginFormat;
+// Only used by the non-Linux fail-closed tests at the bottom of this file.
+#[cfg(not(target_os = "linux"))]
 use crate::external_plugin_ipc::{PluginIpcLayout, SecurePluginSharedMemory};
 
 fn descriptor(id: &str) -> PluginDescriptor {
@@ -175,7 +181,7 @@ fn import_policy_filters_grants_that_overlap_protected_media() {
 }
 
 #[test]
-fn authorized_runtime_policy_ignores_external_grants_and_allows_media() {
+fn authorized_runtime_policy_applies_remembered_grants_and_allows_media() {
     let plugin_descriptor = descriptor("com.test.runtime");
     let identity = PluginSandboxIdentity::from_descriptor(&plugin_descriptor);
     let mut store = PluginSandboxGrantStore::default();
@@ -200,8 +206,11 @@ fn authorized_runtime_policy_ignores_external_grants_and_allows_media() {
         ],
     );
 
-    assert_eq!(policy.network, PluginSandboxNetworkGrant::Deny);
-    assert_eq!(policy.local_authorizations, Vec::new());
+    assert_eq!(policy.network, PluginSandboxNetworkGrant::AnyOutbound);
+    assert_eq!(
+        policy.local_authorizations,
+        vec![PluginSandboxAuthorizationGrant::Pace]
+    );
     assert_eq!(policy.child_processes, PluginSandboxChildProcessGrant::Deny);
     assert!(
         policy

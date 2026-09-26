@@ -1,3 +1,8 @@
+#[cfg(windows)]
+use std::io;
+#[cfg(windows)]
+use std::path::Path;
+
 pub(super) fn align_up(value: usize, alignment: usize) -> usize {
     debug_assert!(alignment.is_power_of_two());
     (value + alignment - 1) & !(alignment - 1)

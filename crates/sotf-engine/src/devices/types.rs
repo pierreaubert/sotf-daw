@@ -191,7 +191,7 @@ pub(super) fn deduplicate_linux_devices(
         if let Some(card_start) = source.find("CARD=") {
             let after_card = &source[card_start + 5..];
             let card_name = after_card
-                .split(|c: char| c == ',' || c == ' ' || c == ':')
+                .split([',', ' ', ':'])
                 .next()
                 .unwrap_or(after_card);
             if !card_name.is_empty() {
@@ -202,7 +202,7 @@ pub(super) fn deduplicate_linux_devices(
         // For "hw:0,0" style, extract the card number
         if let Some(rest) = source.strip_prefix("hw:") {
             let card_num = rest
-                .split(|c: char| c == ',' || c == ' ')
+                .split([',', ' '])
                 .next()
                 .unwrap_or(rest);
             if !card_num.is_empty() {

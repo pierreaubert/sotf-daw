@@ -14,7 +14,7 @@ path = "src/lib.rs"
 
 [features]
 default = []
-onnx = ["dep:tract-onnx"]
+onnx = ["dep:tract-onnx", "dep:plugins-inference"]
 qa = ["sotf-host/qa"]
 
 [[bin]]
@@ -29,8 +29,8 @@ math-dsp = { workspace = true }
 math-iir-fir = { workspace = true }
 ndarray = { workspace = true }
 tract-onnx = { workspace = true, optional = true }
+plugins-inference = { workspace = true, optional = true }
 realfft = { workspace = true }
-rtrb = { workspace = true }
 rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

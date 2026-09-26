@@ -3,6 +3,7 @@ use super::playback_thread::{
     FrameWriteOutcome, PlaybackState, apply_volume_clamp, read_ring_buffer,
     required_conversion_capacity, write_chunk_bulk, write_frame_to_ring,
 };
+use super::volume_ramp::VolumeRampState;
 use rtrb::{Consumer, Producer, RingBuffer};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, sync_channel};
 
@@ -67,6 +68,39 @@ impl PlaybackCallbackHarness {
             self.sample_rate,
         );
         &self.scratch
+    }
+}
+
+/// Deterministic harness for the per-callback output gain ramp.
+///
+/// Both sinks run `VolumeRampState::apply` on every callback; this harness
+/// exposes that kernel for benchmarks and RT-behavior tests without audio
+/// hardware.
+pub struct VolumeRampHarness {
+    state: VolumeRampState,
+    channels: usize,
+    sample_rate: u32,
+}
+
+impl VolumeRampHarness {
+    pub fn new(channels: usize, sample_rate: u32, initial_gain: f32) -> Self {
+        Self {
+            state: VolumeRampState::new(initial_gain),
+            channels: channels.max(1),
+            sample_rate,
+        }
+    }
+
+    /// Snap the ramp to `gain` without transitioning.
+    pub fn snap_to(&mut self, gain: f32) {
+        self.state.snap_to(gain);
+    }
+
+    /// Apply the ramp toward `target_gain` over `samples`, in place.
+    #[inline(always)]
+    pub fn apply(&mut self, samples: &mut [f32], target_gain: f32) {
+        self.state
+            .apply(samples, self.channels, self.sample_rate, target_gain);
     }
 }
 

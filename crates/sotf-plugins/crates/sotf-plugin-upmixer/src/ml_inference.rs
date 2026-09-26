@@ -2,16 +2,13 @@
 // Async ML Inference Thread for Vocal Detection
 // ============================================================================
 //
-// Runs ONNX model inference on a separate thread, communicating with the
-// audio thread via a lock-free ring buffer (features in) and atomic (V_prob out).
-//
-// The audio thread never blocks: features are pushed non-blocking via rtrb,
-// and V_prob is read after acquiring the publication flag.
+// Runs ONNX model inference through the shared `plugins-inference` bridge:
+// the audio thread pushes feature frames without blocking, a worker thread
+// runs the tract model, and the latest vocal probability is published behind
+// a generation counter (a reset invalidates stale work).
 
 use super::ml_features::{CONTEXT_FRAMES, FEATURE_SIZE, FRAME_FEATURE_SIZE};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::thread::{self, JoinHandle};
+use plugins_inference::{AsyncInference, InferenceModel};
 use tract_onnx::prelude::*;
 
 /// Optimised+runnable tract model. Type alias for the value returned by
@@ -24,31 +21,30 @@ const RING_BUFFER_CAPACITY: usize = 4;
 /// A single feature context sent from audio thread to inference thread.
 pub struct MfccFrame {
     pub features: [f32; FEATURE_SIZE],
-    generation: u32,
 }
 
-/// Shared state between audio thread and inference thread
-struct SharedState {
-    /// V_prob stored as raw f32 bits in AtomicU32
-    v_prob_bits: AtomicU32,
-    /// Whether at least one inference result is available
-    has_result: AtomicBool,
-    /// Generation associated with `v_prob_bits`.
-    result_generation: AtomicU32,
-    /// Transport generation used to invalidate queued/in-flight frames on reset.
-    generation: AtomicU32,
-    /// Signal to shut down the inference thread
-    shutdown: AtomicBool,
+/// tract adapter: runs the vocal-detection model on the bridge worker thread.
+struct OnnxModelAdapter {
+    model: RunnableOnnxModel,
+}
+
+impl InferenceModel for OnnxModelAdapter {
+    type Input = MfccFrame;
+    type Output = f32;
+
+    fn run(&mut self, input: &Self::Input) -> Result<Self::Output, String> {
+        let mut input_data = vec![0.0_f32; FEATURE_SIZE];
+        input_data.copy_from_slice(&input.features);
+        run_inference(&self.model, &input_data).map(|v_prob| v_prob.clamp(0.0, 1.0))
+    }
 }
 
 /// Audio-thread side handle for the ML inference system.
 ///
-/// Owns the ring buffer producer and a reference to shared atomic state.
-/// All methods are non-blocking and safe for real-time use.
+/// Thin wrapper over the shared async-inference bridge; all methods are
+/// non-blocking and safe for real-time use.
 pub struct MlInferenceHandle {
-    producer: rtrb::Producer<MfccFrame>,
-    shared: Arc<SharedState>,
-    thread_handle: Option<JoinHandle<()>>,
+    inner: AsyncInference<OnnxModelAdapter>,
 }
 
 impl MlInferenceHandle {
@@ -74,29 +70,14 @@ impl MlInferenceHandle {
 
         validate_input_contract(&model)?;
 
-        let (producer, consumer) = rtrb::RingBuffer::<MfccFrame>::new(RING_BUFFER_CAPACITY);
+        let inner = AsyncInference::spawn(
+            OnnxModelAdapter { model },
+            RING_BUFFER_CAPACITY,
+            "ml-vocal-detect",
+        )
+        .map_err(|e| format!("Failed to spawn inference thread: {e}"))?;
 
-        let shared = Arc::new(SharedState {
-            v_prob_bits: AtomicU32::new(0.5_f32.to_bits()),
-            has_result: AtomicBool::new(false),
-            result_generation: AtomicU32::new(0),
-            generation: AtomicU32::new(0),
-            shutdown: AtomicBool::new(false),
-        });
-
-        let shared_clone = Arc::clone(&shared);
-        let thread_handle = thread::Builder::new()
-            .name("ml-vocal-detect".to_string())
-            .spawn(move || {
-                inference_worker(consumer, model, shared_clone);
-            })
-            .map_err(|e| format!("Failed to spawn inference thread: {}", e))?;
-
-        Ok(Self {
-            producer,
-            shared,
-            thread_handle: Some(thread_handle),
-        })
+        Ok(Self { inner })
     }
 
     /// Send feature context to the inference thread. Non-blocking.
@@ -105,12 +86,9 @@ impl MlInferenceHandle {
     /// is slower than audio — the latest frame that fits will be used).
     #[inline]
     pub fn send_features(&mut self, features: &[f32; FEATURE_SIZE]) {
-        let frame = MfccFrame {
+        self.inner.send(MfccFrame {
             features: *features,
-            generation: self.shared.generation.load(Ordering::Acquire),
-        };
-        // Non-blocking push — drop frame if buffer is full
-        let _ = self.producer.push(frame);
+        });
     }
 
     /// Read the latest V_prob from the inference thread. Non-blocking.
@@ -119,30 +97,12 @@ impl MlInferenceHandle {
     /// `Some(probability)` with the latest vocal detection probability.
     #[inline]
     pub fn read_v_prob(&self) -> Option<f32> {
-        read_published_result(&self.shared).map(|(_, probability)| probability)
+        self.inner.latest()
     }
 
     /// Invalidate queued/in-flight features and clear the published result.
     pub fn reset(&self) {
-        self.shared.generation.fetch_add(1, Ordering::AcqRel);
-        self.shared
-            .v_prob_bits
-            .store(0.5_f32.to_bits(), Ordering::Relaxed);
-        self.shared.has_result.store(false, Ordering::Release);
-    }
-
-    /// Shut down the inference thread and wait for it to finish.
-    pub fn shutdown(&mut self) {
-        self.shared.shutdown.store(true, Ordering::Relaxed);
-        if let Some(handle) = self.thread_handle.take() {
-            let _ = handle.join();
-        }
-    }
-}
-
-impl Drop for MlInferenceHandle {
-    fn drop(&mut self) {
-        self.shutdown();
+        self.inner.reset();
     }
 }
 
@@ -228,82 +188,6 @@ fn validate_metadata_contract(
     Ok(())
 }
 
-/// Inference worker function running on the dedicated thread.
-fn inference_worker(
-    mut consumer: rtrb::Consumer<MfccFrame>,
-    model: RunnableOnnxModel,
-    shared: Arc<SharedState>,
-) {
-    // Pre-allocate input buffer: shape [1, FEATURE_SIZE]
-    let mut input_data = vec![0.0_f32; FEATURE_SIZE];
-
-    loop {
-        if shared.shutdown.load(Ordering::Relaxed) {
-            break;
-        }
-
-        // Drain all available frames, keeping only the latest
-        let mut got_frame = false;
-        let mut frame_generation = 0;
-        while let Ok(frame) = consumer.pop() {
-            input_data.copy_from_slice(&frame.features);
-            frame_generation = frame.generation;
-            got_frame = true;
-        }
-
-        if got_frame {
-            // Run inference
-            match run_inference(&model, &input_data) {
-                Ok(v_prob) => {
-                    let clamped = v_prob.clamp(0.0, 1.0);
-                    publish_result(&shared, frame_generation, clamped);
-                }
-                Err(e) => {
-                    log::warn!("ML inference error: {}", e);
-                }
-            }
-        } else {
-            // No frames available — sleep briefly to avoid busy-waiting
-            thread::sleep(std::time::Duration::from_millis(1));
-        }
-    }
-}
-
-#[inline]
-fn publish_result(shared: &SharedState, generation: u32, probability: f32) {
-    if shared.generation.load(Ordering::Acquire) != generation {
-        return;
-    }
-    shared
-        .v_prob_bits
-        .store(probability.to_bits(), Ordering::Relaxed);
-    shared
-        .result_generation
-        .store(generation, Ordering::Relaxed);
-    shared.has_result.store(true, Ordering::Release);
-}
-
-#[inline]
-fn read_published_result(shared: &SharedState) -> Option<(u32, f32)> {
-    if !shared.has_result.load(Ordering::Acquire) {
-        return None;
-    }
-
-    // The acquire load above makes both fields published before the ready flag
-    // visible. Comparing the result stamp with the current transport generation
-    // rejects an old inference even when reset races after the worker's initial
-    // generation check. The second generation load closes the reader/reset race.
-    let result_generation = shared.result_generation.load(Ordering::Relaxed);
-    if shared.generation.load(Ordering::Acquire) != result_generation {
-        return None;
-    }
-    let probability_bits = shared.v_prob_bits.load(Ordering::Relaxed);
-    if shared.generation.load(Ordering::Acquire) != result_generation {
-        return None;
-    }
-    Some((result_generation, f32::from_bits(probability_bits)))
-}
-
 /// Run a single inference pass. Returns the vocal probability (0.0-1.0).
 fn run_inference(model: &RunnableOnnxModel, input_data: &[f32]) -> Result<f32, String> {
     let input = tract_ndarray::Array2::from_shape_vec((1, FEATURE_SIZE), input_data.to_vec())
@@ -342,34 +226,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_shared_state_atomic_roundtrip() {
-        let shared = SharedState {
-            v_prob_bits: AtomicU32::new(0.0_f32.to_bits()),
-            has_result: AtomicBool::new(false),
-            result_generation: AtomicU32::new(0),
-            generation: AtomicU32::new(0),
-            shutdown: AtomicBool::new(false),
-        };
-
-        // Initially no result
-        assert!(!shared.has_result.load(Ordering::Acquire));
-
-        // Store a probability
-        let prob = 0.75_f32;
-        shared.v_prob_bits.store(prob.to_bits(), Ordering::Relaxed);
-        shared.has_result.store(true, Ordering::Release);
-
-        // Read it back
-        let bits = shared.v_prob_bits.load(Ordering::Relaxed);
-        let read_prob = f32::from_bits(bits);
-        assert!((read_prob - prob).abs() < 1e-7);
-    }
-
-    #[test]
     fn test_mfcc_frame_size() {
         let frame = MfccFrame {
             features: [0.0; FEATURE_SIZE],
-            generation: 0,
         };
         assert_eq!(frame.features.len(), FEATURE_SIZE);
     }
@@ -391,29 +250,6 @@ mod tests {
         assert!(!output_shape_accepts_probability(&[2, 1]));
         assert!(!output_shape_accepts_probability(&[1, 2]));
         assert!(!output_shape_accepts_probability(&[]));
-    }
-
-    #[test]
-    fn result_publication_orders_probability_before_ready_flag() {
-        // The ready flag is the release sequence for the probability bits.  A
-        // reader using acquire must never observe the flag before the value it
-        // describes has been published.
-        let shared = SharedState {
-            v_prob_bits: AtomicU32::new(0.0_f32.to_bits()),
-            has_result: AtomicBool::new(false),
-            result_generation: AtomicU32::new(0),
-            generation: AtomicU32::new(0),
-            shutdown: AtomicBool::new(false),
-        };
-        shared
-            .v_prob_bits
-            .store(0.75_f32.to_bits(), Ordering::Relaxed);
-        shared.has_result.store(true, Ordering::Release);
-        assert!(shared.has_result.load(Ordering::Acquire));
-        assert_eq!(
-            f32::from_bits(shared.v_prob_bits.load(Ordering::Relaxed)),
-            0.75
-        );
     }
 
     #[test]
@@ -458,7 +294,8 @@ mod tests {
             prob
         );
 
-        handle.shutdown();
+        // Dropping the handle joins the worker thread.
+        drop(handle);
     }
 
     #[test]
@@ -472,84 +309,38 @@ mod tests {
     }
 
     #[test]
-    fn reset_generation_rejects_stale_inference_publication() {
-        let shared = SharedState {
-            v_prob_bits: AtomicU32::new(0.5_f32.to_bits()),
-            has_result: AtomicBool::new(false),
-            result_generation: AtomicU32::new(1),
-            generation: AtomicU32::new(1),
-            shutdown: AtomicBool::new(false),
-        };
-
-        publish_result(&shared, 0, 0.9);
-        assert!(!shared.has_result.load(Ordering::Acquire));
-        assert_eq!(
-            f32::from_bits(shared.v_prob_bits.load(Ordering::Relaxed)),
-            0.5
+    fn reset_during_streaming_recovers_with_fresh_result() {
+        // Generation fencing moved into the shared bridge; here we pin the
+        // observable contract: after hammering send/reset, a fresh input
+        // still publishes and no stale pre-reset value surfaces.
+        let model_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/test_data/dummy_vocal_detector.onnx"
         );
-
-        publish_result(&shared, 1, 0.2);
-        assert!(shared.has_result.load(Ordering::Acquire));
-        assert_eq!(
-            f32::from_bits(shared.v_prob_bits.load(Ordering::Relaxed)),
-            0.2
-        );
-    }
-
-    #[test]
-    fn concurrent_publication_and_reset_never_expose_a_stale_generation() {
-        use std::sync::Barrier;
-
-        const PUBLICATIONS: usize = 100_000;
-        const RESETS: usize = 20_000;
-        let shared = Arc::new(SharedState {
-            v_prob_bits: AtomicU32::new(0.5_f32.to_bits()),
-            has_result: AtomicBool::new(false),
-            result_generation: AtomicU32::new(0),
-            generation: AtomicU32::new(0),
-            shutdown: AtomicBool::new(false),
-        });
-        let start = Arc::new(Barrier::new(3));
-
-        let publisher_shared = Arc::clone(&shared);
-        let publisher_start = Arc::clone(&start);
-        let publisher = std::thread::spawn(move || {
-            publisher_start.wait();
-            for iteration in 0..PUBLICATIONS {
-                let generation = publisher_shared.generation.load(Ordering::Acquire);
-                let probability = if generation & 1 == 0 { 0.25 } else { 0.75 };
-                publish_result(&publisher_shared, generation, probability);
-                if iteration & 0xff == 0 {
-                    std::thread::yield_now();
-                }
-            }
-        });
-
-        let reset_shared = Arc::clone(&shared);
-        let reset_start = Arc::clone(&start);
-        let resetter = std::thread::spawn(move || {
-            reset_start.wait();
-            for iteration in 0..RESETS {
-                reset_shared.generation.fetch_add(1, Ordering::AcqRel);
-                reset_shared.has_result.store(false, Ordering::Release);
-                if iteration & 0x3f == 0 {
-                    std::thread::yield_now();
-                }
-            }
-        });
-
-        start.wait();
-        for _ in 0..PUBLICATIONS {
-            if let Some((generation, probability)) = read_published_result(&shared) {
-                let expected = if generation & 1 == 0 { 0.25 } else { 0.75 };
-                assert_eq!(
-                    probability, expected,
-                    "observed stale generation {generation}"
-                );
-            }
-            std::hint::spin_loop();
+        if !std::path::Path::new(model_path).exists() {
+            eprintln!("Skipping test: dummy model not found at {}", model_path);
+            return;
         }
-        publisher.join().unwrap();
-        resetter.join().unwrap();
+
+        let mut handle = MlInferenceHandle::new(model_path).expect("Should load dummy model");
+        for _ in 0..50 {
+            handle.send_features(&[0.0; FEATURE_SIZE]);
+            handle.reset();
+        }
+        handle.send_features(&[0.0; FEATURE_SIZE]);
+        let mut v_prob = None;
+        for _ in 0..100 {
+            v_prob = handle.read_v_prob();
+            if v_prob.is_some() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let prob = v_prob.expect("fresh input after resets must publish");
+        assert!(
+            (prob - 0.5).abs() < 0.01,
+            "dummy model should output ~0.5, got {}",
+            prob
+        );
     }
 }

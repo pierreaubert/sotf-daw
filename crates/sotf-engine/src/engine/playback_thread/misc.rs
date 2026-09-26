@@ -197,10 +197,3 @@ pub(super) fn fallback_output_format(
 ) -> (SampleFormat, u16) {
     default_format_and_channels.unwrap_or((SampleFormat::F32, requested_channels))
 }
-
-#[inline(always)]
-pub(super) fn clamp_samples(scratch: &mut [f32]) {
-    for sample in scratch.iter_mut() {
-        *sample = sample.clamp(-1.0, 1.0);
-    }
-}

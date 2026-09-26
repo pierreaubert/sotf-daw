@@ -183,6 +183,12 @@ pub struct IsolatedExternalPluginWorkerStatus {
     pub worker_exit_count: u64,
     /// Number of launch failures.
     pub worker_launch_failure_count: u64,
+    /// Whether the worker is quarantined (crash-loop or repeated block failures).
+    #[serde(default)]
+    pub worker_quarantined: bool,
+    /// Reason text when the worker is quarantined.
+    #[serde(default)]
+    pub worker_quarantine_reason: Option<String>,
     /// Number of block timeouts from the shared-memory proxy.
     pub block_timeout_count: u64,
     /// Number of worker failures while processing blocks.

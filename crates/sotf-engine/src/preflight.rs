@@ -237,15 +237,15 @@ mod tests {
                 panic!("Unexpected error type: {:?}", e);
             }
         }
+    }
 
-        #[cfg(target_os = "linux")]
-        #[test]
-        fn missing_linux_audio_cards_file_is_not_fatal() {
-            let missing = std::env::temp_dir().join("sotf_missing_asound_cards");
-            let _ = std::fs::remove_file(&missing);
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn missing_linux_audio_cards_file_is_not_fatal() {
+        let missing = std::env::temp_dir().join("sotf_missing_asound_cards");
+        let _ = std::fs::remove_file(&missing);
 
-            assert!(check_linux_audio_cards_at(&missing).is_ok());
-        }
+        assert!(check_linux_audio_cards_at(&missing).is_ok());
     }
 
     #[test]

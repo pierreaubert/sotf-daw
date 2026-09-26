@@ -1,9 +1,13 @@
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 use sotf_audio::engine::playback_runtime_harness::{
-    FrameWriterHarness, XorShift64, generated_frame,
+    FrameWriterHarness, PlaybackCallbackHarness, XorShift64, generated_frame,
 };
 
-criterion_group!(benches, benchmark_playback_frame_writer);
+criterion_group!(
+    benches,
+    benchmark_playback_frame_writer,
+    benchmark_playback_callback
+);
 criterion_main!(benches);
 
 fn benchmark_playback_frame_writer(c: &mut Criterion) {
@@ -60,6 +64,42 @@ fn benchmark_playback_frame_writer(c: &mut Criterion) {
             BatchSize::SmallInput,
         );
     });
+
+    group.finish();
+}
+
+/// End-to-end consumer-side cost per callback: ring read + volume ramp +
+/// output metering + clamp. This is the true per-callback budget the
+/// producer-side writer bench does not cover.
+fn benchmark_playback_callback(c: &mut Criterion) {
+    let mut group = c.benchmark_group("playback_callback");
+
+    for channels in [2usize, 8] {
+        for frames in [512usize, 4096] {
+            group.bench_with_input(
+                BenchmarkId::new(format!("{channels}ch"), frames),
+                &(channels, frames),
+                |b, &(channels, frames)| {
+                    let mut harness = PlaybackCallbackHarness::new(
+                        frames * channels * 4,
+                        frames * channels,
+                        channels,
+                        48_000,
+                    );
+                    // Prime the ring so every measured iteration reads full.
+                    let prime = vec![0.5f32; frames * channels];
+                    harness.process(&prime);
+                    b.iter_batched(
+                        || vec![0.5f32; frames * channels],
+                        |input| {
+                            std::hint::black_box(harness.process(&input));
+                        },
+                        BatchSize::SmallInput,
+                    );
+                },
+            );
+        }
+    }
 
     group.finish();
 }

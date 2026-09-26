@@ -6,6 +6,12 @@ use sotf_host::{
     DawHost, ExternalPluginProcessEvent, ExternalPluginWorkerCommand, IsolatedExternalPlugin,
     IsolatedExternalPluginConfig, PluginDescriptor, PluginFormat,
 };
+#[cfg(all(
+    target_os = "linux",
+    feature = "worker-test-backend",
+    feature = "external-plugin-clap"
+))]
+use sotf_host::{ExternalPluginTrust, Plugin, PluginSandboxStatusCode, ProcessContext};
 
 #[test]
 #[cfg(not(feature = "external-plugin-clap"))]
@@ -207,6 +213,72 @@ fn daw_host_can_report_isolated_external_plugin_worker_launch_failures() {
         Some(ExternalPluginProcessEvent::NotRunning)
     );
     assert_eq!(reports[0].error, None);
+}
+
+/// A real worker binary runs the audio path under the enforced Linux sandbox
+/// (Landlock plus the seccomp child-process denial) and must still start,
+/// report `Enforced`, and process audio. The worker-side status only reports
+/// `Enforced` when every denial installs, so this covers the seccomp filter
+/// against the production worker, including its thread spawning.
+#[test]
+#[cfg(all(
+    target_os = "linux",
+    feature = "worker-test-backend",
+    feature = "external-plugin-clap"
+))]
+fn sandboxed_worker_with_child_denial_still_processes_audio() {
+    let (_dir, descriptor) = test_descriptor("external-worker-sandbox-seccomp");
+    let worker_binary = env!("CARGO_BIN_EXE_sotf-external-plugin-worker");
+    let mut sandbox_policy =
+        sotf_host::ExternalPluginSandboxPolicy::for_trust(ExternalPluginTrust::Unknown);
+    // Keep the test portable to kernels without Landlock: enforcement is
+    // asserted below when the platform provides it.
+    sandbox_policy.require_platform_sandbox = false;
+    assert!(
+        !sandbox_policy.allow_child_processes,
+        "untrusted policy must deny child processes"
+    );
+    let mut plugin = IsolatedExternalPlugin::new(
+        descriptor,
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new(worker_binary)
+                .arg("--test-passthrough")
+                .arg("--idle-sleep-micros")
+                .arg("50"),
+            sandbox_policy,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    let status = plugin.worker_sandbox_status();
+    match status.status {
+        PluginSandboxStatusCode::Enforced => {}
+        PluginSandboxStatusCode::Unsupported => {
+            eprintln!(
+                "SKIP: kernel sandbox unavailable (backend {:?}); seccomp path not exercised",
+                status.backend
+            );
+            return;
+        }
+        other => panic!("unexpected worker sandbox status: {other:?} ({status:?})"),
+    }
+
+    // Full-size blocks: the first primes the latency-compensating timeline
+    // (8192 frames) and the second must carry the worker-rendered audio.
+    // Zero block failures proves the sandboxed worker rendered in time.
+    let input: Vec<f32> = (0..8192 * 2).map(|i| (i % 7) as f32 * 0.1).collect();
+    let mut output = vec![0.0; input.len()];
+    let context = ProcessContext::new(48_000, 8192);
+    assert_eq!(plugin.process(&input, &mut output, &context).unwrap(), 8192);
+    let frames = plugin.process(&input, &mut output, &context).unwrap();
+    assert_eq!(frames, 8192);
+    assert_eq!(output, input);
+    assert_eq!(plugin.worker_start_count(), 1);
+    assert_eq!(plugin.block_timeout_count(), 0);
+    assert_eq!(plugin.block_worker_failure_count(), 0);
+    assert!(!plugin.is_worker_quarantined());
 }
 
 fn test_descriptor(name: &str) -> (tempfile::TempDir, PluginDescriptor) {

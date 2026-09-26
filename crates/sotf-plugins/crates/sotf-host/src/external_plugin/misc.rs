@@ -2,6 +2,12 @@
 use std::fs;
 #[cfg(any(feature = "external-plugin-clap", feature = "external-plugin-vst3"))]
 use std::path::Path;
+#[cfg(any(
+    target_os = "linux",
+    target_os = "macos",
+    feature = "external-plugin-clap",
+    feature = "external-plugin-vst3"
+))]
 use std::path::PathBuf;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]

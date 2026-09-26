@@ -1,7 +1,5 @@
 use super::plugin_sandbox_backend::PluginSandboxBackend;
 use super::types::PluginSandboxBackendCapabilities;
-#[cfg(target_os = "linux")]
-use super::types::platform;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PluginSandboxLaunchBackend {
@@ -27,7 +25,12 @@ impl PluginSandboxLaunchBackend {
                 filesystem: true,
                 network: true,
                 local_authorization_profiles: false,
-                child_process_control: false,
+                // Seccomp child-process denial ships on x86_64/aarch64 Linux;
+                // other architectures still report the gap at runtime.
+                child_process_control: cfg!(all(
+                    target_os = "linux",
+                    any(target_arch = "x86_64", target_arch = "aarch64")
+                )),
                 prompt_without_restart: false,
                 store_compatible: true,
             },

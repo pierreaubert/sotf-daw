@@ -2,6 +2,10 @@
 use super::misc::win32_error;
 #[cfg(windows)]
 use super::misc::windows_path_wide;
+#[cfg(windows)]
+use std::io;
+#[cfg(windows)]
+use std::path::Path;
 
 #[cfg(unix)]
 pub(super) fn current_user_tag() -> String {

@@ -42,6 +42,8 @@ pub struct IsolatedExternalPluginWorkerReport {
     pub worker_start_count: u64,
     pub worker_exit_count: u64,
     pub worker_launch_failure_count: u64,
+    pub worker_quarantined: bool,
+    pub worker_quarantine_reason: Option<String>,
     pub block_timeout_count: u64,
     pub block_worker_failure_count: u64,
     pub block_wrong_sequence_count: u64,

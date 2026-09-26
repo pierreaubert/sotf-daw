@@ -36,6 +36,9 @@ pub use plugin_sandbox_backend_code::*;
 pub use plugin_sandbox_status_code::*;
 pub use secure_plugin_shared_memory::*;
 pub use types::*;
+// Re-exported solely for the non-Linux sandbox `platform::enter()` integrity
+// check; gated to match that usage so Linux builds stay warning-free.
+#[cfg(not(target_os = "linux"))]
 pub(crate) use validate::*;
 
 #[repr(C, align(64))]

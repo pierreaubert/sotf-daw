@@ -1,7 +1,8 @@
 //! Sandbox policy for isolated external plugin workers.
 //!
 //! The public policy is intentionally portable, but enforcement is platform
-//! specific. Linux currently applies a best-effort Landlock filesystem sandbox.
+//! specific. Linux applies a Landlock filesystem/network sandbox plus a
+//! seccomp-bpf filter denying child-process creation (x86_64/aarch64).
 //! macOS and Windows expose explicit process-isolation-only backends when native
 //! sandbox enforcement is unavailable in this build.
 
@@ -28,6 +29,8 @@ mod plugin_sandbox_permission_request;
 mod plugin_sandbox_policy;
 mod plugin_sandbox_policy_adapter_issue;
 mod plugin_sandbox_policy_support_issue;
+#[cfg(target_os = "linux")]
+mod seccomp_child_process;
 #[cfg(test)]
 mod tests;
 mod types;

@@ -13,7 +13,7 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, TrySendError, sync_channel};
 use std::thread::{JoinHandle, ThreadId};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub struct ExternalPluginWorkerCommand {
@@ -105,6 +105,11 @@ pub enum ExternalPluginProcessEvent {
 
 const SUPERVISOR_COMMAND_CAPACITY: usize = 8;
 const SUPERVISOR_POLL_INTERVAL: Duration = Duration::from_millis(10);
+/// A worker that dies faster than this counts toward crash-loop quarantine.
+const QUICK_EXIT_WINDOW: Duration = Duration::from_secs(5);
+/// Consecutive quick failures (rapid exits or launch errors) before the
+/// supervisor stops restarting and quarantines the worker instead.
+const MAX_QUICK_FAILURES: u32 = 5;
 
 #[derive(Clone)]
 struct ExternalPluginProcessSnapshot {
@@ -114,6 +119,7 @@ struct ExternalPluginProcessSnapshot {
     start_count: u64,
     exit_count: u64,
     launch_failure_count: u64,
+    quarantined: bool,
     last_stderr: Option<Arc<str>>,
     running: bool,
     // Test-only observability proves process supervision stays off the caller thread.
@@ -154,6 +160,7 @@ impl ExternalPluginProcessSupervisor {
             start_count: 0,
             exit_count: 0,
             launch_failure_count: 0,
+            quarantined: false,
             last_stderr: None,
             running: false,
             supervisor_thread_id: None,
@@ -257,6 +264,10 @@ impl ExternalPluginProcessSupervisor {
         self.snapshot.load().exit_count
     }
 
+    pub fn quarantined(&self) -> bool {
+        self.snapshot.load().quarantined
+    }
+
     pub fn launch_failure_count(&self) -> u64 {
         self.snapshot.load().launch_failure_count
     }
@@ -300,6 +311,13 @@ struct ExternalPluginProcessSupervisorCore {
     exit_count: u64,
     launch_failure_count: u64,
     last_stderr: Option<String>,
+    /// Consecutive quick failures (rapid exits or launch errors).
+    quick_failure_count: u32,
+    /// When the last successful start happened; used to tell instant crashes
+    /// apart from workers that ran fine for a while before exiting.
+    last_start: Option<Instant>,
+    /// Set once the crash loop trips; refuses restarts until `terminate()`.
+    quarantined: bool,
 }
 
 impl ExternalPluginProcessSupervisorCore {
@@ -312,13 +330,34 @@ impl ExternalPluginProcessSupervisorCore {
             exit_count: 0,
             launch_failure_count: 0,
             last_stderr: None,
+            quick_failure_count: 0,
+            last_start: None,
+            quarantined: false,
         }
     }
 
     fn ensure_running(&mut self) -> Result<ExternalPluginProcessEvent, String> {
+        if self.quarantined {
+            return Err(self.quarantine_message("restarts refused while quarantined"));
+        }
+
         if let Some(event) = self.poll_process()?
             && matches!(event, ExternalPluginProcessEvent::Exited { .. })
         {
+            // A worker that lived a full window earned its exit; only instant
+            // crashes count toward the circuit breaker.
+            match self.last_start {
+                Some(started) if started.elapsed() >= QUICK_EXIT_WINDOW => {
+                    self.quick_failure_count = 0;
+                }
+                _ => {
+                    self.quick_failure_count = self.quick_failure_count.saturating_add(1);
+                }
+            }
+            if self.quick_failure_count >= MAX_QUICK_FAILURES {
+                self.quarantined = true;
+                return Err(self.quarantine_message("worker keeps exiting immediately"));
+            }
             return self.start();
         }
 
@@ -327,6 +366,24 @@ impl ExternalPluginProcessSupervisorCore {
         }
 
         self.start()
+    }
+
+    fn quarantine_message(&self, detail: &str) -> String {
+        format!(
+            "external plugin worker quarantined after {} quick failures; {detail}",
+            self.quick_failure_count
+        )
+    }
+
+    fn note_launch_failure(&mut self, err: String) -> String {
+        self.launch_failure_count = self.launch_failure_count.saturating_add(1);
+        self.quick_failure_count = self.quick_failure_count.saturating_add(1);
+        if self.quick_failure_count >= MAX_QUICK_FAILURES {
+            self.quarantined = true;
+            self.quarantine_message(&format!("last launch error: {err}"))
+        } else {
+            err
+        }
     }
 
     fn poll_process(&mut self) -> Result<Option<ExternalPluginProcessEvent>, String> {
@@ -352,6 +409,10 @@ impl ExternalPluginProcessSupervisorCore {
     }
 
     fn terminate(&mut self) -> Result<(), String> {
+        // Explicit teardown lifts the quarantine: the next `ensure_running`
+        // starts fresh instead of refusing.
+        self.quarantined = false;
+        self.quick_failure_count = 0;
         let Some(mut child) = self.child.take() else {
             return Ok(());
         };
@@ -378,11 +439,10 @@ impl ExternalPluginProcessSupervisorCore {
     fn start(&mut self) -> Result<ExternalPluginProcessEvent, String> {
         self.last_stderr = None;
         if !self.command.program().is_absolute() {
-            self.launch_failure_count = self.launch_failure_count.saturating_add(1);
-            return Err(format!(
+            return Err(self.note_launch_failure(format!(
                 "external plugin worker path must be absolute: '{}'",
                 self.command.program().display()
-            ));
+            )));
         }
 
         let mut command = self.command.to_command(&self.shared_memory_path);
@@ -391,15 +451,13 @@ impl ExternalPluginProcessSupervisorCore {
                 let pid = child.id();
                 self.child = Some(child);
                 self.start_count = self.start_count.saturating_add(1);
+                self.last_start = Some(Instant::now());
                 Ok(ExternalPluginProcessEvent::Started { pid })
             }
-            Err(err) => {
-                self.launch_failure_count = self.launch_failure_count.saturating_add(1);
-                Err(format!(
-                    "failed to launch external plugin worker '{}': {err}",
-                    self.command.program().display()
-                ))
-            }
+            Err(err) => Err(self.note_launch_failure(format!(
+                "failed to launch external plugin worker '{}': {err}",
+                self.command.program().display()
+            ))),
         }
     }
 }
@@ -425,6 +483,7 @@ fn publish_supervisor_snapshot(
         start_count: core.start_count,
         exit_count: core.exit_count,
         launch_failure_count: core.launch_failure_count,
+        quarantined: core.quarantined,
         last_stderr: core.last_stderr.as_deref().map(Arc::<str>::from),
         running: core.child.is_some(),
         supervisor_thread_id: Some(supervisor_thread_id),
@@ -627,6 +686,67 @@ mod tests {
         let err = supervisor.ensure_running().unwrap_err();
         assert!(err.contains("failed to launch external plugin worker"));
         assert_eq!(supervisor.launch_failure_count(), 1);
+    }
+
+    #[test]
+    fn test_supervisor_quarantines_crash_loop() {
+        // The test binary exits immediately with --help: each restart dies
+        // within the quick-exit window, so the breaker must trip instead of
+        // respawning forever.
+        let exe = std::env::current_exe().unwrap();
+        let mut core = ExternalPluginProcessSupervisorCore::new(
+            ExternalPluginWorkerCommand::new(exe).arg("--help"),
+            "/tmp/sotf-plugin-test-quarantine.shm",
+        );
+
+        let mut quarantined = false;
+        for _ in 0..50 {
+            match core.ensure_running() {
+                Ok(_) => std::thread::sleep(Duration::from_millis(10)),
+                Err(err) if err.contains("quarantined") => {
+                    quarantined = true;
+                    break;
+                }
+                Err(err) => panic!("unexpected supervisor error: {err}"),
+            }
+        }
+        assert!(quarantined, "crash loop must trip the circuit breaker");
+        assert!(
+            core.start_count <= 6,
+            "restarts must stay bounded, got {}",
+            core.start_count
+        );
+
+        // Explicit termination lifts the quarantine for a fresh start.
+        core.terminate().unwrap();
+        assert!(matches!(
+            core.ensure_running(),
+            Ok(ExternalPluginProcessEvent::Started { .. })
+        ));
+    }
+
+    #[test]
+    fn test_supervisor_quarantines_repeated_launch_failures() {
+        let mut core = ExternalPluginProcessSupervisorCore::new(
+            ExternalPluginWorkerCommand::new("/definitely/not/a/real/sotf/external/plugin/worker"),
+            "/tmp/sotf-plugin-test-quarantine.shm",
+        );
+
+        // Early failures still report the root cause verbatim.
+        let err = core.ensure_running().unwrap_err();
+        assert!(err.contains("failed to launch external plugin worker"));
+
+        let mut quarantined = false;
+        for _ in 0..10 {
+            if let Err(err) = core.ensure_running()
+                && err.contains("quarantined")
+            {
+                quarantined = true;
+                break;
+            }
+        }
+        assert!(quarantined, "repeated launch failures must quarantine");
+        assert_eq!(core.launch_failure_count, 5);
     }
 
     #[test]

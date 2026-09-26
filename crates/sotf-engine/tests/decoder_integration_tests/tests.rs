@@ -133,6 +133,34 @@ fn test_create_decoder_invalid_file() {
 }
 
 #[test]
+fn test_truncated_file_terminates_decode() {
+    // Valid header with the data cut off mid-stream: decode must terminate
+    // (clean eof or explicit error), never spin waiting for missing frames.
+    let (wav_file, _) = temp_sine_wav(0.5, 48_000, 2, 440.0).unwrap();
+    let bytes = std::fs::read(wav_file.path()).unwrap();
+    assert!(bytes.len() > 1024);
+    let cut = tempfile::Builder::new().suffix(".wav").tempfile().unwrap();
+    std::fs::write(cut.path(), &bytes[..bytes.len() / 2]).unwrap();
+
+    let mut decoder = create_decoder(cut.path()).unwrap();
+    let spec = decoder.spec().clone();
+    let mut destination = DecodedAudio::new(spec);
+    let mut iterations = 0usize;
+    // A corrupt tail fails closed: explicit error is acceptable termination.
+    while let Ok(frames) = decoder.decode_into(&mut destination) {
+        iterations += 1;
+        if frames == 0 || decoder.is_eof() {
+            break;
+        }
+        assert!(
+            iterations < 512,
+            "decode did not terminate on truncated input after {iterations} iterations"
+        );
+    }
+    assert_finite_audio(&destination.samples);
+}
+
+#[test]
 fn test_decoder_reuses_destination_without_stale_or_non_finite_samples() {
     let (wav_file, _) = temp_sine_wav(0.05, 48_000, 2, 440.0).unwrap();
     let mut decoder = create_decoder(wav_file.path()).unwrap();

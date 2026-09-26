@@ -101,6 +101,8 @@ struct PlaybackRuntime {
     host: cpal::Host,
     output_device: Option<String>,
     allow_virtual_output: bool,
+    // Read only by the macOS exclusive-mode recovery path.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     output_access: OutputAccessMode,
     output_access_status: OutputAccessStatus,
     #[cfg(target_os = "macos")]
@@ -194,6 +196,8 @@ impl PlaybackRuntime {
             .is_some_and(crate::devices::is_asio_device);
 
         let output_access_plan = plan_output_access(output_access, output_device.as_deref());
+        // Mutated only by the macOS exclusive-mode activation below.
+        #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
         let mut output_access_status = output_access_plan.status;
         if output_access.requires_exclusive()
             && output_access_status == OutputAccessStatus::Unsupported

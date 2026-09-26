@@ -107,6 +107,11 @@ required-features = ["playback-runtime-harness"]
 name = "timeline_processor_benchmark"
 harness = false
 
+[[bench]]
+name = "volume_ramp_benchmark"
+harness = false
+required-features = ["playback-runtime-harness"]
+
 [[test]]
 name = "playback_runtime_allocation_tests"
 required-features = ["playback-runtime-harness"]
