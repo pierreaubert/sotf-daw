@@ -6,6 +6,7 @@ pub enum PluginSandboxBackendCode {
     MacosProcessIsolation = 2,
     WindowsProcessIsolation = 3,
     MacosAppSandboxHelper = 4,
+    WindowsAppContainerWorker = 5,
 }
 
 impl PluginSandboxBackendCode {
@@ -15,6 +16,7 @@ impl PluginSandboxBackendCode {
             2 => Self::MacosProcessIsolation,
             3 => Self::WindowsProcessIsolation,
             4 => Self::MacosAppSandboxHelper,
+            5 => Self::WindowsAppContainerWorker,
             _ => Self::Unknown,
         }
     }

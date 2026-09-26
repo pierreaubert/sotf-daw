@@ -654,6 +654,25 @@ fn isolated_external_plugin_rejects_helper_backend_without_launcher() {
 }
 
 #[test]
+fn isolated_external_plugin_rejects_windows_backend_without_launcher() {
+    let config = IsolatedExternalPluginConfig {
+        capability_sandbox_policy: Some(PluginSandboxPolicy::strict_with_preset_dir(
+            "/tmp/sotf-presets",
+        )),
+        sandbox_launch_backend: PluginSandboxLaunchBackend::WindowsAppContainerWorker,
+        start_worker: false,
+        ..Default::default()
+    };
+
+    let err = match IsolatedExternalPlugin::new(descriptor(), 48_000, config) {
+        Ok(_) => panic!("expected Windows backend to require launcher command"),
+        Err(err) => err,
+    };
+
+    assert!(err.contains("requires a host-owned sandbox launcher command"));
+}
+
+#[test]
 fn sandbox_launcher_command_receives_worker_metadata() {
     let config = IsolatedExternalPluginConfig {
         worker_command: ExternalPluginWorkerCommand::new("/tmp/sotf-worker")

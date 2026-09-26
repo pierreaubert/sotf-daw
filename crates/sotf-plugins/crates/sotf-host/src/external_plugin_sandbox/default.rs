@@ -10,6 +10,9 @@ pub fn default_plugin_sandbox_launcher_command_for_backend(
         PluginSandboxLaunchBackend::MacosAppSandboxHelper => {
             Some(ExternalPluginWorkerCommand::default_macos_sandbox_helper_binary())
         }
+        PluginSandboxLaunchBackend::WindowsAppContainerWorker => {
+            Some(ExternalPluginWorkerCommand::default_windows_sandbox_launcher_binary())
+        }
         _ => None,
     }
 }

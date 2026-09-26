@@ -405,6 +405,7 @@ mod desktop {
             "macos-app-sandbox-helper" => PluginSandboxBackendCode::MacosAppSandboxHelper,
             "macos-process-isolation" => PluginSandboxBackendCode::MacosProcessIsolation,
             "windows-process-isolation" => PluginSandboxBackendCode::WindowsProcessIsolation,
+            "windows-appcontainer-worker" => PluginSandboxBackendCode::WindowsAppContainerWorker,
             _ => PluginSandboxBackendCode::Unknown,
         }
     }
@@ -665,6 +666,14 @@ mod desktop {
             assert_eq!(
                 sandbox_backend_code("macos-app-sandbox-helper"),
                 PluginSandboxBackendCode::MacosAppSandboxHelper
+            );
+        }
+
+        #[test]
+        fn sandbox_backend_code_maps_windows_appcontainer_worker() {
+            assert_eq!(
+                sandbox_backend_code("windows-appcontainer-worker"),
+                PluginSandboxBackendCode::WindowsAppContainerWorker
             );
         }
 

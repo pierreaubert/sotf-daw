@@ -185,6 +185,30 @@ fn default_launcher_command_for_macos_helper_uses_helper_binary() {
     );
 }
 
+#[test]
+fn default_launcher_command_for_windows_worker_uses_launcher_binary() {
+    let launcher = default_plugin_sandbox_launcher_command_for_backend(
+        PluginSandboxLaunchBackend::WindowsAppContainerWorker,
+    )
+    .unwrap();
+
+    assert!(
+        launcher
+            .program()
+            .ends_with(ExternalPluginWorkerCommand::DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY)
+    );
+}
+
+#[test]
+fn strict_policy_is_fully_supported_by_windows_appcontainer_backend() {
+    let policy = PluginSandboxPolicy::strict_with_preset_dir("/tmp/sotf-presets");
+    let plan = policy.launch_plan(PluginSandboxLaunchBackend::WindowsAppContainerWorker);
+
+    assert!(plan.is_store_compatible());
+    assert!(plan.is_fully_supported());
+    assert!(plan.validate_for_launch(&policy).is_ok());
+}
+
 #[cfg(target_os = "macos")]
 #[test]
 fn macos_app_sandbox_container_selects_helper_backend() {

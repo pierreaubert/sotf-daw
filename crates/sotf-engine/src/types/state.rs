@@ -161,6 +161,7 @@ pub enum IsolatedExternalPluginSandboxBackend {
     MacosAppSandboxHelper,
     MacosProcessIsolation,
     WindowsProcessIsolation,
+    WindowsAppContainerWorker,
 }
 
 /// Snapshot of a single isolated external plugin worker status.

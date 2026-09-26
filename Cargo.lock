@@ -6582,6 +6582,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "plugins-inference"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "rtrb",
+]
+
+[[package]]
 name = "plugins-nih"
 version = "0.5.4"
 dependencies = [
@@ -7068,6 +7076,16 @@ name = "rangemap"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a611d15b50743feb4c76b7d03edcb0e64f399c26961e4efe6975bc398be6aa3d"
+
+[[package]]
+name = "rappct"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11762a6aea3b0a87a51b21cb2085d252f10c01cd0f3f505e1da002cf6e2427da"
+dependencies = [
+ "thiserror 2.0.21",
+ "windows 0.62.2",
+]
 
 [[package]]
 name = "ratatui"
@@ -8355,6 +8373,7 @@ dependencies = [
  "objc2-core-foundation",
  "proptest",
  "rand 0.10.3",
+ "rappct",
  "rayon",
  "realfft",
  "rtrb",
@@ -8880,8 +8899,8 @@ dependencies = [
  "math-dsp",
  "math-iir-fir",
  "ndarray 0.17.2",
+ "plugins-inference",
  "realfft",
- "rtrb",
  "rustfft 6.4.1",
  "serde",
  "serde_json",

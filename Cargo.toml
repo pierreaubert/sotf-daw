@@ -51,6 +51,7 @@ members = [
     "crates/sotf-plugins/crates/plugins-denoiser",
     "crates/sotf-plugins/crates/plugins-ffi",
     "crates/sotf-plugins/crates/plugins-gpui",
+    "crates/sotf-plugins/crates/plugins-inference",
     "crates/sotf-plugins/crates/plugins-nih",
     "crates/sotf-plugins/crates/plugins-spatial",
     "crates/sotf-iamf",
@@ -75,6 +76,7 @@ driver-common = { path = "crates/driver-common" }
 driver-hal = { path = "crates/driver-hal" }
 plugins-denoiser = { path = "crates/sotf-plugins/crates/plugins-denoiser" }
 plugins-gpui = { path = "crates/sotf-plugins/crates/plugins-gpui" }
+plugins-inference = { path = "crates/sotf-plugins/crates/plugins-inference" }
 plugins-spatial = { path = "crates/sotf-plugins/crates/plugins-spatial" }
 sotf-engine = { path = "crates/sotf-engine", default-features = false }
 sotf-host = { path = "crates/sotf-plugins/crates/sotf-host", default-features = false }

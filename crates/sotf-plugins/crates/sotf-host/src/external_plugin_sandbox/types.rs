@@ -415,11 +415,13 @@ pub(super) mod platform {
     const MACOS_APP_SANDBOX_CONTAINER_ENV: &str = "APP_SANDBOX_CONTAINER_ID";
     #[cfg(target_os = "windows")]
     const BACKEND_NAME: &str = "windows-process-isolation";
+    #[cfg(target_os = "windows")]
+    pub(super) const WINDOWS_APPCONTAINER_BACKEND_NAME: &str = "windows-appcontainer-worker";
     #[cfg(target_os = "macos")]
     const BACKEND_NOTE: &str =
         "macOS native sandbox backend is unavailable in this build; worker uses process isolation";
     #[cfg(target_os = "windows")]
-    const BACKEND_NOTE: &str = "Windows native sandbox backend is unavailable in this build; worker uses process isolation";
+    const BACKEND_NOTE: &str = "worker is not running inside the Windows AppContainer; process isolation only";
 
     #[cfg(target_os = "macos")]
     use std::ffi::OsStr;
@@ -455,7 +457,12 @@ pub(super) mod platform {
             )
         }
 
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(target_os = "windows")]
+        {
+            super::super::PluginSandboxLaunchBackend::WindowsAppContainerWorker
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         {
             super::super::PluginSandboxLaunchBackend::ProcessIsolationOnly {
                 platform: BACKEND_NAME,
@@ -488,9 +495,40 @@ pub(super) mod platform {
             });
         }
 
+        #[cfg(target_os = "windows")]
+        {
+            enter_windows_appcontainer()
+        }
+
+        #[cfg(not(target_os = "windows"))]
         Ok(ExternalPluginSandboxStatus::Unsupported {
             backend: BACKEND_NAME,
             reason: BACKEND_NOTE.to_string(),
         })
+    }
+
+    /// Confirm the worker is actually confined in the rappct AppContainer.
+    ///
+    /// The token query is authoritative: unlike an environment flag it cannot
+    /// be set by the plugin itself, so a worker launched without the
+    /// `sotf-windows-sandbox-launcher` reports `Unsupported` and fails closed
+    /// when the policy requires platform enforcement.
+    #[cfg(target_os = "windows")]
+    fn enter_windows_appcontainer() -> Result<ExternalPluginSandboxStatus, String> {
+        match rappct::token::query_current_process_token() {
+            Ok(info) if info.is_appcontainer => {
+                Ok(ExternalPluginSandboxStatus::Enforced {
+                    backend: WINDOWS_APPCONTAINER_BACKEND_NAME,
+                })
+            }
+            Ok(_) => Ok(ExternalPluginSandboxStatus::Unsupported {
+                backend: BACKEND_NAME,
+                reason: BACKEND_NOTE.to_string(),
+            }),
+            Err(err) => Ok(ExternalPluginSandboxStatus::Unsupported {
+                backend: BACKEND_NAME,
+                reason: format!("Windows AppContainer token query failed: {err}"),
+            }),
+        }
     }
 }

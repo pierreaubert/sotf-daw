@@ -35,6 +35,13 @@ check:
 test:
 	{{cargo}} test --workspace {{ffi_exclude}} --lib --bins --tests --examples
 
+# Feature-gated sandbox end-to-end: real worker binary under the enforced
+# Linux sandbox (Landlock + seccomp child-process denial). Not covered by
+# `test` above, which uses default features.
+[group('test')]
+test-sandbox-e2e:
+	{{cargo}} test -p sotf-host --features worker-test-backend,external-plugin-clap --test external_plugin_isolation
+
 # ----------------------------------------------------------------------
 # LINT (same target name as sotf)
 # ----------------------------------------------------------------------

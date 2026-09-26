@@ -25,6 +25,8 @@ pub struct ExternalPluginWorkerCommand {
 impl ExternalPluginWorkerCommand {
     pub const DEFAULT_WORKER_BINARY: &'static str = "sotf-external-plugin-worker";
     pub const DEFAULT_MACOS_SANDBOX_HELPER_BINARY: &'static str = "sotf-macos-sandbox-helper";
+    pub const DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY: &'static str =
+        "sotf-windows-sandbox-launcher";
 
     pub fn default_worker_binary() -> Self {
         Self::sibling_binary(Self::DEFAULT_WORKER_BINARY)
@@ -32,6 +34,10 @@ impl ExternalPluginWorkerCommand {
 
     pub fn default_macos_sandbox_helper_binary() -> Self {
         Self::sibling_binary(Self::DEFAULT_MACOS_SANDBOX_HELPER_BINARY)
+    }
+
+    pub fn default_windows_sandbox_launcher_binary() -> Self {
+        Self::sibling_binary(Self::DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY)
     }
 
     fn sibling_binary(name: &'static str) -> Self {

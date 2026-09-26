@@ -85,5 +85,8 @@ pub(super) fn isolated_external_plugin_sandbox_backend(
         PluginSandboxBackendCode::WindowsProcessIsolation => {
             IsolatedExternalPluginSandboxBackend::WindowsProcessIsolation
         }
+        PluginSandboxBackendCode::WindowsAppContainerWorker => {
+            IsolatedExternalPluginSandboxBackend::WindowsAppContainerWorker
+        }
     }
 }

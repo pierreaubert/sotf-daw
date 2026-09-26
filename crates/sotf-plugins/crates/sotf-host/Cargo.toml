@@ -33,6 +33,10 @@ path = "bin/external_plugin_worker.rs"
 name = "sotf-macos-sandbox-helper"
 path = "bin/macos_sandbox_helper.rs"
 
+[[bin]]
+name = "sotf-windows-sandbox-launcher"
+path = "bin/windows_sandbox_launcher.rs"
+
 [features]
 default = []
 qa = ["dep:criterion"]
@@ -88,6 +92,7 @@ windows-sys = { workspace = true, features = [
     "Win32_System_SystemServices",
     "Win32_System_Threading",
 ] }
+rappct = "0.13.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-audio-toolbox = { version = "0.3", optional = true, default-features = false, features = [

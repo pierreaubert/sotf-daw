@@ -46,8 +46,11 @@ pub(super) fn sandbox_reason_text(
                 "macOS App Sandbox helper reported unsupported at runtime".to_string()
             }
             PluginSandboxBackendCode::WindowsProcessIsolation => {
-                "Windows native sandbox backend is unavailable in this build; worker uses process isolation"
+                "Windows AppContainer launcher did not confine the worker; process isolation only"
                     .to_string()
+            }
+            PluginSandboxBackendCode::WindowsAppContainerWorker => {
+                "Windows AppContainer worker reported unsupported at runtime".to_string()
             }
             PluginSandboxBackendCode::LinuxLandlock => {
                 "Linux sandbox backend reported unsupported at runtime".to_string()
