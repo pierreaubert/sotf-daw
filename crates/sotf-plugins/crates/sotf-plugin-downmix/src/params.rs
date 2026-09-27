@@ -232,15 +232,15 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.center_gain_db = value,
-            1 => self.surround_gain_db = value,
-            2 => self.height_gain_db = value,
-            3 => self.lfe_gain_db = value,
-            4 => self.phase_coherence = value > 0.5,
-            5 => self.phase_blend_low_hz = value,
-            6 => self.phase_blend_high_hz = value,
-            7 => self.itu_mode = value > 0.5,
-            8 => self.matrix_ltrt = value > 0.5,
+            0 => self.center_gain_db = PARAMS[0].clamp_f64(value),
+            1 => self.surround_gain_db = PARAMS[1].clamp_f64(value),
+            2 => self.height_gain_db = PARAMS[2].clamp_f64(value),
+            3 => self.lfe_gain_db = PARAMS[3].clamp_f64(value),
+            4 => self.phase_coherence = PARAMS[4].clamp_f64(value) > 0.5,
+            5 => self.phase_blend_low_hz = PARAMS[5].clamp_f64(value),
+            6 => self.phase_blend_high_hz = PARAMS[6].clamp_f64(value),
+            7 => self.itu_mode = PARAMS[7].clamp_f64(value) > 0.5,
+            8 => self.matrix_ltrt = PARAMS[8].clamp_f64(value) > 0.5,
             _ => {}
         }
     }
@@ -310,5 +310,16 @@ mod tests {
         );
         assert_eq!(p.itu_mode, pk(PARAMS, "itu_mode").default_bool());
         assert_eq!(p.matrix_ltrt, pk(PARAMS, "matrix_ltrt").default_bool());
+    }
+
+    #[test]
+    fn indexed_set_clamps_to_spec_range() {
+        let mut p = Params::default();
+        // center_gain_db range per PARAMS.
+        let spec = pk(PARAMS, "center_gain_db");
+        p.set_param_value(0, 1e9);
+        assert_eq!(p.param_value(0), Some(spec.max_f64()));
+        p.set_param_value(0, -1e9);
+        assert_eq!(p.param_value(0), Some(spec.min_f64()));
     }
 }

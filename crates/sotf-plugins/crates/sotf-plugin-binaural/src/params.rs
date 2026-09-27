@@ -281,7 +281,7 @@ impl PluginParamDef for Params {
             10 => Some(self.head_yaw_deg),
             11 => Some(self.head_pitch_deg),
             12 => Some(self.head_roll_deg),
-            13 => None,
+            13 => None, // hrtf_database_dir (FilePath — handled separately)
             14 => Some(self.head_width_cm),
             15 => Some(self.ear_height_cm),
             _ => None,
@@ -291,21 +291,21 @@ impl PluginParamDef for Params {
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
             0 => {} // sofa_file (FilePath — handled separately)
-            1 => self.input_channels = value as usize,
-            2 => self.externalization = value,
-            3 => self.near_field_strength = value,
-            4 => self.crossfade_mode = value as usize,
-            5 => self.late_reverb_enabled = value > 0.5,
-            6 => self.late_reverb_mix = value,
-            7 => self.late_reverb_rt60 = value,
-            8 => self.late_reverb_damping = value,
-            9 => self.crossfade_ms = value,
-            10 => self.head_yaw_deg = value,
-            11 => self.head_pitch_deg = value,
-            12 => self.head_roll_deg = value,
-            13 => {}
-            14 => self.head_width_cm = value,
-            15 => self.ear_height_cm = value,
+            1 => self.input_channels = PARAMS[1].clamp_f64(value) as usize,
+            2 => self.externalization = PARAMS[2].clamp_f64(value),
+            3 => self.near_field_strength = PARAMS[3].clamp_f64(value),
+            4 => self.crossfade_mode = PARAMS[4].clamp_f64(value) as usize,
+            5 => self.late_reverb_enabled = PARAMS[5].clamp_f64(value) > 0.5,
+            6 => self.late_reverb_mix = PARAMS[6].clamp_f64(value),
+            7 => self.late_reverb_rt60 = PARAMS[7].clamp_f64(value),
+            8 => self.late_reverb_damping = PARAMS[8].clamp_f64(value),
+            9 => self.crossfade_ms = PARAMS[9].clamp_f64(value),
+            10 => self.head_yaw_deg = PARAMS[10].clamp_f64(value),
+            11 => self.head_pitch_deg = PARAMS[11].clamp_f64(value),
+            12 => self.head_roll_deg = PARAMS[12].clamp_f64(value),
+            13 => {} // hrtf_database_dir (FilePath — handled separately)
+            14 => self.head_width_cm = PARAMS[14].clamp_f64(value),
+            15 => self.ear_height_cm = PARAMS[15].clamp_f64(value),
             _ => {}
         }
     }

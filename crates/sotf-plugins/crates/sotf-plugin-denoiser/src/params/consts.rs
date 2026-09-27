@@ -169,7 +169,7 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .structural()
     .secondary("Noise Profile")
-    .doc("Capture noise-only reference"),
+    .doc("Trigger: capture noise-only reference. Fired via named set_parameter; the indexed API stores but never fires it"),
     ParamSpec::bool_param(
         "Use Profile",
         "use_captured_profile",
@@ -188,7 +188,7 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .structural()
     .secondary("Noise Profile")
-    .doc("Discard captured noise profile"),
+    .doc("Trigger: discard captured profile. Always reads 0.0; indexed set is a no-op, use named set_parameter"),
     ParamSpec::bool_param("Formant Preserve", "formant_preservation", false, "Formant")
         .secondary("Formant")
         .doc("Protect vocal formant structure"),

@@ -130,9 +130,9 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.bit_depth = value as usize,
-            1 => self.noise_shaping = value > 0.5,
-            2 => self.dither_type = value as usize,
+            0 => self.bit_depth = PARAMS[0].clamp_f64(value) as usize,
+            1 => self.noise_shaping = PARAMS[1].clamp_f64(value) > 0.5,
+            2 => self.dither_type = PARAMS[2].clamp_f64(value) as usize,
             _ => {}
         }
     }

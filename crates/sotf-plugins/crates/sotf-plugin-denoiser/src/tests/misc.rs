@@ -338,3 +338,17 @@ fn test_power_at_bin_reads_no_alloc_vector_per_call() {
     let p = plugin.get_power_at_bin(0, 3);
     assert!((p - 25.0).abs() < 1e-6, "Expected norm^2 = 25, got {p}");
 }
+
+#[test]
+fn test_trigger_params_indexed_api_contract() {
+    // learn_noise (20) and clear_profile (22) are trigger-only: the indexed
+    // API must never observe or fire them; only named set_parameter does.
+    let mut denoiser = DenoiserPlugin::new(2, false);
+    denoiser.initialize(SAMPLE_RATE).unwrap();
+
+    assert_eq!(denoiser.param_value(22), Some(0.0));
+    denoiser.set_param_value(22, 1.0);
+    assert_eq!(denoiser.param_value(22), Some(0.0));
+    denoiser.set_param_value(20, 1.0);
+    assert_eq!(denoiser.param_value(20), Some(0.0));
+}

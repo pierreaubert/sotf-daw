@@ -1310,33 +1310,63 @@ impl UpmixerPlugin {
         match index {
             // 0 => speaker_config -- handled as side effect in set_parameter
             0 => {} // no-op, side effect handles this
-            1 => self.gains.gain_front_direct.set_target(value as f32),
-            2 => self.gains.gain_front_ambient.set_target(value as f32),
-            3 => self.gains.gain_rear_ambient.set_target(value as f32),
-            4 => self.height.height_gain.set_target(value as f32),
-            5 => self.gains.lfe_gain.set_target(value as f32),
+            1 => self
+                .gains
+                .gain_front_direct
+                .set_target(UP[1].clamp_f64(value) as f32),
+            2 => self
+                .gains
+                .gain_front_ambient
+                .set_target(UP[2].clamp_f64(value) as f32),
+            3 => self
+                .gains
+                .gain_rear_ambient
+                .set_target(UP[3].clamp_f64(value) as f32),
+            4 => self
+                .height
+                .height_gain
+                .set_target(UP[4].clamp_f64(value) as f32),
+            5 => self
+                .gains
+                .lfe_gain
+                .set_target(UP[5].clamp_f64(value) as f32),
             6 => self
                 .param_smoothers
                 .lfe_cutoff_hz_smoother
                 .set_target(value as f32),
-            7 => self.subharmonic.enable_subharmonic_synth = value > 0.5,
-            8 => self.subharmonic.subharmonic_gain.set_target(value as f32),
-            9 => self.subharmonic.subharmonic_freq_hz = value as f32,
-            10 => self.subharmonic.subharmonic_attack_ms = value as f32,
-            11 => self.subharmonic.subharmonic_release_ms = value as f32,
-            12 => self.gains.stereo_width.set_target(value as f32),
-            13 => self.gains.center_spread.set_target(value as f32),
+            7 => self.subharmonic.enable_subharmonic_synth = UP[7].clamp_f64(value) > 0.5,
+            8 => self
+                .subharmonic
+                .subharmonic_gain
+                .set_target(UP[8].clamp_f64(value) as f32),
+            9 => self.subharmonic.subharmonic_freq_hz = UP[9].clamp_f64(value) as f32,
+            10 => self.subharmonic.subharmonic_attack_ms = UP[10].clamp_f64(value) as f32,
+            11 => self.subharmonic.subharmonic_release_ms = UP[11].clamp_f64(value) as f32,
+            12 => self
+                .gains
+                .stereo_width
+                .set_target(UP[12].clamp_f64(value) as f32),
+            13 => self
+                .gains
+                .center_spread
+                .set_target(UP[13].clamp_f64(value) as f32),
             14 => self
                 .param_smoothers
                 .bandpass_hz_smoother
                 .set_target(value as f32),
-            15 => self.params.enable_hr_direct = value > 0.5,
-            16 => self.gains.hr_sharpen.set_target(value as f32),
-            17 => self.surround.ambient_boost.set_target(value as f32),
-            18 => self.decorrelation.decorrelation_mode = value as usize,
-            19 => self.decorrelation.decorrelation_lfo_rate_hz = value as f32,
-            20 => self.decorrelation.velvet_noise_duration_ms = value as f32,
-            21 => self.decorrelation.velvet_noise_density = value as f32,
+            15 => self.params.enable_hr_direct = UP[15].clamp_f64(value) > 0.5,
+            16 => self
+                .gains
+                .hr_sharpen
+                .set_target(UP[16].clamp_f64(value) as f32),
+            17 => self
+                .surround
+                .ambient_boost
+                .set_target(UP[17].clamp_f64(value) as f32),
+            18 => self.decorrelation.decorrelation_mode = UP[18].clamp_f64(value) as usize,
+            19 => self.decorrelation.decorrelation_lfo_rate_hz = UP[19].clamp_f64(value) as f32,
+            20 => self.decorrelation.velvet_noise_duration_ms = UP[20].clamp_f64(value) as f32,
+            21 => self.decorrelation.velvet_noise_density = UP[21].clamp_f64(value) as f32,
             22 => self
                 .param_smoothers
                 .height_hf_cap_hz_smoother
@@ -1345,11 +1375,26 @@ impl UpmixerPlugin {
                 .height
                 .height_transient_reduction
                 .set_target(value as f32),
-            24 => self.height.height_direct_leak.set_target(value as f32),
-            25 => self.surround.surround_direct_bleed.set_target(value as f32),
-            26 => self.surround.rear_ambient_boost.set_target(value as f32),
-            27 => self.surround.rear_late_reflection.set_target(value as f32),
-            28 => self.dialogue.dialogue_weight.set_target(value as f32),
+            24 => self
+                .height
+                .height_direct_leak
+                .set_target(UP[24].clamp_f64(value) as f32),
+            25 => self
+                .surround
+                .surround_direct_bleed
+                .set_target(UP[25].clamp_f64(value) as f32),
+            26 => self
+                .surround
+                .rear_ambient_boost
+                .set_target(UP[26].clamp_f64(value) as f32),
+            27 => self
+                .surround
+                .rear_late_reflection
+                .set_target(UP[27].clamp_f64(value) as f32),
+            28 => self
+                .dialogue
+                .dialogue_weight
+                .set_target(UP[28].clamp_f64(value) as f32),
             29 => {
                 self.dialogue.voice_freq_min_hz =
                     (value as f32).min(self.dialogue.voice_freq_max_hz);
@@ -1358,14 +1403,14 @@ impl UpmixerPlugin {
                 self.dialogue.voice_freq_max_hz =
                     (value as f32).max(self.dialogue.voice_freq_min_hz);
             }
-            31 => self.dialogue.dialogue_centroid_weight = value as f32,
-            32 => self.dialogue.dialogue_variance_weight = value as f32,
-            33 => self.dialogue.dialogue_coherence_weight = value as f32,
+            31 => self.dialogue.dialogue_centroid_weight = UP[31].clamp_f64(value) as f32,
+            32 => self.dialogue.dialogue_variance_weight = UP[32].clamp_f64(value) as f32,
+            33 => self.dialogue.dialogue_coherence_weight = UP[33].clamp_f64(value) as f32,
             34 => self
                 .param_smoothers
                 .safety_cap_db_smoother
                 .set_target(value as f32),
-            35 => self.params.low_latency = value > 0.5,
+            35 => self.params.low_latency = UP[35].clamp_f64(value) > 0.5,
             36 => {
                 self.params.frequency_resolution =
                     Self::frequency_resolution_from_index(value as usize).to_string();
@@ -1375,16 +1420,16 @@ impl UpmixerPlugin {
                         self.core.fft_size,
                     );
             }
-            37 => self.params.bypass_decorrelation = value > 0.5,
-            38 => self.params.bypass_transient_detection = value > 0.5,
-            39 => self.params.bypass_all_processing = value > 0.5,
-            40 => self.ml.enable_ml_detection = value > 0.5,
-            41 => self.spectral.multi_source_extraction = value > 0.5,
-            42 => self.spectral.multi_source_threshold = value as f32,
-            43 => self.core.binaural_preview = value > 0.5,
-            44 => self.safety.auto_gain_enabled = value > 0.5,
-            45 => self.safety.auto_gain_max_db = value as f32,
-            46 => self.safety.auto_gain_smoothing_ms = value as f32,
+            37 => self.params.bypass_decorrelation = UP[37].clamp_f64(value) > 0.5,
+            38 => self.params.bypass_transient_detection = UP[38].clamp_f64(value) > 0.5,
+            39 => self.params.bypass_all_processing = UP[39].clamp_f64(value) > 0.5,
+            40 => self.ml.enable_ml_detection = UP[40].clamp_f64(value) > 0.5,
+            41 => self.spectral.multi_source_extraction = UP[41].clamp_f64(value) > 0.5,
+            42 => self.spectral.multi_source_threshold = UP[42].clamp_f64(value) as f32,
+            43 => self.core.binaural_preview = UP[43].clamp_f64(value) > 0.5,
+            44 => self.safety.auto_gain_enabled = UP[44].clamp_f64(value) > 0.5,
+            45 => self.safety.auto_gain_max_db = UP[45].clamp_f64(value) as f32,
+            46 => self.safety.auto_gain_smoothing_ms = UP[46].clamp_f64(value) as f32,
             _ => {}
         }
     }

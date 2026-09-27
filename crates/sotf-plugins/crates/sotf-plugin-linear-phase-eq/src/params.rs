@@ -206,11 +206,11 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.num_filters = value,
-            1 => self.fir_length = value,
-            2 => self.phase_mode = value,
-            3 => self.auto_gain = value,
-            4 => self.mix = value,
+            0 => self.num_filters = PARAMS[0].clamp_f64(value),
+            1 => self.fir_length = PARAMS[1].clamp_f64(value),
+            2 => self.phase_mode = PARAMS[2].clamp_f64(value),
+            3 => self.auto_gain = PARAMS[3].clamp_f64(value),
+            4 => self.mix = PARAMS[4].clamp_f64(value),
             _ => {}
         }
     }

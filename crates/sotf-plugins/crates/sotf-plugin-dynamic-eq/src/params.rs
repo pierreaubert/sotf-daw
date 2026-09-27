@@ -376,14 +376,14 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.num_bands = value as i64,
-            1 => self.threshold = value,
-            2 => self.ratio = value,
-            3 => self.attack = value,
-            4 => self.release = value,
-            5 => self.knee = value,
-            6 => self.link_channels = value >= 0.5,
-            7 => self.mix = value,
+            0 => self.num_bands = PARAMS[0].clamp_f64(value) as i64,
+            1 => self.threshold = PARAMS[1].clamp_f64(value),
+            2 => self.ratio = PARAMS[2].clamp_f64(value),
+            3 => self.attack = PARAMS[3].clamp_f64(value),
+            4 => self.release = PARAMS[4].clamp_f64(value),
+            5 => self.knee = PARAMS[5].clamp_f64(value),
+            6 => self.link_channels = PARAMS[6].clamp_f64(value) >= 0.5,
+            7 => self.mix = PARAMS[7].clamp_f64(value),
             _ => {}
         }
     }

@@ -248,19 +248,19 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.frequency = value,
-            1 => self.q = value,
-            2 => self.threshold = value,
-            3 => self.ratio = value,
-            4 => self.attack = value,
-            5 => self.release = value,
+            0 => self.frequency = PARAMS[0].clamp_f64(value),
+            1 => self.q = PARAMS[1].clamp_f64(value),
+            2 => self.threshold = PARAMS[2].clamp_f64(value),
+            3 => self.ratio = PARAMS[3].clamp_f64(value),
+            4 => self.attack = PARAMS[4].clamp_f64(value),
+            5 => self.release = PARAMS[5].clamp_f64(value),
             6 => {
                 let idx = value as usize;
                 if let Some(&label) = MODES.get(idx) {
                     self.mode = label.to_string();
                 }
             }
-            7 => self.mix = value,
+            7 => self.mix = PARAMS[7].clamp_f64(value),
             _ => {}
         }
     }

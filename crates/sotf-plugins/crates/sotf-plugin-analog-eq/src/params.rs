@@ -181,7 +181,8 @@ fn d_high_gain() -> f64 {
     pk(PARAMS, "high_gain").default_f64()
 }
 fn d_analog_model() -> String {
-    MODEL_NAMES[0].to_string()
+    let idx = pk(PARAMS, "analog_model").default_usize();
+    MODEL_NAMES.get(idx).unwrap_or(&MODEL_NAMES[0]).to_string()
 }
 fn d_analog_drive() -> f64 {
     pk(PARAMS, "analog_drive").default_f64()
@@ -298,26 +299,66 @@ impl PluginParamDef for AnalogEqPluginParams {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.low_freq = value,
-            1 => self.low_gain = value,
-            2 => self.mid1_freq = value,
-            3 => self.mid1_gain = value,
-            4 => self.mid1_q = value,
-            5 => self.mid2_freq = value,
-            6 => self.mid2_gain = value,
-            7 => self.mid2_q = value,
-            8 => self.high_freq = value,
-            9 => self.high_gain = value,
+            0 => self.low_freq = PARAMS[0].clamp_f64(value),
+            1 => self.low_gain = PARAMS[1].clamp_f64(value),
+            2 => self.mid1_freq = PARAMS[2].clamp_f64(value),
+            3 => self.mid1_gain = PARAMS[3].clamp_f64(value),
+            4 => self.mid1_q = PARAMS[4].clamp_f64(value),
+            5 => self.mid2_freq = PARAMS[5].clamp_f64(value),
+            6 => self.mid2_gain = PARAMS[6].clamp_f64(value),
+            7 => self.mid2_q = PARAMS[7].clamp_f64(value),
+            8 => self.high_freq = PARAMS[8].clamp_f64(value),
+            9 => self.high_gain = PARAMS[9].clamp_f64(value),
             10 => {
                 if let Some(name) = MODEL_NAMES.get(value as usize) {
                     self.analog_model = name.to_string();
                 }
             }
-            11 => self.analog_drive = value,
-            12 => self.analog_color = value,
-            13 => self.analog_character = value,
-            14 => self.analog_trim = value,
+            11 => self.analog_drive = PARAMS[11].clamp_f64(value),
+            12 => self.analog_color = PARAMS[12].clamp_f64(value),
+            13 => self.analog_character = PARAMS[13].clamp_f64(value),
+            14 => self.analog_trim = PARAMS[14].clamp_f64(value),
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sotf_host::param_specs::ParamType;
+
+    #[test]
+    fn defaults_match_schema() {
+        let p = AnalogEqPluginParams::default();
+        for (index, spec) in PARAMS.iter().enumerate() {
+            let value = p.param_value(index).unwrap_or_else(|| {
+                panic!("param_value({}) is None for {}", index, spec.engine_key)
+            });
+            let expected = match spec.param_type {
+                ParamType::Float { default, .. } => default,
+                ParamType::Int { default, .. } => default as f64,
+                ParamType::Bool { default, .. } => default as u8 as f64,
+                ParamType::Choice { default_index, .. } => default_index as f64,
+                ParamType::FilePath => unreachable!(),
+            };
+            assert!(
+                (value - expected).abs() < 1e-6,
+                "default drift for {}",
+                spec.engine_key
+            );
+        }
+    }
+
+    #[test]
+    fn indexed_set_clamps_to_spec_range() {
+        let mut p = AnalogEqPluginParams::default();
+        p.set_param_value(0, 1e9);
+        assert_eq!(p.param_value(0), Some(500.0));
+        p.set_param_value(4, 1e9);
+        assert_eq!(p.param_value(4), Some(10.0));
+        // Model index out of range is ignored, never stored.
+        p.set_param_value(10, 99.0);
+        assert_eq!(p.param_value(10), Some(0.0));
     }
 }

@@ -287,22 +287,22 @@ impl MultibandExpanderPlugin {
     /// Order must match params::GLOBAL_PARAMS exactly.
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.num_bands = value as usize,              // num_bands
-            1 => self._crossover_preset = value as i32,        // crossover_preset
-            2 => self.crossover_frequencies[0] = value as f32, // crossover_freq_1
-            3 => self.crossover_frequencies[1] = value as f32, // crossover_freq_2
-            4 => self.crossover_frequencies[2] = value as f32, // crossover_freq_3
-            5 => self.crossover_frequencies[3] = value as f32, // crossover_freq_4
-            6 => self.threshold_db = value as f32,             // threshold
-            7 => self.ratio = value as f32,                    // ratio
-            8 => self.attack_ms = value as f32,                // attack
-            9 => self.release_ms = value as f32,               // release
-            10 => self.range_db = value as f32,                // range
-            11 => self.knee_db = value as f32,                 // knee
-            12 => self.hysteresis_db = value as f32,           // hysteresis
-            13 => self.hold_ms = value as f32,                 // hold
-            14 => self.mix = value as f32,                     // mix
-            15 => self.link_channels = value > 0.5,            // link_channels
+            0 => self.num_bands = ME[0].clamp_f64(value) as usize, // num_bands
+            1 => self._crossover_preset = ME[1].clamp_f64(value) as i32, // crossover_preset
+            2 => self.crossover_frequencies[0] = ME[2].clamp_f64(value) as f32, // crossover_freq_1
+            3 => self.crossover_frequencies[1] = ME[3].clamp_f64(value) as f32, // crossover_freq_2
+            4 => self.crossover_frequencies[2] = ME[4].clamp_f64(value) as f32, // crossover_freq_3
+            5 => self.crossover_frequencies[3] = ME[5].clamp_f64(value) as f32, // crossover_freq_4
+            6 => self.threshold_db = ME[6].clamp_f64(value) as f32, // threshold
+            7 => self.ratio = ME[7].clamp_f64(value) as f32,       // ratio
+            8 => self.attack_ms = ME[8].clamp_f64(value) as f32,   // attack
+            9 => self.release_ms = ME[9].clamp_f64(value) as f32,  // release
+            10 => self.range_db = ME[10].clamp_f64(value) as f32,  // range
+            11 => self.knee_db = ME[11].clamp_f64(value) as f32,   // knee
+            12 => self.hysteresis_db = ME[12].clamp_f64(value) as f32, // hysteresis
+            13 => self.hold_ms = ME[13].clamp_f64(value) as f32,   // hold
+            14 => self.mix = ME[14].clamp_f64(value) as f32,       // mix
+            15 => self.link_channels = ME[15].clamp_f64(value) > 0.5, // link_channels
             16 => {
                 // detection_mode
                 self.detection_mode = if value as i32 == 1 {

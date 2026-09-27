@@ -397,9 +397,9 @@ impl ConvolutionPlugin {
                 self.gain_db_value = value;
                 self.gain_linear.set_target(10.0f32.powf(value / 20.0));
             }
-            3 => self.use_nupc = value > 0.5,
-            4 => self.zero_latency_head = value > 0.5,
-            5 => self.head_taps = value.clamp(CV[5].min_f64(), CV[5].max_f64()) as usize,
+            3 => self.use_nupc = CV[3].clamp_f64(value) > 0.5,
+            4 => self.zero_latency_head = CV[4].clamp_f64(value) > 0.5,
+            5 => self.head_taps = CV[5].clamp_f64(value) as usize,
             _ => {}
         }
     }

@@ -146,7 +146,7 @@ impl DownmixPlugin {
             phase_blend_low_hz: pk(DM, "phase_blend_low_hz").default_f64() as f32,
             phase_blend_high_hz: pk(DM, "phase_blend_high_hz").default_f64() as f32,
             itu_mode: pk(DM, "itu_mode").default_bool(),
-            matrix_ltrt: false,
+            matrix_ltrt: pk(DM, "matrix_ltrt").default_bool(),
             cached_parameters: Vec::new(),
         };
         p.compute_coefficients(true);
@@ -175,15 +175,15 @@ impl DownmixPlugin {
     /// Order must match params::PARAMS exactly.
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.center_gain_db = value as f32,
-            1 => self.surround_gain_db = value as f32,
-            2 => self.height_gain_db = value as f32,
-            3 => self.lfe_gain_db = value as f32,
-            4 => self.phase_coherence = value > 0.5,
-            5 => self.phase_blend_low_hz = value as f32,
-            6 => self.phase_blend_high_hz = value as f32,
-            7 => self.itu_mode = value > 0.5,
-            8 => self.matrix_ltrt = value > 0.5,
+            0 => self.center_gain_db = DM[0].clamp_f64(value) as f32,
+            1 => self.surround_gain_db = DM[1].clamp_f64(value) as f32,
+            2 => self.height_gain_db = DM[2].clamp_f64(value) as f32,
+            3 => self.lfe_gain_db = DM[3].clamp_f64(value) as f32,
+            4 => self.phase_coherence = DM[4].clamp_f64(value) > 0.5,
+            5 => self.phase_blend_low_hz = DM[5].clamp_f64(value) as f32,
+            6 => self.phase_blend_high_hz = DM[6].clamp_f64(value) as f32,
+            7 => self.itu_mode = DM[7].clamp_f64(value) > 0.5,
+            8 => self.matrix_ltrt = DM[8].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

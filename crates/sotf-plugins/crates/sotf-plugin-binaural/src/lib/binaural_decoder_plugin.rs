@@ -414,20 +414,32 @@ impl BinauralDecoderPlugin {
         match index {
             0 => {} // sofa_file (FilePath — handled separately)
             1 => {} // input_channels (construction-only, requires buffer rebuild)
-            2 => self.smoothing.externalization.set_target(value as f32),
-            3 => self.config.near_field_strength = value as f32,
-            4 => self.config.crossfade_mode_index = value as usize,
-            5 => self.config.late_reverb_enabled = value > 0.5,
-            6 => self.config.late_reverb_mix = value as f32,
-            7 => self.config.late_reverb_rt60 = value as f32,
-            8 => self.config.late_reverb_damping = value as f32,
-            9 => self.config.crossfade_ms = value as f32,
-            10 => self.smoothing.head_yaw_deg.set_target(value as f32),
-            11 => self.smoothing.head_pitch_deg.set_target(value as f32),
-            12 => self.smoothing.head_roll_deg.set_target(value as f32),
-            13 => {}
-            14 => self.config.head_width_cm = value as f32,
-            15 => self.config.ear_height_cm = value as f32,
+            2 => self
+                .smoothing
+                .externalization
+                .set_target(BN[2].clamp_f64(value) as f32),
+            3 => self.config.near_field_strength = BN[3].clamp_f64(value) as f32,
+            4 => self.config.crossfade_mode_index = BN[4].clamp_f64(value) as usize,
+            5 => self.config.late_reverb_enabled = BN[5].clamp_f64(value) > 0.5,
+            6 => self.config.late_reverb_mix = BN[6].clamp_f64(value) as f32,
+            7 => self.config.late_reverb_rt60 = BN[7].clamp_f64(value) as f32,
+            8 => self.config.late_reverb_damping = BN[8].clamp_f64(value) as f32,
+            9 => self.config.crossfade_ms = BN[9].clamp_f64(value) as f32,
+            10 => self
+                .smoothing
+                .head_yaw_deg
+                .set_target(BN[10].clamp_f64(value) as f32),
+            11 => self
+                .smoothing
+                .head_pitch_deg
+                .set_target(BN[11].clamp_f64(value) as f32),
+            12 => self
+                .smoothing
+                .head_roll_deg
+                .set_target(BN[12].clamp_f64(value) as f32),
+            13 => {} // hrtf_database_dir (FilePath — handled separately)
+            14 => self.config.head_width_cm = BN[14].clamp_f64(value) as f32,
+            15 => self.config.ear_height_cm = BN[15].clamp_f64(value) as f32,
             _ => {}
         }
     }

@@ -75,3 +75,26 @@ fn every_numeric_schema_entry_maps_both_directions() {
         );
     }
 }
+
+#[test]
+fn indexed_set_clamps_choice_and_float_to_spec_range() {
+    let mut params = Params::default();
+    // head_model (index 27) has 2 labels: out-of-range clamps to last index.
+    params.set_param_value(27, 99.0);
+    assert_eq!(params.param_value(27), Some(1.0));
+    params.set_param_value(27, -5.0);
+    assert_eq!(params.param_value(27), Some(0.0));
+    // distance_m (index 0) range is 0.5..=10.0 per PARAMS.
+    params.set_param_value(0, 500.0);
+    assert_eq!(params.param_value(0), Some(10.0));
+    params.set_param_value(0, -500.0);
+    assert_eq!(params.param_value(0), Some(0.5));
+}
+
+#[test]
+fn filepath_index_is_visible_but_not_settable() {
+    let mut params = Params::default();
+    assert_eq!(params.param_value(16), None);
+    params.set_param_value(16, 1.0);
+    assert_eq!(params.param_value(16), None);
+}

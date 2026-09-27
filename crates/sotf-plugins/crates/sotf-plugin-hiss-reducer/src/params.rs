@@ -119,11 +119,11 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.enabled = value > 0.5,
-            1 => self.threshold_db = value,
-            2 => self.frequency_hz = value,
-            3 => self.strength = value,
-            4 => self.spectral_mode = value > 0.5,
+            0 => self.enabled = PARAMS[0].clamp_f64(value) > 0.5,
+            1 => self.threshold_db = PARAMS[1].clamp_f64(value),
+            2 => self.frequency_hz = PARAMS[2].clamp_f64(value),
+            3 => self.strength = PARAMS[3].clamp_f64(value),
+            4 => self.spectral_mode = PARAMS[4].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

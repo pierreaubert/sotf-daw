@@ -298,19 +298,19 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.fft_size = value as usize,
-            1 => self.threshold = value,
-            2 => self.ratio = value,
-            3 => self.attack = value,
-            4 => self.release = value,
-            5 => self.knee = value,
-            6 => self.spectral_smoothing = value,
-            7 => self.mix = value,
-            8 => self.target_mode = value,
-            9 => self.delta_listen = value,
-            10 => self.adaptive_threshold = value,
-            11 => self.adaptive_offset_db = value,
-            12 => self.channel_link = value,
+            0 => self.fft_size = PARAMS[0].clamp_f64(value) as usize,
+            1 => self.threshold = PARAMS[1].clamp_f64(value),
+            2 => self.ratio = PARAMS[2].clamp_f64(value),
+            3 => self.attack = PARAMS[3].clamp_f64(value),
+            4 => self.release = PARAMS[4].clamp_f64(value),
+            5 => self.knee = PARAMS[5].clamp_f64(value),
+            6 => self.spectral_smoothing = PARAMS[6].clamp_f64(value),
+            7 => self.mix = PARAMS[7].clamp_f64(value),
+            8 => self.target_mode = PARAMS[8].clamp_f64(value),
+            9 => self.delta_listen = PARAMS[9].clamp_f64(value),
+            10 => self.adaptive_threshold = PARAMS[10].clamp_f64(value),
+            11 => self.adaptive_offset_db = PARAMS[11].clamp_f64(value),
+            12 => self.channel_link = PARAMS[12].clamp_f64(value),
             _ => {}
         }
     }

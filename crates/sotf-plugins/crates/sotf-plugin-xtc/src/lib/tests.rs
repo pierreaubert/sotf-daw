@@ -1631,8 +1631,33 @@ fn test_param_value_roundtrip() {
             plugin.set_param_value(i, 0.0);
             assert!((plugin.param_value(i).unwrap()).abs() < 1e-6);
         } else {
-            plugin.set_param_value(i, original + 1.0);
-            assert!((plugin.param_value(i).unwrap() - (original + 1.0)).abs() < 1e-6);
+            // Indexed sets clamp to the spec range, so probe with an
+            // in-range value distinct from the default.
+            let probe = match &crate::params::PARAMS[i].param_type {
+                sotf_host::param_specs::ParamType::Float { min, max, .. } => {
+                    if (original - min).abs() > 1e-9 {
+                        *min
+                    } else {
+                        (min + max) * 0.5
+                    }
+                }
+                sotf_host::param_specs::ParamType::Choice { labels, .. } => {
+                    ((original as usize + 1) % labels.len().max(1)) as f64
+                }
+                sotf_host::param_specs::ParamType::Int { min, max, .. } => {
+                    if (original - *min as f64).abs() > 1e-9 {
+                        *min as f64
+                    } else {
+                        (*min + 1).min(*max) as f64
+                    }
+                }
+                _ => original,
+            };
+            plugin.set_param_value(i, probe);
+            assert!(
+                (plugin.param_value(i).unwrap() - probe).abs() < 1e-6,
+                "roundtrip drift at index {i}"
+            );
         }
         plugin.set_param_value(i, original);
         assert!((plugin.param_value(i).unwrap() - original).abs() < 1e-6);

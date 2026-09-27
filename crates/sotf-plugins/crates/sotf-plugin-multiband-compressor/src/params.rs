@@ -291,6 +291,15 @@ pub const GLOBAL_PARAMS: &[ParamSpec] = multiband_global_params![
 // ============================================================================
 
 /// Template for each compressor band (repeated per band).
+///
+/// Key scoping rule: engine keys are unique *within* each array, but the
+/// dynamics keys (`threshold`, `ratio`, `attack`, `release`, `knee`, `mix`,
+/// `auto_makeup`) intentionally repeat across `PARAMS` (single-band compat),
+/// `GLOBAL_PARAMS`, and this template. Lookups must always qualify the array
+/// (`pk(GLOBAL_PARAMS, "ratio")`, never a bare key), and runtime per-band
+/// parameters are namespaced as `band_{i}_<key>`. The shared keys carry
+/// identical type/range/default in every array (pinned by
+/// `shared_keys_agree_across_arrays`); only group and doc differ.
 pub const BAND_TEMPLATE: &[ParamSpec] = &[
     ParamSpec::bool_param("Solo", "solo", false, "Band").doc("Solo this band (mute others)"),
     ParamSpec::bool_param("Bypass", "bypass", false, "Band")
@@ -594,5 +603,43 @@ mod tests {
         let groups: Vec<_> = LAYOUT.main.iter().collect();
         let solved = solve_control_groups(&groups, 320.0).unwrap();
         assert!(solved.find("DYNAMICS").unwrap().visible());
+    }
+}
+
+#[cfg(test)]
+mod shared_key_contract_tests {
+    use super::*;
+
+    fn check_pair(a_name: &str, a: &[ParamSpec], b_name: &str, b: &[ParamSpec]) {
+        for spec in a {
+            let Some(other) = b.iter().find(|s| s.engine_key == spec.engine_key) else {
+                continue;
+            };
+            assert_eq!(
+                spec.param_type, other.param_type,
+                "type drift for '{}' between {a_name} and {b_name}",
+                spec.engine_key
+            );
+            assert_eq!(
+                spec.unit, other.unit,
+                "unit drift for '{}' between {a_name} and {b_name}",
+                spec.engine_key
+            );
+        }
+    }
+
+    #[test]
+    fn shared_keys_agree_across_arrays() {
+        // Keys repeat across arrays by design (see BAND_TEMPLATE docs); any
+        // key present in two arrays must carry identical type/range/default
+        // and unit. Only group and doc may differ.
+        check_pair("PARAMS", PARAMS, "GLOBAL_PARAMS", GLOBAL_PARAMS);
+        check_pair("PARAMS", PARAMS, "BAND_TEMPLATE", BAND_TEMPLATE);
+        check_pair(
+            "GLOBAL_PARAMS",
+            GLOBAL_PARAMS,
+            "BAND_TEMPLATE",
+            BAND_TEMPLATE,
+        );
     }
 }

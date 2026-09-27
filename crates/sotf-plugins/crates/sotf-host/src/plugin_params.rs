@@ -40,10 +40,23 @@ pub trait PluginParamDef: Serialize + DeserializeOwned + Clone + std::fmt::Debug
 
     /// Read parameter at `index` as f64.
     /// Returns `None` if out of range.
+    ///
+    /// `FilePath` entries always return `None` here (paths are managed
+    /// outside the numeric automation path); mark the arm with
+    /// `// <key> (FilePath — handled separately)`.
+    /// Trigger-only entries (momentary actions) always read `0.0`.
     fn param_value(&self, index: usize) -> Option<f64>;
 
     /// Set parameter at `index` from f64.
     /// No-op if out of range.
+    ///
+    /// Clamp `value` against `Self::PARAMS[index]` (`clamp_f64`) before
+    /// storing so the indexed path enforces the same ranges as the named
+    /// path (`param_bridge::set_parameter`, which already clamps).
+    /// `FilePath` and construction-only indices stay explicit no-op arms
+    /// (`16 => {}`) with a `// <key> (<reason>)` comment so hosts can tell
+    /// "by design" apart from "not yet implemented". Trigger-only entries
+    /// must not fire from here; they fire via named `set_parameter` only.
     fn set_param_value(&mut self, index: usize, value: f64);
 
     /// Migrate old JSON to current schema. Override when bumping VERSION.

@@ -128,14 +128,14 @@ impl MonoToStereoPlugin {
 
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.stereo_width.set_target(value as f32),
+            0 => self.stereo_width.set_target(MS[0].clamp_f64(value) as f32),
             1 => {
                 self.haas_delay_ms = value as f32;
                 self.update_haas_delay_samples();
             }
-            2 => self.decor_low_hz = value as f32,
-            3 => self.decor_high_hz = value as f32,
-            4 => self.freq_dependent = value > 0.5,
+            2 => self.decor_low_hz = MS[2].clamp_f64(value) as f32,
+            3 => self.decor_high_hz = MS[3].clamp_f64(value) as f32,
+            4 => self.freq_dependent = MS[4].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

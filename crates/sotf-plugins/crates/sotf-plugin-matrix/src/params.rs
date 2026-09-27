@@ -87,7 +87,7 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         if index == 0 {
-            self.gain = value
+            self.gain = PARAMS[0].clamp_f64(value)
         }
     }
 }

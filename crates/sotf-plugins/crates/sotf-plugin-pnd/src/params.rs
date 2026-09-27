@@ -249,14 +249,14 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.correction_strength = value,
-            1 => self.analysis_window_ms = value,
-            2 => self.drift_smoothing = value,
-            3 => self.multi_channel_analysis = value > 0.5,
-            4 => self.confidence_threshold = value,
-            5 => self.reference_frequency_hz = value,
-            6 => self.formant_preservation = value > 0.5,
-            7 => self.formant_strength = value,
+            0 => self.correction_strength = PARAMS[0].clamp_f64(value),
+            1 => self.analysis_window_ms = PARAMS[1].clamp_f64(value),
+            2 => self.drift_smoothing = PARAMS[2].clamp_f64(value),
+            3 => self.multi_channel_analysis = PARAMS[3].clamp_f64(value) > 0.5,
+            4 => self.confidence_threshold = PARAMS[4].clamp_f64(value),
+            5 => self.reference_frequency_hz = PARAMS[5].clamp_f64(value),
+            6 => self.formant_preservation = PARAMS[6].clamp_f64(value) > 0.5,
+            7 => self.formant_strength = PARAMS[7].clamp_f64(value),
             _ => {}
         }
     }

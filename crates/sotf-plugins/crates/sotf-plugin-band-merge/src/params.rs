@@ -86,7 +86,7 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         if index == 0 {
-            self.bands = value as usize
+            self.bands = PARAMS[0].clamp_f64(value) as usize
         }
     }
 }

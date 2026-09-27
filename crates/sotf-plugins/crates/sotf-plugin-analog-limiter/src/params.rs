@@ -109,7 +109,8 @@ fn d_mix() -> f32 {
     pk(PARAMS, "mix").default_f64() as f32
 }
 fn d_analog_model() -> String {
-    MODEL_NAMES[0].to_string()
+    let idx = pk(PARAMS, "analog_model").default_usize();
+    MODEL_NAMES.get(idx).unwrap_or(&MODEL_NAMES[0]).to_string()
 }
 fn d_analog_drive() -> f32 {
     pk(PARAMS, "analog_drive").default_f64() as f32
@@ -219,22 +220,62 @@ impl PluginParamDef for AnalogLimiterPluginParams {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.threshold = value as f32,
-            1 => self.release = value as f32,
-            2 => self.lookahead = value as f32,
-            3 => self.soft = value >= 0.5,
-            4 => self.true_peak = value >= 0.5,
-            5 => self.mix = value as f32,
+            0 => self.threshold = PARAMS[0].clamp_f64(value) as f32,
+            1 => self.release = PARAMS[1].clamp_f64(value) as f32,
+            2 => self.lookahead = PARAMS[2].clamp_f64(value) as f32,
+            3 => self.soft = PARAMS[3].clamp_f64(value) >= 0.5,
+            4 => self.true_peak = PARAMS[4].clamp_f64(value) >= 0.5,
+            5 => self.mix = PARAMS[5].clamp_f64(value) as f32,
             6 => {
                 if let Some(name) = MODEL_NAMES.get(value as usize) {
                     self.analog_model = name.to_string();
                 }
             }
-            7 => self.analog_drive = value as f32,
-            8 => self.analog_color = value as f32,
-            9 => self.analog_character = value as f32,
-            10 => self.analog_trim = value as f32,
+            7 => self.analog_drive = PARAMS[7].clamp_f64(value) as f32,
+            8 => self.analog_color = PARAMS[8].clamp_f64(value) as f32,
+            9 => self.analog_character = PARAMS[9].clamp_f64(value) as f32,
+            10 => self.analog_trim = PARAMS[10].clamp_f64(value) as f32,
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sotf_host::param_specs::ParamType;
+
+    #[test]
+    fn defaults_match_schema() {
+        let p = AnalogLimiterPluginParams::default();
+        for (index, spec) in PARAMS.iter().enumerate() {
+            let value = p.param_value(index).unwrap_or_else(|| {
+                panic!("param_value({}) is None for {}", index, spec.engine_key)
+            });
+            let expected = match spec.param_type {
+                ParamType::Float { default, .. } => default,
+                ParamType::Int { default, .. } => default as f64,
+                ParamType::Bool { default, .. } => default as u8 as f64,
+                ParamType::Choice { default_index, .. } => default_index as f64,
+                ParamType::FilePath => unreachable!(),
+            };
+            assert!(
+                (value - expected).abs() < 1e-6,
+                "default drift for {}",
+                spec.engine_key
+            );
+        }
+    }
+
+    #[test]
+    fn indexed_set_clamps_to_spec_range() {
+        let mut p = AnalogLimiterPluginParams::default();
+        p.set_param_value(0, 99.0);
+        assert_eq!(p.param_value(0), Some(0.0));
+        p.set_param_value(2, 1e9);
+        assert_eq!(p.param_value(2), Some(20.0));
+        // Model index out of range is ignored, never stored.
+        p.set_param_value(6, 99.0);
+        assert_eq!(p.param_value(6), Some(0.0));
     }
 }

@@ -129,9 +129,9 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.enabled = value != 0.0,
-            1 => self.dim_gain_db = value as f32,
-            2 => self.fade_ms = value as f32,
+            0 => self.enabled = PARAMS[0].clamp_f64(value) != 0.0,
+            1 => self.dim_gain_db = PARAMS[1].clamp_f64(value) as f32,
+            2 => self.fade_ms = PARAMS[2].clamp_f64(value) as f32,
             _ => {}
         }
     }

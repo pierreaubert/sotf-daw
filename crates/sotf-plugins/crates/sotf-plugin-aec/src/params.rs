@@ -124,9 +124,9 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.echo_tail_ms = value,
-            1 => self.step_size = value,
-            2 => self.post_filter_enabled = value > 0.5,
+            0 => self.echo_tail_ms = PARAMS[0].clamp_f64(value),
+            1 => self.step_size = PARAMS[1].clamp_f64(value),
+            2 => self.post_filter_enabled = PARAMS[2].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

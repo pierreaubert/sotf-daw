@@ -488,23 +488,23 @@ impl MultibandCompressorPlugin {
     /// Order must match params::GLOBAL_PARAMS exactly.
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.num_bands = value.round() as usize, // num_bands (round, not truncate)
-            1 => self._crossover_preset = value as i32,   // crossover_preset
-            2 => self.crossover_frequencies[0] = value as f32, // crossover_freq_1
-            3 => self.crossover_frequencies[1] = value as f32, // crossover_freq_2
-            4 => self.crossover_frequencies[2] = value as f32, // crossover_freq_3
-            5 => self.crossover_frequencies[3] = value as f32, // crossover_freq_4
-            6 => self.threshold_db = value as f32,        // threshold
-            7 => self.ratio = value as f32,               // ratio
-            8 => self.attack_ms = value as f32,           // attack
-            9 => self.release_ms = value as f32,          // release
-            10 => self.knee_db = value as f32,            // knee
-            11 => self.mix = value as f32,                // mix
-            12 => self.link_channels = value > 0.5,       // link_channels
+            0 => self.num_bands = MC[0].clamp_f64(value.round()) as usize, // num_bands (round, not truncate)
+            1 => self._crossover_preset = MC[1].clamp_f64(value) as i32,   // crossover_preset
+            2 => self.crossover_frequencies[0] = MC[2].clamp_f64(value) as f32, // crossover_freq_1
+            3 => self.crossover_frequencies[1] = MC[3].clamp_f64(value) as f32, // crossover_freq_2
+            4 => self.crossover_frequencies[2] = MC[4].clamp_f64(value) as f32, // crossover_freq_3
+            5 => self.crossover_frequencies[3] = MC[5].clamp_f64(value) as f32, // crossover_freq_4
+            6 => self.threshold_db = MC[6].clamp_f64(value) as f32,        // threshold
+            7 => self.ratio = MC[7].clamp_f64(value) as f32,               // ratio
+            8 => self.attack_ms = MC[8].clamp_f64(value) as f32,           // attack
+            9 => self.release_ms = MC[9].clamp_f64(value) as f32,          // release
+            10 => self.knee_db = MC[10].clamp_f64(value) as f32,           // knee
+            11 => self.mix = MC[11].clamp_f64(value) as f32,               // mix
+            12 => self.link_channels = MC[12].clamp_f64(value) > 0.5,      // link_channels
             13 => self.per_band_lookahead_ms = (value as f32).clamp(0.0, 20.0), // per_band_lookahead_ms
-            14 => self.ms_mode = value > 0.5,                                   // ms_mode
-            15 => self.sidechain_tilt_db = value as f32,                        // sidechain_tilt_db
-            16 => self.link_amount = value as f32,                              // link_amount
+            14 => self.ms_mode = MC[14].clamp_f64(value) > 0.5,                 // ms_mode
+            15 => self.sidechain_tilt_db = MC[15].clamp_f64(value) as f32,      // sidechain_tilt_db
+            16 => self.link_amount = MC[16].clamp_f64(value) as f32,            // link_amount
             _ => {}
         }
     }

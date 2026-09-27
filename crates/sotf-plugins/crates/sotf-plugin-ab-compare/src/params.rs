@@ -29,7 +29,7 @@ pub const LOUDNESS_TYPE_LABELS: &[&str] = &["Momentary", "ShortTerm"];
 pub const PARAMS: &[ParamSpec] = &[
     ParamSpec::float("Mix (A/B)", "mix", 0.0, -1.0, 1.0, 0.05, "", "Mix")
         .scaled(100.0)
-        .doc("Crossfade between path A and B"),
+        .doc("Crossfade between path A (-1) and B (+1); not a dry/wet blend"),
     ParamSpec::choice("Mix Mode", "mix_mode", 0, MIX_MODE_LABELS, "Mix")
         .doc("Smooth pot or instant switch"),
     ParamSpec::choice(
@@ -322,30 +322,30 @@ impl PluginParamDef for Params {
             11 => Some(if self.difference_mode { 1.0 } else { 0.0 }),
             12 => Some(self.band_mask_low_hz),
             13 => Some(self.band_mask_high_hz),
-            14 => None,
-            15 => None,
+            14 => None, // path_a_config (FilePath — handled separately)
+            15 => None, // path_b_config (FilePath — handled separately)
             _ => None,
         }
     }
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.mix = value,
-            1 => self.mix_mode = value as usize,
-            2 => self.selected_path = value as usize,
-            3 => self.bypass = value > 0.5,
-            4 => self.auto_gain_enabled = value > 0.5,
-            5 => self.loudness_type = value as usize,
-            6 => self.max_auto_gain_db = value,
-            7 => self.gain_smoothing_ms = value,
-            8 => self.mix_transition_ms = value,
-            9 => self.phase_invert_a = value > 0.5,
-            10 => self.phase_invert_b = value > 0.5,
-            11 => self.difference_mode = value > 0.5,
-            12 => self.band_mask_low_hz = value,
-            13 => self.band_mask_high_hz = value,
-            14 => {}
-            15 => {}
+            0 => self.mix = PARAMS[0].clamp_f64(value),
+            1 => self.mix_mode = PARAMS[1].clamp_f64(value) as usize,
+            2 => self.selected_path = PARAMS[2].clamp_f64(value) as usize,
+            3 => self.bypass = PARAMS[3].clamp_f64(value) > 0.5,
+            4 => self.auto_gain_enabled = PARAMS[4].clamp_f64(value) > 0.5,
+            5 => self.loudness_type = PARAMS[5].clamp_f64(value) as usize,
+            6 => self.max_auto_gain_db = PARAMS[6].clamp_f64(value),
+            7 => self.gain_smoothing_ms = PARAMS[7].clamp_f64(value),
+            8 => self.mix_transition_ms = PARAMS[8].clamp_f64(value),
+            9 => self.phase_invert_a = PARAMS[9].clamp_f64(value) > 0.5,
+            10 => self.phase_invert_b = PARAMS[10].clamp_f64(value) > 0.5,
+            11 => self.difference_mode = PARAMS[11].clamp_f64(value) > 0.5,
+            12 => self.band_mask_low_hz = PARAMS[12].clamp_f64(value),
+            13 => self.band_mask_high_hz = PARAMS[13].clamp_f64(value),
+            14 => {} // path_a_config (FilePath — handled separately)
+            15 => {} // path_b_config (FilePath — handled separately)
             _ => {}
         }
     }
@@ -449,5 +449,20 @@ mod tests {
             p.band_mask_high_hz,
             pk(PARAMS, "band_mask_high_hz").default_f64()
         );
+    }
+
+    #[test]
+    fn indexed_set_clamps_choice_and_float_to_spec_range() {
+        let mut p = Params::default();
+        // mix_mode has 2 labels: out-of-range clamps to the last index.
+        p.set_param_value(1, 99.0);
+        assert_eq!(p.param_value(1), Some(1.0));
+        p.set_param_value(1, -99.0);
+        assert_eq!(p.param_value(1), Some(0.0));
+        // mix range is -1.0..=1.0 per PARAMS.
+        p.set_param_value(0, 5.0);
+        assert_eq!(p.param_value(0), Some(1.0));
+        p.set_param_value(0, -5.0);
+        assert_eq!(p.param_value(0), Some(-1.0));
     }
 }

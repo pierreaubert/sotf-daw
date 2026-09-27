@@ -277,16 +277,16 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.threshold = value,
-            1 => self.release = value,
-            2 => self.lookahead = value,
-            3 => self.soft = value > 0.5,
-            4 => self.true_peak = value > 0.5,
-            5 => self.isp_mode = value > 0.5,
-            6 => self.dual_release = value > 0.5,
-            7 => self.mix = value,
-            8 => self.link_amount = value,
-            9 => self.feed_forward = value > 0.5,
+            0 => self.threshold = PARAMS[0].clamp_f64(value),
+            1 => self.release = PARAMS[1].clamp_f64(value),
+            2 => self.lookahead = PARAMS[2].clamp_f64(value),
+            3 => self.soft = PARAMS[3].clamp_f64(value) > 0.5,
+            4 => self.true_peak = PARAMS[4].clamp_f64(value) > 0.5,
+            5 => self.isp_mode = PARAMS[5].clamp_f64(value) > 0.5,
+            6 => self.dual_release = PARAMS[6].clamp_f64(value) > 0.5,
+            7 => self.mix = PARAMS[7].clamp_f64(value),
+            8 => self.link_amount = PARAMS[8].clamp_f64(value),
+            9 => self.feed_forward = PARAMS[9].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

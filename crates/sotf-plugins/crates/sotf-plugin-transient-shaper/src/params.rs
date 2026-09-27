@@ -182,11 +182,11 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.attack = value,
-            1 => self.sustain = value,
-            2 => self.sensitivity = value,
-            3 => self.output_gain = value,
-            4 => self.mix = value,
+            0 => self.attack = PARAMS[0].clamp_f64(value),
+            1 => self.sustain = PARAMS[1].clamp_f64(value),
+            2 => self.sensitivity = PARAMS[2].clamp_f64(value),
+            3 => self.output_gain = PARAMS[3].clamp_f64(value),
+            4 => self.mix = PARAMS[4].clamp_f64(value),
             _ => {}
         }
     }

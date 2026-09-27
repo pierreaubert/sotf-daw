@@ -118,8 +118,8 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.gain_db = value,
-            1 => self.smoothing_ms = value,
+            0 => self.gain_db = PARAMS[0].clamp_f64(value),
+            1 => self.smoothing_ms = PARAMS[1].clamp_f64(value),
             _ => {}
         }
     }

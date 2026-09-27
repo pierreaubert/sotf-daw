@@ -252,7 +252,7 @@ impl BandSplitPlugin {
         match index {
             0 => {
                 if let Some(s) = self.freq_smoothers.first_mut() {
-                    s.set_target(value as f32);
+                    s.set_target(BS[0].clamp_f64(value) as f32);
                 }
             }
             1 => {

@@ -166,13 +166,13 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.order = value as usize,
+            0 => self.order = PARAMS[0].clamp_f64(value) as usize,
             1 => {
                 let idx = (value as usize).min(TARGET_LAYOUTS.len() - 1);
                 self.target_layout = TARGET_LAYOUTS[idx].to_string();
             }
-            2 => self.max_re_weighting = value > 0.5,
-            3 => self.dual_band = value > 0.5,
+            2 => self.max_re_weighting = PARAMS[2].clamp_f64(value) > 0.5,
+            3 => self.dual_band = PARAMS[3].clamp_f64(value) > 0.5,
             4 => {
                 let index = (value as usize).min(ALGORITHMS.len() - 1);
                 self.algorithm = ALGORITHMS[index].to_owned();

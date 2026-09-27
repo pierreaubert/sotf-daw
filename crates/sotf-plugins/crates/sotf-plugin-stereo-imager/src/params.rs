@@ -90,7 +90,7 @@ pub const PARAMS: &[ParamSpec] = &[
     ParamSpec::bool_labeled("Mono Bass", "mono_bass", false, "On", "Off", "Options")
         .doc("Collapse stereo below low-mid crossover"),
     // 7: Dry/wet mix
-    ParamSpec::float("Mix", "mix", 1.0, 0.0, 1.0, 0.01, "", "Output")
+    ParamSpec::float("Mix", "mix", 1.0, 0.0, 1.0, 0.01, "%", "Output")
         .scaled(100.0)
         .output()
         .doc("Dry/wet mix"),
@@ -246,14 +246,14 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.width = value,
-            1 => self.low_mid_freq = value,
-            2 => self.mid_high_freq = value,
-            3 => self.low_width = value,
-            4 => self.mid_width = value,
-            5 => self.high_width = value,
-            6 => self.mono_bass = value > 0.5,
-            7 => self.mix = value,
+            0 => self.width = PARAMS[0].clamp_f64(value),
+            1 => self.low_mid_freq = PARAMS[1].clamp_f64(value),
+            2 => self.mid_high_freq = PARAMS[2].clamp_f64(value),
+            3 => self.low_width = PARAMS[3].clamp_f64(value),
+            4 => self.mid_width = PARAMS[4].clamp_f64(value),
+            5 => self.high_width = PARAMS[5].clamp_f64(value),
+            6 => self.mono_bass = PARAMS[6].clamp_f64(value) > 0.5,
+            7 => self.mix = PARAMS[7].clamp_f64(value),
             _ => {}
         }
     }

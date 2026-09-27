@@ -87,9 +87,9 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.enabled = value > 0.5,
-            1 => self.sensitivity = value,
-            2 => self.link_channels = value > 0.5,
+            0 => self.enabled = PARAMS[0].clamp_f64(value) > 0.5,
+            1 => self.sensitivity = PARAMS[1].clamp_f64(value),
+            2 => self.link_channels = PARAMS[2].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

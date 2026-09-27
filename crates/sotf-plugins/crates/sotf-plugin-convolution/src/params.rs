@@ -150,10 +150,10 @@ impl PluginParamDef for Params {
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
             0 => {} // ir_file (FilePath — handled separately)
-            1 => self.mix = value,
-            2 => self.gain_db = value,
-            3 => self.use_nupc = value > 0.5,
-            4 => self.zero_latency_head = value > 0.5,
+            1 => self.mix = PARAMS[1].clamp_f64(value),
+            2 => self.gain_db = PARAMS[2].clamp_f64(value),
+            3 => self.use_nupc = PARAMS[3].clamp_f64(value) > 0.5,
+            4 => self.zero_latency_head = PARAMS[4].clamp_f64(value) > 0.5,
             5 => self.head_taps = value.clamp(PARAMS[5].min_f64(), PARAMS[5].max_f64()) as usize,
             _ => {}
         }

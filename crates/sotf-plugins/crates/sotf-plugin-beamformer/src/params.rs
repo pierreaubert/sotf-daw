@@ -195,10 +195,10 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.num_mics = value as usize,
-            1 => self.mic_spacing_cm = value as f32,
-            2 => self.steer_angle_deg = value as f32,
-            3 => self.beamformer_type = (value as usize).min(BEAMFORMER_TYPES.len() - 1),
+            0 => self.num_mics = PARAMS[0].clamp_f64(value) as usize,
+            1 => self.mic_spacing_cm = PARAMS[1].clamp_f64(value) as f32,
+            2 => self.steer_angle_deg = PARAMS[2].clamp_f64(value) as f32,
+            3 => self.beamformer_type = PARAMS[3].clamp_f64(value) as usize,
             _ => {}
         }
     }

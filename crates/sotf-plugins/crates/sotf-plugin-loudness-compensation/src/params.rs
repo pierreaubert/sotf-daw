@@ -422,30 +422,30 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.low_freq = value,
-            1 => self.low_gain = value,
-            2 => self.high_freq = value,
-            3 => self.high_gain = value,
-            4 => self.mid_enabled = value > 0.5,
-            5 => self.mid_freq = value,
-            6 => self.mid_gain = value,
-            7 => self.mid_q = value,
+            0 => self.low_freq = PARAMS[0].clamp_f64(value),
+            1 => self.low_gain = PARAMS[1].clamp_f64(value),
+            2 => self.high_freq = PARAMS[2].clamp_f64(value),
+            3 => self.high_gain = PARAMS[3].clamp_f64(value),
+            4 => self.mid_enabled = PARAMS[4].clamp_f64(value) > 0.5,
+            5 => self.mid_freq = PARAMS[5].clamp_f64(value),
+            6 => self.mid_gain = PARAMS[6].clamp_f64(value),
+            7 => self.mid_q = PARAMS[7].clamp_f64(value),
             8 => {
                 self.auto_gain_enabled = value > 0.5;
                 self.auto_gain_position = if self.auto_gain_enabled { 2 } else { 0 };
             }
-            9 => self.auto_gain_max_db = value,
-            10 => self.auto_gain_smoothing_ms = value,
-            11 => self.mode = value as usize,
-            12 => self.playback_level_db = value,
-            13 => self.reference_level_db = value,
-            14 => self.playback_volume_db = value,
+            9 => self.auto_gain_max_db = PARAMS[9].clamp_f64(value),
+            10 => self.auto_gain_smoothing_ms = PARAMS[10].clamp_f64(value),
+            11 => self.mode = PARAMS[11].clamp_f64(value) as usize,
+            12 => self.playback_level_db = PARAMS[12].clamp_f64(value),
+            13 => self.reference_level_db = PARAMS[13].clamp_f64(value),
+            14 => self.playback_volume_db = PARAMS[14].clamp_f64(value),
             15 => {
                 self.auto_gain_position = value as usize;
                 self.auto_gain_enabled = self.auto_gain_position != 0;
             }
-            16 => self.headroom_normalized = value > 0.5,
-            17 => self.auto_calibrated = value > 0.5,
+            16 => self.headroom_normalized = PARAMS[16].clamp_f64(value) > 0.5,
+            17 => self.auto_calibrated = PARAMS[17].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

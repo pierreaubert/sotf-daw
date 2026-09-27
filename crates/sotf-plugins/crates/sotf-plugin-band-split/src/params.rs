@@ -123,7 +123,7 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.frequency = value,
+            0 => self.frequency = PARAMS[0].clamp_f64(value),
             1 => {
                 let idx = value.round().clamp(0.0, (CROSSOVER_TYPES.len() - 1) as f64) as usize;
                 self.crossover_type = CROSSOVER_TYPES[idx].to_string();

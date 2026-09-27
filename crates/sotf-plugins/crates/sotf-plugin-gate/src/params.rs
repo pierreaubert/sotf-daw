@@ -398,14 +398,14 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.threshold = value,
-            1 => self.ratio = value,
-            2 => self.attack = value,
-            3 => self.hold = value,
-            4 => self.release = value,
-            5 => self.mix = value,
-            6 => self.link_channels = value > 0.5,
-            7 => self.sidechain_hpf_hz = value,
+            0 => self.threshold = PARAMS[0].clamp_f64(value),
+            1 => self.ratio = PARAMS[1].clamp_f64(value),
+            2 => self.attack = PARAMS[2].clamp_f64(value),
+            3 => self.hold = PARAMS[3].clamp_f64(value),
+            4 => self.release = PARAMS[4].clamp_f64(value),
+            5 => self.mix = PARAMS[5].clamp_f64(value),
+            6 => self.link_channels = PARAMS[6].clamp_f64(value) > 0.5,
+            7 => self.sidechain_hpf_hz = PARAMS[7].clamp_f64(value),
             8 => {
                 let idx = value as usize;
                 if let Some(&label) = HPF_ORDERS.get(idx) {
@@ -418,11 +418,11 @@ impl PluginParamDef for Params {
                     self.detection_mode = label.to_string();
                 }
             }
-            10 => self.sidechain_external = value > 0.5,
-            11 => self.range_db = value,
-            12 => self.hysteresis_db = value,
-            13 => self.knee_db = value,
-            14 => self.lookahead_ms = value,
+            10 => self.sidechain_external = PARAMS[10].clamp_f64(value) > 0.5,
+            11 => self.range_db = PARAMS[11].clamp_f64(value),
+            12 => self.hysteresis_db = PARAMS[12].clamp_f64(value),
+            13 => self.knee_db = PARAMS[13].clamp_f64(value),
+            14 => self.lookahead_ms = PARAMS[14].clamp_f64(value),
             _ => {}
         }
     }

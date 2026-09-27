@@ -171,11 +171,11 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.stereo_width = value,
-            1 => self.haas_delay_ms = value,
-            2 => self.decor_low_hz = value,
-            3 => self.decor_high_hz = value,
-            4 => self.freq_dependent = value > 0.5,
+            0 => self.stereo_width = PARAMS[0].clamp_f64(value),
+            1 => self.haas_delay_ms = PARAMS[1].clamp_f64(value),
+            2 => self.decor_low_hz = PARAMS[2].clamp_f64(value),
+            3 => self.decor_high_hz = PARAMS[3].clamp_f64(value),
+            4 => self.freq_dependent = PARAMS[4].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

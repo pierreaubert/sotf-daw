@@ -53,7 +53,7 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         if index == 0 {
-            self.enabled = value > 0.5;
+            self.enabled = PARAMS[0].clamp_f64(value) > 0.5;
         }
     }
 }

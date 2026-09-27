@@ -225,14 +225,14 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.delay_ms = value,
-            1 => self.feedback = value,
-            2 => self.mix = value,
-            3 => self.lfo_rate_hz = value,
-            4 => self.lfo_depth_ms = value,
-            5 => self.allpass_coeff = value,
-            6 => self.allpass_feedback = value > 0.5,
-            7 => self.pitch_preserving = value > 0.5,
+            0 => self.delay_ms = PARAMS[0].clamp_f64(value),
+            1 => self.feedback = PARAMS[1].clamp_f64(value),
+            2 => self.mix = PARAMS[2].clamp_f64(value),
+            3 => self.lfo_rate_hz = PARAMS[3].clamp_f64(value),
+            4 => self.lfo_depth_ms = PARAMS[4].clamp_f64(value),
+            5 => self.allpass_coeff = PARAMS[5].clamp_f64(value),
+            6 => self.allpass_feedback = PARAMS[6].clamp_f64(value) > 0.5,
+            7 => self.pitch_preserving = PARAMS[7].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

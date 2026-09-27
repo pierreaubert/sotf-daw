@@ -188,21 +188,21 @@ impl GatePlugin {
     /// Order must match params::PARAMS exactly.
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.threshold_db = value as f32,
-            1 => self.ratio = value as f32,
-            2 => self.attack_ms = value as f32,
-            3 => self.hold_ms = value as f32,
-            4 => self.release_ms = value as f32,
-            5 => self.mix = value as f32,
-            6 => self.link_channels = value > 0.5,
-            7 => self.sidechain_hpf_hz = value as f32,
-            8 => self.sidechain_hpf_order_index = value as usize,
-            9 => self.detection_mode_index = value as usize,
-            10 => self.sidechain_external = value > 0.5,
-            11 => self.range_db = value as f32,
-            12 => self.hysteresis_db = value as f32,
-            13 => self.knee_db = value as f32,
-            14 => self.lookahead_ms = value as f32,
+            0 => self.threshold_db = GT[0].clamp_f64(value) as f32,
+            1 => self.ratio = GT[1].clamp_f64(value) as f32,
+            2 => self.attack_ms = GT[2].clamp_f64(value) as f32,
+            3 => self.hold_ms = GT[3].clamp_f64(value) as f32,
+            4 => self.release_ms = GT[4].clamp_f64(value) as f32,
+            5 => self.mix = GT[5].clamp_f64(value) as f32,
+            6 => self.link_channels = GT[6].clamp_f64(value) > 0.5,
+            7 => self.sidechain_hpf_hz = GT[7].clamp_f64(value) as f32,
+            8 => self.sidechain_hpf_order_index = GT[8].clamp_f64(value) as usize,
+            9 => self.detection_mode_index = GT[9].clamp_f64(value) as usize,
+            10 => self.sidechain_external = GT[10].clamp_f64(value) > 0.5,
+            11 => self.range_db = GT[11].clamp_f64(value) as f32,
+            12 => self.hysteresis_db = GT[12].clamp_f64(value) as f32,
+            13 => self.knee_db = GT[13].clamp_f64(value) as f32,
+            14 => self.lookahead_ms = GT[14].clamp_f64(value) as f32,
             _ => {}
         }
     }

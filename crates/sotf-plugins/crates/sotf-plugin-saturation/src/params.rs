@@ -318,18 +318,18 @@ impl PluginParamDef for Params {
 
     fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
-            0 => self.mode = value,
-            1 => self.drive = value,
-            2 => self.tone = value,
-            3 => self.exciter_freq = value,
-            4 => self.oversampling = value,
-            5 => self.output_gain = value,
-            6 => self.mix = value,
-            7 => self.dynamic_amount = value,
-            8 => self.dynamic_attack_ms = value,
-            9 => self.dynamic_release_ms = value,
-            10 => self.dc_blocker = value > 0.5,
-            11 => self.use_adaa = value > 0.5,
+            0 => self.mode = PARAMS[0].clamp_f64(value),
+            1 => self.drive = PARAMS[1].clamp_f64(value),
+            2 => self.tone = PARAMS[2].clamp_f64(value),
+            3 => self.exciter_freq = PARAMS[3].clamp_f64(value),
+            4 => self.oversampling = PARAMS[4].clamp_f64(value),
+            5 => self.output_gain = PARAMS[5].clamp_f64(value),
+            6 => self.mix = PARAMS[6].clamp_f64(value),
+            7 => self.dynamic_amount = PARAMS[7].clamp_f64(value),
+            8 => self.dynamic_attack_ms = PARAMS[8].clamp_f64(value),
+            9 => self.dynamic_release_ms = PARAMS[9].clamp_f64(value),
+            10 => self.dc_blocker = PARAMS[10].clamp_f64(value) > 0.5,
+            11 => self.use_adaa = PARAMS[11].clamp_f64(value) > 0.5,
             _ => {}
         }
     }
