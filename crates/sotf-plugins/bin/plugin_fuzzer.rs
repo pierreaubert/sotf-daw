@@ -6,6 +6,12 @@ use sotf_plugins::Plugin;
 mod abcompare_fuzzer;
 #[path = "plugin_fuzzer/abnormality_report.rs"]
 mod abnormality_report;
+#[path = "plugin_fuzzer/analog_compressor_fuzzer.rs"]
+mod analog_compressor_fuzzer;
+#[path = "plugin_fuzzer/analog_eq_fuzzer.rs"]
+mod analog_eq_fuzzer;
+#[path = "plugin_fuzzer/analog_limiter_fuzzer.rs"]
+mod analog_limiter_fuzzer;
 #[path = "plugin_fuzzer/band_merge_fuzzer.rs"]
 mod band_merge_fuzzer;
 #[path = "plugin_fuzzer/band_split_fuzzer.rs"]

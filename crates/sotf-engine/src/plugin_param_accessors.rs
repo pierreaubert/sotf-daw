@@ -537,6 +537,38 @@ impl_param_accessors! {
             dc_blocker: bool, use_adaa: bool,
         ]
     },
+    AnalogEq {
+        params: param_specs::analog_eq::PARAMS,
+        layout: Some(&param_specs::analog_eq::LAYOUT),
+        fields: [
+            low_freq: f64, low_gain: f64,
+            mid1_freq: f64, mid1_gain: f64, mid1_q: f64,
+            mid2_freq: f64, mid2_gain: f64, mid2_q: f64,
+            high_freq: f64, high_gain: f64,
+            analog_model: f64, analog_drive: f64, analog_color: f64,
+            analog_character: f64, analog_trim: f64,
+        ]
+    },
+    AnalogLimiter {
+        params: param_specs::analog_limiter::PARAMS,
+        layout: Some(&param_specs::analog_limiter::LAYOUT),
+        fields: [
+            threshold: f64, release: f64, lookahead: f64,
+            soft: bool, true_peak: bool, mix: f64,
+            analog_model: f64, analog_drive: f64, analog_color: f64,
+            analog_character: f64, analog_trim: f64,
+        ]
+    },
+    AnalogCompressor {
+        params: param_specs::analog_compressor::PARAMS,
+        layout: Some(&param_specs::analog_compressor::LAYOUT),
+        fields: [
+            threshold: f64, ratio: f64, attack: f64, release: f64,
+            knee: f64, makeup: f64, mix: f64, auto_makeup: bool,
+            analog_model: f64, analog_drive: f64, analog_color: f64,
+            analog_character: f64, analog_trim: f64,
+        ]
+    },
     DynamicEq {
         params: param_specs::dynamic_eq::PARAMS,
         layout: Some(&param_specs::dynamic_eq::LAYOUT),

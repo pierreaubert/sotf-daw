@@ -359,6 +359,9 @@ use sotf_plugins::param_specs::mono_to_stereo as mono_to_stereo_specs;
 use sotf_plugins::param_specs::multiband_compressor as mb_compressor_specs;
 use sotf_plugins::param_specs::multiband_expander as mb_expander_specs;
 use sotf_plugins::param_specs::pnd as pnd_specs;
+use sotf_plugins::param_specs::analog_compressor as analog_compressor_specs;
+use sotf_plugins::param_specs::analog_eq as analog_eq_specs;
+use sotf_plugins::param_specs::analog_limiter as analog_limiter_specs;
 use sotf_plugins::param_specs::saturation as saturation_specs;
 use sotf_plugins::param_specs::spectral_compressor as spectral_compressor_specs;
 use sotf_plugins::param_specs::spectrum as spectrum_specs;
@@ -1422,6 +1425,90 @@ pub enum PluginSettings {
         #[serde(default = "default_sat_use_adaa")]
         use_adaa: bool,
     },
+    AnalogEq {
+        #[serde(default)]
+        low_freq: f64,
+        #[serde(default)]
+        low_gain: f64,
+        #[serde(default)]
+        mid1_freq: f64,
+        #[serde(default)]
+        mid1_gain: f64,
+        #[serde(default)]
+        mid1_q: f64,
+        #[serde(default)]
+        mid2_freq: f64,
+        #[serde(default)]
+        mid2_gain: f64,
+        #[serde(default)]
+        mid2_q: f64,
+        #[serde(default)]
+        high_freq: f64,
+        #[serde(default)]
+        high_gain: f64,
+        #[serde(default)]
+        analog_model: f64,
+        #[serde(default)]
+        analog_drive: f64,
+        #[serde(default)]
+        analog_color: f64,
+        #[serde(default)]
+        analog_character: f64,
+        #[serde(default)]
+        analog_trim: f64,
+    },
+    AnalogLimiter {
+        #[serde(default)]
+        threshold: f64,
+        #[serde(default)]
+        release: f64,
+        #[serde(default)]
+        lookahead: f64,
+        #[serde(default)]
+        soft: bool,
+        #[serde(default)]
+        true_peak: bool,
+        #[serde(default)]
+        mix: f64,
+        #[serde(default)]
+        analog_model: f64,
+        #[serde(default)]
+        analog_drive: f64,
+        #[serde(default)]
+        analog_color: f64,
+        #[serde(default)]
+        analog_character: f64,
+        #[serde(default)]
+        analog_trim: f64,
+    },
+    AnalogCompressor {
+        #[serde(default)]
+        threshold: f64,
+        #[serde(default)]
+        ratio: f64,
+        #[serde(default)]
+        attack: f64,
+        #[serde(default)]
+        release: f64,
+        #[serde(default)]
+        knee: f64,
+        #[serde(default)]
+        makeup: f64,
+        #[serde(default)]
+        mix: f64,
+        #[serde(default)]
+        auto_makeup: bool,
+        #[serde(default)]
+        analog_model: f64,
+        #[serde(default)]
+        analog_drive: f64,
+        #[serde(default)]
+        analog_color: f64,
+        #[serde(default)]
+        analog_character: f64,
+        #[serde(default)]
+        analog_trim: f64,
+    },
     DynamicEq {
         #[serde(default = "default_dyneq_num_bands")]
         num_bands: f64,
@@ -1554,6 +1641,9 @@ impl PluginSettings {
             Self::DeEsser { .. } => PluginType::DeEsser,
             Self::TransientShaper { .. } => PluginType::TransientShaper,
             Self::Saturation { .. } => PluginType::Saturation,
+            Self::AnalogEq { .. } => PluginType::AnalogEq,
+            Self::AnalogLimiter { .. } => PluginType::AnalogLimiter,
+            Self::AnalogCompressor { .. } => PluginType::AnalogCompressor,
             Self::DynamicEq { .. } => PluginType::DynamicEq,
             Self::LinearPhaseEq { .. } => PluginType::LinearPhaseEq,
             Self::SpectralCompressor { .. } => PluginType::SpectralCompressor,
@@ -2223,6 +2313,60 @@ impl PluginSettings {
                     dynamic_release_ms: p(sat, "dynamic_release_ms").default_f64(),
                     dc_blocker: p(sat, "dc_blocker").default_bool(),
                     use_adaa: p(sat, "use_adaa").default_bool(),
+                }
+            }
+            PluginType::AnalogEq => {
+                let ae = analog_eq_specs::PARAMS;
+                Self::AnalogEq {
+                    low_freq: p(ae, "low_freq").default_f64(),
+                    low_gain: p(ae, "low_gain").default_f64(),
+                    mid1_freq: p(ae, "mid1_freq").default_f64(),
+                    mid1_gain: p(ae, "mid1_gain").default_f64(),
+                    mid1_q: p(ae, "mid1_q").default_f64(),
+                    mid2_freq: p(ae, "mid2_freq").default_f64(),
+                    mid2_gain: p(ae, "mid2_gain").default_f64(),
+                    mid2_q: p(ae, "mid2_q").default_f64(),
+                    high_freq: p(ae, "high_freq").default_f64(),
+                    high_gain: p(ae, "high_gain").default_f64(),
+                    analog_model: p(ae, "analog_model").default_f64(),
+                    analog_drive: p(ae, "analog_drive").default_f64(),
+                    analog_color: p(ae, "analog_color").default_f64(),
+                    analog_character: p(ae, "analog_character").default_f64(),
+                    analog_trim: p(ae, "analog_trim").default_f64(),
+                }
+            }
+            PluginType::AnalogLimiter => {
+                let al = analog_limiter_specs::PARAMS;
+                Self::AnalogLimiter {
+                    threshold: p(al, "threshold").default_f64(),
+                    release: p(al, "release").default_f64(),
+                    lookahead: p(al, "lookahead").default_f64(),
+                    soft: p(al, "soft").default_bool(),
+                    true_peak: p(al, "true_peak").default_bool(),
+                    mix: p(al, "mix").default_f64(),
+                    analog_model: p(al, "analog_model").default_f64(),
+                    analog_drive: p(al, "analog_drive").default_f64(),
+                    analog_color: p(al, "analog_color").default_f64(),
+                    analog_character: p(al, "analog_character").default_f64(),
+                    analog_trim: p(al, "analog_trim").default_f64(),
+                }
+            }
+            PluginType::AnalogCompressor => {
+                let ac = analog_compressor_specs::PARAMS;
+                Self::AnalogCompressor {
+                    threshold: p(ac, "threshold").default_f64(),
+                    ratio: p(ac, "ratio").default_f64(),
+                    attack: p(ac, "attack").default_f64(),
+                    release: p(ac, "release").default_f64(),
+                    knee: p(ac, "knee").default_f64(),
+                    makeup: p(ac, "makeup").default_f64(),
+                    mix: p(ac, "mix").default_f64(),
+                    auto_makeup: p(ac, "auto_makeup").default_bool(),
+                    analog_model: p(ac, "analog_model").default_f64(),
+                    analog_drive: p(ac, "analog_drive").default_f64(),
+                    analog_color: p(ac, "analog_color").default_f64(),
+                    analog_character: p(ac, "analog_character").default_f64(),
+                    analog_trim: p(ac, "analog_trim").default_f64(),
                 }
             }
             PluginType::DynamicEq => {

@@ -62,6 +62,9 @@ impl PluginConfigConverterRegistry {
         registry.register("de_esser", dynamics::convert_de_esser);
         registry.register("transient_shaper", dynamics::convert_transient_shaper);
         registry.register("saturation", effects::convert_saturation);
+        registry.register("analog_eq", effects::convert_analog_eq);
+        registry.register("analog_limiter", effects::convert_analog_limiter);
+        registry.register("analog_compressor", effects::convert_analog_compressor);
         registry.register("dynamic_eq", dynamics::convert_dynamic_eq);
         registry.register("linear_phase_eq", eq::convert_linear_phase_eq);
         registry.register("fir_designer", eq::convert_linear_phase_eq);

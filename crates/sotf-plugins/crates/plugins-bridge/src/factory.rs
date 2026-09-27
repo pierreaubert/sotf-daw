@@ -353,6 +353,31 @@ pub fn create_plugin(
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
+        "AnalogCompressor" | "analog_compressor" => {
+            let params: sotf_plugin_analog_compressor::AnalogCompressorPluginParams =
+                parse_params(config_json)?;
+            let plugin =
+                sotf_plugin_analog_compressor::AnalogCompressorPlugin::try_from_params(
+                    channels, params,
+                )?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
+        "AnalogEQ" | "analog_eq" => {
+            let params: sotf_plugin_analog_eq::AnalogEqPluginParams = parse_params(config_json)?;
+            let plugin =
+                sotf_plugin_analog_eq::AnalogEqPlugin::try_from_params(channels, params)?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
+        "AnalogLimiter" | "analog_limiter" => {
+            let params: sotf_plugin_analog_limiter::AnalogLimiterPluginParams =
+                parse_params(config_json)?;
+            let plugin =
+                sotf_plugin_analog_limiter::AnalogLimiterPlugin::try_from_params(channels, params)?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
         "LinearPhaseEQ" | "linear_phase_eq" => {
             let params: sotf_plugin_linear_phase_eq::LinearPhaseEqPluginParams =
                 parse_params(config_json)?;
@@ -479,6 +504,9 @@ pub fn available_plugin_types() -> &'static [&'static str] {
         "TransientShaper",
         "DynamicEQ",
         "Saturation",
+        "AnalogEQ",
+        "AnalogLimiter",
+        "AnalogCompressor",
         "LinearPhaseEQ",
         "SpectralCompressor",
         "Dither",

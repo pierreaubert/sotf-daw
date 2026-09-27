@@ -105,6 +105,136 @@ pub fn convert_saturation(settings: &PluginSettings, _sample_rate: f64) -> Optio
     ))
 }
 
+fn analog_model_name(index: f64) -> &'static str {
+    sotf_plugins::plugin_analog_common::MODEL_NAMES
+        .get(index as usize)
+        .copied()
+        .unwrap_or("Harmonics")
+}
+
+pub fn convert_analog_eq(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
+    let PluginSettings::AnalogEq {
+        low_freq,
+        low_gain,
+        mid1_freq,
+        mid1_gain,
+        mid1_q,
+        mid2_freq,
+        mid2_gain,
+        mid2_q,
+        high_freq,
+        high_gain,
+        analog_model,
+        analog_drive,
+        analog_color,
+        analog_character,
+        analog_trim,
+    } = settings
+    else {
+        return None;
+    };
+    Some(PluginConfig::new(
+        "analog_eq",
+        json!({
+            "low_freq": *low_freq,
+            "low_gain": *low_gain,
+            "mid1_freq": *mid1_freq,
+            "mid1_gain": *mid1_gain,
+            "mid1_q": *mid1_q,
+            "mid2_freq": *mid2_freq,
+            "mid2_gain": *mid2_gain,
+            "mid2_q": *mid2_q,
+            "high_freq": *high_freq,
+            "high_gain": *high_gain,
+            "analog_model": analog_model_name(*analog_model),
+            "analog_drive": *analog_drive,
+            "analog_color": *analog_color,
+            "analog_character": *analog_character,
+            "analog_trim": *analog_trim,
+        }),
+    ))
+}
+
+pub fn convert_analog_limiter(
+    settings: &PluginSettings,
+    _sample_rate: f64,
+) -> Option<PluginConfig> {
+    let PluginSettings::AnalogLimiter {
+        threshold,
+        release,
+        lookahead,
+        soft,
+        true_peak,
+        mix,
+        analog_model,
+        analog_drive,
+        analog_color,
+        analog_character,
+        analog_trim,
+    } = settings
+    else {
+        return None;
+    };
+    Some(PluginConfig::new(
+        "analog_limiter",
+        json!({
+            "threshold": *threshold,
+            "release": *release,
+            "lookahead": *lookahead,
+            "soft": *soft,
+            "true_peak": *true_peak,
+            "mix": *mix,
+            "analog_model": analog_model_name(*analog_model),
+            "analog_drive": *analog_drive,
+            "analog_color": *analog_color,
+            "analog_character": *analog_character,
+            "analog_trim": *analog_trim,
+        }),
+    ))
+}
+
+pub fn convert_analog_compressor(
+    settings: &PluginSettings,
+    _sample_rate: f64,
+) -> Option<PluginConfig> {
+    let PluginSettings::AnalogCompressor {
+        threshold,
+        ratio,
+        attack,
+        release,
+        knee,
+        makeup,
+        mix,
+        auto_makeup,
+        analog_model,
+        analog_drive,
+        analog_color,
+        analog_character,
+        analog_trim,
+    } = settings
+    else {
+        return None;
+    };
+    Some(PluginConfig::new(
+        "analog_compressor",
+        json!({
+            "threshold": *threshold,
+            "ratio": *ratio,
+            "attack": *attack,
+            "release": *release,
+            "knee": *knee,
+            "makeup": *makeup,
+            "mix": *mix,
+            "auto_makeup": *auto_makeup,
+            "analog_model": analog_model_name(*analog_model),
+            "analog_drive": *analog_drive,
+            "analog_color": *analog_color,
+            "analog_character": *analog_character,
+            "analog_trim": *analog_trim,
+        }),
+    ))
+}
+
 pub fn convert_loudness_compensation(
     settings: &PluginSettings,
     _sample_rate: f64,

@@ -1,0 +1,21 @@
+[package]
+name = "sotf-plugin-analog-eq"
+description = "SOTF Analog EQ — 4-band parametric EQ with analog coloration stage"
+version = "0.5.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+[lib]
+name = "sotf_plugin_analog_eq"
+path = "src/lib.rs"
+
+[dependencies]
+sotf-host = { workspace = true }
+sotf-plugin-analog-common = { workspace = true }
+math-iir-fir = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

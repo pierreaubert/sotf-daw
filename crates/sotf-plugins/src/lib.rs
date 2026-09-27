@@ -90,6 +90,15 @@ pub mod param_specs {
     pub mod aec {
         pub use sotf_plugin_aec::params::*;
     }
+    pub mod analog_compressor {
+        pub use sotf_plugin_analog_compressor::params::*;
+    }
+    pub mod analog_eq {
+        pub use sotf_plugin_analog_eq::params::*;
+    }
+    pub mod analog_limiter {
+        pub use sotf_plugin_analog_limiter::params::*;
+    }
     pub mod beamformer {
         pub use sotf_plugin_beamformer::params::*;
     }
@@ -302,6 +311,10 @@ pub use sotf_host::test_utils;
 pub use sotf_plugin_aae as plugin_aae;
 pub use sotf_plugin_ab_compare as plugin_ab_compare;
 pub use sotf_plugin_aec as plugin_aec;
+pub use sotf_plugin_analog_compressor as plugin_analog_compressor;
+pub use sotf_plugin_analog_common as plugin_analog_common;
+pub use sotf_plugin_analog_eq as plugin_analog_eq;
+pub use sotf_plugin_analog_limiter as plugin_analog_limiter;
 pub use sotf_plugin_band_merge as plugin_band_merge;
 pub use sotf_plugin_band_split as plugin_band_split;
 pub use sotf_plugin_beamformer as plugin_beamformer;
@@ -398,6 +411,9 @@ pub use plugin_multiband_expander::{
 };
 pub use plugin_pnd::{PndPlugin, PndPluginParams};
 pub use plugin_resampler::ResamplerPlugin;
+pub use plugin_analog_compressor::{AnalogCompressorPlugin, AnalogCompressorPluginParams};
+pub use plugin_analog_eq::{AnalogEqPlugin, AnalogEqPluginParams};
+pub use plugin_analog_limiter::{AnalogLimiterPlugin, AnalogLimiterPluginParams};
 pub use plugin_saturation::{SaturationPlugin, SaturationPluginParams};
 pub use plugin_spectral_compressor::{SpectralCompressorPlugin, SpectralCompressorPluginParams};
 pub use plugin_speech_denoiser::{

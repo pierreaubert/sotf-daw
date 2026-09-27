@@ -1,0 +1,348 @@
+//! Shared analog coloration stage for the `sotf-plugin-analog-*` family.
+//!
+//! [`AnalogColorStage`] wraps one `math_analog::AnalogModel` and presents the
+//! uniform control surface every analog plugin exposes:
+//!
+//! - `model` — one of [`MODEL_NAMES`], selected by stable id
+//!   (`AnalogModel::from_id`; unknown ids are rejected, never guessed).
+//! - `drive_db` — input drive in dB, range −60..+36. On the console-preamp
+//!   model this maps to its `input_gain_db` control, which shares the range.
+//! - `character` — timbre control in 0..1. On the console-preamp model this
+//!   maps to its `asymmetry` control, which shares the range.
+//! - `color` — coloration amount in 0..1 (maps to the models' `amount`;
+//!   the per-model `mix` stays at 1.0 so there is exactly one blend knob).
+//! - `output_trim_db` — post-stage trim in dB, range −60..+24.
+//!
+//! Defect controls (noise, hum, crosstalk) default to zero inside
+//! `math-analog` and are intentionally left untouched: adding this stage never
+//! silently adds defects to an existing preset.
+//!
+//! The stage processes interleaved audio in place, matching the host buffer
+//! layout, and chunks blocks larger than the prepared maximum so the realtime
+//! path performs no allocation.
+
+use math_audio_analog::{
+    AnalogError, AnalogModel, AnalogProcessor, DEFAULT_REFERENCE_LEVEL_DBFS, ProcessSpec,
+};
+use sotf_host::param_specs::ParamSpec;
+
+/// Model names in [`AnalogModel`] id order.
+///
+/// `MODEL_NAMES[id as usize]` is the display name for
+/// `AnalogModel::from_id(id)`. The order is append-only: new models go last so
+/// serialized selections stay stable.
+pub const MODEL_NAMES: &[&str] = &[
+    "Harmonics",
+    "Static",
+    "Hammerstein",
+    "Tape",
+    "Transformer",
+    "Console Preamp",
+];
+
+/// 0 VU calibration shared by the analog family, in dBFS.
+///
+/// Re-exported from `math-analog` so plugins and UIs agree on drive staging.
+pub const REFERENCE_LEVEL_DBFS: f32 = DEFAULT_REFERENCE_LEVEL_DBFS;
+
+/// Shared `model` parameter spec for the analog family.
+///
+/// `default` is a model id (0..5); unknown defaults fall back to Harmonics.
+pub const fn model_param_spec(default: u32, group: &'static str) -> ParamSpec {
+    let max = MODEL_NAMES.len() as u32 - 1;
+    let safe = if default > max { max } else { default } as usize;
+    ParamSpec::choice("Analog Model", "analog_model", safe, MODEL_NAMES, group)
+        .setup()
+        .doc("Analog coloration model applied after the core DSP")
+}
+
+/// Shared `drive` parameter spec (dB, −60..+36).
+pub const fn drive_param_spec(group: &'static str) -> ParamSpec {
+    ParamSpec::float("Analog Drive", "analog_drive", 0.0, -60.0, 36.0, 0.1, "dB", group)
+        .doc("Input drive into the analog coloration stage")
+}
+
+/// Shared `color` (amount) parameter spec (0..1, displayed as %).
+pub const fn color_param_spec(group: &'static str) -> ParamSpec {
+    ParamSpec::float("Analog Color", "analog_color", 0.0, 0.0, 1.0, 0.01, "%", group)
+        .scaled(100.0)
+        .doc("Analog coloration amount; 0% leaves the core DSP untouched")
+}
+
+/// Shared `character` parameter spec (0..1, displayed as %).
+pub const fn character_param_spec(group: &'static str) -> ParamSpec {
+    ParamSpec::float(
+        "Analog Character",
+        "analog_character",
+        0.5,
+        0.0,
+        1.0,
+        0.01,
+        "%",
+        group,
+    )
+    .scaled(100.0)
+    .doc("Analog model timbre")
+}
+
+/// Shared output-trim parameter spec (dB, −24..+24).
+pub const fn output_trim_param_spec(group: &'static str) -> ParamSpec {
+    ParamSpec::float(
+        "Analog Trim",
+        "analog_trim",
+        0.0,
+        -24.0,
+        24.0,
+        0.1,
+        "dB",
+        group,
+    )
+    .output()
+    .doc("Post-stage output trim")
+}
+
+/// One `math-analog` model with a uniform control surface.
+///
+/// Owns no scratch buffers: processing happens in place on the caller's
+/// interleaved buffer, chunked at the prepared block size.
+pub struct AnalogColorStage {
+    model: AnalogModel,
+    spec: ProcessSpec,
+    prepared: bool,
+}
+
+impl AnalogColorStage {
+    /// Build a Harmonics stage; call [`prepare`](Self::prepare) before use.
+    pub fn new(channels: usize) -> Self {
+        let channels = channels.max(1);
+        Self {
+            model: AnalogModel::default(),
+            spec: ProcessSpec::new(48_000.0, channels, 4096),
+            prepared: false,
+        }
+    }
+
+    /// Prepare (or re-prepare) the stage for a fixed stream layout.
+    pub fn prepare(&mut self, sample_rate: u32, max_block_frames: usize) -> Result<(), String> {
+        if sample_rate == 0 {
+            return Err("analog stage sample rate must be non-zero".to_string());
+        }
+        if max_block_frames == 0 {
+            return Err("analog stage max block size must be non-zero".to_string());
+        }
+        self.spec = ProcessSpec::new(
+            sample_rate as f32,
+            self.spec.channels,
+            max_block_frames,
+        );
+        self.model.prepare(self.spec).map_err(|e| e.to_string())?;
+        self.prepared = true;
+        Ok(())
+    }
+
+    /// Select the coloration model by stable id. Unknown ids are rejected and
+    /// the current model is left untouched.
+    pub fn set_model_id(&mut self, id: u32) -> Result<(), String> {
+        let model = AnalogModel::from_id(id).map_err(|e| e.to_string())?;
+        self.model = model;
+        if self.prepared {
+            // Restore the stream layout on the new model and fail closed if
+            // the layout is rejected.
+            self.model.prepare(self.spec).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    /// Currently selected model id.
+    pub fn model_id(&self) -> u32 {
+        self.model.model_id()
+    }
+
+    /// Currently selected model name.
+    pub fn model_name(&self) -> &'static str {
+        MODEL_NAMES
+            .get(self.model_id() as usize)
+            .copied()
+            .unwrap_or("Harmonics")
+    }
+
+    /// Set input drive in dB (−60..+36).
+    pub fn set_drive_db(&mut self, value: f32) -> Result<(), String> {
+        map_err(match &mut self.model {
+            AnalogModel::Harmonics(m) => m.set_drive_db(value),
+            AnalogModel::Static(m) => m.set_drive_db(value),
+            AnalogModel::Hammerstein(m) => m.set_drive_db(value),
+            AnalogModel::Tape(m) => m.set_drive_db(value),
+            AnalogModel::Transformer(m) => m.set_drive_db(value),
+            // The console preamp has no `drive_db`; its `input_gain_db`
+            // shares the same −60..+36 dB range.
+            AnalogModel::ConsolePreamp(m) => m.set_input_gain_db(value),
+        })
+    }
+
+    /// Set coloration amount in 0..1.
+    pub fn set_color(&mut self, value: f32) -> Result<(), String> {
+        map_err(match &mut self.model {
+            AnalogModel::Harmonics(m) => m.set_amount(value),
+            AnalogModel::Static(m) => m.set_amount(value),
+            AnalogModel::Hammerstein(m) => m.set_amount(value),
+            AnalogModel::Tape(m) => m.set_amount(value),
+            AnalogModel::Transformer(m) => m.set_amount(value),
+            AnalogModel::ConsolePreamp(m) => m.set_amount(value),
+        })
+    }
+
+    /// Set timbre in 0..1.
+    pub fn set_character(&mut self, value: f32) -> Result<(), String> {
+        map_err(match &mut self.model {
+            AnalogModel::Harmonics(m) => m.set_character(value),
+            AnalogModel::Static(m) => m.set_character(value),
+            AnalogModel::Hammerstein(m) => m.set_character(value),
+            AnalogModel::Tape(m) => m.set_character(value),
+            AnalogModel::Transformer(m) => m.set_character(value),
+            // The console preamp has no `character`; its `asymmetry`
+            // shares the same 0..1 range.
+            AnalogModel::ConsolePreamp(m) => m.set_asymmetry(value),
+        })
+    }
+
+    /// Set post-stage trim in dB (−60..+24 at the model; plugins clamp their
+    /// own narrower UI range via the parameter schema).
+    pub fn set_output_trim_db(&mut self, value: f32) -> Result<(), String> {
+        map_err(match &mut self.model {
+            AnalogModel::Harmonics(m) => m.set_output_gain_db(value),
+            AnalogModel::Static(m) => m.set_output_gain_db(value),
+            AnalogModel::Hammerstein(m) => m.set_output_gain_db(value),
+            AnalogModel::Tape(m) => m.set_output_gain_db(value),
+            AnalogModel::Transformer(m) => m.set_output_gain_db(value),
+            AnalogModel::ConsolePreamp(m) => m.set_output_gain_db(value),
+        })
+    }
+
+    /// Clear model state without changing controls or layout.
+    pub fn reset(&mut self) {
+        self.model.reset();
+    }
+
+    /// Additional latency introduced by the prepared model, in samples.
+    pub fn latency_samples(&self) -> usize {
+        self.model.latency_samples()
+    }
+
+    /// Process `frames` of interleaved audio in place.
+    ///
+    /// Blocks larger than the prepared maximum are processed in chunks; the
+    /// call performs no allocation.
+    pub fn process_interleaved(
+        &mut self,
+        samples: &mut [f32],
+        frames: usize,
+    ) -> Result<(), String> {
+        if !self.prepared {
+            return Err("analog stage has not been prepared".to_string());
+        }
+        let channels = self.spec.channels;
+        let total = frames
+            .checked_mul(channels)
+            .ok_or_else(|| "analog stage frame/sample count overflow".to_string())?;
+        if samples.len() < total {
+            return Err(format!(
+                "analog stage buffer too short ({} < {})",
+                samples.len(),
+                total
+            ));
+        }
+        let mut done = 0;
+        while done < frames {
+            let chunk = (frames - done).min(self.spec.max_block_frames);
+            let start = done * channels;
+            let chunk_buf = &mut samples[start..start + chunk * channels];
+            self.model
+                .process_interleaved(chunk_buf, chunk)
+                .map_err(|e| e.to_string())?;
+            done += chunk;
+        }
+        Ok(())
+    }
+}
+
+fn map_err(result: Result<(), AnalogError>) -> Result<(), String> {
+    result.map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn prepared_stage(id: u32, channels: usize) -> AnalogColorStage {
+        let mut stage = AnalogColorStage::new(channels);
+        stage.prepare(48_000, 512).expect("prepare");
+        stage.set_model_id(id).expect("model");
+        stage.set_drive_db(0.0).expect("drive");
+        stage.set_color(1.0).expect("color");
+        stage.set_character(0.5).expect("character");
+        stage.set_output_trim_db(0.0).expect("trim");
+        stage
+    }
+
+    #[test]
+    fn model_ids_round_trip_and_reject_unknown() {
+        let mut stage = AnalogColorStage::new(2);
+        stage.prepare(48_000, 512).expect("prepare");
+        for id in 0..MODEL_NAMES.len() as u32 {
+            stage.set_model_id(id).expect("known model");
+            assert_eq!(stage.model_id(), id);
+        }
+        assert!(stage.set_model_id(999).is_err());
+        // Failed selection leaves the current model untouched.
+        assert_eq!(stage.model_id(), MODEL_NAMES.len() as u32 - 1);
+    }
+
+    #[test]
+    fn zero_color_is_transparent_for_every_model() {
+        for id in 0..MODEL_NAMES.len() as u32 {
+            let mut stage = prepared_stage(id, 2);
+            stage.set_color(0.0).expect("color off");
+            // Let control smoothing settle past the 10 ms time constant.
+            let mut buf = vec![0.0_f32; 2 * 4096];
+            for (i, sample) in buf.iter_mut().enumerate() {
+                let t = i as f32 / 2.0;
+                *sample = (t * 440.0 * std::f32::consts::TAU / 48_000.0).sin() * 0.5;
+            }
+            let input = buf.clone();
+            // Process in prepared-size chunks so smoothing advances.
+            for chunk in buf.chunks_mut(2 * 512) {
+                stage.process_interleaved(chunk, 512).expect("process");
+            }
+            for (got, want) in buf.iter().zip(input.iter()) {
+                assert!(
+                    (got - want).abs() < 1e-4,
+                    "model {id} leaks color at 0%: {got} != {want}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn oversized_blocks_are_chunked_without_allocation() {
+        let mut stage = prepared_stage(0, 2);
+        stage.set_color(0.0).expect("color off");
+        let mut buf = vec![0.25_f32; 2 * 2048];
+        stage.process_interleaved(&mut buf, 2048).expect("chunked");
+        assert!(buf.iter().all(|s| s.is_finite()));
+    }
+
+    #[test]
+    fn out_of_range_controls_are_rejected() {
+        let mut stage = prepared_stage(0, 1);
+        assert!(stage.set_drive_db(100.0).is_err());
+        assert!(stage.set_color(2.0).is_err());
+        assert!(stage.set_character(-1.0).is_err());
+        assert!(stage.process_interleaved(&mut [], 1).is_err());
+    }
+
+    #[test]
+    fn reference_level_matches_math_analog_calibration() {
+        assert_eq!(REFERENCE_LEVEL_DBFS, -18.0);
+    }
+}

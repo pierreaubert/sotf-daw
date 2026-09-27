@@ -5,6 +5,10 @@ members = [
     "crates/sotf-plugins/crates/sotf-plugin-ab-compare",
     "crates/sotf-plugins/crates/sotf-plugin-aae",
     "crates/sotf-plugins/crates/sotf-plugin-aec",
+    "crates/sotf-plugins/crates/sotf-plugin-analog-common",
+    "crates/sotf-plugins/crates/sotf-plugin-analog-compressor",
+    "crates/sotf-plugins/crates/sotf-plugin-analog-eq",
+    "crates/sotf-plugins/crates/sotf-plugin-analog-limiter",
     "crates/sotf-plugins/crates/sotf-plugin-band-merge",
     "crates/sotf-plugins/crates/sotf-plugin-beamformer",
     "crates/sotf-plugins/crates/sotf-plugin-band-split",
@@ -85,6 +89,10 @@ sotf-midi = { path = "crates/sotf-midi" }
 sotf-plugin-aae = { path = "crates/sotf-plugins/crates/sotf-plugin-aae" }
 sotf-plugin-ab-compare = { path = "crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
 sotf-plugin-aec = { path = "crates/sotf-plugins/crates/sotf-plugin-aec" }
+sotf-plugin-analog-common = { path = "crates/sotf-plugins/crates/sotf-plugin-analog-common" }
+sotf-plugin-analog-compressor = { path = "crates/sotf-plugins/crates/sotf-plugin-analog-compressor" }
+sotf-plugin-analog-eq = { path = "crates/sotf-plugins/crates/sotf-plugin-analog-eq" }
+sotf-plugin-analog-limiter = { path = "crates/sotf-plugins/crates/sotf-plugin-analog-limiter" }
 sotf-plugin-ambisonics = { path = "crates/sotf-plugins/crates/sotf-plugin-ambisonics" }
 sotf-plugin-band-merge = { path = "crates/sotf-plugins/crates/sotf-plugin-band-merge" }
 sotf-plugin-band-split = { path = "crates/sotf-plugins/crates/sotf-plugin-band-split" }
@@ -164,6 +172,7 @@ insta = { version = "1.42", features = ["json"] }
 libc = "0.2"
 libloading = { version = "0.8" }
 log = "0.4.28"
+math-analog = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
 math-dsp = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
 math-iir-fir = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }
 math-rir = { git = "https://github.com/pierreaubert/math-audio", version = "0.5" }

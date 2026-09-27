@@ -22,7 +22,9 @@ use super::validate::validate_external_plugin_security_config;
 use crate::ExternalPlugin;
 use crate::{
     ABComparePlugin, ABComparePluginParams, AaePlugin, AaePluginParams, AecPlugin, AecPluginParams,
-    BandMergePlugin, BandMergePluginParams, BandSplitPlugin, BandSplitPluginParams,
+    AnalogCompressorPlugin, AnalogCompressorPluginParams, AnalogEqPlugin, AnalogEqPluginParams,
+    AnalogLimiterPlugin, AnalogLimiterPluginParams, BandMergePlugin, BandMergePluginParams,
+    BandSplitPlugin, BandSplitPluginParams,
     BeamformerPlugin, BeamformerPluginParams, BinauralDecoderParams, BinauralDecoderPlugin,
     ChannelMuteSoloParams, ChannelMuteSoloPlugin, CompressorPlugin, CompressorPluginParams,
     ConvolutionPlugin, ConvolutionPluginParams, CrossfeedPlugin, CrossfeedPluginParams,
@@ -349,6 +351,28 @@ pub fn create_plugin(
             let params: SaturationPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse saturation params: {e}"))?;
             let plugin = SaturationPlugin::try_from_params(channels, params)?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
+        "analog_compressor" => {
+            let params: AnalogCompressorPluginParams =
+                serde_json::from_value(parameters.clone())
+                    .map_err(|e| format!("Failed to parse analog compressor params: {e}"))?;
+            let plugin = AnalogCompressorPlugin::try_from_params(channels, params)?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
+        "analog_eq" => {
+            let params: AnalogEqPluginParams = serde_json::from_value(parameters.clone())
+                .map_err(|e| format!("Failed to parse analog EQ params: {e}"))?;
+            let plugin = AnalogEqPlugin::try_from_params(channels, params)?;
+            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        }
+
+        "analog_limiter" => {
+            let params: AnalogLimiterPluginParams = serde_json::from_value(parameters.clone())
+                .map_err(|e| format!("Failed to parse analog limiter params: {e}"))?;
+            let plugin = AnalogLimiterPlugin::try_from_params(channels, params)?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 

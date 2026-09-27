@@ -335,6 +335,18 @@ invariant_test!(
     sotf_plugin_saturation::params::Params
 );
 invariant_test!(
+    invariants_analog_compressor,
+    sotf_plugin_analog_compressor::params::AnalogCompressorPluginParams
+);
+invariant_test!(
+    invariants_analog_eq,
+    sotf_plugin_analog_eq::params::AnalogEqPluginParams
+);
+invariant_test!(
+    invariants_analog_limiter,
+    sotf_plugin_analog_limiter::params::AnalogLimiterPluginParams
+);
+invariant_test!(
     invariants_transient_shaper,
     sotf_plugin_transient_shaper::params::Params
 );

@@ -27,6 +27,10 @@ sotf-host = { workspace = true }
 sotf-plugin-ab-compare = { workspace = true }
 sotf-plugin-aae = { workspace = true }
 sotf-plugin-aec = { workspace = true }
+sotf-plugin-analog-common = { workspace = true }
+sotf-plugin-analog-compressor = { workspace = true }
+sotf-plugin-analog-eq = { workspace = true }
+sotf-plugin-analog-limiter = { workspace = true }
 sotf-plugin-ambisonics = { workspace = true }
 sotf-plugin-band-merge = { workspace = true }
 sotf-plugin-beamformer = { workspace = true }

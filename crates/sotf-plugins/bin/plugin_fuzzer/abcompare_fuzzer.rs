@@ -1,4 +1,7 @@
 use super::PluginFuzzer;
+use super::analog_compressor_fuzzer::AnalogCompressorFuzzer;
+use super::analog_eq_fuzzer::AnalogEqFuzzer;
+use super::analog_limiter_fuzzer::AnalogLimiterFuzzer;
 use super::band_merge_fuzzer::BandMergeFuzzer;
 use super::band_split_fuzzer::BandSplitFuzzer;
 use super::binaural_fuzzer::BinauralFuzzer;
@@ -59,6 +62,11 @@ pub(super) fn get_fuzzer(
         "eq" => Ok(Box::new(EqFuzzer { sample_rate })),
         "compressor" | "comp" => Ok(Box::new(CompressorFuzzer)),
         "limiter" | "limit" => Ok(Box::new(LimiterFuzzer)),
+        "analog_eq" | "analogeq" => Ok(Box::new(AnalogEqFuzzer)),
+        "analog_limiter" | "analoglimiter" | "analoglimit" => Ok(Box::new(AnalogLimiterFuzzer)),
+        "analog_compressor" | "analogcomp" | "analogcompressor" => {
+            Ok(Box::new(AnalogCompressorFuzzer))
+        }
         "gate" => Ok(Box::new(GateFuzzer)),
         "delay" => Ok(Box::new(DelayFuzzer)),
         "loudness" | "loudness_compensation" => Ok(Box::new(LoudnessCompensationFuzzer)),

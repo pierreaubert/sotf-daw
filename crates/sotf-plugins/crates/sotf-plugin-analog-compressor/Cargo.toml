@@ -1,0 +1,20 @@
+[package]
+name = "sotf-plugin-analog-compressor"
+description = "SOTF Analog Compressor — single-band compressor with analog coloration stage"
+version = "0.5.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+[lib]
+name = "sotf_plugin_analog_compressor"
+path = "src/lib.rs"
+
+[dependencies]
+sotf-host = { workspace = true }
+sotf-plugin-analog-common = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

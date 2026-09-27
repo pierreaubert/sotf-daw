@@ -848,6 +848,69 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         )
     ),
     entry!(
+        "analog_compressor",
+        ["analog_compressor"],
+        Processor,
+        builtin_metadata!(
+            "sotf-plugin-analog-compressor",
+            "Analog Compressor",
+            Beta,
+            PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
+            PluginChannelOutputModel::PreservesInput,
+            PluginLatencyModel::PluginReported(
+                "compressor core and analog color stage add no latency"
+            ),
+            "sotf_plugin_analog_compressor::params::PARAMS",
+            Generated,
+            true,
+        ),
+        zero_alloc_evidence(
+            "sotf-plugin-analog-compressor gain-computer oracle, makeup, mix, auto-makeup, driven color, oversized-block chunking, and bounded-output tests"
+        )
+    ),
+    entry!(
+        "analog_eq",
+        ["analog_eq"],
+        Processor,
+        builtin_metadata!(
+            "sotf-plugin-analog-eq",
+            "Analog EQ",
+            Beta,
+            PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
+            PluginChannelOutputModel::PreservesInput,
+            PluginLatencyModel::PluginReported(
+                "EQ core and analog color stage add no latency"
+            ),
+            "sotf_plugin_analog_eq::params::PARAMS",
+            Generated,
+            true,
+        ),
+        zero_alloc_evidence(
+            "sotf-plugin-analog-eq band boost/cut, default transparency, driven color, oversized-block chunking, reset, and bounded-output tests"
+        )
+    ),
+    entry!(
+        "analog_limiter",
+        ["analog_limiter"],
+        Processor,
+        builtin_metadata!(
+            "sotf-plugin-analog-limiter",
+            "Analog Limiter",
+            Beta,
+            PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
+            PluginChannelOutputModel::PreservesInput,
+            PluginLatencyModel::PluginReported(
+                "limiter-core lookahead latency; analog color stage adds none"
+            ),
+            "sotf_plugin_analog_limiter::params::PARAMS",
+            Generated,
+            true,
+        ),
+        zero_alloc_evidence(
+            "sotf-plugin-analog-limiter ceiling, quiet transparency, driven color, oversized-block chunking, and bounded-output tests"
+        )
+    ),
+    entry!(
         "loudness_compensation",
         ["loudness_compensation"],
         Processor,
