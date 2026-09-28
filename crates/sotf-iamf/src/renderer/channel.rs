@@ -8,8 +8,13 @@
 
 use crate::error::{IamfError, IamfResult};
 use crate::renderer::ElementRenderer;
+use crate::renderer::scalable::{
+    DemixFrame, Role, ScalableFrameParams, W_TABLE, advance_widx, demix_layer, gain_role,
+    layout_roles, new_channels, recon_role, substream_order,
+};
 use crate::types::*;
 use sotf_host::speaker_config::SpeakerConfig;
+use std::collections::{HashMap, HashSet};
 
 /// IAMF channel order for a given loudspeaker_layout (IAMF v1.1.0 §7.3.2,
 /// referencing ITU-R BS.2051 system identifiers).
@@ -127,6 +132,101 @@ pub struct ChannelRenderer {
     /// Channel mapping from element to output layout.
     /// channel_map[element_ch] = output_ch (or usize::MAX to discard)
     channel_map: Vec<usize>,
+    /// Scalable reconstruction state (Gain → De-mixer → Recon Gain).
+    /// `None` for single-layer elements, which route discretely.
+    scalable: Option<ScalableState>,
+}
+
+/// One channel group (layer) of a scalable element.
+struct ScalableGroup {
+    layout: IamfChannelLayout,
+    /// Mixed-channel roles in substream order.
+    mixed_roles: Vec<Role>,
+    substream_count: usize,
+    coupled_count: usize,
+    gain_flags: u8,
+    gain_db: f32,
+}
+
+/// §7.2 reconstruction state for a multi-layer channel element.
+struct ScalableState {
+    groups: Vec<ScalableGroup>,
+    first_layout: IamfChannelLayout,
+    /// Layouts of layers 0..=best, for de-mixer eligibility scans.
+    layouts: Vec<IamfChannelLayout>,
+    target_roles: Vec<Role>,
+    olen: usize,
+    default_mode: u8,
+    default_w: Option<u8>,
+    // Runtime state:
+    widx: i32,
+    w: f32,
+    params: crate::types::DmixParams,
+    saw_dmix_block: bool,
+    smoothers: HashMap<Role, crate::renderer::scalable::ReconSmoother>,
+    pending: ScalableFrameParams,
+}
+
+impl ScalableState {
+    fn new(
+        config: &ScalableChannelConfig,
+        best_layer_idx: usize,
+        olen: usize,
+        default_mode: u8,
+        default_w: Option<u8>,
+    ) -> IamfResult<Self> {
+        let mut groups = Vec::with_capacity(best_layer_idx + 1);
+        let mut layouts = Vec::with_capacity(best_layer_idx + 1);
+        let mut prev: Option<IamfChannelLayout> = None;
+        for layer in &config.layers[..=best_layer_idx] {
+            let cur = layer.loudspeaker_layout;
+            let ordered = substream_order(&new_channels(prev, cur));
+            let expect = layer.coupled_substream_count as usize * 2
+                + (layer.substream_count as usize)
+                    .saturating_sub(layer.coupled_substream_count as usize);
+            if ordered.len() != expect {
+                return Err(IamfError::ParseError(format!(
+                    "Layer {cur:?}: {sub} substreams ({coupled} coupled) deliver {expect} channels but the layout step needs {}",
+                    ordered.len(),
+                    sub = layer.substream_count,
+                    coupled = layer.coupled_substream_count,
+                )));
+            }
+            groups.push(ScalableGroup {
+                layout: cur,
+                mixed_roles: ordered,
+                substream_count: layer.substream_count as usize,
+                coupled_count: layer.coupled_substream_count as usize,
+                gain_flags: layer.output_gain_flags,
+                gain_db: layer.output_gain_db,
+            });
+            layouts.push(cur);
+            prev = Some(cur);
+        }
+        let first_layout = layouts[0];
+        let target_roles = layout_roles(layouts[best_layer_idx]).to_vec();
+        let params = crate::types::DmixParams::for_mode(default_mode).ok_or_else(|| {
+            IamfError::ParseError(format!("Reserved default dmixp_mode {default_mode}"))
+        })?;
+        let w = default_w
+            .map(|w| W_TABLE[(w.min(10)) as usize])
+            .unwrap_or(0.0);
+        Ok(Self {
+            groups,
+            first_layout,
+            layouts,
+            target_roles,
+            olen,
+            default_mode,
+            default_w,
+            widx: 0,
+            w,
+            params,
+            saw_dmix_block: false,
+            smoothers: HashMap::new(),
+            pending: ScalableFrameParams::default(),
+        })
+    }
 }
 
 impl ChannelRenderer {
@@ -163,23 +263,229 @@ impl ChannelRenderer {
             "channel_map length must match IAMF layer channel count"
         );
 
+        // Multi-layer elements reconstruct through the §7.2 pipeline;
+        // single layers route discretely. Codec overlap and element
+        // demixing defaults are refined by `create_renderer` via the
+        // setters below; the fallbacks here are spec defaults.
+        let scalable = if config.layers.len() > 1 {
+            Some(ScalableState::new(config, best_layer_idx, 64, 0, None)?)
+        } else {
+            None
+        };
+
         Ok(Self {
             _layer_channels: layer_channels,
             substreams_for_layer,
             coupled_for_layer,
             output_channels: target_channels,
             channel_map,
+            scalable,
         })
+    }
+
+    /// Refine the recon-gain overlap length from the stream codec
+    /// (60 for Opus, 64 for AAC; §7.2.3).
+    pub fn set_recon_overlap(&mut self, olen: usize) {
+        if let Some(state) = self.scalable.as_mut() {
+            state.olen = olen.max(1);
+        }
+    }
+
+    /// Install the element's default demixing mode/weight, applied until
+    /// per-frame DemixingInfo blocks arrive.
+    pub fn set_default_demixing(&mut self, mode: u8, w: Option<u8>) -> IamfResult<()> {
+        let Some(state) = self.scalable.as_mut() else {
+            return Ok(());
+        };
+        state.params = crate::types::DmixParams::for_mode(mode)
+            .ok_or_else(|| IamfError::ParseError(format!("Reserved default dmixp_mode {mode}")))?;
+        state.default_mode = mode;
+        state.default_w = w;
+        state.w = w.map(|w| W_TABLE[(w.min(10)) as usize]).unwrap_or(0.0);
+        state.widx = 0;
+        Ok(())
+    }
+
+    /// Push per-frame demixing/recon parameters for the next `render` call.
+    pub fn push_frame_params(&mut self, params: ScalableFrameParams) {
+        if let Some(state) = self.scalable.as_mut() {
+            state.pending = params;
+        }
+    }
+
+    /// Clear reconstruction state (seek): moving averages, wIdx, pending.
+    pub fn reset_scalable_state(&mut self) {
+        if let Some(state) = self.scalable.as_mut() {
+            state.smoothers.clear();
+            state.widx = 0;
+            state.saw_dmix_block = false;
+            state.pending = ScalableFrameParams::default();
+            if let Some(params) = crate::types::DmixParams::for_mode(state.default_mode) {
+                state.params = params;
+            }
+            state.w = state
+                .default_w
+                .map(|w| W_TABLE[(w.min(10)) as usize])
+                .unwrap_or(0.0);
+        }
+    }
+
+    /// Render through the §7.2 Gain → De-mixer → Recon Gain pipeline.
+    fn render_scalable(
+        &mut self,
+        substream_pcm: &[Vec<f32>],
+        output: &mut [f32],
+        num_frames: usize,
+    ) -> IamfResult<()> {
+        let out_len = num_frames * self.output_channels;
+        if output.len() < out_len {
+            return Err(IamfError::ParseError(format!(
+                "Output buffer too small: need {out_len} samples, got {}",
+                output.len()
+            )));
+        }
+        output[..out_len].fill(0.0);
+
+        let state = self.scalable.as_mut().ok_or_else(|| {
+            IamfError::ParseError("Scalable render without scalable state".into())
+        })?;
+
+        // 1. Assign mixed buffers per group, applying the Gain module
+        // (output_gain on flagged mixed channels, §7.2.1).
+        let mut buffers: HashMap<Role, Vec<f32>> = HashMap::new();
+        let mut ss_base = 0;
+        for group in &state.groups {
+            let gain_lin = 10.0f32.powf(group.gain_db / 20.0);
+            for s in 0..group.substream_count {
+                let pcm = substream_pcm.get(ss_base + s).ok_or_else(|| {
+                    IamfError::ParseError("Missing substream for scalable group".into())
+                })?;
+                let is_coupled = s < group.coupled_count;
+                let nch = if is_coupled { 2 } else { 1 };
+                // Role offset within the group: coupled pairs pack 2.
+                let mut role_off = 0;
+                for q in 0..s {
+                    role_off += if q < group.coupled_count { 2 } else { 1 };
+                }
+                for ch in 0..nch {
+                    let role = group.mixed_roles[role_off + ch];
+                    let mut buf = Vec::with_capacity(num_frames);
+                    for frame in 0..num_frames {
+                        let idx = frame * nch + ch;
+                        buf.push(pcm.get(idx).copied().unwrap_or(0.0));
+                    }
+                    if group.gain_flags != 0
+                        && let Some(bit) = gain_bit_for_role(group.layout, role)
+                        && group.gain_flags & (1 << bit) != 0
+                    {
+                        for sample in buf.iter_mut() {
+                            *sample *= gain_lin;
+                        }
+                    }
+                    buffers.insert(role, buf);
+                }
+            }
+            ss_base += group.substream_count;
+        }
+
+        // 2. Resolve this frame's de-mixer scalars.
+        if let Some(mode) = state.pending.dmix_mode {
+            state.params = crate::types::DmixParams::for_mode(mode)
+                .ok_or_else(|| IamfError::ParseError(format!("Reserved dmixp_mode {mode}")))?;
+            state.widx = advance_widx(state.widx, state.params.w_offset);
+            state.w = W_TABLE[state.widx as usize];
+            state.saw_dmix_block = true;
+        }
+        let frame = DemixFrame {
+            params: state.params,
+            w: state.w,
+        };
+
+        // 3. Reconstruct each layer step, then apply Recon Gain (§7.2.3).
+        let first = state.first_layout;
+        let layouts = state.layouts.clone();
+        let target_roles = state.target_roles.clone();
+        for (i, target) in layouts.iter().enumerate().skip(1) {
+            demix_layer(
+                &mut buffers,
+                first,
+                &layouts[..i],
+                *target,
+                &frame,
+                num_frames,
+            )?;
+        }
+        let mut seen: HashSet<Role> = HashSet::new();
+        let recon: Vec<(u32, f32)> = state.pending.recon.clone();
+        let target_layout = state.layouts[state.layouts.len() - 1];
+        let olen = state.olen;
+        for (bit, gain) in recon {
+            // Resolve the recon-flag bit against the target layout; flags
+            // for channels outside the layout are malformed.
+            let Some(role) = recon_role(target_layout, bit) else {
+                return Err(IamfError::ParseError(format!(
+                    "Recon gain flag bit {bit} outside target layout {target_layout:?}"
+                )));
+            };
+            if !seen.insert(role) {
+                continue;
+            }
+            let Some(buf) = buffers.get_mut(&role) else {
+                return Err(IamfError::ParseError(format!(
+                    "Recon gain for absent channel {role:?}"
+                )));
+            };
+            let smoother = state
+                .smoothers
+                .entry(role)
+                .or_insert_with(|| crate::renderer::scalable::ReconSmoother::new(olen));
+            smoother.apply(buf, gain);
+        }
+        state.pending = ScalableFrameParams::default();
+
+        // 4. Route target roles to the output layout.
+        for (i, role) in target_roles.iter().enumerate() {
+            let buf = buffers.get(role).ok_or_else(|| {
+                IamfError::ParseError(format!("Missing reconstructed channel {role:?}"))
+            })?;
+            if i < self.channel_map.len() {
+                let out_ch = self.channel_map[i];
+                if out_ch < self.output_channels {
+                    for frame in 0..num_frames {
+                        output[frame * self.output_channels + out_ch] +=
+                            buf.get(frame).copied().unwrap_or(0.0);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
+/// Map a mixed-channel role back to its output-gain flag bit for a layer
+/// layout (inverse of [`gain_role`]).
+fn gain_bit_for_role(layout: IamfChannelLayout, role: Role) -> Option<u32> {
+    (0..6).find(|&bit| gain_role(layout, bit) == Some(role))
+}
+
 impl ElementRenderer for ChannelRenderer {
+    fn set_frame_params(&mut self, params: ScalableFrameParams) {
+        self.push_frame_params(params);
+    }
+
+    fn reset_state(&mut self) {
+        self.reset_scalable_state();
+    }
+
     fn render(
         &mut self,
         substream_pcm: &[Vec<f32>],
         output: &mut [f32],
         num_frames: usize,
     ) -> IamfResult<()> {
+        if self.scalable.is_some() {
+            return self.render_scalable(substream_pcm, output, num_frames);
+        }
         // Clear output
         let out_len = num_frames * self.output_channels;
         if output.len() < out_len {
@@ -239,6 +545,7 @@ mod tests {
                 recon_gain_is_present: false,
                 substream_count: 1,
                 coupled_substream_count: 1,
+                output_gain_flags: 0,
                 output_gain_db: 0.0,
             }],
         };
@@ -284,6 +591,7 @@ mod tests {
                 // 4 substreams: 2 coupled (LR, LsRs) + 2 mono (C, LFE) = 6 ch
                 substream_count: 4,
                 coupled_substream_count: 2,
+                output_gain_flags: 0,
                 output_gain_db: 0.0,
             }],
         };
@@ -375,6 +683,7 @@ mod tests {
                 recon_gain_is_present: false,
                 substream_count: 1,
                 coupled_substream_count: 0,
+                output_gain_flags: 0,
                 output_gain_db: 0.0,
             }],
         };
@@ -404,14 +713,18 @@ mod tests {
                     recon_gain_is_present: false,
                     substream_count: 1,
                     coupled_substream_count: 1,
+                    output_gain_flags: 0,
                     output_gain_db: 0.0,
                 },
                 ChannelLayer {
                     loudspeaker_layout: IamfChannelLayout::Layout5_1,
                     output_gain_is_present: false,
                     recon_gain_is_present: false,
-                    substream_count: 4,
-                    coupled_substream_count: 2,
+                    // Enhancement layers carry only new channels: one
+                    // coupled surround pair + C + LFE (§3.6.3.2/§3.6.3.3).
+                    substream_count: 3,
+                    coupled_substream_count: 1,
+                    output_gain_flags: 0,
                     output_gain_db: 0.0,
                 },
             ],
@@ -434,6 +747,7 @@ mod tests {
                     recon_gain_is_present: false,
                     substream_count: 1,
                     coupled_substream_count: 1,
+                    output_gain_flags: 0,
                     output_gain_db: 0.0,
                 },
                 ChannelLayer {
@@ -442,6 +756,7 @@ mod tests {
                     recon_gain_is_present: false,
                     substream_count: 4,
                     coupled_substream_count: 2,
+                    output_gain_flags: 0,
                     output_gain_db: 0.0,
                 },
             ],
@@ -464,6 +779,7 @@ mod tests {
                 recon_gain_is_present: false,
                 substream_count: 1,
                 coupled_substream_count: 1,
+                output_gain_flags: 0,
                 output_gain_db: 0.0,
             }],
         };

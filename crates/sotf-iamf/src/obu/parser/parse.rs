@@ -96,8 +96,10 @@ pub fn parse_codec_config(data: &[u8]) -> IamfResult<CodecConfig> {
     let num_samples_per_frame = read_leb128_u32(data, &mut pos)?;
     let audio_roll_distance = read_i16_be(data, &mut pos)?;
 
-    // Parse decoder_config based on codec type
-    let (sample_rate, bit_depth) = match codec_id {
+    // Parse decoder_config based on codec type. The raw decoder_config
+    // bytes (AudioSpecificConfig for AAC, STREAMINFO for FLAC) are
+    // retained for the substream decoders — not consumed.
+    let (sample_rate, bit_depth, decoder_config) = match codec_id {
         CodecId::Opus => {
             // Opus decoder config: version(1), output_channel_count(1), pre_skip(2),
             // input_sample_rate(4), output_gain(2), mapping_family(1)
@@ -107,40 +109,61 @@ pub fn parse_codec_config(data: &[u8]) -> IamfResult<CodecConfig> {
             let sr = read_u32_be(data, &mut pos)?;
             let _output_gain = read_i16_be(data, &mut pos)?;
             let _mapping_family = read_u8(data, &mut pos)?;
-            (sr, 32) // Opus always outputs float32
+            (sr, 32, data[pos..].to_vec()) // Opus always outputs float32
         }
         CodecId::Flac => {
-            // FLAC: read STREAMINFO metadata block
-            // For now, extract sample rate and bit depth from minimum fields
-            if data.len() > pos + 18 {
-                let sr = (u32::from(data[pos + 10]) << 12)
-                    | (u32::from(data[pos + 11]) << 4)
-                    | (u32::from(data[pos + 12]) >> 4);
+            // FLAC: one or more metadata blocks, each with a 4-byte header
+            // (last-flag + 7-bit type + 24-bit length). The STREAMINFO
+            // block (type 0) carries sample rate/bit depth and is what the
+            // substream decoder needs (header stripped).
+            let raw = &data[pos..];
+            let mut streaminfo: &[u8] = &[];
+            let mut cursor = 0usize;
+            for _ in 0..128 {
+                if cursor + 4 > raw.len() {
+                    break;
+                }
+                let last = raw[cursor] & 0x80 != 0;
+                let block_type = raw[cursor] & 0x7F;
+                let len = ((u32::from(raw[cursor + 1]) << 16)
+                    | (u32::from(raw[cursor + 2]) << 8)
+                    | u32::from(raw[cursor + 3])) as usize;
+                cursor += 4;
+                if cursor + len > raw.len() {
+                    break;
+                }
+                if block_type == 0 && len >= 34 && streaminfo.is_empty() {
+                    streaminfo = &raw[cursor..cursor + 34];
+                }
+                cursor += len;
+                if last {
+                    break;
+                }
+            }
+            if streaminfo.len() >= 18 {
+                let sr = (u32::from(streaminfo[10]) << 12)
+                    | (u32::from(streaminfo[11]) << 4)
+                    | (u32::from(streaminfo[12]) >> 4);
                 let bps =
-                    (u16::from(data[pos + 12] & 0x01) << 4) | (u16::from(data[pos + 13]) >> 4);
-                pos = data.len(); // consume rest
-                (sr, bps + 1)
+                    (u16::from(streaminfo[12] & 0x01) << 4) | (u16::from(streaminfo[13]) >> 4);
+                (sr, bps + 1, streaminfo.to_vec())
             } else {
-                (48000, 24) // fallback
+                (48000, 24, raw.to_vec()) // fallback; decoder reports it
             }
         }
         CodecId::AacLc => {
-            // AAC-LC: AudioSpecificConfig
-            // sample rate and channel info encoded in first 2+ bytes
-            // Simplified: use common defaults
-            pos = data.len();
-            (48000, 16)
+            // AAC-LC: the remainder is the AudioSpecificConfig, which
+            // carries sample rate and channel count for the decoder.
+            (48000, 16, data[pos..].to_vec())
         }
         CodecId::Lpcm => {
             // LPCM config: sample_format_flags(1), sample_size(1), sample_rate(4)
             let _format_flags = read_u8(data, &mut pos)?;
             let sample_size = read_u8(data, &mut pos)?;
             let sr = read_u32_be(data, &mut pos)?;
-            (sr, sample_size as u16)
+            (sr, sample_size as u16, data[pos..].to_vec())
         }
     };
-
-    let decoder_config = data[pos..].to_vec();
 
     Ok(CodecConfig {
         codec_config_id,
@@ -209,6 +232,20 @@ pub fn parse_audio_element(data: &[u8]) -> IamfResult<AudioElement> {
                 }
             }
         }
+        // Demixing definitions carry DefaultDemixingInfoParameterData:
+        // the default dmixp_mode byte (3 bits + 5 reserved) plus the
+        // default_w nibble (4 bits + 4 reserved).
+        let (default_dmixp_mode, default_w) = if parameter_kind == ParameterDataKind::DemixingInfo {
+            let mode_byte = read_bytes(data, &mut pos, 1)?;
+            let mut br = BitReader::new(mode_byte);
+            let mode = br.read_bits(3)? as u8;
+            let w_byte = read_bytes(data, &mut pos, 1)?;
+            let mut br = BitReader::new(w_byte);
+            let w = br.read_bits(4)? as u8;
+            (Some(mode), Some(w))
+        } else {
+            (None, None)
+        };
         parameter_definitions.push(ParameterDefinition {
             parameter_id,
             parameter_rate,
@@ -216,6 +253,8 @@ pub fn parse_audio_element(data: &[u8]) -> IamfResult<AudioElement> {
             duration,
             constant_subblock_duration,
             parameter_kind,
+            default_dmixp_mode,
+            default_w,
         });
     }
 
@@ -272,17 +311,17 @@ fn parse_scalable_channel_config(
         let substream_count = br.read_bits(8)? as u8;
         let coupled_substream_count = br.read_bits(8)? as u8;
 
-        let output_gain_db = if output_gain_is_present {
+        let (output_gain_flags, output_gain_db) = if output_gain_is_present {
             // output_gain_flags (6 bits per-channel mask) + reserved (2)
             // + output_gain (i16 Q7.8)
             let og_bytes = read_bytes(data, pos, 3)?;
             let mut br = BitReader::new(og_bytes);
-            let _flags = br.read_bits(6)?;
+            let flags = br.read_bits(6)? as u8;
             br.skip_bits(2)?;
             let raw = br.read_bits(16)? as i16;
-            raw as f32 / 256.0
+            (flags, raw as f32 / 256.0)
         } else {
-            0.0
+            (0, 0.0)
         };
 
         layers.push(ChannelLayer {
@@ -291,6 +330,7 @@ fn parse_scalable_channel_config(
             recon_gain_is_present,
             substream_count,
             coupled_substream_count,
+            output_gain_flags,
             output_gain_db,
         });
     }
@@ -299,12 +339,8 @@ fn parse_scalable_channel_config(
 }
 
 fn parse_ambisonics_config(data: &[u8], pos: &mut usize) -> IamfResult<AmbisonicsConfig> {
-    // ambisonics_mode fits in a byte. Use the bit reader for consistency.
-    let mode_bytes = read_bytes(data, pos, 1)?;
-    let mode_val = {
-        let mut br = BitReader::new(mode_bytes);
-        br.read_bits(8)? as u8
-    };
+    // ambisonics_mode is uleb128: 0 = mono, 1 = projection.
+    let mode_val = read_leb128_u32(data, pos)?;
     let ambisonics_mode = match mode_val {
         0 => AmbisonicsMode::Mono,
         1 => AmbisonicsMode::Projection,
@@ -315,53 +351,60 @@ fn parse_ambisonics_config(data: &[u8], pos: &mut usize) -> IamfResult<Ambisonic
         }
     };
 
-    let cfg_bytes = read_bytes(data, pos, 3)?;
-    let (output_channel_count, substream_count, coupled_substream_count) = {
-        let mut br = BitReader::new(cfg_bytes);
-        (
-            br.read_bits(8)? as u8,
-            br.read_bits(8)? as u8,
-            br.read_bits(8)? as u8,
-        )
-    };
+    // Mono and projection configs differ: mono carries a per-channel
+    // mapping and no coupled count; projection carries a demixing matrix
+    // and no mapping.
+    let output_channel_count = read_u8(data, pos)?;
+    let substream_count = read_u8(data, pos)?;
 
-    let mapping_len = output_channel_count as usize;
-    if mapping_len > data.len().saturating_sub(*pos) {
-        return Err(IamfError::ParseError(format!(
-            "ambisonics mapping length {mapping_len} > remaining bytes"
-        )));
-    }
-    let mut channel_mapping = Vec::with_capacity(mapping_len);
-    for _ in 0..output_channel_count {
-        channel_mapping.push(read_u8(data, pos)?);
-    }
-
-    let demixing_matrix = if ambisonics_mode == AmbisonicsMode::Projection {
-        let coupled = coupled_substream_count as usize;
-        let uncoupled = (substream_count as usize).saturating_sub(coupled);
-        let substream_channels = coupled * 2 + uncoupled;
-        let matrix_size = output_channel_count as usize * substream_channels;
-        if matrix_size.saturating_mul(2) > data.len().saturating_sub(*pos) {
+    if ambisonics_mode == AmbisonicsMode::Mono {
+        let mapping_len = output_channel_count as usize;
+        if mapping_len > data.len().saturating_sub(*pos) {
             return Err(IamfError::ParseError(format!(
-                "ambisonics matrix size {matrix_size} exceeds remaining bytes"
+                "ambisonics mapping length {mapping_len} > remaining bytes"
             )));
         }
-        let mut matrix = Vec::with_capacity(matrix_size);
-        for _ in 0..matrix_size {
-            let val = read_i16_be(data, pos)?;
-            matrix.push(val as f32 / 32768.0); // Q15 to float
+        let mut channel_mapping = Vec::with_capacity(mapping_len);
+        for _ in 0..output_channel_count {
+            channel_mapping.push(read_u8(data, pos)?);
         }
-        matrix
-    } else {
-        Vec::new()
-    };
+        return Ok(AmbisonicsConfig {
+            ambisonics_mode,
+            output_channel_count,
+            substream_count,
+            coupled_substream_count: 0,
+            channel_mapping,
+            demixing_matrix: Vec::new(),
+        });
+    }
+
+    let coupled_substream_count = read_u8(data, pos)?;
+    if coupled_substream_count > substream_count {
+        return Err(IamfError::ParseError(format!(
+            "ambisonics coupled count {coupled_substream_count} > substream count {substream_count}"
+        )));
+    }
+    let coupled = coupled_substream_count as usize;
+    let uncoupled = (substream_count as usize).saturating_sub(coupled);
+    let substream_channels = coupled * 2 + uncoupled;
+    let matrix_size = output_channel_count as usize * substream_channels;
+    if matrix_size.saturating_mul(2) > data.len().saturating_sub(*pos) {
+        return Err(IamfError::ParseError(format!(
+            "ambisonics matrix size {matrix_size} exceeds remaining bytes"
+        )));
+    }
+    let mut demixing_matrix = Vec::with_capacity(matrix_size);
+    for _ in 0..matrix_size {
+        let val = read_i16_be(data, pos)?;
+        demixing_matrix.push(val as f32 / 32768.0); // Q15 to float
+    }
 
     Ok(AmbisonicsConfig {
         ambisonics_mode,
         output_channel_count,
         substream_count,
         coupled_substream_count,
-        channel_mapping,
+        channel_mapping: Vec::new(),
         demixing_matrix,
     })
 }
@@ -428,26 +471,64 @@ pub fn parse_mix_presentation(data: &[u8]) -> IamfResult<MixPresentation> {
         // output mix gain
         let output_mix_gain = parse_mix_gain_config(data, &mut pos)?;
 
-        // output layout
-        let layout_byte = read_u8(data, &mut pos)?;
-        let layout_type = (layout_byte >> 6) & 0x03;
-        let output_layout = if layout_type == 0 {
-            // Loudspeaker layout
-            let sound_system_byte = read_u8(data, &mut pos)?;
-            let sound_system = (sound_system_byte >> 4) & 0x0F;
-            IamfChannelLayout::from_layout_index(sound_system).unwrap_or(IamfChannelLayout::Stereo)
-        } else {
-            // Binaural or reserved
-            IamfChannelLayout::Binaural
-        };
+        // v1.1 loudness layouts: a count followed by one Layout +
+        // loudness pair each. The Layout is a 2-bit type (0/1 reserved,
+        // 2 = BS.2051 sound system, 3 = binaural) plus variant bits.
+        let num_layouts = read_leb128_u32(data, &mut pos)?;
+        let cap = bounded_capacity(num_layouts, data.len().saturating_sub(pos))?;
+        let mut layouts = Vec::with_capacity(cap);
+        for _ in 0..num_layouts {
+            let layout_bytes = read_bytes(data, &mut pos, 1)?;
+            let mut br = BitReader::new(layout_bytes);
+            let layout_type = br.read_bits(2)? as u8;
+            let layout = match layout_type {
+                2 => {
+                    let sound_system = br.read_bits(4)? as u8;
+                    br.skip_bits(2)?; // reserved
+                    // Unknown BS.2051 systems are accepted but dropped:
+                    // only renderable layouts drive output, and an
+                    // all-unknown list falls back to stereo below.
+                    let Some(layout) = IamfChannelLayout::from_sound_system(sound_system) else {
+                        let _loudness = parse_loudness_info(data, &mut pos)?;
+                        continue;
+                    };
+                    layout
+                }
+                3 => {
+                    br.skip_bits(6)?; // reserved
+                    IamfChannelLayout::Binaural
+                }
+                t => {
+                    return Err(IamfError::ParseError(format!(
+                        "Unknown mix layout type: {t}"
+                    )));
+                }
+            };
+            let loudness = parse_loudness_info(data, &mut pos)?;
+            layouts.push(SubMixLayout { layout, loudness });
+        }
 
-        // Loudness info
-        let loudness = parse_loudness_info(data, &mut pos)?;
+        // Render target and reported loudness follow the first layout;
+        // an empty list (spec-invalid) or an all-unknown one falls back
+        // to stereo like the reference decoder does.
+        let (output_layout, loudness) = layouts
+            .first()
+            .map(|l| (l.layout, l.loudness.clone()))
+            .unwrap_or((
+                IamfChannelLayout::Stereo,
+                LoudnessInfo {
+                    info_type: 0,
+                    integrated_loudness: 0.0,
+                    digital_peak: 0.0,
+                    true_peak: None,
+                },
+            ));
 
         sub_mixes.push(SubMix {
             num_audio_elements,
             element_mix_configs,
             output_mix_gain,
+            layouts,
             output_layout,
             loudness,
         });
@@ -533,12 +614,13 @@ fn parse_loudness_info(data: &[u8], pos: &mut usize) -> IamfResult<LoudnessInfo>
 /// audio_element kind map and are always MixGain in v1.1.0).
 ///
 /// On a typed match the payload is parsed with the spec-correct shape:
-/// DemixingInfo → `dmixp_mode (3 bits) + reserved (5)`, ReconGain → empty
-/// (we emit a typed variant with no values rather than coercing it into
-/// random MixGain bytes).
+/// DemixingInfo → `dmixp_mode (3 bits) + reserved (5)`, ReconGain → per-layer
+/// `recon_gain_flags` bitmask plus one u8 gain per set bit, sized by the
+/// owning audio element's layer flags (`recon_layouts`).
 pub fn parse_parameter_block_with_kind(
     data: &[u8],
     kind_lookup: &HashMap<u32, ParameterDataKind>,
+    recon_layouts: &HashMap<u32, ReconGainLayout>,
 ) -> IamfResult<ParameterBlock> {
     let mut pos = 0;
     let parameter_id = read_leb128_u32(data, &mut pos)?;
@@ -559,20 +641,23 @@ pub fn parse_parameter_block_with_kind(
         .unwrap_or(ParameterDataKind::MixGain);
 
     // Bound the number of subblocks to prevent unbounded allocation/iteration.
-    // MixGain and DemixingInfo subblocks consume at least one byte each, so
-    // they are capped by the remaining payload bytes. ReconGain subblocks may
-    // be zero-byte in our simplified parse, so they keep the absolute ceiling.
-    let cap_n = match kind {
-        ParameterDataKind::ReconGain => {
-            let n = num_subblocks as usize;
-            if n > MAX_LEB128_CAPACITY {
-                return Err(IamfError::ParseError(format!(
-                    "Refusing num_subblocks {n} > MAX_LEB128_CAPACITY"
-                )));
-            }
-            n
+    // Every subblock consumes at least one byte except a ReconGain subblock
+    // whose layers all have recon_gain_is_present == false; those keep the
+    // absolute ceiling instead of the remaining-bytes cap.
+    let recon_all_absent = kind == ParameterDataKind::ReconGain
+        && recon_layouts
+            .get(&parameter_id)
+            .is_none_or(|layout| layout.layers_present.iter().all(|present| !present));
+    let cap_n = if recon_all_absent {
+        let n = num_subblocks as usize;
+        if n > MAX_LEB128_CAPACITY {
+            return Err(IamfError::ParseError(format!(
+                "Refusing num_subblocks {n} > MAX_LEB128_CAPACITY"
+            )));
         }
-        _ => bounded_capacity(num_subblocks, data.len().saturating_sub(pos))?,
+        n
+    } else {
+        bounded_capacity(num_subblocks, data.len().saturating_sub(pos))?
     };
     let mut subblocks = Vec::with_capacity(cap_n);
     for i in 0..num_subblocks {
@@ -598,13 +683,7 @@ pub fn parse_parameter_block_with_kind(
                 ParameterData::DemixingInfo { dmixp_mode }
             }
             ParameterDataKind::ReconGain => {
-                // Emit a typed variant with no gains so the mixer can't
-                // silently apply this as MixGain. A spec-accurate parse
-                // requires the owning audio_element's `recon_gain_is_present`
-                // flags to know how many channels carry a recon gain byte.
-                ParameterData::ReconGain {
-                    recon_gains: Vec::new(),
-                }
+                parse_recon_gain_payload(data, &mut pos, parameter_id, recon_layouts)?
             }
         };
 
@@ -627,7 +706,49 @@ pub fn parse_parameter_block_with_kind(
 /// available.
 pub fn parse_parameter_block(data: &[u8]) -> IamfResult<ParameterBlock> {
     let empty = HashMap::new();
-    parse_parameter_block_with_kind(data, &empty)
+    let no_recon = HashMap::new();
+    parse_parameter_block_with_kind(data, &empty, &no_recon)
+}
+
+/// Parse one ReconGain subblock payload per v1.1.0 §3.8.3.
+///
+/// For each of the owning element's layers with `recon_gain_is_present`, the
+/// payload carries a leb128 `recon_gain_flags` bitmask (only the 12 defined
+/// channel bits b0..b11 are valid) followed by one u8 gain per set bit, in
+/// bit order. Each gain byte maps to linear gain as `byte / 255`.
+/// Layers without the present flag consume no bytes.
+fn parse_recon_gain_payload(
+    data: &[u8],
+    pos: &mut usize,
+    parameter_id: u32,
+    recon_layouts: &HashMap<u32, ReconGainLayout>,
+) -> IamfResult<ParameterData> {
+    let layout = recon_layouts.get(&parameter_id).ok_or_else(|| {
+        IamfError::ParseError(format!(
+            "ReconGain parameter {parameter_id} has no descriptor layout"
+        ))
+    })?;
+    let mut layers = Vec::with_capacity(layout.num_layers as usize);
+    for layer in 0..layout.num_layers as usize {
+        let present = layout.layers_present.get(layer).copied().unwrap_or(false);
+        if !present {
+            layers.push(None);
+            continue;
+        }
+        let flags = read_leb128_u32(data, pos)?;
+        if flags > 0xFFF {
+            return Err(IamfError::ParseError(format!(
+                "ReconGain flags {flags:#x} exceed the 12 defined channel bits"
+            )));
+        }
+        let count = flags.count_ones() as usize;
+        let bytes = read_bytes(data, pos, count)?;
+        layers.push(Some(ReconLayerGains {
+            flags,
+            gains: bytes.iter().map(|byte| *byte as f32 / 255.0).collect(),
+        }));
+    }
+    Ok(ParameterData::ReconGain { layers })
 }
 
 fn parse_mix_gain_payload(data: &[u8], pos: &mut usize) -> IamfResult<ParameterData> {
@@ -743,10 +864,12 @@ pub fn parse_descriptors(data: &[u8]) -> IamfResult<(IamfDescriptors, usize)> {
 ///
 /// `parameter_kinds` dispatches parameter-block payloads by kind. Build it
 /// from descriptors via [`IamfDescriptors::parameter_kinds`]; an empty map
-/// degrades to MixGain-only parsing.
+/// degrades to MixGain-only parsing. `recon_layouts` sizes ReconGain
+/// payloads; build it via [`IamfDescriptors::recon_layouts`].
 pub fn parse_temporal_unit_with_kinds(
     data: &[u8],
     parameter_kinds: &HashMap<u32, ParameterDataKind>,
+    recon_layouts: &HashMap<u32, ReconGainLayout>,
 ) -> IamfResult<(TemporalUnit, usize)> {
     let mut pos = 0;
     let mut parameter_blocks = Vec::new();
@@ -783,7 +906,9 @@ pub fn parse_temporal_unit_with_kinds(
 
         match header.obu_type {
             ObuType::ParameterBlock => {
-                if let Ok(pb) = parse_parameter_block_with_kind(payload, parameter_kinds) {
+                if let Ok(pb) =
+                    parse_parameter_block_with_kind(payload, parameter_kinds, recon_layouts)
+                {
                     parameter_blocks.push(pb);
                 }
             }
@@ -829,5 +954,6 @@ pub fn parse_temporal_unit_with_kinds(
 /// Legacy wrapper: parse a temporal unit with no parameter-kind hints.
 pub fn parse_temporal_unit(data: &[u8]) -> IamfResult<(TemporalUnit, usize)> {
     let empty: HashMap<u32, ParameterDataKind> = HashMap::new();
-    parse_temporal_unit_with_kinds(data, &empty)
+    let no_recon: HashMap<u32, ReconGainLayout> = HashMap::new();
+    parse_temporal_unit_with_kinds(data, &empty, &no_recon)
 }

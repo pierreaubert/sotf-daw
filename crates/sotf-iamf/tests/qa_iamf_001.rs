@@ -117,9 +117,10 @@ fn mix_presentation_stereo_payload() -> Vec<u8> {
     payload.push(0x80); // param_definition_mode=true
     payload.extend_from_slice(&0_i16.to_be_bytes()); // default_mix_gain_db
 
-    // output layout: loudspeaker (layout_type=0), sound_system=1 (Stereo)
-    payload.push(0x00);
-    payload.push(0x10);
+    // loudness layouts: one stereo entry (Layout type 2 + BS.2051 sound
+    // system 0), then its loudness info.
+    payload.extend_from_slice(&leb128_u32(1)); // num_layouts
+    payload.push(0x80);
 
     // loudness info
     payload.push(0x00); // info_type

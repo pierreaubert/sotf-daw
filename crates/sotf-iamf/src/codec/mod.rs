@@ -105,25 +105,35 @@ impl SubstreamDecoder for LpcmDecoder {
     }
 }
 
+pub mod symphonia;
+
+pub use symphonia::{AacSubstreamDecoder, FlacSubstreamDecoder};
+
 /// Factory function to create a decoder for a given codec.
-/// Only LPCM is handled natively. Other codecs need engine-level support.
+///
+/// LPCM is handled natively; AAC-LC and FLAC decode via Symphonia.
+/// Opus still needs engine-level support (no pure-Rust Opus decoder).
 pub fn create_substream_decoder(
     codec_id: CodecId,
     channels: usize,
     bit_depth: u16,
     sample_rate: u32,
-    _decoder_config: &[u8],
+    decoder_config: &[u8],
 ) -> IamfResult<Box<dyn SubstreamDecoder>> {
     match codec_id {
         CodecId::Lpcm => Ok(Box::new(LpcmDecoder::new(channels, bit_depth, sample_rate))),
+        CodecId::AacLc => Ok(Box::new(AacSubstreamDecoder::new(
+            channels,
+            sample_rate,
+            decoder_config,
+        )?)),
+        CodecId::Flac => Ok(Box::new(FlacSubstreamDecoder::new(
+            channels,
+            sample_rate,
+            decoder_config,
+        )?)),
         CodecId::Opus => Err(IamfError::UnsupportedCodec(
-            "Opus decoding requires engine-level Symphonia integration".into(),
-        )),
-        CodecId::AacLc => Err(IamfError::UnsupportedCodec(
-            "AAC-LC decoding requires engine-level Symphonia integration".into(),
-        )),
-        CodecId::Flac => Err(IamfError::UnsupportedCodec(
-            "FLAC decoding requires engine-level Symphonia integration".into(),
+            "Opus decoding requires engine-level integration".into(),
         )),
     }
 }
@@ -213,8 +223,14 @@ mod tests {
     }
 
     #[test]
-    fn test_create_substream_decoder_aac_errors() {
+    fn test_create_substream_decoder_aac_needs_asc() {
         let decoder = create_substream_decoder(CodecId::AacLc, 2, 16, 48000, &[]);
+        assert!(decoder.is_err());
+    }
+
+    #[test]
+    fn test_create_substream_decoder_flac_needs_streaminfo() {
+        let decoder = create_substream_decoder(CodecId::Flac, 1, 16, 48000, &[]);
         assert!(decoder.is_err());
     }
 

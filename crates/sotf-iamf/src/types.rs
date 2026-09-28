@@ -97,6 +97,25 @@ impl IamfChannelLayout {
         }
     }
 
+    /// ITU-R BS.2051 Sound System index (mix presentation loudness
+    /// layouts, v1.1.0 §3.7) → layout. Systems with no IAMF loudspeaker
+    /// equivalent (3, 5, 6, 7, 9, 13, 14, 15) are `None`; the mix
+    /// presentation parser drops those layouts, falling back to stereo
+    /// when none remain.
+    pub fn from_sound_system(idx: u8) -> Option<Self> {
+        match idx {
+            0 => Some(Self::Stereo),
+            1 => Some(Self::Layout5_1),
+            2 => Some(Self::Layout5_1_2),
+            4 => Some(Self::Layout5_1_4),
+            8 => Some(Self::Layout7_1),
+            10 => Some(Self::Layout7_1_2),
+            11 => Some(Self::Layout3_1_2),
+            12 => Some(Self::Mono),
+            _ => None,
+        }
+    }
+
     pub fn channel_count(&self) -> usize {
         match self {
             Self::Mono => 1,
@@ -142,6 +161,10 @@ pub struct ChannelLayer {
     pub recon_gain_is_present: bool,
     pub substream_count: u8,
     pub coupled_substream_count: u8,
+    /// 6-bit per-channel mask selecting which mixed channels of this layer
+    /// receive `output_gain_db`. Bit order follows the gain-channel order
+    /// L, R, Ls, Rs, Ltf, Rtf resolved against the layer layout.
+    pub output_gain_flags: u8,
     pub output_gain_db: f32,
 }
 
@@ -188,6 +211,77 @@ pub struct ParameterDefinition {
     /// Parameter payload kind (`parameter_definition_type` field in the
     /// audio_element OBU): MixGain / DemixingInfo / ReconGain.
     pub parameter_kind: ParameterDataKind,
+    /// Default `dmixp_mode` from `DefaultDemixingInfoParameterData`.
+    /// Present only for Demixing definitions; applies until per-frame
+    /// parameter blocks arrive.
+    pub default_dmixp_mode: Option<u8>,
+    /// Default weight index from `DefaultDemixingInfoParameterData`
+    /// (`default_w`, 4 bits). Directly indicates w(k) when no DemixingInfo
+    /// parameter blocks exist.
+    pub default_w: Option<u8>,
+}
+
+/// Demixing parameters for one audio frame, selected by `dmixp_mode`
+/// (v1.1.0 §3.8.2). α/β feed the S7to5 de-mixer, γ the T4to2 de-mixer,
+/// δ the S5to3 de-mixer; `w_offset` steps the wIdx state machine.
+#[derive(Debug, Clone, Copy)]
+pub struct DmixParams {
+    pub alpha: f32,
+    pub beta: f32,
+    pub gamma: f32,
+    pub delta: f32,
+    pub w_offset: i8,
+}
+
+impl DmixParams {
+    /// Parameters for a `dmixp_mode` value. Modes 3 and 7 are reserved.
+    pub fn for_mode(mode: u8) -> Option<Self> {
+        match mode {
+            0 => Some(Self {
+                alpha: 1.0,
+                beta: 1.0,
+                gamma: 0.707,
+                delta: 0.707,
+                w_offset: -1,
+            }),
+            1 => Some(Self {
+                alpha: 0.707,
+                beta: 0.707,
+                gamma: 0.707,
+                delta: 0.707,
+                w_offset: -1,
+            }),
+            2 => Some(Self {
+                alpha: 1.0,
+                beta: 0.866,
+                gamma: 0.866,
+                delta: 0.866,
+                w_offset: -1,
+            }),
+            4 => Some(Self {
+                alpha: 1.0,
+                beta: 1.0,
+                gamma: 0.707,
+                delta: 0.707,
+                w_offset: 1,
+            }),
+            5 => Some(Self {
+                alpha: 0.707,
+                beta: 0.707,
+                gamma: 0.707,
+                delta: 0.707,
+                w_offset: 1,
+            }),
+            6 => Some(Self {
+                alpha: 1.0,
+                beta: 0.866,
+                gamma: 0.866,
+                delta: 0.866,
+                w_offset: 1,
+            }),
+            _ => None,
+        }
+    }
 }
 
 /// What kind of payload a parameter block carries. Determines how
@@ -226,13 +320,26 @@ pub struct MixAnnotation {
     pub label: String,
 }
 
+/// One loudness layout of a sub-mix (v1.1.0 §3.7): a BS.2051 sound
+/// system or binaural layout plus the loudness measured for it.
+#[derive(Debug, Clone)]
+pub struct SubMixLayout {
+    pub layout: IamfChannelLayout,
+    pub loudness: LoudnessInfo,
+}
+
 /// Sub-mix within a mix presentation
 #[derive(Debug, Clone)]
 pub struct SubMix {
     pub num_audio_elements: u32,
     pub element_mix_configs: Vec<ElementMixConfig>,
     pub output_mix_gain: MixGainConfig,
+    /// All declared loudness layouts (v1.1 allows several per sub-mix).
+    pub layouts: Vec<SubMixLayout>,
+    /// Render target: the first declared layout (Stereo fallback when the
+    /// bitstream declares none, mirroring the reference decoder).
     pub output_layout: IamfChannelLayout,
+    /// Loudness of the first declared layout.
     pub loudness: LoudnessInfo,
 }
 
@@ -268,6 +375,22 @@ pub struct ParameterBlock {
     pub subblocks: Vec<ParameterSubblock>,
 }
 
+/// Recon gains for one scalable-channel layer, in `recon_gain_flags`
+/// bit order (b0 = L … b11 = LFE). Each gain is linear (`byte / 255`).
+#[derive(Debug, Clone)]
+pub struct ReconLayerGains {
+    pub flags: u32,
+    pub gains: Vec<f32>,
+}
+
+/// Descriptor-side context needed to size a ReconGain payload: the owning
+/// audio element's layer count plus per-layer `recon_gain_is_present`.
+#[derive(Debug, Clone)]
+pub struct ReconGainLayout {
+    pub num_layers: u8,
+    pub layers_present: Vec<bool>,
+}
+
 /// A subblock within a parameter block
 #[derive(Debug, Clone)]
 pub struct ParameterSubblock {
@@ -289,7 +412,9 @@ pub enum ParameterData {
         dmixp_mode: u8,
     },
     ReconGain {
-        recon_gains: Vec<f32>,
+        /// One entry per audio-element layer; `None` where
+        /// `recon_gain_is_present` is false for that layer.
+        layers: Vec<Option<ReconLayerGains>>,
     },
 }
 

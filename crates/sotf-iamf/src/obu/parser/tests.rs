@@ -1,6 +1,7 @@
 use super::misc::bounded_capacity;
 use super::obu_type::ObuType;
 use super::parse::parse_audio_element;
+use super::parse::parse_mix_presentation;
 use super::parse::parse_obu_header;
 use super::parse::parse_parameter_block;
 use super::parse::parse_parameter_block_with_kind;
@@ -107,7 +108,8 @@ fn parameter_block_demixing_info_not_silently_mix_gain() {
     // With kind=DemixingInfo, the parse succeeds and emits DemixingInfo.
     let mut kinds = HashMap::new();
     kinds.insert(7u32, ParameterDataKind::DemixingInfo);
-    let pb = parse_parameter_block_with_kind(&payload, &kinds)
+    let no_recon: HashMap<u32, ReconGainLayout> = HashMap::new();
+    let pb = parse_parameter_block_with_kind(&payload, &kinds, &no_recon)
         .expect("demixing-info parameter block must parse");
     assert_eq!(pb.parameter_id, 7);
     assert_eq!(pb.subblocks.len(), 1);
@@ -134,7 +136,8 @@ fn parameter_block_mix_gain_still_parses() {
     let payload = build_param_block_payload(3);
     let mut kinds = HashMap::new();
     kinds.insert(3u32, ParameterDataKind::MixGain);
-    let pb = parse_parameter_block_with_kind(&payload, &kinds).unwrap();
+    let no_recon: HashMap<u32, ReconGainLayout> = HashMap::new();
+    let pb = parse_parameter_block_with_kind(&payload, &kinds, &no_recon).unwrap();
     assert_eq!(pb.parameter_id, 3);
     assert_eq!(pb.subblocks.len(), 1);
     match &pb.subblocks[0].param_data {
@@ -147,21 +150,104 @@ fn parameter_block_mix_gain_still_parses() {
     }
 }
 
-/// ReconGain dispatch emits a typed variant rather than coercing the
-/// payload into MixGain.
+/// ReconGain payloads are consumed per the v1.1.0 bit layout: for each
+/// layer with recon_gain_is_present, a leb128 flags bitmask followed by one
+/// u8 per set bit (gain = byte / 255).
 #[test]
-fn parameter_block_recon_gain_emits_typed_variant() {
-    // payload: parameter_id=9, duration=10, csd=10, then 1 subblock with
-    // no recon-gain bytes (our simplified parse skips them).
-    let payload = vec![9u8, 10, 10];
+fn parameter_block_recon_gain_parses_values() {
+    // 2 layers, both present. Layer 0: flags=0b101 -> gains for b0, b2.
+    // Layer 1: flags=0 -> no gain bytes.
+    let payload = vec![
+        9u8,  // parameter_id
+        10,   // duration
+        10,   // constant_subblock_duration
+        0x05, // layer 0 flags: b0 + b2
+        200,  // gain b0 = 200/255
+        255,  // gain b2 = 1.0
+        0x00, // layer 1 flags: none
+    ];
     let mut kinds = HashMap::new();
     kinds.insert(9u32, ParameterDataKind::ReconGain);
-    let pb = parse_parameter_block_with_kind(&payload, &kinds).unwrap();
+    let recon = HashMap::from([(
+        9u32,
+        ReconGainLayout {
+            num_layers: 2,
+            layers_present: vec![true, true],
+        },
+    )]);
+    let pb = parse_parameter_block_with_kind(&payload, &kinds, &recon).unwrap();
     assert_eq!(pb.subblocks.len(), 1);
-    assert!(matches!(
-        pb.subblocks[0].param_data,
-        ParameterData::ReconGain { .. }
-    ));
+    match &pb.subblocks[0].param_data {
+        ParameterData::ReconGain { layers } => {
+            assert_eq!(layers.len(), 2);
+            let l0 = layers[0].as_ref().expect("layer 0 present");
+            assert_eq!(l0.flags, 0x05);
+            assert_eq!(l0.gains.len(), 2);
+            assert!((l0.gains[0] - 200.0 / 255.0).abs() < 1e-6);
+            assert!((l0.gains[1] - 1.0).abs() < 1e-6);
+            assert!(layers[1].is_none() || layers[1].as_ref().unwrap().gains.is_empty());
+        }
+        other => panic!("expected ReconGain, got {other:?}"),
+    }
+}
+
+/// Layers without recon_gain_is_present consume no bytes.
+#[test]
+fn parameter_block_recon_gain_skips_absent_layers() {
+    // Layer 0 absent, layer 1 present with flags=0x01 + 1 gain byte.
+    let payload = vec![9u8, 10, 10, 0x01, 128];
+    let mut kinds = HashMap::new();
+    kinds.insert(9u32, ParameterDataKind::ReconGain);
+    let recon = HashMap::from([(
+        9u32,
+        ReconGainLayout {
+            num_layers: 2,
+            layers_present: vec![false, true],
+        },
+    )]);
+    let pb = parse_parameter_block_with_kind(&payload, &kinds, &recon).unwrap();
+    match &pb.subblocks[0].param_data {
+        ParameterData::ReconGain { layers } => {
+            assert_eq!(layers.len(), 2);
+            assert!(layers[0].is_none());
+            let l1 = layers[1].as_ref().expect("layer 1 present");
+            assert_eq!(l1.flags, 0x01);
+            assert_eq!(l1.gains.len(), 1);
+        }
+        other => panic!("expected ReconGain, got {other:?}"),
+    }
+}
+
+/// Flag bits beyond the 12 defined channels are rejected, and truncated
+/// payloads fail instead of yielding partial gains.
+#[test]
+fn parameter_block_recon_gain_rejects_bad_payloads() {
+    let mut kinds = HashMap::new();
+    kinds.insert(9u32, ParameterDataKind::ReconGain);
+    let recon = HashMap::from([(
+        9u32,
+        ReconGainLayout {
+            num_layers: 1,
+            layers_present: vec![true],
+        },
+    )]);
+    // flags = 0x1000 (bit 12): outside the 12 defined channels.
+    let bad_flags = vec![9u8, 10, 10, 0x80, 0x20];
+    assert!(parse_parameter_block_with_kind(&bad_flags, &kinds, &recon).is_err());
+    // flags promise 2 gains but only 1 byte follows.
+    let truncated = vec![9u8, 10, 10, 0x03, 100];
+    assert!(parse_parameter_block_with_kind(&truncated, &kinds, &recon).is_err());
+}
+
+/// ReconGain without a descriptor layout cannot be sized, so it errors
+/// instead of emitting empty gains.
+#[test]
+fn parameter_block_recon_gain_without_layout_errors() {
+    let payload = vec![9u8, 10, 10, 0x01, 100];
+    let mut kinds = HashMap::new();
+    kinds.insert(9u32, ParameterDataKind::ReconGain);
+    let empty: HashMap<u32, ReconGainLayout> = HashMap::new();
+    assert!(parse_parameter_block_with_kind(&payload, &kinds, &empty).is_err());
 }
 
 /// `bounded_capacity` must reject leb128 counts greater than the byte
@@ -204,4 +290,72 @@ fn parse_audio_element_rejects_unbounded_leb128_substreams() {
         }
         other => panic!("expected ParseError, got {other:?}"),
     }
+}
+
+/// Unsigned LEB128 writer for fixtures.
+fn leb(mut value: u32) -> Vec<u8> {
+    let mut out = Vec::new();
+    loop {
+        let mut byte = (value & 0x7F) as u8;
+        value >>= 7;
+        if value != 0 {
+            byte |= 0x80;
+        }
+        out.push(byte);
+        if value == 0 {
+            break;
+        }
+    }
+    out
+}
+
+fn mix_gain_config(parameter_id: u32) -> Vec<u8> {
+    let mut out = leb(parameter_id);
+    out.extend(leb(48000)); // parameter_rate
+    out.push(0x80); // param_definition_mode = 1 (no durations)
+    out.extend_from_slice(&0i16.to_be_bytes()); // unity gain
+    out
+}
+
+/// One mix-presentation OBU payload with a single sub-mix and the given
+/// raw layout bytes (each followed by a fixed loudness record).
+fn mix_presentation_layouts(layouts: &[u8]) -> Vec<u8> {
+    let mut mp = leb(0); // mix_presentation_id
+    mp.extend(leb(0)); // count_label
+    mp.extend(leb(1)); // num_sub_mixes
+    mp.extend(leb(1)); // num_audio_elements
+    mp.extend(leb(0)); // audio_element_id
+    mp.push(0x00); // headphones rendering mode
+    mp.extend(leb(0)); // rendering extension size
+    mp.extend(mix_gain_config(10));
+    mp.extend(mix_gain_config(11));
+    mp.extend(leb(layouts.len() as u32)); // num_layouts
+    for &layout in layouts {
+        mp.push(layout);
+        mp.extend_from_slice(&[0x00, 0xE9, 0x00, 0xFF, 0x00]); // loudness
+    }
+    mp
+}
+
+#[test]
+fn unknown_bs2051_sound_system_is_skipped() {
+    // System 7 has no IAMF equivalent: the layout is dropped (its
+    // loudness still consumed), and the following stereo layout drives
+    // output. 0x9C = type 2 + system 7; 0x80 = type 2 + system 0.
+    let mp = parse_mix_presentation(&mix_presentation_layouts(&[0x9C, 0x80]))
+        .expect("unknown systems are accepted");
+    let sub = &mp.sub_mixes[0];
+    assert_eq!(sub.layouts.len(), 1);
+    assert_eq!(sub.layouts[0].layout, IamfChannelLayout::Stereo);
+    assert_eq!(sub.output_layout, IamfChannelLayout::Stereo);
+}
+
+#[test]
+fn all_unknown_bs2051_layouts_fall_back_to_stereo() {
+    // 0xB4 = type 2 + system 13.
+    let mp = parse_mix_presentation(&mix_presentation_layouts(&[0x9C, 0xB4]))
+        .expect("unknown systems are accepted");
+    let sub = &mp.sub_mixes[0];
+    assert!(sub.layouts.is_empty());
+    assert_eq!(sub.output_layout, IamfChannelLayout::Stereo);
 }

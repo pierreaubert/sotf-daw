@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Mix presentations with unknown BS.2051 sound systems in loudness
+  layouts now parse: unrenderable layouts are dropped (rendering falls
+  back to known layouts, else stereo) instead of failing the whole
+  mix presentation.
+
+## [0.2.0] - 2026-09-28
+
+### Added
+- Native pure-Rust AAC-LC and FLAC substream decoders
+  (`codec::AacSubstreamDecoder`, `codec::FlacSubstreamDecoder` via
+  Symphonia), wired into `create_substream_decoder`; Opus still reports
+  `UnsupportedCodec` for engine-side handling.
+- MixGain Step/Linear/Bezier animation with chained multi-subblock
+  segments in the mixer; post-block gains persist at end values.
+- Per-frame DemixingInfo/ReconGain routing into scalable channel
+  rendering, element default demixing modes, and codec-dependent
+  recon-gain overlap.
+- v1.1 mix presentation `num_layouts` loudness layouts with BS.2051
+  sound-system mapping (`SubMix.layouts`; `output_layout`/`loudness`
+  follow the first layout).
+- `tests/corpus_conformance.rs` over the reference `.iamf` bitstreams in
+  `tests/data/` (AOMediaCodec/iamf-tools): FLAC and 5.1 LPCM full
+  decode, Opus rejection, ambisonics element parse.
+
+### Fixed
+- Codec configs now retain decoder bytes (AudioSpecificConfig,
+  STREAMINFO) instead of consuming them; FLAC metadata-block headers
+  are skipped to find STREAMINFO.
+- LPCM configs declaring `num_samples_per_frame = 0` derive the frame
+  count from decoded payloads instead of decoding zero frames.
+- Ambisonics element parsing matches the wire format (mono has no
+  coupled count; projection has no channel mapping).
+- `select_mix_presentation` rebuilds renderers, substream decoders, and
+  scratch buffers, not just mix gains.
+
+### Changed
+- `RELEASE_SCOPE.md` rewritten to describe the implemented v1.1.0
+  surface, conformance evidence, and known gaps (engine-side Opus,
+  downmix on layout reduction, encryption, expanded layouts).
+
 ## [0.1.1] - 2026-07-08
 
 ### Added
