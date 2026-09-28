@@ -16,6 +16,21 @@ pub(super) fn channel_of(msg: &MidiMessage) -> Option<u8> {
         | MidiMessage::PitchBend { channel, .. } => Some(*channel),
         MidiMessage::SystemExclusive { .. }
         | MidiMessage::System { .. }
+        | MidiMessage::MtcFullFrame { .. }
+        | MidiMessage::MtcQuarterFrame { .. }
+        | MidiMessage::Mmc { .. }
+        | MidiMessage::MmcResponse { .. }
+        | MidiMessage::IdentityRequest { .. }
+        | MidiMessage::IdentityReply { .. }
+        | MidiMessage::GmSystem { .. }
+        | MidiMessage::MasterControl { .. }
+        | MidiMessage::MtsSingleNote { .. }
+        | MidiMessage::MtsScaleOctave { .. }
+        | MidiMessage::MtsScaleOctave14 { .. }
+        | MidiMessage::MtsBulkRequest { .. }
+        | MidiMessage::MtsBulkRequestBank { .. }
+        | MidiMessage::MtsBulkDump { .. }
+        | MidiMessage::MtsScaleOctaveDump { .. }
         | MidiMessage::Raw { .. } => None,
     }
 }

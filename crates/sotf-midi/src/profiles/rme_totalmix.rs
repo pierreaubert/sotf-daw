@@ -73,7 +73,10 @@ impl RMETotalMixProfile {
     pub const MAIN_VOLUME_CC: u8 = 7;
     pub const MAIN_VOLUME_CHANNEL: u8 = 0;
 
-    /// Mackie Control Protocol constants
+    /// Mackie-flavored note/CC bases. TotalMix speaks its own dialect on
+    /// its bank channels (notably SELECT starts at 0, unlike canonical
+    /// MCU), so these stay pinned here rather than tracking the surfaces
+    /// module's canonical map.
     pub const MACKIE_MUTE_NOTE_START: u8 = 16;
     pub const MACKIE_SOLO_NOTE_START: u8 = 8;
     pub const MACKIE_SELECT_NOTE_START: u8 = 0;
@@ -138,18 +141,7 @@ impl RMETotalMixProfile {
 
     /// Build a Mackie Control momentary button press (NoteOn then NoteOff).
     pub fn mackie_button_press(channel: u8, note: u8) -> [MidiMessage; 2] {
-        [
-            MidiMessage::NoteOn {
-                channel,
-                note,
-                velocity: 127,
-            },
-            MidiMessage::NoteOff {
-                channel,
-                note,
-                velocity: 0,
-            },
-        ]
+        crate::surfaces::mackie::button_press(channel, note)
     }
 }
 

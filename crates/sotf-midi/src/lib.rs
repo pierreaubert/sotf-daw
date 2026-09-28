@@ -79,6 +79,7 @@ pub mod message;
 pub mod profiles;
 pub mod sequencer;
 pub mod smf;
+pub mod surfaces;
 pub mod templates;
 
 pub use clock::{
@@ -94,6 +95,17 @@ pub use layout::{ControllerLayout, MidiControlId, PhysicalControl, PhysicalContr
 pub use manager::{MidiManager, enumerate_input_devices, enumerate_output_devices};
 pub use mapping::{ControlBinding, MidiMapping, MidiOverlay, ValueScaling};
 pub use mapping_engine::{MappingAction, MidiMappingEngine};
-pub use message::MidiMessage;
+pub use message::{
+    BulkTuningDump, GmMode, IdentityReply, ManufacturerId, MasterControl, Midi2Voice,
+    MmcCommand, MmcField, MmcResponse, MmcShuttleSpeed, MidiMessage, MtcFrameRate,
+    MtcQuarterFrameAssembler, MtcQuarterFrameKind, MtcTime, NoteAttribute, Realtime,
+    ScaleChannels, ScaleOctaveDump, SingleNoteChange, SysexStatus, TuningFrequency, UmpMessage,
+    UmpUtility, GROUP_MAX, SYSEX7_CAPACITY, SYSEX8_CAPACITY,
+};
 pub use sequencer::{MidiClip, MidiEvent, MidiRegion};
+pub use surfaces::{
+    HuiFaderStream, HuiMeterSide, HuiSwitch, HuiSwitchStream, MackieAssign, MackieButton,
+    MackieCursor, MackieMeterLevel, MackieRingMode, MackieTransport, MackieView,
+    SELECT_ASSIGN_STRIP, ZONE_FOOTSWITCH,
+};
 pub use templates::TemplateRegistry;

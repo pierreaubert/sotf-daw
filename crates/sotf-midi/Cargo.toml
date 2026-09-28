@@ -30,6 +30,8 @@ chrono = { workspace = true }
 midir = { workspace = true }
 
 [dev-dependencies]
+# External UMP/SysEx reference for cross-check tests (stages 3-4).
+midi2 = { version = "0.11", default-features = false, features = ["std", "channel-voice1", "channel-voice2", "sysex7", "sysex8", "system-common", "utility"] }
 tempfile = { workspace = true }
 env_logger = { workspace = true }
 sotf-plugin-multiband-compressor = { workspace = true }
