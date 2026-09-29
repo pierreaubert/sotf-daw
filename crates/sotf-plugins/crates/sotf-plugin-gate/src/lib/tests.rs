@@ -134,6 +134,7 @@ fn test_linked_stereo_monitoring_cache_reports_closed() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -184,6 +185,7 @@ fn test_sidechain_hpf_filters_low_freq_detection() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p_low.initialize(sr).unwrap();
@@ -222,6 +224,7 @@ fn test_sidechain_hpf_filters_low_freq_detection() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p_high.initialize(sr).unwrap();
@@ -282,6 +285,7 @@ fn test_gate_hysteresis_no_chatter() {
             range_db: 80.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -367,6 +371,7 @@ fn test_gate_linear_threshold_no_fast_log10_in_decision() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -397,7 +402,7 @@ fn test_soft_knee_curve_is_continuous_at_boundaries() {
     let threshold = -20.0;
     let upper = threshold + p.knee_db / 2.0;
     let lower = threshold - p.knee_db / 2.0;
-    let slope = 1.0 - 1.0 / p.ratio.max(1.0);
+    let slope = p.ratio - 1.0;
 
     let at_upper = p.calculate_gate_attenuation(upper, threshold);
     let just_inside_upper = p.calculate_gate_attenuation(upper - 0.001, threshold);
@@ -419,7 +424,7 @@ fn test_soft_knee_curve_is_continuous_at_boundaries() {
 fn range_zero_means_unlimited_attenuation() {
     let mut p = GatePlugin::new(1, -20.0, 100.0, 1.0, 0.0, 10.0);
     p.knee_db = 0.0;
-    for (range, expected) in [(0.0, 79.2), (20.0, 20.0), (80.0, 79.2), (120.0, 79.2)] {
+    for (range, expected) in [(0.0, 240.0), (20.0, 20.0), (80.0, 80.0), (120.0, 120.0)] {
         p.range_db = range;
         let attenuation = p.calculate_gate_attenuation(-100.0, -20.0);
         assert!(
@@ -449,6 +454,7 @@ fn invalid_factory_parameters_are_rejected() {
         hysteresis_db: 0.0,
         knee_db: 0.0,
         lookahead_ms: 0.0,
+        ..GatePluginParams::default()
     };
     for bad in [
         GatePluginParams {
@@ -719,6 +725,7 @@ fn test_input_channels_doubles_with_external_sidechain() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(48000).unwrap();
@@ -747,6 +754,7 @@ fn test_from_params_detection_mode_rms() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     assert_eq!(p.detection_mode_index, 1);
@@ -772,6 +780,7 @@ fn test_from_params_hpf_order_4th() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(48000).unwrap();
@@ -807,6 +816,7 @@ fn test_info_and_latency() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 5.0,
+            ..GatePluginParams::default()
         },
     );
     p2.initialize(48000).unwrap();
@@ -838,6 +848,7 @@ fn test_process_in_place_rms_detection() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -875,6 +886,7 @@ fn test_process_in_place_lookahead_delays_output() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -1018,6 +1030,7 @@ fn test_process_in_place_external_sidechain() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -1074,6 +1087,7 @@ fn test_process_in_place_mix_half() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -1125,6 +1139,7 @@ fn test_process_in_place_unlinked_dual_channel() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -1172,6 +1187,7 @@ fn test_process_in_place_hold_counter() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     p.initialize(sr).unwrap();
@@ -1397,4 +1413,103 @@ fn steady_state_audio_gain_obeys_range_contract() {
     assert!(range_120 < range_80);
     assert!(range_80 < range_20);
     assert!((range_20 - 0.1).abs() < 0.002);
+}
+
+// Independent f64 transfer curve: output movement below threshold is R times
+// input movement. The quadratic joins unity and that line with matching slope.
+fn conventional_expander_output_db(
+    input: f64,
+    threshold: f64,
+    ratio: f64,
+    knee: f64,
+    range: f64,
+) -> f64 {
+    let output = if knee == 0.0 || input < threshold - knee / 2.0 {
+        if input < threshold {
+            threshold + ratio * (input - threshold)
+        } else {
+            input
+        }
+    } else if input >= threshold + knee / 2.0 {
+        input
+    } else {
+        input + (1.0 - ratio) * (input - threshold - knee / 2.0).powi(2) / (2.0 * knee)
+    };
+    output.max(input - range)
+}
+
+#[test]
+fn conventional_ratio_matches_independent_transfer_curve() {
+    for threshold in [-60.0_f32, -20.0, -3.0] {
+        for ratio in [1.0_f32, 1.5, 2.0, 4.0, 20.0] {
+            for knee in [0.0_f32, 6.0, 12.0] {
+                for range in [12.0_f32, 60.0, 120.0] {
+                    for step in -240..=40 {
+                        let input = threshold + step as f32 * 0.25;
+                        let mut plugin = GatePlugin::new(1, threshold, ratio, 1.0, 0.0, 10.0);
+                        plugin.knee_db = knee;
+                        plugin.range_db = range;
+                        let attenuation = plugin.calculate_gate_attenuation(input, threshold);
+                        let expected = conventional_expander_output_db(
+                            input as f64,
+                            threshold as f64,
+                            ratio as f64,
+                            knee as f64,
+                            range as f64,
+                        );
+                        assert!(
+                            ((input - attenuation) as f64 - expected).abs() < 2.0e-5,
+                            "input={input}, threshold={threshold}, ratio={ratio}, knee={knee}, range={range}: output={}, expected={expected}",
+                            input - attenuation
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conventional_ratio_matches_settled_audio_at_multiple_rates_and_channels() {
+    for rate in [44_100, 48_000, 96_000] {
+        for channels in [1, 2, 6] {
+            for ratio in [1.0_f32, 2.0, 4.0, 20.0] {
+                let mut plugin = GatePlugin::from_params(
+                    channels,
+                    GatePluginParams {
+                        threshold_db: -20.0,
+                        ratio,
+                        knee_db: 0.0,
+                        range_db: 80.0,
+                        hold_ms: 0.0,
+                        hysteresis_db: 0.0,
+                        release_ms: 10.0,
+                        detection_mode: "peak".to_string(),
+                        sidechain_hpf_hz: 0.0,
+                        ..Default::default()
+                    },
+                );
+                plugin.initialize(rate).unwrap();
+                let input = 10.0_f64.powf(-30.0 / 20.0) as f32;
+                let expected = conventional_expander_output_db(
+                    20.0 * (input as f64).log10(),
+                    -20.0,
+                    ratio as f64,
+                    0.0,
+                    80.0,
+                );
+                let mut buffer = vec![input; rate as usize * channels / 2];
+                plugin
+                    .process_in_place(&mut buffer, &ProcessContext::new(rate, rate as usize / 2))
+                    .unwrap();
+                for sample in &buffer[buffer.len() - channels..] {
+                    let actual = 20.0 * (*sample as f64).abs().log10();
+                    assert!(
+                        (actual - expected).abs() < 0.02,
+                        "rate={rate}, channels={channels}, ratio={ratio}: {actual} != {expected}"
+                    );
+                }
+            }
+        }
+    }
 }

@@ -390,6 +390,7 @@ fn create_plugin_rejects_channel_mismatch() {
 fn create_gain_plugin_and_process() {
     let params = serde_json::json!({"gain_db": -6.0, "smoothing_ms": 0.0});
     let mut plugin = create_plugin("gain", &params, 2, SAMPLE_RATE).unwrap();
+    plugin.initialize(SAMPLE_RATE).unwrap();
 
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 2);
@@ -416,6 +417,7 @@ fn create_gain_plugin_and_process() {
 fn create_eq_plugin_with_empty_filters_is_passthrough() {
     let params = serde_json::json!({"filters": []});
     let mut plugin = create_plugin("eq", &params, 2, SAMPLE_RATE).unwrap();
+    plugin.initialize(SAMPLE_RATE).unwrap();
 
     let frames = 64;
     let input = vec![0.5_f32; frames * 2];
@@ -433,8 +435,9 @@ fn create_eq_plugin_with_empty_filters_is_passthrough() {
 
 #[test]
 fn create_limiter_plugin_and_process() {
-    let params = serde_json::json!({"threshold_db": -1.0});
+    let params = serde_json::json!({"threshold_db": -1.0, "lookahead_ms": 1.0});
     let mut plugin = create_plugin("limiter", &params, 2, SAMPLE_RATE).unwrap();
+    plugin.initialize(SAMPLE_RATE).unwrap();
 
     let frames = 256;
     let input = vec![0.25_f32; frames * 2];
@@ -444,11 +447,20 @@ fn create_limiter_plugin_and_process() {
     let out_frames = plugin.process(&input, &mut output, &ctx).unwrap();
     assert_eq!(out_frames, frames);
 
-    // With a -1 dB threshold and 0.25 (-12 dBFS) input, the limiter should not
-    // be actively reducing gain.
-    for &sample in &output {
-        assert!(sample.abs() < 1.0, "limiter output should remain bounded");
-    }
+    // One millisecond at 48 kHz delays 48 frames. The -12 dBFS input is below
+    // the -1 dB ceiling, so it must pass unchanged after that initial silence.
+    // This also rejects accidentally using the constructor's 44.1 kHz state.
+    let delay_frames = 48;
+    assert_eq!(plugin.latency_samples(), delay_frames);
+    assert!(
+        output[..delay_frames * 2]
+            .iter()
+            .all(|&sample| sample == 0.0)
+    );
+    assert_eq!(
+        &output[delay_frames * 2..],
+        &input[..(frames - delay_frames) * 2]
+    );
 }
 
 // ----------------------------------------------------------------------------

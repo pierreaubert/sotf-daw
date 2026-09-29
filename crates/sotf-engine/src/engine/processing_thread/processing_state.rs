@@ -29,6 +29,8 @@ const RECYCLE_FALLBACK_POOL_SIZE: usize = 4;
 /// The manager serializes host swaps, so reaching this limit means the GC is
 /// persistently unhealthy rather than merely one item behind.
 const MAX_PENDING_RETIREMENTS: usize = 64;
+/// Host replacements fade for 50 ms on the emitted audio timeline.
+const CROSSFADE_DURATION_MS: u64 = 50;
 
 /// Processing state
 pub(super) struct ProcessingState {
@@ -38,8 +40,8 @@ pub(super) struct ProcessingState {
     pub(super) prev_host: Option<Box<PluginHost>>,
     /// Crossfade progress (0.0 to 1.0, 1.0 = current host only)
     pub(super) crossfade_progress: f32,
-    /// Crossfade step per frame
-    pub(super) crossfade_step: f32,
+    /// Output-rate frames emitted since this transition began.
+    crossfade_frames: usize,
     /// When host timing differs, transition old→silence→new instead of
     /// blending time-misaligned samples.
     pub(super) crossfade_through_silence: bool,
@@ -52,6 +54,8 @@ pub(super) struct ProcessingState {
     pub(super) pending_retirements: Vec<GcItem>,
     retirement_overflowed: bool,
     pub(super) host_generation: Arc<AtomicU64>,
+    /// Local identity of the committed host, independent of request generations.
+    committed_host_epoch: u64,
     /// Number of channels
     pub(super) channels: usize,
     pub(super) bypassed: bool,
@@ -102,7 +106,7 @@ impl ProcessingState {
             host: Box::new(PluginHost::new(channels, sample_rate)),
             prev_host: None,
             crossfade_progress: 1.0,
-            crossfade_step: 0.0,
+            crossfade_frames: 0,
             crossfade_through_silence: false,
             old_path_delay: PreparedTransitionDelay::default(),
             new_path_delay: PreparedTransitionDelay::default(),
@@ -110,6 +114,7 @@ impl ProcessingState {
             pending_retirements: Vec::with_capacity(MAX_PENDING_RETIREMENTS + 1),
             retirement_overflowed: false,
             host_generation: Arc::new(AtomicU64::new(0)),
+            committed_host_epoch: 0,
             channels,
             bypassed: false,
             // Pre-sized for the worst-case processing block so the hot path only reuses memory.
@@ -156,21 +161,22 @@ impl ProcessingState {
         }
     }
 
-    pub(super) fn compute_crossfade_step(input_frames: usize, sample_rate: u32) -> f32 {
-        if input_frames == 0 {
-            return 1.0;
-        }
-
-        let crossfade_duration_ms = 50.0;
-        let block_duration_ms = (input_frames as f32 * 1000.0) / sample_rate as f32;
-        (block_duration_ms / crossfade_duration_ms).min(0.5)
-    }
-
     #[inline]
     pub(super) fn equal_power_crossfade_gains(alpha: f32) -> (f32, f32) {
         let angle = alpha.clamp(0.0, 1.0) * std::f32::consts::FRAC_PI_2;
         let (new_gain, old_gain) = angle.sin_cos();
         (old_gain, new_gain)
+    }
+
+    fn reset(&mut self) {
+        self.host.reset();
+        if let Some(previous) = self.prev_host.as_mut() {
+            previous.reset();
+            self.crossfade_progress = 0.0;
+        }
+        self.crossfade_frames = 0;
+        self.old_path_delay.reset();
+        self.new_path_delay.reset();
     }
 
     pub(super) fn prepare_scratch_buffer(buffer: &mut Vec<f32>, len: usize) {
@@ -360,7 +366,7 @@ impl ProcessingState {
         if can_transition {
             self.prev_host = Some(std::mem::replace(&mut self.host, new_host));
             self.crossfade_progress = 0.0;
-            self.crossfade_step = 0.0;
+            self.crossfade_frames = 0;
             self.crossfade_through_silence = old_output_rate != output_sample_rate;
             self.old_path_delay = old_path_delay;
             self.new_path_delay = new_path_delay;
@@ -368,12 +374,14 @@ impl ProcessingState {
             let previous = std::mem::replace(&mut self.host, new_host);
             self.retire(GcItem::PluginHost(previous));
             self.crossfade_progress = 1.0;
+            self.crossfade_frames = 0;
             self.crossfade_through_silence = false;
             self.old_path_delay = PreparedTransitionDelay::default();
             self.new_path_delay = PreparedTransitionDelay::default();
         }
         self.channels = output_channels;
         self.spare_cache_arc = Some(analyzer_cache);
+        self.committed_host_epoch = self.committed_host_epoch.wrapping_add(1);
         Ok((
             generation,
             output_channels,
@@ -441,20 +449,17 @@ impl ProcessingState {
                     .process_in_place(&mut self.prev_process_buffer[..prev_actual * self.channels]);
             }
 
-            // Compute crossfade step from actual frame size (~50ms crossfade)
-            if self.crossfade_step == 0.0 {
-                self.crossfade_step = Self::compute_crossfade_step(input_frames, self.sample_rate);
-            }
-
-            let alpha_start = self.crossfade_progress;
-            let alpha_end = (alpha_start + self.crossfade_step).min(1.0);
+            // Count emitted frames rather than callbacks or accepted input.
+            // Buffered/rate-changing chains can emit zero or multiple chunks;
+            // only output samples advance the audible transition timeline.
+            let output_rate = self.host.output_sample_rate(self.sample_rate);
+            let fade_frames = (u64::from(output_rate) * CROSSFADE_DURATION_MS)
+                .div_ceil(1_000)
+                .max(1) as usize;
             for frame in 0..actual_frames {
-                let position = if actual_frames > 1 {
-                    frame as f32 / (actual_frames - 1) as f32
-                } else {
-                    1.0
-                };
-                let alpha = alpha_start + (alpha_end - alpha_start) * position;
+                let alpha = (self.crossfade_frames.saturating_add(frame) as f64
+                    / fade_frames as f64)
+                    .min(1.0) as f32;
                 for channel in 0..self.channels {
                     let index = frame * self.channels + channel;
                     let previous = if prev_actual == 0 {
@@ -493,8 +498,10 @@ impl ProcessingState {
                 }
             }
 
-            self.crossfade_progress = alpha_end;
-            if self.crossfade_progress >= 1.0 {
+            self.crossfade_frames = self.crossfade_frames.saturating_add(actual_frames);
+            self.crossfade_progress =
+                (self.crossfade_frames as f64 / fade_frames as f64).min(1.0) as f32;
+            if self.crossfade_frames >= fade_frames {
                 let previous = self.prev_host.take().expect("crossfade host exists");
                 let old_path_delay = std::mem::take(&mut self.old_path_delay);
                 let new_path_delay = std::mem::take(&mut self.new_path_delay);
@@ -514,14 +521,28 @@ impl ProcessingState {
     }
 }
 
-/// Handle a processing command
-/// Returns true if shutdown requested
+/// Result of an executed command; cancelled requests always continue.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum CommandOutcome {
+    Continue,
+    Stopped,
+    Shutdown,
+}
+
+impl CommandOutcome {
+    #[cfg(test)]
+    pub(super) fn is_shutdown(self) -> bool {
+        self == Self::Shutdown
+    }
+}
+
+/// Handles a command after atomically claiming its request ticket.
 pub(super) fn handle_processing_command(
     request: ProcessingRequest,
     state: &mut ProcessingState,
     response_tx: &Sender<ProcessingReply>,
     event_tx: &crossbeam::channel::Sender<ThreadEvent>,
-) -> bool {
+) -> CommandOutcome {
     let _ = event_tx;
     let ProcessingRequest {
         id: request_id,
@@ -538,7 +559,7 @@ pub(super) fn handle_processing_command(
                 "processing request {request_id} was cancelled before execution"
             )))
             .ok();
-        return false;
+        return CommandOutcome::Continue;
     }
     match command {
         ProcessingCommand::CommitHostUpdate(update) => {
@@ -555,7 +576,7 @@ pub(super) fn handle_processing_command(
                         response_tx
                             .send(ProcessingResponse::Error(reason.to_string()))
                             .ok();
-                        return false;
+                        return CommandOutcome::Continue;
                     }
                 };
             response_tx
@@ -594,7 +615,7 @@ pub(super) fn handle_processing_command(
                         "Failed to set parameter: {e}"
                     )))
                     .ok();
-                return false;
+                return CommandOutcome::Continue;
             }
 
             // This command already runs on the processing thread between
@@ -677,18 +698,16 @@ pub(super) fn handle_processing_command(
         ProcessingCommand::Stop => {
             // Stop discards the current stream. Reset all buffered plugin
             // state so a later start cannot emit stale residual/tail audio.
-            state.host.reset();
-            if let Some(previous) = state.prev_host.as_mut() {
-                previous.reset();
-            }
+            state.reset();
             log::debug!("[Processing Thread] Stopped");
+            return CommandOutcome::Stopped;
         }
         ProcessingCommand::Shutdown => {
             log::debug!("[Processing Thread] Shutting down");
-            return true;
+            return CommandOutcome::Shutdown;
         }
     }
-    false
+    CommandOutcome::Continue
 }
 
 struct CorrelatedResponseSender<'a> {
@@ -803,17 +822,13 @@ pub(super) fn run_processing_thread(
 
     let mut decoder_stream_active = true;
 
-    loop {
+    'processing: loop {
         // Check for commands (non-blocking)
         if let Ok(request) = command_rx.try_recv() {
-            if matches!(
-                request.command,
-                ProcessingCommand::Stop | ProcessingCommand::Shutdown
-            ) {
-                decoder_stream_active = false;
-            }
-            if handle_processing_command(request, &mut state, &response_tx, &event_tx) {
-                break;
+            match handle_processing_command(request, &mut state, &response_tx, &event_tx) {
+                CommandOutcome::Shutdown => break,
+                CommandOutcome::Stopped => decoder_stream_active = false,
+                CommandOutcome::Continue => {}
             }
         }
 
@@ -939,18 +954,30 @@ pub(super) fn run_processing_thread(
                         while let Some(msg) = pending_msg.take() {
                             match send_or_interrupt(&message_tx, &command_rx, msg) {
                                 Ok(Some((cmd, unsent))) => {
-                                    let old_channels = state.channels;
                                     pending_msg = unsent;
-                                    if handle_processing_command(
+                                    let outcome = handle_processing_command(
                                         cmd,
                                         &mut state,
                                         &response_tx,
                                         &event_tx,
-                                    ) {
-                                        break;
+                                    );
+                                    if outcome != CommandOutcome::Continue {
+                                        decoder_stream_active = false;
+                                        if let Some(ProcessingMessage::Frame(frame)) =
+                                            pending_msg.take()
+                                        {
+                                            state.recycle_output_buffer_locally(frame.data);
+                                        }
                                     }
-                                    // If channels changed, discard the stale frame
-                                    if state.channels != old_channels {
+                                    if outcome == CommandOutcome::Shutdown {
+                                        break 'processing;
+                                    }
+                                    // A successful update may change only the clock.
+                                    // Compare the rendered frame's complete format.
+                                    if state.output_channels() != output_channels
+                                        || state.output_sample_rate(state.sample_rate)
+                                            != output_sample_rate
+                                    {
                                         if let Some(ProcessingMessage::Frame(frame)) =
                                             pending_msg.take()
                                         {
@@ -984,25 +1011,38 @@ pub(super) fn run_processing_thread(
                 // Formatting, logging, and analyzer-stat Vec construction are
                 // deliberately excluded from this realtime loop.
             }
-            Ok(DecoderMessage::EndOfStream) => {
+            Ok(DecoderMessage::EndOfStream) => 'eos: loop {
                 decoder_stream_active = false;
                 // Finalize every stateful plugin before publishing EOS. Drain
                 // output is already propagated through downstream plugins by
                 // DawHost, so a resampler followed by another buffered plugin
                 // retains both tails in causal order.
-                let output_channels = state.output_channels();
-                let output_sample_rate = state.host.output_sample_rate(state.sample_rate);
-                let mut drain_steps = 0usize;
-                loop {
-                    drain_steps += 1;
-                    if drain_steps > 4096 {
-                        event_tx
-                            .try_send(ThreadEvent::ProcessingError(
-                                "plugin drain did not converge after 4096 steps".to_string(),
-                            ))
-                            .ok();
-                        break;
+                'drain: while !state.bypassed {
+                    // A drain step can make progress without emitting frames,
+                    // so it must also observe commands between plugin calls.
+                    if let Ok(command) = command_rx.try_recv() {
+                        match handle_processing_command(
+                            command,
+                            &mut state,
+                            &response_tx,
+                            &event_tx,
+                        ) {
+                            CommandOutcome::Shutdown => break 'processing,
+                            CommandOutcome::Stopped => {
+                                decoder_stream_active = false;
+                                continue 'processing;
+                            }
+                            CommandOutcome::Continue => {}
+                        }
+                        if state.bypassed {
+                            break 'drain;
+                        }
                     }
+                    // DawHost enforces each active plugin's prepared work bound.
+                    // A global call cap would truncate legitimate long finite tails.
+                    let draining_host_epoch = state.committed_host_epoch;
+                    let output_channels = state.output_channels();
+                    let output_sample_rate = state.output_sample_rate(state.sample_rate);
                     let capacity = state.host.drain_output_frames_max();
                     let samples = capacity.saturating_mul(output_channels);
                     ProcessingState::prepare_scratch_buffer(&mut state.process_buffer, samples);
@@ -1010,9 +1050,12 @@ pub(super) fn run_processing_thread(
                         Ok(result) => result,
                         Err(error) => {
                             event_tx.try_send(ThreadEvent::ProcessingError(error)).ok();
-                            break;
+                            break 'processing;
                         }
                     };
+                    // Analyzer-only finalization can change measurements while
+                    // emitting zero frames. Publish those results before EOS.
+                    let _ = update_plugin_data_cache(&mut state, &plugin_data_cache);
                     if drain.frames > 0 {
                         let actual_samples = drain.frames.saturating_mul(output_channels);
                         let mut data = recycle_rx.try_recv().unwrap_or_else(|_| {
@@ -1039,7 +1082,7 @@ pub(super) fn run_processing_thread(
                                         "plugin drain produced an invalid output frame: {error}"
                                     )))
                                     .ok();
-                                break;
+                                break 'processing;
                             }
                         };
                         let mut pending = Some(ProcessingMessage::Frame(frame));
@@ -1047,64 +1090,126 @@ pub(super) fn run_processing_thread(
                             match send_or_interrupt(&message_tx, &command_rx, message) {
                                 Ok(Some((command, unsent))) => {
                                     pending = unsent;
-                                    if handle_processing_command(
+                                    let outcome = handle_processing_command(
                                         command,
                                         &mut state,
                                         &response_tx,
                                         &event_tx,
-                                    ) {
-                                        break;
+                                    );
+                                    let format_changed = state.output_channels() != output_channels
+                                        || state.output_sample_rate(state.sample_rate)
+                                            != output_sample_rate;
+                                    if (outcome != CommandOutcome::Continue
+                                        || state.bypassed
+                                        || format_changed)
+                                        && let Some(ProcessingMessage::Frame(frame)) =
+                                            pending.take()
+                                    {
+                                        state.recycle_output_buffer_locally(frame.data);
+                                    }
+                                    match outcome {
+                                        CommandOutcome::Shutdown => break 'processing,
+                                        CommandOutcome::Stopped => {
+                                            decoder_stream_active = false;
+                                            continue 'processing;
+                                        }
+                                        CommandOutcome::Continue => {}
+                                    }
+                                    if state.bypassed || format_changed {
+                                        break 'drain;
                                     }
                                 }
                                 Ok(None) => {}
-                                Err(_) => {
+                                Err(error) => {
                                     if let Some(ProcessingMessage::Frame(frame)) = pending.take() {
                                         state.recycle_output_buffer_locally(frame.data);
                                     }
-                                    break;
+                                    event_tx.try_send(ThreadEvent::ProcessingError(error)).ok();
+                                    break 'processing;
                                 }
                             }
                         }
                     }
-                    if drain.complete {
+                    if drain.complete && state.committed_host_epoch == draining_host_epoch {
                         break;
                     }
+                }
+                if state.bypassed {
+                    // The bypassed stream has ended. Discard frozen DSP state
+                    // so disabling bypass cannot release an earlier stream's
+                    // tail on a later start or end-of-stream notification.
+                    state.reset();
                 }
                 let mut pending_msg = Some(ProcessingMessage::EndOfStream);
                 while let Some(msg) = pending_msg.take() {
                     match send_or_interrupt(&message_tx, &command_rx, msg) {
                         Ok(Some((cmd, unsent))) => {
-                            let old_channels = state.channels;
+                            let old_host_epoch = state.committed_host_epoch;
+                            let old_format = (
+                                state.output_channels(),
+                                state.output_sample_rate(state.sample_rate),
+                            );
                             pending_msg = unsent;
-                            if handle_processing_command(cmd, &mut state, &response_tx, &event_tx) {
-                                break;
+                            match handle_processing_command(
+                                cmd,
+                                &mut state,
+                                &response_tx,
+                                &event_tx,
+                            ) {
+                                CommandOutcome::Shutdown => break 'processing,
+                                CommandOutcome::Stopped => {
+                                    decoder_stream_active = false;
+                                    pending_msg = None;
+                                }
+                                CommandOutcome::Continue => {}
                             }
-                            if state.channels != old_channels {
+                            if old_format
+                                != (
+                                    state.output_channels(),
+                                    state.output_sample_rate(state.sample_rate),
+                                )
+                            {
                                 pending_msg = None;
+                            } else if pending_msg.is_some()
+                                && state.committed_host_epoch != old_host_epoch
+                            {
+                                // The unsent EOS belongs to the replaced host.
+                                continue 'eos;
                             }
                         }
                         Ok(None) => {}
-                        Err(_) => break,
+                        Err(error) => {
+                            event_tx.try_send(ThreadEvent::ProcessingError(error)).ok();
+                            break 'processing;
+                        }
                     }
                 }
-            }
+                break 'eos;
+            },
             Ok(DecoderMessage::Flush) => {
                 decoder_stream_active = true;
                 // Reset plugin state (IIR filter history, compressor envelopes,
                 // limiter lookahead, upmixer FFT buffers) so that stale pre-seek
                 // audio doesn't cause transient artifacts in post-seek output.
-                state.host.reset();
-                if let Some(ref mut prev) = state.prev_host {
-                    prev.reset();
-                }
+                state.reset();
                 let mut pending_msg = Some(ProcessingMessage::Flush);
                 while let Some(msg) = pending_msg.take() {
                     match send_or_interrupt(&message_tx, &command_rx, msg) {
                         Ok(Some((cmd, unsent))) => {
                             let old_channels = state.channels;
                             pending_msg = unsent;
-                            if handle_processing_command(cmd, &mut state, &response_tx, &event_tx) {
-                                break;
+                            match handle_processing_command(
+                                cmd,
+                                &mut state,
+                                &response_tx,
+                                &event_tx,
+                            ) {
+                                CommandOutcome::Shutdown => break 'processing,
+                                CommandOutcome::Stopped => {
+                                    decoder_stream_active = false;
+                                    pending_msg = None;
+                                }
+                                CommandOutcome::Continue => {}
                             }
                             if state.channels != old_channels {
                                 pending_msg = None;

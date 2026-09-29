@@ -44,6 +44,9 @@ mod error;
 mod host;
 #[path = "lib/libc.rs"]
 mod libc;
+#[cfg(test)]
+#[path = "lib/limiter_oversampling_tests.rs"]
+mod limiter_oversampling_tests;
 #[path = "lib/misc.rs"]
 mod misc;
 #[path = "lib/plugin.rs"]
@@ -56,7 +59,8 @@ mod tests;
 #[path = "lib/types.rs"]
 mod types;
 
-pub use misc::*;
+#[cfg(target_os = "macos")]
+pub use misc::gpui_au_create_with_plugin;
 pub use plugin::*;
 
 /// Opaque handle to a plugin instance.

@@ -69,6 +69,11 @@ pub struct CrossfeedPlugin {
 
     // Auto gain helper
     pub(super) auto_gain: sotf_host::auto_gain::AutoGain,
+    // Preserve sanitized input while the complete raw callback and mix ramp run.
+    auto_gain_reference: Vec<f32>,
+    // Accepted AutoGain-enabled frames since the last completed 10 Hz interval.
+    // Disabled AutoGain freezes its meter history and this clock together.
+    auto_gain_frames: usize,
 
     // Smoothing
     pub(super) mix_smoother: Smoother,
@@ -174,6 +179,8 @@ impl CrossfeedPlugin {
                     smoothing_ms: params.autogain_smoothing_ms,
                 },
             )?,
+            auto_gain_reference: vec![0.0; cap * 2],
+            auto_gain_frames: 0,
             mix_smoother: Smoother::new(params.mix, 20.0, sr),
             yaw_smoother: Smoother::new(params.head_yaw_deg, 10.0, sr),
             cached_parameters: Vec::new(),
@@ -627,6 +634,14 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        if id.as_str() == "head_yaw_deg" {
+            Some(ParameterValue::Float(self.params.head_yaw_deg))
+        } else {
+            param_bridge::get_parameter(CF, id, |i| self.param_value(i))
+        }
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         for param in &self.cached_parameters {
@@ -872,6 +887,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
             .set_sample_rate(sr)
             .map_err(|e| e.to_string())?;
         self.auto_gain.set_enabled(self.params.autogain_enabled);
+        self.auto_gain_frames = 0;
         Ok(())
     }
 
@@ -895,6 +911,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         self.mb_low_r.reset();
         self.mb_high_r.reset();
         self.auto_gain.reset();
+        self.auto_gain_frames = 0;
     }
 
     fn process_in_place(
@@ -946,7 +963,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         }
 
         if self.params.autogain_enabled {
-            self.auto_gain.measure_input(buffer)?;
+            self.auto_gain_reference[..buffer.len()].copy_from_slice(buffer);
         }
 
         deinterleave_stereo(buffer, &mut self.dry_l[..nf], &mut self.dry_r[..nf]);
@@ -981,8 +998,28 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         interleave_stereo(&self.dry_l[..nf], &self.dry_r[..nf], buffer);
 
         if self.params.autogain_enabled {
-            self.auto_gain.measure_output(buffer)?;
-            self.auto_gain.apply_compensation(buffer, nf);
+            // Keep raw DSP and the independent block mix ramp unchanged. Only
+            // metering/compensation is segmented, on accepted base-rate frames.
+            // Integer periods give exactly 10 Hz at conventional audio rates.
+            let interval = (self.sample_rate as usize / 10).max(1);
+            let mut offset = 0;
+            while offset < nf {
+                let frames = (nf - offset).min(interval - self.auto_gain_frames);
+                let range = offset * 2..(offset + frames) * 2;
+                let output = &mut buffer[range.clone()];
+                self.auto_gain
+                    .ingest_input(&self.auto_gain_reference[range])?;
+                self.auto_gain.ingest_output(output)?;
+                self.auto_gain.apply_compensation(output, frames);
+                offset += frames;
+                self.auto_gain_frames += frames;
+                if self.auto_gain_frames == interval {
+                    self.auto_gain_frames = 0;
+                    // This interval's measurements affect only later audio.
+                    self.auto_gain.refresh_input_measurement();
+                    self.auto_gain.refresh_output_measurement();
+                }
+            }
         }
 
         Ok(nf)

@@ -104,6 +104,21 @@ pub fn default_multi_resolution() -> bool {
     pk(DN, "multi_resolution").default_bool()
 }
 
+/// Return the default harmonic/percussive processing setting.
+pub fn default_harmonic_percussive() -> bool {
+    pk(DN, "harmonic_percussive").default_bool()
+}
+
+/// Return the default spatial denoising setting.
+pub fn default_spatial_denoise() -> bool {
+    pk(DN, "spatial_denoise").default_bool()
+}
+
+/// Return the default spatial denoising strength.
+pub fn default_spatial_strength() -> f32 {
+    pk(DN, "spatial_strength").default_f32()
+}
+
 /// Configuration parameters for DenoiserPlugin
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenoiserPluginParams {
@@ -205,6 +220,18 @@ pub struct DenoiserPluginParams {
     /// Gains are blended by spectral-flux-based transient detection.
     #[serde(default = "default_multi_resolution")]
     pub multi_resolution: bool,
+
+    /// Preserve transients using harmonic/percussive separation.
+    #[serde(default = "default_harmonic_percussive")]
+    pub harmonic_percussive: bool,
+
+    /// Enable spatial denoising when at least two channels are present.
+    #[serde(default = "default_spatial_denoise")]
+    pub spatial_denoise: bool,
+
+    /// Spatial denoising strength, from zero to one.
+    #[serde(default = "default_spatial_strength")]
+    pub spatial_strength: f32,
 }
 
 impl Default for DenoiserPluginParams {
@@ -234,6 +261,9 @@ impl Default for DenoiserPluginParams {
             formant_preservation: default_formant_preservation(),
             formant_strength: default_formant_strength(),
             multi_resolution: default_multi_resolution(),
+            harmonic_percussive: default_harmonic_percussive(),
+            spatial_denoise: default_spatial_denoise(),
+            spatial_strength: default_spatial_strength(),
         }
     }
 }

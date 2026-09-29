@@ -160,11 +160,9 @@ impl SpectrumAnalyzerPlugin {
                 }
                 let bin_idx = (((freq.log10() - log_min) / log_range) * config.num_bins as f32)
                     .floor() as usize;
-                if bin_idx < config.num_bins {
-                    Some(bin_idx)
-                } else {
-                    None
-                }
+                // The requested range includes max_freq. Its normalized index
+                // is num_bins, so retain that endpoint in the final band.
+                Some(bin_idx.min(config.num_bins - 1))
             })
             .collect();
         let mut occupied = vec![false; config.num_bins];
@@ -529,7 +527,15 @@ impl Plugin for SpectrumAnalyzerPlugin {
 
             for (i, &norm_sq) in self.fft_line_max_power.iter().enumerate().skip(1) {
                 if let Some(display_bin) = self.bin_to_display.get(i).copied().flatten() {
-                    self.new_mags[display_bin] += norm_sq;
+                    // Squared coherent amplitudes use a quarter-sized scale
+                    // at Nyquist, but one-sided energy needs half the interior
+                    // scale. Correct band power without changing peak units.
+                    let band_power = if i == FFT_SIZE / 2 {
+                        2.0 * norm_sq
+                    } else {
+                        norm_sq
+                    };
+                    self.new_mags[display_bin] += band_power;
                     new_peak_magnitude =
                         new_peak_magnitude.max(10.0 * fast_log10(norm_sq.max(1e-10)));
                 }

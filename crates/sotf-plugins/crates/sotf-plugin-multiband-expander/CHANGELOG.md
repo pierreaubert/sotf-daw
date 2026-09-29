@@ -1,152 +1,71 @@
+## Unreleased finite stream audit (2026-09-28)
+
+- Recover spectral startup at every phase by including all preceding Hann
+  windows; retain the declared 1024-frame delay and discard negative-time output.
+- Drain wet and fading spectral output through the final synthesis window,
+  with an exact phase-dependent 1792-2047-frame continuation, preallocated hop
+  caching, and a remaining-call bound that includes unread cached output.
+- Preserve the shorter settled-dry spectral delay and all time-domain finite
+  eligibility. Spectral controls freeze at accepted nonempty EOS until reset.
+- Recover delayed program audio for proved finite response cases with bounded,
+  allocation-free drain, reset-required EOS and conservative tail metadata.
+- Preserve legacy drain behavior for recursive wet/color responses and document
+  the unresolved rendering policy rather than claiming a finite response.
+- Report the actual one-frame minimum for positive sub-sample lookahead (AUD075).
+
 # Changelog
 
-## 0.5.26
+## Unreleased
 
-### Review remediation
+### Continuous soft-knee opening (AUD-095)
 
-- The `expander` factory now forces a genuine one-band broadband processor with
-  `Expander` identity and the single-band schema; multiband creation still
-  requires 2-5 bands.
-- Factory construction is fallible and rejects zero channels, non-finite or
-  out-of-range dynamics, unknown detection/processing modes, and non-ascending
-  or above-Nyquist crossovers.
-- `num_bands` and `processing_mode` are structural controls. Live setters reject
-  them instead of planning FFTs, resizing DSP arrays, or deleting state on the
-  audio thread.
-- Bypassed/passive bands now traverse the same lookahead delay as active bands,
-  preserving crossover recombination and reported latency.
-- The advertised sidechain HPF now filters detector input with per-band/channel
-  state and deterministic reset.
-- Crossover smoothing advances per sample and analyzer publication advances by
-  elapsed samples, making automation and UI cadence callback-size invariant.
-- Spectral mode publishes analyzer data and rejects unsupported RMS/unlinked,
-  lookahead, HPF, and auto-makeup configurations instead of silently ignoring
-  those controls.
-- Realtime value writes no longer rebuild dynamic schemas, and band parameter
-  parsing no longer allocates temporary vectors.
-- Non-finite input samples are sanitized before they can poison detector,
-  crossover, or FFT state. Plugin metadata reports the crate version.
-- Corrected the spectral contract documentation: dual Hann windows use 75%
-  overlap (`N/4` hop), `1/(1.5N)` normalization, and `N` samples of streaming
-  and dry-path latency.
+Both spectral and time-domain state machines now open at the centered knee's
+upper edge (`threshold + knee/2`), with the same hysteresis distance below it.
+They continue passing the original threshold center to the attenuation law.
+The prior center trigger skipped half the curve and produced a measured
+4.18 dB spectral gain jump across a 0.02 dB input change (threshold -24 dB,
+knee 12 dB, ratio 4, zero hold/hysteresis). The one-band time-domain path had
+the same defect, jumping approximately 4.52 dB.
 
-## 0.5.25
+Existing nonzero-knee presets can become more attenuating near threshold;
+hold/hysteresis follow the corrected unity edge. Serialized values, defaults,
+IDs, gain law, envelope coefficients and hold-count timing are preserved.
+Knees below 0.1 dB retain their hard-knee behavior. Independent f64 DC and
+periodic-Hann fundamental oracles pin the full curve, with history, automation,
+per-band overrides and callback-partition regressions.
 
-### Bug fixes
+### Corrected downward expansion ratio
 
-- Analyzer snapshots now own their vectors directly, allowing the realtime
-  double-buffer cache to publish changing attenuation, gate, level, and
-  crossover values instead of permanently retaining the initial snapshot.
-- Processing validates exact frame/channel buffer lengths before advancing DSP
-  state, and oversized spectral blocks are chunked through preallocated scratch
-  rather than resizing inside the realtime path.
-- Reset now clears crossover histories, smoothers, meters, cache cadence, and all
-  existing detector/lookahead/spectral state for deterministic transport reset.
-- Detection-mode preset strings are case-insensitive, so documented `RMS` values
-  no longer silently select peak detection.
+Both the single-band Expander alias and Multiband Expander now use the
+conventional downward expansion law: below threshold, ratio `R:1` means
+R dB of output change per 1 dB of input change. Attenuation is
+`(R - 1) * (threshold_db - input_db)`, limited by Range. Ratio 1:1 remains
+unity. This applies to global and per-band controls in time and spectral
+modes, including the soft knee.
 
-## 0.5.24
+The previous implementation used `(1 - 1/R) * (threshold_db - input_db)`.
+For input −30 dB, threshold −20 dB, ratio 4:1 and range at least 30 dB,
+settled output therefore changes from −37.5 dB to −60 dB in time mode.
+Spectral mode applies the ratio separately to each normalized FFT bin;
+window leakage means its reconstructed output need not match a broadband
+expander's level.
 
-### Bug fixes
+**Existing presets become more attenuating below threshold.** Their JSON
+keys, parameter IDs, defaults, timing and Range remain unchanged. There is
+no serialized ratio-law version, so loaded presets use the corrected law.
+To preserve the old attenuation curve, set every affected global/per-band
+ratio to `R_new = 2 - 1/R_old` (old 4:1 becomes new 1.75:1). This equivalence
+includes knee and range behavior, subject to control rounding.
 
-- **Real-time safety** (`lib.rs:1787`): Time-domain processing now splits blocks larger than the
-  preallocated `4096` frame capacity into internal chunks instead of growing `dry_buffer` or
-  `band_buffers` inside `process_in_place`. Added regression coverage that verifies oversized
-  blocks process without resizing the hot-path buffers.
+Static auto-makeup retains its existing bounded heuristic; it is not an
+exact inverse of a level-dependent transfer curve. When migrating ratios,
+disable static auto-makeup and compensate manually if an exact old output
+level is needed. Measured auto-makeup responds to the actual attenuation.
 
-## 0.5.23
+### Spectral callback input retention
 
-### Bug fixes (critical / high)
-
-- **COLA compliance** (`lib.rs:292`): Changed STFT overlap from 75 % to 50 %.
-  Hann window is COLA-compliant at 50 % overlap; the previous 75 % setting
-  produced a time-varying OLA gain (amplitude modulation at the hop rate ≈187 Hz).
-
-- **Dry/wet mix latency compensation — spectral mode** (`lib.rs:1273`): The dry
-  signal in spectral mode is now delayed by `fft_size - hop_size` samples (= 512
-  at default FFT size) through a ring buffer before being mixed with the wet path.
-  Previously the undelayed dry signal was mixed with the STFT-delayed wet signal,
-  creating comb-filter notches at 1/latency spacing whenever `mix < 1.0`.
-
-- **Dry/wet mix latency compensation — time-domain lookahead** (`lib.rs:2014`):
-  Added `dry_lookahead_buffers` (one per channel) kept in sync with the per-band
-  lookahead buffers. When `lookahead_ms > 0`, the dry path is now delayed by the
-  same lookahead delay as the wet path, preventing comb-filtering.
-
-- **Spectral magnitude normalization** (`lib.rs:1077`): Bin magnitude is now
-  divided by the actual window DC sum (`window_sum = fft_size / 2` for Hann)
-  instead of `fft_size / 2` incorrectly computed as `2 / fft_size`. This removes
-  the ~6 dB under-estimation that caused the spectral-mode expander to trigger
-  more aggressively than time-domain mode for the same settings.
-
-- **Spectral latency over-reporting** (`lib.rs:1771`): `latency_samples()` now
-  returns `fft_size - hop_size` (512) instead of `fft_size` (1024). Reporting the
-  full FFT size caused the host to over-compensate by one hop, shifting the plugin
-  output early relative to other tracks.
-
-- **Spectral mode OOB panic with `num_bands > 5`** (`lib.rs:1009`): The
-  fixed-size `[BandInfo; MAX_MB_BANDS]` array has been replaced with a `Vec<BandInfo>`
-  sized to `num_bands`, eliminating the out-of-bounds index panic.
-
-- **Measured auto-makeup stereo corruption** (`lib.rs:1968`): The makeup tracker
-  is now updated once per frame using `max(envelope[L], envelope[R])` instead of
-  once per channel, which was interleaving unrelated L/R envelopes into a single
-  tracker and causing makeup gain jitter on stereo material.
-
-- **`initialize()` missing `reset()` call** (`lib.rs:1733`): `initialize()` now
-  calls `self.reset()` at the end. Previously, old envelope states, hold counters,
-  and STFT ring buffers survived a sample-rate change, causing a transient click.
-
-- **OLA ring clear size wrong** (`lib.rs:1150`): The pre-clear loop now clears
-  `fft_size` positions (not `hop_size`). Clearing only `hop_size` left stale
-  accumulation in the `fft_size - hop_size` un-cleared region, causing glitches
-  on ring wrap-around.
-
-### Bug fixes (medium)
-
-- **Peak envelope follower release** (`lib.rs:1907`): The peak detector release
-  is now a fixed fast 5 ms coefficient independent of the expander's attack time.
-  Previously it used `attack_coeff`, so slow attack settings caused the peak
-  envelope to lag, preventing the gate from closing promptly.
-
-- **Hold-time truncation** (`lib.rs:1035, 1884`): Hold-time milliseconds-to-samples
-  and milliseconds-to-hops conversions now use `.round()` before the `as usize`
-  cast. Without rounding, values < 1 sample (e.g. 0.4 ms at 48 kHz) were silently
-  truncated to 0.
-
-- **`enable_ftz_daz()` missing in spectral path** (`lib.rs:1178`): Added at the
-  top of `process_spectral_in_place`. FFT and complex-multiply loops generate
-  denormals; without flushing them, CPUs without hardware DAZ can slow down 10–100×.
-
-### Code cleanup
-
-- Removed dead `latency_filled` field from `SpectralState` (was incremented but
-  never read).
-- Removed unused `RealFftPlanner` construction in `SpectralState::new` (the
-  planner and its plans were created and immediately dropped).
-- Removed `realfft` from `Cargo.toml` (no longer a direct dependency).
-
-### Deferred
-
-- **🔵 Dry/wet mix for time-domain without lookahead** — when `lookahead_ms == 0`
-  there is no wet-path latency so no latency compensation is needed; already correct.
-- **🟡 Spectral mode feature parity** (2.6): lookahead, `link_channels`,
-  `detection_mode = rms`, sidechain HPF, and auto-makeup are not applied in
-  spectral mode. These are cross-crate design gaps deferred for a dedicated feature.
-- **🔵 SIMD per-sample log/pow** (4.7): performance advisory, no correctness impact.
-- **🔵 `build_crossovers` mute/crossfade on `num_bands` change** (4.8): UX
-  quality advisory, out of scope for this bug-fix pass.
-
-## 0.5.22
-
-- Added lookahead support (`lookahead_ms` parameter, 0–20 ms). Detection runs
-  on the current sample while gain is applied to a delayed copy, letting the
-  envelope "see" transients before they reach the output. Per-band, per-channel
-  `LookaheadBuffer` circular delays, with latency correctly reported to the host.
-- Added `lookahead_ms` to `GLOBAL_PARAMS` (index 17) and the multiband LAYOUT
-  TIMING group.
-
-## 0.5.21
-
-- Initial multiband expander with LR4 crossovers, per-band dynamics,
-  time-domain and spectral processing modes.
+Spectral processing now consumes every input frame even when buffered output
+fills a callback first. Previously, non-hop-aligned callbacks could drop an
+input suffix; a 257-frame callback stream measurably shifted a coherent tone
+compared with 256-frame callbacks, even at ratio 1:1. The correction uses the
+existing preallocated overlap-add buffer and preserves reported latency.

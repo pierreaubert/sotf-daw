@@ -132,13 +132,14 @@ fn process_adoption_backpressures_and_recovers_without_realtime_ownership_work()
     let mut plugin = make_delta_ir_plugin(false, false);
     plugin.test_ir_reclaimers = Some((primary_tx.clone(), fallback_tx.clone()));
     plugin.last_output[0] = 1.0;
-    let original_state = plugin.state.load_full();
+    let original_state = Arc::clone(&plugin.state);
 
     let first = make_delta_ir_result("first-ir");
     let first_state = Arc::clone(&first.state);
     plugin.desired_generation = 1;
     let (first_tx, first_rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(first_rx);
+    plugin.completion_pending = true;
     plugin.ir_load_result_keepalive = Some(first_tx.clone());
     first_tx
         .send(IrLoadCompletion {
@@ -153,7 +154,7 @@ fn process_adoption_backpressures_and_recovers_without_realtime_ownership_work()
     assert_no_allocs("Convolution saturated async adoption", || {
         plugin.process_in_place(&mut sample, &context).unwrap();
     });
-    assert!(Arc::ptr_eq(&plugin.state.load_full(), &first_state));
+    assert!(Arc::ptr_eq(&Arc::clone(&plugin.state), &first_state));
     assert!(plugin.retired_pending.is_some());
     assert_eq!(plugin.transition_remaining, 127);
     assert!(
@@ -168,6 +169,7 @@ fn process_adoption_backpressures_and_recovers_without_realtime_ownership_work()
     plugin.desired_generation = 2;
     let (second_tx, second_rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(second_rx);
+    plugin.completion_pending = true;
     plugin.ir_load_result_keepalive = Some(second_tx.clone());
     second_tx
         .send(IrLoadCompletion {
@@ -179,8 +181,8 @@ fn process_adoption_backpressures_and_recovers_without_realtime_ownership_work()
     assert_no_allocs("Convolution fenced adoption", || {
         plugin.process_in_place(&mut sample, &context).unwrap();
     });
-    assert!(Arc::ptr_eq(&plugin.state.load_full(), &first_state));
-    assert!(plugin.ir_load_result_rx.is_some());
+    assert!(Arc::ptr_eq(&Arc::clone(&plugin.state), &first_state));
+    assert!(plugin.completion_pending);
 
     let drop_threads = Arc::new(Mutex::new(Vec::new()));
     let (credit_tx, credit_rx) = std::sync::mpsc::channel();
@@ -228,8 +230,8 @@ fn process_adoption_backpressures_and_recovers_without_realtime_ownership_work()
         plugin.process_in_place(&mut sample, &context).unwrap();
     });
     assert!(plugin.retired_pending.is_none());
-    assert!(plugin.ir_load_result_rx.is_none());
-    assert!(Arc::ptr_eq(&plugin.state.load_full(), &second_state));
+    assert!(!plugin.completion_pending);
+    assert!(Arc::ptr_eq(&Arc::clone(&plugin.state), &second_state));
     assert_eq!(plugin.transition_remaining, 127);
 
     plugin.test_ir_reclaimers = None;
@@ -284,8 +286,12 @@ fn adoption_reset_is_bounded_by_stream_buffers_not_ir_length() {
     );
 }
 
+#[path = "tests/finite_stream.rs"]
+mod finite_stream;
 #[path = "tests/misc.rs"]
 mod misc;
+#[path = "tests/tail_length.rs"]
+mod tail_length;
 
 #[test]
 fn from_params_rebuilds_host_visible_values() {
@@ -410,7 +416,7 @@ fn stale_and_failed_async_generations_never_replace_last_known_good() {
     use sotf_host::assert_no_allocs;
 
     let mut plugin = make_delta_ir_plugin(false, false);
-    let original_state = plugin.state.load_full();
+    let original_state = Arc::clone(&plugin.state);
     plugin.desired_generation = 7;
     plugin.load_status.store(
         ConvolutionLoadStatus::Loading as u8,
@@ -418,6 +424,7 @@ fn stale_and_failed_async_generations_never_replace_last_known_good() {
     );
     let (tx, rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(rx);
+    plugin.completion_pending = true;
     plugin.ir_load_result_keepalive = Some(tx.clone());
     tx.send(IrLoadCompletion {
         generation: 6,
@@ -430,10 +437,11 @@ fn stale_and_failed_async_generations_never_replace_last_known_good() {
     assert_no_allocs("Convolution stale failed completion", || {
         plugin.process_in_place(&mut block, &context).unwrap();
     });
-    assert!(Arc::ptr_eq(&original_state, &plugin.state.load_full()));
+    assert!(Arc::ptr_eq(&original_state, &Arc::clone(&plugin.state)));
 
     let (tx, rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(rx);
+    plugin.completion_pending = true;
     plugin.ir_load_result_keepalive = Some(tx.clone());
     tx.send(IrLoadCompletion {
         generation: 7,
@@ -445,7 +453,7 @@ fn stale_and_failed_async_generations_never_replace_last_known_good() {
         plugin.process_in_place(&mut block, &context).unwrap();
     });
     assert_eq!(plugin.load_status(), ConvolutionLoadStatus::Failed);
-    assert!(Arc::ptr_eq(&original_state, &plugin.state.load_full()));
+    assert!(Arc::ptr_eq(&original_state, &Arc::clone(&plugin.state)));
 }
 
 #[test]
@@ -478,6 +486,7 @@ fn clearing_ir_cancels_pending_async_result() {
     let mut plugin = ConvolutionPlugin::new(1, 48_000);
     let (_tx, rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(rx);
+    plugin.completion_pending = true;
 
     plugin
         .parametric_set_parameter(
@@ -486,8 +495,8 @@ fn clearing_ir_cancels_pending_async_result() {
         )
         .unwrap();
 
-    assert!(plugin.ir_load_result_rx.is_none());
-    assert!(plugin.state.load().is_none());
+    assert!(!plugin.completion_pending);
+    assert!(Arc::clone(&plugin.state).is_none());
 }
 
 #[test]
@@ -513,7 +522,7 @@ fn test_ir_file_parameter_reports_load_errors() {
         )
         .unwrap_err();
     assert!(err.contains("IO:"), "unexpected error: {err}");
-    assert!(plugin.state.load().is_none());
+    assert!(Arc::clone(&plugin.state).is_none());
 }
 
 #[test]
@@ -608,6 +617,7 @@ fn configured_zero_latency_head_is_stable_before_runtime_ir_load() {
 
 fn make_delta_ir_plugin(use_nupc: bool, zero_latency_head: bool) -> ConvolutionPlugin {
     let mut plugin = ConvolutionPlugin::new(1, 48_000);
+    plugin.max_ir_frames = 1;
     let mut planner = FftPlanner::<f32>::new();
     let fft_forward = planner.plan_fft_forward(FFT_SIZE);
     let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
@@ -617,13 +627,13 @@ fn make_delta_ir_plugin(use_nupc: bool, zero_latency_head: bool) -> ConvolutionP
     let scratch_len = fft_forward
         .get_inplace_scratch_len()
         .max(fft_inverse.get_inplace_scratch_len());
-    plugin.state.store(Arc::new(Some(ConvolutionState {
+    plugin.ir_runtime.state = Arc::new(Some(ConvolutionState {
         partitions: vec![vec![partition]],
         num_partitions: 1,
         ir_channels: 1,
         fft_forward: Some(fft_forward),
         fft_inverse: Some(fft_inverse),
-    })));
+    }));
     plugin.fdl_flat = vec![Complex::new(0.0, 0.0); FFT_SIZE];
     plugin.fft_scratch = vec![Complex::new(0.0, 0.0); scratch_len];
     plugin.use_nupc = use_nupc;
@@ -649,6 +659,7 @@ fn make_delta_ir_result(ir_file: &str) -> IrLoadResult {
         .get_inplace_scratch_len()
         .max(fft_inverse.get_inplace_scratch_len());
     IrLoadResult {
+        max_ir_frames: 1,
         state: Arc::new(Some(ConvolutionState {
             partitions: vec![vec![partition]],
             num_partitions: 1,
@@ -795,15 +806,12 @@ fn test_set_parameter_long_ir_loads_without_process_allocations() {
     // Warm up and wait for the background IR load to complete.
     for _ in 0..200 {
         plugin.process_in_place(&mut buffer, &ctx).unwrap();
-        if plugin.ir_load_result_rx.is_none() {
+        if !plugin.completion_pending {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
-    assert!(
-        plugin.ir_load_result_rx.is_none(),
-        "IR load should complete"
-    );
+    assert!(!plugin.completion_pending, "IR load should complete");
 
     let replacement = ConvolutionPlugin::build_ir_state(
         ir_path.to_str().unwrap(),
@@ -818,6 +826,7 @@ fn test_set_parameter_long_ir_loads_without_process_allocations() {
     let generation = plugin.desired_generation;
     let (tx, rx) = std::sync::mpsc::channel();
     plugin.ir_load_result_rx = Some(rx);
+    plugin.completion_pending = true;
     tx.send(IrLoadCompletion {
         generation,
         result: Ok(replacement),
@@ -834,4 +843,79 @@ fn test_set_parameter_long_ir_loads_without_process_allocations() {
     });
 
     std::fs::remove_file(&ir_path).ok();
+}
+
+#[test]
+fn host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_calls() {
+    use sotf_host::plugin::TailLength;
+    use sotf_host::{DawHost, ParametricInPlacePluginAdapter};
+    const RATE: u32 = 192_000;
+    const IR_FRAMES: usize = 30 * RATE as usize;
+    let mut ir = vec![0.0; IR_FRAMES];
+    ir[0] = 0.25;
+    ir[IR_FRAMES / 2] = -0.125;
+    ir[IR_FRAMES - 1] = 0.5;
+    // Actual prepared NUPC kernel, including its final nonzero partition. No
+    // wall-clock worker sleeps or fake declared tail stand in for retained DSP.
+    let mut plugin = make_delta_ir_plugin(true, false);
+    plugin.nupc_engines = vec![nupc::NupcEngine::new(&ir, PARTITION_SIZE)];
+    plugin.max_ir_frames = IR_FRAMES;
+    plugin.initialize(RATE).unwrap();
+    let latency = plugin.latency_samples();
+    let mut first = [1.0];
+    plugin
+        .process_in_place(&mut first, &ProcessContext::new(RATE, 1))
+        .unwrap();
+    assert_eq!(first, [0.0]);
+    let expected_tail = latency + IR_FRAMES - 1;
+    let bound = plugin.drain_call_bound().unwrap().get();
+    assert_eq!(bound, expected_tail.div_ceil(PARTITION_SIZE) as u64);
+    assert!(bound > 4096);
+
+    // Completion is already ready, but EOS must keep the active long kernel.
+    let (sender, receiver) = std::sync::mpsc::channel();
+    plugin.desired_generation += 1;
+    sender
+        .send(IrLoadCompletion {
+            generation: plugin.desired_generation,
+            result: Ok(make_delta_ir_result("pending-short-replacement")),
+        })
+        .unwrap();
+    plugin.ir_load_result_rx = Some(receiver);
+    plugin.ir_load_result_keepalive = Some(sender);
+    plugin.completion_pending = true;
+    assert_eq!(plugin.tail_length(), TailLength::Unknown);
+    assert_eq!(plugin.drain_call_bound().unwrap().get(), bound);
+
+    let mut host = DawHost::new(1, RATE);
+    host.add_plugin(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+        .unwrap();
+    host.build().unwrap();
+    let mut output = vec![0.0; host.drain_output_frames_max()];
+    let mut emitted = 0;
+    let mut calls = 0;
+    loop {
+        let result = host.drain(&mut output).unwrap();
+        calls += 1;
+        for (offset, &actual) in output[..result.frames].iter().enumerate() {
+            let source = (1 + emitted + offset).checked_sub(latency);
+            let expected = source
+                .and_then(|index| ir.get(index))
+                .copied()
+                .unwrap_or(0.0);
+            assert!(
+                (actual - expected).abs() < 2.0e-5,
+                "frame={} actual={actual} expected={expected}",
+                1 + emitted + offset
+            );
+        }
+        emitted += result.frames;
+        if result.complete {
+            break;
+        }
+        assert!(calls < bound);
+    }
+    assert_eq!(calls, bound);
+    assert_eq!(emitted, expected_tail);
+    assert!(host.drain(&mut []).unwrap().complete);
 }

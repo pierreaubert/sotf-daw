@@ -1,3 +1,17 @@
+# Unreleased
+
+- Restore unity reconstruction from the first input sample by processing three
+  zero-padded negative-time windows, discarding negative synthesis, and retaining
+  the reported one-FFT-frame latency independently of callback size.
+- Verify all 7,168 first/final impulse positions across the supported FFT sizes,
+  dense unity through ring wraps, and short-stream cold drain/reset behavior.
+- Preserve retained audio at finite-stream end through the host drain contract,
+  with a derived finite bound, prepared scratch, stable completion, and reset
+  required before accepting new audio or control changes.
+- Reject invalid drain destinations and rates before consuming stream state.
+- Add independent delay/zero-continuation, callback partition, reset, and cold
+  allocation/deallocation regressions.
+
 # 0.5.25
 
 ## Complete 2026-08-12 review remediation

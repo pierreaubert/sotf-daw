@@ -36,3 +36,4 @@ sotf-midi = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+serde_json = { workspace = true }

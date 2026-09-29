@@ -12,7 +12,8 @@ use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::ParameterId;
 use sotf_host::parameters::ParameterValue;
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::smoothing::Smoother;
 use sotf_host::speaker_config::{
@@ -46,6 +47,11 @@ pub struct DownmixPlugin {
     pub(super) output_read_position: usize,
     /// Samples left on the fixed causal STFT delay before accumulated output is read.
     pub(super) startup_delay_remaining: usize,
+    /// The first spectral window starts one hop before programme time zero.
+    pub(super) discard_synthesis_prefix: bool,
+    has_input: bool,
+    input_phase: usize,
+    drain_remaining: Option<usize>,
 
     /// Flat FFT output: [channel * num_bins + bin]
     pub(super) fft_output: Vec<Complex<f32>>,
@@ -131,6 +137,10 @@ impl DownmixPlugin {
             next_add_position: 0,
             output_read_position: 0,
             startup_delay_remaining: FFT_SIZE,
+            discard_synthesis_prefix: false,
+            has_input: false,
+            input_phase: 0,
+            drain_remaining: None,
             fft_output: vec![Complex::new(0.0, 0.0); num_bins * input_channels],
             out_freq_l: vec![Complex::new(0.0, 0.0); num_bins],
             out_freq_r: vec![Complex::new(0.0, 0.0); num_bins],
@@ -150,6 +160,7 @@ impl DownmixPlugin {
             cached_parameters: Vec::new(),
         };
         p.compute_coefficients(true);
+        p.clear_stream_state();
         p.rebuild_cached_parameters();
         Ok(p)
     }
@@ -268,11 +279,7 @@ impl DownmixPlugin {
         plugin.matrix_ltrt = params.matrix_ltrt;
         plugin.compute_coefficients(true);
         plugin.rebuild_cached_parameters();
-        plugin.startup_delay_remaining = if plugin.uses_spectral_path() {
-            FFT_SIZE
-        } else {
-            0
-        };
+        plugin.clear_stream_state();
         Ok(plugin)
     }
 
@@ -282,17 +289,33 @@ impl DownmixPlugin {
     }
 
     fn clear_stream_state(&mut self) {
+        let spectral = self.uses_spectral_path();
         self.input_buffer.fill(0.0);
-        self.input_fill = 0;
+        self.input_fill = if spectral { HOP_SIZE } else { 0 };
         self.output_accumulator.fill(0.0);
         self.output_accumulator_fill = 0;
         self.next_add_position = 0;
-        self.output_read_position = 0;
-        self.startup_delay_remaining = if self.uses_spectral_path() {
-            FFT_SIZE
-        } else {
-            0
-        };
+        self.output_read_position = self.input_fill;
+        self.startup_delay_remaining = if spectral { FFT_SIZE } else { 0 };
+        self.discard_synthesis_prefix = spectral;
+        self.has_input = false;
+        self.input_phase = 0;
+        self.drain_remaining = None;
+    }
+
+    fn has_finite_support(&self) -> bool {
+        self.matrix_ltrt
+            || self.lfe_channels.iter().all(|&channel| {
+                [channel * 2, channel * 2 + 1].into_iter().all(|index| {
+                    let smoother = &self.coeff_smoothers[index];
+                    smoother.current() == 0.0 && smoother.target() == 0.0
+                })
+            })
+    }
+
+    fn remaining_spectral_frames(&self) -> usize {
+        // D=N; the last occupied analysis window starts at floor((S-1)/H)*H.
+        FFT_SIZE * 2 - HOP_SIZE + (HOP_SIZE - self.input_phase) % HOP_SIZE
     }
 
     /// Compute ITU-R BS.775 standard coefficients for 5.1 → stereo downmix.
@@ -582,6 +605,49 @@ impl DownmixPlugin {
         }
     }
 
+    /// Advance the same sample clock for accepted programme or EOS zeros.
+    fn process_spectral(&mut self, input: Option<&[f32]>, output: &mut [f32], num_frames: usize) {
+        output.fill(0.0);
+        let mask = self.output_accumulator_mask;
+        let n = FFT_SIZE;
+        for frame in 0..num_frames {
+            for ch in 0..self.input_ch {
+                let mut sample = input.map_or(0.0, |samples| samples[frame * self.input_ch + ch]);
+                if self.lfe_is_channel.get(ch).copied().unwrap_or(false) && ch < self.lfe_lpf.len()
+                {
+                    let mut value = sample as f64;
+                    value = self.lfe_lpf[ch][0].process(value);
+                    value = self.lfe_lpf[ch][1].process(value);
+                    sample = value as f32;
+                }
+                self.input_buffer[ch * n + self.input_fill] = sample;
+            }
+            self.input_fill += 1;
+
+            if self.input_fill == n {
+                self.process_fft_block();
+                let overlap = n - HOP_SIZE;
+                for ch in 0..self.input_ch {
+                    let ch_offset = ch * n;
+                    self.input_buffer[ch_offset..ch_offset + n].copy_within(HOP_SIZE..n, 0);
+                }
+                self.input_fill = overlap;
+            }
+
+            if self.startup_delay_remaining > 0 {
+                self.startup_delay_remaining -= 1;
+            } else if self.output_accumulator_fill > 0 {
+                let read_idx = self.output_read_position & mask;
+                output[frame * 2] = self.output_accumulator[read_idx * 2];
+                output[frame * 2 + 1] = self.output_accumulator[read_idx * 2 + 1];
+                self.output_accumulator[read_idx * 2] = 0.0;
+                self.output_accumulator[read_idx * 2 + 1] = 0.0;
+                self.output_read_position = (self.output_read_position + 1) & mask;
+                self.output_accumulator_fill -= 1;
+            }
+        }
+    }
+
     /// Matrix Lt/Rt stereo encoding (Dolby Surround / Pro Logic).
     ///
     /// Lt = L + 0.707*C - 0.707*j*Ls + 0.707*j*Rs
@@ -778,8 +844,15 @@ impl DownmixPlugin {
         }
 
         self.advance_coeff_smoothers_by(HOP_SIZE);
+        if self.discard_synthesis_prefix {
+            // The first window completes one negative-time synthesis hop.
+            // Clear it before ring wrap while retaining its nonnegative overlap.
+            self.output_accumulator[..HOP_SIZE * 2].fill(0.0);
+            self.discard_synthesis_prefix = false;
+        } else {
+            self.output_accumulator_fill += HOP_SIZE;
+        }
         self.next_add_position = (self.next_add_position + HOP_SIZE) & mask;
-        self.output_accumulator_fill += HOP_SIZE;
     }
 }
 
@@ -808,6 +881,12 @@ impl Plugin for DownmixPlugin {
         self.cached_parameters.clone()
     }
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            if self.get_parameter(&id).as_ref() == Some(&value) {
+                return Ok(());
+            }
+            return Err("Downmix parameter changes after drain require reset".into());
+        }
         let mut changed_index = None;
         let old_phase = self.phase_coherence;
         let old_ltrt = self.matrix_ltrt;
@@ -924,52 +1003,93 @@ impl Plugin for DownmixPlugin {
                 output.len()
             ));
         }
-        output.fill(0.0);
+        if num_frames == 0 {
+            return Ok(0);
+        }
+        if context.sample_rate != self.sample_rate {
+            return Err("Downmix process sample rate must match the configured rate".into());
+        }
+        if input.iter().any(|sample| !sample.is_finite()) {
+            return Err("Downmix input must contain only finite samples".into());
+        }
+        if self.drain_remaining.is_some() {
+            return Err("Downmix input after drain requires reset".into());
+        }
         if !self.uses_spectral_path() {
             self.process_simple(input, output, num_frames);
-            return Ok(num_frames);
+        } else {
+            self.process_spectral(Some(input), output, num_frames);
         }
-
-        let mask = self.output_accumulator_mask;
-        let n = FFT_SIZE;
-        for frame in 0..num_frames {
-            for ch in 0..self.input_ch {
-                let mut sample = input[frame * self.input_ch + ch];
-                if self.lfe_is_channel.get(ch).copied().unwrap_or(false) && ch < self.lfe_lpf.len()
-                {
-                    let mut value = sample as f64;
-                    value = self.lfe_lpf[ch][0].process(value);
-                    value = self.lfe_lpf[ch][1].process(value);
-                    sample = value as f32;
-                }
-                self.input_buffer[ch * n + self.input_fill] = sample;
-            }
-            self.input_fill += 1;
-
-            if self.input_fill == n {
-                self.process_fft_block();
-                let overlap = n - HOP_SIZE;
-                for ch in 0..self.input_ch {
-                    let ch_offset = ch * n;
-                    self.input_buffer[ch_offset..ch_offset + n].copy_within(HOP_SIZE..n, 0);
-                }
-                self.input_fill = overlap;
-            }
-
-            if self.startup_delay_remaining > 0 {
-                self.startup_delay_remaining -= 1;
-            } else if self.output_accumulator_fill > 0 {
-                let read_idx = self.output_read_position & mask;
-                output[frame * 2] = self.output_accumulator[read_idx * 2];
-                output[frame * 2 + 1] = self.output_accumulator[read_idx * 2 + 1];
-                self.output_accumulator[read_idx * 2] = 0.0;
-                self.output_accumulator[read_idx * 2 + 1] = 0.0;
-                self.output_read_position = (self.output_read_position + 1) & mask;
-                self.output_accumulator_fill -= 1;
-            }
-        }
-
+        self.has_input = true;
+        self.input_phase = (self.input_phase + num_frames % HOP_SIZE) % HOP_SIZE;
         Ok(num_frames)
+    }
+    fn tail_length(&self) -> TailLength {
+        if !self.has_finite_support() {
+            TailLength::Infinite
+        } else if self.uses_spectral_path() {
+            TailLength::Finite((FFT_SIZE * 2 - 1) as u64)
+        } else {
+            TailLength::Finite(0)
+        }
+    }
+    fn drain_output_frames_max(&self) -> usize {
+        // Wrappers prepare their scratch before any input has been accepted.
+        // Advertise the structural maximum even for an empty or completed stream.
+        if self.uses_spectral_path() {
+            HOP_SIZE
+        } else {
+            0
+        }
+    }
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let calls = if !self.has_input
+            || self.drain_remaining == Some(0)
+            || !self.uses_spectral_path()
+            || !self.has_finite_support()
+        {
+            1
+        } else {
+            self.drain_remaining
+                .unwrap_or_else(|| self.remaining_spectral_frames())
+                .div_ceil(HOP_SIZE)
+        };
+        std::num::NonZeroU64::new(calls as u64)
+    }
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if self.lfe_lpf.len() != self.input_ch {
+            return Err("Downmix must be initialized before drain".into());
+        }
+        if context.sample_rate != self.sample_rate {
+            return Err("Downmix drain sample rate must match initialization".into());
+        }
+        if !output.len().is_multiple_of(2) {
+            return Err("Downmix drain requires whole stereo frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) || !self.has_finite_support() {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if !self.uses_spectral_path() {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() {
+            return Err("Downmix drain requires positive output capacity".into());
+        }
+        let remaining = self
+            .drain_remaining
+            .unwrap_or_else(|| self.remaining_spectral_frames());
+        let frames = remaining.min(HOP_SIZE).min(output.len() / 2);
+        self.process_spectral(None, &mut output[..frames * 2], frames);
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
     fn reset(&mut self) {
         self.clear_stream_state();

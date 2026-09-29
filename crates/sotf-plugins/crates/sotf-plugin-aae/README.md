@@ -39,3 +39,10 @@ distortion/limiter activity, and synthetic dialogue-detector precision/recall
 over a representative preset/layout/rate/partition matrix. See
 `quality-validation.md` for the separate external listening/corpus protocol;
 synthetic results are never presented as listening evidence.
+
+
+### AutoGain timing
+
+AutoGain compares the original stereo source with the uncorrected multichannel output, using the existing stereo speaker fold and excluding LFE from measurement. It updates the target every `sample_rate / 10` active frames; that target starts affecting the next frame through the existing smoothing. Disabling pauses metering and gain history. Reset clears them; sample-rate initialization preserves its existing gain history.
+
+Compensation stays after the acoustic renderer and before the final safety limiter and audible bypass blend. It does not enter ER/FDN feedback. The audio callback uses prepared bounded scratch even above 8192 frames. This timing correction does not add a finite native drain policy for AAE's recursive response.

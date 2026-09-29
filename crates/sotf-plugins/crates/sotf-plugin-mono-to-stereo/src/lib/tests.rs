@@ -1093,3 +1093,76 @@ fn leaving_duplicate_fast_path_primes_state_without_a_transition_spike() {
     assert!(output.iter().all(|sample| sample.is_finite()));
     assert!(output.iter().all(|sample| sample.abs() <= 0.251));
 }
+
+#[test]
+fn hostile_final_duplicate_sample_is_sanitized_before_width_automation() {
+    for hostile in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        for reset in [false, true] {
+            let make_plugin = || {
+                let mut plugin = MonoToStereoPlugin::new();
+                plugin.initialize(48_000).unwrap();
+                plugin.haas_delay_ms = 0.0;
+                plugin.update_haas_delay_samples();
+                plugin.stereo_width.reset(0.0);
+                plugin
+            };
+            let mut actual = make_plugin();
+            let mut reference = make_plugin();
+            let mut input = [0.1; 17];
+            input[16] = hostile;
+            let mut expected_input = input;
+            expected_input[16] = 0.0;
+            let mut output = [0.0; 34];
+            let mut expected = [0.0; 34];
+            actual
+                .process(&input, &mut output, &ProcessContext::new(48_000, 17))
+                .unwrap();
+            reference
+                .process(
+                    &expected_input,
+                    &mut expected,
+                    &ProcessContext::new(48_000, 17),
+                )
+                .unwrap();
+            assert_eq!(output, expected);
+            actual
+                .set_parameter(
+                    ParameterId::from("stereo_width"),
+                    ParameterValue::Float(1.0),
+                )
+                .unwrap();
+            reference
+                .set_parameter(
+                    ParameterId::from("stereo_width"),
+                    ParameterValue::Float(1.0),
+                )
+                .unwrap();
+            if reset {
+                actual.reset();
+                reference.reset();
+            }
+            for frames in [1, 7, 17, 11] {
+                actual
+                    .process(
+                        &[0.1; 17][..frames],
+                        &mut output[..frames * 2],
+                        &ProcessContext::new(48_000, frames),
+                    )
+                    .unwrap();
+                reference
+                    .process(
+                        &[0.1; 17][..frames],
+                        &mut expected[..frames * 2],
+                        &ProcessContext::new(48_000, frames),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    output[..frames * 2],
+                    expected[..frames * 2],
+                    "hostile={hostile}, reset={reset}"
+                );
+                assert!(output[..frames * 2].iter().all(|sample| sample.is_finite()));
+            }
+        }
+    }
+}

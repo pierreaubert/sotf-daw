@@ -33,7 +33,7 @@ src/
 - `XtcPlugin` -- Main plugin implementing `Plugin`. 2 input -> 2 output channels. Decomposed into cohesive sub-structs aligned with processing stages: `XtcFftConfig`, `XtcInputBuffers`, `XtcWorkBuffers`, `XtcFilterState`, `XtcOutputBuffers`, `XtcDynamics`, and `XtcDiagnostics`.
 - `XtcPluginParams` -- Config: speaker distance/angle, head radius, regularization, HRTF options, room reflections.
 - `XtcData` -- Monitoring data: auto-gain info, limiter envelope.
-- `XtcFilters` -- Pre-computed frequency-domain XTC filter matrix (lock-free via `ArcSwap`).
+- `XtcFilters` -- Pre-computed frequency-domain XTC filter matrix, with an audio-owned current snapshot and bounded worker publication/retirement exchange.
 
 ## Key Public API
 
@@ -57,7 +57,7 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 
 ## Important Notes
 
-- XTC filters are recomputed when geometry parameters change. Computation happens on a background thread; the audio thread picks up new filters via `ArcSwap` without blocking.
+- XTC filters are recomputed when geometry parameters change. A background worker publishes into a prepared bounded exchange. The callback uses `try_lock`, keeps its current filters under contention, and postpones adoption when retirement capacity is full. Filter and auxiliary-data destruction stays off the audio thread.
 - Regularization prevents excessive filter boost at frequencies where the inverse is ill-conditioned. Higher values = safer but less cancellation.
 - The built-in limiter envelope prevents output clipping that can occur with aggressive cancellation settings.
 - SIMD operations: `complex_mul_simd`, `complex_mul_add_simd`, `deinterleave_stereo`, `window_mul_simd`.

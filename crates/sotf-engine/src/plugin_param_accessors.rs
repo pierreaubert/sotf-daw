@@ -239,6 +239,7 @@ impl_param_accessors! {
             detection_mode: [str detection_mode_to_index, index_to_detection_mode],
             lookahead_ms: f64, program_dependent_release: bool, measured_auto_makeup: bool,
             sidechain_external: bool,
+            range_db: f64, hold_ms: f64,
         ]
     },
     Gate {
@@ -251,6 +252,7 @@ impl_param_accessors! {
             detection_mode: [str detection_mode_to_index, index_to_detection_mode],
             sidechain_external: bool,
             range_db: f64, hysteresis_db: f64, knee_db: f64, lookahead_ms: f64,
+            mode: [enum gate_mode_to_index, index_to_gate_mode], max_boost_db: f64,
         ]
     },
     Expander {
@@ -271,7 +273,7 @@ impl_param_accessors! {
         fields: [
             threshold_db: f64, release_ms: f64, lookahead_ms: f64, soft: bool,
             true_peak: bool, isp_mode: bool, dual_release: bool, mix: f64,
-            link_amount: f64, feed_forward: bool,
+            link_amount: f64, feed_forward: bool, oversampling: usize,
         ]
     },
     LoudnessCompensation {
@@ -478,6 +480,7 @@ impl_param_accessors! {
             knee_db: f64, mix: f64, link_channels: bool,
             per_band_lookahead_ms: f64, ms_mode: bool,
             sidechain_tilt_db: f64, link_amount: f64,
+            range_db: f64, hold_ms: f64,
         ]
     },
     MultibandExpander {
@@ -516,6 +519,7 @@ impl_param_accessors! {
             attack: f64, release: f64,
             mode: [str de_esser_mode_to_index, index_to_de_esser_mode],
             mix: f64,
+            range_db: f64, stereo_link: f64,
         ]
     },
     TransientShaper {
@@ -567,6 +571,7 @@ impl_param_accessors! {
             knee: f64, makeup: f64, mix: f64, auto_makeup: bool,
             analog_model: f64, analog_drive: f64, analog_color: f64,
             analog_character: f64, analog_trim: f64,
+            range_db: f64, hold_ms: f64,
         ]
     },
     DynamicEq {
@@ -949,6 +954,7 @@ use index::index_to_hpf_order;
 use index::index_to_speaker_config;
 use index::index_to_spectral_tilt;
 use index::index_to_tilt_reference;
+use index::{gate_mode_to_index, index_to_gate_mode};
 use index::{index_to_ambisonics_algorithm, index_to_ambisonics_layout};
 use misc::b2f;
 use misc::f2b;

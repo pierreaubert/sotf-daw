@@ -408,7 +408,9 @@ impl Plugin for MonoToStereoPlugin {
                 output[frame * 2 + 1] = sample;
             }
             if let Some(last) = input[..frames].last() {
-                self.last_input = *last;
+                // This sample primes the allpass histories when width becomes
+                // nonzero, so it must follow the same policy as rendered audio.
+                self.last_input = if last.is_finite() { *last } else { 0.0 };
             }
             self.was_duplicate_fast_path = true;
             #[cfg(test)]

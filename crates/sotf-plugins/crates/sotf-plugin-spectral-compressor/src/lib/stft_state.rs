@@ -36,6 +36,8 @@ pub(super) struct StftState {
     pub(super) output_accumulator: Vec<f32>,
     pub(super) output_accumulator_mask: usize,
     pub(super) output_accumulator_fill: usize,
+    /// Negative-time synthesis frames still excluded from the output timeline.
+    pub(super) synthesis_discard: usize,
     pub(super) next_add_position: usize,
     pub(super) output_read_position: usize,
     pub(super) latency_filled: usize,
@@ -95,12 +97,15 @@ impl StftState {
             output_scale,
             input_buffers: vec![vec![0.0f32; fft_size]; channels],
             input_write_pos: 0,
-            input_fill: 0,
+            // Analyze origins -(N-H), ..., -H, 0 so the first real sample
+            // receives all four overlapping Hann-square contributions.
+            input_fill: fft_size - hop_size,
             bin_envelopes,
             output_accumulator,
             output_accumulator_mask: output_accumulator_frames - 1,
             output_accumulator_fill: 0,
-            next_add_position: 0,
+            synthesis_discard: fft_size - hop_size,
+            next_add_position: output_accumulator_frames - (fft_size - hop_size),
             output_read_position: 0,
             latency_filled: 0,
             dry_delay_buf: vec![0.0; fft_size * channels],
@@ -124,7 +129,7 @@ impl StftState {
         for buf in &mut self.input_buffers {
             buf.fill(0.0);
         }
-        self.input_fill = 0;
+        self.input_fill = self.fft_size - self.hop_size;
         self.input_write_pos = 0;
         for env in &mut self.bin_envelopes {
             env.fill(0.0);
@@ -147,7 +152,8 @@ impl StftState {
         }
         self.output_accumulator.fill(0.0);
         self.output_accumulator_fill = 0;
-        self.next_add_position = 0;
+        self.synthesis_discard = self.fft_size - self.hop_size;
+        self.next_add_position = self.output_accumulator_mask + 1 - self.synthesis_discard;
         self.output_read_position = 0;
         self.latency_filled = 0;
         self.dry_delay_buf.fill(0.0);

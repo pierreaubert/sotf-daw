@@ -311,8 +311,8 @@ pub use sotf_host::test_utils;
 pub use sotf_plugin_aae as plugin_aae;
 pub use sotf_plugin_ab_compare as plugin_ab_compare;
 pub use sotf_plugin_aec as plugin_aec;
-pub use sotf_plugin_analog_compressor as plugin_analog_compressor;
 pub use sotf_plugin_analog_common as plugin_analog_common;
+pub use sotf_plugin_analog_compressor as plugin_analog_compressor;
 pub use sotf_plugin_analog_eq as plugin_analog_eq;
 pub use sotf_plugin_analog_limiter as plugin_analog_limiter;
 pub use sotf_plugin_band_merge as plugin_band_merge;
@@ -392,8 +392,11 @@ pub use plugin_linear_phase_eq::{LinearPhaseEqPlugin, LinearPhaseEqPluginParams}
 pub use sotf_plugin_dither::{DitherPlugin, DitherPluginParams};
 pub type ExpanderPlugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin;
 pub type ExpanderPluginParams = sotf_plugin_multiband_expander::MultibandExpanderPluginParams;
+pub use plugin_analog_compressor::{AnalogCompressorPlugin, AnalogCompressorPluginParams};
+pub use plugin_analog_eq::{AnalogEqPlugin, AnalogEqPluginParams};
+pub use plugin_analog_limiter::{AnalogLimiterPlugin, AnalogLimiterPluginParams};
 pub use plugin_gain::{GainPlugin, GainPluginParams};
-pub use plugin_gate::{GateData, GatePlugin, GatePluginParams};
+pub use plugin_gate::{GateData, GateMode, GatePlugin, GatePluginParams};
 pub use plugin_hiss_reducer::{HissReducerPlugin, HissReducerPluginParams};
 pub use plugin_limiter::{LimiterData, LimiterPlugin, LimiterPluginParams};
 pub use plugin_loudness_compensation::{FletcherMunsonPlugin, FletcherMunsonPluginParams};
@@ -411,9 +414,6 @@ pub use plugin_multiband_expander::{
 };
 pub use plugin_pnd::{PndPlugin, PndPluginParams};
 pub use plugin_resampler::ResamplerPlugin;
-pub use plugin_analog_compressor::{AnalogCompressorPlugin, AnalogCompressorPluginParams};
-pub use plugin_analog_eq::{AnalogEqPlugin, AnalogEqPluginParams};
-pub use plugin_analog_limiter::{AnalogLimiterPlugin, AnalogLimiterPluginParams};
 pub use plugin_saturation::{SaturationPlugin, SaturationPluginParams};
 pub use plugin_spectral_compressor::{SpectralCompressorPlugin, SpectralCompressorPluginParams};
 pub use plugin_speech_denoiser::{

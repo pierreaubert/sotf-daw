@@ -7,6 +7,7 @@ use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
     Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use std::cell::Cell;
@@ -228,6 +229,16 @@ impl Plugin for BandMergePlugin {
     fn output_channels(&self) -> usize {
         self.output_channels
     }
+    fn tail_length(&self) -> TailLength {
+        // Gain smoothing retains coefficients, never program samples: zero input
+        // produces zero output immediately, even while gains or mutes change.
+        TailLength::Finite(0)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        Some(std::num::NonZeroU64::MIN)
+    }
+
     fn compile_metadata(&self) -> PluginCompileMetadata {
         let mut metadata = PluginCompileMetadata::linear_transform(
             PluginCostClass::Scalar,

@@ -7,6 +7,8 @@ pub(super) struct CompensationDelays<T: AudioSample> {
     #[allow(dead_code)]
     pub(super) edge_keys: Vec<(NodeId, NodeId)>,
     pub(super) delays: Vec<Option<DelayBuffer<T>>>,
+    /// Delays at the final host mix, in output-node order.
+    pub(super) output_delays: Vec<Option<DelayBuffer<T>>>,
 }
 
 impl<T: AudioSample> CompensationDelays<T> {
@@ -14,6 +16,7 @@ impl<T: AudioSample> CompensationDelays<T> {
         Self {
             edge_keys: edges.iter().map(|e| (e.from_node, e.to_node)).collect(),
             delays: (0..edges.len()).map(|_| None).collect(),
+            output_delays: Vec::new(),
         }
     }
 
@@ -22,6 +25,7 @@ impl<T: AudioSample> CompensationDelays<T> {
         Self {
             edge_keys: Vec::new(),
             delays: Vec::new(),
+            output_delays: Vec::new(),
         }
     }
 
@@ -40,6 +44,17 @@ impl<T: AudioSample> CompensationDelays<T> {
 
     pub(super) fn get_mut_edge(&mut self, edge_id: usize) -> Option<&mut DelayBuffer<T>> {
         self.delays.get_mut(edge_id).and_then(Option::as_mut)
+    }
+
+    pub(super) fn reset(&mut self) {
+        for delay in self
+            .delays
+            .iter_mut()
+            .chain(self.output_delays.iter_mut())
+            .flatten()
+        {
+            delay.reset();
+        }
     }
 
     #[cfg(test)]
@@ -61,6 +76,9 @@ impl<T: AudioSample> CompensationDelays<T> {
 
     #[allow(dead_code)]
     pub(super) fn is_empty(&self) -> bool {
-        self.delays.iter().all(Option::is_none)
+        self.delays
+            .iter()
+            .chain(self.output_delays.iter())
+            .all(Option::is_none)
     }
 }

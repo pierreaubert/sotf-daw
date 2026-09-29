@@ -22,6 +22,8 @@ pub fn convert_compressor(settings: &PluginSettings, _sample_rate: f64) -> Optio
         program_dependent_release,
         measured_auto_makeup,
         sidechain_external,
+        range_db,
+        hold_ms,
     } = settings
     else {
         return None;
@@ -38,6 +40,8 @@ pub fn convert_compressor(settings: &PluginSettings, _sample_rate: f64) -> Optio
         "link_channels": link_channels,
         "lookahead_ms": lookahead_ms,
         "measured_auto_makeup": measured_auto_makeup,
+        "range_db": range_db,
+        "hold_ms": hold_ms,
     });
     let parameters = value.as_object_mut()?;
     // These legacy controls are not implemented by the current DSP. Preserve
@@ -74,7 +78,9 @@ pub fn convert_limiter(settings: &PluginSettings, _sample_rate: f64) -> Option<P
         isp_mode,
         dual_release,
         mix,
-        ..
+        link_amount,
+        feed_forward,
+        oversampling,
     } = settings
     else {
         return None;
@@ -90,6 +96,9 @@ pub fn convert_limiter(settings: &PluginSettings, _sample_rate: f64) -> Option<P
             "isp_mode": isp_mode,
             "dual_release": dual_release,
             "mix": mix,
+            "link_amount": link_amount,
+            "feed_forward": feed_forward,
+            "oversampling": oversampling,
         }),
     ))
 }
@@ -111,6 +120,8 @@ pub fn convert_gate(settings: &PluginSettings, _sample_rate: f64) -> Option<Plug
         hysteresis_db,
         knee_db,
         lookahead_ms,
+        mode,
+        max_boost_db,
     } = settings
     else {
         return None;
@@ -133,6 +144,8 @@ pub fn convert_gate(settings: &PluginSettings, _sample_rate: f64) -> Option<Plug
             "hysteresis_db": hysteresis_db,
             "knee_db": knee_db,
             "lookahead_ms": lookahead_ms,
+            "mode": mode,
+            "max_boost_db": max_boost_db,
         }),
     ))
 }
@@ -201,7 +214,10 @@ pub fn convert_multiband_compressor(
         per_band_lookahead_ms,
         ms_mode,
         bands,
-        ..
+        sidechain_tilt_db,
+        link_amount,
+        range_db,
+        hold_ms,
     } = settings
     else {
         return None;
@@ -226,6 +242,10 @@ pub fn convert_multiband_compressor(
             "per_band_lookahead_ms": per_band_lookahead_ms,
             "ms_mode": ms_mode,
             "bands": bands,
+            "sidechain_tilt_db": sidechain_tilt_db,
+            "link_amount": link_amount,
+            "range_db": range_db,
+            "hold_ms": hold_ms,
         }),
     ))
 }
@@ -295,6 +315,8 @@ pub fn convert_de_esser(settings: &PluginSettings, _sample_rate: f64) -> Option<
         release,
         mode,
         mix,
+        range_db,
+        stereo_link,
     } = settings
     else {
         return None;
@@ -310,6 +332,8 @@ pub fn convert_de_esser(settings: &PluginSettings, _sample_rate: f64) -> Option<
             "release_ms": *release as f32,
             "mode": mode,
             "mix": *mix as f32,
+            "range_db": *range_db as f32,
+            "stereo_link": *stereo_link as f32,
         }),
     ))
 }

@@ -21,6 +21,10 @@ cargo test -p sotf-plugin-spectral-compressor
 
 - Periodic dual-Hann WOLA uses 75% overlap, an `N/4` hop, `1/(1.5N)`
   normalization, and exactly one FFT frame of reported latency.
+- Startup primes three negative-time windows and discards their negative synthesis
+  prefixes, preserving first-sample unity at the unchanged `N`-frame delay.
+- Finite drain emits through the final input-containing window; nonempty input
+  or parameter changes after drain starts require reset. The maximum tail is `2N-1`.
 - Input history and output overlap-add are circular. Plans and all scratch are
   prepared outside `process_in_place`; initialized blocks are bounded at 16,384 frames.
 - Threshold is calibrated as local narrowband coherent amplitude using five-bin

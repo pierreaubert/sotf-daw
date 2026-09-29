@@ -618,3 +618,6 @@ fn test_aec_echo_reduction() {
         );
     }
 }
+
+#[path = "tests/drain.rs"]
+mod drain;

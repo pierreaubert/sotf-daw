@@ -16,10 +16,10 @@
 //! 14=analog_trim.
 
 use serde::{Deserialize, Serialize};
+use sotf_host::define_choice_string_deserializer;
 use sotf_host::param_specs::{ParamSpec, find_by_key as pk};
 use sotf_host::plugin_layout::*;
 use sotf_host::plugin_params::PluginParamDef;
-use sotf_host::define_choice_string_deserializer;
 use sotf_plugin_analog_common::{
     MODEL_NAMES, character_param_spec, color_param_spec, drive_param_spec, model_param_spec,
     output_trim_param_spec,
@@ -36,10 +36,28 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("Low-shelf corner frequency"),
     ParamSpec::float("Low Gain", "low_gain", 0.0, -24.0, 24.0, 0.1, "dB", "Low")
         .doc("Low-shelf gain"),
-    ParamSpec::float("LowMid Freq", "mid1_freq", 800.0, 100.0, 5000.0, 1.0, "Hz", "Low Mid")
-        .doc("First peak center frequency"),
-    ParamSpec::float("LowMid Gain", "mid1_gain", 0.0, -24.0, 24.0, 0.1, "dB", "Low Mid")
-        .doc("First peak gain"),
+    ParamSpec::float(
+        "LowMid Freq",
+        "mid1_freq",
+        800.0,
+        100.0,
+        5000.0,
+        1.0,
+        "Hz",
+        "Low Mid",
+    )
+    .doc("First peak center frequency"),
+    ParamSpec::float(
+        "LowMid Gain",
+        "mid1_gain",
+        0.0,
+        -24.0,
+        24.0,
+        0.1,
+        "dB",
+        "Low Mid",
+    )
+    .doc("First peak gain"),
     ParamSpec::float("LowMid Q", "mid1_q", 1.0, 0.1, 10.0, 0.05, "", "Low Mid")
         .doc("First peak resonance"),
     ParamSpec::float(
@@ -77,8 +95,17 @@ pub const PARAMS: &[ParamSpec] = &[
         "High",
     )
     .doc("High-shelf corner frequency"),
-    ParamSpec::float("High Gain", "high_gain", 0.0, -24.0, 24.0, 0.1, "dB", "High")
-        .doc("High-shelf gain"),
+    ParamSpec::float(
+        "High Gain",
+        "high_gain",
+        0.0,
+        -24.0,
+        24.0,
+        0.1,
+        "dB",
+        "High",
+    )
+    .doc("High-shelf gain"),
     model_param_spec(0, "Analog"),
     drive_param_spec("Analog"),
     color_param_spec("Analog"),

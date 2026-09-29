@@ -1,5 +1,15 @@
 # 0.1.12 (unreleased)
 
+## Reader staging
+
+- Hold the existing read-commit bit across staged plaintext delivery and record
+  reads, with exclusive consuming access and automatic bit release.
+- Tag decrypted suffixes with their format/key identity and discard stale
+  suffixes after observed changes or any key reload attempt.
+- Preserve caller-owned trailing samples after positive partial reads.
+- Add eight portable staging tests and six macOS reader/guard regressions.
+  macOS test targets compile and pass Clippy; native execution remains pending.
+
 ## Cross-process atomic and real-time hardening
 
 - Publish active channel geometry to the CoreAudio IO callback through a C11

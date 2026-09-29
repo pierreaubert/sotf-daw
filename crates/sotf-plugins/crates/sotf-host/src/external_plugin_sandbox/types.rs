@@ -380,10 +380,7 @@ pub(super) mod platform {
         fn access_mask_tracks_landlock_abi() {
             let full = writable_access() | FS_EXECUTE;
             // ABI 1: no REFER, no TRUNCATE.
-            assert_eq!(
-                fs_access_mask_for_abi(1),
-                full & !FS_REFER & !FS_TRUNCATE
-            );
+            assert_eq!(fs_access_mask_for_abi(1), full & !FS_REFER & !FS_TRUNCATE);
             // ABI 2: REFER added, TRUNCATE still absent.
             assert_eq!(fs_access_mask_for_abi(2), full & !FS_TRUNCATE);
             // ABI 3+: full filesystem mask; ABI 4 additionally gates TCP.
@@ -421,7 +418,8 @@ pub(super) mod platform {
     const BACKEND_NOTE: &str =
         "macOS native sandbox backend is unavailable in this build; worker uses process isolation";
     #[cfg(target_os = "windows")]
-    const BACKEND_NOTE: &str = "worker is not running inside the Windows AppContainer; process isolation only";
+    const BACKEND_NOTE: &str =
+        "worker is not running inside the Windows AppContainer; process isolation only";
 
     #[cfg(target_os = "macos")]
     use std::ffi::OsStr;
@@ -516,11 +514,9 @@ pub(super) mod platform {
     #[cfg(target_os = "windows")]
     fn enter_windows_appcontainer() -> Result<ExternalPluginSandboxStatus, String> {
         match rappct::token::query_current_process_token() {
-            Ok(info) if info.is_appcontainer => {
-                Ok(ExternalPluginSandboxStatus::Enforced {
-                    backend: WINDOWS_APPCONTAINER_BACKEND_NAME,
-                })
-            }
+            Ok(info) if info.is_appcontainer => Ok(ExternalPluginSandboxStatus::Enforced {
+                backend: WINDOWS_APPCONTAINER_BACKEND_NAME,
+            }),
             Ok(_) => Ok(ExternalPluginSandboxStatus::Unsupported {
                 backend: BACKEND_NAME,
                 reason: BACKEND_NOTE.to_string(),

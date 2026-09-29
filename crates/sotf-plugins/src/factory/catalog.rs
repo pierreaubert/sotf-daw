@@ -878,9 +878,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
             Beta,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
-            PluginLatencyModel::PluginReported(
-                "EQ core and analog color stage add no latency"
-            ),
+            PluginLatencyModel::PluginReported("EQ core and analog color stage add no latency"),
             "sotf_plugin_analog_eq::params::PARAMS",
             Generated,
             true,

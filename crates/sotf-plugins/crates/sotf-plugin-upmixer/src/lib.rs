@@ -4,6 +4,7 @@ mod bass;
 mod config;
 mod decorrelation;
 mod detection;
+mod drain;
 mod fft;
 mod frequency_domain;
 mod height;
@@ -18,6 +19,9 @@ pub mod params;
 mod process;
 mod setup;
 #[cfg(test)]
+#[path = "lib/stream_boundary_tests.rs"]
+mod stream_boundary_tests;
+#[cfg(test)]
 mod test;
 
 #[path = "lib/misc.rs"]
@@ -29,3 +33,7 @@ mod upmixer_plugin;
 
 pub use types::*;
 pub use upmixer_plugin::*;
+
+#[cfg(test)]
+#[path = "lib/autogain_reference_tests.rs"]
+mod autogain_reference_tests;

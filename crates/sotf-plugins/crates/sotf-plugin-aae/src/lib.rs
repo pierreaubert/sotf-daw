@@ -26,3 +26,7 @@ mod types;
 
 pub use aae_plugin::*;
 pub use types::*;
+
+#[cfg(test)]
+#[path = "lib/autogain_state_tests.rs"]
+mod autogain_state_tests;

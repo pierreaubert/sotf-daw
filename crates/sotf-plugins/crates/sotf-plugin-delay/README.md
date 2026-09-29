@@ -26,3 +26,42 @@ maximum live automation range and size the ring accordingly. The ordinary
 scalar constructor retains the full five-second range; the RoomEQ per-channel
 constructor uses the largest configured route delay and exposes no effect
 controls.
+
+## Native host tails
+
+The zero-input response bound is unknown before initialization. With no feedback
+history, the bound is the prepared ring capacity in output frames, covering
+fractional interpolation, modulation, and both transition read heads. This is
+conservative: it can exceed the currently selected delay time.
+
+Any nonzero feedback keeps the tail classified as infinite until reset clears
+the history with a zero feedback target. Setting feedback or wet mix to zero
+does not immediately discard that classification, because smoothed feedback and
+allpass history may still contribute. This metadata lets native hosts continue
+processing through silent gaps.
+
+## End of stream
+
+With no recursive feedback history, native `drain` continues the existing DSP
+with zero input for one prepared ring traversal. It preserves fractional taps,
+LFO motion, per-channel delays, and unfinished delay transitions. Each call
+writes at most 1024 output frames and accepts any positive whole-frame output
+capacity. Only the returned prefix is written. The conservative bound can
+include trailing zeros; no level threshold truncates the response.
+
+A valid first drain freezes parameter changes and later nonempty input until
+`reset` or successful `initialize`; unchanged parameter writes remain accepted.
+Invalid rate, partial-frame, and insufficient-capacity calls preserve the
+stream. Empty streams complete without entering EOS. Continuation and reset
+reuse prepared storage without allocating or freeing on the audio thread.
+
+Recursive feedback EOS remains unsupported: `drain` retains its previous
+immediate-completion behavior, and tail metadata remains `Infinite`. This does
+not mean recursive audio has been exhausted. No guessed cutoff or new render
+error is introduced. A renderer-controlled infinite-tail policy is separate
+work.
+
+The engine currently limits a stream to 4096 drain calls. Very long/high-rate
+rings or multiple serial tails can exceed that limit even though each plugin
+makes finite progress; the plugin's drain does not shorten its response to
+fit that engine policy.

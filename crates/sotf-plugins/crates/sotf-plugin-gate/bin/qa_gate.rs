@@ -27,6 +27,7 @@ fn main() {
         hysteresis_db: 0.0,
         knee_db: 0.0,
         lookahead_ms: 0.0,
+        ..GatePluginParams::default()
     };
 
     let mut inner = GatePlugin::from_params(channels, params);

@@ -24,14 +24,14 @@ fn test_limiter_basic() {
 fn threshold_smoother_operates_in_decibels() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
     plugin.initialize(48_000).unwrap();
-    assert!((plugin.threshold_db_smoother.current() + 6.0).abs() < 1e-6);
+    assert!((plugin.kernel.threshold_db_smoother.current() + 6.0).abs() < 1e-6);
 
     plugin
         .parametric_set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-18.0))
         .unwrap();
-    assert!((plugin.threshold_db_smoother.target() + 18.0).abs() < 1e-6);
+    assert!((plugin.kernel.threshold_db_smoother.target() + 18.0).abs() < 1e-6);
 
-    let first_step_db = plugin.threshold_db_smoother.advance();
+    let first_step_db = plugin.kernel.threshold_db_smoother.advance();
     assert!(first_step_db < -6.0 && first_step_db > -18.0);
     let first_step_linear = fast_pow10(first_step_db / 20.0);
     assert!(first_step_linear > fast_pow10(-18.0 / 20.0));
@@ -53,10 +53,11 @@ fn from_params_seeds_mix_smoother_at_saved_value() {
             mix: 0.0,
             feed_forward: false,
             link_amount: 1.0,
+            oversampling: 0,
         },
     );
 
-    assert_eq!(plugin.mix_smoother.current(), 0.0);
+    assert_eq!(plugin.kernel.mix_smoother.current(), 0.0);
 }
 
 #[test]
@@ -74,6 +75,7 @@ fn from_params_sanitizes_non_finite_and_out_of_range_values() {
             mix: f32::INFINITY,
             feed_forward: false,
             link_amount: -10.0,
+            oversampling: 0,
         },
     );
     assert!(plugin.threshold_db.is_finite());
@@ -161,7 +163,7 @@ fn process_rejects_wrong_buffer_lengths_without_advancing_state() {
                 .process_in_place(&mut buffer, &ProcessContext::new(48_000, 4))
                 .is_err()
         );
-        assert_eq!(plugin.lookahead_pos, 0);
+        assert_eq!(plugin.kernel.lookahead_pos, 0);
     }
 }
 
@@ -174,10 +176,10 @@ fn reset_matches_fresh_instance_observable_state() {
         .process_in_place(&mut loud, &ProcessContext::new(48_000, 512))
         .unwrap();
     plugin.reset();
-    assert_eq!(plugin.lookahead_pos, 0);
-    assert_eq!(plugin.cache_update_counter, 0);
-    assert_eq!(plugin.monitoring_peak_db, -100.0);
-    assert_eq!(plugin.monitoring_gr_db, 0.0);
+    assert_eq!(plugin.kernel.lookahead_pos, 0);
+    assert_eq!(plugin.kernel.cache_update_counter, 0);
+    assert_eq!(plugin.kernel.monitoring_peak_db, -100.0);
+    assert_eq!(plugin.kernel.monitoring_gr_db, 0.0);
 }
 
 /// Regression: threshold smoother was advanced twice per block (once via
@@ -389,6 +391,7 @@ fn test_from_params_new_fields() {
         mix: 0.8,
         feed_forward: true,
         link_amount: 0.75,
+        oversampling: 0,
     };
     let p = LimiterPlugin::from_params(2, params);
     assert!(p.true_peak);
@@ -599,11 +602,11 @@ fn test_isp_meter_resets_to_floor_when_true_peak_disabled() {
 #[test]
 fn test_isp_mode_parameter() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
     assert!(!p.isp_mode);
 
     p.parametric_set_parameter(ParameterId::from("isp_mode"), ParameterValue::Bool(true))
         .unwrap();
+    p.initialize(48000).unwrap();
     assert!(p.isp_mode);
 
     let val = p.parametric_get_parameter(&ParameterId::from("isp_mode"));
@@ -734,7 +737,7 @@ fn test_isp_correction_decay_speed() {
     p.process_in_place(&mut b, &ctx).unwrap();
 
     // Now the correction should be > 0.  Feed silence to let it decay.
-    let correction_before = p.isp_correction_db;
+    let correction_before = p.kernel.isp_correction_db;
 
     // If correction was built up, verify it decays at a reasonable rate.
     // With release_ms=100, after one block of silence (4096 samples ≈ 85ms),
@@ -757,11 +760,11 @@ fn test_isp_correction_decay_speed() {
         let min_expected_db = expected_remaining_db - 6.0; // 6 dB tolerance
 
         assert!(
-            p.isp_correction_db >= min_expected_db.max(0.0),
+            p.kernel.isp_correction_db >= min_expected_db.max(0.0),
             "ISP correction decayed too fast: before={correction_before:.3} dB, \
                  after={:.3} dB, expected >= {min_expected_db:.3} dB. \
                  Decay is in wrong domain (dB vs linear).",
-            p.isp_correction_db
+            p.kernel.isp_correction_db
         );
     }
     // Even with no correction, the test passes — main assertion is that
@@ -808,7 +811,7 @@ fn test_lookahead_parameter_change_uses_preallocated_storage() {
     p.parametric_set_parameter(ParameterId::from("lookahead"), ParameterValue::Float(20.0))
         .unwrap();
     p.initialize(48000).unwrap();
-    assert_eq!(p.lookahead_len, 960);
+    assert_eq!(p.kernel.lookahead_len, 960);
     assert!(
         p.parametric_set_parameter(ParameterId::from("lookahead"), ParameterValue::Float(1.0))
             .is_err()
@@ -845,10 +848,10 @@ fn test_link_amount_interpolates_average_to_peak_detection() {
         .unwrap();
 
     assert!(
-        half.monitoring_gr_db < linked.monitoring_gr_db,
+        half.kernel.monitoring_gr_db < linked.kernel.monitoring_gr_db,
         "partial linking should produce intermediate detector GR: half={} linked={}",
-        half.monitoring_gr_db,
-        linked.monitoring_gr_db
+        half.kernel.monitoring_gr_db,
+        linked.kernel.monitoring_gr_db
     );
 }
 
@@ -868,10 +871,10 @@ fn test_reset_clears_new_state() {
     p.reset();
 
     // After reset, detectors should be zeroed
-    for det in &p.true_peak_detectors {
+    for det in &p.kernel.true_peak_detectors {
         assert!(det.history.iter().all(|sample| *sample == 0.0));
     }
-    assert_eq!(p.envelope, 0.0);
+    assert_eq!(p.kernel.envelope, 0.0);
 }
 
 // -------------------------------------------------------------------------
@@ -982,10 +985,10 @@ fn test_set_release_recomputes_coefficients() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p.initialize(48000).unwrap();
 
-    let old_coeff = p.release_coeff;
+    let old_coeff = p.kernel.release_coeff;
     p.parametric_set_parameter(ParameterId::from("release"), ParameterValue::Float(200.0))
         .unwrap();
-    assert!((p.release_coeff - old_coeff).abs() > 1e-6);
+    assert!((p.kernel.release_coeff - old_coeff).abs() > 1e-6);
     assert_eq!(p.release_ms, 200.0);
 }
 
@@ -1026,12 +1029,12 @@ fn test_channels() {
     assert_eq!(p.channels(), 4);
 }
 
-/// Verify parameters() returns all 10 cached parameters.
+/// Verify parameters() retains ten legacy IDs and appends oversampling.
 #[test]
 fn test_parameters_returns_all_params() {
     let p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     let params = p.parametric_parameters();
-    assert_eq!(params.len(), 10);
+    assert_eq!(params.len(), 11);
     let ids: Vec<_> = params.iter().map(|p| p.id.clone()).collect();
     assert!(ids.contains(&ParameterId::from("threshold")));
     assert!(ids.contains(&ParameterId::from("release")));
@@ -1043,6 +1046,7 @@ fn test_parameters_returns_all_params() {
     assert!(ids.contains(&ParameterId::from("mix")));
     assert!(ids.contains(&ParameterId::from("link_amount")));
     assert!(ids.contains(&ParameterId::from("feed_forward")));
+    assert_eq!(ids[10], ParameterId::from("oversampling"));
 }
 
 /// set_parameter round-trip for the "soft" boolean parameter.
@@ -1189,12 +1193,12 @@ fn test_process_silence_no_gr() {
     }
     // No gain reduction applied
     assert!(
-        p.monitoring_gr_db < 0.01,
+        p.kernel.monitoring_gr_db < 0.01,
         "silence should cause no GR, got {} dB",
-        p.monitoring_gr_db
+        p.kernel.monitoring_gr_db
     );
     assert!(
-        p.monitoring_peak_db < -50.0,
+        p.kernel.monitoring_peak_db < -50.0,
         "peak meter should be very low for silence"
     );
 }
@@ -1226,9 +1230,9 @@ fn test_process_below_threshold_no_limiting() {
         "signal below threshold should pass through unchanged, max_error={max_error}"
     );
     assert!(
-        p.monitoring_gr_db < 0.01,
+        p.kernel.monitoring_gr_db < 0.01,
         "GR should be zero for signal below threshold, got {} dB",
-        p.monitoring_gr_db
+        p.kernel.monitoring_gr_db
     );
 }
 
@@ -1270,7 +1274,7 @@ fn test_feed_forward_disabled_when_lookahead_zero() {
     p.rebuild_cached_parameters();
     p.initialize(48000).unwrap();
 
-    assert_eq!(p.lookahead_len, 0);
+    assert_eq!(p.kernel.lookahead_len, 0);
 
     let frames = 512;
     let mut b = vec![0.9f32; frames];
@@ -1294,12 +1298,12 @@ fn test_initialize_different_sample_rates() {
     assert_eq!(p.sample_rate, 96000);
 
     // 5ms @ 96kHz = 480 samples
-    assert_eq!(p.lookahead_len, 480);
+    assert_eq!(p.kernel.lookahead_len, 480);
 
     let mut p2 = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p2.initialize(192000).unwrap();
     assert_eq!(p2.sample_rate, 192000);
-    assert_eq!(p2.lookahead_len, 960);
+    assert_eq!(p2.kernel.lookahead_len, 960);
 }
 
 /// get_data() returns LimiterData with expected fields.
@@ -1372,7 +1376,7 @@ fn test_envelope_decay_after_transient() {
     let mut b = vec![1.0f32; sr as usize]; // 1 second of loud signal
     let ctx = ProcessContext::new(sr, b.len());
     p.process_in_place(&mut b, &ctx).unwrap();
-    let gr_after_transient = p.monitoring_gr_db;
+    let gr_after_transient = p.kernel.monitoring_gr_db;
     assert!(
         gr_after_transient > 1.0,
         "should have significant GR after loud signal"
@@ -1381,7 +1385,7 @@ fn test_envelope_decay_after_transient() {
     // Now silence — envelope should release
     let mut silence = vec![0.0f32; sr as usize];
     p.process_in_place(&mut silence, &ctx).unwrap();
-    let gr_after_silence = p.monitoring_gr_db;
+    let gr_after_silence = p.kernel.monitoring_gr_db;
     assert!(
         gr_after_silence < gr_after_transient,
         "envelope should decay during silence: before={gr_after_transient}, after={gr_after_silence}"
@@ -1436,9 +1440,9 @@ fn test_threshold_zero_db() {
         "signal below 0 dB threshold should not be limited, max_out={max_out}"
     );
     assert!(
-        p.monitoring_gr_db < 0.1,
+        p.kernel.monitoring_gr_db < 0.1,
         "GR should be near zero, got {} dB",
-        p.monitoring_gr_db
+        p.kernel.monitoring_gr_db
     );
 }
 
@@ -1523,13 +1527,13 @@ fn test_dual_release_envelope_decay() {
     let mut b = vec![1.0f32; sr as usize];
     let ctx = ProcessContext::new(sr, b.len());
     p.process_in_place(&mut b, &ctx).unwrap();
-    let gr_after_loud = p.monitoring_gr_db;
+    let gr_after_loud = p.kernel.monitoring_gr_db;
     assert!(gr_after_loud > 1.0);
 
     // Silence to trigger release branch
     let mut silence = vec![0.0f32; sr as usize];
     p.process_in_place(&mut silence, &ctx).unwrap();
-    let gr_after_silence = p.monitoring_gr_db;
+    let gr_after_silence = p.kernel.monitoring_gr_db;
 
     assert!(
         gr_after_silence < gr_after_loud,
@@ -1555,7 +1559,7 @@ fn test_isp_mode_correction_decay_path() {
     }
     let ctx = ProcessContext::new(sr, frames);
     p.process_in_place(&mut b, &ctx).unwrap();
-    let correction_before = p.isp_correction_db;
+    let correction_before = p.kernel.isp_correction_db;
 
     // Now feed a signal well below threshold to trigger the decay path
     let mut quiet = vec![0.0f32; frames];
@@ -1566,9 +1570,9 @@ fn test_isp_mode_correction_decay_path() {
 
     if correction_before > 0.1 {
         assert!(
-            p.isp_correction_db < correction_before,
+            p.kernel.isp_correction_db < correction_before,
             "ISP correction should decay when output is below threshold: before={correction_before}, after={}",
-            p.isp_correction_db
+            p.kernel.isp_correction_db
         );
     }
 }
@@ -1600,15 +1604,15 @@ fn test_cache_update_channel_mismatch_does_not_panic() {
 fn test_initialize_resizes_detectors() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
     p.initialize(48000).unwrap();
-    assert_eq!(p.true_peak_detectors.len(), 2);
-    assert_eq!(p.output_isp_detectors.len(), 2);
-    assert_eq!(p.channel_peaks.len(), 2);
-    assert_eq!(p.monitoring_isp_linear.len(), 2);
+    assert_eq!(p.kernel.true_peak_detectors.len(), 2);
+    assert_eq!(p.kernel.output_isp_detectors.len(), 2);
+    assert_eq!(p.kernel.channel_peaks.len(), 2);
+    assert_eq!(p.kernel.monitoring_isp_linear.len(), 2);
 
     // The plugin's channels field doesn't change, but we can verify the resize path
     // by calling initialize again with same channels (resize_with should be no-op)
     p.initialize(48000).unwrap();
-    assert_eq!(p.true_peak_detectors.len(), 2);
+    assert_eq!(p.kernel.true_peak_detectors.len(), 2);
 }
 
 /// Soft clipping should produce different output than hard clipping for loud signals.

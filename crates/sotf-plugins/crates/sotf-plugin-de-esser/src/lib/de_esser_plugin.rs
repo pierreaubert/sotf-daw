@@ -4,10 +4,10 @@ use super::consts::FIXED_KNEE_DB;
 use super::de_esser_data::DeEsserData;
 use super::types::DeEsserPluginParams;
 use crate::params::{
-    PARAMS as DE, default_attack_ms, default_frequency, default_mix, default_q, default_ratio,
-    default_release_ms, default_threshold,
+    PARAMS as DE, default_attack_ms, default_frequency, default_mix, default_q, default_range_db,
+    default_ratio, default_release_ms, default_stereo_link, default_threshold,
 };
-use math_audio_dsp::fast_math::{fast_log10, fast_pow10};
+use math_audio_dsp::fast_math::fast_log10;
 use math_audio_iir_fir::{Biquad, BiquadBank, BiquadFilterType};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::dynamics_core::DynamicsCore;
@@ -53,6 +53,12 @@ pub struct DeEsserPlugin {
     pub(super) threshold: f32,
     pub(super) param_ratio: ParameterId,
     pub(super) ratio: f32,
+    pub(super) param_range_db: ParameterId,
+    pub(super) range_db: f32,
+    pub(super) range_smoother: Smoother,
+    pub(super) param_stereo_link: ParameterId,
+    pub(super) stereo_link: f32,
+    pub(super) link_smoother: Smoother,
 
     // Split-band mode
     pub(super) param_mode: ParameterId,
@@ -107,6 +113,12 @@ impl DeEsserPlugin {
             threshold: default_threshold(),
             param_ratio: ParameterId::from("ratio"),
             ratio: default_ratio(),
+            param_range_db: ParameterId::from("range_db"),
+            range_db: default_range_db(),
+            range_smoother: Smoother::new(default_range_db(), 5.0, sr),
+            param_stereo_link: ParameterId::from("stereo_link"),
+            stereo_link: default_stereo_link(),
+            link_smoother: Smoother::new(default_stereo_link(), 5.0, sr),
 
             param_mode: ParameterId::from("mode"),
             mode_index: 1, // default: split-band
@@ -151,6 +163,10 @@ impl DeEsserPlugin {
         p.q = params.q;
         p.threshold = params.threshold;
         p.ratio = params.ratio;
+        p.range_db = params.range_db;
+        p.range_smoother.reset(p.range_db);
+        p.stereo_link = params.stereo_link;
+        p.link_smoother.reset(p.stereo_link);
         p.attack_ms = params.attack_ms;
         p.release_ms = params.release_ms;
         p.mix = params.mix;
@@ -206,6 +222,8 @@ impl DeEsserPlugin {
             ("attack_ms", params.attack_ms, 0.1, 10.0),
             ("release_ms", params.release_ms, 5.0, 200.0),
             ("mix", params.mix, 0.0, 1.0),
+            ("range_db", params.range_db, 0.0, 60.0),
+            ("stereo_link", params.stereo_link, 0.0, 1.0),
         ];
         for (name, value, min, max) in ranges {
             if !value.is_finite() || !(min..=max).contains(&value) {
@@ -368,6 +386,26 @@ impl DeEsserPlugin {
             .with_description("Dry/wet mix (0 = dry, 1 = processed)")
             .with_group("Output")
             .with_importance(ParameterImportance::Useful),
+            Parameter::new_float(
+                "range_db",
+                "Range",
+                self.range_db,
+                pk(DE, "range_db").min_f64() as f32,
+                pk(DE, "range_db").max_f64() as f32,
+            )
+            .with_description("Maximum gain reduction (dB)")
+            .with_group("Dynamics")
+            .with_importance(ParameterImportance::Useful),
+            Parameter::new_float(
+                "stereo_link",
+                "Stereo Link",
+                self.stereo_link,
+                pk(DE, "stereo_link").min_f64() as f32,
+                pk(DE, "stereo_link").max_f64() as f32,
+            )
+            .with_description("Link channel gains to the strongest reduction (0 to 1)")
+            .with_group("Detection")
+            .with_importance(ParameterImportance::Useful),
         ];
     }
 
@@ -427,10 +465,57 @@ impl DeEsserPlugin {
                 .as_float()
                 .ok_or_else(|| "mix must be a float".to_string())?;
             self.mix_smoother.set_target(self.mix);
+        } else if id == self.param_range_db {
+            self.range_db = value
+                .as_float()
+                .ok_or_else(|| "range_db must be a float".to_string())?;
+            self.range_smoother.set_target(self.range_db);
+        } else if id == self.param_stereo_link {
+            self.stereo_link = value
+                .as_float()
+                .ok_or_else(|| "stereo_link must be a float".to_string())?;
+            self.link_smoother.set_target(self.stereo_link);
         } else {
             return Err(format!("Unknown parameter: {id}"));
         }
         Ok(())
+    }
+
+    /// Calculates bounded, linked channel gains from the current detector frame.
+    fn update_frame_gains(&mut self) {
+        let range = self.range_smoother.advance();
+        let link = self.link_smoother.advance();
+        let mut maximum_reduction = 0.0_f32;
+        for ch in 0..self.channels {
+            let level = self.cores[ch].detect_level(0, self.sidechain_frame[ch]);
+            let level_db = DB_CONVERSION_FACTOR * fast_log10(level.max(EPSILON));
+            let reduction = self.cores[ch].calculate_gain_reduction(
+                level_db,
+                self.threshold,
+                self.ratio,
+                FIXED_KNEE_DB,
+            );
+            // Bound the envelope input and output: lowering Range must also
+            // bound an envelope that is still releasing from a larger value.
+            let reduction = self.cores[ch]
+                .apply_envelope(0, reduction.min(range))
+                .min(range);
+            self.monitoring_gr[ch] = reduction;
+            maximum_reduction = maximum_reduction.max(reduction);
+        }
+        for ch in 0..self.channels {
+            // Link the smoothed reductions in dB. Applying the link after the
+            // envelopes makes 100% linking identical across channels even if
+            // their independent detector histories differ. All channels in a
+            // multichannel instance share the strongest reduction.
+            let independent = self.monitoring_gr[ch];
+            let reduction = independent + link * (maximum_reduction - independent);
+            self.monitoring_gr[ch] = reduction;
+            // Use the precise exponential so the range cap and dB interpolation
+            // are not biased by the fast approximation's gain error.
+            self.frame_gains[ch] =
+                (-reduction * std::f32::consts::LOG2_10 / DB_CONVERSION_FACTOR).exp2();
+        }
     }
 }
 
@@ -453,6 +538,22 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
 
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "frequency" => Some(ParameterValue::Float(self.frequency)),
+            "q" => Some(ParameterValue::Float(self.q)),
+            "threshold" => Some(ParameterValue::Float(self.threshold)),
+            "ratio" => Some(ParameterValue::Float(self.ratio)),
+            "attack" => Some(ParameterValue::Float(self.attack_ms)),
+            "release" => Some(ParameterValue::Float(self.release_ms)),
+            "mode" => Some(ParameterValue::String(self.mode_string())),
+            "mix" => Some(ParameterValue::Float(self.mix)),
+            "range_db" => Some(ParameterValue::Float(self.range_db)),
+            "stereo_link" => Some(ParameterValue::Float(self.stereo_link)),
+            _ => None,
+        }
     }
 
     fn current_values(&self) -> ParameterSet {
@@ -480,6 +581,14 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
             ParameterValue::String(self.mode_string()),
         );
         values.insert(self.param_mix.clone(), ParameterValue::Float(self.mix));
+        values.insert(
+            self.param_range_db.clone(),
+            ParameterValue::Float(self.range_db),
+        );
+        values.insert(
+            self.param_stereo_link.clone(),
+            ParameterValue::Float(self.stereo_link),
+        );
         values
     }
 
@@ -535,6 +644,8 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
 
         // Reset smoother
         self.mix_smoother.set_time(5.0, sample_rate);
+        self.range_smoother.set_time(5.0, sample_rate);
+        self.link_smoother.set_time(5.0, sample_rate);
 
         Ok(())
     }
@@ -556,6 +667,8 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         self.monitoring_gr.fill(0.0);
         self.cache_counter = 0;
         self.mix_smoother.reset(self.mix);
+        self.range_smoother.reset(self.range_db);
+        self.link_smoother.reset(self.stereo_link);
     }
 
     fn process_in_place(
@@ -595,31 +708,14 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
                 frame_samples.copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
                 self.hp_filters.process_interleaved_frame(frame_samples);
                 self.lp_filters.process_interleaved_frame(frame_samples);
+                self.update_frame_gains();
 
                 // Advance mix smoother once per frame (not per channel) to avoid
                 // block-constant mix that would cause zipper noise during automation.
                 let mix = self.mix_smoother.advance();
                 let dry_mix = 1.0 - mix;
-                for (ch, &sidechain) in frame_samples.iter().enumerate().take(self.channels) {
-                    // Sidechain: HP then LP to form bandpass
-                    // Level detection
-                    let level = self.cores[ch].detect_level(0, sidechain);
-                    let level_db = DB_CONVERSION_FACTOR * fast_log10(level.max(EPSILON));
-
-                    // Gain reduction
-                    let gr = self.cores[ch].calculate_gain_reduction(
-                        level_db,
-                        self.threshold,
-                        self.ratio,
-                        FIXED_KNEE_DB,
-                    );
-                    let smoothed_gr = self.cores[ch].apply_envelope(0, gr);
-                    let gain = fast_pow10(-smoothed_gr / DB_CONVERSION_FACTOR);
-                    self.frame_gains[ch] = dry_mix + mix * gain;
-
-                    if frame + 1 == num_frames {
-                        self.monitoring_gr[ch] = smoothed_gr;
-                    }
+                for gain in &mut self.frame_gains {
+                    *gain = dry_mix + mix * *gain;
                 }
                 apply_per_channel_gain_simd(
                     &mut buffer[frame_offset..frame_offset + self.channels],
@@ -639,6 +735,7 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
                     .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
                 self.lp_filters
                     .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
+                self.update_frame_gains();
                 // Advance mix smoother once per frame (not per channel) to avoid
                 // block-constant mix that would cause zipper noise during automation.
                 let mix = self.mix_smoother.advance();
@@ -649,30 +746,13 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
                     // Split into low and high bands
                     let (low, high) = self.crossovers[ch].process(input, 0);
 
-                    // Use the same Q-defined detector band in both modes while
-                    // still applying gain only to the split high band.
-                    let level = self.cores[ch].detect_level(0, self.sidechain_frame[ch]);
-                    let level_db = DB_CONVERSION_FACTOR * fast_log10(level.max(EPSILON));
-
-                    // Gain reduction (only on HF)
-                    let gr = self.cores[ch].calculate_gain_reduction(
-                        level_db,
-                        self.threshold,
-                        self.ratio,
-                        FIXED_KNEE_DB,
-                    );
-                    let smoothed_gr = self.cores[ch].apply_envelope(0, gr);
-                    let gain = fast_pow10(-smoothed_gr / DB_CONVERSION_FACTOR);
+                    let gain = self.frame_gains[ch];
 
                     // The LR4 low+high sum is the phase-matched dry reference.
                     // Mix controls only the reduction depth, so gain=1 yields
                     // the same all-pass response for every Mix value and cannot
                     // comb-filter a phase-rotated wet path against raw input.
                     buffer[idx] = low + high * (1.0 + mix * (gain - 1.0));
-
-                    if frame + 1 == num_frames {
-                        self.monitoring_gr[ch] = smoothed_gr;
-                    }
                 }
             }
         }

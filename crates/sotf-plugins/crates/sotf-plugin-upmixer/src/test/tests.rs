@@ -745,7 +745,21 @@ mod upmixer_tests {
             )
             .unwrap();
         assert_eq!(plugin.latency_samples(), 0);
-        assert_eq!(plugin.main_buffers.input_buffer_fill, 0);
+        assert_eq!(
+            plugin.main_buffers.input_buffer_fill,
+            plugin.core.hop_size * 2
+        );
+        assert!(
+            plugin
+                .main_buffers
+                .input_buffer
+                .iter()
+                .all(|&sample| sample == 0.0)
+        );
+        assert_eq!(
+            plugin.output.startup_discard_remaining,
+            plugin.core.hop_size
+        );
         plugin
             .set_parameter(
                 ParameterId::from("bypass_all_processing"),

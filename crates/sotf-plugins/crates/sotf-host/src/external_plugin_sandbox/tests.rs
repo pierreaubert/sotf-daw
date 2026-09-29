@@ -17,7 +17,10 @@ use crate::external_plugin_process::ExternalPluginWorkerCommand;
 use std::path::PathBuf;
 
 mod misc;
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 mod seccomp;
 
 #[test]

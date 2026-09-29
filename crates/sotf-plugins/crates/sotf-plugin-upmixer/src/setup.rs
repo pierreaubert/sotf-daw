@@ -55,15 +55,20 @@ impl UpmixerPlugin {
         // Also reallocate HR output buffers which depend on channel count
         self.hr_buffers.hr_time_out_channels =
             vec![vec![0.0; self.fft.hr_fft_size]; self.core.num_output_channels];
-        let accumulator_frames = self.core.fft_size * 4;
+        let accumulator_frames = self.core.fft_size.max(self.fft.hr_fft_size) * 4;
         debug_assert!(accumulator_frames.is_power_of_two());
         self.output.output_accumulator =
             vec![0.0; accumulator_frames * self.core.num_output_channels];
         self.output.output_accumulator_mask = accumulator_frames - 1;
         self.output.output_block = vec![0.0; self.core.fft_size * self.core.num_output_channels];
+        self.drain
+            .output
+            .resize(self.core.hop_size * self.core.num_output_channels, 0.0);
+        let hr_accumulator_frames = self.core.fft_size.max(self.fft.hr_fft_size) * 4;
         self.hr_buffers.hr_output_accumulator =
-            vec![0.0; accumulator_frames * self.core.num_output_channels];
-        self.hr_buffers.hr_output_accumulator_mask = accumulator_frames - 1;
+            vec![0.0; hr_accumulator_frames * self.core.num_output_channels];
+        self.hr_buffers.hr_output_accumulator_mask = hr_accumulator_frames - 1;
+        self.hr_buffers.hr_output_source_tags = vec![u64::MAX; hr_accumulator_frames];
         // Re-allocate blended decorrelation filters for new channel count
         let spectrum_size = self.core.fft_size / 2 + 1;
         self.decorrelation.blended_decorrelation_filters =

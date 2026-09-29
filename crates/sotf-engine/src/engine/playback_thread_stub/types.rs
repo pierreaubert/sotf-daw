@@ -11,6 +11,14 @@ pub(super) struct RenderContext {
     pub(super) channels: usize,
 }
 
+struct CallbackActive<'a>(&'a std::sync::atomic::AtomicBool);
+
+impl Drop for CallbackActive<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
+}
+
 /// CoreAudio render callback — called on the real-time audio thread.
 /// Reads from ring buffer, applies volume/clamp, writes to AudioBufferList.
 pub(super) unsafe extern "C" fn render_callback(
@@ -21,24 +29,31 @@ pub(super) unsafe extern "C" fn render_callback(
     _in_number_frames: u32,
     io_data: *mut ca::AudioBufferList,
 ) -> ca::OSStatus {
-    let ctx = &mut *(in_ref_con as *mut RenderContext);
-    let buf_list = &mut *io_data;
+    // SAFETY: AudioUnitHandle retains the boxed context until RemoteIO stops;
+    // RemoteIO serializes this callback and supplies a writable interleaved buffer.
+    let ctx = unsafe { &mut *(in_ref_con as *mut RenderContext) };
+    ctx.state.callback_active.store(true, Ordering::Release);
+    let _active = CallbackActive(&ctx.state.callback_active);
+    // SAFETY: The installed callback contract provides a valid AudioBufferList.
+    let buf_list = unsafe { &mut *io_data };
     let buf = &mut buf_list.buffers[0];
 
     let output_samples = buf.data_byte_size as usize / std::mem::size_of::<f32>();
-    let out = std::slice::from_raw_parts_mut(buf.data as *mut f32, output_samples);
+    // SAFETY: The configured AudioUnit format is interleaved f32, and the
+    // byte count describes the writable storage supplied for this callback.
+    let out = unsafe { std::slice::from_raw_parts_mut(buf.data as *mut f32, output_samples) };
 
     // Handle flush: discard ring buffer contents, output silence
-    if ctx.state.flush_requested.load(Ordering::Relaxed) {
+    if ctx.state.flush_requested.load(Ordering::Acquire) {
         let available = ctx.consumer.slots().min(output_samples);
-        if available > 0 {
-            if let Ok(chunk) = ctx.consumer.read_chunk(available) {
-                chunk.commit_all();
-            }
+        if available > 0
+            && let Ok(chunk) = ctx.consumer.read_chunk(available)
+        {
+            chunk.commit_all();
         }
         out.fill(0.0);
         if ctx.consumer.slots() == 0 {
-            ctx.state.flush_requested.store(false, Ordering::Relaxed);
+            ctx.state.flush_requested.store(false, Ordering::Release);
         }
         return ca::noErr;
     }
@@ -47,15 +62,15 @@ pub(super) unsafe extern "C" fn render_callback(
     let available = ctx.consumer.slots();
     let to_read = output_samples.min(available);
 
-    if to_read > 0 {
-        if let Ok(chunk) = ctx.consumer.read_chunk(to_read) {
-            let (first, second) = chunk.as_slices();
-            out[..first.len()].copy_from_slice(first);
-            if !second.is_empty() {
-                out[first.len()..first.len() + second.len()].copy_from_slice(second);
-            }
-            chunk.commit_all();
+    if to_read > 0
+        && let Ok(chunk) = ctx.consumer.read_chunk(to_read)
+    {
+        let (first, second) = chunk.as_slices();
+        out[..first.len()].copy_from_slice(first);
+        if !second.is_empty() {
+            out[first.len()..first.len() + second.len()].copy_from_slice(second);
         }
+        chunk.commit_all();
     }
 
     // Zero-pad if underrun

@@ -31,3 +31,23 @@ a reliable tonal channel.
 Legacy presets containing `phase_vocoder: false` or `true` migrate to the sole
 duration-preserving engine. Schema v3 retains that migration and adds the
 explicit formant mode while avoiding ambiguous fixed-frame SRC behavior.
+
+## Finite streams
+
+After the last program frame, call `drain` until it returns `complete`. PND
+emits the retained suffix at the effective correction ratio and smoothed
+strength present at EOF; padding does not update drift estimators or diagnostic
+cadence. The fixed latency remains 2047 frames. For nonempty input the
+conservative continuation is 3583–4094 frames, depending on the final 512-frame
+hop phase; `tail_length` reports `Finite(4094)` after initialization.
+
+Each drain call processes at most 512 frames and accepts any positive whole-frame
+destination capacity, preserving its unused suffix. `drain_call_bound` reports
+remaining successful calls when using that full capacity, including the final
+completion call. Empty streams produce no padding and remain available for input.
+
+Accepted nonempty EOF freezes new input and changed parameters until reset or
+successful reinitialization. Identical recognized parameter snapshots, including
+structural settings, are allocation-free no-ops during EOF; they do not reset
+analyzers or rebuild metadata. Zero-frame process calls remain no-ops. Invalid
+rate, capacity or reinitialization requests preserve the existing stream.

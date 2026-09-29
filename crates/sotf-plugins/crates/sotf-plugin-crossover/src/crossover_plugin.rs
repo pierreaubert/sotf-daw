@@ -9,10 +9,14 @@ use sotf_host::fir_crossover::{DEFAULT_FIR_CROSSOVER_TAPS, FirCrossover, Multiba
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::LogSmoother;
+
+// Bound one drain callback independently of FIR length or destination capacity.
+const FIR_DRAIN_FRAMES: usize = 256;
 
 /// Estimated persistent FIR DSP payload owned by a compiled crossover.
 ///
@@ -91,6 +95,8 @@ pub struct CrossoverPlugin {
     /// Set once the host has compiled/initialized this instance. Structural
     /// FIR parameters are configuration-only after this point.
     initialized: bool,
+    fir_has_input: bool,
+    fir_drain_remaining: Option<usize>,
     pub(super) mode: CrossoverMode,
     pub(super) kind: CrossoverKind,
     pub(super) fir_taps: usize,
@@ -241,6 +247,8 @@ impl CrossoverPlugin {
             num_channels,
             sample_rate: sr,
             initialized: false,
+            fir_has_input: false,
+            fir_drain_remaining: None,
             mode,
             kind,
             fir_taps,
@@ -317,6 +325,8 @@ impl CrossoverPlugin {
             num_channels,
             sample_rate: sr,
             initialized: false,
+            fir_has_input: false,
+            fir_drain_remaining: None,
             mode: CrossoverMode::Lowpass,
             kind,
             fir_taps: DEFAULT_FIR_CROSSOVER_TAPS,
@@ -558,6 +568,103 @@ impl CrossoverPlugin {
             .and_then(|idx| if idx >= 2 { Some(idx - 2) } else { None })
     }
 
+    /// Run the prepared FIR bank; absent input supplies exact zero continuation.
+    fn process_fir(
+        &mut self,
+        input: Option<&[f32]>,
+        output: &mut [f32],
+        num_frames: usize,
+    ) -> PluginResult<()> {
+        let in_ch = self.num_channels;
+        let out_ch = self.calc_output_channels();
+        if self.is_multiway() {
+            // This scratch is unused by the multiway FIR kernel. Reuse it as
+            // one immutable zero input frame while retaining the normal path.
+            if input.is_none() {
+                self.low_buf.fill(0.0);
+            }
+            let num_bands = self.num_bands();
+            let mb = self.fir_multiband.as_mut().ok_or_else(|| {
+                "crossover multiband FIR bank missing for multi-way linear-phase mode; rebuild the graph".to_string()
+            })?;
+
+            for frame in 0..num_frames {
+                let in_off = frame * in_ch;
+                let out_off = frame * out_ch;
+                let frame_slice = input.map_or(self.low_buf.as_slice(), |input| {
+                    &input[in_off..in_off + in_ch]
+                });
+
+                {
+                    let flat = &mut self.band_flat[..num_bands * in_ch];
+                    let mut band_slices: [&mut [f32]; 4] = [&mut [], &mut [], &mut [], &mut []];
+                    let mut remaining = flat;
+                    for slot in band_slices.iter_mut().take(num_bands) {
+                        let (chunk, rest) = remaining.split_at_mut(in_ch);
+                        *slot = chunk;
+                        remaining = rest;
+                    }
+                    mb.process_frame(frame_slice, &mut band_slices[..num_bands]);
+                }
+                if let Some(alignment) = &mut self.fir_band_alignment {
+                    alignment.process_frame(&mut self.band_flat[..num_bands * in_ch]);
+                }
+
+                match self.mode {
+                    CrossoverMode::Lowpass => {
+                        output[out_off..out_off + in_ch].copy_from_slice(&self.band_flat[..in_ch]);
+                    }
+                    CrossoverMode::Highpass => {
+                        let hi_off = (num_bands - 1) * in_ch;
+                        output[out_off..out_off + in_ch]
+                            .copy_from_slice(&self.band_flat[hi_off..hi_off + in_ch]);
+                    }
+                    CrossoverMode::Both => {
+                        output[out_off..out_off + out_ch]
+                            .copy_from_slice(&self.band_flat[..out_ch]);
+                    }
+                }
+            }
+        } else {
+            let xover = self.fir_crossover_2way.as_mut().ok_or_else(|| {
+                "crossover two-way FIR bank missing for linear-phase mode; rebuild the graph"
+                    .to_string()
+            })?;
+            for frame in 0..num_frames {
+                let in_off = frame * in_ch;
+                let out_off = frame * out_ch;
+                for channel in 0..in_ch {
+                    let sample = input.map_or(0.0, |input| input[in_off + channel]);
+                    let (low, high) = xover.process_sample(sample, channel);
+                    self.low_buf[channel] = low;
+                    self.high_buf[channel] = high;
+                }
+
+                match self.mode {
+                    CrossoverMode::Lowpass => {
+                        output[out_off..out_off + in_ch].copy_from_slice(&self.low_buf);
+                    }
+                    CrossoverMode::Highpass => {
+                        output[out_off..out_off + in_ch].copy_from_slice(&self.high_buf);
+                    }
+                    CrossoverMode::Both => {
+                        output[out_off..out_off + in_ch].copy_from_slice(&self.low_buf);
+                        output[out_off + in_ch..out_off + 2 * in_ch]
+                            .copy_from_slice(&self.high_buf);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn fir_support_frames(&self) -> usize {
+        // A cascade of S length-L FIR splits has support S*(L-1). An
+        // earlier band's alignment adds only half the missing split support,
+        // so this also bounds every aligned low/high output selection.
+        self.all_frequencies.len() * (self.fir_taps - 1)
+    }
+
     /// Process a coefficient-stable LR24 two-way segment. Output mode is
     /// selected once for the segment and the external frame-slice adapter is
     /// bypassed in favor of the crossover's scalar channel primitive.
@@ -650,6 +757,9 @@ impl Plugin for CrossoverPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.fir_drain_remaining.is_some() {
+            return Err("reset the FIR crossover before changing controls after drain".into());
+        }
         // FIR coefficients (and, for multi-way FIR, the complete set of
         // convolution histories) are compile-time state. Rebuilding them from
         // the control path after initialization would allocate, reset audio
@@ -897,11 +1007,15 @@ impl Plugin for CrossoverPlugin {
         self.band_flat.resize(nb * self.num_channels, 0.0);
 
         self.initialized = true;
-
+        if self.kind == CrossoverKind::LinearPhase {
+            self.reset();
+        }
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.fir_has_input = false;
+        self.fir_drain_remaining = None;
         if self.is_per_channel() {
             for xo in &mut self.per_channel_lr4 {
                 xo.reset();
@@ -958,6 +1072,20 @@ impl Plugin for CrossoverPlugin {
             ));
         }
 
+        if self.kind == CrossoverKind::LinearPhase {
+            if !self.initialized || context.sample_rate != self.sample_rate {
+                return Err(
+                    "FIR crossover requires initialization at the process sample rate".into(),
+                );
+            }
+            if num_frames == 0 {
+                return Ok(0);
+            }
+            if self.fir_drain_remaining.is_some() {
+                return Err("reset the FIR crossover before processing after drain".into());
+            }
+        }
+
         if self.is_per_channel() {
             // Per-channel mode: each channel is processed independently by
             // its own single-channel LR24 crossover. Output channel count
@@ -1000,74 +1128,8 @@ impl Plugin for CrossoverPlugin {
         }
 
         if self.kind == CrossoverKind::LinearPhase {
-            if self.is_multiway() {
-                let num_bands = self.num_bands();
-                let mb = self.fir_multiband.as_mut().ok_or_else(|| {
-                    "crossover multiband FIR bank missing for multi-way linear-phase mode; rebuild the graph".to_string()
-                })?;
-
-                for frame in 0..num_frames {
-                    let in_off = frame * in_ch;
-                    let out_off = frame * out_ch;
-                    let frame_slice = &input[in_off..in_off + in_ch];
-
-                    {
-                        let flat = &mut self.band_flat[..num_bands * in_ch];
-                        let mut band_slices: [&mut [f32]; 4] = [&mut [], &mut [], &mut [], &mut []];
-                        let mut remaining = flat;
-                        for slot in band_slices.iter_mut().take(num_bands) {
-                            let (chunk, rest) = remaining.split_at_mut(in_ch);
-                            *slot = chunk;
-                            remaining = rest;
-                        }
-                        mb.process_frame(frame_slice, &mut band_slices[..num_bands]);
-                    }
-                    if let Some(alignment) = &mut self.fir_band_alignment {
-                        alignment.process_frame(&mut self.band_flat[..num_bands * in_ch]);
-                    }
-
-                    match self.mode {
-                        CrossoverMode::Lowpass => {
-                            output[out_off..out_off + in_ch]
-                                .copy_from_slice(&self.band_flat[..in_ch]);
-                        }
-                        CrossoverMode::Highpass => {
-                            let hi_off = (num_bands - 1) * in_ch;
-                            output[out_off..out_off + in_ch]
-                                .copy_from_slice(&self.band_flat[hi_off..hi_off + in_ch]);
-                        }
-                        CrossoverMode::Both => {
-                            output[out_off..out_off + out_ch]
-                                .copy_from_slice(&self.band_flat[..out_ch]);
-                        }
-                    }
-                }
-            } else {
-                let xover = self.fir_crossover_2way.as_mut().ok_or_else(|| {
-                    "crossover two-way FIR bank missing for linear-phase mode; rebuild the graph".to_string()
-                })?;
-                for frame in 0..num_frames {
-                    let in_off = frame * in_ch;
-                    let out_off = frame * out_ch;
-                    let frame_slice = &input[in_off..in_off + in_ch];
-
-                    xover.process_frame(frame_slice, &mut self.low_buf, &mut self.high_buf);
-
-                    match self.mode {
-                        CrossoverMode::Lowpass => {
-                            output[out_off..out_off + in_ch].copy_from_slice(&self.low_buf);
-                        }
-                        CrossoverMode::Highpass => {
-                            output[out_off..out_off + in_ch].copy_from_slice(&self.high_buf);
-                        }
-                        CrossoverMode::Both => {
-                            output[out_off..out_off + in_ch].copy_from_slice(&self.low_buf);
-                            output[out_off + in_ch..out_off + 2 * in_ch]
-                                .copy_from_slice(&self.high_buf);
-                        }
-                    }
-                }
-            }
+            self.process_fir(Some(input), output, num_frames)?;
+            self.fir_has_input = true;
         } else if self.is_multiway() {
             // Multi-way processing
             let num_bands = self.num_bands();
@@ -1150,6 +1212,66 @@ impl Plugin for CrossoverPlugin {
 
         flush_denormals_inplace(output);
         Ok(num_frames)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.kind == CrossoverKind::LinearPhase && self.initialized {
+            TailLength::Finite(self.fir_support_frames() as u64)
+        } else {
+            // LR recurrence needs a separate truncation/settled-state policy.
+            TailLength::Unknown
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        if self.kind == CrossoverKind::LinearPhase {
+            FIR_DRAIN_FRAMES.min(self.fir_support_frames())
+        } else {
+            0
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.kind == CrossoverKind::LinearPhase && self.fir_has_input {
+            self.fir_drain_remaining
+                .unwrap_or_else(|| self.fir_support_frames())
+        } else {
+            0
+        };
+        // A short FIR advertises its entire support; longer FIRs advance one block.
+        std::num::NonZeroU64::new(remaining.div_ceil(FIR_DRAIN_FRAMES).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if self.kind != CrossoverKind::LinearPhase
+            || !self.fir_has_input
+            || self.fir_drain_remaining == Some(0)
+        {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let channels = self.calc_output_channels();
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("FIR crossover drain requires the initialized sample rate".into());
+        }
+        if output.len() < channels || !output.len().is_multiple_of(channels) {
+            return Err("FIR crossover drain needs nonempty whole output frames".into());
+        }
+        let remaining = self
+            .fir_drain_remaining
+            .unwrap_or_else(|| self.fir_support_frames());
+        let frames = remaining.min(FIR_DRAIN_FRAMES).min(output.len() / channels);
+        enable_ftz_daz();
+        self.process_fir(None, &mut output[..frames * channels], frames)?;
+        flush_denormals_inplace(&mut output[..frames * channels]);
+        self.fir_drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
 
     fn latency_samples(&self) -> usize {

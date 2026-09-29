@@ -595,6 +595,11 @@ uint8_t *plugin_save_state(const struct PluginHandle *handle, size_t *out_len);
 /**
  * Load plugin state from a JSON byte buffer.
  *
+ * Restoration is transactional: failure leaves the live instance unchanged.
+ * Success replaces the DSP instance, restarting its processing history while
+ * retaining constructor configuration and parameter values omitted by `data`.
+ * This operation may allocate, load resources, and stop worker threads.
+ *
  * # Returns
  * * 0 on success
  * * Error code on failure
@@ -603,6 +608,8 @@ uint8_t *plugin_save_state(const struct PluginHandle *handle, size_t *out_len);
  * * `handle` must be a valid plugin handle that has not been destroyed.
  * * `data` must point to `len` bytes of valid JSON that remain readable for
  *   the duration of this call.
+ * * Call on a control thread with no concurrent access to `handle`, including
+ *   audio processing or parameter access.
  */
 int plugin_load_state(struct PluginHandle *handle, const uint8_t *data, size_t len);
 
@@ -637,10 +644,14 @@ uint8_t *plugin_export_preset_json(const struct PluginHandle *handle,
 /**
  * Import a JSON preset document created by [`plugin_export_preset_json`].
  *
+ * Uses the transactional, control-thread restoration behavior documented by
+ * [`plugin_load_state`].
+ *
  * # Safety
  * * `handle` must be a valid plugin handle that has not been destroyed.
  * * `data` must point to `len` bytes of valid preset JSON that remain readable
  *   for the duration of this call.
+ * * Call on a control thread with no concurrent access to `handle`.
  */
 int plugin_import_preset_json(struct PluginHandle *handle, const uint8_t *data, size_t len);
 

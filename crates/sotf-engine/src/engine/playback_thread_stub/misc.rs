@@ -16,7 +16,6 @@ pub(super) fn write_chunk_bulk(mut chunk: WriteChunkUninit<'_, f32>, data: &[f32
 
 #[allow(non_camel_case_types, non_upper_case_globals, dead_code)]
 pub(super) mod core_audio_ffi {
-    use super::*;
     use std::os::raw::c_void;
 
     pub type OSStatus = i32;
@@ -158,6 +157,7 @@ pub(super) mod core_audio_ffi {
     }
 }
 
+#[cfg(target_os = "ios")]
 pub(super) fn playback_buffer_capacity(sample_rate: u32, channels: usize, buffer_ms: u32) -> usize {
     let samples = sample_rate as u128 * buffer_ms as u128 * channels as u128;
     samples.div_ceil(1000).min(usize::MAX as u128) as usize

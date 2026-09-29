@@ -380,41 +380,8 @@ fn complete_stream_counts_cover_all_qualities_ratios_and_residual_boundaries() {
     }
 }
 
-#[test]
-fn ratio_ramps_use_cumulative_stream_duration_when_draining() {
-    let mut plugin = ResamplerPlugin::new(1, 44_100, 48_000, 64).unwrap();
-    plugin.initialize(44_100).unwrap();
-    plugin
-        .set_parameter(
-            ParameterId::from("dynamic_ratio"),
-            ParameterValue::Bool(true),
-        )
-        .unwrap();
-    let nominal = 48_000.0 / 44_100.0;
-    let mut expected = 0.0;
-    let mut total = 0;
-    for (frames, ratio) in [(64usize, nominal * 0.99), (31, nominal * 1.01)] {
-        plugin.set_ratio(ratio, true).unwrap();
-        expected += frames as f64 * ratio;
-        let input = vec![0.25; frames];
-        let mut output = vec![0.0; plugin.output_frames_for_input(frames)];
-        total += plugin
-            .process(&input, &mut output, &ProcessContext::new(44_100, frames))
-            .unwrap();
-    }
-    let frozen_drain_delay = plugin.output_delay_frames();
-    loop {
-        let mut output = vec![0.0; plugin.drain_output_frames_max()];
-        let step = plugin
-            .drain(&mut output, &ProcessContext::new(44_100, 0))
-            .unwrap();
-        total += step.frames;
-        if step.complete {
-            break;
-        }
-    }
-    assert_eq!(total, expected.ceil() as usize + frozen_drain_delay);
-}
+// Dynamic EOF is covered by the independent source-clock and waveform oracles
+// in dynamic_endpoint.rs; accepted input times requested ratios is not a clock.
 
 struct RateProbe {
     expected_rate: u32,

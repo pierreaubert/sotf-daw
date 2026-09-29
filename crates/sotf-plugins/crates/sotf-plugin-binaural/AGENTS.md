@@ -30,7 +30,7 @@ src/
 **Key types:**
 
 - `BinauralDecoderPlugin` -- Main plugin implementing `Plugin`. N input channels -> 2 output channels.
-- `BinauralState` -- Lock-free swappable state (via `ArcSwap`): frequency-domain HRTF filters, diffuse field EQ.
+- `BinauralState` -- Immutable frequency-domain HRTF filters and diffuse field EQ; published through a prepared shared mutex with callback `try_lock` and an audio-owned snapshot.
 - `BinauralDecoderParams` -- Config: HRTF path, speaker config, externalization, near-field, room model.
 - `RoomModel` -- Room reflections using image source method with per-reflection HRTF.
 
@@ -58,7 +58,7 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 
 - HRTF data loaded from SOFA files via `SofaFile` from sotf-host. The `hrtf_database.rs` module manages a database of available HRTFs.
 - Speaker configuration is auto-detected from input channel count. HRTF filters are selected based on speaker positions from `SpeakerConfig`.
-- Lock-free HRTF state swapping via `ArcSwap` allows changing HRTFs without blocking the audio thread.
+- HRTF publication never waits on the audio thread. Construction prepares native mutex resources; contention retains the current snapshot. Interrupted and completed fades transfer ownership to the background reclaimer; full retirement queues postpone adoption without destroying filters in the callback.
 - Output accumulator uses a power-of-2 ring buffer with bitmask wrapping (`output_accumulator_mask`).
 - LFE channels are identified from the speaker config, processed through a lowpass filter, and mixed into both L/R outputs.
 - SIMD operations: `complex_mul_add_simd` for HRTF convolution, `window_mul_simd` for analysis window application.

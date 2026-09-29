@@ -1,9 +1,10 @@
 // ============================================================================
-// Cross-Format Audio Comparison Test
+// Shared Parameter Bridge Integration Tests
 // ============================================================================
 //
-// Validates that the parameter bridge (used by AU/VST3/CLAP wrappers)
-// produces identical audio output to direct plugin API usage.
+// These tests exercise two direct DSP instances with different parameter paths.
+// They do not load a CLAP, VST3, or AU binary. Native format tests live in
+// sotf-host/tests/native_* and plugins-nih/src/wrapper/transport/tests.rs.
 //
 // Tests three critical invariants:
 // 1. Parameter normalize/denormalize round-trip accuracy
@@ -13,14 +14,13 @@
 // These tests catch:
 // - Log/linear normalization mismatches
 // - Parameter clamping differences between bridge and plugin
-// - Interleave/deinterleave bugs in the buffer bridge
 // - State serialization losing precision
 
 use plugins_bridge::factory::{available_plugin_types, create_plugin};
 use plugins_bridge::param_bridge::ParamBridge;
 use sotf_host::param_specs::ParamType;
 use sotf_host::parameters::{ParameterId, ParameterValue};
-use sotf_host::plugin::ProcessContext;
+use sotf_host::plugin::{Plugin, ProcessContext};
 
 const SAMPLE_RATE: u32 = 48000;
 const NUM_FRAMES: usize = 1024;
@@ -61,7 +61,7 @@ fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::Param
     }
 }
 
-/// Plugins suitable for cross-format testing (simple parameter model, stereo in/out)
+/// Explicit coverage list for the direct shared-bridge integration.
 fn testable_plugins() -> Vec<&'static str> {
     vec![
         "Gain",
@@ -88,9 +88,10 @@ fn test_param_normalize_denormalize_roundtrip() {
 
     for &plugin_type in &testable_plugins() {
         let specs = get_param_specs(plugin_type);
-        if specs.is_empty() {
-            continue;
-        }
+        assert!(
+            !specs.is_empty(),
+            "{plugin_type} needs explicit parameter coverage"
+        );
 
         let bridge = ParamBridge::new(specs);
 
@@ -145,80 +146,103 @@ fn test_param_normalize_denormalize_roundtrip() {
 // Test 2: Audio output equivalence — direct vs bridge
 // ============================================================================
 
-#[test]
-fn test_audio_output_equivalence() {
-    let mut failures = Vec::new();
+fn nondefault_setting(plugin_type: &str) -> (&'static str, ParameterValue) {
+    match plugin_type {
+        "Gain" => ("gain_db", ParameterValue::Float(-6.0)),
+        "Limiter" => ("threshold", ParameterValue::Float(-12.0)),
+        "Gate" => ("threshold", ParameterValue::Float(-18.0)),
+        "Delay" => ("delay_ms", ParameterValue::Float(17.0)),
+        "Saturation" => ("drive", ParameterValue::Float(3.7)),
+        "ChannelMuteSolo" => ("dim_gain_db", ParameterValue::Float(-12.0)),
+        "PND" => ("correction_strength", ParameterValue::Float(0.65)),
+        "StereoImager" => ("width", ParameterValue::Float(0.4)),
+        "TransientShaper" => ("output_gain", ParameterValue::Float(-3.0)),
+        "ABCompare" => ("mix", ParameterValue::Float(0.6)),
+        "Dither" => ("bit_depth", ParameterValue::Int(1)),
+        _ => panic!("Missing explicit fixture for {plugin_type}"),
+    }
+}
 
-    for &plugin_type in &testable_plugins() {
-        // Create two identical plugins via the factory
-        let mut plugin_direct = match create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}") {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
-        let mut plugin_bridge = match create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}") {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
+fn prepared_plugin(plugin_type: &str) -> Box<dyn Plugin> {
+    let mut plugin = create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}")
+        .unwrap_or_else(|error| panic!("{plugin_type} construction: {error}"));
+    plugin
+        .initialize(SAMPLE_RATE)
+        .unwrap_or_else(|error| panic!("{plugin_type} initialization: {error}"));
+    assert_eq!(plugin.input_channels(), CHANNELS);
+    assert_eq!(plugin.output_channels(), CHANNELS);
+    plugin
+}
 
-        plugin_direct.initialize(SAMPLE_RATE).ok();
-        plugin_bridge.initialize(SAMPLE_RATE).ok();
-
-        let specs = get_param_specs(plugin_type);
-        if specs.is_empty() {
-            continue;
+fn compare_audio<'a>(plugin_type: &str, direct: &'a mut dyn Plugin, bridged: &'a mut dyn Plugin) {
+    // Distinct channels expose stereo mapping errors. Run long enough to exceed
+    // the largest analysis latency in this explicit fixture list.
+    let mut signal = test_signal(NUM_FRAMES, CHANNELS);
+    for frame in signal.as_chunks_mut::<CHANNELS>().0 {
+        frame[1] *= -0.7;
+    }
+    let mut direct_output = vec![f32::NAN; signal.len()];
+    let mut bridge_output = direct_output.clone();
+    let mut energy = 0.0_f64;
+    for block in 0..64 {
+        direct_output.fill(f32::NAN);
+        bridge_output.fill(f32::NAN);
+        let mut context = ProcessContext::new(SAMPLE_RATE, NUM_FRAMES);
+        context.transport.sample_position = (block * NUM_FRAMES) as u64;
+        for (plugin, output) in [
+            (&mut *direct, &mut direct_output),
+            (&mut *bridged, &mut bridge_output),
+        ] {
+            let frames = plugin
+                .process(&signal, output, &context)
+                .unwrap_or_else(|error| panic!("{plugin_type} block {block}: {error}"));
+            assert_eq!(frames, NUM_FRAMES, "{plugin_type} block {block}");
+            assert!(
+                output.iter().all(|sample| sample.is_finite()),
+                "{plugin_type} unwritten/nonfinite output"
+            );
         }
-        let bridge = ParamBridge::new(specs);
-
-        // Set parameters on bridge plugin via normalized path (simulates AU/VST3 host)
-        for idx in 0..bridge.count() {
-            let info = bridge.info(idx).unwrap();
-            // Use default normalized value
-            let default_norm = bridge.normalize(idx, info.default_value).unwrap_or(0.5);
-            bridge
-                .set_normalized(plugin_bridge.as_mut(), idx, default_norm)
-                .ok();
-        }
-
-        // Process identical audio through both
-        let signal = test_signal(NUM_FRAMES, CHANNELS);
-        let mut buf_direct = signal.clone();
-        let mut buf_bridge = signal.clone();
-        let ctx = ProcessContext::new(SAMPLE_RATE, NUM_FRAMES);
-
-        // Process multiple blocks to let both converge past any transient differences
-        for _ in 0..4 {
-            buf_direct = signal.clone();
-            buf_bridge = signal.clone();
-            plugin_direct
-                .process(&buf_direct.clone(), &mut buf_direct, &ctx)
-                .ok();
-            plugin_bridge
-                .process(&buf_bridge.clone(), &mut buf_bridge, &ctx)
-                .ok();
-        }
-
-        // Compare outputs
-        let max_diff: f32 = buf_direct
-            .iter()
-            .zip(buf_bridge.iter())
-            .map(|(d, b)| (d - b).abs())
-            .fold(0.0f32, f32::max);
-
-        // Allow small tolerance for floating-point parameter mapping differences
-        let tolerance = 1e-4;
-        if max_diff > tolerance {
-            failures.push(format!(
-                "{plugin_type}: max_diff={max_diff:.6} (tolerance={tolerance})"
-            ));
+        for (a, b) in direct_output.iter().zip(&bridge_output) {
+            assert!(
+                (a - b).abs() <= 1e-6,
+                "{plugin_type} block {block}: {a} versus {b}"
+            );
+            energy += f64::from(*a).powi(2);
         }
     }
+    assert!(
+        energy > 1e-3,
+        "{plugin_type}: identical silence is insufficient evidence"
+    );
+}
 
-    if !failures.is_empty() {
-        panic!(
-            "Audio equivalence failures ({}):\n  {}",
-            failures.len(),
-            failures.join("\n  ")
+#[test]
+fn nondefault_normalized_parameters_match_direct_typed_audio() {
+    for plugin_type in testable_plugins() {
+        let mut direct = prepared_plugin(plugin_type);
+        let mut bridged = prepared_plugin(plugin_type);
+        let bridge = ParamBridge::new(get_param_specs(plugin_type));
+        let (key, value) = nondefault_setting(plugin_type);
+        let id = ParameterId::from(key);
+        assert_ne!(
+            direct.get_parameter(&id),
+            Some(value.clone()),
+            "{plugin_type} fixture must be nondefault"
         );
+        direct.set_parameter(id.clone(), value.clone()).unwrap();
+        let raw = match value {
+            ParameterValue::Float(value) => f64::from(value),
+            ParameterValue::Int(value) => f64::from(value),
+            ParameterValue::Bool(value) => f64::from(value),
+            _ => unreachable!(),
+        };
+        let index = bridge.find_index(key).unwrap();
+        bridge
+            .set_normalized(&mut *bridged, index, bridge.normalize(index, raw).unwrap())
+            .unwrap();
+        assert_eq!(direct.get_parameter(&id), Some(value.clone()));
+        assert_eq!(bridged.get_parameter(&id), Some(value));
+        compare_audio(plugin_type, &mut *direct, &mut *bridged);
     }
 }
 
@@ -227,7 +251,7 @@ fn test_audio_output_equivalence() {
 // ============================================================================
 
 #[test]
-fn test_all_factory_plugins_create_successfully() {
+fn supported_default_factory_configurations_create_successfully() {
     let mut failures = Vec::new();
 
     // Plugins that require non-empty config JSON (mandatory fields with no serde default)
@@ -304,59 +328,38 @@ fn spectral_compressor_bridge_factory_is_fallible_and_preserves_advanced_state()
 
 #[test]
 fn test_bridge_set_get_roundtrip_on_plugin() {
-    let mut failures = Vec::new();
-
-    for &plugin_type in &testable_plugins() {
-        let specs = get_param_specs(plugin_type);
-        if specs.is_empty() {
-            continue;
-        }
-
-        let mut plugin = match create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}") {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
-        plugin.initialize(SAMPLE_RATE).ok();
-
-        let bridge = ParamBridge::new(specs);
-
-        for idx in 0..bridge.count() {
-            let info = bridge.info(idx).unwrap();
-
-            // Set to a known normalized value
-            let test_norm = 0.6;
-            if bridge
-                .set_normalized(plugin.as_mut(), idx, test_norm)
-                .is_err()
-            {
-                continue; // Some params may not support arbitrary values
+    for plugin_type in testable_plugins() {
+        let mut plugin = prepared_plugin(plugin_type);
+        let bridge = ParamBridge::new(get_param_specs(plugin_type));
+        assert!(bridge.count() > 0, "{plugin_type} needs explicit coverage");
+        for index in 0..bridge.count() {
+            let spec = bridge.spec(index).unwrap();
+            if matches!(spec.param_type, ParamType::FilePath) {
+                continue;
             }
-
-            // Read back
-            let readback = bridge.get_normalized(plugin.as_ref(), idx);
-            if let Some(rb) = readback {
-                let tolerance = if info.steps > 0 {
-                    1.0 / (info.steps as f64).max(1.0) + 1e-4
-                } else {
-                    0.02 // Allow 2% tolerance for float rounding through clamp/step
-                };
-                if (rb - test_norm).abs() > tolerance {
-                    failures.push(format!(
-                        "{plugin_type}/{} (idx {idx}): set {test_norm:.4}, got {rb:.4} (diff {:.6})",
-                        info.name,
-                        (rb - test_norm).abs()
-                    ));
-                }
-            }
+            // Structural controls are tested with lifecycle reconstruction in
+            // the NIH/FFI suites. Here, verify their readable current setting.
+            let normalized = if spec.update_mode == sotf_host::param_specs::UpdateMode::Realtime {
+                0.6
+            } else {
+                bridge
+                    .get_normalized(&*plugin, index)
+                    .expect("structural getter")
+            };
+            let raw = bridge.denormalize(index, normalized).unwrap();
+            let expected = bridge.normalize(index, raw).unwrap();
+            bridge
+                .set_normalized(&mut *plugin, index, normalized)
+                .unwrap_or_else(|error| panic!("{plugin_type}/{}: {error}", spec.engine_key));
+            let actual = bridge
+                .get_normalized(&*plugin, index)
+                .unwrap_or_else(|| panic!("{plugin_type}/{} has no getter", spec.engine_key));
+            assert!(
+                (actual - expected).abs() < 1e-6,
+                "{plugin_type}/{}: actual {actual} versus quantized {expected}",
+                spec.engine_key
+            );
         }
-    }
-
-    if !failures.is_empty() {
-        panic!(
-            "Bridge set/get round-trip failures ({}):\n  {}",
-            failures.len(),
-            failures.join("\n  ")
-        );
     }
 }
 
@@ -365,43 +368,52 @@ fn test_bridge_set_get_roundtrip_on_plugin() {
 // ============================================================================
 
 #[test]
-fn test_state_save_load_roundtrip() {
-    for &plugin_type in &testable_plugins() {
-        let mut plugin = match create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}") {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
-        plugin.initialize(SAMPLE_RATE).ok();
-
-        // Save state
-        let state = plugins_bridge::state::save_state(plugin.as_ref());
-        if state.is_empty() {
-            continue;
+fn nondefault_state_restore_preserves_parameters_and_audio() {
+    for plugin_type in testable_plugins() {
+        let mut original = prepared_plugin(plugin_type);
+        let (key, value) = nondefault_setting(plugin_type);
+        let id = ParameterId::from(key);
+        original.set_parameter(id.clone(), value.clone()).unwrap();
+        let state = plugins_bridge::state::save_state(&*original);
+        assert!(!state.is_empty());
+        let mut restored = prepared_plugin(plugin_type);
+        plugins_bridge::state::load_state(&mut *restored, &state)
+            .unwrap_or_else(|error| panic!("{plugin_type} restore: {error}"));
+        assert_eq!(restored.get_parameter(&id), Some(value));
+        for parameter in original.parameters() {
+            let expected = original
+                .get_parameter(&parameter.id)
+                .unwrap_or_else(|| panic!("{plugin_type}/{} unreadable", parameter.id));
+            assert_eq!(
+                restored.get_parameter(&parameter.id),
+                Some(expected),
+                "{plugin_type}/{}",
+                parameter.id
+            );
         }
+        original.reset();
+        restored.reset();
+        compare_audio(plugin_type, &mut *original, &mut *restored);
+    }
+}
 
-        // Create fresh plugin, load state
-        let mut plugin2 = create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}").unwrap();
-        plugin2.initialize(SAMPLE_RATE).ok();
-        plugins_bridge::state::load_state(plugin2.as_mut(), &state).ok();
-
-        // Process identical audio through both
-        let signal = test_signal(NUM_FRAMES, CHANNELS);
-        let mut buf1 = signal.clone();
-        let mut buf2 = signal.clone();
-        let ctx = ProcessContext::new(SAMPLE_RATE, NUM_FRAMES);
-        plugin.process(&signal, &mut buf1, &ctx).ok();
-        plugin2.process(&signal, &mut buf2, &ctx).ok();
-
-        // Compare
-        let max_diff: f32 = buf1
-            .iter()
-            .zip(buf2.iter())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0f32, f32::max);
-
-        assert!(
-            max_diff < 1e-4,
-            "{plugin_type}: state round-trip output mismatch: max_diff={max_diff:.6}"
+#[test]
+fn unchanged_limiter_restore_preserves_audio_already_in_flight() {
+    let mut original = prepared_plugin("Limiter");
+    let mut restored = prepared_plugin("Limiter");
+    let input = test_signal(127, CHANNELS);
+    let mut output = vec![0.0; input.len()];
+    for plugin in [&mut original, &mut restored] {
+        assert_eq!(
+            plugin
+                .process(&input, &mut output, &ProcessContext::new(SAMPLE_RATE, 127))
+                .unwrap(),
+            127
         );
     }
+    let state = plugins_bridge::state::save_state(&*restored);
+    plugins_bridge::state::load_state(&mut *restored, &state).unwrap();
+    // The 127-frame prefix is shorter than the default 240-frame lookahead.
+    // Any reset or unnecessary rebuild would discard its queued signal.
+    compare_audio("Limiter", &mut *original, &mut *restored);
 }

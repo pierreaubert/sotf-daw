@@ -1,3 +1,35 @@
+# 0.6.0
+
+- Prepare anti-alias cutoff tables for dynamic ratio changes; select a safe cutoff
+  across each ramp without allocation or resetting audio history. Reset restores
+  the nominal filter. Enable the previously failing dynamic alias regression.
+- Use a private Rubato fork with exact inverse-ratio ramp sizing, derived output
+  capacity and sufficient history for deferred tiny blocks at extreme ratios.
+- Rebase the private Rubato fork onto upstream 5.0.0; it is now the single
+  Rubato in the workspace (all users) with a single audioadapter-buffers 5.x.
+  Bank, ramp, history, and EOF behavior are unchanged and re-pinned by the
+  ported fork suite plus the production cutoff/drain regressions.
+
+- Reject equal-rate dynamic-mode transitions after accepted input until reset,
+  preserving buffered audio, chronological order, and active latency. Fresh
+  setup transitions clear dormant backend ratio ramps; unchanged flags remain
+  idempotent. Runtime metadata is Structural only for equal-rate instances.
+- Preserve live unequal-rate backend history when disabling dynamic updates and
+  propagate ratio-reset failures before changing public state.
+- Validate drain capacity and callback clocks before latching EOF; reject ratio
+  and control mutation after finalization. Empty valid drains still finalize.
+- Add exact public history/retry/reset regressions and cold allocation/deallocation
+  checks.
+- Replace accepted-input times requested-ratio EOF estimates with the actual emitted
+  interpolation trajectory and exact integer submitted-input origins. Buffered
+  overwritten targets no longer truncate or extend equivalent fixed streams.
+- Preserve fixed-rate frame counts; variable trajectories drain through the first
+  source-clock boundary crossing, with less than one output interval of overshoot.
+  Keep zero-output drain steps unfinished until their endpoint is reached.
+- Add independent clock, full zero-continuation, final-marker, output-canary,
+  reset/retry, tiny/low-ratio and cold allocation/deallocation regressions.
+  Signal-delay and realtime latency/PDC declarations are unchanged.
+
 # 0.5.27
 
 ## Improvements

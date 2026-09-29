@@ -12,6 +12,21 @@ use sotf_host::plugin::Plugin;
 /// Built from a slice of `ParamSpec` (the single source of truth for parameter metadata).
 pub struct ParamBridge {
     specs: Vec<ParamSpec>,
+    // Arc-backed IDs are prepared once, then cheaply cloned by live setters.
+    ids: Vec<ParameterId>,
+}
+
+/// Value type accepted by a plugin parameter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BridgedParamKind {
+    /// Floating-point value, including parameters with discrete UI increments.
+    Float,
+    /// Integer value or choice index.
+    Int,
+    /// Boolean switch.
+    Bool,
+    /// File path, which numeric parameter hosts cannot represent.
+    FilePath,
 }
 
 /// Information about a single parameter, suitable for FFI export.
@@ -29,6 +44,8 @@ pub struct BridgedParamInfo {
     pub max_value: f64,
     /// Default value (raw, not normalized)
     pub default_value: f64,
+    /// Value type, independent of the number of UI steps.
+    pub kind: BridgedParamKind,
     /// Number of discrete steps (0 = continuous)
     pub steps: u32,
     /// Whether this parameter should use logarithmic scaling in UI
@@ -44,6 +61,10 @@ impl ParamBridge {
     pub fn new(specs: &[ParamSpec]) -> Self {
         Self {
             specs: specs.to_vec(),
+            ids: specs
+                .iter()
+                .map(|spec| ParameterId::from(spec.engine_key))
+                .collect(),
         }
     }
 
@@ -108,6 +129,12 @@ impl ParamBridge {
                 min_value: min,
                 max_value: max,
                 default_value: default,
+                kind: match spec.param_type {
+                    ParamType::Float { .. } => BridgedParamKind::Float,
+                    ParamType::Int { .. } | ParamType::Choice { .. } => BridgedParamKind::Int,
+                    ParamType::Bool { .. } => BridgedParamKind::Bool,
+                    ParamType::FilePath => BridgedParamKind::FilePath,
+                },
                 steps,
                 logarithmic,
                 group: spec.group.to_string(),
@@ -151,17 +178,20 @@ impl ParamBridge {
             .ok_or_else(|| format!("Parameter index {index} out of range"))?;
 
         let raw = denormalize_value(spec, normalized);
-        let value = raw_to_parameter_value(spec, raw);
-        let id = ParameterId::from(spec.engine_key.to_string());
-        plugin.set_parameter(id, value)
+        let value = self.value_for_plugin(plugin, index, raw)?;
+        if spec.update_mode != UpdateMode::Realtime
+            && plugin.get_parameter(&self.ids[index]).as_ref() == Some(&value)
+        {
+            return Ok(());
+        }
+        plugin.set_parameter(self.ids[index].clone(), value)
     }
 
     /// Get a normalized parameter value (0.0-1.0) from a plugin.
     pub fn get_normalized(&self, plugin: &dyn Plugin, index: usize) -> Option<f64> {
         let spec = self.specs.get(index)?;
-        let id = ParameterId::from(spec.engine_key.to_string());
-        let value = plugin.get_parameter(&id)?;
-        let raw = parameter_value_to_raw(&value);
+        let value = plugin.get_parameter(&self.ids[index])?;
+        let raw = parameter_value_to_raw(Some(spec), &value)?;
         Some(normalize_value(spec, raw))
     }
 
@@ -172,23 +202,60 @@ impl ParamBridge {
         engine_key: &str,
         raw_value: f64,
     ) -> Result<(), String> {
-        let spec = self
-            .specs
-            .iter()
-            .find(|s| s.engine_key == engine_key)
+        let index = self
+            .find_index(engine_key)
             .ok_or_else(|| format!("Unknown parameter: {engine_key}"))?;
+        let spec = &self.specs[index];
 
         let clamped = spec.clamp_f64(raw_value);
-        let value = raw_to_parameter_value(spec, clamped);
-        let id = ParameterId::from(engine_key.to_string());
-        plugin.set_parameter(id, value)
+        let value = self.value_for_plugin(plugin, index, clamped)?;
+        if spec.update_mode != UpdateMode::Realtime
+            && plugin.get_parameter(&self.ids[index]).as_ref() == Some(&value)
+        {
+            return Ok(());
+        }
+        plugin.set_parameter(self.ids[index].clone(), value)
     }
 
     /// Get a raw parameter value from a plugin.
     pub fn get_raw(&self, plugin: &dyn Plugin, engine_key: &str) -> Option<f64> {
-        let id = ParameterId::from(engine_key.to_string());
-        let value = plugin.get_parameter(&id)?;
-        Some(parameter_value_to_raw(&value))
+        // Preserve the existing convenience lookup for keys outside the static
+        // schema. Only prepared keys promise allocation-free ID handling.
+        let (spec, value) = if let Some(index) = self.find_index(engine_key) {
+            (
+                Some(&self.specs[index]),
+                plugin.get_parameter(&self.ids[index])?,
+            )
+        } else {
+            (None, plugin.get_parameter(&ParameterId::from(engine_key))?)
+        };
+        parameter_value_to_raw(spec, &value)
+    }
+
+    fn value_for_plugin(
+        &self,
+        plugin: &dyn Plugin,
+        index: usize,
+        raw: f64,
+    ) -> Result<ParameterValue, String> {
+        let spec = &self.specs[index];
+        if matches!(spec.param_type, ParamType::FilePath) {
+            return Err(format!("{} requires a string value", spec.engine_key));
+        }
+        if let ParamType::Choice { labels, .. } = spec.param_type
+            && matches!(
+                plugin.get_parameter(&self.ids[index]),
+                Some(ParameterValue::String(_))
+            )
+        {
+            // Some structural choices use canonical labels in the DSP API.
+            // Their owned String values are control-thread operations.
+            let label = labels
+                .get(raw.round() as usize)
+                .ok_or_else(|| format!("Invalid choice for {}", spec.engine_key))?;
+            return Ok(ParameterValue::String((*label).to_owned()));
+        }
+        Ok(raw_to_parameter_value(spec, raw))
     }
 }
 
@@ -289,8 +356,8 @@ fn raw_to_parameter_value(spec: &ParamSpec, raw: f64) -> ParameterValue {
 }
 
 /// Extract a raw f64 from a ParameterValue.
-fn parameter_value_to_raw(value: &ParameterValue) -> f64 {
-    match value {
+fn parameter_value_to_raw(spec: Option<&ParamSpec>, value: &ParameterValue) -> Option<f64> {
+    Some(match value {
         ParameterValue::Float(f) => *f as f64,
         ParameterValue::Int(i) => *i as f64,
         ParameterValue::Bool(b) => {
@@ -300,8 +367,13 @@ fn parameter_value_to_raw(value: &ParameterValue) -> f64 {
                 0.0
             }
         }
-        ParameterValue::String(_) => 0.0,
-    }
+        ParameterValue::String(value) => {
+            let ParamType::Choice { labels, .. } = spec?.param_type else {
+                return None;
+            };
+            labels.iter().position(|label| *label == value)? as f64
+        }
+    })
 }
 
 #[cfg(test)]
@@ -397,6 +469,49 @@ mod tests {
         assert!((bridge.denormalize(0, 0.0).unwrap() - 0.0).abs() < 1e-10);
         assert!((bridge.denormalize(0, 0.5).unwrap() - 1.0).abs() < 1e-10);
         assert!((bridge.denormalize(0, 1.0).unwrap() - 2.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn structural_string_choices_roundtrip_all_configured_labels() {
+        for (family, key, labels, specs) in [
+            (
+                "DeEsser",
+                "mode",
+                &["wideband", "split-band"][..],
+                sotf_plugin_de_esser::params::PARAMS,
+            ),
+            (
+                "AAE",
+                "room_preset",
+                &["small", "medium", "large", "cathedral"][..],
+                sotf_plugin_aae::params::PARAMS,
+            ),
+        ] {
+            for (index, label) in labels.iter().enumerate() {
+                let config = serde_json::json!({key: label}).to_string();
+                let mut plugin = crate::create_plugin(family, 2, 48_000, &config).unwrap();
+                let bridge = ParamBridge::new(specs);
+                let parameter = bridge.find_index(key).unwrap();
+                let normalized = index as f64 / (labels.len() - 1) as f64;
+                assert_eq!(bridge.get_normalized(&*plugin, parameter), Some(normalized));
+                assert_eq!(bridge.get_raw(&*plugin, key), Some(index as f64));
+                bridge
+                    .set_normalized(&mut *plugin, parameter, normalized)
+                    .unwrap();
+                bridge.set_raw(&mut *plugin, key, index as f64).unwrap();
+                assert_eq!(
+                    plugin.get_parameter(&ParameterId::from(key)),
+                    Some(ParameterValue::String(if family == "DeEsser" {
+                        ["Wideband", "Split-Band"][index].into()
+                    } else {
+                        (*label).into()
+                    }))
+                );
+                let other = (index + 1) % labels.len();
+                assert!(bridge.set_raw(&mut *plugin, key, other as f64).is_err());
+                assert_eq!(bridge.get_raw(&*plugin, key), Some(index as f64));
+            }
+        }
     }
 
     #[test]

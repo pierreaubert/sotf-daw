@@ -5,10 +5,9 @@ use super::types::ConvolutionState;
 use super::types::IrLoadResult;
 use super::types::{ConvolutionLoadStatus, IrLoadCompletion, RetiredIrState};
 use crate::params::PARAMS as CV;
-use arc_swap::ArcSwap;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use plugins_spatial::{nupc, validate_interleaved_in_place};
-use rubato::{Fft, FixedSync, Resampler};
+use rubato::{Fft, FixedSync, Resampler, WindowFunction};
 use rustfft::FftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::param_bridge;
@@ -16,7 +15,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{complex_mul_add_simd, enable_ftz_daz};
 use sotf_host::smoothing::Smoother;
@@ -180,16 +180,21 @@ pub(super) fn try_reclaim<T>(
 #[doc(hidden)]
 pub struct IrRuntimeState {
     pub(super) ir_file: String,
-    pub(super) state: Arc<ArcSwap<Option<ConvolutionState>>>,
+    // The worker sends owned completions; only this plugin reads/replaces the
+    // active root. A callback clone cannot be the final owner, and replacement
+    // moves the old root into the existing off-thread retirement payload.
+    pub(super) state: Arc<Option<ConvolutionState>>,
     pub(super) fdl_flat: Vec<Complex<f32>>,
     pub(super) fdl_head: usize,
     pub(super) fft_scratch: Vec<Complex<f32>>,
     pub(super) nupc_engines: Vec<nupc::NupcEngine>,
     pub(super) rayon_accum_pool: Vec<Vec<Complex<f32>>>,
+    /// Retained after consumption: dropping the receiver can free its message
+    /// block even while a sender keeps the channel allocation alive.
     pub(super) ir_load_result_rx: Option<std::sync::mpsc::Receiver<IrLoadCompletion>>,
-    /// Keeps the channel allocation alive after the callback consumes and
-    /// drops its receiver. It is replaced or dropped only by control-thread
-    /// load/clear operations (or plugin destruction), never by `process`.
+    pub(super) completion_pending: bool,
+    /// Both endpoints are replaced/dropped only by control-thread load/clear
+    /// operations or plugin destruction, never by process, drain, or reset.
     pub(super) ir_load_result_keepalive: Option<std::sync::mpsc::Sender<IrLoadCompletion>>,
     pub(super) desired_generation: u64,
     pub(super) load_status: AtomicU8,
@@ -243,6 +248,12 @@ pub struct ConvolutionPlugin {
     pub(super) last_output: Vec<f32>,
     pub(super) transition_from: Vec<f32>,
     pub(super) transition_remaining: usize,
+    /// Audio-owned metadata: the realtime tail getter only reads scalar fields.
+    pub(super) max_ir_frames: usize,
+    /// Conservative history bound across live replacements; reset clears it.
+    retained_tail_frames: u64,
+    has_input: bool,
+    drain_remaining: Option<usize>,
 }
 
 impl std::ops::Deref for ConvolutionPlugin {
@@ -323,13 +334,14 @@ impl ConvolutionPlugin {
             sample_rate,
             ir_runtime: IrRuntimeState {
                 ir_file: String::new(),
-                state: Arc::new(ArcSwap::from_pointee(None)),
+                state: Arc::new(None),
                 fdl_flat: Vec::new(),
                 fdl_head: 0,
                 fft_scratch: Vec::new(),
                 nupc_engines: Vec::new(),
                 rayon_accum_pool: Vec::new(),
                 ir_load_result_rx: None,
+                completion_pending: false,
                 ir_load_result_keepalive: None,
                 desired_generation: 0,
                 load_status: AtomicU8::new(ConvolutionLoadStatus::Idle as u8),
@@ -363,6 +375,10 @@ impl ConvolutionPlugin {
             last_output: vec![0.0; channels],
             transition_from: vec![0.0; channels],
             transition_remaining: 0,
+            max_ir_frames: 0,
+            retained_tail_frames: 0,
+            has_input: false,
+            drain_remaining: None,
         };
         p.rebuild_cached_parameters();
         p
@@ -441,6 +457,7 @@ impl ConvolutionPlugin {
         let generation = self.desired_generation;
         let (result_tx, result_rx) = std::sync::mpsc::channel();
         self.ir_load_result_rx = Some(result_rx);
+        self.completion_pending = true;
         self.ir_load_result_keepalive = Some(result_tx.clone());
         self.load_status
             .store(ConvolutionLoadStatus::Loading as u8, Ordering::Release);
@@ -455,7 +472,12 @@ impl ConvolutionPlugin {
                 head_taps: self.head_taps,
                 result_tx,
             })
-            .map_err(|e| format!("Failed to enqueue IR load: {e}"))
+            .map_err(|e| {
+                self.completion_pending = false;
+                self.load_status
+                    .store(ConvolutionLoadStatus::Failed as u8, Ordering::Release);
+                format!("Failed to enqueue IR load: {e}")
+            })
     }
 
     fn queue_retired(&mut self, retired: RetiredIrState) {
@@ -504,13 +526,15 @@ impl ConvolutionPlugin {
         if self.retired_pending.is_some() {
             return Err("Convolution IR retirement is backpressured; retry later".into());
         }
+        self.retain_tail_for_replacement();
         self.transition_from.copy_from_slice(&self.last_output);
         self.transition_remaining = TRANSITION_SAMPLES;
         self.desired_generation = self.desired_generation.wrapping_add(1);
         self.ir_load_result_rx = None;
+        self.completion_pending = false;
         self.ir_load_result_keepalive = None;
         let retired = RetiredIrState {
-            state: self.state.swap(Arc::new(None)),
+            state: std::mem::replace(&mut self.ir_runtime.state, Arc::new(None)),
             nupc_engines: std::mem::take(&mut self.nupc_engines),
             fdl_flat: std::mem::take(&mut self.fdl_flat),
             fft_scratch: std::mem::take(&mut self.fft_scratch),
@@ -518,6 +542,7 @@ impl ConvolutionPlugin {
             ir_file: String::new(),
         };
         self.ir_file.clear();
+        self.max_ir_frames = 0;
         // The IR-sized state has been moved to the reclaimer; only fixed-size
         // stream-boundary buffers remain locally.
         self.reset_fixed_streaming_state();
@@ -668,6 +693,7 @@ impl ConvolutionPlugin {
         }
 
         Ok(IrLoadResult {
+            max_ir_frames: ir_samples.iter().map(Vec::len).max().unwrap_or(0),
             state: Arc::new(Some(state)),
             nupc_engines,
             fdl_flat: vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_SIZE],
@@ -682,10 +708,12 @@ impl ConvolutionPlugin {
 
     pub(super) fn apply_ir_state(&mut self, result: IrLoadResult) {
         debug_assert!(self.retired_pending.is_none());
+        self.retain_tail_for_replacement();
+        self.max_ir_frames = result.max_ir_frames;
         self.transition_from.copy_from_slice(&self.last_output);
         self.transition_remaining = TRANSITION_SAMPLES;
         let retired = RetiredIrState {
-            state: self.state.swap(result.state),
+            state: std::mem::replace(&mut self.ir_runtime.state, result.state),
             nupc_engines: std::mem::replace(&mut self.nupc_engines, result.nupc_engines),
             fdl_flat: std::mem::replace(&mut self.fdl_flat, result.fdl_flat),
             fft_scratch: std::mem::replace(&mut self.fft_scratch, result.fft_scratch),
@@ -703,6 +731,20 @@ impl ConvolutionPlugin {
         self.load_status
             .store(ConvolutionLoadStatus::Ready as u8, Ordering::Release);
         self.queue_retired(retired);
+    }
+
+    fn current_ir_tail_frames(&self) -> u64 {
+        (self.latency_samples() as u64).saturating_add(self.max_ir_frames.saturating_sub(1) as u64)
+    }
+
+    fn retain_tail_for_replacement(&mut self) {
+        // A late replacement can hold the old final nonzero output for another
+        // fade. Keep the prior bound and extend it, including repeated swaps:
+        // native hosts may count silence from the original last input sample.
+        self.retained_tail_frames = self
+            .retained_tail_frames
+            .max(self.current_ir_tail_frames())
+            .saturating_add(TRANSITION_SAMPLES as u64);
     }
 
     pub(super) fn reset_fixed_streaming_state(&mut self) {
@@ -752,6 +794,9 @@ impl ConvolutionPlugin {
     }
 
     pub fn load_ir(&mut self, path: &str) -> Result<(), String> {
+        if self.drain_remaining.is_some() {
+            return Err("Convolution requires reset before loading an IR after drain".into());
+        }
         self.flush_retired();
         if self.retired_pending.is_some() {
             return Err("Convolution IR retirement is backpressured; retry later".into());
@@ -914,12 +959,16 @@ impl ConvolutionPlugin {
         let num_channels = ir_samples.len();
         let chunk_size = 1024;
 
-        let mut resampler = Fft::<f32>::new(
+        // new_custom preserves the historical two-sub-chunk geometry and
+        // BlackmanHarris2 window; Fft::new would auto-select sub-chunks and
+        // change delay and block sizes.
+        let mut resampler = Fft::<f32>::new_custom(
             source_rate as usize,
             target_rate as usize,
             chunk_size,
             2,
             num_channels,
+            WindowFunction::BlackmanHarris2,
             FixedSync::Input,
         )
         .map_err(|e| format!("Failed to create resampler: {e}"))?;
@@ -975,6 +1024,16 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
             .collect()
     }
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("Convolution requires reset before changing parameters after drain".into())
+            };
+        }
         for (id, value) in values {
             if id.as_str() == "ir_file" {
                 let path = match value {
@@ -1013,11 +1072,53 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         id: ParameterId,
         value: ParameterValue,
     ) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.parametric_get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("Convolution requires reset before changing parameters after drain".into())
+            };
+        }
+        if matches!(id.as_str(), "mix" | "gain_db") {
+            let index = param_bridge::set_parameter(CV, &id, &value, |index, value| {
+                self.set_param_value(index, value);
+            })?;
+            // Keep control-thread schema snapshots current without rebuilding
+            // strings, vectors and maps for a scalar automation event.
+            let current = param_bridge::get_parameter(CV, &id, |index| self.param_value(index))
+                .expect("known scalar convolution parameter");
+            self.cached_parameters[index].default_value = current;
+            return Ok(());
+        }
         let mut values = ParameterSet::new();
         values.insert(id, value);
         self.apply_values(values)
     }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        if id.as_str() == "ir_file" {
+            // File paths are setup state; the owned String API requires a copy.
+            return Some(ParameterValue::String(self.ir_file.clone()));
+        }
+        param_bridge::get_parameter(CV, id, |index| self.param_value(index))
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
     fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+        if sr == 0 || self.channels == 0 {
+            return Err("Convolution requires nonzero rate and channels".into());
+        }
         let old_sr = self.sample_rate;
         self.sample_rate = sr;
         self.mix.set_time(20.0, sr);
@@ -1025,9 +1126,16 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         if old_sr != sr && !self.ir_file.is_empty() {
             self.begin_async_load(self.ir_file.clone())?;
         }
+        // Preserve ordinary initialization's existing history behavior. When
+        // rearming EOS, clear signal history and counters together.
+        if self.drain_remaining.is_some() {
+            self.reset();
+        }
         Ok(())
     }
     fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
         // UPC state
         self.fdl_flat.fill(Complex::new(0.0, 0.0));
         self.fdl_head = 0;
@@ -1067,6 +1175,16 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         self.last_output.fill(0.0);
         self.transition_from.fill(0.0);
         self.transition_remaining = 0;
+        self.retained_tail_frames = 0;
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.completion_pending {
+            // Completion timing is external to this callback. Do not promise
+            // a finite deadline while a replacement is already scheduled.
+            return TailLength::Unknown;
+        }
+        TailLength::Finite(self.current_ir_tail_frames().max(self.retained_tail_frames))
     }
 
     fn latency_samples(&self) -> usize {
@@ -1091,21 +1209,120 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        // Issue #6: enable flush-to-zero / denormals-are-zero at the top of
-        // the callback so FFT multiply-adds cannot generate costly denormals.
-        enable_ftz_daz();
+        self.validate_stream_rate(context)?;
+        validate_interleaved_in_place(
+            "Convolution",
+            context.num_frames,
+            self.channels,
+            buffer.len(),
+        )?;
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Convolution requires reset before processing input after drain".into());
+        }
+        if self.drain_remaining.is_none() {
+            self.accept_ir_completion();
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
 
-        let nf = context.num_frames;
-        validate_interleaved_in_place("Convolution", nf, self.channels, buffer.len())?;
+    fn drain_output_frames_max(&self) -> usize {
+        // A stable bound also prepares hosts for IRs loaded after initialization.
+        // One UPC partition bounds the work; any smaller capacity is accepted.
+        PARTITION_SIZE
+    }
 
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.has_input {
+            match self.drain_remaining {
+                Some(remaining) => remaining,
+                None => self
+                    .latency_samples()
+                    .checked_add(self.max_ir_frames.saturating_sub(1))?
+                    .max(self.transition_remaining),
+            }
+        } else {
+            0
+        };
+        // EOS freezes the active backend: pending prepared IRs are not adopted.
+        // Every full-capacity call consumes one partition, including the last.
+        std::num::NonZeroU64::new(remaining.div_ceil(PARTITION_SIZE).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.validate_stream_rate(context)?;
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("Convolution drain output must contain whole channel frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let remaining = match self.drain_remaining {
+            Some(remaining) => remaining,
+            None => self
+                .latency_samples()
+                .checked_add(self.max_ir_frames.saturating_sub(1))
+                .ok_or_else(|| "Convolution tail length overflow".to_string())?
+                .max(self.transition_remaining),
+        };
+        if remaining == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = (output.len() / self.channels)
+            .min(remaining)
+            .min(PARTITION_SIZE);
+        if frames == 0 {
+            return Err("Convolution drain needs at least one output frame".into());
+        }
+        // Freeze the current backend, even if an unconsumed completion is
+        // already ready. The worker only owns a mailbox sender. Keeping both
+        // receiver and sender alive defers publication/destruction until reset
+        // permits ordinary processing to accept the completion again.
+        let samples = frames * self.channels;
+        output[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        None
+    }
+}
+
+impl ConvolutionPlugin {
+    fn validate_stream_rate(&self, context: &ProcessContext) -> PluginResult<()> {
+        if self.channels == 0 || self.sample_rate == 0 || context.sample_rate != self.sample_rate {
+            return Err(
+                "Convolution requires the prepared sample rate and nonzero channels".into(),
+            );
+        }
+        Ok(())
+    }
+
+    fn accept_ir_completion(&mut self) {
         // Check for asynchronously-loaded IR results and swap them in.
         self.flush_retired();
-        if self.retired_pending.is_none()
+        if self.completion_pending
+            && self.retired_pending.is_none()
             && self.failed_error_pending.is_none()
             && let Some(ref rx) = self.ir_load_result_rx
             && let Ok(completion) = rx.try_recv()
         {
-            self.ir_load_result_rx = None;
+            // Each request has its own one-result mailbox. Consume once, but
+            // retain the receiver storage until a control-thread replacement.
+            self.completion_pending = false;
             if completion.generation != self.desired_generation {
                 match completion.result {
                     Ok(loaded) => self.retire_uninstalled(loaded),
@@ -1138,8 +1355,21 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
                 }
             }
         }
+    }
 
-        let state_guard = self.state.load();
+    fn process_stream(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        // Issue #6: enable flush-to-zero / denormals-are-zero at the top of
+        // the callback so FFT multiply-adds cannot generate costly denormals.
+        enable_ftz_daz();
+
+        let nf = context.num_frames;
+        validate_interleaved_in_place("Convolution", nf, self.channels, buffer.len())?;
+
+        let state_guard = Arc::clone(&self.ir_runtime.state);
         let state = match state_guard.as_ref() {
             Some(s) => s,
             None => {
@@ -1353,9 +1583,5 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         drop(state_guard);
         self.finish_output_block(buffer, nf);
         Ok(nf)
-    }
-
-    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        None
     }
 }

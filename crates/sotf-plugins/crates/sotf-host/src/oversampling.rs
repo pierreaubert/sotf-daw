@@ -1,7 +1,11 @@
 mod auto_oversampled_plugin;
+#[cfg(test)]
+mod drain_tests;
 mod misc;
 mod oversampled_plugin;
 mod oversampler;
+#[cfg(test)]
+mod tail_tests;
 #[cfg(test)]
 mod tests;
 

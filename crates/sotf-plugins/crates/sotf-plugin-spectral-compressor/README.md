@@ -58,3 +58,27 @@ cargo run -p sotf-plugin-spectral-compressor --features qa --bin qa-spectral-com
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+## Finite streams
+
+`drain` emits the zero-input continuation of the current spectral processing,
+including dry-path delay and all remaining overlap-add windows. With FFT size
+`N`, hop `H=N/4`, and `T>0` accepted input frames, the suffix has
+`2N + floor((T-1)/H)*H - T` frames. The native tail declaration is the
+phase-independent maximum `2N-1`. Envelope and classifier history can change
+gain, but cannot generate audio once every input-containing window has ended.
+
+Drain uses a prepared one-hop cache, accepts any positive destination capacity
+aligned to the channel count, and leaves unused destination samples untouched.
+An empty stream completes without output. The first successful drain closes
+the stream; further nonempty input and parameter changes require `reset` or
+successful reinitialization. Invalid capacities and sample rates consume no
+audio. Completed calls remain complete, without allocation or deallocation.
+
+Startup includes the three zero-padded negative-time windows at origins
+`-3H`, `-2H`, and `-H`. Negative synthesis samples are discarded explicitly;
+positive samples receive all four Hann-square contributions before output
+begins at the unchanged `N`-frame delay. Unity processing therefore preserves
+every input sample, including the first and final samples of very short streams.
+Priming windows also advance the existing detector/envelope rules; compression
+at startup can differ from steady state because those windows contain silence.

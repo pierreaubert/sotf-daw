@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 /// Result of loading an IR on a background thread, ready to be swapped into the audio thread.
 pub(super) struct IrLoadResult {
+    /// Maximum channel length after resampling, independent of FFT padding.
+    pub(super) max_ir_frames: usize,
     pub(super) state: Arc<Option<ConvolutionState>>,
     pub(super) nupc_engines: Vec<nupc::NupcEngine>,
     pub(super) fdl_flat: Vec<Complex<f32>>,

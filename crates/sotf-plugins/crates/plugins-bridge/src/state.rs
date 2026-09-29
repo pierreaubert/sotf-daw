@@ -32,6 +32,9 @@ pub fn save_state(plugin: &dyn Plugin) -> Vec<u8> {
 ///
 /// The data should be a JSON object mapping parameter ID → value,
 /// as produced by `save_state`.
+/// Unchanged values are retained without invoking a setter. Changed structural
+/// values still require reconstruction by the caller. This in-place helper is
+/// not transactional: a later setter error can follow earlier successful writes.
 pub fn load_state(plugin: &mut dyn Plugin, data: &[u8]) -> Result<(), String> {
     let map: serde_json::Map<String, serde_json::Value> =
         serde_json::from_slice(data).map_err(|e| format!("Failed to parse state: {e}"))?;
@@ -42,6 +45,11 @@ pub fn load_state(plugin: &mut dyn Plugin, data: &[u8]) -> Result<(), String> {
             continue;
         };
         let value = value_from_json(key, json_val, &param.default_value)?;
+        // Restoring an unchanged structural control must not require a rebuild
+        // or reset DSP history. Changed values still obey the plugin lifecycle.
+        if plugin.get_parameter(&param.id).as_ref() == Some(&value) {
+            continue;
+        }
 
         plugin
             .set_parameter(ParameterId::from(key.clone()), value)

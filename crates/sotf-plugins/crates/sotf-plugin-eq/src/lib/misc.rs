@@ -11,12 +11,13 @@ pub(super) fn default_order() -> usize {
 pub(super) fn butterworth_q_values(order: usize) -> Vec<f64> {
     let n = order.max(2);
     let num_stages = n / 2;
-    (0..num_stages)
-        .map(|k| {
-            let angle = std::f64::consts::PI * (2 * k + 1) as f64 / (2 * n) as f64;
-            1.0 / (2.0 * angle.cos())
-        })
-        .collect()
+    (0..num_stages).map(|k| butterworth_q(n, k)).collect()
+}
+
+/// Q of one Butterworth section, without temporary heap storage.
+pub(super) fn butterworth_q(order: usize, stage: usize) -> f64 {
+    let angle = std::f64::consts::PI * (2 * stage + 1) as f64 / (2 * order.max(2)) as f64;
+    1.0 / (2.0 * angle.cos())
 }
 
 /// Return whether a high-order cascade uses the user Q as a bandwidth/phase
@@ -38,7 +39,7 @@ pub(super) fn band_user_q(stages: &[Biquad], order: usize) -> f64 {
         return 1.0;
     };
     if order > 2 && scales_prototype_q(primary.filter_type) {
-        let prototype_q = butterworth_q_values(order).first().copied().unwrap_or(1.0);
+        let prototype_q = butterworth_q(order, 0);
         primary.q / prototype_q
     } else {
         primary.q

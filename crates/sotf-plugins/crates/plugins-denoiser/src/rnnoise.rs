@@ -1,4 +1,9 @@
 const RNNOISE_FRAME_SIZE: usize = 480;
+// The model analyzes previous+current frames and emits the previous synthesis
+// half. Its signal delay is separate from the queue needed for partial calls.
+const RNNOISE_MODEL_DELAY: usize = RNNOISE_FRAME_SIZE;
+const RNNOISE_QUEUE_DELAY: usize = RNNOISE_FRAME_SIZE;
+const RNNOISE_LATENCY: usize = RNNOISE_MODEL_DELAY + RNNOISE_QUEUE_DELAY;
 const BYPASS_CROSSFADE_SAMPLES: usize = RNNOISE_FRAME_SIZE;
 pub const RNNOISE_BAND_COUNT: usize = nnnoiseless::DENOISE_BAND_COUNT;
 
@@ -26,7 +31,7 @@ impl Default for RnnoiseAnalyzerData {
 /// # Constraints
 /// - Only supports 48 kHz sample rate (hard-coded by RNNoise / nnnoiseless).
 /// - Host block sizes may be arbitrary; input is framed internally in 480-sample quanta.
-/// - Reports a fixed latency of 480 samples regardless of bypass state.
+/// - Reports a fixed total latency of 960 samples regardless of bypass state.
 /// - A pre-seeded 480-sample output queue provides a constant startup delay.
 pub struct RnnoiseBackend {
     denoisers: Vec<Box<nnnoiseless::DenoiseState>>,
@@ -37,7 +42,7 @@ pub struct RnnoiseBackend {
     channels: usize,
     sample_rate: u32,
     accum_buffers: Vec<Vec<f32>>,
-    /// Processed signal, delayed by one model frame.
+    /// Model output queued one frame after computation (total delay two frames).
     output_buffers: Vec<Vec<f32>>,
     /// Unprocessed signal with the identical delay used for click-free bypass.
     dry_output_buffers: Vec<Vec<f32>>,
@@ -109,17 +114,18 @@ impl RnnoiseBackend {
             .collect::<Vec<_>>();
         self.stereo_detector = (channels == 2).then(nnnoiseless::DenoiseState::new);
         self.accum_buffers = vec![vec![0.0; RNNOISE_FRAME_SIZE]; channels];
-        // Ring buffer: 4× frame size so even back-to-back full frames never
-        // wrap back onto unread data before the reader catches up.
+        // Ring buffer: 4× frame size. With calls subdivided at one frame, the
+        // dry write frontier (one frame ahead of wet) is at most three frames
+        // ahead of the read head, so neither stream overwrites unread data.
         let ring_size = RNNOISE_FRAME_SIZE * 4;
         self.output_buffers = vec![vec![0.0; ring_size]; channels];
         self.dry_output_buffers = vec![vec![0.0; ring_size]; channels];
         // Pre-allocate scratch buffers used inside the hot processing loop.
         self.scratch_input = vec![vec![0.0; RNNOISE_FRAME_SIZE]; channels];
         self.scratch_output = vec![vec![0.0; RNNOISE_FRAME_SIZE]; channels];
-        // Keep one model frame of zeroes ahead of the write head. This gives
-        // every input sample the same declared latency, including startup.
-        self.output_write_pos = RNNOISE_FRAME_SIZE;
+        // Prime only the adapter queue. The model itself adds another frame
+        // of signal delay; its first returned frame can contain pre-ringing.
+        self.output_write_pos = RNNOISE_QUEUE_DELAY;
         self.output_read_pos = 0;
         self.accum_fill = 0;
         self.analyzer_data = RnnoiseAnalyzerData::default();
@@ -145,14 +151,27 @@ impl RnnoiseBackend {
         if required_samples > buffer.len() {
             return 0;
         }
+        if num_frames == 0 {
+            return 0;
+        }
 
-        let ch_count = channels;
         self.bypass_target = if bypass { 1.0 } else { 0.0 };
         if !self.bypass_initialized {
             self.bypass_mix = self.bypass_target;
             self.bypass_initialized = true;
         }
 
+        // A call may exceed the prepared ring capacity. Consume each bounded
+        // chunk before producing the next one, retaining room for the pending
+        // latency region and one newly completed model frame.
+        for chunk in buffer[..required_samples].chunks_mut(RNNOISE_FRAME_SIZE * channels) {
+            self.process_prepared_chunk(chunk, chunk.len() / channels, channels);
+        }
+        num_frames
+    }
+
+    fn process_prepared_chunk(&mut self, buffer: &mut [f32], num_frames: usize, channels: usize) {
+        let ch_count = channels;
         for frame in 0..num_frames {
             for ch in 0..ch_count {
                 let sample = buffer[frame * channels + ch];
@@ -171,7 +190,10 @@ impl RnnoiseBackend {
                 for ch in 0..ch_count {
                     let ring_size = self.dry_output_buffers[ch].len();
                     for (i, &sample) in self.accum_buffers[ch].iter().enumerate() {
-                        self.dry_output_buffers[ch][(self.output_write_pos + i) % ring_size] =
+                        // Raw dry audio has no model delay. Queue it one extra
+                        // frame ahead so wet/dry refer to the same source time.
+                        self.dry_output_buffers[ch]
+                            [(self.output_write_pos + RNNOISE_MODEL_DELAY + i) % ring_size] =
                             sample;
                     }
                 }
@@ -272,12 +294,12 @@ impl RnnoiseBackend {
         }
         let ring_size = self.output_buffers[0].len();
         if self.output_write_pos >= ring_size * 2 {
-            let delta = self.output_write_pos - self.output_read_pos;
-            self.output_write_pos = delta;
-            self.output_read_pos = 0;
+            // Only subtract complete ring turns: physical sample locations
+            // must retain their modulo mapping for irregular block lengths.
+            let completed_turns = (self.output_read_pos / ring_size) * ring_size;
+            self.output_write_pos -= completed_turns;
+            self.output_read_pos -= completed_turns;
         }
-
-        num_frames
     }
 
     /// Reset processing state in place without heap allocation.
@@ -303,7 +325,7 @@ impl RnnoiseBackend {
         for buf in &mut self.scratch_output {
             buf.fill(0.0);
         }
-        self.output_write_pos = RNNOISE_FRAME_SIZE;
+        self.output_write_pos = RNNOISE_QUEUE_DELAY;
         self.output_read_pos = 0;
         self.accum_fill = 0;
         self.analyzer_data = RnnoiseAnalyzerData::default();
@@ -312,13 +334,13 @@ impl RnnoiseBackend {
         self.bypass_initialized = false;
     }
 
-    /// Always returns 480 (RNNOISE_FRAME_SIZE) regardless of bypass state.
+    /// Returns 960 frames: model signal delay plus adapter queue delay.
     ///
     /// Plugin hosts require a fixed, constant latency after initialisation.
     /// Returning 0 when disabled would cause phase misalignment in parallel
     /// processing chains.
     pub fn latency_samples(&self) -> usize {
-        RNNOISE_FRAME_SIZE
+        RNNOISE_LATENCY
     }
 
     pub fn analyzer_data(&self) -> RnnoiseAnalyzerData {
@@ -472,6 +494,24 @@ mod tests {
             .map(|(a, b)| *a as f64 * *b as f64)
             .sum();
         let correlation = xy / (xx.sqrt() * yy.sqrt());
+        let error_energy: f64 = reference
+            .iter()
+            .zip(&actual)
+            .map(|(&expected, &observed)| (f64::from(observed) - f64::from(expected)).powi(2))
+            .sum();
+        let relative_error = (error_energy / xx).sqrt();
+        let gain_error_db = 10.0 * (yy / xx).log10();
+        // Correlation alone also accepts a uniformly attenuated or amplified
+        // result. Require at least 80 dB waveform agreement and 0.001 dB gain
+        // agreement with the recorded 16-bit reference as well.
+        assert!(
+            relative_error < 1.0e-4,
+            "reference relative RMS error={relative_error}"
+        );
+        assert!(
+            gain_error_db.abs() < 0.001,
+            "reference gain error={gain_error_db} dB"
+        );
         assert!(
             (correlation - 1.0).abs() < 1e-4,
             "reference correlation={correlation}"
@@ -501,7 +541,7 @@ mod tests {
         let mut backend = RnnoiseBackend::new();
         backend.initialize(48000, 2).unwrap();
         assert_eq!(backend.channels, 2);
-        assert_eq!(backend.latency_samples(), 480);
+        assert_eq!(backend.latency_samples(), 960);
     }
 
     #[test]
@@ -531,13 +571,13 @@ mod tests {
     }
 
     #[test]
-    fn latency_is_fixed_at_480() {
+    fn latency_is_fixed_at_960() {
         let mut backend = RnnoiseBackend::new();
         backend.initialize(48000, 1).unwrap();
-        assert_eq!(backend.latency_samples(), RNNOISE_FRAME_SIZE);
+        assert_eq!(backend.latency_samples(), RNNOISE_LATENCY);
     }
 
-    /// Verify that the declared 480-sample startup latency is emitted as
+    /// Verify that the separate 480-sample startup queue is emitted as
     /// zeroes without discarding the first processed input frame.
     #[test]
     fn startup_emits_zero_valued_latency_region() {
@@ -889,10 +929,13 @@ mod tests {
             );
         }
 
-        // The next block carries the first frame through unchanged (bypass).
+        // The dry path also waits for the model's intrinsic signal delay.
         let mut second = vec![0.3f32; RNNOISE_FRAME_SIZE];
         backend.process(&mut second, RNNOISE_FRAME_SIZE, 1, true);
-        for (i, &s) in second.iter().enumerate() {
+        assert!(second.iter().all(|sample| *sample == 0.0));
+        let mut third = vec![0.1f32; RNNOISE_FRAME_SIZE];
+        backend.process(&mut third, RNNOISE_FRAME_SIZE, 1, true);
+        for (i, &s) in third.iter().enumerate() {
             assert!(
                 (s - 0.5).abs() < 1e-6,
                 "bypass sample {i} should equal delayed input (0.5), got {s}"
@@ -943,7 +986,7 @@ mod tests {
                 max_step = max_step.max((sample - previous).abs());
                 previous = sample;
             }
-            assert_eq!(backend.latency_samples(), RNNOISE_FRAME_SIZE);
+            assert_eq!(backend.latency_samples(), RNNOISE_LATENCY);
         }
         assert!(max_step < 0.25, "bypass transition clicked: {max_step}");
     }
@@ -952,7 +995,7 @@ mod tests {
     fn model_domain_is_sanitized_and_clamped_for_each_stereo_channel() {
         let mut backend = RnnoiseBackend::new();
         backend.initialize(48000, 2).unwrap();
-        let mut buffer = vec![0.0; RNNOISE_FRAME_SIZE * 2 * 2];
+        let mut buffer = vec![0.0; RNNOISE_FRAME_SIZE * 3 * 2];
         for frame in 0..RNNOISE_FRAME_SIZE {
             buffer[frame * 2] = if frame % 3 == 0 { f32::NAN } else { 1.0e30 };
             buffer[frame * 2 + 1] = if frame % 5 == 0 {
@@ -961,10 +1004,10 @@ mod tests {
                 -1.0e30
             };
         }
-        backend.process(&mut buffer, RNNOISE_FRAME_SIZE * 2, 2, true);
+        backend.process(&mut buffer, RNNOISE_FRAME_SIZE * 3, 2, true);
         assert!(buffer.iter().all(|sample| sample.is_finite()));
         assert!(buffer.iter().all(|sample| sample.abs() <= 1.0));
-        let delayed = &buffer[RNNOISE_FRAME_SIZE * 2..];
+        let delayed = &buffer[RNNOISE_LATENCY * 2..];
         assert!(delayed.iter().step_by(2).any(|sample| *sample == 1.0));
         assert!(
             delayed
@@ -1044,6 +1087,52 @@ mod tests {
         assert!(backend.output_write_pos >= backend.output_read_pos);
         let delta = backend.output_write_pos - backend.output_read_pos;
         assert!(delta <= backend.output_buffers[0].len());
+    }
+
+    #[test]
+    fn irregular_and_large_blocks_preserve_delayed_dry_and_wet_samples() {
+        const FRAMES: usize = 32_769;
+        for channels in [1, 2] {
+            let input: Vec<_> = (0..FRAMES * channels)
+                .map(|sample| ((sample * 37 + sample / channels) % 211) as f32 / 300.0 - 0.35)
+                .collect();
+            for bypass in [false, true] {
+                let render = |blocks: &[usize]| {
+                    let mut backend = RnnoiseBackend::new();
+                    backend.initialize(48_000, channels).unwrap();
+                    let mut output = Vec::with_capacity(input.len());
+                    let mut offset = 0;
+                    for frames in blocks.iter().copied().cycle() {
+                        if offset == FRAMES {
+                            break;
+                        }
+                        let frames = frames.min(FRAMES - offset);
+                        let mut block =
+                            input[offset * channels..(offset + frames) * channels].to_vec();
+                        block.extend_from_slice(&[1234.0, -5678.0]);
+                        assert_eq!(
+                            backend.process(&mut block, frames, channels, bypass),
+                            frames
+                        );
+                        assert_eq!(&block[frames * channels..], &[1234.0, -5678.0]);
+                        output.extend_from_slice(&block[..frames * channels]);
+                        offset += frames;
+                    }
+                    output
+                };
+                let actual = render(&[1, 17, 63, 256, 3, 127, 4097]);
+                let reference = render(&[RNNOISE_FRAME_SIZE]);
+                assert_eq!(actual, reference, "channels={channels}, bypass={bypass}");
+                if bypass {
+                    for (sample, &actual) in actual.iter().enumerate() {
+                        let expected = sample
+                            .checked_sub(RNNOISE_LATENCY * channels)
+                            .map_or(0.0, |source| input[source]);
+                        assert_eq!(actual, expected, "channels={channels}, sample={sample}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]

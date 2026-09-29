@@ -109,7 +109,8 @@ mod tests_decoder {
             .check_error_limit(&mut consecutive_errors, "boom", "corrupted frame")
             .unwrap_err();
         assert!(
-            err.to_string().contains("Too many consecutive decode errors"),
+            err.to_string()
+                .contains("Too many consecutive decode errors"),
             "unexpected error: {err}"
         );
         assert!(decoder.is_eof());

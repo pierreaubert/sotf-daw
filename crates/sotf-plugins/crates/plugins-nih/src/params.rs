@@ -1,10 +1,26 @@
 //! Dynamic parameter bridge between ParamSpec and nih-plug's Params trait.
 
 use nih_plug::prelude::*;
-use plugins_bridge::param_bridge::BridgedParamInfo;
+use plugins_bridge::param_bridge::{BridgedParamInfo, BridgedParamKind};
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+// Exported wrapper macros must also resolve these helpers in downstream crates.
+#[doc(hidden)]
+pub mod configuration;
+
+#[cfg(test)]
+#[path = "params_default_sync_tests.rs"]
+mod default_sync_tests;
+
+#[cfg(test)]
+#[path = "params_scalar_getter_tests.rs"]
+mod scalar_getter_tests;
+
+#[cfg(test)]
+#[path = "params_scalar_setter_tests.rs"]
+mod scalar_setter_tests;
 
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
@@ -42,7 +58,10 @@ impl DynamicParams {
         let mut sync_entries = Vec::new();
 
         for info in infos {
-            if info.steps == 1 && info.min_value == 0.0 && info.max_value == 1.0 {
+            if info.kind == BridgedParamKind::FilePath {
+                continue;
+            }
+            if info.kind == BridgedParamKind::Bool {
                 // Bool parameter
                 let idx = bool_params.len();
                 let mut param = BoolParam::new(&info.name, info.default_value > 0.5);
@@ -58,7 +77,7 @@ impl DynamicParams {
                 };
                 sync_entries.push(entry.clone());
                 param_map.insert(info.id.clone(), entry);
-            } else if info.steps > 0 && info.steps < 100 {
+            } else if info.kind == BridgedParamKind::Int {
                 // Int/Choice parameter
                 let idx = int_params.len();
                 let mut param = IntParam::new(
@@ -122,8 +141,11 @@ impl DynamicParams {
         })
     }
 
-    /// Sync all parameter values to a SOTF plugin.
-    pub fn sync_to_plugin(&self, plugin: &mut dyn sotf_host::plugin::Plugin) {
+    /// Sync realtime parameter values to a SOTF plugin.
+    ///
+    /// # Errors
+    /// Returns the plugin's error when a parameter update is rejected.
+    pub fn sync_to_plugin(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
         for entry in self.sync_entries.iter().filter(|entry| entry.realtime) {
             let value = match entry.kind {
                 ParamKind::Float => ParameterValue::Float(self.float_params[entry.index].value()),
@@ -131,16 +153,17 @@ impl DynamicParams {
                 ParamKind::Int => ParameterValue::Int(self.int_params[entry.index].value()),
             };
             if plugin.get_parameter(&entry.id).as_ref() != Some(&value) {
-                let _ = plugin.set_parameter(entry.id.clone(), value);
+                plugin.set_parameter(entry.id.clone(), value)?;
             }
         }
+        Ok(())
     }
 
     /// Allocation-free identity for construction-sized parameters. A change
     /// while active requires the host to deactivate/reactivate the instance;
     /// the render thread must never rebuild or destroy the DSP graph.
-    #[cfg(any(feature = "linear-phase-eq", test))]
-    pub(crate) fn structural_fingerprint(&self) -> u64 {
+    #[doc(hidden)]
+    pub fn structural_fingerprint(&self) -> u64 {
         let mut fingerprint = 0xcbf2_9ce4_8422_2325_u64;
         for entry in self.sync_entries.iter().filter(|entry| !entry.realtime) {
             let bits = match entry.kind {
@@ -154,8 +177,7 @@ impl DynamicParams {
         fingerprint
     }
 
-    #[cfg(any(feature = "linear-phase-eq", test))]
-    fn value(&self, id: &str) -> Option<ParameterValue> {
+    pub(crate) fn value(&self, id: &str) -> Option<ParameterValue> {
         let entry = self.param_map.get(id)?;
         Some(match entry.kind {
             ParamKind::Float => ParameterValue::Float(self.float_params[entry.index].value()),
@@ -167,7 +189,6 @@ impl DynamicParams {
     /// Build the construction-sized LinearPhaseEQ configuration represented by
     /// NIH's non-automatable parameters. Hosts apply these values when they
     /// recreate/initialize the plugin, never from the render callback.
-    #[cfg(any(feature = "linear-phase-eq", test))]
     pub(crate) fn linear_phase_eq_config_json(&self) -> Result<String, String> {
         let int_value = |id: &str| match self.value(id) {
             Some(ParameterValue::Int(value)) => Ok(value),
@@ -321,7 +342,7 @@ mod tests {
         // Render synchronization only forwards realtime parameters. The
         // construction-sized values above therefore cannot be silently
         // rejected or diverge on the callback.
-        params.sync_to_plugin(&mut adapter);
+        params.sync_to_plugin(&mut adapter).unwrap();
         assert_eq!(
             adapter.get_parameter(&ParameterId::from("fir_length_index")),
             Some(ParameterValue::Int(3))

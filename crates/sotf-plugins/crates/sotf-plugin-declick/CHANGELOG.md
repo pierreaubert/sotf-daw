@@ -1,3 +1,12 @@
+# Unreleased
+
+- Preserve retained audio at finite-stream end through the host drain contract,
+  with a derived finite bound, prepared scratch, stable completion, and reset
+  required before accepting new audio or control changes.
+- Reject invalid drain destinations and rates before consuming stream state.
+- Add independent delay/zero-continuation, callback partition, reset, and cold
+  allocation/deallocation regressions.
+
 # 0.5.7
 
 - Replace the causal slew limiter with an eight-sample-lookahead robust

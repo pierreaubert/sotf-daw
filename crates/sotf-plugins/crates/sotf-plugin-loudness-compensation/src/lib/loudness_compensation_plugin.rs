@@ -13,7 +13,8 @@ use super::iso226::{ISO226_NUM_FREQS, compute_iso226_delta};
 use super::types::LoudnessCompensationPluginParams;
 use crate::params::PARAMS as LC;
 use math_audio_iir_fir::{Biquad, BiquadFilterType};
-use sotf_host::analyzer::RealTimeCache;
+use sotf_host::analyzer::{LoudnessData, RealTimeCache};
+use sotf_host::analyzer_loudness_monitor::LoudnessMonitor;
 use sotf_host::auto_gain::{AutoGain, AutoGainData, AutoGainLoudnessType, AutoGainParams};
 use sotf_host::param_bridge::apply_spec_update_modes;
 use sotf_host::param_specs::find_by_key as pk;
@@ -29,6 +30,25 @@ use std::any::Any;
 use std::sync::Arc;
 
 const FILTER_CROSSFADE_SAMPLES: usize = 256;
+// Use a 20 Hz control update rate without depending on host
+// callback boundaries. Targets affect only samples after each boundary.
+const AUTO_GAIN_UPDATES_PER_SECOND: usize = 20;
+
+struct AutoGainDisplay {
+    // Pre: raw input; Post: compensated output. The other displayed signal is
+    // already measured by the controller. Keep telemetry out of its gain law.
+    monitor: LoudnessMonitor,
+    data: LoudnessData,
+}
+
+impl AutoGainDisplay {
+    fn new(channels: usize, sample_rate: u32) -> PluginResult<Self> {
+        Ok(Self {
+            monitor: LoudnessMonitor::new(channels as u32, sample_rate)?,
+            data: LoudnessData::new(channels),
+        })
+    }
+}
 
 struct FilterTransition {
     old_filters: Vec<Vec<Biquad>>,
@@ -79,6 +99,8 @@ pub struct LoudnessCompensationPlugin {
     pub(super) iso_deltas: [(f64, f64); ISO226_NUM_FREQS],
     // -- Common fields --
     pub(super) auto_gain: Option<AutoGain>,
+    auto_gain_display: Option<AutoGainDisplay>,
+    auto_gain_frames: usize,
     pub(super) auto_gain_max_db: f32,
     pub(super) auto_gain_smoothing_ms: f32,
     pub(super) auto_gain_position: AutoGainPosition,
@@ -121,6 +143,8 @@ impl LoudnessCompensationPlugin {
             iso_filters: vec![Vec::new(); num_channels],
             iso_deltas: compute_iso226_delta(playback_db as f64, reference_db as f64),
             auto_gain: None,
+            auto_gain_display: None,
+            auto_gain_frames: 0,
             auto_gain_max_db: pk(LC, "auto_gain_max_db").default_f32(),
             auto_gain_smoothing_ms: pk(LC, "auto_gain_smoothing_ms").default_f32(),
             auto_gain_position: AutoGainPosition::Disabled,
@@ -307,11 +331,11 @@ impl LoudnessCompensationPlugin {
     }
 
     fn set_auto_gain_position(&mut self, position: AutoGainPosition) -> PluginResult<()> {
-        self.auto_gain_position = position;
         if position == AutoGainPosition::Disabled {
             self.auto_gain = None;
+            self.auto_gain_display = None;
         } else if self.auto_gain.is_none() {
-            self.auto_gain = Some(AutoGain::new(
+            let auto_gain = AutoGain::new(
                 self.num_channels,
                 self.sample_rate,
                 AutoGainParams {
@@ -320,8 +344,24 @@ impl LoudnessCompensationPlugin {
                     max_gain_db: self.auto_gain_max_db,
                     smoothing_ms: self.auto_gain_smoothing_ms,
                 },
-            )?);
+            )?;
+            let display = AutoGainDisplay::new(self.num_channels, self.sample_rate)?;
+            self.auto_gain = Some(auto_gain);
+            self.auto_gain_display = Some(display);
+        } else if position != self.auto_gain_position {
+            // The controller's input/output measurement points change between
+            // Pre and Post. Do not combine histories from different points.
+            if let Some(ag) = &mut self.auto_gain {
+                ag.reset();
+            }
+            if let Some(display) = &mut self.auto_gain_display {
+                display.monitor.reset()?;
+            }
         }
+        if position != self.auto_gain_position {
+            self.auto_gain_frames = 0;
+        }
+        self.auto_gain_position = position;
         Ok(())
     }
 
@@ -424,7 +464,7 @@ impl LoudnessCompensationPlugin {
 
     /// Rebuild ISO 226 filters based on current playback/reference levels.
     ///
-    /// Fits 7 parametric EQ bands to the ISO 226 delta contour.
+    /// Fits the prepared biquad bank to the ISO 226:2003 delta contour.
     /// Called at parameter-change time only, never in the hot path.
     pub(super) fn rebuild_iso_filters(&mut self) {
         if self.mode_index != 0 {
@@ -475,10 +515,10 @@ impl LoudnessCompensationPlugin {
 
     /// Update the compensation gain smoother targets based on the active mode.
     ///
-    /// For ISO 226 / Auto modes, the combined response of 7 parametric EQ bands
+    /// For ISO 226 / Auto modes, the combined response of the fitted biquad bank
     /// is evaluated on a 128-point log-spaced grid (20 Hz – 20 kHz) to capture
     /// constructive interference (ripple peaks) that occur between band centres.
-    /// Evaluating only at the 7 band-centre frequencies can underestimate the
+    /// Evaluating only at the band-center frequencies can underestimate the
     /// true peak by several dB, causing under-attenuation and potential clipping.
     pub(super) fn update_comp_gain_smoother(&mut self) {
         let active = if self.mode_index == 0 {
@@ -586,18 +626,7 @@ impl LoudnessCompensationPlugin {
         };
         p.auto_gain_max_db = params.auto_gain_max_db;
         p.auto_gain_smoothing_ms = params.auto_gain_smoothing_ms;
-        if p.auto_gain_enabled() {
-            p.auto_gain = Some(AutoGain::new(
-                num_channels,
-                p.sample_rate,
-                AutoGainParams {
-                    enabled: true,
-                    loudness_type: AutoGainLoudnessType::Momentary,
-                    max_gain_db: params.auto_gain_max_db,
-                    smoothing_ms: params.auto_gain_smoothing_ms,
-                },
-            )?);
-        }
+        p.set_auto_gain_position(p.auto_gain_position)?;
         p.rebuild_filters();
         p.rebuild_iso_filters();
         if p.mode_index == 2 {
@@ -638,6 +667,28 @@ impl LoudnessCompensationPlugin {
         (output as f32) * self.comp_gain_smoother[ch].advance()
     }
 
+    fn process_filters(&mut self, buffer: &mut [f32]) {
+        if buffer.is_empty() {
+            return;
+        }
+        for frame in buffer.chunks_exact_mut(self.num_channels) {
+            for (ch, sample) in frame.iter_mut().enumerate() {
+                *sample = self.process_sample(ch, *sample);
+            }
+        }
+    }
+
+    fn apply_auto_gain(&mut self, buffer: &mut [f32]) {
+        if let Some(ag) = &mut self.auto_gain {
+            for frame in buffer.chunks_exact_mut(self.num_channels) {
+                let gain = ag.next_gain_linear();
+                for sample in frame {
+                    *sample *= gain;
+                }
+            }
+        }
+    }
+
     /// In Auto mode, rebuild ISO 226 filters based on engine volume.
     /// Converts relative `playback_volume_db` to absolute SPL estimate:
     ///   estimated_spl = reference_level_db + playback_volume_db
@@ -654,7 +705,8 @@ impl LoudnessCompensationPlugin {
         self.last_auto_volume_db = self.playback_volume_db;
         // Compute effective SPL: 0 dB volume = reference_level_db SPL
         let estimated_spl = self.reference_level_db + self.playback_volume_db;
-        // Clamp to valid ISO 226 range (20-90 phon)
+        // Retain the legacy 20–90 phon range. Above 80 phon, the 5–12.5 kHz
+        // portion extrapolates the ISO 226:2003 equation beyond its stated range.
         let estimated_phon = (estimated_spl as f64).clamp(20.0, 90.0);
         let reference_phon = (self.reference_level_db as f64).clamp(20.0, 90.0);
         // Temporarily set playback_level_db for rebuild_iso_filters
@@ -832,12 +884,13 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                     .ok_or_else(|| "headroom_normalized must be a boolean".to_string())?;
                 update_headroom = true;
             } else if key == "auto_calibrated" {
-                self.auto_calibrated = value
+                let calibrated = value
                     .as_bool()
                     .ok_or_else(|| "auto_calibrated must be a boolean".to_string())?;
-                if !self.auto_calibrated && self.mode_index == 2 {
+                if !calibrated && self.mode_index == 2 {
                     return Err("cannot remove SPL calibration while Auto mode is active".into());
                 }
+                self.auto_calibrated = calibrated;
             } else {
                 return Err(format!("Unknown parameter: {}", id));
             }
@@ -863,7 +916,10 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         self.sample_rate = sr;
         if let Some(auto_gain) = &mut self.auto_gain {
             auto_gain.set_sample_rate(sr)?;
+            auto_gain.reset();
+            self.auto_gain_display = Some(AutoGainDisplay::new(self.num_channels, sr)?);
         }
+        self.auto_gain_frames = 0;
         for s in &mut self.comp_gain_smoother {
             s.set_time(20.0, sr);
         }
@@ -887,6 +943,10 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         if let Some(auto_gain) = &mut self.auto_gain {
             auto_gain.reset();
         }
+        if let Some(display) = &mut self.auto_gain_display {
+            let _ = display.monitor.reset();
+        }
+        self.auto_gain_frames = 0;
         self.transition.remaining = 0;
         for filters in &mut self.transition.old_filters {
             for filter in filters {
@@ -919,70 +979,59 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                 context.sample_rate, self.sample_rate
             ));
         }
-        // Measurement (input + output LUFS) and cache update happen every block
-        // for fresh auto-gain data (Bug #2 fix: previously throttled to every
-        // 10 blocks, causing up to ~107 ms of stale data at 512-sample / 48 kHz).
-        let do_cache_update = true;
+        if self.auto_gain_position == AutoGainPosition::Disabled {
+            self.process_filters(buffer);
+        } else {
+            let interval = (self.sample_rate as usize / AUTO_GAIN_UPDATES_PER_SECOND).max(1);
+            let mut offset = 0;
+            while offset < nf {
+                let frames = (interval - self.auto_gain_frames).min(nf - offset);
+                let segment =
+                    &mut buffer[offset * self.num_channels..(offset + frames) * self.num_channels];
 
-        match self.auto_gain_position {
-            AutoGainPosition::Pre => {
-                // Pre mode: measure input, apply gain compensation, then run filters.
-                // Output measurement happens after compensation (correct level reported).
-                if let Some(ag) = &mut self.auto_gain {
-                    let _ = ag.measure_input(buffer);
-                    // Apply compensation before filters
-                    ag.apply_compensation(buffer, nf);
-                }
-
-                // Process through filters
-                for frame in 0..nf {
-                    for ch in 0..self.num_channels {
-                        let idx = frame * self.num_channels + ch;
-                        buffer[idx] = self.process_sample(ch, buffer[idx]);
+                if self.auto_gain_position == AutoGainPosition::Pre {
+                    if let Some(display) = &mut self.auto_gain_display {
+                        display.monitor.add_frames(segment)?;
                     }
+                    self.apply_auto_gain(segment);
                 }
+                // Compare the two sides of the EQ with the SAME applied gain.
+                // Post: neither side includes compensation. Pre: both do.
+                // AutoGain sets an absolute target; feeding raw input against
+                // already corrected output would leave half the EQ level error.
                 if let Some(ag) = &mut self.auto_gain {
-                    let _ = ag.measure_output(buffer);
-                    if do_cache_update {
-                        let data = ag.get_data();
-                        self.cache.update(|d| *d = data);
-                    }
+                    ag.ingest_input(segment)?;
                 }
-            }
-            AutoGainPosition::Post => {
-                // Post mode (default): measure input, run EQ filters, apply
-                // compensation, then measure output.
-                // Measuring output AFTER apply_compensation ensures output_lufs
-                // reflects the actual compensated signal level (Bug #3 fix).
+                self.process_filters(segment);
                 if let Some(ag) = &mut self.auto_gain {
-                    let _ = ag.measure_input(buffer);
+                    ag.ingest_output(segment)?;
                 }
-
-                for frame in 0..nf {
-                    for ch in 0..self.num_channels {
-                        let idx = frame * self.num_channels + ch;
-                        buffer[idx] = self.process_sample(ch, buffer[idx]);
+                if self.auto_gain_position == AutoGainPosition::Post {
+                    self.apply_auto_gain(segment);
+                    if let Some(display) = &mut self.auto_gain_display {
+                        display.monitor.add_frames(segment)?;
                     }
                 }
 
-                if let Some(ag) = &mut self.auto_gain {
-                    // Apply compensation first, then measure the actual output level.
-                    ag.apply_compensation(buffer, nf);
-                    let _ = ag.measure_output(buffer);
-                    if do_cache_update {
-                        let data = ag.get_data();
-                        self.cache.update(|d| {
-                            *d = data;
-                        });
-                    }
-                }
-            }
-            AutoGainPosition::Disabled => {
-                // No auto-gain, just filters
-                for frame in 0..nf {
-                    for ch in 0..self.num_channels {
-                        let idx = frame * self.num_channels + ch;
-                        buffer[idx] = self.process_sample(ch, buffer[idx]);
+                offset += frames;
+                self.auto_gain_frames += frames;
+                if self.auto_gain_frames == interval {
+                    self.auto_gain_frames = 0;
+                    if let Some(ag) = &mut self.auto_gain {
+                        ag.refresh_input_measurement();
+                        ag.refresh_output_measurement();
+                        let mut data = ag.get_data();
+                        if let Some(display) = &mut self.auto_gain_display {
+                            display.monitor.update_loudness_data(&mut display.data);
+                            if self.auto_gain_position == AutoGainPosition::Pre {
+                                data.input_lufs = display.data.momentary_lufs;
+                                data.input_peak = display.data.peak;
+                            } else {
+                                data.output_lufs = display.data.momentary_lufs;
+                                data.output_peak = display.data.peak;
+                            }
+                        }
+                        self.cache.update(|cached| *cached = data);
                     }
                 }
             }

@@ -1,7 +1,5 @@
 pub(super) const DEFAULT_SAMPLE_RATE: u32 = 44100;
 
-pub(super) const MEASUREMENT_THROTTLE: usize = 10;
-
 /// Duration of coefficient interpolation in seconds (~5ms)
 pub(super) const TRANSITION_DURATION_SECS: f64 = 0.005;
 

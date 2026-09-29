@@ -58,6 +58,7 @@ fn from_params_sets_sidechain_state() {
             hysteresis_db: 4.0,
             knee_db: 3.0,
             lookahead_ms: 5.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();
@@ -163,6 +164,7 @@ fn loud_signal_passes() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();
@@ -199,6 +201,7 @@ fn quiet_signal_is_attenuated() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();
@@ -237,6 +240,7 @@ fn bypass_mix_zero_passthrough() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();
@@ -291,6 +295,7 @@ fn reset_returns_deterministic_state() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();
@@ -335,6 +340,7 @@ fn diagnostic_data_exposed() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();

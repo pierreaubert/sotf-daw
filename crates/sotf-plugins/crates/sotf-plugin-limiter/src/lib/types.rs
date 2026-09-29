@@ -1,9 +1,11 @@
 use crate::params::{
-    default_dual_release, default_feed_forward, default_isp_mode, default_link_amount,
-    default_lookahead_ms, default_mix, default_release_ms, default_soft, default_threshold_db,
-    default_true_peak,
+    OVERSAMPLING_OPTIONS, default_dual_release, default_feed_forward, default_isp_mode,
+    default_link_amount, default_lookahead_ms, default_mix, default_oversampling,
+    default_release_ms, default_soft, default_threshold_db, default_true_peak,
 };
 use serde::{Deserialize, Serialize};
+
+sotf_host::define_choice_index_deserializer!(deserialize_oversampling, OVERSAMPLING_OPTIONS);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LimiterPluginParams {
@@ -27,6 +29,12 @@ pub struct LimiterPluginParams {
     pub feed_forward: bool,
     #[serde(default = "default_link_amount")]
     pub link_amount: f32,
+    /// Structural choice index: 0 = 1x, 1 = 2x, 2 = 4x.
+    #[serde(
+        default = "default_oversampling",
+        deserialize_with = "deserialize_oversampling"
+    )]
+    pub oversampling: usize,
 }
 
 #[cfg(test)]
@@ -34,6 +42,42 @@ mod tests {
     use super::*;
     use crate::params::PARAMS;
     use sotf_host::param_specs::find_by_key as pk;
+
+    #[test]
+    fn oversampling_constructor_wire_forms_preserve_integer_serialization() {
+        for (index, label) in OVERSAMPLING_OPTIONS.iter().enumerate() {
+            for value in [
+                serde_json::json!(index),
+                serde_json::json!(index as f64),
+                serde_json::json!(label),
+            ] {
+                let input = serde_json::json!({"oversampling": value});
+                let constructor: LimiterPluginParams =
+                    serde_json::from_value(input.clone()).unwrap();
+                let state: crate::params::Params = serde_json::from_value(input).unwrap();
+                assert_eq!(constructor.oversampling, index);
+                assert_eq!(state.oversampling, index);
+                assert_eq!(
+                    serde_json::to_value(constructor).unwrap()["oversampling"],
+                    index
+                );
+                assert_eq!(serde_json::to_value(state).unwrap()["oversampling"], index);
+            }
+        }
+        for invalid in [
+            serde_json::json!(-1),
+            serde_json::json!(3),
+            serde_json::json!(0.5),
+            serde_json::json!("8x"),
+            serde_json::json!("2"),
+            serde_json::json!(true),
+            serde_json::Value::Null,
+        ] {
+            let input = serde_json::json!({"oversampling": invalid});
+            assert!(serde_json::from_value::<LimiterPluginParams>(input.clone()).is_err());
+            assert!(serde_json::from_value::<crate::params::Params>(input).is_err());
+        }
+    }
 
     #[test]
     fn deserialize_empty_json_uses_param_specs_defaults() {
@@ -57,7 +101,10 @@ mod tests {
 /// Data exposed by the limiter for UI monitoring
 #[derive(Debug, Clone, Default)]
 pub struct LimiterData {
-    /// Current gain reduction in dB (positive value, e.g., 6.0 means -6dB gain)
+    /// Gain reduction in dB (positive value, e.g., 6.0 means -6 dB gain).
+    /// At 2x/4x this is a conservative indication of actual limiting gains over
+    /// both finite downsampler contributors, aligned with the final guard and
+    /// effective mix. It is not a waveform amplitude or filter-loss ratio.
     pub gain_reduction_db: f32,
     /// Peak input level in dB
     pub peak_db: f32,

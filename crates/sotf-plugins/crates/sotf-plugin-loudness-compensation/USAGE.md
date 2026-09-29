@@ -15,6 +15,11 @@
 
 ISO 226 is a population-average free-field relationship. Headphone or room use
 may require a separate transfer correction and listening validation.
+The implemented edition is **ISO 226:2003**, clause 4.1 and Table 1, not the
+2023 revision. Its specified range is 20–90 phon through 4 kHz and 20–80 phon at
+5–12.5 kHz. The existing controls retain their range; computed treble contours
+above 80 phon are extrapolations. Contour differences are a playback-EQ model,
+not an ISO 532 broadband loudness calculation.
 
 ## Level and AutoGain policies
 
@@ -29,6 +34,16 @@ AutoGain has one canonical three-state control: `disabled`, `pre`, or `post`.
 The legacy `auto_gain_enabled` boolean remains accepted for old presets and maps
 to `post`/`disabled`. AutoGain is an LUFS matching loop and is separate from SPL
 calibration and ISO contour generation.
+
+The gain controller compares the signals immediately before and after the EQ.
+In Post mode neither measurement includes its compensation gain; in Pre mode
+both include it. This estimates the EQ's level change without counting the
+correction twice. Separate metering reports the actual raw input and final
+output in both modes. The gain target and displayed loudness update every
+50 ms of processed audio (rounded down to whole frames), independently of host
+callback sizes, and a new target affects only subsequent samples. Gain smoothing
+advances once per frame. The meter first supplies an estimate after 100 ms;
+its momentary window fills over 400 ms. This adaptation adds no audio latency.
 
 ## Realtime contract
 

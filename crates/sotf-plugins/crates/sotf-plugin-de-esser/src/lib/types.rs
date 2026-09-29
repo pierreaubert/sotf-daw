@@ -1,6 +1,6 @@
 use crate::params::{
     MODES, default_attack_ms, default_frequency, default_mix, default_mode, default_q,
-    default_ratio, default_release_ms, default_threshold,
+    default_range_db, default_ratio, default_release_ms, default_stereo_link, default_threshold,
 };
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -26,6 +26,12 @@ pub struct DeEsserPluginParams {
     pub mode: String,
     #[serde(default = "default_mix")]
     pub mix: f32,
+    /// Maximum gain reduction in decibels.
+    #[serde(default = "default_range_db")]
+    pub range_db: f32,
+    /// Channel linking from independent (zero) to fully linked (one).
+    #[serde(default = "default_stereo_link")]
+    pub stereo_link: f32,
 }
 
 impl Default for DeEsserPluginParams {
@@ -39,6 +45,8 @@ impl Default for DeEsserPluginParams {
             release_ms: default_release_ms(),
             mode: default_mode(),
             mix: default_mix(),
+            range_db: default_range_db(),
+            stereo_link: default_stereo_link(),
         }
     }
 }
@@ -60,6 +68,11 @@ mod tests {
         assert_eq!(p.release_ms, pk(PARAMS, "release").default_f64() as f32);
         assert_eq!(p.mode, crate::params::MODES[1]);
         assert_eq!(p.mix, pk(PARAMS, "mix").default_f64() as f32);
+        assert_eq!(p.range_db, pk(PARAMS, "range_db").default_f64() as f32);
+        assert_eq!(
+            p.stereo_link,
+            pk(PARAMS, "stereo_link").default_f64() as f32
+        );
     }
 
     #[test]

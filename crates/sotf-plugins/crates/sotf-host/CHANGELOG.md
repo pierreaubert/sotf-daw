@@ -1,5 +1,11 @@
 # Unreleased
 
+## Maintenance
+
+- Build the oversampler FFT stages with `Fft::new_custom`, preserving the
+  historical sub-chunk counts and BlackmanHarris2 window on the workspace
+  Rubato 5 fork. Geometry, delay, and audio are unchanged.
+
 ## Zero-copy compiled analyzer taps
 
 - Add an input-only analyzer callback for non-terminal compiled analyzer nodes.

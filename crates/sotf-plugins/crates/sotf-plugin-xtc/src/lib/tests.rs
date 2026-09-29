@@ -1,6 +1,7 @@
 // These tests intentionally vary small groups of fields from the default baseline.
 #![allow(clippy::field_reassign_with_default)]
 
+// Rust guideline compliant 2026-02-21
 use super::*;
 use crate::filters::XtcFilters;
 use crate::load::load_roomeq_recommended_filters;
@@ -13,14 +14,14 @@ use filters::{
 };
 use reflections::{air_absorption, compute_image_sources, compute_reflection_beta_boost};
 use rustfft::num_complex::Complex;
+use sotf_host::assert_no_allocs;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
-use sotf_host::{CountingAlloc, assert_no_allocs};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-#[global_allocator]
-static ALLOCATOR: CountingAlloc = CountingAlloc;
+#[path = "sofa_delay_tests.rs"]
+mod sofa_delay_tests;
 
 #[test]
 fn test_xtc_creation() {
@@ -274,10 +275,10 @@ fn test_xtc_bypass() {
 
     plugin.process(&input, &mut output, &context).unwrap();
 
-    // Bypass should be exact passthrough
-    for i in 0..input.len() {
-        assert_eq!(output[i], input[i]);
-    }
+    // Bypass preserves source values exactly at the declared fixed delay.
+    let delay = plugin.latency_samples() * 2;
+    assert!(output[..delay].iter().all(|&v| v == 0.0));
+    assert_eq!(&output[delay..], &input[..input.len() - delay]);
 }
 
 #[test]
@@ -1769,8 +1770,17 @@ fn test_process_bypass_disabled() {
     let mut output = vec![0.0_f32; 4];
     let ctx = ProcessContext::new(48000, 2);
     plugin.process(&input, &mut output, &ctx).unwrap();
-    assert_eq!(output[0], 1.0);
-    assert_eq!(output[1], 2.0);
+    assert_eq!(output, [0.0; 4]);
+    let delay = plugin.latency_samples();
+    let mut tail = vec![0.0; delay * 2];
+    plugin
+        .process(
+            &vec![0.0; delay * 2],
+            &mut tail,
+            &ProcessContext::new(48000, delay),
+        )
+        .unwrap();
+    assert_eq!(&tail[(delay - 2) * 2..], &input);
 }
 
 #[test]
@@ -1803,7 +1813,10 @@ fn test_reset_clears_state() {
     let ctx = ProcessContext::new(48000, 4096);
     plugin.process(&input, &mut output, &ctx).unwrap();
     plugin.reset();
-    assert_eq!(plugin.input.input_fill, 0);
+    assert_eq!(
+        plugin.input.input_fill,
+        plugin.fft.fft_size - plugin.fft.hop_size
+    );
     assert_eq!(plugin.output.output_accumulator_fill, 0);
     assert_eq!(plugin.filter_state.crossfade_progress, 1.0);
     assert!(plugin.filter_state.prev_filters.is_none());
@@ -2225,6 +2238,7 @@ fn test_compute_xtc_filters_with_hrtf_data() {
         h_lr: vec![Complex::new(0.5, 0.0); 513],
         h_rl: vec![Complex::new(0.5, 0.0); 513],
         h_rr: vec![Complex::new(1.0, 0.0); 513],
+        delay_rebase_seconds: 0.0,
     };
     let filters = crate::filters::compute_xtc_filters_full_with_cache_and_hrtf(
         &params,
@@ -2252,7 +2266,17 @@ fn test_xtc_process_disabled() {
     let mut output = vec![0.0; 1024 * 2];
     let context = ProcessContext::new(48000, 1024);
     plugin.process(&input, &mut output, &context).unwrap();
-    assert_eq!(output[..2048], input[..2048]);
+    let delay = plugin.latency_samples();
+    assert_eq!(output, vec![0.0; 2048]);
+    let mut tail = vec![0.0; delay * 2];
+    plugin
+        .process(
+            &vec![0.0; delay * 2],
+            &mut tail,
+            &ProcessContext::new(48000, delay),
+        )
+        .unwrap();
+    assert_eq!(&tail[(delay - 1024) * 2..], &input);
 }
 
 #[test]
@@ -2612,8 +2636,11 @@ fn async_filter_automation_uses_one_coalescing_worker() {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
     while plugin
         .filter_state
-        .pending_filter_update
-        .load_full()
+        .exchange
+        .lock()
+        .unwrap()
+        .pending
+        .as_ref()
         .is_none_or(|update| update.generation != requested_generation)
     {
         assert!(
@@ -2667,16 +2694,13 @@ fn same_width_filter_adoption_allocates_and_deallocates_nothing() {
         48_000,
         plugin.fft.fft_size / 2 + 1,
     ));
-    plugin
-        .filter_state
-        .pending_filter_update
-        .store(Some(Arc::new(PendingFilterUpdate {
-            generation,
-            filters,
-            hrtf_transfer_functions: None,
-            room_reflection_cache: None,
-            room_params_hash: 0,
-        })));
+    plugin.filter_state.exchange.lock().unwrap().pending = Some(Arc::new(PendingFilterUpdate {
+        generation,
+        filters,
+        hrtf_transfer_functions: None,
+        room_reflection_cache: None,
+        room_params_hash: 0,
+    }));
     assert_no_allocs("XTC same-width update adoption", || {
         plugin.adopt_pending_filters();
     });
@@ -2705,25 +2729,22 @@ fn first_adoption_retires_initial_auxiliary_resources_off_callback() {
         .filter_state
         .filter_update_generation
         .store(generation, Ordering::Release);
-    plugin
-        .filter_state
-        .pending_filter_update
-        .store(Some(Arc::new(PendingFilterUpdate {
-            generation,
-            filters: Arc::new(compute_xtc_filters_full(
-                &XtcPluginParams::default(),
-                48_000,
-                plugin.fft.fft_size / 2 + 1,
-            )),
-            hrtf_transfer_functions: None,
-            room_reflection_cache: None,
-            room_params_hash: 0,
-        })));
+    plugin.filter_state.exchange.lock().unwrap().pending = Some(Arc::new(PendingFilterUpdate {
+        generation,
+        filters: Arc::new(compute_xtc_filters_full(
+            &XtcPluginParams::default(),
+            48_000,
+            plugin.fft.fft_size / 2 + 1,
+        )),
+        hrtf_transfer_functions: None,
+        room_reflection_cache: None,
+        room_params_hash: 0,
+    }));
 
     assert_no_allocs("XTC initial resource retirement", || {
         plugin.adopt_pending_filters();
     });
-    assert!(plugin.filter_state.retired_filter_update.load().is_some());
+    assert!(plugin.filter_state.exchange.lock().unwrap().retired_updates[0].is_some());
 }
 
 #[test]
@@ -2736,32 +2757,29 @@ fn mismatched_width_publication_is_rejected_before_mutating_active_state() {
         .filter_state
         .filter_update_generation
         .store(generation, Ordering::Release);
-    plugin
-        .filter_state
-        .pending_filter_update
-        .store(Some(Arc::new(PendingFilterUpdate {
-            generation,
-            filters: Arc::new(XtcFilters {
-                filter_ll: vec![Complex::new(0.0, 0.0); num_bins],
-                filter_lr: vec![Complex::new(0.0, 0.0); num_bins],
-                filter_rl: None,
-                filter_rr: None,
-                is_symmetric: true,
-                speaker_filters: Some(
-                    (0..3)
-                        .map(|_| {
-                            [
-                                vec![Complex::new(0.0, 0.0); num_bins],
-                                vec![Complex::new(0.0, 0.0); num_bins],
-                            ]
-                        })
-                        .collect(),
-                ),
-            }),
-            hrtf_transfer_functions: None,
-            room_reflection_cache: None,
-            room_params_hash: 0,
-        })));
+    plugin.filter_state.exchange.lock().unwrap().pending = Some(Arc::new(PendingFilterUpdate {
+        generation,
+        filters: Arc::new(XtcFilters {
+            filter_ll: vec![Complex::new(0.0, 0.0); num_bins],
+            filter_lr: vec![Complex::new(0.0, 0.0); num_bins],
+            filter_rl: None,
+            filter_rr: None,
+            is_symmetric: true,
+            speaker_filters: Some(
+                (0..3)
+                    .map(|_| {
+                        [
+                            vec![Complex::new(0.0, 0.0); num_bins],
+                            vec![Complex::new(0.0, 0.0); num_bins],
+                        ]
+                    })
+                    .collect(),
+            ),
+        }),
+        hrtf_transfer_functions: None,
+        room_reflection_cache: None,
+        room_params_hash: 0,
+    }));
 
     assert_no_allocs("XTC mismatched-width rejection", || {
         plugin.adopt_pending_filters();
@@ -2770,10 +2788,6 @@ fn mismatched_width_publication_is_rejected_before_mutating_active_state() {
     assert!(Arc::ptr_eq(
         &original,
         &plugin.filter_state.cached_current_filters
-    ));
-    assert!(Arc::ptr_eq(
-        &original,
-        &plugin.filter_state.filters.load_full()
     ));
 }
 
@@ -2799,14 +2813,8 @@ fn stale_adoption_does_not_overwrite_an_occupied_retirement_slot() {
     // retired its active bundle, a newer request advances the generation, and
     // the callback sees the older pending publication before the new worker's
     // first reclamation pass runs.
-    plugin
-        .filter_state
-        .retired_filter_update
-        .store(Some(make_update(1)));
-    plugin
-        .filter_state
-        .pending_filter_update
-        .store(Some(make_update(2)));
+    plugin.filter_state.exchange.lock().unwrap().retired_updates[0] = Some(make_update(1));
+    plugin.filter_state.exchange.lock().unwrap().pending = Some(make_update(2));
     plugin
         .filter_state
         .filter_update_generation
@@ -2815,8 +2823,8 @@ fn stale_adoption_does_not_overwrite_an_occupied_retirement_slot() {
     assert_no_allocs("XTC stale update retirement race", || {
         plugin.adopt_pending_filters();
     });
-    assert!(plugin.filter_state.retired_filter_update.load().is_some());
-    assert!(plugin.filter_state.retired_filter_update_2.load().is_some());
+    assert!(plugin.filter_state.exchange.lock().unwrap().retired_updates[0].is_some());
+    assert!(plugin.filter_state.exchange.lock().unwrap().retired_updates[1].is_some());
 }
 
 fn write_pcm16_wav(path: &std::path::Path, frames: usize) {

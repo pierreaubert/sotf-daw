@@ -79,6 +79,82 @@ fn test_oversampler_latency() {
     assert!(os_4x.latency_samples() < 4096);
 }
 
+fn render_partitioned_oversampling(
+    os: &mut Oversampler,
+    input: &[f32],
+    channels: usize,
+    partition: &[usize],
+) -> Vec<f32> {
+    let mut output = input.to_vec();
+    let mut position = 0;
+    for &frames in partition.iter().cycle() {
+        let frames = frames.min(input.len() / channels - position);
+        if frames == 0 {
+            break;
+        }
+        let block = &mut output[position * channels..(position + frames) * channels];
+        crate::assert_no_allocs("oversampling callback partition", || {
+            assert_eq!(os.process(block, frames, |_, _| {}).unwrap(), frames);
+        });
+        position += frames;
+    }
+    output
+}
+
+#[test]
+fn oversampler_delay_and_waveform_are_independent_of_callback_partition() {
+    for factor in [2, 4] {
+        for channels in [1, 2, 6] {
+            let mut input = vec![0.0; 4096 * channels];
+            for (channel, sample) in input[..channels].iter_mut().enumerate() {
+                *sample = 1.0 / (channel + 1) as f32;
+            }
+            let mut reference_os = Oversampler::new(factor, channels).unwrap();
+            let reference =
+                render_partitioned_oversampling(&mut reference_os, &input, channels, &[256]);
+            let peak = |samples: &[f32]| {
+                samples
+                    .chunks_exact(channels)
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a[0].abs().total_cmp(&b[0].abs()))
+                    .unwrap()
+                    .0
+            };
+            for partition in [
+                &[1][..],
+                &[127][..],
+                &[256][..],
+                &[512][..],
+                &[1, 17, 255, 3, 512, 29][..],
+            ] {
+                let mut os = Oversampler::new(factor, channels).unwrap();
+                let actual = render_partitioned_oversampling(&mut os, &input, channels, partition);
+                assert_eq!(
+                    peak(&actual),
+                    peak(&reference),
+                    "factor={factor}, channels={channels}, partition={partition:?}"
+                );
+                for (index, (&sample, &expected)) in actual.iter().zip(&reference).enumerate() {
+                    assert_eq!(
+                        sample, expected,
+                        "factor={factor}, channels={channels}, partition={partition:?}, sample={index}"
+                    );
+                }
+                assert_eq!(
+                    peak(&actual),
+                    os.latency_samples(),
+                    "impulse peak must equal reported PDC latency"
+                );
+                os.reset();
+                assert_eq!(
+                    render_partitioned_oversampling(&mut os, &input, channels, partition),
+                    actual
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn test_oversampler_preserves_signal() {
     // Process a known sine wave through a passthrough callback and verify
@@ -148,11 +224,16 @@ fn test_oversampler_reset() {
     os.process(&mut buffer, num_frames, |_planar, _frames| {})
         .unwrap();
 
-    // Reset should clear all residual state
+    // Reset clears buffered audio and restores the fixed latency prefill.
     os.reset();
     assert_eq!(os.residual_frames, 0);
-    assert_eq!(os.residual_out_frames, 0);
+    assert_eq!(os.residual_out_frames, OS_CHUNK_SIZE);
     assert_eq!(os.residual_out_read, 0);
+    assert!(
+        os.residual_out[..OS_CHUNK_SIZE * channels]
+            .iter()
+            .all(|sample| *sample == 0.0)
+    );
 }
 
 #[test]
@@ -170,7 +251,7 @@ fn test_oversampler_variable_small_blocks_keep_residual_cursors_valid() {
             .process(&mut buffer, num_frames, |_planar, _frames| {})
             .unwrap();
 
-        assert!(processed <= num_frames);
+        assert_eq!(processed, num_frames);
         assert!(buffer.iter().all(|s| s.is_finite()));
         assert!(os.residual_in_read + os.residual_frames <= os.residual_in.len() / channels);
         assert!(os.residual_out_read + os.residual_out_frames <= os.residual_out.len() / channels);
@@ -263,19 +344,23 @@ fn test_oversampled_plugin_processes_audio() {
     let mut os = OversampledPlugin::new(DoublerPlugin, 2, 1).unwrap();
     os.initialize(48000).unwrap();
 
-    // Feed a few blocks to prime the oversampler pipeline
+    // Pass the declared delay and one chunk of FIR settling before measuring gain.
     let ctx = ProcessContext::new(48000, 256);
     let mut buf = vec![0.5f32; 256];
-    os.process_in_place(&mut buf, &ctx).unwrap();
+    for _ in 0..os.latency_samples().div_ceil(256) + 1 {
+        buf.fill(0.5);
+        os.process_in_place(&mut buf, &ctx).unwrap();
+    }
 
     // After pipeline is primed, output should be ~doubled (accounting for resampler delay)
     let mut buf2 = vec![0.5f32; 256];
     os.process_in_place(&mut buf2, &ctx).unwrap();
-    let max = buf2.iter().copied().fold(0.0f32, f32::max);
-    assert!(
-        max > 0.8,
-        "Doubler through oversampler should produce amplified output: max={max}"
-    );
+    for (index, sample) in buf2.iter().enumerate() {
+        assert!(
+            (sample - 1.0).abs() < 1e-4,
+            "Doubler steady output sample {index}: {sample}"
+        );
+    }
 }
 
 #[test]
@@ -338,6 +423,108 @@ fn test_oversampler_invalid_channels() {
 }
 
 #[test]
+fn native_f64_inner_with_oversampling_uses_preallocated_host_conversion() {
+    use crate::host::DawHost;
+    use crate::parameters::{Parameter, ParameterId, ParameterValue};
+    use crate::plugin::{Plugin, PluginInfo, ProcessContext};
+
+    struct DualPrecisionGain {
+        channels: usize,
+        factor: u32,
+    }
+    impl Plugin for DualPrecisionGain {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("DualPrecisionGain", "1", "test")
+        }
+        fn input_channels(&self) -> usize {
+            self.channels
+        }
+        fn output_channels(&self) -> usize {
+            self.channels
+        }
+        fn parameters(&self) -> Vec<Parameter> {
+            Vec::new()
+        }
+        fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+            Ok(())
+        }
+        fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+        fn preferred_oversampling(&self) -> Option<u32> {
+            Some(self.factor)
+        }
+        fn supports_f64(&self) -> bool {
+            true
+        }
+        fn process(
+            &mut self,
+            input: &[f32],
+            output: &mut [f32],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            for (out, sample) in output.iter_mut().zip(input) {
+                *out = *sample * 0.75;
+            }
+            Ok(context.num_frames)
+        }
+        fn process_f64(
+            &mut self,
+            input: &[f64],
+            output: &mut [f64],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            for (out, sample) in output.iter_mut().zip(input) {
+                *out = *sample * 0.75;
+            }
+            Ok(context.num_frames)
+        }
+    }
+    for factor in [2, 4] {
+        for channels in [1, 2, 6] {
+            let make_host = || {
+                let mut host = DawHost::new(channels, 48_000);
+                host.add_plugin(Box::new(DualPrecisionGain { channels, factor }))
+                    .unwrap();
+                host.build().unwrap();
+                host
+            };
+            let mut host = make_host();
+            let mut reference_host = make_host();
+            let input: Vec<f64> = (0..8192 * channels)
+                .map(|sample| ((sample as f64 * 0.013).sin() * 0.3) as f32 as f64)
+                .collect();
+            let reference_input: Vec<f32> = input.iter().map(|sample| *sample as f32).collect();
+            let mut output = vec![0.0; input.len()];
+            let mut reference = vec![0.0; input.len()];
+            std::thread::spawn(move || {
+                for frames in [1, 127, 256, 8192, 17, 4096] {
+                    let count = frames * channels;
+                    crate::assert_no_allocs("oversampled f64 host callback", || {
+                        assert_eq!(
+                            host.process_f64(&input[..count], &mut output[..count])
+                                .unwrap(),
+                            frames
+                        );
+                    });
+                    assert_eq!(
+                        reference_host
+                            .process(&reference_input[..count], &mut reference[..count])
+                            .unwrap(),
+                        frames
+                    );
+                    for (&actual, &expected) in output[..count].iter().zip(&reference[..count]) {
+                        assert_eq!(actual, f64::from(expected));
+                    }
+                }
+            })
+            .join()
+            .unwrap();
+        }
+    }
+}
+
+#[test]
 fn test_interleaved_to_planar_roundtrip() {
     let channels = 3;
     let frames = 4;
@@ -357,4 +544,229 @@ fn test_interleaved_to_planar_roundtrip() {
     let mut result = vec![0.0f32; channels * frames];
     planar_to_interleaved(&planar, &mut result, frames, channels);
     assert_eq!(result, interleaved);
+}
+
+#[test]
+fn wrappers_preserve_transport_in_oversampled_chunk_clock() {
+    use crate::parameters::{Parameter, ParameterId, ParameterValue};
+    use crate::plugin::{
+        InPlacePluginAdapter, LoopRange, Plugin, PluginInfo, ProcessContext, TransportInfo,
+    };
+    use std::sync::{Arc, Mutex};
+
+    type ContextLog = Arc<Mutex<Vec<(u32, usize, TransportInfo)>>>;
+    struct ContextProbe(ContextLog);
+    impl InPlacePlugin for ContextProbe {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("Transport probe", "1.0", "Test")
+        }
+        fn channels(&self) -> usize {
+            1
+        }
+        fn parameters(&self) -> Vec<Parameter> {
+            vec![]
+        }
+        fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+            Ok(())
+        }
+        fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+        fn process_in_place(
+            &mut self,
+            _: &mut [f32],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            self.0.lock().unwrap().push((
+                context.sample_rate,
+                context.num_frames,
+                context.transport,
+            ));
+            Ok(context.num_frames)
+        }
+    }
+
+    for factor in [2, 4] {
+        for dynamic in [false, true] {
+            for partition in [&[1][..], &[127][..], &[512][..], &[17, 255, 513, 3][..]] {
+                let log: ContextLog = Arc::new(Mutex::new(Vec::with_capacity(16)));
+                // Prepare platform mutex resources before measuring callbacks.
+                log.lock().unwrap().clear();
+                let probe = ContextProbe(Arc::clone(&log));
+                let mut wrapper: Box<dyn Plugin> = if dynamic {
+                    Box::new(
+                        super::AutoOversampledPlugin::new(
+                            Box::new(InPlacePluginAdapter::new(probe)),
+                            factor,
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    Box::new(InPlacePluginAdapter::new(
+                        OversampledPlugin::new(probe, factor, 1).unwrap(),
+                    ))
+                };
+                wrapper.initialize(48_000).unwrap();
+                let input = [0.0; 513];
+                let mut output = [0.0; 513];
+                // Reset at a nonzero origin, then seek at a chunk boundary
+                // without resetting the filter history.
+                for (pass, origin) in [12_480, 40_123, 9_000].into_iter().enumerate() {
+                    if pass == 1 {
+                        wrapper.reset();
+                    }
+                    log.lock().unwrap().clear();
+                    let mut position = 0;
+                    let mut block = 0;
+                    while position < 2048 {
+                        let frames = partition[block % partition.len()].min(2048 - position);
+                        let mut transport =
+                            TransportInfo::at_sample(origin + position as u64, 48_000)
+                                .with_tempo(93.0, 48_000)
+                                .with_time_signature(7, 8)
+                                .with_loop_range(LoopRange::new(8000, 50_000));
+                        transport.playing = false;
+                        transport.recording = true;
+                        // The musical origin need not coincide with sample zero.
+                        transport.ppq_position = 17.25 + position as f64 / 48_000.0 * 93.0 / 60.0;
+                        let context = ProcessContext::new(48_000, frames).with_transport(transport);
+                        crate::assert_no_allocs("oversampled transport", || {
+                            wrapper
+                                .process(&input[..frames], &mut output[..frames], &context)
+                                .unwrap();
+                        });
+                        position += frames;
+                        block += 1;
+                    }
+                    let entries = log.lock().unwrap();
+                    assert_eq!(entries.len(), 8);
+                    for (chunk, &(rate, frames, transport)) in entries.iter().enumerate() {
+                        assert_eq!(rate, 48_000 * factor);
+                        assert_eq!(frames, OS_CHUNK_SIZE * factor as usize);
+                        assert_eq!(
+                            transport.sample_position,
+                            (origin + (chunk * OS_CHUNK_SIZE) as u64) * u64::from(factor)
+                        );
+                        let expected_ppq =
+                            17.25 + (chunk * OS_CHUNK_SIZE) as f64 / 48_000.0 * 93.0 / 60.0;
+                        assert!((transport.ppq_position - expected_ppq).abs() < 1e-12);
+                        assert_eq!(transport.bpm, 93.0);
+                        assert_eq!(transport.time_signature.numerator, 7);
+                        assert_eq!(transport.time_signature.denominator, 8);
+                        assert!(!transport.playing);
+                        assert!(transport.recording && transport.looping);
+                        assert_eq!(
+                            transport.loop_range,
+                            LoopRange::new(8000 * u64::from(factor), 50_000 * u64::from(factor))
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn fractional_inner_latency_is_reported_conservatively() {
+    use crate::parameters::{Parameter, ParameterId, ParameterValue};
+    use crate::plugin::{InPlacePluginAdapter, Plugin, PluginInfo, ProcessContext};
+
+    struct SampleDelay {
+        ring: Vec<f32>,
+        position: usize,
+    }
+    impl InPlacePlugin for SampleDelay {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("Sample delay", "1.0", "Test")
+        }
+        fn channels(&self) -> usize {
+            1
+        }
+        fn parameters(&self) -> Vec<Parameter> {
+            vec![]
+        }
+        fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+            Ok(())
+        }
+        fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+        fn latency_samples(&self) -> usize {
+            self.ring.len()
+        }
+        fn process_in_place(
+            &mut self,
+            buffer: &mut [f32],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            if !self.ring.is_empty() {
+                for sample in buffer {
+                    std::mem::swap(sample, &mut self.ring[self.position]);
+                    self.position = (self.position + 1) % self.ring.len();
+                }
+            }
+            Ok(context.num_frames)
+        }
+    }
+
+    for factor in [2, 4] {
+        for dynamic in [false, true] {
+            let mut base_moment = 0.0;
+            for delay in 0..8 {
+                let inner = SampleDelay {
+                    ring: vec![0.0; delay],
+                    position: 0,
+                };
+                let mut wrapper: Box<dyn Plugin> = if dynamic {
+                    Box::new(
+                        super::AutoOversampledPlugin::new(
+                            Box::new(InPlacePluginAdapter::new(inner)),
+                            factor,
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    Box::new(InPlacePluginAdapter::new(
+                        OversampledPlugin::new(inner, factor, 1).unwrap(),
+                    ))
+                };
+                wrapper.initialize(48_000).unwrap();
+                let mut impulse = vec![0.0; 2048];
+                impulse[0] = 1.0;
+                let mut response = vec![0.0; impulse.len()];
+                for (block, (src, dst)) in impulse
+                    .chunks(127)
+                    .zip(response.chunks_mut(127))
+                    .enumerate()
+                {
+                    wrapper
+                        .process(
+                            src,
+                            dst,
+                            &ProcessContext::new(48_000, src.len())
+                                .with_sample_position((block * 127) as u64),
+                        )
+                        .unwrap();
+                }
+                // For an FIR with nonzero DC response, its normalized first
+                // impulse moment gives DC group delay, including subframes.
+                let area: f64 = response.iter().map(|&x| f64::from(x)).sum();
+                let moment: f64 = response
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &x)| i as f64 * f64::from(x))
+                    .sum::<f64>()
+                    / area;
+                if delay == 0 {
+                    base_moment = moment;
+                }
+                assert!((moment - base_moment - delay as f64 / f64::from(factor)).abs() < 0.002);
+                let reported = wrapper.latency_samples() as f64;
+                assert!(
+                    reported >= moment - 0.002 && reported < moment + 1.002,
+                    "factor={factor}, dynamic={dynamic}, inner={delay}: reported={reported}, measured={moment}"
+                );
+            }
+        }
+    }
 }

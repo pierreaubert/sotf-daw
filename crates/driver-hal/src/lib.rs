@@ -49,6 +49,9 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+#[cfg(any(target_os = "macos", test))]
+mod reader_state;
+
 #[cfg(target_os = "macos")]
 pub mod driver;
 #[cfg(target_os = "macos")]

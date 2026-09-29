@@ -21,3 +21,16 @@ Parameters:
 The callback is allocation-free, lock-free, frame-major, and accepts arbitrary
 block sizes. Non-finite input is replaced locally with the last finite sample.
 See `USAGE.md` and `UI.md` for contracts and controls.
+
+## Finite streams
+
+After a nonempty input stream, `drain` returns exactly eight frames of zero-input
+continuation, including repaired or bypassed audio still held in lookahead. It
+accepts any positive destination capacity aligned to the channel count, returns
+at most eight frames per call, and leaves unused destination samples untouched.
+An empty stream completes without output. The declared tail is eight frames.
+
+The first successful drain closes the stream: subsequent nonempty input and
+parameter changes require `reset` or successful reinitialization. Invalid drain
+capacities and sample rates leave the stream untouched. Completion is stable,
+and both draining and reset reuse prepared storage without allocating or freeing.

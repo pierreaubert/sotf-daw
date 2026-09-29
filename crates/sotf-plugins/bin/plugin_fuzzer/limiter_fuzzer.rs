@@ -24,6 +24,7 @@ impl PluginFuzzer for LimiterFuzzer {
             dual_release: false,
             feed_forward: false,
             link_amount: 1.0,
+            oversampling: 0,
         };
         let plugin = LimiterPlugin::from_params(channels, params);
 

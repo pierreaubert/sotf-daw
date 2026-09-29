@@ -17,7 +17,6 @@ sotf-host = { workspace = true }
 plugins-spatial = { workspace = true }
 math-dsp = { workspace = true }
 math-rir = { workspace = true }
-arc-swap = { workspace = true }
 hound = { workspace = true }
 audioadapter-buffers = { workspace = true }
 log = { workspace = true }

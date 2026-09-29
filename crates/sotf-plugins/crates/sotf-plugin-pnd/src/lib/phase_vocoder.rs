@@ -1,6 +1,7 @@
 use super::phase_vocoder_channel::PhaseVocoderChannel;
 
 /// Multi-channel phase vocoder.
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct PhaseVocoder {
     pub(super) channels: Vec<PhaseVocoderChannel>,
 }

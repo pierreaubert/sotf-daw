@@ -1,3 +1,29 @@
+# Unreleased
+
+- Report native finite response bounds from the prepared active algorithm,
+  verified with continuing ordinary adaptation and spectral overflow residue.
+- Preserve finite MVDR covariance through overload with whole-bin candidate
+  validation, overflow-only wider retries, and invalid FFT evidence rejection.
+- Suppress invalid spectral output samples at the existing read-and-clear
+  boundary, preserving ordinary samples and finite audio support. Full-range
+  overloaded FFT waveform fidelity is not guaranteed.
+- Verify subsequent adaptive recovery without reset, independent covariance
+  and detector oracles, unchanged ordinary rounding, and cold zero allocation/
+  deallocation. Representable large covariance retains its original decay rate.
+- Prevent MVDR from generating NaN during prolonged silence by widening weight
+  normalization and validating each whole frequency bin before installation.
+- Preserve GSC adaptation after finite extreme input with wider private
+  reference/weight state, finite coefficient commits, and bounded f32 output.
+- Verify independent numerical oracles, small-signal recovery without reset,
+  prolonged exact silence, and cold callback allocation/deallocation behavior.
+- Preserve the first spectral input sample with half-window prefix analysis and
+  negative-time synthesis discard, retaining the declared 512-sample latency.
+- Skip MVDR covariance learning on the synthetic startup frame.
+- Add bounded drain for complete STFT synthesis and GSC steering/FIR histories,
+  freezing adaptive state and requiring reset before continuation.
+- Verify every startup hop phase, independent frozen spectral/FIR drain oracles,
+  transactional validation, and cold allocation/deallocation behavior.
+
 # 0.5.4
 
 ## Complete 2026-08-12 review remediation

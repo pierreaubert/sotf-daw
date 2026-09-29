@@ -1,0 +1,509 @@
+--- a/crates/sotf-plugins/crates/sotf-host/src/host/node_buffer.rs
++++ b/crates/sotf-plugins/crates/sotf-host/src/host/node_buffer.rs
+@@ -20,6 +20,23 @@
+         self.data[..data.len()].copy_from_slice(data);
+         self.actual_len = data.len();
+     }
++    pub(super) fn append(&mut self, samples: &[T]) -> Result<(), String> {
++        if samples.len() > self.data.len().saturating_sub(self.actual_len) {
++            return Err(
++                "Graph branch queue capacity exceeded; branch frame counts do not converge".into(),
++            );
++        }
++        self.data[self.actual_len..self.actual_len + samples.len()].copy_from_slice(samples);
++        self.actual_len += samples.len();
++        Ok(())
++    }
++
++    pub(super) fn consume_frames(&mut self, frames: usize) {
++        let samples = (frames * self.num_channels).min(self.actual_len);
++        self.data.copy_within(samples..self.actual_len, 0);
++        self.actual_len -= samples;
++    }
++
+     pub(super) fn read(&self) -> &[T] {
+         if self.actual_len == 0 {
+             &[]
+--- a/crates/sotf-plugins/crates/sotf-host/src/host/types.rs
++++ b/crates/sotf-plugins/crates/sotf-host/src/host/types.rs
+@@ -12,6 +12,8 @@
+ 
+ pub(super) struct ProcessBuffers<T: AudioSample> {
+     pub(super) node_buffers: Vec<Option<NodeBuffer<T>>>,
++    pub(super) edge_queues: Vec<Option<NodeBuffer<T>>>,
++    pub(super) output_queues: Vec<Option<NodeBuffer<T>>>,
+     pub(super) scratch_input: Vec<T>,
+     pub(super) scratch_output: Vec<T>,
+     pub(super) merge_buffer: Vec<T>,
+--- a/crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs
++++ b/crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs
+@@ -682,6 +682,28 @@
+ 
+         self.process_buffers = Some(ProcessBuffers {
+             node_buffers,
++            edge_queues: self
++                .edges
++                .iter()
++                .map(|edge| {
++                    (self.predecessors[edge.to_node].len() > 1).then(|| {
++                        NodeBuffer::<f32>::new(
++                            max_graph_frames.saturating_mul(2),
++                            self.nodes[&edge.from_node].output_channels(),
++                        )
++                    })
++                })
++                .collect(),
++            output_queues: (0..num_slots)
++                .map(|id| {
++                    (self.output_nodes.len() > 1 && self.is_output_node[id]).then(|| {
++                        NodeBuffer::<f32>::new(
++                            max_graph_frames.saturating_mul(2),
++                            self.nodes[&id].output_channels(),
++                        )
++                    })
++                })
++                .collect(),
+             scratch_input: vec![0.0f32; graph_scratch_samples],
+             scratch_output: vec![0.0f32; graph_scratch_samples],
+             merge_buffer: vec![0.0f32; graph_scratch_samples],
+@@ -711,6 +733,28 @@
+         });
+         self.process_buffers_f64 = Some(ProcessBuffers {
+             node_buffers: node_buffers_f64,
++            edge_queues: self
++                .edges
++                .iter()
++                .map(|edge| {
++                    (self.predecessors[edge.to_node].len() > 1).then(|| {
++                        NodeBuffer::<f64>::new(
++                            max_graph_frames.saturating_mul(2),
++                            self.nodes[&edge.from_node].output_channels(),
++                        )
++                    })
++                })
++                .collect(),
++            output_queues: (0..num_slots)
++                .map(|id| {
++                    (self.output_nodes.len() > 1 && self.is_output_node[id]).then(|| {
++                        NodeBuffer::<f64>::new(
++                            max_graph_frames.saturating_mul(2),
++                            self.nodes[&id].output_channels(),
++                        )
++                    })
++                })
++                .collect(),
+             scratch_input: vec![0.0f64; graph_scratch_samples],
+             scratch_output: vec![0.0f64; graph_scratch_samples],
+             merge_buffer: vec![0.0f64; graph_scratch_samples],
+@@ -2246,7 +2290,13 @@
+ 
+             for &nid in &stage.nodes {
+                 let node = &self.nodes[&nid];
+-                let cf = Self::node_input_frames(nid, nf, &self.predecessors, &bufs.node_buffers)?;
++                let cf = Self::node_input_frames(
++                    nid,
++                    nf,
++                    &self.predecessors,
++                    &bufs.node_buffers,
++                    &mut bufs.edge_queues,
++                )?;
+                 if self.is_input_node[nid] {
+                     self.node_input_positions[nid] = block_start_sample;
+                 }
+@@ -2259,6 +2309,7 @@
+                         node,
+                         &self.predecessors,
+                         &bufs.node_buffers,
++                        &mut bufs.edge_queues,
+                         cf,
+                         &mut bufs.merge_buffer,
+                         &mut bufs.channel_map_buffer,
+@@ -2325,10 +2376,19 @@
+                     self.node_input_positions[nid].saturating_add(cf as u64);
+             }
+         }
+-        cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
++        cf = Self::terminal_output_frames(
++            &self.output_nodes,
++            &bufs.node_buffers,
++            &mut bufs.output_queues,
++            output.len() / out_ch,
++        )?;
+         Self::collect_output_from_buffers(
+             &self.output_nodes,
+-            &mut bufs.node_buffers,
++            if self.output_nodes.len() > 1 {
++                &mut bufs.output_queues
++            } else {
++                &mut bufs.node_buffers
++            },
+             &mut bufs.compensation_delays,
+             output,
+             cf,
+@@ -2337,7 +2397,14 @@
+             crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
+             e
+         })?;
+-        if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
++        for queue in bufs.output_queues.iter_mut().flatten() {
++            queue.consume_frames(cf);
++        }
++        if cf < nf
++            && self.has_variable_frame_plugin
++            && self.cached_rate_identity
++            && self.is_topologically_linear_chain()
++        {
+             output[cf * out_ch..].fill(0.0);
+             cf = nf;
+         }
+@@ -3074,7 +3141,13 @@
+         for stage in &self.stages {
+             for &nid in &stage.nodes {
+                 let node = &self.nodes[&nid];
+-                let cf = Self::node_input_frames(nid, nf, &self.predecessors, &bufs.node_buffers)?;
++                let cf = Self::node_input_frames(
++                    nid,
++                    nf,
++                    &self.predecessors,
++                    &bufs.node_buffers,
++                    &mut bufs.edge_queues,
++                )?;
+                 if self.is_input_node[nid] {
+                     self.node_input_positions[nid] = block_start_sample;
+                 }
+@@ -3087,6 +3160,7 @@
+                         node,
+                         &self.predecessors,
+                         &bufs.node_buffers,
++                        &mut bufs.edge_queues,
+                         cf,
+                         &mut bufs.merge_buffer,
+                         &mut bufs.channel_map_buffer,
+@@ -3153,10 +3227,19 @@
+             }
+         }
+ 
+-        cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
++        cf = Self::terminal_output_frames(
++            &self.output_nodes,
++            &bufs.node_buffers,
++            &mut bufs.output_queues,
++            output.len() / out_ch,
++        )?;
+         Self::collect_output_from_buffers(
+             &self.output_nodes,
+-            &mut bufs.node_buffers,
++            if self.output_nodes.len() > 1 {
++                &mut bufs.output_queues
++            } else {
++                &mut bufs.node_buffers
++            },
+             &mut bufs.compensation_delays,
+             output,
+             cf,
+@@ -3169,7 +3252,14 @@
+             );
+             e
+         })?;
+-        if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
++        for queue in bufs.output_queues.iter_mut().flatten() {
++            queue.consume_frames(cf);
++        }
++        if cf < nf
++            && self.has_variable_frame_plugin
++            && self.cached_rate_identity
++            && self.is_topologically_linear_chain()
++        {
+             output[cf * out_ch..].fill(0.0);
+             cf = nf;
+         }
+@@ -3512,6 +3602,7 @@
+         n: &GraphNode,
+         preds: &[Vec<GraphEdge>],
+         nbs: &[Option<NodeBuffer<T>>],
++        queues: &mut [Option<NodeBuffer<T>>],
+         nf: usize,
+         mb: &mut Vec<T>,
+         cmb: &mut Vec<T>,
+@@ -3531,7 +3622,10 @@
+         };
+         let mut sidechain_offset = primary_channels;
+         for e in &preds[n.id] {
+-            let sb = nbs[e.from_node].as_ref().unwrap();
++            let sb = queues
++                .get(e.id)
++                .and_then(Option::as_ref)
++                .unwrap_or_else(|| nbs[e.from_node].as_ref().unwrap());
+             let sd = sb.read();
+             let dest_offset = match e.edge_type {
+                 EdgeType::Audio => e.destination_offset,
+@@ -3620,6 +3714,11 @@
+                 }
+             }
+         }
++        for edge in &preds[n.id] {
++            if let Some(queue) = queues.get_mut(edge.id).and_then(Option::as_mut) {
++                queue.consume_frames(nf);
++            }
++        }
+         Ok(is)
+     }
+ 
+@@ -3628,13 +3727,17 @@
+         source_frames: usize,
+         predecessors: &[Vec<GraphEdge>],
+         buffers: &[Option<NodeBuffer<T>>],
++        queues: &mut [Option<NodeBuffer<T>>],
+     ) -> Result<usize, String> {
+         let mut frames = None;
+         for edge in &predecessors[id] {
+-            let buffer = buffers[edge.from_node].as_ref().unwrap();
+-            let count = buffer.actual_len / buffer.num_channels;
+-            // Preserve the existing common-prefix behavior. Retaining the
+-            // unmatched suffix requires per-edge queues (separate follow-up).
++            let source = buffers[edge.from_node].as_ref().unwrap();
++            let count = if let Some(queue) = queues.get_mut(edge.id).and_then(Option::as_mut) {
++                queue.append(source.read())?;
++                queue.actual_len / queue.num_channels
++            } else {
++                source.actual_len / source.num_channels
++            };
+             frames = Some(frames.map_or(count, |previous: usize| previous.min(count)));
+         }
+         Ok(frames.unwrap_or(source_frames))
+@@ -3643,14 +3746,30 @@
+     fn terminal_output_frames<T: AudioSample>(
+         outputs: &[NodeId],
+         buffers: &[Option<NodeBuffer<T>>],
++        queues: &mut [Option<NodeBuffer<T>>],
++        max_frames: usize,
+     ) -> Result<usize, String> {
+-        let mut frames = None;
++        if outputs.len() == 1 {
++            let source = buffers[outputs[0]].as_ref().unwrap();
++            let frames = source.actual_len / source.num_channels;
++            return if frames <= max_frames {
++                Ok(frames)
++            } else {
++                Err("Host output too small for the single terminal's emitted frames".into())
++            };
++        }
++        let mut frames = max_frames;
+         for &id in outputs {
+-            let buffer = buffers[id].as_ref().unwrap();
+-            let count = buffer.actual_len / buffer.num_channels;
+-            frames = Some(frames.map_or(count, |previous: usize| previous.min(count)));
+-        }
+-        Ok(frames.unwrap_or(0))
++            let source = buffers[id].as_ref().unwrap();
++            let count = if let Some(queue) = queues[id].as_mut() {
++                queue.append(source.read())?;
++                queue.actual_len / queue.num_channels
++            } else {
++                source.actual_len / source.num_channels
++            };
++            frames = frames.min(count);
++        }
++        Ok(frames)
+     }
+ 
+     /// Apply latency compensation delay (if any) to `src_data` for the given edge,
+@@ -3749,17 +3868,18 @@
+         nbs: &mut [Option<NodeBuffer<T>>],
+         delays: &mut CompensationDelays<T>,
+         out: &mut [T],
+-        _nf: usize,
++        nf: usize,
+     ) -> Result<(), String> {
+         if ons.len() == 1 {
+-            let d = nbs[ons[0]].as_ref().unwrap().read();
++            let buffer = nbs[ons[0]].as_ref().unwrap();
++            let d = &buffer.read()[..(nf * buffer.num_channels).min(buffer.actual_len)];
+             let l = d.len().min(out.len());
+             out[..l].copy_from_slice(&d[..l]);
+         } else {
+             out.fill(T::default());
+             for (output_index, &id) in ons.iter().enumerate() {
+                 let buffer = nbs[id].as_mut().unwrap();
+-                let d = &mut buffer.data[..buffer.actual_len];
++                let d = &mut buffer.data[..(nf * buffer.num_channels).min(buffer.actual_len)];
+                 if let Some(delay) = delays.output_delays[output_index].as_mut() {
+                     for frame in d.chunks_exact_mut(buffer.num_channels) {
+                         delay.process_frame_in_place(frame);
+@@ -3781,9 +3901,25 @@
+         }
+         if let Some(buffers) = self.process_buffers.as_mut() {
+             buffers.compensation_delays.reset();
++            for queue in buffers
++                .edge_queues
++                .iter_mut()
++                .chain(&mut buffers.output_queues)
++                .flatten()
++            {
++                queue.clear();
++            }
+         }
+         if let Some(buffers) = self.process_buffers_f64.as_mut() {
+             buffers.compensation_delays.reset();
++            for queue in buffers
++                .edge_queues
++                .iter_mut()
++                .chain(&mut buffers.output_queues)
++                .flatten()
++            {
++                queue.clear();
++            }
+         }
+     }
+     pub fn total_latency_samples(&self) -> usize {
+--- a/crates/sotf-plugins/crates/sotf-host/src/host/tests.rs
++++ b/crates/sotf-plugins/crates/sotf-host/src/host/tests.rs
+@@ -23,6 +23,7 @@
+ use std::sync::Arc;
+ use std::sync::atomic::{AtomicUsize, Ordering};
+ 
++mod branch_queue_regression;
+ mod channel_changing_plugin;
+ mod drain;
+ mod f64_scale_plugin;
+@@ -1214,6 +1215,8 @@
+ #[test]
+ fn test_buffer_guard_returns_buffers_on_drop() {
+     let mut slot: Option<ProcessBuffers<f32>> = Some(ProcessBuffers {
++        edge_queues: Vec::new(),
++        output_queues: Vec::new(),
+         node_buffers: vec![],
+         scratch_input: vec![],
+         scratch_output: vec![],
+@@ -1239,6 +1242,8 @@
+ #[test]
+ fn test_buffer_guard_survives_simulated_early_return() {
+     let mut slot: Option<ProcessBuffers<f32>> = Some(ProcessBuffers {
++        edge_queues: Vec::new(),
++        output_queues: Vec::new(),
+         node_buffers: vec![],
+         scratch_input: vec![],
+         scratch_output: vec![],
+--- /dev/null
++++ b/crates/sotf-plugins/crates/sotf-host/src/host/tests/branch_queue_regression.rs
+@@ -0,0 +1,120 @@
++//! Proposed host regression: install as host/tests/branch_queue_regression.rs.
++//! It fails on the current common-prefix merge because the fast branch's
++//! unmatched samples are discarded between calls.
++use super::super::{daw_host::DawHost, graph_edge::GraphEdge};
++use crate::parameters::{Parameter, ParameterId, ParameterValue};
++use crate::plugin::{Plugin, PluginInfo, ProcessContext};
++
++struct Burst {
++    first: bool,
++    delayed: bool,
++    held: [f32; 2],
++    pending: bool,
++}
++impl Plugin for Burst {
++    fn info(&self) -> PluginInfo {
++        PluginInfo::new("burst fixture", "1", "test")
++    }
++    fn input_channels(&self) -> usize {
++        1
++    }
++    fn output_channels(&self) -> usize {
++        1
++    }
++    fn parameters(&self) -> Vec<Parameter> {
++        vec![]
++    }
++    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
++        Ok(())
++    }
++    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
++        None
++    }
++    fn output_frames_for_input(&self, frames: usize) -> usize {
++        if self.delayed { frames + 2 } else { frames }
++    }
++    fn process(
++        &mut self,
++        input: &[f32],
++        output: &mut [f32],
++        context: &ProcessContext,
++    ) -> Result<usize, String> {
++        if !self.delayed {
++            output[..input.len()].copy_from_slice(input);
++            return Ok(context.num_frames);
++        }
++        if self.first {
++            self.first = false;
++            self.pending = true;
++            self.held.copy_from_slice(&input[2..4]);
++            output[..2].copy_from_slice(&input[..2]);
++            Ok(2)
++        } else if self.pending {
++            self.pending = false;
++            output[..2].copy_from_slice(&self.held);
++            output[2..2 + input.len()].copy_from_slice(input);
++            Ok(input.len() + 2)
++        } else {
++            output[..input.len()].copy_from_slice(input);
++            Ok(input.len())
++        }
++    }
++}
++
++#[test]
++fn unmatched_branch_suffix_survives_next_callback() {
++    let mut host = DawHost::new(1, 48000);
++    let fast = host
++        .add_node(
++            "fast".into(),
++            Box::new(Burst {
++                first: true,
++                delayed: false,
++                held: [0.0; 2],
++                pending: false,
++            }),
++        )
++        .unwrap();
++    let slow = host
++        .add_node(
++            "burst".into(),
++            Box::new(Burst {
++                first: true,
++                delayed: true,
++                held: [0.0; 2],
++                pending: false,
++            }),
++        )
++        .unwrap();
++    let join = host
++        .add_node(
++            "join".into(),
++            Box::new(Burst {
++                first: true,
++                delayed: false,
++                held: [0.0; 2],
++                pending: false,
++            }),
++        )
++        .unwrap();
++    host.add_edge(GraphEdge::new(fast, join)).unwrap();
++    host.add_edge(GraphEdge::new(slow, join)).unwrap();
++    host.build().unwrap();
++    let mut output = [0.0; 6];
++    assert_eq!(host.process(&[0.0, 1.0, 2.0, 3.0], &mut output).unwrap(), 2);
++    assert_eq!(&output[..2], &[0.0, 2.0]);
++    let frames = host.process(&[4.0, 5.0, 6.0, 7.0], &mut output).unwrap();
++    assert_eq!(
++        frames, 6,
++        "two queued frames plus four new frames must reach the join"
++    );
++    assert_eq!(output, [4.0, 6.0, 8.0, 10.0, 12.0, 14.0]);
++    let frames = host.process(&[8.0, 9.0, 10.0, 11.0], &mut output).unwrap();
++    assert_eq!(frames, 4);
++    assert_eq!(&output[..frames], &[16.0, 18.0, 20.0, 22.0]);
++    assert!(
++        host.drain(&mut output)
++            .unwrap_err()
++            .contains("requires a linear plugin graph")
++    );
++}

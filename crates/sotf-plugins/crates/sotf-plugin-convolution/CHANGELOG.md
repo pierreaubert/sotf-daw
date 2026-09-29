@@ -1,3 +1,32 @@
+# Unreleased
+
+## Maintenance
+
+- Resample IRs with `Fft::new_custom`, preserving the historical sub-chunk
+  count and BlackmanHarris2 window on the workspace Rubato 5 fork. Output
+  is unchanged.
+
+## Fixes
+
+- Native finite EOS drains preserve UPC/NUPC/head responses, inactive delayed dry
+  audio, and replacement fades through bounded zero continuation. Pending IR
+  publication is frozen until reset, with transactional destination checks.
+- Audio-owned active Arcs avoid cold callback reader allocation. Consumed
+  completion receivers remain owned alongside senders so callback adoption does
+  not free channel message storage; state retirement stays off the audio thread.
+
+- Report the prepared IR's finite zero-input tail, including backend latency once, for UPC,
+  NUPC, and direct-head processing. Pending loads remain unknown; live replacements retain a
+  conservative bound through held-output fades until reset.
+- Scalar parameter reads, validation, and mix/gain automation now avoid rebuilding parameter
+  maps and schema strings on the audio thread. Setup file-path queries remain owned strings.
+
+## Tests
+
+- Direct convolution last-tap bounds across five backends, three rates, and eight IR lengths;
+  resampled prepared-IR support; inactive dry delay; pending replacement at the old final tap;
+  sample-rate reload and reset; fresh-thread tail/scalar allocation checks.
+
 # 0.5.11
 
 ## Fixes

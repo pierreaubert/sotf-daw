@@ -4,7 +4,9 @@
 //
 // Full implementation of ISO 226:2003 "Acoustics — Normal equal-loudness-level
 // contours" using the standard's Table 1 data. Computes equal-loudness contours
-// for any phon level in the 20–90 phon range across 29 reference frequencies.
+// across 29 reference frequencies. The standard applies from 20 to 90 phon
+// through 4 kHz and from 20 to 80 phon at 5–12.5 kHz. Higher treble levels
+// computed by this legacy-compatible API are extrapolations.
 //
 // Reference: ISO 226:2003, Equations 1–3 and Table 1.
 // ============================================================================
@@ -38,19 +40,25 @@ const ISO226_TF: [f64; 29] = [
     2.2, 2.4, 3.5, 1.7, -1.3, -4.2, -6.0, -5.4, -1.5, 6.0, 12.6, 13.9, 12.3,
 ];
 
-/// ISO 226:2003 Eq. 1–3: compute SPL (dB) at frequency index `i` for loudness
-/// `phon` (valid for 20–90 phon).
+/// Compute ISO 226:2003 sound pressure level at a reference frequency.
 ///
 /// Returns the sound pressure level in dB SPL that produces the given perceived
 /// loudness at the given frequency.
+/// The standard applies at 20–90 phon through 4 kHz and 20–80 phon above it.
+/// Values outside those limits extrapolate the same equation.
+///
+/// # Panics
+/// Panics if `i` is outside the 29 reference frequencies.
 pub fn iso226_spl_at_freq(i: usize, phon: f64) -> f64 {
     let alpha_f = ISO226_ALPHA_F[i];
     let lu = ISO226_LU[i];
     let tf = ISO226_TF[i];
 
-    // Eq. 2: A_f — frequency-dependent amplitude factor
-    let af = 4.47e-3 * (10.0_f64.powf(0.025 * phon) - 1.585)
-        + 0.4 * 10.0_f64.powf(((tf + lu) / 10.0) - 9.0);
+    // Clause 4.1, Eq. 1: the entire threshold term is raised to alpha_f.
+    // Also reproduced by Suzuki/Takeshima/Kurakata (2024), section 2.3:
+    // https://doi.org/10.1250/ast.e23.66
+    let af = 4.47e-3 * (10.0_f64.powf(0.025 * phon) - 1.15)
+        + (0.4 * 10.0_f64.powf(((tf + lu) / 10.0) - 9.0)).powf(alpha_f);
 
     // Eq. 1: L_f — sound pressure level at frequency f
     (10.0 / alpha_f) * af.log10() - lu + 94.0

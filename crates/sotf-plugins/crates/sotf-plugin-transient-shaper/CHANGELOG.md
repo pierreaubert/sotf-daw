@@ -1,3 +1,10 @@
+# Unreleased
+
+- Report an exact zero audio tail and one-call drain bound through the native
+  adapter. Detector envelopes and smoothed controls cannot emit audio from zero
+  input; processing and immediate drain behavior are unchanged. Add exact-zero
+  warmed/control-transition regressions and cold allocation/deallocation checks.
+
 # 0.5.9
 
 ## Review remediation

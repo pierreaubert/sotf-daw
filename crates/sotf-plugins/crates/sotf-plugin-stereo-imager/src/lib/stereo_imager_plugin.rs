@@ -1,7 +1,6 @@
 use super::misc::SMOOTHING_MS;
 use super::stereo_imager_plugin_params::StereoImagerPluginParams;
 use crate::params::PARAMS as SI;
-use sotf_host::lr4_crossover::Lr4Crossover;
 use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -13,6 +12,46 @@ use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
 
 const CROSSOVER_CONTROL_INTERVAL: usize = 16;
+
+// Bilinear one-pole lowpass in trapezoidal-integrator form. Its complementary
+// highpass is input - lowpass, so the sum is identity rather than an allpass.
+// f64 state avoids precision loss at low cutoffs and high sample rates.
+pub(super) struct ComplementaryLowpass {
+    frequency: f32,
+    sample_rate: f64,
+    coefficient: f64,
+    state: f64,
+}
+
+impl ComplementaryLowpass {
+    fn new(frequency: f32, sample_rate: u32) -> Self {
+        let mut filter = Self {
+            frequency,
+            sample_rate: f64::from(sample_rate),
+            coefficient: 0.0,
+            state: 0.0,
+        };
+        filter.set_frequency(frequency);
+        filter
+    }
+
+    pub(super) fn frequency(&self) -> f32 {
+        self.frequency
+    }
+
+    fn set_frequency(&mut self, frequency: f32) {
+        self.frequency = frequency;
+        let g = (std::f64::consts::PI * f64::from(frequency) / self.sample_rate).tan();
+        self.coefficient = g / (1.0 + g);
+    }
+
+    fn process(&mut self, input: f32) -> f32 {
+        let delta = (f64::from(input) - self.state) * self.coefficient;
+        let low = self.state + delta;
+        self.state = low + delta;
+        low as f32
+    }
+}
 
 pub struct StereoImagerPlugin {
     pub(super) channels: usize,
@@ -28,9 +67,10 @@ pub struct StereoImagerPlugin {
     pub(super) mono_bass: bool,
     pub(super) mix: f32,
 
-    // Crossovers: each crossover handles 2 channels (one for mid signal, one for side signal)
-    pub(super) crossover_low: Lr4Crossover<f32>,
-    pub(super) crossover_high: Lr4Crossover<f32>,
+    // Parallel lowpasses form complementary bands: L, U-L, and input-U.
+    // Their sum is the original side signal with zero phase/latency change.
+    pub(super) crossover_low: ComplementaryLowpass,
+    pub(super) crossover_high: ComplementaryLowpass,
 
     // Smoothers for click-free parameter changes
     pub(super) width_smoother: Smoother,
@@ -97,9 +137,8 @@ impl StereoImagerPlugin {
             mono_bass: params.mono_bass,
             mix: params.mix,
 
-            // 2 channels: channel 0 = mid, channel 1 = side
-            crossover_low: Lr4Crossover::new(params.low_mid_freq, sr as f32, 2),
-            crossover_high: Lr4Crossover::new(params.mid_high_freq, sr as f32, 2),
+            crossover_low: ComplementaryLowpass::new(params.low_mid_freq, sr),
+            crossover_high: ComplementaryLowpass::new(params.mid_high_freq, sr),
 
             width_smoother: Smoother::new(params.width, SMOOTHING_MS, sr),
             low_mid_freq_smoother: Smoother::new(params.low_mid_freq, SMOOTHING_MS, sr),
@@ -209,39 +248,10 @@ impl StereoImagerPlugin {
             ),
         ];
     }
-}
-
-impl ParametricInPlacePlugin for StereoImagerPlugin {
-    fn info(&self) -> PluginInfo {
-        PluginInfo::new("StereoImager", env!("CARGO_PKG_VERSION"), "SotF")
-            .with_description("Multi-band M/S stereo width control")
-    }
-
-    fn cost_class(&self) -> PluginCostClass {
-        PluginCostClass::Iir
-    }
-
-    fn compile_metadata(&self) -> PluginCompileMetadata {
-        PluginCompileMetadata::linear_transform(PluginCostClass::Iir, None, 0, true, true, false)
-    }
-
-    fn channels(&self) -> usize {
-        self.channels
-    }
-
-    fn parameter_schema(&self) -> ParameterSchema {
-        self.cached_parameters.clone()
-    }
-
-    fn current_values(&self) -> ParameterSet {
-        let mut values = ParameterSet::new();
-        for param in &self.cached_parameters {
-            values.insert(param.id.clone(), param.default_value.clone());
-        }
-        values
-    }
-
-    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+    fn apply_value_refs<'a>(
+        &mut self,
+        values: impl Iterator<Item = (&'a ParameterId, &'a ParameterValue)> + Clone,
+    ) -> PluginResult<()> {
         // Phase 1: validate the whole set before touching any DSP state, so
         // a rejected automation event leaves fields, smoother targets, and
         // the cached schema exactly as they were. Prospective crossover
@@ -255,7 +265,7 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         let mut high_width: Option<f32> = None;
         let mut mono_bass: Option<bool> = None;
         let mut mix: Option<f32> = None;
-        for (id, value) in &values {
+        for (id, value) in values.clone() {
             match id.as_str() {
                 "width" => width = Some(Self::check_finite_range(id, value, 0.0, 2.0)?),
                 "low_mid_freq" => {
@@ -283,6 +293,9 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         if low_mid_freq.unwrap_or(self.low_mid_freq) >= mid_high_freq.unwrap_or(self.mid_high_freq)
         {
             return Err("low_mid_freq must be lower than mid_high_freq".into());
+        }
+        if mid_high_freq.unwrap_or(self.mid_high_freq) >= self.sample_rate as f32 * 0.5 {
+            return Err("mid_high_freq must be below Nyquist".into());
         }
 
         // Phase 2: commit. Every value above already passed validation.
@@ -321,11 +334,77 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         }
         // Keep the cached parameter list in sync with the live state.
         for (id, value) in values {
-            if let Some(p) = self.cached_parameters.iter_mut().find(|p| p.id == id) {
-                p.default_value = value;
+            if let Some(p) = self.cached_parameters.iter_mut().find(|p| &p.id == id) {
+                p.default_value = value.clone();
             }
         }
         Ok(())
+    }
+}
+
+impl ParametricInPlacePlugin for StereoImagerPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("StereoImager", env!("CARGO_PKG_VERSION"), "SotF")
+            .with_description("Multi-band M/S stereo width control")
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Iir
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::linear_transform(PluginCostClass::Iir, None, 0, true, true, false)
+    }
+
+    fn channels(&self) -> usize {
+        self.channels
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.parametric_validate_parameter(&id, &value)?;
+        self.apply_value_refs(std::iter::once((&id, &value)))
+    }
+
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.cached_parameters.clone()
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .map(|parameter| parameter.default_value.clone())
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        let mut values = ParameterSet::new();
+        for param in &self.cached_parameters {
+            values.insert(param.id.clone(), param.default_value.clone());
+        }
+        values
+    }
+
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        self.apply_value_refs(values.iter())
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
@@ -342,10 +421,8 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         self.sample_rate = sample_rate;
 
         // Reinitialize crossovers at the correct sample rate
-        self.crossover_low
-            .reinit(self.low_mid_freq, sample_rate as f32, 2);
-        self.crossover_high
-            .reinit(self.mid_high_freq, sample_rate as f32, 2);
+        self.crossover_low = ComplementaryLowpass::new(self.low_mid_freq, sample_rate);
+        self.crossover_high = ComplementaryLowpass::new(self.mid_high_freq, sample_rate);
 
         // Reset smoothers at the new sample rate
         self.width_smoother = Smoother::new(self.width, SMOOTHING_MS, sample_rate);
@@ -370,8 +447,8 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
     }
 
     fn reset(&mut self) {
-        self.crossover_low.reset();
-        self.crossover_high.reset();
+        self.crossover_low = ComplementaryLowpass::new(self.low_mid_freq, self.sample_rate);
+        self.crossover_high = ComplementaryLowpass::new(self.mid_high_freq, self.sample_rate);
         // Snap all smoothers to their current target values so a reset
         // during a parameter transition does not resume the ramp.
         self.width_smoother.reset(self.width);
@@ -442,7 +519,7 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             let mid = (l + r) * 0.5;
             let side = (l - r) * 0.5;
 
-            // Advance targets at audio rate, but redesign biquad coefficients at a
+            // Advance targets at audio rate, but redesign crossover coefficients at a
             // bounded control rate. This retains time-based smoothing without doing
             // trigonometric filter design for every sample.
             let low_mid_freq = self.low_mid_freq_smoother.advance();
@@ -466,11 +543,8 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             self.crossover_control_phase =
                 (self.crossover_control_phase + 1) % CROSSOVER_CONTROL_INTERVAL;
 
-            // Split mid and side into bands via cascaded crossovers.
-            // crossover_low: channel 0 = mid signal, channel 1 = side signal
-            let (side_low, side_rest) = self.crossover_low.process(side, 1);
-            // crossover_high: channel 0 = mid rest, channel 1 = side rest
-            let (side_mid, side_high) = self.crossover_high.process(side_rest, 1);
+            let side_low = self.crossover_low.process(side);
+            let side_upper_low = self.crossover_high.process(side);
 
             // Advance smoothers (per-sample)
             let gw = self.width_smoother.advance();
@@ -479,15 +553,12 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             let hw = self.high_width_smoother.advance();
             let low_side_enable = self.mono_bass_smoother.advance();
 
-            // Apply per-band width scaling to side signal.
-            // Apply only the width correction to the untouched M/S reference.
-            // At neutral widths every correction is exactly zero, avoiding the
-            // phase rotation and dry/wet comb filtering of crossover reconstruction.
+            // Weighted sum of the complementary bands L, U-L, and S-U.
+            // This expanded form makes neutral widths exactly transparent and
+            // all-zero band widths exactly mono, including crossover frequencies.
             let total_mid = mid;
-            let total_side = side * gw
-                + side_low * gw * (lw * low_side_enable - 1.0)
-                + side_mid * gw * (mw - 1.0)
-                + side_high * gw * (hw - 1.0);
+            let total_side = gw
+                * (side * hw + side_low * (lw * low_side_enable - mw) + side_upper_low * (mw - hw));
 
             // M/S decode
             let wet_l = total_mid + total_side;

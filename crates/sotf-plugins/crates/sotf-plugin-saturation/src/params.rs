@@ -29,6 +29,7 @@ pub const OVERSAMPLING_OPTIONS: &[&str] = &["Off", "2x", "4x"];
 pub const PARAMS: &[ParamSpec] = &[
     ParamSpec::choice("Mode", "mode", 0, MODES, "Saturation")
         .setup()
+        .structural()
         .doc("Saturation algorithm"),
     ParamSpec::float("Drive", "drive", 2.0, 1.0, 20.0, 0.1, "", "Saturation")
         .doc("Saturation intensity"),
@@ -55,6 +56,7 @@ pub const PARAMS: &[ParamSpec] = &[
         "Quality",
     )
     .setup()
+    .structural()
     .doc("Oversampling factor for alias suppression"),
     ParamSpec::float(
         "Output",

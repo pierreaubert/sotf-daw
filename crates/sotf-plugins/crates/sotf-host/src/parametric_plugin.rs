@@ -12,8 +12,8 @@
 
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{
-    Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginInfo, PluginResult,
-    ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginDrainResult,
+    PluginInfo, PluginResult, ProcessContext,
 };
 use std::any::Any;
 use std::collections::BTreeMap;
@@ -87,6 +87,32 @@ pub trait ParametricPlugin: Send {
         context: &ProcessContext,
     ) -> Result<usize, String>;
 
+    /// Maximum output-rate frames written by one [`Self::drain`] call.
+    fn drain_output_frames_max(&self) -> usize {
+        0
+    }
+
+    /// Prepare bounded, idempotent EOS work; see [`Plugin::begin_drain`].
+    fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Bound full-capacity EOS calls; see [`Plugin::drain_call_bound`].
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        None
+    }
+
+    /// Emit retained audio without accepting new input; see [`Plugin::drain`].
+    ///
+    /// Output uses the plugin's output-channel layout. The default has no tail.
+    fn drain(
+        &mut self,
+        _output: &mut [f32],
+        _context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        Ok(PluginDrainResult::COMPLETE)
+    }
+
     /// Optional specialized operation used by host compiled render plans.
     fn process_compiled_f32(
         &mut self,
@@ -134,6 +160,11 @@ pub trait ParametricPlugin: Send {
     /// Processing latency in samples.
     fn latency_samples(&self) -> usize {
         0
+    }
+
+    /// Allocation-free zero-input response bound; see [`crate::plugin::TailLength`].
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        crate::plugin::TailLength::Unknown
     }
 
     /// Coarse cost category for host scheduling.
@@ -197,6 +228,10 @@ pub trait ParametricPlugin: Send {
     }
 
     /// Read a single parameter value.
+    ///
+    /// The default builds the full allocating snapshot. Plugins queried on an
+    /// audio callback must override this method with direct scalar access.
+    /// Owned string values may still require control-thread queries.
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         self.current_values().get(id).cloned()
     }
@@ -292,6 +327,26 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         self.plugin.process(input, output, context)
     }
 
+    fn drain_output_frames_max(&self) -> usize {
+        self.plugin.drain_output_frames_max()
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        self.plugin.begin_drain(context)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.plugin.drain_call_bound()
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.plugin.drain(output, context)
+    }
+
     fn process_compiled_f32(
         &mut self,
         op: PluginCompiledOp,
@@ -331,6 +386,10 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
 
     fn latency_samples(&self) -> usize {
         self.plugin.latency_samples()
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        self.plugin.tail_length()
     }
 
     fn cost_class(&self) -> PluginCostClass {

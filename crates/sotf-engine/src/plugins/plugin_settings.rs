@@ -81,6 +81,7 @@ use super::default_cms_dim_gain_db;
 use super::default_cms_fade_ms;
 use super::default_compressor_detection_mode;
 use super::default_compressor_link_channels;
+use super::default_compressor_range_db;
 use super::default_compressor_sidechain_hpf_hz;
 use super::default_compressor_sidechain_hpf_order;
 use super::default_crossfeed_autogain_max_gain_db;
@@ -104,8 +105,10 @@ use super::default_de_esser_attack;
 use super::default_de_esser_frequency;
 use super::default_de_esser_mix;
 use super::default_de_esser_q;
+use super::default_de_esser_range_db;
 use super::default_de_esser_ratio;
 use super::default_de_esser_release;
+use super::default_de_esser_stereo_link;
 use super::default_de_esser_threshold;
 use super::default_declick_enabled;
 use super::default_declick_link_channels;
@@ -168,6 +171,7 @@ use super::default_gain_smoothing_ms;
 use super::default_gate_detection_mode;
 use super::default_gate_hold_ms;
 use super::default_gate_link_channels;
+use super::default_gate_max_boost_db;
 use super::default_gate_mix;
 use super::default_gate_range_db;
 use super::default_gate_sidechain_hpf_order;
@@ -332,6 +336,9 @@ use sotf_plugins::param_specs::aae as aae_specs;
 use sotf_plugins::param_specs::ab_compare as ab_compare_specs;
 use sotf_plugins::param_specs::aec as aec_specs;
 use sotf_plugins::param_specs::ambisonics as ambisonics_specs;
+use sotf_plugins::param_specs::analog_compressor as analog_compressor_specs;
+use sotf_plugins::param_specs::analog_eq as analog_eq_specs;
+use sotf_plugins::param_specs::analog_limiter as analog_limiter_specs;
 use sotf_plugins::param_specs::beamformer as beamformer_specs;
 use sotf_plugins::param_specs::binaural as binaural_specs;
 use sotf_plugins::param_specs::channel_mute_solo as cms_specs;
@@ -359,9 +366,6 @@ use sotf_plugins::param_specs::mono_to_stereo as mono_to_stereo_specs;
 use sotf_plugins::param_specs::multiband_compressor as mb_compressor_specs;
 use sotf_plugins::param_specs::multiband_expander as mb_expander_specs;
 use sotf_plugins::param_specs::pnd as pnd_specs;
-use sotf_plugins::param_specs::analog_compressor as analog_compressor_specs;
-use sotf_plugins::param_specs::analog_eq as analog_eq_specs;
-use sotf_plugins::param_specs::analog_limiter as analog_limiter_specs;
 use sotf_plugins::param_specs::saturation as saturation_specs;
 use sotf_plugins::param_specs::spectral_compressor as spectral_compressor_specs;
 use sotf_plugins::param_specs::spectrum as spectrum_specs;
@@ -644,6 +648,10 @@ pub enum PluginSettings {
         measured_auto_makeup: bool,
         #[serde(default)]
         sidechain_external: bool,
+        #[serde(default = "default_compressor_range_db")]
+        range_db: f64,
+        #[serde(default)]
+        hold_ms: f64,
     },
     Limiter {
         threshold_db: f64,
@@ -664,6 +672,9 @@ pub enum PluginSettings {
         link_amount: f64,
         #[serde(default)]
         feed_forward: bool,
+        /// Choice index: 0 = 1x, 1 = 2x, 2 = 4x.
+        #[serde(default)]
+        oversampling: usize,
     },
     Gate {
         threshold_db: f64,
@@ -692,6 +703,10 @@ pub enum PluginSettings {
         knee_db: f64,
         #[serde(default)]
         lookahead_ms: f64,
+        #[serde(default)]
+        mode: sotf_plugins::GateMode,
+        #[serde(default = "default_gate_max_boost_db")]
+        max_boost_db: f64,
     },
     Expander {
         #[serde(default = "default_expander_threshold_db")]
@@ -762,6 +777,10 @@ pub enum PluginSettings {
         sidechain_tilt_db: f64,
         #[serde(default = "default_mb_compressor_link_amount")]
         link_amount: f64,
+        #[serde(default = "default_compressor_range_db")]
+        range_db: f64,
+        #[serde(default)]
+        hold_ms: f64,
     },
     MultibandExpander {
         #[serde(default = "default_mb_expander_num_bands")]
@@ -1386,6 +1405,10 @@ pub enum PluginSettings {
         mode: String,
         #[serde(default = "default_de_esser_mix")]
         mix: f64,
+        #[serde(default = "default_de_esser_range_db")]
+        range_db: f64,
+        #[serde(default = "default_de_esser_stereo_link")]
+        stereo_link: f64,
     },
     TransientShaper {
         #[serde(default)]
@@ -1508,6 +1531,10 @@ pub enum PluginSettings {
         analog_character: f64,
         #[serde(default)]
         analog_trim: f64,
+        #[serde(default = "default_compressor_range_db")]
+        range_db: f64,
+        #[serde(default)]
+        hold_ms: f64,
     },
     DynamicEq {
         #[serde(default = "default_dyneq_num_bands")]
@@ -1816,6 +1843,8 @@ impl PluginSettings {
                     program_dependent_release: p(c, "program_dependent_release").default_bool(),
                     measured_auto_makeup: p(c, "measured_auto_makeup").default_bool(),
                     sidechain_external: p(c, "sidechain_external").default_bool(),
+                    range_db: p(c, "range_db").default_f64(),
+                    hold_ms: p(c, "hold_ms").default_f64(),
                 }
             }
             PluginType::Limiter => {
@@ -1831,6 +1860,7 @@ impl PluginSettings {
                     mix: p(l, "mix").default_f64(),
                     link_amount: p(l, "link_amount").default_f64(),
                     feed_forward: p(l, "feed_forward").default_bool(),
+                    oversampling: p(l, "oversampling").default_usize(),
                 }
             }
             PluginType::Gate => {
@@ -1851,6 +1881,8 @@ impl PluginSettings {
                     hysteresis_db: p(g, "hysteresis_db").default_f64(),
                     knee_db: p(g, "knee_db").default_f64(),
                     lookahead_ms: p(g, "lookahead_ms").default_f64(),
+                    mode: sotf_plugins::GateMode::default(),
+                    max_boost_db: p(g, "max_boost_db").default_f64(),
                 }
             }
             PluginType::Expander => {
@@ -1894,6 +1926,8 @@ impl PluginSettings {
                     bands: Vec::new(),
                     sidechain_tilt_db: 0.0,
                     link_amount: p(mc, "link_amount").default_f64(),
+                    range_db: p(mc, "range_db").default_f64(),
+                    hold_ms: p(mc, "hold_ms").default_f64(),
                 }
             }
             PluginType::MultibandExpander => {
@@ -2286,6 +2320,8 @@ impl PluginSettings {
                     release: p(de, "release").default_f64(),
                     mode: default_de_esser_mode(),
                     mix: p(de, "mix").default_f64(),
+                    range_db: p(de, "range_db").default_f64(),
+                    stereo_link: p(de, "stereo_link").default_f64(),
                 }
             }
             PluginType::TransientShaper => {
@@ -2367,6 +2403,8 @@ impl PluginSettings {
                     analog_color: p(ac, "analog_color").default_f64(),
                     analog_character: p(ac, "analog_character").default_f64(),
                     analog_trim: p(ac, "analog_trim").default_f64(),
+                    range_db: p(ac, "range_db").default_f64(),
+                    hold_ms: p(ac, "hold_ms").default_f64(),
                 }
             }
             PluginType::DynamicEq => {

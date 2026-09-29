@@ -25,6 +25,7 @@ use super::misc::u64_to_fingerprint;
 use super::types::EncryptedRecordHeader;
 use super::types::EncryptedRecordRead;
 use super::validate::{open_existing_shared_memory_file, open_shared_memory_file};
+use crate::reader_state::ReaderIdentity;
 use memmap2::MmapMut;
 use std::io;
 #[cfg(unix)]
@@ -54,7 +55,65 @@ pub struct SharedAudioBuffer {
     pub(super) max_audio_capacity: usize,
 }
 
+/// One reader transaction, including cached plaintext delivery.
+/// Drops the existing header read bit on every normal return/unwind path.
+/// Cursor-consuming and repair operations require an exclusive borrow so a
+/// shared guard cannot admit concurrent readers through one claimed read bit.
+pub(super) struct ReadCommit<'a> {
+    shared: &'a SharedAudioBuffer,
+}
+
+impl ReadCommit<'_> {
+    pub(super) fn identity(&self) -> ReaderIdentity {
+        ReaderIdentity {
+            sample_rate: self.shared.sample_rate(),
+            channel_count: self.shared.channel_count(),
+            buffer_frames: self.shared.buffer_frames(),
+            encrypted: self.shared.is_encrypted(),
+            key_fingerprint: self.shared.key_fingerprint(),
+        }
+    }
+
+    pub(super) fn read_audio(&mut self, output: &mut [f32]) -> usize {
+        self.shared.read_audio_under_commit(output)
+    }
+
+    pub(super) fn available_read_frames(&mut self) -> usize {
+        self.shared.available_read_frames_under_commit()
+    }
+
+    pub(super) fn read_next_encrypted_record_into(
+        &mut self,
+        output: &mut [f32],
+        cipher: &crate::encryption::AudioCipher,
+        encrypted_buf: &mut Vec<f32>,
+        ciphertext_buf: &mut Vec<u8>,
+    ) -> EncryptedRecordRead {
+        self.shared.read_next_encrypted_record_under_commit(
+            output,
+            cipher,
+            encrypted_buf,
+            ciphertext_buf,
+        )
+    }
+}
+
+impl Drop for ReadCommit<'_> {
+    fn drop(&mut self) {
+        self.shared.release_io_commit(CONFIGURING_READ_COMMIT);
+    }
+}
+
 impl SharedAudioBuffer {
+    pub(super) fn try_read_commit(&self) -> Option<ReadCommit<'_>> {
+        if self.reconfiguration_requested() {
+            self.header().configuring_ack.store(1, Ordering::Release);
+            return None;
+        }
+        self.try_acquire_io_commit(CONFIGURING_READ_COMMIT)
+            .then(|| ReadCommit { shared: self })
+    }
+
     fn reconfiguration_requested(&self) -> bool {
         self.header().configuring.load(Ordering::Acquire) & CONFIGURING_RECONFIGURE != 0
     }
@@ -1061,6 +1120,7 @@ impl SharedAudioBuffer {
     ///
     /// There is exactly one daemon reader and one HAL writer per ring, so
     /// atomic stores from this `&self` method are well-defined.
+    #[cfg(test)]
     pub(super) fn commit_read_position(&self, new_read_pos: u64) -> bool {
         if !self.try_acquire_io_commit(CONFIGURING_READ_COMMIT) {
             return false;
@@ -1302,11 +1362,14 @@ impl SharedAudioBuffer {
 
     /// Get available frames to read.
     pub fn available_read_frames(&self) -> usize {
-        let header = self.header();
-        if self.reconfiguration_requested() {
-            header.configuring_ack.store(1, Ordering::Release);
+        let Some(mut commit) = self.try_read_commit() else {
             return 0;
-        }
+        };
+        commit.available_read_frames()
+    }
+
+    fn available_read_frames_under_commit(&self) -> usize {
+        let header = self.header();
         let write_pos = header.write_position.load(Ordering::Acquire);
         let read_pos = header.read_position.load(Ordering::Acquire);
         let channel_count = header.channel_count.load(Ordering::Acquire) as usize;
@@ -1316,14 +1379,18 @@ impl SharedAudioBuffer {
         }
 
         if self.is_encrypted() {
-            return self.available_encrypted_read_frames(write_pos, read_pos, channel_count);
+            return self.available_encrypted_read_frames_under_commit(
+                write_pos,
+                read_pos,
+                channel_count,
+            );
         }
 
         let (_, available) = self.compute_repair(write_pos, read_pos);
         available / channel_count
     }
 
-    pub(super) fn available_encrypted_read_frames(
+    fn available_encrypted_read_frames_under_commit(
         &self,
         write_pos: u64,
         read_pos: u64,
@@ -1335,7 +1402,9 @@ impl SharedAudioBuffer {
             // position. A partial recovery would leave us mid-record with
             // no way to find the next valid header so we'd just flush on
             // the next read anyway.
-            self.commit_read_position(write_pos);
+            self.header()
+                .read_position
+                .store(write_pos, Ordering::Release);
             return 0;
         }
         let mut read_pos = repaired_read_pos;
@@ -1352,7 +1421,9 @@ impl SharedAudioBuffer {
                 parse_encrypted_record_header(&header_bytes, self.current_audio_capacity())
             else {
                 log::warn!("Invalid encrypted audio record header; flushing encrypted ring");
-                self.commit_read_position(write_pos);
+                self.header()
+                    .read_position
+                    .store(write_pos, Ordering::Release);
                 return 0;
             };
 
@@ -1457,28 +1528,6 @@ impl SharedAudioBuffer {
             self.current_audio_capacity(),
         )
         .map(Some)
-    }
-
-    pub(super) fn read_next_encrypted_record_into(
-        &self,
-        output: &mut [f32],
-        cipher: &crate::encryption::AudioCipher,
-        encrypted_buf: &mut Vec<f32>,
-        ciphertext_buf: &mut Vec<u8>,
-    ) -> EncryptedRecordRead {
-        if self.reconfiguration_requested() || !self.try_acquire_io_commit(CONFIGURING_READ_COMMIT)
-        {
-            return EncryptedRecordRead::Empty;
-        }
-
-        let result = self.read_next_encrypted_record_under_commit(
-            output,
-            cipher,
-            encrypted_buf,
-            ciphertext_buf,
-        );
-        self.release_io_commit(CONFIGURING_READ_COMMIT);
-        result
     }
 
     /// Read and publish one encrypted record while holding the read commit bit

@@ -24,6 +24,11 @@ fn main() {
         ..Default::default()
     };
 
+    let input_db = -40.0;
+    // Conventional downward expansion: y = T + R * (x - T), capped by range.
+    let reduction_db =
+        ((params.threshold_db - input_db) * (params.ratio - 1.0)).clamp(0.0, params.range_db);
+    let expected_db = input_db - reduction_db;
     let mut inner = MultibandExpanderPlugin::from_params(channels, params);
     inner.initialize(sample_rate).unwrap();
 
@@ -32,7 +37,7 @@ fn main() {
     // Test 1: Expansion Accuracy
     println!("\n[Test 1] High Band Expansion (Input -40dB @ 10kHz, Thresh -20dB)");
     let num_frames = 48000;
-    let mut buffer = generate_sine(sample_rate, 10000.0, -40.0, num_frames);
+    let mut buffer = generate_sine(sample_rate, 10000.0, input_db, num_frames);
 
     let mut pos = 0;
     let block_size = 1024;
@@ -44,9 +49,10 @@ fn main() {
     }
 
     let peak = measure_peak_db(&buffer[num_frames - 4096..]);
-    // Input -40dB, Thresh -20dB. Diff 20dB. Ratio 2:1. Expansion = 20 * 0.5 = 10dB. Output = -40 - 10 = -50dB
-    println!("  Expected: ~-50.0dB, Measured: {:.2}dB", peak);
-    assert!((peak + 50.0).abs() < 2.0);
+    // Allow the existing crossover and envelope ripple budget in this broad
+    // diagnostic; the independent unit oracles isolate the static gain law.
+    println!("  Expected: ~{expected_db:.1}dB, Measured: {peak:.2}dB");
+    assert!((peak - expected_db).abs() < 2.0);
     println!("  High Band Expansion: PASS");
 
     // Run standard QA tests

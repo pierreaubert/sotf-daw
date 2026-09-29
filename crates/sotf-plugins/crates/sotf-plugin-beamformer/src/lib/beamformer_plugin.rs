@@ -11,13 +11,22 @@ use plugins_spatial::validate_interleaved_io;
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use std::any::Any;
 use std::sync::Arc;
 
+#[derive(Default)]
+struct StreamDrain {
+    has_input: bool,
+    remaining: Option<usize>,
+    silence: Vec<f32>,
+}
+
 /// Beamformer plugin — M-channel input to 1-channel output.
 pub struct BeamformerPlugin {
+    drain_state: StreamDrain,
     pub(super) num_mics: usize,
     pub(super) sample_rate: u32,
     pub(super) mic_spacing_cm: f32,
@@ -81,6 +90,10 @@ impl BeamformerPlugin {
         let window = math_audio_dsp::stft::generate_sqrt_hann_window(FFT_SIZE);
 
         let mut p = Self {
+            drain_state: StreamDrain {
+                silence: vec![0.0; num_mics * (FFT_SIZE / 2)],
+                ..Default::default()
+            },
             num_mics,
             sample_rate,
             mic_spacing_cm: 5.0,
@@ -91,7 +104,9 @@ impl BeamformerPlugin {
             gsc: GscBeamformer::new(num_mics, &delays, 32, 0.01),
             steering_vectors,
             input_buffers: vec![vec![0.0; FFT_SIZE]; num_mics],
-            input_fill: 0,
+            // The first frame covers [-hop, hop): a zero prefix supplies the
+            // complementary window needed to reconstruct the first sample.
+            input_fill: FFT_SIZE / 2,
             // OLA buffer: hold FFT_SIZE * 2 samples so there is always room
             // for the full analysis window output at any hop boundary.
             ola_buffer: vec![0.0; FFT_SIZE * 2],
@@ -101,9 +116,9 @@ impl BeamformerPlugin {
             gsc_samples: vec![0.0; num_mics],
             window,
             stft_filled: false,
-            // The first synthesis frame is emitted after exactly FFT_SIZE
-            // samples of startup latency.
-            ola_write_pos: FFT_SIZE,
+            // Discard the first frame's negative-time half during synthesis;
+            // its first real sample still lands at the declared FFT_SIZE delay.
+            ola_write_pos: FFT_SIZE / 2,
             param_steer_angle: ParameterId::from("steer_angle_deg"),
             param_type: ParameterId::from("beamformer_type"),
             param_num_mics: ParameterId::from("num_mics"),
@@ -246,6 +261,9 @@ impl Plugin for BeamformerPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_state.remaining.is_some() {
+            return Err("BeamformerPlugin: reset before changing parameters after drain".into());
+        }
         self.validate_parameter(&id, &value)?;
         if id == self.param_steer_angle || id == self.param_num_mics || id == self.param_mic_spacing
         {
@@ -288,15 +306,17 @@ impl Plugin for BeamformerPlugin {
     }
 
     fn reset(&mut self) {
+        self.drain_state.has_input = false;
+        self.drain_state.remaining = None;
         self.mvdr.reset();
         self.gsc.reset();
-        self.input_fill = 0;
+        self.input_fill = FFT_SIZE / 2;
         for buf in &mut self.input_buffers {
             buf.fill(0.0);
         }
         self.ola_buffer.fill(0.0);
         self.ola_read_pos = 0;
-        self.ola_write_pos = FFT_SIZE;
+        self.ola_write_pos = FFT_SIZE / 2;
         self.stft_filled = false;
     }
 
@@ -305,6 +325,135 @@ impl Plugin for BeamformerPlugin {
         input: &[f32],
         output: &mut [f32],
         context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.drain_state.remaining.is_some() {
+            return Err("BeamformerPlugin: reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(input, output, context, false)?;
+        self.drain_state.has_input |= frames > 0;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        FFT_SIZE / 2
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let hop = FFT_SIZE / 2;
+        let remaining = if self.drain_state.has_input {
+            self.drain_state
+                .remaining
+                .unwrap_or_else(|| match self.beamformer_type {
+                    BeamformerType::Gsc => self.gsc.finite_support_frames(),
+                    _ => {
+                        let phase = self.input_fill - hop;
+                        2 * FFT_SIZE - if phase == 0 { hop } else { phase }
+                    }
+                })
+        } else {
+            0
+        };
+        std::num::NonZeroU64::new(remaining.div_ceil(hop).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.sample_rate {
+            return Err("BeamformerPlugin drain sample-rate mismatch".into());
+        }
+        if !self.drain_state.has_input || self.drain_state.remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() {
+            return Err("BeamformerPlugin drain needs at least one mono output frame".into());
+        }
+        // Validate before entering EOS: a rejected capacity/rate request must
+        // neither freeze learning nor consume a pending real input prefix.
+        let remaining = self
+            .drain_state
+            .remaining
+            .unwrap_or_else(|| match self.beamformer_type {
+                BeamformerType::Gsc => self.gsc.finite_support_frames(),
+                _ => {
+                    let hop = FFT_SIZE / 2;
+                    let phase = self.input_fill - hop;
+                    let phase = if phase == 0 { hop } else { phase };
+                    // The last frame touching real input starts at the last
+                    // hop boundary. Emit its entire N-sample synthesis window
+                    // after the declared N-sample delay, including bin-filter
+                    // spreading beyond the final real sample.
+                    2 * FFT_SIZE - phase
+                }
+            });
+        let frames = remaining
+            .min(output.len())
+            .min(self.drain_output_frames_max());
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        let silence = std::mem::take(&mut self.drain_state.silence);
+        let result = self.process_stream(
+            &silence[..frames * self.num_mics],
+            &mut output[..frames],
+            &drain_context,
+            true,
+        );
+        self.drain_state.silence = silence;
+        result?;
+        self.drain_state.remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn latency_samples(&self) -> usize {
+        match self.beamformer_type {
+            BeamformerType::Gsc => self.gsc.latency_samples(),
+            // Prefix analysis starts after half a window; synthesis remains
+            // scheduled at exactly FFT_SIZE samples after source time zero.
+            _ => FFT_SIZE,
+        }
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.sample_rate == 0 {
+            return TailLength::Unknown;
+        }
+        // This is the prepared response bound, not a remaining-drain count.
+        // Adaptation changes finite coefficients but introduces no audio once
+        // the steering/FIR or analysis/synthesis histories are empty.
+        let frames = match self.beamformer_type {
+            BeamformerType::Gsc => self.gsc.finite_support_frames(),
+            _ => 2 * FFT_SIZE,
+        };
+        TailLength::Finite(frames as u64)
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        None
+    }
+}
+
+impl std::fmt::Debug for BeamformerPlugin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BeamformerPlugin")
+            .field("num_mics", &self.num_mics)
+            .field("beamformer_type", &self.beamformer_type)
+            .field("steer_angle_deg", &self.steer_angle_deg)
+            .finish()
+    }
+}
+
+impl BeamformerPlugin {
+    fn process_stream(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+        frozen: bool,
     ) -> Result<usize, String> {
         let nf = context.num_frames;
         let hop = FFT_SIZE / 2;
@@ -332,7 +481,11 @@ impl Plugin for BeamformerPlugin {
                     for ch in 0..self.num_mics {
                         self.gsc_samples[ch] = input[i * self.num_mics + ch];
                     }
-                    output[i] = self.gsc.process_sample(&self.gsc_samples);
+                    output[i] = if frozen {
+                        self.gsc.process_sample_frozen(&self.gsc_samples)
+                    } else {
+                        self.gsc.process_sample(&self.gsc_samples)
+                    };
                 }
             }
             _ => {
@@ -350,7 +503,12 @@ impl Plugin for BeamformerPlugin {
                     // Drain before ingesting this timeline sample. A frame that
                     // completes below can therefore only become audible on the
                     // following sample, enforcing the declared FFT_SIZE latency.
-                    output[i] = self.ola_buffer[self.ola_read_pos];
+                    let sample = self.ola_buffer[self.ola_read_pos];
+                    // Finite input can exceed the internal f32 FFT range.
+                    // Suppress invalid synthesis samples at the public boundary;
+                    // clearing the same cell preserves timing and recovery.
+                    // This is overload suppression, not full-range reconstruction.
+                    output[i] = if sample.is_finite() { sample } else { 0.0 };
                     self.ola_buffer[self.ola_read_pos] = 0.0;
                     self.ola_read_pos = (self.ola_read_pos + 1) % ola_len;
 
@@ -375,10 +533,15 @@ impl Plugin for BeamformerPlugin {
                         // Beamform — result lands in fft.freq_buffer
                         match self.beamformer_type {
                             BeamformerType::Mvdr => {
-                                let covariance_dirty = self.mvdr.update_noise_covariance(
-                                    &self.stft_channels,
-                                    &self.steering_vectors,
-                                );
+                                // The startup prefix is synthetic, not new
+                                // microphone evidence. Initial dirty weights
+                                // are still solved from the existing covariance.
+                                let covariance_dirty = !frozen
+                                    && self.stft_filled
+                                    && self.mvdr.update_noise_covariance(
+                                        &self.stft_channels,
+                                        &self.steering_vectors,
+                                    );
                                 if covariance_dirty || self.mvdr.weights_dirty() {
                                     self.mvdr.compute_weights(&self.steering_vectors);
                                 }
@@ -409,11 +572,13 @@ impl Plugin for BeamformerPlugin {
                         // with length FFT_SIZE * 2 — large enough that the write
                         // head never catches the read head for any practical block.
                         let scale = 1.0 / FFT_SIZE as f32;
-                        for j in 0..FFT_SIZE {
+                        let synthesis_start = if self.stft_filled { 0 } else { hop };
+                        for j in synthesis_start..FFT_SIZE {
                             let pos = (self.ola_write_pos + j) % ola_len;
                             self.ola_buffer[pos] +=
                                 self.fft.time_buffer[j] * self.window[j] * scale;
                         }
+                        self.stft_filled = true;
 
                         // Shift input buffers: keep the last (FFT_SIZE - hop) samples
                         // as the overlap tail for the next frame.
@@ -430,29 +595,5 @@ impl Plugin for BeamformerPlugin {
         }
 
         Ok(nf)
-    }
-
-    fn latency_samples(&self) -> usize {
-        match self.beamformer_type {
-            BeamformerType::Gsc => self.gsc.latency_samples(),
-            // First output samples appear after one full FFT_SIZE of input has
-            // accumulated. The OLA read pointer advances in lock-step with the
-            // input, so output lags by FFT_SIZE samples.
-            _ => FFT_SIZE,
-        }
-    }
-
-    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        None
-    }
-}
-
-impl std::fmt::Debug for BeamformerPlugin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BeamformerPlugin")
-            .field("num_mics", &self.num_mics)
-            .field("beamformer_type", &self.beamformer_type)
-            .field("steer_angle_deg", &self.steer_angle_deg)
-            .finish()
     }
 }

@@ -51,7 +51,9 @@ impl ChannelCorrelationMonitor {
             sum_xy: vec![0.0; triangle_len],
             samples_seen: 0,
             frame_scratch: vec![0.0; channels],
-            partial_frame: Vec::with_capacity(channels.saturating_sub(1)),
+            // Completion temporarily appends the final sample before clearing
+            // the carry, so its peak length is one complete frame.
+            partial_frame: Vec::with_capacity(channels),
         }
     }
 

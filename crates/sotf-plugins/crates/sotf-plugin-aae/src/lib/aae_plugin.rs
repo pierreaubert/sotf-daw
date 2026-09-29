@@ -513,6 +513,7 @@ impl AaePlugin {
 
     pub(super) fn apply_auto_gain(
         &mut self,
+        input: &[f32],
         output: &mut [f32],
         num_frames: usize,
     ) -> PluginResult<()> {
@@ -523,7 +524,7 @@ impl AaePlugin {
         let speaker_config = self.speaker_config;
         let out_ch = self.num_output_channels;
         let auto_gain = self.auto_gain.as_mut().unwrap();
-        auto_gain.measure_and_apply(output, num_frames, out_ch, speaker_config)
+        auto_gain.measure_aligned_and_apply(input, output, num_frames, out_ch, speaker_config)
     }
 
     pub(super) fn apply_output_safety_limit(
@@ -960,13 +961,6 @@ impl Plugin for AaePlugin {
         // Zero output
         output.fill(0.0);
 
-        if self.params.auto_gain_enabled {
-            self.ensure_auto_gain()?;
-            if let Some(auto_gain) = &mut self.auto_gain {
-                auto_gain.measure_input(input)?;
-            }
-        }
-
         let num_er_taps = self.early_reflections.num_taps();
         self.er_tap_buffer.fill(0.0);
 
@@ -1108,7 +1102,7 @@ impl Plugin for AaePlugin {
         }
 
         flush_denormals_inplace(output);
-        self.apply_auto_gain(output, num_frames)?;
+        self.apply_auto_gain(input, output, num_frames)?;
         self.apply_output_safety_limit(output, num_frames, out_ch);
         flush_denormals_inplace(output);
 

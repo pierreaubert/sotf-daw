@@ -17,6 +17,10 @@ impl InPlacePlugin for SidechainInPlacePlugin {
         self.channels * 2
     }
 
+    fn supports_bounded_subdivision(&self) -> bool {
+        true
+    }
+
     fn parameters(&self) -> Vec<crate::parameters::Parameter> {
         vec![]
     }

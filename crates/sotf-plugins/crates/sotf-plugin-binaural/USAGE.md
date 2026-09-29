@@ -121,6 +121,26 @@ The plugin automatically selects the speaker layout based on input channel count
 
 ## Signal Flow
 
+### End of stream
+
+Hosts call `drain` after the last input block to release the fixed FFT-size
+startup delay, any partial input hop, the complete overlap-add transform tail,
+and the longest source-owned reflection delay. Reflection taps have scalar ear
+gains; their support does not add another HRTF convolution. Drain may include
+trailing zeros because its finite bound covers a full transform block.
+
+When late reverb is enabled, drain continues for **three configured RT60s after
+the finite tail**, then clears the feedback network. This is a bounded rendering
+policy for a recursive effect, not an exact finite tail or a promised residual
+dB level. The maximum additional reverb rendering time is 15 seconds.
+
+The tail budget and active HRTF snapshot are frozen when draining starts.
+Existing crossfades can finish, but pending head-tracking publications are held
+until reset. New input and parameter changes require `reset` after draining has
+started. Repeated completed drains return zero frames. An empty stream drains
+immediately. Each call writes at most one input hop; any positive capacity of
+complete stereo frames is accepted, and unused destination samples are untouched.
+
 ```
 Input (N channels) → hop partitions (zero-padded for causal linear OLA)
   → For each main channel:

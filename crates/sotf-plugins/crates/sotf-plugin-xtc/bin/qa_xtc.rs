@@ -65,5 +65,16 @@ fn main() {
     // Run standard QA tests (Latency, Real-time safety, Performance)
     run_standard_tests(&mut plugin, "XtcPlugin");
 
+    // Fixed-latency bypass keeps wet history warm; exercise its real CPU cost.
+    plugin
+        .set_parameter(
+            sotf_host::ParameterId::from("enabled"),
+            sotf_host::ParameterValue::Bool(false),
+        )
+        .unwrap();
+    plugin.reset();
+    println!("\n=== QA: Xtc aligned dry bypass ===");
+    run_standard_tests(&mut plugin, "XtcPlugin disabled");
+
     println!("\n[ALL PASS] Xtc QA Complete.");
 }

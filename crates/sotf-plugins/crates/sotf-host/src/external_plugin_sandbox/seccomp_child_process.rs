@@ -12,7 +12,10 @@
 //! when `CLONE_THREAD` is set. Everything else is allowed: this is a
 //! process-spawn gate, not a full syscall sandbox.
 
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 mod ffi {
     // Offsets into `struct seccomp_data` (stable kernel ABI).
     pub const NR_OFFSET: u32 = 0;
@@ -27,7 +30,10 @@ mod ffi {
 ///
 /// Requires `no_new_privs`, which the Landlock entry path already sets before
 /// this runs.
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 pub(super) fn deny_child_processes() -> Result<(), String> {
     let program = build_filter();
     let prog = libc::sock_fprog {
@@ -51,14 +57,8 @@ pub(super) fn deny_child_processes() -> Result<(), String> {
         // Kernel predates `TSYNC` support. The worker installs the sandbox
         // before spawning its threads, so a calling-thread-only filter still
         // covers everything created afterwards.
-        let installed = unsafe {
-            libc::syscall(
-                libc::SYS_seccomp,
-                libc::SECCOMP_SET_MODE_FILTER,
-                0,
-                &prog,
-            )
-        };
+        let installed =
+            unsafe { libc::syscall(libc::SYS_seccomp, libc::SECCOMP_SET_MODE_FILTER, 0, &prog) };
         if installed == 0 {
             return Ok(());
         }
@@ -72,7 +72,10 @@ pub(super) fn deny_child_processes() -> Result<(), String> {
     ))
 }
 
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 fn build_filter() -> Vec<libc::sock_filter> {
     use ffi::{ARGS_OFFSET, CLONE_THREAD, NR_OFFSET};
 
@@ -132,12 +135,7 @@ fn build_filter() -> Vec<libc::sock_filter> {
     builder.bind(check_clone);
     builder.emit_stmt(libc::BPF_LD | libc::BPF_W | libc::BPF_ABS, ARGS_OFFSET);
     builder.emit_stmt(libc::BPF_ALU | libc::BPF_AND | libc::BPF_K, CLONE_THREAD);
-    builder.emit_jump(
-        libc::BPF_JMP | libc::BPF_JEQ | libc::BPF_K,
-        0,
-        deny,
-        allow,
-    );
+    builder.emit_jump(libc::BPF_JMP | libc::BPF_JEQ | libc::BPF_K, 0, deny, allow);
     builder.bind(deny);
     builder.emit_stmt(libc::BPF_RET | libc::BPF_K, DENY_PROCESS);
     builder.bind(deny_clone3);
@@ -148,14 +146,20 @@ fn build_filter() -> Vec<libc::sock_filter> {
 }
 
 /// Minimal classic-BPF assembler with labels so jump offsets stay correct.
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 struct Builder {
     insns: Vec<libc::sock_filter>,
     targets: Vec<usize>,
     fixups: Vec<(usize, bool, usize)>,
 }
 
-#[cfg(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 impl Builder {
     fn new() -> Self {
         Self {
@@ -215,12 +219,19 @@ impl Builder {
 /// Fallback for Linux architectures without a hand-checked syscall table:
 ///
 /// report the backend as unavailable so policy stays honest.
-#[cfg(not(all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64"))))]
+#[cfg(not(all(
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+)))]
 pub(super) fn deny_child_processes() -> Result<(), String> {
     Err("child-process seccomp filter is not implemented for this architecture".to_string())
 }
 
-#[cfg(all(test, target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(all(
+    test,
+    target_os = "linux",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
 mod tests {
     use super::*;
 

@@ -44,6 +44,27 @@ pub struct Pbfdaf {
 }
 
 impl Pbfdaf {
+    pub(crate) fn reference_support_frames(&self) -> usize {
+        self.num_partitions * self.block_size
+    }
+
+    #[cfg(test)]
+    pub(crate) fn install_test_impulse_response(&mut self, impulse: &[f32]) {
+        assert_eq!(impulse.len(), self.reference_support_frames());
+        for (partition, taps) in self.weights.iter_mut().zip(impulse.chunks(self.block_size)) {
+            partition.fill(Complex::new(0.0, 0.0));
+            for (sample, &tap) in partition.iter_mut().zip(taps) {
+                sample.re = tap;
+            }
+            self.fft_forward
+                .process_with_scratch(partition, &mut self.fft_scratch);
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn learned_weights(&self) -> Vec<Complex<f32>> {
+        self.weights.iter().flatten().copied().collect()
+    }
     /// Create a new PBFDAF.
     ///
     /// # Arguments
@@ -176,24 +197,26 @@ impl Pbfdaf {
         // leak = 1 - 1e-3 gives τ ≈ -T_block / ln(leak) ≈ 5.3 s at 48 kHz / 256
         // which is ~100× faster than the old 1e-5 (530 s) and still avoids
         // drift during stationary signals.
-        let leak = 1.0 - 1e-3;
-        for p in 0..self.num_partitions {
-            let fdl_idx = (self.fdl_head + p) % self.num_partitions;
-            for ((w, (&power, &error)), &fdl) in self.weights[p]
-                .iter_mut()
-                .zip(self.power_sum.iter().zip(&self.error_freq))
-                .zip(&self.fdl[fdl_idx])
-            {
-                let norm = power + self.delta;
-                let update = error * fdl.conj() * (self.mu * adaptation_scale) / norm;
-                let effective_leak = 1.0 - (1.0 - leak) * adaptation_scale;
-                *w = (*w + update) * effective_leak;
-                // Prevent NaN propagation
-                if !w.re.is_finite() {
-                    w.re = 0.0;
-                }
-                if !w.im.is_finite() {
-                    w.im = 0.0;
+        if adaptation_scale > 0.0 {
+            let leak = 1.0 - 1e-3;
+            for p in 0..self.num_partitions {
+                let fdl_idx = (self.fdl_head + p) % self.num_partitions;
+                for ((w, (&power, &error)), &fdl) in self.weights[p]
+                    .iter_mut()
+                    .zip(self.power_sum.iter().zip(&self.error_freq))
+                    .zip(&self.fdl[fdl_idx])
+                {
+                    let norm = power + self.delta;
+                    let update = error * fdl.conj() * (self.mu * adaptation_scale) / norm;
+                    let effective_leak = 1.0 - (1.0 - leak) * adaptation_scale;
+                    *w = (*w + update) * effective_leak;
+                    // Prevent NaN propagation
+                    if !w.re.is_finite() {
+                        w.re = 0.0;
+                    }
+                    if !w.im.is_finite() {
+                        w.im = 0.0;
+                    }
                 }
             }
         }
@@ -262,20 +285,22 @@ impl Pbfdaf {
         self.fft_forward
             .process_with_scratch(&mut self.error_freq, &mut self.fft_scratch);
 
-        let leak = 1.0 - 1e-3;
-        let effective_leak = 1.0 - (1.0 - leak) * adaptation_scale;
-        for p in 0..self.num_partitions {
-            let fdl_idx = (shared.fdl_head + p) % self.num_partitions;
-            for ((w, (&power, &error)), &fdl) in self.weights[p]
-                .iter_mut()
-                .zip(shared.power_sum.iter().zip(&self.error_freq))
-                .zip(&shared.fdl[fdl_idx])
-            {
-                let update =
-                    error * fdl.conj() * (self.mu * adaptation_scale) / (power + self.delta);
-                *w = (*w + update) * effective_leak;
-                if !w.re.is_finite() || !w.im.is_finite() {
-                    *w = Complex::new(0.0, 0.0);
+        if adaptation_scale > 0.0 {
+            let leak = 1.0 - 1e-3;
+            let effective_leak = 1.0 - (1.0 - leak) * adaptation_scale;
+            for p in 0..self.num_partitions {
+                let fdl_idx = (shared.fdl_head + p) % self.num_partitions;
+                for ((w, (&power, &error)), &fdl) in self.weights[p]
+                    .iter_mut()
+                    .zip(shared.power_sum.iter().zip(&self.error_freq))
+                    .zip(&shared.fdl[fdl_idx])
+                {
+                    let update =
+                        error * fdl.conj() * (self.mu * adaptation_scale) / (power + self.delta);
+                    *w = (*w + update) * effective_leak;
+                    if !w.re.is_finite() || !w.im.is_finite() {
+                        *w = Complex::new(0.0, 0.0);
+                    }
                 }
             }
         }

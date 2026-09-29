@@ -56,3 +56,13 @@ cargo test -p plugins-bridge
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+## Gate external keys
+
+Gate's constructor channel count is the program width. For stereo external-key
+processing, call `create_plugin("Gate", 2, rate, config)` with
+`sidechain_external: true`; the plugin reports 4 inputs and 2 outputs. Input
+frames are `[program L, program R, key L, key R]`, and output frames contain only
+the two program channels. Initialize before processing. The adapter owns prepared
+input-stride scratch, preserves state across arbitrary callback sizes, and
+rejects malformed/nonfinite whole blocks before advancing the DSP.

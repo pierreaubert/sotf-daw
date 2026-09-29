@@ -141,9 +141,13 @@ impl NupcEngine {
         }
     }
 
-    /// Get the latency in samples (= min_block).
+    /// Return the processing latency, including the optional direct convolution head.
     pub fn latency_samples(&self) -> usize {
-        self.min_block
+        if self.td_head.is_some() {
+            0
+        } else {
+            self.min_block
+        }
     }
 
     pub fn shares_ir_kernel_with(&self, other: &Self) -> bool {

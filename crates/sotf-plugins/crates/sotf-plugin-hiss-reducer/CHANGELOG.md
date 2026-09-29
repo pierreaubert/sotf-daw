@@ -1,3 +1,11 @@
+# Unreleased
+
+- Add finite-stream drain to spectral mode, preserving transform and dry-path
+  audio through the derived endpoint using prepared storage. Conventional IIR
+  mode retains its unknown-tail/no-drain contract.
+- Add phase-complete delayed-unity, nonlinear zero-continuation, control
+  transition, lifecycle and cold allocation/deallocation regressions.
+
 # 0.5.8
 
 - Add an opt-in structural Spectral mode using a 1024-point, 75%-overlap

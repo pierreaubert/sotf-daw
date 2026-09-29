@@ -35,6 +35,7 @@ custom
 | HPF Order | sidechain_hpf_order | Selector (2nd/4th) | — | Structural; rebuild graph |
 | Detection | detection_mode | Selector (Peak/RMS) | — | Structural; rebuild graph |
 | External Sidechain | sidechain_external | Toggle | — | Structural; doubles input width |
+| Mode | mode | Selector (Downward/Upward/Duck) | — | Structural; appended index 15 |
 
 Width: 100px fixed
 
@@ -49,6 +50,7 @@ Two sub-sections side by side: DYNAMICS (left) and TIMING (right), with Gate Sta
 | Threshold | threshold | Vertical slider with ticks | t | -80 to 0 dB |
 | Ratio | ratio | Vertical slider with ticks | r | 1:1 to 100:1 |
 | Range | range_db | Vertical slider with ticks | — | 0–120 dB; 0 means unlimited (240 dB finite ceiling) |
+| Max Boost | max_boost_db | Vertical slider with ticks | — | 0–24 dB, default 12; used by Upward, appended index 16 |
 | Hysteresis | hysteresis_db | Vertical slider with ticks | — | 0–12 dB |
 | Knee | knee_db | Vertical slider with ticks | — | 0–20 dB |
 
@@ -91,7 +93,9 @@ Width: 120px fixed
 - **States:** OPEN (green/success) or CLOSED (red/error)
 - **Input meter:** Horizontal bar showing input level relative to threshold
 - **Threshold marker:** Yellow/warning vertical line on the input meter at threshold position
-- **Data source:** GateData { input_levels_db, is_open, attenuation_db }
+- **Data source:** GateData { input_levels_db, is_open, attenuation_db, gain_db, effect_active, gate_open, mode }
+- Signed `gain_db` supports upward boost display; retain `attenuation_db` for reduction-only meters. Both describe the wet effect before Mix.
+- `effect_active` is true for wet magnitude at least 0.1 dB. `gate_open` is the detector latch and excludes hold; mode selects the upper (Downward) or lower (Upward/Duck) knee edge. Legacy `is_open` only indicates low attenuation and stays true during upward boost.
 
 ## Diagnostic
 

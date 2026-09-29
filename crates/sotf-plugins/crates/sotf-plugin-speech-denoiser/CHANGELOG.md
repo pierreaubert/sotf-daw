@@ -1,3 +1,20 @@
+## Unreleased audit corrections (2026-09-28)
+
+- Add finite native EOF handling when disabled: exactly 960 continuation frames,
+  bounded 480-frame calls, incomplete fade support, transactional capacity/rate
+  checks and reset-required controls after finite EOF. Enabled wet support
+  remains unknown. Exact full-program, transition and cold heap checks pass.
+
+- Report the full 960-frame RNNoise signal delay (480 model + 480 queue), keeping
+  the 480-frame model size and all enabled wet samples unchanged.
+- Delay dry audio by another 480 frames so live bypass blends aligned streams.
+  Existing sessions may realign after host latency compensation is refreshed;
+  disabled and transition output timing changes intentionally.
+- Make zero-frame callbacks leave the initial bypass state untouched.
+- Add direct-model waveform, exact dry-delay, every-frame-phase impulse,
+  transition/reset/error and cold allocation/deallocation regressions. No finite
+  tail or native EOF drain is claimed by this correction.
+
 # 0.5.12
 
 ## Fixes (2026-08-13 retained quality closure)

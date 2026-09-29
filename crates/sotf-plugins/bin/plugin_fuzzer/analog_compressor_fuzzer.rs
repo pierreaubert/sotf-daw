@@ -1,10 +1,10 @@
 use super::PluginFuzzer;
 use rand::RngExt;
 use rand::rngs::StdRng;
+use sotf_plugins::plugin_analog_common::MODEL_NAMES;
 use sotf_plugins::{
     AnalogCompressorPlugin, AnalogCompressorPluginParams, ParametricInPlacePluginAdapter, Plugin,
 };
-use sotf_plugins::plugin_analog_common::MODEL_NAMES;
 
 pub(super) struct AnalogCompressorFuzzer;
 
@@ -25,14 +25,26 @@ impl PluginFuzzer for AnalogCompressorFuzzer {
             analog_color: rng.random_range(0.0..1.0),
             analog_character: rng.random_range(0.0..1.0),
             analog_trim: rng.random_range(-24.0..24.0),
+            range_db: match rng.random_range(0..4) {
+                0 => 0.0,
+                1 => 120.0, // Explicit unlimited default.
+                _ => rng.random_range(0.0..120.0),
+            },
+            hold_ms: if rng.random_bool(0.25) {
+                0.0 // Legacy attack/release behavior.
+            } else {
+                rng.random_range(0.0..=1000.0)
+            },
         };
         let desc = format!(
-            "threshold={:.1}dB ratio={:.1} model={} drive={:.1}dB color={:.2}",
+            "threshold={:.1}dB ratio={:.1} model={} drive={:.1}dB color={:.2} range={:.1}dB hold={:.1}ms",
             params.threshold,
             params.ratio,
             params.analog_model,
             params.analog_drive,
-            params.analog_color
+            params.analog_color,
+            params.range_db,
+            params.hold_ms
         );
         let plugin = AnalogCompressorPlugin::try_from_params(channels, params)
             .expect("in-range analog compressor params must validate");

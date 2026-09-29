@@ -65,6 +65,9 @@ pub struct AnalogCompressorPlugin {
     attack_ms: f32,
     release_ms: f32,
     knee_db: f32,
+    range_db: f32,
+    hold_ms: f32,
+    hold_remaining: usize,
     makeup_db: f32,
     mix: f32,
     auto_makeup: bool,
@@ -95,6 +98,9 @@ impl AnalogCompressorPlugin {
             attack_ms: params.attack,
             release_ms: params.release,
             knee_db: params.knee,
+            range_db: params.range_db,
+            hold_ms: params.hold_ms,
+            hold_remaining: 0,
             makeup_db: params.makeup,
             mix: params.mix,
             auto_makeup: params.auto_makeup,
@@ -149,6 +155,8 @@ impl AnalogCompressorPlugin {
             ("knee", ParameterValue::Float(params.knee)),
             ("makeup", ParameterValue::Float(params.makeup)),
             ("mix", ParameterValue::Float(params.mix)),
+            ("range_db", ParameterValue::Float(params.range_db)),
+            ("hold_ms", ParameterValue::Float(params.hold_ms)),
         ] {
             values.insert(ParameterId::from(key), value);
         }
@@ -224,8 +232,15 @@ impl AnalogCompressorPlugin {
             .with_importance(Critical),
             f("analog_drive", "Analog Drive", self.drive_db, Useful),
             f("analog_color", "Analog Color", self.color, Critical),
-            f("analog_character", "Analog Character", self.character, Useful),
+            f(
+                "analog_character",
+                "Analog Character",
+                self.character,
+                Useful,
+            ),
             f("analog_trim", "Analog Trim", self.trim_db, Useful),
+            f("range_db", "Range", self.range_db, Useful),
+            f("hold_ms", "Hold", self.hold_ms, Useful),
         ];
     }
 
@@ -272,6 +287,29 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        let value = match id.as_str() {
+            "threshold" => self.threshold_db,
+            "ratio" => self.ratio,
+            "attack" => self.attack_ms,
+            "release" => self.release_ms,
+            "knee" => self.knee_db,
+            "makeup" => self.makeup_db,
+            "mix" => self.mix,
+            "analog_drive" => self.drive_db,
+            "analog_color" => self.color,
+            "analog_character" => self.character,
+            "analog_trim" => self.trim_db,
+            "range_db" => self.range_db,
+            "hold_ms" => self.hold_ms,
+            "auto_makeup" => return Some(ParameterValue::Bool(self.auto_makeup)),
+            // String values retain the owned control-query contract.
+            "analog_model" => return Some(ParameterValue::String(self.model_name().to_string())),
+            _ => return None,
+        };
+        Some(ParameterValue::Float(value))
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         for (key, value) in [
@@ -286,6 +324,8 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
             ("analog_color", self.color),
             ("analog_character", self.character),
             ("analog_trim", self.trim_db),
+            ("range_db", self.range_db),
+            ("hold_ms", self.hold_ms),
         ] {
             values.insert(ParameterId::from(key), ParameterValue::Float(value));
         }
@@ -340,6 +380,8 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
                     timing_dirty = true;
                 }
                 "knee" => self.knee_db = value.as_float().unwrap_or(self.knee_db),
+                "range_db" => self.range_db = value.as_float().unwrap_or(self.range_db),
+                "hold_ms" => self.hold_ms = value.as_float().unwrap_or(self.hold_ms),
                 "makeup" => self.makeup_db = value.as_float().unwrap_or(self.makeup_db),
                 "mix" => self.mix = value.as_float().unwrap_or(self.mix),
                 "auto_makeup" => self.auto_makeup = value.as_bool().unwrap_or(self.auto_makeup),
@@ -376,17 +418,46 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
         Ok(())
     }
 
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        // These realtime controls only need scalar writes. Avoid the default
+        // ParameterSet/schema allocation when automating them on the callback.
+        if matches!(id.as_str(), "range_db" | "hold_ms") {
+            let parameter = self
+                .cached_parameters
+                .iter_mut()
+                .find(|parameter| parameter.id == id)
+                .expect("range and hold metadata is constructed with the plugin");
+            parameter.validate(&value)?;
+            let v = value
+                .as_float()
+                .ok_or_else(|| format!("{id} must be a float"))?;
+            if id.as_str() == "range_db" {
+                self.range_db = v;
+            } else {
+                self.hold_ms = v;
+            }
+            parameter.default_value = value;
+            return Ok(());
+        }
+        self.parametric_validate_parameter(&id, &value)?;
+        let mut values = ParameterSet::new();
+        values.insert(id, value);
+        self.apply_values(values)
+    }
+
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
         if sample_rate == 0 {
             return Err("Analog compressor sample rate must be greater than zero".to_string());
         }
         self.sample_rate = sample_rate;
+        self.hold_remaining = 0;
         self.retime_detector();
-        self.makeup_follower = EnvelopeFollower::new(
-            AUTO_MAKEUP_ATTACK_MS,
-            AUTO_MAKEUP_RELEASE_MS,
-            sample_rate,
-        );
+        self.makeup_follower =
+            EnvelopeFollower::new(AUTO_MAKEUP_ATTACK_MS, AUTO_MAKEUP_RELEASE_MS, sample_rate);
         self.stage
             .prepare(sample_rate, MAX_BLOCK_FRAMES)
             .map_err(|e| format!("Analog compressor stage prepare failed: {e}"))?;
@@ -397,6 +468,7 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
 
     fn reset(&mut self) {
         self.detector.reset();
+        self.hold_remaining = 0;
         self.makeup_follower.reset();
         self.stage.reset();
     }
@@ -434,6 +506,13 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
         let makeup = self.makeup_db;
         let mix = self.mix;
         let auto = self.auto_makeup;
+        let range_limit = if self.range_db >= 120.0 {
+            f32::INFINITY
+        } else {
+            self.range_db
+        };
+        let hold_samples =
+            (self.hold_ms as f64 * self.sample_rate as f64 / 1000.0).round() as usize;
         // Compressor core first, then the analog color stage, both in place.
         for frame in 0..frames {
             // Linked detection: hottest channel drives one shared envelope.
@@ -441,9 +520,22 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
             for ch in 0..channels {
                 peak = peak.max(buffer[frame * channels + ch].abs());
             }
-            let env = self.detector.process(peak);
+            self.hold_remaining = self.hold_remaining.min(hold_samples);
+            // Freeze the existing detector on falling input so the held gain
+            // reduction resumes its original release curve after the hold.
+            // A new equal/higher peak retriggers hold; zero hold follows the
+            // exact original detector path.
+            let env = if peak >= self.detector.current() {
+                self.hold_remaining = hold_samples;
+                self.detector.process(peak)
+            } else if self.hold_remaining > 0 {
+                self.hold_remaining -= 1;
+                self.detector.current()
+            } else {
+                self.detector.process(peak)
+            };
             let level_db = 20.0 * (env.max(ENV_EPS)).log10();
-            let gr_db = gain_reduction_db(level_db, threshold, ratio, knee);
+            let gr_db = gain_reduction_db(level_db, threshold, ratio, knee).min(range_limit);
             let auto_db = if auto {
                 self.makeup_follower.process(gr_db).min(AUTO_MAKEUP_MAX_DB)
             } else {

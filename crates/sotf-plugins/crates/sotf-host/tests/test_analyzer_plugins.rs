@@ -504,7 +504,7 @@ fn loudness_monitor_stereo_correlation_is_centered_and_partition_invariant() {
 
 #[test]
 fn loudness_data_exposes_validity_true_peak_scope_and_integrated_window() {
-    for sample_rate in [44_100, 48_000, 88_200, 96_000, 192_000] {
+    for sample_rate in [7_999, 44_100, 48_000, 88_200, 96_000, 192_000] {
         let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
         plugin.initialize(sample_rate).unwrap();
         let frames = sample_rate as usize * 4;
@@ -519,11 +519,8 @@ fn loudness_data_exposes_validity_true_peak_scope_and_integrated_window() {
             .unwrap();
         let data = plugin.get_data().unwrap();
         let data = data.downcast_ref::<LoudnessData>().unwrap();
-        assert_eq!(
-            data.true_peak_is_compliant,
-            matches!(sample_rate, 44_100 | 48_000 | 88_200 | 96_000)
-        );
-        if sample_rate == 192_000 {
+        assert_eq!(data.true_peak_is_compliant, sample_rate >= 8_000);
+        if sample_rate == 7_999 {
             assert!(
                 data.true_peaks_dbtp
                     .iter()

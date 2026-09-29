@@ -52,6 +52,80 @@ use std::panic::{self, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
 
+fn load_changed_state(
+    plugin: &mut dyn sotf_host::plugin::Plugin,
+    state: &[u8],
+    plugin_type: &str,
+) -> Result<(), String> {
+    let mut incoming: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse plugin state: {error}"))?;
+
+    // Crossfeed's preset selector is an action that changes several other
+    // parameters. Apply it before their explicit saved values, so replaying a
+    // saved custom mode cannot be overwritten by its preset selection.
+    if matches!(plugin_type, "Crossfeed" | "crossfeed")
+        && let Some(preset) = incoming.remove("preset")
+    {
+        let preset = serde_json::to_vec(&serde_json::json!({"preset": preset}))
+            .map_err(|error| format!("Failed to serialize preset selection: {error}"))?;
+        load_changed_state(plugin, &preset, "")?;
+    }
+
+    let current: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(plugin))
+            .map_err(|error| format!("Failed to capture plugin state: {error}"))?;
+    // Unchanged setters may run preset/momentary actions or reload resources.
+    // Invalid values still differ and reach the normal typed loader below.
+    incoming.retain(|key, value| current.get(key) != Some(value));
+    let changes = serde_json::to_vec(&incoming)
+        .map_err(|error| format!("Failed to serialize plugin state: {error}"))?;
+    plugins_bridge::state::load_state(plugin, &changes)
+}
+
+fn replace_plugin_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    if handle.plugin_type == "LinearPhaseEQ" {
+        return replace_linear_phase_eq_from_state(handle, state);
+    }
+
+    // Construct from the original configuration: the flat parameter snapshot
+    // does not contain every resource, routing matrix, or setup option.
+    // All fallible work runs on a separate instance on the control thread.
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &handle.config_json,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    // Preserve live automation when a partial preset omits a parameter. Only
+    // replay values that differ from the constructor, avoiding unnecessary
+    // writes to setup parameters already represented by the original config.
+    let current = plugins_bridge::state::save_state(&*handle.plugin);
+    load_changed_state(&mut *replacement, &current, &handle.plugin_type)?;
+    load_changed_state(&mut *replacement, state, &handle.plugin_type)?;
+
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+
+    // A setup setter may change its bus widths. The host's buffers and stored
+    // layout remain fixed for the lifetime of the handle.
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored plugin channel layout differs from the handle layout".into());
+    }
+
+    // Keep ParameterMap storage alive: foreign ParameterInfo pointers remain
+    // valid until plugin_destroy. A rejected preset never touches live DSP.
+    handle.plugin = replacement;
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "state_tests.rs"]
+mod state_tests;
+
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
     state: &[u8],
@@ -952,6 +1026,11 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
 
 /// Load plugin state from a JSON byte buffer.
 ///
+/// Restoration is transactional: failure leaves the live instance unchanged.
+/// Success replaces the DSP instance, restarting its processing history while
+/// retaining constructor configuration and parameter values omitted by `data`.
+/// This operation may allocate, load resources, and stop worker threads.
+///
 /// # Returns
 /// * 0 on success
 /// * Error code on failure
@@ -960,6 +1039,8 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
 /// * `handle` must be a valid plugin handle that has not been destroyed.
 /// * `data` must point to `len` bytes of valid JSON that remain readable for
 ///   the duration of this call.
+/// * Call on a control thread with no concurrent access to `handle`, including
+///   audio processing or parameter access.
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_load_state(
     handle: *mut PluginHandle,
@@ -975,11 +1056,7 @@ pub extern "C" fn plugin_load_state(
         let handle_ref = &mut *handle;
         let slice = slice::from_raw_parts(data, len);
 
-        let load_result = if handle_ref.plugin_type == "LinearPhaseEQ" {
-            replace_linear_phase_eq_from_state(handle_ref, slice)
-        } else {
-            plugins_bridge::state::load_state(&mut *handle_ref.plugin, slice)
-        };
+        let load_result = replace_plugin_from_state(handle_ref, slice);
         match load_result {
             Ok(_) => PluginError::Success,
             Err(e) => {
@@ -1069,10 +1146,14 @@ pub extern "C" fn plugin_export_preset_json(
 
 /// Import a JSON preset document created by [`plugin_export_preset_json`].
 ///
+/// Uses the transactional, control-thread restoration behavior documented by
+/// [`plugin_load_state`].
+///
 /// # Safety
 /// * `handle` must be a valid plugin handle that has not been destroyed.
 /// * `data` must point to `len` bytes of valid preset JSON that remain readable
 ///   for the duration of this call.
+/// * Call on a control thread with no concurrent access to `handle`.
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_import_preset_json(
     handle: *mut PluginHandle,
@@ -1123,11 +1204,7 @@ pub extern "C" fn plugin_import_preset_json(
             state.push(byte);
         }
 
-        let load_result = if handle_ref.plugin_type == "LinearPhaseEQ" {
-            replace_linear_phase_eq_from_state(handle_ref, &state)
-        } else {
-            plugins_bridge::state::load_state(&mut *handle_ref.plugin, &state)
-        };
+        let load_result = replace_plugin_from_state(handle_ref, &state);
         match load_result {
             Ok(_) => PluginError::Success,
             Err(e) => {

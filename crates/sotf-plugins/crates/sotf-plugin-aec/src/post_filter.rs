@@ -44,6 +44,34 @@ pub struct ResidualEchoSuppressor {
 }
 
 impl ResidualEchoSuppressor {
+    /// Apply the learned gains without updating them from synthetic EOF input.
+    pub(crate) fn process_frozen(&mut self, error: &[Complex<f32>]) -> &[Complex<f32>] {
+        for ((output, &sample), &gain) in self
+            .output_buf
+            .iter_mut()
+            .zip(error)
+            .zip(&self.smoothed_gains)
+        {
+            *output = sample * gain;
+        }
+        &self.output_buf
+    }
+
+    #[cfg(test)]
+    pub(crate) fn install_test_gains(&mut self, gains: &[f32]) {
+        self.smoothed_gains.copy_from_slice(gains);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn learned_snapshot(&self) -> Vec<f32> {
+        let mut values = self.smoothed_gains.clone();
+        values.extend_from_slice(&[
+            self.dtd_mic_power,
+            self.dtd_echo_power,
+            self.residual_leakage,
+        ]);
+        values
+    }
     /// Create a new residual echo suppressor.
     ///
     /// # Arguments

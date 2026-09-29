@@ -1,3 +1,10 @@
+## Unreleased finite stream audit (2026-09-28)
+
+- Recover delayed program audio for proved finite response cases with bounded,
+  allocation-free drain, reset-required EOS and conservative tail metadata.
+- Preserve legacy drain behavior for recursive wet/color responses and document
+  the unresolved rendering policy rather than claiming a finite response.
+
 # 0.5.0
 
 ## New

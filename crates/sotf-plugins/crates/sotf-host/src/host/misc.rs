@@ -139,10 +139,7 @@ mod sandbox_reason_tests {
             None
         );
         assert_eq!(
-            sandbox_unsupported_detail(
-                PluginSandboxStatusCode::Unsupported,
-                Some("   \n"),
-            ),
+            sandbox_unsupported_detail(PluginSandboxStatusCode::Unsupported, Some("   \n"),),
             None
         );
         let long = format!("a{}\nsecond", "b".repeat(300));

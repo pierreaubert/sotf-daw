@@ -287,7 +287,8 @@ impl SaturationPlugin {
             Parameter::new_string("mode", "Mode", self.mode_string())
                 .with_description("Saturation algorithm")
                 .with_group("Saturation")
-                .with_importance(ParameterImportance::Critical),
+                .with_importance(ParameterImportance::Critical)
+                .with_update_mode(UpdateMode::Structural),
             Parameter::new_float(
                 "drive",
                 "Drive",
@@ -322,7 +323,8 @@ impl SaturationPlugin {
             Parameter::new_string("oversampling", "Oversampling", self.oversampling_string())
                 .with_description("Oversampling factor for alias suppression")
                 .with_group("Quality")
-                .with_importance(ParameterImportance::Useful),
+                .with_importance(ParameterImportance::Useful)
+                .with_update_mode(UpdateMode::Structural),
             Parameter::new_float(
                 "output_gain",
                 "Output",
@@ -417,7 +419,10 @@ impl SaturationPlugin {
 
     /// Backward-compatible single-parameter getter.
     pub fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
-        self.current_values().get(id).cloned()
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .map(|parameter| parameter.default_value.clone())
     }
 
     /// Backward-compatible parameter validation.
@@ -428,7 +433,7 @@ impl SaturationPlugin {
             return Ok(());
         }
 
-        if let Some(param) = self.parameters().iter().find(|p| &p.id == id) {
+        if let Some(param) = self.cached_parameters.iter().find(|p| &p.id == id) {
             param.validate(value).map_err(|e| format!("{}: {}", id, e))
         } else {
             Err(format!("Unknown parameter: {}", id))
@@ -438,6 +443,18 @@ impl SaturationPlugin {
     /// Backward-compatible single-parameter setter.
     pub fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
         self.validate_parameter(&id, &value)?;
+        if let Some(parameter) = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| parameter.id == id)
+            && parameter.update_mode == UpdateMode::Realtime
+        {
+            self.apply_continuous_value(
+                id.as_str(),
+                value.as_float().expect("validated float control"),
+            );
+            return Ok(());
+        }
         let mut values = ParameterSet::new();
         values.insert(id, value);
         self.apply_values(values)
@@ -476,56 +493,60 @@ impl SaturationPlugin {
             let value = value
                 .as_float()
                 .ok_or_else(|| format!("{id} must be a float"))?;
-            match id.as_str() {
-                "drive" => {
-                    self.drive = value;
-                    self.drive_smoother.set_target(value);
-                    self.update_cached_float("drive", value);
-                }
-                "tone" => {
-                    self.tone = value;
-                    self.update_cached_float("tone", value);
-                }
-                "output_gain" => {
-                    self.output_gain_db = value;
-                    self.output_smoother.set_target(value);
-                    self.update_cached_float("output_gain", value);
-                }
-                "mix" => {
-                    self.mix = value;
-                    self.mix_smoother.set_target(value);
-                    self.update_cached_float("mix", value);
-                }
-                "dynamic_amount" => {
-                    self.dynamic_amount = value;
-                    self.update_cached_float("dynamic_amount", value);
-                }
-                "dynamic_attack_ms" => {
-                    self.dynamic_attack_ms = value;
-                    self.update_cached_float("dynamic_attack_ms", value);
-                    for follower in &mut self.envelope_followers {
-                        follower.set_times(
-                            self.dynamic_attack_ms,
-                            self.dynamic_release_ms,
-                            self.sample_rate,
-                        );
-                    }
-                }
-                "dynamic_release_ms" => {
-                    self.dynamic_release_ms = value;
-                    self.update_cached_float("dynamic_release_ms", value);
-                    for follower in &mut self.envelope_followers {
-                        follower.set_times(
-                            self.dynamic_attack_ms,
-                            self.dynamic_release_ms,
-                            self.sample_rate,
-                        );
-                    }
-                }
-                _ => unreachable!("continuous parameter set was validated above"),
-            }
+            self.apply_continuous_value(id.as_str(), value);
         }
         Ok(())
+    }
+
+    fn apply_continuous_value(&mut self, id: &str, value: f32) {
+        match id {
+            "drive" => {
+                self.drive = value;
+                self.drive_smoother.set_target(value);
+                self.update_cached_float("drive", value);
+            }
+            "tone" => {
+                self.tone = value;
+                self.update_cached_float("tone", value);
+            }
+            "output_gain" => {
+                self.output_gain_db = value;
+                self.output_smoother.set_target(value);
+                self.update_cached_float("output_gain", value);
+            }
+            "mix" => {
+                self.mix = value;
+                self.mix_smoother.set_target(value);
+                self.update_cached_float("mix", value);
+            }
+            "dynamic_amount" => {
+                self.dynamic_amount = value;
+                self.update_cached_float("dynamic_amount", value);
+            }
+            "dynamic_attack_ms" => {
+                self.dynamic_attack_ms = value;
+                self.update_cached_float("dynamic_attack_ms", value);
+                for follower in &mut self.envelope_followers {
+                    follower.set_times(
+                        self.dynamic_attack_ms,
+                        self.dynamic_release_ms,
+                        self.sample_rate,
+                    );
+                }
+            }
+            "dynamic_release_ms" => {
+                self.dynamic_release_ms = value;
+                self.update_cached_float("dynamic_release_ms", value);
+                for follower in &mut self.envelope_followers {
+                    follower.set_times(
+                        self.dynamic_attack_ms,
+                        self.dynamic_release_ms,
+                        self.sample_rate,
+                    );
+                }
+            }
+            _ => unreachable!("continuous parameter set was validated above"),
+        }
     }
 }
 
@@ -553,6 +574,18 @@ impl ParametricInPlacePlugin for SaturationPlugin {
 
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        self.get_parameter(id)
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.set_parameter(id, value)
     }
 
     fn current_values(&self) -> ParameterSet {

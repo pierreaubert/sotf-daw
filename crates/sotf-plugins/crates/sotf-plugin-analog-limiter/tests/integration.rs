@@ -16,8 +16,8 @@ fn make_interleaved_sine(
 ) -> Vec<f32> {
     let mut buffer = vec![0.0; frames * channels];
     for frame in 0..frames {
-        let sample = amplitude
-            * (std::f32::consts::TAU * freq_hz * frame as f32 / sample_rate as f32).sin();
+        let sample =
+            amplitude * (std::f32::consts::TAU * freq_hz * frame as f32 / sample_rate as f32).sin();
         for ch in 0..channels {
             buffer[frame * channels + ch] = sample;
         }
@@ -52,6 +52,7 @@ fn info_channels_and_core_latency() {
             dual_release: false,
             feed_forward: false,
             link_amount: 1.0,
+            oversampling: 0,
         },
     );
     let mut core = core;
@@ -87,11 +88,12 @@ fn quiet_signal_passes_transparent_with_color_off() {
     let context = ProcessContext::new(SR, 4096);
     plugin.process_in_place(&mut buffer, &context).unwrap();
     // Below threshold: no gain reduction; lookahead delays but preserves level.
-    let rms = |b: &[f32]| {
-        (b.iter().map(|s| s * s).sum::<f32>() / b.len() as f32).sqrt()
-    };
+    let rms = |b: &[f32]| (b.iter().map(|s| s * s).sum::<f32>() / b.len() as f32).sqrt();
     let ratio = rms(&buffer[1024..]) / rms(&input[1024..]);
-    assert!((ratio - 1.0).abs() < 0.02, "unexpected GR on quiet signal: {ratio}");
+    assert!(
+        (ratio - 1.0).abs() < 0.02,
+        "unexpected GR on quiet signal: {ratio}"
+    );
 }
 
 #[test]
@@ -99,10 +101,16 @@ fn color_stage_adds_character_when_driven() {
     let mut plugin = AnalogLimiterPlugin::new(1);
     plugin.initialize(SR).unwrap();
     plugin
-        .set_parameter(ParameterId::from("analog_drive"), ParameterValue::Float(12.0))
+        .set_parameter(
+            ParameterId::from("analog_drive"),
+            ParameterValue::Float(12.0),
+        )
         .unwrap();
     plugin
-        .set_parameter(ParameterId::from("analog_color"), ParameterValue::Float(1.0))
+        .set_parameter(
+            ParameterId::from("analog_color"),
+            ParameterValue::Float(1.0),
+        )
         .unwrap();
     let input = make_interleaved_sine(440.0, SR, 4096, 1, 0.4);
     let mut buffer = input.clone();
@@ -217,4 +225,111 @@ fn factory_roundtrip_through_json() {
     assert_eq!(legacy.threshold, -4.0);
     let plugin = AnalogLimiterPlugin::try_from_params(2, params).unwrap();
     assert_eq!(plugin.channels(), 2);
+}
+
+#[test]
+fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
+    use sotf_host::parametric_plugin::ParameterSet;
+    for name in [
+        "Harmonics",
+        "Static",
+        "Hammerstein",
+        "Tape",
+        "Transformer",
+        "Console Preamp",
+    ] {
+        let controls = [
+            ("analog_drive", ParameterValue::Float(12.0)),
+            ("analog_color", ParameterValue::Float(0.73)),
+            ("analog_character", ParameterValue::Float(0.21)),
+            ("analog_trim", ParameterValue::Float(-6.0)),
+        ];
+        let model = ParameterValue::String(name.to_string());
+        let mut expected_plugin = AnalogLimiterPlugin::new(2);
+        expected_plugin.initialize(SR).unwrap();
+        expected_plugin
+            .set_parameter(ParameterId::from("analog_model"), model.clone())
+            .unwrap();
+        for (id, value) in &controls {
+            expected_plugin
+                .set_parameter(ParameterId::from(*id), value.clone())
+                .unwrap();
+        }
+        let input = make_interleaved_sine(997.0, SR, 4096, 2, 0.3);
+        let mut expected_live = input.clone();
+        expected_plugin
+            .process_in_place(&mut expected_live, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        expected_plugin.reset();
+        let mut expected = input.clone();
+        expected_plugin
+            .process_in_place(&mut expected, &ProcessContext::new(SR, 4096))
+            .unwrap();
+
+        // Every insertion position places the model among the shared controls;
+        // each new HashMap also has an independent iteration seed.
+        for model_position in 0..=controls.len() {
+            let mut plugin = AnalogLimiterPlugin::new(2);
+            plugin.initialize(SR).unwrap();
+            let mut values = ParameterSet::new();
+            for position in 0..=controls.len() {
+                if position == model_position {
+                    values.insert(ParameterId::from("analog_model"), model.clone());
+                }
+                if let Some((id, value)) = controls.get(position) {
+                    values.insert(ParameterId::from(*id), value.clone());
+                }
+            }
+            plugin.apply_values(values).unwrap();
+            for (id, value) in &controls {
+                assert_eq!(
+                    plugin.get_parameter(&ParameterId::from(*id)),
+                    Some(value.clone())
+                );
+            }
+            let mut actual_live = input.clone();
+            plugin
+                .process_in_place(&mut actual_live, &ProcessContext::new(SR, 4096))
+                .unwrap();
+            let live_error = actual_live
+                .iter()
+                .zip(&expected_live)
+                .map(|(a, b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            assert_eq!(
+                live_error, 0.0,
+                "model={name}, insertion={model_position}, smoothing"
+            );
+            plugin.reset();
+            let mut actual = input.clone();
+            plugin
+                .process_in_place(&mut actual, &ProcessContext::new(SR, 4096))
+                .unwrap();
+            assert_eq!(actual, expected, "model={name}, insertion={model_position}");
+        }
+        // Deterministic reproduction: set all controls first, select another
+        // model last. Getters must agree with the actual rendered DSP state.
+        let mut switched = AnalogLimiterPlugin::new(2);
+        switched.initialize(SR).unwrap();
+        switched
+            .set_parameter(
+                ParameterId::from("analog_model"),
+                ParameterValue::String(if name == "Tape" { "Static" } else { "Tape" }.to_string()),
+            )
+            .unwrap();
+        for (id, value) in &controls {
+            switched
+                .set_parameter(ParameterId::from(*id), value.clone())
+                .unwrap();
+        }
+        switched
+            .set_parameter(ParameterId::from("analog_model"), model)
+            .unwrap();
+        switched.reset();
+        let mut actual = input.clone();
+        switched
+            .process_in_place(&mut actual, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        assert_eq!(actual, expected, "model={name}, switched last");
+    }
 }

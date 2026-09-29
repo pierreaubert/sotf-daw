@@ -39,13 +39,12 @@ fn test_xtc_bypass_fidelity() {
 
     plugin.process(&input, &mut output, &context).unwrap();
 
-    // Account for STFT latency
+    // Align the source to the fixed STFT delay, including its first sample.
     let latency = plugin.latency_samples();
-    let start = latency;
-    let end = num_frames - latency;
-
-    let signal_segment = &input[start * 2..end * 2];
-    let output_segment = &output[start * 2..end * 2];
+    assert_eq!(latency, fft_size);
+    assert!(output[..latency * 2].iter().all(|&sample| sample == 0.0));
+    let signal_segment = &input[..(num_frames - latency) * 2];
+    let output_segment = &output[latency * 2..];
 
     let mut error = vec![0.0; signal_segment.len()];
     for i in 0..signal_segment.len() {

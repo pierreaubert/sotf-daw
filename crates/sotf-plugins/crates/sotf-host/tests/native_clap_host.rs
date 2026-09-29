@@ -3,6 +3,7 @@
 use sotf_host::external_plugin::{
     ExternalHostingBackend, ExternalPlugin, PluginDescriptor, PluginFormat, PluginScanStatus,
 };
+use sotf_host::parameters::ParameterValue;
 use sotf_host::plugin::{Plugin, ProcessContext};
 use sotf_host::serialization::SerializablePlugin;
 use sotf_host::{
@@ -47,6 +48,24 @@ fn native_clap_gain_processes_and_round_trips_state() {
         assert!((actual - expected).abs() < 1.0e-5);
     }
 
+    // A fractional value detects accidental integer parameter registration.
+    // Allow the documented smoothing to settle before checking absolute gain.
+    let gain_db = -6.5_f32;
+    // NIH exposes normalized values to CLAP for continuous parameters.
+    // The gain DSP range is linear in dB from -60 to +20.
+    assert_eq!(gain.min_value, Some(ParameterValue::Float(0.0)));
+    assert_eq!(gain.max_value, Some(ParameterValue::Float(1.0)));
+    plugin
+        .set_parameter(gain.id, ParameterValue::Float((gain_db + 60.0) / 80.0))
+        .expect("queue fractional CLAP gain");
+    for _ in 0..256 {
+        plugin.process(&input, &mut output, &context).unwrap();
+    }
+    let expected_gain = 10.0_f32.powf(gain_db / 20.0);
+    for (actual, original) in output.iter().zip(&input) {
+        assert!((actual - original * expected_gain).abs() < 1.0e-5);
+    }
+
     let preset = plugin.serialize().expect("save CLAP state");
     let state = preset
         .external_plugin_state()
@@ -57,10 +76,14 @@ fn native_clap_gain_processes_and_round_trips_state() {
     let mut restored =
         ExternalPlugin::from_placeholder_state(&state, 48_000).expect("restore CLAP state");
     let mut restored_output = vec![0.0; input.len()];
-    restored
-        .process(&input, &mut restored_output, &context)
-        .unwrap();
-    assert_eq!(restored_output, output);
+    for _ in 0..256 {
+        restored
+            .process(&input, &mut restored_output, &context)
+            .unwrap();
+    }
+    for (actual, original) in restored_output.iter().zip(&input) {
+        assert!((actual - original * expected_gain).abs() < 1.0e-5);
+    }
 }
 
 #[test]
@@ -73,8 +96,9 @@ fn isolated_native_clap_worker_processes_and_restores_state() {
         .into_iter()
         .find(|parameter| parameter.name.to_ascii_lowercase().contains("gain"))
         .expect("CLAP gain parameter metadata");
+    let gain_db = -6.5_f32;
     source
-        .set_parameter(gain.id, gain.min_value.expect("gain minimum"))
+        .set_parameter(gain.id, ParameterValue::Float((gain_db + 60.0) / 80.0))
         .expect("queue non-default CLAP gain");
 
     let frames = 127;
@@ -83,7 +107,7 @@ fn isolated_native_clap_worker_processes_and_restores_state() {
         .collect::<Vec<_>>();
     let context = ProcessContext::new(48_000, frames);
     let mut source_output = vec![0.0; input.len()];
-    for _ in 0..32 {
+    for _ in 0..256 {
         source
             .process(&input, &mut source_output, &context)
             .unwrap();
@@ -102,6 +126,7 @@ fn isolated_native_clap_worker_processes_and_restores_state() {
 
     let worker_binary = env!("CARGO_BIN_EXE_sotf-external-plugin-worker");
     let config = || IsolatedExternalPluginConfig {
+        max_block_frames: frames as u32,
         deadline: Duration::from_secs(2),
         worker_command: ExternalPluginWorkerCommand::new(worker_binary)
             .arg("--idle-sleep-micros")
@@ -116,8 +141,11 @@ fn isolated_native_clap_worker_processes_and_restores_state() {
             .expect("start native CLAP worker from serialized state");
     assert_eq!(first.launch_error(), None);
     let mut first_output = vec![0.0; input.len()];
-    for _ in 0..32 {
+    for _ in 0..64 {
         first.process(&input, &mut first_output, &context).unwrap();
+        // Simulate callback pacing so the asynchronous worker can publish the
+        // preceding block before its fixed one-block transport deadline.
+        std::thread::sleep(Duration::from_millis(10));
     }
 
     let mut second =
@@ -125,22 +153,21 @@ fn isolated_native_clap_worker_processes_and_restores_state() {
             .expect("start fresh native CLAP worker from serialized state");
     assert_eq!(second.launch_error(), None);
     let mut second_output = vec![0.0; input.len()];
-    for _ in 0..32 {
+    for _ in 0..64 {
         second
             .process(&input, &mut second_output, &context)
             .unwrap();
+        std::thread::sleep(Duration::from_millis(10));
     }
 
-    assert_eq!(first.latency_samples(), source.latency_samples());
-    assert_eq!(second.latency_samples(), source.latency_samples());
-    assert_eq!(second_output, first_output);
-    assert!(
-        first_output
-            .iter()
-            .zip(&input)
-            .any(|(actual, original)| (actual - original).abs() > 1.0e-4),
-        "serialized CLAP gain state did not affect isolated native processing"
-    );
+    assert_eq!(first.latency_samples(), source.latency_samples() + frames);
+    assert_eq!(second.latency_samples(), source.latency_samples() + frames);
+    let expected_gain = 10.0_f32.powf(gain_db / 20.0);
+    for rendered in [&source_output, &first_output, &second_output] {
+        for (actual, original) in rendered.iter().zip(&input) {
+            assert!((actual - original * expected_gain).abs() < 1.0e-5);
+        }
+    }
 }
 
 fn clap_gain_descriptor() -> PluginDescriptor {

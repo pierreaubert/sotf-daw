@@ -118,9 +118,8 @@ impl AnalogEqPlugin {
         if channels == 0 {
             return Err("Analog EQ requires at least one channel".to_string());
         }
-        let model_id = model_id_for_name(&params.analog_model).ok_or_else(|| {
-            format!("Unknown analog model: {}", params.analog_model)
-        })?;
+        let model_id = model_id_for_name(&params.analog_model)
+            .ok_or_else(|| format!("Unknown analog model: {}", params.analog_model))?;
         let mut plugin = Self::new(channels);
         plugin.low_freq = params.low_freq;
         plugin.low_gain = params.low_gain;
@@ -206,7 +205,10 @@ impl AnalogEqPlugin {
     }
 
     fn model_name(&self) -> &'static str {
-        MODEL_NAMES.get(self.model_id as usize).copied().unwrap_or(MODEL_NAMES[0])
+        MODEL_NAMES
+            .get(self.model_id as usize)
+            .copied()
+            .unwrap_or(MODEL_NAMES[0])
     }
 
     fn rebuild_cached_parameters(&mut self) {
@@ -239,9 +241,9 @@ impl AnalogEqPlugin {
                 "Analog Model",
                 self.model_name().to_string(),
             )
-                .with_description("Analog coloration model applied after the EQ core")
-                .with_group("Analog")
-                .with_importance(Critical),
+            .with_description("Analog coloration model applied after the EQ core")
+            .with_group("Analog")
+            .with_importance(Critical),
             f("analog_drive", "Analog Drive", self.drive_db as f64, Useful),
             f("analog_color", "Analog Color", self.color as f64, Critical),
             f(
@@ -315,6 +317,29 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        let value = match id.as_str() {
+            "low_freq" => self.low_freq as f32,
+            "low_gain" => self.low_gain as f32,
+            "mid1_freq" => self.mid1_freq as f32,
+            "mid1_gain" => self.mid1_gain as f32,
+            "mid1_q" => self.mid1_q as f32,
+            "mid2_freq" => self.mid2_freq as f32,
+            "mid2_gain" => self.mid2_gain as f32,
+            "mid2_q" => self.mid2_q as f32,
+            "high_freq" => self.high_freq as f32,
+            "high_gain" => self.high_gain as f32,
+            "analog_drive" => self.drive_db,
+            "analog_color" => self.color,
+            "analog_character" => self.character,
+            "analog_trim" => self.trim_db,
+            // String values retain the owned control-query contract.
+            "analog_model" => return Some(ParameterValue::String(self.model_name().to_string())),
+            _ => return None,
+        };
+        Some(ParameterValue::Float(value))
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         let floats: [(&str, f64); 14] = [
@@ -334,10 +359,7 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
             ("analog_trim", self.trim_db as f64),
         ];
         for (key, value) in floats {
-            values.insert(
-                ParameterId::from(key),
-                ParameterValue::Float(value as f32),
-            );
+            values.insert(ParameterId::from(key), ParameterValue::Float(value as f32));
         }
         values.insert(
             ParameterId::from("analog_model"),
@@ -369,15 +391,18 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
                 }
             }
         }
+        // Model replacement precedes target updates, so both the targets and
+        // their initial smoothing trajectories are independent of map order.
+        if let Some(value) = values.get(&ParameterId::from("analog_model"))
+            && let Some(name) = value.as_string()
+            && let Some(model_id) = model_id_for_name(name)
+        {
+            self.stage.set_model_id(model_id)?;
+            self.model_id = model_id;
+        }
         let mut bands_dirty = false;
         for (id, value) in &values {
             if id.as_str() == "analog_model" {
-                let name = value.as_string().unwrap_or(MODEL_NAMES[0]);
-                // Validated above; the lookup cannot fail here.
-                if let Some(model_id) = model_id_for_name(name) {
-                    self.model_id = model_id;
-                    self.stage.set_model_id(model_id)?;
-                }
                 continue;
             }
             let Some(float) = value.as_float() else {

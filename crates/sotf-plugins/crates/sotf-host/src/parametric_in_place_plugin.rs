@@ -9,9 +9,11 @@
 
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::parametric_plugin::{ParameterSchema, ParameterSet};
+use crate::plugin::bounded_in_place::{self, BoundedInPlace};
 use crate::plugin::{
-    InPlacePlugin, Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginInfo,
-    PluginResult, ProcessContext, validate_process_block_f32, validate_process_block_f64,
+    InPlacePlugin, Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass,
+    PluginDrainResult, PluginInfo, PluginResult, ProcessContext, validate_process_block_f32,
+    validate_process_block_f64,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -39,6 +41,24 @@ pub trait ParametricInPlacePlugin: Send {
     /// Default: same as `channels()`.
     fn input_channels(&self) -> usize {
         self.channels()
+    }
+
+    /// Allow bounded subdivision with exact audio and signal-state equivalence.
+    ///
+    /// Opting in guarantees full consumption of every valid positive block,
+    /// with identical audio and signal state under arbitrary ordered partitions.
+    /// Processing uses only `sample_rate` and `num_frames` from the context;
+    /// transport and event slices must be ignored. Native f64 obeys the same
+    /// contract when supported. Diagnostic publication may follow subcalls.
+    ///
+    /// After initialization, finite correctly shaped input at the initialized
+    /// rate must succeed and return exactly `num_frames`. Lifecycle/rate errors
+    /// must precede mutation; no later subcall may fail for that same context.
+    /// Standard adapters prepare bounded scratch during initialization, without
+    /// imposing a maximum public callback size. Asymmetric adapter layouts
+    /// require this opt-in; direct in-place calls retain their full input stride.
+    fn supports_bounded_subdivision(&self) -> bool {
+        false
     }
 
     /// Parameter metadata. May be dynamic (e.g. per-channel gains).
@@ -72,6 +92,32 @@ pub trait ParametricInPlacePlugin: Send {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize>;
+
+    /// Maximum output-rate frames written by one [`Self::drain`] call.
+    fn drain_output_frames_max(&self) -> usize {
+        0
+    }
+
+    /// Prepare bounded, idempotent EOS work; see [`Plugin::begin_drain`].
+    fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Bound full-capacity EOS calls; see [`Plugin::drain_call_bound`].
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        None
+    }
+
+    /// Emit retained audio without accepting new input; see [`Plugin::drain`].
+    ///
+    /// Output uses the plugin's output-channel layout. The default has no tail.
+    fn drain(
+        &mut self,
+        _output: &mut [f32],
+        _context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        Ok(PluginDrainResult::COMPLETE)
+    }
 
     /// Optional specialized operation used by host compiled render plans.
     fn process_compiled_f32(
@@ -118,6 +164,11 @@ pub trait ParametricInPlacePlugin: Send {
     /// Processing latency in samples.
     fn latency_samples(&self) -> usize {
         0
+    }
+
+    /// Allocation-free zero-input response bound; see [`crate::plugin::TailLength`].
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        crate::plugin::TailLength::Unknown
     }
 
     /// Minimum input-rate scheduling budget for worst-case realtime work.
@@ -192,6 +243,10 @@ pub trait ParametricInPlacePlugin: Send {
     }
 
     /// Read a single parameter value.
+    ///
+    /// The default builds the full allocating snapshot. Plugins queried on an
+    /// audio callback must override this method with direct scalar access.
+    /// Owned string values may still require control-thread queries.
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         self.current_values().get(id).cloned()
     }
@@ -221,9 +276,9 @@ pub trait ParametricInPlacePlugin: Send {
 #[derive(Debug)]
 pub struct ParametricInPlacePluginAdapter<T: ParametricInPlacePlugin> {
     plugin: T,
-    /// Reusable f32 scratch for the f64 in-place processing path. Pre-sized and
-    /// grown on demand so the audio thread does not allocate per block.
+    /// Legacy f64 fallback storage for processors without subdivision support.
     scratch: Vec<f32>,
+    bounded: BoundedInPlace,
 }
 
 impl<T: ParametricInPlacePlugin> ParametricInPlacePluginAdapter<T> {
@@ -232,6 +287,7 @@ impl<T: ParametricInPlacePlugin> ParametricInPlacePluginAdapter<T> {
         Self {
             plugin,
             scratch: Vec::new(),
+            bounded: BoundedInPlace::default(),
         }
     }
 
@@ -260,6 +316,10 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.input_channels()
     }
 
+    fn supports_bounded_subdivision(&self) -> bool {
+        self.plugin.supports_bounded_subdivision()
+    }
+
     fn parameters(&self) -> Vec<Parameter> {
         self.plugin.parametric_parameters()
     }
@@ -277,7 +337,14 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.plugin.initialize(sample_rate)
+        self.bounded.invalidate();
+        self.plugin.initialize(sample_rate)?;
+        self.bounded.prepare(
+            self.plugin.supports_bounded_subdivision(),
+            [self.plugin.input_channels(), self.plugin.channels()],
+            self.plugin.supports_f64(),
+            sample_rate,
+        )
     }
 
     fn reset(&mut self) {
@@ -297,6 +364,22 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         buffer: &mut [f64],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if self.plugin.supports_f64() {
+            return self.plugin.process_in_place_f64(buffer, context);
+        }
+        if self.plugin.supports_bounded_subdivision() {
+            let channels = [self.plugin.input_channels(), self.plugin.channels()];
+            validate_process_block_f64(buffer, buffer, context, channels[0], channels[0])?;
+            self.bounded.validate(channels, context)?;
+            let plugin = &mut self.plugin;
+            return bounded_in_place::fallback_in_place(
+                &mut self.bounded.f32_samples,
+                buffer,
+                context,
+                channels[0],
+                |work, context| plugin.process_in_place(work, context),
+            );
+        }
         self.ensure_scratch(buffer.len());
         let scratch = &mut self.scratch[..buffer.len()];
         for (dst, &src) in scratch.iter_mut().zip(buffer.iter()) {
@@ -309,8 +392,32 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         Ok(frames)
     }
 
+    fn drain_output_frames_max(&self) -> usize {
+        self.plugin.drain_output_frames_max()
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        self.plugin.begin_drain(context)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.plugin.drain_call_bound()
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.plugin.drain(output, context)
+    }
+
     fn latency_samples(&self) -> usize {
         self.plugin.latency_samples()
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        self.plugin.tail_length()
     }
 
     fn realtime_quantum_frames(&self) -> usize {
@@ -364,7 +471,14 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.plugin.initialize(sample_rate)
+        self.bounded.invalidate();
+        self.plugin.initialize(sample_rate)?;
+        self.bounded.prepare(
+            self.plugin.supports_bounded_subdivision(),
+            [self.plugin.input_channels(), self.plugin.channels()],
+            self.plugin.supports_f64(),
+            sample_rate,
+        )
     }
 
     fn reset(&mut self) {
@@ -377,24 +491,24 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        let in_ch = self.plugin.input_channels();
-        let out_ch = self.plugin.channels();
-        if in_ch == out_ch {
-            validate_process_block_f32(input, output, context, in_ch, out_ch)?;
+        let channels = [self.plugin.input_channels(), self.plugin.channels()];
+        validate_process_block_f32(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_bounded_subdivision() || channels[0] != channels[1] {
+            self.bounded.validate(channels, context)?;
+        }
+        if channels[0] == channels[1] {
             output.copy_from_slice(input);
             self.plugin.process_in_place(output, context)
         } else {
-            validate_process_block_f32(input, output, context, in_ch, in_ch)?;
-            output[..input.len()].copy_from_slice(input);
-            let frames = self
-                .plugin
-                .process_in_place(&mut output[..input.len()], context)?;
-            for frame in 0..frames {
-                let src = frame * in_ch;
-                let dst = frame * out_ch;
-                output.copy_within(src..src + out_ch, dst);
-            }
-            Ok(frames)
+            let plugin = &mut self.plugin;
+            bounded_in_place::process(
+                &mut self.bounded.f32_samples,
+                input,
+                output,
+                context,
+                channels,
+                |work, context| plugin.process_in_place(work, context),
+            )
         }
     }
 
@@ -432,29 +546,65 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
         output: &mut [f64],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        let in_ch = self.plugin.input_channels();
-        let out_ch = self.plugin.channels();
-        if in_ch == out_ch {
-            validate_process_block_f64(input, output, context, in_ch, out_ch)?;
-            output.copy_from_slice(input);
-            self.plugin.process_in_place_f64(output, context)
-        } else {
-            validate_process_block_f64(input, output, context, in_ch, in_ch)?;
-            output[..input.len()].copy_from_slice(input);
-            let frames = self
-                .plugin
-                .process_in_place_f64(&mut output[..input.len()], context)?;
-            for frame in 0..frames {
-                let src = frame * in_ch;
-                let dst = frame * out_ch;
-                output.copy_within(src..src + out_ch, dst);
-            }
-            Ok(frames)
+        let channels = [self.plugin.input_channels(), self.plugin.channels()];
+        validate_process_block_f64(input, output, context, channels[0], channels[1])?;
+        let subdivide = self.plugin.supports_bounded_subdivision();
+        if subdivide || channels[0] != channels[1] {
+            self.bounded.validate(channels, context)?;
         }
+        if channels[0] == channels[1] && (!subdivide || self.plugin.supports_f64()) {
+            output.copy_from_slice(input);
+            InPlacePlugin::process_in_place_f64(self, output, context)
+        } else {
+            let plugin = &mut self.plugin;
+            if plugin.supports_f64() {
+                bounded_in_place::process(
+                    &mut self.bounded.f64_samples,
+                    input,
+                    output,
+                    context,
+                    channels,
+                    |work, context| plugin.process_in_place_f64(work, context),
+                )
+            } else {
+                bounded_in_place::process(
+                    &mut self.bounded.f32_samples,
+                    input,
+                    output,
+                    context,
+                    channels,
+                    |work, context| plugin.process_in_place(work, context),
+                )
+            }
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.plugin.drain_output_frames_max()
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        self.plugin.begin_drain(context)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.plugin.drain_call_bound()
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.plugin.drain(output, context)
     }
 
     fn latency_samples(&self) -> usize {
         self.plugin.latency_samples()
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        self.plugin.tail_length()
     }
 
     fn realtime_quantum_frames(&self) -> usize {
@@ -475,5 +625,78 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
 
     fn supports_f64(&self) -> bool {
         self.plugin.supports_f64()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct NativePrecision;
+
+    impl ParametricInPlacePlugin for NativePrecision {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("Precision", "1", "Test")
+        }
+        fn channels(&self) -> usize {
+            2
+        }
+        fn parameter_schema(&self) -> ParameterSchema {
+            Vec::new()
+        }
+        fn current_values(&self) -> ParameterSet {
+            ParameterSet::new()
+        }
+        fn apply_values(&mut self, _: ParameterSet) -> PluginResult<()> {
+            Ok(())
+        }
+        fn supports_f64(&self) -> bool {
+            true
+        }
+        fn process_in_place(&mut self, _: &mut [f32], _: &ProcessContext) -> PluginResult<usize> {
+            panic!("native f64 must not use the f32 path");
+        }
+        fn process_in_place_f64(
+            &mut self,
+            buffer: &mut [f64],
+            context: &ProcessContext,
+        ) -> PluginResult<usize> {
+            for sample in buffer {
+                *sample -= 1.0;
+            }
+            Ok(context.num_frames)
+        }
+    }
+
+    #[test]
+    fn native_in_place_f64_preserves_precision_without_cold_allocation() {
+        for frames in [0, 1, 17, 257] {
+            let mut plugin = ParametricInPlacePluginAdapter::new(NativePrecision);
+            assert!(InPlacePlugin::supports_f64(&plugin));
+            let mut samples: Vec<f64> = (0..frames * 2)
+                .map(|index| match index % 3 {
+                    0 => 1.0 + 2.0_f64.powi(-40),
+                    1 => 1.0e40,
+                    _ => 1.0 - 2.0_f64.powi(-40),
+                })
+                .collect();
+            let expected: Vec<f64> = samples.iter().map(|sample| sample - 1.0).collect();
+            std::thread::spawn(move || {
+                crate::assert_no_allocs("parametric native f64 in-place adapter", || {
+                    assert_eq!(
+                        InPlacePlugin::process_in_place_f64(
+                            &mut plugin,
+                            &mut samples,
+                            &ProcessContext::new(48_000, frames),
+                        )
+                        .unwrap(),
+                        frames
+                    );
+                });
+                assert_eq!(samples, expected);
+            })
+            .join()
+            .unwrap();
+        }
     }
 }

@@ -1,3 +1,20 @@
+## Unreleased audit corrections (2026-09-28)
+
+- Reset harmonic/percussive classification history and scratch on reset and
+  reinitialization, preserving the enabled setting and stored noise profile.
+  Warm-to-fresh waveform and cold reset allocation/deallocation tests cover
+  both FFT sizes and mono, stereo, and six-channel processing.
+- Preserve finite-stream audio through a bounded STFT drain, including optional
+  note-detection and multi-resolution modes. Freeze explicit profile capture
+  during synthetic padding, preserving stored profiles and partial measurements.
+- Prime the missing negative-time sqrt-Hann window, retaining reported latency
+  while reconstructing the first sample. Note analysis now advances at source
+  FFT boundaries rather than reading future callback samples.
+- Reset retained program state on reinitialization and reject mismatched process
+  rates. Add independent startup, tail, capture, lifecycle and cold allocation/
+  deallocation regressions.
+- Scalar parameter writes and validation now reuse prepared metadata without singleton maps or schema rebuilds. Profile triggers update all affected cached values in place; their update policy is unchanged. Cold callback tests cover both FFT sizes and multi-resolution modes.
+
 # 0.5.8
 
 ## Fixes

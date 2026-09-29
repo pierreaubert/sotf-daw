@@ -17,7 +17,7 @@ Data flow: IR file loaded (WAV/FLAC via Symphonia, resampled via rubato if neede
 
 **Key types:**
 
-- `ConvolutionPlugin` -- Main plugin implementing `ParametricInPlacePlugin`. Uses `ArcSwap<Option<ConvolutionState>>` for lock-free IR swapping.
+- `ConvolutionPlugin` -- Main plugin implementing `ParametricInPlacePlugin`. Owns the active `Arc<Option<ConvolutionState>>`; background workers return prepared states through completion mailboxes.
 - `ConvolutionState` -- Holds pre-computed frequency-domain IR partitions: `partitions[channel][partition][bin]`.
 - `ConvolutionPluginParams` -- Serde config: `ir_file`, `mix`, `gain_db`, `use_nupc`, `zero_latency_head`, `head_taps`.
 
@@ -45,7 +45,9 @@ cargo test -p sotf-plugin-convolution
 - `zero_latency_head` mode processes the first `head_taps` samples via direct time-domain convolution (no latency), with the rest using partitioned FFT. Useful for preserving transient attacks.
 - UPC accumulation stays on the callback thread; it never dispatches through Rayon's global pool.
 - Complex multiply-accumulate uses SIMD (`complex_mul_add_simd` from sotf-host).
-- Lock-free IR swapping via `ArcSwap` allows changing IRs without blocking the audio thread.
+- Active IR replacement moves the previous Arc and backend into existing retirement queues; callbacks clone an audio-owned Arc without thread-local reader allocation.
+- Consumed completion receivers and their keepalive senders stay owned until control-thread load/clear/teardown; dropping only the receiver can free a channel message block.
+- Native drain freezes the active backend, keeps pending completions queued until reset, and emits exact finite support in at most 1024-frame chunks.
 - Channel mapping: if IR has fewer channels than input, channels are mapped cyclically.
 - Never drop a replaced backend or error string on the callback; use the retirement queues.
 - Preserve the configured latency in inactive/loading/failed/cleared states.

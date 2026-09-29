@@ -279,6 +279,33 @@ pub(crate) fn create_plugin_with_max_callback(
     sample_rate: u32,
     max_callback_frames: usize,
 ) -> Result<Box<dyn Plugin>, String> {
+    let plugin = create_unprepared_plugin(
+        plugin_type,
+        config_json,
+        input_channels,
+        output_channels,
+        sample_rate,
+    )?;
+    if canonical_direct_plugin_type(plugin_type) == "LinearPhaseEQ" {
+        Ok(Box::new(AsyncTimelinePlugin::new(
+            plugin,
+            sample_rate,
+            max_callback_frames,
+        )?))
+    } else {
+        plugins_bridge::prepare_standalone_plugin(plugin, max_callback_frames)
+    }
+}
+
+// State restoration must apply structural settings before selecting native
+// processing adapters (in particular, the oversampling factor).
+pub(crate) fn create_unprepared_plugin(
+    plugin_type: &str,
+    config_json: &str,
+    input_channels: usize,
+    output_channels: usize,
+    sample_rate: u32,
+) -> Result<Box<dyn Plugin>, String> {
     let plugin_type = canonical_direct_plugin_type(plugin_type);
     if plugin_type == "Resampler" {
         return Err(
@@ -290,17 +317,22 @@ pub(crate) fn create_plugin_with_max_callback(
     // FFI construction metadata belongs to the facade, not the plugin schema.
     // Consume it before deserializing strict `deny_unknown_fields` configs.
     let plugin_config = plugin_config_without_ffi_metadata(config_json)?;
-    let plugin =
-        plugins_bridge::create_plugin(plugin_type, input_channels, sample_rate, &plugin_config)?;
-    let plugin: Box<dyn Plugin> = if plugin_type == "LinearPhaseEQ" {
-        Box::new(AsyncTimelinePlugin::new(
-            plugin,
-            sample_rate,
-            max_callback_frames,
-        )?)
-    } else {
-        plugin
-    };
+    // BandMerge's legacy bridge constructor takes the merged output width;
+    // Gate also takes program/output width. Other routes take input width.
+    // Validate both actual buses so inconsistent sidechain/band counts cannot
+    // bypass the requested FFI layout.
+    let constructor_channels =
+        if matches!(plugin_type, "BandMerge" | "band_merge" | "Gate" | "gate") {
+            output_channels
+        } else {
+            input_channels
+        };
+    let plugin = plugins_bridge::create_plugin(
+        plugin_type,
+        constructor_channels,
+        sample_rate,
+        &plugin_config,
+    )?;
     if plugin.input_channels() != input_channels {
         return Err(format!(
             "Plugin {plugin_type} created with {} input channels, requested {input_channels}",
@@ -354,6 +386,24 @@ mod tests {
         assert_eq!(plugin.input_channels(), 6);
         assert_eq!(plugin.output_channels(), 2);
         assert!(create_plugin("Downmix", "{}", 6, 6, 48_000).is_err());
+    }
+
+    #[test]
+    fn band_merge_translates_legacy_constructor_width_and_validates_both_buses() {
+        for alias in ["BandMerge", "band_merge"] {
+            for (config, input_channels, output_channels) in [
+                ("{}", 4, 2),
+                (r#"{"bands":3}"#, 6, 2),
+                (r#"{"bands":4}"#, 4, 1),
+            ] {
+                let plugin =
+                    create_plugin(alias, config, input_channels, output_channels, 48_000).unwrap();
+                assert_eq!(plugin.input_channels(), input_channels);
+                assert_eq!(plugin.output_channels(), output_channels);
+            }
+            assert!(create_plugin(alias, "{}", 6, 2, 48_000).is_err());
+            assert!(create_plugin(alias, r#"{"bands":3}"#, 4, 2, 48_000).is_err());
+        }
     }
 
     #[test]

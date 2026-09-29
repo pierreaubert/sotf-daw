@@ -1,3 +1,66 @@
+# Unreleased AutoGain clock audit (2026-09-28)
+
+- Fix AUD104 skipped loudness input and callback-dependent gain updates. Ingest
+  all stereo frames and refresh at fixed 100 ms sample boundaries, applying new
+  targets only to subsequent output.
+- Compare N-delayed original input with uncompensated wet output using the
+  existing dry ring. Preserve filter/limiter arithmetic and finite drain support.
+- Advance the existing gain recurrence per frame; reset its measurement phase
+  with stream history or newly constructed meters. No new callback storage.
+- Add independent delayed identity, gain-ratio, causal-boundary, lifecycle and
+  cold allocation/free evidence. AutoGain-enabled audio intentionally changes;
+  continuous measurement costs more CPU than the former decimated metering.
+
+# Unreleased aligned bypass audit (2026-09-28)
+
+- Fix AUD099 disabled output disagreeing with its advertised N-frame delay and
+  re-enabling replaying stale wet audio. Keep a prepared stereo N-frame dry ring
+  and continuously advance wet filtering, AutoGain, limiter and filter fades.
+- Crossfade enabled changes over a sample-counted 10 ms linear ramp. Preserve
+  fully enabled output arithmetic, exact delayed dry values and extra-channel
+  zero routing; use a wider convex intermediate for finite overrange blends.
+- Update the cached enabled bool without allocation or schema reconstruction.
+- Drain N frames for settled dry EOF, otherwise the canonical finite wet support
+  based on all accepted input. Latch accepted tail metadata through completion;
+  preserve transactional validation, snapshots, reset and staged initialization.
+- Add independent delayed-waveform, multichannel matrix/ramp and actual parallel
+  host PDC regressions, plus cold allocation AND deallocation checks.
+- Compatibility: disabled output now has the already reported latency, toggles
+  fade instead of switching instantly, and bypass consumes wet-processing CPU.
+
+# Unreleased finite stream and publication audit (2026-09-28)
+
+- Fix AUD096 synchronous initialization silently accepting source-load, source-rate
+  and output-width errors. Stage target-rate filters, room data and AutoGain before
+  committing; failures preserve the running audio/EOS epoch and pending updates.
+- Recompute synchronous room spectra for the requested clock, propagate active
+  room IR failures, and start successful initialization with fresh meter cadence.
+- Add AUD073 bounded finite EOS continuation with an H-frame prepared output
+  cache. Preserve ordinary STFT math, AutoGain cadence and hard-disabled routing;
+  arbitrary destination capacities no longer control drain measurement cadence.
+- Freeze nonempty EOF input, changed controls and pending filter adoption until
+  reset. Preserve active fades, bounded resource retirement and deferred desired
+  configuration across reset; empty EOF remains reusable.
+- Fix AUD093 stale-rate filter adoption after synchronous reinitialization by
+  advancing the generation at successful installation. Preflight the existing
+  stereo AutoGain meter rate range before changing the active audio epoch.
+- Add independent delayed-source and f64 circular-FIR/WOLA oracles, live toggle
+  and partial-cache bounds, actual worker barriers, transactional rejection and
+  cold allocation/deallocation ownership regressions.
+
+# Unreleased stream timing audit (2026-09-28)
+
+- Fix AUD080 callback-dependent STFT timing and discarded accepted input when
+  queued output filled a shorter callback. Enabled processing now follows the
+  input sample clock with the unchanged declared `fft_size` latency.
+- Add three negative-origin analysis windows and discard their negative-time
+  synthesis to preserve startup amplitude and avoid stale ring-wrap output.
+- Reset the timeline on initialization; reject wrong process rate and checked
+  buffer-size overflow before publication adoption or audio mutation.
+- Add independent full-waveform, impulse, mixed-callback, reset/preflight and
+  cold allocation/deallocation regressions. AutoGain callback cadence, hard
+  enable/disable semantics and explicit EOS drain remain separate scopes.
+
 # 0.5.42
 
 ## Performance

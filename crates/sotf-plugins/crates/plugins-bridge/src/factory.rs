@@ -157,8 +157,16 @@ pub fn create_plugin(
         }
 
         "Convolution" | "convolution" => {
+            let defaults = sotf_plugin_convolution::ConvolutionPluginParams::default();
             let params: sotf_plugin_convolution::ConvolutionPluginParams =
-                parse_params(config_json)?;
+                parse_params_with_defaults(
+                    config_json,
+                    [
+                        ("ir_file", serde_json::json!(defaults.ir_file)),
+                        ("mix", serde_json::json!(defaults.mix)),
+                        ("gain_db", serde_json::json!(defaults.gain_db)),
+                    ],
+                )?;
             let plugin = sotf_plugin_convolution::ConvolutionPlugin::from_params(
                 channels,
                 sample_rate,
@@ -228,7 +236,16 @@ pub fn create_plugin(
         }
 
         "Binaural" | "binaural" => {
-            let params: sotf_plugin_binaural::BinauralDecoderParams = parse_params(config_json)?;
+            let params: sotf_plugin_binaural::BinauralDecoderParams = parse_params_with_defaults(
+                config_json,
+                [("input_channels", serde_json::json!(channels))],
+            )?;
+            if params.input_channels != channels {
+                return Err(format!(
+                    "Binaural is configured for {} input channels, got {channels}",
+                    params.input_channels
+                ));
+            }
             let plugin = sotf_plugin_binaural::BinauralDecoderPlugin::try_from_params(params)?;
             Ok(Box::new(plugin))
         }
@@ -324,7 +341,19 @@ pub fn create_plugin(
         }
 
         "Crossover" | "crossover" => {
-            let params: sotf_plugin_crossover::CrossoverPluginParams = parse_params(config_json)?;
+            let specs = sotf_plugin_crossover::params::PARAMS;
+            let crossover_type =
+                sotf_plugin_crossover::params::CROSSOVER_TYPES[specs[0].default_usize()];
+            // The construction schema calls the runtime `mode` parameter `output`.
+            let output = ["lowpass", "highpass", "both"][specs[2].default_usize()];
+            let params: sotf_plugin_crossover::CrossoverPluginParams = parse_params_with_defaults(
+                config_json,
+                [
+                    ("type", serde_json::json!(crossover_type)),
+                    ("frequency", serde_json::json!(specs[1].default_f64())),
+                    ("output", serde_json::json!(output)),
+                ],
+            )?;
             let plugin = sotf_plugin_crossover::CrossoverPlugin::from_params(channels, &params)?;
             Ok(Box::new(plugin))
         }
@@ -356,17 +385,15 @@ pub fn create_plugin(
         "AnalogCompressor" | "analog_compressor" => {
             let params: sotf_plugin_analog_compressor::AnalogCompressorPluginParams =
                 parse_params(config_json)?;
-            let plugin =
-                sotf_plugin_analog_compressor::AnalogCompressorPlugin::try_from_params(
-                    channels, params,
-                )?;
+            let plugin = sotf_plugin_analog_compressor::AnalogCompressorPlugin::try_from_params(
+                channels, params,
+            )?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
         "AnalogEQ" | "analog_eq" => {
             let params: sotf_plugin_analog_eq::AnalogEqPluginParams = parse_params(config_json)?;
-            let plugin =
-                sotf_plugin_analog_eq::AnalogEqPlugin::try_from_params(channels, params)?;
+            let plugin = sotf_plugin_analog_eq::AnalogEqPlugin::try_from_params(channels, params)?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
@@ -465,6 +492,45 @@ pub fn create_plugin(
             Ok(Box::new(plugin))
         }
 
+        "LoudnessMonitor" | "loudness_monitor" => {
+            #[derive(serde::Deserialize)]
+            struct LoudnessConfig {
+                enabled: bool,
+                #[serde(default)]
+                integrated_mode: sotf_host::IntegratedLoudnessMode,
+                channel_layout: Option<sotf_host::speaker_config::ChannelLayout>,
+                speaker_config: Option<String>,
+            }
+            let config: LoudnessConfig =
+                parse_params_with_defaults(config_json, [("enabled", serde_json::json!(true))])?;
+            let speaker_layout = config
+                .speaker_config
+                .map(|id| {
+                    let speakers = sotf_host::speaker_config::get_speaker_config(&id)
+                        .ok_or_else(|| format!("Unknown loudness speaker_config: {id}"))?;
+                    sotf_host::speaker_config::ChannelLayout::from_speaker_config(speakers)
+                })
+                .transpose()?;
+            let layout = match (config.channel_layout, speaker_layout) {
+                (Some(layout), Some(speaker_layout)) if layout != speaker_layout => {
+                    return Err("loudness channel_layout conflicts with speaker_config".into());
+                }
+                (Some(layout), _) | (None, Some(layout)) => Some(layout),
+                (None, None) => None,
+            };
+            let mut plugin = if let Some(layout) = layout {
+                sotf_host::LoudnessMonitorPlugin::new_with_layout(channels, layout)?
+            } else {
+                sotf_host::LoudnessMonitorPlugin::new(channels)?
+            }
+            .with_integrated_mode(config.integrated_mode)?;
+            plugin.set_parameter(
+                ParameterId::from("enabled"),
+                ParameterValue::Bool(config.enabled),
+            )?;
+            Ok(Box::new(plugin))
+        }
+
         _ => Err(format!("Unknown plugin type: {plugin_type}")),
     }
 }
@@ -516,7 +582,23 @@ pub fn available_plugin_types() -> &'static [&'static str] {
         "AEC",
         "Beamformer",
         "SpectrumAnalyzer",
+        "LoudnessMonitor",
+        "DeEsser",
     ]
+}
+
+// Fill absent construction fields without replacing explicit values, including
+// invalid values that must still reach deserialization or plugin validation.
+fn parse_params_with_defaults<T: serde::de::DeserializeOwned>(
+    config_json: &str,
+    defaults: impl IntoIterator<Item = (&'static str, serde_json::Value)>,
+) -> Result<T, String> {
+    let mut config: serde_json::Map<String, serde_json::Value> = parse_params(config_json)?;
+    for (key, value) in defaults {
+        config.entry(key).or_insert(value);
+    }
+    serde_json::from_value(serde_json::Value::Object(config))
+        .map_err(|error| format!("Failed to parse plugin config: {error}"))
 }
 
 fn parse_params<T: serde::de::DeserializeOwned>(config_json: &str) -> Result<T, String> {
@@ -534,6 +616,132 @@ fn parse_params<T: serde::de::DeserializeOwned>(config_json: &str) -> Result<T, 
 mod tests {
     use super::*;
     use sotf_host::plugin::ProcessContext;
+
+    #[test]
+    fn wrapper_defaults_and_aliases_initialize_and_process() {
+        for plugin_type in [
+            "Convolution",
+            "convolution",
+            "Binaural",
+            "binaural",
+            "Crossover",
+            "crossover",
+            "LoudnessMonitor",
+            "loudness_monitor",
+        ] {
+            for config in ["", "null", "{}", " { } "] {
+                let mut plugin = create_plugin(plugin_type, 2, 44_100, config)
+                    .unwrap_or_else(|error| panic!("{plugin_type} {config:?}: {error}"));
+                assert_eq!(plugin.input_channels(), 2, "{plugin_type}");
+                assert_eq!(plugin.output_channels(), 2, "{plugin_type}");
+                plugin.initialize(44_100).unwrap();
+                let input = vec![0.125; 128 * 2];
+                let mut output = vec![f32::NAN; input.len()];
+                assert_eq!(
+                    plugin
+                        .process(&input, &mut output, &ProcessContext::new(44_100, 128))
+                        .unwrap(),
+                    128
+                );
+                assert!(
+                    output.iter().all(|sample| sample.is_finite()),
+                    "{plugin_type}"
+                );
+            }
+        }
+        assert!(available_plugin_types().contains(&"LoudnessMonitor"));
+    }
+
+    #[test]
+    fn constructor_defaults_preserve_explicit_settings() {
+        let convolution =
+            create_plugin("Convolution", 3, 96_000, r#"{"mix":0.25,"gain_db":-6.0}"#).unwrap();
+        assert_eq!(convolution.input_channels(), 3);
+        assert_eq!(
+            convolution.get_parameter(&ParameterId::from("mix")),
+            Some(ParameterValue::Float(0.25))
+        );
+        assert_eq!(
+            convolution.get_parameter(&ParameterId::from("gain_db")),
+            Some(ParameterValue::Float(-6.0))
+        );
+
+        let crossover = create_plugin(
+            "Crossover",
+            3,
+            48_000,
+            r#"{"frequency":750.0,"output":"both"}"#,
+        )
+        .unwrap();
+        assert_eq!(crossover.input_channels(), 3);
+        assert_eq!(crossover.output_channels(), 6);
+        assert_eq!(
+            crossover.get_parameter(&ParameterId::from("frequency")),
+            Some(ParameterValue::Float(750.0))
+        );
+
+        for config in ["{}", r#"{"input_channels":6}"#] {
+            let binaural = create_plugin("Binaural", 6, 48_000, config).unwrap();
+            assert_eq!(binaural.input_channels(), 6);
+            assert_eq!(binaural.output_channels(), 2);
+        }
+        let mut loudness = create_plugin(
+            "LoudnessMonitor",
+            6,
+            48_000,
+            r#"{"speaker_config":"5.1","integrated_mode":"whole_program","enabled":false}"#,
+        )
+        .unwrap();
+        loudness.initialize(48_000).unwrap();
+        assert_eq!(
+            loudness.get_parameter(&ParameterId::from("enabled")),
+            Some(ParameterValue::Bool(false))
+        );
+        let input = vec![0.125; 128 * 6];
+        let mut output = vec![f32::NAN; input.len()];
+        loudness
+            .process(&input, &mut output, &ProcessContext::new(48_000, 128))
+            .unwrap();
+        assert_eq!(output, input);
+        let data = loudness.get_data().expect("loudness data");
+        let data = data.downcast_ref::<sotf_host::LoudnessData>().unwrap();
+        assert!(!data.measurement_enabled);
+    }
+
+    #[test]
+    fn constructor_defaults_do_not_hide_invalid_explicit_settings() {
+        for (plugin_type, config) in [
+            ("Convolution", r#"{"ir_file":null}"#),
+            ("Convolution", r#"{"mix":2.0}"#),
+            ("Convolution", r#"{"gain_db":100.0}"#),
+            (
+                "Convolution",
+                r#"{"ir_file":"/nonexistent/sotf-bridge-test.wav"}"#,
+            ),
+            ("Binaural", r#"{"input_channels":null}"#),
+            ("Binaural", r#"{"input_channels":6}"#),
+            ("Crossover", r#"{"type":"invalid"}"#),
+            ("Crossover", r#"{"frequency":0.0}"#),
+            ("Crossover", r#"{"output":"invalid"}"#),
+            ("LoudnessMonitor", r#"{"enabled":"false"}"#),
+            ("LoudnessMonitor", r#"{"integrated_mode":"invalid"}"#),
+            ("LoudnessMonitor", r#"{"speaker_config":"5.1"}"#),
+            ("LoudnessMonitor", r#"{"speaker_config":"invalid"}"#),
+        ] {
+            assert!(
+                create_plugin(plugin_type, 2, 48_000, config).is_err(),
+                "{plugin_type}: {config}"
+            );
+        }
+        for plugin_type in ["Convolution", "Binaural", "Crossover", "LoudnessMonitor"] {
+            for config in ["[]", "true", "1", "{"] {
+                assert!(
+                    create_plugin(plugin_type, 2, 48_000, config).is_err(),
+                    "{plugin_type}: {config}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_create_wave1_plugins() {

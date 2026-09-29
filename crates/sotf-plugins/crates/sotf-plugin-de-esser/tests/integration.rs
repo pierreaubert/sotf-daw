@@ -160,6 +160,7 @@ fn reset_clears_state() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -200,6 +201,7 @@ fn wideband_reduces_sibilance() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -237,6 +239,7 @@ fn low_frequency_passthrough() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -274,6 +277,7 @@ fn split_band_attenuates_hf_passthrough_lf() {
             release_ms: 20.0,
             mode: "Split-Band".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -320,6 +324,7 @@ fn mix_zero_is_dry() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 0.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -363,6 +368,7 @@ fn stereo_channels_processed_independently() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -423,6 +429,7 @@ fn from_params_rejects_out_of_bounds() {
             release_ms: 1.0,
             mode: "Wideband".to_string(),
             mix: -1.0,
+            ..Default::default()
         },
     );
     assert!(result.is_err(), "invalid serialized state must be rejected");

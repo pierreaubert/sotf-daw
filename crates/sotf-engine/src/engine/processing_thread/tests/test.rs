@@ -81,7 +81,8 @@ fn test_handle_processing_command_polls_isolated_external_plugin_statuses_withou
         &mut state,
         &response_tx,
         &event_tx,
-    );
+    )
+    .is_shutdown();
     assert!(!shutdown);
 
     let statuses = match event_rx.recv_timeout(Duration::from_secs(1)).unwrap() {

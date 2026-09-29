@@ -1,9 +1,10 @@
+// Rust guideline compliant 2026-02-21
 pub use super::config::BinauralDecoderParams;
 pub use super::error::BinauralError;
 pub use super::room::{Reflection, RoomModel};
+use super::state::HrtfState;
 use super::types::BinauralState;
 use crate::params::PARAMS as BN;
-use arc_swap::ArcSwap;
 use math_audio_dsp::rtpghi::RtpghiProcessor;
 use plugins_spatial::validate_interleaved_io;
 use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
@@ -11,11 +12,12 @@ use rustfft::num_complex::Complex;
 use sotf_host::param_bridge;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext,
 };
 use sotf_host::simd::{complex_mul_add_simd, enable_ftz_daz};
 use sotf_host::smoothing::Smoother;
-use sotf_host::sofa::SofaFile;
+use sotf_host::sofa::{SofaFile, load_sofa};
 use sotf_host::speaker_config::{SpeakerConfig, get_speaker_config_by_channels};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -165,8 +167,18 @@ pub(super) struct BinauralRetirement {
     pub(super) thread: Option<JoinHandle<()>>,
 }
 
+struct BinauralDrain {
+    silence: Vec<f32>,
+    has_input: bool,
+    /// None before EOS; Some(0) after completion. The budget is frozen at EOS.
+    remaining: Option<usize>,
+}
+
 pub struct BinauralDecoderPlugin {
-    pub(super) state: Arc<ArcSwap<BinauralState>>,
+    drain: BinauralDrain,
+    /// Common causal offset applied to the currently active SOFA response.
+    sofa_delay_rebase_seconds: Option<f64>,
+    pub(super) state: Arc<HrtfState>,
     pub(super) config: BinauralConfig,
     pub(super) fft: BinauralFft,
     pub(super) analysis: BinauralAnalysis,
@@ -280,7 +292,13 @@ impl BinauralDecoderPlugin {
         });
 
         let mut p = Self {
-            state: Arc::new(ArcSwap::from(initial_state.clone())),
+            drain: BinauralDrain {
+                silence: vec![0.0; hop_size * input_channels],
+                has_input: false,
+                remaining: None,
+            },
+            sofa_delay_rebase_seconds: None,
+            state: HrtfState::new(initial_state.clone()),
             config: BinauralConfig {
                 input_channels,
                 fft_size,
@@ -448,6 +466,14 @@ impl BinauralDecoderPlugin {
         self.config.cached_parameters = param_bridge::build_parameters(BN, |i| self.param_value(i));
     }
 
+    /// Return the causal SOFA offset applied to the active filters, in seconds.
+    ///
+    /// The value is absent before a SOFA response has been prepared. A returned
+    /// zero means the active response needed no common causal rebase.
+    pub fn sofa_delay_rebase_seconds(&self) -> Option<f64> {
+        self.sofa_delay_rebase_seconds
+    }
+
     fn default_hrtf_state(&self) -> Arc<BinauralState> {
         let mut filters = vec![
             vec![Complex::new(0.0, 0.0); self.config.freq_size * 2];
@@ -536,44 +562,62 @@ impl BinauralDecoderPlugin {
         Self::try_from_params(params).expect("invalid BinauralDecoderParams")
     }
 
-    pub(super) fn process_audio_block(&mut self) {
-        self.retire_completed_crossfade_state();
-        // Detect state changes for crossfade.
-        // Use load() (borrow guard) instead of load_full() (Arc clone) to avoid
-        // an atomic refcount increment on every audio block call.
-        let new_state = self.state.load();
-        if !Arc::ptr_eq(&new_state, &self.crossfade.current_state_snapshot) {
-            // State changed -- start crossfade from old to new
-            // Crossfade duration in samples, rounded up to hop_size boundary
-            let crossfade_samples =
-                (self.config.sample_rate as f32 * self.config.crossfade_ms * 0.001) as usize;
-            let crossfade_hops = crossfade_samples.div_ceil(self.config.hop_size);
-            let total = crossfade_hops * self.config.hop_size;
+    fn adopt_published_state(&mut self) {
+        // Do not clone a newly published Arc unless it can be adopted: the
+        // worker could replace it immediately, leaving our clone the final
+        // owner. Contention keeps the currently audible snapshot unchanged.
+        let Ok(published) = self.state.try_lock() else {
+            return;
+        };
+        if Arc::ptr_eq(&published, &self.crossfade.current_state_snapshot) {
+            return;
+        }
 
-            log::debug!(
-                "[BinauralDecoder] HRTF state changed, crossfading over {} samples ({} hops)",
-                total,
-                crossfade_hops
-            );
-
-            self.crossfade.crossfade_prev_state =
-                Some(self.crossfade.current_state_snapshot.clone());
-            self.crossfade.crossfade_total = total;
-            self.crossfade.crossfade_remaining = total;
-            // Guard derefs to Arc<BinauralState>; clone the Arc to store as snapshot.
-            self.crossfade.current_state_snapshot = Arc::clone(&new_state);
-
-            // Reset RTPGHI state when starting a new crossfade so stale phase
-            // history from a previous crossfade does not contaminate this one.
-            if self.config.crossfade_mode_index == 1 {
-                if let Some(ref mut rtpghi) = self.crossfade.rtpghi_left {
-                    rtpghi.reset();
-                }
-                if let Some(ref mut rtpghi) = self.crossfade.rtpghi_right {
-                    rtpghi.reset();
-                }
+        // Interrupted fades must be retired before replacing their owner.
+        // Backpressure postpones adoption, preserving the current fade and
+        // the latest publication until the next hop can try again.
+        if let Some(previous) = self.crossfade.crossfade_prev_state.take() {
+            let Some(tx) = &self.retirement.tx else {
+                self.crossfade.crossfade_prev_state = Some(previous);
+                return;
+            };
+            if let Err(TrySendError::Full(previous) | TrySendError::Disconnected(previous)) =
+                tx.try_send(previous)
+            {
+                self.crossfade.crossfade_prev_state = Some(previous);
+                return;
             }
         }
+
+        let previous = std::mem::replace(
+            &mut self.crossfade.current_state_snapshot,
+            Arc::clone(&published),
+        );
+        self.crossfade.crossfade_prev_state = Some(previous);
+        let samples = (self.config.sample_rate as f32 * self.config.crossfade_ms * 0.001) as usize;
+        let total = samples.div_ceil(self.config.hop_size) * self.config.hop_size;
+        self.crossfade.crossfade_total = total;
+        self.crossfade.crossfade_remaining = total;
+        if self.config.crossfade_mode_index == 1 {
+            if let Some(rtpghi) = &mut self.crossfade.rtpghi_left {
+                rtpghi.reset();
+            }
+            if let Some(rtpghi) = &mut self.crossfade.rtpghi_right {
+                rtpghi.reset();
+            }
+        }
+    }
+
+    pub(super) fn process_audio_block(&mut self) {
+        self.retire_completed_crossfade_state();
+        // EOS renders the active filter/crossfade snapshot. A pending tracking
+        // publication belongs to the next stream, after reset.
+        if self.drain.remaining.is_none() {
+            self.adopt_published_state();
+        }
+        // Keep an owner in current_state_snapshot throughout this block. A
+        // concurrent publication cannot make this local clone the final owner.
+        let new_state = Arc::clone(&self.crossfade.current_state_snapshot);
 
         let state = &new_state;
         let filters = &state.hrtf_filters_freq;
@@ -766,6 +810,11 @@ impl BinauralDecoderPlugin {
                 }
             }
 
+            // Release the temporary owner before the reclaimer can destroy
+            // the retained fade state. Otherwise this local Arc could become
+            // the final owner and free the filters on the audio thread.
+            drop(prev);
+
             // Advance crossfade
             self.crossfade.crossfade_remaining = self
                 .crossfade
@@ -773,7 +822,6 @@ impl BinauralDecoderPlugin {
                 .saturating_sub(self.config.hop_size);
             if self.crossfade.crossfade_remaining == 0 {
                 self.retire_completed_crossfade_state();
-                log::debug!("[BinauralDecoder] HRTF crossfade complete");
             }
         } else {
             // Normal path -- no crossfade
@@ -1127,7 +1175,7 @@ impl BinauralDecoderPlugin {
     /// Recompute a new `BinauralState` for the given head angles.
     /// This is the CPU-heavy work that now runs off the audio thread.
     fn compute_head_rotated_hrtf_state(
-        state: &Arc<ArcSwap<BinauralState>>,
+        state: &Arc<HrtfState>,
         config: &BinauralConfig,
         prepared: &super::hrtf::PreparedHrtfSpectra,
         lfe_channels: &[usize],
@@ -1136,13 +1184,13 @@ impl BinauralDecoderPlugin {
         roll: f32,
     ) -> PluginResult<Arc<BinauralState>> {
         if config.sample_rate == 0 {
-            return Ok(Arc::clone(&state.load_full()));
+            return Ok(state.load_full());
         }
 
         let state_guard = state.load();
         let sofa_ref: &SofaFile = match state_guard._hrtf_data.as_ref() {
             Some(s) => s,
-            None => return Ok(Arc::clone(&state.load_full())),
+            None => return Ok(state.load_full()),
         };
 
         let mut filters =
@@ -1195,6 +1243,8 @@ impl BinauralDecoderPlugin {
     }
 
     pub(super) fn reset_state(&mut self) {
+        self.drain.has_input = false;
+        self.drain.remaining = None;
         self.input.input_fill = 0;
         self.input.read_pos = 0;
         self.input.write_pos = 0;
@@ -1267,6 +1317,9 @@ impl Plugin for BinauralDecoderPlugin {
         self.config.cached_parameters.clone()
     }
     fn set_parameter(&mut self, id: ParameterId, val: ParameterValue) -> PluginResult<()> {
+        if self.drain.remaining.is_some() {
+            return Err("BinauralDecoder: reset before changing parameters after drain".into());
+        }
         // Parameters not in PARAMS — handle separately
         if id.as_str() == "crossfade_ms" {
             let v = val
@@ -1291,8 +1344,10 @@ impl Plugin for BinauralDecoderPlugin {
             if let Some(ref p) = new_path
                 && self.config.sample_rate > 0
             {
-                let mut sofa = SofaFile::load(p)
+                let loaded = load_sofa(p)
                     .map_err(|e| format!("Failed to load HRTF file '{}': {}", path_str, e))?;
+                let delay_rebase_seconds = loaded.delay_rebase_seconds;
+                let mut sofa = loaded.data;
 
                 let sofa_rate = sofa.sample_rate.round() as u32;
                 if sofa_rate != self.config.sample_rate {
@@ -1360,6 +1415,7 @@ impl Plugin for BinauralDecoderPlugin {
                 self.shutdown_hrtf_update_thread();
                 self.config.hrtf_path = new_path;
                 self.state.store(new_state);
+                self.sofa_delay_rebase_seconds = Some(delay_rebase_seconds);
                 self.smoothing.last_hrtf_yaw = f32::INFINITY;
                 self.smoothing.last_hrtf_pitch = f32::INFINITY;
                 self.smoothing.last_hrtf_roll = f32::INFINITY;
@@ -1368,6 +1424,7 @@ impl Plugin for BinauralDecoderPlugin {
                 self.shutdown_hrtf_update_thread();
                 self.config.hrtf_path = new_path;
                 self.state.store(self.default_hrtf_state());
+                self.sofa_delay_rebase_seconds = None;
             }
 
             self.rebuild_cached_parameters();
@@ -1561,6 +1618,49 @@ impl Plugin for BinauralDecoderPlugin {
         if sr == 0 {
             return Err("sample rate must be greater than zero".to_string());
         }
+        // Validate the candidate file before changing live clocks or DSP history.
+        // Later unrelated filter-preparation errors retain their existing behavior.
+        let mut candidate_path = self.config.hrtf_path.clone();
+        // If a database directory is configured, scan it now and pick the best
+        // match.  This overrides any hrtf_path that was set individually.
+        if !self.config.hrtf_database_dir.is_empty() {
+            let dir = std::path::Path::new(&self.config.hrtf_database_dir);
+            match super::hrtf_database::best_match(
+                dir,
+                self.config.head_width_cm,
+                self.config.ear_height_cm,
+            ) {
+                Some(best) => {
+                    log::info!(
+                        "[BinauralDecoder] HRTF database scan: selected '{}'",
+                        best.display()
+                    );
+                    candidate_path = Some(best);
+                }
+                None => {
+                    log::warn!(
+                        "[BinauralDecoder] HRTF database dir '{}' contains no .sofa files; \
+                         falling back to hrtf_path",
+                        self.config.hrtf_database_dir
+                    );
+                }
+            }
+        }
+
+        let prepared_sofa = if let Some(p) = &candidate_path {
+            let loaded = load_sofa(p)?;
+            let delay_rebase_seconds = loaded.delay_rebase_seconds;
+            let mut sofa = loaded.data;
+            let sofa_rate = sofa.sample_rate.round() as u32;
+            if sofa_rate != sr {
+                super::hrtf::resample_sofa(&mut sofa, sr)?;
+            }
+            self.validate_linear_convolution_ir(sofa.ir_length)?;
+            Some((sofa, delay_rebase_seconds))
+        } else {
+            None
+        };
+        self.config.hrtf_path = candidate_path;
         enable_ftz_daz();
         self.config.sample_rate = sr;
         self.smoothing.externalization.set_time(50.0, sr);
@@ -1670,47 +1770,7 @@ impl Plugin for BinauralDecoderPlugin {
             }
         }
 
-        // If a database directory is configured, scan it now and pick the best
-        // match.  This overrides any hrtf_path that was set individually.
-        if !self.config.hrtf_database_dir.is_empty() {
-            let dir = std::path::Path::new(&self.config.hrtf_database_dir);
-            match super::hrtf_database::best_match(
-                dir,
-                self.config.head_width_cm,
-                self.config.ear_height_cm,
-            ) {
-                Some(best) => {
-                    log::info!(
-                        "[BinauralDecoder] HRTF database scan: selected '{}'",
-                        best.display()
-                    );
-                    self.config.hrtf_path = Some(best);
-                }
-                None => {
-                    log::warn!(
-                        "[BinauralDecoder] HRTF database dir '{}' contains no .sofa files; \
-                         falling back to hrtf_path",
-                        self.config.hrtf_database_dir
-                    );
-                }
-            }
-        }
-
-        if let Some(p) = &self.config.hrtf_path {
-            let mut sofa = SofaFile::load(p)?;
-
-            // Resample HRTF IRs if sample rate differs from engine rate
-            let sofa_rate = sofa.sample_rate.round() as u32;
-            if sofa_rate != sr {
-                log::info!(
-                    "[BinauralDecoder] HRTF sample rate ({} Hz) differs from engine ({} Hz), resampling",
-                    sofa_rate,
-                    sr
-                );
-                super::hrtf::resample_sofa(&mut sofa, sr)?;
-            }
-            self.validate_linear_convolution_ir(sofa.ir_length)?;
-
+        if let Some((sofa, delay_rebase_seconds)) = prepared_sofa {
             let mut filters = vec![
                 vec![Complex::new(0.0, 0.0); self.config.freq_size * 2];
                 self.config.input_channels
@@ -1790,9 +1850,12 @@ impl Plugin for BinauralDecoderPlugin {
             });
             self.state.store(new_state.clone());
             self.crossfade.current_state_snapshot = new_state;
+            self.sofa_delay_rebase_seconds = Some(delay_rebase_seconds);
             // Clear any in-progress crossfade on re-initialize
             self.crossfade.crossfade_prev_state = None;
             self.crossfade.crossfade_remaining = 0;
+        } else {
+            self.sofa_delay_rebase_seconds = None;
         }
 
         self.rebuild_reflection_groups();
@@ -1801,12 +1864,121 @@ impl Plugin for BinauralDecoderPlugin {
         // is loaded and the shared state is initialized.
         self.spawn_hrtf_update_thread();
 
+        self.reset_state();
         Ok(())
     }
     fn reset(&mut self) {
         self.reset_state();
     }
     fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        if context.num_frames > 0 && self.drain.remaining.is_some() {
+            return Err("BinauralDecoder: reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(input, output, context)?;
+        self.drain.has_input |= context.num_frames > 0;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.config.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.drain.has_input || self.drain.remaining == Some(0) {
+            return std::num::NonZeroU64::new(1);
+        }
+        let hop = self.config.hop_size;
+        if hop == 0 {
+            return None;
+        }
+        let remaining = self
+            .drain
+            .remaining
+            .unwrap_or_else(|| self.drain_tail_frames());
+        std::num::NonZeroU64::new(u64::try_from(remaining.div_ceil(hop).max(1)).ok()?)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.drain.has_input || self.drain.remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() || !output.len().is_multiple_of(2) {
+            return Err("BinauralDecoder drain requires complete stereo frames".into());
+        }
+
+        let remaining = self
+            .drain
+            .remaining
+            .unwrap_or_else(|| self.drain_tail_frames());
+        self.drain.remaining = Some(remaining);
+        let frames = remaining.min(output.len() / 2).min(self.config.hop_size);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        // Move the preallocated zero buffer out temporarily to borrow the DSP.
+        // mem::take creates an empty Vec without allocating or freeing storage.
+        let silence = std::mem::take(&mut self.drain.silence);
+        let result = self.process_stream(
+            &silence[..frames * self.config.input_channels],
+            &mut output[..frames * 2],
+            &drain_context,
+        );
+        self.drain.silence = silence;
+        result?;
+        let remaining = remaining - frames;
+        self.drain.remaining = Some(remaining);
+        if remaining == 0 {
+            self.room.fdn.reset();
+        }
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == 0,
+        })
+    }
+
+    fn latency_samples(&self) -> usize {
+        self.config.fft_size
+    }
+}
+
+impl BinauralDecoderPlugin {
+    fn drain_tail_frames(&self) -> usize {
+        let n = self.config.fft_size;
+        let hop = self.config.hop_size;
+        let padding = (hop - self.input.input_fill) % hop;
+        // Last nonempty input hop contributes N transform samples. Include
+        // the fixed N-frame startup delay and partial-hop scheduling zeros.
+        let transform_tail = n + n - hop + padding;
+        // Reflection taps read original source channels and have scalar ear
+        // gains, so their support is the source delay (no extra HRIR tail).
+        let reflection_delay = self
+            .room
+            .reflection_groups
+            .iter()
+            .map(|group| group.delay_samples)
+            .max()
+            .unwrap_or(0);
+        let finite_tail = transform_tail.max(n + reflection_delay);
+        // Recursive reverb has no finite support. This is an explicit render
+        // cap, not a guaranteed residual level or an exact completion time.
+        let reverb_tail = if self.config.late_reverb_enabled {
+            (3.0 * f64::from(self.config.late_reverb_rt60) * f64::from(self.config.sample_rate))
+                .ceil() as usize
+        } else {
+            0
+        };
+        finite_tail.saturating_add(reverb_tail)
+    }
+
+    fn process_stream(
         &mut self,
         input: &[f32],
         output: &mut [f32],
@@ -1830,7 +2002,7 @@ impl Plugin for BinauralDecoderPlugin {
         let angle_changed = (yaw - self.smoothing.last_hrtf_yaw).abs() > 0.5
             || (pitch - self.smoothing.last_hrtf_pitch).abs() > 0.5
             || (roll - self.smoothing.last_hrtf_roll).abs() > 0.5;
-        if angle_changed {
+        if angle_changed && self.drain.remaining.is_none() {
             // Request a background recomputation instead of blocking the audio
             // thread. The update thread will store the new state; process_audio_block
             // detects the change and crossfades. If the channel is full the thread
@@ -1960,8 +2132,5 @@ impl Plugin for BinauralDecoderPlugin {
         }
         self.smoothing.externalization.next_n(nf);
         Ok(op)
-    }
-    fn latency_samples(&self) -> usize {
-        self.config.fft_size
     }
 }

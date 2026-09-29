@@ -10,6 +10,7 @@ use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
     Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    TailLength,
 };
 use sotf_host::speaker_config::get_speaker_config;
 use std::any::Any;
@@ -398,6 +399,20 @@ impl Plugin for AmbisonicsDecoderPlugin {
         }
 
         Ok(num_frames)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.dual_band {
+            // The LR4 program crossover retains recursive audio history.
+            TailLength::Unknown
+        } else {
+            TailLength::Finite(0)
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        // Both modes keep the default immediate drain; dual-band support is unknown.
+        std::num::NonZeroU64::new(1)
     }
 
     fn latency_samples(&self) -> usize {

@@ -29,3 +29,27 @@ fn realtime_parameter_writes_do_not_allocate() {
             .unwrap();
     });
 }
+
+#[test]
+fn cold_scalar_reads_match_snapshots_without_allocating() {
+    for mut plugin in [
+        DelayPlugin::new(2, 100.0, 0.3, 0.5),
+        DelayPlugin::new_per_channel(vec![2.0, 7.0, 13.0]).unwrap(),
+    ] {
+        plugin.initialize(48_000).unwrap();
+        let expected = plugin.current_values();
+        let unknown = ParameterId::from("missing");
+        let invalid_channel = ParameterId::from("delay_ms_64");
+        std::thread::spawn(move || {
+            assert_no_allocs("Delay cold scalar reads", || {
+                for (id, value) in &expected {
+                    assert_eq!(plugin.parametric_get_parameter(id).as_ref(), Some(value));
+                }
+                assert_eq!(plugin.parametric_get_parameter(&unknown), None);
+                assert_eq!(plugin.parametric_get_parameter(&invalid_channel), None);
+            });
+        })
+        .join()
+        .unwrap();
+    }
+}

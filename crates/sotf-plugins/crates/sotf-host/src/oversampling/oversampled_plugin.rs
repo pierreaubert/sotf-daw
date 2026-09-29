@@ -2,7 +2,7 @@ use super::misc::interleaved_to_planar;
 use super::misc::planar_to_interleaved;
 use super::oversampler::Oversampler;
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
-use crate::plugin::{InPlacePlugin, PluginInfo, PluginResult, ProcessContext};
+use crate::plugin::{InPlacePlugin, PluginDrainResult, PluginInfo, PluginResult, ProcessContext};
 use std::any::Any;
 use std::sync::Arc;
 
@@ -10,6 +10,10 @@ use std::sync::Arc;
 ///
 /// The inner plugin processes audio at `factor × sample_rate`. The wrapper
 /// handles upsampling before and downsampling after `process_in_place()`.
+/// End-of-stream drain retains both FFT overlaps and the inner plugin's
+/// declared tail, with padding to complete internal chunks. It emits at most
+/// 256 frames into any nonempty frame-aligned destination. Reset is required
+/// after draining a nonempty stream or an inner drain error; empty drain is a no-op.
 ///
 /// This enables any plugin to be oversampled without modifying its internals:
 /// ```ignore
@@ -24,6 +28,9 @@ pub struct OversampledPlugin<P: InPlacePlugin> {
     pub(super) sample_rate: u32,
     /// Pre-allocated interleaved buffer for oversampled processing
     pub(super) os_interleaved: Vec<f32>,
+    next_os_context: ProcessContext<'static>,
+    initialized: bool,
+    drain_prepared: bool,
 }
 
 impl<P: InPlacePlugin> OversampledPlugin<P> {
@@ -51,8 +58,14 @@ impl<P: InPlacePlugin> OversampledPlugin<P> {
         channels: usize,
         max_block_frames: usize,
     ) -> Result<Self, String> {
-        let oversampler = Oversampler::new(factor, channels)?;
-        let os_buf_size = max_block_frames * factor as usize * channels;
+        let mut oversampler = Oversampler::new(factor, channels)?;
+        oversampler.reserve_for_max_frames(max_block_frames)?;
+        let os_buf_size = max_block_frames
+            .max(super::misc::OS_CHUNK_SIZE)
+            .checked_mul(factor as usize)
+            .and_then(|frames| frames.checked_mul(channels))
+            .filter(|samples| *samples <= isize::MAX as usize / std::mem::size_of::<f32>())
+            .ok_or_else(|| "Oversampling scratch capacity overflow".to_string())?;
         Ok(Self {
             inner,
             oversampler,
@@ -60,6 +73,9 @@ impl<P: InPlacePlugin> OversampledPlugin<P> {
             channels,
             sample_rate: 48000,
             os_interleaved: vec![0.0; os_buf_size],
+            next_os_context: ProcessContext::new(48_000 * factor, 0),
+            initialized: false,
+            drain_prepared: false,
         })
     }
 
@@ -102,13 +118,27 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
         // Initialize inner plugin at the oversampled rate
         let os_rate = sample_rate * self.factor;
         self.inner.initialize(os_rate)?;
+        let drain_frames = self.inner.drain_output_frames_max();
+        let drain_samples = drain_frames
+            .checked_mul(self.channels)
+            .filter(|samples| *samples <= isize::MAX as usize / std::mem::size_of::<f32>())
+            .ok_or_else(|| "Oversampled inner drain capacity overflow".to_string())?;
+        self.oversampler.reserve_for_drain_frames(drain_frames)?;
+        if self.os_interleaved.len() < drain_samples {
+            self.os_interleaved.resize(drain_samples, 0.0);
+        }
         self.oversampler.reset();
+        self.next_os_context = ProcessContext::new(os_rate, 0);
+        self.initialized = true;
+        self.drain_prepared = false;
         Ok(())
     }
 
     fn reset(&mut self) {
         self.inner.reset();
         self.oversampler.reset();
+        self.next_os_context = ProcessContext::new(self.next_os_context.sample_rate, 0);
+        self.drain_prepared = false;
     }
 
     fn process_in_place(
@@ -122,7 +152,9 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
         // The oversampler's callback receives planar buffers at the OS rate.
         // We need to convert to interleaved, call inner.process_in_place, then
         // convert back to planar.
-        let os_context = ProcessContext::new(context.sample_rate * self.factor, 0);
+        let factor = self.factor;
+        let buffered_frames = self.oversampler.residual_frames;
+        let mut processed_frames = 0;
 
         let inner = &mut self.inner;
         let os_interleaved = &mut self.os_interleaved;
@@ -154,7 +186,13 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
                 // Convert planar → interleaved
                 planar_to_interleaved(planar, &mut os_interleaved[..total_os], os_frames, nc);
                 // Process at oversampled rate
-                let ctx = ProcessContext::new(os_context.sample_rate, os_frames);
+                let ctx = super::misc::oversampled_context(
+                    context,
+                    factor,
+                    buffered_frames,
+                    processed_frames,
+                    os_frames,
+                );
                 match inner.process_in_place(&mut os_interleaved[..total_os], &ctx) {
                     Ok(frames) if frames == os_frames => {}
                     Ok(frames) => {
@@ -170,6 +208,7 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
                 }
                 // Convert interleaved → planar (back)
                 interleaved_to_planar(&os_interleaved[..total_os], planar, os_frames, nc);
+                processed_frames += os_frames / factor as usize;
             })
             .map_err(|e| e.to_string())?;
 
@@ -177,13 +216,132 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
             return Err(err);
         }
 
+        self.next_os_context =
+            super::misc::oversampled_context(context, factor, buffered_frames, processed_frames, 0);
+
         Ok(nf)
     }
 
+    fn drain_output_frames_max(&self) -> usize {
+        super::misc::OS_CHUNK_SIZE
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        if self.oversampler.drain_failed() {
+            return Err("Oversampler must be reset after a failed drain".into());
+        }
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("Oversampled drain requires its initialized sample rate".into());
+        }
+        if self.drain_prepared || !self.oversampler.received_input() {
+            return Ok(());
+        }
+        let nc = self.channels;
+        let needed = super::misc::OS_CHUNK_SIZE * self.factor as usize * nc;
+        if self.os_interleaved.len() < needed {
+            return Err("Oversampled EOS setup exceeds prepared scratch".into());
+        }
+        if self.inner.drain_output_frames_max() > self.os_interleaved.len() / nc {
+            return Err("Oversampled inner drain capacity changed; reinitialize first".into());
+        }
+        let inner = &mut self.inner;
+        let scratch = &mut self.os_interleaved;
+        let next_context = &mut self.next_os_context;
+        self.oversampler.begin_drain_with(|planar, frames| {
+            let samples = frames * nc;
+            planar_to_interleaved(planar, &mut scratch[..samples], frames, nc);
+            let context = ProcessContext {
+                num_frames: frames,
+                ..*next_context
+            };
+            let written = inner.process_in_place(&mut scratch[..samples], &context)?;
+            if written != frames {
+                return Err("Oversampled inner returned an incorrect setup frame count".into());
+            }
+            interleaved_to_planar(&scratch[..samples], planar, frames, nc);
+            super::misc::advance_context(next_context, frames);
+            Ok(())
+        })?;
+        inner
+            .begin_drain(next_context)
+            .map_err(|error| self.oversampler.fail_drain(error))?;
+        self.drain_prepared = true;
+        Ok(())
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.drain_prepared && self.oversampler.received_input() {
+            return None;
+        }
+        self.oversampler.drain_call_bound(
+            self.inner.drain_call_bound(),
+            self.inner.drain_output_frames_max(),
+        )
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.oversampler.validate_drain_output(output)?;
+        self.begin_drain(context)?;
+        let nc = self.channels;
+        let inner = &mut self.inner;
+        let scratch = &mut self.os_interleaved;
+        let next_context = &mut self.next_os_context;
+        self.oversampler
+            .drain_with(output, |planar, process_frames| {
+                let result = if let Some(frames) = process_frames {
+                    let samples = frames * nc;
+                    planar_to_interleaved(planar, &mut scratch[..samples], frames, nc);
+                    let context = ProcessContext {
+                        num_frames: frames,
+                        ..*next_context
+                    };
+                    let written = inner.process_in_place(&mut scratch[..samples], &context)?;
+                    if written != frames {
+                        return Err(
+                            "Oversampled inner returned an incorrect frame count during drain"
+                                .to_string(),
+                        );
+                    }
+                    PluginDrainResult {
+                        frames,
+                        complete: false,
+                    }
+                } else {
+                    let frames = inner.drain_output_frames_max();
+                    if frames > scratch.len() / nc || frames > planar[0].len() {
+                        return Err(
+                            "Oversampled inner drain capacity changed; reinitialize first"
+                                .to_string(),
+                        );
+                    }
+                    let result = inner.drain(&mut scratch[..frames * nc], next_context)?;
+                    if result.frames > frames {
+                        return Err(
+                            "Oversampled inner drain exceeded its declared capacity".to_string()
+                        );
+                    }
+                    result
+                };
+                interleaved_to_planar(&scratch[..result.frames * nc], planar, result.frames, nc);
+                if process_frames.is_some() {
+                    super::misc::advance_context(next_context, result.frames);
+                }
+                Ok(result)
+            })
+    }
+
     fn latency_samples(&self) -> usize {
-        // Oversampler latency + inner plugin's latency (scaled to 1x rate)
-        let inner_latency_1x = self.inner.latency_samples() / self.factor as usize;
+        // The integral host clock conservatively rounds fractional delay up.
+        let inner_latency_1x = self.inner.latency_samples().div_ceil(self.factor as usize);
         self.oversampler.latency_samples() + inner_latency_1x
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        self.oversampler.tail_length(self.inner.tail_length())
     }
 
     fn realtime_quantum_frames(&self) -> usize {

@@ -9,7 +9,7 @@
 //!
 //! Param indices: 0=threshold, 1=ratio, 2=attack, 3=release, 4=knee,
 //! 5=makeup, 6=mix, 7=auto_makeup, 8=analog_model, 9=analog_drive,
-//! 10=analog_color, 11=analog_character, 12=analog_trim.
+//! 10=analog_color, 11=analog_character, 12=analog_trim, 13=range_db, 14=hold_ms.
 
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -24,14 +24,25 @@ use sotf_plugin_analog_common::{
 define_choice_string_deserializer!(deserialize_analog_model, MODEL_NAMES);
 
 pub const PARAMS: &[ParamSpec] = &[
-    ParamSpec::float("Threshold", "threshold", -18.0, -60.0, 0.0, 0.5, "dB", "Dynamics")
-        .doc("Level above which gain reduction starts"),
+    ParamSpec::float(
+        "Threshold",
+        "threshold",
+        -18.0,
+        -60.0,
+        0.0,
+        0.5,
+        "dB",
+        "Dynamics",
+    )
+    .doc("Level above which gain reduction starts"),
     ParamSpec::float("Ratio", "ratio", 4.0, 1.0, 20.0, 0.1, ":1", "Dynamics")
         .doc("Gain-reduction ratio above threshold"),
     ParamSpec::float("Attack", "attack", 10.0, 0.1, 100.0, 0.5, "ms", "Dynamics")
         .doc("Detector attack time"),
-    ParamSpec::float("Release", "release", 100.0, 10.0, 1000.0, 5.0, "ms", "Dynamics")
-        .doc("Detector release time"),
+    ParamSpec::float(
+        "Release", "release", 100.0, 10.0, 1000.0, 5.0, "ms", "Dynamics",
+    )
+    .doc("Detector release time"),
     ParamSpec::float("Knee", "knee", 6.0, 0.0, 20.0, 0.5, "dB", "Dynamics")
         .doc("Soft-knee width around threshold; 0 dB is hard knee"),
     ParamSpec::float("Makeup", "makeup", 0.0, -24.0, 24.0, 0.5, "dB", "Dynamics")
@@ -47,6 +58,12 @@ pub const PARAMS: &[ParamSpec] = &[
     color_param_spec("Analog"),
     character_param_spec("Analog"),
     output_trim_param_spec("Analog"),
+    ParamSpec::float(
+        "Range", "range_db", 120.0, 0.0, 120.0, 0.5, "dB", "Dynamics",
+    )
+    .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
+    ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Dynamics")
+        .doc("Keep gain reduction at its peak before detector release"),
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
@@ -62,6 +79,8 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(5),
                 ControlSpec::slider(2),
                 ControlSpec::slider(3),
+                ControlSpec::slider(13),
+                ControlSpec::knob(14),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -101,6 +120,12 @@ fn d_attack() -> f32 {
 }
 fn d_release() -> f32 {
     pk(PARAMS, "release").default_f64() as f32
+}
+fn d_range_db() -> f32 {
+    pk(PARAMS, "range_db").default_f64() as f32
+}
+fn d_hold_ms() -> f32 {
+    pk(PARAMS, "hold_ms").default_f64() as f32
 }
 fn d_knee() -> f32 {
     pk(PARAMS, "knee").default_f64() as f32
@@ -163,6 +188,10 @@ pub struct AnalogCompressorPluginParams {
     pub analog_character: f32,
     #[serde(default = "d_analog_trim")]
     pub analog_trim: f32,
+    #[serde(default = "d_range_db")]
+    pub range_db: f32,
+    #[serde(default = "d_hold_ms")]
+    pub hold_ms: f32,
 }
 
 impl Default for AnalogCompressorPluginParams {
@@ -181,6 +210,8 @@ impl Default for AnalogCompressorPluginParams {
             analog_color: d_analog_color(),
             analog_character: d_analog_character(),
             analog_trim: d_analog_trim(),
+            range_db: d_range_db(),
+            hold_ms: d_hold_ms(),
         }
     }
 }
@@ -218,6 +249,8 @@ impl PluginParamDef for AnalogCompressorPluginParams {
             10 => Some(self.analog_color as f64),
             11 => Some(self.analog_character as f64),
             12 => Some(self.analog_trim as f64),
+            13 => Some(self.range_db as f64),
+            14 => Some(self.hold_ms as f64),
             _ => None,
         }
     }
@@ -241,6 +274,8 @@ impl PluginParamDef for AnalogCompressorPluginParams {
             10 => self.analog_color = PARAMS[10].clamp_f64(value) as f32,
             11 => self.analog_character = PARAMS[11].clamp_f64(value) as f32,
             12 => self.analog_trim = PARAMS[12].clamp_f64(value) as f32,
+            13 => self.range_db = PARAMS[13].clamp_f64(value) as f32,
+            14 => self.hold_ms = PARAMS[14].clamp_f64(value) as f32,
             _ => {}
         }
     }

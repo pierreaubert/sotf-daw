@@ -54,6 +54,7 @@ pub const PARAMS: &[ParamSpec] = &[
     .doc("Gap before first reflection"),
     // 6: room_preset
     ParamSpec::choice("Room Preset", "room_preset", 1, ROOM_PRESETS, "Room")
+        .structural()
         .setup()
         .doc("Early reflection tap configuration"),
     // 7: dry_level

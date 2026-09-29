@@ -75,16 +75,17 @@ fn integration_disabled_is_transparent_after_latency() {
         .unwrap();
     plugin.initialize(48000).unwrap();
 
-    // Process two frames: the first 480-sample frame is the startup delay,
-    // followed by the first input frame.
-    let mut buffer: Vec<f32> = (0..1920)
+    // Process three model frames: total dry delay is 960 frames, followed
+    // by the first source frame.
+    let mut buffer: Vec<f32> = (0..2880)
         .map(|i| ((i % 100) as f32 - 50.0) / 100.0)
         .collect();
     let input = buffer.clone();
-    let ctx = ProcessContext::new(48000, 960);
+    let ctx = ProcessContext::new(48000, 1440);
     let written = plugin.process_in_place(&mut buffer, &ctx).unwrap();
-    assert_eq!(written, 960);
-    assert_eq!(&buffer[960..1920], &input[..960]);
+    assert_eq!(written, 1440);
+    assert!(buffer[..1920].iter().all(|&sample| sample == 0.));
+    assert_eq!(&buffer[1920..2880], &input[..960]);
 }
 
 #[test]
@@ -148,7 +149,7 @@ fn integration_process_rejects_bad_block_size_and_buffer() {
 
     // Buffer smaller than the declared frame count must fail.
     let mut small_buffer = vec![0.0f32; 480];
-    let ctx = ProcessContext::new(48000, 960);
+    let ctx = ProcessContext::new(48000, 1440);
     assert!(plugin.process_in_place(&mut small_buffer, &ctx).is_err());
 }
 

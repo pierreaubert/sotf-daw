@@ -24,9 +24,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod channel_changing_plugin;
+mod drain;
+mod drain_work;
 mod f64_scale_plugin;
 mod frame_recorder_plugin;
 mod gain_plugin;
+mod latency_compensation;
+mod mixed_rate_timing;
 mod panicking_process_plugin;
 mod playback_context_recorder_plugin;
 mod prefers_oversampling_plugin;
@@ -1177,6 +1181,10 @@ fn test_sidechain_edge_appends_extended_input_for_in_place_adapter() {
     g.process(&input, &mut output).unwrap();
 
     assert_eq!(output, vec![21.0, 42.0, 63.0, 84.0]);
+    let input64: Vec<_> = input.iter().map(|sample| f64::from(*sample)).collect();
+    let mut output64 = vec![0.0; 4];
+    assert_eq!(g.process_f64(&input64, &mut output64).unwrap(), 2);
+    assert_eq!(output64, vec![21.0, 42.0, 63.0, 84.0]);
 }
 
 #[test]

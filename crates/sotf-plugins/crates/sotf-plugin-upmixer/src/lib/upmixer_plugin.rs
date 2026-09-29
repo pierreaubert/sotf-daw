@@ -1,4 +1,5 @@
 pub use super::config::*;
+use super::drain::UpmixerDrain;
 use super::frequency_domain;
 use super::misc::hr_delay_buffer_len;
 use super::misc::periodic_sqrt_hann_window;
@@ -13,12 +14,16 @@ use sotf_host::multichannel_auto_gain::MultichannelAutoGain;
 use sotf_host::param_bridge;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
 use sotf_host::speaker_config::{SpeakerConfig, get_speaker_config};
 use std::sync::Arc;
+
+/// Smallest transform with a positive 50% overlap hop and valid WOLA geometry.
+const MIN_FFT_SIZE: usize = 2;
 
 /// Stereo to multi-channel surround upmixer using FFT-based Direct/Ambient decomposition
 pub(super) struct UpmixerCore {
@@ -114,6 +119,10 @@ pub(super) struct UpmixerSafety {
     pub(super) auto_gain_max_db: f32,
     pub(super) auto_gain_smoothing_ms: f32,
     pub(super) auto_gain: Option<MultichannelAutoGain>,
+    // Original stereo source delayed by the renderer's fixed N-frame latency.
+    // This ring advances even when AutoGain is disabled.
+    pub(super) auto_gain_reference: Vec<f32>,
+    pub(super) auto_gain_reference_position: usize,
     // Cached safety cap linear values (avoid per-block powf)
     // safety_cap_linear = 10^(safety_cap_db / 20)
     pub(super) safety_cap_linear: f32,
@@ -365,6 +374,18 @@ pub(super) struct UpmixerMainBuffers {
 }
 
 pub(super) struct UpmixerOutput {
+    /// Discard the negative-time half of the prefixed first analysis window.
+    pub(super) startup_discard_remaining: usize,
+    /// HR gain scheduled per ready main-output frame, independent of host reads.
+    pub(super) hr_mix_gains: Vec<f32>,
+    /// Optional deterministic gain targets consumed once per prepared main hop.
+    #[cfg(test)]
+    pub(super) hr_test_gain_sequence: Vec<f32>,
+    #[cfg(test)]
+    pub(super) hr_test_gain_sequence_position: usize,
+    /// Selects the pre-AUD130 drain-time mixer as an independent test control.
+    #[cfg(test)]
+    pub(super) hr_use_pre_correction_mixer_for_test: bool,
     /// Output accumulator for overlap-add (flat interleaved ring buffer)
     /// Layout: [ch0_f0, ch1_f0, ..., ch0_f1, ch1_f1, ...]
     /// Buffer size in frames is always power-of-2 (4 * fft_size) for efficient masking
@@ -377,11 +398,21 @@ pub(super) struct UpmixerOutput {
     pub(super) next_add_position: usize,
     /// Current read frame position in the output accumulator ring buffer
     pub(super) output_read_position: usize,
+    /// Absolute source frame represented by `output_read_position` after the
+    /// negative-time startup prefix has been discarded.
+    pub(super) source_read_position: u64,
+    /// Total real or drain-zero input frames accepted since reset.
+    pub(super) accepted_input_frames: u64,
+    /// Source timestamp of the next main hop being prepared for HR mixing.
+    pub(super) main_next_add_source_frame: i64,
+    /// Earliest source frame allowed to use the resumed HR path.
+    pub(super) hr_gain_resume_source_frame: u64,
     /// Pre-allocated output block buffer (reused to avoid allocations)
     pub(super) output_block: Vec<f32>,
 }
 
 pub(super) struct UpmixerHrBuffers {
+    pub(super) hr_startup_discard_remaining: usize,
     /// Periodic sqrt-Hann window for high-resolution FFT path
     pub(super) hr_window: Vec<f32>,
     // High-resolution direct-path buffers (allocated once, reused)
@@ -412,11 +443,20 @@ pub(super) struct UpmixerHrBuffers {
     pub(super) hr_time_out_channels: Vec<Vec<f32>>,
     /// Next position to add a HR block in the shared accumulator (reserved)
     pub(super) hr_next_add_position: usize,
+    /// Source frame represented by the first sample of the next HR FFT block.
+    /// Negative values describe the zero-prefixed startup region.
+    pub(super) hr_next_add_source_frame: i64,
     // HR output accumulator
     pub(super) hr_output_accumulator: Vec<f32>,
     pub(super) hr_output_accumulator_mask: usize,
     pub(super) hr_output_accumulator_fill: usize,
     pub(super) hr_output_read_position: usize,
+    /// Absolute input-frame tag for each HR output ring slot. `u64::MAX` marks
+    /// a slot that is not part of the ready HR sequence.
+    pub(super) hr_output_source_tags: Vec<u64>,
+    /// Tracks whether HR input is being accumulated; a resume reseeds its
+    /// prefix so partial samples from before the disabled interval are dropped.
+    pub(super) hr_input_active: bool,
 }
 
 pub(super) struct UpmixerHrState {
@@ -434,6 +474,7 @@ pub(super) struct UpmixerHrState {
 
 /// Stereo to multi-channel surround upmixer using FFT-based Direct/Ambient decomposition
 pub struct UpmixerPlugin {
+    pub(super) drain: UpmixerDrain,
     pub(super) core: UpmixerCore,
     pub(super) fft: UpmixerFft,
     pub(super) gains: UpmixerGains,
@@ -489,7 +530,7 @@ impl UpmixerPlugin {
     /// Create a new upmixer plugin with speaker configuration
     ///
     /// # Arguments
-    /// * `fft_size` - FFT size (must be power of 2, recommended: 2048)
+    /// * `fft_size` - FFT size (power of two, at least 2; recommended: 2048)
     /// * `speaker_config_id` - Speaker configuration ("5.1", "7.1", "5.1.4", etc.)
     /// * `gain_front_direct` - Gain for direct sound in front channels (default: 1.0)
     /// * `gain_front_ambient` - Gain for ambient sound in front channels (default: 0.5)
@@ -511,7 +552,10 @@ impl UpmixerPlugin {
         enable_subharmonic_synth: bool,
         subharmonic_gain: f32,
     ) -> Self {
-        assert!(fft_size.is_power_of_two(), "FFT size must be power of 2");
+        assert!(
+            fft_size >= MIN_FFT_SIZE && fft_size.is_power_of_two(),
+            "FFT size must be a power of 2 and at least 2"
+        );
         assert!(
             (20.0..=180.0).contains(&lfe_cutoff_hz),
             "LFE cutoff must be between 20-180 Hz"
@@ -575,9 +619,12 @@ impl UpmixerPlugin {
         let panning_gains_left = Vec::with_capacity(num_output_channels);
         let panning_gains_right = Vec::with_capacity(num_output_channels);
 
-        // Output accumulator: flat interleaved ring buffer
-        // 4 * fft_size frames (power-of-2 since fft_size is power-of-2)
-        let accumulator_frames = fft_size * 4;
+        // Main output may wait for the fixed 512-frame HR lookahead when the
+        // selected main FFT is smaller than the high-resolution transform.
+        let accumulator_frames = fft_size.max(hr_fft_size) * 4;
+        // HR output advances by hr_fft_size / 2 frames per block. Its ring must
+        // hold at least that hop even when the main FFT is shorter than the HR FFT.
+        let hr_accumulator_frames = fft_size.max(hr_fft_size) * 4;
         debug_assert!(accumulator_frames.is_power_of_two());
         let output_accumulator = vec![0.0; accumulator_frames * num_output_channels];
         let output_accumulator_mask = accumulator_frames - 1;
@@ -600,7 +647,7 @@ impl UpmixerPlugin {
 
             latency_filled: 0,
 
-            startup_padding_remaining: fft_size,
+            startup_padding_remaining: fft_size.max(hr_fft_size),
 
             cached_parameters: Vec::new(),
         };
@@ -679,7 +726,20 @@ impl UpmixerPlugin {
 
             auto_gain_smoothing_ms: 100.0,
 
-            auto_gain: None,
+            auto_gain: Some(
+                MultichannelAutoGain::new(
+                    sample_rate,
+                    AutoGainParams {
+                        enabled: false,
+                        loudness_type: AutoGainLoudnessType::Momentary,
+                        max_gain_db: 12.0,
+                        smoothing_ms: 100.0,
+                    },
+                )
+                .expect("the constructor's fixed stereo 44100 Hz meter is supported"),
+            ),
+            auto_gain_reference: vec![0.0; fft_size.max(hr_fft_size) * 2],
+            auto_gain_reference_position: 0,
 
             safety_cap_linear: if default_safety_cap_db() >= 0.0 {
                 fast_pow10(default_safety_cap_db() / 20.0)
@@ -928,7 +988,7 @@ impl UpmixerPlugin {
 
             input_buffer: vec![0.0; fft_size * 2],
 
-            input_buffer_fill: 0,
+            input_buffer_fill: hop_size * 2,
 
             temp_input_block: vec![0.0; fft_size * 2],
 
@@ -940,6 +1000,14 @@ impl UpmixerPlugin {
         };
 
         let output = UpmixerOutput {
+            startup_discard_remaining: hop_size,
+            hr_mix_gains: vec![0.0; accumulator_frames],
+            #[cfg(test)]
+            hr_test_gain_sequence: Vec::new(),
+            #[cfg(test)]
+            hr_test_gain_sequence_position: 0,
+            #[cfg(test)]
+            hr_use_pre_correction_mixer_for_test: false,
             output_accumulator,
 
             output_accumulator_mask,
@@ -950,15 +1018,26 @@ impl UpmixerPlugin {
 
             output_read_position: 0,
 
+            source_read_position: 0,
+
+            accepted_input_frames: 0,
+
+            main_next_add_source_frame: -(hop_size as i64),
+
+            hr_gain_resume_source_frame: 0,
+
             output_block: vec![0.0; fft_size * num_output_channels],
         };
 
+        let hr_delay_buffer = vec![0.0; hr_delay_buffer_len(fft_size, hop_size, hr_fft_size)];
+        let hr_source_startup_discard_frames = hr_fft_size / 2 + hr_delay_buffer.len() / 2;
         let hr_buffers = UpmixerHrBuffers {
+            hr_startup_discard_remaining: hr_source_startup_discard_frames,
             hr_window,
 
             hr_input_buffer: vec![0.0; hr_fft_size * 2],
 
-            hr_input_buffer_fill: 0,
+            hr_input_buffer_fill: hr_fft_size,
 
             hr_temp_input_block: vec![0.0; hr_fft_size * 2],
 
@@ -976,19 +1055,25 @@ impl UpmixerPlugin {
 
             hr_delay_temp: vec![0.0; fft_size * 2],
 
-            hr_delay_buffer: vec![0.0; hr_delay_buffer_len(fft_size, hop_size, hr_fft_size)],
+            hr_delay_buffer,
 
             hr_delay_cursor: 0,
 
-            hr_output_accumulator: vec![0.0; fft_size * 4 * num_output_channels],
+            hr_output_accumulator: vec![0.0; hr_accumulator_frames * num_output_channels],
 
-            hr_output_accumulator_mask: (fft_size * 4) - 1,
+            hr_output_accumulator_mask: hr_accumulator_frames - 1,
 
             hr_output_accumulator_fill: 0,
 
             hr_next_add_position: 0,
 
             hr_output_read_position: 0,
+
+            hr_next_add_source_frame: -(hr_source_startup_discard_frames as i64),
+
+            hr_output_source_tags: vec![u64::MAX; hr_accumulator_frames],
+
+            hr_input_active: false,
         };
 
         let hr_state = UpmixerHrState {
@@ -1006,6 +1091,7 @@ impl UpmixerPlugin {
         };
 
         let mut plugin = Self {
+            drain: UpmixerDrain::new(hop_size, num_output_channels),
             core,
 
             fft,
@@ -1087,17 +1173,89 @@ impl UpmixerPlugin {
 
     pub(super) fn apply_auto_gain(
         &mut self,
+        input: &[f32],
         output: &mut [f32],
         num_frames: usize,
         out_ch: usize,
     ) -> PluginResult<()> {
-        if !self.safety.auto_gain_enabled || num_frames == 0 {
+        if num_frames == 0 {
             return Ok(());
         }
-        self.ensure_auto_gain()?;
         let speaker_config = self.core.speaker_config;
-        let auto_gain = self.safety.auto_gain.as_mut().unwrap();
-        auto_gain.measure_and_apply(output, num_frames, out_ch, speaker_config)
+        let reference_frames = self.output_latency_frames();
+        let auto_gain = self
+            .safety
+            .auto_gain
+            .as_mut()
+            .expect("AutoGain is prepared during construction and initialization");
+        if self.params.bypass_all_processing {
+            return auto_gain.measure_aligned_and_apply(
+                input,
+                output,
+                num_frames,
+                out_ch,
+                speaker_config,
+            );
+        }
+
+        // Read each old reference span before overwriting it. A callback may
+        // wrap this ring many times; writing the full input first loses history.
+        let mut position = 0;
+        while position < num_frames {
+            let cursor = self.safety.auto_gain_reference_position;
+            let frames = (num_frames - position).min(reference_frames - cursor);
+            let end = position + frames;
+            let reference = &mut self.safety.auto_gain_reference[cursor * 2..(cursor + frames) * 2];
+            auto_gain.measure_aligned_and_apply(
+                reference,
+                &mut output[position * out_ch..end * out_ch],
+                frames,
+                out_ch,
+                speaker_config,
+            )?;
+            reference.copy_from_slice(&input[position * 2..end * 2]);
+            self.safety.auto_gain_reference_position = (cursor + frames) % reference_frames;
+            position = end;
+        }
+        Ok(())
+    }
+
+    /// Both paths share the high-resolution lookahead when its fixed 512-frame
+    /// window is longer than the selected main FFT.
+    pub(super) fn output_latency_frames(&self) -> usize {
+        self.core.fft_size.max(self.fft.hr_fft_size)
+    }
+
+    /// Start a fresh HR source timeline at the current accepted input frame.
+    /// The prefixed zeros let the first post-discard HR frame retain that source
+    /// position after an HR off/on transition.
+    fn reset_hr_source_timeline(&mut self, source_frame: u64) {
+        let startup_discard = self.hr_source_startup_discard_frames();
+        let ring_mask = self.hr_buffers.hr_output_accumulator_mask;
+        let source_index = usize::try_from(source_frame).expect("audio source frame fits usize");
+        let ring_position = source_index & ring_mask;
+
+        self.hr_buffers.hr_input_buffer.fill(0.0);
+        self.hr_buffers.hr_input_buffer_fill = self.fft.hr_fft_size;
+        self.hr_buffers.hr_delay_buffer.fill(0.0);
+        self.hr_buffers.hr_delay_cursor = 0;
+        // The first fresh window contains one full hop before the restart
+        // point, even when the absolute source position is already positive.
+        // Discard it so pre-toggle samples cannot re-enter the resumed stream.
+        self.hr_buffers.hr_startup_discard_remaining = startup_discard;
+        self.hr_buffers.hr_next_add_position = ring_position;
+        self.hr_buffers.hr_next_add_source_frame = i64::try_from(source_frame)
+            .expect("audio source frame fits i64")
+            - startup_discard as i64;
+        self.hr_buffers.hr_output_read_position = ring_position;
+        self.hr_buffers.hr_output_accumulator.fill(0.0);
+        self.hr_buffers.hr_output_source_tags.fill(u64::MAX);
+        self.hr_buffers.hr_output_accumulator_fill = 0;
+        // Main frames may already be buffered for output. Their old HR samples
+        // were cleared above, so clear the matching pending gains as well.
+        self.output.hr_mix_gains.fill(0.0);
+        self.output.hr_gain_resume_source_frame = source_frame;
+        self.hr_buffers.hr_input_active = true;
     }
 
     pub(super) fn canonical_frequency_resolution(value: &str) -> &'static str {
@@ -1442,11 +1600,11 @@ impl UpmixerPlugin {
     pub fn from_params(params: UpmixerPluginParams) -> Self {
         // Low-latency mode halves the FFT size from 2048 to 1024 (21ms vs 43ms at 48kHz).
         // If the user explicitly set a custom fft_size, low_latency overrides it.
-        // Round up to the nearest power of two to satisfy the invariant required by new().
+        // Preserve upward rounding while ensuring the half-overlap hop is nonzero.
         let fft_size = if params.core.low_latency {
             1024
         } else {
-            params.core.fft_size.next_power_of_two()
+            params.core.fft_size.max(MIN_FFT_SIZE).next_power_of_two()
         };
         // Factory JSON can contain independently valid crossover values whose pair is invalid.
         // Preserve the requested LFE cutoff and clamp the upmix boundary to a safe transition.
@@ -1585,6 +1743,11 @@ impl UpmixerPlugin {
         plugin.safety.auto_gain_enabled = params.output.auto_gain_enabled;
         plugin.safety.auto_gain_max_db = params.output.auto_gain_max_db;
         plugin.safety.auto_gain_smoothing_ms = params.output.auto_gain_smoothing_ms;
+        if let Some(auto_gain) = &mut plugin.safety.auto_gain {
+            auto_gain.set_enabled(plugin.safety.auto_gain_enabled);
+            auto_gain.set_max_gain_db(plugin.safety.auto_gain_max_db);
+            auto_gain.set_smoothing_ms(plugin.safety.auto_gain_smoothing_ms);
+        }
 
         plugin.rebuild_cached_parameters();
         plugin
@@ -1602,6 +1765,9 @@ impl UpmixerPlugin {
 
         self.core.fft_size = new_fft_size;
         self.core.hop_size = new_fft_size / 2;
+        self.drain = UpmixerDrain::new(self.core.hop_size, self.core.num_output_channels);
+        self.safety.auto_gain_reference = vec![0.0; new_fft_size.max(self.fft.hr_fft_size) * 2];
+        self.safety.auto_gain_reference_position = 0;
 
         // Recreate FFT planners
         let mut planner = RealFftPlanner::<f32>::new();
@@ -1653,8 +1819,9 @@ impl UpmixerPlugin {
         self.main_buffers.temp_input_block = vec![0.0; new_fft_size * 2];
 
         // Ring buffer (fft_size * 4 frames)
-        let accumulator_frames = new_fft_size * 4;
+        let accumulator_frames = new_fft_size.max(self.fft.hr_fft_size) * 4;
         self.output.output_accumulator = vec![0.0; accumulator_frames * nch];
+        self.output.hr_mix_gains = vec![0.0; accumulator_frames];
         self.output.output_accumulator_mask = accumulator_frames - 1;
 
         // HR-path buffers that depend on main fft_size
@@ -1664,20 +1831,32 @@ impl UpmixerPlugin {
         self.hr_buffers.hr_delay_buffer =
             vec![0.0; hr_delay_buffer_len(new_fft_size, hop_size, hr_fft_size)];
         self.hr_buffers.hr_delay_cursor = 0;
-        self.hr_buffers.hr_output_accumulator = vec![0.0; accumulator_frames * nch];
-        self.hr_buffers.hr_output_accumulator_mask = accumulator_frames - 1;
+        let hr_source_startup_discard_frames =
+            hr_fft_size / 2 + self.hr_buffers.hr_delay_buffer.len() / 2;
+        let hr_accumulator_frames = new_fft_size.max(hr_fft_size) * 4;
+        self.hr_buffers.hr_output_accumulator = vec![0.0; hr_accumulator_frames * nch];
+        self.hr_buffers.hr_output_accumulator_mask = hr_accumulator_frames - 1;
+        self.hr_buffers.hr_output_source_tags = vec![u64::MAX; hr_accumulator_frames];
 
         // Reset all STFT state counters
-        self.main_buffers.input_buffer_fill = 0;
+        self.main_buffers.input_buffer_fill = self.core.hop_size * 2;
+        self.output.startup_discard_remaining = self.core.hop_size;
         self.output.output_accumulator_fill = 0;
         self.output.next_add_position = 0;
         self.output.output_read_position = 0;
-        self.hr_buffers.hr_input_buffer_fill = 0;
+        self.hr_buffers.hr_input_buffer_fill = self.fft.hr_fft_size;
+        self.hr_buffers.hr_startup_discard_remaining = hr_source_startup_discard_frames;
         self.hr_buffers.hr_output_accumulator_fill = 0;
         self.hr_buffers.hr_next_add_position = 0;
         self.hr_buffers.hr_output_read_position = 0;
+        self.hr_buffers.hr_next_add_source_frame = -(hr_source_startup_discard_frames as i64);
+        self.hr_buffers.hr_input_active = false;
+        self.output.source_read_position = 0;
+        self.output.accepted_input_frames = 0;
+        self.output.main_next_add_source_frame = -(self.core.hop_size as i64);
+        self.output.hr_gain_resume_source_frame = 0;
         self.core.latency_filled = 0;
-        self.core.startup_padding_remaining = new_fft_size;
+        self.core.startup_padding_remaining = new_fft_size.max(hr_fft_size);
 
         // Re-initialize all derived state (ERB bands, decorrelation filters, crossover
         // gains, bin caches, smoothers, MFCC, etc.)
@@ -1774,6 +1953,9 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain.remaining.is_some() {
+            return Err("Upmixer: reset before changing parameters after drain".into());
+        }
         // ml_model_path is not in PARAMS — handle before param_bridge
         if id.as_str() == "ml_model_path" {
             let path = value
@@ -2029,7 +2211,7 @@ impl Plugin for UpmixerPlugin {
 
         if let Some(auto_gain) = &mut self.safety.auto_gain {
             auto_gain.set_sample_rate(sample_rate)?;
-        } else if self.safety.auto_gain_enabled {
+        } else {
             self.ensure_auto_gain()?;
         }
 
@@ -2062,13 +2244,20 @@ impl Plugin for UpmixerPlugin {
         // Start ML inference thread if enabled
         self.try_start_ml_inference();
 
+        self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.drain.reset();
         // Clear buffers
-        self.main_buffers.input_buffer_fill = 0;
-        self.hr_buffers.hr_input_buffer_fill = 0;
+        // The first analysis window starts at -H. Its nonnegative half has
+        // full weight at sample zero and overlaps the following window.
+        self.main_buffers.input_buffer.fill(0.0);
+        self.main_buffers.input_buffer_fill = self.core.hop_size * 2;
+        self.output.startup_discard_remaining = self.core.hop_size;
+        self.hr_buffers.hr_input_buffer_fill = self.fft.hr_fft_size;
+        self.hr_buffers.hr_startup_discard_remaining = self.hr_source_startup_discard_frames();
         let zero = Complex::new(0.0, 0.0);
 
         // Clear real-valued time domain buffers
@@ -2106,12 +2295,17 @@ impl Plugin for UpmixerPlugin {
         }
 
         self.output.output_accumulator.fill(0.0);
+        self.output.hr_mix_gains.fill(0.0);
         self.output.output_accumulator_fill = 0;
         self.output.output_block.fill(0.0);
         self.output.next_add_position = 0;
         self.output.output_read_position = 0;
+        self.output.source_read_position = 0;
+        self.output.accepted_input_frames = 0;
+        self.output.main_next_add_source_frame = -(self.core.hop_size as i64);
+        self.output.hr_gain_resume_source_frame = 0;
         self.core.latency_filled = 0;
-        self.core.startup_padding_remaining = self.core.fft_size;
+        self.core.startup_padding_remaining = self.output_latency_frames();
 
         // Clear HR input and temp blocks
         self.hr_buffers.hr_input_buffer.fill(0.0);
@@ -2123,6 +2317,10 @@ impl Plugin for UpmixerPlugin {
         self.hr_buffers.hr_output_accumulator_fill = 0;
         self.hr_buffers.hr_next_add_position = 0;
         self.hr_buffers.hr_output_read_position = 0;
+        self.hr_buffers.hr_output_source_tags.fill(u64::MAX);
+        self.hr_buffers.hr_next_add_source_frame =
+            -(self.hr_source_startup_discard_frames() as i64);
+        self.hr_buffers.hr_input_active = false;
 
         // Reset state vectors
         self.steering.steering_alphas.fill(0.15);
@@ -2169,6 +2367,8 @@ impl Plugin for UpmixerPlugin {
 
         self.safety.prev_safety_scale = 1.0;
         self.safety.final_safety_scale = 1.0;
+        self.safety.auto_gain_reference.fill(0.0);
+        self.safety.auto_gain_reference_position = 0;
         if let Some(auto_gain) = &mut self.safety.auto_gain {
             auto_gain.reset();
         }
@@ -2185,6 +2385,51 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        if context.num_frames > 0 && self.drain.remaining.is_some() {
+            return Err("Upmixer: reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(input, output, context)?;
+        if context.num_frames > 0 {
+            self.drain.has_input = true;
+            let period = self.core.fft_size.max(self.fft.hr_fft_size);
+            self.drain.input_phase =
+                (self.drain.input_phase + context.num_frames % period) % period;
+        }
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.core.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.drain_stream_call_bound()
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.drain_stream(output, context)
+    }
+
+    fn latency_samples(&self) -> usize {
+        if self.params.bypass_all_processing {
+            0
+        } else {
+            self.output_latency_frames()
+        }
+    }
+}
+
+impl UpmixerPlugin {
+    pub(super) fn process_stream(
         &mut self,
         input: &[f32],
         output: &mut [f32],
@@ -2219,11 +2464,8 @@ impl Plugin for UpmixerPlugin {
             ));
         }
 
-        if self.safety.auto_gain_enabled {
-            self.ensure_auto_gain()?;
-            if let Some(auto_gain) = &mut self.safety.auto_gain {
-                auto_gain.measure_input(input)?;
-            }
+        if context.num_frames == 0 {
+            return Ok(0);
         }
 
         // Update smoothers by the number of frames in this block
@@ -2295,6 +2537,16 @@ impl Plugin for UpmixerPlugin {
             }
         }
 
+        if self.uses_hr_source_tags() {
+            if self.hr_state.hr_direct_envelope > 0.0 {
+                if !self.hr_buffers.hr_input_active {
+                    self.reset_hr_source_timeline(self.output.accepted_input_frames);
+                }
+            } else {
+                self.hr_buffers.hr_input_active = false;
+            }
+        }
+
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
             let num_frames = context.num_frames;
@@ -2310,7 +2562,7 @@ impl Plugin for UpmixerPlugin {
                     output[i * out_nch + ch] = 0.0;
                 }
             }
-            self.apply_auto_gain(output, num_frames, out_nch)?;
+            self.apply_auto_gain(input, output, num_frames, out_nch)?;
             flush_denormals_inplace(output);
             return Ok(context.num_frames);
         }
@@ -2408,6 +2660,10 @@ impl Plugin for UpmixerPlugin {
                     }
 
                     self.main_buffers.input_buffer_fill += samples_to_copy;
+                    self.output.accepted_input_frames = self
+                        .output
+                        .accepted_input_frames
+                        .saturating_add((samples_to_copy / 2) as u64);
                     input_pos += samples_to_copy / 2;
                 }
             }
@@ -2448,12 +2704,33 @@ impl Plugin for UpmixerPlugin {
 
                 self.output.output_block = output_block;
 
+                // Attach HR gain to the output timeline while its matching
+                // main analysis is current, before any host-sized read.
+                self.prepare_hr_output_gains();
+
                 // Advance positions
                 self.output.next_add_position =
                     (self.output.next_add_position + self.core.hop_size) & mask;
+                self.output.main_next_add_source_frame += self.core.hop_size as i64;
 
                 self.output.output_accumulator_fill += self.core.hop_size;
                 self.core.latency_filled += self.core.hop_size;
+
+                // The first prefixed window represents [-H, H). Its first H
+                // samples precede the stream. Clear and skip them so the ring
+                // timestamp zero still corresponds to the first real input.
+                let discard = self
+                    .output
+                    .startup_discard_remaining
+                    .min(self.output.output_accumulator_fill);
+                for frame in 0..discard {
+                    let offset = ((self.output.output_read_position + frame) & mask) * nch;
+                    self.output.output_accumulator[offset..offset + nch].fill(0.0);
+                }
+                self.output.output_read_position =
+                    (self.output.output_read_position + discard) & mask;
+                self.output.output_accumulator_fill -= discard;
+                self.output.startup_discard_remaining -= discard;
 
                 // Shift input buffer
                 let shift_amount = self.core.hop_size * 2;
@@ -2468,28 +2745,59 @@ impl Plugin for UpmixerPlugin {
             // small host blocks can drop the unread tail of the input block and later
             // starve the OLA reservoir.
             if output_pos < context.num_frames {
-                if self.core.startup_padding_remaining > 0 {
-                    let frames_to_pad = self
-                        .core
-                        .startup_padding_remaining
-                        .min(context.num_frames - output_pos);
+                // The host's callback size is an output request, not proof that
+                // all input frames in this callback have entered the analysis
+                // path. Clock output only against accepted input credits so a
+                // large padding remainder cannot drain audio early while this
+                // loop is still ingesting the current callback.
+                let remaining_output = context.num_frames - output_pos;
+                let output_credit = if self.core.fft_size < self.fft.hr_fft_size {
+                    let output_clock_position = self
+                        .output_latency_frames()
+                        .saturating_sub(self.core.startup_padding_remaining)
+                        .saturating_add(
+                            usize::try_from(self.output.source_read_position).unwrap_or(usize::MAX),
+                        );
+                    let accepted_output_credit = self
+                        .output
+                        .accepted_input_frames
+                        .saturating_sub(output_clock_position as u64);
+                    usize::try_from(accepted_output_credit)
+                        .unwrap_or(usize::MAX)
+                        .min(remaining_output)
+                } else {
+                    remaining_output
+                };
+
+                let mut credited_frames = output_credit;
+                if credited_frames > 0 && self.core.startup_padding_remaining > 0 {
+                    let frames_to_pad = self.core.startup_padding_remaining.min(credited_frames);
                     output_pos += frames_to_pad;
                     self.core.startup_padding_remaining -= frames_to_pad;
+                    credited_frames -= frames_to_pad;
                     made_progress = true;
                 }
 
-                let frames_to_drain = if output_pos < context.num_frames {
-                    self.output
-                        .output_accumulator_fill
-                        .min(context.num_frames - output_pos)
+                let frames_to_drain = if credited_frames > 0 {
+                    self.output.output_accumulator_fill.min(credited_frames)
                 } else {
                     0
                 };
 
                 if frames_to_drain > 0 {
+                    let main_ring_start = self.output.output_read_position;
+                    let source_start = self.output.source_read_position;
+                    let source_aligned_hr = self.uses_hr_source_tags();
+                    if source_aligned_hr {
+                        self.validate_hr_source_alignment(
+                            main_ring_start,
+                            source_start,
+                            frames_to_drain,
+                        )?;
+                    }
                     made_progress = true;
                     for i in 0..frames_to_drain {
-                        let read_idx = (self.output.output_read_position + i) & mask;
+                        let read_idx = (main_ring_start + i) & mask;
                         let acc_base = read_idx * nch;
                         let out_base = (output_pos + i) * out_nch;
                         if self.core.binaural_preview {
@@ -2516,7 +2824,16 @@ impl Plugin for UpmixerPlugin {
                     self.output.output_accumulator_fill -= frames_to_drain;
 
                     // Drain HR output and mix into the frames we just wrote
-                    if self.hr_state.hr_direct_envelope > 0.0 {
+                    if source_aligned_hr {
+                        self.mix_hr_output_source_aligned(
+                            &mut output[output_pos * out_nch..],
+                            main_ring_start,
+                            source_start,
+                            frames_to_drain,
+                            out_nch,
+                            self.core.binaural_preview,
+                        );
+                    } else if self.hr_state.hr_direct_envelope > 0.0 {
                         if self.core.binaural_preview {
                             self.mix_hr_output_binaural(
                                 &mut output[output_pos * out_nch..],
@@ -2535,6 +2852,10 @@ impl Plugin for UpmixerPlugin {
                         self.hr_buffers.hr_next_add_position = 0;
                     }
 
+                    self.output.source_read_position = self
+                        .output
+                        .source_read_position
+                        .saturating_add(frames_to_drain as u64);
                     output_pos += frames_to_drain;
                 }
             }
@@ -2547,17 +2868,18 @@ impl Plugin for UpmixerPlugin {
 
         // Return actual number of frames written; startup latency is emitted as leading silence.
         if output_pos > 0 {
-            self.apply_auto_gain(&mut output[..output_pos * out_nch], output_pos, out_nch)?;
+            // Prepared WOLA geometry emits one output for every accepted frame:
+            // leading N zeros cover analysis startup, then ready hops cover the
+            // remaining input clock. Preserve that clock for the source ring.
+            debug_assert_eq!(output_pos, context.num_frames);
+            self.apply_auto_gain(
+                &input[..output_pos * 2],
+                &mut output[..output_pos * out_nch],
+                output_pos,
+                out_nch,
+            )?;
             self.apply_final_safety_cap(&mut output[..output_pos * out_nch], output_pos);
         }
         Ok(output_pos)
-    }
-
-    fn latency_samples(&self) -> usize {
-        if self.params.bypass_all_processing {
-            0
-        } else {
-            self.core.fft_size
-        }
     }
 }

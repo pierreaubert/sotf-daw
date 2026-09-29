@@ -58,15 +58,33 @@ pub const fn model_param_spec(default: u32, group: &'static str) -> ParamSpec {
 
 /// Shared `drive` parameter spec (dB, −60..+36).
 pub const fn drive_param_spec(group: &'static str) -> ParamSpec {
-    ParamSpec::float("Analog Drive", "analog_drive", 0.0, -60.0, 36.0, 0.1, "dB", group)
-        .doc("Input drive into the analog coloration stage")
+    ParamSpec::float(
+        "Analog Drive",
+        "analog_drive",
+        0.0,
+        -60.0,
+        36.0,
+        0.1,
+        "dB",
+        group,
+    )
+    .doc("Input drive into the analog coloration stage")
 }
 
 /// Shared `color` (amount) parameter spec (0..1, displayed as %).
 pub const fn color_param_spec(group: &'static str) -> ParamSpec {
-    ParamSpec::float("Analog Color", "analog_color", 0.0, 0.0, 1.0, 0.01, "%", group)
-        .scaled(100.0)
-        .doc("Analog coloration amount; 0% leaves the core DSP untouched")
+    ParamSpec::float(
+        "Analog Color",
+        "analog_color",
+        0.0,
+        0.0,
+        1.0,
+        0.01,
+        "%",
+        group,
+    )
+    .scaled(100.0)
+    .doc("Analog coloration amount; 0% leaves the core DSP untouched")
 }
 
 /// Shared `character` parameter spec (0..1, displayed as %).
@@ -109,6 +127,11 @@ pub struct AnalogColorStage {
     model: AnalogModel,
     spec: ProcessSpec,
     prepared: bool,
+    // Only explicitly set controls override a newly selected model's defaults.
+    drive_db: Option<f32>,
+    color: Option<f32>,
+    character: Option<f32>,
+    output_trim_db: Option<f32>,
 }
 
 impl AnalogColorStage {
@@ -119,6 +142,10 @@ impl AnalogColorStage {
             model: AnalogModel::default(),
             spec: ProcessSpec::new(48_000.0, channels, 4096),
             prepared: false,
+            drive_db: None,
+            color: None,
+            character: None,
+            output_trim_db: None,
         }
     }
 
@@ -130,26 +157,53 @@ impl AnalogColorStage {
         if max_block_frames == 0 {
             return Err("analog stage max block size must be non-zero".to_string());
         }
-        self.spec = ProcessSpec::new(
-            sample_rate as f32,
-            self.spec.channels,
-            max_block_frames,
-        );
+        self.spec = ProcessSpec::new(sample_rate as f32, self.spec.channels, max_block_frames);
         self.model.prepare(self.spec).map_err(|e| e.to_string())?;
         self.prepared = true;
         Ok(())
     }
 
-    /// Select the coloration model by stable id. Unknown ids are rejected and
-    /// the current model is left untouched.
+    /// Select a model while preserving explicitly set shared controls.
+    ///
+    /// Preparation and model replacement belong on the control thread. Selecting
+    /// the current model is a no-op and preserves its filter/smoother state.
+    ///
+    /// # Errors
+    ///
+    /// Unknown IDs or preparation errors leave the current stage untouched.
     pub fn set_model_id(&mut self, id: u32) -> Result<(), String> {
-        let model = AnalogModel::from_id(id).map_err(|e| e.to_string())?;
-        self.model = model;
-        if self.prepared {
-            // Restore the stream layout on the new model and fail closed if
-            // the layout is rejected.
-            self.model.prepare(self.spec).map_err(|e| e.to_string())?;
+        if id == self.model_id() {
+            return Ok(());
         }
+        let mut replacement = Self {
+            model: AnalogModel::from_id(id).map_err(|e| e.to_string())?,
+            spec: self.spec,
+            prepared: false,
+            drive_db: self.drive_db,
+            color: self.color,
+            character: self.character,
+            output_trim_db: self.output_trim_db,
+        };
+        if let Some(value) = self.drive_db {
+            replacement.set_drive_db(value)?;
+        }
+        if let Some(value) = self.color {
+            replacement.set_color(value)?;
+        }
+        if let Some(value) = self.character {
+            replacement.set_character(value)?;
+        }
+        if let Some(value) = self.output_trim_db {
+            replacement.set_output_trim_db(value)?;
+        }
+        if self.prepared {
+            replacement
+                .model
+                .prepare(self.spec)
+                .map_err(|e| e.to_string())?;
+            replacement.prepared = true;
+        }
+        *self = replacement;
         Ok(())
     }
 
@@ -177,7 +231,9 @@ impl AnalogColorStage {
             // The console preamp has no `drive_db`; its `input_gain_db`
             // shares the same −60..+36 dB range.
             AnalogModel::ConsolePreamp(m) => m.set_input_gain_db(value),
-        })
+        })?;
+        self.drive_db = Some(value);
+        Ok(())
     }
 
     /// Set coloration amount in 0..1.
@@ -189,7 +245,9 @@ impl AnalogColorStage {
             AnalogModel::Tape(m) => m.set_amount(value),
             AnalogModel::Transformer(m) => m.set_amount(value),
             AnalogModel::ConsolePreamp(m) => m.set_amount(value),
-        })
+        })?;
+        self.color = Some(value);
+        Ok(())
     }
 
     /// Set timbre in 0..1.
@@ -203,7 +261,9 @@ impl AnalogColorStage {
             // The console preamp has no `character`; its `asymmetry`
             // shares the same 0..1 range.
             AnalogModel::ConsolePreamp(m) => m.set_asymmetry(value),
-        })
+        })?;
+        self.character = Some(value);
+        Ok(())
     }
 
     /// Set post-stage trim in dB (−60..+24 at the model; plugins clamp their
@@ -216,7 +276,9 @@ impl AnalogColorStage {
             AnalogModel::Tape(m) => m.set_output_gain_db(value),
             AnalogModel::Transformer(m) => m.set_output_gain_db(value),
             AnalogModel::ConsolePreamp(m) => m.set_output_gain_db(value),
-        })
+        })?;
+        self.output_trim_db = Some(value);
+        Ok(())
     }
 
     /// Clear model state without changing controls or layout.
@@ -344,5 +406,60 @@ mod tests {
     #[test]
     fn reference_level_matches_math_analog_calibration() {
         assert_eq!(REFERENCE_LEVEL_DBFS, -18.0);
+    }
+    #[test]
+    fn model_switch_preserves_shared_control_targets() {
+        for id in 0..MODEL_NAMES.len() as u32 {
+            let mut switched = prepared_stage((id + 1) % MODEL_NAMES.len() as u32, 2);
+            switched.set_drive_db(12.0).unwrap();
+            switched.set_color(0.73).unwrap();
+            switched.set_character(0.21).unwrap();
+            switched.set_output_trim_db(-6.0).unwrap();
+            switched.set_model_id(id).unwrap();
+            switched.reset();
+
+            let mut reference = prepared_stage(id, 2);
+            reference.set_drive_db(12.0).unwrap();
+            reference.set_color(0.73).unwrap();
+            reference.set_character(0.21).unwrap();
+            reference.set_output_trim_db(-6.0).unwrap();
+            reference.reset();
+            let input: Vec<f32> = (0..4096).map(|i| (i as f32 * 0.037).sin() * 0.3).collect();
+            let mut actual = input.clone();
+            let mut expected = input;
+            switched.process_interleaved(&mut actual, 2048).unwrap();
+            reference.process_interleaved(&mut expected, 2048).unwrap();
+            let error = actual
+                .iter()
+                .zip(&expected)
+                .map(|(a, b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            assert_eq!(error, 0.0, "model {id} lost shared controls");
+        }
+    }
+    #[test]
+    fn selecting_current_model_preserves_running_state() {
+        for id in 0..MODEL_NAMES.len() as u32 {
+            let mut actual = prepared_stage(id, 1);
+            let mut reference = prepared_stage(id, 1);
+            actual.set_drive_db(9.0).unwrap();
+            reference.set_drive_db(9.0).unwrap();
+            let input: Vec<f32> = (0..512).map(|i| (i as f32 * 0.071).sin() * 0.2).collect();
+            let mut a = input.clone();
+            let mut b = input.clone();
+            actual.process_interleaved(&mut a, 512).unwrap();
+            reference.process_interleaved(&mut b, 512).unwrap();
+            actual.set_model_id(id).unwrap();
+            a.copy_from_slice(&input);
+            b.copy_from_slice(&input);
+            actual.process_interleaved(&mut a, 512).unwrap();
+            reference.process_interleaved(&mut b, 512).unwrap();
+            let error = a
+                .iter()
+                .zip(&b)
+                .map(|(a, b)| (a - b).abs())
+                .fold(0.0_f32, f32::max);
+            assert_eq!(error, 0.0, "model {id} reset on redundant selection");
+        }
     }
 }

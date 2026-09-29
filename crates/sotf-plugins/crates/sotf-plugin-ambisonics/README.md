@@ -9,8 +9,8 @@ one of two setup-time matrix builders. `mode_matching` uses a rank-revealing SVD
 pseudoinverse of the physical loudspeaker spherical-harmonic matrix.
 `allrad` decodes to a deterministic Fibonacci virtual sphere and projects each
 virtual speaker to the physical layout with 2D pair or 3D triangle VBAP before
-composing the final fixed matrix. The selected matrix is the only work done in
-the realtime process path.
+composing the final fixed matrix. Single-band processing applies only the selected fixed matrix to each input
+frame.
 
 ## Features
 
@@ -30,6 +30,12 @@ LF and exact max-rE degree weights feed HF. It requires a sample rate above
 1400 Hz and has frequency-dependent crossover phase but no fixed host-compensated
 latency. Scratch is fixed to two 16-sample frames, so validated host blocks have
 no plugin-owned frame limit and allocate no callback memory.
+
+Single-band mode declares a zero audio tail: zero input immediately produces
+zero output regardless of prior program. Dual-band LR4 response retains unknown
+tail metadata and its existing immediate native drain behavior; its recursive
+response has no new truncation policy. Both native drains need one successful
+call. This scheduling bound does not imply finite dual-band audio support.
 
 NaN and infinity reject the entire block before state mutation; subnormal values
 are flushed to zero before the stateful crossover. Underdetermined or planar

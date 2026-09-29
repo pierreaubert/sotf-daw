@@ -96,6 +96,84 @@ impl MvdrBeamformer {
         steering: &[Vec<Complex<f32>>],
     ) -> bool {
         let m = self.num_mics.min(stft_channels.len());
+        let is_noise = self.noise_frame(stft_channels, steering, m);
+        self.frame_count += 1;
+        if is_noise != Some(true) {
+            return false;
+        }
+
+        let alpha = self.alpha;
+        let one_minus_alpha = 1.0 - self.alpha;
+        let mm = m * m;
+        let mut changed = false;
+
+        for k in 0..self.spectrum_size {
+            let cov_off = k * self.num_mics * self.num_mics;
+            let mut valid = true;
+            // Stage the complete bin before changing retained history. Keep
+            // the ordinary f32 product and recurrence ordering unchanged.
+            for i in 0..m {
+                let xi = stft_channels[i].get(k).copied().unwrap_or_default();
+                for j in 0..m {
+                    let xj = stft_channels[j].get(k).copied().unwrap_or_default();
+                    let outer = xi * xj.conj();
+                    let previous = self.noise_cov[cov_off + i * m + j];
+                    let candidate = Complex::new(
+                        previous.re * alpha + outer.re * one_minus_alpha,
+                        previous.im * alpha + outer.im * one_minus_alpha,
+                    );
+                    valid &= candidate.re.is_finite() && candidate.im.is_finite();
+                    self.scratch_outer[i * m + j] = candidate;
+                }
+            }
+            if !valid {
+                // A raw outer product can overflow even when its weighted
+                // contribution fits f32. Retry only this exceptional bin,
+                // promoting the existing f32 smoothing constants exactly.
+                valid = true;
+                for i in 0..m {
+                    let xi = stft_channels[i].get(k).copied().unwrap_or_default();
+                    let xi = Complex::new(f64::from(xi.re), f64::from(xi.im));
+                    for j in 0..m {
+                        let xj = stft_channels[j].get(k).copied().unwrap_or_default();
+                        let xj = Complex::new(f64::from(xj.re), f64::from(xj.im));
+                        let outer = xi * xj.conj();
+                        let previous = self.noise_cov[cov_off + i * m + j];
+                        let candidate = Complex::new(
+                            (f64::from(previous.re) * f64::from(alpha)
+                                + outer.re * f64::from(one_minus_alpha))
+                                as f32,
+                            (f64::from(previous.im) * f64::from(alpha)
+                                + outer.im * f64::from(one_minus_alpha))
+                                as f32,
+                        );
+                        valid &= candidate.re.is_finite() && candidate.im.is_finite();
+                        self.scratch_outer[i * m + j] = candidate;
+                    }
+                }
+            }
+            if valid {
+                self.noise_cov[cov_off..cov_off + mm].copy_from_slice(&self.scratch_outer[..mm]);
+                changed = true;
+            }
+            // An unrepresentable bin keeps its entire previous covariance.
+            // Representable neighbors and later ordinary frames still learn.
+        }
+        self.weights_dirty |= changed;
+        changed
+    }
+
+    /// Classify current evidence without retaining overflowed detector state.
+    /// None means the FFT frame cannot be used for covariance estimation.
+    fn noise_frame(
+        &self,
+        stft_channels: &[Vec<Complex<f32>>],
+        steering: &[Vec<Complex<f32>>],
+        m: usize,
+    ) -> Option<bool> {
+        if m == 0 {
+            return None;
+        }
         let bins = self.spectrum_size.min(steering.len());
         let mut total_energy = 0.0_f32;
         let mut look_energy = 0.0_f32;
@@ -103,6 +181,9 @@ impl MvdrBeamformer {
             let mut projection = Complex::new(0.0, 0.0);
             for mic in 0..m {
                 let sample = stft_channels[mic].get(k).copied().unwrap_or_default();
+                if !sample.re.is_finite() || !sample.im.is_finite() {
+                    return None;
+                }
                 total_energy += sample.norm_sqr();
                 if let Some(direction) = steering[k].get(mic) {
                     projection += direction.conj() * sample;
@@ -110,55 +191,47 @@ impl MvdrBeamformer {
             }
             look_energy += projection.norm_sqr() / m as f32;
         }
+        // The low-level API permits incomplete steering. Those extra bins
+        // still participate in updates, so validate them before any commit.
+        if stft_channels.iter().take(m).any(|channel| {
+            channel
+                .iter()
+                .take(self.spectrum_size)
+                .skip(bins)
+                .any(|sample| !sample.re.is_finite() || !sample.im.is_finite())
+        }) {
+            return None;
+        }
         let coherent_fraction = look_energy / total_energy.max(1e-20);
-        let is_noise = total_energy <= 1e-20 || coherent_fraction < self.target_presence_threshold;
-        self.frame_count += 1;
-
-        if !is_noise {
-            return false;
+        if total_energy.is_finite() && look_energy.is_finite() && coherent_fraction.is_finite() {
+            return Some(
+                total_energy <= 1e-20 || coherent_fraction < self.target_presence_threshold,
+            );
         }
 
-        let alpha = self.alpha;
-        let one_minus_alpha = 1.0 - self.alpha;
-        let mm = m * m;
-
-        for k in 0..self.spectrum_size {
-            let cov_off = k * self.num_mics * self.num_mics;
-
-            // Build outer product x * x^H directly into scratch_outer
-            // x[i] = stft_channels[i][k]
-            for i in 0..m {
-                let xi = if k < stft_channels[i].len() {
-                    stft_channels[i][k]
-                } else {
-                    Complex::new(0.0, 0.0)
-                };
-                for j in 0..m {
-                    let xj = if k < stft_channels[j].len() {
-                        stft_channels[j][k]
-                    } else {
-                        Complex::new(0.0, 0.0)
-                    };
-                    // outer[i,j] = x[i] * conj(x[j])
-                    self.scratch_outer[i * m + j] = xi * xj.conj();
+        // Only detector overflow takes the wider path. At most eight finite
+        // f32 channels have ample power/projection headroom in f64.
+        let mut total_energy = 0.0_f64;
+        let mut look_energy = 0.0_f64;
+        for k in 0..bins {
+            let mut projection = Complex::new(0.0_f64, 0.0);
+            for mic in 0..m {
+                let sample = stft_channels[mic].get(k).copied().unwrap_or_default();
+                let sample = Complex::new(f64::from(sample.re), f64::from(sample.im));
+                total_energy += sample.norm_sqr();
+                if let Some(direction) = steering[k].get(mic) {
+                    if !direction.re.is_finite() || !direction.im.is_finite() {
+                        return None;
+                    }
+                    let direction = Complex::new(f64::from(direction.re), f64::from(direction.im));
+                    projection += direction.conj() * sample;
                 }
             }
-
-            // R = α*R + (1-α)*outer
-            // Use real scalar multiplies — a purely-real complex multiply
-            // costs 4 muls + 2 adds, but here the scalars are real so we
-            // can do 2 muls + 1 add per element (§3.3).
-            for idx in 0..mm {
-                let r = &mut self.noise_cov[cov_off + idx];
-                let s = self.scratch_outer[idx];
-                *r = Complex::new(
-                    r.re * alpha + s.re * one_minus_alpha,
-                    r.im * alpha + s.im * one_minus_alpha,
-                );
-            }
+            look_energy += projection.norm_sqr() / m as f64;
         }
-        self.weights_dirty = true;
-        true
+        let floor = f64::from(1e-20_f32);
+        let coherent_fraction = look_energy / total_energy.max(floor);
+        Some(total_energy <= floor || coherent_fraction < f64::from(self.target_presence_threshold))
     }
 
     /// Compute MVDR weights for all bins.
@@ -200,11 +273,26 @@ impl MvdrBeamformer {
                     denom += d_vec[i].conj() * self.scratch_r_inv_d[i];
                 }
 
-                if denom.norm_sqr() > 1e-20 {
-                    // w = r_inv_d / denom
+                // Quiet covariance can yield inverse coefficients near 1e20.
+                // Squaring that finite f32 denominator overflows before the
+                // Cholesky floor is reached, so normalize in the wider type.
+                let denom = Complex::new(f64::from(denom.re), f64::from(denom.im));
+                let norm_squared = denom.norm_sqr();
+                let mut candidates = [Complex::new(0.0_f32, 0.0); MAX_MICS];
+                let mut valid = norm_squared.is_finite() && norm_squared > f64::from(1e-20_f32);
+                if valid {
                     for i in 0..m {
-                        self.weights_buf[k][i] = self.scratch_r_inv_d[i] / denom;
+                        let solved = self.scratch_r_inv_d[i];
+                        let weight =
+                            Complex::new(f64::from(solved.re), f64::from(solved.im)) / denom;
+                        candidates[i] = Complex::new(weight.re as f32, weight.im as f32);
+                        valid &= candidates[i].re.is_finite() && candidates[i].im.is_finite();
                     }
+                }
+                // Install one validated bin atomically with respect to the
+                // processing method; no partial candidate set is retained.
+                if valid {
+                    self.weights_buf[k].copy_from_slice(&candidates[..m]);
                 } else {
                     write_steered_delay_and_sum(&mut self.weights_buf[k], d_vec);
                 }
@@ -312,6 +400,14 @@ fn write_steered_delay_and_sum(dest: &mut [Complex<f32>], steering: &[Complex<f3
         *weight = *direction * scale;
     }
 }
+
+#[cfg(test)]
+#[path = "mvdr/numerical_tests.rs"]
+mod numerical_tests;
+
+#[cfg(test)]
+#[path = "mvdr/recovery_tests.rs"]
+mod recovery_tests;
 
 #[cfg(test)]
 mod tests {

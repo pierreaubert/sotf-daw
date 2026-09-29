@@ -2,6 +2,10 @@ use crate::params::PARAMS;
 use serde::{Deserialize, Serialize};
 use sotf_host::param_specs::find_by_key as param_by_key;
 
+fn default_enabled() -> bool {
+    param_by_key(PARAMS, "enabled").default_f64() != 0.0
+}
+
 pub(super) fn default_dim_gain_db() -> f32 {
     param_by_key(PARAMS, "dim_gain_db").default_f32()
 }
@@ -22,7 +26,7 @@ pub struct ChannelState {
 /// Configuration parameters for ChannelMuteSoloPlugin
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelMuteSoloParams {
-    #[serde(default)]
+    #[serde(default = "default_enabled")]
     pub enabled: bool,
     #[serde(default)]
     pub channel_states: Vec<ChannelState>,

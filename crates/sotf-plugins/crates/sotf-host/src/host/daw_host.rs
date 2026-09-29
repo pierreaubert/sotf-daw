@@ -114,6 +114,17 @@ pub(super) struct DawConfig {
     pub(super) f64_chain_scratch_alt: Vec<f64>,
 }
 
+/// Unknown plugins retain the historical finite allowance, independently per stage.
+const UNKNOWN_DRAIN_CALL_LIMIT: u64 = 4096;
+
+#[derive(Default)]
+struct DrainState {
+    completed_prefix: usize,
+    active_node: Option<NodeId>,
+    prepared: bool,
+    remaining_calls: Option<u64>,
+}
+
 pub struct DawHost {
     pub(super) nodes: HashMap<NodeId, GraphNode>,
     /// Plugin storage indexed by NodeId — disjoint from `nodes` for borrow checker.
@@ -158,6 +169,13 @@ pub struct DawHost {
     pub(super) node_latency_from_input: Vec<usize>,
     /// Negotiated input sample rate for each node, indexed by NodeId.
     pub(super) node_input_sample_rates: Vec<u32>,
+    /// Output clock for latency and edge routing, indexed by node.
+    pub(super) node_output_sample_rates: Vec<u32>,
+    /// Next accepted input-frame position in each node's negotiated clock.
+    /// Upstream buffering and fractional conversion make this independent of
+    /// the current host callback position.
+    node_input_positions: Vec<u64>,
+    drain_state: DrainState,
     /// Pre-allocated scratch buffer for automation updates (avoids per-process() heap allocation).
     pub(super) automation_scratch: Vec<(usize, f32)>,
     pub(super) queues: DawQueueEndpoints,
@@ -203,6 +221,9 @@ impl DawHost {
             bypassed: Vec::new(),
             node_latency_from_input: Vec::new(),
             node_input_sample_rates: Vec::new(),
+            node_output_sample_rates: Vec::new(),
+            node_input_positions: Vec::new(),
+            drain_state: DrainState::default(),
             automation_scratch: Vec::new(),
             queues: DawQueueEndpoints {
                 parameter_event_tx: Some(parameter_event_tx),
@@ -324,6 +345,7 @@ impl DawHost {
     /// Reset playback position to 0.
     pub fn reset_playback_position(&mut self) {
         self.automation_state.playback_position = 0;
+        self.reanchor_node_positions();
         for slot in &mut self.automation_state.automation {
             slot.automation.position = 0;
         }
@@ -334,8 +356,25 @@ impl DawHost {
     /// Embedded/DAW hosts call this at discontinuities; continuous processing
     /// advances the position internally without any control-thread traffic.
     pub fn set_playback_position(&mut self, sample_position: u64) {
-        self.automation_state.playback_position =
-            usize::try_from(sample_position).unwrap_or(usize::MAX);
+        let position = usize::try_from(sample_position).unwrap_or(usize::MAX);
+        if self.automation_state.playback_position != position {
+            self.automation_state.playback_position = position;
+            self.reanchor_node_positions();
+        }
+    }
+
+    fn reanchor_node_positions(&mut self) {
+        for (position, &rate) in self
+            .node_input_positions
+            .iter_mut()
+            .zip(&self.node_input_sample_rates)
+        {
+            *position = Self::convert_sample_position(
+                self.automation_state.playback_position as u64,
+                self.config.sample_rate,
+                rate,
+            );
+        }
     }
 
     /// Take a snapshot of the current graph topology.
@@ -425,9 +464,13 @@ impl DawHost {
         if id >= self.plugins.len() {
             self.plugins.resize_with(id + 1, || None);
         }
+        self.node_input_sample_rates
+            .resize(self.plugins.len(), self.config.sample_rate);
+        self.node_input_sample_rates[id] = input_sample_rate;
         self.plugins[id] = Some(plugin);
         self.built = false;
         self.cached_latency = None;
+        self.drain_state = DrainState::default();
         Ok(())
     }
 
@@ -442,6 +485,7 @@ impl DawHost {
         self.edges.push(edge);
         self.built = false;
         self.cached_latency = None;
+        self.drain_state = DrainState::default();
         Ok(())
     }
 
@@ -516,19 +560,6 @@ impl DawHost {
         }
         let max_id = self.nodes.keys().copied().max().unwrap_or(0);
         let num_slots = if self.nodes.is_empty() { 0 } else { max_id + 1 };
-        self.node_input_sample_rates = vec![self.config.sample_rate; num_slots];
-        let mut chain_rate = self.config.sample_rate;
-        for &id in &self.chain_nodes {
-            self.node_input_sample_rates[id] = chain_rate;
-            let plugin = self.plugins[id].as_ref().unwrap();
-            let node = &self.nodes[&id];
-            chain_rate = Self::plugin_output_sample_rate_isolated(
-                plugin.as_ref(),
-                id,
-                &node.name,
-                chain_rate,
-            );
-        }
         self.predecessors = vec![Vec::new(); num_slots];
         self.is_input_node = vec![false; num_slots];
         self.is_output_node = vec![false; num_slots];
@@ -541,15 +572,80 @@ impl DawHost {
         for &id in &self.output_nodes {
             self.is_output_node[id] = true;
         }
+        self.node_input_sample_rates
+            .resize(num_slots, self.config.sample_rate);
+        self.node_output_sample_rates = vec![self.config.sample_rate; num_slots];
+        let previous_position_slots = self.node_input_positions.len();
+        self.node_input_positions.resize(num_slots, 0);
+        for stage in &self.stages {
+            for &id in &stage.nodes {
+                let input_rate = self.predecessors[id]
+                    .first()
+                    .map_or(self.config.sample_rate, |edge| {
+                        self.node_output_sample_rates[edge.from_node]
+                    });
+                if self.predecessors[id]
+                    .iter()
+                    .any(|edge| self.node_output_sample_rates[edge.from_node] != input_rate)
+                {
+                    return Err(format!(
+                        "Node {id} joins incompatible sample rates; add resamplers before the join"
+                    ));
+                }
+                let plugin = self.plugins[id].as_mut().unwrap();
+                if self.node_input_sample_rates[id] != input_rate {
+                    plugin.initialize(input_rate)?;
+                }
+                if id >= previous_position_slots || self.node_input_sample_rates[id] != input_rate {
+                    self.node_input_positions[id] = Self::convert_sample_position(
+                        self.automation_state.playback_position as u64,
+                        self.config.sample_rate,
+                        input_rate,
+                    );
+                }
+                self.node_input_sample_rates[id] = input_rate;
+                let output_rate = if self.nodes[&id].bypassed {
+                    input_rate
+                } else {
+                    Self::plugin_output_sample_rate_isolated(
+                        plugin.as_ref(),
+                        id,
+                        &self.nodes[&id].name,
+                        input_rate,
+                    )
+                };
+                if output_rate == 0 {
+                    return Err(format!("Node {id} returned a zero output sample rate"));
+                }
+                self.node_output_sample_rates[id] = output_rate;
+            }
+        }
+        if let Some(&first) = self.output_nodes.first()
+            && self.output_nodes.iter().any(|&id| {
+                self.node_output_sample_rates[id] != self.node_output_sample_rates[first]
+            })
+        {
+            return Err("Graph outputs have incompatible sample rates; add resamplers before the output mix".into());
+        }
+        let max_graph_frames = self
+            .nodes
+            .keys()
+            .map(|&id| self.path_output_frames(id, Self::MAX_BLOCK_FRAMES))
+            .max()
+            .unwrap_or(Self::MAX_BLOCK_FRAMES)
+            .max(Self::MAX_BLOCK_FRAMES);
+        let graph_scratch_samples = max_graph_frames
+            .checked_mul(32)
+            .ok_or("Graph frame expansion exceeds addressable storage")?;
         let mut node_buffers = (0..num_slots).map(|_| None).collect::<Vec<_>>();
         let mut node_buffers_f64 = (0..num_slots).map(|_| None).collect::<Vec<_>>();
         for (&id, node) in &self.nodes {
             node_buffers[id] = Some(NodeBuffer::<f32>::new(
-                Self::MAX_BLOCK_FRAMES,
+                self.path_output_frames(id, Self::MAX_BLOCK_FRAMES),
                 node.output_channels(),
             ));
             node_buffers_f64[id] = Some(NodeBuffer::<f64>::new(
-                Self::MAX_BLOCK_FRAMES,
+                self.path_output_frames(id, Self::MAX_BLOCK_FRAMES),
                 node.output_channels(),
             ));
         }
@@ -601,12 +697,12 @@ impl DawHost {
 
         self.process_buffers = Some(ProcessBuffers {
             node_buffers,
-            scratch_input: vec![0.0f32; Self::MAX_BLOCK_FRAMES * 32],
-            scratch_output: vec![0.0f32; Self::MAX_BLOCK_FRAMES * 32],
-            merge_buffer: vec![0.0f32; Self::MAX_BLOCK_FRAMES * 32],
-            channel_map_buffer: vec![0.0f32; Self::MAX_BLOCK_FRAMES * 32],
+            scratch_input: vec![0.0f32; graph_scratch_samples],
+            scratch_output: vec![0.0f32; graph_scratch_samples],
+            merge_buffer: vec![0.0f32; graph_scratch_samples],
+            channel_map_buffer: vec![0.0f32; graph_scratch_samples],
             compensation_delays,
-            delay_scratch: vec![0.0f32; Self::MAX_BLOCK_FRAMES * 32],
+            delay_scratch: vec![0.0f32; graph_scratch_samples + 32],
             parallel_scratch: (0..num_slots)
                 .map(|id| {
                     if let Some(node) = self.nodes.get(&id) {
@@ -630,12 +726,12 @@ impl DawHost {
         });
         self.process_buffers_f64 = Some(ProcessBuffers {
             node_buffers: node_buffers_f64,
-            scratch_input: vec![0.0f64; Self::MAX_BLOCK_FRAMES * 32],
-            scratch_output: vec![0.0f64; Self::MAX_BLOCK_FRAMES * 32],
-            merge_buffer: vec![0.0f64; Self::MAX_BLOCK_FRAMES * 32],
-            channel_map_buffer: vec![0.0f64; Self::MAX_BLOCK_FRAMES * 32],
+            scratch_input: vec![0.0f64; graph_scratch_samples],
+            scratch_output: vec![0.0f64; graph_scratch_samples],
+            merge_buffer: vec![0.0f64; graph_scratch_samples],
+            channel_map_buffer: vec![0.0f64; graph_scratch_samples],
             compensation_delays: compensation_delays_f64,
-            delay_scratch: vec![0.0f64; Self::MAX_BLOCK_FRAMES * 32],
+            delay_scratch: vec![0.0f64; graph_scratch_samples + 32],
             parallel_scratch: (0..num_slots)
                 .map(|id| {
                     if let Some(node) = self.nodes.get(&id) {
@@ -657,34 +753,40 @@ impl DawHost {
                     .unwrap_or(0),
             ),
         });
+        // Native f64 chains and f32 fallback use these buffers on their first
+        // callback too; reserve them alongside the graph processing buffers.
+        ensure_len(&mut self.config.f64_chain_scratch, graph_scratch_samples);
+        ensure_len(
+            &mut self.config.f64_chain_scratch_alt,
+            graph_scratch_samples,
+        );
+        ensure_len(&mut self.config.f64_input_scratch, graph_scratch_samples);
+        ensure_len(&mut self.config.f64_output_scratch, graph_scratch_samples);
         // Cache per-frame properties to avoid mutex locks during process()
         self.cached_frames_identity = true;
         self.cached_rate_identity = true;
         self.cached_output_frame_ratios.clear();
         self.analyzer_indices.clear();
 
-        for (chain_idx, &id) in self.chain_nodes.iter().enumerate() {
+        for (&id, node) in &self.nodes {
             let p = self.plugins[id].as_ref().unwrap();
-            let node = &self.nodes[&id];
-            if Self::plugin_output_frames_for_input_isolated(p.as_ref(), id, &node.name, 100) != 100
+            if !node.bypassed
+                && Self::plugin_output_frames_for_input_isolated(p.as_ref(), id, &node.name, 100)
+                    != 100
             {
                 self.cached_frames_identity = false;
             }
-            if Self::plugin_output_sample_rate_isolated(
-                p.as_ref(),
-                id,
-                &node.name,
-                self.config.sample_rate,
-            ) != self.config.sample_rate
-            {
+            if self.node_output_sample_rates[id] != self.node_input_sample_rates[id] {
                 self.cached_rate_identity = false;
             }
-            if p.get_data().is_some() {
+        }
+        for (chain_idx, &id) in self.chain_nodes.iter().enumerate() {
+            if self.plugins[id].as_ref().unwrap().get_data().is_some() {
                 self.analyzer_indices.push(chain_idx);
             }
         }
 
-        self.has_variable_frame_plugin = self.chain_nodes.iter().any(|&id| {
+        self.has_variable_frame_plugin = self.nodes.keys().any(|&id| {
             let p = self.plugins[id].as_ref().unwrap();
             let node = &self.nodes[&id];
             Self::plugin_output_frames_for_input_isolated(p.as_ref(), id, &node.name, 100) != 100
@@ -907,6 +1009,7 @@ impl DawHost {
         self.nodes.remove(&id).unwrap();
         self.built = false;
         self.cached_latency = None;
+        self.drain_state = DrainState::default();
         Ok(self.plugins[id].take().unwrap())
     }
 
@@ -1059,32 +1162,59 @@ impl DawHost {
         if self.cached_frames_identity {
             return f;
         }
-        let mut result = f;
-        for &id in &self.chain_nodes {
-            let plugin = self.plugins[id].as_ref().unwrap();
-            let node = &self.nodes[&id];
-            result = Self::plugin_output_frames_for_input_isolated(
-                plugin.as_ref(),
-                id,
-                &node.name,
-                result,
-            );
-        }
-        result
+        self.output_nodes
+            .iter()
+            .map(|&id| self.path_output_frames(id, f))
+            .max()
+            .unwrap_or(f)
     }
+
+    fn path_output_frames(&self, id: NodeId, frames: usize) -> usize {
+        let input_frames = self
+            .predecessors
+            .get(id)
+            .into_iter()
+            .flatten()
+            .map(|edge| self.path_output_frames(edge.from_node, frames))
+            .max()
+            .unwrap_or(frames);
+        if self.nodes[&id].bypassed {
+            return input_frames;
+        }
+        Self::plugin_output_frames_for_input_isolated(
+            self.plugins[id].as_ref().unwrap().as_ref(),
+            id,
+            &self.nodes[&id].name,
+            input_frames,
+        )
+    }
+
     pub fn output_sample_rate(&self, r: u32) -> u32 {
         if self.cached_rate_identity {
             return r;
         }
-        let mut result = r;
-        for &id in &self.chain_nodes {
-            let plugin = self.plugins[id].as_ref().unwrap();
-            let node = &self.nodes[&id];
-            result =
-                Self::plugin_output_sample_rate_isolated(plugin.as_ref(), id, &node.name, result);
-        }
-        result
+        self.output_nodes
+            .first()
+            .map_or(r, |&id| self.path_output_rate(id, r))
     }
+
+    fn path_output_rate(&self, id: NodeId, rate: u32) -> u32 {
+        let input_rate = self
+            .predecessors
+            .get(id)
+            .and_then(|edges| edges.first())
+            .map_or(rate, |edge| self.path_output_rate(edge.from_node, rate));
+        if self.nodes[&id].bypassed {
+            return input_rate;
+        }
+        Self::plugin_output_sample_rate_isolated(
+            self.plugins[id].as_ref().unwrap().as_ref(),
+            id,
+            &self.nodes[&id].name,
+            input_rate,
+        )
+    }
+
     pub fn last_output_frames(&self) -> Option<usize> {
         for &id in self.chain_nodes.iter().rev() {
             if let Some(f) = self.plugins[id].as_ref().unwrap().last_output_frames() {
@@ -1632,7 +1762,8 @@ impl DawHost {
             .get_mut(node_id)
             .and_then(Option::as_mut)
             .ok_or_else(|| format!("Plugin for node {node_id} not found"))?;
-        match catch_unwind(AssertUnwindSafe(|| plugin.set_parameter(param_id, value))) {
+        let result = match catch_unwind(AssertUnwindSafe(|| plugin.set_parameter(param_id, value)))
+        {
             Ok(result) => result.map_err(|err| {
                 crate::rate_limited_log!(
                     warn,
@@ -1658,7 +1789,13 @@ impl DawHost {
                     node.name, node_id, reason
                 ))
             }
+        };
+        if result.is_ok() && self.drain_state.active_node == Some(node_id) {
+            // Accepted actions can restart work even when getter values are
+            // unchanged. Unrelated controls and rejected writes do not rearm.
+            self.drain_state.remaining_calls = None;
         }
+        result
     }
 
     /// Number of parameter events dropped because the RT queue was full.
@@ -1770,6 +1907,9 @@ impl DawHost {
     /// never diverge.
     pub(super) fn set_bypass_state(&mut self, id: NodeId, bypassed: bool) {
         if let Some(node) = self.nodes.get_mut(&id) {
+            if node.bypassed != bypassed {
+                self.drain_state = DrainState::default();
+            }
             node.bypassed = bypassed;
         }
         if id < self.bypassed.len() {
@@ -1829,18 +1969,30 @@ impl DawHost {
         self.drain_parameter_events_into(&mut events);
         let result = self.process_with_parameter_events(input, output, &mut events);
         self.queues.parameter_event_scratch = events;
+        if result.is_ok() && !input.is_empty() {
+            self.drain_state = DrainState::default();
+        }
         result
     }
 
-    /// Conservative capacity for one polymorphic end-of-stream drain step.
+    /// Required conservative frame capacity for one end-of-stream drain step.
+    ///
+    /// Multiply by [`Self::output_channels`] to size the interleaved destination.
+    /// Queued graph mutations applied by [`Self::drain`] can change this bound.
     pub fn drain_output_frames_max(&self) -> usize {
         let mut maximum = 0usize;
         for (index, &node_id) in self.chain_nodes.iter().enumerate() {
+            if self.nodes[&node_id].bypassed {
+                continue;
+            }
             let Some(plugin) = self.plugins[node_id].as_ref() else {
                 continue;
             };
             let mut frames = plugin.drain_output_frames_max();
             for &downstream_id in &self.chain_nodes[index + 1..] {
+                if self.nodes[&downstream_id].bypassed {
+                    continue;
+                }
                 let downstream = self.plugins[downstream_id].as_ref().unwrap();
                 frames = downstream.output_frames_for_input(frames);
             }
@@ -1855,16 +2007,61 @@ impl DawHost {
     /// before the downstream node's own tail is drained. This ordering is what
     /// prevents a resampler followed by a limiter/convolver from losing either
     /// plugin's final state.
+    ///
+    /// For a nonempty graph, `output` must contain whole output-channel frames
+    /// and hold at least [`Self::drain_output_frames_max`] frames, even when the
+    /// actual result is shorter. Capacity is checked after queued graph changes
+    /// and parameter events are applied and before plugin EOS preparation,
+    /// drain, or downstream audio processing. EOF has no new source frames, so
+    /// queued event offsets apply at the current boundary. An empty or already
+    /// completed graph completes without requiring output storage.
+    ///
+    /// Each active plugin gets its prepared `drain_call_bound`, or 4096 calls
+    /// when unknown. Successful zero-output calls count too. Completed stages
+    /// are never revisited until reset, new accepted input, or graph mutation.
+    /// An accepted active-stage control refreshes only that stage's quota.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an invalid graph, insufficient or misaligned output
+    /// storage, invalid output geometry, exhausted native work quota, or a plugin
+    /// processing failure. Capacity errors leave audio state unconsumed; queued
+    /// graph and parameter changes may already have been applied. Plugin errors need not leave audio state unchanged.
     pub fn drain(&mut self, output: &mut [f32]) -> Result<PluginDrainResult, String> {
         self.drain_graph_mutations()?;
+        // No source frames arrive during EOS: queued offsets apply at this
+        // boundary, and each event is consumed once even if capacity is rejected.
+        while let Ok(event) = self.queues.parameter_event_rx.pop() {
+            let _ = self.apply_parameter_event(event);
+        }
         if !self.built {
             self.build()?;
         }
-        if self.chain_nodes.is_empty() {
+        if self.nodes.is_empty() {
             return Ok(PluginDrainResult::COMPLETE);
         }
         if !self.is_topologically_linear_chain() {
             return Err("end-of-stream drain currently requires a linear plugin graph".to_string());
+        }
+        if self.drain_state.completed_prefix == self.chain_nodes.len() {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+
+        let output_channels = self.output_channels();
+        if output_channels == 0 || !output.len().is_multiple_of(output_channels) {
+            return Err(format!(
+                "Host drain output must contain whole frames of {output_channels} channels"
+            ));
+        }
+        let required_samples = self
+            .drain_output_frames_max()
+            .checked_mul(output_channels)
+            .ok_or("Host drain output capacity overflow")?;
+        if output.len() < required_samples {
+            return Err(format!(
+                "Host drain output too small: need {required_samples} samples, got {}",
+                output.len()
+            ));
         }
 
         let mut guard = BufferGuard::take(&mut self.process_buffers);
@@ -1874,19 +2071,65 @@ impl DawHost {
         for chain_index in 0..self.chain_nodes.len() {
             let node_id = self.chain_nodes[chain_index];
             let node = &self.nodes[&node_id];
+            if node.bypassed {
+                if chain_index >= self.drain_state.completed_prefix {
+                    self.drain_state.completed_prefix = chain_index + 1;
+                }
+                continue;
+            }
+            if chain_index < self.drain_state.completed_prefix {
+                input_rate = self.plugins[node_id]
+                    .as_ref()
+                    .unwrap()
+                    .output_sample_rate(input_rate);
+                continue;
+            }
             let drain_capacity = self.plugins[node_id]
                 .as_ref()
                 .unwrap()
                 .drain_output_frames_max();
-            ensure_len(
-                &mut bufs.scratch_output,
-                drain_capacity.saturating_mul(node.output_channels()),
-            );
-            let drain_context = ProcessContext::new(input_rate, 0);
-            let result = self.plugins[node_id].as_mut().unwrap().drain(
-                &mut bufs.scratch_output[..drain_capacity.saturating_mul(node.output_channels())],
-                &drain_context,
-            )?;
+            let drain_samples = drain_capacity
+                .checked_mul(node.output_channels())
+                .ok_or("Host native drain capacity overflow")?;
+            if input_rate == 0 || node.input_channels() == 0 || node.output_channels() == 0 {
+                return Err("Host native drain requires nonzero rate and channels".into());
+            }
+            ensure_len(&mut bufs.scratch_output, drain_samples);
+            let drain_context = ProcessContext::new(input_rate, 0)
+                .with_sample_position(self.node_input_positions[node_id]);
+            if self.drain_state.active_node != Some(node_id) {
+                self.drain_state.active_node = Some(node_id);
+                self.drain_state.prepared = false;
+                self.drain_state.remaining_calls = None;
+            }
+            if !self.drain_state.prepared {
+                self.plugins[node_id]
+                    .as_mut()
+                    .unwrap()
+                    .begin_drain(&drain_context)?;
+                self.drain_state.prepared = true;
+            }
+            let remaining = *self.drain_state.remaining_calls.get_or_insert_with(|| {
+                self.plugins[node_id]
+                    .as_ref()
+                    .unwrap()
+                    .drain_call_bound()
+                    .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get)
+            });
+            if remaining == 0 {
+                return Err(format!(
+                    "plugin '{}' drain did not converge within its call bound",
+                    node.name
+                ));
+            }
+            let result = self.plugins[node_id]
+                .as_mut()
+                .unwrap()
+                .drain(&mut bufs.scratch_output[..drain_samples], &drain_context)?;
+            self.drain_state.remaining_calls = Some(remaining - 1);
+            if result.frames > drain_capacity {
+                return Err("Plugin drain exceeded its declared output capacity".into());
+            }
 
             if result.frames > 0 {
                 let mut current_frames = result.frames;
@@ -1897,6 +2140,12 @@ impl DawHost {
                     .output_sample_rate(input_rate);
 
                 for &downstream_id in &self.chain_nodes[chain_index + 1..] {
+                    if self.nodes[&downstream_id].bypassed {
+                        self.node_input_positions[downstream_id] = self.node_input_positions
+                            [downstream_id]
+                            .saturating_add(current_frames as u64);
+                        continue;
+                    }
                     let samples = current_frames.saturating_mul(current_channels);
                     ensure_len(&mut bufs.scratch_input, samples);
                     bufs.scratch_input[..samples].copy_from_slice(&bufs.scratch_output[..samples]);
@@ -1906,12 +2155,16 @@ impl DawHost {
                     let capacity = downstream.output_frames_for_input(current_frames);
                     let output_samples = capacity.saturating_mul(downstream_node.output_channels());
                     ensure_len(&mut bufs.scratch_output, output_samples);
-                    let context = ProcessContext::new(current_rate, current_frames);
+                    let context = ProcessContext::new(current_rate, current_frames)
+                        .with_sample_position(self.node_input_positions[downstream_id]);
                     current_frames = downstream.process(
                         &bufs.scratch_input[..samples],
                         &mut bufs.scratch_output[..output_samples],
                         &context,
                     )?;
+                    self.node_input_positions[downstream_id] = self.node_input_positions
+                        [downstream_id]
+                        .saturating_add(context.num_frames as u64);
                     current_channels = downstream_node.output_channels();
                     current_rate = downstream.output_sample_rate(current_rate);
                 }
@@ -1924,7 +2177,16 @@ impl DawHost {
                     ));
                 }
                 output[..samples].copy_from_slice(&bufs.scratch_output[..samples]);
-                let is_last = chain_index + 1 == self.chain_nodes.len();
+                if result.complete {
+                    self.drain_state.completed_prefix = chain_index + 1;
+                    self.drain_state.active_node = None;
+                }
+                let is_last = self.chain_nodes[chain_index + 1..]
+                    .iter()
+                    .all(|id| self.nodes[id].bypassed);
+                if is_last && result.complete {
+                    self.drain_state.completed_prefix = self.chain_nodes.len();
+                }
                 return Ok(PluginDrainResult {
                     frames: current_frames,
                     complete: is_last && result.complete,
@@ -1933,6 +2195,8 @@ impl DawHost {
             if !result.complete {
                 return Ok(result);
             }
+            self.drain_state.completed_prefix = chain_index + 1;
+            self.drain_state.active_node = None;
             input_rate = self.plugins[node_id]
                 .as_ref()
                 .unwrap()
@@ -1979,7 +2243,6 @@ impl DawHost {
 
     pub(super) fn can_split_parameter_event_block(&self, input: &[f32], output: &[f32]) -> bool {
         if !self.automation_state.automation.is_empty()
-            || self.has_variable_frame_plugin
             || !self.cached_frames_identity
             || !self.cached_rate_identity
         {
@@ -2081,15 +2344,18 @@ impl DawHost {
             nb.clear();
         }
         ensure_len(&mut bufs.scratch_input, input.len());
-        let mut cf = nf;
+        let mut cf;
 
         for stage in &self.stages {
             if let Some(parallel_result) = Self::process_stage_parallel(
-                self.config.parallel_enabled,
+                self.config.parallel_enabled
+                    && self.cached_frames_identity
+                    && self.cached_rate_identity
+                    && !self.has_variable_frame_plugin,
                 stage,
                 input,
                 self.config.sample_rate,
-                cf,
+                nf,
                 stage_block_start_sample,
                 &mut self.plugins,
                 &self.nodes,
@@ -2099,13 +2365,19 @@ impl DawHost {
                 &self.cached_parallel_node_costs,
                 bufs,
             ) {
-                cf = parallel_result?;
+                parallel_result?;
+                for &nid in &stage.nodes {
+                    self.node_input_positions[nid] = block_start_sample.saturating_add(nf as u64);
+                }
                 continue;
             }
 
-            let mut stage_cf: Option<usize> = None;
             for &nid in &stage.nodes {
                 let node = &self.nodes[&nid];
+                let cf = Self::node_input_frames(nid, nf, &self.predecessors, &bufs.node_buffers)?;
+                if self.is_input_node[nid] {
+                    self.node_input_positions[nid] = block_start_sample;
+                }
                 let in_len = if self.is_input_node[nid] {
                     ensure_len(&mut bufs.scratch_input, input.len());
                     bufs.scratch_input[..input.len()].copy_from_slice(input);
@@ -2135,7 +2407,7 @@ impl DawHost {
                     bufs.scratch_input[..il].copy_from_slice(&bufs.merge_buffer[..il]);
                     il
                 };
-                let aof = if self.bypassed[nid] {
+                if self.bypassed[nid] {
                     // Bypassed: pass input directly to output buffer
                     bufs.node_buffers[nid]
                         .as_mut()
@@ -2145,7 +2417,7 @@ impl DawHost {
                 } else {
                     let p = self.plugins[nid].as_mut().unwrap();
                     let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
-                        .with_sample_position(stage_block_start_sample);
+                        .with_sample_position(self.node_input_positions[nid]);
                     let mof = Self::plugin_output_frames_for_input_isolated(
                         p.as_ref(),
                         nid,
@@ -2153,16 +2425,9 @@ impl DawHost {
                         cf,
                     );
                     let ol = mof * node.output_channels();
-                    let needs_extended_in_place_buffer = node.input_channels()
-                        > node.output_channels()
-                        && self.predecessors[nid]
-                            .iter()
-                            .any(|e| e.edge_type == EdgeType::Sidechain);
-                    let process_output_len = if needs_extended_in_place_buffer {
-                        ol.max(in_len)
-                    } else {
-                        ol
-                    };
+                    // Adapters own any input-stride work storage; Plugin output
+                    // always uses the declared output channel count.
+                    let process_output_len = ol;
                     ensure_len(&mut bufs.scratch_output, process_output_len);
                     let out_frames = Self::process_plugin_f32_isolated(
                         p.as_mut(),
@@ -2177,20 +2442,22 @@ impl DawHost {
                         .write(&bufs.scratch_output[..out_frames * node.output_channels()]);
                     out_frames
                 };
-                stage_cf = Some(match stage_cf {
-                    Some(prev) => prev.min(aof),
-                    None => aof,
-                });
-            }
-            if let Some(scf) = stage_cf {
-                cf = scf;
+                self.node_input_positions[nid] =
+                    self.node_input_positions[nid].saturating_add(cf as u64);
             }
         }
-        Self::collect_output_from_buffers(&self.output_nodes, &bufs.node_buffers, output, cf)
-            .map_err(|e| {
-                crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
-                e
-            })?;
+        cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
+        Self::collect_output_from_buffers(
+            &self.output_nodes,
+            &mut bufs.node_buffers,
+            &mut bufs.compensation_delays,
+            output,
+            cf,
+        )
+        .map_err(|e| {
+            crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
+            e
+        })?;
         if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
             output[cf * out_ch..].fill(0.0);
             cf = nf;
@@ -2277,7 +2544,9 @@ impl DawHost {
                     continue;
                 }
             }
-            let output_frames = {
+            let output_frames = if self.bypassed[nid] {
+                current_frames
+            } else {
                 let plugin = self.plugins[nid].as_ref().unwrap();
                 Self::plugin_output_frames_for_input_isolated(
                     plugin.as_ref(),
@@ -2415,6 +2684,10 @@ impl DawHost {
             }
         }
 
+        for op in &plan.ops {
+            self.node_input_positions[op.node_id] =
+                block_start_sample.saturating_add((input.len() / input_channels) as u64);
+        }
         self.automation_state.playback_position += input.len() / input_channels;
         Ok(current_frames)
     }
@@ -2693,6 +2966,9 @@ impl DawHost {
         self.drain_parameter_events_into(&mut events);
         let result = self.process_f64_with_parameter_events(input, output, &mut events);
         self.queues.parameter_event_scratch = events;
+        if result.is_ok() && !input.is_empty() {
+            self.drain_state = DrainState::default();
+        }
         result
     }
 
@@ -2917,12 +3193,15 @@ impl DawHost {
             nb.clear();
         }
         ensure_len(&mut bufs.scratch_input, input.len());
-        let mut cf = nf;
+        let mut cf;
 
         for stage in &self.stages {
-            let mut stage_cf: Option<usize> = None;
             for &nid in &stage.nodes {
                 let node = &self.nodes[&nid];
+                let cf = Self::node_input_frames(nid, nf, &self.predecessors, &bufs.node_buffers)?;
+                if self.is_input_node[nid] {
+                    self.node_input_positions[nid] = block_start_sample;
+                }
                 let in_len = if self.is_input_node[nid] {
                     ensure_len(&mut bufs.scratch_input, input.len());
                     bufs.scratch_input[..input.len()].copy_from_slice(input);
@@ -2952,7 +3231,7 @@ impl DawHost {
                     bufs.scratch_input[..il].copy_from_slice(&bufs.merge_buffer[..il]);
                     il
                 };
-                let actual_output_frames = if self.bypassed[nid] {
+                if self.bypassed[nid] {
                     bufs.node_buffers[nid]
                         .as_mut()
                         .unwrap()
@@ -2961,7 +3240,7 @@ impl DawHost {
                 } else {
                     let plugin = self.plugins[nid].as_mut().unwrap();
                     let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
-                        .with_sample_position(block_start_sample);
+                        .with_sample_position(self.node_input_positions[nid]);
                     let max_output_frames = Self::plugin_output_frames_for_input_isolated(
                         plugin.as_ref(),
                         nid,
@@ -2969,16 +3248,9 @@ impl DawHost {
                         cf,
                     );
                     let output_len = max_output_frames * node.output_channels();
-                    let needs_extended_in_place_buffer = node.input_channels()
-                        > node.output_channels()
-                        && self.predecessors[nid]
-                            .iter()
-                            .any(|e| e.edge_type == EdgeType::Sidechain);
-                    let process_output_len = if needs_extended_in_place_buffer {
-                        output_len.max(in_len)
-                    } else {
-                        output_len
-                    };
+                    // Adapters own any input-stride work storage; Plugin output
+                    // always uses the declared output channel count.
+                    let process_output_len = output_len;
                     ensure_len(&mut bufs.scratch_output, process_output_len);
                     let frames = Self::process_plugin_f64_isolated(
                         plugin.as_mut(),
@@ -2993,25 +3265,27 @@ impl DawHost {
                         .write(&bufs.scratch_output[..frames * node.output_channels()]);
                     frames
                 };
-                stage_cf = Some(match stage_cf {
-                    Some(prev) => prev.min(actual_output_frames),
-                    None => actual_output_frames,
-                });
-            }
-            if let Some(scf) = stage_cf {
-                cf = scf;
+                self.node_input_positions[nid] =
+                    self.node_input_positions[nid].saturating_add(cf as u64);
             }
         }
 
-        Self::collect_output_from_buffers(&self.output_nodes, &bufs.node_buffers, output, cf)
-            .map_err(|e| {
-                crate::rate_limited_log!(
-                    error,
-                    5,
-                    "host: f64 collect_output_from_buffers failed: {e}"
-                );
-                e
-            })?;
+        cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
+        Self::collect_output_from_buffers(
+            &self.output_nodes,
+            &mut bufs.node_buffers,
+            &mut bufs.compensation_delays,
+            output,
+            cf,
+        )
+        .map_err(|e| {
+            crate::rate_limited_log!(
+                error,
+                5,
+                "host: f64 collect_output_from_buffers failed: {e}"
+            );
+            e
+        })?;
         if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
             output[cf * out_ch..].fill(0.0);
             cf = nf;
@@ -3040,12 +3314,17 @@ impl DawHost {
 
         for idx in 0..self.chain_nodes.len() {
             let nid = self.chain_nodes[idx];
+            if idx == 0 {
+                self.node_input_positions[nid] = block_start_sample;
+            }
             let node = self
                 .nodes
                 .get(&nid)
                 .ok_or_else(|| format!("Missing node {nid} during f64 processing"))?;
             let is_last = idx + 1 == self.chain_nodes.len();
-            let output_frames = {
+            let output_frames = if self.bypassed[nid] {
+                current_frames
+            } else {
                 let plugin = self.plugins[nid].as_ref().unwrap();
                 Self::plugin_output_frames_for_input_isolated(
                     plugin.as_ref(),
@@ -3073,7 +3352,7 @@ impl DawHost {
                         &scratch_a[..current_len],
                         &mut output[..output_len],
                         current_rate,
-                        block_start_sample,
+                        self.node_input_positions[nid],
                         current_frames,
                     )?
                 } else {
@@ -3084,7 +3363,7 @@ impl DawHost {
                         &scratch_b[..current_len],
                         &mut output[..output_len],
                         current_rate,
-                        block_start_sample,
+                        self.node_input_positions[nid],
                         current_frames,
                     )?
                 }
@@ -3097,7 +3376,7 @@ impl DawHost {
                     &scratch_a[..current_len],
                     &mut scratch_b[..output_len],
                     current_rate,
-                    block_start_sample,
+                    self.node_input_positions[nid],
                     current_frames,
                 )?;
                 current_in_a = false;
@@ -3111,24 +3390,18 @@ impl DawHost {
                     &scratch_b[..current_len],
                     &mut scratch_a[..output_len],
                     current_rate,
-                    block_start_sample,
+                    self.node_input_positions[nid],
                     current_frames,
                 )?;
                 current_in_a = true;
                 frames
             };
 
+            self.node_input_positions[nid] =
+                self.node_input_positions[nid].saturating_add(current_frames as u64);
             current_frames = frames;
             current_len = frames * node.output_channels();
-            current_rate = {
-                let plugin = self.plugins[nid].as_ref().unwrap();
-                Self::plugin_output_sample_rate_isolated(
-                    plugin.as_ref(),
-                    nid,
-                    &node.name,
-                    current_rate,
-                )
-            };
+            current_rate = self.node_output_sample_rates[nid];
         }
 
         self.config.f64_chain_scratch = scratch_a;
@@ -3467,6 +3740,36 @@ impl DawHost {
         Ok(is)
     }
 
+    fn node_input_frames<T: AudioSample>(
+        id: NodeId,
+        source_frames: usize,
+        predecessors: &[Vec<GraphEdge>],
+        buffers: &[Option<NodeBuffer<T>>],
+    ) -> Result<usize, String> {
+        let mut frames = None;
+        for edge in &predecessors[id] {
+            let buffer = buffers[edge.from_node].as_ref().unwrap();
+            let count = buffer.actual_len / buffer.num_channels;
+            // Preserve the existing common-prefix behavior. Retaining the
+            // unmatched suffix requires per-edge queues (separate follow-up).
+            frames = Some(frames.map_or(count, |previous: usize| previous.min(count)));
+        }
+        Ok(frames.unwrap_or(source_frames))
+    }
+
+    fn terminal_output_frames<T: AudioSample>(
+        outputs: &[NodeId],
+        buffers: &[Option<NodeBuffer<T>>],
+    ) -> Result<usize, String> {
+        let mut frames = None;
+        for &id in outputs {
+            let buffer = buffers[id].as_ref().unwrap();
+            let count = buffer.actual_len / buffer.num_channels;
+            frames = Some(frames.map_or(count, |previous: usize| previous.min(count)));
+        }
+        Ok(frames.unwrap_or(0))
+    }
+
     /// Apply latency compensation delay (if any) to `src_data` for the given edge,
     /// then sum the result into `dest`. If no compensation is needed, sums directly.
     #[allow(
@@ -3560,7 +3863,8 @@ impl DawHost {
 
     pub(super) fn collect_output_from_buffers<T: AudioSample>(
         ons: &[NodeId],
-        nbs: &[Option<NodeBuffer<T>>],
+        nbs: &mut [Option<NodeBuffer<T>>],
+        delays: &mut CompensationDelays<T>,
         out: &mut [T],
         _nf: usize,
     ) -> Result<(), String> {
@@ -3570,8 +3874,14 @@ impl DawHost {
             out[..l].copy_from_slice(&d[..l]);
         } else {
             out.fill(T::default());
-            for &id in ons {
-                let d = nbs[id].as_ref().unwrap().read();
+            for (output_index, &id) in ons.iter().enumerate() {
+                let buffer = nbs[id].as_mut().unwrap();
+                let d = &mut buffer.data[..buffer.actual_len];
+                if let Some(delay) = delays.output_delays[output_index].as_mut() {
+                    for frame in d.chunks_exact_mut(buffer.num_channels) {
+                        delay.process_frame_in_place(frame);
+                    }
+                }
                 let l = d.len().min(out.len());
                 T::scale_add(&mut out[..l], &d[..l]);
             }
@@ -3580,10 +3890,18 @@ impl DawHost {
     }
 
     pub fn reset(&mut self) {
+        self.drain_state = DrainState::default();
+        self.reanchor_node_positions();
         for &id in self.nodes.keys() {
             if let Some(p) = self.plugins[id].as_mut() {
                 p.reset();
             }
+        }
+        if let Some(buffers) = self.process_buffers.as_mut() {
+            buffers.compensation_delays.reset();
+        }
+        if let Some(buffers) = self.process_buffers_f64.as_mut() {
+            buffers.compensation_delays.reset();
         }
     }
     pub fn total_latency_samples(&self) -> usize {
@@ -3609,6 +3927,35 @@ impl DawHost {
                 .max(1)
         }
     }
+    /// Use a common integer clock to retain fractions across consecutive converters.
+    /// Clock construction and all latency calculations run during graph setup.
+    fn latency_clock_rate(&self) -> Result<u128, String> {
+        self.node_output_sample_rates.iter().try_fold(
+            self.config.sample_rate.max(1) as u128,
+            |clock, &rate| {
+                let rate = rate.max(1) as u128;
+                let (mut a, mut b) = (clock, rate);
+                while b != 0 {
+                    (a, b) = (b, a % b);
+                }
+                (clock / a).checked_mul(rate).ok_or_else(|| {
+                    "Graph sample rates exceed the exact latency clock range".to_string()
+                })
+            },
+        )
+    }
+
+    fn latency_ticks_to_frames(ticks: u128, clock: u128, rate: u32) -> usize {
+        ticks
+            .div_ceil(clock / rate.max(1) as u128)
+            .min(usize::MAX as u128) as usize
+    }
+
+    fn convert_sample_position(position: u64, source_rate: u32, target_rate: u32) -> u64 {
+        ((position as u128 * target_rate as u128) / source_rate.max(1) as u128)
+            .min(u64::MAX as u128) as u64
+    }
+
     pub(super) fn compute_latency(&self) -> usize {
         self.output_nodes
             .iter()
@@ -3617,34 +3964,69 @@ impl DawHost {
             .unwrap_or(0)
     }
     pub(super) fn path_latency(&self, id: NodeId) -> usize {
-        // Bypassed nodes contribute zero latency
-        let l = if self.nodes.get(&id).is_some_and(|n| n.bypassed) {
+        let Ok(clock) = self.latency_clock_rate() else {
+            return usize::MAX;
+        };
+        let rate = self
+            .node_output_sample_rates
+            .get(id)
+            .copied()
+            .unwrap_or(self.config.sample_rate);
+        Self::latency_ticks_to_frames(self.path_latency_ticks(id, clock), clock, rate)
+    }
+
+    fn path_latency_ticks(&self, id: NodeId, clock: u128) -> u128 {
+        let own = if self.nodes.get(&id).is_some_and(|node| node.bypassed) {
             0
         } else {
             self.plugins[id].as_ref().unwrap().latency_samples()
         };
-        // Use pre-built predecessors list (no heap allocation, O(n) instead of O(2^n) for diamonds)
-        let preds = if id < self.predecessors.len() {
-            &self.predecessors[id]
-        } else {
-            // Fallback for nodes added after build() — scan edges
-            return l + self
-                .edges
-                .iter()
-                .filter(|e| e.to_node == id)
-                .map(|e| self.path_latency(e.from_node))
-                .max()
-                .unwrap_or(0);
+        let rate = self
+            .node_output_sample_rates
+            .get(id)
+            .copied()
+            .unwrap_or(self.config.sample_rate)
+            .max(1);
+        let own_ticks = (own as u128).saturating_mul(clock / rate as u128);
+        let edges = self.predecessors.get(id).unwrap_or(&self.edges);
+        let mut predecessors = edges.iter().filter(|edge| edge.to_node == id);
+        let Some(first) = predecessors.next() else {
+            return own_ticks;
         };
-        if preds.is_empty() {
-            l
-        } else {
-            l + preds
-                .iter()
-                .map(|e| self.path_latency(e.from_node))
-                .max()
-                .unwrap_or(0)
+        let first_ticks = self.path_latency_ticks(first.from_node, clock);
+        if predecessors.next().is_none() {
+            return own_ticks.saturating_add(first_ticks);
         }
+        let input_rate = self
+            .node_input_sample_rates
+            .get(id)
+            .copied()
+            .unwrap_or(self.config.sample_rate);
+        let max_frames = edges
+            .iter()
+            .filter(|edge| edge.to_node == id)
+            .map(|edge| {
+                Self::latency_ticks_to_frames(
+                    self.path_latency_ticks(edge.from_node, clock),
+                    clock,
+                    input_rate,
+                )
+            })
+            .max()
+            .unwrap_or(0);
+        let predecessor_ticks = edges
+            .iter()
+            .filter(|edge| edge.to_node == id)
+            .map(|edge| {
+                let ticks = self.path_latency_ticks(edge.from_node, clock);
+                let frames = Self::latency_ticks_to_frames(ticks, clock, input_rate);
+                ticks.saturating_add(
+                    (max_frames - frames) as u128 * (clock / input_rate.max(1) as u128),
+                )
+            })
+            .max()
+            .unwrap_or(0);
+        own_ticks.saturating_add(predecessor_ticks)
     }
     /// Compute the cumulative latency from graph inputs to each node, then create
     /// compensation delay buffers for edges feeding into merge points where path
@@ -3658,6 +4040,8 @@ impl DawHost {
         // For each node, the cumulative latency is:
         //   node's own latency + max(cumulative latency of predecessors)
         self.node_latency_from_input = vec![0; num_slots];
+        let clock = self.latency_clock_rate()?;
+        let mut latency_ticks = vec![0_u128; num_slots];
 
         // Process in topological order (stages are already computed)
         for stage in &self.stages {
@@ -3671,13 +4055,36 @@ impl DawHost {
                         .unwrap_or(0)
                 };
 
-                let max_pred_latency = self.predecessors[nid]
+                let max_pred_frames = self.predecessors[nid]
                     .iter()
-                    .map(|e| self.node_latency_from_input[e.from_node])
+                    .map(|edge| self.node_latency_from_input[edge.from_node])
                     .max()
                     .unwrap_or(0);
-
-                self.node_latency_from_input[nid] = own_latency + max_pred_latency;
+                // Integer compensation can add a fraction beyond the longest
+                // unrounded path. Carry that actual added delay into later
+                // rate conversions instead of discarding it at this merge.
+                let input_tick_scale = clock / self.node_input_sample_rates[nid] as u128;
+                let max_pred_ticks =
+                    self.predecessors[nid]
+                        .iter()
+                        .try_fold(0_u128, |maximum, edge| {
+                            let compensation =
+                                max_pred_frames - self.node_latency_from_input[edge.from_node];
+                            let ticks = (compensation as u128)
+                                .checked_mul(input_tick_scale)
+                                .and_then(|delay| latency_ticks[edge.from_node].checked_add(delay))
+                                .ok_or_else(|| {
+                                    "Graph compensation exceeds the exact clock range".to_string()
+                                })?;
+                            Ok::<_, String>(maximum.max(ticks))
+                        })?;
+                let rate = self.node_output_sample_rates[nid];
+                latency_ticks[nid] = (own_latency as u128)
+                    .checked_mul(clock / rate as u128)
+                    .and_then(|own_ticks| own_ticks.checked_add(max_pred_ticks))
+                    .ok_or_else(|| "Graph latency exceeds the exact clock range".to_string())?;
+                self.node_latency_from_input[nid] =
+                    Self::latency_ticks_to_frames(latency_ticks[nid], clock, rate);
             }
         }
 
@@ -3749,6 +4156,24 @@ impl DawHost {
                 }
             }
         }
+
+        // The host output is another merge point, even when no plugin joins
+        // the terminal branches. Align these paths before summing them.
+        let output_latency = self
+            .output_nodes
+            .iter()
+            .map(|&id| self.node_latency_from_input[id])
+            .max()
+            .unwrap_or(0);
+        delays.output_delays = self
+            .output_nodes
+            .iter()
+            .map(|&id| {
+                let compensation = output_latency - self.node_latency_from_input[id];
+                (compensation > 0)
+                    .then(|| DelayBuffer::new(compensation, self.nodes[&id].output_channels()))
+            })
+            .collect();
 
         Ok(delays)
     }

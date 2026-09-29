@@ -431,9 +431,6 @@ impl InPlacePlugin for Scale2Plugin {
         }
         Ok(context.num_frames)
     }
-    fn supports_f64(&self) -> bool {
-        true
-    }
 }
 
 #[test]
@@ -568,4 +565,196 @@ fn compiled_adapter_uses_the_same_transactional_block_validation() {
     assert!(result.unwrap_err().contains("non-finite"));
     assert_eq!(output, vec![3.0; 8]);
     assert_eq!(adapted.plugin.compiled_calls, 0);
+}
+
+/// Subtract a unity reference to expose information lost by an f32 conversion.
+struct NativePrecisionPlugin {
+    channels: usize,
+    sidechain: bool,
+    f32_calls: usize,
+    f64_calls: usize,
+}
+
+impl InPlacePlugin for NativePrecisionPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("NativePrecision", "1", "Test")
+    }
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn input_channels(&self) -> usize {
+        self.channels + usize::from(self.sidechain)
+    }
+    fn supports_bounded_subdivision(&self) -> bool {
+        true
+    }
+    fn parameters(&self) -> Vec<Parameter> {
+        Vec::new()
+    }
+    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> PluginResult<()> {
+        Ok(())
+    }
+    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+        None
+    }
+    fn supports_f64(&self) -> bool {
+        true
+    }
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        self.f32_calls += 1;
+        for frame in buffer.chunks_exact_mut(self.input_channels()) {
+            let reference = if self.sidechain {
+                frame[self.channels]
+            } else {
+                1.0
+            };
+            for sample in &mut frame[..self.channels] {
+                *sample -= reference;
+            }
+        }
+        Ok(context.num_frames)
+    }
+    fn process_in_place_f64(
+        &mut self,
+        buffer: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        self.f64_calls += 1;
+        for frame in buffer.chunks_exact_mut(self.input_channels()) {
+            let reference = if self.sidechain {
+                frame[self.channels]
+            } else {
+                1.0
+            };
+            for sample in &mut frame[..self.channels] {
+                *sample -= reference;
+            }
+        }
+        Ok(context.num_frames)
+    }
+}
+
+#[test]
+fn in_place_adapter_dispatches_native_f64_without_rounding_or_allocating() {
+    for channels in [1, 2, 6] {
+        for sidechain in [false, true] {
+            let mut plugin = InPlacePluginAdapter::new(NativePrecisionPlugin {
+                channels,
+                sidechain,
+                f32_calls: 0,
+                f64_calls: 0,
+            });
+            plugin.initialize(96_000).unwrap();
+            assert!(plugin.supports_f64());
+            for frames in [0, 1, 17, 257] {
+                let input_channels = channels + usize::from(sidechain);
+                let mut input = vec![1.0_f64; frames * input_channels];
+                let mut expected = Vec::with_capacity(frames * channels);
+                for (index, frame) in input.chunks_exact_mut(input_channels).enumerate() {
+                    for (channel, sample) in frame[..channels].iter_mut().enumerate() {
+                        *sample = if index % 7 == 6 {
+                            1.0e40
+                        } else {
+                            1.0 + (index + channel + 1) as f64 * 2.0_f64.powi(-40)
+                        };
+                        expected.push(*sample - 1.0);
+                    }
+                }
+                let mut output = vec![f64::NAN; frames * channels];
+                let context = ProcessContext::new(96_000, frames);
+                let mut done = usize::MAX;
+                crate::assert_no_allocs("native f64 in-place adapter", || {
+                    done = plugin.process_f64(&input, &mut output, &context).unwrap();
+                });
+                assert_eq!(done, frames);
+                assert_eq!(
+                    plugin.plugin.f32_calls, 0,
+                    "native DSP was converted to f32"
+                );
+                assert_eq!(
+                    &output[..expected.len()],
+                    expected.as_slice(),
+                    "channels={channels}, sidechain={sidechain}, frames={frames}"
+                );
+            }
+            assert_eq!(plugin.plugin.f64_calls, 4);
+        }
+    }
+}
+
+#[test]
+fn in_place_adapter_forwards_bounded_drain_and_its_context() {
+    struct TailPlugin {
+        remaining: usize,
+    }
+    impl InPlacePlugin for TailPlugin {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("Tail", "1", "Test")
+        }
+        fn channels(&self) -> usize {
+            2
+        }
+        fn parameters(&self) -> Vec<Parameter> {
+            Vec::new()
+        }
+        fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> PluginResult<()> {
+            Ok(())
+        }
+        fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+        fn process_in_place(
+            &mut self,
+            _: &mut [f32],
+            context: &ProcessContext,
+        ) -> PluginResult<usize> {
+            Ok(context.num_frames)
+        }
+        fn drain_output_frames_max(&self) -> usize {
+            1
+        }
+        fn drain(
+            &mut self,
+            output: &mut [f32],
+            context: &ProcessContext,
+        ) -> PluginResult<super::PluginDrainResult> {
+            if self.remaining == 0 {
+                return Ok(super::PluginDrainResult::COMPLETE);
+            }
+            if output.len() < 2 {
+                return Err("tail buffer too small".into());
+            }
+            assert_eq!(context.num_frames, 0);
+            output[0] = context.transport.sample_position as f32;
+            output[1] = context.sample_rate as f32;
+            self.remaining -= 1;
+            Ok(super::PluginDrainResult {
+                frames: 1,
+                complete: self.remaining == 0,
+            })
+        }
+    }
+    let mut adapter = InPlacePluginAdapter::new(TailPlugin { remaining: 2 });
+    assert_eq!(adapter.drain_output_frames_max(), 1);
+    let mut context = ProcessContext::new(48_000, 0);
+    context.transport.sample_position = 123;
+    assert!(adapter.drain(&mut [0.0; 1], &context).is_err());
+    assert_eq!(adapter.plugin.remaining, 2);
+    let mut output = [0.0; 2];
+    crate::assert_no_allocs("in-place adapter drain forwarding", || {
+        let first = adapter.drain(&mut output, &context).unwrap();
+        assert_eq!(first.frames, 1);
+        assert!(!first.complete);
+        assert_eq!(output, [123.0, 48_000.0]);
+        let second = adapter.drain(&mut output, &context).unwrap();
+        assert_eq!(second.frames, 1);
+        assert!(second.complete);
+        let completed = adapter.drain(&mut output, &context).unwrap();
+        assert_eq!(completed.frames, 0);
+        assert!(completed.complete);
+    });
 }

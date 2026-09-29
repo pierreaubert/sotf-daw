@@ -435,11 +435,11 @@ fn test_noise_shaping_feedback_excludes_dither_term() {
         .process_in_place(&mut buffer, &make_context(1))
         .unwrap();
 
-    let shaped = input;
-    let dithered = shaped + tpdf * plugin.inv_scale;
-    let quantized = (dithered * plugin.scale).round() * plugin.inv_scale;
-    let expected_error = quantized - dithered;
-    let stale_error = quantized - shaped;
+    let shaped = f64::from(input);
+    let dithered = shaped + f64::from(tpdf) * f64::from(plugin.inv_scale);
+    let quantized = (dithered * f64::from(plugin.scale)).round() * f64::from(plugin.inv_scale);
+    let expected_error = (quantized - dithered) as f32;
+    let stale_error = (quantized - shaped) as f32;
 
     assert!(
         tpdf.abs() > 0.0,

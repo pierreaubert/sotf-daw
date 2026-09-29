@@ -1,5 +1,17 @@
 # 0.5.12
 
+## Finite-stream completion
+
+- Emit retained vocoder audio through bounded 512-frame drain calls, preserving
+  the existing 2047-frame delay and final effective correction ratio.
+- Freeze adaptive estimators, correction-strength smoothing and diagnostics
+  during padding; expose conservative finite-tail and current drain-call bounds.
+- Reject post-EOF input/control changes until reset, while accepting identical
+  snapshots without metadata rebuilds. Reinitialization resets learned ratios.
+- Add independent delayed-source and exact continuation references, all-hop-phase
+  and boundary matrices, adaptive-history snapshots, transactional lifecycle and
+  cold allocation/deallocation regressions.
+
 ## Formant preservation
 
 - Add opt-in structural `formant_preservation` and `formant_strength` controls

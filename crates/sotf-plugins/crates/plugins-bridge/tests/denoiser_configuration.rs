@@ -1,0 +1,44 @@
+//! Denoiser JSON and saved state retain persistent mode controls.
+
+// Rust guideline compliant 2026-02-21
+use plugins_bridge::{
+    create_plugin,
+    state::{load_state, save_state},
+};
+use sotf_host::{ParameterId, ParameterValue};
+
+#[test]
+fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
+    let mut plugin = create_plugin(
+        "Denoiser",
+        2,
+        48_000,
+        r#"{"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9}"#,
+    )
+    .unwrap();
+    plugin.initialize(48_000).unwrap();
+    for (id, expected) in [
+        ("harmonic_percussive", ParameterValue::Bool(true)),
+        ("spatial_denoise", ParameterValue::Bool(true)),
+        ("spatial_strength", ParameterValue::Float(0.9)),
+    ] {
+        assert_eq!(plugin.get_parameter(&ParameterId::from(id)), Some(expected));
+    }
+    let saved = save_state(plugin.as_ref());
+    let mut restored = create_plugin("Denoiser", 2, 48_000, "{}").unwrap();
+    restored.initialize(48_000).unwrap();
+    load_state(restored.as_mut(), &saved).unwrap();
+    assert_eq!(save_state(restored.as_ref()), saved);
+}
+
+#[test]
+fn bridge_rejects_invalid_denoiser_constructor_controls() {
+    for config in [
+        r#"{"spatial_strength":-0.01}"#,
+        r#"{"spatial_strength":1.01}"#,
+        r#"{"harmonic_percussive":1}"#,
+        r#"{"spatial_denoise":"true"}"#,
+    ] {
+        assert!(create_plugin("Denoiser", 2, 48_000, config).is_err());
+    }
+}

@@ -62,6 +62,7 @@ members = [
     "crates/driver-common",
     "crates/driver-hal",
 ]
+exclude = ["crates/3rdparties/nih-plug", "crates/3rdparties/rubato"]
 resolver = "3"
 
 [workspace.package]
@@ -143,7 +144,7 @@ sotf-testkit = { path = "crates/sotf-testkit" }
 anyhow = { version = "1.0" }
 approx = "0.5"
 arc-swap = "1"
-audioadapter-buffers = "2.0"
+audioadapter-buffers = "5"
 bincode = { version = "2.0.1", features = ["serde"] }
 bytemuck = { version = "1.14", features = ["derive"] }
 cbindgen = "0.28"
@@ -192,7 +193,9 @@ ratatui = "0.30"
 rayon = "1.11"
 realfft = "3.5"
 rtrb = "0.4"
-rubato = "1.0"
+# Private fork of rubato 5.0.0 (exact variable-ratio sizing, prepared cutoff
+# tables); the single rubato in this workspace. See crates/3rdparties/rubato/SOTF_FORK.md.
+rubato = { path = "crates/3rdparties/rubato" }
 rusqlite = { version = "0.38" }
 rustfft = "6.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -291,3 +294,14 @@ coreaudio-rs = { path = "crates/3rdparties/coreaudio-rs" }
 wgpu = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }
 wgpu-core = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }
 wgpu-hal = { git = "https://github.com/zed-industries/wgpu.git", rev = "357a0c56e0070480ad9daea5d2eaa83150b79e88" }
+
+# Pinned NIH with narrowly scoped CLAP event-offset and transport fixes.
+[patch."https://github.com/robbert-vdh/nih-plug.git"]
+nih_plug = { path = "crates/3rdparties/nih-plug" }
+
+[patch."https://github.com/pierreaubert/math-audio"]
+# Sibling checkout (all_of_sotf layout), same as sotf: math-dsp is a SotF
+# crate, edited in place in ../math-audio. Both entries stay on the same
+# revision so DSP primitives and their public IIR types match.
+math-dsp = { path = "../math-audio/crates/math-dsp" }
+math-iir-fir = { path = "../math-audio/crates/math-iir-fir" }

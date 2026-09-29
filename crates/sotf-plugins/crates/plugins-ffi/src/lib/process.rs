@@ -63,10 +63,25 @@ pub(super) unsafe fn process_impl(
         .plugin
         .process(input_slice, output_slice, context)
     {
-        Ok(_) => PluginError::Success,
-        Err(_) => PluginError::ProcessingFailed,
+        Ok(frames) if frames == num_frames => PluginError::Success,
+        Ok(_) => {
+            // The C ABI has no produced-frame count or drain operation. Every
+            // successful call must fill the complete fixed-frame destination.
+            output_slice.fill(0.0);
+            set_last_error_static(c"Plugin returned an unexpected audio frame count");
+            PluginError::ProcessingFailed
+        }
+        Err(_) => {
+            output_slice.fill(0.0);
+            set_last_error_static(c"Plugin audio processing failed");
+            PluginError::ProcessingFailed
+        }
     }
 }
+
+#[cfg(test)]
+#[path = "process_tests.rs"]
+mod tests;
 
 #[inline]
 pub(super) unsafe fn process_with_ffi_events_impl(

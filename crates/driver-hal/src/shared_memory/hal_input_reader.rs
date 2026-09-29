@@ -6,6 +6,7 @@ use super::misc::get_shared_memory_path;
 use super::shared_audio_buffer::SharedAudioBuffer;
 use super::shared_audio_buffer::load_initial_cipher;
 use super::types::read_encrypted_with_staging;
+use crate::reader_state::StagedPlaintext;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Reader adapter for HAL input.
@@ -21,8 +22,7 @@ pub struct HalInputReader {
     pub(super) encrypted_samples_buf: Vec<f32>,
     pub(super) ciphertext_buf: Vec<u8>,
     pub(super) decrypted_record_buf: Vec<f32>,
-    pub(super) pending_decrypted_samples: Vec<f32>,
-    pub(super) pending_sample_offset: usize,
+    pub(super) pending: StagedPlaintext,
     pub(super) key_mismatch_count: AtomicU64,
 }
 
@@ -61,8 +61,7 @@ impl HalInputReader {
                     encrypted_samples_buf: Vec::with_capacity(encrypted_slots),
                     ciphertext_buf: Vec::with_capacity(ciphertext_bytes),
                     decrypted_record_buf: Vec::with_capacity(pre_alloc),
-                    pending_decrypted_samples: Vec::with_capacity(pre_alloc),
-                    pending_sample_offset: 0,
+                    pending: StagedPlaintext::new(pre_alloc),
                     key_mismatch_count: AtomicU64::new(0),
                 })
             }
@@ -79,6 +78,9 @@ impl HalInputReader {
     /// while the cached cipher's fingerprint disagrees with the header's
     /// — call this to recover.
     pub fn reload_cipher(&mut self) -> std::io::Result<()> {
+        // Even a failed/same-key reload is an explicit session boundary.
+        self.pending.invalidate();
+        self.cipher = None;
         if let Some(buf) = self.buffer.as_ref() {
             let key = crate::encryption::load_session_key()?;
             let cipher = crate::encryption::AudioCipher::new(&key);
@@ -136,43 +138,54 @@ impl HalInputReader {
     /// formatting. If encryption is on and the cached cipher's fingerprint
     /// no longer matches the header, returns silence.
     pub fn read(&mut self, buffer: &mut [f32]) -> usize {
-        if let Some(buf) = &self.buffer {
-            if buf.is_encrypted() {
-                let header_fingerprint = buf.key_fingerprint();
-                let fingerprint_ok = self
-                    .cipher
-                    .as_ref()
-                    .map(|c| fingerprints_equal(c.fingerprint(), &header_fingerprint))
-                    .unwrap_or(false);
+        let Some(buf) = &self.buffer else {
+            self.pending.invalidate();
+            buffer.fill(0.0);
+            return 0;
+        };
+        let Some(mut commit) = buf.try_read_commit() else {
+            self.pending.invalidate();
+            buffer.fill(0.0);
+            return 0;
+        };
+        let identity = commit.identity();
+        self.pending.observe(identity);
+        if !identity.valid() {
+            buffer.fill(0.0);
+            return 0;
+        }
 
-                if !fingerprint_ok {
-                    self.key_mismatch_count.fetch_add(1, Ordering::Relaxed);
-                    // RT-safe: silence until a control thread calls
-                    // `reload_cipher`. No disk I/O on the audio path.
-                    buffer.fill(0.0);
-                    return 0;
-                }
-
-                if let Some(cipher) = &self.cipher {
-                    return read_encrypted_with_staging(
-                        buf,
-                        buffer,
-                        cipher,
-                        &mut self.encrypted_samples_buf,
-                        &mut self.ciphertext_buf,
-                        &mut self.decrypted_record_buf,
-                        &mut self.pending_decrypted_samples,
-                        &mut self.pending_sample_offset,
-                    );
-                }
+        let frames = if identity.encrypted {
+            let matching_cipher = self.cipher.as_ref().filter(|cipher| {
+                fingerprints_equal(cipher.fingerprint(), &identity.key_fingerprint)
+            });
+            let Some(cipher) = matching_cipher else {
+                self.pending.invalidate();
+                self.key_mismatch_count.fetch_add(1, Ordering::Relaxed);
                 buffer.fill(0.0);
                 return 0;
-            }
-
-            buf.read_audio(buffer)
+            };
+            read_encrypted_with_staging(
+                &mut commit,
+                identity,
+                buffer,
+                cipher,
+                &mut self.encrypted_samples_buf,
+                &mut self.ciphertext_buf,
+                &mut self.decrypted_record_buf,
+                &mut self.pending,
+            )
         } else {
-            0
+            // observe() already discarded encrypted leftovers.
+            commit.read_audio(buffer)
+        };
+
+        if commit.identity() != identity {
+            self.pending.invalidate();
+            buffer.fill(0.0);
+            return 0;
         }
+        frames
     }
 
     /// Number of audio reads suppressed because the cached session key did
@@ -211,16 +224,28 @@ impl HalInputReader {
 
     /// Get available frames to read.
     pub fn available_read_frames(&self) -> usize {
-        let shared_frames = self
-            .buffer
-            .as_ref()
-            .map(|b| b.available_read_frames())
-            .unwrap_or(0);
-        let pending_samples = self
-            .pending_decrypted_samples
-            .len()
-            .saturating_sub(self.pending_sample_offset);
-        let channels = self.channel_count() as usize;
-        shared_frames + pending_samples.checked_div(channels).unwrap_or(0)
+        let Some(buf) = &self.buffer else {
+            return 0;
+        };
+        let Some(mut commit) = buf.try_read_commit() else {
+            return 0;
+        };
+        let identity = commit.identity();
+        if !identity.valid()
+            || (identity.encrypted
+                && !self.cipher.as_ref().is_some_and(|cipher| {
+                    fingerprints_equal(cipher.fingerprint(), &identity.key_fingerprint)
+                }))
+        {
+            return 0;
+        }
+        let available = commit
+            .available_read_frames()
+            .saturating_add(self.pending.remaining_frames(identity));
+        if commit.identity() == identity {
+            available
+        } else {
+            0
+        }
     }
 }

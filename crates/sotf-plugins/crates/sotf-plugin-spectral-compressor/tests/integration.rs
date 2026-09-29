@@ -169,23 +169,20 @@ fn mix_zero_passthrough() {
 
 #[test]
 fn compression_reduces_loud_signal() {
-    let mut plugin =
-        SpectralCompressorPlugin::from_params(2, SpectralCompressorPluginParams::default());
-    plugin
-        .set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
-        .unwrap();
-    plugin
-        .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-40.0))
-        .unwrap();
-    plugin
-        .set_parameter(ParameterId::from("ratio"), ParameterValue::Float(10.0))
-        .unwrap();
-    plugin
-        .set_parameter(ParameterId::from("attack"), ParameterValue::Float(0.1))
-        .unwrap();
-    plugin
-        .set_parameter(ParameterId::from("release"), ParameterValue::Float(10.0))
-        .unwrap();
+    // Test the requested static compression law, without a concurrent 20 ms
+    // threshold transition from the default value. Startup must not be muted
+    // to hide that legitimate control transient.
+    let mut plugin = SpectralCompressorPlugin::from_params(
+        2,
+        SpectralCompressorPluginParams {
+            mix: 1.0,
+            threshold_db: -40.0,
+            ratio: 10.0,
+            attack_ms: 0.1,
+            release_ms: 10.0,
+            ..Default::default()
+        },
+    );
 
     let num_frames = 8_192;
     let mut buffer = make_sine(48_000, 1_000.0, num_frames, plugin.channels());
@@ -196,7 +193,10 @@ fn compression_reduces_loud_signal() {
 
     assert!(buffer.iter().all(|s| s.is_finite()));
 
-    let skip = plugin.latency_samples().max(512);
+    // The last negative-origin window ends at source time N-H. Measure the
+    // steady sine only once output no longer contains that padded onset.
+    let n = plugin.latency_samples();
+    let skip = n + n - n / 4;
     let tail_peak = buffer[skip * plugin.channels()..]
         .iter()
         .map(|s| s.abs())

@@ -20,6 +20,7 @@ fn main() {
         release_ms: 20.0,
         mode: "Split-Band".to_string(),
         mix: 1.0,
+        ..Default::default()
     };
 
     let mut inner =

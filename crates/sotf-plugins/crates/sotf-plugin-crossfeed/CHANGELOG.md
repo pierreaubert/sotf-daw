@@ -1,3 +1,14 @@
+# Unreleased
+
+## Fixes
+
+- Publish AutoGain measurements on a causal 10 Hz accepted-sample clock. A
+  completed measurement interval affects only subsequent audio, so fixed-mode
+  output no longer depends on callback partitions or a later callback suffix.
+- Prepare stereo reference storage at construction. AutoGain-disabled callbacks
+  retain their existing frozen-meter policy; reset and initialization restart
+  the measurement phase. Raw processing and the separate mix ramp are unchanged.
+
 # 0.5.14
 
 ## Features (2026-08-13 retained review gap)

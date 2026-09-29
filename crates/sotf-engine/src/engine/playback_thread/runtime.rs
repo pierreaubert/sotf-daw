@@ -143,7 +143,64 @@ struct DrainState {
     drain_start: Option<Instant>,
     drain_timeout: Duration,
     flush_mode: FlushMode,
+    // Control commands and FIFO stream markers travel through different
+    // queues. Pause/Resume must not erase an outstanding stream boundary.
+    stream_flush_pending: bool,
+    paused: bool,
 }
+
+impl DrainState {
+    fn begin_drop(&mut self, mode: FlushMode) {
+        if matches!(mode, FlushMode::DroppingUntilFlush) {
+            self.stream_flush_pending = true;
+            self.paused = false;
+        } else {
+            self.paused = true;
+        }
+        self.end_of_stream = false;
+        self.drain_start = None;
+        self.update_flush_mode(false);
+    }
+
+    fn resume(&mut self, callback_flush_completed: bool) {
+        self.paused = false;
+        self.update_flush_mode(callback_flush_completed);
+    }
+
+    fn stream_flushed(&mut self, callback_flush_completed: bool) {
+        self.stream_flush_pending = false;
+        self.end_of_stream = false;
+        self.drain_start = None;
+        self.update_flush_mode(callback_flush_completed);
+    }
+
+    fn update_flush_mode(&mut self, callback_flush_completed: bool) {
+        self.flush_mode = if self.stream_flush_pending {
+            FlushMode::DroppingUntilFlush
+        } else if self.paused {
+            FlushMode::DroppingUntilResume
+        } else if callback_flush_completed {
+            FlushMode::Normal
+        } else {
+            FlushMode::WaitingForDrain
+        };
+    }
+
+    fn callback_flushed(&mut self) {
+        self.update_flush_mode(true);
+    }
+
+    fn drops_frames(&self) -> bool {
+        matches!(
+            self.flush_mode,
+            FlushMode::DroppingUntilFlush | FlushMode::DroppingUntilResume
+        )
+    }
+}
+
+#[cfg(test)]
+#[path = "runtime_protocol_tests.rs"]
+mod protocol_tests;
 
 struct RecoveryState {
     last_callback_count: u64,
@@ -339,6 +396,8 @@ impl PlaybackRuntime {
                 drain_start: None,
                 drain_timeout: Duration::from_secs(2),
                 flush_mode: FlushMode::Normal,
+                stream_flush_pending: false,
+                paused: false,
             },
             recovery: RecoveryState {
                 last_callback_count: 0,
@@ -408,18 +467,15 @@ impl PlaybackRuntime {
             }
             PlaybackCommand::Pause => {
                 request_flush(&self.state);
-                self.drain.flush_mode = FlushMode::DroppingUntilResume;
-                self.drain.end_of_stream = false;
-                self.drain.drain_start = None;
+                self.drain.begin_drop(FlushMode::DroppingUntilResume);
                 RuntimeDecision::Proceed
             }
             PlaybackCommand::Resume => {
-                self.drain.flush_mode =
-                    if flush_completed(&self.state, &self.producer, self.buffer_capacity) {
-                        FlushMode::Normal
-                    } else {
-                        FlushMode::WaitingForDrain
-                    };
+                self.drain.resume(flush_completed(
+                    &self.state,
+                    &self.producer,
+                    self.buffer_capacity,
+                ));
                 RuntimeDecision::Proceed
             }
             PlaybackCommand::UpdateSampleRate(new_sample_rate) => {
@@ -433,9 +489,7 @@ impl PlaybackRuntime {
                 self.state.reset_output_meter();
                 self.diagnostics.last_meter_report = Instant::now();
                 request_flush(&self.state);
-                self.drain.flush_mode = FlushMode::DroppingUntilFlush;
-                self.drain.end_of_stream = false;
-                self.drain.drain_start = None;
+                self.drain.begin_drop(FlushMode::DroppingUntilFlush);
                 RuntimeDecision::Proceed
             }
             PlaybackCommand::Shutdown => {
@@ -889,7 +943,7 @@ impl PlaybackRuntime {
         if flush_completed(&self.state, &self.producer, self.buffer_capacity) {
             self.state.reset_output_meter();
             self.diagnostics.last_meter_report = Instant::now();
-            self.drain.flush_mode = FlushMode::Normal;
+            self.drain.callback_flushed();
             RuntimeDecision::Proceed
         } else {
             std::thread::sleep(Duration::from_millis(1));
@@ -1059,7 +1113,7 @@ impl PlaybackRuntime {
         self.recovery.last_stream_error_count = 0;
         self.recovery.last_callback_check = Instant::now();
         self.recovery.last_reported_underruns = 0;
-        self.drain.flush_mode = FlushMode::Normal;
+        self.drain.callback_flushed();
         self.drain.end_of_stream = false;
         self.drain.drain_start = None;
 
@@ -1237,10 +1291,7 @@ impl PlaybackRuntime {
     }
 
     fn handle_frame(&mut self, frame: super::super::AudioFrame) -> RuntimeDecision {
-        if matches!(
-            self.drain.flush_mode,
-            FlushMode::DroppingUntilFlush | FlushMode::DroppingUntilResume
-        ) {
+        if self.drain.drops_frames() {
             self.accounting.frames_dropped += 1;
             recycle_frame_data(&self.recycle_tx, frame.data, "flush drop");
             return RuntimeDecision::Continue;
@@ -1264,10 +1315,7 @@ impl PlaybackRuntime {
                     recycle_frame_data(&self.recycle_tx, frame.data, "shutdown frame drop");
                     return RuntimeDecision::Break;
                 }
-                if matches!(
-                    self.drain.flush_mode,
-                    FlushMode::DroppingUntilFlush | FlushMode::DroppingUntilResume
-                ) {
+                if self.drain.drops_frames() {
                     self.accounting.frames_dropped += 1;
                     recycle_frame_data(&self.recycle_tx, frame.data, "paused frame drop");
                     return RuntimeDecision::Continue;
@@ -1316,10 +1364,7 @@ impl PlaybackRuntime {
     }
 
     fn handle_end_of_stream(&mut self) -> RuntimeDecision {
-        if matches!(
-            self.drain.flush_mode,
-            FlushMode::DroppingUntilFlush | FlushMode::DroppingUntilResume
-        ) {
+        if self.drain.drops_frames() {
             return RuntimeDecision::Continue;
         }
         log::debug!("[Playback Thread] End of stream - starting drain");
@@ -1330,16 +1375,12 @@ impl PlaybackRuntime {
 
     fn handle_flush(&mut self) -> RuntimeDecision {
         request_flush(&self.state);
-        self.drain.end_of_stream = false;
-        self.drain.drain_start = None;
-        self.drain.flush_mode =
-            if flush_completed(&self.state, &self.producer, self.buffer_capacity) {
-                self.state.reset_output_meter();
-                self.diagnostics.last_meter_report = Instant::now();
-                FlushMode::Normal
-            } else {
-                FlushMode::WaitingForDrain
-            };
+        let completed = flush_completed(&self.state, &self.producer, self.buffer_capacity);
+        if completed {
+            self.state.reset_output_meter();
+            self.diagnostics.last_meter_report = Instant::now();
+        }
+        self.drain.stream_flushed(completed);
         RuntimeDecision::Continue
     }
 

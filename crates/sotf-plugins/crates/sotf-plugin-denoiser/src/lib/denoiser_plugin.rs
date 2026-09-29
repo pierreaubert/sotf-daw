@@ -14,7 +14,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_plugin_pnd::analysis::PndAnalyzer;
 use std::any::Any;
@@ -150,6 +151,13 @@ pub(super) struct DenoiserIo {
     pub output_write_pos: usize,    // next overlap-add write position
     pub output_accumulator_fill: usize, // frames available for reading
     pub startup_padding_remaining: usize,
+    pub synthesis_discard: usize,
+    pub has_input: bool,
+    pub source_phase: usize,
+    pub drain_remaining: Option<usize>,
+    pub drain_cache: Vec<f32>,
+    pub drain_frames: usize,
+    pub drain_pos: usize,
     pub time_out_channels: Vec<Vec<f32>>,
 }
 
@@ -396,14 +404,21 @@ impl DenoiserPlugin {
 
             io: DenoiserIo {
                 input_buffer,
-                input_buffer_fill: 0,
+                input_buffer_fill: (fft_size - hop_size) * channels,
                 temp_input_block: vec![0.0_f32; temp_input_block_len],
                 output_accumulator,
                 output_ring_mask: ring_capacity - 1,
                 output_read_pos: 0,
-                output_write_pos: 0,
+                output_write_pos: ring_capacity - hop_size,
                 output_accumulator_fill: 0,
                 startup_padding_remaining: fft_size,
+                synthesis_discard: hop_size,
+                has_input: false,
+                source_phase: 0,
+                drain_remaining: None,
+                drain_cache: vec![0.0; hop_size * channels],
+                drain_frames: 0,
+                drain_pos: 0,
                 time_out_channels,
             },
 
@@ -558,6 +573,92 @@ impl DenoiserPlugin {
         self.ui.cached_parameters = param_bridge::build_parameters(DN, |i| self.param_value(i));
     }
 
+    fn apply_value_refs<'a>(
+        &mut self,
+        values: impl Iterator<Item = (&'a ParameterId, &'a ParameterValue)> + Clone,
+    ) -> PluginResult<()> {
+        if self.io.drain_remaining.is_some() {
+            return Err("Reset denoiser before changing parameters after drain starts".into());
+        }
+        for (id, value) in values.clone() {
+            if id.as_str() == "low_latency" {
+                let requested = value
+                    .as_bool()
+                    .ok_or_else(|| "low_latency requires a boolean".to_string())?;
+                if requested != self.params.low_latency {
+                    return Err("low_latency is structural; recreate the denoiser".to_string());
+                }
+            }
+            if id.as_str() == "multi_resolution" {
+                let requested = value
+                    .as_bool()
+                    .ok_or_else(|| "multi_resolution requires a boolean".to_string())?;
+                if requested != self.multi_res.multi_resolution {
+                    return Err("multi_resolution is structural; recreate the denoiser".to_string());
+                }
+            }
+        }
+        for (id, value) in values {
+            let idx = param_bridge::set_parameter(DN, id, value, |i, v| {
+                self.set_param_value(i, v);
+            })?;
+            // Side effects based on which parameter changed
+            match idx {
+                0 => {
+                    // reduction_db -> recompute reduction_linear
+                    self.coeffs.reduction_linear = 10.0_f32.powf(self.params.reduction_db / 10.0);
+                }
+                1 => {
+                    // floor_db -> recompute floor_linear
+                    self.coeffs.floor_linear = 10.0_f32.powf(self.params.floor_db / 20.0);
+                }
+                2 => {
+                    // smoothing -> recompute frequency smoothing kernel
+                    self.gains.freq_smooth_kernel =
+                        Self::compute_smoothing_kernel(self.params.smoothing);
+                }
+                3 | 4 => {
+                    // attack_ms or release_ms -> recompute envelope coefficients
+                    self.update_envelope_coefficients();
+                }
+                7..=10 => {
+                    if let Some(ref mut state) = self.multi_res.multi_res_state {
+                        state.set_mcra_parameters(
+                            self.mcra.mcra_alpha_s,
+                            self.mcra.mcra_alpha_p,
+                            self.mcra.mcra_l,
+                            self.mcra.mcra_delta,
+                        );
+                    }
+                }
+                20
+                    // learn_noise (trigger param)
+                    if value.as_bool().unwrap_or(false) => {
+                        self.start_learning();
+                    }
+                22
+                    // clear_profile (trigger param)
+                    if value.as_bool().unwrap_or(false) => {
+                        self.clear_noise_profile();
+                    }
+                _ => {}
+            }
+        }
+        // Refresh primitive cached values in place. Profile triggers can also
+        // change Learn/Use Profile, so update every value without replacing the
+        // prepared schema or any of its owned metadata.
+        for index in 0..self.ui.cached_parameters.len() {
+            if let Some(value) =
+                param_bridge::get_parameter(DN, &self.ui.cached_parameters[index].id, |i| {
+                    self.param_value(i)
+                })
+            {
+                self.ui.cached_parameters[index].default_value = value;
+            }
+        }
+        Ok(())
+    }
+
     /// Create a new denoiser plugin from configuration parameters
     pub fn from_params(channels: usize, params: DenoiserPluginParams) -> Self {
         Self::try_from_params(channels, params).expect("valid denoiser configuration")
@@ -592,6 +693,7 @@ impl DenoiserPlugin {
         validate_float!(spectral_sub_alpha, "spectral_sub_alpha");
         validate_float!(spectral_sub_beta, "spectral_sub_beta");
         validate_float!(formant_strength, "formant_strength");
+        validate_float!(spatial_strength, "spatial_strength");
         let mcra_l = pk(DN, "mcra_l");
         if params.mcra_l < mcra_l.min_f64() as usize || params.mcra_l > mcra_l.max_f64() as usize {
             return Err(format!("Invalid denoiser mcra_l: {}", params.mcra_l));
@@ -670,6 +772,10 @@ impl DenoiserPlugin {
             ));
         }
 
+        plugin.params.harmonic_percussive = params.harmonic_percussive;
+        plugin.params.spatial_denoise = params.spatial_denoise;
+        plugin.params.spatial_strength = params.spatial_strength;
+
         plugin.rebuild_cached_parameters();
         Ok(plugin)
     }
@@ -687,7 +793,7 @@ impl DenoiserPlugin {
     }
 
     /// Process one FFT block
-    pub(super) fn process_fft_block(&mut self) -> Result<(), String> {
+    pub(super) fn process_fft_block(&mut self, capture_noise: bool) -> Result<(), String> {
         // Extract block from input buffer (fft_size * channels samples)
         let block_samples = self.config.fft_size * self.config.channels;
 
@@ -714,7 +820,7 @@ impl DenoiserPlugin {
         let bootstrapping = self.update_noise_estimation();
 
         // Phase 2b: Noise profile learning (if active)
-        if self.noise_profile.is_learning {
+        if self.noise_profile.is_learning && capture_noise {
             self.accumulate_noise_frame();
         }
 
@@ -802,6 +908,9 @@ impl DenoiserPlugin {
                 .zip(self.fft.synthesis_window.iter())
                 .enumerate()
                 .take(self.config.fft_size)
+                // Negative synthesis belongs before source time zero, not a
+                // later revolution of the circular accumulator.
+                .skip(self.io.synthesis_discard)
             {
                 let idx = (self.io.output_write_pos + i) & mask;
                 accum[idx] += t * w;
@@ -810,7 +919,11 @@ impl DenoiserPlugin {
 
         // Advance write position by hop_size for next block
         self.io.output_write_pos = (self.io.output_write_pos + self.config.hop_size) & mask;
-        self.io.output_accumulator_fill += self.config.hop_size;
+        if self.io.synthesis_discard > 0 {
+            self.io.synthesis_discard -= self.config.hop_size;
+        } else {
+            self.io.output_accumulator_fill += self.config.hop_size;
+        }
     }
 
     /// Drain available frames from ring-buffer accumulator to output buffer.
@@ -839,191 +952,15 @@ impl DenoiserPlugin {
 
         frames_to_drain
     }
-}
-
-impl ParametricInPlacePlugin for DenoiserPlugin {
-    fn info(&self) -> PluginInfo {
-        PluginInfo::new("Denoiser", "1.0.0", "SotF")
-            .with_description("Wiener filter denoiser with MCRA noise estimation")
-    }
-
-    fn cost_class(&self) -> PluginCostClass {
-        PluginCostClass::Fft
-    }
-
-    fn compile_metadata(&self) -> PluginCompileMetadata {
-        PluginCompileMetadata::nonlinear(PluginCostClass::Fft, None, self.latency_samples(), false)
-    }
-
-    fn channels(&self) -> usize {
-        self.config.channels
-    }
-
-    fn parameter_schema(&self) -> ParameterSchema {
-        self.ui.cached_parameters.clone()
-    }
-
-    fn current_values(&self) -> ParameterSet {
-        self.ui
-            .cached_parameters
-            .iter()
-            .map(|p| (p.id.clone(), p.default_value.clone()))
-            .collect()
-    }
-
-    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, value) in &values {
-            if id.as_str() == "low_latency" {
-                let requested = value
-                    .as_bool()
-                    .ok_or_else(|| "low_latency requires a boolean".to_string())?;
-                if requested != self.params.low_latency {
-                    return Err("low_latency is structural; recreate the denoiser".to_string());
-                }
-            }
-            if id.as_str() == "multi_resolution" {
-                let requested = value
-                    .as_bool()
-                    .ok_or_else(|| "multi_resolution requires a boolean".to_string())?;
-                if requested != self.multi_res.multi_resolution {
-                    return Err("multi_resolution is structural; recreate the denoiser".to_string());
-                }
-            }
-        }
-        for (id, value) in values {
-            let idx = param_bridge::set_parameter(DN, &id, &value, |i, v| {
-                self.set_param_value(i, v);
-            })?;
-            // Side effects based on which parameter changed
-            match idx {
-                0 => {
-                    // reduction_db -> recompute reduction_linear
-                    self.coeffs.reduction_linear = 10.0_f32.powf(self.params.reduction_db / 10.0);
-                }
-                1 => {
-                    // floor_db -> recompute floor_linear
-                    self.coeffs.floor_linear = 10.0_f32.powf(self.params.floor_db / 20.0);
-                }
-                2 => {
-                    // smoothing -> recompute frequency smoothing kernel
-                    self.gains.freq_smooth_kernel =
-                        Self::compute_smoothing_kernel(self.params.smoothing);
-                }
-                3 | 4 => {
-                    // attack_ms or release_ms -> recompute envelope coefficients
-                    self.update_envelope_coefficients();
-                }
-                7..=10 => {
-                    if let Some(ref mut state) = self.multi_res.multi_res_state {
-                        state.set_mcra_parameters(
-                            self.mcra.mcra_alpha_s,
-                            self.mcra.mcra_alpha_p,
-                            self.mcra.mcra_l,
-                            self.mcra.mcra_delta,
-                        );
-                    }
-                }
-                20
-                    // learn_noise (trigger param)
-                    if value.as_bool().unwrap_or(false) => {
-                        self.start_learning();
-                    }
-                22
-                    // clear_profile (trigger param)
-                    if value.as_bool().unwrap_or(false) => {
-                        self.clear_noise_profile();
-                    }
-                _ => {}
-            }
-        }
-        self.rebuild_cached_parameters();
-        Ok(())
-    }
-
-    fn parametric_set_parameter(
-        &mut self,
-        id: ParameterId,
-        value: ParameterValue,
-    ) -> PluginResult<()> {
-        let mut values = ParameterSet::new();
-        values.insert(id, value);
-        self.apply_values(values)
-    }
-
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Denoiser sample rate must be greater than zero".to_string());
-        }
-        self.config.sample_rate = sample_rate;
-        self.noise_profile.learning_frames_target =
-            (sample_rate as usize).div_ceil(self.config.hop_size).max(1);
-        self.update_envelope_coefficients();
-        self.precompute_bark_mapping();
-
-        // Update PND analyzers with correct sample rate
-        for analyzer in &mut self.auxiliary.pnd_analyzers {
-            *analyzer = PndAnalyzer::new(2048, sample_rate, 50.0);
-        }
-
-        Ok(())
-    }
-
-    fn reset(&mut self) {
-        // Reset MCRA state
-        for ch in 0..self.config.channels {
-            self.reset_mcra(ch);
-            self.gains.gain[ch].fill(1.0);
-            self.gains.smoothed_gain[ch].fill(1.0);
-            self.decision_directed.prev_power[ch].fill(0.0);
-            self.noise_profile.learning_accumulator[ch].fill(0.0);
-            self.io.output_accumulator[ch].fill(0.0);
-            self.io.time_out_channels[ch].fill(0.0);
-        }
-        self.noise_profile.is_learning = false;
-        self.noise_profile.learning_frames_count = 0;
-
-        // Reset PND analyzers
-        for analyzer in &mut self.auxiliary.pnd_analyzers {
-            analyzer.reset();
-        }
-
-        // Reset buffers
-        self.io.input_buffer.fill(0.0);
-        self.io.input_buffer_fill = 0;
-        self.io.output_read_pos = 0;
-        self.io.output_write_pos = 0;
-        self.io.output_accumulator_fill = 0;
-        self.io.startup_padding_remaining = self.config.fft_size;
-
-        // Reset formant preserver working buffers
-        self.auxiliary.formant_preserver.log_mag_scratch.fill(0.0);
-        self.auxiliary.formant_preserver.envelope.fill(0.0);
-        for coherence in &mut self.spatial.spatial_coherence {
-            coherence.fill(1.0);
-        }
-        for cross in &mut self.spatial.spatial_cross {
-            cross.fill(Complex::new(0.0_f32, 0.0_f32));
-        }
-        for power in &mut self.spatial.spatial_power_a {
-            power.fill(0.0);
-        }
-        for power in &mut self.spatial.spatial_power_b {
-            power.fill(0.0);
-        }
-
-        // Reset multi-resolution state
-        if let Some(ref mut mrs) = self.multi_res.multi_res_state {
-            mrs.reset();
-        }
-        self.ui.avg_reduction_db = 0.0;
-        self.ui.learning_active = true;
-    }
-
-    fn process_in_place(
+    fn process_audio(
         &mut self,
         buffer: &mut [f32],
         context: &ProcessContext,
+        capture_noise: bool,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.config.sample_rate {
+            return Err("Denoiser sample-rate mismatch".into());
+        }
         // Miri cannot execute the architecture-specific FP-control inline
         // assembly. The guard only changes denormal handling and owns no DSP
         // state, so omit it under Miri while preserving production behavior.
@@ -1064,21 +1001,6 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
 
         let block_samples = self.config.fft_size * self.config.channels;
 
-        // Phase 0: Feed samples to PND analyzers.
-        // De-interleave each channel into temp_input_block (first num_frames elements)
-        // and pass the whole block at once — one analyze() call per channel instead of
-        // one per sample, reducing function-call overhead by num_frames×.
-        if self.params.polyphonic_detection {
-            let channels = self.config.channels;
-            for ch in 0..channels {
-                // Reuse temp_input_block[0..num_frames] as a de-interleave scratch.
-                for i in 0..num_frames {
-                    self.io.temp_input_block[i] = buffer[i * channels + ch];
-                }
-                self.auxiliary.pnd_analyzers[ch].analyze(&self.io.temp_input_block[..num_frames]);
-            }
-        }
-
         // Phase 1: Accumulate ALL input into input_buffer.
         // This is an in-place plugin (same buffer for input/output), so we must
         // consume all input before writing any output to avoid data corruption.
@@ -1093,6 +1015,19 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
             // never advanced with future samples before that large frame runs.
             let until_frame = block_samples - self.io.input_buffer_fill;
             let samples_to_copy = remaining_input.min(space_available).min(until_frame);
+
+            // Advance note analysis only through this source boundary. Feeding
+            // the entire callback lets an earlier STFT frame observe future notes.
+            if self.params.polyphonic_detection {
+                let channels = self.config.channels;
+                let frames = samples_to_copy / channels;
+                for ch in 0..channels {
+                    for frame in 0..frames {
+                        self.io.temp_input_block[frame] = buffer[input_pos + frame * channels + ch];
+                    }
+                    self.auxiliary.pnd_analyzers[ch].analyze(&self.io.temp_input_block[..frames]);
+                }
+            }
 
             if let Some(ref mut mrs) = self.multi_res.multi_res_state {
                 mrs.feed_and_process(
@@ -1112,13 +1047,13 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
 
             // Process FFT blocks to free input buffer space
             while self.io.input_buffer_fill >= block_samples {
-                self.process_fft_block()?;
+                self.process_fft_block(capture_noise)?;
             }
         }
 
         // Phase 2: Process any remaining complete FFT blocks
         while self.io.input_buffer_fill >= block_samples {
-            self.process_fft_block()?;
+            self.process_fft_block(capture_noise)?;
         }
 
         // Phase 3: Drain output to buffer
@@ -1138,6 +1073,246 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
         // STFT convention: always return num_frames. Buffer is zero-padded for
         // unfilled portions, so downstream plugins see valid (silent) data.
         Ok(context.num_frames)
+    }
+}
+
+impl ParametricInPlacePlugin for DenoiserPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Denoiser", "1.0.0", "SotF")
+            .with_description("Wiener filter denoiser with MCRA noise estimation")
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Fft
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::nonlinear(PluginCostClass::Fft, None, self.latency_samples(), false)
+    }
+
+    fn channels(&self) -> usize {
+        self.config.channels
+    }
+
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.ui.cached_parameters.clone()
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .ui
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        self.ui
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .map(|parameter| parameter.default_value.clone())
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        self.ui
+            .cached_parameters
+            .iter()
+            .map(|p| (p.id.clone(), p.default_value.clone()))
+            .collect()
+    }
+
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        self.apply_value_refs(values.iter())
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.apply_value_refs(std::iter::once((&id, &value)))
+    }
+
+    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if sample_rate == 0 {
+            return Err("Denoiser sample rate must be greater than zero".to_string());
+        }
+        self.config.sample_rate = sample_rate;
+        self.noise_profile.learning_frames_target =
+            (sample_rate as usize).div_ceil(self.config.hop_size).max(1);
+        self.update_envelope_coefficients();
+        self.precompute_bark_mapping();
+
+        // Update PND analyzers with correct sample rate
+        for analyzer in &mut self.auxiliary.pnd_analyzers {
+            *analyzer = PndAnalyzer::new(2048, sample_rate, 50.0);
+        }
+        self.reset();
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        // Reset MCRA state
+        for ch in 0..self.config.channels {
+            self.reset_mcra(ch);
+            self.gains.gain[ch].fill(1.0);
+            self.gains.smoothed_gain[ch].fill(1.0);
+            self.decision_directed.prev_power[ch].fill(0.0);
+            self.noise_profile.learning_accumulator[ch].fill(0.0);
+            self.io.output_accumulator[ch].fill(0.0);
+            self.io.time_out_channels[ch].fill(0.0);
+        }
+        self.noise_profile.is_learning = false;
+        self.noise_profile.learning_frames_count = 0;
+
+        // Reset PND analyzers
+        for analyzer in &mut self.auxiliary.pnd_analyzers {
+            analyzer.reset();
+        }
+
+        // Classification history belongs to the previous audio stream, even
+        // when harmonic/percussive processing is currently disabled.
+        for separator in &mut self.tonal_transient.tonal_transient_seps {
+            separator.reset();
+        }
+        self.tonal_transient.tt_magnitudes.fill(0.0);
+        self.tonal_transient.tt_tonal_mask.fill(0.0);
+        self.tonal_transient.tt_transient_mask.fill(0.0);
+
+        // Reset buffers
+        self.io.input_buffer.fill(0.0);
+        self.io.input_buffer_fill = self.config.hop_size * self.config.channels;
+        self.io.output_read_pos = 0;
+        self.io.output_write_pos = self.io.output_ring_mask + 1 - self.config.hop_size;
+        self.io.synthesis_discard = self.config.hop_size;
+        self.io.has_input = false;
+        self.io.source_phase = 0;
+        self.io.drain_remaining = None;
+        self.io.drain_cache.fill(0.0);
+        self.io.drain_frames = 0;
+        self.io.drain_pos = 0;
+        self.io.output_accumulator_fill = 0;
+        self.io.startup_padding_remaining = self.config.fft_size;
+
+        // Reset formant preserver working buffers
+        self.auxiliary.formant_preserver.log_mag_scratch.fill(0.0);
+        self.auxiliary.formant_preserver.envelope.fill(0.0);
+        for coherence in &mut self.spatial.spatial_coherence {
+            coherence.fill(1.0);
+        }
+        for cross in &mut self.spatial.spatial_cross {
+            cross.fill(Complex::new(0.0_f32, 0.0_f32));
+        }
+        for power in &mut self.spatial.spatial_power_a {
+            power.fill(0.0);
+        }
+        for power in &mut self.spatial.spatial_power_b {
+            power.fill(0.0);
+        }
+
+        // Reset multi-resolution state
+        if let Some(ref mut mrs) = self.multi_res.multi_res_state {
+            mrs.reset();
+        }
+        self.ui.avg_reduction_db = 0.0;
+        self.ui.learning_active = true;
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.io.drain_remaining.is_some() {
+            return Err("Reset denoiser before processing input after drain starts".into());
+        }
+        let frames = self.process_audio(buffer, context, true)?;
+        self.io.has_input |= frames > 0;
+        self.io.source_phase =
+            (self.io.source_phase + frames % self.config.hop_size) % self.config.hop_size;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.config.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !(self.io.has_input) {
+            return std::num::NonZeroU64::new(1);
+        }
+        let hop = self.config.hop_size;
+        let remaining = self
+            .io
+            .drain_remaining
+            .unwrap_or(2 * self.config.fft_size - hop + (hop - self.io.source_phase) % hop);
+        // One call serves at most one canonical refill. A partially served
+        // refill needs its own call even when fewer than one hop remains.
+        let cached = self.io.drain_frames - self.io.drain_pos;
+        let calls = usize::from(cached != 0) + remaining.saturating_sub(cached).div_ceil(hop);
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.config.sample_rate {
+            return Err("Denoiser drain sample-rate mismatch".into());
+        }
+        if !self.io.has_input || self.io.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let channels = self.config.channels;
+        if output.is_empty() || !output.len().is_multiple_of(channels) {
+            return Err("Denoiser drain requires a positive frame-aligned destination".into());
+        }
+        let hop = self.config.hop_size;
+        // Last source-containing origin is floor((T-1)/H)*H. Its complete
+        // synthesis support ends at output time 2N+origin.
+        let remaining = self
+            .io
+            .drain_remaining
+            .unwrap_or(2 * self.config.fft_size - hop + (hop - self.io.source_phase) % hop);
+        if self.io.drain_pos == self.io.drain_frames {
+            let frames = remaining.min(hop);
+            let mut cache = std::mem::take(&mut self.io.drain_cache);
+            cache[..frames * channels].fill(0.0);
+            // Padding is audio continuation, not new noise-profile measurement.
+            let result = self.process_audio(
+                &mut cache[..frames * channels],
+                &ProcessContext::new(self.config.sample_rate, frames),
+                false,
+            );
+            self.io.drain_cache = cache;
+            result?;
+            self.io.drain_frames = frames;
+            self.io.drain_pos = 0;
+        }
+        let frames = (output.len() / channels).min(self.io.drain_frames - self.io.drain_pos);
+        let start = self.io.drain_pos * channels;
+        output[..frames * channels]
+            .copy_from_slice(&self.io.drain_cache[start..start + frames * channels]);
+        self.io.drain_pos += frames;
+        self.io.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        TailLength::Finite((2 * self.config.fft_size - 1) as u64)
     }
 
     fn latency_samples(&self) -> usize {

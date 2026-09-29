@@ -66,7 +66,7 @@ fn test_crossover_frequency_changes_are_smoothed() {
 
     assert!(
         (plugin.crossover_low.frequency() - initial).abs() < 1e-3,
-        "set_parameter should retarget the frequency smoother, not retune LR4 coefficients instantly"
+        "set_parameter should retarget the frequency smoother, not retune coefficients instantly"
     );
 
     let mut buffer = vec![0.25f32; 256 * 2];

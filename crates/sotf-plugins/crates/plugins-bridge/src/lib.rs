@@ -6,7 +6,10 @@
 pub mod buffers;
 pub mod factory;
 pub mod param_bridge;
+pub mod standalone;
 pub mod state;
 
 pub use factory::create_plugin;
 pub use param_bridge::ParamBridge;
+#[doc(inline)]
+pub use standalone::prepare_standalone_plugin;

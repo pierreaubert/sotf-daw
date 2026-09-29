@@ -64,7 +64,7 @@ pub use gpui_design as design_system;
 // Flat re-exports for commonly used types
 pub use analyzer::{
     AnalyzerData, CorrelationData, IntegratedLoudnessMode, LoudnessData, LoudnessQueryError,
-    SpectrumData,
+    LoudnessRangeConfig, LoudnessRangeData, LoudnessRangeMode, LoudnessRangeStatus, SpectrumData,
 };
 pub use analyzer_channel_correlation::{ChannelCorrelationMonitor, ChannelCorrelationPlugin};
 pub use math_audio_dsp::adaa::{
@@ -154,7 +154,8 @@ pub use parametric_plugin::{
 };
 pub use plugin::{
     InPlacePlugin, InPlacePluginAdapter, LoopRange, MidiEvent, MidiMessage, Plugin,
-    PluginCostClass, PluginInfo, PluginResult, ProcessContext, TimeSignature, TransportInfo,
+    PluginCostClass, PluginInfo, PluginResult, ProcessContext, TailLength, TimeSignature,
+    TransportInfo,
 };
 
 #[cfg(feature = "qa")]

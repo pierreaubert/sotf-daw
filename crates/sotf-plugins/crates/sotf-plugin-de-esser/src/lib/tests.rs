@@ -36,6 +36,7 @@ fn test_de_esser_reduces_sibilance() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -78,6 +79,7 @@ fn test_wideband_reduction_is_channel_specific() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -146,6 +148,7 @@ fn test_de_esser_passes_low_frequencies() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -210,6 +213,7 @@ fn test_mix_smoother_ramps_per_sample() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 0.0, // fully dry initially
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -278,6 +282,7 @@ fn test_mix_smoother_ramps_per_sample() {
             release_ms: 200.0,
             mode: "Wideband".to_string(),
             mix: 0.0, // start dry
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -338,6 +343,7 @@ fn test_split_band_mode() {
             release_ms: 20.0,
             mode: "Split-Band".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -522,6 +528,7 @@ fn from_params_rejects_out_of_range_values() {
             release_ms: 1.0,  // below min
             mode: "Wideband".to_string(),
             mix: -1.0, // below min
+            ..Default::default()
         },
     );
     assert!(result.is_err(), "invalid serialized state must be rejected");
@@ -640,6 +647,7 @@ fn test_reset_clears_filter_state() {
             release_ms: 20.0,
             mode: "Wideband".to_string(),
             mix: 1.0,
+            ..Default::default()
         },
     )
     .expect("valid De-Esser parameters");
@@ -783,6 +791,7 @@ fn split_band_inactive_output_is_mix_invariant() {
             release_ms: 20.0,
             mode: "Split-Band".into(),
             mix,
+            ..Default::default()
         };
         let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, 48_000).unwrap();
         plugin.initialize(48_000).unwrap();
@@ -888,6 +897,7 @@ fn held_monitor_snapshot_does_not_freeze_future_publication() {
         release_ms: 20.0,
         mode: "Wideband".into(),
         mix: 1.0,
+        ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, 48_000).unwrap();
     plugin.initialize(48_000).unwrap();

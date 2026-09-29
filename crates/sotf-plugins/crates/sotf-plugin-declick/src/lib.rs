@@ -9,7 +9,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +51,9 @@ pub struct DeclickPlugin {
     suppressor: TransientSuppressor,
     initialized_sample_rate: u32,
     cached_parameters: Vec<Parameter>,
+    has_input: bool,
+    drain_remaining: Option<usize>,
+    drain_silence: Vec<f32>,
 }
 
 impl DeclickPlugin {
@@ -85,6 +89,9 @@ impl DeclickPlugin {
             suppressor,
             initialized_sample_rate: sample_rate,
             cached_parameters: Vec::new(),
+            has_input: false,
+            drain_remaining: None,
+            drain_silence: vec![0.0; channels * plugins_denoiser::transient::LOOKAHEAD_SAMPLES],
         };
         plugin.rebuild_cached_parameters();
         Ok(plugin)
@@ -137,6 +144,15 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "enabled" => Some(ParameterValue::Bool(self.enabled)),
+            "sensitivity" => Some(ParameterValue::Float(self.sensitivity)),
+            "link_channels" => Some(ParameterValue::Bool(self.link_channels)),
+            _ => None,
+        }
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         values.insert(
@@ -155,6 +171,9 @@ impl ParametricInPlacePlugin for DeclickPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err("Reset declick before changing parameters after drain starts".into());
+        }
         // Validate the complete batch before mutating DSP state. The cache is
         // updated in place, so successful automation does not rebuild a Vec.
         let mut enabled = self.enabled;
@@ -189,6 +208,9 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         id: ParameterId,
         value: ParameterValue,
     ) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err("Reset declick before changing parameters after drain starts".into());
+        }
         let mut numeric = 0.0;
         let index = param_bridge::set_parameter(DC, &id, &value, |_, value| numeric = value)?;
         match index {
@@ -216,12 +238,15 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         }
         self.suppressor.set_sample_rate(sample_rate)?;
         self.initialized_sample_rate = sample_rate;
-        self.suppressor.reset();
+        self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
         self.suppressor.reset();
+        self.has_input = false;
+        self.drain_remaining = None;
+        self.drain_silence.fill(0.0);
     }
 
     fn process_in_place(
@@ -249,8 +274,56 @@ impl ParametricInPlacePlugin for DeclickPlugin {
                 self.initialized_sample_rate, context.sample_rate
             ));
         }
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Reset declick before processing input after drain starts".into());
+        }
         self.suppressor.process(buffer)?;
+        self.has_input |= context.num_frames > 0;
         Ok(context.num_frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.suppressor.latency_samples()
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        // The advertised buffer holds the entire eight-frame continuation.
+        std::num::NonZeroU64::new(1)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.initialized_sample_rate {
+            return Err("Declick drain sample-rate mismatch".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() || !output.len().is_multiple_of(self.channels) {
+            return Err("Declick drain requires a positive frame-aligned destination".into());
+        }
+        let remaining = self.drain_remaining.unwrap_or(self.latency_samples());
+        let frames = remaining.min(output.len() / self.channels);
+        let samples = frames * self.channels;
+        self.drain_silence[..samples].fill(0.0);
+        self.suppressor
+            .process(&mut self.drain_silence[..samples])?;
+        output[..samples].copy_from_slice(&self.drain_silence[..samples]);
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: frames == remaining,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        // A zero candidate has eight zero future neighbors: any nonzero
+        // baseline gives an excursion longer than the repair limit of six.
+        // Thus no repaired audio is synthesized after the delayed input ends.
+        TailLength::Finite(self.latency_samples() as u64)
     }
 
     fn latency_samples(&self) -> usize {

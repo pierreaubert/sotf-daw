@@ -819,6 +819,11 @@ fn parse_crosspoint_id(id: &str, prefix: &str) -> Result<(usize, usize), String>
 }
 
 impl Plugin for MatrixPlugin {
+    fn tail_length(&self) -> sotf_host::TailLength {
+        // Gain smoothing retains coefficients, never past input samples.
+        sotf_host::TailLength::Finite(0)
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Matrix", env!("CARGO_PKG_VERSION"), "SotF")
     }

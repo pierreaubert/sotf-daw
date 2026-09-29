@@ -2,8 +2,21 @@ use super::misc::MAX_OS_CHANNELS;
 use super::misc::OS_CHUNK_SIZE;
 use super::misc::interleaved_to_planar;
 use super::misc::planar_to_interleaved;
+use crate::plugin::PluginDrainResult;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
-use rubato::{Fft, FixedSync, Resampler};
+use rubato::{Fft, FixedSync, Resampler, WindowFunction};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DrainStage {
+    Idle,
+    Input,
+    UpTail,
+    InnerTail,
+    DownPartial,
+    DownTail,
+    Complete,
+    Failed,
+}
 
 /// Oversampling processor that handles up/downsampling with residual buffering.
 ///
@@ -45,6 +58,12 @@ pub struct Oversampler {
     pub(super) channels: usize,
     /// Total latency in samples (at 1x rate) from the resampler pair
     pub(super) latency: usize,
+    received_input: bool,
+    drain_stage: DrainStage,
+    inner_tail_frames: usize,
+    inner_tail_read: usize,
+    inner_tail_complete: bool,
+    down_pending_frames: usize,
 }
 
 impl Oversampler {
@@ -68,16 +87,34 @@ impl Oversampler {
 
         let f = factor as usize;
 
+        // new_custom preserves the historical single-sub-chunk geometry and
+        // BlackmanHarris2 window; Fft::new would auto-select sub-chunks and
+        // change delay and block sizes for the downsampling stage.
         // Up-resampler: input sample_rate 1, output sample_rate factor
         // chunk_size = OS_CHUNK_SIZE (fixed input)
-        let resampler_up = Fft::<f32>::new(1, f, OS_CHUNK_SIZE, 1, channels, FixedSync::Input)
-            .map_err(|e| format!("Failed to create up-resampler: {:?}", e))?;
+        let resampler_up = Fft::<f32>::new_custom(
+            1,
+            f,
+            OS_CHUNK_SIZE,
+            1,
+            channels,
+            WindowFunction::BlackmanHarris2,
+            FixedSync::Input,
+        )
+        .map_err(|e| format!("Failed to create up-resampler: {:?}", e))?;
 
         // Down-resampler: input sample_rate factor, output sample_rate 1
         // chunk_size = OS_CHUNK_SIZE * factor (fixed input, produces OS_CHUNK_SIZE output)
-        let resampler_down =
-            Fft::<f32>::new(f, 1, OS_CHUNK_SIZE * f, 1, channels, FixedSync::Input)
-                .map_err(|e| format!("Failed to create down-resampler: {:?}", e))?;
+        let resampler_down = Fft::<f32>::new_custom(
+            f,
+            1,
+            OS_CHUNK_SIZE * f,
+            1,
+            channels,
+            WindowFunction::BlackmanHarris2,
+            FixedSync::Input,
+        )
+        .map_err(|e| format!("Failed to create down-resampler: {:?}", e))?;
 
         let up_out_frames = resampler_up.output_frames_max();
         let down_out_frames = resampler_down.output_frames_max();
@@ -103,13 +140,59 @@ impl Oversampler {
             residual_in_read: 0,
             residual_frames: 0,
             residual_out: vec![0.0f32; (OS_CHUNK_SIZE + latency) * channels * 4],
-            residual_out_frames: 0,
+            // A fixed chunk of silence makes the buffering delay independent
+            // of callback partitioning and matches the reported PDC latency.
+            residual_out_frames: OS_CHUNK_SIZE,
             residual_out_read: 0,
             chunk_buffer: vec![0.0f32; OS_CHUNK_SIZE * channels],
             factor,
             channels,
             latency,
+            received_input: false,
+            drain_stage: DrainStage::Idle,
+            inner_tail_frames: 0,
+            inner_tail_read: 0,
+            inner_tail_complete: false,
+            down_pending_frames: 0,
         })
+    }
+
+    /// Prepare residual queues for a maximum callback size on the control thread.
+    ///
+    /// Call before audio processing. This method can allocate; subsequent calls
+    /// to [`Self::process`] with at most `max_frames` do not grow the residual
+    /// queues. It preserves existing samples and does not impose a runtime cap.
+    /// The supplied inner processing closure must uphold its own realtime contract.
+    ///
+    /// # Errors
+    /// Returns an error if the requested capacity is not addressable.
+    pub fn reserve_for_max_frames(&mut self, max_frames: usize) -> Result<(), String> {
+        let samples = max_frames
+            .checked_add(OS_CHUNK_SIZE)
+            .and_then(|frames| frames.checked_add(self.latency))
+            .and_then(|frames| frames.checked_mul(self.channels))
+            .filter(|samples| *samples <= isize::MAX as usize / std::mem::size_of::<f32>())
+            .ok_or_else(|| "Oversampling residual capacity overflow".to_string())?;
+        if self.residual_in.len() < samples {
+            self.residual_in.resize(samples, 0.0);
+        }
+        if self.residual_out.len() < samples {
+            self.residual_out.resize(samples, 0.0);
+        }
+        Ok(())
+    }
+
+    /// Prepare storage for the inner plugin's maximum drain block on the control thread.
+    pub(super) fn reserve_for_drain_frames(&mut self, frames: usize) -> Result<(), String> {
+        if frames > isize::MAX as usize / std::mem::size_of::<f32>() {
+            return Err("Oversampling drain capacity overflow".to_string());
+        }
+        for channel in &mut self.up_out {
+            if channel.len() < frames {
+                channel.resize(frames, 0.0);
+            }
+        }
+        Ok(())
     }
 
     /// Reset all internal state (resamplers, residual buffers).
@@ -118,8 +201,15 @@ impl Oversampler {
         self.resampler_down.reset();
         self.residual_in_read = 0;
         self.residual_frames = 0;
-        self.residual_out_frames = 0;
+        self.residual_out_frames = OS_CHUNK_SIZE;
         self.residual_out_read = 0;
+        self.received_input = false;
+        self.drain_stage = DrainStage::Idle;
+        self.inner_tail_frames = 0;
+        self.inner_tail_read = 0;
+        self.inner_tail_complete = false;
+        self.down_pending_frames = 0;
+        self.residual_out[..OS_CHUNK_SIZE * self.channels].fill(0.0);
         for ch_buf in &mut self.up_in {
             ch_buf.fill(0.0);
         }
@@ -137,6 +227,38 @@ impl Oversampler {
     /// Total latency in samples (at the original sample rate).
     pub fn latency_samples(&self) -> usize {
         self.latency
+    }
+
+    /// Bound zero-input continuation for a memoryless inner processing operation.
+    ///
+    /// Frames are at the original sample rate. The bound includes the fixed
+    /// startup queue, residual chunk phase, and both finite FFT overlaps. It
+    /// applies only when the inner operation cannot retain or generate audio
+    /// after its input becomes zero. It is conservative, not a minimal endpoint.
+    pub fn passthrough_tail_frames(&self) -> usize {
+        4 * OS_CHUNK_SIZE
+    }
+
+    pub(super) fn tail_length(
+        &self,
+        inner: crate::plugin::TailLength,
+    ) -> crate::plugin::TailLength {
+        use crate::plugin::TailLength;
+        match inner {
+            TailLength::Finite(frames) => {
+                // Rubato 5 fixed FFT stages each retain one chunk overlap.
+                // Also cover residual input phase, chunk completion and the
+                // fixed startup queue. Group delay alone is not FIR support.
+                let chunk = super::misc::OS_CHUNK_SIZE as u64;
+                let base_frames = frames.div_ceil(u64::from(self.factor));
+                base_frames
+                    .div_ceil(chunk)
+                    .checked_mul(chunk)
+                    .and_then(|frames| frames.checked_add(self.passthrough_tail_frames() as u64))
+                    .map_or(TailLength::Unknown, TailLength::Finite)
+            }
+            other => other,
+        }
     }
 
     /// Oversampling factor (2 or 4).
@@ -162,8 +284,12 @@ impl Oversampler {
     where
         F: FnMut(&mut [Vec<f32>], usize),
     {
+        if self.drain_stage != DrainStage::Idle {
+            return Err("Oversampler must be reset before processing after drain".to_string());
+        }
         let nc = self.channels;
         let total_in_samples = num_frames * nc;
+        self.received_input |= num_frames != 0;
 
         // 1. Append incoming frames to residual_in. The read cursor allows full
         // chunks to be consumed without shifting residual data every iteration.
@@ -189,7 +315,10 @@ impl Oversampler {
                 self.residual_in_read = 0;
             }
 
-            self.process_chunk(&mut process_fn)?;
+            self.process_chunk(&mut |planar, frames| {
+                process_fn(planar, frames);
+                Ok(())
+            })?;
         }
 
         // 3. Drain residual_out into buffer
@@ -220,6 +349,276 @@ impl Oversampler {
         }
 
         Ok(frames_written)
+    }
+
+    /// Flush the two FFT overlaps and the inner plugin's explicit finite tail.
+    /// `Some(frames)` requests ordinary inner processing; `None` requests drain.
+    /// All output is retained through the final padded downsampling chunk.
+    /// Each call performs at most one resampling chunk or one inner drain call.
+    pub(super) fn drain_with<F>(
+        &mut self,
+        output: &mut [f32],
+        mut process_fn: F,
+    ) -> Result<PluginDrainResult, String>
+    where
+        F: FnMut(&mut [Vec<f32>], Option<usize>) -> Result<PluginDrainResult, String>,
+    {
+        if self.drain_stage == DrainStage::Failed {
+            return Err("Oversampler must be reset after a failed drain".to_string());
+        }
+        if !self.received_input
+            || self.drain_stage == DrainStage::Complete && self.residual_out_frames == 0
+        {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        // Reject capacity errors before changing queues, stage, or inner DSP.
+        if output.len() < self.channels || !output.len().is_multiple_of(self.channels) {
+            return Err(
+                "Oversampling drain needs a nonempty frame-aligned output buffer".to_string(),
+            );
+        }
+        if self.drain_stage == DrainStage::Idle {
+            self.drain_stage = if self.residual_frames == 0 {
+                DrainStage::UpTail
+            } else {
+                DrainStage::Input
+            };
+        }
+        if self.residual_out_frames == 0 {
+            match self.drain_stage {
+                DrainStage::Input | DrainStage::UpTail => {
+                    self.chunk_buffer.fill(0.0);
+                    if self.drain_stage == DrainStage::Input {
+                        let start = self.residual_in_read * self.channels;
+                        let samples = self.residual_frames * self.channels;
+                        self.chunk_buffer[..samples]
+                            .copy_from_slice(&self.residual_in[start..start + samples]);
+                    }
+                    self.process_chunk(&mut |planar, frames| {
+                        process_fn(planar, Some(frames)).map(|_| ())
+                    })
+                    .map_err(|error| self.fail_drain(error))?;
+                    self.residual_frames = 0;
+                    self.residual_in_read = 0;
+                    self.drain_stage = if self.drain_stage == DrainStage::Input {
+                        DrainStage::UpTail
+                    } else {
+                        DrainStage::InnerTail
+                    };
+                }
+                DrainStage::InnerTail => {
+                    if self.inner_tail_frames == 0 && !self.inner_tail_complete {
+                        let result = process_fn(&mut self.up_out, None)
+                            .map_err(|error| self.fail_drain(error))?;
+                        if result.frames > self.up_out[0].len() {
+                            self.drain_stage = DrainStage::Failed;
+                            return Err(
+                                "Oversampled inner drain exceeded prepared capacity".to_string()
+                            );
+                        }
+                        self.inner_tail_frames = result.frames;
+                        self.inner_tail_read = 0;
+                        self.inner_tail_complete = result.complete;
+                        // The inner step itself is the bounded unit of work for this call.
+                        return Ok(PluginDrainResult {
+                            frames: 0,
+                            complete: false,
+                        });
+                    }
+                    let chunk_frames = OS_CHUNK_SIZE * self.factor as usize;
+                    let frames = self
+                        .inner_tail_frames
+                        .min(chunk_frames - self.down_pending_frames);
+                    for (src, dst) in self.up_out.iter().zip(&mut self.down_in) {
+                        dst[self.down_pending_frames..self.down_pending_frames + frames]
+                            .copy_from_slice(
+                                &src[self.inner_tail_read..self.inner_tail_read + frames],
+                            );
+                    }
+                    self.inner_tail_frames -= frames;
+                    self.inner_tail_read += frames;
+                    self.down_pending_frames += frames;
+                    if self.down_pending_frames == chunk_frames {
+                        self.process_down_chunk()
+                            .map_err(|error| self.fail_drain(error))?;
+                        self.down_pending_frames = 0;
+                    }
+                    if self.inner_tail_frames == 0 && self.inner_tail_complete {
+                        self.drain_stage = if self.down_pending_frames == 0 {
+                            DrainStage::DownTail
+                        } else {
+                            DrainStage::DownPartial
+                        };
+                    }
+                }
+                DrainStage::DownPartial | DrainStage::DownTail => {
+                    for channel in &mut self.down_in {
+                        channel[self.down_pending_frames..].fill(0.0);
+                    }
+                    self.process_down_chunk()
+                        .map_err(|error| self.fail_drain(error))?;
+                    self.down_pending_frames = 0;
+                    self.drain_stage = if self.drain_stage == DrainStage::DownPartial {
+                        DrainStage::DownTail
+                    } else {
+                        DrainStage::Complete
+                    };
+                }
+                DrainStage::Complete => {}
+                DrainStage::Idle => unreachable!("drain stage initialized above"),
+                DrainStage::Failed => unreachable!("failed drains rejected above"),
+            }
+        }
+        let frames = self
+            .residual_out_frames
+            .min(output.len() / self.channels)
+            .min(OS_CHUNK_SIZE);
+        let start = self.residual_out_read * self.channels;
+        output[..frames * self.channels]
+            .copy_from_slice(&self.residual_out[start..start + frames * self.channels]);
+        self.residual_out_read += frames;
+        self.residual_out_frames -= frames;
+        if self.residual_out_frames == 0 {
+            self.residual_out_read = 0;
+        }
+        Ok(PluginDrainResult {
+            frames,
+            complete: self.drain_stage == DrainStage::Complete && self.residual_out_frames == 0,
+        })
+    }
+
+    pub(super) fn fail_drain(&mut self, error: String) -> String {
+        self.drain_stage = DrainStage::Failed;
+        error
+    }
+
+    /// Validate caller storage before any wrapper EOS preparation.
+    pub(super) fn validate_drain_output(&self, output: &[f32]) -> Result<(), String> {
+        if self.drain_stage == DrainStage::Failed {
+            return Err("Oversampler must be reset after a failed drain".into());
+        }
+        if self.received_input
+            && !(self.drain_stage == DrainStage::Complete && self.residual_out_frames == 0)
+            && (output.len() < self.channels || !output.len().is_multiple_of(self.channels))
+        {
+            return Err("Oversampling drain needs a nonempty frame-aligned output buffer".into());
+        }
+        Ok(())
+    }
+
+    /// Finish at most two prepared input chunks before querying the child bound.
+    pub(super) fn begin_drain_with<F>(&mut self, mut process_fn: F) -> Result<(), String>
+    where
+        F: FnMut(&mut [Vec<f32>], usize) -> Result<(), String>,
+    {
+        if self.drain_stage == DrainStage::Failed {
+            return Err("Oversampler must be reset after a failed drain".into());
+        }
+        if !self.received_input
+            || !matches!(
+                self.drain_stage,
+                DrainStage::Idle | DrainStage::Input | DrainStage::UpTail
+            )
+        {
+            return Ok(());
+        }
+        // A normal boundary retains at most C ready frames. Both setup chunks
+        // together add at most 2C; setup allocation already reserves >=8C.
+        let needed = self
+            .residual_out_frames
+            .checked_add(2 * OS_CHUNK_SIZE)
+            .and_then(|frames| frames.checked_mul(self.channels))
+            .ok_or("Oversampling EOS queue capacity overflow")?;
+        if self.residual_frames >= OS_CHUNK_SIZE || needed > self.residual_out.len() {
+            return Err("Oversampling EOS setup exceeds prepared capacity".into());
+        }
+        self.compact_residual_out();
+        if self.drain_stage == DrainStage::Idle {
+            self.drain_stage = if self.residual_frames == 0 {
+                DrainStage::UpTail
+            } else {
+                DrainStage::Input
+            };
+        }
+        for _ in 0..2 {
+            if !matches!(self.drain_stage, DrainStage::Input | DrainStage::UpTail) {
+                break;
+            }
+            self.chunk_buffer.fill(0.0);
+            if self.drain_stage == DrainStage::Input {
+                let start = self.residual_in_read * self.channels;
+                let samples = self.residual_frames * self.channels;
+                self.chunk_buffer[..samples]
+                    .copy_from_slice(&self.residual_in[start..start + samples]);
+            }
+            self.process_chunk(&mut process_fn)
+                .map_err(|error| self.fail_drain(error))?;
+            self.residual_frames = 0;
+            self.residual_in_read = 0;
+            self.drain_stage = if self.drain_stage == DrainStage::Input {
+                DrainStage::UpTail
+            } else {
+                DrainStage::InnerTail
+            };
+        }
+        Ok(())
+    }
+
+    pub(super) fn received_input(&self) -> bool {
+        self.received_input
+    }
+
+    pub(super) fn drain_failed(&self) -> bool {
+        self.drain_stage == DrainStage::Failed
+    }
+
+    /// Compose native calls, cached transfer steps and final FFT overlaps.
+    pub(super) fn drain_call_bound(
+        &self,
+        child_bound: Option<std::num::NonZeroU64>,
+        child_capacity: usize,
+    ) -> Option<std::num::NonZeroU64> {
+        if !self.received_input {
+            return std::num::NonZeroU64::new(1);
+        }
+        let queued = u64::try_from(self.residual_out_frames)
+            .ok()?
+            .div_ceil(OS_CHUNK_SIZE as u64);
+        let calls = match self.drain_stage {
+            DrainStage::Idle | DrainStage::Input | DrainStage::UpTail | DrainStage::Failed => {
+                return None;
+            }
+            DrainStage::Complete => queued,
+            DrainStage::DownTail => queued.checked_add(1)?,
+            DrainStage::DownPartial => queued.checked_add(2)?,
+            DrainStage::InnerTail => {
+                let chunk = OS_CHUNK_SIZE as u64 * u64::from(self.factor);
+                let child_calls = if self.inner_tail_complete {
+                    0
+                } else {
+                    child_bound?.get()
+                };
+                // A result needs one native call and at most ceil(K/U)+1
+                // transfer steps, including an empty final-result transition.
+                let per_child = u64::try_from(child_capacity)
+                    .ok()?
+                    .div_ceil(chunk)
+                    .checked_add(2)?;
+                let cached = if self.inner_tail_frames > 0 || self.inner_tail_complete {
+                    u64::try_from(self.inner_tail_frames)
+                        .ok()?
+                        .div_ceil(chunk)
+                        .checked_add(1)?
+                } else {
+                    0
+                };
+                queued
+                    .checked_add(child_calls.checked_mul(per_child)?)?
+                    .checked_add(cached)?
+                    .checked_add(2)?
+            }
+        };
+        std::num::NonZeroU64::new(calls.max(1))
     }
 
     pub(super) fn ensure_residual_in_capacity(&mut self, additional_frames: usize) {
@@ -285,7 +684,7 @@ impl Oversampler {
     /// upsample -> callback -> downsample.
     pub(super) fn process_chunk<F>(&mut self, process_fn: &mut F) -> Result<(), String>
     where
-        F: FnMut(&mut [Vec<f32>], usize),
+        F: FnMut(&mut [Vec<f32>], usize) -> Result<(), String>,
     {
         let nc = self.channels;
         let factor = self.factor as usize;
@@ -323,12 +722,19 @@ impl Oversampler {
         let up_frames = OS_CHUNK_SIZE * factor;
 
         // Step 3: call the process callback on upsampled data
-        process_fn(&mut self.up_out, up_frames);
+        process_fn(&mut self.up_out, up_frames)?;
 
         // Step 4: copy upsampled data to down_in (they are different buffers)
         for ch in 0..nc {
             self.down_in[ch][..up_frames].copy_from_slice(&self.up_out[ch][..up_frames]);
         }
+
+        self.process_down_chunk()
+    }
+
+    fn process_down_chunk(&mut self) -> Result<(), String> {
+        let nc = self.channels;
+        let factor = self.factor as usize;
 
         // Step 5: downsample
         let down_out_max = self.resampler_down.output_frames_max();

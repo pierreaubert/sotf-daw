@@ -14,6 +14,11 @@ use sotf_host::param_specs::{ParamSpec, find_by_key as pk};
 use sotf_host::plugin_layout::*;
 use sotf_host::plugin_params::PluginParamDef;
 
+/// Labels accepted by constructor JSON and displayed by the quality selector.
+pub const OVERSAMPLING_OPTIONS: &[&str] = &["1x", "2x", "4x"];
+
+sotf_host::define_choice_index_deserializer!(deserialize_oversampling, OVERSAMPLING_OPTIONS);
+
 // ============================================================================
 // Parameter Specifications
 // ============================================================================
@@ -54,8 +59,9 @@ pub const PARAMS: &[ParamSpec] = &[
         .setup()
         .doc("Rate-appropriate ITU-R BS.1770-compatible inter-sample peak detection"),
     ParamSpec::bool_labeled("ISP Limit", "isp_mode", false, "On", "Off", "Detection")
+        .structural()
         .setup()
-        .doc("Predictive ISP limiting; requires hard mode, 100% wet, and enough lookahead to cover the rate-dependent detector delay"),
+        .doc("Predictive output ISP correction adds rate-dependent latency; requires hard mode, 100% wet, and enough input lookahead to cover the detector delay"),
     ParamSpec::bool_labeled("Dual Release", "dual_release", false, "On", "Off", "Timing")
         .setup()
         .doc("Fast+slow release envelopes"),
@@ -77,13 +83,17 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .setup()
     .doc("Compatibility control; nonzero lookahead is always predictive"),
+    ParamSpec::choice("Oversampling", "oversampling", 0, OVERSAMPLING_OPTIONS, "Quality")
+        .structural()
+        .setup()
+        .doc("Prepared audio-rate oversampling with native output protection; changes latency"),
 ];
 
 // ============================================================================
 // UI Layout
 // ============================================================================
 
-/// Limiter: idx 0=threshold, 1=release, 2=lookahead, 3=soft_knee, 4=true_peak, 5=isp_mode, 6=dual_release, 7=mix, 8=link_amount, 9=feed_forward
+/// Limiter: idx 0=threshold, 1=release, 2=lookahead, 3=soft_knee, 4=true_peak, 5=isp_mode, 6=dual_release, 7=mix, 8=link_amount, 9=feed_forward, 10=oversampling
 ///
 /// ui.md Phase 3 pilot: the primary dynamics row (ceiling, release,
 /// gain-reduction feedback, output mix) is pinned visible at every width so
@@ -118,10 +128,11 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "DETECTOR",
             "Knee & detection",
             &[
-                ControlSpec::toggle(3), // soft knee
-                ControlSpec::toggle(5), // ISP mode
-                ControlSpec::toggle(9), // feed-forward
-                ControlSpec::slider(8), // link_amount
+                ControlSpec::toggle(3),    // soft knee
+                ControlSpec::toggle(5),    // ISP mode
+                ControlSpec::toggle(9),    // feed-forward
+                ControlSpec::slider(8),    // link_amount
+                ControlSpec::selector(10), // oversampling
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.35)),
@@ -166,6 +177,12 @@ pub struct Params {
     pub link_amount: f64,
     #[serde(default = "d_feed_forward")]
     pub feed_forward: bool,
+    /// Choice index: 0 = 1x, 1 = 2x, 2 = 4x.
+    #[serde(
+        default = "default_oversampling",
+        deserialize_with = "deserialize_oversampling"
+    )]
+    pub oversampling: usize,
 }
 
 fn d_link_amount() -> f64 {
@@ -232,6 +249,10 @@ pub fn default_feed_forward() -> bool {
     d_feed_forward()
 }
 
+pub fn default_oversampling() -> usize {
+    pk(PARAMS, "oversampling").default_usize()
+}
+
 impl Default for Params {
     fn default() -> Self {
         Self {
@@ -245,6 +266,7 @@ impl Default for Params {
             mix: d_mix(),
             link_amount: d_link_amount(),
             feed_forward: d_feed_forward(),
+            oversampling: default_oversampling(),
         }
     }
 }
@@ -271,6 +293,7 @@ impl PluginParamDef for Params {
             7 => Some(self.mix),
             8 => Some(self.link_amount),
             9 => Some(if self.feed_forward { 1.0 } else { 0.0 }),
+            10 => Some(self.oversampling as f64),
             _ => None,
         }
     }
@@ -287,6 +310,7 @@ impl PluginParamDef for Params {
             7 => self.mix = PARAMS[7].clamp_f64(value),
             8 => self.link_amount = PARAMS[8].clamp_f64(value),
             9 => self.feed_forward = PARAMS[9].clamp_f64(value) > 0.5,
+            10 => self.oversampling = PARAMS[10].clamp_f64(value).round() as usize,
             _ => {}
         }
     }

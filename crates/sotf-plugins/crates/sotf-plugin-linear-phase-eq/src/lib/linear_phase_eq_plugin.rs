@@ -21,7 +21,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
@@ -30,6 +31,8 @@ use std::sync::Arc;
 
 const NUPC_REALTIME_QUANTUM_FRAMES: usize = 32;
 const REALTIME_SCHEDULER_QUANTUM_FRAMES: usize = 128;
+// Bound zero-continuation work independently of FIR length or caller capacity.
+const DRAIN_FRAMES: usize = 256;
 
 #[allow(
     dead_code,
@@ -43,6 +46,8 @@ pub struct LinearPhaseEqPlugin {
     pub(super) phase_mode_index: usize,
     pub(super) auto_gain: bool,
     pub(super) mix_value: f32,
+    has_input: bool,
+    drain_remaining: Option<usize>,
 
     // EQ band definitions (for magnitude computation only)
     pub(super) bands: Vec<EqBand>,
@@ -255,6 +260,8 @@ impl LinearPhaseEqPlugin {
             phase_mode_index,
             auto_gain,
             mix_value: mix,
+            has_input: false,
+            drain_remaining: None,
             bands,
             fir_coeffs: vec![0.0; fir_length],
             fir_spectrum: vec![Complex::new(0.0, 0.0); freq_size],
@@ -627,6 +634,9 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() && !values.is_empty() {
+            return Err("reset FIR EQ before changing controls after drain".into());
+        }
         for (id, value) in values {
             let id_str = id.as_str();
 
@@ -661,6 +671,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         if sample_rate == 0 {
             return Err("sample rate must be positive".into());
         }
+        let reset_stream = self.drain_remaining.is_some() || sample_rate != self.sample_rate;
         if sample_rate != self.sample_rate {
             self.sample_rate = sample_rate;
             self.mix_smoother = Smoother::new(self.mix_value, 20.0, sample_rate);
@@ -673,10 +684,15 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             self.rebuild_fir();
             self.fir_dirty = false;
         }
+        if reset_stream {
+            self.reset();
+        }
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
         // Clear overlap buffers
         for ch_overlap in &mut self.overlap {
             ch_overlap.fill(0.0);
@@ -726,6 +742,97 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             );
         }
 
+        if self.drain_remaining.is_some() {
+            return Err("reset FIR EQ before processing after drain".into());
+        }
+        self.process_stream(&mut buffer[..total_samples], nf);
+        self.has_input = true;
+        Ok(nf)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.fir_dirty || self.sample_rate == 0 {
+            TailLength::Unknown
+        } else {
+            TailLength::Finite(self.response_frames() as u64)
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        DRAIN_FRAMES
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.has_input {
+            self.drain_remaining
+                .unwrap_or_else(|| self.response_frames())
+        } else {
+            0
+        };
+        std::num::NonZeroU64::new(remaining.div_ceil(DRAIN_FRAMES).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if self.sample_rate == 0 || context.sample_rate != self.sample_rate || self.fir_dirty {
+            return Err("FIR EQ drain requires clean state at the prepared sample rate".into());
+        }
+        if output.len() < self.channels || !output.len().is_multiple_of(self.channels) {
+            return Err("FIR EQ drain needs nonempty whole output frames".into());
+        }
+        let remaining = self
+            .drain_remaining
+            .unwrap_or_else(|| self.response_frames());
+        let frames = remaining
+            .min(DRAIN_FRAMES)
+            .min(output.len() / self.channels);
+        let buffer = &mut output[..frames * self.channels];
+        buffer.fill(0.0);
+        enable_ftz_daz();
+        self.process_stream(buffer, frames);
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: frames == remaining,
+        })
+    }
+
+    fn latency_samples(&self) -> usize {
+        if self.phase_mode_index == 0 {
+            // The even-tap designer centers its impulse at N/2. NUPC adds one
+            // 32-sample head partition of streaming latency.
+            self.fir_length() / 2 + 32
+        } else {
+            32
+        }
+    }
+
+    fn realtime_quantum_frames(&self) -> usize {
+        REALTIME_SCHEDULER_QUANTUM_FRAMES
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        None
+    }
+}
+
+impl LinearPhaseEqPlugin {
+    fn response_frames(&self) -> usize {
+        // FIR support is coefficient length minus one, plus NUPC's fixed
+        // emitted startup delay. The dry branch is bounded by the same span.
+        (NUPC_REALTIME_QUANTUM_FRAMES + self.fir_coeffs.len().saturating_sub(1))
+            .max(self.latency_samples())
+    }
+
+    fn process_stream(&mut self, buffer: &mut [f32], nf: usize) {
+        let nc = self.channels;
+
         // Save a latency-aligned dry signal for mix. Linear-phase FIR output has
         // group delay; delaying the dry branch avoids comb filtering at partial mix.
         let dry_delay = self.latency_samples();
@@ -755,25 +862,6 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             self.dry_delay_pos = (self.dry_delay_pos + 1) % ring_len;
         }
 
-        flush_denormals_inplace(&mut buffer[..total_samples]);
-        Ok(nf)
-    }
-
-    fn latency_samples(&self) -> usize {
-        if self.phase_mode_index == 0 {
-            // The even-tap designer centers its impulse at N/2. NUPC adds one
-            // 32-sample head partition of streaming latency.
-            self.fir_length() / 2 + 32
-        } else {
-            32
-        }
-    }
-
-    fn realtime_quantum_frames(&self) -> usize {
-        REALTIME_SCHEDULER_QUANTUM_FRAMES
-    }
-
-    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        None
+        flush_denormals_inplace(buffer);
     }
 }

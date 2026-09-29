@@ -109,12 +109,11 @@ impl DitherPlugin {
 
     pub(super) fn init_rng_states(channels: usize) -> Vec<u64> {
         // Seed each channel with a different non-zero value
-        (0..channels)
-            .map(|ch| {
-                0xDEAD_BEEF_CAFE_0001_u64
-                    .wrapping_add((ch as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
-            })
-            .collect()
+        (0..channels).map(Self::rng_seed).collect()
+    }
+
+    fn rng_seed(channel: usize) -> u64 {
+        0xDEAD_BEEF_CAFE_0001_u64.wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
     }
 
     pub(super) fn update_scales(&mut self) {
@@ -245,42 +244,66 @@ impl ParametricInPlacePlugin for DitherPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, val) in values {
-            if id == self.param_bit_depth {
-                if let Some(v) = val.as_int() {
-                    let idx = v.clamp(0, (BIT_DEPTHS.len() - 1) as i32) as usize;
-                    self.bit_depth_index = idx;
-                    self.update_scales();
-                } else {
-                    return Err("bit_depth must be an int".to_string());
-                }
-            } else if id == self.param_noise_shaping {
-                if let Some(v) = val.as_bool() {
-                    self.noise_shaping_enabled = v;
-                } else {
-                    return Err("noise_shaping must be a bool".to_string());
-                }
-            } else if id == self.param_dither_type {
-                if let Some(v) = val.as_int() {
-                    let idx = v.clamp(0, 2) as usize;
-                    self.dither_type_index = idx;
-                } else {
-                    return Err("dither_type must be an int".to_string());
-                }
-            } else {
-                return Err(format!("Invalid or unknown parameter: {}", id));
-            }
+        for (id, value) in values {
+            self.parametric_set_parameter(id, value)?;
         }
-        self.rebuild_cached_parameters();
+        Ok(())
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        if id == &self.param_bit_depth {
+            Some(ParameterValue::Int(self.bit_depth_index as i32))
+        } else if id == &self.param_noise_shaping {
+            Some(ParameterValue::Bool(self.noise_shaping_enabled))
+        } else if id == &self.param_dither_type {
+            Some(ParameterValue::Int(self.dither_type_index as i32))
+        } else {
+            None
+        }
+    }
+
+    /// Preserve clamping semantics without allocating a parameter map or
+    /// rebuilding metadata on the audio thread.
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        let (index, current) = if id == self.param_bit_depth {
+            if let Some(v) = value.as_int() {
+                let idx = v.clamp(0, (BIT_DEPTHS.len() - 1) as i32) as usize;
+                self.bit_depth_index = idx;
+                self.update_scales();
+                (0, ParameterValue::Int(idx as i32))
+            } else {
+                return Err("bit_depth must be an int".to_string());
+            }
+        } else if id == self.param_noise_shaping {
+            if let Some(v) = value.as_bool() {
+                self.noise_shaping_enabled = v;
+                (1, ParameterValue::Bool(v))
+            } else {
+                return Err("noise_shaping must be a bool".to_string());
+            }
+        } else if id == self.param_dither_type {
+            if let Some(v) = value.as_int() {
+                let idx = v.clamp(0, 2) as usize;
+                self.dither_type_index = idx;
+                (2, ParameterValue::Int(idx as i32))
+            } else {
+                return Err("dither_type must be an int".to_string());
+            }
+        } else {
+            return Err(format!("Invalid or unknown parameter: {}", id));
+        };
+        self.cached_parameters[index].default_value = current;
         Ok(())
     }
 
     /// Preserve original DitherPlugin behavior: clamp out-of-range ints instead of
     /// rejecting them at the schema-validation layer.
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
-        let mut values = ParameterSet::new();
-        values.insert(id, value);
-        self.apply_values(values)
+        self.parametric_set_parameter(id, value)
     }
 
     fn initialize(&mut self, sr: u32) -> PluginResult<()> {
@@ -294,7 +317,9 @@ impl ParametricInPlacePlugin for DitherPlugin {
     }
 
     fn reset(&mut self) {
-        self.rng_state = Self::init_rng_states(self.channels);
+        for (channel, state) in self.rng_state.iter_mut().enumerate() {
+            *state = Self::rng_seed(channel);
+        }
         for h in &mut self.error_history {
             h.fill(0.0);
         }
@@ -323,8 +348,11 @@ impl ParametricInPlacePlugin for DitherPlugin {
             ));
         }
         enable_ftz_daz();
-        let scale = self.scale;
-        let inv_scale = self.inv_scale;
+        // Keep guard bits until after quantization. At 24 bits an f32 near
+        // full scale has only half an LSB of resolution: adding dither in f32
+        // first creates frequent ties and biased rounding in the final PCM.
+        let scale = f64::from(self.scale);
+        let inv_scale = f64::from(self.inv_scale);
         // Signed PCM uses one more negative code than positive code.  Keep
         // the integer bounds explicit so +1.0 (and noise-shaping overshoot)
         // cannot produce an unrepresentable code before conversion back to
@@ -338,23 +366,23 @@ impl ParametricInPlacePlugin for DitherPlugin {
             let base = frame * ch;
             for c in 0..ch {
                 let idx = base + c;
-                let input = buffer[idx];
+                let input = f64::from(buffer[idx]);
 
                 // Noise shaping feedback
                 let shaped = if noise_shaping {
                     input
-                        - Self::noise_shaping_feedback(
+                        - f64::from(Self::noise_shaping_feedback(
                             &self.error_history[c],
                             self.error_history_heads[c],
                             &self.noise_shaping_delays_samples,
-                        )
+                        ))
                 } else {
                     input
                 };
 
                 let dithered = match dither_type {
                     // TPDF dither: difference of two independent uniforms.
-                    0 => shaped + self.next_tpdf(c) * inv_scale,
+                    0 => shaped + f64::from(self.next_tpdf(c)) * inv_scale,
                     _ => shaped,
                 };
 
@@ -367,7 +395,7 @@ impl ParametricInPlacePlugin for DitherPlugin {
                     // fallback for malformed values (e.g. serialized legacy state)
                     _ => (dithered * scale).round() as i32,
                 };
-                let quantized = quantized_code.clamp(min_code, max_code) as f32 * inv_scale;
+                let quantized = f64::from(quantized_code.clamp(min_code, max_code)) * inv_scale;
 
                 // Compute quantization error and store for noise shaping
                 if noise_shaping {
@@ -377,11 +405,13 @@ impl ParametricInPlacePlugin for DitherPlugin {
                     Self::push_error(
                         &mut self.error_history[c],
                         &mut self.error_history_heads[c],
-                        error,
+                        error as f32,
                     );
                 }
 
-                buffer[idx] = quantized;
+                // All supported signed PCM codes (up to 24 bits) are exactly
+                // representable as f32 after scaling by a power of two.
+                buffer[idx] = quantized as f32;
             }
         }
 

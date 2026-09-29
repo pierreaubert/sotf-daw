@@ -13,28 +13,28 @@ fn disabled_is_transparent() {
         .expect("set enabled");
     plugin.initialize(48000).expect("initialize");
 
-    // Process an arbitrary host block. The first 480 output samples are the
-    // declared startup latency, followed by the beginning of the dry stream.
-    let mut buffer: Vec<f32> = (0..1920)
+    // Dry audio has the same 960-frame total delay as the wet path.
+    let mut buffer: Vec<f32> = (0..2880)
         .map(|i| ((i % 100) as f32 - 50.0) / 100.0)
         .collect();
     let input = buffer.clone();
-    let context = ProcessContext::new(48000, 960);
+    let context = ProcessContext::new(48000, 1440);
     let written = plugin.process_in_place(&mut buffer, &context).unwrap();
-    assert_eq!(written, 960);
-    assert_eq!(&buffer[960..1920], &input[..960]);
+    assert_eq!(written, 1440);
+    assert!(buffer[..1920].iter().all(|&sample| sample == 0.));
+    assert_eq!(&buffer[1920..2880], &input[..960]);
 }
 
 #[test]
 fn latency_is_constant_when_disabled() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
     plugin.initialize(48000).expect("initialize");
-    assert_eq!(plugin.latency_samples(), 480);
+    assert_eq!(plugin.latency_samples(), 960);
 
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(false))
         .expect("set enabled");
-    assert_eq!(plugin.latency_samples(), 480);
+    assert_eq!(plugin.latency_samples(), 960);
 }
 
 #[test]
@@ -92,8 +92,8 @@ fn latency_is_constant_regardless_of_enabled() {
         .unwrap();
     let latency_off = plugin.latency_samples();
 
-    assert_eq!(latency_on, 480, "Latency when enabled must be 480");
-    assert_eq!(latency_off, 480, "Latency when disabled must still be 480");
+    assert_eq!(latency_on, 960, "Latency when enabled must be 960");
+    assert_eq!(latency_off, 960, "Latency when disabled must still be 960");
 }
 
 #[test]

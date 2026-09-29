@@ -36,6 +36,46 @@ pub struct TwoPathAec {
 }
 
 impl TwoPathAec {
+    /// Flush signal history without treating EOF padding as training evidence.
+    pub(crate) fn process_frozen(&mut self, mic: &[f32], reference: &[f32]) -> &[f32] {
+        self.background.process_with_adaptation(mic, reference, 0.0);
+        self.reference_fft_count += 1;
+        let error = self
+            .foreground
+            .process_with_shared_reference(mic, &self.background, 0.0);
+        self.output_buf.copy_from_slice(error);
+        &self.output_buf
+    }
+
+    pub(crate) fn reference_support_frames(&self) -> usize {
+        self.background.reference_support_frames()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn install_test_foreground(&mut self, impulse: &[f32]) {
+        self.foreground.install_test_impulse_response(impulse);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn learned_snapshot(&self) -> Vec<f32> {
+        let mut values = vec![
+            self.power_fg,
+            self.power_bg,
+            self.transfer_count as f32,
+            self.double_talk_blocks as f32,
+            if self.double_talk { 1.0 } else { 0.0 },
+            self.background_adaptation_scale,
+        ];
+        for weight in self
+            .foreground
+            .learned_weights()
+            .into_iter()
+            .chain(self.background.learned_weights())
+        {
+            values.extend_from_slice(&[weight.re, weight.im]);
+        }
+        values
+    }
     /// Create a new two-path AEC.
     ///
     /// # Arguments
@@ -43,6 +83,7 @@ impl TwoPathAec {
     /// * `echo_tail_samples` - Echo path length in samples
     /// * `fg_mu` - Foreground step size (conservative, e.g. 0.3)
     /// * `bg_mu` - Background step size (aggressive, e.g. 0.7)
+    #[cfg(test)]
     pub fn new(block_size: usize, echo_tail_samples: usize, fg_mu: f32, bg_mu: f32) -> Self {
         Self::new_with_sample_rate(block_size, echo_tail_samples, fg_mu, bg_mu, 48_000)
     }

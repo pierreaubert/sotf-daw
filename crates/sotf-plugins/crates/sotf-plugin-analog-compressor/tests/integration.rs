@@ -17,8 +17,8 @@ fn make_interleaved_sine(
 ) -> Vec<f32> {
     let mut buffer = vec![0.0; frames * channels];
     for frame in 0..frames {
-        let sample = amplitude
-            * (std::f32::consts::TAU * freq_hz * frame as f32 / sample_rate as f32).sin();
+        let sample =
+            amplitude * (std::f32::consts::TAU * freq_hz * frame as f32 / sample_rate as f32).sin();
         for ch in 0..channels {
             buffer[frame * channels + ch] = sample;
         }
@@ -50,7 +50,10 @@ fn quiet_signal_gets_no_gain_reduction() {
     let context = ProcessContext::new(SR, FRAMES);
     plugin.process_in_place(&mut buffer, &context).unwrap();
     let ratio = rms_settled(&buffer[2048..]) / rms_settled(&input[2048..]);
-    assert!((ratio - 1.0).abs() < 0.05, "unexpected GR on quiet signal: {ratio}");
+    assert!(
+        (ratio - 1.0).abs() < 0.05,
+        "unexpected GR on quiet signal: {ratio}"
+    );
 }
 
 #[test]
@@ -104,7 +107,10 @@ fn makeup_and_mix_behave() {
     plugin.process_in_place(&mut buffer, &context).unwrap();
     // 9 dB GR + 9 dB makeup ≈ unity.
     let ratio = rms_settled(&buffer[2048..]) / rms_settled(&input[2048..]);
-    assert!((ratio - 1.0).abs() < 0.08, "makeup did not restore level: {ratio}");
+    assert!(
+        (ratio - 1.0).abs() < 0.08,
+        "makeup did not restore level: {ratio}"
+    );
 
     // Mix at 0% is dry regardless of GR.
     plugin
@@ -156,10 +162,16 @@ fn color_stage_adds_character_when_driven() {
     let mut plugin = AnalogCompressorPlugin::new(1);
     plugin.initialize(SR).unwrap();
     plugin
-        .set_parameter(ParameterId::from("analog_drive"), ParameterValue::Float(12.0))
+        .set_parameter(
+            ParameterId::from("analog_drive"),
+            ParameterValue::Float(12.0),
+        )
         .unwrap();
     plugin
-        .set_parameter(ParameterId::from("analog_color"), ParameterValue::Float(1.0))
+        .set_parameter(
+            ParameterId::from("analog_color"),
+            ParameterValue::Float(1.0),
+        )
         .unwrap();
     let input = make_interleaved_sine(440.0, SR, FRAMES, 1, 0.4);
     let mut buffer = input.clone();

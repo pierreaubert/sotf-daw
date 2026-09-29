@@ -1,5 +1,13 @@
 pub mod params;
 
+#[path = "lib/oversampled_core.rs"]
+mod oversampled_core;
+#[path = "lib/oversampled_path.rs"]
+mod oversampled_path;
+
+#[path = "lib/native_kernel.rs"]
+mod native_kernel;
+
 #[path = "lib/limiter_plugin.rs"]
 mod limiter_plugin;
 #[path = "lib/misc.rs"]

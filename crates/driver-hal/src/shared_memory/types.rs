@@ -1,4 +1,5 @@
-use super::shared_audio_buffer::SharedAudioBuffer;
+use super::shared_audio_buffer::ReadCommit;
+use crate::reader_state::{ReaderIdentity, StagedPlaintext};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct EncryptedRecordHeader {
@@ -20,111 +21,62 @@ pub(super) enum EncryptedRecordRead {
 
 #[allow(
     clippy::too_many_arguments,
-    reason = "internal hot-path helper: refactoring into a struct would not improve readability"
+    reason = "preallocated encrypted read scratch"
 )]
 pub(super) fn read_encrypted_with_staging(
-    shared: &SharedAudioBuffer,
+    commit: &mut ReadCommit<'_>,
+    identity: ReaderIdentity,
     output: &mut [f32],
     cipher: &crate::encryption::AudioCipher,
     encrypted_samples_buf: &mut Vec<f32>,
     ciphertext_buf: &mut Vec<u8>,
     decrypted_record_buf: &mut Vec<f32>,
-    pending_decrypted_samples: &mut Vec<f32>,
-    pending_sample_offset: &mut usize,
+    pending: &mut StagedPlaintext,
 ) -> usize {
-    let channel_count = shared.channel_count() as usize;
-    if channel_count == 0 {
-        output.fill(0.0);
-        return 0;
-    }
-
-    // The AudioDriver contract is frame-based. Never consume a partial
-    // interleaved frame when a caller supplies an odd-sized sample buffer.
-    let requested_samples = output.len() / channel_count * channel_count;
-    if requested_samples < output.len() {
-        output[requested_samples..].fill(0.0);
-    }
-
-    let mut copied_samples = 0;
-
-    if *pending_sample_offset < pending_decrypted_samples.len() {
-        let pending_available = pending_decrypted_samples.len() - *pending_sample_offset;
-        let to_copy = pending_available
-            .min(requested_samples)
-            .checked_div(channel_count)
-            .unwrap_or(0)
-            * channel_count;
-        output[..to_copy].copy_from_slice(
-            &pending_decrypted_samples[*pending_sample_offset..*pending_sample_offset + to_copy],
-        );
-        *pending_sample_offset += to_copy;
-        copied_samples += to_copy;
-
-        if *pending_sample_offset >= pending_decrypted_samples.len() {
-            pending_decrypted_samples.clear();
-            *pending_sample_offset = 0;
-        }
-    }
+    // Caller checked geometry, encryption and cached cipher under this guard.
+    let channels = identity.channel_count as usize;
+    let requested_samples = output.len() / channels * channels;
+    let mut copied_samples = pending.copy_into(identity, &mut output[..requested_samples]);
 
     while copied_samples < requested_samples {
-        match shared.read_next_encrypted_record_into(
+        match commit.read_next_encrypted_record_into(
             decrypted_record_buf,
             cipher,
             encrypted_samples_buf,
             ciphertext_buf,
         ) {
             EncryptedRecordRead::Read { sample_count } => {
-                let remaining = requested_samples - copied_samples;
-                let to_copy = sample_count
-                    .min(remaining)
-                    .checked_div(channel_count)
-                    .unwrap_or(0)
-                    * channel_count;
-                if to_copy == 0 {
-                    break;
-                }
+                let to_copy = sample_count.min(requested_samples - copied_samples);
                 output[copied_samples..copied_samples + to_copy]
                     .copy_from_slice(&decrypted_record_buf[..to_copy]);
                 copied_samples += to_copy;
-
                 if to_copy < sample_count {
-                    let pending_count = sample_count - to_copy;
-                    if pending_decrypted_samples.capacity() < pending_count {
-                        output[copied_samples..].fill(0.0);
-                        return copied_samples / channel_count;
+                    if !pending.stage(identity, &decrypted_record_buf[to_copy..sample_count]) {
+                        output.fill(0.0);
+                        return 0;
                     }
-                    pending_decrypted_samples.clear();
-                    pending_decrypted_samples
-                        .extend_from_slice(&decrypted_record_buf[to_copy..sample_count]);
-                    *pending_sample_offset = 0;
                     break;
                 }
             }
             EncryptedRecordRead::OutputTooSmall { sample_count } => {
-                // Production readers reserve the protocol maximum in `new`.
-                // Never grow here: a malformed record or hand-constructed
-                // undersized reader must fail silent instead of allocating on
-                // the audio thread.
                 if decrypted_record_buf.capacity() < sample_count {
-                    output[copied_samples..].fill(0.0);
-                    return copied_samples / channel_count;
+                    pending.invalidate();
+                    output.fill(0.0);
+                    return 0;
                 }
                 decrypted_record_buf.resize(sample_count, 0.0);
             }
             EncryptedRecordRead::Corrupt { .. } | EncryptedRecordRead::InvalidHeader => {
-                if copied_samples == 0 {
-                    output.fill(0.0);
-                    return 0;
-                }
+                pending.invalidate();
                 break;
             }
             EncryptedRecordRead::Empty => break,
         }
     }
-
-    if copied_samples < requested_samples {
-        output[copied_samples..].fill(0.0);
+    // The caller rechecks identity before returning; key/mode stores are not
+    // serialized by the geometry guard in protocol v6.
+    if copied_samples == 0 {
+        output.fill(0.0);
     }
-
-    copied_samples / channel_count
+    copied_samples / channels
 }

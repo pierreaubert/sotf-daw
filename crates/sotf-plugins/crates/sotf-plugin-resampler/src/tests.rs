@@ -1057,6 +1057,84 @@ fn test_latency_converts_chunk_priming_to_output_frames() {
 }
 
 #[test]
+fn signal_delay_matches_concatenated_impulse_without_callback_waiting() {
+    let mut maximum_error = 0.0_f64;
+    let mut cases = 0;
+    for quality in [
+        ResamplerQuality::Fast,
+        ResamplerQuality::Medium,
+        ResamplerQuality::High,
+    ] {
+        for (input_rate, output_rate) in [
+            (48_000, 96_000),
+            (96_000, 48_000),
+            (44_100, 48_000),
+            (48_000, 44_100),
+        ] {
+            for chunk in [64, 127, 513] {
+                for partition in [1, 127, 257] {
+                    for impulse_frame in [0, 1, 2, 17, 63, 127, 997] {
+                        let mut plugin = ResamplerPlugin::with_quality(
+                            1,
+                            input_rate,
+                            output_rate,
+                            chunk,
+                            quality,
+                        )
+                        .unwrap();
+                        let physical_delay = plugin.signal_delay_samples();
+                        assert!(plugin.latency_samples() as f64 > physical_delay);
+                        let mut rendered = Vec::new();
+                        let mut position = 0;
+                        while position < 2_048 {
+                            let frames = partition.min(2_048 - position);
+                            let mut input = vec![0.0; frames];
+                            if (position..position + frames).contains(&impulse_frame) {
+                                input[impulse_frame - position] = 1.0;
+                            }
+                            let mut output = vec![0.0; plugin.output_frames_for_input(frames)];
+                            let actual = plugin
+                                .process(
+                                    &input,
+                                    &mut output,
+                                    &ProcessContext::new(input_rate, frames),
+                                )
+                                .unwrap();
+                            rendered.extend_from_slice(&output[..actual]);
+                            position += frames;
+                        }
+                        let (peak_index, peak) = rendered
+                            .iter()
+                            .enumerate()
+                            .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
+                            .unwrap();
+                        assert!(peak.abs() > 0.2);
+                        // Observe the integer peak independently. A sampled
+                        // sinc peak lies within half a sample of its group
+                        // center; the extra 0.02 allows table/window bias.
+                        let center = impulse_frame as f64 * f64::from(output_rate)
+                            / f64::from(input_rate)
+                            + physical_delay;
+                        let error = (peak_index as f64 - center).abs();
+                        maximum_error = maximum_error.max(error);
+                        cases += 1;
+                        assert!(
+                            error <= 0.52,
+                            "{quality:?} {input_rate}->{output_rate}, offset={impulse_frame}, chunk={chunk}, partition={partition}: peak={peak_index}, center={center}, error={error}",
+                        );
+                    }
+                }
+            }
+        }
+    }
+    eprintln!(
+        "physical delay matrix: {cases} cases; maximum integer-peak error {maximum_error:.9} output frames"
+    );
+    let unity = ResamplerPlugin::new(1, 48_000, 48_000, 127).unwrap();
+    assert_eq!(unity.signal_delay_samples(), 0.0);
+}
+
+#[test]
 fn test_flush_produces_signal_not_silence() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
     resampler.initialize(44100).unwrap();

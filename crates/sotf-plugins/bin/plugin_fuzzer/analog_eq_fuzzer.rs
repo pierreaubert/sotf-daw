@@ -1,10 +1,8 @@
 use super::PluginFuzzer;
 use rand::RngExt;
 use rand::rngs::StdRng;
-use sotf_plugins::{
-    AnalogEqPlugin, AnalogEqPluginParams, ParametricInPlacePluginAdapter, Plugin,
-};
 use sotf_plugins::plugin_analog_common::MODEL_NAMES;
+use sotf_plugins::{AnalogEqPlugin, AnalogEqPluginParams, ParametricInPlacePluginAdapter, Plugin};
 
 pub(super) struct AnalogEqFuzzer;
 

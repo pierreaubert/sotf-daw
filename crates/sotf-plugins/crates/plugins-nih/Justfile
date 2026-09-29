@@ -106,3 +106,194 @@ install-clap: prod-clap
 # Build + install everything
 [group('install')]
 install-nih-all: install-vst3 install-clap
+
+# ----------------------------------------------------------------------
+# Linux builds (native .so)
+# ----------------------------------------------------------------------
+# NOTE: the recipes above are macOS-only (.dylib). The ones below cover
+# Linux and Windows; outputs go to suffixed dist/ dirs so platforms never
+# clobber each other.
+
+# Build all feature-gated plugin cdylibs for native Linux (release)
+[group('build')]
+build-nih-linux:
+	#!/usr/bin/env bash
+	set -uo pipefail
+	# Find workspace root
+	ROOT=$({{cargo}} metadata --no-deps --format-version=1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace_root'])" 2>/dev/null || echo "$(pwd)/../../../..")
+	mkdir -p dist/nih-linux
+	failed=0
+	for feat in {{NIH_FEATURES}}; do
+		echo "Building $feat..."
+		{{cargo}} build --release -p plugins-nih --features "$feat" --no-default-features 2>&1 | tail -1
+		lib_name="sotf_${feat//-/_}"
+		built="$ROOT/target/release/{{_lib_name}}.so"
+		if [ -f "$built" ]; then
+			cp "$built" "dist/nih-linux/lib${lib_name}.so"
+		else
+			echo "  FAILED: $built not found"
+			failed=$((failed + 1))
+		fi
+	done
+	count=$(ls dist/nih-linux/*.so 2>/dev/null | wc -l | tr -d ' ')
+	total=$(echo "{{NIH_FEATURES}}" | wc -w | tr -d ' ')
+	echo "Built $count/$total plugins in dist/nih-linux/ ($failed failed)"
+	[ "$failed" -eq 0 ]
+
+# Build + bundle all VST3 plugins for Linux (x86_64-linux layout)
+[group('build')]
+prod-vst3-linux: build-nih-linux
+	#!/usr/bin/env bash
+	set -euo pipefail
+	VST3_DIR="dist/vst3-linux"
+	rm -rf "$VST3_DIR"
+	for lib in dist/nih-linux/lib*.so; do
+		base=$(basename "$lib" .so | sed 's/^lib//')
+		display=$(echo "$base" | sed 's/sotf_/SOTF /; s/_/ /g' | sed 's/\b\(.\)/\u\1/g')
+		bundle="$VST3_DIR/${display}.vst3"
+		mkdir -p "$bundle/Contents/x86_64-linux"
+		cp "$lib" "$bundle/Contents/x86_64-linux/${base}.so"
+	done
+	echo "Bundled $(ls -d "$VST3_DIR"/*.vst3 | wc -l | tr -d ' ') VST3 plugins"
+
+# Build + bundle all CLAP plugins for Linux
+[group('build')]
+prod-clap-linux: build-nih-linux
+	#!/usr/bin/env bash
+	set -euo pipefail
+	CLAP_DIR="dist/clap-linux"
+	rm -rf "$CLAP_DIR"
+	mkdir -p "$CLAP_DIR"
+	for lib in dist/nih-linux/lib*.so; do
+		base=$(basename "$lib" .so | sed 's/^lib//')
+		cp "$lib" "$CLAP_DIR/${base}.clap"
+	done
+	echo "Bundled $(ls "$CLAP_DIR"/*.clap | wc -l | tr -d ' ') CLAP plugins"
+
+# Install VST3 plugins on Linux (~/.vst3)
+[group('install')]
+install-vst3-linux: prod-vst3-linux
+	#!/usr/bin/env bash
+	set -euo pipefail
+	DEST="$HOME/.vst3"
+	mkdir -p "$DEST"
+	for bundle in dist/vst3-linux/*.vst3; do
+		name=$(basename "$bundle")
+		rm -rf "$DEST/$name"
+		cp -R "$bundle" "$DEST/$name"
+	done
+	echo "Installed $(ls -d "$DEST"/SOTF*.vst3 2>/dev/null | wc -l | tr -d ' ') VST3 plugins to $DEST"
+
+# Install CLAP plugins on Linux (~/.clap)
+[group('install')]
+install-clap-linux: prod-clap-linux
+	#!/usr/bin/env bash
+	set -euo pipefail
+	DEST="$HOME/.clap"
+	mkdir -p "$DEST"
+	cp dist/clap-linux/*.clap "$DEST/"
+	echo "Installed $(ls "$DEST"/sotf_*.clap 2>/dev/null | wc -l | tr -d ' ') CLAP plugins to $DEST"
+
+# Build + install everything on Linux
+[group('install')]
+install-nih-linux: install-vst3-linux install-clap-linux
+
+# ----------------------------------------------------------------------
+# Windows builds (cross via x86_64-pc-windows-gnu, or native MSVC)
+# ----------------------------------------------------------------------
+# Prerequisites for cross-building from Linux/macOS:
+#   rustup target add x86_64-pc-windows-gnu
+#   apt install mingw-w64   (provides x86_64-w64-mingw32-gcc)
+# Override the triple on a native Windows host, e.g.:
+#   just WIN_TARGET=x86_64-pc-windows-msvc build-nih-windows
+WIN_TARGET := "x86_64-pc-windows-gnu"
+
+# Build all feature-gated plugin cdylibs for Windows (release)
+[group('build')]
+build-nih-windows:
+	#!/usr/bin/env bash
+	set -uo pipefail
+	if [ "{{WIN_TARGET}}" = "x86_64-pc-windows-gnu" ] && ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+		echo "Missing x86_64-w64-mingw32-gcc (package mingw-w64)." >&2
+		echo "Install it, or run on a Windows host with:" >&2
+		echo "  just WIN_TARGET=x86_64-pc-windows-msvc build-nih-windows" >&2
+		exit 1
+	fi
+	# Find workspace root
+	ROOT=$({{cargo}} metadata --no-deps --format-version=1 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['workspace_root'])" 2>/dev/null || echo "$(pwd)/../../../..")
+	mkdir -p dist/nih-windows
+	failed=0
+	for feat in {{NIH_FEATURES}}; do
+		echo "Building $feat..."
+		CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc {{cargo}} build --release --target "{{WIN_TARGET}}" -p plugins-nih --features "$feat" --no-default-features 2>&1 | tail -1
+		lib_name="sotf_${feat//-/_}"
+		built="$ROOT/target/{{WIN_TARGET}}/release/plugins_nih.dll"
+		if [ -f "$built" ]; then
+			cp "$built" "dist/nih-windows/${lib_name}.dll"
+		else
+			echo "  FAILED: $built not found"
+			failed=$((failed + 1))
+		fi
+	done
+	count=$(ls dist/nih-windows/*.dll 2>/dev/null | wc -l | tr -d ' ')
+	total=$(echo "{{NIH_FEATURES}}" | wc -w | tr -d ' ')
+	echo "Built $count/$total plugins in dist/nih-windows/ ($failed failed)"
+	[ "$failed" -eq 0 ]
+
+# Build + bundle all VST3 plugins for Windows (x86_64-win layout)
+[group('build')]
+prod-vst3-windows: build-nih-windows
+	#!/usr/bin/env bash
+	set -euo pipefail
+	VST3_DIR="dist/vst3-windows"
+	rm -rf "$VST3_DIR"
+	for lib in dist/nih-windows/*.dll; do
+		base=$(basename "$lib" .dll)
+		display=$(echo "$base" | sed 's/sotf_/SOTF /; s/_/ /g' | sed 's/\b\(.\)/\u\1/g')
+		bundle="$VST3_DIR/${display}.vst3"
+		mkdir -p "$bundle/Contents/x86_64-win"
+		cp "$lib" "$bundle/Contents/x86_64-win/${base}.vst3"
+	done
+	echo "Bundled $(ls -d "$VST3_DIR"/*.vst3 | wc -l | tr -d ' ') VST3 plugins"
+
+# Build + bundle all CLAP plugins for Windows
+[group('build')]
+prod-clap-windows: build-nih-windows
+	#!/usr/bin/env bash
+	set -euo pipefail
+	CLAP_DIR="dist/clap-windows"
+	rm -rf "$CLAP_DIR"
+	mkdir -p "$CLAP_DIR"
+	for lib in dist/nih-windows/*.dll; do
+		base=$(basename "$lib" .dll)
+		cp "$lib" "$CLAP_DIR/${base}.clap"
+	done
+	echo "Bundled $(ls "$CLAP_DIR"/*.clap | wc -l | tr -d ' ') CLAP plugins"
+
+# Install VST3 plugins on Windows (Common Files/VST3)
+[group('install')]
+install-vst3-windows: prod-vst3-windows
+	#!/usr/bin/env bash
+	set -euo pipefail
+	DEST="C:/Program Files/Common Files/VST3"
+	mkdir -p "$DEST"
+	for bundle in dist/vst3-windows/*.vst3; do
+		name=$(basename "$bundle")
+		rm -rf "$DEST/$name"
+		cp -R "$bundle" "$DEST/$name"
+	done
+	echo "Installed $(ls -d "$DEST"/SOTF*.vst3 2>/dev/null | wc -l | tr -d ' ') VST3 plugins to $DEST"
+
+# Install CLAP plugins on Windows (Common Files/CLAP)
+[group('install')]
+install-clap-windows: prod-clap-windows
+	#!/usr/bin/env bash
+	set -euo pipefail
+	DEST="C:/Program Files/Common Files/CLAP"
+	mkdir -p "$DEST"
+	cp dist/clap-windows/*.clap "$DEST/"
+	echo "Installed $(ls "$DEST"/sotf_*.clap 2>/dev/null | wc -l | tr -d ' ') CLAP plugins to $DEST"
+
+# Build + install everything on Windows
+[group('install')]
+install-nih-windows: install-vst3-windows install-clap-windows

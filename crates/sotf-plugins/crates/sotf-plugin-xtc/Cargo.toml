@@ -22,7 +22,6 @@ required-features = ["qa"]
 
 [dependencies]
 sotf-host = { workspace = true }
-arc-swap = { workspace = true }
 math-dsp = { workspace = true }
 realfft = { workspace = true }
 rustfft = { workspace = true }
@@ -35,6 +34,8 @@ symphonia-codec-pcm = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+sofa-reader = { workspace = true }
+tempfile = { workspace = true }
 
 [[bench]]
 name = "xtc-validation-benchmark"

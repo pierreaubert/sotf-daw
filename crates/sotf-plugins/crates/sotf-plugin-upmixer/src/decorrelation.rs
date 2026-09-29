@@ -374,7 +374,10 @@ impl UpmixerPlugin {
     ) -> Vec<Complex<f32>> {
         let duration_ms = self.decorrelation.velvet_noise_duration_ms;
         let seq_len = ((duration_ms / 1000.0) * self.core.sample_rate as f32) as usize;
-        let seq_len = seq_len.clamp(128, self.core.fft_size / 2);
+        let maximum = self.core.fft_size / 2;
+        // Short transforms cannot hold the nominal 128-sample minimum. Keep
+        // the existing clamp unchanged for ordinary FFT sizes of 256 and up.
+        let seq_len = seq_len.clamp(128.min(maximum), maximum);
 
         let pulses_per_sec = self.decorrelation.velvet_noise_density;
         let grid_size = (self.core.sample_rate as f32 / pulses_per_sec).max(1.0) as usize;
@@ -447,3 +450,6 @@ impl UpmixerPlugin {
         result
     }
 }
+
+#[cfg(test)]
+mod tests;

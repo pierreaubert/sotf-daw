@@ -21,6 +21,24 @@ pub trait InPlacePlugin: Send {
         self.channels()
     }
 
+    /// Allow bounded subdivision with exact audio and signal-state equivalence.
+    ///
+    /// Opting in guarantees full consumption of every valid positive block,
+    /// with identical audio and signal state under arbitrary ordered partitions.
+    /// Processing uses only `sample_rate` and `num_frames` from the context;
+    /// transport and event slices must be ignored. Native f64 obeys the same
+    /// contract when supported. Diagnostic publication may follow subcalls.
+    ///
+    /// After initialization, finite correctly shaped input at the initialized
+    /// rate must succeed and return exactly `num_frames`. Lifecycle/rate errors
+    /// must precede mutation; no later subcall may fail for that same context.
+    /// Standard adapters prepare bounded scratch during initialization, without
+    /// imposing a maximum public callback size. Asymmetric adapter layouts
+    /// require this opt-in; direct in-place calls retain their full input stride.
+    fn supports_bounded_subdivision(&self) -> bool {
+        false
+    }
+
     /// Get the list of parameters this plugin supports
     fn parameters(&self) -> Vec<Parameter>;
 
@@ -71,6 +89,32 @@ pub trait InPlacePlugin: Send {
         context: &ProcessContext,
     ) -> PluginResult<usize>;
 
+    /// Maximum output-rate frames returned by one end-of-stream drain step.
+    /// See [`super::Plugin::drain_output_frames_max`].
+    fn drain_output_frames_max(&self) -> usize {
+        0
+    }
+
+    /// Prepare bounded, idempotent EOS work; see [`super::Plugin::begin_drain`].
+    fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Bound full-capacity EOS calls; see [`super::Plugin::drain_call_bound`].
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        None
+    }
+
+    /// Flush buffered samples without accepting more programme input.
+    /// The allocation, completion and capacity contracts match [`super::Plugin::drain`].
+    fn drain(
+        &mut self,
+        _output: &mut [f32],
+        _context: &ProcessContext,
+    ) -> PluginResult<super::PluginDrainResult> {
+        Ok(super::PluginDrainResult::COMPLETE)
+    }
+
     /// Optional specialized operation used by host compiled render plans.
     fn process_compiled_f32(
         &mut self,
@@ -117,6 +161,11 @@ pub trait InPlacePlugin: Send {
     /// Get the processing latency in samples (if any)
     fn latency_samples(&self) -> usize {
         0
+    }
+
+    /// Allocation-free zero-input response bound, as defined by [`super::TailLength`].
+    fn tail_length(&self) -> super::TailLength {
+        super::TailLength::Unknown
     }
 
     /// Minimum input-rate scheduling budget for worst-case realtime work.

@@ -6,6 +6,9 @@ pub mod params;
 
 #[path = "lib/consts.rs"]
 mod consts;
+#[cfg(test)]
+#[path = "lib/finite_stream_tests.rs"]
+mod finite_stream_tests;
 #[path = "lib/phase_vocoder.rs"]
 mod phase_vocoder;
 #[path = "lib/phase_vocoder_channel.rs"]

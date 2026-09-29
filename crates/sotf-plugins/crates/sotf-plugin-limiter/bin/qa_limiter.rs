@@ -22,6 +22,7 @@ fn main() {
         mix: 1.0,
         feed_forward: false,
         link_amount: 1.0,
+        oversampling: 0,
     };
 
     let mut inner = LimiterPlugin::from_params(channels, params);

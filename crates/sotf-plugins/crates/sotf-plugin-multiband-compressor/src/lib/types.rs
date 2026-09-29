@@ -79,6 +79,11 @@ pub struct MultibandCompressorPluginParams {
     /// External sidechain (single-band compatibility)
     #[serde(default = "default_sidechain_external")]
     pub sidechain_external: Option<bool>,
+    /// Maximum reduction before makeup; 120 dB preserves unlimited legacy behavior.
+    #[serde(default = "crate::params::default_range_db")]
+    pub range_db: f32,
+    #[serde(default = "crate::params::default_hold_ms")]
+    pub hold_ms: f32,
 }
 
 impl Default for MultibandCompressorPluginParams {
@@ -108,6 +113,8 @@ impl Default for MultibandCompressorPluginParams {
             lookahead_ms: default_lookahead_ms(),
             program_dependent_release: default_program_dependent_release(),
             sidechain_external: default_sidechain_external(),
+            range_db: crate::params::default_range_db(),
+            hold_ms: crate::params::default_hold_ms(),
         }
     }
 }
@@ -173,6 +180,7 @@ mod tests {
 
 pub(super) struct BandCompressor {
     pub(super) envelope: Vec<f32>,
+    pub(super) hold_remaining: Vec<usize>,
     pub(super) attack_coeff: f32,
     pub(super) release_coeff: f32,
 }

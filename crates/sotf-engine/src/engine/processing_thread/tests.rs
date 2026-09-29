@@ -38,6 +38,10 @@ fn request(command: ProcessingCommand) -> super::ProcessingRequest {
 }
 use std::sync::Arc;
 
+mod crossfade_clock;
+mod eos;
+mod final_meter_cache;
+mod frame_format;
 mod misc;
 mod test;
 
@@ -250,11 +254,6 @@ fn test_matrix_mono_routing_signal_integrity() {
 }
 
 #[test]
-fn crossfade_zero_frame_block_completes_instead_of_leaking_prev_host() {
-    assert_eq!(ProcessingState::compute_crossfade_step(0, 48_000), 1.0);
-}
-
-#[test]
 fn same_rate_crossfade_uses_constant_power_gains() {
     let (old_start, new_start) = ProcessingState::equal_power_crossfade_gains(0.0);
     let (old_mid, new_mid) = ProcessingState::equal_power_crossfade_gains(0.5);
@@ -321,12 +320,15 @@ fn output_rate_changing_host_update_fades_through_silence_without_a_jump() {
             previous_latency,
         )
         .unwrap();
-        assert!(!handle_processing_command(
-            request(ProcessingCommand::CommitHostUpdate(prepared)),
-            &mut state,
-            &response_tx,
-            &event_tx,
-        ));
+        assert!(
+            !handle_processing_command(
+                request(ProcessingCommand::CommitHostUpdate(prepared)),
+                &mut state,
+                &response_tx,
+                &event_tx,
+            )
+            .is_shutdown()
+        );
         assert!(
             state.prev_host.is_some(),
             "latency-changing update should retain the old host for a safe transition"
@@ -710,7 +712,8 @@ fn cancelled_processing_request_is_rejected_before_mutation() {
         &mut state,
         &response_tx,
         &event_tx,
-    );
+    )
+    .is_shutdown();
 
     assert!(!shutdown);
     assert!(!state.bypassed);

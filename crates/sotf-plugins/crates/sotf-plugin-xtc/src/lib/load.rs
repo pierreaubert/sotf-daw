@@ -1,9 +1,10 @@
+// Rust guideline compliant 2026-02-21
 pub use super::config::*;
 use super::filters::{HrtfTransferFunctions, XtcFilters};
 use super::misc::fir_taps_to_half_spectrum;
 use super::types::RoomeqRecommendedMatrix;
 use rustfft::num_complex::Complex;
-use sotf_host::sofa::{SofaFile, SourcePosition};
+use sotf_host::sofa::{SourcePosition, load_sofa};
 
 /// Load HRTF data from a SOFA file and compute frequency-domain transfer functions
 /// for the XTC plant matrix at the configured speaker angles.
@@ -21,7 +22,9 @@ pub(super) fn load_hrtf_for_xtc(
         return Err(format!("HRTF file not found: {}", hrtf_path));
     }
 
-    let sofa = SofaFile::load(path)?;
+    let loaded = load_sofa(path)?;
+    let delay_rebase_seconds = loaded.delay_rebase_seconds;
+    let sofa = loaded.data;
 
     // Reject SOFA files with missing or mismatched sample rate.
     // A missing sample rate means all spectral features could be shifted in
@@ -56,6 +59,27 @@ pub(super) fn load_hrtf_for_xtc(
 
     // FFT the impulse responses to get frequency-domain transfer functions
     let fft_size = (num_bins - 1) * 2;
+    // Preserve legacy raw/zero-delay/cache truncation. Newly materialized delays
+    // must not move selected plant energy outside the FFT and silently lose it.
+    // Long unselected measurements and pure zero padding do not affect this plant.
+    if loaded.delay_applied
+        && [
+            &hrtf_left_speaker.ir_left,
+            &hrtf_left_speaker.ir_right,
+            &hrtf_right_speaker.ir_left,
+            &hrtf_right_speaker.ir_right,
+        ]
+        .iter()
+        .any(|ir| {
+            ir.get(fft_size..)
+                .is_some_and(|tail| tail.iter().any(|&sample| sample != 0.0))
+        })
+    {
+        return Err(format!(
+            "Unsupported XTC SOFA capability: selected delayed HRIR has nonzero support beyond FFT size {fft_size}"
+        ));
+    }
+
     let mut planner = realfft::RealFftPlanner::new();
     let fft_forward = planner.plan_fft_forward(fft_size);
 
@@ -88,6 +112,7 @@ pub(super) fn load_hrtf_for_xtc(
         h_lr,
         h_rl,
         h_rr,
+        delay_rebase_seconds,
     }))
 }
 

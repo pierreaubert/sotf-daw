@@ -632,26 +632,9 @@ fn test_auto_gain_measurement_not_stale_after_one_block() {
     );
 }
 
-/// Bug #3: in Post mode, output measurement must see post-compensation level.
-///
-/// The AutoGain feedback loop sets its next gain target via:
-///   `target = input_lufs - output_lufs`
-///
-/// If `ag.measure_output` is called BEFORE `ag.apply_compensation` (the bug),
-/// `output_lufs` reflects the signal BEFORE the AutoGain's own gain is applied.
-/// When the AutoGain is boosting (gain_linear > 1.0), the measurement will be
-/// lower than the actual output, causing the feedback loop to increase gain further.
-/// This positive feedback drives gain to `max_gain_db` → audible pumping.
-///
-/// The fix applies `ag.apply_compensation` first, then calls `ag.measure_output`.
-///
-/// This test verifies:
-///   (a) Both `input_lufs` and `output_lufs` are finite after sufficient audio.
-///   (b) The difference is bounded by the AutoGain's max_gain_db range.
-///
-/// Full regression of the feedback instability requires fine-grained control over
-/// the EBU R128 internal state, which is out of scope here.  The code fix is
-/// verified by code review (apply then measure).
+/// Public AutoGain telemetry reports the compensated output. Its control meter
+/// separately measures uncompensated EQ output; matching uses an absolute target.
+/// The independent convergence and partition oracles live in reference_accuracy.
 #[test]
 fn test_post_mode_output_measurement_after_compensation() {
     let params = crate::LoudnessCompensationPluginParams {
@@ -693,19 +676,10 @@ fn test_post_mode_output_measurement_after_compensation() {
         ag_data.output_lufs
     );
 
-    // In steady state, |output_lufs - input_lufs| must be within AutoGain's range.
-    // This bound would be violated if the feedback loop ran away due to the
-    // wrong measurement order.
     let diff = (ag_data.output_lufs - ag_data.input_lufs).abs();
-    let max_gain_db = 12.0_f64;
     assert!(
-        diff <= max_gain_db + 1.0,
-        "output_lufs ({:.2}) and input_lufs ({:.2}) should be within {:.1} dB \
-             (Post mode, Bug #3 fix: measure AFTER compensation); diff = {:.2}",
-        ag_data.output_lufs,
-        ag_data.input_lufs,
-        max_gain_db + 1.0,
-        diff
+        diff < 0.03,
+        "post-compensation output differs from input by {diff:.3} LU"
     );
 }
 

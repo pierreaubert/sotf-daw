@@ -1,3 +1,4 @@
+// Rust guideline compliant 2026-02-21
 use super::apply::apply_filter_left;
 use super::apply::apply_filter_left_blended;
 use super::apply::apply_filter_pair;
@@ -15,11 +16,12 @@ use super::load::load_hrtf_for_xtc;
 use super::load::load_roomeq_recommended_filters;
 use super::load::validate_roomeq_recommended_source;
 use super::misc::MAX_PROCESS_FRAMES;
-use super::reflections::{RoomReflectionData, build_reflection_data_ir};
+use super::reflections::{
+    RoomReflectionData, build_reflection_data_image_source, build_reflection_data_ir,
+};
 use super::types::{FilterUpdateRequest, PendingFilterUpdate};
 use super::xtc_data::XtcData;
 use crate::params::PARAMS as XT;
-use arc_swap::{ArcSwap, ArcSwapOption};
 use math_audio_dsp::stft::generate_hann_window;
 use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
 use rustfft::num_complex::Complex;
@@ -28,7 +30,8 @@ use sotf_host::auto_gain::{AutoGain, AutoGainParams};
 use sotf_host::param_bridge;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{deinterleave_stereo, flush_denormals_inplace, window_mul_simd};
 use std::any::Any;
@@ -148,35 +151,28 @@ pub(super) struct XtcWorkBuffers {
     pub(super) prev_ifft_output: Vec<f32>,
 }
 
+/// Bounded publication and retirement storage shared with the filter worker.
+#[derive(Default)]
+pub(super) struct XtcFilterExchange {
+    pub(super) pending: Option<Arc<PendingFilterUpdate>>,
+    // Two slots cover a completed fade plus an interrupted successor. A full
+    // exchange postpones adoption until the worker drains its owned garbage.
+    pub(super) retired_updates: [Option<Arc<PendingFilterUpdate>>; 2],
+    pub(super) retired_snapshots: [Option<Arc<XtcFilters>>; 2],
+}
+
 /// Thread-safe filter state, including the current filters, asynchronous updates,
 /// crossfade smoothing, and room/HRTF data.
 pub(super) struct XtcFilterState {
-    /// Thread-safe crosstalk cancellation filters (lock-free via ArcSwap)
-    pub(super) filters: Arc<ArcSwap<XtcFilters>>,
-
-    /// Cached filter snapshot loaded once per process() call (avoids per-frame ArcSwap::load)
+    /// Audio-owned current filters; only explicit adoption replaces this Arc.
     pub(super) cached_current_filters: Arc<XtcFilters>,
 
-    /// Completed asynchronous filter update waiting to be adopted by the audio thread.
-    pub(super) pending_filter_update: Arc<ArcSwapOption<PendingFilterUpdate>>,
+    /// Prepared bounded exchange. The callback only uses try_lock; the worker
+    /// destroys displaced publications and retired owners outside the lock.
+    pub(super) exchange: Arc<Mutex<XtcFilterExchange>>,
 
-    /// Last adopted update, retained until the filter worker can destroy it off
-    /// the audio thread. One update can be adopted per worker publication, so
-    /// the worker clears these slots before publishing its next result. Two
-    /// slots cover the race where an earlier active bundle is already retired
-    /// and a now-stale pending publication is adopted before the replacement
-    /// worker gets scheduled to reclaim it.
-    pub(super) retired_filter_update: Arc<ArcSwapOption<PendingFilterUpdate>>,
-    pub(super) retired_filter_update_2: Arc<ArcSwapOption<PendingFilterUpdate>>,
-
-    /// Ownership bundle for the currently active filters and auxiliary data.
-    /// Keeping this bundle intact lets adoption retire all old resources as one
-    /// unit instead of dropping the final HRTF/room-data reference on callback.
+    /// Retains all current auxiliary data until ownership moves to the worker.
     pub(super) active_filter_update: Option<Arc<PendingFilterUpdate>>,
-
-    /// Previous crossfade snapshot waiting for off-thread destruction.
-    pub(super) retired_filter_snapshot: Arc<ArcSwapOption<XtcFilters>>,
-    pub(super) retired_filter_snapshot_2: Arc<ArcSwapOption<XtcFilters>>,
 
     /// Latest requested asynchronous filter generation; workers use it to drop stale results.
     pub(super) filter_update_generation: Arc<AtomicU64>,
@@ -189,6 +185,8 @@ pub(super) struct XtcFilterState {
     /// payloads stay in `filter_request`, so notifications coalesce as well.
     filter_worker_waker: Option<SyncSender<()>>,
     pub(super) filter_worker_launches: Arc<AtomicU64>,
+    #[cfg(test)]
+    pub(super) worker_test_barrier: Option<Arc<crate::generation_tests::WorkerBarrier>>,
 
     /// Previous filter snapshot for crossfading (Block mode)
     pub(super) prev_filters: Option<Arc<XtcFilters>>,
@@ -223,8 +221,96 @@ pub(super) struct XtcOutputBuffers {
     pub(super) next_add_position: usize,
     /// Current read frame position in the output accumulator ring buffer
     pub(super) output_read_position: usize,
-    /// Initial latency counter to ensure OLA buffer is primed before output
-    pub(super) latency_filled: usize,
+    /// Declared causal delay still to emit as startup silence.
+    pub(super) startup_delay_remaining: usize,
+    /// Negative-origin synthesis frames to discard before programme time zero.
+    pub(super) synthesis_prefix_remaining: usize,
+}
+
+/// Fixed-latency dry path and sample-counted, complementary wet transition.
+pub(super) struct XtcBypassState {
+    pub(super) dry: Vec<f32>,
+    pub(super) position: usize,
+    pub(super) mix: f64,
+    pub(super) step: f64,
+    pub(super) remaining: usize,
+    pub(super) duration: usize,
+}
+
+impl XtcBypassState {
+    fn reset(&mut self, enabled: bool, rate: u32) {
+        self.dry.fill(0.0);
+        self.position = 0;
+        self.mix = f64::from(enabled);
+        self.step = 0.0;
+        self.remaining = 0;
+        // Integer rounding avoids a rate-dependent floating-point boundary.
+        self.duration = ((u64::from(rate) + 50) / 100).max(1) as usize;
+    }
+
+    fn start(&mut self, enabled: bool) {
+        self.remaining = self.duration;
+        self.step = (f64::from(enabled) - self.mix) / self.duration as f64;
+    }
+
+    pub(super) fn apply(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        channels: usize,
+        enabled: bool,
+    ) {
+        for (source, frame) in input
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .zip(output.chunks_exact_mut(channels))
+        {
+            let dry = [self.dry[self.position], self.dry[self.position + 1]];
+            self.dry[self.position..self.position + 2].copy_from_slice(source);
+            self.position += 2;
+            if self.position == self.dry.len() {
+                self.position = 0;
+            }
+            if self.remaining > 0 {
+                self.remaining -= 1;
+                self.mix = if self.remaining == 0 {
+                    f64::from(enabled)
+                } else {
+                    (self.mix + self.step).clamp(0.0, 1.0)
+                };
+            }
+            if self.mix == 1.0 {
+                // Preserve the original all-enabled output bit for bit.
+                continue;
+            }
+            for (ch, wet) in frame.iter_mut().enumerate() {
+                let dry = dry.get(ch).copied().unwrap_or(0.0);
+                *wet = if self.mix == 0.0 {
+                    dry
+                } else {
+                    // A convex combination in f64 cannot overflow merely
+                    // because finite f32 dry/wet have opposite overrange signs.
+                    ((1.0 - self.mix) * f64::from(dry) + self.mix * f64::from(*wet)) as f32
+                };
+            }
+        }
+    }
+}
+
+/// Prepared finite-stream continuation with one canonical-hop output cache.
+#[derive(Default)]
+pub(super) struct XtcDrainState {
+    pub(super) received_input: bool,
+    pub(super) input_phase: usize,
+    /// Preserve the accepted EOF support declaration through refill/completion.
+    pub(super) tail_bound: Option<usize>,
+    /// Total frames not yet returned, including unread cache; Some freezes EOF.
+    pub(super) remaining: Option<usize>,
+    pub(super) zeros: Vec<f32>,
+    pub(super) output: Vec<f32>,
+    pub(super) cached_frames: usize,
+    pub(super) cache_position: usize,
 }
 
 /// Output dynamics processing (auto-gain + peak limiter).
@@ -248,8 +334,8 @@ pub(super) struct XtcDiagnostics {
     /// Diagnostic data cache (Real-time safe)
     pub(super) cache: RealTimeCache<XtcData>,
 
-    /// Counter to throttle diagnostic cache updates
-    pub(super) cache_update_counter: usize,
+    /// Frames since the last sample-clock AutoGain measurement refresh
+    pub(super) auto_gain_frames: usize,
 
     pub(super) cached_parameters: Vec<Parameter>,
 }
@@ -281,6 +367,11 @@ pub struct XtcPlugin {
     /// Filter state, asynchronous updates, crossfade smoothing, room/HRTF data
     pub(super) filter_state: XtcFilterState,
 
+    pub(super) bypass: XtcBypassState,
+
+    /// Finite continuation storage and the accepted-input clock.
+    pub(super) drain_state: XtcDrainState,
+
     /// Output dynamics (auto-gain + peak limiter)
     pub(super) dynamics: XtcDynamics,
 
@@ -293,9 +384,27 @@ pub struct XtcPlugin {
     pub(super) initialized: bool,
 }
 
+/// Control-side candidate; nothing here is published before preparation succeeds.
+struct PreparedInitialization {
+    update: PendingFilterUpdate,
+    auto_gain: Option<AutoGain>,
+}
+
 impl XtcPlugin {
     const STRUCTURAL_SOURCE_ERROR: &'static str =
         "XTC source/artifact changes are structural and require rebuilding the plugin graph";
+
+    /// Return the causal SOFA offset represented by the active plant, in seconds.
+    ///
+    /// The value is absent when the active source is not an HRTF file. A
+    /// returned zero means the source required no common causal rebase.
+    pub fn sofa_delay_rebase_seconds(&self) -> Option<f64> {
+        self.filter_state
+            .hrtf_transfer_functions
+            .as_ref()
+            .map(|hrtf| hrtf.delay_rebase_seconds)
+    }
+
     /// Validate a source configuration before exposing it through parameters.
     ///
     /// Source changes are structural: an asynchronous recompute may fail after
@@ -446,8 +555,14 @@ impl XtcPlugin {
             )
         };
         let output_channels = filters.output_channels();
+        let drain_samples = hop_size
+            .checked_mul(output_channels)
+            .ok_or_else(|| "XTC drain output dimensions overflow".to_string())?;
         let cached_current_filters = Arc::new(filters);
-        let filters = Arc::new(ArcSwap::from(Arc::clone(&cached_current_filters)));
+        let exchange = Arc::new(Mutex::new(XtcFilterExchange::default()));
+        // Initialize lazy native mutex resources at their final Arc address,
+        // on the construction thread, including the macOS pthread backend.
+        drop(exchange.lock().expect("new filter exchange is unpoisoned"));
         let active_filter_update = Some(Arc::new(PendingFilterUpdate {
             generation: 0,
             filters: Arc::clone(&cached_current_filters),
@@ -488,7 +603,7 @@ impl XtcPlugin {
             input: XtcInputBuffers {
                 input_buffer_l: vec![0.0; fft_size],
                 input_buffer_r: vec![0.0; fft_size],
-                input_fill: 0,
+                input_fill: fft_size - hop_size,
                 temp_input_l: vec![0.0; MAX_PROCESS_FRAMES],
                 temp_input_r: vec![0.0; MAX_PROCESS_FRAMES],
             },
@@ -497,8 +612,9 @@ impl XtcPlugin {
                 output_accumulator_mask: (fft_size * 4) - 1,
                 output_accumulator_fill: 0,
                 next_add_position: 0,
-                output_read_position: 0,
-                latency_filled: 0,
+                output_read_position: fft_size - hop_size,
+                startup_delay_remaining: fft_size,
+                synthesis_prefix_remaining: fft_size - hop_size,
             },
             work: XtcWorkBuffers {
                 fft_buffer: vec![0.0; fft_size],
@@ -509,24 +625,34 @@ impl XtcPlugin {
                 prev_ifft_output: vec![0.0; fft_size],
             },
             filter_state: XtcFilterState {
-                filters,
                 cached_current_filters,
-                pending_filter_update: Arc::new(ArcSwapOption::empty()),
-                retired_filter_update: Arc::new(ArcSwapOption::empty()),
-                retired_filter_update_2: Arc::new(ArcSwapOption::empty()),
+                exchange,
                 active_filter_update,
-                retired_filter_snapshot: Arc::new(ArcSwapOption::empty()),
-                retired_filter_snapshot_2: Arc::new(ArcSwapOption::empty()),
                 filter_update_generation: Arc::new(AtomicU64::new(0)),
                 filter_request: Arc::new(Mutex::new(None)),
                 filter_worker_waker: None,
                 filter_worker_launches: Arc::new(AtomicU64::new(0)),
+                #[cfg(test)]
+                worker_test_barrier: None,
                 prev_filters: None,
                 crossfade_progress: 1.0, // Start fully faded to current
                 progress_per_hop: 0.0,
                 hrtf_transfer_functions,
                 room_reflection_cache,
                 room_params_hash,
+            },
+            bypass: XtcBypassState {
+                dry: vec![0.0; fft_size * 2],
+                position: 0,
+                mix: f64::from(params.enabled),
+                step: 0.0,
+                remaining: 0,
+                duration: ((u64::from(sample_rate) + 50) / 100).max(1) as usize,
+            },
+            drain_state: XtcDrainState {
+                zeros: vec![0.0; hop_size * 2],
+                output: vec![0.0; drain_samples],
+                ..Default::default()
             },
             dynamics: XtcDynamics {
                 auto_gain,
@@ -540,7 +666,7 @@ impl XtcPlugin {
             },
             diagnostics: XtcDiagnostics {
                 cache: RealTimeCache::new(XtcData::default()),
-                cache_update_counter: 0,
+                auto_gain_frames: 0,
                 cached_parameters: Vec::new(),
             },
             initialized: false,
@@ -714,163 +840,186 @@ impl XtcPlugin {
         };
     }
 
-    /// Recompute filters when parameters change.
-    ///
-    /// Optimization 3 & 4: Uses geometry cache and room reflection cache to avoid redundant computation.
-    pub(super) fn update_filters(&mut self, sync: bool) {
+    /// Load a complete target-rate configuration without changing the live epoch.
+    fn prepare_initialization(&self, sample_rate: u32) -> PluginResult<PreparedInitialization> {
         let num_bins = self.fft.fft_size / 2 + 1;
-        let sample_rate = self.fft.sample_rate;
-
-        self.set_crossfade_rate();
-
-        if sync {
-            let new_hash = compute_room_params_hash(&self.params);
-            let room_data = if new_hash != self.filter_state.room_params_hash {
-                compute_room_reflection_data(
-                    &self.params,
-                    sample_rate,
-                    num_bins,
-                    Some(self.fft.fft_forward.clone()),
-                )
-            } else {
-                self.filter_state.room_reflection_cache.clone()
-            };
-            self.filter_state.room_reflection_cache = room_data.clone();
-            self.filter_state.room_params_hash = new_hash;
-
-            let hrtf_data = if self.params.source_mode == "hrtf_file" {
-                let Some(hrtf_path) = self.params.hrtf_file.as_deref() else {
-                    return;
-                };
-                let Ok(data) = load_hrtf_for_xtc(hrtf_path, &self.params, sample_rate, num_bins)
-                else {
-                    return;
-                };
-                data.map(Arc::new)
-            } else {
-                None
-            };
-            self.filter_state.hrtf_transfer_functions = hrtf_data.clone();
-
-            let new_filters = if self.params.source_mode == "roomeq_recommended" {
-                let Some(matrix_path) = self.params.recommended_matrix_file.as_deref() else {
-                    return;
-                };
-                let Ok(filters) =
-                    load_roomeq_recommended_filters(matrix_path, sample_rate, num_bins)
-                else {
-                    return;
-                };
-                filters
-            } else {
-                let cache = compute_geometry_cache(&self.params, sample_rate, num_bins);
-                compute_xtc_filters_full_with_cache_and_hrtf(
-                    &self.params,
-                    sample_rate,
-                    num_bins,
-                    &cache,
-                    room_data.clone(),
-                    hrtf_data.as_deref(),
-                )
-            };
-            let new_filters = Arc::new(new_filters);
-            let previous_output_channels =
-                self.filter_state.cached_current_filters.output_channels();
-            let next_output_channels = new_filters.output_channels();
-            if previous_output_channels != next_output_channels {
-                return;
-            }
-            self.filter_state.filters.store(Arc::clone(&new_filters));
-            self.filter_state.cached_current_filters = Arc::clone(&new_filters);
-            self.filter_state.active_filter_update = Some(Arc::new(PendingFilterUpdate {
-                generation: self
-                    .filter_state
-                    .filter_update_generation
-                    .load(Ordering::Acquire),
-                filters: new_filters,
-                hrtf_transfer_functions: hrtf_data,
-                room_reflection_cache: room_data,
-                room_params_hash: new_hash,
-            }));
-            self.reconfigure_auto_gain_for_layout();
-            self.filter_state.pending_filter_update.store(None);
-        } else {
-            // Latest-only coalescing worker. Expensive recomputation never
-            // fans out onto Rayon's global pool under high-rate automation.
-            let generation = self
-                .filter_state
-                .filter_update_generation
-                .fetch_add(1, Ordering::Relaxed)
-                + 1;
-            let request = FilterUpdateRequest {
-                generation,
-                params: self.params.clone(),
+        // Synchronous initialization reloads artifacts once and uses those exact
+        // in-memory results. The parameter hash alone does not include rate.
+        let room_data = if !self.params.room_reflections_enabled {
+            None
+        } else if let Some(path) = self.params.room_ir_file.as_deref() {
+            Some(Arc::new(build_reflection_data_ir(
+                path,
                 sample_rate,
                 num_bins,
-                expected_output_channels: self.output_channels(),
-                fft_forward: self.fft.fft_forward.clone(),
-            };
-            *self
-                .filter_state
-                .filter_request
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(request);
-            if let Some(waker) = self.filter_state.filter_worker_waker.as_ref() {
-                match waker.try_send(()) {
-                    Ok(()) | Err(TrySendError::Full(())) => return,
-                    Err(TrySendError::Disconnected(())) => {
-                        self.filter_state.filter_worker_waker = None;
-                    }
+                Some(Arc::clone(&self.fft.fft_forward)),
+            )?))
+        } else {
+            Some(Arc::new(build_reflection_data_image_source(
+                &self.params,
+                sample_rate,
+                num_bins,
+            )))
+        };
+        let hrtf_data = if self.params.source_mode == "hrtf_file" {
+            let path = self
+                .params
+                .hrtf_file
+                .as_deref()
+                .ok_or("source_mode='hrtf_file' requires hrtf_file")?;
+            load_hrtf_for_xtc(path, &self.params, sample_rate, num_bins)?.map(Arc::new)
+        } else {
+            None
+        };
+        let filters = if self.params.source_mode == "roomeq_recommended" {
+            let path = self
+                .params
+                .recommended_matrix_file
+                .as_deref()
+                .ok_or("source_mode='roomeq_recommended' requires recommended_matrix_file")?;
+            load_roomeq_recommended_filters(path, sample_rate, num_bins)?
+        } else {
+            let geometry = compute_geometry_cache(&self.params, sample_rate, num_bins);
+            compute_xtc_filters_full_with_cache_and_hrtf(
+                &self.params,
+                sample_rate,
+                num_bins,
+                &geometry,
+                room_data.clone(),
+                hrtf_data.as_deref(),
+            )
+        };
+        if filters.output_channels() != self.output_channels() {
+            return Err(format!(
+                "XTC initialization cannot change output channels from {} to {}; rebuild the plugin graph",
+                self.output_channels(),
+                filters.output_channels(),
+            ));
+        }
+        let auto_gain = if self.params.auto_gain_enabled && self.output_channels() == 2 {
+            Some(AutoGain::new(
+                2,
+                sample_rate,
+                AutoGainParams {
+                    enabled: true,
+                    loudness_type: Default::default(),
+                    max_gain_db: self.params.auto_gain_max_db,
+                    smoothing_ms: self.params.auto_gain_smoothing_ms,
+                },
+            )?)
+        } else {
+            None
+        };
+        Ok(PreparedInitialization {
+            update: PendingFilterUpdate {
+                // The commit assigns a new generation only after all loading
+                // and allocation that can return an error has succeeded.
+                generation: 0,
+                filters: Arc::new(filters),
+                hrtf_transfer_functions: hrtf_data,
+                room_reflection_cache: room_data,
+                room_params_hash: compute_room_params_hash(&self.params),
+            },
+            auto_gain,
+        })
+    }
+
+    /// Request asynchronous filters using the existing latest-only worker.
+    pub(super) fn update_filters(&mut self) {
+        let num_bins = self.fft.fft_size / 2 + 1;
+        let sample_rate = self.fft.sample_rate;
+        self.set_crossfade_rate();
+        // Latest-only coalescing worker. Expensive recomputation never
+        // fans out onto Rayon's global pool under high-rate automation.
+        let generation = self
+            .filter_state
+            .filter_update_generation
+            .fetch_add(1, Ordering::Relaxed)
+            + 1;
+        let request = FilterUpdateRequest {
+            generation,
+            params: self.params.clone(),
+            sample_rate,
+            num_bins,
+            expected_output_channels: self.output_channels(),
+            fft_forward: self.fft.fft_forward.clone(),
+        };
+        *self
+            .filter_state
+            .filter_request
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(request);
+        if let Some(waker) = self.filter_state.filter_worker_waker.as_ref() {
+            match waker.try_send(()) {
+                Ok(()) | Err(TrySendError::Full(())) => return,
+                Err(TrySendError::Disconnected(())) => {
+                    self.filter_state.filter_worker_waker = None;
                 }
             }
+        }
 
-            let request_mailbox = self.filter_state.filter_request.clone();
-            let worker_launches = self.filter_state.filter_worker_launches.clone();
-            let pending_filter_update = self.filter_state.pending_filter_update.clone();
-            let retired_filter_update = self.filter_state.retired_filter_update.clone();
-            let retired_filter_update_2 = self.filter_state.retired_filter_update_2.clone();
-            let retired_filter_snapshot = self.filter_state.retired_filter_snapshot.clone();
-            let retired_filter_snapshot_2 = self.filter_state.retired_filter_snapshot_2.clone();
-            let requested_generation = self.filter_state.filter_update_generation.clone();
-            let (worker_waker, worker_wakeups) = std::sync::mpsc::sync_channel(1);
-            let spawn_result = std::thread::Builder::new()
-                .name("xtc-filter-worker".to_string())
-                .spawn(move || {
-                    while worker_wakeups.recv().is_ok() {
-                        loop {
-                            // A bounded wakeup only says that the latest-only
-                            // mailbox may contain work. Drain stale wakeups so
-                            // each iteration computes at most the newest request.
-                            while worker_wakeups.try_recv().is_ok() {}
+        let request_mailbox = self.filter_state.filter_request.clone();
+        let worker_launches = self.filter_state.filter_worker_launches.clone();
+        let exchange = Arc::clone(&self.filter_state.exchange);
+        let requested_generation = self.filter_state.filter_update_generation.clone();
+        let (worker_waker, worker_wakeups) = std::sync::mpsc::sync_channel(1);
+        #[cfg(test)]
+        let worker_test_barrier = self.filter_state.worker_test_barrier.clone();
+        let spawn_result = std::thread::Builder::new()
+            .name("xtc-filter-worker".to_string())
+            .spawn(move || {
+                while worker_wakeups.recv().is_ok() {
+                    loop {
+                        // A bounded wakeup only says that the latest-only
+                        // mailbox may contain work. Drain stale wakeups so
+                        // each iteration computes at most the newest request.
+                        while worker_wakeups.try_recv().is_ok() {}
 
-                            // Reclaim audio-thread state before producing another
-                            // publication. The callback only transfers ownership
-                            // into these slots; it never destroys filter objects.
-                            retired_filter_update.store(None);
-                            retired_filter_update_2.store(None);
-                            retired_filter_snapshot.store(None);
-                            retired_filter_snapshot_2.store(None);
-                            let request = request_mailbox
+                        // Reclaim audio-thread state before producing another
+                        // publication. The callback only transfers ownership
+                        // into these slots; it never destroys filter objects.
+                        let retired = {
+                            let mut exchange =
+                                exchange.lock().unwrap_or_else(|error| error.into_inner());
+                            (
+                                std::mem::take(&mut exchange.retired_updates),
+                                std::mem::take(&mut exchange.retired_snapshots),
+                            )
+                        };
+                        drop(retired);
+                        let request = request_mailbox
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner())
+                            .take();
+                        let Some(request) = request else {
+                            break;
+                        };
+                        if let Some(update) = Self::compute_filter_update(&request)
+                            && requested_generation.load(Ordering::Acquire) == request.generation
+                        {
+                            let update = Arc::new(update);
+                            #[cfg(test)]
+                            let test_paused = worker_test_barrier.as_ref().is_some_and(|barrier| {
+                                barrier.after_check(request.sample_rate, &update)
+                            });
+                            let displaced = exchange
                                 .lock()
-                                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                                .take();
-                            let Some(request) = request else {
-                                break;
-                            };
-                            if let Some(update) = Self::compute_filter_update(&request)
-                                && requested_generation.load(Ordering::Acquire)
-                                    == request.generation
-                            {
-                                pending_filter_update.store(Some(Arc::new(update)));
+                                .unwrap_or_else(|error| error.into_inner())
+                                .pending
+                                .replace(update);
+                            drop(displaced);
+                            #[cfg(test)]
+                            if test_paused {
+                                worker_test_barrier.as_ref().unwrap().after_publication();
                             }
                         }
                     }
-                });
-            if spawn_result.is_ok() {
-                worker_launches.fetch_add(1, Ordering::Relaxed);
-                let _ = worker_waker.try_send(());
-                self.filter_state.filter_worker_waker = Some(worker_waker);
-            }
+                }
+            });
+        if spawn_result.is_ok() {
+            worker_launches.fetch_add(1, Ordering::Relaxed);
+            let _ = worker_waker.try_send(());
+            self.filter_state.filter_worker_waker = Some(worker_waker);
         }
     }
 
@@ -919,90 +1068,68 @@ impl XtcPlugin {
     }
 
     pub(super) fn adopt_pending_filters(&mut self) {
-        let Some(update) = self.filter_state.pending_filter_update.swap(None) else {
+        self.retire_completed_filter_snapshot();
+        let state = &mut self.filter_state;
+        let Ok(mut exchange) = state.exchange.try_lock() else {
             return;
         };
-
-        if update.generation
-            != self
-                .filter_state
-                .filter_update_generation
-                .load(Ordering::Acquire)
-        {
-            self.retire_filter_update(update);
+        let Some(pending) = &exchange.pending else {
+            return;
+        };
+        let stale = pending.generation != state.filter_update_generation.load(Ordering::Acquire);
+        let mismatched =
+            pending.filters.output_channels() != state.cached_current_filters.output_channels();
+        let update_slot = exchange.retired_updates.iter().position(Option::is_none);
+        if stale || mismatched {
+            if let Some(slot) = update_slot {
+                exchange.retired_updates[slot] = exchange.pending.take();
+            }
             return;
         }
-
-        let previous = self.filter_state.filters.load_full();
-        let previous_output_channels = previous.output_channels();
-        let next_output_channels = update.filters.output_channels();
-        if previous_output_channels != next_output_channels {
-            self.retire_filter_update(update);
+        // Reserve all required retirement capacity before taking a publication.
+        // If the worker is delayed, keep the current fade and latest pending
+        // update intact. No callback path overwrites a live retired owner.
+        if state.active_filter_update.is_some() && update_slot.is_none() {
             return;
         }
-        self.filter_state.filters.store(Arc::clone(&update.filters));
-        self.filter_state.cached_current_filters = Arc::clone(&update.filters);
-        self.filter_state.hrtf_transfer_functions = update.hrtf_transfer_functions.clone();
-        self.filter_state.room_reflection_cache = update.room_reflection_cache.clone();
-        self.filter_state.room_params_hash = update.room_params_hash;
-        if let Some(previous_crossfade) = self.filter_state.prev_filters.take() {
-            self.retire_filter_snapshot(previous_crossfade);
+        let snapshot_slot = exchange.retired_snapshots.iter().position(Option::is_none);
+        if state.prev_filters.is_some() && snapshot_slot.is_none() {
+            return;
         }
-        self.filter_state.prev_filters = Some(previous);
-        self.filter_state.crossfade_progress = 0.0;
-        if let Some(previous_update) = self.filter_state.active_filter_update.replace(update) {
-            self.retire_filter_update(previous_update);
+        let update = exchange
+            .pending
+            .take()
+            .expect("pending publication checked");
+        let previous = std::mem::replace(
+            &mut state.cached_current_filters,
+            Arc::clone(&update.filters),
+        );
+        // The old active bundle still owns these auxiliary resources.
+        state.hrtf_transfer_functions = update.hrtf_transfer_functions.clone();
+        state.room_reflection_cache = update.room_reflection_cache.clone();
+        state.room_params_hash = update.room_params_hash;
+        if let Some(previous_crossfade) = state.prev_filters.replace(previous) {
+            exchange.retired_snapshots[snapshot_slot.expect("retirement capacity checked")] =
+                Some(previous_crossfade);
+        }
+        state.crossfade_progress = 0.0;
+        if let Some(previous_update) = state.active_filter_update.replace(update) {
+            exchange.retired_updates[update_slot.expect("retirement capacity checked")] =
+                Some(previous_update);
         }
     }
 
-    /// Transfer an update bundle to worker-owned garbage without replacing a
-    /// still-live retired bundle on the callback thread.
-    #[inline]
-    fn retire_filter_update(&self, update: Arc<PendingFilterUpdate>) {
-        if self.filter_state.retired_filter_update.load().is_none() {
-            self.filter_state.retired_filter_update.store(Some(update));
-        } else {
-            debug_assert!(self.filter_state.retired_filter_update_2.load().is_none());
-            self.filter_state
-                .retired_filter_update_2
-                .store(Some(update));
-        }
-    }
-
-    /// Transfer a filter snapshot to worker-owned garbage without decrementing
-    /// its final reference on the audio thread. Interrupted crossfades can
-    /// retire two snapshots before the next worker request, hence two slots.
-    #[inline]
-    fn retire_filter_snapshot(&self, filters: Arc<XtcFilters>) {
-        if self.filter_state.retired_filter_snapshot.load().is_none() {
-            self.filter_state
-                .retired_filter_snapshot
-                .store(Some(filters));
-        } else {
-            debug_assert!(self.filter_state.retired_filter_snapshot_2.load().is_none());
-            self.filter_state
-                .retired_filter_snapshot_2
-                .store(Some(filters));
-        }
-    }
-
-    fn reconfigure_auto_gain_for_layout(&mut self) {
-        if self.output_channels() != 2 || !self.params.auto_gain_enabled {
-            self.dynamics.auto_gain = None;
+    /// Retain a completed fade until the worker can accept its ownership.
+    fn retire_completed_filter_snapshot(&mut self) {
+        let state = &mut self.filter_state;
+        if state.crossfade_progress < 1.0 || state.prev_filters.is_none() {
             return;
         }
-        if self.dynamics.auto_gain.is_none() {
-            self.dynamics.auto_gain = AutoGain::new(
-                2,
-                self.fft.sample_rate,
-                AutoGainParams {
-                    enabled: true,
-                    loudness_type: Default::default(),
-                    max_gain_db: self.params.auto_gain_max_db,
-                    smoothing_ms: self.params.auto_gain_smoothing_ms,
-                },
-            )
-            .ok();
+        let Ok(mut exchange) = state.exchange.try_lock() else {
+            return;
+        };
+        if let Some(slot) = exchange.retired_snapshots.iter().position(Option::is_none) {
+            exchange.retired_snapshots[slot] = state.prev_filters.take();
         }
     }
 
@@ -1264,23 +1391,223 @@ impl XtcPlugin {
             );
         }
 
-        // Update positions
+        if self.output.synthesis_prefix_remaining > 0 {
+            // Each of the first three windows finalizes one negative-time hop.
+            // Discard it after accumulation so no stale contribution survives a
+            // ring wrap. The remaining nonnegative samples retain all overlaps.
+            let channels = self.output_channels();
+            let start = self.output.next_add_position * channels;
+            let end = start + self.fft.hop_size * channels;
+            self.output.output_accumulator[start..end].fill(0.0);
+            self.output.synthesis_prefix_remaining -= self.fft.hop_size;
+        } else {
+            self.output.output_accumulator_fill += self.fft.hop_size;
+        }
         self.output.next_add_position = (self.output.next_add_position + self.fft.hop_size) & mask;
-
-        // Start draining immediately to match physical latency.
-        self.output.output_accumulator_fill += self.fft.hop_size;
-        self.output.latency_filled += self.fft.hop_size;
 
         // Advance crossfade progress
         if self.filter_state.crossfade_progress < 1.0 {
             self.filter_state.crossfade_progress = (self.filter_state.crossfade_progress
                 + self.filter_state.progress_per_hop)
                 .min(1.0);
-            if self.filter_state.crossfade_progress >= 1.0
-                && let Some(previous) = self.filter_state.prev_filters.take()
-            {
-                self.retire_filter_snapshot(previous);
+            self.retire_completed_filter_snapshot();
+        }
+    }
+
+    /// Advance validated audio without adopting an asynchronous publication.
+    fn process_audio(&mut self, input: &[f32], output: &mut [f32], num_frames: usize) {
+        let channels = self.output_channels();
+        if self.dynamics.auto_gain.is_none() {
+            self.process_wet_audio(input, output, num_frames);
+            self.apply_wet_limiter(output, num_frames);
+            flush_denormals_inplace(output);
+            self.bypass
+                .apply(input, output, channels, self.params.enabled);
+            return;
+        }
+
+        // AutoGain exists only for stereo output. Refresh after each completed
+        // sample interval, so new measurements affect only subsequent audio.
+        debug_assert_eq!(channels, 2);
+        let interval = (self.fft.sample_rate as usize / 10).max(1);
+        let mut offset = 0;
+        while offset < num_frames {
+            let dry_start = self.bypass.position;
+            let frames = (num_frames - offset)
+                .min(interval - self.diagnostics.auto_gain_frames)
+                .min((self.bypass.dry.len() - dry_start) / 2);
+            let source = &input[offset * 2..(offset + frames) * 2];
+            let wet = &mut output[offset * 2..(offset + frames) * 2];
+            self.process_wet_audio(source, wet, frames);
+
+            if let Some(ag) = &mut self.dynamics.auto_gain {
+                // Before this contiguous ring span is advanced, it contains
+                // precisely the original input delayed by the declared N.
+                // Compare that reference with uncompensated wet audio.
+                let _ = ag.ingest_input(&self.bypass.dry[dry_start..dry_start + frames * 2]);
+                let _ = ag.ingest_output(wet);
+                for frame in wet.as_chunks_mut::<2>().0 {
+                    // The helper's near-target shortcut is evaluated on a
+                    // fixed one-frame clock rather than caller boundaries.
+                    ag.apply_compensation(frame, 1);
+                }
             }
+            self.apply_wet_limiter(wet, frames);
+            flush_denormals_inplace(wet);
+            self.bypass
+                .apply(source, wet, channels, self.params.enabled);
+
+            offset += frames;
+            self.diagnostics.auto_gain_frames += frames;
+            if self.diagnostics.auto_gain_frames == interval {
+                self.diagnostics.auto_gain_frames = 0;
+                if let Some(ag) = &mut self.dynamics.auto_gain {
+                    ag.refresh_input_measurement();
+                    ag.refresh_output_measurement();
+                    let data = ag.get_data();
+                    let envelope = self.dynamics.limiter_envelope;
+                    self.diagnostics.cache.update(|cached| {
+                        cached.auto_gain = data;
+                        cached.limiter_envelope = envelope;
+                    });
+                }
+            }
+        }
+    }
+
+    /// Emit the unchanged windowed filter output on the accepted-input clock.
+    fn process_wet_audio(&mut self, input: &[f32], output: &mut [f32], num_frames: usize) {
+        let output_channels = self.output_channels();
+        output.fill(0.0);
+        let mut block_start = 0;
+        while block_start < num_frames {
+            let block_frames = self.input.temp_input_l.len().min(num_frames - block_start);
+            debug_assert!(block_frames > 0, "initialize prepares nonempty staging");
+            let input_start = block_start * 2;
+            let input_end = input_start + block_frames * 2;
+            deinterleave_stereo(
+                &input[input_start..input_end],
+                &mut self.input.temp_input_l[..block_frames],
+                &mut self.input.temp_input_r[..block_frames],
+            );
+
+            // The accepted input clock owns progress. Queued output can never
+            // end the loop early and discard an unconsumed callback suffix.
+            for frame in 0..block_frames {
+                self.input.input_buffer_l[self.input.input_fill] = self.input.temp_input_l[frame];
+                self.input.input_buffer_r[self.input.input_fill] = self.input.temp_input_r[frame];
+                self.input.input_fill += 1;
+                if self.input.input_fill == self.fft.fft_size {
+                    self.process_stft_frame();
+                    self.shift_input_buffer();
+                }
+
+                if self.output.startup_delay_remaining > 0 {
+                    self.output.startup_delay_remaining -= 1;
+                } else if self.output.output_accumulator_fill > 0 {
+                    let out_start = (block_start + frame) * output_channels;
+                    self.output.output_read_position = drain_output_accumulator(
+                        &mut self.output.output_accumulator,
+                        self.output.output_read_position,
+                        output_channels,
+                        &mut output[out_start..out_start + output_channels],
+                    );
+                    self.output.output_accumulator_fill -= 1;
+                }
+            }
+            block_start += block_frames;
+        }
+    }
+
+    fn apply_wet_limiter(&mut self, output: &mut [f32], num_frames: usize) {
+        let output_channels = self.output_channels();
+        let output_pos = num_frames;
+        // Per-sample peak limiter: prevent clipping after XTC filter summation + AutoGain.
+        // Smooth attack (~0.2ms) and release (~50ms) to avoid gain modulation artifacts.
+        // Skip when filters are bypassed — no amplification occurs.
+        if !self.params.bypass_xtc_filters && output_pos > 0 {
+            let threshold = 0.95_f32;
+            for frame in 0..output_pos {
+                let base = frame * output_channels;
+                let frame_slice = &output[base..base + output_channels];
+                let peak = frame_slice
+                    .iter()
+                    .map(|sample| sample.abs())
+                    .fold(0.0, f32::max);
+                let target_gr = if peak > threshold {
+                    threshold / peak
+                } else {
+                    1.0
+                };
+                if target_gr < self.dynamics.limiter_envelope {
+                    // Smooth attack (~0.2ms) to avoid per-sample gain jumps
+                    self.dynamics.limiter_envelope = target_gr
+                        + self.dynamics.limiter_attack_coeff
+                            * (self.dynamics.limiter_envelope - target_gr);
+                } else {
+                    self.dynamics.limiter_envelope = target_gr
+                        + self.dynamics.limiter_release_coeff
+                            * (self.dynamics.limiter_envelope - target_gr);
+                }
+                for ch in 0..output_channels {
+                    let idx = base + ch;
+                    output[idx] *= self.dynamics.limiter_envelope;
+                    // Hard clamp: the one-pole envelope has finite attack time, so a
+                    // few samples can overshoot during transient onset. Clamp to ±1.0
+                    // as a safety ceiling — matches standard digital limiter practice.
+                    output[idx] = output[idx].clamp(-1.0, 1.0);
+                }
+            }
+        }
+    }
+
+    fn settled_dry(&self) -> bool {
+        !self.params.enabled && self.bypass.mix == 0.0
+    }
+
+    fn current_tail_bound(&self) -> usize {
+        if self.settled_dry() {
+            self.fft.fft_size
+        } else {
+            self.fft.fft_size * 2 - 1
+        }
+    }
+
+    fn remaining_tail_frames(&self) -> Option<usize> {
+        if let Some(remaining) = self.drain_state.remaining {
+            return Some(remaining);
+        }
+        if !self.drain_state.received_input {
+            return Some(0);
+        }
+        if self.settled_dry() {
+            return Some(self.fft.fft_size);
+        }
+        let hop = self.fft.hop_size;
+        let padding = (hop - self.drain_state.input_phase) % hop;
+        self.fft
+            .fft_size
+            .checked_mul(2)?
+            .checked_sub(hop)?
+            .checked_add(padding)
+    }
+
+    /// Compare snapshots without constructing owned strings or triggering setters.
+    fn parameter_unchanged(&self, id: &ParameterId, value: &ParameterValue) -> bool {
+        let borrowed = match id.as_str() {
+            "hrtf_file" => Some(self.params.hrtf_file.as_deref().unwrap_or("")),
+            "room_ir_file" => Some(self.params.room_ir_file.as_deref().unwrap_or("")),
+            "source_mode" => Some(self.params.source_mode.as_str()),
+            "recommended_matrix_file" => {
+                Some(self.params.recommended_matrix_file.as_deref().unwrap_or(""))
+            }
+            "itd_modeling" => Some(self.params.itd_modeling.as_str()),
+            _ => None,
+        };
+        if let Some(current) = borrowed {
+            value.as_string() == Some(current)
+        } else {
+            self.get_parameter(id).as_ref() == Some(value)
         }
     }
 
@@ -1336,12 +1663,30 @@ impl Plugin for XtcPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_state.remaining.is_some() {
+            return if self.parameter_unchanged(&id, &value) {
+                Ok(())
+            } else {
+                Err("XTC parameters are frozen after EOF; reset before changing them".into())
+            };
+        }
         // Parameters not in PARAMS — handle separately
         if id.as_str() == "enabled" {
-            self.params.enabled = value
+            let enabled = value
                 .as_bool()
                 .ok_or_else(|| "enabled must be a boolean".to_string())?;
-            self.rebuild_cached_parameters();
+            if enabled != self.params.enabled {
+                self.params.enabled = enabled;
+                self.bypass.start(enabled);
+                if let Some(parameter) = self
+                    .diagnostics
+                    .cached_parameters
+                    .iter_mut()
+                    .find(|parameter| parameter.id.as_str() == "enabled")
+                {
+                    parameter.default_value = ParameterValue::Bool(enabled);
+                }
+            }
             return Ok(());
         }
         if id.as_str() == "kappa_target" {
@@ -1350,7 +1695,7 @@ impl Plugin for XtcPlugin {
                 .ok_or_else(|| "kappa_target must be a float".to_string())?;
             if v.is_finite() {
                 self.params.kappa_target = v.clamp(1.0, 1000.0);
-                self.update_filters(false);
+                self.update_filters();
             }
             self.rebuild_cached_parameters();
             return Ok(());
@@ -1370,7 +1715,7 @@ impl Plugin for XtcPlugin {
                 self.fft.fft_size / 2 + 1,
             )?;
             self.params = candidate;
-            self.update_filters(false);
+            self.update_filters();
             self.rebuild_cached_parameters();
             return Ok(());
         }
@@ -1399,7 +1744,7 @@ impl Plugin for XtcPlugin {
                 self.fft.fft_size / 2 + 1,
             )?;
             self.params = candidate;
-            self.update_filters(false);
+            self.update_filters();
             self.rebuild_cached_parameters();
             return Ok(());
         }
@@ -1424,7 +1769,7 @@ impl Plugin for XtcPlugin {
                 ));
             }
             self.params.itd_modeling = v.to_string();
-            self.update_filters(false);
+            self.update_filters();
             self.rebuild_cached_parameters();
             return Ok(());
         }
@@ -1462,6 +1807,7 @@ impl Plugin for XtcPlugin {
             22 | 23 => true, // bypass_spectral_normalization, bypass_neumann_refinement
             24 => {
                 // auto_gain_enabled
+                let had_auto_gain = self.dynamics.auto_gain.is_some();
                 if self.output_channels() != 2 {
                     self.dynamics.auto_gain = None;
                 } else if self.params.auto_gain_enabled && self.dynamics.auto_gain.is_none() {
@@ -1477,6 +1823,9 @@ impl Plugin for XtcPlugin {
                     )?);
                 } else if !self.params.auto_gain_enabled {
                     self.dynamics.auto_gain = None;
+                }
+                if had_auto_gain != self.dynamics.auto_gain.is_some() {
+                    self.diagnostics.auto_gain_frames = 0;
                 }
                 false
             }
@@ -1499,7 +1848,7 @@ impl Plugin for XtcPlugin {
         };
 
         if needs_filter_update {
-            self.update_filters(false);
+            self.update_filters();
         }
         self.rebuild_cached_parameters();
 
@@ -1549,41 +1898,83 @@ impl Plugin for XtcPlugin {
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if sample_rate == 0 {
+            return Err("XTC sample rate must be non-zero".into());
+        }
+        // AutoGain's two fixed stereo loudness monitors use this validated range.
+        // Reject before changing the audio clock or invalidating a pending request.
+        if self.params.auto_gain_enabled
+            && self.output_channels() == 2
+            && !(16..=2_822_400).contains(&sample_rate)
+        {
+            return Err("XTC AutoGain sample rate must be in 16..=2822400 Hz".into());
+        }
+        let mut prepared = self.prepare_initialization(sample_rate)?;
+        // Constructor storage has the fixed FFT/layout dimensions. Complete
+        // control-side preparation before advancing the publication generation.
+        self.input.temp_input_l.resize(MAX_PROCESS_FRAMES, 0.0);
+        self.input.temp_input_r.resize(MAX_PROCESS_FRAMES, 0.0);
+        prepared.update.generation = self
+            .filter_state
+            .filter_update_generation
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1);
+        let update = Arc::new(prepared.update);
         self.fft.sample_rate = sample_rate;
         self.dynamics.limiter_attack_coeff =
             math_audio_dsp::fast_math::fast_exp(-1.0 / (0.2 * 0.001 * sample_rate as f32));
         self.dynamics.limiter_release_coeff =
             math_audio_dsp::fast_math::fast_exp(-1.0 / (50.0 * 0.001 * sample_rate as f32));
-        self.update_filters(true); // Synchronous for initialization
-
-        // Pre-allocate temp buffers to the validated maximum XTC block size.
-        // After this, the resize() check in process() is a guaranteed no-op.
-        self.input.temp_input_l.resize(MAX_PROCESS_FRAMES, 0.0);
-        self.input.temp_input_r.resize(MAX_PROCESS_FRAMES, 0.0);
-
-        if let Some(ag) = &mut self.dynamics.auto_gain {
-            ag.set_sample_rate(sample_rate).map_err(|e| e.to_string())?;
-        }
+        self.set_crossfade_rate();
+        self.filter_state.cached_current_filters = Arc::clone(&update.filters);
+        self.filter_state.hrtf_transfer_functions = update.hrtf_transfer_functions.clone();
+        self.filter_state.room_reflection_cache = update.room_reflection_cache.clone();
+        self.filter_state.room_params_hash = update.room_params_hash;
+        self.filter_state.active_filter_update = Some(update);
+        self.dynamics.auto_gain = prepared.auto_gain;
+        // A successful synchronous installation supersedes the ready update;
+        // a worker already past its own check is rejected at later adoption.
+        self.filter_state
+            .exchange
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .pending = None;
 
         self.initialized = true;
+        // A new initialized clock starts the same meter cadence as a fresh
+        // instance. Failed preparation never reaches this epoch boundary.
+        self.diagnostics.auto_gain_frames = 0;
+        self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.drain_state.received_input = false;
+        self.diagnostics.auto_gain_frames = 0;
+        self.bypass.reset(self.params.enabled, self.fft.sample_rate);
+        self.drain_state.tail_bound = None;
+        self.drain_state.input_phase = 0;
+        self.drain_state.remaining = None;
+        self.drain_state.cached_frames = 0;
+        self.drain_state.cache_position = 0;
+        self.drain_state.zeros.fill(0.0);
+        self.drain_state.output.fill(0.0);
         // Clear all buffers
         self.input.input_buffer_l.fill(0.0);
         self.input.input_buffer_r.fill(0.0);
         self.output.output_accumulator.fill(0.0);
         self.output.output_accumulator_fill = 0;
         self.output.next_add_position = 0;
-        self.output.output_read_position = 0;
+        let prefix = self.fft.fft_size - self.fft.hop_size;
+        self.output.output_read_position = prefix;
         self.work.prev_ifft_output.fill(0.0);
-        self.input.input_fill = 0;
-        self.output.latency_filled = 0;
+        self.input.input_fill = prefix;
+        self.output.startup_delay_remaining = self.fft.fft_size;
+        self.output.synthesis_prefix_remaining = prefix;
 
         // Reset crossfade state
-        self.filter_state.prev_filters = None;
         self.filter_state.crossfade_progress = 1.0;
+        self.retire_completed_filter_snapshot();
 
         if let Some(ag) = &mut self.dynamics.auto_gain {
             ag.reset();
@@ -1603,211 +1994,139 @@ impl Plugin for XtcPlugin {
         if !self.initialized {
             return Err("XTC process called before initialize".to_string());
         }
-        self.adopt_pending_filters();
+        if context.sample_rate != self.fft.sample_rate {
+            return Err("XTC process requires the initialized sample rate".into());
+        }
         let output_channels = self.output_channels();
-
-        // Verify buffer sizes (stereo input, dynamic speaker output for roomEQ matrices)
-        if input.len() != num_frames * 2 {
+        let input_samples = num_frames
+            .checked_mul(2)
+            .ok_or_else(|| "XTC input sample count overflow".to_string())?;
+        let output_samples = num_frames
+            .checked_mul(output_channels)
+            .ok_or_else(|| "XTC output sample count overflow".to_string())?;
+        if input.len() != input_samples {
             return Err(format!(
-                "Input size mismatch: expected {}, got {}",
-                num_frames * 2,
+                "Input size mismatch: expected {input_samples}, got {}",
                 input.len()
             ));
         }
-        if output.len() != num_frames * output_channels {
+        if output.len() != output_samples {
             return Err(format!(
-                "Output size mismatch: expected {}, got {}",
-                num_frames * output_channels,
+                "Output size mismatch: expected {output_samples}, got {}",
                 output.len()
             ));
         }
-
-        // Measure loudness (throttled to 1/10 blocks to save CPU)
-        self.diagnostics.cache_update_counter += 1;
-        let mut do_measure = false;
-        if self.diagnostics.cache_update_counter >= 10 {
-            self.diagnostics.cache_update_counter = 0;
-            do_measure = true;
+        if num_frames == 0 {
+            return Ok(0);
         }
-
-        // Measure input loudness for auto-gain (before any processing)
-        if do_measure && let Some(ag) = &mut self.dynamics.auto_gain {
-            let _ = ag.measure_input(input);
+        if self.drain_state.remaining.is_some() {
+            return Err("XTC input is frozen after EOF; reset before processing".into());
         }
+        // All rejection checks precede publication adoption and audio mutation.
+        // Adoption only accepts matrices with the already validated width.
+        self.adopt_pending_filters();
 
-        // Bypass if disabled
-        if !self.params.enabled {
-            for frame in 0..num_frames {
-                let input_base = frame * 2;
-                let output_base = frame * output_channels;
-                output[output_base] = input[input_base];
-                if output_channels > 1 {
-                    output[output_base + 1] = input[input_base + 1];
-                }
-                for ch in 2..output_channels {
-                    output[output_base + ch] = 0.0;
-                }
-            }
+        self.process_audio(input, output, num_frames);
+        self.drain_state.received_input = true;
+        self.drain_state.input_phase =
+            (self.drain_state.input_phase + num_frames % self.fft.hop_size) % self.fft.hop_size;
+        Ok(num_frames)
+    }
 
-            // Still update diagnostic cache when bypassed
-            if do_measure {
-                let ag_data = self
-                    .dynamics
-                    .auto_gain
-                    .as_ref()
-                    .map(|ag| ag.get_data())
-                    .unwrap_or_default();
-                self.diagnostics.cache.update(|d| {
-                    d.auto_gain = ag_data;
-                    d.limiter_envelope = 1.0;
-                });
-            }
-            return Ok(context.num_frames);
+    fn drain_output_frames_max(&self) -> usize {
+        self.fft.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            return None;
         }
+        let remaining = self.remaining_tail_frames()?;
+        let cached = self
+            .drain_state
+            .cached_frames
+            .checked_sub(self.drain_state.cache_position)?;
+        let calls = usize::from(cached > 0)
+            .checked_add(remaining.checked_sub(cached)?.div_ceil(self.fft.hop_size))?;
+        std::num::NonZeroU64::new(u64::try_from(calls.max(1)).ok()?)
+    }
 
-        // Snapshot current filters once per process() call (avoids per-frame ArcSwap::load atomic ops)
-        self.filter_state.cached_current_filters =
-            arc_swap::Guard::into_inner(self.filter_state.filters.load());
+    fn tail_length(&self) -> TailLength {
+        if !self.initialized {
+            TailLength::Unknown
+        } else {
+            TailLength::Finite(
+                self.drain_state
+                    .tail_bound
+                    .unwrap_or_else(|| self.current_tail_bound()) as u64,
+            )
+        }
+    }
 
-        let mut output_pos = 0;
-        let mut block_start = 0;
-
-        while block_start < num_frames && output_pos < num_frames {
-            let block_frames = self.input.temp_input_l.len().min(num_frames - block_start);
-            if block_frames == 0 {
-                return Err("XTC block size is zero; plugin may not be initialized".to_string());
-            }
-            let input_start = block_start * 2;
-            let input_end = input_start + block_frames * 2;
-
-            deinterleave_stereo(
-                &input[input_start..input_end],
-                &mut self.input.temp_input_l[..block_frames],
-                &mut self.input.temp_input_r[..block_frames],
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized {
+            return Err("XTC drain called before initialize".into());
+        }
+        if context.sample_rate != self.fft.sample_rate {
+            return Err("XTC drain requires the initialized sample rate".into());
+        }
+        let channels = self.output_channels();
+        if !output.len().is_multiple_of(channels) {
+            return Err("XTC drain output must contain complete frames".into());
+        }
+        let remaining = self
+            .remaining_tail_frames()
+            .ok_or_else(|| "XTC finite support overflow".to_string())?;
+        if remaining > 0 && output.is_empty() {
+            return Err("XTC drain requires positive capacity for pending audio".into());
+        }
+        if !self.drain_state.received_input {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        // Freeze the audible support before a canonical refill can finish a fade.
+        // No-input and rejected calls do not begin an EOF epoch.
+        let bound = self.current_tail_bound();
+        self.drain_state.tail_bound.get_or_insert(bound);
+        self.drain_state.remaining = Some(remaining);
+        if remaining == 0 {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if self.drain_state.cache_position == self.drain_state.cached_frames {
+            let frames = remaining.min(self.fft.hop_size);
+            // Temporarily move prepared vectors to permit the shared audio kernel
+            // to borrow self. This infallible refill neither resizes nor allocates.
+            let zeros = std::mem::take(&mut self.drain_state.zeros);
+            let mut cache = std::mem::take(&mut self.drain_state.output);
+            self.process_audio(
+                &zeros[..frames * 2],
+                &mut cache[..frames * channels],
+                frames,
             );
-
-            let mut input_pos = 0;
-            while output_pos < num_frames {
-                // Step 1: Fill input buffer from deinterleaved temp buffers
-                if input_pos < block_frames {
-                    let samples_needed = self.fft.fft_size - self.input.input_fill;
-                    let samples_available_in = block_frames - input_pos;
-                    let to_copy = samples_needed.min(samples_available_in);
-
-                    if to_copy > 0 {
-                        self.input.input_buffer_l
-                            [self.input.input_fill..self.input.input_fill + to_copy]
-                            .copy_from_slice(
-                                &self.input.temp_input_l[input_pos..input_pos + to_copy],
-                            );
-                        self.input.input_buffer_r
-                            [self.input.input_fill..self.input.input_fill + to_copy]
-                            .copy_from_slice(
-                                &self.input.temp_input_r[input_pos..input_pos + to_copy],
-                            );
-                        self.input.input_fill += to_copy;
-                        input_pos += to_copy;
-                    }
-                }
-
-                // Step 2: Process ALL possible STFT frames from current input
-                while self.input.input_fill >= self.fft.fft_size {
-                    self.process_stft_frame();
-                    self.shift_input_buffer();
-                }
-
-                // Step 3: Copy available output to output buffer
-                let frames_to_drain = self
-                    .output
-                    .output_accumulator_fill
-                    .min(num_frames - output_pos);
-
-                if frames_to_drain > 0 {
-                    let out_start = output_pos * output_channels;
-                    let out_end = out_start + frames_to_drain * output_channels;
-                    self.output.output_read_position = drain_output_accumulator(
-                        &mut self.output.output_accumulator,
-                        self.output.output_read_position,
-                        output_channels,
-                        &mut output[out_start..out_end],
-                    );
-                    self.output.output_accumulator_fill -= frames_to_drain;
-                    output_pos += frames_to_drain;
-                } else if input_pos >= block_frames {
-                    break;
-                }
-            }
-
-            block_start += block_frames;
+            self.drain_state.zeros = zeros;
+            self.drain_state.output = cache;
+            self.drain_state.cached_frames = frames;
+            self.drain_state.cache_position = 0;
         }
-
-        // Auto-gain: measure the UNCOMPENSATED output from the plugin filters.
-        // This ensures the gain calculation is stable and doesn't oscillate.
-        if let Some(ag) = &mut self.dynamics.auto_gain {
-            if do_measure {
-                let _ = ag.measure_output(&output[..output_pos * output_channels]);
-
-                // Update diagnostic cache (Real-time safe, throttled)
-                let ag_data = ag.get_data();
-                let limiter_env = self.dynamics.limiter_envelope;
-                self.diagnostics.cache.update(|d| {
-                    d.auto_gain = ag_data;
-                    d.limiter_envelope = limiter_env;
-                });
-            }
-            ag.apply_compensation(&mut output[..output_pos * output_channels], output_pos);
-        }
-
-        // Per-sample peak limiter: prevent clipping after XTC filter summation + AutoGain.
-        // Smooth attack (~0.2ms) and release (~50ms) to avoid gain modulation artifacts.
-        // Skip when filters are bypassed — no amplification occurs.
-        if !self.params.bypass_xtc_filters && output_pos > 0 {
-            let threshold = 0.95_f32;
-            for frame in 0..output_pos {
-                let base = frame * output_channels;
-                let frame_slice = &output[base..base + output_channels];
-                let peak = frame_slice
-                    .iter()
-                    .map(|sample| sample.abs())
-                    .fold(0.0, f32::max);
-                let target_gr = if peak > threshold {
-                    threshold / peak
-                } else {
-                    1.0
-                };
-                if target_gr < self.dynamics.limiter_envelope {
-                    // Smooth attack (~0.2ms) to avoid per-sample gain jumps
-                    self.dynamics.limiter_envelope = target_gr
-                        + self.dynamics.limiter_attack_coeff
-                            * (self.dynamics.limiter_envelope - target_gr);
-                } else {
-                    self.dynamics.limiter_envelope = target_gr
-                        + self.dynamics.limiter_release_coeff
-                            * (self.dynamics.limiter_envelope - target_gr);
-                }
-                for ch in 0..output_channels {
-                    let idx = base + ch;
-                    output[idx] *= self.dynamics.limiter_envelope;
-                    // Hard clamp: the one-pole envelope has finite attack time, so a
-                    // few samples can overshoot during transient onset. Clamp to ±1.0
-                    // as a safety ceiling — matches standard digital limiter practice.
-                    output[idx] = output[idx].clamp(-1.0, 1.0);
-                }
-            }
-        }
-
-        output[output_pos * output_channels..].fill(0.0);
-
-        // STFT plugins must return context.num_frames (not output_pos) to prevent
-        // ring buffer underrun in the host. Unproduced frames are already zeroed.
-        flush_denormals_inplace(output);
-        Ok(context.num_frames)
+        let frames = (self.drain_state.cached_frames - self.drain_state.cache_position)
+            .min(output.len() / channels);
+        let start = self.drain_state.cache_position * channels;
+        output[..frames * channels]
+            .copy_from_slice(&self.drain_state.output[start..start + frames * channels]);
+        self.drain_state.cache_position += frames;
+        self.drain_state.remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
 
     fn latency_samples(&self) -> usize {
-        // Output becomes observable in the host block that completes the first
-        // FFT frame. Reporting one full frame keeps latency independent of host
-        // block size and bounds compensation error to one block.
+        // The sample clock emits one full frame of startup silence, independent
+        // of callback boundaries; negative-origin windows preserve startup gain.
         self.fft.fft_size
     }
 }

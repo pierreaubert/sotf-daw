@@ -1019,8 +1019,7 @@ fn test_hal_input_reader_stages_partial_encrypted_record() {
         encrypted_samples_buf,
         ciphertext_buf,
         decrypted_record_buf: Vec::with_capacity(sample_capacity),
-        pending_decrypted_samples: Vec::with_capacity(sample_capacity),
-        pending_sample_offset: 0,
+        pending: crate::reader_state::StagedPlaintext::new(sample_capacity),
         key_mismatch_count: std::sync::atomic::AtomicU64::new(0),
     };
 
@@ -1112,8 +1111,7 @@ fn test_hal_input_reader_reports_cipher_reload_need() {
         encrypted_samples_buf: Vec::new(),
         ciphertext_buf: Vec::new(),
         decrypted_record_buf: Vec::new(),
-        pending_decrypted_samples: Vec::new(),
-        pending_sample_offset: 0,
+        pending: crate::reader_state::StagedPlaintext::default(),
         key_mismatch_count: std::sync::atomic::AtomicU64::new(0),
     };
 
@@ -1289,4 +1287,294 @@ fn test_multichannel_configurations() {
             );
         }
     }
+}
+
+// Actual macOS mmap/AEAD reader regressions for the isolated staging proposal.
+fn staging_test_reader(path: &std::path::Path) -> HalInputReader {
+    let (ciphertext_buf, encrypted_samples_buf) = encrypted_staging_buffers();
+    let capacity = super::super::consts::pre_alloc_capacity_samples();
+    HalInputReader {
+        buffer: Some(SharedAudioBuffer::open(path).expect("open test reader mapping")),
+        cipher: Some(test_audio_cipher()),
+        encrypted_samples_buf,
+        ciphertext_buf,
+        decrypted_record_buf: Vec::with_capacity(capacity),
+        pending: crate::reader_state::StagedPlaintext::new(capacity),
+        key_mismatch_count: std::sync::atomic::AtomicU64::new(0),
+    }
+}
+
+#[test]
+fn hal_reader_staging_rejects_old_channels_after_quiesced_change() {
+    let mapping = create_mock_shared_memory_with_max_geometry(48_000, 512, 2, 512, 3);
+    let mut writer = SharedAudioBuffer::open(mapping.path()).expect("open writer");
+    let cipher = test_audio_cipher();
+    writer.set_key_fingerprint(*cipher.fingerprint());
+    writer.set_encrypted(true);
+    let mut reader = staging_test_reader(mapping.path());
+    let old = [10.0, 11.0, 20.0, 21.0, 30.0, 31.0, 40.0, 41.0];
+    assert_eq!(writer.write_audio_encrypted(&old, &cipher), 4);
+    let mut first = [0.0; 2];
+    assert_eq!(reader.read(&mut first), 1);
+    assert_eq!(first, old[..2]);
+    assert_eq!(reader.available_read_frames(), 3);
+
+    writer.reconfigure_quiesced(Some(96_000), Some(256), Some(3));
+    assert_eq!(reader.current_format().unwrap(), (96_000, 3, 256));
+    assert_eq!(reader.available_read_frames(), 0);
+    let marker = [
+        101.0, 102.0, 103.0, 201.0, 202.0, 203.0, 301.0, 302.0, 303.0,
+    ];
+    assert_eq!(writer.write_audio_encrypted(&marker, &cipher), 3);
+    assert_eq!(reader.available_read_frames(), 3);
+    let mut output = [9876.0; 14];
+    assert_eq!(reader.read(&mut output), 3);
+    assert_eq!(&output[..marker.len()], &marker);
+    assert_eq!(&output[marker.len()..], &[9876.0; 5]);
+    assert_eq!(reader.available_read_frames(), 0);
+    assert_eq!(
+        writer.header().read_position.load(Ordering::Acquire),
+        writer.header().write_position.load(Ordering::Acquire),
+    );
+    assert_eq!(writer.header().configuring.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn hal_reader_positive_reads_preserve_caller_suffix_in_both_modes() {
+    for encrypted in [false, true] {
+        let mapping = create_mock_shared_memory(48_000, 512, 2);
+        let mut writer = SharedAudioBuffer::open(mapping.path()).expect("open writer");
+        let cipher = test_audio_cipher();
+        writer.set_key_fingerprint(*cipher.fingerprint());
+        writer.set_encrypted(encrypted);
+        let mut reader = staging_test_reader(mapping.path());
+        let samples = [-0.0, 0.125, 1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0];
+        for record in [&samples[..6], &samples[6..]] {
+            let written = if encrypted {
+                writer.write_audio_encrypted(record, &cipher)
+            } else {
+                writer.write_audio(record)
+            };
+            assert_eq!(written, record.len() / 2);
+        }
+        // Encrypted mode leaves two frames staged and another record in the ring.
+        let mut first = [9876.0; 3];
+        assert_eq!(reader.read(&mut first), 1);
+        assert_eq!(first[0].to_bits(), samples[0].to_bits());
+        assert_eq!(first[1], samples[1]);
+        assert_eq!(first[2], 9876.0);
+        assert_eq!(reader.available_read_frames(), 4);
+        let mut remainder = [9876.0; 11];
+        assert_eq!(reader.read(&mut remainder), 4);
+        assert_eq!(&remainder[..8], &samples[2..]);
+        assert_eq!(&remainder[8..], &[9876.0; 3]);
+        assert_eq!(reader.available_read_frames(), 0);
+        assert_eq!(writer.header().configuring.load(Ordering::Acquire), 0);
+    }
+}
+
+// A child-only environment override exercises the public reload method without
+// mutating global test-process state or reading/writing any real session key.
+fn staging_key_test_in_child(test_name: &str, key_exists: bool) -> bool {
+    const CHILD: &str = "SOTF_HAL_STAGING_KEY_TEST_CHILD";
+    if env::var_os(CHILD).as_deref() == Some(std::ffi::OsStr::new(test_name)) {
+        return true;
+    }
+    let directory = tempfile::tempdir().expect("create isolated session directory");
+    let key_path = directory.path().join("session.key");
+    if key_exists {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&key_path)
+            .expect("create private test key");
+        file.write_all(&[0x42; 32]).expect("write test key");
+    }
+    let result = Command::new(env::current_exe().expect("locate test executable"))
+        .args(["--exact", test_name, "--nocapture"])
+        .env(CHILD, test_name)
+        .env("SOTF_HAL_SESSION_KEY_PATH", &key_path)
+        .output()
+        .expect("run isolated key test");
+    assert!(
+        result.status.success(),
+        "isolated key test failed: stdout={} stderr={}",
+        String::from_utf8_lossy(&result.stdout),
+        String::from_utf8_lossy(&result.stderr),
+    );
+    assert!(
+        String::from_utf8_lossy(&result.stdout).contains("1 passed"),
+        "the exact child test must actually run: {}",
+        String::from_utf8_lossy(&result.stdout),
+    );
+    false
+}
+
+#[test]
+fn hal_reader_matching_key_reload_discards_staged_plaintext() {
+    if !staging_key_test_in_child(
+        "shared_memory::tests::misc::hal_reader_matching_key_reload_discards_staged_plaintext",
+        true,
+    ) {
+        return;
+    }
+    let mapping = create_mock_shared_memory(48_000, 512, 2);
+    let mut writer = SharedAudioBuffer::open(mapping.path()).expect("open writer");
+    let cipher = test_audio_cipher();
+    writer.set_key_fingerprint(*cipher.fingerprint());
+    writer.set_encrypted(true);
+    let mut reader = staging_test_reader(mapping.path());
+    assert_eq!(
+        writer.write_audio_encrypted(&[10.0, 11.0, 20.0, 21.0], &cipher),
+        2
+    );
+    assert_eq!(reader.read(&mut [0.0; 2]), 1);
+    assert_eq!(reader.available_read_frames(), 1);
+    reader
+        .reload_cipher()
+        .expect("reload the same matching key");
+    assert!(!reader.needs_cipher_reload());
+    assert_eq!(reader.available_read_frames(), 0);
+    let marker = [101.0, 102.0, 201.0, 202.0];
+    assert_eq!(writer.write_audio_encrypted(&marker, &cipher), 2);
+    let mut output = [9876.0; 7];
+    assert_eq!(reader.read(&mut output), 2);
+    assert_eq!(&output[..4], &marker);
+    assert_eq!(&output[4..], &[9876.0; 3]);
+    assert_eq!(writer.header().configuring.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn hal_reader_failed_key_reload_discards_staged_plaintext() {
+    if !staging_key_test_in_child(
+        "shared_memory::tests::misc::hal_reader_failed_key_reload_discards_staged_plaintext",
+        false,
+    ) {
+        return;
+    }
+    let mapping = create_mock_shared_memory(48_000, 512, 2);
+    let mut writer = SharedAudioBuffer::open(mapping.path()).expect("open writer");
+    let cipher = test_audio_cipher();
+    writer.set_key_fingerprint(*cipher.fingerprint());
+    writer.set_encrypted(true);
+    let mut reader = staging_test_reader(mapping.path());
+    assert_eq!(
+        writer.write_audio_encrypted(&[10.0, 11.0, 20.0, 21.0], &cipher),
+        2
+    );
+    assert_eq!(reader.read(&mut [0.0; 2]), 1);
+    assert_eq!(reader.available_read_frames(), 1);
+    let identity = writer
+        .try_read_commit()
+        .expect("claim identity snapshot")
+        .identity();
+    assert_eq!(reader.pending.remaining_frames(identity), 1);
+    assert_eq!(
+        reader.reload_cipher().unwrap_err().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    // Inspect immediately: a subsequent read must not be what discards staging.
+    assert_eq!(reader.pending.remaining_frames(identity), 0);
+    assert!(reader.cipher.is_none());
+    assert!(reader.needs_cipher_reload());
+    assert_eq!(reader.available_read_frames(), 0);
+    let mut output = [9876.0; 7];
+    assert_eq!(reader.read(&mut output), 0);
+    assert_eq!(output, [0.0; 7]);
+    assert_eq!(writer.header().configuring.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn hal_reader_commit_drop_preserves_other_bits_and_geometry() {
+    use super::super::shared_audio_buffer::{
+        CONFIGURING_READ_COMMIT, CONFIGURING_RECONFIGURE, CONFIGURING_WRITE_COMMIT,
+    };
+    for unwind in [false, true] {
+        let mapping = create_mock_shared_memory(48_000, 512, 2);
+        let mut buffer = SharedAudioBuffer::open(mapping.path()).expect("open mapping");
+        assert_eq!(buffer.write_audio(&[1.0, 2.0]), 1);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let guard = buffer.try_read_commit().expect("claim read transaction");
+            assert_eq!(
+                buffer.header().configuring.load(Ordering::Acquire),
+                CONFIGURING_READ_COMMIT
+            );
+            buffer.header().configuring.fetch_or(
+                CONFIGURING_RECONFIGURE | CONFIGURING_WRITE_COMMIT,
+                Ordering::AcqRel,
+            );
+            assert_eq!(guard.identity().channel_count, 2);
+            if unwind {
+                panic!("exercise read transaction unwinding");
+            }
+            drop(guard);
+        }));
+        assert_eq!(result.is_err(), unwind);
+        assert_eq!(
+            buffer.header().configuring.load(Ordering::Acquire),
+            CONFIGURING_RECONFIGURE | CONFIGURING_WRITE_COMMIT,
+        );
+        assert_eq!(
+            (
+                buffer.sample_rate(),
+                buffer.buffer_frames(),
+                buffer.channel_count()
+            ),
+            (48_000, 512, 2)
+        );
+        assert_eq!(buffer.header().read_position.load(Ordering::Acquire), 0);
+        assert_eq!(buffer.header().write_position.load(Ordering::Acquire), 2);
+        assert!(buffer.try_read_commit().is_none());
+        assert_eq!(buffer.header().configuring_ack.load(Ordering::Acquire), 1);
+    }
+}
+
+#[test]
+fn hal_reader_commit_prevents_geometry_change_until_release() {
+    use super::super::shared_audio_buffer::CONFIGURING_READ_COMMIT;
+    let mapping = create_mock_shared_memory_with_max_geometry(48_000, 16, 2, 32, 3);
+    let mut controller = SharedAudioBuffer::open(mapping.path()).expect("open controller");
+    let reader_mapping = SharedAudioBuffer::open(mapping.path()).expect("open reader");
+    assert_eq!(controller.write_audio(&[1.0, 2.0]), 1);
+    let guard = reader_mapping
+        .try_read_commit()
+        .expect("claim read transaction");
+    controller.reconfigure_quiesced(Some(96_000), Some(32), Some(3));
+    assert_eq!(
+        (
+            controller.sample_rate(),
+            controller.buffer_frames(),
+            controller.channel_count()
+        ),
+        (48_000, 16, 2)
+    );
+    assert_eq!(
+        controller.header().write_position.load(Ordering::Acquire),
+        2
+    );
+    assert_eq!(controller.header().read_position.load(Ordering::Acquire), 0);
+    assert_eq!(
+        controller.header().configuring.load(Ordering::Acquire),
+        CONFIGURING_READ_COMMIT
+    );
+    drop(guard);
+    assert_eq!(controller.header().configuring.load(Ordering::Acquire), 0);
+    controller.reconfigure_quiesced(Some(96_000), Some(32), Some(3));
+    assert_eq!(
+        (
+            controller.sample_rate(),
+            controller.buffer_frames(),
+            controller.channel_count()
+        ),
+        (96_000, 32, 3)
+    );
+    assert_eq!(
+        controller.header().write_position.load(Ordering::Acquire),
+        0
+    );
+    assert_eq!(controller.header().read_position.load(Ordering::Acquire), 0);
+    assert_eq!(controller.header().configuring.load(Ordering::Acquire), 0);
 }

@@ -17,13 +17,16 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginInfo, PluginResult,
-    ProcessContext,
+    PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginDrainResult, PluginInfo,
+    PluginResult, ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::{LogSmoother, Smoother};
 use std::any::Any;
 use std::sync::Arc;
+
+/// Bounds work in each finite-stream drain call without additional scratch.
+const MAX_DRAIN_FRAMES: usize = 256;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct BandDynamicsSmoothers {
@@ -39,6 +42,8 @@ pub(super) struct BandDynamicsSmoothers {
 pub struct MultibandCompressorPlugin {
     pub(super) channels: usize,
     pub(super) sample_rate: u32,
+    has_input: bool,
+    drain_remaining: Option<usize>,
     pub(super) num_bands: usize,
     pub(super) _crossover_preset: i32,
     pub(super) crossover_frequencies: Vec<f32>,
@@ -47,6 +52,8 @@ pub struct MultibandCompressorPlugin {
     pub(super) attack_ms: f32,
     pub(super) release_ms: f32,
     pub(super) knee_db: f32,
+    pub(super) range_db: f32,
+    pub(super) hold_ms: f32,
     pub(super) link_channels: bool,
     pub(super) mix: f32,
     pub(super) per_band_lookahead_ms: f32,
@@ -206,6 +213,8 @@ impl MultibandCompressorPlugin {
         spec_range("attack", params.attack_ms, SC)?;
         spec_range("release", params.release_ms, SC)?;
         spec_range("knee", params.knee_db, SC)?;
+        spec_range("range_db", params.range_db, SC)?;
+        spec_range("hold_ms", params.hold_ms, SC)?;
         spec_range("mix", params.mix, SC)?;
         spec_range("per_band_lookahead_ms", params.per_band_lookahead_ms, MC)?;
         spec_range("sidechain_tilt_db", params.sidechain_tilt_db, MC)?;
@@ -286,6 +295,12 @@ impl MultibandCompressorPlugin {
             if let Some(value) = band.knee_db {
                 spec_range("knee", value, MCB)?;
             }
+            if let Some(value) = band.range_db {
+                spec_range("range_db", value, MCB)?;
+            }
+            if let Some(value) = band.hold_ms {
+                spec_range("hold_ms", value, MCB)?;
+            }
             spec_range("makeup_gain", band.makeup_gain_db, MCB)
                 .map_err(|error| format!("band {band_index} {error}"))?;
         }
@@ -336,6 +351,7 @@ impl MultibandCompressorPlugin {
         for _ in 0..nb {
             bcomps.push(BandCompressor {
                 envelope: vec![0.0; channels],
+                hold_remaining: vec![0; channels],
                 attack_coeff: 0.0,
                 release_coeff: 0.0,
             });
@@ -394,6 +410,8 @@ impl MultibandCompressorPlugin {
         let mut p = Self {
             channels,
             sample_rate: sr,
+            has_input: false,
+            drain_remaining: None,
             num_bands: nb,
             _crossover_preset: params.crossover_preset,
             crossover_frequencies: xfs.clone(),
@@ -402,6 +420,8 @@ impl MultibandCompressorPlugin {
             attack_ms,
             release_ms,
             knee_db: params.knee_db,
+            range_db: params.range_db,
+            hold_ms: params.hold_ms,
             link_channels: params.link_channels,
             mix: params.mix,
             per_band_lookahead_ms: la_ms,
@@ -480,6 +500,8 @@ impl MultibandCompressorPlugin {
             14 => Some(if self.ms_mode { 1.0 } else { 0.0 }),       // ms_mode
             15 => Some(self.sidechain_tilt_db as f64),              // sidechain_tilt_db
             16 => Some(self.link_amount as f64),                    // link_amount
+            17 => Some(self.range_db as f64),
+            18 => Some(self.hold_ms as f64),
             _ => None,
         }
     }
@@ -505,6 +527,8 @@ impl MultibandCompressorPlugin {
             14 => self.ms_mode = MC[14].clamp_f64(value) > 0.5,                 // ms_mode
             15 => self.sidechain_tilt_db = MC[15].clamp_f64(value) as f32,      // sidechain_tilt_db
             16 => self.link_amount = MC[16].clamp_f64(value) as f32,            // link_amount
+            17 => self.range_db = MC[17].clamp_f64(value) as f32,
+            18 => self.hold_ms = MC[18].clamp_f64(value) as f32,
             _ => {}
         }
     }
@@ -647,6 +671,23 @@ impl MultibandCompressorPlugin {
                 Parameter::new_bool(&format!("band_{}_bypass", i), "Bypass", bp.bypass)
                     .with_group(&group),
             );
+            for (key, value) in [
+                ("range_db", bp.range_db.unwrap_or(self.range_db)),
+                ("hold_ms", bp.hold_ms.unwrap_or(self.hold_ms)),
+            ] {
+                let spec = pk(MCB, key);
+                params.push(
+                    Parameter::new_float(
+                        &format!("band_{i}_{key}"),
+                        spec.name,
+                        value,
+                        spec.min_f64() as f32,
+                        spec.max_f64() as f32,
+                    )
+                    .with_description(spec.doc)
+                    .with_group(&group),
+                );
+            }
         }
 
         if self.num_bands == 1 {
@@ -663,6 +704,8 @@ impl MultibandCompressorPlugin {
                 "makeup_gain",
                 "auto_makeup",
                 "measured_auto_makeup",
+                "range_db",
+                "hold_ms",
             ];
             params.retain(|parameter| BROADBAND_KEYS.contains(&parameter.id.as_str()));
         }
@@ -795,7 +838,23 @@ impl MultibandCompressorPlugin {
     }
 
     pub fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("reset the multiband compressor before changing controls after drain".into())
+            };
+        }
         let name = id.as_str();
+        if matches!(name, "range_db" | "hold_ms") {
+            let v = value
+                .as_float()
+                .ok_or_else(|| format!("{name} must be a float"))?;
+            let spec = pk(MC, name);
+            if !v.is_finite() || v < spec.min_f64() as f32 || v > spec.max_f64() as f32 {
+                return Err(format!("{name} is outside its finite parameter range"));
+            }
+        }
         // Band count determines the size and topology of all per-band state. Reject live
         // changes before the bridge invokes the mutating setter so failure is transactional.
         if self.initialized
@@ -832,6 +891,7 @@ impl MultibandCompressorPlugin {
                     while self.band_compressors.len() < nb {
                         self.band_compressors.push(BandCompressor {
                             envelope: vec![0.0; self.channels],
+                            hold_remaining: vec![0; self.channels],
                             attack_coeff: 0.0,
                             release_coeff: 0.0,
                         });
@@ -1036,6 +1096,25 @@ impl MultibandCompressorPlugin {
                     let bp = &mut self.band_params[b_idx];
                     let smoothers = &mut self.band_smoothers[b_idx];
                     match field {
+                        "range_db" | "hold_ms" => {
+                            let v = value
+                                .as_float()
+                                .ok_or_else(|| format!("{name} must be a float"))?;
+                            let spec = pk(MCB, field);
+                            if !v.is_finite()
+                                || v < spec.min_f64() as f32
+                                || v > spec.max_f64() as f32
+                            {
+                                return Err(format!(
+                                    "{name} is outside its finite parameter range"
+                                ));
+                            }
+                            if field == "range_db" {
+                                bp.range_db = Some(v);
+                            } else {
+                                bp.hold_ms = Some(v);
+                            }
+                        }
                         "threshold" => {
                             let v = value
                                 .as_float()
@@ -1174,6 +1253,12 @@ impl MultibandCompressorPlugin {
                 if b_idx < self.num_bands {
                     let bp = &self.band_params[b_idx];
                     match field {
+                        "range_db" => {
+                            Some(ParameterValue::Float(bp.range_db.unwrap_or(self.range_db)))
+                        }
+                        "hold_ms" => {
+                            Some(ParameterValue::Float(bp.hold_ms.unwrap_or(self.hold_ms)))
+                        }
                         "threshold" => Some(ParameterValue::Float(
                             bp.threshold_db.unwrap_or(self.threshold_db),
                         )),
@@ -1207,164 +1292,18 @@ impl MultibandCompressorPlugin {
     }
 }
 
-impl ParametricInPlacePlugin for MultibandCompressorPlugin {
-    fn info(&self) -> PluginInfo {
-        if self.num_bands == 1 {
-            PluginInfo::new("Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
-                .with_description("Broadband dynamics processor")
-        } else {
-            PluginInfo::new("Multiband Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
-                .with_description("Cascaded LR4 multiband dynamics processor")
+impl MultibandCompressorPlugin {
+    /// Exact audio support when no recursive wet path can contribute.
+    fn finite_response_frames(&self) -> Option<usize> {
+        if !self.initialized {
+            return None;
         }
+        let settled_dry = self.mix_smoother.current() == 0.0 && self.mix_smoother.target() == 0.0;
+        let broadband = self.num_bands == 1;
+        (settled_dry || broadband).then(|| self.latency_samples())
     }
 
-    fn cost_class(&self) -> PluginCostClass {
-        PluginCostClass::Dynamics
-    }
-
-    fn compile_metadata(&self) -> PluginCompileMetadata {
-        PluginCompileMetadata::nonlinear(
-            PluginCostClass::Dynamics,
-            (self.per_band_lookahead_ms <= 0.0).then_some(PluginCompiledOp::MultibandCompressor),
-            self.latency_samples(),
-            false,
-        )
-    }
-
-    fn channels(&self) -> usize {
-        self.channels
-    }
-    fn parameter_schema(&self) -> ParameterSchema {
-        self.cached_parameters.clone()
-    }
-    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, value) in values {
-            self.set_parameter(id, value)?;
-        }
-        Ok(())
-    }
-
-    fn current_values(&self) -> ParameterSet {
-        let mut values = ParameterSet::new();
-        for param in &self.cached_parameters {
-            if let Some(value) = self.get_parameter(&param.id) {
-                values.insert(param.id.clone(), value);
-            }
-        }
-        values
-    }
-
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        self.sample_rate = sr;
-        // Update cache throttle threshold: fire every ~50 ms worth of samples.
-        self.cache_update_threshold = (sr as usize * 50 / 1000).max(1);
-        self.build_crossovers();
-        self.update_coefficients();
-        self.rebuild_sidechain_tilt();
-        for smoother in &mut self.band_smoothers {
-            smoother.applied_tilt_db = self.tilt_smoother.current();
-        }
-        self.threshold_smoother.set_time(20.0, sr);
-        self.mix_smoother.set_time(20.0, sr);
-        self.link_smoother.set_time(20.0, sr);
-        self.tilt_smoother.set_time(20.0, sr);
-        for (band, smoother) in self.band_params.iter().zip(&mut self.band_smoothers) {
-            smoother.threshold.set_time(20.0, sr);
-            smoother.ratio.set_time(20.0, sr);
-            smoother.knee.set_time(20.0, sr);
-            smoother.makeup_db.set_time(20.0, sr);
-            smoother.attack_coeff.set_time(20.0, sr);
-            smoother.release_coeff.set_time(20.0, sr);
-            smoother.attack_coeff.reset(Self::envelope_coeff(
-                band.attack_ms.unwrap_or(self.attack_ms),
-                sr,
-            ));
-            smoother.release_coeff.reset(Self::envelope_coeff(
-                band.release_ms.unwrap_or(self.release_ms),
-                sr,
-            ));
-        }
-        for s in &mut self.xover_smoothers {
-            *s = LogSmoother::new(s.target(), 50.0, sr);
-        }
-
-        // Reinitialize lookahead buffers for new sample rate
-        let la_ms = self.per_band_lookahead_ms;
-        for buf in &mut self.lookahead_buffers {
-            if la_ms > 0.0 {
-                let max_samples = (20.0 * 0.001 * sr as f32).round() as usize;
-                buf.resize(max_samples, self.channels);
-                buf.set_delay_ms(la_ms, sr);
-            }
-        }
-        let max_samples = (20.0 * 0.001 * sr as f32).round() as usize;
-        self.dry_lookahead_buffer.resize(max_samples, self.channels);
-        if la_ms > 0.0 {
-            self.dry_lookahead_buffer.set_delay_ms(la_ms, sr);
-        }
-        // Reinitialize measured makeup smoothing for new sample rate
-        for mm in &mut self.measured_makeups {
-            mm.set_smoothing(1000.0, sr);
-        }
-
-        // Pre-allocate buffers for real-time safety
-        let max_frames = 4096;
-        let stride = max_frames * self.channels;
-        self.band_buffers.resize(self.num_bands * stride, 0.0);
-        self.dry_buffer.resize(max_frames * self.channels, 0.0);
-        self.automation_values.resize(max_frames, [0.0; 4]);
-        self.lookahead_frame_tmp.resize(self.channels, 0.0);
-        self.initialized = true;
-
-        Ok(())
-    }
-    fn reset(&mut self) {
-        for x in &mut self.crossover_points {
-            x.reset();
-        }
-        for b in &mut self.band_compressors {
-            b.envelope.fill(0.0);
-        }
-        for buf in &mut self.lookahead_buffers {
-            buf.reset();
-        }
-        self.dry_lookahead_buffer.reset();
-        for mm in &mut self.measured_makeups {
-            mm.reset();
-        }
-        self.threshold_smoother.reset(self.threshold_db);
-        self.mix_smoother.reset(self.mix);
-        self.link_smoother.reset(self.link_amount);
-        self.tilt_smoother.reset(self.sidechain_tilt_db);
-        for (band, smoother) in self.band_params.iter().zip(&mut self.band_smoothers) {
-            smoother
-                .threshold
-                .reset(band.threshold_db.unwrap_or(self.threshold_db));
-            smoother.ratio.reset(band.ratio.unwrap_or(self.ratio));
-            smoother.knee.reset(band.knee_db.unwrap_or(self.knee_db));
-            smoother.makeup_db.reset(band.makeup_gain_db);
-            smoother.applied_tilt_db = self.sidechain_tilt_db;
-            smoother.attack_coeff.reset(Self::envelope_coeff(
-                band.attack_ms.unwrap_or(self.attack_ms),
-                self.sample_rate,
-            ));
-            smoother.release_coeff.reset(Self::envelope_coeff(
-                band.release_ms.unwrap_or(self.release_ms),
-                self.sample_rate,
-            ));
-        }
-        self.band_buffers.fill(0.0);
-        self.dry_buffer.fill(0.0);
-        self.update_sidechain_tilt_coefficients(self.sidechain_tilt_db);
-        for band in &mut self.sidechain_tilt_biquads {
-            for (low, high) in band {
-                low.reset();
-                high.reset();
-            }
-        }
-    }
-
-    fn process_in_place(
+    fn process_stream(
         &mut self,
         buffer: &mut [f32],
         context: &ProcessContext,
@@ -1391,7 +1330,7 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
                 let sample_end = sample_start + chunk_frames * self.channels;
                 let mut chunk_context = *context;
                 chunk_context.num_frames = chunk_frames;
-                self.process_in_place(&mut buffer[sample_start..sample_end], &chunk_context)?;
+                self.process_stream(&mut buffer[sample_start..sample_end], &chunk_context)?;
                 processed += chunk_frames;
             }
             return Ok(nf);
@@ -1507,6 +1446,23 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
 
             let use_measured_makeup = bp.map(|p| p.measured_auto_makeup).unwrap_or(false);
             let use_auto_makeup = bp.map(|p| p.auto_makeup).unwrap_or(false);
+            let range_db = bp.and_then(|p| p.range_db).unwrap_or(self.range_db);
+            // The top setting is an explicit unlimited sentinel, retaining the
+            // original response even for floating-point inputs above full scale.
+            let range_limit = if range_db >= 120.0 {
+                f32::INFINITY
+            } else {
+                range_db
+            };
+            // fast_pow10 is approximate. Bound its result with an exact floor
+            // so the physical applied reduction cannot exceed the Range knob.
+            let range_gain_floor = if range_db >= 120.0 {
+                0.0
+            } else {
+                10.0_f32.powf(-range_db / 20.0)
+            };
+            let hold_ms = bp.and_then(|p| p.hold_ms).unwrap_or(self.hold_ms);
+            let hold_samples = (hold_ms as f64 * self.sample_rate as f64 / 1000.0).round() as usize;
 
             let use_lookahead = self.per_band_lookahead_ms > 0.0;
             let bcomp = &mut self.band_compressors[b];
@@ -1595,16 +1551,23 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
                     } else {
                         per_ch_idb * (1.0 - link) + max_idb * link
                     };
-                    let tgr = Self::calculate_gain_reduction(idb, th, rat, kn);
-
-                    let c = if tgr > bcomp.envelope[ch] {
-                        attack_coeff
+                    let tgr = Self::calculate_gain_reduction(idb, th, rat, kn).min(range_limit);
+                    // Clamp existing state too: lowering Range limits already
+                    // active compression on the very next sample.
+                    bcomp.envelope[ch] = bcomp.envelope[ch].min(range_limit);
+                    bcomp.hold_remaining[ch] = bcomp.hold_remaining[ch].min(hold_samples);
+                    if tgr > bcomp.envelope[ch] {
+                        bcomp.envelope[ch] = tgr + attack_coeff * (bcomp.envelope[ch] - tgr);
+                        bcomp.hold_remaining[ch] = hold_samples;
+                    } else if tgr == bcomp.envelope[ch] {
+                        bcomp.hold_remaining[ch] = hold_samples;
+                    } else if bcomp.hold_remaining[ch] > 0 {
+                        bcomp.hold_remaining[ch] -= 1;
                     } else {
-                        release_coeff
-                    };
-                    bcomp.envelope[ch] = tgr + c * (bcomp.envelope[ch] - tgr);
+                        bcomp.envelope[ch] = tgr + release_coeff * (bcomp.envelope[ch] - tgr);
+                    }
 
-                    let gain_linear = fast_pow10(-bcomp.envelope[ch] / 20.0);
+                    let gain_linear = fast_pow10(-bcomp.envelope[ch] / 20.0).max(range_gain_floor);
                     self.band_buffers[idx] *= gain_linear;
                 }
                 // Update measured makeup once per frame using the max envelope across channels.
@@ -1622,7 +1585,7 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
                     let makeup = if use_auto_makeup {
                         let slope = 1.0 - 1.0 / rat.max(1.0);
                         let overshoot = (-th).max(0.0) * 0.5;
-                        fast_pow10((overshoot * slope) / 20.0)
+                        fast_pow10((overshoot * slope).min(range_limit) / 20.0)
                     } else {
                         fast_pow10(makeup_db / 20.0)
                     };
@@ -1681,6 +1644,232 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         flush_denormals_inplace(buffer);
         Ok(nf)
     }
+}
+
+impl ParametricInPlacePlugin for MultibandCompressorPlugin {
+    fn info(&self) -> PluginInfo {
+        if self.num_bands == 1 {
+            PluginInfo::new("Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
+                .with_description("Broadband dynamics processor")
+        } else {
+            PluginInfo::new("Multiband Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
+                .with_description("Cascaded LR4 multiband dynamics processor")
+        }
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Dynamics
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::nonlinear(
+            PluginCostClass::Dynamics,
+            (self.per_band_lookahead_ms <= 0.0).then_some(PluginCompiledOp::MultibandCompressor),
+            self.latency_samples(),
+            false,
+        )
+    }
+
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.cached_parameters.clone()
+    }
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        if matches!(id.as_str(), "range_db" | "hold_ms")
+            || (id.as_str().starts_with("band_")
+                && (id.as_str().ends_with("_range_db") || id.as_str().ends_with("_hold_ms")))
+        {
+            return self.set_parameter(id, value);
+        }
+        self.parametric_validate_parameter(&id, &value)?;
+        self.set_parameter(id, value)
+    }
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("reset the multiband compressor before changing controls after drain".into())
+            };
+        }
+        for (id, value) in values {
+            self.set_parameter(id, value)?;
+        }
+        Ok(())
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        // The full snapshot contains only declared IDs. Preserve that boundary
+        // before the inherent getter parses dynamic band fields and aliases.
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)?;
+        self.get_parameter(id)
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        let mut values = ParameterSet::new();
+        for param in &self.cached_parameters {
+            if let Some(value) = self.get_parameter(&param.id) {
+                values.insert(param.id.clone(), value);
+            }
+        }
+        values
+    }
+
+    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+        if sr == 0 {
+            return Err("multiband compressor requires a positive sample rate".into());
+        }
+        self.sample_rate = sr;
+        // Update cache throttle threshold: fire every ~50 ms worth of samples.
+        self.cache_update_threshold = (sr as usize * 50 / 1000).max(1);
+        self.build_crossovers();
+        self.update_coefficients();
+        self.rebuild_sidechain_tilt();
+        for smoother in &mut self.band_smoothers {
+            smoother.applied_tilt_db = self.tilt_smoother.current();
+        }
+        self.threshold_smoother.set_time(20.0, sr);
+        self.mix_smoother.set_time(20.0, sr);
+        self.link_smoother.set_time(20.0, sr);
+        self.tilt_smoother.set_time(20.0, sr);
+        for (band, smoother) in self.band_params.iter().zip(&mut self.band_smoothers) {
+            smoother.threshold.set_time(20.0, sr);
+            smoother.ratio.set_time(20.0, sr);
+            smoother.knee.set_time(20.0, sr);
+            smoother.makeup_db.set_time(20.0, sr);
+            smoother.attack_coeff.set_time(20.0, sr);
+            smoother.release_coeff.set_time(20.0, sr);
+            smoother.attack_coeff.reset(Self::envelope_coeff(
+                band.attack_ms.unwrap_or(self.attack_ms),
+                sr,
+            ));
+            smoother.release_coeff.reset(Self::envelope_coeff(
+                band.release_ms.unwrap_or(self.release_ms),
+                sr,
+            ));
+        }
+        for s in &mut self.xover_smoothers {
+            *s = LogSmoother::new(s.target(), 50.0, sr);
+        }
+
+        // Reinitialize lookahead buffers for new sample rate
+        let la_ms = self.per_band_lookahead_ms;
+        for buf in &mut self.lookahead_buffers {
+            if la_ms > 0.0 {
+                let max_samples = (20.0 * 0.001 * sr as f32).round() as usize;
+                buf.resize(max_samples, self.channels);
+                buf.set_delay_ms(la_ms, sr);
+            }
+        }
+        let max_samples = (20.0 * 0.001 * sr as f32).round() as usize;
+        self.dry_lookahead_buffer.resize(max_samples, self.channels);
+        if la_ms > 0.0 {
+            self.dry_lookahead_buffer.set_delay_ms(la_ms, sr);
+        }
+        // Reinitialize measured makeup smoothing for new sample rate
+        for mm in &mut self.measured_makeups {
+            mm.set_smoothing(1000.0, sr);
+        }
+
+        // Pre-allocate buffers for real-time safety
+        let max_frames = 4096;
+        let stride = max_frames * self.channels;
+        self.band_buffers.resize(self.num_bands * stride, 0.0);
+        self.dry_buffer.resize(max_frames * self.channels, 0.0);
+        self.automation_values.resize(max_frames, [0.0; 4]);
+        self.lookahead_frame_tmp.resize(self.channels, 0.0);
+        self.initialized = true;
+        self.reset();
+
+        Ok(())
+    }
+    fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
+        for x in &mut self.crossover_points {
+            x.reset();
+        }
+        for b in &mut self.band_compressors {
+            b.envelope.fill(0.0);
+            b.hold_remaining.fill(0);
+        }
+        for buf in &mut self.lookahead_buffers {
+            buf.reset();
+        }
+        self.dry_lookahead_buffer.reset();
+        for mm in &mut self.measured_makeups {
+            mm.reset();
+        }
+        self.threshold_smoother.reset(self.threshold_db);
+        self.mix_smoother.reset(self.mix);
+        self.link_smoother.reset(self.link_amount);
+        self.tilt_smoother.reset(self.sidechain_tilt_db);
+        for (band, smoother) in self.band_params.iter().zip(&mut self.band_smoothers) {
+            smoother
+                .threshold
+                .reset(band.threshold_db.unwrap_or(self.threshold_db));
+            smoother.ratio.reset(band.ratio.unwrap_or(self.ratio));
+            smoother.knee.reset(band.knee_db.unwrap_or(self.knee_db));
+            smoother.makeup_db.reset(band.makeup_gain_db);
+            smoother.applied_tilt_db = self.sidechain_tilt_db;
+            smoother.attack_coeff.reset(Self::envelope_coeff(
+                band.attack_ms.unwrap_or(self.attack_ms),
+                self.sample_rate,
+            ));
+            smoother.release_coeff.reset(Self::envelope_coeff(
+                band.release_ms.unwrap_or(self.release_ms),
+                self.sample_rate,
+            ));
+        }
+        self.band_buffers.fill(0.0);
+        self.dry_buffer.fill(0.0);
+        self.update_sidechain_tilt_coefficients(self.sidechain_tilt_db);
+        for band in &mut self.sidechain_tilt_biquads {
+            for (low, high) in band {
+                low.reset();
+                high.reset();
+            }
+        }
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("reset the multiband compressor before processing after drain".into());
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
+
     fn process_compiled_f32(
         &mut self,
         op: PluginCompiledOp,
@@ -1690,6 +1879,11 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
     ) -> Option<Result<usize, String>> {
         if op != PluginCompiledOp::MultibandCompressor || self.per_band_lookahead_ms > 0.0 {
             return None;
+        }
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Some(Err(
+                "reset the multiband compressor before processing after drain".into(),
+            ));
         }
         let sample_len = context.num_frames.checked_mul(self.channels)?;
         if input.len() < sample_len || output.len() < sample_len {
@@ -1703,6 +1897,79 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         Some(self.process_in_place(&mut output[..sample_len], context))
     }
 
+    fn tail_length(&self) -> TailLength {
+        if let Some(frames) = self.finite_response_frames() {
+            TailLength::Finite(frames as u64)
+        } else if !self.initialized {
+            TailLength::Unknown
+        } else {
+            TailLength::Infinite
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.finite_response_frames()
+            .map_or(0, |frames| frames.min(MAX_DRAIN_FRAMES))
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            return None;
+        }
+        let remaining = if self.has_input {
+            self.finite_response_frames()
+                .map_or(0, |support| self.drain_remaining.unwrap_or(support))
+        } else {
+            0
+        };
+        // Eligible finite paths publish up to 256 frames per full-capacity
+        // call with no separate output cache. Unsupported wet paths retain
+        // their existing immediate COMPLETE policy, which costs one call.
+        std::num::NonZeroU64::new(remaining.div_ceil(MAX_DRAIN_FRAMES).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("multiband compressor drain requires the initialized sample rate".into());
+        }
+        if self.channels == 0 || !output.len().is_multiple_of(self.channels) {
+            return Err("multiband compressor drain requires whole output frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let Some(bound) = self.finite_response_frames() else {
+            // Preserve legacy EOS behavior for recursive wet paths. A finite
+            // rendering policy remains unresolved; metadata never claims zero.
+            return Ok(PluginDrainResult::COMPLETE);
+        };
+        let remaining = self.drain_remaining.unwrap_or(bound);
+        if remaining == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = remaining
+            .min(MAX_DRAIN_FRAMES)
+            .min(output.len() / self.channels);
+        if frames == 0 {
+            return Err("multiband compressor drain needs output capacity".into());
+        }
+        let samples = frames * self.channels;
+        output[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
         Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
     }
@@ -1711,7 +1978,8 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         if self.per_band_lookahead_ms <= 0.0 {
             0
         } else {
-            (self.per_band_lookahead_ms * 0.001 * self.sample_rate as f32).round() as usize
+            // An active ring clamps positive sub-sample delays to one frame.
+            self.dry_lookahead_buffer.delay()
         }
     }
 }

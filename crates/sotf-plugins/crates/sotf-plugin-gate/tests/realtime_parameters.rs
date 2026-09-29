@@ -36,7 +36,29 @@ fn realtime_parameter_updates_and_reset_do_not_allocate() {
         assert_no_allocs("Gate realtime parameter update", || {
             gate.parametric_set_parameter(id.clone(), value.clone())
                 .unwrap();
+            assert_eq!(gate.parametric_get_parameter(&id), Some(value.clone()));
         });
     }
     assert_no_allocs("Gate reset", || gate.reset());
+}
+
+#[test]
+fn cold_scalar_reads_preserve_all_parameter_types_without_allocation() {
+    let mut gate = GatePlugin::try_from_params(2, GatePluginParams::default()).unwrap();
+    gate.initialize(48_000).unwrap();
+    let parameters = gate.parameter_schema();
+    let missing = ParameterId::from("missing");
+    std::thread::spawn(move || {
+        assert_no_allocs("Gate cold scalar getters", || {
+            for parameter in &parameters {
+                assert_eq!(
+                    gate.parametric_get_parameter(&parameter.id),
+                    Some(parameter.default_value.clone())
+                );
+            }
+            assert_eq!(gate.parametric_get_parameter(&missing), None);
+        });
+    })
+    .join()
+    .unwrap();
 }

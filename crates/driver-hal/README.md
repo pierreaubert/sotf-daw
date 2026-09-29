@@ -17,5 +17,29 @@ Rust side of the shared memory bridge used to exchange audio data with the macOS
 - The daemon owns session-key rotation; shared-memory open/reinitialization
   never changes key files independently.
 
+## Reader transactions and staged plaintext
+
+`HalInputReader` holds the existing read-commit bit while it snapshots the
+format, delivers cached plaintext, and consumes encrypted records. The guard's
+consuming methods require exclusive mutable access; drop releases only its read
+bit, preserving any writer or reconfiguration request. Reconfiguration can wait
+for the whole bounded read, including its decryptions.
+
+Cached suffixes carry their sample rate, channel count, buffer geometry,
+encryption mode, and public key fingerprint. A changed identity or a key reload
+attempt discards them, including a failed reload. Storage retains its prepared
+capacity. Positive reads preserve destination samples after the returned complete
+frames; callers own that suffix. Zero-frame reads may clear the destination.
+
+This format identity is not a session generation. Protocol v6 cannot identify
+a same-format restart or an A→B→A transition entirely between reads. Key/mode
+stores are not coordinated by the geometry guard; the final identity check is
+not an atomic key-rotation guarantee. Format queries and reads are separate,
+and replacing an orphaned mapping remains a control-owner recovery task.
+
+Portable staging tests pass. The macOS library and test targets compile and
+pass Clippy for x86_64-apple-darwin; native reader/reconfiguration tests and
+device deadline measurements still require execution on macOS.
+
 This crate is the macOS HAL bridge. Other platforms use `driver-common` and its
 `NullDriver` fallback until native drivers are implemented.

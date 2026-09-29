@@ -201,10 +201,7 @@ pub(super) fn deduplicate_linux_devices(
 
         // For "hw:0,0" style, extract the card number
         if let Some(rest) = source.strip_prefix("hw:") {
-            let card_num = rest
-                .split([',', ' '])
-                .next()
-                .unwrap_or(rest);
+            let card_num = rest.split([',', ' ']).next().unwrap_or(rest);
             if !card_num.is_empty() {
                 return format!("hw:{}", card_num);
             }

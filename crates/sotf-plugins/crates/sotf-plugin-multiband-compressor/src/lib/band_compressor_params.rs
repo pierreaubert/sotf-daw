@@ -17,6 +17,12 @@ pub struct BandCompressorParams {
     pub active: bool,
     pub solo: bool,
     pub bypass: bool,
+    /// Overrides the global reduction limit; 120 dB disables the limit.
+    #[serde(default)]
+    pub range_db: Option<f32>,
+    /// Overrides the global hold duration.
+    #[serde(default)]
+    pub hold_ms: Option<f32>,
 }
 
 impl Default for BandCompressorParams {
@@ -33,6 +39,8 @@ impl Default for BandCompressorParams {
             active: default_active(),
             solo: false,
             bypass: false,
+            range_db: None,
+            hold_ms: None,
         }
     }
 }

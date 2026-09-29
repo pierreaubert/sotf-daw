@@ -2,11 +2,52 @@
 
 ## Overview
 
-A noise gate that attenuates audio below a threshold level. Use it to remove background noise, bleed from other instruments, or clean up recordings during silent passages. Unlike a simple on/off gate, this implements a soft gate with adjustable ratio, hold time, and sidechain filtering.
+A dynamics processor with downward gating, upward expansion, and ducking. The default downward mode removes background noise and bleed below threshold. Upward mode boosts levels above threshold; Duck reduces program gain when the detector rises above threshold. All modes have adjustable ratio, hold time, sidechain filtering, and a quadratic knee.
 
 ## Features
 
-### Gating
+### Mode and boost limit
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Mode | Downward / Upward / Duck | Downward | Structural choice; changing mode requires reconstruction |
+| Max Boost | 0–24 dB | 12 dB | Upward gain ceiling; zero disables boost |
+
+Mode and Max Boost are appended parameter indices 15 and 16. Existing presets
+without these fields retain Downward mode. Mode JSON accepts the labels above,
+case-insensitively, or numeric indices 0/1/2. Max Boost can change during playback;
+its new ceiling applies immediately, including during hold and release.
+
+With hysteresis and hold zero, Upward and Duck reflect the downward knee about
+the threshold. Put `x = L - T`. Effect magnitude is zero for `x <= -K/2`,
+`(R-1)*(x+K/2)^2/(2K)` inside the knee, and `(R-1)*x` above `K/2`.
+For a hard knee it is `(R-1)*max(L-T,0)`. Upward adds this gain in dB,
+capped by Max Boost; Duck subtracts it, capped by Range. A zero Range retains
+the finite 240 dB attenuation ceiling. Ratio 1 gives no effect.
+
+For threshold −20 dB, knee 6 dB, ratio 4 and detector levels −23/−20/−17 dB,
+the effect magnitudes are 0/2.25/9 dB. Upward boosts; Duck attenuates.
+The ducking ratio specifies this reflected expansion slope, not a conventional
+compressor ratio. These are documented SOTF laws, not replicas of proprietary
+gate styles.
+
+For these two modes the detector activates at the **lower** knee edge
+`T-K/2`, where effect starts continuously from zero. While above it, the target
+follows the curve. If the detector falls into the hysteresis band, the most
+recent effect target is retained. Below `T-K/2-H`, hold retains that target
+for the configured duration, then release returns toward unity. Attack follows
+increasing effect; release follows decreasing effect. A gradual fall through
+the knee leaves a smaller held target than an abrupt sidechain dropout.
+
+Use an external sidechain in Duck mode to reduce music beneath speech. The
+program and detector signals can have independent levels. Stereo linking uses
+the largest channel detector level in every mode.
+
+Upward gain can exceed full scale; no output limiter is applied. Multiplications
+that would exceed the finite f32 range saturate at that numeric limit. Normal
+floating-point headroom is retained.
+
+### Downward gating
 
 Reduces gain when the input signal falls below the threshold. The ratio controls how aggressively the signal is attenuated — low ratios provide gentle noise reduction, high ratios approach full silence.
 
@@ -14,21 +55,37 @@ Reduces gain when the input signal falls below the threshold. The ratio controls
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Threshold | -80 to 0 | -40 | dB | Level below which the gate begins attenuating |
+| Threshold | -80 to 0 | -40 | dB | Center of the attenuation knee; opening level for a hard knee |
 | Ratio | 1:1 to 100:1 | 10:1 | :1 | Attenuation depth. 1:1 = no gating, 100:1 ≈ full silence below threshold |
 | Knee | 0 to 20 | 0 | dB | Width of a quadratic soft-knee transition around the threshold |
 
+With hysteresis and hold both zero, the settled attenuation follows the full
+quadratic knee. For threshold `T`, width `K`, ratio `R`, and detector level `L`
+(all levels in dB), attenuation within the knee is
+`(R - 1) * (T + K/2 - L)^2 / (2K)`. Below `T - K/2` it is
+`(R - 1) * (T - L)`, and above `T + K/2` it is zero. Range caps this
+attenuation. At `T = -20`, `K = 6`, and `R = 4`, an input at the threshold
+receives 2.25 dB attenuation. Widths below 0.1 dB use a hard knee.
+
+The gate's state opens at the **upper knee edge** `T + K/2`, or `T` for a hard
+knee. With hysteresis `H`, it stays open until the detector falls below
+`T + K/2 - H`. Hold then retains the unity-gain target for the configured
+duration before the attenuation curve takes over. Hysteresis and hold therefore
+make the result depend on previous signal levels; the static curve describes
+the closed state after hold expires. Live knee changes and the smoothed
+threshold move both state thresholds together.
+
 ### Timing
 
-Controls the gate's response speed. Fast attack opens the gate quickly to preserve transients. Hold keeps the gate open for a set time after the signal drops below threshold (prevents chattering). Release controls how fast the gate closes.
+Controls the gate's response speed. Fast attack reduces attenuation quickly to preserve transients. Hold keeps the unity-gain target for a set time after the signal drops below the closing threshold (prevents chattering). Release controls increasing attenuation. Attack and release are one-pole time constants in dB; after one time constant, approximately 63% of a step toward the new gain target is complete.
 
 **Parameters:**
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Attack | 0.1 to 50 | 1 | ms | Time to fully open the gate when signal exceeds threshold |
-| Hold | 0 to 1000 | 10 | ms | Time the gate stays open after signal drops below threshold |
-| Release | 10 to 2000 | 100 | ms | Time to close the gate after hold expires |
+| Attack | 0.1 to 50 | 1 | ms | Time constant for decreasing attenuation |
+| Hold | 0 to 1000 | 10 | ms | Time the unity-gain target remains after signal drops below the closing threshold |
+| Release | 10 to 2000 | 100 | ms | Time constant for increasing attenuation after hold expires |
 
 ### Sidechain & Channel Linking
 
@@ -51,7 +108,7 @@ Controls the gate's response speed. Fast attack opens the gate quickly to preser
 - Initialize before the first callback. The process context must retain that
   sample rate and the buffer must contain exactly `num_frames * input_channels()`
   interleaved samples; checked arithmetic errors are reported.
-- `link_channels`, sidechain HPF frequency/order, detection mode, external
+- `mode`, `link_channels`, sidechain HPF frequency/order, detection mode, external
   sidechain mode, and lookahead require graph replacement. Writing the current
   value is an accepted no-op; actual live changes are rejected transactionally
   without moving or clearing the active delay line. The host must latency-align
@@ -63,6 +120,14 @@ Controls the gate's response speed. Fast attack opens the gate quickly to preser
   delay lines, diagnostic counters, and scratch storage.
 - Monitoring snapshots are immutable after publication and update at a
   sample-derived 30 Hz cadence independent of callback partitioning.
+- Monitoring `gain_db` reports signed wet gain before Mix: positive for
+  Upward, negative for Downward/Duck. `attenuation_db` remains nonnegative and
+  is zero in Upward. `effect_active` means any wet gain magnitude is at least
+  0.1 dB. `gate_open` is the detector hysteresis latch (upper knee edge for
+  Downward, lower for Upward/Duck); it excludes the subsequent hold period.
+  Legacy `is_open` means any channel has less than 0.1 dB attenuation, so it
+  remains true in Upward even while boosting. These are wet-effect indicators,
+  including when Mix is zero.
 
 ## Demos
 
@@ -203,4 +268,4 @@ Input → Sidechain HPF → Level Detection → Threshold Comparison
 Input → Envelope Follower (attack/release) → Attenuation → Mix → Output
 ```
 
-The gate has three states: Open (signal above threshold), Hold (signal dropped but timer active), Closing (hold expired, gate closing at release rate).
+The gate has three states: Open (signal reached the upper knee edge and remains above the hysteresis closing threshold), Hold (signal dropped but timer active), Closing (hold expired, attenuation follows the curve with attack/release smoothing).

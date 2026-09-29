@@ -1,3 +1,25 @@
+# Unreleased
+
+- Fix AUD103 direct construction using hidden 0.7 background learning and fixed
+  48 kHz adaptive timing despite its reported 0.5 step and requested sample rate.
+  Prepare the constructor from one canonical step binding and the actual rate.
+  Preserve constructor-time processing, initialized/configured waveforms, public
+  signatures, post-filter behavior, latency and finite-drain contracts.
+- Add independent scalar timing and public constructor/reset waveform regressions,
+  including an explicit 0.7 learning negative control.
+
+- Reject ordinary callbacks with a mismatched sample rate before changing output
+  or adaptive state, including constructor-time processing and empty callbacks.
+
+- Declare conservative native finite-tail support from prepared partitions,
+  including ordinary zero-input learning and post-filter transitions.
+
+- Add bounded finite-stream drain for partial blocks, all reference partitions,
+  and queued output, with frozen adaptive and residual-suppressor state.
+- Preserve state on invalid drain requests and require reset before continuation.
+- Verify nonzero final-partition convolution and frozen spectral gains against
+  independent time-domain oracles, including cold allocation/deallocation checks.
+
 # 0.5.7
 
 ## Correctness and DSP

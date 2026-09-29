@@ -41,6 +41,9 @@ mod load;
 #[path = "lib/misc.rs"]
 mod misc;
 #[cfg(test)]
+#[path = "lib/realtime_tests.rs"]
+mod realtime_tests;
+#[cfg(test)]
 #[path = "lib/tests.rs"]
 mod tests;
 #[path = "lib/types.rs"]
@@ -52,3 +55,22 @@ mod xtc_plugin;
 
 pub use xtc_data::*;
 pub use xtc_plugin::*;
+
+#[cfg(test)]
+#[path = "lib/initialize_tests.rs"]
+mod initialize_tests;
+
+#[cfg(test)]
+#[path = "lib/drain_tests.rs"]
+mod drain_tests;
+#[cfg(test)]
+#[path = "lib/generation_tests.rs"]
+mod generation_tests;
+
+#[cfg(test)]
+#[path = "lib/bypass_tests.rs"]
+mod bypass_tests;
+
+#[cfg(test)]
+#[path = "lib/autogain_tests.rs"]
+mod autogain_tests;

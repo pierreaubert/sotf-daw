@@ -188,6 +188,132 @@ fn eq_global_parameters_round_trip_through_engine_accessors() {
 }
 
 #[test]
+fn de_esser_range_and_link_survive_engine_presets_and_factory_conversion() {
+    use sotf_plugins::{ParameterId, ParameterValue};
+
+    // Presets saved before these controls existed retain independent channels
+    // and the original effectively unrestricted reduction range.
+    let mut settings: PluginSettings =
+        serde_json::from_value(serde_json::json!({ "DeEsser": {} })).unwrap();
+    assert_eq!(settings.param_value(8), Some(60.0));
+    assert_eq!(settings.param_value(9), Some(0.0));
+    assert_eq!(settings.param_specs()[8].engine_key, "range_db");
+    assert_eq!(settings.param_specs()[9].engine_key, "stereo_link");
+
+    settings.set_param_value(8, 6.0);
+    settings.set_param_value(9, 0.75);
+    let encoded = serde_json::to_value(&settings).unwrap();
+    let restored: PluginSettings = serde_json::from_value(encoded).unwrap();
+    for (index, key, expected) in [(8, "range_db", 6.0), (9, "stereo_link", 0.75)] {
+        assert_eq!(restored.param_value(index), Some(expected));
+        let (engine_key, engine_value) = restored.engine_param_at(index).unwrap();
+        assert_eq!(engine_key, key);
+        assert_eq!(engine_value.parse::<f64>().unwrap(), expected);
+    }
+
+    let config = restored.to_plugin_config(48_000.0);
+    let plugin =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("range_db")),
+        Some(ParameterValue::Float(6.0))
+    );
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("stereo_link")),
+        Some(ParameterValue::Float(0.75))
+    );
+}
+
+#[test]
+fn compressor_range_and_hold_survive_presets_accessors_and_factory_conversion() {
+    use sotf_plugins::{ParameterId, ParameterValue};
+
+    for (kind, range_index, hold_index) in [
+        (PluginType::Compressor, 16, 17),
+        (PluginType::MultibandCompressor, 17, 18),
+        (PluginType::AnalogCompressor, 13, 14),
+    ] {
+        let defaults = PluginSettings::default_for(&kind).unwrap();
+        let mut old_preset = serde_json::to_value(&defaults).unwrap();
+        let fields = old_preset
+            .as_object_mut()
+            .unwrap()
+            .values_mut()
+            .next()
+            .unwrap()
+            .as_object_mut()
+            .unwrap();
+        fields.remove("range_db");
+        fields.remove("hold_ms");
+        let mut settings: PluginSettings = serde_json::from_value(old_preset).unwrap();
+        assert_eq!(settings.param_value(range_index), Some(120.0), "{kind:?}");
+        assert_eq!(settings.param_value(hold_index), Some(0.0), "{kind:?}");
+        for (index, key, value) in [
+            (range_index, "range_db", 6.0),
+            (hold_index, "hold_ms", 25.0),
+        ] {
+            assert_eq!(settings.param_specs()[index].engine_key, key);
+            settings.set_param_value(index, value);
+            let (engine_key, engine_value) = settings.engine_param_at(index).unwrap();
+            assert_eq!(engine_key, key);
+            assert_eq!(engine_value.parse::<f64>().unwrap(), value);
+        }
+        let restored: PluginSettings =
+            serde_json::from_value(serde_json::to_value(&settings).unwrap()).unwrap();
+        let config = restored.to_plugin_config(48_000.0);
+        let plugin =
+            sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+                .unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("range_db")),
+            Some(ParameterValue::Float(6.0)),
+            "{kind:?}"
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("hold_ms")),
+            Some(ParameterValue::Float(25.0)),
+            "{kind:?}"
+        );
+    }
+}
+
+#[test]
+fn multiband_compressor_preserves_band_overrides_and_link_controls() {
+    use sotf_plugins::{ParameterId, ParameterValue};
+    let defaults = PluginSettings::default_for(&PluginType::MultibandCompressor).unwrap();
+    let mut saved = serde_json::to_value(&defaults).unwrap();
+    let fields = &mut saved["MultibandCompressor"];
+    fields["range_db"] = serde_json::json!(12.0);
+    fields["hold_ms"] = serde_json::json!(10.0);
+    fields["sidechain_tilt_db"] = serde_json::json!(3.0);
+    fields["link_amount"] = serde_json::json!(0.25);
+    let mut band = serde_json::to_value(sotf_plugins::BandCompressorParams::default()).unwrap();
+    band["range_db"] = serde_json::json!(3.0);
+    band["hold_ms"] = serde_json::json!(50.0);
+    fields["bands"] = serde_json::json!([band]);
+    let settings: PluginSettings = serde_json::from_value(saved).unwrap();
+    let config = settings.to_plugin_config(48_000.0);
+    let plugin =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
+    for (key, value) in [
+        ("range_db", 12.0),
+        ("hold_ms", 10.0),
+        ("band_0_range_db", 3.0),
+        ("band_0_hold_ms", 50.0),
+        ("band_1_range_db", 12.0),
+        ("band_1_hold_ms", 10.0),
+        ("sidechain_tilt_db", 3.0),
+        ("link_amount", 0.25),
+    ] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(key)),
+            Some(ParameterValue::Float(value)),
+            "{key}"
+        );
+    }
+}
+
+#[test]
 fn downmix_matrix_ltrt_is_exposed_and_round_trips() {
     let mut settings = PluginSettings::default_for(&PluginType::Downmix).unwrap();
     let matrix_ltrt_idx = param_specs::index_of(param_specs::downmix::PARAMS, "matrix_ltrt");
@@ -201,4 +327,50 @@ fn downmix_matrix_ltrt_is_exposed_and_round_trips() {
 
     let config = settings.to_plugin_config(48_000.0);
     assert_eq!(config.parameters["matrix_ltrt"], serde_json::json!(true));
+}
+
+#[test]
+fn gate_modes_preserve_legacy_presets_indices_and_factory_state() {
+    use sotf_plugins::{GateMode, ParameterId, ParameterValue};
+    let defaults = PluginSettings::default_for(&PluginType::Gate).unwrap();
+    let mut legacy = serde_json::to_value(&defaults).unwrap();
+    legacy["Gate"].as_object_mut().unwrap().remove("mode");
+    legacy["Gate"]
+        .as_object_mut()
+        .unwrap()
+        .remove("max_boost_db");
+    let mut settings: PluginSettings = serde_json::from_value(legacy).unwrap();
+    assert_eq!(settings.param_value(15), Some(0.0));
+    assert_eq!(settings.param_value(16), Some(12.0));
+    assert_eq!(settings.param_specs()[14].engine_key, "lookahead_ms");
+    assert_eq!(settings.param_specs()[15].engine_key, "mode");
+    assert_eq!(settings.param_specs()[16].engine_key, "max_boost_db");
+    for mode in [GateMode::Downward, GateMode::Upward, GateMode::Duck] {
+        settings.set_param_value(15, mode.index() as f64);
+        settings.set_param_value(16, 6.0);
+        assert_eq!(settings.param_value(15), Some(mode.index() as f64));
+        assert_eq!(
+            settings.engine_param_at(15),
+            None,
+            "mode requires reconstruction"
+        );
+        let (key, value) = settings.engine_param_at(16).unwrap();
+        assert_eq!(key, "max_boost_db");
+        assert_eq!(value.parse::<f64>().unwrap(), 6.0);
+        let saved = serde_json::to_value(&settings).unwrap();
+        assert_eq!(saved["Gate"]["mode"], serde_json::to_value(mode).unwrap());
+        let restored: PluginSettings = serde_json::from_value(saved).unwrap();
+        let config = restored.to_plugin_config(48_000.0);
+        let plugin =
+            sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+                .unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("mode")),
+            Some(ParameterValue::Int(mode.index() as i32))
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("max_boost_db")),
+            Some(ParameterValue::Float(6.0))
+        );
+    }
 }

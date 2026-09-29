@@ -1,14 +1,105 @@
 //! Macro-based wrapper that generates nih-plug Plugin implementations for SOTF plugins.
 
 #[doc(hidden)]
+pub mod transport;
+
+#[doc(hidden)]
 #[macro_export]
 macro_rules! sotf_nih_sample_accurate {
+    ("Gain") => {
+        true
+    };
+    ("Gate") => {
+        true
+    };
+    ("EQ") => {
+        true
+    };
     ("LinearPhaseEQ") => {
         true
     };
     ($other:literal) => {
         false
     };
+}
+
+/// DSP channel counts for the fixed layouts exported by the NIH binaries.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_io_channels {
+    ("MonoToStereo", $channels:literal) => {
+        (1usize, 2usize)
+    };
+    ("AmbisonicsDecoder", $channels:literal) => {
+        (4usize, 6usize)
+    };
+    ("Upmixer", $channels:literal) => {
+        (2usize, 6usize)
+    };
+    ("AAE", $channels:literal) => {
+        (2usize, 6usize)
+    };
+    ("BandSplit", $channels:literal) => {
+        (2usize, 4usize)
+    };
+    ("BandMerge", $channels:literal) => {
+        (4usize, 2usize)
+    };
+    ("AEC", $channels:literal) => {
+        (2usize, 1usize)
+    };
+    ("Beamformer", $channels:literal) => {
+        (2usize, 1usize)
+    };
+    ($other:literal, $channels:literal) => {
+        ($channels as usize, $channels as usize)
+    };
+}
+
+/// Default DSP input/output counts for the packaged plugin layouts.
+pub fn plugin_io_channels(plugin_type: &str) -> (usize, usize) {
+    match plugin_type {
+        "MonoToStereo" => (1, 2),
+        "AmbisonicsDecoder" => (4, 6),
+        "Upmixer" | "AAE" => (2, 6),
+        "BandSplit" => (2, 4),
+        "BandMerge" => (4, 2),
+        "AEC" | "Beamformer" => (2, 1),
+        _ => (2, 2),
+    }
+}
+
+/// Append Gate's key bus without renumbering existing CLAP configurations.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_layouts {
+    ("Gate", $default:expr) => {{
+        const DEFAULT: nih_plug::prelude::AudioIOLayout = $default;
+        &[
+            DEFAULT,
+            nih_plug::prelude::AudioIOLayout {
+                aux_input_ports: &[nih_plug::audio_setup::new_nonzero_u32(2)],
+                names: nih_plug::audio_setup::PortNames {
+                    layout: Some("Stereo + Sidechain"),
+                    aux_inputs: &["Sidechain"],
+                    ..DEFAULT.names
+                },
+                ..DEFAULT
+            },
+        ]
+    }};
+    ($other:literal, $default:expr) => {
+        &[$default]
+    };
+}
+
+/// Factory channel argument. BandMerge historically takes the output width.
+pub fn plugin_constructor_channels(plugin_type: &str) -> usize {
+    match plugin_type {
+        "MonoToStereo" => 1,
+        "AmbisonicsDecoder" => 4,
+        _ => 2,
+    }
 }
 
 /// Generate a complete nih-plug plugin struct from SOTF plugin metadata.
@@ -36,8 +127,8 @@ macro_rules! sotf_nih_plugin {
             interleaved_out: Vec<f32>,
             max_frames: usize,
             sample_rate: u32,
-            #[cfg(feature = "linear-phase-eq")]
             structural_fingerprint: u64,
+            transport: $crate::wrapper::transport::TransportTracker,
         }
 
         impl Default for $struct_name {
@@ -56,19 +147,12 @@ macro_rules! sotf_nih_plugin {
                 // If no ParamSpec params, or when LinearPhaseEQ needs its
                 // dynamic band schema in addition to global specs, inspect a
                 // temporary uninitialized instance on the control thread.
-                if (infos.is_empty() || matches!($plugin_type, "LinearPhaseEQ"))
+                if (infos.is_empty() || matches!($plugin_type, "LinearPhaseEQ" | "EQ"))
                     && let Ok(plugin) = plugins_bridge::create_plugin(
                         $plugin_type,
-                        $channels,
+                        $crate::wrapper::plugin_constructor_channels($plugin_type),
                         48000,
-                        if matches!($plugin_type, "LinearPhaseEQ") {
-                            // Discover the complete preset-compatible band
-                            // schema while the ParamSpec-owned num_filters
-                            // entry retains its normal default.
-                            r#"{"num_filters":10}"#
-                        } else {
-                            "{}"
-                        },
+                        &$crate::wrapper::default_plugin_config($plugin_type),
                     )
                 {
                     for param in plugin.parameters() {
@@ -96,8 +180,8 @@ macro_rules! sotf_nih_plugin {
                     interleaved_out: Vec::new(),
                     max_frames: 0,
                     sample_rate: 48000,
-                    #[cfg(feature = "linear-phase-eq")]
                     structural_fingerprint: 0,
+                    transport: $crate::wrapper::transport::TransportTracker::default(),
                 }
             }
         }
@@ -114,12 +198,39 @@ macro_rules! sotf_nih_plugin {
             // of collapsing automation to the original callback start.
             const SAMPLE_ACCURATE_AUTOMATION: bool =
                 $crate::sotf_nih_sample_accurate!($plugin_type);
+            fn tail_length(&self) -> Option<u32> {
+                Some($crate::wrapper::native_tail_samples(
+                    self.inner.as_ref().map_or(sotf_host::TailLength::Unknown, |plugin| plugin.tail_length()),
+                ))
+            }
             const AUDIO_IO_LAYOUTS: &'static [nih_plug::prelude::AudioIOLayout] =
-                &[nih_plug::prelude::AudioIOLayout {
-                    main_input_channels: std::num::NonZeroU32::new($channels),
-                    main_output_channels: std::num::NonZeroU32::new($channels),
+                $crate::sotf_nih_layouts!($plugin_type, nih_plug::prelude::AudioIOLayout {
+                    main_input_channels: std::num::NonZeroU32::new({
+                        let (inputs, outputs) =
+                            $crate::sotf_nih_io_channels!($plugin_type, $channels);
+                        if inputs < outputs {
+                            inputs as u32
+                        } else {
+                            outputs as u32
+                        }
+                    }),
+                    main_output_channels: std::num::NonZeroU32::new(
+                        $crate::sotf_nih_io_channels!($plugin_type, $channels).1 as u32,
+                    ),
+                    // NIH's main Buffer contains only output channels. Put
+                    // additional input channels on a separate bus so none are lost.
+                    aux_input_ports: {
+                        const IO: (usize, usize) =
+                            $crate::sotf_nih_io_channels!($plugin_type, $channels);
+                        if IO.0 > IO.1 {
+                            &[nih_plug::audio_setup::new_nonzero_u32((IO.0 - IO.1) as u32)]
+                        } else {
+                            &[]
+                        }
+                    },
+                    aux_output_ports: &[],
                     ..nih_plug::prelude::AudioIOLayout::const_default()
-                }];
+                });
 
             type SysExMessage = ();
             type BackgroundTask = ();
@@ -130,45 +241,50 @@ macro_rules! sotf_nih_plugin {
 
             fn initialize(
                 &mut self,
-                _audio_io_layout: &nih_plug::prelude::AudioIOLayout,
+                audio_io_layout: &nih_plug::prelude::AudioIOLayout,
                 buffer_config: &nih_plug::prelude::BufferConfig,
                 context: &mut impl nih_plug::prelude::InitContext<Self>,
             ) -> bool {
+                if !Self::AUDIO_IO_LAYOUTS.contains(audio_io_layout) {
+                    return false;
+                }
                 self.sample_rate = buffer_config.sample_rate as u32;
-                let channels: usize = $channels;
                 let max_frames = buffer_config.max_buffer_size as usize;
 
-                let config = {
-                    #[cfg(feature = "linear-phase-eq")]
-                    {
-                        if matches!($plugin_type, "LinearPhaseEQ") {
-                            match self.params.linear_phase_eq_config_json() {
-                                Ok(config) => config,
-                                Err(error) => {
-                                    log::error!(
-                                        "Failed to build {} configuration: {error}",
-                                        $plugin_type
-                                    );
-                                    return false;
-                                }
-                            }
-                        } else {
-                            "{}".to_string()
-                        }
-                    }
-                    #[cfg(not(feature = "linear-phase-eq"))]
-                    {
-                        "{}".to_string()
-                    }
-                };
-
-                match plugins_bridge::create_plugin(
+                match $crate::params::configuration::create_plugin(
                     $plugin_type,
-                    channels,
                     self.sample_rate,
-                    &config,
+                    &self.params,
                 ) {
                     Ok(mut plugin) => {
+                        let input_channels = plugin.input_channels();
+                        let output_channels = plugin.output_channels();
+                        let main_inputs = audio_io_layout.main_input_channels
+                            .map_or(0, |channels| channels.get() as usize);
+                        let total_inputs = main_inputs + audio_io_layout.aux_input_ports
+                            .iter().map(|channels| channels.get() as usize).sum::<usize>();
+                        // Gate's internal detector ignores the optional key bus.
+                        // External detection requires that the host selected it.
+                        let ignores_key_bus = matches!($plugin_type, "Gate")
+                            && input_channels == main_inputs;
+                        if (input_channels != total_inputs && !ignores_key_bus)
+                            || Some(output_channels as u32)
+                                != audio_io_layout.main_output_channels.map(|channels| channels.get())
+                        {
+                            log::error!(
+                                "{} DSP channels do not match the declared host layout",
+                                $plugin_type
+                            );
+                            return false;
+                        }
+
+                        plugin = match plugins_bridge::prepare_standalone_plugin(plugin, max_frames) {
+                            Ok(plugin) => plugin,
+                            Err(error) => {
+                                log::error!("Failed to prepare {}: {error}", $plugin_type);
+                                return false;
+                            }
+                        };
                         if matches!($plugin_type, "LinearPhaseEQ") {
                             plugin = match sotf_host::AsyncTimelinePlugin::new(
                                 plugin,
@@ -189,6 +305,14 @@ macro_rules! sotf_nih_plugin {
                             return false;
                         }
 
+                        // Validate the complete saved state on the control thread.
+                        // Realtime values may depend on structural settings, such
+                        // as the limiter requiring a fully wet mix in ISP mode.
+                        if let Err(error) = self.params.sync_to_plugin(plugin.as_mut()) {
+                            log::error!("Failed to restore {} parameters: {error}", $plugin_type);
+                            return false;
+                        }
+
                         let latency = match u32::try_from(plugin.latency_samples()) {
                             Ok(latency) => latency,
                             Err(_) => {
@@ -198,14 +322,12 @@ macro_rules! sotf_nih_plugin {
                         };
                         context.set_latency_samples(latency);
 
-                        self.interleaved_in = vec![0.0; max_frames * channels];
-                        self.interleaved_out = vec![0.0; max_frames * channels];
+                        self.interleaved_in = vec![0.0; max_frames * input_channels];
+                        self.interleaved_out = vec![0.0; max_frames * output_channels];
                         self.max_frames = max_frames;
-                        #[cfg(feature = "linear-phase-eq")]
-                        if matches!($plugin_type, "LinearPhaseEQ") {
-                            self.structural_fingerprint = self.params.structural_fingerprint();
-                        }
+                        self.structural_fingerprint = self.params.structural_fingerprint();
                         self.inner = Some(plugin);
+                        self.transport = $crate::wrapper::transport::TransportTracker::default();
                         true
                     }
                     Err(e) => {
@@ -218,8 +340,26 @@ macro_rules! sotf_nih_plugin {
             fn process(
                 &mut self,
                 buffer: &mut nih_plug::prelude::Buffer,
-                _aux: &mut nih_plug::prelude::AuxiliaryBuffers,
-                _context: &mut impl nih_plug::prelude::ProcessContext<Self>,
+                aux: &mut nih_plug::prelude::AuxiliaryBuffers,
+                context: &mut impl nih_plug::prelude::ProcessContext<Self>,
+            ) -> nih_plug::prelude::ProcessStatus {
+                self.process_with_transport(buffer, aux, context.transport().into())
+            }
+
+            fn reset(&mut self) {
+                self.transport = $crate::wrapper::transport::TransportTracker::default();
+                if let Some(plugin) = self.inner.as_mut() {
+                    plugin.reset();
+                }
+            }
+        }
+
+        impl $struct_name {
+            fn process_with_transport(
+                &mut self,
+                buffer: &mut nih_plug::prelude::Buffer,
+                aux: &mut nih_plug::prelude::AuxiliaryBuffers,
+                transport: $crate::wrapper::transport::NativeTransport,
             ) -> nih_plug::prelude::ProcessStatus {
                 let plugin = match self.inner.as_mut() {
                     Some(p) => p,
@@ -228,7 +368,9 @@ macro_rules! sotf_nih_plugin {
 
                 let num_frames = buffer.samples();
                 let num_channels = buffer.channels();
-                let expected_channels: usize = $channels;
+                let input_channels = plugin.input_channels();
+                let output_channels = plugin.output_channels();
+                let expected_channels = output_channels;
 
                 // A misbehaving host may hand us a block larger than the
                 // negotiated `max_buffer_size` or with an unexpected channel
@@ -251,7 +393,15 @@ macro_rules! sotf_nih_plugin {
                         );
                     }
                 };
-                if needed > self.interleaved_in.len() || needed > self.interleaved_out.len() {
+                if num_frames
+                    .checked_mul(input_channels)
+                    .is_none_or(|samples| samples > self.interleaved_in.len())
+                    || needed > self.interleaved_out.len()
+                    || (input_channels > output_channels
+                        && (aux.inputs.len() != 1
+                            || aux.inputs[0].channels() != input_channels - output_channels
+                            || aux.inputs[0].samples() != num_frames))
+                {
                     for channel in buffer.as_slice() {
                         channel.fill(0.0);
                     }
@@ -260,9 +410,7 @@ macro_rules! sotf_nih_plugin {
                     );
                 }
 
-                #[cfg(feature = "linear-phase-eq")]
-                if matches!($plugin_type, "LinearPhaseEQ") {
-                    if self.params.structural_fingerprint() != self.structural_fingerprint {
+                if self.params.structural_fingerprint() != self.structural_fingerprint {
                         // Structural state is hidden/non-automatable and is
                         // reconstructed by initialize(). If a host restores it
                         // while active, fail silent and request lifecycle
@@ -274,32 +422,47 @@ macro_rules! sotf_nih_plugin {
                         return nih_plug::prelude::ProcessStatus::Error(
                             "Structural parameter state changed; reactivate plugin",
                         );
-                    }
                 }
 
                 // Sync nih-plug params → SOTF plugin
-                self.bridge
-                    .sync_params_to_plugin(&self.params, plugin.as_mut());
+                if self
+                    .bridge
+                    .sync_params_to_plugin(&self.params, plugin.as_mut())
+                    .is_err()
+                {
+                    for channel in buffer.as_slice() {
+                        channel.fill(0.0);
+                    }
+                    return nih_plug::prelude::ProcessStatus::Error("Parameter update failed");
+                }
 
-                // Interleave input
+                // Interleave main inputs and any additional input bus.
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
-                    for ch in 0..num_channels {
-                        self.interleaved_in[frame * num_channels + ch] = channel_slices[ch][frame];
+                    for ch in 0..input_channels.min(output_channels) {
+                        self.interleaved_in[frame * input_channels + ch] =
+                            channel_slices[ch][frame];
+                    }
+                    if input_channels > output_channels {
+                        for ch in 0..input_channels - output_channels {
+                            self.interleaved_in[frame * input_channels + output_channels + ch] =
+                                aux.inputs[0].as_slice_immutable()[ch][frame];
+                        }
                     }
                 }
 
                 // Process
-                let ctx = sotf_host::plugin::ProcessContext::new(self.sample_rate, num_frames);
-                if plugin
-                    .process(
-                        &self.interleaved_in[..num_frames * num_channels],
-                        &mut self.interleaved_out[..num_frames * num_channels],
-                        &ctx,
-                    )
-                    .is_err()
-                {
-                    return nih_plug::prelude::ProcessStatus::Error("Processing failed");
+                let ctx = self.transport.context(transport, self.sample_rate, num_frames);
+                let produced = plugin.process(
+                    &self.interleaved_in[..num_frames * input_channels],
+                    &mut self.interleaved_out[..num_frames * output_channels],
+                    &ctx,
+                );
+                if !matches!(produced, Ok(frames) if frames == num_frames) {
+                    for channel in buffer.as_slice() {
+                        channel.fill(0.0);
+                    }
+                    return nih_plug::prelude::ProcessStatus::Error("Processing failed or returned an incomplete block");
                 }
 
                 // Deinterleave output
@@ -310,13 +473,7 @@ macro_rules! sotf_nih_plugin {
                     }
                 }
 
-                nih_plug::prelude::ProcessStatus::Normal
-            }
-
-            fn reset(&mut self) {
-                if let Some(plugin) = self.inner.as_mut() {
-                    plugin.reset();
-                }
+                $crate::wrapper::process_status_for_tail(plugin.tail_length())
             }
         }
 
@@ -324,6 +481,13 @@ macro_rules! sotf_nih_plugin {
             const VST3_CLASS_ID: [u8; 16] = $vst3_id;
             const VST3_SUBCATEGORIES: &'static [nih_plug::prelude::Vst3SubCategory] =
                 &[nih_plug::prelude::Vst3SubCategory::Fx];
+
+            fn default_audio_io_layout() -> nih_plug::prelude::AudioIOLayout {
+                // VST3 discovers buses from its initial layout. CLAP retains
+                // its legacy stereo config ID and explicitly selects keys.
+                let layouts = <Self as nih_plug::prelude::Plugin>::AUDIO_IO_LAYOUTS;
+                layouts[if matches!($plugin_type, "Gate") { 1 } else { 0 }]
+            }
         }
 
         impl nih_plug::prelude::ClapPlugin for $struct_name {
@@ -337,11 +501,106 @@ macro_rules! sotf_nih_plugin {
     };
 }
 
+/// Convert an output-clock tail bound to the common native representation.
+#[doc(hidden)]
+pub fn native_tail_samples(tail: sotf_host::TailLength) -> u32 {
+    match tail {
+        sotf_host::TailLength::Finite(frames) if frames < i32::MAX as u64 => frames as u32,
+        _ => u32::MAX,
+    }
+}
+
+/// Keep processing until the declared zero-input response can be emitted.
+#[doc(hidden)]
+pub fn process_status_for_tail(tail: sotf_host::TailLength) -> nih_plug::prelude::ProcessStatus {
+    match native_tail_samples(tail) {
+        0 => nih_plug::prelude::ProcessStatus::Normal,
+        u32::MAX => nih_plug::prelude::ProcessStatus::KeepAlive,
+        frames => nih_plug::prelude::ProcessStatus::Tail(frames),
+    }
+}
+
+/// Stable DAW parameter count. Neutral peaking bands preserve pass-through audio
+/// while making every supported EQ band available before the host scans params.
+pub const NIH_EQ_BANDS: usize = 20;
+
+/// Default construction used for parameter discovery and host initialization.
+pub fn default_plugin_config(plugin_type: &str) -> String {
+    match plugin_type {
+        "EQ" => eq_config_json(|_| None),
+        "LinearPhaseEQ" => r#"{"num_filters":10}"#.to_string(),
+        _ => "{}".to_string(),
+    }
+}
+
+/// Restore the fixed EQ band schema from DAW state before starting audio.
+pub fn eq_config_json(
+    value: impl Fn(&str) -> Option<sotf_host::parameters::ParameterValue>,
+) -> String {
+    use sotf_host::parameters::ParameterValue;
+    let types = [
+        "Peak",
+        "Lowshelf",
+        "Highshelf",
+        "Lowpass",
+        "Highpass",
+        "Bandpass",
+        "Notch",
+        "AllPass",
+    ];
+    let filters: Vec<_> = (0..NIH_EQ_BANDS)
+        .map(|band| {
+            let float = |field, default| {
+                value(&format!("band_{band}_{field}"))
+                    .and_then(|value| value.as_float())
+                    .unwrap_or(default)
+            };
+            let integer = |field, default| {
+                value(&format!("band_{band}_{field}"))
+                    .and_then(|value| value.as_int())
+                    .unwrap_or(default)
+            };
+            serde_json::json!({
+                "filter_type": types.get(integer("filter_type", 0) as usize).unwrap_or(&"Peak"),
+                "freq": float("freq", 1000.0),
+                "q": float("q", 1.0),
+                "db_gain": float("gain", 0.0),
+                "order": integer("order", 2),
+            })
+        })
+        .collect();
+    let enabled = matches!(value("auto_gain_enabled"), Some(ParameterValue::Bool(true)));
+    serde_json::json!({ "filters": filters, "auto_gain": { "enabled": enabled } }).to_string()
+}
+
+/// Apply structural controls on the control thread. Their host representation
+/// remains the historical choice index while the DSP accepts an actual factor.
+pub(crate) fn apply_eq_structural(
+    plugin: &mut dyn sotf_host::plugin::Plugin,
+    value: impl Fn(&str) -> Option<sotf_host::parameters::ParameterValue>,
+) -> Result<(), String> {
+    use sotf_host::parameters::{ParameterId, ParameterValue};
+    for id in ["max_filters", "oversampling", "topology"] {
+        if let Some(mut current) = value(id) {
+            if id == "oversampling" {
+                current = ParameterValue::Int(match current.as_int().unwrap_or(0) {
+                    1 => 2,
+                    2 => 4,
+                    _ => 1,
+                });
+            }
+            plugin.set_parameter(ParameterId::from(id), current)?;
+        }
+    }
+    Ok(())
+}
+
 /// Convert runtime plugin metadata to NIH's format without erasing integer,
 /// boolean, or structural/realtime semantics.
 pub fn bridged_info_from_parameter(
     parameter: &sotf_host::parameters::Parameter,
 ) -> Option<plugins_bridge::param_bridge::BridgedParamInfo> {
+    use plugins_bridge::param_bridge::BridgedParamKind;
     use sotf_host::param_specs::UpdateMode;
     use sotf_host::parameters::ParameterValue;
 
@@ -377,6 +636,12 @@ pub fn bridged_info_from_parameter(
         min_value,
         max_value,
         default_value,
+        kind: match parameter.default_value {
+            ParameterValue::Float(_) => BridgedParamKind::Float,
+            ParameterValue::Int(_) => BridgedParamKind::Int,
+            ParameterValue::Bool(_) => BridgedParamKind::Bool,
+            ParameterValue::String(_) => return None,
+        },
         steps,
         logarithmic: parameter.logarithmic,
         realtime: parameter.update_mode == UpdateMode::Realtime,
@@ -443,6 +708,7 @@ pub fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::P
         "Limiter" => limiter::PARAMS,
         "Gate" => gate::PARAMS,
         "Gain" => gain::PARAMS,
+        "Saturation" => saturation::PARAMS,
         "Delay" => delay::PARAMS,
         "Expander" => expander::PARAMS,
         "Crossfeed" => crossfeed::PARAMS,
@@ -500,3 +766,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "wrapper_tests.rs"]
+mod process_tests;

@@ -12,7 +12,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, Paramet
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
@@ -50,6 +51,13 @@ pub struct SpectralCompressorPlugin {
     pub(super) stft: StftState,
     /// Stable input copy because in-place output can precede later input reads.
     pub(super) block_input: Vec<f32>,
+    // EOS tracks source phase only, never an unbounded accepted-frame count.
+    has_input: bool,
+    input_phase: usize,
+    drain_remaining: Option<usize>,
+    drain_output: Vec<f32>,
+    drain_output_frames: usize,
+    drain_output_pos: usize,
 
     // Smoothers
     pub(super) threshold_smoother: Smoother,
@@ -152,6 +160,12 @@ impl SpectralCompressorPlugin {
 
             stft: StftState::new(fft_size, channels),
             block_input: vec![0.0; MAX_BLOCK_FRAMES * channels],
+            has_input: false,
+            input_phase: 0,
+            drain_remaining: None,
+            drain_output: vec![0.0; hop_size * channels],
+            drain_output_frames: 0,
+            drain_output_pos: 0,
 
             threshold_smoother: Smoother::new(params.threshold_db, 20.0, sample_rate),
             mix_smoother: Smoother::new(params.mix, 20.0, sample_rate),
@@ -357,7 +371,9 @@ impl SpectralCompressorPlugin {
 
             // Apply synthesis window (Hann) + scale, overlap-add into ring
             let next_pos = self.stft.next_add_position;
-            for i in 0..fft_size {
+            // Skip negative-time synthesis explicitly: writing those samples
+            // into the wrapped ring would leak them into a later revolution.
+            for i in self.stft.synthesis_discard..fft_size {
                 let frame_idx = (next_pos + i) & mask;
                 let s = self.stft.fft_processors[ch].time_buffer[i]
                     * self.stft.analysis_window[i] // synthesis window = same Hann
@@ -369,7 +385,13 @@ impl SpectralCompressorPlugin {
         // Advance OLA write position by one hop
         let hop_size = self.stft.hop_size;
         self.stft.next_add_position = (self.stft.next_add_position + hop_size) & mask;
-        self.stft.output_accumulator_fill += hop_size;
+        if self.stft.synthesis_discard > 0 {
+            self.stft.synthesis_discard -= hop_size;
+        } else {
+            // A nonnegative origin finalizes the next hop. Priming windows
+            // contribute to it but cannot make it readable prematurely.
+            self.stft.output_accumulator_fill += hop_size;
+        }
     }
 
     pub(super) fn rebuild_cached_parameters(&mut self) {
@@ -483,7 +505,7 @@ impl SpectralCompressorPlugin {
 
     /// Backward-compatible single-parameter getter.
     pub fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
-        self.current_values().get(id).cloned()
+        self.parametric_get_parameter(id)
     }
 
     /// Backward-compatible single-parameter setter.
@@ -492,6 +514,11 @@ impl SpectralCompressorPlugin {
     }
 
     fn apply_parameter(&mut self, id: &ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err(
+                "Reset spectral compressor before changing parameters after drain starts".into(),
+            );
+        }
         match id.as_str() {
             "fft_size_index" => {
                 let idx = value
@@ -578,137 +605,24 @@ impl SpectralCompressorPlugin {
     }
 }
 
-impl ParametricInPlacePlugin for SpectralCompressorPlugin {
-    fn info(&self) -> PluginInfo {
-        PluginInfo::new("Spectral Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
+impl SpectralCompressorPlugin {
+    fn clear_drain(&mut self) {
+        self.has_input = false;
+        self.input_phase = 0;
+        self.drain_remaining = None;
+        self.drain_output_frames = 0;
+        self.drain_output_pos = 0;
+        self.drain_output.fill(0.0);
     }
 
-    fn cost_class(&self) -> PluginCostClass {
-        PluginCostClass::Fft
-    }
-
-    fn compile_metadata(&self) -> PluginCompileMetadata {
-        PluginCompileMetadata::nonlinear(PluginCostClass::Fft, None, self.latency_samples(), false)
-    }
-
-    fn channels(&self) -> usize {
-        self.channels
-    }
-
-    fn parameter_schema(&self) -> ParameterSchema {
-        self.cached_parameters.clone()
-    }
-
-    fn current_values(&self) -> ParameterSet {
-        let mut values = ParameterSet::new();
-        values.insert(
-            ParameterId::from("fft_size_index"),
-            ParameterValue::Int(self.fft_size_index as i32),
-        );
-        // NOTE: canonical-only; see linear-phase-eq current_values.
-        values.insert(
-            ParameterId::from("threshold"),
-            ParameterValue::Float(self.threshold_db),
-        );
-        values.insert(
-            ParameterId::from("ratio"),
-            ParameterValue::Float(self.ratio),
-        );
-        values.insert(
-            ParameterId::from("attack"),
-            ParameterValue::Float(self.attack_ms),
-        );
-        values.insert(
-            ParameterId::from("release"),
-            ParameterValue::Float(self.release_ms),
-        );
-        values.insert(
-            ParameterId::from("knee"),
-            ParameterValue::Float(self.knee_db),
-        );
-        values.insert(
-            ParameterId::from("spectral_smoothing"),
-            ParameterValue::Float(self.spectral_smoothing),
-        );
-        values.insert(ParameterId::from("mix"), ParameterValue::Float(self.mix));
-        values.insert(
-            ParameterId::from("target_mode"),
-            ParameterValue::Int(self.target_mode as i32),
-        );
-        values.insert(
-            ParameterId::from("delta_listen"),
-            ParameterValue::Bool(self.delta_monitor.enabled()),
-        );
-        values.insert(
-            ParameterId::from("adaptive_threshold"),
-            ParameterValue::Bool(self.adaptive_threshold),
-        );
-        values.insert(
-            ParameterId::from("adaptive_offset_db"),
-            ParameterValue::Float(self.adaptive_offset_db),
-        );
-        values.insert(
-            ParameterId::from("channel_link"),
-            ParameterValue::Float(self.channel_link),
-        );
-        values
-    }
-
-    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, value) in values {
-            self.apply_parameter(&id, value)?;
-        }
-        Ok(())
-    }
-
-    fn parametric_validate_parameter(
-        &self,
-        id: &ParameterId,
-        value: &ParameterValue,
-    ) -> PluginResult<()> {
-        self.cached_parameters
-            .iter()
-            .find(|parameter| &parameter.id == id)
-            .ok_or_else(|| format!("Unknown parameter: {id}"))?
-            .validate(value)
-            .map_err(|error| format!("{id}: {error}"))
-    }
-
-    fn parametric_set_parameter(
-        &mut self,
-        id: ParameterId,
-        value: ParameterValue,
-    ) -> PluginResult<()> {
-        self.parametric_validate_parameter(&id, &value)?;
-        self.apply_parameter(&id, value)
-    }
-
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.sample_rate = sample_rate;
-        self.stft = StftState::new(self.fft_size, self.channels);
-        self.recompute_coefficients();
-        self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, sample_rate);
-        self.mix_smoother = Smoother::new(self.mix, 20.0, sample_rate);
-        Ok(())
-    }
-
-    fn reset(&mut self) {
-        self.stft.reset();
-        self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, self.sample_rate);
-        self.mix_smoother = Smoother::new(self.mix, 20.0, self.sample_rate);
-    }
-
-    fn latency_samples(&self) -> usize {
-        // The output scheduler emits exactly one FFT frame of leading silence,
-        // independent of host block partitioning.
-        self.fft_size
-    }
-
-    fn process_in_place(
+    fn process_audio(
         &mut self,
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Spectral compressor sample-rate mismatch".into());
+        }
         enable_ftz_daz();
 
         let nf = context.num_frames;
@@ -778,7 +692,12 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
 
             // --- Step 3: Emit fixed leading latency, then drain OLA output ---
             let startup_remaining = fft_size.saturating_sub(self.stft.latency_filled);
-            let startup_frames = startup_remaining.min(nf - output_pos);
+            // Priming runs one hop at a time. Do not emit the entire callback's
+            // leading padding before processing its other negative-origin
+            // windows, or large callbacks could exhaust output prematurely.
+            let startup_frames = startup_remaining
+                .min(nf - output_pos)
+                .min(input_pos.saturating_sub(output_pos));
             if startup_frames > 0 {
                 for i in 0..startup_frames {
                     let out_base = (output_pos + i) * channels;
@@ -797,7 +716,7 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
                 }
                 self.stft.latency_filled += startup_frames;
                 output_pos += startup_frames;
-                if output_pos >= nf {
+                if output_pos >= nf || self.stft.latency_filled < fft_size {
                     continue;
                 }
             }
@@ -856,5 +775,252 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
 
         flush_denormals_inplace(buffer);
         Ok(nf)
+    }
+}
+
+impl ParametricInPlacePlugin for SpectralCompressorPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Spectral Compressor", env!("CARGO_PKG_VERSION"), "Sotf")
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Fft
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::nonlinear(PluginCostClass::Fft, None, self.latency_samples(), false)
+    }
+
+    fn channels(&self) -> usize {
+        self.channels
+    }
+
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.cached_parameters.clone()
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "fft_size_index" => Some(ParameterValue::Int(self.fft_size_index as i32)),
+            "threshold" => Some(ParameterValue::Float(self.threshold_db)),
+            "ratio" => Some(ParameterValue::Float(self.ratio)),
+            "attack" => Some(ParameterValue::Float(self.attack_ms)),
+            "release" => Some(ParameterValue::Float(self.release_ms)),
+            "knee" => Some(ParameterValue::Float(self.knee_db)),
+            "spectral_smoothing" => Some(ParameterValue::Float(self.spectral_smoothing)),
+            "mix" => Some(ParameterValue::Float(self.mix)),
+            "target_mode" => Some(ParameterValue::Int(self.target_mode as i32)),
+            "delta_listen" => Some(ParameterValue::Bool(self.delta_monitor.enabled())),
+            "adaptive_threshold" => Some(ParameterValue::Bool(self.adaptive_threshold)),
+            "adaptive_offset_db" => Some(ParameterValue::Float(self.adaptive_offset_db)),
+            "channel_link" => Some(ParameterValue::Float(self.channel_link)),
+            _ => None,
+        }
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        let mut values = ParameterSet::new();
+        values.insert(
+            ParameterId::from("fft_size_index"),
+            ParameterValue::Int(self.fft_size_index as i32),
+        );
+        // NOTE: canonical-only; see linear-phase-eq current_values.
+        values.insert(
+            ParameterId::from("threshold"),
+            ParameterValue::Float(self.threshold_db),
+        );
+        values.insert(
+            ParameterId::from("ratio"),
+            ParameterValue::Float(self.ratio),
+        );
+        values.insert(
+            ParameterId::from("attack"),
+            ParameterValue::Float(self.attack_ms),
+        );
+        values.insert(
+            ParameterId::from("release"),
+            ParameterValue::Float(self.release_ms),
+        );
+        values.insert(
+            ParameterId::from("knee"),
+            ParameterValue::Float(self.knee_db),
+        );
+        values.insert(
+            ParameterId::from("spectral_smoothing"),
+            ParameterValue::Float(self.spectral_smoothing),
+        );
+        values.insert(ParameterId::from("mix"), ParameterValue::Float(self.mix));
+        values.insert(
+            ParameterId::from("target_mode"),
+            ParameterValue::Int(self.target_mode as i32),
+        );
+        values.insert(
+            ParameterId::from("delta_listen"),
+            ParameterValue::Bool(self.delta_monitor.enabled()),
+        );
+        values.insert(
+            ParameterId::from("adaptive_threshold"),
+            ParameterValue::Bool(self.adaptive_threshold),
+        );
+        values.insert(
+            ParameterId::from("adaptive_offset_db"),
+            ParameterValue::Float(self.adaptive_offset_db),
+        );
+        values.insert(
+            ParameterId::from("channel_link"),
+            ParameterValue::Float(self.channel_link),
+        );
+        values
+    }
+
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err(
+                "Reset spectral compressor before changing parameters after drain starts".into(),
+            );
+        }
+        for (id, value) in values {
+            self.apply_parameter(&id, value)?;
+        }
+        Ok(())
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.parametric_validate_parameter(&id, &value)?;
+        self.apply_parameter(&id, value)
+    }
+
+    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if sample_rate == 0 {
+            return Err("Spectral compressor sample rate must be positive".into());
+        }
+        self.sample_rate = sample_rate;
+        self.stft = StftState::new(self.fft_size, self.channels);
+        self.recompute_coefficients();
+        self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, sample_rate);
+        self.mix_smoother = Smoother::new(self.mix, 20.0, sample_rate);
+        self.clear_drain();
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        self.clear_drain();
+        self.stft.reset();
+        self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, self.sample_rate);
+        self.mix_smoother = Smoother::new(self.mix, 20.0, self.sample_rate);
+    }
+
+    fn latency_samples(&self) -> usize {
+        // The output scheduler emits exactly one FFT frame of leading silence,
+        // independent of host block partitioning.
+        self.fft_size
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err(
+                "Reset spectral compressor before processing input after drain starts".into(),
+            );
+        }
+        let frames = self.process_audio(buffer, context)?;
+        self.has_input |= frames > 0;
+        self.input_phase = (self.input_phase + frames % self.stft.hop_size) % self.stft.hop_size;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.stft.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !(self.has_input) {
+            return std::num::NonZeroU64::new(1);
+        }
+        let hop = self.stft.hop_size;
+        let remaining = self
+            .drain_remaining
+            .unwrap_or(2 * self.fft_size - hop + (hop - self.input_phase) % hop);
+        // One call serves at most one canonical refill. A partially served
+        // refill needs its own call even when fewer than one hop remains.
+        let cached = self.drain_output_frames - self.drain_output_pos;
+        let calls = usize::from(cached != 0) + remaining.saturating_sub(cached).div_ceil(hop);
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Spectral compressor drain sample-rate mismatch".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() || !output.len().is_multiple_of(self.channels) {
+            return Err(
+                "Spectral compressor drain requires a positive frame-aligned destination".into(),
+            );
+        }
+        let hop = self.stft.hop_size;
+        let remaining = self.drain_remaining.unwrap_or_else(|| {
+            // Last input-containing origin S=floor((T-1)/H)*H contributes
+            // through exclusive output time 2N+S. This includes the complete
+            // transform response, not only the N-frame emitted latency.
+            2 * self.fft_size - hop + (hop - self.input_phase) % hop
+        });
+        if self.drain_output_pos == self.drain_output_frames {
+            let frames = remaining.min(hop);
+            let mut scratch = std::mem::take(&mut self.drain_output);
+            scratch[..frames * self.channels].fill(0.0);
+            let result = self.process_audio(
+                &mut scratch[..frames * self.channels],
+                &ProcessContext::new(self.sample_rate, frames),
+            );
+            // Restore owned storage even if a future process validation fails.
+            self.drain_output = scratch;
+            result?;
+            self.drain_output_frames = frames;
+            self.drain_output_pos = 0;
+        }
+        let frames =
+            (output.len() / self.channels).min(self.drain_output_frames - self.drain_output_pos);
+        let start = self.drain_output_pos * self.channels;
+        let samples = frames * self.channels;
+        output[..samples].copy_from_slice(&self.drain_output[start..start + samples]);
+        self.drain_output_pos += frames;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        // Phase-independent bound: max_T(2N+floor((T-1)/H)*H-T)=2N-1.
+        // FFT size is structural; live gain changes retain no larger window.
+        TailLength::Finite((2 * self.fft_size - 1) as u64)
     }
 }

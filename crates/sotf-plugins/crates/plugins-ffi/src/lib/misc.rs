@@ -2,6 +2,7 @@ use super::{LAST_ERROR, LAST_STATIC_ERROR};
 #[cfg(target_os = "macos")]
 use gpui::AppContext as _;
 use std::ffi::{CStr, CString};
+#[cfg(target_os = "macos")]
 use std::os::raw::c_char;
 #[cfg(target_os = "macos")]
 use std::rc::Rc;

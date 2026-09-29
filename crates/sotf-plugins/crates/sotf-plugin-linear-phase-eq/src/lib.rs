@@ -3,6 +3,9 @@ pub mod params;
 
 #[path = "lib/default.rs"]
 mod default;
+#[cfg(test)]
+#[path = "lib/drain_tests.rs"]
+mod drain_tests;
 #[path = "lib/eq_band.rs"]
 mod eq_band;
 #[path = "lib/linear_phase_eq_plugin.rs"]

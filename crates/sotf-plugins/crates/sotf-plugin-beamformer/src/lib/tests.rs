@@ -103,6 +103,29 @@ fn test_beamformer_superdirective_process() {
     assert!(result.is_ok());
 }
 
+#[test]
+fn synthetic_startup_prefix_solves_weights_without_learning_covariance() {
+    let mut plugin = BeamformerPlugin::new(2, 48_000).unwrap();
+    for _ in 0..2 {
+        plugin.reset();
+        let covariance = plugin.mvdr.noise_cov_snapshot().to_vec();
+        let solves = plugin.mvdr.weight_solve_count;
+        let input: Vec<f32> = (0..256).flat_map(|_| [0.25, 0.0]).collect();
+        let mut output = [0.0; 256];
+        plugin
+            .process(&input, &mut output, &ProcessContext::new(48_000, 256))
+            .unwrap();
+        assert_eq!(plugin.mvdr.noise_cov_snapshot(), covariance);
+        assert_eq!(plugin.mvdr.weight_solve_count, solves + 1);
+        assert!(output.iter().all(|&x| x == 0.0));
+        plugin
+            .process(&input, &mut output, &ProcessContext::new(48_000, 256))
+            .unwrap();
+        assert_ne!(plugin.mvdr.noise_cov_snapshot(), covariance);
+        assert_eq!(plugin.mvdr.weight_solve_count, solves + 2);
+    }
+}
+
 /// Regression test for §1.1 (STFT trigger fires every sample after hop).
 ///
 /// Before the fix `input_fill` was reset to `FFT_SIZE - hop = hop`, so on
@@ -115,15 +138,14 @@ fn test_stft_trigger_fires_at_fft_size_not_hop() {
     plugin.beamformer_type = BeamformerType::Mvdr;
 
     let hop = FFT_SIZE / 2;
-    // Feed exactly hop samples at a time over several calls.
-    // With the buggy trigger each call after the first would fire a frame;
-    // with the correct trigger only every other call fires one.
+    // The prefix and then the carried overlap occupy half the accumulator.
+    // Each call completes one frame, rather than triggering on every sample.
     let block = ProcessContext::new(48000, hop);
     let input = vec![0.1f32; hop * 2];
     let mut output = vec![0.0f32; hop];
 
-    // After 2 blocks (= FFT_SIZE samples) we expect the first frame to
-    // have fired.  Accumulate across many blocks; all outputs must be finite.
+    // The first prefix frame fires after one hop. Accumulate across many
+    // blocks; all outputs must be finite.
     for _ in 0..16 {
         let result = plugin.process(&input, &mut output, &block);
         assert!(result.is_ok());
@@ -384,3 +406,9 @@ fn sample_rate_reinitialization_discards_old_grid_and_pending_audio() {
         assert!(reused_output.iter().all(|sample| *sample == 0.0));
     }
 }
+
+#[path = "tests/drain.rs"]
+mod drain;
+
+#[path = "tests/tail_metadata.rs"]
+mod tail_metadata;

@@ -24,25 +24,25 @@ use crate::{
     ABComparePlugin, ABComparePluginParams, AaePlugin, AaePluginParams, AecPlugin, AecPluginParams,
     AnalogCompressorPlugin, AnalogCompressorPluginParams, AnalogEqPlugin, AnalogEqPluginParams,
     AnalogLimiterPlugin, AnalogLimiterPluginParams, BandMergePlugin, BandMergePluginParams,
-    BandSplitPlugin, BandSplitPluginParams,
-    BeamformerPlugin, BeamformerPluginParams, BinauralDecoderParams, BinauralDecoderPlugin,
-    ChannelMuteSoloParams, ChannelMuteSoloPlugin, CompressorPlugin, CompressorPluginParams,
-    ConvolutionPlugin, ConvolutionPluginParams, CrossfeedPlugin, CrossfeedPluginParams,
-    CrossoverPlugin, CrossoverPluginParams, DeEsserPlugin, DeEsserPluginParams, DeclickPlugin,
-    DeclickPluginParams, DelayPlugin, DelayPluginParams, DenoiserPlugin, DenoiserPluginParams,
-    DitherPlugin, DitherPluginParams, DownmixPlugin, DownmixPluginParams, DynamicEqPlugin,
-    DynamicEqPluginParams, EqPlugin, EqPluginParams, ExpanderPlugin, ExpanderPluginParams,
-    GainPlugin, GainPluginParams, GatePlugin, GatePluginParams, HissReducerPlugin,
-    HissReducerPluginParams, LimiterPlugin, LimiterPluginParams, LinearPhaseEqPlugin,
-    LinearPhaseEqPluginParams, LoudnessCompensationPlugin, LoudnessCompensationPluginParams,
-    LoudnessMonitorPlugin, MatrixPlugin, MonoToStereoPlugin, MonoToStereoPluginParams,
-    MultibandCompressorPlugin, MultibandCompressorPluginParams, MultibandExpanderPlugin,
-    MultibandExpanderPluginParams, ParametricInPlacePluginAdapter, ParametricPluginAdapter, Plugin,
-    PndPlugin, PndPluginParams, ResamplerPlugin, SaturationPlugin, SaturationPluginParams,
-    SpectralCompressorPlugin, SpectralCompressorPluginParams, SpectrumAnalyzerPlugin,
-    SpectrumConfig, SpeechDenoiserPlugin, SpeechDenoiserPluginParams, StereoImagerPlugin,
-    StereoImagerPluginParams, TransientShaperPlugin, TransientShaperPluginParams, UpmixerPlugin,
-    UpmixerPluginParams, XtcPlugin, XtcPluginParams,
+    BandSplitPlugin, BandSplitPluginParams, BeamformerPlugin, BeamformerPluginParams,
+    BinauralDecoderParams, BinauralDecoderPlugin, ChannelMuteSoloParams, ChannelMuteSoloPlugin,
+    CompressorPlugin, CompressorPluginParams, ConvolutionPlugin, ConvolutionPluginParams,
+    CrossfeedPlugin, CrossfeedPluginParams, CrossoverPlugin, CrossoverPluginParams, DeEsserPlugin,
+    DeEsserPluginParams, DeclickPlugin, DeclickPluginParams, DelayPlugin, DelayPluginParams,
+    DenoiserPlugin, DenoiserPluginParams, DitherPlugin, DitherPluginParams, DownmixPlugin,
+    DownmixPluginParams, DynamicEqPlugin, DynamicEqPluginParams, EqPlugin, EqPluginParams,
+    ExpanderPlugin, ExpanderPluginParams, GainPlugin, GainPluginParams, GatePlugin,
+    GatePluginParams, HissReducerPlugin, HissReducerPluginParams, LimiterPlugin,
+    LimiterPluginParams, LinearPhaseEqPlugin, LinearPhaseEqPluginParams,
+    LoudnessCompensationPlugin, LoudnessCompensationPluginParams, LoudnessMonitorPlugin,
+    MatrixPlugin, MonoToStereoPlugin, MonoToStereoPluginParams, MultibandCompressorPlugin,
+    MultibandCompressorPluginParams, MultibandExpanderPlugin, MultibandExpanderPluginParams,
+    ParametricInPlacePluginAdapter, ParametricPluginAdapter, Plugin, PndPlugin, PndPluginParams,
+    ResamplerPlugin, SaturationPlugin, SaturationPluginParams, SpectralCompressorPlugin,
+    SpectralCompressorPluginParams, SpectrumAnalyzerPlugin, SpectrumConfig, SpeechDenoiserPlugin,
+    SpeechDenoiserPluginParams, StereoImagerPlugin, StereoImagerPluginParams,
+    TransientShaperPlugin, TransientShaperPluginParams, UpmixerPlugin, UpmixerPluginParams,
+    XtcPlugin, XtcPluginParams,
 };
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::{
@@ -60,6 +60,12 @@ use std::path::PathBuf;
 /// Supports all plugin types in the SOTF ecosystem. This is the single
 /// authoritative factory -- both the audio engine and the A/B Compare
 /// plugin's sub-rack builder delegate to this function.
+///
+/// This constructs the plugin; it does not guarantee initialization. Direct
+/// callers must call [`Plugin::initialize`] at the processing sample rate before
+/// processing audio. Inserting the plugin into a host performs that step at the
+/// node's input sample rate. The factory's `sample_rate` argument supplies any
+/// rate-dependent constructor configuration.
 pub fn create_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,

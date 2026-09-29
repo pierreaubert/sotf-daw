@@ -255,6 +255,11 @@ impl PreparedTransitionDelay {
             }
         }
     }
+
+    pub(crate) fn reset(&mut self) {
+        self.samples.fill(0.0);
+        self.cursor = 0;
+    }
 }
 
 #[cfg(test)]
@@ -272,6 +277,16 @@ mod prepared_host_update_tests {
 
         assert_eq!(first, [0.0, 0.0]);
         assert_eq!(second, [0.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn transition_delay_reset_discards_buffered_samples() {
+        let mut delay = PreparedTransitionDelay::new(3);
+        delay.process_in_place(&mut [1.0, 2.0]);
+        delay.reset();
+        let mut output = [3.0, 4.0, 5.0, 6.0];
+        delay.process_in_place(&mut output);
+        assert_eq!(output, [0.0, 0.0, 0.0, 3.0]);
     }
 }
 

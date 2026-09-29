@@ -34,4 +34,16 @@ impl<T: AudioSample> DelayBuffer<T> {
     pub(super) fn delay(&self) -> usize {
         self.delay
     }
+
+    pub(super) fn process_frame_in_place(&mut self, frame: &mut [T]) {
+        debug_assert_eq!(frame.len(), self.channels);
+        let base = self.pos * self.channels;
+        frame.swap_with_slice(&mut self.buffer[base..base + self.channels]);
+        self.pos = (self.pos + 1) % self.delay;
+    }
+
+    pub(super) fn reset(&mut self) {
+        self.buffer.fill(T::default());
+        self.pos = 0;
+    }
 }

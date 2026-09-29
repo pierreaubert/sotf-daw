@@ -2,17 +2,18 @@ use super::in_place_plugin::InPlacePlugin;
 use super::plugin_info::PluginInfo;
 use super::process_context::ProcessContext;
 use super::types::{PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginResult};
-use super::{Plugin, validate_process_block_f32, validate_process_block_f64};
+use super::{Plugin, PluginDrainResult, validate_process_block_f32, validate_process_block_f64};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
+use crate::plugin::bounded_in_place::{self, BoundedInPlace};
 use std::any::Any;
 use std::sync::Arc;
 
 /// Adapter to convert InPlacePlugin to Plugin
 pub struct InPlacePluginAdapter<T: InPlacePlugin> {
     pub(super) plugin: T,
-    /// Reusable f32 scratch for the f64 processing path. Pre-sized and grown on
-    /// demand so the audio thread does not allocate per block.
+    /// Legacy f64 fallback storage for processors without subdivision support.
     scratch: Vec<f32>,
+    bounded: BoundedInPlace,
 }
 
 impl<T: InPlacePlugin> InPlacePluginAdapter<T> {
@@ -20,6 +21,7 @@ impl<T: InPlacePlugin> InPlacePluginAdapter<T> {
         Self {
             plugin,
             scratch: Vec::new(),
+            bounded: BoundedInPlace::default(),
         }
     }
 
@@ -29,11 +31,27 @@ impl<T: InPlacePlugin> InPlacePluginAdapter<T> {
         }
     }
 
-    fn process_in_place_f64_with_scratch(
+    fn process_in_place_f64(
         &mut self,
         buffer: &mut [f64],
         context: &ProcessContext,
     ) -> Result<usize, String> {
+        if self.plugin.supports_f64() {
+            return self.plugin.process_in_place_f64(buffer, context);
+        }
+        if self.plugin.supports_bounded_subdivision() {
+            let channels = [self.plugin.input_channels(), self.plugin.channels()];
+            validate_process_block_f64(buffer, buffer, context, channels[0], channels[0])?;
+            self.bounded.validate(channels, context)?;
+            let plugin = &mut self.plugin;
+            return bounded_in_place::fallback_in_place(
+                &mut self.bounded.f32_samples,
+                buffer,
+                context,
+                channels[0],
+                |work, context| plugin.process_in_place(work, context),
+            );
+        }
         self.ensure_scratch(buffer.len());
         let scratch = &mut self.scratch[..buffer.len()];
         for (dst, &src) in scratch.iter_mut().zip(buffer.iter()) {
@@ -73,7 +91,14 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.plugin.initialize(sample_rate)
+        self.bounded.invalidate();
+        self.plugin.initialize(sample_rate)?;
+        self.bounded.prepare(
+            self.plugin.supports_bounded_subdivision(),
+            [self.plugin.input_channels(), self.plugin.channels()],
+            self.plugin.supports_f64(),
+            sample_rate,
+        )
     }
 
     fn reset(&mut self) {
@@ -86,31 +111,24 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        let in_ch = self.plugin.input_channels();
-        let out_ch = self.plugin.channels();
-        if in_ch == out_ch {
-            validate_process_block_f32(input, output, context, in_ch, out_ch)?;
-            // Standard in-place: copy input to output, then process
+        let channels = [self.plugin.input_channels(), self.plugin.channels()];
+        validate_process_block_f32(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_bounded_subdivision() || channels[0] != channels[1] {
+            self.bounded.validate(channels, context)?;
+        }
+        if channels[0] == channels[1] {
             output.copy_from_slice(input);
             self.plugin.process_in_place(output, context)
         } else {
-            // Sidechain-style in-place plugins use the output as an input-width
-            // work buffer, then compact the programme channels in place.
-            validate_process_block_f32(input, output, context, in_ch, in_ch)?;
-            // Extended input (e.g. external sidechain): copy full input to output buffer
-            // which is sized for input_channels, then process in-place.
-            // The output buffer must be sized for input_channels * num_frames.
-            // After processing, only the first out_ch channels per frame are meaningful.
-            output[..input.len()].copy_from_slice(input);
-            let frames = self
-                .plugin
-                .process_in_place(&mut output[..input.len()], context)?;
-            for frame in 0..frames {
-                let src = frame * in_ch;
-                let dst = frame * out_ch;
-                output.copy_within(src..src + out_ch, dst);
-            }
-            Ok(frames)
+            let plugin = &mut self.plugin;
+            bounded_in_place::process(
+                &mut self.bounded.f32_samples,
+                input,
+                output,
+                context,
+                channels,
+                |work, context| plugin.process_in_place(work, context),
+            )
         }
     }
 
@@ -148,28 +166,65 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         output: &mut [f64],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        let in_ch = self.plugin.input_channels();
-        let out_ch = self.plugin.channels();
-        if in_ch == out_ch {
-            validate_process_block_f64(input, output, context, in_ch, out_ch)?;
-            output.copy_from_slice(input);
-            self.process_in_place_f64_with_scratch(output, context)
-        } else {
-            validate_process_block_f64(input, output, context, in_ch, in_ch)?;
-            output[..input.len()].copy_from_slice(input);
-            let frames =
-                self.process_in_place_f64_with_scratch(&mut output[..input.len()], context)?;
-            for frame in 0..frames {
-                let src = frame * in_ch;
-                let dst = frame * out_ch;
-                output.copy_within(src..src + out_ch, dst);
-            }
-            Ok(frames)
+        let channels = [self.plugin.input_channels(), self.plugin.channels()];
+        validate_process_block_f64(input, output, context, channels[0], channels[1])?;
+        let subdivide = self.plugin.supports_bounded_subdivision();
+        if subdivide || channels[0] != channels[1] {
+            self.bounded.validate(channels, context)?;
         }
+        if channels[0] == channels[1] && (!subdivide || self.plugin.supports_f64()) {
+            output.copy_from_slice(input);
+            self.process_in_place_f64(output, context)
+        } else {
+            let plugin = &mut self.plugin;
+            if plugin.supports_f64() {
+                bounded_in_place::process(
+                    &mut self.bounded.f64_samples,
+                    input,
+                    output,
+                    context,
+                    channels,
+                    |work, context| plugin.process_in_place_f64(work, context),
+                )
+            } else {
+                bounded_in_place::process(
+                    &mut self.bounded.f32_samples,
+                    input,
+                    output,
+                    context,
+                    channels,
+                    |work, context| plugin.process_in_place(work, context),
+                )
+            }
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.plugin.drain_output_frames_max()
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        self.plugin.begin_drain(context)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.plugin.drain_call_bound()
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.plugin.drain(output, context)
     }
 
     fn latency_samples(&self) -> usize {
         self.plugin.latency_samples()
+    }
+
+    fn tail_length(&self) -> super::TailLength {
+        self.plugin.tail_length()
     }
 
     fn realtime_quantum_frames(&self) -> usize {

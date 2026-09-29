@@ -1,0 +1,492 @@
+diff --git a/crates/app-gpui/app/dev_api/queries.rs b/crates/app-gpui/app/dev_api/queries.rs
+--- a/crates/app-gpui/app/dev_api/queries.rs
++++ b/crates/app-gpui/app/dev_api/queries.rs
+@@ -37,6 +37,10 @@
+         .map_err(|e| anyhow!("window.update failed: {e:#}"))?
+ }
+ 
++fn maximum_true_peak_query(loudness: Option<&sotf_audio_player::LoudnessData>) -> Value {
++    json!(loudness.and_then(|data| data.maximum_true_peak_dbtp))
++}
++
+ fn read_path(path: &str, state: &AppState) -> Result<Value> {
+     let app = &state.app;
+     Ok(match path {
+@@ -66,6 +70,9 @@
+                 .map(|item| item.current_track_index)
+         ),
+         "meters.has_data" => json!(app.playback.loudness_info.is_some()),
++        "meters.maximum_true_peak_dbtp" => {
++            maximum_true_peak_query(app.playback.loudness_info.as_deref())
++        }
+         "meters.channel_count" => json!(
+             app.playback
+                 .loudness_info
+@@ -1516,3 +1523,20 @@
+         filter_count: Some(filter_count),
+     })
+ }
++
++#[cfg(test)]
++mod programme_true_peak_query_tests {
++    use super::*;
++    use sotf_audio_player::LoudnessData;
++
++    #[test]
++    fn query_returns_latched_programme_max_after_lower_interval_values() {
++        let mut data = LoudnessData::new(2);
++        data.maximum_true_peak_dbtp = Some(-1.2);
++        data.update_true_peaks(&[-3.0, -4.0]);
++        assert_eq!(maximum_true_peak_query(Some(&data)), json!(-1.2));
++
++        data.update_true_peaks(&[-9.0, -10.0]);
++        assert_eq!(maximum_true_peak_query(Some(&data)), json!(-1.2));
++    }
++}
+diff --git a/crates/app-gpui/app/dev_api/server/dispatch.rs b/crates/app-gpui/app/dev_api/server/dispatch.rs
+--- a/crates/app-gpui/app/dev_api/server/dispatch.rs
++++ b/crates/app-gpui/app/dev_api/server/dispatch.rs
+@@ -1237,6 +1237,7 @@
+                         fixture.integrated_valid = true;
+                         fixture.sample_peak_valid = true;
+                         fixture.true_peak_valid = true;
++                        fixture.maximum_true_peak_dbtp = Some(-1.2);
+                         fixture.momentary_lufs = -18.4;
+                         fixture.shortterm_lufs = -19.1;
+                         fixture.integrated_lufs = -20.0;
+diff --git a/crates/app-gpui/app/dev_api/server/parse.rs b/crates/app-gpui/app/dev_api/server/parse.rs
+--- a/crates/app-gpui/app/dev_api/server/parse.rs
++++ b/crates/app-gpui/app/dev_api/server/parse.rs
+@@ -142,6 +142,7 @@
+         "playback.current_track_index".into(),
+         "playback.seekable".into(),
+         "meters.has_data".into(),
++        "meters.maximum_true_peak_dbtp".into(),
+         "meters.channel_count".into(),
+         "meters.group_count".into(),
+         "meters.selected_group".into(),
+diff --git a/crates/app-gpui/app/i18n/translations.rs b/crates/app-gpui/app/i18n/translations.rs
+--- a/crates/app-gpui/app/i18n/translations.rs
++++ b/crates/app-gpui/app/i18n/translations.rs
+@@ -4287,6 +4287,8 @@
+     pub gain_reduction: &'static str,
+     pub peak: &'static str,
+     pub true_peak: &'static str,
++    pub max_true_peak: &'static str,
++    pub true_peak_unavailable: &'static str,
+     pub lufs: &'static str,
+     pub peak_spread: &'static str,
+     pub even: &'static str,
+@@ -4313,6 +4315,8 @@
+                 gain_reduction: "Gain Reduction",
+                 peak: "Peak",
+                 true_peak: "True Peak",
++                max_true_peak: "Max TP",
++                true_peak_unavailable: "Unavailable",
+                 lufs: "LUFS",
+                 peak_spread: "Peak Spread",
+                 even: "Even",
+@@ -4334,6 +4338,8 @@
+                 gain_reduction: "Réduction de gain",
+                 peak: "Crête",
+                 true_peak: "Crête vraie",
++                max_true_peak: "TP max",
++                true_peak_unavailable: "Indisponible",
+                 lufs: "LUFS",
+                 peak_spread: "Écart de crête",
+                 even: "Uniforme",
+@@ -4355,6 +4361,8 @@
+                 gain_reduction: "Pegelreduktion",
+                 peak: "Spitze",
+                 true_peak: "True Peak",
++                max_true_peak: "Max TP",
++                true_peak_unavailable: "Nicht verfügbar",
+                 lufs: "LUFS",
+                 peak_spread: "Spitzenstreuung",
+                 even: "Gleichmäßig",
+@@ -4376,6 +4384,8 @@
+                 gain_reduction: "Reducción de ganancia",
+                 peak: "Pico",
+                 true_peak: "Pico verdadero",
++                max_true_peak: "Pico máx.",
++                true_peak_unavailable: "No disponible",
+                 lufs: "LUFS",
+                 peak_spread: "Dispersión de picos",
+                 even: "Uniforme",
+diff --git a/crates/app-gpui/app/i18n/translations_pseudo_generated.rs b/crates/app-gpui/app/i18n/translations_pseudo_generated.rs
+--- a/crates/app-gpui/app/i18n/translations_pseudo_generated.rs
++++ b/crates/app-gpui/app/i18n/translations_pseudo_generated.rs
+@@ -655,6 +655,8 @@
+                 gain_reduction: pseudo_static("Gain Reduction"),
+                 peak: pseudo_static("Peak"),
+                 true_peak: pseudo_static("True Peak"),
++                max_true_peak: pseudo_static("Max TP"),
++                true_peak_unavailable: pseudo_static("Unavailable"),
+                 lufs: pseudo_static("LUFS"),
+                 peak_spread: pseudo_static("Peak Spread"),
+                 even: pseudo_static("Even"),
+diff --git a/crates/app-gpui/components/plugins/level_meters/render.rs b/crates/app-gpui/components/plugins/level_meters/render.rs
+--- a/crates/app-gpui/components/plugins/level_meters/render.rs
++++ b/crates/app-gpui/components/plugins/level_meters/render.rs
+@@ -63,6 +63,18 @@
+ /// the UI boundary.
+ fn finite_meter_value(value: f64, fallback: f64) -> f64 {
+     if value.is_finite() { value } else { fallback }
++}
++
++fn maximum_true_peak_value(
++    loudness: &sotf_audio_player::LoudnessData,
++    text: LevelMeterTranslations,
++) -> String {
++    match loudness.maximum_true_peak_dbtp {
++        Some(value) if value.is_finite() => format!("{value:.1} dBTP"),
++        Some(_) => text.true_peak_unavailable.to_string(),
++        None if loudness.true_peak_is_compliant => "— dBTP".to_string(),
++        None => text.true_peak_unavailable.to_string(),
++    }
+ }
+ 
+ /// Render a horizontal gain reduction meter
+@@ -284,6 +296,9 @@
+         let empty = empty.dev_track("plugin.loudness.no-data");
+         return div().child(empty);
+     }
++    let maximum_true_peak_value = loudness
++        .map(|data| maximum_true_peak_value(data, text))
++        .unwrap_or_default();
+     // Older snapshots and analyzers that do not expose oversampled peaks can
+     // still provide per-channel sample peaks. Keep that fallback channel
+     // aware instead of silently substituting a fake stereo L/R pair. The
+@@ -376,6 +391,18 @@
+                         .text_color(theme.text_primary)
+                         .mb(d.grid)
+                         .child(peak_label),
++                )
++                .child(
++                    div()
++                        .flex()
++                        .flex_col()
++                        .gap(d.gap)
++                        .w_full()
++                        .min_w_0()
++                        .text_size(d.text_xs)
++                        .text_color(theme.text_muted)
++                        .child(div().w_full().min_w_0().child(text.max_true_peak))
++                        .child(div().w_full().min_w_0().child(maximum_true_peak_value)),
+                 )
+                 .children(true_peaks.iter().enumerate().map(|(index, true_peak)| {
+                     PlayerView::render_meter_bar(
+@@ -1198,3 +1225,35 @@
+         panel
+     }
+ }
++
++#[cfg(test)]
++mod programme_true_peak_tests {
++    use super::*;
++    use crate::app::i18n::Language;
++    use sotf_audio_player::LoudnessData;
++
++    #[test]
++    fn programme_maximum_is_independent_of_status_flags_and_later_intervals() {
++        let text = LevelMeterTranslations::for_language(Language::English);
++        let mut loudness = LoudnessData::new(2);
++        loudness.maximum_true_peak_dbtp = Some(-1.2);
++        loudness.true_peak_is_compliant = false;
++        loudness.true_peak_valid = false;
++        loudness.update_true_peaks(&[-3.0, -4.0]);
++        let label = maximum_true_peak_value(&loudness, text);
++        assert_eq!(label, "-1.2 dBTP");
++
++        loudness.update_true_peaks(&[-9.0, -10.0]);
++        assert_eq!(maximum_true_peak_value(&loudness, text), label);
++
++        loudness.maximum_true_peak_dbtp = None;
++        loudness.true_peak_is_compliant = true;
++        assert_eq!(maximum_true_peak_value(&loudness, text), "— dBTP");
++
++        loudness.true_peak_is_compliant = false;
++        assert_eq!(maximum_true_peak_value(&loudness, text), "Unavailable");
++
++        loudness.maximum_true_peak_dbtp = Some(f64::INFINITY);
++        assert_eq!(maximum_true_peak_value(&loudness, text), "Unavailable");
++    }
++}
+diff --git a/crates/app-gpui/tests/component_tests/tests.rs b/crates/app-gpui/tests/component_tests/tests.rs
+--- a/crates/app-gpui/tests/component_tests/tests.rs
++++ b/crates/app-gpui/tests/component_tests/tests.rs
+@@ -4457,6 +4457,8 @@
+                 text.gain_reduction,
+                 text.peak,
+                 text.true_peak,
++                text.max_true_peak,
++                text.true_peak_unavailable,
+                 text.lufs,
+                 text.peak_spread,
+                 text.even,
+diff --git a/crates/app-tui/i18n.rs b/crates/app-tui/i18n.rs
+--- a/crates/app-tui/i18n.rs
++++ b/crates/app-tui/i18n.rs
+@@ -344,6 +344,8 @@
+ const FRENCH_UI: &[(&str, &str)] = &[
+     ("Loudness", "Sonie"),
+     ("True Peak", "Crête vraie"),
++    ("Max TP", "TP max"),
++    ("Unavailable", "Indisponible"),
+     ("Stereo width", "Largeur stéréo"),
+     ("No audio playing", "Aucun son en lecture"),
+     ("No audio", "Aucun son"),
+@@ -501,6 +503,8 @@
+ const GERMAN_UI: &[(&str, &str)] = &[
+     ("Loudness", "Lautheit"),
+     ("True Peak", "True Peak"),
++    ("Max TP", "Max TP"),
++    ("Unavailable", "Nicht verfügbar"),
+     ("Stereo width", "Stereobreite"),
+     ("No audio playing", "Keine Audiowiedergabe"),
+     ("No audio", "Kein Audio"),
+@@ -655,6 +659,8 @@
+ const SPANISH_UI: &[(&str, &str)] = &[
+     ("Loudness", "Sonoridad"),
+     ("True Peak", "Pico verdadero"),
++    ("Max TP", "Pico máx."),
++    ("Unavailable", "No disponible"),
+     ("Stereo width", "Anchura estéreo"),
+     ("No audio playing", "No se está reproduciendo audio"),
+     ("No audio", "Sin audio"),
+diff --git a/crates/app-tui/main/misc.rs b/crates/app-tui/main/misc.rs
+--- a/crates/app-tui/main/misc.rs
++++ b/crates/app-tui/main/misc.rs
+@@ -58,6 +58,20 @@
+     sig = sig
+         .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+         .wrapping_add(q(l.integrated_lufs));
++    let maximum = match l.maximum_true_peak_dbtp {
++        Some(value) if value.is_finite() => q(value).wrapping_add(1),
++        Some(_) => u64::MAX - 1,
++        None => u64::MAX,
++    };
++    sig = sig
++        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
++        .wrapping_add(maximum);
++    sig = sig
++        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
++        .wrapping_add(u64::from(l.true_peak_is_compliant));
++    for p in l.true_peaks_dbtp.iter() {
++        sig = sig.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(q(*p));
++    }
+     for p in l.channel_peaks.iter() {
+         let v = if *p > 0.0 {
+             (20.0 * (*p).log10()).max(-120.0)
+@@ -897,7 +911,7 @@
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+-    use sotf_audio_player::SignalPath;
++    use sotf_audio_player::{LoudnessData, SignalPath};
+ 
+     #[test]
+     fn signal_path_signature_changes_with_resampling_and_health() {
+@@ -943,4 +957,31 @@
+         let sig_unhealthy = signal_path_redraw_signature(Some(&unhealthy_path));
+         assert_ne!(sig_resampled, sig_unhealthy);
+     }
+-}
++    #[test]
++    fn loudness_signature_tracks_programme_precision_and_interval_peaks() {
++        let mut data = LoudnessData::new(2);
++        data.maximum_true_peak_dbtp = Some(-1.24);
++        data.true_peak_is_compliant = true;
++        data.true_peaks_dbtp = std::sync::Arc::new(vec![-3.5, -6.0]);
++        let original = loudness_redraw_signature(Some(&data));
++        assert_eq!(original, loudness_redraw_signature(Some(&data)));
++
++        data.maximum_true_peak_dbtp = Some(-1.26);
++        let visible_tenth_db_change = loudness_redraw_signature(Some(&data));
++        assert_ne!(original, visible_tenth_db_change);
++
++        data.maximum_true_peak_dbtp = Some(-1.24);
++        data.true_peaks_dbtp = std::sync::Arc::new(vec![-3.6, -6.0]);
++        let later_interval = loudness_redraw_signature(Some(&data));
++        assert_ne!(original, later_interval);
++
++        data.true_peaks_dbtp = std::sync::Arc::new(vec![-3.5, -6.0]);
++        data.maximum_true_peak_dbtp = None;
++        let reset = loudness_redraw_signature(Some(&data));
++        assert_ne!(original, reset);
++
++        data.true_peak_is_compliant = false;
++        let unsupported = loudness_redraw_signature(Some(&data));
++        assert_ne!(reset, unsupported);
++    }
++}
+diff --git a/crates/app-tui/ui/draw_meters/draw.rs b/crates/app-tui/ui/draw_meters/draw.rs
+--- a/crates/app-tui/ui/draw_meters/draw.rs
++++ b/crates/app-tui/ui/draw_meters/draw.rs
+@@ -69,38 +69,74 @@
+         // True Peak Section
+         // ============================================================================
+ 
+-        if !loudness.true_peaks_dbtp.is_empty() && y_offset < inner.height {
+-            // Find max true peak for display
+-            let max_true_peak = loudness
+-                .true_peaks_dbtp
+-                .iter()
+-                .copied()
+-                .fold(f64::NEG_INFINITY, f64::max);
+-
+-            // Header: "True Peak      [XX.X]" — write into the
+-            // reused stack buffer to avoid a per-frame `format!`.
+-            label_buf.len = 0;
+-            if max_true_peak.is_finite() {
+-                let _ = write!(
+-                    &mut label_buf,
+-                    "{}      [{:>4.1}]",
+-                    i18n.ui("True Peak"),
+-                    max_true_peak
++        if y_offset < inner.height {
++            let unavailable = match loudness.maximum_true_peak_dbtp {
++                Some(value) => !value.is_finite(),
++                None => !loudness.true_peak_is_compliant,
++            };
++
++            // Stack the heading and status whenever their localized combined
++            // width exceeds the available inner width, so narrow terminals do
++            // not clip the unavailable state.
++            let unavailable_label = i18n.ui("Max TP");
++            let unavailable_text = i18n.ui("Unavailable");
++            let unavailable_line_width =
++                unavailable_label.chars().count() + 2 + unavailable_text.chars().count();
++            if unavailable && usize::from(inner.width) < unavailable_line_width {
++                for text in [unavailable_label, unavailable_text] {
++                    if y_offset >= inner.height {
++                        break;
++                    }
++                    f.render_widget(
++                        Paragraph::new(text).style(Style::default().fg(app.theme.title_color)),
++                        Rect {
++                            x: inner.x,
++                            y: inner.y + y_offset,
++                            width: inner.width,
++                            height: 1,
++                        },
++                    );
++                    y_offset += 1;
++                }
++            } else {
++                label_buf.len = 0;
++                match loudness.maximum_true_peak_dbtp {
++                    Some(value) if value.is_finite() => {
++                        let _ =
++                            write!(&mut label_buf, "{}: {:>4.1} dBTP", i18n.ui("Max TP"), value);
++                    }
++                    Some(_) => {
++                        let _ = write!(
++                            &mut label_buf,
++                            "{}: {}",
++                            i18n.ui("Max TP"),
++                            i18n.ui("Unavailable")
++                        );
++                    }
++                    None if loudness.true_peak_is_compliant => {
++                        let _ = write!(&mut label_buf, "{}: — dBTP", i18n.ui("Max TP"));
++                    }
++                    None => {
++                        let _ = write!(
++                            &mut label_buf,
++                            "{}: {}",
++                            i18n.ui("Max TP"),
++                            i18n.ui("Unavailable")
++                        );
++                    }
++                }
++                f.render_widget(
++                    Paragraph::new(label_buf.as_str())
++                        .style(Style::default().fg(app.theme.title_color)),
++                    Rect {
++                        x: inner.x,
++                        y: inner.y + y_offset,
++                        width: inner.width,
++                        height: 1,
++                    },
+                 );
+-            } else {
+-                let _ = write!(&mut label_buf, "{}        [-∞]", i18n.ui("True Peak"));
++                y_offset += 1;
+             }
+-            f.render_widget(
+-                Paragraph::new(label_buf.as_str())
+-                    .style(Style::default().fg(app.theme.title_color)),
+-                Rect {
+-                    x: inner.x,
+-                    y: inner.y + y_offset,
+-                    width: inner.width,
+-                    height: 1,
+-                },
+-            );
+-            y_offset += 1;
+ 
+             // Render true peak bars for each channel (max 2 bars to save space)
+             let num_peak_bars = loudness.true_peaks_dbtp.len().min(2);
+@@ -975,6 +1011,7 @@
+             peak: 0.5,
+             channel_peaks: Arc::new(vec![0.5, 0.3]),
+             true_peaks_dbtp: Arc::new(vec![-3.5, -6.0]),
++            maximum_true_peak_dbtp: Some(-1.2),
+             true_peak_is_compliant: true,
+             integrated_window_seconds: 3_600,
+             correlation_lr: Some(0.8),
+@@ -985,13 +1022,36 @@
+         app
+     }
+ 
++    #[test]
++    fn unsupported_programme_max_is_visible_without_interval_channels() {
++        let mut app = App::new(Theme::default(), /* read_only */ true);
++        app.ui.language = crate::i18n::Language::German;
++        app.playback.loudness_info = Some(LoudnessData::new(0));
++        let backend = TestBackend::new(24, 20);
++        let mut terminal = Terminal::new(backend).unwrap();
++
++        terminal
++            .draw(|f| {
++                let area = f.area();
++                draw_lufs_box(f, area, &app);
++            })
++            .unwrap();
++
++        let buffer = terminal.backend().buffer();
++        let content: String = buffer.content.iter().map(|cell| cell.symbol()).collect();
++        assert!(
++            content.contains("Max TP") && content.contains("Nicht verfügbar"),
++            "expected the localized unsupported status to wrap within a 22-column inner box; got {content:?}"
++        );
++    }
++
+     /// Smoke / regression test: `draw_lufs_box` must render the loudness box
+     /// without relying on per-frame `String` allocations for labels or scale
+     /// strings. We verify that the expected sections are written into the
+     /// terminal buffer.
+     #[test]
+     fn draw_lufs_box_renders_all_sections() {
+-        let backend = TestBackend::new(40, 20);
++        let backend = TestBackend::new(24, 20);
+         let mut terminal = Terminal::new(backend).unwrap();
+         let app = test_app_with_loudness();
+         terminal
+@@ -1004,8 +1064,13 @@
+         let buffer = terminal.backend().buffer();
+         let content: String = buffer.content.iter().map(|c| c.symbol()).collect();
+         assert!(
+-            content.contains("True Peak"),
+-            "expected True Peak header; got {:?}",
++            content.contains("Max TP: -1.2 dBTP"),
++            "expected programme maximum header; got {:?}",
++            content
++        );
++        assert!(
++            content.contains("-3.5"),
++            "expected latest interval true-peak bar value; got {:?}",
+             content
+         );
+         assert!(

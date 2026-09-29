@@ -21,10 +21,10 @@ expression: plan
   "columns_collapsed": [],
   "visible_group_ids": [
     "DYNAMICS",
-    "TIMING",
     "RESPONSE"
   ],
   "overflow_group_ids": [
+    "TIMING",
     "DETECTOR"
   ],
   "config_controls": [],
@@ -33,6 +33,18 @@ expression: plan
       "id": "DYNAMICS",
       "title": "DYNAMICS",
       "controls": [
+        {
+          "param_index": 15,
+          "param_name": "Mode",
+          "control_type": "selector",
+          "unit": "",
+          "range": [
+            0.0,
+            2.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
         {
           "param_index": 0,
           "param_name": "Threshold",
@@ -56,6 +68,18 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
+        },
+        {
+          "param_index": 16,
+          "param_name": "Max Boost",
+          "control_type": "vertical_slider",
+          "unit": "dB",
+          "range": [
+            0.0,
+            24.0
+          ],
+          "read_only": false,
+          "enabled": false
         },
         {
           "param_index": 2,

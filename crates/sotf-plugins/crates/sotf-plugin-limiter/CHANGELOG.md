@@ -1,3 +1,27 @@
+# Unreleased
+
+## Unreleased — prepared audio oversampling
+
+- Add structural oversampling choice at index 10 (0/1/2 = 1x/2x/4x); keep default
+  audio, telemetry, latency, and native EOS behavior exact.
+- Prepare high-rate wet processing, accepted-input control snapshots, a native
+  final peak guard, and full-latency dry alignment inside the limiter.
+- Add bounded finite EOS, transactional prepared initialization, and conservative
+  contributing-gain telemetry that excludes filter loss and phase cancellation.
+- Verify independent ceilings, alias measurements, all-phase automation and
+  stream support, and cold allocation/deallocation checks.
+
+
+- Drain the exact active lookahead and ISP audio delay at finite-stream end,
+  preserving final program samples previously discarded by the default drain.
+  Report a finite native tail bound without counting detector/release history.
+- Require reset or reinitialization before new input or changed controls after
+  draining a nonempty stream. Identical control snapshots remain accepted;
+  empty-stream drain is a no-op. Invalid drain rate, shape, or capacity preserves
+  stream history, and each call emits at most 256 frames without heap activity.
+- Preserve the existing native processing kernel and default waveforms; reject
+  input before initialization or at a different sample rate before changing DSP.
+
 # 0.5.14
 
 - Replace spline-based peak estimation with a libebur128-style 49-tap

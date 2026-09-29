@@ -1,23 +1,23 @@
 use super::advanced_filter::AdvancedFilter;
+use super::auto_gain_clock::AutoGainClock;
 use super::consts::DEFAULT_SAMPLE_RATE;
 use super::consts::FREQ_MAX;
 use super::consts::FREQ_MIN;
 use super::consts::GAIN_MAX;
 use super::consts::GAIN_MIN;
-use super::consts::MEASUREMENT_THROTTLE;
 use super::consts::Q_MAX;
 use super::consts::Q_MAX_NOTCH;
 use super::consts::Q_MIN;
 use super::consts::TRANSITION_DURATION_SECS;
 use super::misc::band_user_q;
-use super::misc::butterworth_q_values;
+use super::misc::butterworth_q;
 use super::misc::create_band_stages;
 use super::misc::scales_prototype_q;
 use super::types::BandTransition;
 use super::types::BiquadFilterConfig;
 use super::types::EqFilterTopology;
 use super::types::EqPluginParams;
-use math_audio_iir_fir::{Biquad, BiquadCoefficients, BiquadFilterType, SvfFilter, SvfFilterType};
+use math_audio_iir_fir::{Biquad, BiquadFilterType, SvfFilter, SvfFilterType};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::auto_gain::{AutoGain, AutoGainData};
 use sotf_host::oversampling::Oversampler;
@@ -26,8 +26,8 @@ use sotf_host::parametric_plugin::{
     ParameterSchema, ParameterSet, ParametricPlugin, ParametricPluginAdapter,
 };
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginInfo, PluginResult,
-    ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginDrainResult,
+    PluginInfo, PluginResult, ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use std::any::Any;
@@ -36,6 +36,8 @@ use std::sync::Arc;
 const MAX_FILTERS: i32 = 20;
 /// Largest callback block accepted by the preallocated oversampling route.
 pub const EQ_MAX_BLOCK_FRAMES: usize = 4096;
+// Fixed continuation cadence keeps AutoGain independent of drain destination size.
+const DRAIN_FRAMES: usize = 256;
 
 /// Maximum accepted Q for a band: notch filters allow much higher Q
 /// (very narrow rejection bands) than other filter types.
@@ -73,6 +75,19 @@ fn filter_type_from_index(index: i32) -> Option<BiquadFilterType> {
     }
 }
 
+fn svf_type_for(filter_type: BiquadFilterType) -> SvfFilterType {
+    match filter_type {
+        BiquadFilterType::Peak | BiquadFilterType::PeakMatched => SvfFilterType::Peak,
+        BiquadFilterType::Lowpass => SvfFilterType::Lowpass,
+        BiquadFilterType::Highpass | BiquadFilterType::HighpassVariableQ => SvfFilterType::Highpass,
+        BiquadFilterType::Lowshelf | BiquadFilterType::LowshelfOrf => SvfFilterType::Lowshelf,
+        BiquadFilterType::Highshelf | BiquadFilterType::HighshelfOrf => SvfFilterType::Highshelf,
+        BiquadFilterType::Bandpass => SvfFilterType::Bandpass,
+        BiquadFilterType::Notch => SvfFilterType::Notch,
+        BiquadFilterType::AllPass => SvfFilterType::Allpass,
+    }
+}
+
 pub struct EqPlugin {
     pub(super) num_channels: usize,
     /// filters[channel][band][stage] — for order=2, each band has 1 stage.
@@ -83,12 +98,14 @@ pub struct EqPlugin {
     pub(super) sample_rate: u32,
     pub(super) auto_gain: AutoGain,
     pub(super) cache: RealTimeCache<AutoGainData>,
-    pub(super) cache_update_counter: usize,
+    auto_gain_clock: AutoGainClock,
     pub(super) cached_parameters: Vec<Parameter>,
     /// Per-band transition state. Outer index = band, applies to all channels.
     /// Each transition stores per-stage old/new coefficients so all biquad stages
     /// interpolate smoothly (fixes glitch for high-order bands with order > 2).
     pub(super) transitions: Vec<Option<BandTransition>>,
+    /// Inactive transition storage, recycled without allocation on the audio thread.
+    transition_spares: Vec<Option<BandTransition>>,
     /// Oversampling factor: 1 (off), 2, or 4.
     pub(super) oversampling_factor: u32,
     /// Oversampling state (None when oversampling_factor == 1).
@@ -106,9 +123,82 @@ pub struct EqPlugin {
     /// Advanced filter banks: advanced_filters[channel][filter].
     /// Populated from per-filter `topology=warped_biquad` or `topology=kautz_filter`.
     pub(super) advanced_filters: Vec<Vec<AdvancedFilter>>,
+    received_input: bool,
+    drain_remaining: Option<usize>,
+    drain_output: Vec<f32>,
+    drain_read: usize,
+    drain_frames: usize,
 }
 
 impl EqPlugin {
+    fn finite_response_frames(&self) -> Option<usize> {
+        if self.filters.iter().any(|channel| !channel.is_empty())
+            || self.svf_filters.iter().any(|channel| !channel.is_empty())
+            || self
+                .advanced_filters
+                .iter()
+                .any(|channel| !channel.is_empty())
+            || self.transitions.iter().any(Option::is_some)
+        {
+            return None;
+        }
+        if self.oversampling_factor == 1 {
+            Some(0)
+        } else {
+            self.oversampler
+                .as_ref()
+                .map(Oversampler::passthrough_tail_frames)
+        }
+    }
+
+    fn prepare_oversampler(&self, factor: u32) -> Result<Oversampler, String> {
+        let mut oversampler = Oversampler::new(factor, self.num_channels)?;
+        oversampler.reserve_for_max_frames(EQ_MAX_BLOCK_FRAMES)?;
+        Ok(oversampler)
+    }
+
+    fn reset_endpoint(&mut self) {
+        self.received_input = false;
+        self.drain_remaining = None;
+        self.drain_read = 0;
+        self.drain_frames = 0;
+        self.drain_output.fill(0.0);
+    }
+
+    fn validate_processing_endpoint(&self, frames: usize) -> PluginResult<()> {
+        if frames != 0 && self.drain_remaining.is_some() {
+            return Err("reset EQ before processing after finite drain".into());
+        }
+        Ok(())
+    }
+
+    fn recycle_transitions(&mut self, completed_only: bool) {
+        for (active, spare) in self.transitions.iter_mut().zip(&mut self.transition_spares) {
+            if active
+                .as_ref()
+                .is_some_and(|state| !completed_only || state.samples_remaining == 0)
+            {
+                *spare = active.take();
+            }
+        }
+    }
+
+    /// Refresh scalar metadata without replacing owned strings or vectors.
+    fn refresh_cached_values(&mut self) {
+        for index in 0..self.cached_parameters.len() {
+            if let Some(value) = self.get_parameter(&self.cached_parameters[index].id) {
+                self.cached_parameters[index].default_value = value;
+            }
+        }
+        // Q validation follows the band's current filter type.
+        for (band, stages) in self.filters.first().into_iter().flatten().enumerate() {
+            if let Some(primary) = stages.first() {
+                self.cached_parameters[5 + band * 5 + 1].max_value =
+                    Some(ParameterValue::Float(q_max_for(primary.filter_type)));
+            }
+        }
+    }
+
     /// Create an EQ with single-biquad bands (order=2, backward compatible).
     pub fn new(num_channels: usize, filters: Vec<Biquad>) -> Self {
         let num_bands = filters.len();
@@ -128,12 +218,19 @@ impl EqPlugin {
             sample_rate,
             auto_gain,
             cache: RealTimeCache::new(AutoGainData::default()),
-            cache_update_counter: 0,
+            auto_gain_clock: AutoGainClock::new(num_channels, sample_rate, 0)
+                .expect("EQ AutoGain reference capacity"),
             cached_parameters: Vec::new(),
             transitions,
+            transition_spares: Vec::new(),
             oversampling_factor: 1,
             use_tdf2: false,
             oversampler: None,
+            received_input: false,
+            drain_remaining: None,
+            drain_output: vec![0.0; DRAIN_FRAMES * num_channels],
+            drain_read: 0,
+            drain_frames: 0,
             topology: 0,
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
@@ -160,25 +257,7 @@ impl EqPlugin {
             let mut ch_svfs = Vec::with_capacity(channel_filters.len());
             for stages in channel_filters {
                 if let Some(primary) = stages.first() {
-                    let svf_type = match primary.filter_type {
-                        math_audio_iir_fir::BiquadFilterType::Peak
-                        | math_audio_iir_fir::BiquadFilterType::PeakMatched => SvfFilterType::Peak,
-                        math_audio_iir_fir::BiquadFilterType::Lowpass => SvfFilterType::Lowpass,
-                        math_audio_iir_fir::BiquadFilterType::Highpass => SvfFilterType::Highpass,
-                        math_audio_iir_fir::BiquadFilterType::Lowshelf
-                        | math_audio_iir_fir::BiquadFilterType::LowshelfOrf => {
-                            SvfFilterType::Lowshelf
-                        }
-                        math_audio_iir_fir::BiquadFilterType::Highshelf
-                        | math_audio_iir_fir::BiquadFilterType::HighshelfOrf => {
-                            SvfFilterType::Highshelf
-                        }
-                        math_audio_iir_fir::BiquadFilterType::Bandpass => SvfFilterType::Bandpass,
-                        math_audio_iir_fir::BiquadFilterType::Notch => SvfFilterType::Notch,
-                        math_audio_iir_fir::BiquadFilterType::AllPass => SvfFilterType::Allpass,
-                        // Other biquad types (HighpassVariableQ etc.) map to closest SVF type
-                        _ => SvfFilterType::Peak,
-                    };
+                    let svf_type = svf_type_for(primary.filter_type);
                     ch_svfs.push(SvfFilter::new(
                         svf_type,
                         primary.freq,
@@ -283,7 +362,38 @@ impl EqPlugin {
                 }
             }
         }
+        for param in &mut params {
+            if matches!(
+                param.id.as_str(),
+                "max_filters" | "topology" | "oversampling"
+            ) || param.id.as_str().ends_with("_order")
+            {
+                param.update_mode = sotf_host::param_specs::UpdateMode::Structural;
+            }
+        }
         self.cached_parameters = params;
+        // This method runs only for construction or structural changes.
+        self.transitions = (0..self.band_orders.len()).map(|_| None).collect();
+        self.transition_spares = (0..self.band_orders.len())
+            .map(|band| {
+                let coefficients: Vec<Vec<_>> = self
+                    .filters
+                    .iter()
+                    .map(|channel| {
+                        channel
+                            .get(band)
+                            .map(|stages| stages.iter().map(Biquad::coefficients).collect())
+                            .unwrap_or_default()
+                    })
+                    .collect();
+                Some(BandTransition {
+                    new_coeffs_per_channel: coefficients.clone(),
+                    old_coeffs_per_channel: coefficients,
+                    samples_remaining: 0,
+                    total_samples: 0,
+                })
+            })
+            .collect();
     }
 
     pub fn new_per_channel(
@@ -310,12 +420,18 @@ impl EqPlugin {
             sample_rate,
             auto_gain,
             cache: RealTimeCache::new(AutoGainData::default()),
-            cache_update_counter: 0,
+            auto_gain_clock: AutoGainClock::new(num_channels, sample_rate, 0)?,
             cached_parameters: Vec::new(),
             transitions,
+            transition_spares: Vec::new(),
             oversampling_factor: 1,
             use_tdf2: false,
             oversampler: None,
+            received_input: false,
+            drain_remaining: None,
+            drain_output: vec![0.0; DRAIN_FRAMES * num_channels],
+            drain_read: 0,
+            drain_frames: 0,
             topology: 0,
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
@@ -431,12 +547,18 @@ impl EqPlugin {
                 sample_rate,
                 auto_gain,
                 cache: RealTimeCache::new(AutoGainData::default()),
-                cache_update_counter: 0,
+                auto_gain_clock: AutoGainClock::new(num_channels, sample_rate, 0)?,
                 cached_parameters: Vec::new(),
                 transitions: (0..num_bands).map(|_| None).collect(),
+                transition_spares: Vec::new(),
                 oversampling_factor: 1,
                 use_tdf2: false,
                 oversampler: None,
+                received_input: false,
+                drain_remaining: None,
+                drain_output: vec![0.0; DRAIN_FRAMES * num_channels],
+                drain_read: 0,
+                drain_frames: 0,
                 topology: 0,
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
@@ -474,12 +596,18 @@ impl EqPlugin {
                 sample_rate,
                 auto_gain,
                 cache: RealTimeCache::new(AutoGainData::default()),
-                cache_update_counter: 0,
+                auto_gain_clock: AutoGainClock::new(num_channels, sample_rate, 0)?,
                 cached_parameters: Vec::new(),
                 transitions: (0..num_bands).map(|_| None).collect(),
+                transition_spares: Vec::new(),
                 oversampling_factor: 1,
                 use_tdf2: false,
                 oversampler: None,
+                received_input: false,
+                drain_remaining: None,
+                drain_output: vec![0.0; DRAIN_FRAMES * num_channels],
+                drain_read: 0,
+                drain_frames: 0,
                 topology: 0,
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
@@ -491,11 +619,17 @@ impl EqPlugin {
     }
 
     pub fn set_filters(&mut self, filters: Vec<Biquad>) -> Result<(), String> {
+        if self.drain_remaining.is_some() {
+            return Err("reset EQ before replacing filters after finite drain".into());
+        }
         let channel_filters = (0..self.num_channels).map(|_| filters.clone()).collect();
         self.set_channel_filters(channel_filters)
     }
 
     pub fn set_channel_filters(&mut self, channel_filters: Vec<Vec<Biquad>>) -> Result<(), String> {
+        if self.drain_remaining.is_some() {
+            return Err("reset EQ before replacing filters after finite drain".into());
+        }
         if channel_filters.len() != self.num_channels {
             return Err(format!(
                 "EQ replacement channel count mismatch: expected {}, got {}",
@@ -592,9 +726,7 @@ impl EqPlugin {
                 }
             }
         }
-        for t in &mut self.transitions {
-            *t = None;
-        }
+        self.recycle_transitions(false);
     }
 
     pub(super) fn apply_sample_rate_to_advanced_filters(
@@ -736,6 +868,10 @@ impl EqPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        self.validate_processing_endpoint(context.num_frames)?;
+        if context.num_frames == 0 {
+            return Ok(0);
+        }
         enable_ftz_daz();
         let num_frames = context.num_frames;
         let nc = self.num_channels;
@@ -755,32 +891,20 @@ impl EqPlugin {
             ));
         }
 
-        self.cache_update_counter += 1;
-        let mut do_measure = false;
-        if self.cache_update_counter >= MEASUREMENT_THROTTLE {
-            self.cache_update_counter = 0;
-            do_measure = true;
-        }
-
-        if do_measure {
-            let _ = self.auto_gain.measure_input(&input[..sample_len]);
-        }
-
         let output = &mut output[..sample_len];
         output.copy_from_slice(&input[..sample_len]);
         Self::process_biquads_interleaved_no_transitions(&mut self.filters, output, num_frames, nc);
         self.process_advanced_interleaved(output, num_frames);
 
-        if do_measure {
-            let _ = self.auto_gain.measure_output(output);
-            let ag_data = self.auto_gain.get_data();
-            self.cache.update(|d| {
-                *d = ag_data;
-            });
-        }
-
-        self.auto_gain.apply_compensation(output, num_frames);
+        self.auto_gain_clock.compensate_native(
+            &mut self.auto_gain,
+            &mut self.cache,
+            &input[..sample_len],
+            output,
+            nc,
+        );
         flush_denormals_inplace(output);
+        self.received_input = true;
         Ok(num_frames)
     }
 
@@ -840,6 +964,15 @@ impl ParametricPlugin for EqPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            if values
+                .iter()
+                .any(|(id, value)| self.get_parameter(id).as_ref() != Some(value))
+            {
+                return Err("reset EQ before changing controls after finite drain".into());
+            }
+            return Ok(());
+        }
         for (id, value) in values {
             self.set_parameter(id, value)?;
         }
@@ -868,6 +1001,7 @@ impl ParametricPlugin for EqPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
+        self.validate_processing_endpoint(context.num_frames)?;
         let sample_len = context
             .num_frames
             .checked_mul(self.num_channels)
@@ -886,6 +1020,105 @@ impl ParametricPlugin for EqPlugin {
         }
         output[..sample_len].copy_from_slice(&input[..sample_len]);
         self.process_in_place(&mut output[..sample_len], context)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        self.finite_response_frames()
+            .map_or(TailLength::Unknown, |frames| {
+                TailLength::Finite(frames as u64)
+            })
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        if self
+            .finite_response_frames()
+            .is_some_and(|frames| frames != 0)
+        {
+            DRAIN_FRAMES
+        } else {
+            0
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let Some(support) = self.finite_response_frames() else {
+            // The existing unsupported recursive path completes immediately.
+            return std::num::NonZeroU64::new(1);
+        };
+        let calls = if self.received_input {
+            // Remaining excludes the currently cached refill; count that separately.
+            self.drain_remaining
+                .unwrap_or(support)
+                .div_ceil(DRAIN_FRAMES)
+                + usize::from(self.drain_frames != 0)
+        } else {
+            0
+        };
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        let Some(support) = self.finite_response_frames() else {
+            // Recursive banks retain the legacy unsupported native EOS behavior.
+            return Ok(PluginDrainResult::COMPLETE);
+        };
+        if !self.received_input || self.drain_remaining == Some(0) && self.drain_frames == 0 {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if context.sample_rate == 0 || context.sample_rate != self.sample_rate {
+            return Err("EQ drain requires the prepared sample rate".into());
+        }
+        if !output.len().is_multiple_of(self.num_channels)
+            || support != 0 && output.len() < self.num_channels
+        {
+            return Err("EQ drain needs whole output frames and nonempty tail capacity".into());
+        }
+        if support == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+
+        let remaining = self.drain_remaining.unwrap_or(support);
+        if self.drain_frames == 0 {
+            // Canonical refills keep output capacity from retiming loudness
+            // measurements and AutoGain. The support bound is four full blocks.
+            let frames = remaining.min(DRAIN_FRAMES);
+            let samples = frames * self.num_channels;
+            let mut cache = std::mem::take(&mut self.drain_output);
+            cache[..samples].fill(0.0);
+            let mut drain_context = *context;
+            drain_context.num_frames = frames;
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.process_stream(&mut cache[..samples], &drain_context)
+            }));
+            self.drain_output = cache;
+            match result {
+                Ok(result) => {
+                    result?;
+                }
+                Err(payload) => std::panic::resume_unwind(payload),
+            }
+            self.drain_remaining = Some(remaining - frames);
+            self.drain_read = 0;
+            self.drain_frames = frames;
+        }
+        let frames = self
+            .drain_frames
+            .min(output.len() / self.num_channels)
+            .min(DRAIN_FRAMES);
+        let start = self.drain_read * self.num_channels;
+        output[..frames * self.num_channels]
+            .copy_from_slice(&self.drain_output[start..start + frames * self.num_channels]);
+        self.drain_read += frames;
+        self.drain_frames -= frames;
+        Ok(PluginDrainResult {
+            frames,
+            complete: self.drain_remaining == Some(0) && self.drain_frames == 0,
+        })
     }
 
     fn process_compiled_f32(
@@ -926,6 +1159,17 @@ impl ParametricPlugin for EqPlugin {
 }
 
 impl EqPlugin {
+    fn publish_cleared_meter_diagnostics(&mut self) {
+        let data = AutoGainData {
+            input_lufs: f64::NEG_INFINITY,
+            output_lufs: f64::NEG_INFINITY,
+            input_peak: 0.0,
+            output_peak: 0.0,
+            ..self.auto_gain.get_data()
+        };
+        self.cache.update(|published| *published = data);
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Parametric EQ", env!("CARGO_PKG_VERSION"), "SotF")
     }
@@ -933,11 +1177,18 @@ impl EqPlugin {
         self.cached_parameters.clone()
     }
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("reset EQ before changing controls after finite drain".into())
+            };
+        }
         let name = id.as_str();
         if name == "auto_gain_enabled" {
-            Parameter::new_bool("auto_gain_enabled", "Auto Gain", true).validate(&value)?;
+            self.cached_parameters[3].validate(&value)?;
             self.auto_gain.set_enabled(value.as_bool().unwrap_or(true));
-            self.rebuild_cached_parameters();
+            self.refresh_cached_values();
         } else if name == "oversampling" {
             let new_factor = value.as_int().unwrap_or(1);
             // Only 1, 2, 4 are valid
@@ -950,18 +1201,29 @@ impl EqPlugin {
             if self.topology == 1 && new_factor != 1 {
                 return Err("SVF topology does not support internal oversampling".to_string());
             }
+            let prepared = if new_factor > 1 {
+                Some(self.prepare_oversampler(new_factor as u32)?)
+            } else {
+                None
+            };
+            let prepared_clock = AutoGainClock::new(
+                self.num_channels,
+                self.sample_rate,
+                prepared.as_ref().map_or(0, Oversampler::latency_samples),
+            )?;
+            // New measurement/reference epoch, preserving the current and
+            // target gain trajectory across control-thread reconstruction.
+            self.auto_gain.set_sample_rate(self.sample_rate)?;
             self.oversampling_factor = new_factor as u32;
+            self.oversampler = prepared;
+            self.auto_gain_clock = prepared_clock;
+            self.publish_cleared_meter_diagnostics();
             // Re-initialize oversampling state (uses current sample_rate)
             if self.oversampling_factor > 1 {
-                self.oversampler = Some(Oversampler::new(
-                    self.oversampling_factor,
-                    self.num_channels,
-                )?);
                 // Recalculate biquad coefficients at oversampled rate
                 let os_rate = self.sample_rate as f64 * self.oversampling_factor as f64;
                 self.apply_sample_rate_to_filters(os_rate);
             } else {
-                self.oversampler = None;
                 // Restore biquad coefficients at nominal rate
                 self.apply_sample_rate_to_filters(self.sample_rate as f64);
             }
@@ -991,11 +1253,9 @@ impl EqPlugin {
                         }
                     }
                 }
-                for transition in &mut self.transitions {
-                    *transition = None;
-                }
+                self.recycle_transitions(false);
             }
-            self.rebuild_cached_parameters();
+            self.refresh_cached_values();
         } else if name == "topology" {
             let new_topo = if let Some(v) = value.as_int() {
                 v.clamp(0, 1) as usize
@@ -1033,9 +1293,7 @@ impl EqPlugin {
                         }
                     }
                 }
-                for transition in &mut self.transitions {
-                    *transition = None;
-                }
+                self.recycle_transitions(false);
                 self.topology = new_topo;
                 if new_topo == 1 {
                     self.rebuild_svf_filters();
@@ -1102,31 +1360,19 @@ impl EqPlugin {
                     return Ok(());
                 }
 
-                // Validate using a temporary parameter template
-                match field {
-                    "freq" => Parameter::new_float("freq", "Freq", 1000.0, FREQ_MIN, FREQ_MAX)
-                        .validate(&value)?,
-                    "q" => {
-                        let q_max = self.filters[0]
-                            .get(b_idx)
-                            .and_then(|stages| stages.first())
-                            .map(|primary| q_max_for(primary.filter_type))
-                            .unwrap_or(Q_MAX);
-                        Parameter::new_float("q", "Q", 1.0, Q_MIN, q_max).validate(&value)?
-                    }
-                    "gain" => Parameter::new_float("gain", "Gain", 0.0, GAIN_MIN, GAIN_MAX)
-                        .validate(&value)?,
-                    "filter_type" => {
-                        let index = value.as_int().unwrap_or(0);
-                        if filter_type_from_index(index).is_none() {
-                            return Err(format!(
-                                "Invalid filter_type {}: must be between 0 and 7",
-                                index
-                            ));
-                        }
-                    }
-                    _ => return Err(format!("Unknown field: {}", field)),
+                if !matches!(field, "freq" | "q" | "gain" | "filter_type") {
+                    return Err(format!("Unknown field: {field}"));
                 }
+                // Preserve the existing no-op behavior for a removed band.
+                if b_idx >= self.transitions.len() {
+                    return Ok(());
+                }
+                let parameter = self
+                    .cached_parameters
+                    .iter()
+                    .find(|parameter| parameter.id == id)
+                    .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+                parameter.validate(&value)?;
 
                 if let Some(v) = value
                     .as_float()
@@ -1138,35 +1384,33 @@ impl EqPlugin {
                     // Capture old per-stage coefficients before updating.
                     // If a transition is already in progress, interpolate to the current
                     // mid-point so the new transition starts from the actual running state.
-                    let old_coeffs_per_channel: Vec<Vec<BiquadCoefficients>> =
-                        if let Some(Some(active)) = self.transitions.get(b_idx) {
-                            let t = 1.0
-                                - (active.samples_remaining as f64 / active.total_samples as f64);
-                            active
-                                .old_coeffs_per_channel
-                                .iter()
-                                .zip(active.new_coeffs_per_channel.iter())
-                                .map(|(old_channel, new_channel)| {
-                                    old_channel
-                                        .iter()
-                                        .zip(new_channel.iter())
-                                        .map(|(old, new)| old.lerp(new, t))
-                                        .collect()
-                                })
-                                .collect()
-                        } else {
-                            self.filters
-                                .iter()
-                                .map(|channel| {
-                                    channel
-                                        .get(b_idx)
-                                        .map(|stages| {
-                                            stages.iter().map(|f| f.coefficients()).collect()
-                                        })
-                                        .unwrap_or_default()
-                                })
-                                .collect()
-                        };
+                    let mut transition = if let Some(mut active) = self.transitions[b_idx].take() {
+                        let t = 1.0 - active.samples_remaining as f64 / active.total_samples as f64;
+                        for (old_channel, new_channel) in active
+                            .old_coeffs_per_channel
+                            .iter_mut()
+                            .zip(&active.new_coeffs_per_channel)
+                        {
+                            for (old, new) in old_channel.iter_mut().zip(new_channel) {
+                                *old = old.lerp(new, t);
+                            }
+                        }
+                        active
+                    } else {
+                        let mut spare = self.transition_spares[b_idx]
+                            .take()
+                            .expect("each band owns preallocated transition storage");
+                        for (channel, old_channel) in
+                            self.filters.iter().zip(&mut spare.old_coeffs_per_channel)
+                        {
+                            if let Some(stages) = channel.get(b_idx) {
+                                for (stage, old) in stages.iter().zip(old_channel) {
+                                    *old = stage.coefficients();
+                                }
+                            }
+                        }
+                        spare
+                    };
 
                     let order = self.band_orders.get(b_idx).copied().unwrap_or(2);
                     let num_stages = order / 2;
@@ -1199,8 +1443,8 @@ impl EqPlugin {
                             if num_stages == 1 {
                                 stages[0].update_params(ft, freq, srate, q, new_total_gain);
                             } else {
-                                let bw_qs = butterworth_q_values(order);
-                                for (s, &bw_q) in stages.iter_mut().zip(bw_qs.iter()) {
+                                for (index, s) in stages.iter_mut().enumerate() {
+                                    let bw_q = butterworth_q(order, index);
                                     let effective_q = if scales_prototype_q(ft) {
                                         q * bw_q
                                     } else {
@@ -1211,39 +1455,42 @@ impl EqPlugin {
                             }
                         }
                     }
-                    // Start a per-stage coefficient transition covering all biquad stages
-                    if old_coeffs_per_channel
+                    for (channel, new_channel) in self
+                        .filters
                         .iter()
-                        .any(|stages| !stages.is_empty())
+                        .zip(&mut transition.new_coeffs_per_channel)
                     {
-                        let new_coeffs_per_channel: Vec<Vec<BiquadCoefficients>> = self
-                            .filters
-                            .iter()
-                            .map(|channel| {
-                                channel
-                                    .get(b_idx)
-                                    .map(|stages| stages.iter().map(|f| f.coefficients()).collect())
-                                    .unwrap_or_default()
-                            })
-                            .collect();
-                        let total = self.transition_samples();
-                        if total > 0 {
-                            while self.transitions.len() <= b_idx {
-                                self.transitions.push(None);
+                        if let Some(stages) = channel.get(b_idx) {
+                            for (stage, new) in stages.iter().zip(new_channel) {
+                                *new = stage.coefficients();
                             }
-                            self.transitions[b_idx] = Some(BandTransition {
-                                old_coeffs_per_channel,
-                                new_coeffs_per_channel,
-                                samples_remaining: total,
-                                total_samples: total,
-                            });
                         }
                     }
-                    // Update SVF filters if topology is active
-                    if self.topology == 1 {
-                        self.rebuild_svf_filters();
+                    transition.total_samples = self.transition_samples();
+                    transition.samples_remaining = transition.total_samples;
+                    if self.topology == 1 || transition.total_samples == 0 {
+                        self.transition_spares[b_idx] = Some(transition);
+                    } else {
+                        self.transitions[b_idx] = Some(transition);
                     }
-                    self.rebuild_cached_parameters();
+                    // Preserve SVF integrators when automating coefficients.
+                    if self.topology == 1 {
+                        for (channel, svfs) in self.filters.iter().zip(&mut self.svf_filters) {
+                            if let (Some(stages), Some(svf)) =
+                                (channel.get(b_idx), svfs.get_mut(b_idx))
+                                && let Some(primary) = stages.first()
+                            {
+                                svf.update_params(
+                                    svf_type_for(primary.filter_type),
+                                    primary.freq,
+                                    primary.srate,
+                                    primary.q,
+                                    primary.db_gain,
+                                );
+                            }
+                        }
+                    }
+                    self.refresh_cached_values();
                 }
             }
         } else {
@@ -1302,6 +1549,16 @@ impl EqPlugin {
         if sample_rate == 0 {
             return Err("EQ sample rate must be greater than zero".to_string());
         }
+        let prepared = if self.oversampling_factor > 1 {
+            Some(self.prepare_oversampler(self.oversampling_factor)?)
+        } else {
+            None
+        };
+        let prepared_clock = AutoGainClock::new(
+            self.num_channels,
+            sample_rate,
+            prepared.as_ref().map_or(0, Oversampler::latency_samples),
+        )?;
         self.sample_rate = sample_rate;
 
         // Biquad coefficients are designed at the oversampled rate so that
@@ -1314,32 +1571,33 @@ impl EqPlugin {
                 }
             }
         }
-        for t in &mut self.transitions {
-            *t = None;
-        }
+        self.recycle_transitions(false);
         self.apply_sample_rate_to_advanced_filters(sample_rate as f64)?;
         self.auto_gain
             .set_sample_rate(sample_rate)
             .map_err(|e| e.to_string())?;
 
         // Rebuild oversampling state if active
-        if self.oversampling_factor > 1 {
-            self.oversampler = Some(Oversampler::new(
-                self.oversampling_factor,
-                self.num_channels,
-            )?);
-        } else {
-            self.oversampler = None;
-        }
+        self.oversampler = prepared;
+        self.auto_gain_clock = prepared_clock;
 
         // Rebuild SVF filters if SVF topology is active
         if self.topology == 1 {
             self.rebuild_svf_filters();
         }
 
+        if self.drain_remaining.is_some() {
+            self.reset();
+        } else {
+            self.reset_endpoint();
+        }
+        // Publish after the existing post-EOS full reset so this new epoch's
+        // diagnostic gain agrees with its actual preserved-or-reset state.
+        self.publish_cleared_meter_diagnostics();
         Ok(())
     }
     fn reset(&mut self) {
+        self.reset_endpoint();
         // Reset SVF integrator state
         for ch_svfs in &mut self.svf_filters {
             for svf in ch_svfs {
@@ -1358,10 +1616,9 @@ impl EqPlugin {
                 filter.reset();
             }
         }
-        for t in &mut self.transitions {
-            *t = None;
-        }
+        self.recycle_transitions(false);
         self.auto_gain.reset();
+        self.auto_gain_clock.reset();
 
         // Reset oversampling resamplers
         if let Some(os) = &mut self.oversampler {
@@ -1382,7 +1639,7 @@ impl EqPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        enable_ftz_daz();
+        self.validate_processing_endpoint(context.num_frames)?;
         let num_frames = context.num_frames;
         let nc = self.num_channels;
         let sample_len = num_frames
@@ -1399,19 +1656,54 @@ impl EqPlugin {
                 "EQ oversampling block too large: maximum {EQ_MAX_BLOCK_FRAMES} frames, got {num_frames}"
             ));
         }
+        if num_frames == 0 {
+            return Ok(0);
+        }
         let buffer = &mut buffer[..sample_len];
 
-        // Throttled measurement
-        self.cache_update_counter += 1;
-        let mut do_measure = false;
-        if self.cache_update_counter >= MEASUREMENT_THROTTLE {
-            self.cache_update_counter = 0;
-            do_measure = true;
-        }
+        let result = self.process_stream(buffer, context)?;
+        self.received_input = true;
+        Ok(result)
+    }
 
-        if do_measure {
-            let _ = self.auto_gain.measure_input(buffer);
+    fn process_stream(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        enable_ftz_daz();
+        let num_frames = context.num_frames;
+        let nc = self.num_channels;
+        if self.oversampling_factor > 1 {
+            // Keep the raw oversampler invocation and its transition wall-clock
+            // reconciliation at the original callback boundary.
+            self.auto_gain_clock.capture(buffer);
+            self.process_raw(buffer, num_frames)?;
+            self.auto_gain_clock
+                .compensate_saved(&mut self.auto_gain, &mut self.cache, buffer, nc);
+        } else {
+            for chunk in buffer.chunks_mut(EQ_MAX_BLOCK_FRAMES * nc) {
+                self.auto_gain_clock.capture(chunk);
+                self.process_raw(chunk, chunk.len() / nc)?;
+                self.auto_gain_clock.compensate_saved(
+                    &mut self.auto_gain,
+                    &mut self.cache,
+                    chunk,
+                    nc,
+                );
+            }
+            // Retire only after the complete public callback. At zero remaining
+            // frames, lerp(old,new,1) can still round differently from stored new.
+            if self.topology != 1 {
+                self.recycle_transitions(true);
+            }
         }
+        flush_denormals_inplace(buffer);
+        Ok(num_frames)
+    }
+
+    fn process_raw(&mut self, buffer: &mut [f32], num_frames: usize) -> PluginResult<()> {
+        let nc = self.num_channels;
 
         if self.topology == 1 && !self.svf_filters.is_empty() {
             // ----------------------------------------------------------------
@@ -1473,11 +1765,6 @@ impl EqPlugin {
                         }
                     }
                 }
-                for trans in self.transitions.iter_mut() {
-                    if trans.as_ref().is_some_and(|t| t.samples_remaining == 0) {
-                        *trans = None;
-                    }
-                }
             } else {
                 // Fast path: no transitions active
                 Self::process_biquads_interleaved_no_transitions(
@@ -1527,32 +1814,15 @@ impl EqPlugin {
                                     .min(state.total_samples);
                             }
                         }
-                        if transition
-                            .as_ref()
-                            .is_some_and(|state| state.samples_remaining == 0)
-                        {
-                            *transition = None;
-                        }
                     }
+                    self.recycle_transitions(true);
                 }
                 Err(payload) => std::panic::resume_unwind(payload),
             }
         }
 
         self.process_advanced_interleaved(buffer, num_frames);
-
-        if do_measure {
-            let _ = self.auto_gain.measure_output(buffer);
-            let ag_data = self.auto_gain.get_data();
-            self.cache.update(|d| {
-                *d = ag_data;
-            });
-        }
-
-        self.auto_gain.apply_compensation(buffer, num_frames);
-
-        flush_denormals_inplace(buffer);
-        Ok(num_frames)
+        Ok(())
     }
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
         Some(self.cache.load() as Arc<dyn Any + Send + Sync>)

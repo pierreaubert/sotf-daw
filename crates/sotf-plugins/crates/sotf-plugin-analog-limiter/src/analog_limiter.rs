@@ -6,22 +6,21 @@
 //! `math-analog` model in place. Reported latency is the core's lookahead
 //! latency; the color stage adds none.
 
-use super::params::{
-    AnalogLimiterPluginParams, CORE_KEYS, PARAMS as ALIM, model_id_for_name,
-};
+use super::params::{AnalogLimiterPluginParams, CORE_KEYS, PARAMS as ALIM, model_id_for_name};
+use sotf_host::param_specs::find_by_key as lim_pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::enable_ftz_daz;
 use sotf_plugin_analog_common::{AnalogColorStage, MODEL_NAMES};
 use sotf_plugin_limiter::params::PARAMS as LIM;
-use sotf_host::param_specs::find_by_key as lim_pk;
 use sotf_plugin_limiter::{LimiterPlugin, LimiterPluginParams};
-use std::sync::Arc;
 use std::any::Any;
+use std::sync::Arc;
 
 /// Prepared block ceiling for the analog stage; larger host blocks are
 /// chunked by the stage itself.
@@ -31,6 +30,11 @@ pub struct AnalogLimiterPlugin {
     channels: usize,
     sample_rate: u32,
     initialized: bool,
+    has_input: bool,
+    drained: bool,
+    /// Proves the model's current and future amount are exactly zero. A target
+    /// of zero alone is insufficient during a fade from a nonzero amount.
+    zero_color_epoch: bool,
 
     core: LimiterPlugin,
     stage: AnalogColorStage,
@@ -45,9 +49,7 @@ pub struct AnalogLimiterPlugin {
     cached_parameters: Vec<Parameter>,
 }
 
-fn core_params_from(
-    params: &AnalogLimiterPluginParams,
-) -> LimiterPluginParams {
+fn core_params_from(params: &AnalogLimiterPluginParams) -> LimiterPluginParams {
     LimiterPluginParams {
         threshold_db: params.threshold,
         release_ms: params.release,
@@ -60,6 +62,7 @@ fn core_params_from(
         dual_release: false,
         feed_forward: false,
         link_amount: lim_pk(LIM, "link_amount").default_f64() as f32,
+        oversampling: 0,
     }
 }
 
@@ -72,6 +75,9 @@ impl AnalogLimiterPlugin {
             channels,
             sample_rate: 0,
             initialized: false,
+            has_input: false,
+            drained: false,
+            zero_color_epoch: false,
             core,
             stage: AnalogColorStage::new(channels),
             model_id: 0,
@@ -96,10 +102,7 @@ impl AnalogLimiterPlugin {
         Self::from_params(channels, params)
     }
 
-    pub fn from_params(
-        channels: usize,
-        params: AnalogLimiterPluginParams,
-    ) -> PluginResult<Self> {
+    pub fn from_params(channels: usize, params: AnalogLimiterPluginParams) -> PluginResult<Self> {
         if channels == 0 {
             return Err("Analog limiter requires at least one channel".to_string());
         }
@@ -177,9 +180,7 @@ impl AnalogLimiterPlugin {
                     .iter()
                     .find(|parameter| parameter.id.as_str() == *key)
                     .cloned()
-                    .unwrap_or_else(|| {
-                        Parameter::new_float(key, key, 0.0, 0.0, 1.0)
-                    })
+                    .unwrap_or_else(|| Parameter::new_float(key, key, 0.0, 0.0, 1.0))
             })
             .collect();
         cached.push(
@@ -219,8 +220,11 @@ impl AnalogLimiterPlugin {
                 self.stage.set_drive_db(value)?;
             }
             "analog_color" => {
-                self.color = value;
                 self.stage.set_color(value)?;
+                self.color = value;
+                if value != 0.0 {
+                    self.zero_color_epoch = false;
+                }
             }
             "analog_character" => {
                 self.character = value;
@@ -271,6 +275,19 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "analog_drive" => Some(ParameterValue::Float(self.drive_db)),
+            "analog_color" => Some(ParameterValue::Float(self.color)),
+            "analog_character" => Some(ParameterValue::Float(self.character)),
+            "analog_trim" => Some(ParameterValue::Float(self.trim_db)),
+            // String values retain the owned control-query contract.
+            "analog_model" => Some(ParameterValue::String(self.model_name().to_string())),
+            key if CORE_KEYS.contains(&key) => self.core.get_parameter(id),
+            _ => None,
+        }
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         for key in CORE_KEYS {
@@ -295,6 +312,16 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drained {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("reset the analog limiter before changing controls after drain".into())
+            };
+        }
         // Validate everything before mutating any state.
         for (id, value) in &values {
             let Some(parameter) = self
@@ -316,14 +343,18 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
                 }
             }
         }
+        // Model replacement precedes target updates, so both the targets and
+        // their initial smoothing trajectories are independent of map order.
+        if let Some(value) = values.get(&ParameterId::from("analog_model"))
+            && let Some(name) = value.as_string()
+            && let Some(model_id) = model_id_for_name(name)
+        {
+            self.stage.set_model_id(model_id)?;
+            self.model_id = model_id;
+        }
         for (id, value) in &values {
             let key = id.as_str();
             if key == "analog_model" {
-                let name = value.as_string().unwrap_or(MODEL_NAMES[0]);
-                if let Some(model_id) = model_id_for_name(name) {
-                    self.model_id = model_id;
-                    self.stage.set_model_id(model_id)?;
-                }
                 continue;
             }
             if key.starts_with("analog_") {
@@ -352,12 +383,16 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         self.push_analog_state()?;
         self.sample_rate = sample_rate;
         self.initialized = true;
+        self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
         self.core.reset();
         self.stage.reset();
+        self.has_input = false;
+        self.drained = false;
+        self.zero_color_epoch = self.color == 0.0;
     }
 
     fn process_in_place(
@@ -369,6 +404,9 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         let frames = context.num_frames;
         if !self.initialized {
             return Err("Analog limiter must be initialized before processing".to_string());
+        }
+        if frames > 0 && self.drained {
+            return Err("reset the analog limiter before processing after drain".into());
         }
         // Limiter core first, then the analog color stage, both in place.
         let done = self.core.process_in_place(buffer, context)?;
@@ -383,6 +421,64 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         self.stage
             .process_interleaved(&mut buffer[..total], frames)
             .map_err(|e| format!("Analog limiter color stage failed: {e}"))?;
+        self.has_input |= frames > 0;
         Ok(frames)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if !self.initialized {
+            TailLength::Unknown
+        } else if self.zero_color_epoch {
+            self.core.tail_length()
+        } else {
+            TailLength::Infinite
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        if self.initialized && self.zero_color_epoch {
+            self.core.drain_output_frames_max()
+        } else {
+            0
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            None
+        } else if self.zero_color_epoch {
+            // Color processing neither buffers frames nor adds drain calls
+            // in the existing eligible zero-color epoch.
+            self.core.drain_call_bound()
+        } else {
+            // A work bound for the existing unsupported-path COMPLETE result,
+            // not a claim that recursive color has finite audio support.
+            Some(std::num::NonZeroU64::MIN)
+        }
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("analog limiter drain requires the initialized sample rate".into());
+        }
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("analog limiter drain requires whole output frames".into());
+        }
+        if !self.zero_color_epoch {
+            // Color recurrence needs a separately selected rendering policy.
+            // Preserve legacy EOS behavior without claiming finite support.
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let result = self.core.drain(output, context)?;
+        // The prepared stage accepts this bounded, exact channel shape. Advance
+        // it only for returned frames, preserving the ordinary core->color path.
+        self.stage
+            .process_interleaved(&mut output[..result.frames * self.channels], result.frames)?;
+        self.drained |= self.has_input;
+        Ok(result)
     }
 }

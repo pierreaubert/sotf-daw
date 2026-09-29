@@ -12,7 +12,8 @@ use sotf_host::param_bridge::apply_spec_update_modes;
 use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -66,6 +67,11 @@ pub struct PndPlugin {
     pub(super) cache_update_counter: usize,
     pub(super) cached_parameters: Vec<Parameter>,
     pub(super) initialized: bool,
+    received_input: bool,
+    input_phase: usize,
+    drain_remaining: Option<usize>,
+    drain_pitch: f32,
+    drain_zeros: Vec<f32>,
 }
 
 impl PndPlugin {
@@ -116,6 +122,11 @@ impl PndPlugin {
             cache_update_counter: 0,
             cached_parameters: Vec::new(),
             initialized: false,
+            received_input: false,
+            input_phase: 0,
+            drain_remaining: None,
+            drain_pitch: 1.0,
+            drain_zeros: Vec::new(),
         };
         p.rebuild_cached_parameters();
         p
@@ -260,6 +271,17 @@ impl PndPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
+        self.process_vocoder(input, output, context, None)
+    }
+
+    /// Continue synthesis at EOF without training estimators on synthetic input.
+    fn process_vocoder(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+        fixed_ratio: Option<f32>,
+    ) -> Result<usize, String> {
         let num_frames = context.num_frames;
         let nf = context.num_frames;
 
@@ -288,63 +310,68 @@ impl PndPlugin {
         // as synthesis. This prevents a large callback from applying a decision
         // derived from its final samples to samples at the callback's start.
         for i in 0..num_frames {
-            let mut analysis_generation = self.last_analysis_generation;
-            for ch in 0..self.analyzers.len().min(self.channels) {
-                let analyzer = &mut self.analyzers[ch];
-                let sample = input[i * self.channels + ch];
-                let previous_generation = analyzer.analysis_generation();
-                let temporal_drift = analyzer.analyze(std::slice::from_ref(&sample));
-                analysis_generation = analysis_generation.max(analyzer.analysis_generation());
-                if analyzer.analysis_generation() > previous_generation {
-                    self.channel_consensus_scratch[ch] = if self.reference_frequency_hz > 0.0 {
-                        analyzer.estimate_against_reference(self.reference_frequency_hz)
+            if fixed_ratio.is_none() {
+                let mut analysis_generation = self.last_analysis_generation;
+                for ch in 0..self.analyzers.len().min(self.channels) {
+                    let analyzer = &mut self.analyzers[ch];
+                    let sample = input[i * self.channels + ch];
+                    let previous_generation = analyzer.analysis_generation();
+                    let temporal_drift = analyzer.analyze(std::slice::from_ref(&sample));
+                    analysis_generation = analysis_generation.max(analyzer.analysis_generation());
+                    if analyzer.analysis_generation() > previous_generation {
+                        self.channel_consensus_scratch[ch] = if self.reference_frequency_hz > 0.0 {
+                            analyzer.estimate_against_reference(self.reference_frequency_hz)
+                        } else {
+                            (temporal_drift, analyzer.confidence())
+                        };
+                    }
+                }
+
+                let elapsed_hops =
+                    analysis_generation.saturating_sub(self.last_analysis_generation);
+                if elapsed_hops > 0 {
+                    self.last_analysis_generation = analysis_generation;
+                    let (drift_ratio, new_confidence) = if self.analyzers.is_empty() {
+                        (1.0, 0.0)
+                    } else if self.multi_channel_analysis && self.analyzers.len() > 1 {
+                        let n = self.analyzers.len().min(self.channels);
+                        weighted_channel_consensus(
+                            &mut self.channel_consensus_scratch[..n],
+                            self.confidence_threshold,
+                        )
                     } else {
-                        (temporal_drift, analyzer.confidence())
+                        self.channel_consensus_scratch[0]
                     };
+                    confidence = new_confidence;
+                    self.last_drift_ratio = f64::from(drift_ratio);
+
+                    let target = if confidence >= self.confidence_threshold {
+                        self.reference_transition_pending = false;
+                        Some(1.0 / f64::from(drift_ratio))
+                    } else if self.reference_frequency_hz > 0.0 || self.reference_transition_pending
+                    {
+                        Some(1.0)
+                    } else {
+                        None
+                    };
+                    if let Some(target) = target {
+                        self.current_ratio = smooth_drift_ratio(
+                            self.current_ratio,
+                            target,
+                            self.drift_smoothing,
+                            elapsed_hops as usize * PV_HOP_SIZE,
+                            self.sample_rate,
+                        );
+                    }
                 }
+
+                self.correction_strength_current += self.correction_strength_alpha
+                    * (self.correction_strength - self.correction_strength_current);
             }
-
-            let elapsed_hops = analysis_generation.saturating_sub(self.last_analysis_generation);
-            if elapsed_hops > 0 {
-                self.last_analysis_generation = analysis_generation;
-                let (drift_ratio, new_confidence) = if self.analyzers.is_empty() {
-                    (1.0, 0.0)
-                } else if self.multi_channel_analysis && self.analyzers.len() > 1 {
-                    let n = self.analyzers.len().min(self.channels);
-                    weighted_channel_consensus(
-                        &mut self.channel_consensus_scratch[..n],
-                        self.confidence_threshold,
-                    )
-                } else {
-                    self.channel_consensus_scratch[0]
-                };
-                confidence = new_confidence;
-                self.last_drift_ratio = f64::from(drift_ratio);
-
-                let target = if confidence >= self.confidence_threshold {
-                    self.reference_transition_pending = false;
-                    Some(1.0 / f64::from(drift_ratio))
-                } else if self.reference_frequency_hz > 0.0 || self.reference_transition_pending {
-                    Some(1.0)
-                } else {
-                    None
-                };
-                if let Some(target) = target {
-                    self.current_ratio = smooth_drift_ratio(
-                        self.current_ratio,
-                        target,
-                        self.drift_smoothing,
-                        elapsed_hops as usize * PV_HOP_SIZE,
-                        self.sample_rate,
-                    );
-                }
-            }
-
-            self.correction_strength_current += self.correction_strength_alpha
-                * (self.correction_strength - self.correction_strength_current);
-            let pitch_shift = (1.0
-                + (self.current_ratio - 1.0) * f64::from(self.correction_strength_current))
-                as f32;
+            let pitch_shift = fixed_ratio.unwrap_or_else(|| {
+                (1.0 + (self.current_ratio - 1.0) * f64::from(self.correction_strength_current))
+                    as f32
+            });
             for ch in 0..self.channels {
                 let pv = &mut vocoder.channels[ch];
                 pv.input_buf[pv.input_fill] = input[i * self.channels + ch];
@@ -378,8 +405,10 @@ impl PndPlugin {
         }
 
         // Update diagnostic cache (throttled)
-        self.cache_update_counter += 1;
-        if self.cache_update_counter >= 10 {
+        if fixed_ratio.is_none() {
+            self.cache_update_counter += 1;
+        }
+        if fixed_ratio.is_none() && self.cache_update_counter >= 10 {
             self.cache_update_counter = 0;
             let drift = self.last_drift_ratio;
             let correction = self.current_ratio;
@@ -544,6 +573,16 @@ impl Plugin for PndPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            // Snapshot restoration is a true no-op, including structural values.
+            // Do not reset an analyzer or rebuild metadata after accepted EOF.
+            if self.get_parameter(&id).as_ref() == Some(&value) {
+                return Ok(());
+            }
+            return Err(
+                "PND controls are frozen after EOF; reset before changing them".to_string(),
+            );
+        }
         self.validate_parameter(&id, &value)?;
         if id == self.param_correction_strength {
             let v = value
@@ -665,6 +704,12 @@ impl Plugin for PndPlugin {
     }
 
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if self.channels == 0 {
+            return Err("PND requires at least one channel".to_string());
+        }
+        let drain_samples = PV_HOP_SIZE
+            .checked_mul(self.channels)
+            .ok_or_else(|| "PND drain sample count overflow".to_string())?;
         if sample_rate == 0 {
             return Err("PND sample rate must be non-zero".to_string());
         }
@@ -686,8 +731,10 @@ impl Plugin for PndPlugin {
         self.correction_strength_alpha = 1.0 - (-1.0 / smoothing_frames).exp();
         self.correction_strength_current = self.correction_strength;
         self.vocoder = Some(PhaseVocoder::new(self.channels));
+        self.drain_zeros = vec![0.0; drain_samples];
 
         self.initialized = true;
+        self.reset();
 
         Ok(())
     }
@@ -701,6 +748,9 @@ impl Plugin for PndPlugin {
         let num_frames = context.num_frames;
         if num_frames == 0 {
             return Ok(0);
+        }
+        if self.drain_remaining.is_some() {
+            return Err("PND input is frozen after EOF; reset before processing".to_string());
         }
         let total_input_samples = num_frames
             .checked_mul(self.channels)
@@ -734,10 +784,102 @@ impl Plugin for PndPlugin {
             return Err("PND input contains a non-finite sample".to_string());
         }
 
-        self.process_phase_vocoder(input, output, context)
+        let frames = self.process_phase_vocoder(input, output, context)?;
+        self.received_input = true;
+        self.input_phase = (self.input_phase + frames % PV_HOP_SIZE) % PV_HOP_SIZE;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        PV_HOP_SIZE
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            return None;
+        }
+        let remaining = if self.received_input {
+            self.drain_remaining.unwrap_or_else(|| {
+                PV_LATENCY_FRAMES
+                    + (PV_FFT_SIZE - PV_HOP_SIZE)
+                    + (PV_HOP_SIZE - self.input_phase) % PV_HOP_SIZE
+            })
+        } else {
+            0
+        };
+        std::num::NonZeroU64::new(remaining.div_ceil(PV_HOP_SIZE).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized || self.channels == 0 {
+            return Err("PND must be initialized before drain".to_string());
+        }
+        if context.sample_rate != self.sample_rate || !output.len().is_multiple_of(self.channels) {
+            return Err(
+                "PND drain requires the initialized rate and whole output frames".to_string(),
+            );
+        }
+        if !self.received_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let capacity = output.len() / self.channels;
+        if capacity == 0 {
+            return Err(
+                "PND drain requires positive output capacity while audio remains".to_string(),
+            );
+        }
+        let remaining = self.drain_remaining.unwrap_or_else(|| {
+            // Last occupied analysis origin is floor((S-1)/H)*H. Its N-sample
+            // synthesis ends at D + origin + N, preserving the existing D=N-1.
+            PV_LATENCY_FRAMES
+                + (PV_FFT_SIZE - PV_HOP_SIZE)
+                + (PV_HOP_SIZE - self.input_phase) % PV_HOP_SIZE
+        });
+        if self.drain_remaining.is_none() {
+            self.drain_pitch = (1.0
+                + (self.current_ratio - 1.0) * f64::from(self.correction_strength_current))
+                as f32;
+        }
+        let frames = capacity.min(PV_HOP_SIZE).min(remaining);
+        let samples = frames * self.channels;
+        let zeros = std::mem::take(&mut self.drain_zeros);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        let result = self.process_vocoder(
+            &zeros[..samples],
+            &mut output[..samples],
+            &drain_context,
+            Some(self.drain_pitch),
+        );
+        self.drain_zeros = zeros;
+        result?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.initialized {
+            // Maximum of D + (N-H) + hop padding over all source phases.
+            TailLength::Finite((PV_LATENCY_FRAMES + PV_FFT_SIZE - 1) as u64)
+        } else {
+            TailLength::Unknown
+        }
     }
 
     fn reset(&mut self) {
+        self.received_input = false;
+        self.input_phase = 0;
+        self.drain_remaining = None;
+        self.drain_pitch = 1.0;
+        self.drain_zeros.fill(0.0);
+        self.channel_consensus_scratch.fill((1.0, 0.0));
         for analyzer in &mut self.analyzers {
             analyzer.reset();
         }

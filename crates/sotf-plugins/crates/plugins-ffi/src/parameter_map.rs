@@ -6,6 +6,8 @@
 // Uses ParamBridge from plugins-bridge for normalization and metadata.
 
 use plugins_bridge::ParamBridge;
+use sotf_host::param_specs::ParamType;
+use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::Plugin;
 use std::ffi::CString;
 use std::os::raw::c_char;
@@ -47,13 +49,50 @@ pub struct ParameterInfo {
     pub logarithmic: bool,
 }
 
+impl ParameterInfo {
+    fn normalize(&self, raw: f64) -> f64 {
+        if self.max_value <= self.min_value {
+            return 0.0;
+        }
+        if self.logarithmic && self.min_value > 0.0 {
+            let log_min = self.min_value.ln();
+            ((raw.clamp(self.min_value, self.max_value).ln() - log_min)
+                / (self.max_value.ln() - log_min))
+                .clamp(0.0, 1.0)
+        } else {
+            ((raw - self.min_value) / (self.max_value - self.min_value)).clamp(0.0, 1.0)
+        }
+    }
+
+    fn denormalize(&self, normalized: f64) -> f64 {
+        let normalized = normalized.clamp(0.0, 1.0);
+        if self.logarithmic && self.min_value > 0.0 {
+            let log_min = self.min_value.ln();
+            (log_min + normalized * (self.max_value.ln() - log_min)).exp()
+        } else {
+            self.min_value + normalized * (self.max_value - self.min_value)
+        }
+    }
+}
+
 /// Parameter mapping for a plugin, backed by plugins-bridge ParamBridge.
 pub struct ParameterMap {
     bridge: ParamBridge,
     /// Cached C-compatible info structs (leaked CStrings for FFI safety).
     /// Stored as `ParameterInfo` directly so we can return stable pointers via `get_info()`.
     cached_infos: Vec<ParameterInfo>,
+    cached_ids: Vec<ParameterId>,
+    cached_kinds: Vec<FallbackKind>,
     plugin_type: String,
+}
+
+/// Prepared at construction, including inactive band slots from their schema.
+enum FallbackKind {
+    Float,
+    Int,
+    Bool,
+    StringChoice(&'static [&'static str]),
+    Unsupported,
 }
 
 /// Translate a pre-migration external parameter id to its canonical key.
@@ -67,15 +106,17 @@ fn canonical_param_id<'a>(plugin_type: &str, param_id: &'a str) -> std::borrow::
     // hyphenated aliases ("Linear-Phase-EQ") interchangeably; normalize all
     // three before matching so the legacy table cannot be bypassed by
     // spelling.
-    let flat: String = plugin_type
-        .chars()
-        .filter(|c| *c != '-' && *c != '_')
-        .collect::<String>()
-        .to_lowercase();
-    let linear_phase_eq = flat == "linearphaseeq" || flat == "firdesigner";
-    let crossfeed = flat == "crossfeed";
-    let spectral = flat == "spectralcompressor";
-    let band_split = flat == "bandsplit";
+    let matches_family = |family: &str| {
+        plugin_type
+            .bytes()
+            .filter(|byte| *byte != b'-' && *byte != b'_')
+            .map(|byte| byte.to_ascii_lowercase())
+            .eq(family.bytes())
+    };
+    let linear_phase_eq = matches_family("linearphaseeq") || matches_family("firdesigner");
+    let crossfeed = matches_family("crossfeed");
+    let spectral = matches_family("spectralcompressor");
+    let band_split = matches_family("bandsplit");
     use std::borrow::Cow;
     match param_id {
         "fir_length" if linear_phase_eq => Cow::Borrowed("fir_length_index"),
@@ -91,8 +132,16 @@ fn canonical_param_id<'a>(plugin_type: &str, param_id: &'a str) -> std::borrow::
 impl ParameterMap {
     /// Create parameter map from a plugin using its ParamSpec definitions.
     pub fn from_plugin(plugin: &dyn Plugin, plugin_type: &str) -> Self {
-        let specs = get_param_specs(plugin_type);
+        Self::from_specs(plugin, plugin_type, get_param_specs(plugin_type))
+    }
+
+    fn from_specs(
+        plugin: &dyn Plugin,
+        plugin_type: &str,
+        specs: &[sotf_host::param_specs::ParamSpec],
+    ) -> Self {
         let bridge = ParamBridge::new(specs);
+        let runtime_parameters = plugin.parameters();
 
         // Pre-build cached C-compatible info structs from static ParamSpec
         let mut cached_infos = Vec::with_capacity(bridge.count());
@@ -124,7 +173,7 @@ impl ParameterMap {
 
         // Fallback: if no static specs produced params, use Plugin::parameters()
         if cached_infos.is_empty() {
-            for param in plugin.parameters() {
+            for param in &runtime_parameters {
                 let (min, max, default) =
                     match (&param.min_value, &param.max_value, &param.default_value) {
                         (
@@ -132,6 +181,7 @@ impl ParameterMap {
                             Some(sotf_host::parameters::ParameterValue::Float(max)),
                             sotf_host::parameters::ParameterValue::Float(def),
                         ) => (*min as f64, *max as f64, *def as f64),
+                        (_, _, ParameterValue::Bool(default)) => (0.0, 1.0, f64::from(*default)),
                         (
                             Some(sotf_host::parameters::ParameterValue::Int(min)),
                             Some(sotf_host::parameters::ParameterValue::Int(max)),
@@ -157,9 +207,54 @@ impl ParameterMap {
             }
         }
 
+        let cached_ids: Vec<ParameterId> = cached_infos
+            .iter()
+            .map(|info| {
+                // SAFETY: These CStrings are owned by cached_infos and remain valid
+                // until ParameterMap::drop; ParameterId copies the bytes here.
+                let key = unsafe { std::ffi::CStr::from_ptr(info.id).to_str().unwrap_or("") };
+                ParameterId::from(key)
+            })
+            .collect();
+        let cached_kinds = cached_ids
+            .iter()
+            .map(|id| {
+                let template_type =
+                    id.0.strip_prefix("band_")
+                        .and_then(|suffix| suffix.split_once('_'))
+                        .and_then(|(_, field)| {
+                            get_band_template(plugin_type).and_then(|(template, _)| {
+                                template.iter().find(|spec| spec.engine_key == field)
+                            })
+                        })
+                        .map(|spec| spec.param_type);
+                let runtime = runtime_parameters
+                    .iter()
+                    .find(|parameter| parameter.id == *id);
+                match runtime.map(|parameter| &parameter.default_value) {
+                    Some(ParameterValue::Float(_)) => FallbackKind::Float,
+                    Some(ParameterValue::Int(_)) => FallbackKind::Int,
+                    Some(ParameterValue::Bool(_)) => FallbackKind::Bool,
+                    Some(ParameterValue::String(_)) => match template_type {
+                        Some(ParamType::Choice { labels, .. }) => {
+                            FallbackKind::StringChoice(labels)
+                        }
+                        _ => FallbackKind::Unsupported,
+                    },
+                    None => match template_type {
+                        Some(ParamType::Float { .. }) => FallbackKind::Float,
+                        Some(ParamType::Int { .. } | ParamType::Choice { .. }) => FallbackKind::Int,
+                        Some(ParamType::Bool { .. }) => FallbackKind::Bool,
+                        _ => FallbackKind::Unsupported,
+                    },
+                }
+            })
+            .collect();
         Self {
             bridge,
             cached_infos,
+            cached_ids,
+            cached_kinds,
             plugin_type: plugin_type.to_string(),
         }
     }
@@ -195,9 +290,9 @@ impl ParameterMap {
         let param_id = unsafe { std::ffi::CStr::from_ptr(info.id).to_str().unwrap_or("") };
         let normalized = self.get_normalized(plugin, param_id)?;
         // Use bridge for correct denormalization (handles log scaling for Hz params)
-        self.bridge.denormalize(index, normalized).or(Some(
-            info.min_value + normalized * (info.max_value - info.min_value),
-        ))
+        self.bridge
+            .denormalize(index, normalized)
+            .or_else(|| Some(info.denormalize(normalized)))
     }
 
     /// Set denormalized parameter value by index.
@@ -216,15 +311,10 @@ impl ParameterMap {
             .ok_or_else(|| format!("Parameter index {index} out of range"))?;
         let param_id = unsafe { std::ffi::CStr::from_ptr(info.id).to_str().unwrap_or("") };
         // Use bridge for correct normalization (handles log scaling for Hz params)
-        let normalized = self.bridge.normalize(index, value).unwrap_or_else(|| {
-            // Fallback: linear normalization
-            let range = info.max_value - info.min_value;
-            if range.abs() < f64::EPSILON {
-                0.0
-            } else {
-                ((value - info.min_value) / range).clamp(0.0, 1.0)
-            }
-        });
+        let normalized = self
+            .bridge
+            .normalize(index, value)
+            .unwrap_or_else(|| info.normalize(value));
         self.set_normalized(plugin, param_id, normalized)
     }
 
@@ -248,16 +338,31 @@ impl ParameterMap {
             id == param_id
         }) {
             let info = &self.cached_infos[pos];
-            let raw = if info.logarithmic && info.min_value > 0.0 {
-                let log_min = info.min_value.ln();
-                let log_max = info.max_value.ln();
-                (log_min + normalized_value * (log_max - log_min)).exp()
-            } else {
-                info.min_value + (normalized_value * (info.max_value - info.min_value))
+            let normalized_value = normalized_value.clamp(0.0, 1.0);
+            let raw = info.denormalize(normalized_value);
+            let value = match &self.cached_kinds[pos] {
+                FallbackKind::Float => ParameterValue::Float(raw as f32),
+                FallbackKind::Int => {
+                    let raw = if info.steps > 0 && info.max_value > info.min_value {
+                        let step = (info.max_value - info.min_value) / f64::from(info.steps);
+                        info.min_value + ((raw - info.min_value) / step).round() * step
+                    } else {
+                        raw
+                    };
+                    ParameterValue::Int(raw.round() as i32)
+                }
+                FallbackKind::Bool => ParameterValue::Bool(normalized_value >= 0.5),
+                FallbackKind::StringChoice(labels) => {
+                    let label = labels
+                        .get(raw.round() as usize)
+                        .ok_or_else(|| format!("Invalid choice for {param_id}"))?;
+                    ParameterValue::String((*label).to_owned())
+                }
+                FallbackKind::Unsupported => {
+                    return Err(format!("{param_id} requires a string value"));
+                }
             };
-            let id = sotf_host::parameters::ParameterId::from(param_id.to_string());
-            let value = sotf_host::parameters::ParameterValue::Float(raw as f32);
-            plugin.set_parameter(id, value)
+            plugin.set_parameter(self.cached_ids[pos].clone(), value)
         } else {
             Err(format!("Unknown parameter: {param_id}"))
         }
@@ -278,8 +383,7 @@ impl ParameterMap {
         })?;
 
         let info = &self.cached_infos[pos];
-        let id = sotf_host::parameters::ParameterId::from(param_id.to_string());
-        let value = plugin.get_parameter(&id)?;
+        let value = plugin.get_parameter(&self.cached_ids[pos])?;
         let raw = match value {
             sotf_host::parameters::ParameterValue::Float(f) => f as f64,
             sotf_host::parameters::ParameterValue::Int(i) => i as f64,
@@ -290,20 +394,14 @@ impl ParameterMap {
                     0.0
                 }
             }
-            _ => return None,
+            ParameterValue::String(value) => match &self.cached_kinds[pos] {
+                FallbackKind::StringChoice(labels) => {
+                    labels.iter().position(|label| *label == value)? as f64
+                }
+                _ => return None,
+            },
         };
-        if info.logarithmic && info.min_value > 0.0 {
-            let log_min = info.min_value.ln();
-            let log_max = info.max_value.ln();
-            let log_val = raw.clamp(info.min_value, info.max_value).ln();
-            Some(((log_val - log_min) / (log_max - log_min)).clamp(0.0, 1.0))
-        } else {
-            let range = info.max_value - info.min_value;
-            if range.abs() < f64::EPSILON {
-                return Some(0.0);
-            }
-            Some(((raw - info.min_value) / range).clamp(0.0, 1.0))
-        }
+        Some(info.normalize(raw))
     }
 }
 
@@ -460,6 +558,9 @@ fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::Param
         "Declick" | "declick" | "TransientRepair" | "transient_repair" => declick::PARAMS,
         "Downmix" | "downmix" => downmix::PARAMS,
         "Saturation" | "saturation" => saturation::PARAMS,
+        "AnalogEQ" | "analog_eq" => analog_eq::PARAMS,
+        "AnalogLimiter" | "analog_limiter" => analog_limiter::PARAMS,
+        "AnalogCompressor" | "analog_compressor" => analog_compressor::PARAMS,
         "StereoImager" | "stereo_imager" => stereo_imager::PARAMS,
         "TransientShaper" | "transient_shaper" => transient_shaper::PARAMS,
         "DeEsser" | "de_esser" => de_esser::PARAMS,
@@ -511,6 +612,53 @@ mod tests {
         let param_map = ParameterMap::from_plugin(&*plugin, "EQ");
         // Five global controls plus 20 bands × five params.
         assert_eq!(param_map.count(), 5 + 20 * 5);
+    }
+
+    #[test]
+    fn runtime_metadata_fallback_preserves_bool_and_integer_types() {
+        let config = r#"{"filters":[{"filter_type":"peak","freq":1000.0,"q":1.5,"db_gain":3.0}]}"#;
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, config).unwrap();
+        let map = ParameterMap::from_specs(&*plugin, "RuntimeMetadataOnly", &[]);
+        for enabled in [true, false] {
+            map.set_normalized(&mut *plugin, "tdf2", f64::from(enabled))
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("tdf2")),
+                Some(ParameterValue::Bool(enabled))
+            );
+        }
+        for order in [4, 6, 8, 2] {
+            map.set_normalized(&mut *plugin, "band_0_order", f64::from(order - 2) / 6.0)
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("band_0_order")),
+                Some(ParameterValue::Int(order))
+            );
+        }
+    }
+
+    #[test]
+    fn expanded_frequency_raw_interface_matches_normalized_interface() {
+        let config = r#"{"filters":[{"filter_type":"peak","freq":1000.0,"q":1.5,"db_gain":3.0}]}"#;
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, config).unwrap();
+        let map = ParameterMap::from_plugin(&*plugin, "EQ");
+        let index = (0..map.count())
+            .find(|index| map.param_id_at(*index) == Some("band_0_freq"))
+            .unwrap();
+        assert!((map.get_denormalized_by_index(&*plugin, index).unwrap() - 1000.0).abs() < 1e-3);
+        for frequency in [20.0, 160.0, 1000.0, 6400.0, 20000.0] {
+            map.set_denormalized_by_index(&mut *plugin, index, frequency)
+                .unwrap();
+            let actual = plugin
+                .get_parameter(&ParameterId::from("band_0_freq"))
+                .unwrap()
+                .as_float()
+                .unwrap();
+            assert!((f64::from(actual) - frequency).abs() < 1e-3);
+            assert!(
+                (map.get_denormalized_by_index(&*plugin, index).unwrap() - frequency).abs() < 1e-3
+            );
+        }
     }
 
     #[test]

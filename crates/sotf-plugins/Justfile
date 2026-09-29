@@ -19,62 +19,27 @@ plugins-test: plugins-test-lib plugins-test-integration plugins-test-host
 # Library tests for all plugin crates
 [group('plugins')]
 plugins-test-lib:
-	{{cargo}} test -p sotf-plugins --lib
+	{{cargo}} test -p 'sotf-plugin-*' -p sotf-plugins --lib
 
-# Integration / external test files for individual plugin crates
+# Integration and binary tests for every plugin crate, including new targets.
 [group('plugins')]
 plugins-test-integration:
-	{{cargo}} test -p sotf-plugin-binaural --test binaural_decoder_integration
-	{{cargo}} test -p sotf-plugin-binaural --test test_binaural_decoder
-	{{cargo}} test -p sotf-plugin-delay --test test_basic
-	{{cargo}} test -p sotf-plugin-denoiser --test test_polyphonic_denoiser
-	{{cargo}} test -p sotf-plugin-eq --test test_eq_plugin
-	{{cargo}} test -p sotf-plugin-gain --test test_basic
-	{{cargo}} test -p sotf-plugin-gate --test test_dynamics
-	{{cargo}} test -p sotf-plugin-limiter --test test_dynamics
-	{{cargo}} test -p sotf-plugin-loudness-compensation --test test_loudness_compensation
-	{{cargo}} test -p sotf-plugin-matrix --test matrix_mixing_test
-	{{cargo}} test -p sotf-plugin-matrix --test matrix_mute_test
-	{{cargo}} test -p sotf-plugin-matrix --test test_basic
-	{{cargo}} test -p sotf-plugin-multiband-compressor --test test_multiband
-	{{cargo}} test -p sotf-plugin-multiband-expander --test test_multiband
-	{{cargo}} test -p sotf-plugin-pnd --test test_pnd_plugin
-	{{cargo}} test -p sotf-plugin-resampler --test test_resampler_plugin
-	{{cargo}} test -p sotf-plugin-upmixer --test test_upmixer_integration
-	{{cargo}} test -p sotf-plugin-upmixer --test upmixer_audio_regression
-	{{cargo}} test -p sotf-plugin-upmixer --test upmixer_quality_tests
-	{{cargo}} test -p sotf-plugin-xtc --test test_xtc_plugin
-	{{cargo}} test -p sotf-plugin-xtc --test xtc_quality_tests
-	{{cargo}} test -p sotf-plugin-xtc --test xtc_validation
+	{{cargo}} test -p 'sotf-plugin-*' --tests
 
 # Host infrastructure tests (DawHost, automation, STFT, etc.)
 [group('plugins')]
 plugins-test-host:
 	{{cargo}} test -p sotf-host
 
-# Top-level integration test suites (host_integration, property, realtime, etc.)
+# All facade integration suites, including the catalog-driven DSP matrix.
 [group('plugins')]
 plugins-test-suites:
-	{{cargo}} test -p sotf-plugins --test host_integration_tests
-	{{cargo}} test -p sotf-plugins --test automation_tests
-	{{cargo}} test -p sotf-plugins --test property_tests
-	{{cargo}} test -p sotf-plugins --test realtime_tests
-	{{cargo}} test -p sotf-plugins --test realtime_allocation_tests
-	{{cargo}} test -p sotf-plugins --test rt_safety_tests
-	{{cargo}} test -p sotf-plugins --test stft_normalization_tests
-	{{cargo}} test -p sotf-plugins --test parameter_robustness_tests
-	{{cargo}} test -p sotf-plugins --test layout_invariants
-	{{cargo}} test -p sotf-plugins --test render_plan_snapshots
-	{{cargo}} test -p sotf-plugins --test test_plugins
-	{{cargo}} test -p sotf-plugins --test test_dynamics_plugins
-	{{cargo}} test -p sotf-plugins --test test_chain_perf
-	{{cargo}} test -p sotf-plugins --test test_sample_rate_support
-	{{cargo}} test -p sotf-plugins --test test_harness_sanity
-	{{cargo}} test -p sotf-plugins --test distortion_regression_tests
+	{{cargo}} test -p sotf-plugins --tests
 
-# Run everything: lib + integration + host + suites
+# Run every plugin and host test target in one Cargo invocation.
 [group('plugins')]
-plugins-test-all: plugins-test plugins-test-suites
+plugins-test-all:
+	{{cargo}} test -p 'sotf-plugin-*' -p sotf-plugins -p sotf-host --lib --tests
 
 # ----------------------------------------------------------------------
 # EXAMPLES
@@ -88,7 +53,9 @@ plugins-examples:
 	{{cargo}} run -p sotf-plugins --example restore_mono --release
 
 # ----------------------------------------------------------------------
-# QA DIAGNOSTICS (per-plugin QA binaries)
+# QA DIAGNOSTICS (self-contained per-plugin QA binaries)
+# qa-aae-validation needs an external corpus manifest; run it separately with
+# the arguments documented in sotf-plugin-aae/quality-validation.md.
 # ----------------------------------------------------------------------
 
 [group('qa')]
@@ -96,6 +63,8 @@ qa-plugins: qa-plugins-diagnostics qa-plugins-fuzzer
 
 [group('qa-plugins')]
 qa-plugins-diagnostics:
+	{{cargo}} run --release -p sotf-plugin-aae --bin qa-aae --features qa
+	{{cargo}} run --release -p sotf-plugin-aae --bin qa-aae-quality --features qa
 	{{cargo}} run --release -p sotf-plugin-ab-compare --bin qa-ab-compare --features qa
 	{{cargo}} run --release -p sotf-plugin-aec --bin qa-aec --features qa
 	{{cargo}} run --release -p sotf-plugin-ambisonics --bin qa-ambisonics --features qa
@@ -108,6 +77,7 @@ qa-plugins-diagnostics:
 	{{cargo}} run --release -p sotf-plugin-crossfeed --bin qa-crossfeed --features qa
 	{{cargo}} run --release -p sotf-plugin-crossover --bin qa-crossover --features qa
 	{{cargo}} run --release -p sotf-plugin-de-esser --bin qa-de-esser --features qa
+	{{cargo}} run --release -p sotf-plugin-declick --bin qa-declick --features qa
 	{{cargo}} run --release -p sotf-plugin-delay --bin qa-delay --features qa
 	{{cargo}} run --release -p sotf-plugin-denoiser --bin qa-denoiser --features qa
 	{{cargo}} run --release -p sotf-plugin-dither --bin qa-dither --features qa
@@ -116,6 +86,7 @@ qa-plugins-diagnostics:
 	{{cargo}} run --release -p sotf-plugin-eq --bin qa-eq --features qa
 	{{cargo}} run --release -p sotf-plugin-gain --bin qa-gain --features qa
 	{{cargo}} run --release -p sotf-plugin-gate --bin qa-gate --features qa
+	{{cargo}} run --release -p sotf-plugin-hiss-reducer --bin qa-hiss-reducer --features qa
 	{{cargo}} run --release -p sotf-plugin-limiter --bin qa-limiter --features qa
 	{{cargo}} run --release -p sotf-plugin-linear-phase-eq --bin qa-linear-phase-eq --features qa
 	{{cargo}} run --release -p sotf-plugin-loudness-compensation --bin qa-loudness-compensation --features qa
@@ -127,6 +98,7 @@ qa-plugins-diagnostics:
 	{{cargo}} run --release -p sotf-plugin-resampler --bin qa-resampler --features qa
 	{{cargo}} run --release -p sotf-plugin-saturation --bin qa-saturation --features qa
 	{{cargo}} run --release -p sotf-plugin-spectral-compressor --bin qa-spectral-compressor --features qa
+	{{cargo}} run --release -p sotf-plugin-speech-denoiser --bin qa-speech-denoiser --features qa
 	{{cargo}} run --release -p sotf-plugin-stereo-imager --bin qa-stereo-imager --features qa
 	{{cargo}} run --release -p sotf-plugin-transient-shaper --bin qa-transient-shaper --features qa
 	{{cargo}} run --release -p sotf-plugin-upmixer --bin qa-upmixer --features qa

@@ -1,7 +1,7 @@
 // Integration tests for Gate plugin
 
 use sotf_host::{ParametricInPlacePlugin, ParametricInPlacePluginAdapter, PluginHost};
-use sotf_plugin_gate::{GateData, GatePlugin};
+use sotf_plugin_gate::{GateData, GatePlugin, GatePluginParams};
 
 // ---------------------------------------------------------------------------
 // Bug regression tests (added in 0.5.5)
@@ -57,6 +57,7 @@ fn test_attack_controls_gate_open_speed() {
                 hysteresis_db: 0.0,
                 knee_db: 0.0,
                 lookahead_ms: 0.0,
+                ..GatePluginParams::default()
             },
         );
         g.initialize(sr).unwrap();
@@ -126,6 +127,7 @@ fn test_linked_mode_is_open_false_when_gated() {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            ..GatePluginParams::default()
         },
     );
     gate.initialize(sr).unwrap();

@@ -19,9 +19,12 @@ use crate::auto_gain::{AutoGain, AutoGainData, AutoGainParams};
 use crate::speaker_config::SpeakerConfig;
 
 /// Stereo `AutoGain` with multichannel output support via stereo fold-down.
+#[derive(Debug)]
 pub struct MultichannelAutoGain {
     inner: AutoGain,
     meter_buf: Vec<f32>,
+    measurement_interval: usize,
+    measurement_phase: usize,
 }
 
 impl MultichannelAutoGain {
@@ -36,15 +39,21 @@ impl MultichannelAutoGain {
         Ok(Self {
             inner: AutoGain::new(2, sample_rate, params)?,
             meter_buf: vec![0.0; Self::MAX_METER_FRAMES * 2],
+            measurement_interval: (sample_rate / 10).max(1) as usize,
+            measurement_phase: 0,
         })
     }
 
     pub fn set_sample_rate(&mut self, sr: u32) -> Result<(), String> {
-        self.inner.set_sample_rate(sr)
+        self.inner.set_sample_rate(sr)?;
+        self.measurement_interval = (sr / 10).max(1) as usize;
+        self.measurement_phase = 0;
+        Ok(())
     }
 
     pub fn reset(&mut self) {
         self.inner.reset();
+        self.measurement_phase = 0;
     }
 
     pub fn set_enabled(&mut self, enabled: bool) {
@@ -93,18 +102,102 @@ impl MultichannelAutoGain {
             ));
         }
 
-        self.fill_meter_buffer(output, num_frames, out_ch, speaker_config);
-        self.inner
-            .measure_output(&self.meter_buf[..num_frames * 2])?;
+        // Preserve the legacy whole-callback target refresh, while bounding
+        // scratch storage even for offline callbacks larger than 8192 frames.
+        let mut position = 0;
+        while position < num_frames {
+            let frames = (num_frames - position).min(Self::MAX_METER_FRAMES);
+            self.fill_meter_buffer(
+                &output[position * out_ch..(position + frames) * out_ch],
+                frames,
+                out_ch,
+                speaker_config,
+            );
+            let measured = &self.meter_buf[..frames * 2];
+            self.inner.ingest_output(measured)?;
+            position += frames;
+        }
+        self.inner.refresh_output_measurement();
+        self.apply_gains(output, out_ch);
+        Ok(())
+    }
 
-        for frame in 0..num_frames {
+    /// Measure aligned input/output pairs and apply gain on a fixed sample clock.
+    ///
+    /// `input` is stereo and must already include the renderer's transport delay.
+    /// Output folding follows [`Self::measure_and_apply`]. Measurements refresh
+    /// every `max(1, sample_rate / 10)` enabled frames; a new target affects only
+    /// the following frame. Callback boundaries do not refresh measurements.
+    /// Disabled and zero-frame calls are no-ops, retaining the active-frame phase
+    /// and existing gain history. Reset and sample-rate changes restart the phase.
+    ///
+    /// Scratch storage is bounded independently of the caller's block size. Use
+    /// this paired API throughout a metering epoch to obtain causal timing; the
+    /// older separate measurement methods retain their original block timing.
+    /// Published sample peaks cover the complete paired measurement interval,
+    /// including all callback, ring, and bounded scratch fragments.
+    ///
+    /// # Errors
+    /// Returns an error for overflowing or mismatched active buffer dimensions,
+    /// before modifying output or state, or if loudness ingestion fails.
+    pub fn measure_aligned_and_apply(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        num_frames: usize,
+        out_ch: usize,
+        speaker_config: &SpeakerConfig,
+    ) -> Result<(), String> {
+        if !self.inner.is_enabled() || num_frames == 0 || out_ch == 0 {
+            return Ok(());
+        }
+        let input_len = num_frames
+            .checked_mul(2)
+            .ok_or_else(|| "input buffer size overflow".to_string())?;
+        let output_len = num_frames
+            .checked_mul(out_ch)
+            .ok_or_else(|| "output buffer size overflow".to_string())?;
+        if input.len() != input_len || output.len() != output_len {
+            return Err(format!(
+                "aligned AutoGain buffer mismatch: expected {input_len} input and \
+                 {output_len} output samples, got {} and {}",
+                input.len(),
+                output.len()
+            ));
+        }
+
+        let mut position = 0;
+        while position < num_frames {
+            let frames = (num_frames - position)
+                .min(self.measurement_interval - self.measurement_phase)
+                .min(Self::MAX_METER_FRAMES);
+            let end = position + frames;
+            let output_span = &mut output[position * out_ch..end * out_ch];
+            let input_span = &input[position * 2..end * 2];
+            self.inner.ingest_input(input_span)?;
+            self.fill_meter_buffer(output_span, frames, out_ch, speaker_config);
+            let measured = &self.meter_buf[..frames * 2];
+            self.inner.ingest_output(measured)?;
+            // Ingesting cannot change gain until the explicit boundary refresh.
+            self.apply_gains(output_span, out_ch);
+            self.measurement_phase += frames;
+            if self.measurement_phase == self.measurement_interval {
+                self.inner.refresh_input_measurement();
+                self.inner.refresh_output_measurement();
+                self.measurement_phase = 0;
+            }
+            position = end;
+        }
+        Ok(())
+    }
+
+    fn apply_gains(&mut self, output: &mut [f32], out_ch: usize) {
+        for frame in output.chunks_exact_mut(out_ch) {
             let gain = self.inner.next_gain_linear();
-            let base = frame * out_ch;
-            for sample in &mut output[base..base + out_ch] {
+            for sample in frame {
                 *sample *= gain;
             }
         }
-        Ok(())
     }
 
     /// Snapshot of the current AutoGain state (for `get_data()` UI exposure).
@@ -120,15 +213,7 @@ impl MultichannelAutoGain {
         speaker_config: &SpeakerConfig,
     ) {
         let needed = num_frames * 2;
-        debug_assert!(
-            self.meter_buf.capacity() >= needed,
-            "MultichannelAutoGain meter buffer capacity {} is smaller than required {}",
-            self.meter_buf.capacity(),
-            needed
-        );
-        if self.meter_buf.len() < needed {
-            self.meter_buf.resize(needed, 0.0);
-        }
+        debug_assert!(num_frames <= Self::MAX_METER_FRAMES);
         let buf = &mut self.meter_buf[..needed];
 
         // Stereo or mono passthrough: copy directly.

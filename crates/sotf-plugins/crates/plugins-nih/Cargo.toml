@@ -67,3 +67,9 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["a
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
+
+[dev-dependencies]
+crossbeam = { workspace = true }
+parking_lot = { workspace = true }
+assert_no_alloc = { git = "https://github.com/robbert-vdh/rust-assert-no-alloc.git", branch = "feature/nested-permit-forbid", features = ["backtrace", "log"] }
+clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }

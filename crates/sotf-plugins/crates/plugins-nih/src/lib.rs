@@ -56,6 +56,11 @@ pub mod params;
 #[macro_use]
 pub mod wrapper;
 
+#[cfg(test)]
+mod gui_state_return_tests;
+#[cfg(test)]
+mod limiter_oversampling_tests;
+
 /// Wrapper for ParamBridge (unused fields reserved for future param normalization).
 pub struct PluginBridgeWrapper {
     _bridge: plugins_bridge::param_bridge::ParamBridge,
@@ -70,8 +75,8 @@ impl PluginBridgeWrapper {
         &self,
         params: &std::sync::Arc<params::DynamicParams>,
         plugin: &mut dyn sotf_host::plugin::Plugin,
-    ) {
-        params.sync_to_plugin(plugin);
+    ) -> Result<(), String> {
+        params.sync_to_plugin(plugin)
     }
 }
 

@@ -1,3 +1,31 @@
+# Unreleased finite-stream audit (2026-09-28)
+
+- Reject wrong-rate and nonfinite ordinary input before modifying output or
+  retained audio (AUD091), preserving constructor-time default-rate processing.
+
+- Preserve complete finite spectral support at EOS using the existing processor
+  and at most one hop per drain call, with no additional audio buffers.
+- Report finite support only when recursive LFE is unobservable; settled ITU
+  coefficients and Lt/Rt exclusion are checked explicitly. Observable LFE
+  retains the existing caller-selected duration policy.
+- Validate drain calls before consuming audio, freeze completed finite streams
+  until reset, and expose a full-capacity successful-call bound to the host.
+- Add independent first/final markers at every hop phase, dense delayed
+  waveform and ordinary zero-continuation oracles, lifecycle/eligibility tests,
+  and cold allocation/deallocation checks.
+
+# Unreleased startup audit (2026-09-28)
+
+- Fix AUD081 first-sample loss and initial half-window attenuation by adding
+  zero analysis history and discarding negative-time synthesis. The existing
+  2048-frame spectral delay and per-sample scheduler are unchanged.
+- Make constructors and setup mode changes use the same stream reset as
+  initialize/reset. Matrix coefficients, LtRt/phase processing and LFE filter
+  arithmetic are unchanged; no EOS drain policy is added.
+- Add independent full-waveform and every-initial-hop-phase oracles across
+  named layouts, rates, callback partitions and ring wrap, plus cold callback
+  allocation/deallocation checks.
+
 # 0.5.28
 
 ## Fixes

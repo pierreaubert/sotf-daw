@@ -19,3 +19,29 @@ before crossfading; the plugin cannot compensate a graph by itself.
 `range_db = 0` means unlimited attenuation with a finite 240 dB numerical ceiling.
 Processing, realtime parameter writes, and reset are allocation-free; non-finite
 audio and detector samples are treated as silence before entering DSP state.
+
+## Finite streams and lookahead
+
+After the final input block, call `drain()` until complete. It emits exactly the
+active lookahead ring delay, including the final program samples. External-key
+mode continues both program and key inputs with zero but returns only program
+channels. HPF, RMS, hold, release, and smoothed targets continue normally with
+zero input; those detector/envelope histories do not add audio support.
+
+Latency and the finite `tail_length()` bound use the actual active ring delay.
+A positive lookahead shorter than half a sample still uses the ring's minimum
+one-sample delay and reports one sample; exactly zero remains zero latency.
+Tail length is `Unknown` before initialization.
+
+Drain accepts any nonempty whole-frame output capacity and writes at most 256
+frames per call. The destination determines capacity, independently of
+`context.num_frames`; the sample rate must match initialization. Invalid rate,
+shape, or required capacity changes neither history nor EOS state. Empty-stream
+drain is a no-op; zero-delay streams complete without extra samples.
+
+Once valid drain begins for a nonempty stream, reset or reinitialize before new
+input or changed controls. Identical scalar/bulk snapshots remain accepted;
+existing structural rebuild requirements still apply. Reset and reinitialization
+clear the prior stream. Normal silence processing retains ordinary automation.
+Valid processing, drain, scalar tail queries, and reset allocate and free no
+memory; widened external-key scratch is prepared during initialization.

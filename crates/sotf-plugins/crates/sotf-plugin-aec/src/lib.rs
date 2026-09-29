@@ -13,3 +13,7 @@ mod tests;
 
 pub use aec_plugin::*;
 pub use params::Params as AecPluginParams;
+
+#[cfg(test)]
+#[path = "lib/constructor_tests.rs"]
+mod constructor_tests;

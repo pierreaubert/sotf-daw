@@ -1,7 +1,9 @@
 use super::PluginFuzzer;
 use rand::RngExt;
 use rand::rngs::StdRng;
-use sotf_plugins::{GatePlugin, GatePluginParams, ParametricInPlacePluginAdapter, Plugin};
+use sotf_plugins::{
+    GateMode, GatePlugin, GatePluginParams, ParametricInPlacePluginAdapter, Plugin,
+};
 
 pub(super) struct GateFuzzer;
 
@@ -15,6 +17,8 @@ impl PluginFuzzer for GateFuzzer {
         let mix = rng.random_range(0.0..1.0);
         let link_channels = rng.random_bool(0.5);
         let sidechain_hpf_hz = rng.random_range(0.0..200.0);
+        let mode = GateMode::from_index(rng.random_range(0..3)).unwrap();
+        let max_boost_db = rng.random_range(0.0..=24.0);
 
         let params = GatePluginParams {
             threshold_db,
@@ -32,11 +36,13 @@ impl PluginFuzzer for GateFuzzer {
             hysteresis_db: 0.0,
             knee_db: 0.0,
             lookahead_ms: 0.0,
+            mode,
+            max_boost_db,
         };
         let plugin = GatePlugin::from_params(channels, params);
 
         let desc = format!(
-            "threshold={:.1}dB ratio={:.1}:1 attack={:.1}ms hold={:.0}ms release={:.0}ms mix={:.2} link={} sc_hpf={:.0}Hz",
+            "threshold={:.1}dB ratio={:.1}:1 attack={:.1}ms hold={:.0}ms release={:.0}ms mix={:.2} link={} sc_hpf={:.0}Hz mode={mode:?} max_boost={max_boost_db:.1}dB",
             threshold_db,
             ratio,
             attack_ms,

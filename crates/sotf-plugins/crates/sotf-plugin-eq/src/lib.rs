@@ -4,6 +4,8 @@ pub mod ui;
 
 #[path = "lib/advanced_filter.rs"]
 mod advanced_filter;
+#[path = "lib/auto_gain_clock.rs"]
+mod auto_gain_clock;
 #[path = "lib/consts.rs"]
 mod consts;
 #[path = "lib/eq_plugin.rs"]

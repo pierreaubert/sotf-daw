@@ -36,6 +36,7 @@ fn write_test_wav(path: &Path, samples: &[i16], sample_rate: u32) {
 /// Helper: create a ConvolutionPlugin and load a synthetic IR directly.
 fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> ConvolutionPlugin {
     let mut plugin = ConvolutionPlugin::new(channels, sample_rate);
+    plugin.max_ir_frames = ir.iter().map(Vec::len).max().unwrap_or(0);
     plugin.initialize(sample_rate).unwrap();
 
     // Build partitions from the IR data
@@ -66,13 +67,13 @@ fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> 
         .get_inplace_scratch_len()
         .max(fft_inverse.get_inplace_scratch_len());
 
-    plugin.state.store(Arc::new(Some(ConvolutionState {
+    plugin.ir_runtime.state = Arc::new(Some(ConvolutionState {
         partitions,
         num_partitions,
         ir_channels,
         fft_forward: Some(fft_forward),
         fft_inverse: Some(fft_inverse),
-    })));
+    }));
     plugin.fdl_flat = vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_SIZE];
     plugin.fdl_head = 0;
     plugin.fft_scratch = vec![Complex::new(0.0, 0.0); fft_scratch_len];
@@ -449,12 +450,15 @@ fn test_ir_file_parameter_loads_and_reports_path() {
     let ctx = ProcessContext::new(48000, 1024);
     for _ in 0..200 {
         plugin.process_in_place(&mut buf, &ctx).unwrap();
-        if plugin.ir_load_result_rx.is_none() {
+        if !plugin.completion_pending {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
-    assert!(plugin.state.load().is_some(), "IR load should complete");
+    assert!(
+        Arc::clone(&plugin.state).is_some(),
+        "IR load should complete"
+    );
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("ir_file")),
         Some(ParameterValue::String(path.to_string_lossy().into_owned()))
@@ -488,7 +492,7 @@ fn test_from_params_loads_nupc_engine_from_ir_file() {
         "from_params with use_nupc=true should build NUPC engines from the IR file"
     );
     assert!(plugin.nupc_engines[0].shares_ir_kernel_with(&plugin.nupc_engines[1]));
-    let state = plugin.state.load();
+    let state = Arc::clone(&plugin.state);
     let state = state.as_ref().as_ref().expect("loaded NUPC state");
     assert!(state.partitions.is_empty());
     assert!(state.fft_forward.is_none() && state.fft_inverse.is_none());

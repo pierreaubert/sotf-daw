@@ -2,7 +2,8 @@ pub mod params;
 
 use crate::params::PARAMS as HP;
 use plugins_denoiser::hiss::HissReducer;
-use plugins_denoiser::spectral_hiss::SpectralHissReducer;
+use plugins_denoiser::spectral_hiss::{SPECTRAL_HISS_FFT_SIZE, SpectralHissReducer};
+const DRAIN_HOP: usize = SPECTRAL_HISS_FFT_SIZE / 4;
 use serde::{Deserialize, Serialize};
 use sotf_host::param_bridge;
 use sotf_host::param_specs::find_by_key as pk;
@@ -10,7 +11,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +66,12 @@ pub struct HissReducerPlugin {
     reducer: HissReducer,
     spectral_reducer: SpectralHissReducer,
     cached_parameters: Vec<Parameter>,
+    has_input: bool,
+    source_phase: usize,
+    drain_remaining: Option<usize>,
+    drain_cache: Vec<f32>,
+    drain_frames: usize,
+    drain_pos: usize,
 }
 
 impl HissReducerPlugin {
@@ -108,6 +116,12 @@ impl HissReducerPlugin {
             spectral_reducer,
             params,
             cached_parameters: Vec::new(),
+            has_input: false,
+            source_phase: 0,
+            drain_remaining: None,
+            drain_cache: vec![0.0; DRAIN_HOP * channels],
+            drain_frames: 0,
+            drain_pos: 0,
         };
         plugin.rebuild_cached_parameters();
         Ok(plugin)
@@ -243,6 +257,14 @@ impl HissReducerPlugin {
         }
         Ok(())
     }
+    fn clear_drain(&mut self) {
+        self.has_input = false;
+        self.source_phase = 0;
+        self.drain_remaining = None;
+        self.drain_cache.fill(0.0);
+        self.drain_frames = 0;
+        self.drain_pos = 0;
+    }
 }
 
 impl ParametricInPlacePlugin for HissReducerPlugin {
@@ -271,6 +293,17 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "enabled" => Some(ParameterValue::Bool(self.params.enabled)),
+            "threshold_db" => Some(ParameterValue::Float(self.params.threshold_db)),
+            "frequency_hz" => Some(ParameterValue::Float(self.params.frequency_hz)),
+            "strength" => Some(ParameterValue::Float(self.params.strength)),
+            "spectral_mode" => Some(ParameterValue::Bool(self.params.spectral_mode)),
+            _ => None,
+        }
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         values.insert(
@@ -297,6 +330,9 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err("Reset spectral hiss before changing parameters after drain starts".into());
+        }
         let mut next = self.params.clone();
         for (id, value) in &values {
             self.parametric_validate_parameter(id, value)?;
@@ -366,6 +402,9 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         id: ParameterId,
         value: ParameterValue,
     ) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return Err("Reset spectral hiss before changing parameters after drain starts".into());
+        }
         self.parametric_validate_parameter(&id, &value)?;
         self.apply_parameter(id, value)
     }
@@ -388,12 +427,14 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
             self.params.strength,
         );
         self.initialized = true;
+        self.clear_drain();
         Ok(())
     }
 
     fn reset(&mut self) {
         self.reducer.reset();
         self.spectral_reducer.reset();
+        self.clear_drain();
     }
 
     fn process_in_place(
@@ -423,14 +464,91 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
             ));
         }
 
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Reset spectral hiss before processing input after drain starts".into());
+        }
         if self.params.spectral_mode {
             self.spectral_reducer.process(buffer);
+            self.has_input |= context.num_frames > 0;
+            self.source_phase = (self.source_phase + context.num_frames % DRAIN_HOP) % DRAIN_HOP;
         } else {
             // Keep filter and detector state warm while bypassed; HissReducer
             // owns the click-free wet/dry transition and reaches exact dry.
             self.reducer.process(buffer);
         }
         Ok(context.num_frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        if self.params.spectral_mode {
+            DRAIN_HOP
+        } else {
+            0
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !(self.has_input && self.params.spectral_mode) {
+            return std::num::NonZeroU64::new(1);
+        }
+        let hop = DRAIN_HOP;
+        let remaining = self
+            .drain_remaining
+            .unwrap_or(2 * SPECTRAL_HISS_FFT_SIZE - hop + (hop - self.source_phase) % hop);
+        // One call serves at most one canonical refill. A partially served
+        // refill needs its own call even when fewer than one hop remains.
+        let cached = self.drain_frames - self.drain_pos;
+        let calls = usize::from(cached != 0) + remaining.saturating_sub(cached).div_ceil(hop);
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        // Conventional IIR mode retains its legacy unknown-tail/no-drain path.
+        if !self.params.spectral_mode {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("Spectral hiss drain requires its initialized sample rate".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() || !output.len().is_multiple_of(self.channels) {
+            return Err("Spectral hiss drain requires a positive frame-aligned destination".into());
+        }
+        let remaining = self.drain_remaining.unwrap_or(
+            2 * SPECTRAL_HISS_FFT_SIZE - DRAIN_HOP + (DRAIN_HOP - self.source_phase) % DRAIN_HOP,
+        );
+        if self.drain_pos == self.drain_frames {
+            let frames = remaining.min(DRAIN_HOP);
+            self.drain_cache[..frames * self.channels].fill(0.0);
+            self.spectral_reducer
+                .process(&mut self.drain_cache[..frames * self.channels]);
+            self.drain_frames = frames;
+            self.drain_pos = 0;
+        }
+        let frames = (output.len() / self.channels).min(self.drain_frames - self.drain_pos);
+        let start = self.drain_pos * self.channels;
+        output[..frames * self.channels]
+            .copy_from_slice(&self.drain_cache[start..start + frames * self.channels]);
+        self.drain_pos += frames;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.params.spectral_mode {
+            TailLength::Finite((2 * SPECTRAL_HISS_FFT_SIZE - 1) as u64)
+        } else {
+            TailLength::Unknown
+        }
     }
 
     fn latency_samples(&self) -> usize {

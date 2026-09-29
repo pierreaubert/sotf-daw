@@ -1,3 +1,15 @@
+## Unreleased finite stream audit (2026-09-28)
+
+- Recover delayed program audio for proved finite response cases with bounded,
+  allocation-free drain, reset-required EOS and conservative tail metadata.
+- Preserve legacy drain behavior for recursive wet/color responses and document
+  the unresolved rendering policy rather than claiming a finite response.
+- Report the actual one-frame minimum for positive sub-sample lookahead (AUD075).
+
+## Unreleased audit corrections (2026-09-28)
+
+- Parametric scalar writes now validate borrowed cached metadata and call the existing DSP setter directly. Cold automation tests cover one, three and five bands, retained signal history and the static gain equation.
+
 # 0.5.16
 
 ## Review closure (2026-08-12)

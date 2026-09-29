@@ -221,6 +221,39 @@ Controls how the stereo image is distributed across the surround field.
 ## Tips & Best Practices
 
 - The upmixer adds latency equal to the FFT size (typically 2048 samples).
+- The analysis starts with a zero-prefilled half-window. Negative-time synthesis
+  samples are discarded, so startup includes the complete overlap needed to
+  preserve the first input sample. Main and high-resolution paths use the same
+  boundary convention; reset and FFT reconfiguration restart that timeline.
+- High-resolution gain ramps are attached to individual output frames when the
+  corresponding main analysis runs, so splitting an output hop across callbacks
+  does not change its ramp.
+
+### End of stream
+
+After the last input block, hosts call `drain` to release startup scheduling,
+partial analysis windows, main/HR overlap-add output, and the HR alignment delay.
+Its finite bound covers full transform support and may include trailing zeros.
+The crossover and decorrelation responses are applied within finite FFT blocks;
+they do not run recursive IIR audio histories.
+
+Subharmonic synthesis has recursive envelopes. If synthesis is enabled or an
+envelope is still releasing, rendering continues for fourteen effective release
+time constants plus one synthesis window after the finite bound, then clears
+the oscillator/envelopes. The effective time constant comes from the actual
+release coefficient `alpha`: `tau_samples = -1 / ln(1-alpha)`. This is a bounded
+render truncation policy, not exact recursive silence or a promised residual
+dB level. At ordinary sample rates, a 500 ms release adds approximately seven
+seconds plus one FFT window. If coefficient quantization makes `alpha` zero at
+an extreme rate, the configured release time provides the finite fallback cap.
+
+The first drain freezes the bound. New nonempty input and parameter changes
+require reset once draining starts. Repeated completed drains return zero
+frames; empty streams and hard bypass finish immediately. Any positive capacity
+of complete output frames is accepted. Invalid capacities leave state untouched.
+Drain performs fixed-hop zero-input processing into preallocated storage, then
+copies the requested frames, so changing destination capacity does not retime
+its gain controls. Unused destination samples remain untouched.
 - **Stereo Width** is the most important tuning parameter — 0.5 is balanced, lower values spread more to surrounds.
 - Use **Safety Cap** at 0 dB to prevent clipping in the output channels.
 - **HR Direct** improves center channel separation quality but uses more CPU.

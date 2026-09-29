@@ -188,10 +188,24 @@ fn zero_latency_head_preserves_tail_offset() {
     let input: Vec<f32> = (0..129)
         .map(|i| ((i * 11 % 23) as f32 - 11.0) / 23.0)
         .collect();
-    assert_matches_delayed_oracle(
-        NupcEngine::new_with_head(&ir, min_block, head_taps),
-        &input,
-        &ir,
-        0,
-    );
+    let engine = NupcEngine::new_with_head(&ir, min_block, head_taps);
+    assert_eq!(engine.latency_samples(), 0);
+    let latency = engine.latency_samples();
+    assert_matches_delayed_oracle(engine, &input, &ir, latency);
+}
+
+#[test]
+fn reported_latency_matches_impulse_for_each_head_size() {
+    for head_taps in [0, 1, 17, 65, 128] {
+        let ir = [1.0; 65];
+        let mut engine = NupcEngine::new_with_head(&ir, 64, head_taps);
+        let expected_latency = if head_taps == 0 { 64 } else { 0 };
+        assert_eq!(engine.latency_samples(), expected_latency);
+        let mut output = [0.0; 160];
+        for (index, sample) in output.iter_mut().enumerate() {
+            *sample = engine.process_sample(if index == 0 { 1.0 } else { 0.0 });
+        }
+        let first_signal = output.iter().position(|sample| sample.abs() > 0.5);
+        assert_eq!(first_signal, Some(engine.latency_samples()));
+    }
 }

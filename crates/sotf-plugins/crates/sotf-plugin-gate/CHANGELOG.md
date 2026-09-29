@@ -1,126 +1,70 @@
-# 0.5.12
+# Changelog
 
-## Latency transition hardening and detector performance
+## Unreleased
 
-- Prove that structural lookahead writes leave the live delay line and reported
-  latency bit-exactly unchanged, and that replacement instances render impulses
-  at their newly compiled 0/5/20 ms latency.
-- Make structural-change errors explicit that graph replacement is required and
-  live state/latency remain unchanged. Aligned crossfading between old and new
-  graph plans remains a host responsibility.
-- Keep the settled/open detector kernel in linear space and convert only the
-  final per-callback level retained for monitoring. Criterion measured median
-  improvements of 71%, 81%, and 64% at 256/512/1024 stereo frames; a repeat run
-  was stable within noise.
+### Preserve finite lookahead tails
 
-# 0.5.11
+- Emit the complete active lookahead audio delay at finite-stream end in all
+  modes, including external-key input with program-only drain output.
+- Report latency from the actual ring delay. Positive sub-frame lookahead uses
+  and reports one sample; zero-lookahead processing remains unchanged.
+- Add bounded, allocation/deallocation-free zero continuation with transactional
+  rate/shape/capacity checks. Empty-stream drain is a no-op; a nonempty stream
+  requires reset/reinitialization before new input or changed parameters.
+  Identical control snapshots are accepted while draining.
+- Reinitialization now resets existing envelopes, hold state, and histories as
+  well as preparing the delay/detectors, matching a fresh initialized instance.
 
-## Complete review remediation
 
-- Make construction and preset loading fallible and reject zero channels,
-  non-finite/out-of-range values, invalid choices, and unknown preset fields.
-- Require initialization, a matching process sample rate, and an exact checked
-  interleaved buffer length; sanitize non-finite programme and detector samples
-  before they can enter filter, detector, envelope, or lookahead state.
-- Treat channel linking, sidechain topology/detection, external sidechain mode,
-  and lookahead as graph-rebuild parameters. Exact no-op structural writes are
-  accepted, while actual live changes fail transactionally.
-- Make realtime setters and reset allocation-free, clamp active hold counters
-  when Hold decreases, and reset smoothers, diagnostics, filters, detectors,
-  lookahead, and scratch state deterministically.
-- Keep external sidechain samples read-only and flush only interleaved programme
-  samples. Publish immutable, independently owned diagnostic snapshots at a
-  sample-derived 30 Hz cadence.
-- Derive plugin version/defaults/ranges from crate metadata and `ParamSpec`, and
-  add lifecycle, buffer, factory, metadata, range, cache, reset, and allocation
-  regressions.
+### Upward expansion and ducking
 
-# 0.5.10
+Append structural Mode (index 15, default Downward) and realtime Max Boost
+(index 16, default 12 dB, range 0–24 dB). Old JSON retains the original
+downward processing path. Mode accepts typed labels or choice indices.
 
-## Fixes
+Upward and Duck use the reflected quadratic knee above threshold, with bounded
+positive boost or negative attenuation. Their lower knee edge activates the
+effect; hysteresis and hold retain the most recent target. Attack increases
+effect and release reduces it. Max Boost applies immediately when reduced;
+zero disables upward boost. Numeric output overflow is saturated to finite
+f32 values without imposing a full-scale audio limiter.
 
-- Mark the sidechain HPF order parameter as structural so its metadata matches
-  the runtime setter, which rejects topology changes after initialization.
+Add signed wet `gain_db`, `effect_active`, `gate_open`, and `mode`
+telemetry. Existing `attenuation_db` remains nonnegative; legacy `is_open`
+retains its low-attenuation meaning. See USAGE for exact gain and timing laws.
 
-# 0.5.9
+### Preserve the full soft knee during audio processing
 
-## Review follow-up
+Opening and hysteresis now use the upper knee edge (`threshold + knee/2`).
+Previously, opening at the knee's center bypassed its upper half: at a
+−20 dB threshold, 4:1 ratio, 6 dB knee, and zero hold/hysteresis, settled gain
+jumped from approximately −2.25 dB just below threshold to unity at threshold.
+The audio path now follows the continuous quadratic curve on both sides.
 
-- Keep linked-channel diagnostic attenuation aligned with the envelope applied to every output channel.
-- Add regression coverage for distinct per-channel input levels, attenuation snapshots, and the finite `range_db=0` safety ceiling.
+Soft-knee presets can therefore attenuate more around threshold and open later.
+Hysteresis remains the difference between opening and closing levels, with hold
+starting below the closing level. Hard-knee behavior (including defaults),
+parameter IDs, ordering, and ranges are unchanged. Threshold smoothing and live
+knee changes update the opening edge each sample without allocation.
 
-# 0.5.8
+### Corrected downward expansion ratio
 
-## Review remediation
+The Gate now interprets ratio `R:1` as **R dB of output change for each 1 dB
+of input change below threshold**, before the range cap. For a hard knee,
+`output_db = threshold_db + R * (input_db - threshold_db)` below threshold.
+Ratio 1:1 remains unity. The soft knee joins this curve continuously.
 
-- Treat `range_db=0` as unlimited attenuation with a finite numerical ceiling.
-- Validate factory parameters and reject invalid timing, modes, orders, NaN, and zero-channel instances.
-- Reject live topology/latency changes that require graph recompilation.
-- Publish independent input-level and attenuation diagnostics, at a sample-rate-derived cadence.
-- Reset sidechain filter state in place to avoid lifecycle allocations; use checked buffer arithmetic.
+Previously, attenuation used `1 - 1/R` instead of `R - 1`; even a displayed
+100:1 produced only a 1.99:1 output slope. At input −30 dB, threshold −20 dB,
+and ratio 4:1, output changes from −37.5 dB to −60 dB if range allows it.
 
-# 0.5.7
+**Existing presets become more attenuating below threshold.** JSON keys,
+defaults, parameter IDs, range and timing controls are unchanged. Presets
+have no ratio-law version field, so the corrected law applies on load.
+To recover the old attenuation curve, use `R_new = 2 - 1/R_old`; for example,
+old 4:1 corresponds to new 1.75:1. This mapping also preserves the soft-knee
+curve and range cap mathematically, subject to control rounding. Settled
+audio may differ slightly because of floating-point approximations.
 
-## Fixes
-
-- **Guard against buffer-length mismatch when external sidechain is enabled** —
-  `process_in_place` now returns an error instead of indexing out of bounds when
-  `sidechain_external` is toggled on but the input buffer does not contain the
-  expected sidechain channels.
-- **Document and test soft-knee shape** — `USAGE.md` now describes the Knee
-  parameter as a quadratic soft-knee transition around threshold, the code
-  documents the boundary behavior, and
-  `test_soft_knee_curve_is_continuous_at_boundaries` verifies continuity.
-
-# 0.5.6
-
-## Fixes
-
-- Precompute hold time in samples at initialization/sample-rate changes and when the Hold parameter is
-  updated, using rounded sample conversion instead of truncating every audio block.
-
-# 0.5.5
-
-## Fixes
-
-- `src/lib.rs:555-560, 600-605`: Attack/release coefficient selection was reversed. `target > envelope` means
-  attenuation is increasing (gate *closing*) and must use `release_coeff`; decreasing attenuation (gate
-  *opening*) must use `attack_coeff`. Previously, attack controlled closing speed and release controlled
-  opening speed — the opposite of every DAW convention.
-- `src/lib.rs:622`: In linked-channel mode `is_open` was always `true`. `envelope[1..]` retain their
-  initialized value of `0.0`, so `iter().any(|&a| a < 0.1)` never returned `false` even when the gate was
-  fully closed. Fixed by checking only `envelope[0]` (the linked master) when `link_channels` is set.
-- `src/lib.rs:633`: `flush_denormals_inplace` was called on the full buffer including the sidechain region
-  when external sidechain is active. Now restricted to the audio output region (`num_frames * channels`).
-
-## Deferred (noted from code review)
-
-- Performance: envelope follower in dB domain (per-sample `fast_log10`/`fast_pow10`). Requires cross-crate
-  redesign with `sotf-host::LevelDetector`. Deferred.
-- Performance: SIMD gain application. Deferred.
-- Performance: mono HPF for linked channels. Deferred.
-- New parameter: `rms_window_ms` to expose the RMS detection window. Requires a new parameter slot and
-  schema migration. Deferred.
-- New feature: sidechain listen/solo. Deferred.
-
----
-
-# 0.5.4
-
-## New
-
-- The sidechain is not steep enough: add steeper crossover
-- Added missing parameters for new plugins
-
-## Fixes
-
-- Fixed again parameters for plugins. TODO: think about doing it the hard way with a trait per plugin
-- Did a round of test fixing
-- Fixed a lot of tests and then the corresponing code
-
-## Changes
-
-- First step of automatic UI generation via a set of constraints; non-regression is built in with insta
-- Cleanup: another round of clippy
-- Massive update to plugins, see individual markdown plan for details (wave 3)
-- Massive update to plugins, see individual markdown plan for details
+Single-band and multiband Expander use the same correction; see their
+[migration notes](../sotf-plugin-multiband-expander/CHANGELOG.md).

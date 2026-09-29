@@ -24,6 +24,12 @@ pub struct SuperdirectiveBeamformer {
 }
 
 impl SuperdirectiveBeamformer {
+    #[cfg(test)]
+    pub(crate) fn install_test_weights(&mut self, weights: &[Vec<Complex<f32>>]) {
+        for (destination, source) in self.weights.iter_mut().zip(weights) {
+            destination.copy_from_slice(source);
+        }
+    }
     /// Compute superdirective weights for a given array and steering direction.
     ///
     /// # Arguments

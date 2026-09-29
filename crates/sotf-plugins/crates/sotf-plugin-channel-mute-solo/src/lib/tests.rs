@@ -107,6 +107,35 @@ fn test_params_serde_defaults() {
     assert!((params.fade_ms - default_fade_ms()).abs() < f32::EPSILON);
 }
 
+#[test]
+fn omitted_enabled_uses_schema_default_and_applies_channel_mute() {
+    for (json, expected_enabled) in [
+        (
+            r#"{"channel_states":[{"muted":true,"soloed":false}]}"#,
+            true,
+        ),
+        (
+            r#"{"enabled":false,"channel_states":[{"muted":true,"soloed":false}]}"#,
+            false,
+        ),
+    ] {
+        let params: ChannelMuteSoloParams = serde_json::from_str(json).unwrap();
+        assert_eq!(params.enabled, expected_enabled);
+        let mut plugin = ChannelMuteSoloPlugin::from_params(1, params);
+        let mut audio = [0.25; 17];
+        plugin
+            .process_in_place(&mut audio, &ProcessContext::new(48_000, 17))
+            .unwrap();
+        assert!(
+            audio
+                .iter()
+                .all(|sample| *sample == if expected_enabled { 0.0 } else { 0.25 })
+        );
+    }
+    let params: ChannelMuteSoloParams = serde_json::from_str("{}").unwrap();
+    assert_eq!(params.enabled, crate::params::Params::default().enabled);
+}
+
 /// The runtime/serde default must come from the canonical PARAMS schema.
 #[test]
 fn test_params_spec_fade_ms_default_matches_dsp_default() {

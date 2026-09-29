@@ -1,3 +1,10 @@
+## Unreleased audit correction (2026-09-28)
+
+- Declare zero native audio tail for the single-band matrix path. Preserve
+  unknown dual-band LR4 support and unchanged processing/drain behavior.
+- Verify exact zero continuation across 36 matrix configurations and retain
+  six recursive dual-band negative controls.
+
 # 0.5.9
 
 ## AllRAD/VBAP decoder

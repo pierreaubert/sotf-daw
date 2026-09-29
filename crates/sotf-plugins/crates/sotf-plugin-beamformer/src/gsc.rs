@@ -17,10 +17,11 @@ pub struct GscBeamformer {
     fbf_weights: Vec<f32>,
     /// Blocking matrix columns: [(num_mics-1) x num_mics] in flattened form
     blocking_matrix: Vec<Vec<f32>>,
-    /// NLMS adaptive filter weights [(num_mics-1) x filter_length]
-    adaptive_weights: Vec<Vec<f32>>,
-    /// Reference signal delay lines [(num_mics-1) x filter_length]
-    reference_buffers: Vec<Vec<f32>>,
+    /// NLMS weights and reference history use f64 so a finite f32 input cannot
+    /// overflow the blocking projection or its squared reference power.
+    adaptive_weights: Vec<Vec<f64>>,
+    /// Reference signal delay lines [(num_mics-1) x filter_length].
+    reference_buffers: Vec<Vec<f64>>,
     ref_write_pos: usize,
     filter_length: usize,
     /// NLMS step size
@@ -28,9 +29,9 @@ pub struct GscBeamformer {
     /// Regularization
     delta: f32,
     /// Pre-allocated scratch for reference signals (avoids per-sample allocation)
-    reference_scratch: Vec<f32>,
+    reference_scratch: Vec<f64>,
     /// Delay-aligned microphone samples shared by the fixed and blocking paths.
-    aligned_samples: Vec<f32>,
+    aligned_samples: Vec<f64>,
     /// Per-mic delay lines for fractional delay compensation
     delay_lines: Vec<Vec<f32>>,
     delay_write_pos: usize,
@@ -113,6 +114,33 @@ impl GscBeamformer {
     /// Single beamformed output sample
     #[allow(clippy::needless_range_loop)]
     pub fn process_sample(&mut self, mic_samples: &[f32]) -> f32 {
+        self.process_sample_with_adaptation(mic_samples, true)
+    }
+
+    pub(crate) fn process_sample_frozen(&mut self, mic_samples: &[f32]) -> f32 {
+        self.process_sample_with_adaptation(mic_samples, false)
+    }
+
+    pub(crate) fn finite_support_frames(&self) -> usize {
+        self.latency_samples() + self.filter_length.saturating_sub(1)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn install_test_weights(&mut self, weights: &[f32]) {
+        assert_eq!(self.adaptive_weights.len(), 1);
+        assert_eq!(self.adaptive_weights[0].len(), weights.len());
+        for (destination, &source) in self.adaptive_weights[0].iter_mut().zip(weights) {
+            *destination = f64::from(source);
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn learned_snapshot(&self) -> Vec<Vec<f64>> {
+        self.adaptive_weights.clone()
+    }
+
+    #[allow(clippy::needless_range_loop)]
+    fn process_sample_with_adaptation(&mut self, mic_samples: &[f32], adapt: bool) -> f32 {
         let m = self.num_mics.min(mic_samples.len());
         let num_refs = self.blocking_matrix.len();
 
@@ -122,20 +150,20 @@ impl GscBeamformer {
         }
 
         // 1. Fixed beamformer output: delay-compensated sum
-        let mut fbf_output = 0.0f32;
+        let mut fbf_output = 0.0_f64;
         for i in 0..m {
             let delay = self.steering_delays[i];
             let int_delay = delay.floor() as usize;
-            let frac = delay - delay.floor();
+            let frac = f64::from(delay - delay.floor());
             let buf_len = self.delay_lines[i].len();
             let idx0 = (self.delay_write_pos + buf_len - int_delay) % buf_len;
             // Fractional delay lies between the integer-delayed sample and
             // the next older sample in ring time.
             let idx1 = (idx0 + buf_len - 1) % buf_len;
-            let delayed_sample =
-                self.delay_lines[i][idx0] * (1.0 - frac) + self.delay_lines[i][idx1] * frac;
+            let delayed_sample = f64::from(self.delay_lines[i][idx0]) * (1.0 - frac)
+                + f64::from(self.delay_lines[i][idx1]) * frac;
             self.aligned_samples[i] = delayed_sample;
-            fbf_output += delayed_sample * self.fbf_weights[i];
+            fbf_output += delayed_sample * f64::from(self.fbf_weights[i]);
         }
 
         // Advance delay write position
@@ -146,7 +174,7 @@ impl GscBeamformer {
         self.reference_scratch[..num_refs].fill(0.0);
         for (r, row) in self.blocking_matrix.iter().enumerate() {
             for i in 0..m {
-                self.reference_scratch[r] += row[i] * self.aligned_samples[i];
+                self.reference_scratch[r] += f64::from(row[i]) * self.aligned_samples[i];
             }
         }
         let references = &self.reference_scratch[..num_refs];
@@ -161,8 +189,8 @@ impl GscBeamformer {
 
         // 3. NLMS adaptive noise canceller
         // Compute noise estimate: y = Σ_r w_r^T * u_r
-        let mut noise_estimate = 0.0f32;
-        let mut total_ref_power = self.delta;
+        let mut noise_estimate = 0.0_f64;
+        let mut total_ref_power = f64::from(self.delta);
 
         for r in 0..num_refs {
             let mut buf_idx = self.ref_write_pos;
@@ -181,14 +209,21 @@ impl GscBeamformer {
         let error = fbf_output - noise_estimate;
 
         // NLMS weight update: w += μ * e * u / (||u||² + δ)
-        let instantaneous_reference_power: f32 = references.iter().map(|value| value * value).sum();
-        let target_dominant = instantaneous_reference_power < fbf_output * fbf_output * 0.01;
-        if !target_dominant {
-            let step = self.mu * error / total_ref_power;
+        let instantaneous_reference_power: f64 = references.iter().map(|value| value * value).sum();
+        let target_dominant =
+            instantaneous_reference_power < fbf_output * fbf_output * f64::from(0.01_f32);
+        if adapt && !target_dominant {
+            let step = f64::from(self.mu) * error / total_ref_power;
             for r in 0..num_refs {
                 let mut buf_idx = self.ref_write_pos;
                 for j in 0..self.filter_length {
-                    self.adaptive_weights[r][j] += step * self.reference_buffers[r][buf_idx];
+                    let candidate =
+                        self.adaptive_weights[r][j] + step * self.reference_buffers[r][buf_idx];
+                    // Invalid input or arithmetic must not poison retained
+                    // coefficients after the finite reference history clears.
+                    if candidate.is_finite() {
+                        self.adaptive_weights[r][j] = candidate;
+                    }
                     buf_idx = if buf_idx == 0 {
                         self.filter_length - 1
                     } else {
@@ -201,7 +236,14 @@ impl GscBeamformer {
         // Advance write position
         self.ref_write_pos = (self.ref_write_pos + 1) % self.filter_length;
 
-        error
+        // Cancellation can exceed the f32 range even when all inputs are
+        // finite. Saturate only at the public sample boundary, preserving
+        // the wider signal and adaptation internally.
+        if error.is_finite() {
+            error.clamp(f64::from(f32::MIN), f64::from(f32::MAX)) as f32
+        } else {
+            0.0
+        }
     }
 
     /// Reset adaptive weights.
@@ -396,7 +438,7 @@ mod tests {
             let mut gsc = GscBeamformer::new(4, &compensation, 32, 0.03);
             let mut signal_energy = 0.0_f32;
             let mut error_energy = 0.0_f32;
-            let mut reference_energy = 0.0_f32;
+            let mut reference_energy = 0.0_f64;
             for frame in 0..20_000 {
                 let samples: Vec<f32> = propagation
                     .iter()
@@ -413,7 +455,7 @@ mod tests {
                             .sin();
                     signal_energy += expected * expected;
                     error_energy += (output - expected).powi(2);
-                    reference_energy += gsc.reference_scratch.iter().map(|x| x * x).sum::<f32>();
+                    reference_energy += gsc.reference_scratch.iter().map(|x| x * x).sum::<f64>();
                 }
             }
             assert!(
@@ -422,9 +464,9 @@ mod tests {
                 error_energy / signal_energy
             );
             assert!(
-                reference_energy / signal_energy < 1e-4,
+                reference_energy / f64::from(signal_energy) < 1e-4,
                 "angle={angle}, target leakage={}",
-                reference_energy / signal_energy
+                reference_energy / f64::from(signal_energy)
             );
         }
     }

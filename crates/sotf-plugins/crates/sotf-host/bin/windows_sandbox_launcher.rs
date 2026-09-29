@@ -86,12 +86,7 @@ mod common {
     }
 
     /// Flags the launcher consumes itself; everything else still forwards.
-    type SkimmedForwarded = (
-        Option<String>,
-        Option<PathBuf>,
-        Option<String>,
-        bool,
-    );
+    type SkimmedForwarded = (Option<String>, Option<PathBuf>, Option<String>, bool);
 
     /// Pull launcher-relevant flags out of the forwarded worker args without
     /// removing them: the worker still needs every flag it was given.
@@ -272,7 +267,11 @@ mod common {
             push(dir.to_path_buf(), true, false);
         }
         // The third-party plugin bundle itself.
-        push(descriptor_path.to_path_buf(), is_dir(descriptor_path), false);
+        push(
+            descriptor_path.to_path_buf(),
+            is_dir(descriptor_path),
+            false,
+        );
 
         if let Some(policy) = policy {
             use sotf_host::PluginSandboxFileGrant;
@@ -396,10 +395,8 @@ mod windows {
             super::common::append_quoted(&mut cmdline, arg);
         }
 
-        let mut env: Vec<(OsString, OsString)> = vec![(
-            OsString::from("SOTF_PLUGIN_WORKER"),
-            OsString::from("1"),
-        )];
+        let mut env: Vec<(OsString, OsString)> =
+            vec![(OsString::from("SOTF_PLUGIN_WORKER"), OsString::from("1"))];
         env.extend(
             args.worker_env
                 .iter()
@@ -466,7 +463,10 @@ mod windows {
                     AccessMask(FILE_TRAVERSE),
                 )
                 .map_err(|err| {
-                    format!("failed to grant traverse on '{}': {err}", ancestor.display())
+                    format!(
+                        "failed to grant traverse on '{}': {err}",
+                        ancestor.display()
+                    )
                 })?;
             }
         }
@@ -544,8 +544,8 @@ mod tests {
 
     #[test]
     fn rejects_missing_worker_binary() {
-        let err = LauncherArgs::parse(["--descriptor-json".to_string(), "{}".to_string()])
-            .unwrap_err();
+        let err =
+            LauncherArgs::parse(["--descriptor-json".to_string(), "{}".to_string()]).unwrap_err();
 
         assert!(err.contains("missing --sandbox-worker-binary"));
     }

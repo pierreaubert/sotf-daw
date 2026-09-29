@@ -402,6 +402,7 @@ fn from_params_wires_all_fields() {
         mix: 0.8,
         feed_forward: true,
         link_amount: 0.75,
+        oversampling: 0,
     };
     let plugin = LimiterPlugin::from_params(2, params);
     assert_eq!(
@@ -480,10 +481,10 @@ fn isp_guarantee_rejects_uncontrollable_configurations() {
     );
 
     let mut plugin = LimiterPlugin::new(1, -3.0, 50.0, 5.0, false);
-    plugin.initialize(48_000).unwrap();
     plugin
         .set_parameter(ParameterId::from("isp_mode"), ParameterValue::Bool(true))
         .unwrap();
+    plugin.initialize(48_000).unwrap();
     assert!(
         plugin
             .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))

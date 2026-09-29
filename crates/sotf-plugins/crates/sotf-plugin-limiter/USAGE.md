@@ -45,6 +45,33 @@ Choose between hard limiting and a one-dB, dB-domain soft knee in the gain compu
 |-----------|-------|---------|------|-------------|
 | Mix | 0 to 100 | 100 | % | Dry/wet blend. 0% = bypass, 100% = fully limited |
 
+### True Peak and ISP Limit
+
+`true_peak` uses reconstructed inter-sample peaks to drive the input limiter.
+`isp_mode` additionally checks the audio after gain reduction and corrects newly
+created peaks before they leave an output delay. Both stages share gain across
+fully linked channels; independent channels retain separate gain histories.
+
+ISP Limit requires hard limiting and 100% wet mix. At 1x its output stage adds 18 frames
+below 96 kHz, 36 frames from 96 kHz through rates below 192 kHz, and zero frames
+at 192 kHz or above. The plugin reports the combined input and output delay to
+the host. Audio below the ceiling passes through this delay without attenuation.
+Changing ISP Limit requires a graph rebuild when it changes latency.
+
+### Audio Oversampling
+
+| Choice | JSON `oversampling` | Prepared latency in native frames |
+|--------|----------------------|-----------------------------------|
+| 1x (default) | 0 | Existing input lookahead plus optional ISP output delay |
+| 2x | 1 | 512 + input lookahead + optional 4 × detector delay |
+| 4x | 2 | 512 + input lookahead + optional 4 × detector delay |
+
+Choose before initialization; changing the factor requires a graph rebuild.
+The high-rate wet core is followed by a native-rate output protector. Dry mix
+is aligned to the complete reported delay. Only fully wet output is bounded
+by the ceiling. See [the processing, EOS, and gain-meter conventions](README.md#prepared-audio-oversampling)
+for automation timing and finite-stream use.
+
 ## Demos
 
 ### Demo: Transparent Peak Control
@@ -149,9 +176,9 @@ Choose between hard limiting and a one-dB, dB-domain soft knee in the gain compu
 ## Tips & Best Practices
 
 - Place the limiter last in the plugin chain — after EQ, compression, and other processing.
-- The lookahead adds latency equal to the lookahead time. Use 3-5 ms for a good balance.
-- For true peak limiting (inter-sample peaks), set threshold to -1 dBTP or lower.
-- ISP limiting requires hard mode, 100% wet mix, and at least six samples of lookahead.
+- Input lookahead adds the requested delay; ISP Limit adds the output correction delay described above.
+- Enable ISP Limit for output true peak control; choose the ceiling required by the delivery format.
+- ISP limiting requires at least six input lookahead frames below 96 kHz, twelve at 96-191 kHz, and none at 192 kHz or above.
 - Lookahead changes require a graph rebuild so host latency compensation remains correct.
 - If the GR meter never returns to 0, the input is too hot — reduce gain before the limiter.
 - Release time affects pumping: too short = audible pumping, too long = sustained gain reduction.
@@ -163,7 +190,9 @@ Input → Lookahead Buffer → Peak Detection (instant attack)
                                ↓
               Envelope Follower (release smoothing)
                                ↓
-Input (delayed) → Gain Reduction (soft/hard knee) → Safety Ceiling → Mix → Output
+Input (delayed) → Gain Reduction (soft/hard knee) → Safety Ceiling → Mix
+                                                                   ↓
+                                  Optional ISP Output Delay + Correction → Output
 ```
 
 The lookahead buffer delays the audio path while the peak detector sees the signal ahead of time. This allows gain reduction to begin before the peak arrives.

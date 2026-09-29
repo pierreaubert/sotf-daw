@@ -148,6 +148,12 @@ pub const PARAMS: &[ParamSpec] = &[
     .setup()
     .structural()
     .doc("Use external signal for detection"),
+    ParamSpec::float(
+        "Range", "range_db", 120.0, 0.0, 120.0, 0.5, "dB", "Dynamics",
+    )
+    .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
+    ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Timing")
+        .doc("Keep gain reduction at its peak before release"),
 ];
 
 /// Single-band compressor UI layout (backward compat, referencing PARAMS indices).
@@ -179,11 +185,19 @@ pub const SINGLE_BAND_LAYOUT: PluginLayout = PluginLayout {
         ControlGroup::new(
             "TIMING",
             "Timing detail",
-            &[ControlSpec::knob(12), ControlSpec::toggle(13).hide()],
+            &[
+                ControlSpec::knob(12),
+                ControlSpec::toggle(13).hide(),
+                ControlSpec::knob(17),
+            ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.3)),
-        ControlGroup::new("RESPONSE", "Knee & response", &[ControlSpec::slider(4)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.4)),
+        ControlGroup::new(
+            "RESPONSE",
+            "Knee & response",
+            &[ControlSpec::slider(4), ControlSpec::slider(16)],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
             "OUTPUT",
             "Output leveling",
@@ -284,6 +298,10 @@ pub const GLOBAL_PARAMS: &[ParamSpec] = multiband_global_params![
     )
     .scaled(100.0)
     .doc("Channel linking: 0%=independent, 100%=linked"),
+    ParamSpec::float("Range", "range_db", 120.0, 0.0, 120.0, 0.5, "dB", "Global")
+        .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
+    ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Global")
+        .doc("Keep gain reduction at its peak before release"),
 ];
 
 // ============================================================================
@@ -337,16 +355,20 @@ pub const BAND_TEMPLATE: &[ParamSpec] = &[
         .doc("Auto-compensate band gain"),
     ParamSpec::bool_labeled("Active", "active", true, "Active", "Passive", "Band")
         .doc("Enable band processing"),
+    ParamSpec::float("Range", "range_db", 120.0, 0.0, 120.0, 0.5, "dB", "Band")
+        .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
+    ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Band")
+        .doc("Keep gain reduction at its peak before release"),
 ];
 
 // ============================================================================
 // UI Layout
 // ============================================================================
 
-/// Multiband Compressor: GLOBAL_PARAMS 0-16, BAND_TEMPLATE 0-9 per band.
+/// Multiband Compressor: GLOBAL_PARAMS 0-18, BAND_TEMPLATE 0-11 per band.
 /// Global: 0=bands, 1=preset, 2-5=crossovers, 6=threshold, 7=ratio,
 /// 8=attack, 9=release, 10=knee, 11=mix, 12=link_channels, 13=lookahead, 14=ms_mode,
-/// 15=sidechain_tilt_db, 16=link_amount
+/// 15=sidechain_tilt_db, 16=link_amount, 17=range_db, 18=hold_ms
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::knob(0),     // num_bands
@@ -367,6 +389,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(6),  // threshold
                 ControlSpec::slider(7),  // ratio
                 ControlSpec::slider(10), // knee
+                ControlSpec::slider(17), // range
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -376,6 +399,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             &[
                 ControlSpec::slider(8),  // attack
                 ControlSpec::slider(9),  // release
+                ControlSpec::knob(18),   // hold
                 ControlSpec::knob(13),   // lookahead
                 ControlSpec::toggle(14), // ms_mode
             ],
@@ -438,6 +462,14 @@ pub fn default_release_ms() -> f32 {
 
 pub fn default_knee_db() -> f32 {
     pk(PARAMS, "knee").default_f64() as f32
+}
+
+pub fn default_range_db() -> f32 {
+    pk(PARAMS, "range_db").default_f64() as f32
+}
+
+pub fn default_hold_ms() -> f32 {
+    pk(PARAMS, "hold_ms").default_f64() as f32
 }
 
 pub fn default_link_channels() -> bool {

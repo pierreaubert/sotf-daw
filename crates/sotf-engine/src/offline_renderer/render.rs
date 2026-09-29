@@ -10,6 +10,7 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use sotf_plugins::{DawHost, Plugin, ProcessContext, ResamplerPlugin};
 use std::io::{Seek, Write};
 use std::path::Path;
+use std::time::Duration;
 
 const OFFLINE_DITHER_SEED: u64 = 0x6f66_666c_696e_655f;
 
@@ -35,6 +36,30 @@ impl HostOutputState {
 /// should isolate them before passing the callback here.
 pub fn render_offline(
     config: &OfflineRenderConfig,
+    on_progress: Option<&mut dyn FnMut(&RenderProgress)>,
+) -> Result<(), String> {
+    render_offline_with_tail(config, Duration::ZERO, on_progress)
+}
+
+/// Render a source with an explicitly timed extra effect tail.
+///
+/// After the program ends, feed silence through the unchanged plugin chain for
+/// `tail_duration`, rounded up to whole frames at the export sample rate.
+/// Algorithmic signal delay is compensated as in [`render_offline`]. Recursive
+/// effects continue naturally until this requested endpoint; no silence
+/// threshold or finite-response claim is implied. [`Duration::ZERO`] preserves
+/// the original export duration. Existing configuration literals remain valid.
+///
+/// # Errors
+/// Returns an error for unrepresentable durations, invalid configuration, or
+/// decoder, plugin, and output-file failures.
+///
+/// # Panics
+/// A panic in the synchronous progress callback propagates to the caller and
+/// can leave an incomplete output file, as with [`render_offline`].
+pub fn render_offline_with_tail(
+    config: &OfflineRenderConfig,
+    tail_duration: Duration,
     mut on_progress: Option<&mut dyn FnMut(&RenderProgress)>,
 ) -> Result<(), String> {
     if config.frame_size == 0 {
@@ -50,12 +75,35 @@ pub fn render_offline(
     if output_rate == 0 {
         return Err("Offline render output sample rate must be greater than zero".to_string());
     }
+    let tail_frames = tail_duration_frames(tail_duration, output_rate)?;
+    // Validate known total duration before creating or truncating the output.
+    let progress_total = source_spec
+        .total_frames
+        .map(|frames| {
+            u64::try_from(
+                (u128::from(frames) * u128::from(output_rate)).div_ceil(u128::from(source_rate))
+                    + tail_frames as u128,
+            )
+        })
+        .transpose()
+        .map_err(|_| "Offline progress duration exceeds the frame counter")?;
 
     let (mut host, _warnings) = build_plugin_host(&config.plugins, output_rate, input_channels)
         .map_err(|diagnostic| diagnostic.message)?;
+    // The file rate is an export contract, even when the configured chain
+    // changes its internal clock. Normalize the terminal stream before
+    // measuring latency, trimming duration, or constructing the WAV header.
+    let terminal_rate = host.output_sample_rate(output_rate);
+    if terminal_rate != output_rate {
+        host.add_plugin(Box::new(ResamplerPlugin::new(
+            host.output_channels(),
+            terminal_rate,
+            output_rate,
+            config.frame_size,
+        )?))?;
+    }
     host.build()?;
     let output_channels = host.output_channels();
-    let mut host_output = HostOutputState::new(host.total_latency_samples());
 
     let wav_spec = wav_spec(&config.format, output_channels, output_rate)?;
     let mut writer = WavWriter::create(&config.output_path, wav_spec)
@@ -72,19 +120,17 @@ pub fn render_offline(
             config.frame_size,
         )?)
     };
-    let resampler_delay = resampler
-        .as_ref()
-        .map_or(0, ResamplerPlugin::output_delay_frames);
-    let mut resampler_delay_remaining = resampler_delay;
-    let mut resampled_frames_written = 0usize;
+    let resampler_delay = resampler.as_ref().map_or(0.0, Plugin::signal_delay_samples);
+    // Keep the source converter's leading output in the stream. Combining
+    // its delay with the chain avoids rounding and trimming at every stage.
+    let mut host_output = HostOutputState::new(round_signal_delay(
+        resampler_delay + serial_signal_delay(&host, output_rate)?,
+    )?);
 
     let mut decode_buf = DecodedAudio::new(source_spec.clone());
     let mut resample_output = Vec::<f32>::new();
     let mut process_output = Vec::<f32>::new();
     let mut source_frames_decoded = 0usize;
-    let progress_total = source_spec
-        .total_frames
-        .map(|frames| ((frames as f64 * output_rate as f64 / source_rate as f64).ceil()) as u64);
 
     loop {
         decode_buf.clear();
@@ -104,20 +150,18 @@ pub fn render_offline(
                 &mut resample_output,
                 &ProcessContext::new(source_rate, decoded_frames),
             )?;
-            process_resampled_frames(
+            process_and_write(
                 &resample_output[..produced * input_channels],
                 produced,
                 input_channels,
-                &mut resampler_delay_remaining,
-                usize::MAX,
                 &mut host,
                 config.frame_size,
                 &mut process_output,
                 &mut writer,
                 wav_spec,
                 &mut dither,
-                &mut resampled_frames_written,
                 &mut host_output,
+                usize::MAX,
             )?;
         } else {
             process_and_write(
@@ -143,12 +187,31 @@ pub fn render_offline(
         }
     }
 
+    let program_frames = usize::try_from(
+        (source_frames_decoded as u128 * u128::from(output_rate)).div_ceil(u128::from(source_rate)),
+    )
+    .map_err(|_| "Offline program duration exceeds addressable frames")?;
+    let target_frames = program_frames
+        .checked_add(tail_frames)
+        .ok_or("Offline total duration exceeds addressable frames")?;
     if let Some(resampler) = resampler.as_mut() {
-        let expected_frames = ((source_frames_decoded as f64 * output_rate as f64
-            / source_rate as f64)
-            .ceil()) as usize;
+        // Keep the converter in the path until the compensated export ends.
+        // Downstream filters can still need its response after the source's
+        // own delay has elapsed. Scheduling latency bounds work only; it must
+        // not be trimmed from the concatenated signal.
+        let maximum_blocks = continuation_blocks(
+            &host_output,
+            target_frames,
+            host.total_latency_samples() as u128 + resampler.latency_samples() as u128,
+            source_rate,
+            output_rate,
+            config.frame_size,
+        )?;
         let silence = vec![0.0f32; config.frame_size * input_channels];
-        while resampled_frames_written < expected_frames {
+        for _ in 0..maximum_blocks {
+            if host_output.frames_written >= target_frames {
+                break;
+            }
             let max_frames = resampler.output_frames_for_input(config.frame_size);
             resample_output.resize(max_frames.saturating_mul(input_channels), 0.0);
             let produced = resampler.process(
@@ -159,41 +222,39 @@ pub fn render_offline(
             if produced == 0 {
                 continue;
             }
-            let remaining = expected_frames - resampled_frames_written;
-            process_resampled_frames(
+            process_and_write(
                 &resample_output[..produced * input_channels],
                 produced,
                 input_channels,
-                &mut resampler_delay_remaining,
-                remaining,
                 &mut host,
                 config.frame_size,
                 &mut process_output,
                 &mut writer,
                 wav_spec,
                 &mut dither,
-                &mut resampled_frames_written,
                 &mut host_output,
+                target_frames,
             )?;
         }
-    }
-
-    let program_frames = if resampler.is_some() {
-        resampled_frames_written
+        if host_output.frames_written < target_frames {
+            return Err(format!(
+                "Source conversion and plugin host did not reach the requested {target_frames} frames (wrote {})",
+                host_output.frames_written
+            ));
+        }
     } else {
-        source_frames_decoded
-    };
-    drain_host_to_duration(
-        &mut host,
-        input_channels,
-        config.frame_size,
-        &mut process_output,
-        &mut writer,
-        wav_spec,
-        &mut dither,
-        &mut host_output,
-        program_frames,
-    )?;
+        drain_host_to_duration(
+            &mut host,
+            input_channels,
+            config.frame_size,
+            &mut process_output,
+            &mut writer,
+            wav_spec,
+            &mut dither,
+            &mut host_output,
+            target_frames,
+        )?;
+    }
 
     if let Some(ref mut callback) = on_progress {
         callback(&RenderProgress {
@@ -207,45 +268,67 @@ pub fn render_offline(
         .map_err(|e| format!("Failed to finalize output: {e}"))
 }
 
-#[allow(clippy::too_many_arguments)]
-fn process_resampled_frames<W: Write + Seek>(
-    samples: &[f32],
-    frames: usize,
-    channels: usize,
-    delay_remaining: &mut usize,
-    maximum_frames: usize,
-    host: &mut DawHost,
+fn tail_duration_frames(duration: Duration, sample_rate: u32) -> Result<usize, String> {
+    let frames = u128::from(duration.as_secs()) * u128::from(sample_rate)
+        + (u128::from(duration.subsec_nanos()) * u128::from(sample_rate)).div_ceil(1_000_000_000);
+    usize::try_from(frames).map_err(|_| "Offline tail duration exceeds addressable frames".into())
+}
+
+/// Bound continuation work using both signal delay and chunk waiting. Rates
+/// convert the complete budget once, rounding upwards in the supplied-input
+/// clock. This budget does not determine which audio samples are exported.
+fn continuation_blocks(
+    state: &HostOutputState,
+    target_frames: usize,
+    scheduling_frames: u128,
+    input_rate: u32,
+    output_rate: u32,
     frame_size: usize,
-    process_output: &mut Vec<f32>,
-    writer: &mut WavWriter<W>,
-    wav_spec: WavSpec,
-    dither: &mut TpdfDither,
-    frames_written: &mut usize,
-    host_output: &mut HostOutputState,
-) -> Result<(), String> {
-    let skipped = frames.min(*delay_remaining);
-    *delay_remaining -= skipped;
-    let available = frames.saturating_sub(skipped).min(maximum_frames);
-    if available == 0 {
-        return Ok(());
+) -> Result<usize, String> {
+    let output_frames = target_frames.saturating_sub(state.frames_written) as u128
+        + state.latency_remaining as u128
+        + scheduling_frames;
+    let input_frames = (output_frames * u128::from(input_rate)).div_ceil(u128::from(output_rate));
+    usize::try_from(input_frames.div_ceil(frame_size as u128))
+        .ok()
+        .and_then(|blocks| blocks.checked_add(8))
+        .ok_or_else(|| "Offline continuation exceeds addressable blocks".to_owned())
+}
+
+/// Sum fractional group delays in the terminal clock without per-stage rounding.
+pub(super) fn serial_signal_delay(host: &DawHost, input_rate: u32) -> Result<f64, String> {
+    let mut rate = input_rate;
+    let mut seconds = 0.0;
+    for index in 0..host.plugin_count() {
+        let plugin = host
+            .get_plugin(index)
+            .ok_or("Offline plugin chain is incomplete")?;
+        rate = plugin.output_sample_rate(rate);
+        if rate == 0 {
+            return Err("Offline plugin output sample rate must be positive".to_owned());
+        }
+        let delay = plugin.signal_delay_samples();
+        if !delay.is_finite() || delay < 0.0 {
+            return Err(format!(
+                "Offline plugin {index} declares invalid signal delay {delay}"
+            ));
+        }
+        seconds += delay / f64::from(rate);
     }
-    let start = skipped * channels;
-    let end = start + available * channels;
-    process_and_write(
-        &samples[start..end],
-        available,
-        channels,
-        host,
-        frame_size,
-        process_output,
-        writer,
-        wav_spec,
-        dither,
-        host_output,
-        usize::MAX,
-    )?;
-    *frames_written = frames_written.saturating_add(available);
-    Ok(())
+    let output_frames = seconds * f64::from(rate);
+    if !output_frames.is_finite() || output_frames >= usize::MAX as f64 {
+        return Err("Offline signal delay exceeds addressable frames".to_owned());
+    }
+    Ok(output_frames)
+}
+
+pub(super) fn round_signal_delay(delay: f64) -> Result<usize, String> {
+    if !delay.is_finite() || delay < 0.0 || delay >= usize::MAX as f64 {
+        return Err("Offline signal delay must be finite, nonnegative, and addressable".to_owned());
+    }
+    // Nearest-frame trimming leaves at most half a frame of estimated delay.
+    // This is sample-grid alignment, not a fractional-delay filter.
+    Ok(delay.round() as usize)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -312,10 +395,14 @@ fn drain_host_to_duration<W: Write + Seek>(
     }
 
     let silence = vec![0.0f32; frame_size * input_channels];
-    let frames_to_flush = state
-        .latency_remaining
-        .saturating_add(target_frames - state.frames_written);
-    let maximum_blocks = frames_to_flush.div_ceil(frame_size).saturating_add(8);
+    let maximum_blocks = continuation_blocks(
+        state,
+        target_frames,
+        host.total_latency_samples() as u128,
+        wav_spec.sample_rate,
+        wav_spec.sample_rate,
+        frame_size,
+    )?;
     for _ in 0..maximum_blocks {
         process_and_write(
             &silence,

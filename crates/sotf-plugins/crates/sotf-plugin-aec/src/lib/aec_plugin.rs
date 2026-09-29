@@ -8,12 +8,21 @@ use rustfft::num_complex::Complex;
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use std::any::Any;
 use std::sync::Arc;
 
+#[derive(Default)]
+struct StreamDrain {
+    has_input: bool,
+    remaining: Option<usize>,
+    silence: Vec<f32>,
+}
+
 pub struct AecPlugin {
+    drain_state: StreamDrain,
     pub(super) sample_rate: u32,
     pub(super) aec: TwoPathAec,
     pub(super) post_filter: ResidualEchoSuppressor,
@@ -51,6 +60,7 @@ pub struct AecPlugin {
 impl AecPlugin {
     pub fn new(sample_rate: u32) -> Self {
         let block_size = DEFAULT_BLOCK_SIZE;
+        let step_size = AecPluginParams::default().step_size as f32;
         let echo_tail_samples = (DEFAULT_ECHO_TAIL_MS / 1000.0 * sample_rate as f32) as usize;
 
         let fft_size = block_size * 2;
@@ -59,8 +69,18 @@ impl AecPlugin {
         let scratch_len = fft_inverse.get_scratch_len();
 
         let mut p = Self {
+            drain_state: StreamDrain {
+                silence: vec![0.0; block_size * 2],
+                ..Default::default()
+            },
             sample_rate,
-            aec: TwoPathAec::new(block_size, echo_tail_samples, 0.3, 0.7),
+            aec: TwoPathAec::new_with_sample_rate(
+                block_size,
+                echo_tail_samples,
+                step_size * 0.6,
+                step_size,
+                sample_rate,
+            ),
             post_filter: ResidualEchoSuppressor::new_with_timing(
                 block_size + 1,
                 1.5,
@@ -73,7 +93,7 @@ impl AecPlugin {
             post_filter_mix_target: 1.0,
             post_filter_mix_step: 1.0 / (sample_rate as f32 * 0.010).max(1.0),
             echo_tail_ms: DEFAULT_ECHO_TAIL_MS,
-            step_size: 0.5,
+            step_size,
             block_size,
             mic_buffer: vec![0.0; block_size],
             ref_buffer: vec![0.0; block_size],
@@ -188,6 +208,8 @@ impl AecPlugin {
     }
 
     fn reset_streaming_state(&mut self) {
+        self.drain_state.has_input = false;
+        self.drain_state.remaining = None;
         self.input_fill = 0;
         self.mic_buffer.fill(0.0);
         self.ref_buffer.fill(0.0);
@@ -224,6 +246,9 @@ impl Plugin for AecPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_state.remaining.is_some() {
+            return Err("AecPlugin: reset before changing parameters after drain".into());
+        }
         self.validate_parameter(&id, &value)?;
         if id == self.param_echo_tail_ms {
             let val = value.as_float().unwrap_or(DEFAULT_ECHO_TAIL_MS);
@@ -302,6 +327,125 @@ impl Plugin for AecPlugin {
         input: &[f32],
         output: &mut [f32],
         context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("AecPlugin process sample-rate mismatch".into());
+        }
+        if context.num_frames > 0 && self.drain_state.remaining.is_some() {
+            return Err("AecPlugin: reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(input, output, context, false)?;
+        self.drain_state.has_input |= frames > 0;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.block_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.drain_state.has_input {
+            self.drain_state.remaining.unwrap_or_else(|| {
+                let phase = if self.input_fill == 0 {
+                    self.block_size
+                } else {
+                    self.input_fill
+                };
+                self.aec.reference_support_frames() + 2 * self.block_size - phase
+            })
+        } else {
+            0
+        };
+        std::num::NonZeroU64::new(remaining.div_ceil(self.block_size).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.sample_rate {
+            return Err("AecPlugin drain sample-rate mismatch".into());
+        }
+        if !self.drain_state.has_input || self.drain_state.remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if output.is_empty() {
+            return Err("AecPlugin drain needs at least one mono output frame".into());
+        }
+        // Validate before entering EOS: a rejected capacity/rate request must
+        // neither freeze learning nor consume a pending real input prefix.
+        let remaining = self.drain_state.remaining.unwrap_or_else(|| {
+            let phase = if self.input_fill == 0 {
+                self.block_size
+            } else {
+                self.input_fill
+            };
+            // Flush the final partial block, all P overlapping reference
+            // partitions, and the queued output block. A frozen spectral
+            // suppressor may spread energy to the end of that final block.
+            self.aec.reference_support_frames() + 2 * self.block_size - phase
+        });
+        let frames = remaining
+            .min(output.len())
+            .min(self.drain_output_frames_max());
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        let silence = std::mem::take(&mut self.drain_state.silence);
+        let result = self.process_stream(
+            &silence[..frames * 2],
+            &mut output[..frames],
+            &drain_context,
+            true,
+        );
+        self.drain_state.silence = silence;
+        result?;
+        self.drain_state.remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn latency_samples(&self) -> usize {
+        self.block_size
+    }
+
+    fn tail_length(&self) -> TailLength {
+        // Ordinary adaptation changes coefficients, not the finite reference
+        // history. Include overlap-save input and the final queued output block;
+        // suppressor gains and wet/dry ramps only multiply current block audio.
+        TailLength::Finite((self.aec.reference_support_frames() + 2 * self.block_size) as u64)
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        None
+    }
+}
+
+impl AecPlugin {
+    pub fn post_filter_mix(&self) -> f32 {
+        self.post_filter_mix
+    }
+}
+
+impl std::fmt::Debug for AecPlugin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AecPlugin")
+            .field("echo_tail_ms", &self.echo_tail_ms)
+            .field("step_size", &self.step_size)
+            .field("post_filter_enabled", &self.post_filter_enabled)
+            .finish()
+    }
+}
+
+impl AecPlugin {
+    fn process_stream(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+        frozen: bool,
     ) -> Result<usize, String> {
         let nf = context.num_frames;
         let expected_input = nf
@@ -347,7 +491,11 @@ impl Plugin for AecPlugin {
 
             if self.input_fill == self.block_size {
                 // Process one block — copy error output before push (avoids borrow conflict)
-                let error = self.aec.process(&self.mic_buffer, &self.ref_buffer);
+                let error = if frozen {
+                    self.aec.process_frozen(&self.mic_buffer, &self.ref_buffer)
+                } else {
+                    self.aec.process(&self.mic_buffer, &self.ref_buffer)
+                };
                 let error_len = error.len();
                 // The input block has been consumed, so reuse its storage for
                 // the dry path and release the mutable AEC borrow.
@@ -359,9 +507,12 @@ impl Plugin for AecPlugin {
                     let error_freq = self.aec.last_error_freq();
                     let echo_est_freq = self.aec.last_echo_estimate_freq();
                     let unique_bins = self.block_size + 1;
-                    let suppressed = self
-                        .post_filter
-                        .process(&error_freq[..unique_bins], &echo_est_freq[..unique_bins]);
+                    let suppressed = if frozen {
+                        self.post_filter.process_frozen(&error_freq[..unique_bins])
+                    } else {
+                        self.post_filter
+                            .process(&error_freq[..unique_bins], &echo_est_freq[..unique_bins])
+                    };
                     // IFFT the suppressed spectrum to get time-domain output
                     // Copy into pre-allocated buffer since IFFT needs mutable access
                     let n_sup = suppressed.len();
@@ -409,29 +560,5 @@ impl Plugin for AecPlugin {
         }
 
         Ok(nf)
-    }
-
-    fn latency_samples(&self) -> usize {
-        self.block_size
-    }
-
-    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        None
-    }
-}
-
-impl AecPlugin {
-    pub fn post_filter_mix(&self) -> f32 {
-        self.post_filter_mix
-    }
-}
-
-impl std::fmt::Debug for AecPlugin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AecPlugin")
-            .field("echo_tail_ms", &self.echo_tail_ms)
-            .field("step_size", &self.step_size)
-            .field("post_filter_enabled", &self.post_filter_enabled)
-            .finish()
     }
 }

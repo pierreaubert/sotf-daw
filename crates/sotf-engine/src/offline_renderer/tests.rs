@@ -8,6 +8,10 @@ use crate::decoder::source::AudioSource;
 use crate::engine::PluginConfig;
 use std::path::Path;
 
+mod endpoint_composition;
+mod signal_delay;
+mod tail_duration;
+
 fn create_test_wav(path: &Path, sample_rate: u32, channels: u16, num_frames: usize) {
     let spec = hound::WavSpec {
         channels,
@@ -225,6 +229,142 @@ fn test_offline_render_resamples_to_requested_rate_and_duration() {
     assert_eq!(reader.spec().channels, 2);
     assert_eq!(reader.duration(), 4_410);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rate_changing_chain_preserves_export_clock_pitch_and_duration() {
+    let directory = tempfile::tempdir().unwrap();
+    // A prime-sized partial source frame count exercises rational duration
+    // rounding separately from the callback and resampler chunk sizes.
+    for (source_rate, requested_rate, chain_rate) in [
+        (48_000, None, 96_000),
+        (96_000, None, 48_000),
+        (44_100, Some(48_000), 44_100),
+        (48_000, Some(44_100), 96_000),
+    ] {
+        let export_rate = requested_rate.unwrap_or(source_rate);
+        let source_frames = source_rate as usize / 5 + 37;
+        let expected_frames =
+            (source_frames as u64 * u64::from(export_rate)).div_ceil(u64::from(source_rate));
+        let input_path = directory.path().join("input.wav");
+        let mut writer = hound::WavWriter::create(
+            &input_path,
+            hound::WavSpec {
+                channels: 2,
+                sample_rate: source_rate,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            },
+        )
+        .unwrap();
+        for frame in 0..source_frames {
+            let tone = (std::f64::consts::TAU * 1_000.0 * frame as f64 / f64::from(source_rate))
+                .sin() as f32
+                * 0.25;
+            writer.write_sample(tone).unwrap();
+            writer
+                .write_sample(if frame == 0 || frame == source_frames - 1 {
+                    1.0_f32
+                } else {
+                    0.0
+                })
+                .unwrap();
+        }
+        writer.finalize().unwrap();
+
+        for frame_size in [127, 257, 1_024] {
+            let output_path = directory.path().join("output.wav");
+            let mut config =
+                OfflineRenderConfig::new(AudioSource::File(input_path.clone()), &output_path);
+            config.output_sample_rate = requested_rate;
+            config.frame_size = frame_size;
+            config.plugins.push(PluginConfig::new(
+                "resampler",
+                serde_json::json!({
+                    "input_sample_rate": export_rate,
+                    "output_sample_rate": chain_rate,
+                    "chunk_size": 64
+                }),
+            ));
+            let mut progress = Vec::new();
+            render_offline(&config, Some(&mut |value| progress.push(value.clone()))).unwrap();
+            let reader = hound::WavReader::open(&output_path).unwrap();
+            let spec = reader.spec();
+            assert_eq!(spec.sample_rate, export_rate);
+            assert_eq!(spec.channels, 2);
+            assert_eq!(
+                u64::from(reader.duration()),
+                expected_frames,
+                "source={source_rate}, export={export_rate}, chain={chain_rate}, block={frame_size}"
+            );
+            for value in &progress {
+                assert_eq!(value.total_frames, Some(expected_frames));
+                assert!(value.frames_processed <= expected_frames);
+            }
+            assert_eq!(progress.last().unwrap().frames_processed, expected_frames);
+            let samples: Vec<f32> = reader.into_samples::<f32>().map(Result::unwrap).collect();
+            let (frames, remainder) = samples.as_chunks::<2>();
+            assert!(remainder.is_empty());
+            // Zero-crossing interpolation is independent of the production
+            // resampler and checks the frequency implied by the file header.
+            let stable_start = export_rate as usize / 20;
+            let stable_end = export_rate as usize * 3 / 20;
+            let crossings: Vec<f64> = (stable_start..stable_end)
+                .filter_map(|frame| {
+                    let a = f64::from(frames[frame][0]);
+                    let b = f64::from(frames[frame + 1][0]);
+                    (a <= 0.0 && b > 0.0).then(|| frame as f64 - a / (b - a))
+                })
+                .collect();
+            assert!(crossings.len() > 50);
+            let frequency = (crossings.len() - 1) as f64 * f64::from(spec.sample_rate)
+                / (crossings.last().unwrap() - crossings[0]);
+            assert!(
+                (frequency - 1_000.0).abs() < 0.1,
+                "source={source_rate}, export={export_rate}, chain={chain_rate}: {frequency} Hz"
+            );
+            // Conversion can distribute an impulse over neighboring samples,
+            // but must preserve both program boundaries after delay removal.
+            let first_peak = frames[..4]
+                .iter()
+                .map(|frame| frame[1].abs())
+                .fold(0.0_f32, f32::max);
+            let final_peak = frames[frames.len() - 4..]
+                .iter()
+                .map(|frame| frame[1].abs())
+                .fold(0.0_f32, f32::max);
+            assert!(
+                first_peak > 0.2,
+                "source={source_rate}, export={export_rate}, chain={chain_rate}, block={frame_size}: first impulse lost: {first_peak}, samples={:?}",
+                &frames[..12]
+            );
+            assert!(
+                final_peak > 0.2,
+                "source={source_rate}, export={export_rate}, chain={chain_rate}, block={frame_size}: final impulse lost: {final_peak}"
+            );
+            let first_peak_frame = frames[..16]
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a[1].abs().total_cmp(&b[1].abs()))
+                .unwrap()
+                .0;
+            let final_peak_frame = frames.len() - 16
+                + frames[frames.len() - 16..]
+                    .iter()
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a[1].abs().total_cmp(&b[1].abs()))
+                    .unwrap()
+                    .0;
+            let expected_final = ((source_frames - 1) as f64 * f64::from(export_rate)
+                / f64::from(source_rate))
+            .round() as usize;
+            assert!(first_peak_frame <= 1, "first peak at {first_peak_frame}");
+            assert!(
+                final_peak_frame.abs_diff(expected_final) <= 1,
+                "final peak at {final_peak_frame}, expected {expected_final}"
+            );
+        }
+    }
 }
 
 #[test]

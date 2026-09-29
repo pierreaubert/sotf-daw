@@ -12,7 +12,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -47,6 +48,8 @@ pub struct SpeechDenoiserPlugin {
     initialized_sample_rate: Option<u32>,
     analyzer_cache: RealTimeCache<SpeechDenoiserData>,
     published_model_frames: u64,
+    has_input: bool,
+    drain_remaining: Option<usize>,
 }
 
 impl SpeechDenoiserPlugin {
@@ -67,6 +70,8 @@ impl SpeechDenoiserPlugin {
                 SpeechDenoiserData::default(),
             ),
             published_model_frames: 0,
+            has_input: false,
+            drain_remaining: None,
         };
         plugin.rebuild_cached_parameters();
         plugin
@@ -97,36 +102,60 @@ impl SpeechDenoiserPlugin {
 
     /// Apply already-owned parameter storage without taking ownership of it.
     /// Hosts that automate on the realtime thread should use this borrowed
-    /// path so destruction of the caller's `BTreeMap` remains off-callback.
+    /// path so destruction of the caller's parameter map remains off-callback.
     pub fn apply_values_realtime(&mut self, values: &ParameterSet) -> PluginResult<()> {
         for (id, value) in values {
-            let parameter = self
-                .cached_parameters
-                .iter()
-                .find(|parameter| &parameter.id == id)
-                .ok_or_else(|| format!("Unknown parameter: {id}"))?;
-            parameter
-                .validate(value)
-                .map_err(|error| format!("{id}: {error}"))?;
+            self.parametric_validate_parameter(id, value)?;
         }
         for (id, value) in values {
-            match id.as_str() {
-                "enabled" => {
-                    self.enabled = value
-                        .as_bool()
-                        .ok_or_else(|| "enabled must be a boolean".to_string())?;
-                    if let Some(parameter) = self
-                        .cached_parameters
-                        .iter_mut()
-                        .find(|parameter| parameter.id.as_str() == "enabled")
-                    {
-                        parameter.default_value = ParameterValue::Bool(self.enabled);
-                    }
-                }
-                _ => return Err(format!("Unknown parameter: {id}")),
-            }
+            self.apply_value_ref(id, value)?;
         }
         Ok(())
+    }
+
+    fn apply_value_ref(&mut self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        match id.as_str() {
+            "enabled" => {
+                let enabled = value
+                    .as_bool()
+                    .ok_or_else(|| "enabled must be a boolean".to_string())?;
+                if enabled == self.enabled {
+                    return Ok(());
+                }
+                if self.drain_remaining.is_some() {
+                    return Err(
+                        "Speech Denoiser must be reset after drain before changing enabled".into(),
+                    );
+                }
+                self.enabled = enabled;
+                if let Some(parameter) = self
+                    .cached_parameters
+                    .iter_mut()
+                    .find(|parameter| parameter.id == *id)
+                {
+                    parameter.default_value = ParameterValue::Bool(self.enabled);
+                }
+                Ok(())
+            }
+            _ => Err(format!("Unknown parameter: {id}")),
+        }
+    }
+
+    fn process_backend(&mut self, buffer: &mut [f32], frames: usize) -> PluginResult<usize> {
+        let written = self
+            .inner
+            .process(buffer, frames, self.channels, !self.enabled);
+        if written != frames {
+            return Err(format!(
+                "RNNoise processed {written} of {frames} requested frames"
+            ));
+        }
+        let analyzer_data = self.inner.analyzer_data();
+        if analyzer_data.model_frames != self.published_model_frames {
+            self.analyzer_cache.update(|data| *data = analyzer_data);
+            self.published_model_frames = analyzer_data.model_frames;
+        }
+        Ok(written)
     }
 }
 
@@ -152,6 +181,37 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         self.cached_parameters.clone()
     }
 
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.parametric_validate_parameter(&id, &value)?;
+        self.apply_value_ref(&id, &value)
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "enabled" => Some(ParameterValue::Bool(self.enabled)),
+            _ => None,
+        }
+    }
+
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         values.insert(
@@ -173,6 +233,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
         self.inner.initialize(sample_rate, self.channels)?;
         self.initialized_sample_rate = Some(sample_rate);
+        self.has_input = false;
+        self.drain_remaining = None;
         self.published_model_frames = 0;
         self.analyzer_cache
             .update(|data| *data = SpeechDenoiserData::default());
@@ -181,6 +243,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn reset(&mut self) {
         self.inner.reset();
+        self.has_input = false;
+        self.drain_remaining = None;
         self.published_model_frames = 0;
         self.analyzer_cache
             .update(|data| *data = SpeechDenoiserData::default());
@@ -220,31 +284,88 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
             ));
         }
 
-        let frames_written =
-            self.inner
-                .process(buffer, context.num_frames, self.channels, !self.enabled);
-        if frames_written != context.num_frames {
-            return Err(format!(
-                "RNNoise processed {frames_written} of {} requested frames",
-                context.num_frames
-            ));
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Speech Denoiser must be reset after drain before processing input".into());
         }
-        let analyzer_data = self.inner.analyzer_data();
-        if analyzer_data.model_frames != self.published_model_frames {
-            self.analyzer_cache.update(|data| *data = analyzer_data);
-            self.published_model_frames = analyzer_data.model_frames;
+        let written = self.process_backend(buffer, context.num_frames)?;
+        self.has_input |= written > 0;
+        Ok(written)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.initialized_sample_rate.is_some() && !self.enabled {
+            TailLength::Finite(self.latency_samples() as u64)
+        } else {
+            TailLength::Unknown
         }
-        Ok(context.num_frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        // Structural capacity must be available before wrapper preparation feeds input.
+        SPEECH_DENOISER_FRAME_SIZE
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        self.initialized_sample_rate?;
+        let remaining = if self.enabled || !self.has_input {
+            0
+        } else {
+            self.drain_remaining.unwrap_or(self.latency_samples())
+        };
+        std::num::NonZeroU64::new(remaining.div_ceil(SPEECH_DENOISER_FRAME_SIZE).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        let rate = self
+            .initialized_sample_rate
+            .ok_or("Speech Denoiser must be initialized before drain")?;
+        if context.sample_rate != rate {
+            return Err("Speech Denoiser drain sample-rate mismatch".into());
+        }
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("Speech Denoiser drain requires whole output frames".into());
+        }
+        // Wet model/high-pass support remains unknown. Empty streams do not freeze.
+        if self.enabled || !self.has_input {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let remaining = self.drain_remaining.unwrap_or(self.latency_samples());
+        if remaining == 0 {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = (output.len() / self.channels)
+            .min(SPEECH_DENOISER_FRAME_SIZE)
+            .min(remaining);
+        if frames == 0 {
+            return Err("Speech Denoiser drain requires positive output capacity".into());
+        }
+        // Disabled output reaches pure dry within 481 floating-point fade steps.
+        // The 960-frame dry delay covers that transition and all retained program.
+        // Freezing enabled keeps recursive wet history unobservable afterward.
+        self.drain_remaining = Some(remaining);
+        let samples = frames * self.channels;
+        output[..samples].fill(0.0);
+        self.process_backend(&mut output[..samples], frames)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
 
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
         Some(self.analyzer_cache.load() as Arc<dyn Any + Send + Sync>)
     }
 
-    /// Returns a fixed latency of 480 samples regardless of the `enabled`
+    /// Returns a fixed latency of 960 samples regardless of the `enabled`
     /// flag.
     ///
     /// Plugin hosts require latency to remain constant after initialisation.
+    /// RNNoise contributes 480 frames and arbitrary callback framing adds 480.
     /// Returning 0 when disabled would cause phase cancellation in parallel
     /// processing chains and misalignment with other latency-compensated
     /// tracks.

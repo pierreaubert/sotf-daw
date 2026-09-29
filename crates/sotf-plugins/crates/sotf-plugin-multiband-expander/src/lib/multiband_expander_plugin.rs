@@ -24,16 +24,23 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::{LogSmoother, Smoother};
 use std::any::Any;
 use std::sync::Arc;
 
+/// Bounds work in each finite-stream drain call without additional scratch.
+const MAX_DRAIN_FRAMES: usize = 256;
+
 pub struct MultibandExpanderPlugin {
     pub(super) channels: usize,
     pub(super) sample_rate: u32,
+    has_input: bool,
+    drain_remaining: Option<usize>,
+    initialized: bool,
     pub(super) num_bands: usize,
     pub(super) _crossover_preset: i32,
     pub(super) crossover_frequencies: Vec<f32>,
@@ -197,6 +204,9 @@ impl MultibandExpanderPlugin {
         let mut p = Self {
             channels,
             sample_rate: sr,
+            has_input: false,
+            drain_remaining: None,
+            initialized: false,
             num_bands: nb,
             _crossover_preset: params.crossover_preset,
             crossover_frequencies: xfs.clone(),
@@ -661,6 +671,16 @@ impl MultibandExpanderPlugin {
         }
     }
 
+    fn opening_threshold(threshold: f32, knee: f32) -> f32 {
+        // The centered soft knee reaches unity at its upper edge. Keep hold
+        // and hysteresis referenced to that edge, not the nonzero center gain.
+        if knee < 0.1 {
+            threshold
+        } else {
+            threshold + knee / 2.0
+        }
+    }
+
     pub(super) fn calculate_expansion_attenuation(
         idb: f32,
         th: f32,
@@ -668,7 +688,8 @@ impl MultibandExpanderPlugin {
         knee: f32,
         range: f32,
     ) -> f32 {
-        let slope = 1.0 - 1.0 / ratio.max(1.0);
+        // A 1 dB input decrease below threshold produces ratio dB at output.
+        let slope = ratio.max(1.0) - 1.0;
         let atten = if knee < 0.1 {
             if idb >= th { 0.0 } else { (th - idb) * slope }
         } else if idb > th + knee / 2.0 {
@@ -774,11 +795,12 @@ impl MultibandExpanderPlugin {
                 // Update gate state and envelope (at hop rate)
                 let state = &mut ss.bin_states[ch][k];
                 let th = info.threshold_db;
+                let opening = Self::opening_threshold(th, info.knee_db);
                 let hys = info.hysteresis_db;
 
                 let target_atten = match state.gate_state {
                     GateState::Open => {
-                        if mag_db < th {
+                        if mag_db < opening {
                             state.gate_state = GateState::Hold;
                             state.hold_counter = info.hold_hops;
                             0.0
@@ -787,13 +809,13 @@ impl MultibandExpanderPlugin {
                         }
                     }
                     GateState::Hold => {
-                        if mag_db >= th {
+                        if mag_db >= opening {
                             state.gate_state = GateState::Open;
                             0.0
                         } else if state.hold_counter > 0 {
                             state.hold_counter -= 1;
                             0.0
-                        } else if mag_db < th - hys {
+                        } else if mag_db < opening - hys {
                             state.gate_state = GateState::Closing;
                             Self::calculate_expansion_attenuation(
                                 mag_db,
@@ -807,7 +829,7 @@ impl MultibandExpanderPlugin {
                         }
                     }
                     GateState::Closing => {
-                        if mag_db >= th {
+                        if mag_db >= opening {
                             state.gate_state = GateState::Open;
                             0.0
                         } else {
@@ -843,7 +865,8 @@ impl MultibandExpanderPlugin {
 
             // Apply synthesis window (Hann) + scale, overlap-add into ring
             let next_pos = ss.next_add_position;
-            for i in 0..fft_size {
+            // Never wrap negative-time synthesis into a later ring revolution.
+            for i in ss.synthesis_discard..fft_size {
                 let frame_idx = (next_pos + i) & mask;
                 let s = ss.fft_processors[ch].time_buffer[i]
                     * ss.analysis_window[i]  // synthesis window = same Hann
@@ -869,7 +892,12 @@ impl MultibandExpanderPlugin {
             }
         }
 
-        ss.output_accumulator_fill += ss.hop_size;
+        if ss.synthesis_discard > 0 {
+            ss.synthesis_discard -= ss.hop_size;
+        } else {
+            // Preceding windows contribute without publishing incomplete output.
+            ss.output_accumulator_fill += ss.hop_size;
+        }
     }
 
     /// Main in-place processing entry point for spectral mode.
@@ -907,7 +935,10 @@ impl MultibandExpanderPlugin {
             None => return Err("spectral expander state missing for spectral mode".into()),
         };
 
-        while output_pos < nf {
+        // Startup padding or queued OLA output can fill this callback before
+        // its entire input is staged. Always consume that remaining input;
+        // newly generated output stays in the existing accumulator for later.
+        while input_pos < nf || output_pos < nf {
             // --- Step 1: Fill input ring from caller's buffer ---
             if input_pos < nf {
                 let ss = self.spectral.as_mut().ok_or_else(|| {
@@ -1066,6 +1097,13 @@ impl MultibandExpanderPlugin {
     }
 
     pub fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("reset the multiband expander before changing controls after drain".into())
+            };
+        }
         // Handle processing_mode separately (not in GLOBAL_PARAMS)
         if id.as_str() == "processing_mode" {
             value
@@ -1431,195 +1469,69 @@ impl MultibandExpanderPlugin {
     }
 }
 
-impl ParametricInPlacePlugin for MultibandExpanderPlugin {
-    fn info(&self) -> PluginInfo {
-        PluginInfo::new(
-            if self.num_bands == 1 {
-                "Expander"
-            } else {
-                "Multiband Expander"
-            },
-            env!("CARGO_PKG_VERSION"),
-            "SotF",
-        )
-    }
-
-    fn cost_class(&self) -> PluginCostClass {
-        PluginCostClass::Dynamics
-    }
-
-    fn compile_metadata(&self) -> PluginCompileMetadata {
-        let cost_class = if self.spectral.is_some() {
-            PluginCostClass::Fft
-        } else {
-            PluginCostClass::Dynamics
-        };
-        PluginCompileMetadata::nonlinear(cost_class, None, self.latency_samples(), false)
-    }
-
-    fn channels(&self) -> usize {
-        self.channels
-    }
-    fn parameter_schema(&self) -> ParameterSchema {
-        self.cached_parameters.clone()
-    }
-    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, value) in values {
-            self.set_parameter(id, value)?;
+impl MultibandExpanderPlugin {
+    /// Exact audio support when no recursive wet path can contribute.
+    fn finite_response_frames(&self) -> Option<usize> {
+        if !self.initialized {
+            return None;
         }
-        Ok(())
+        let settled_dry = self.mix_smoother.current() == 0.0 && self.mix_smoother.target() == 0.0;
+        let broadband = self.num_bands == 1 && self.processing_mode == "time_domain";
+        if settled_dry || broadband {
+            Some(self.latency_samples())
+        } else {
+            self.spectral.as_ref().map(|ss| {
+                let phase = ss.input_fill - (ss.fft_size - ss.hop_size);
+                // Last source-containing origin floor((T-1)/H)*H contributes
+                // through exclusive emitted time 2N+origin, including N delay.
+                2 * ss.fft_size - ss.hop_size + (ss.hop_size - phase) % ss.hop_size
+            })
+        }
     }
 
-    fn parametric_set_parameter(
+    fn drain_spectral(
         &mut self,
-        id: ParameterId,
-        value: ParameterValue,
-    ) -> PluginResult<()> {
-        let parameter = self
-            .cached_parameters
-            .iter()
-            .find(|parameter| parameter.id == id)
-            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
-        parameter
-            .validate(&value)
-            .map_err(|error| format!("{id}: {error}"))?;
-        self.set_parameter(id, value)
+        output: &mut [f32],
+        context: &ProcessContext,
+        remaining: usize,
+    ) -> PluginResult<PluginDrainResult> {
+        let ss = self.spectral.as_mut().expect("prepared spectral state");
+        if ss.drain_read == ss.drain_frames {
+            let frames = remaining.min(ss.hop_size);
+            let samples = frames * self.channels;
+            let mut cache = std::mem::take(&mut ss.drain_cache);
+            cache[..samples].fill(0.0);
+            let mut drain_context = *context;
+            drain_context.num_frames = frames;
+            // Detector/gain histories continue normally. They multiply finite
+            // windowed audio and do not create an additional recursive tail.
+            let result = self.process_stream(&mut cache[..samples], &drain_context);
+            let ss = self
+                .spectral
+                .as_mut()
+                .expect("spectral mode remains prepared");
+            ss.drain_cache = cache;
+            result?;
+            ss.drain_frames = frames;
+            ss.drain_read = 0;
+            // Tail metadata describes the accepted EOS epoch, not a countdown
+            // that can shrink when this refill finishes an in-flight dry fade.
+            ss.drain_full_support |= remaining > ss.fft_size;
+        }
+        let ss = self.spectral.as_mut().expect("prepared spectral state");
+        let frames = (output.len() / self.channels).min(ss.drain_frames - ss.drain_read);
+        let start = ss.drain_read * self.channels;
+        output[..frames * self.channels]
+            .copy_from_slice(&ss.drain_cache[start..start + frames * self.channels]);
+        ss.drain_read += frames;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
 
-    fn current_values(&self) -> ParameterSet {
-        let mut values = ParameterSet::new();
-        for param in &self.cached_parameters {
-            if let Some(value) = self.get_parameter(&param.id) {
-                values.insert(param.id.clone(), value);
-            }
-        }
-        values
-    }
-
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        self.sample_rate = sr;
-        self.build_crossovers();
-        self.update_coefficients();
-        self.threshold_smoother.set_time(20.0, sr);
-        self.mix_smoother.set_time(20.0, sr);
-        for s in &mut self.xover_smoothers {
-            *s = LogSmoother::new(s.target(), 50.0, sr);
-        }
-
-        // Reinitialize measured makeup smoothing for new sample rate
-        for mm in &mut self.measured_makeups {
-            mm.set_smoothing(1000.0, sr);
-        }
-
-        // Reinitialize level detectors for new sample rate
-        let det_mode = parse_detection_mode(&self.detection_mode).unwrap_or(DetectionMode::Peak);
-        for band_dets in &mut self.level_detectors {
-            for det in band_dets {
-                *det = LevelDetector::new(det_mode, sr);
-            }
-        }
-
-        // Resize lookahead buffers for new sample rate
-        let max_la_samples = (MAX_LOOKAHEAD_MS * 0.001 * sr as f32).round() as usize;
-        for band_bufs in &mut self.lookahead_buffers {
-            for buf in band_bufs {
-                buf.resize(max_la_samples, 1);
-            }
-        }
-        // Resize dry lookahead buffers to match band lookahead buffers.
-        for buf in &mut self.dry_lookahead_buffers {
-            buf.resize(max_la_samples, 1);
-        }
-        self.update_lookahead_delay();
-
-        // Pre-allocate buffers for real-time safety.
-        let max_frames = MAX_BLOCK_FRAMES;
-        let stride = max_frames * self.channels;
-        self.band_buffers.resize(self.num_bands * stride, 0.0);
-        self.dry_buffer.resize(max_frames * self.channels, 0.0);
-        self.automation_values.resize(max_frames, [0.0; 2]);
-
-        // (Re-)initialize spectral state if mode is active
-        if self.processing_mode == "spectral" {
-            let fft_size = 1024;
-            let mut ss = SpectralState::new(
-                fft_size,
-                self.channels,
-                sr,
-                &self.crossover_frequencies,
-                self.num_bands,
-            );
-            ss.update_band_coefficients(
-                self.num_bands,
-                &self.band_params,
-                self.attack_ms,
-                self.release_ms,
-                sr,
-            );
-            self.spectral = Some(ss);
-        }
-
-        // Reset all state after (re-)initialization to eliminate transient artifacts.
-        self.reset();
-
-        Ok(())
-    }
-    fn reset(&mut self) {
-        for b in &mut self.band_expanders {
-            b.reset();
-        }
-        for mm in &mut self.measured_makeups {
-            mm.reset();
-        }
-        for band_dets in &mut self.level_detectors {
-            for det in band_dets {
-                det.reset();
-            }
-        }
-        for band_bufs in &mut self.lookahead_buffers {
-            for buf in band_bufs {
-                buf.reset();
-            }
-        }
-        for buf in &mut self.dry_lookahead_buffers {
-            buf.reset();
-        }
-        self.band_buffers.fill(0.0);
-        self.dry_buffer.fill(0.0);
-        for crossover in &mut self.crossover_points {
-            crossover.reset();
-        }
-        let threshold = self.threshold_smoother.target();
-        self.threshold_smoother.reset(threshold);
-        let mix = self.mix_smoother.target();
-        self.mix_smoother.reset(mix);
-        for smoother in &mut self.xover_smoothers {
-            let target = smoother.target();
-            smoother.reset(target);
-        }
-        self.cache_update_counter = 0;
-        self.band_levels_db.fill(-120.0);
-        self.attenuation_flattened.fill(0.0);
-        self.is_open_buffer.fill(false);
-        self.sidechain_hpf_x1.fill(0.0);
-        self.sidechain_hpf_y1.fill(0.0);
-
-        if let Some(ss) = &mut self.spectral {
-            ss.reset();
-        }
-    }
-
-    fn latency_samples(&self) -> usize {
-        if let Some(ss) = &self.spectral {
-            ss.fft_size
-        } else if self.lookahead_ms > 0.0 {
-            (self.lookahead_ms * 0.001 * self.sample_rate as f32).round() as usize
-        } else {
-            0
-        }
-    }
-
-    fn process_in_place(
+    fn process_stream(
         &mut self,
         buffer: &mut [f32],
         context: &ProcessContext,
@@ -1649,7 +1561,7 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
                 let sample_start = processed * self.channels;
                 let sample_end = sample_start + chunk_frames * self.channels;
                 let chunk_ctx = ProcessContext::new(context.sample_rate, chunk_frames);
-                self.process_in_place(&mut buffer[sample_start..sample_end], &chunk_ctx)?;
+                self.process_stream(&mut buffer[sample_start..sample_end], &chunk_ctx)?;
                 processed += chunk_frames;
             }
             return Ok(nf);
@@ -1750,8 +1662,11 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
                 // Measured makeup: will be computed per-frame below
                 1.0
             } else if bp.map(|p| p.auto_makeup).unwrap_or(false) {
-                let slope = 1.0 - 1.0 / rat.max(1.0);
-                let avg_atten = rg.max(0.0) * slope * 0.5;
+                // Preserve the bounded static-makeup heuristic for existing
+                // presets. This is not the downward-expansion transfer slope;
+                // it estimates compensation without assuming an input level.
+                let makeup_weight = 1.0 - 1.0 / rat.max(1.0);
+                let avg_atten = rg.max(0.0) * makeup_weight * 0.5;
                 fast_pow10(avg_atten / 20.0)
             } else {
                 1.0
@@ -1771,6 +1686,7 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
 
             for frame in 0..nf {
                 let th = threshold_override.unwrap_or(self.automation_values[frame][0]);
+                let opening = Self::opening_threshold(th, kn);
                 let hpf_coeff = if self.sidechain_hpf_hz > 0.0 {
                     let rc = 1.0 / (std::f32::consts::TAU * self.sidechain_hpf_hz);
                     rc / (rc + 1.0 / self.sample_rate as f32)
@@ -1833,7 +1749,7 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
 
                     let target = match bexp.gate_state[ch] {
                         GateState::Open => {
-                            if db < th {
+                            if db < opening {
                                 bexp.gate_state[ch] = GateState::Hold;
                                 bexp.hold_counter[ch] = hs;
                                 0.0
@@ -1842,13 +1758,13 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
                             }
                         }
                         GateState::Hold => {
-                            if db >= th {
+                            if db >= opening {
                                 bexp.gate_state[ch] = GateState::Open;
                                 0.0
                             } else if bexp.hold_counter[ch] > 0 {
                                 bexp.hold_counter[ch] -= 1;
                                 0.0
-                            } else if db < th - hys {
+                            } else if db < opening - hys {
                                 bexp.gate_state[ch] = GateState::Closing;
                                 Self::calculate_expansion_attenuation(db, th, rat, kn, rg)
                             } else {
@@ -1856,7 +1772,7 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
                             }
                         }
                         GateState::Closing => {
-                            if db >= th {
+                            if db >= opening {
                                 bexp.gate_state[ch] = GateState::Open;
                                 0.0
                             } else {
@@ -1950,6 +1866,331 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
         flush_denormals_inplace(buffer);
         Ok(nf)
     }
+}
+
+impl ParametricInPlacePlugin for MultibandExpanderPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new(
+            if self.num_bands == 1 {
+                "Expander"
+            } else {
+                "Multiband Expander"
+            },
+            env!("CARGO_PKG_VERSION"),
+            "SotF",
+        )
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Dynamics
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        let cost_class = if self.spectral.is_some() {
+            PluginCostClass::Fft
+        } else {
+            PluginCostClass::Dynamics
+        };
+        PluginCompileMetadata::nonlinear(cost_class, None, self.latency_samples(), false)
+    }
+
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.cached_parameters.clone()
+    }
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("reset the multiband expander before changing controls after drain".into())
+            };
+        }
+        for (id, value) in values {
+            self.set_parameter(id, value)?;
+        }
+        Ok(())
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(&value)
+            .map_err(|error| format!("{id}: {error}"))?;
+        self.set_parameter(id, value)
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        // Reject undeclared suffixes instead of letting the legacy band parser
+        // interpret an unknown ID as an existing field.
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)?;
+        self.get_parameter(id)
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        let mut values = ParameterSet::new();
+        for param in &self.cached_parameters {
+            if let Some(value) = self.get_parameter(&param.id) {
+                values.insert(param.id.clone(), value);
+            }
+        }
+        values
+    }
+
+    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+        if sr == 0 {
+            return Err("multiband expander requires a positive sample rate".into());
+        }
+        self.sample_rate = sr;
+        self.build_crossovers();
+        self.update_coefficients();
+        self.threshold_smoother.set_time(20.0, sr);
+        self.mix_smoother.set_time(20.0, sr);
+        for s in &mut self.xover_smoothers {
+            *s = LogSmoother::new(s.target(), 50.0, sr);
+        }
+
+        // Reinitialize measured makeup smoothing for new sample rate
+        for mm in &mut self.measured_makeups {
+            mm.set_smoothing(1000.0, sr);
+        }
+
+        // Reinitialize level detectors for new sample rate
+        let det_mode = parse_detection_mode(&self.detection_mode).unwrap_or(DetectionMode::Peak);
+        for band_dets in &mut self.level_detectors {
+            for det in band_dets {
+                *det = LevelDetector::new(det_mode, sr);
+            }
+        }
+
+        // Resize lookahead buffers for new sample rate
+        let max_la_samples = (MAX_LOOKAHEAD_MS * 0.001 * sr as f32).round() as usize;
+        for band_bufs in &mut self.lookahead_buffers {
+            for buf in band_bufs {
+                buf.resize(max_la_samples, 1);
+            }
+        }
+        // Resize dry lookahead buffers to match band lookahead buffers.
+        for buf in &mut self.dry_lookahead_buffers {
+            buf.resize(max_la_samples, 1);
+        }
+        self.update_lookahead_delay();
+
+        // Pre-allocate buffers for real-time safety.
+        let max_frames = MAX_BLOCK_FRAMES;
+        let stride = max_frames * self.channels;
+        self.band_buffers.resize(self.num_bands * stride, 0.0);
+        self.dry_buffer.resize(max_frames * self.channels, 0.0);
+        self.automation_values.resize(max_frames, [0.0; 2]);
+
+        // (Re-)initialize spectral state if mode is active
+        if self.processing_mode == "spectral" {
+            let fft_size = 1024;
+            let mut ss = SpectralState::new(
+                fft_size,
+                self.channels,
+                sr,
+                &self.crossover_frequencies,
+                self.num_bands,
+            );
+            ss.update_band_coefficients(
+                self.num_bands,
+                &self.band_params,
+                self.attack_ms,
+                self.release_ms,
+                sr,
+            );
+            self.spectral = Some(ss);
+        }
+
+        self.initialized = true;
+        // Reset all state after (re-)initialization to eliminate transient artifacts.
+        self.reset();
+
+        Ok(())
+    }
+    fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
+        for b in &mut self.band_expanders {
+            b.reset();
+        }
+        for mm in &mut self.measured_makeups {
+            mm.reset();
+        }
+        for band_dets in &mut self.level_detectors {
+            for det in band_dets {
+                det.reset();
+            }
+        }
+        for band_bufs in &mut self.lookahead_buffers {
+            for buf in band_bufs {
+                buf.reset();
+            }
+        }
+        for buf in &mut self.dry_lookahead_buffers {
+            buf.reset();
+        }
+        self.band_buffers.fill(0.0);
+        self.dry_buffer.fill(0.0);
+        for crossover in &mut self.crossover_points {
+            crossover.reset();
+        }
+        let threshold = self.threshold_smoother.target();
+        self.threshold_smoother.reset(threshold);
+        let mix = self.mix_smoother.target();
+        self.mix_smoother.reset(mix);
+        for smoother in &mut self.xover_smoothers {
+            let target = smoother.target();
+            smoother.reset(target);
+        }
+        self.cache_update_counter = 0;
+        self.band_levels_db.fill(-120.0);
+        self.attenuation_flattened.fill(0.0);
+        self.is_open_buffer.fill(false);
+        self.sidechain_hpf_x1.fill(0.0);
+        self.sidechain_hpf_y1.fill(0.0);
+
+        if let Some(ss) = &mut self.spectral {
+            ss.reset();
+        }
+    }
+
+    fn latency_samples(&self) -> usize {
+        if let Some(ss) = &self.spectral {
+            ss.fft_size
+        } else if self.lookahead_ms > 0.0 {
+            // An active ring clamps positive sub-sample delays to one frame.
+            self.dry_lookahead_buffers
+                .first()
+                .map_or(0, LookaheadBuffer::delay)
+        } else {
+            0
+        }
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("reset the multiband expander before processing after drain".into());
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.initialized
+            && let Some(ss) = &self.spectral
+            && (ss.drain_full_support
+                || !(self.mix_smoother.current() == 0.0 && self.mix_smoother.target() == 0.0))
+        {
+            return TailLength::Finite((2 * ss.fft_size - 1) as u64);
+        }
+        if let Some(frames) = self.finite_response_frames() {
+            TailLength::Finite(frames as u64)
+        } else if !self.initialized || self.processing_mode == "spectral" {
+            TailLength::Unknown
+        } else {
+            TailLength::Infinite
+        }
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        if self.processing_mode == "spectral" {
+            // Structural capacity is available before input, including dry mode,
+            // so wrappers can prepare before the finite epoch begins.
+            MAX_DRAIN_FRAMES
+        } else {
+            self.finite_response_frames()
+                .map_or(0, |frames| frames.min(MAX_DRAIN_FRAMES))
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            return None;
+        }
+        let remaining = if self.has_input {
+            self.finite_response_frames()
+                .map_or(0, |support| self.drain_remaining.unwrap_or(support))
+        } else {
+            0
+        };
+        let cached = self
+            .spectral
+            .as_ref()
+            .map_or(0, |ss| ss.drain_frames - ss.drain_read);
+        // Remaining includes unread canonical output. A partial cached hop
+        // needs its own call before the next refill can advance the DSP.
+        let calls =
+            usize::from(cached != 0) + remaining.saturating_sub(cached).div_ceil(MAX_DRAIN_FRAMES);
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("multiband expander drain requires the initialized sample rate".into());
+        }
+        if self.channels == 0 || !output.len().is_multiple_of(self.channels) {
+            return Err("multiband expander drain requires whole output frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let Some(bound) = self.finite_response_frames() else {
+            // Preserve legacy EOS behavior for recursive wet paths. A finite
+            // rendering policy remains unresolved; metadata never claims zero.
+            return Ok(PluginDrainResult::COMPLETE);
+        };
+        let remaining = self.drain_remaining.unwrap_or(bound);
+        if remaining == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = remaining
+            .min(MAX_DRAIN_FRAMES)
+            .min(output.len() / self.channels);
+        if frames == 0 {
+            return Err("multiband expander drain needs output capacity".into());
+        }
+        if self.spectral.is_some() {
+            return self.drain_spectral(output, context, remaining);
+        }
+        let samples = frames * self.channels;
+        output[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
         Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
     }

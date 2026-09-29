@@ -1,9 +1,13 @@
 use super::super::{
     HostUpdateTicket, PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest,
-    ProcessingMessage, ThreadEvent,
 };
+#[cfg(target_os = "ios")]
+use super::super::{ProcessingMessage, ThreadEvent};
+#[cfg(target_os = "ios")]
 use super::audio_unit_handle::run_playback_ios;
-use std::sync::mpsc::{Receiver, Sender, SyncSender};
+#[cfg(target_os = "ios")]
+use std::sync::mpsc::SyncSender;
+use std::sync::mpsc::{Receiver, Sender};
 
 pub struct PlaybackThread {
     pub(super) command_tx: Sender<PlaybackCommand>,
@@ -11,6 +15,7 @@ pub struct PlaybackThread {
 }
 
 impl PlaybackThread {
+    #[cfg(target_os = "ios")]
     pub fn new(
         message_rx: Receiver<ProcessingMessage>,
         event_tx: crossbeam::channel::Sender<ThreadEvent>,
@@ -78,7 +83,6 @@ impl PlaybackThread {
         sample_rate: u32,
         channels: usize,
     ) -> Result<PlaybackConfiguration, String> {
-        const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
         let (reply_tx, reply_rx) = std::sync::mpsc::sync_channel(1);
         let ticket = HostUpdateTicket::new();
         self.send_command(PlaybackCommand::Reconfigure(PlaybackReconfigureRequest {
@@ -89,6 +93,15 @@ impl PlaybackThread {
             ticket: ticket.clone(),
             reply_tx,
         }))?;
+        self.await_reply(reply_rx, ticket)
+    }
+
+    fn await_reply(
+        &self,
+        reply_rx: Receiver<Result<PlaybackConfiguration, String>>,
+        ticket: HostUpdateTicket,
+    ) -> Result<PlaybackConfiguration, String> {
+        const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
         match reply_rx.recv_timeout(TIMEOUT) {
             Ok(result) => result,
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {

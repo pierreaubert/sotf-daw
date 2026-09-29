@@ -6,6 +6,7 @@ use rustfft::num_complex::Complex;
 use std::sync::Arc;
 
 /// Per-channel phase vocoder state for pitch shifting without changing duration.
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct PhaseVocoderChannel {
     pub(super) fft_forward: Arc<dyn rustfft::Fft<f32>>,
     pub(super) fft_inverse: Arc<dyn rustfft::Fft<f32>>,

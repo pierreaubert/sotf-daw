@@ -44,7 +44,7 @@ pub use playback_thread::PlaybackThread;
 #[doc(hidden)]
 pub mod playback_runtime_harness;
 
-#[cfg(target_os = "ios")]
+#[cfg(any(target_os = "ios", test))]
 mod playback_thread_stub;
 #[cfg(target_os = "ios")]
 pub use playback_thread_stub::PlaybackThread;

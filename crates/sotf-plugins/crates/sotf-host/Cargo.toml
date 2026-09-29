@@ -20,6 +20,14 @@ harness = false
 name = "parameter_id_benchmark"
 harness = false
 
+[[bench]]
+name = "true_peak_rate_benchmark"
+harness = false
+
+[[bench]]
+name = "aud125_ms_cost"
+harness = false
+
 [[bin]]
 name = "qa-host"
 path = "bin/qa_host.rs"

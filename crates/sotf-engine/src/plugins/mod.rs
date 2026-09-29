@@ -112,6 +112,7 @@ sotf_plugins::serde_param_default! {
 sotf_plugins::serde_param_default! {
     compressor_specs::PARAMS;
     fn default_compressor_link_channels() -> bool = "link_channels";
+    fn default_compressor_range_db() -> f64 = "range_db";
     fn default_compressor_sidechain_hpf_hz() -> f64 = "sidechain_hpf_hz";
     fn default_compressor_sidechain_hpf_order() -> String = "sidechain_hpf_order";
     fn default_compressor_detection_mode() -> String = "detection_mode";
@@ -130,6 +131,8 @@ sotf_plugins::serde_param_default! {
     fn default_de_esser_attack() -> f64 = "attack";
     fn default_de_esser_release() -> f64 = "release";
     fn default_de_esser_mix() -> f64 = "mix";
+    fn default_de_esser_range_db() -> f64 = "range_db";
+    fn default_de_esser_stereo_link() -> f64 = "stereo_link";
 }
 sotf_plugins::serde_param_default! {
     binaural_specs::PARAMS;
@@ -165,6 +168,7 @@ sotf_plugins::serde_param_default! {
     fn default_gate_mix() -> f64 = "mix";
     fn default_gate_link_channels() -> bool = "link_channels";
     fn default_gate_range_db() -> f64 = "range_db";
+    fn default_gate_max_boost_db() -> f64 = "max_boost_db";
 }
 sotf_plugins::serde_param_default! {
     expander_specs::PARAMS;

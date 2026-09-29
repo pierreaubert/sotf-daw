@@ -1,3 +1,10 @@
+# Unreleased
+
+- Report an exact zero audio tail and one-call drain bound. Gain and mute
+  smoothing retain coefficients only; processing and immediate drain behavior
+  are unchanged. Verify exact silence after warmed processing and live controls,
+  plus allocation-free and deallocation-free cold metadata queries and reset.
+
 # 0.5.7
 
 ## Reconstruction corpus and profiling

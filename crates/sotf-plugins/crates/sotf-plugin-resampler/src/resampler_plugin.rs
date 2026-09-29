@@ -1,8 +1,10 @@
+use super::cutoff_bank::CutoffBank;
 use super::resampler_quality::ResamplerQuality;
+use super::stream_endpoint::StreamEndpoint;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use rubato::{
-    Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters, SincInterpolationType,
-    WindowFunction,
+    Adjustable, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
+    SincInterpolationType, WindowFunction,
 };
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
@@ -27,6 +29,8 @@ pub struct ResamplerPlugin {
     pub(super) output_sample_rate: u32,
     /// Rubato resampler (planar format)
     pub(super) resampler: Option<Async<f32>>,
+    /// Prepared cutoff policy; all coefficient allocation happens during setup.
+    pub(super) cutoffs: CutoffBank,
     /// Chunk size for processing (number of frames per chunk)
     pub(super) chunk_size: usize,
     /// Output buffer (planar: one vec per channel, pre-allocated to max output size)
@@ -53,12 +57,10 @@ pub struct ResamplerPlugin {
     pub(super) initialized: bool,
     /// Programme frames accepted since the last reset.
     pub(super) stream_input_frames: u64,
-    /// Raw rubato output frames already exposed, including leading delay.
+    /// Output frames actually exposed, including leading delay.
     pub(super) stream_output_frames: u64,
-    /// Cumulative programme duration expressed in output-rate frames.
-    pub(super) expected_signal_frames: f64,
-    /// Frozen raw-output target once end-of-stream draining begins.
-    pub(super) drain_target_frames: Option<u64>,
+    /// Submitted-input origin, emitted trajectory, and explicit EOF lifecycle.
+    pub(super) endpoint: StreamEndpoint,
 }
 
 impl ResamplerPlugin {
@@ -121,7 +123,7 @@ impl ResamplerPlugin {
         let nominal_ratio = output_sample_rate as f64 / input_sample_rate as f64;
 
         // Create resampler
-        let resampler = Self::create_resampler(
+        let (resampler, cutoffs) = Self::create_resampler(
             num_channels,
             input_sample_rate,
             output_sample_rate,
@@ -136,6 +138,7 @@ impl ResamplerPlugin {
             input_sample_rate,
             output_sample_rate,
             resampler: Some(resampler),
+            cutoffs,
             chunk_size,
             output_buffer: vec![vec![0.0; max_output_frames]; num_channels],
             last_output_frames: 0,
@@ -151,8 +154,7 @@ impl ResamplerPlugin {
             initialized: false,
             stream_input_frames: 0,
             stream_output_frames: 0,
-            expected_signal_frames: 0.0,
-            drain_target_frames: None,
+            endpoint: StreamEndpoint::default(),
         };
         plugin.rebuild_cached_parameters();
         Ok(plugin)
@@ -174,38 +176,39 @@ impl ResamplerPlugin {
         output_sample_rate: u32,
         chunk_size: usize,
         quality: ResamplerQuality,
-    ) -> Result<Async<f32>, String> {
+    ) -> Result<(Async<f32>, CutoffBank), String> {
         let params = SincInterpolationParameters {
             sinc_len: quality.sinc_len(),
-            f_cutoff: quality.f_cutoff(),
+            f_cutoff: Some(quality.f_cutoff()),
             interpolation: SincInterpolationType::Linear,
             oversampling_factor: quality.oversampling_factor(),
             window: WindowFunction::BlackmanHarris2,
         };
 
-        let resampler = Async::<f32>::new_sinc(
-            output_sample_rate as f64 / input_sample_rate as f64,
+        let nominal = output_sample_rate as f64 / input_sample_rate as f64;
+        let cutoffs = CutoffBank::new(nominal);
+        let resampler = Async::<f32>::new_sinc_with_cutoff_bank(
+            nominal,
             2.0, // Maximum relative ratio deviation
             &params,
+            cutoffs.additional_ratios(),
             chunk_size,
             num_channels,
             FixedAsync::Input,
         )
         .map_err(|e| format!("Failed to create resampler: {:?}", e))?;
 
-        Ok(resampler)
+        Ok((resampler, cutoffs))
     }
 
     /// Rebuild the resampler with current quality settings.
     /// Called when quality changes.
     ///
-    /// This reuses the pre-allocated `output_buffer` and `residual_input`
-    /// rather than creating new `Vec`s, so it is safe to call from a context where heap
-    /// allocation is undesirable (though note that rubato's internal `create_resampler`
-    /// still allocates the sinc table).  The output frame size depends only on chunk_size
-    /// and ratio, not on quality, so the existing buffers remain correctly sized.
+    /// This allocates the backend and cutoff tables and belongs on a control thread.
+    /// Output and residual buffers are reused because their capacities depend on
+    /// chunk size and ratio bounds, not filter quality.
     pub(super) fn rebuild_resampler(&mut self) -> Result<(), String> {
-        let resampler = Self::create_resampler(
+        let (resampler, cutoffs) = Self::create_resampler(
             self.num_channels,
             self.input_sample_rate,
             self.output_sample_rate,
@@ -230,6 +233,7 @@ impl ResamplerPlugin {
             self.output_buffer[ch].fill(0.0);
         }
         self.resampler = Some(resampler);
+        self.cutoffs = cutoffs;
         self.current_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
         Ok(())
     }
@@ -243,7 +247,14 @@ impl ResamplerPlugin {
                     "Resampling quality: fast (64-tap), medium (128-tap), high (256-tap)",
                 ),
             Parameter::new_bool("dynamic_ratio", "Dynamic Ratio", self.dynamic_ratio)
-                .with_description("Enable runtime ratio changes without rebuilding"),
+                .with_update_mode(if self.input_sample_rate == self.output_sample_rate {
+                    UpdateMode::Structural
+                } else {
+                    UpdateMode::Realtime
+                })
+                .with_description(
+                    "Enable ratio updates; equal-rate mode changes require a fresh or reset stream",
+                ),
             Parameter::new_float(
                 "ratio",
                 "Ratio",
@@ -311,11 +322,7 @@ impl ResamplerPlugin {
 
     /// Maximum frames written by one complete-stream drain step.
     pub fn flush_output_frames_max(&self) -> usize {
-        if self.stream_input_frames == 0
-            || self.is_unity_passthrough()
-            || self
-                .drain_target_frames
-                .is_some_and(|target| self.stream_output_frames >= target)
+        if self.stream_input_frames == 0 || self.is_unity_passthrough() || self.endpoint.complete()
         {
             0
         } else {
@@ -361,10 +368,25 @@ impl ResamplerPlugin {
         self.dynamic_ratio
     }
 
-    /// Set the resampling ratio at runtime (only works when dynamic_ratio is enabled).
-    /// The ratio is clamped to the allowed range (nominal / 2.0 .. nominal * 2.0).
+    /// Set the resampling ratio at runtime when dynamic ratio is enabled.
+    ///
+    /// The allowed range is nominal / 2.0 through nominal * 2.0.
     /// When `ramp` is true, the ratio change is smoothly interpolated.
+    ///
+    /// Selects a prepared cutoff no higher than either endpoint of the ramp.
+    /// Selection preserves filter history and does not allocate. The cutoff grid
+    /// can reduce bandwidth by up to 8.3%; a separate 0.1% step covers small
+    /// negative clock drift. Filter changes can introduce spectral transients.
+    /// Rejection near the new Nyquist remains limited by the selected quality.
+    ///
+    /// # Errors
+    /// Returns an error if dynamic ratio is disabled or the ratio is outside
+    /// the allowed range, non-finite, or non-positive, or draining has begun.
+    /// The active ratio is unchanged on error. Reset before updating a finalized stream.
     pub fn set_ratio(&mut self, new_ratio: f64, ramp: bool) -> Result<(), String> {
+        if self.endpoint.finalized() {
+            return Err("stream has been finalized; reset before changing ratio".to_string());
+        }
         if !self.dynamic_ratio {
             return Err(
                 "Dynamic ratio is not enabled. Set dynamic_ratio to true first.".to_string(),
@@ -375,17 +397,22 @@ impl ResamplerPlugin {
             .set_resample_ratio(new_ratio, ramp)
             .map_err(|e| format!("Failed to set ratio: {:?}", e))?;
         self.current_ratio = new_ratio;
+        self.cutoffs.select(resampler, new_ratio);
         Ok(())
     }
 
-    /// Finish the current stream using rubato's documented complete-stream contract.
+    /// Finish the current programme using its emitted interpolation clock.
     ///
     /// When `process()` receives input that is not a multiple of `chunk_size`, the remaining
     /// frames are held in an internal residual buffer and will not be processed until the next
     /// `process()` call that fills it.  Call `flush()` at the end of a stream to drain those
     /// frames. The final partial chunk is submitted with rubato's `partial_len`, then zero-input
-    /// chunks are pumped until the cumulative raw output contains the complete delayed signal.
-    /// The returned output is already trimmed at the exact cumulative boundary; `discard` is
+    /// chunks are pumped to the programme endpoint. A fixed emitted ratio r retains
+    /// `ceil(input_frames*r) + floor(sinc_len*r/2)` frames. A variable trajectory retains
+    /// the first anchor reaching `input_frames - sinc_len/2 + 1`, using exact backend
+    /// positions. This is programme-extent trimming, not every finite FIR ringing sample.
+    /// Zero-output steps can remain unfinished; use `Plugin::drain()` for explicit completion.
+    /// The returned output is already trimmed at the selected boundary; `discard` is
     /// retained for source compatibility and is always zero.
     ///
     /// Returns the number of output frames written into `output`.
@@ -397,21 +424,18 @@ impl ResamplerPlugin {
         Ok((result.frames, 0))
     }
 
-    /// Set the resampling ratio relative to the current ratio (only works when dynamic_ratio is enabled).
-    /// For example, `rel_ratio=1.01` increases the ratio by 1%.
+    /// Multiply the current resampling ratio by a relative factor.
+    ///
+    /// For example, `rel_ratio=1.01` increases the current target ratio by 1%.
+    /// Repeated calls accumulate. Cutoff and ramp behavior match [`Self::set_ratio`].
+    ///
+    /// # Errors
+    /// Returns an error under the same conditions as [`Self::set_ratio`], with
+    /// range validation applied to the cumulative ratio. The active ratio is unchanged.
     pub fn set_ratio_relative(&mut self, rel_ratio: f64, ramp: bool) -> Result<(), String> {
-        if !self.dynamic_ratio {
-            return Err(
-                "Dynamic ratio is not enabled. Set dynamic_ratio to true first.".to_string(),
-            );
-        }
-        let resampler = self.resampler.as_mut().ok_or("Resampler not initialized")?;
-        resampler
-            .set_resample_ratio_relative(rel_ratio, ramp)
-            .map_err(|e| format!("Failed to set relative ratio: {:?}", e))?;
-        // Update our tracked ratio
-        self.current_ratio *= rel_ratio;
-        Ok(())
+        // Rubato's relative setter uses the original ratio; this API promises
+        // multiplication of the current target, including successive changes.
+        self.set_ratio(self.current_ratio * rel_ratio, ramp)
     }
 }
 
@@ -462,6 +486,11 @@ impl Plugin for ResamplerPlugin {
                 _ => return Err("quality must be a choice index".to_string()),
             };
             if new_quality != self.quality {
+                if self.endpoint.finalized() {
+                    return Err(
+                        "stream has been finalized; reset before changing quality".to_string()
+                    );
+                }
                 if self.initialized || self.residual_frames != 0 {
                     return Err(
                         "quality is a structural setup parameter; rebuild the plugin to change it"
@@ -475,17 +504,36 @@ impl Plugin for ResamplerPlugin {
             let v = value
                 .as_bool()
                 .ok_or_else(|| "dynamic_ratio must be a bool".to_string())?;
-            self.dynamic_ratio = v;
-            if !v {
-                // Reset ratio to nominal when disabling dynamic ratio
-                let nominal = self.output_sample_rate as f64 / self.input_sample_rate as f64;
-                if (self.current_ratio - nominal).abs() > 1e-10 {
-                    if let Some(ref mut resampler) = self.resampler {
-                        let _ = resampler.set_resample_ratio(nominal, true);
-                    }
-                    self.current_ratio = nominal;
-                }
+            // Idempotent state synchronization does not change topology or
+            // the frozen EOF trajectory, including after completion.
+            if v == self.dynamic_ratio {
+                return Ok(());
             }
+            if self.endpoint.finalized() {
+                return Err("stream has been finalized; reset before changing dynamic mode".into());
+            }
+            if self.input_sample_rate == self.output_sample_rate {
+                if self.stream_input_frames != 0 {
+                    return Err(
+                        "equal-rate dynamic mode changes require a fresh or reset stream".into(),
+                    );
+                }
+                // Equal-rate mode changes switch between bit-exact bypass and
+                // a delayed filter. Only a fresh stream may change this path.
+                // Also clear ratio/ramp state configured before any real input.
+                self.reset();
+            } else if !v {
+                // Unequal rates always use this same prepared backend. Return
+                // to nominal without discarding residual input/filter history.
+                let nominal = self.ratio();
+                let resampler = self.resampler.as_mut().ok_or("Resampler not initialized")?;
+                resampler
+                    .set_resample_ratio(nominal, true)
+                    .map_err(|e| format!("Failed to reset ratio: {e:?}"))?;
+                self.current_ratio = nominal;
+                self.cutoffs.select(resampler, nominal);
+            }
+            self.dynamic_ratio = v;
         } else if id == self.param_ratio {
             let v = value
                 .as_float()
@@ -540,8 +588,7 @@ impl Plugin for ResamplerPlugin {
         self.last_output_frames = 0;
         self.stream_input_frames = 0;
         self.stream_output_frames = 0;
-        self.expected_signal_frames = 0.0;
-        self.drain_target_frames = None;
+        self.endpoint = StreamEndpoint::default();
         for ch in 0..self.num_channels {
             self.residual_input[ch].fill(0.0);
         }
@@ -553,11 +600,16 @@ impl Plugin for ResamplerPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        if self.drain_target_frames.is_some() {
+        if context.sample_rate != self.input_sample_rate {
+            return Err("Resampler process sample-rate mismatch".into());
+        }
+        if self.endpoint.finalized() {
             return Err("stream has been finalized; reset before processing new input".to_string());
         }
         let num_input_frames = context.num_frames;
-        let expected_input_samples = num_input_frames * self.num_channels;
+        let expected_input_samples = num_input_frames
+            .checked_mul(self.num_channels)
+            .ok_or("Resampler input sample count overflow")?;
 
         if input.len() != expected_input_samples {
             return Err(format!(
@@ -569,6 +621,11 @@ impl Plugin for ResamplerPlugin {
             ));
         }
 
+        let accepted_frames = self
+            .stream_input_frames
+            .checked_add(num_input_frames as u64)
+            .ok_or("Resampler accepted frame count overflow")?;
+
         if self.is_unity_passthrough() {
             if output.len() < input.len() {
                 return Err(format!(
@@ -579,13 +636,8 @@ impl Plugin for ResamplerPlugin {
             }
             output[..input.len()].copy_from_slice(input);
             self.last_output_frames = num_input_frames;
-            self.stream_input_frames = self
-                .stream_input_frames
-                .saturating_add(num_input_frames as u64);
-            self.stream_output_frames = self
-                .stream_output_frames
-                .saturating_add(num_input_frames as u64);
-            self.expected_signal_frames += num_input_frames as f64;
+            self.stream_input_frames = accepted_frames;
+            self.stream_output_frames = accepted_frames;
             return Ok(num_input_frames);
         }
 
@@ -604,6 +656,10 @@ impl Plugin for ResamplerPlugin {
                 output.len()
             ));
         }
+
+        self.stream_output_frames
+            .checked_add(capacity_frames as u64)
+            .ok_or("Resampler output frame count overflow")?;
 
         // Variable-length input support: buffer input frames in residual_input
         // and process full chunk_size blocks through the resampler.
@@ -643,9 +699,18 @@ impl Plugin for ResamplerPlugin {
                 )
                 .map_err(|e| format!("Output adapter error: {:?}", e))?;
 
-                let (_, output_frames) = resampler
+                let candidate = self.endpoint.after_block(
+                    resampler.input_frames_next(),
+                    resampler.output_frames_next(),
+                    resampler.resample_ratio(),
+                    self.current_ratio,
+                )?;
+                let (consumed, output_frames) = resampler
                     .process_into_buffer(&input_adapter, &mut output_adapter, None)
                     .map_err(|e| format!("Resampling failed: {:?}", e))?;
+                debug_assert_eq!(consumed, chunk_size);
+                self.endpoint = candidate;
+                self.cutoffs.select(resampler, self.current_ratio);
                 self.residual_frames = 0;
 
                 // Check output buffer capacity
@@ -673,13 +738,8 @@ impl Plugin for ResamplerPlugin {
 
         // Store actual output frame count
         self.last_output_frames = total_output_frames;
-        self.stream_input_frames = self
-            .stream_input_frames
-            .saturating_add(num_input_frames as u64);
-        self.stream_output_frames = self
-            .stream_output_frames
-            .saturating_add(total_output_frames as u64);
-        self.expected_signal_frames += num_input_frames as f64 * self.current_ratio;
+        self.stream_input_frames = accepted_frames;
+        self.stream_output_frames += total_output_frames as u64;
 
         Ok(total_output_frames)
     }
@@ -688,42 +748,85 @@ impl Plugin for ResamplerPlugin {
         self.flush_output_frames_max()
     }
 
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if self.endpoint.complete() || self.is_unity_passthrough() || self.stream_input_frames == 0
+        {
+            return std::num::NonZeroU64::new(1);
+        }
+        let backend = self.resampler.as_ref()?;
+        let candidate = self
+            .endpoint
+            .after_block(
+                backend.input_frames_next(),
+                backend.output_frames_next(),
+                backend.resample_ratio(),
+                self.current_ratio,
+            )
+            .ok()?;
+        self.endpoint.drain_call_bound(
+            candidate,
+            self.stream_input_frames,
+            self.stream_output_frames,
+            self.quality.sinc_len(),
+            backend.input_frames_next(),
+            self.current_ratio,
+            backend.last_input_index(),
+        )
+    }
+
     fn drain(
         &mut self,
         output: &mut [f32],
-        _context: &ProcessContext,
+        context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        if self.is_unity_passthrough() || self.stream_input_frames == 0 {
+        if context.sample_rate != self.input_sample_rate {
+            return Err("Resampler drain sample-rate mismatch".into());
+        }
+        if self.endpoint.complete() || self.is_unity_passthrough() || self.stream_input_frames == 0
+        {
+            // Even an empty valid drain explicitly finalizes this stream.
             self.last_output_frames = 0;
-            self.drain_target_frames = Some(self.stream_output_frames);
+            self.endpoint.set_draining(true);
             return Ok(PluginDrainResult::COMPLETE);
         }
 
-        // Match rubato's process_all contract: ceil(total programme duration
-        // in output frames), then retain enough raw output for leading-delay
-        // trimming to preserve the matching final sinc tail.
-        let computed_target = (self.expected_signal_frames.ceil() as u64)
-            .saturating_add(self.output_delay_frames() as u64);
-        let target = *self.drain_target_frames.get_or_insert(computed_target);
-        if self.stream_output_frames >= target {
+        let resampler = self.resampler.as_ref().ok_or("Resampler not initialized")?;
+        let max_output_frames = resampler.output_frames_max();
+        let planned_frames = resampler.output_frames_next();
+        let mut candidate = self.endpoint.after_block(
+            resampler.input_frames_next(),
+            planned_frames,
+            resampler.resample_ratio(),
+            self.current_ratio,
+        )?;
+        let (frames, complete) = self.endpoint.drain_plan(
+            candidate,
+            self.stream_input_frames,
+            self.stream_output_frames,
+            self.quality.sinc_len(),
+            resampler.input_positions_next(),
+        )?;
+        if frames == 0 && complete {
             self.last_output_frames = 0;
+            self.endpoint.set_draining(true);
             return Ok(PluginDrainResult::COMPLETE);
         }
-
-        let max_output_frames = self
-            .resampler
-            .as_ref()
-            .ok_or("Resampler not initialized")?
-            .output_frames_max();
-        let remaining = target.saturating_sub(self.stream_output_frames) as usize;
-        let frames_to_write_bound = remaining.min(max_output_frames);
-        let required_samples = frames_to_write_bound.saturating_mul(self.num_channels);
+        // An empty-output backend block can still consume padding and finish a
+        // ramp. Require usable destination space but report 0/incomplete progress.
+        let required_samples = frames
+            .max(1)
+            .checked_mul(self.num_channels)
+            .ok_or("Resampler drain sample count overflow")?;
         if output.len() < required_samples {
             return Err(format!(
                 "Output buffer too small for drain: need {required_samples} samples, got {}",
                 output.len()
             ));
         }
+        let emitted = self
+            .stream_output_frames
+            .checked_add(frames as u64)
+            .ok_or("Resampler output frame count overflow")?;
 
         let partial_len = self.residual_frames;
         for ch in 0..self.num_channels {
@@ -745,22 +848,21 @@ impl Plugin for ResamplerPlugin {
             partial_len: Some(partial_len),
             active_channels_mask: None,
         };
-        let (_, produced) = self
-            .resampler
-            .as_mut()
-            .ok_or("Resampler not initialized")?
+        let resampler = self.resampler.as_mut().ok_or("Resampler not initialized")?;
+        let (consumed, produced) = resampler
             .process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing))
             .map_err(|e| format!("Resampling drain failed: {e:?}"))?;
+        self.cutoffs.select(resampler, self.current_ratio);
 
+        debug_assert_eq!(consumed, self.chunk_size);
+        debug_assert_eq!(produced, planned_frames);
+        candidate.set_draining(complete);
+        self.endpoint = candidate;
         self.residual_frames = 0;
-        let frames = produced.min(remaining);
         Self::planar_to_interleaved(&self.output_buffer, output, frames, self.num_channels);
-        self.stream_output_frames = self.stream_output_frames.saturating_add(produced as u64);
+        self.stream_output_frames = emitted;
         self.last_output_frames = frames;
-        Ok(PluginDrainResult {
-            frames,
-            complete: self.stream_output_frames >= target,
-        })
+        Ok(PluginDrainResult { frames, complete })
     }
 
     fn latency_samples(&self) -> usize {
@@ -778,6 +880,26 @@ impl Plugin for ResamplerPlugin {
 
     fn realtime_quantum_frames(&self) -> usize {
         ResamplerPlugin::realtime_quantum_frames(self)
+    }
+
+    fn signal_delay_samples(&self) -> f64 {
+        // process() returns only produced chunks. Waiting for a chunk does
+        // not insert startup samples into the concatenated output stream.
+        if self.is_unity_passthrough() {
+            0.0
+        } else {
+            // Pinned rubato 5 fork: InnerSinc starts at -(N - 1), advances
+            // before emitting, and make_sincs centers phase zero at
+            // N/2 - 1 + 1/table_phases. Their combination gives this
+            // fractional output-clock group delay. rubato's integer
+            // output_delay() rounds a different N*ratio/2 convention.
+            // Keep fractional phase until the offline consumer rounds once.
+            ((self.quality.sinc_len() as f64 / 2.0
+                - 1.0 / self.quality.oversampling_factor() as f64)
+                * self.current_ratio
+                - 1.0)
+                .max(0.0)
+        }
     }
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {

@@ -9,6 +9,7 @@
 //! Adding a parameter: add to PARAMS, add field to Params, add match arms.
 //! Nothing else needs to change.
 
+use crate::{GateMode, MODES};
 use serde::{Deserialize, Serialize};
 use sotf_host::param_specs::{ParamSpec, find_by_key as pk};
 use sotf_host::plugin_layout::*;
@@ -36,17 +37,17 @@ pub const PARAMS: &[ParamSpec] = &[
         "dB",
         "Dynamics",
     )
-    .doc("Level below which gate closes"),
+    .doc("Center of the gate's attenuation knee"),
     ParamSpec::float("Ratio", "ratio", 10.0, 1.0, 100.0, 0.1, ":1", "Dynamics")
-        .doc("Attenuation depth when closed"),
+        .doc("Effect slope R-1 per detector dB outside the knee; expansion output ratio R:1"),
     ParamSpec::float("Attack", "attack", 1.0, 0.1, 50.0, 0.1, "ms", "Timing")
-        .doc("Time for gate to open"),
+        .doc("Time constant for opening the downward gate or increasing upward/duck effect"),
     ParamSpec::float("Hold", "hold", 10.0, 0.0, 1000.0, 1.0, "ms", "Timing")
         .doc("Minimum open time after trigger"),
     ParamSpec::float(
         "Release", "release", 100.0, 10.0, 2000.0, 5.0, "ms", "Timing",
     )
-    .doc("Time for gate to close"),
+    .doc("Time constant for closing the downward gate or reducing upward/duck effect"),
     ParamSpec::float("Mix", "mix", 1.0, 0.0, 1.0, 0.01, "%", "Output")
         .scaled(100.0)
         .output()
@@ -107,7 +108,7 @@ pub const PARAMS: &[ParamSpec] = &[
     .structural()
     .doc("Use external sidechain input"),
     ParamSpec::float("Range", "range_db", 80.0, 0.0, 120.0, 1.0, "dB", "Dynamics")
-        .doc("Max attenuation when gate closed"),
+        .doc("Maximum downward/duck attenuation; zero uses the finite 240 dB ceiling"),
     ParamSpec::float(
         "Hysteresis",
         "hysteresis_db",
@@ -120,7 +121,7 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .doc("Open/close threshold difference"),
     ParamSpec::float("Knee", "knee_db", 0.0, 0.0, 20.0, 0.5, "dB", "Dynamics")
-        .doc("Softness of threshold transition"),
+        .doc("Centered transition width; downward opens at upper edge, upward/duck at lower edge"),
     ParamSpec::float(
         "Lookahead",
         "lookahead_ms",
@@ -133,6 +134,21 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .structural()
     .doc("Pre-delay for transient catching"),
+    ParamSpec::choice("Mode", "mode", 0, MODES, "Dynamics")
+        .setup()
+        .structural()
+        .doc("Downward gate, upward expansion, or above-threshold ducking"),
+    ParamSpec::float(
+        "Max Boost",
+        "max_boost_db",
+        12.0,
+        0.0,
+        24.0,
+        0.1,
+        "dB",
+        "Dynamics",
+    )
+    .doc("Maximum gain increase in upward mode; zero disables boost"),
 ];
 
 // ============================================================================
@@ -141,7 +157,7 @@ pub const PARAMS: &[ParamSpec] = &[
 
 /// Gate: idx 0=threshold, 1=ratio, 2=attack, 3=hold, 4=release, 5=mix, 6=link, 7=sidechain_hpf,
 /// 8=sidechain_hpf_order, 9=detection_mode, 10=sidechain_external,
-/// 11=range_db, 12=hysteresis_db, 13=knee_db, 14=lookahead_ms
+/// 11=range_db, 12=hysteresis_db, 13=knee_db, 14=lookahead_ms, 15=mode, 16=max_boost_db
 ///
 /// Primary gate envelope, range, mix, and attenuation feedback remain together.
 /// Ratio, hysteresis, knee, and predictive lookahead are secondary details.
@@ -152,12 +168,14 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "DYNAMICS",
             "DYNAMICS",
             &[
-                ControlSpec::slider(0),  // threshold
-                ControlSpec::slider(11), // range_db
-                ControlSpec::slider(2),  // attack
-                ControlSpec::slider(3),  // hold
-                ControlSpec::slider(4),  // release
-                ControlSpec::knob(5),    // mix
+                ControlSpec::selector(15),                                           // mode
+                ControlSpec::slider(0),                                              // threshold
+                ControlSpec::slider(11),                                             // range_db
+                ControlSpec::slider(16).enabled_when(ParamCondition::choice(15, 1)), // upward boost
+                ControlSpec::slider(2),                                              // attack
+                ControlSpec::slider(3),                                              // hold
+                ControlSpec::slider(4),                                              // release
+                ControlSpec::knob(5),                                                // mix
                 ControlSpec::meter(-30.0, 0.0),
             ],
         )
@@ -237,6 +255,10 @@ pub struct Params {
     pub knee_db: f64,
     #[serde(default = "d_lookahead_ms")]
     pub lookahead_ms: f64,
+    #[serde(default)]
+    pub mode: GateMode,
+    #[serde(default = "d_max_boost_db")]
+    pub max_boost_db: f64,
 }
 
 fn d_threshold() -> f64 {
@@ -283,6 +305,9 @@ fn d_knee_db() -> f64 {
 }
 fn d_lookahead_ms() -> f64 {
     pk(PARAMS, "lookahead_ms").default_f64()
+}
+fn d_max_boost_db() -> f64 {
+    pk(PARAMS, "max_boost_db").default_f64()
 }
 
 /// Public default helpers used by `GatePluginParams` so its serde defaults
@@ -332,6 +357,10 @@ pub fn default_knee_db() -> f32 {
 pub fn default_lookahead_ms() -> f32 {
     d_lookahead_ms() as f32
 }
+/// Returns the default upward boost ceiling in dB.
+pub fn default_max_boost_db() -> f32 {
+    d_max_boost_db() as f32
+}
 
 impl Default for Params {
     fn default() -> Self {
@@ -351,6 +380,8 @@ impl Default for Params {
             hysteresis_db: d_hysteresis_db(),
             knee_db: d_knee_db(),
             lookahead_ms: d_lookahead_ms(),
+            mode: GateMode::default(),
+            max_boost_db: d_max_boost_db(),
         }
     }
 }
@@ -392,6 +423,8 @@ impl PluginParamDef for Params {
             12 => Some(self.hysteresis_db),
             13 => Some(self.knee_db),
             14 => Some(self.lookahead_ms),
+            15 => Some(self.mode.index() as f64),
+            16 => Some(self.max_boost_db),
             _ => None,
         }
     }
@@ -423,6 +456,11 @@ impl PluginParamDef for Params {
             12 => self.hysteresis_db = PARAMS[12].clamp_f64(value),
             13 => self.knee_db = PARAMS[13].clamp_f64(value),
             14 => self.lookahead_ms = PARAMS[14].clamp_f64(value),
+            15 => {
+                self.mode = GateMode::from_index(PARAMS[15].clamp_f64(value) as usize)
+                    .expect("clamped Gate mode")
+            }
+            16 => self.max_boost_db = PARAMS[16].clamp_f64(value),
             _ => {}
         }
     }
@@ -522,7 +560,7 @@ mod tests {
             .filter(|control| control.param_index != usize::MAX)
             .map(|control| control.param_index)
             .collect();
-        assert_eq!(primary, vec![0, 11, 2, 3, 4, 5]);
+        assert_eq!(primary, vec![15, 0, 11, 16, 2, 3, 4, 5]);
         assert_eq!(dynamics.layout.collapse_priority, 1.0);
         assert_eq!(dynamics.layout.overflow, GroupOverflow::KeepVisible);
         assert!(LAYOUT.main[2].layout.collapse_priority > LAYOUT.main[1].layout.collapse_priority);

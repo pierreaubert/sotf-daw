@@ -6,7 +6,6 @@ use super::multiband_expander_plugin::MultibandExpanderPlugin;
 use super::spectral_state::SpectralState;
 use super::types::GateState;
 use super::types::MultibandExpanderPluginParams;
-use math_audio_dsp::fast_math::{fast_log10, fast_pow10};
 use sotf_host::detector::DetectionMode;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -244,17 +243,17 @@ fn render_expander_chunks(
 }
 
 fn independent_single_band_peak_oracle(input: &[f32]) -> Vec<f32> {
-    let detector_release = (-1.0f32 / (5.0e-3 * 48_000.0)).exp();
-    let attenuation_attack = (-1.0f32 / (1.0e-3 * 48_000.0)).exp();
-    let attenuation_release = (-1.0f32 / (50.0e-3 * 48_000.0)).exp();
-    let mut peak_envelope = 0.0f32;
-    let mut attenuation = 0.0f32;
+    let detector_release = (-1.0f64 / (5.0e-3 * 48_000.0)).exp();
+    let attenuation_attack = (-1.0f64 / (1.0e-3 * 48_000.0)).exp();
+    let attenuation_release = (-1.0f64 / (50.0e-3 * 48_000.0)).exp();
+    let mut peak_envelope = 0.0f64;
+    let mut attenuation = 0.0f64;
     let mut state = GateState::Open;
     let mut output = Vec::with_capacity(input.len());
 
     for &sample in input {
-        peak_envelope = sample.abs().max(detector_release * peak_envelope);
-        let detector_db = 20.0 * fast_log10(peak_envelope.max(1.0e-10));
+        peak_envelope = (sample as f64).abs().max(detector_release * peak_envelope);
+        let detector_db = 20.0 * peak_envelope.max(1.0e-10).log10();
         let target = match state {
             GateState::Open => {
                 if detector_db < -20.0 {
@@ -268,7 +267,7 @@ fn independent_single_band_peak_oracle(input: &[f32]) -> Vec<f32> {
                     0.0
                 } else {
                     state = GateState::Closing;
-                    ((-20.0 - detector_db) * (1.0 - 1.0 / 4.0)).min(60.0)
+                    (detector_db - (-20.0 + 4.0 * (detector_db + 20.0))).min(60.0)
                 }
             }
             GateState::Closing => {
@@ -276,7 +275,7 @@ fn independent_single_band_peak_oracle(input: &[f32]) -> Vec<f32> {
                     state = GateState::Open;
                     0.0
                 } else {
-                    ((-20.0 - detector_db) * (1.0 - 1.0 / 4.0)).min(60.0)
+                    (detector_db - (-20.0 + 4.0 * (detector_db + 20.0))).min(60.0)
                 }
             }
         };
@@ -286,7 +285,7 @@ fn independent_single_band_peak_oracle(input: &[f32]) -> Vec<f32> {
             attenuation_release
         };
         attenuation = target + coeff * (attenuation - target);
-        output.push(sample * fast_pow10(-attenuation / 20.0));
+        output.push((sample as f64 * 10.0_f64.powf(-attenuation / 20.0)) as f32);
     }
     output
 }
@@ -834,7 +833,7 @@ fn test_calculate_expansion_attenuation() {
     let att =
         MultibandExpanderPlugin::calculate_expansion_attenuation(-40.0, th, ratio, knee, range);
     assert_eq!(att, range);
-    let slope = 1.0 - 1.0 / ratio.max(1.0);
+    let slope = ratio - 1.0;
     let att2 =
         MultibandExpanderPlugin::calculate_expansion_attenuation(-15.0, th, ratio, knee, range);
     assert!((att2 - 5.0 * slope).abs() < 1e-5);
@@ -2541,10 +2540,33 @@ fn test_spectral_state_reset() {
     ss.bin_states[0][0].envelope_db = 10.0;
     ss.bin_states[0][0].gate_state = GateState::Closing;
     ss.output_accumulator_fill = 100;
+    ss.input_buffers[0].fill(1.0);
+    ss.output_accumulator.fill(1.0);
+    ss.drain_cache.fill(1.0);
+    ss.drain_frames = 17;
+    ss.drain_read = 1;
+    ss.drain_full_support = true;
+    ss.synthesis_discard = 0;
+    ss.next_add_position = 123;
 
     ss.reset();
 
-    assert_eq!(ss.input_fill, 0);
+    assert_eq!(ss.input_fill, 768);
+    assert_eq!(ss.synthesis_discard, 768);
+    assert_eq!(ss.next_add_position, 4096 - 768);
+    assert_eq!(ss.output_read_position, 0);
+    assert_eq!(ss.startup_padding_remaining, 1024);
+    assert_eq!(ss.drain_frames, 0);
+    assert_eq!(ss.drain_read, 0);
+    assert!(!ss.drain_full_support);
+    assert!(
+        ss.input_buffers
+            .iter()
+            .flatten()
+            .all(|&sample| sample == 0.0)
+    );
+    assert!(ss.output_accumulator.iter().all(|&sample| sample == 0.0));
+    assert!(ss.drain_cache.iter().all(|&sample| sample == 0.0));
     assert_eq!(ss.bin_states[0][0].envelope_db, 0.0);
     assert_eq!(ss.bin_states[0][0].gate_state, GateState::Open);
     assert_eq!(ss.output_accumulator_fill, 0);
@@ -2672,6 +2694,234 @@ fn spectral_mode_variable_and_zero_blocks_return_num_frames() {
         assert!(
             buf.iter().all(|s| s.is_finite()),
             "block size {nf} produced non-finite output"
+        );
+    }
+}
+
+// Independent f64 transfer curve: output movement below threshold is R times
+// input movement. The quadratic joins unity and that line with matching slope.
+fn conventional_expander_output_db(
+    input: f64,
+    threshold: f64,
+    ratio: f64,
+    knee: f64,
+    range: f64,
+) -> f64 {
+    let output = if knee == 0.0 || input < threshold - knee / 2.0 {
+        if input < threshold {
+            threshold + ratio * (input - threshold)
+        } else {
+            input
+        }
+    } else if input >= threshold + knee / 2.0 {
+        input
+    } else {
+        input + (1.0 - ratio) * (input - threshold - knee / 2.0).powi(2) / (2.0 * knee)
+    };
+    output.max(input - range)
+}
+
+#[test]
+fn conventional_ratio_matches_independent_transfer_curve() {
+    for threshold in [-60.0_f32, -20.0, -3.0] {
+        for ratio in [1.0_f32, 1.5, 2.0, 4.0, 20.0] {
+            for knee in [0.0_f32, 6.0, 12.0] {
+                for range in [12.0_f32, 60.0, 120.0] {
+                    for step in -240..=40 {
+                        let input = threshold + step as f32 * 0.25;
+                        let attenuation = MultibandExpanderPlugin::calculate_expansion_attenuation(
+                            input, threshold, ratio, knee, range,
+                        );
+                        let expected = conventional_expander_output_db(
+                            input as f64,
+                            threshold as f64,
+                            ratio as f64,
+                            knee as f64,
+                            range as f64,
+                        );
+                        assert!(
+                            ((input - attenuation) as f64 - expected).abs() < 2.0e-5,
+                            "input={input}, threshold={threshold}, ratio={ratio}, knee={knee}, range={range}: output={}, expected={expected}",
+                            input - attenuation
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conventional_ratio_matches_single_and_multiband_settled_audio() {
+    // DC occupies only the lowest crossover band after settling, so its
+    // independent level oracle applies to both the one-band alias and 3 bands.
+    for rate in [44_100, 48_000, 96_000] {
+        for num_bands in [1, 3] {
+            for channels in [1, 2, 6] {
+                let input = 10.0_f64.powf(-30.0 / 20.0) as f32;
+                let frames = rate as usize / 2;
+                // Isolate the nonlinear ratio from the crossover's small f32
+                // DC gain error, which otherwise grows with expansion ratio.
+                let mut unity_params = non_unity_peak_params(num_bands);
+                unity_params.ratio = 1.0;
+                for band in &mut unity_params.bands {
+                    band.ratio = Some(1.0);
+                }
+                let mut unity = MultibandExpanderPlugin::with_params(channels, unity_params);
+                unity.initialize(rate).unwrap();
+                let mut unity_output = vec![input; frames * channels];
+                unity
+                    .process_in_place(&mut unity_output, &ProcessContext::new(rate, frames))
+                    .unwrap();
+                let filtered_input = unity_output[unity_output.len() - 1] as f64;
+                assert!((20.0 * (filtered_input / input as f64).log10()).abs() < 0.01);
+                for ratio in [1.0_f32, 2.0, 4.0, 20.0] {
+                    let mut params = non_unity_peak_params(num_bands);
+                    params.ratio = ratio;
+                    params.range_db = 80.0;
+                    for band in &mut params.bands {
+                        band.ratio = Some(ratio);
+                        band.range_db = Some(80.0);
+                    }
+                    let mut plugin = MultibandExpanderPlugin::with_params(channels, params);
+                    plugin.initialize(rate).unwrap();
+                    let expected = conventional_expander_output_db(
+                        20.0 * filtered_input.log10(),
+                        -20.0,
+                        ratio as f64,
+                        0.0,
+                        80.0,
+                    );
+                    let mut buffer = vec![input; frames * channels];
+                    plugin
+                        .process_in_place(&mut buffer, &ProcessContext::new(rate, frames))
+                        .unwrap();
+                    for sample in &buffer[buffer.len() - channels..] {
+                        let actual = 20.0 * (*sample as f64).abs().log10();
+                        assert!(
+                            (actual - expected).abs() < 0.03,
+                            "rate={rate}, bands={num_bands}, channels={channels}, ratio={ratio}: {actual} != {expected}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn conventional_ratio_matches_spectral_coherent_tone_oracle() {
+    const FFT_SIZE: usize = 1024;
+    let amplitude = 10.0_f64.powf(-30.0 / 20.0);
+    for rate in [44_100, 48_000, 96_000] {
+        for num_bands in [1, 3] {
+            for ratio in [1.0_f32, 2.0, 4.0] {
+                let mut params = non_unity_peak_params(num_bands);
+                // Primed partial windows can first request attenuation above
+                // the steady tone's target. Bound the subsequent 50 ms release
+                // transient by 60 dB * exp(-12) < 0.0004 dB, then allow 2N
+                // samples of transform support before measuring four periods.
+                let release_samples =
+                    (12.0 * params.release_ms as f64 * 0.001 * rate as f64).ceil() as usize;
+                let frames = release_samples.div_ceil(FFT_SIZE) * FFT_SIZE + 6 * FFT_SIZE;
+                params.processing_mode = "spectral".to_string();
+                params.sidechain_hpf_hz = None;
+                params.ratio = ratio;
+                for band in &mut params.bands {
+                    band.ratio = Some(ratio);
+                }
+                let mut aligned = MultibandExpanderPlugin::with_params(1, params.clone());
+                aligned.initialize(rate).unwrap();
+                let mut plugin = MultibandExpanderPlugin::with_params(1, params);
+                plugin.initialize(rate).unwrap();
+                let input: Vec<f32> = (0..frames)
+                    .map(|frame| {
+                        (amplitude
+                            * (std::f64::consts::TAU * 43.0 * frame as f64 / FFT_SIZE as f64).cos())
+                            as f32
+                    })
+                    .collect();
+                let mut output = Vec::with_capacity(frames);
+                for block in input.chunks(257) {
+                    let mut rendered = block.to_vec();
+                    plugin
+                        .process_in_place(&mut rendered, &ProcessContext::new(rate, block.len()))
+                        .unwrap();
+                    output.extend_from_slice(&rendered);
+                }
+                let mut aligned_output = Vec::with_capacity(frames);
+                for block in input.chunks(256) {
+                    let mut rendered = block.to_vec();
+                    aligned
+                        .process_in_place(&mut rendered, &ProcessContext::new(rate, block.len()))
+                        .unwrap();
+                    aligned_output.extend_from_slice(&rendered);
+                }
+                let partition_error = output
+                    .iter()
+                    .zip(&aligned_output)
+                    .map(|(a, b)| (a - b).abs())
+                    .fold(0.0_f32, f32::max);
+                assert_eq!(
+                    partition_error, 0.0,
+                    "rate={rate}, bands={num_bands}, ratio={ratio}: callback partition lost input"
+                );
+                // Periodic Hann maps a coherent tone to its center plus two
+                // half-amplitude neighbors. Dual-Hann overlap-add weights their
+                // gains by 2/3 and 1/3 (squared window Fourier coefficients).
+                let gain = |level: f64| {
+                    let input_db = 20.0 * level.log10();
+                    let output_db =
+                        conventional_expander_output_db(input_db, -20.0, ratio as f64, 0.0, 60.0);
+                    10.0_f64.powf((output_db - input_db) / 20.0)
+                };
+                let expected_gain = (2.0 * gain(amplitude) + gain(amplitude / 2.0)) / 3.0;
+                let rms = |signal: &[f32]| {
+                    (signal.iter().map(|x| (*x as f64).powi(2)).sum::<f64>() / signal.len() as f64)
+                        .sqrt()
+                };
+                let actual_gain =
+                    rms(&output[frames - 4 * FFT_SIZE..]) / (amplitude / 2.0_f64.sqrt());
+                let error_db = 20.0 * (actual_gain / expected_gain).log10();
+                assert!(
+                    error_db.abs() < 0.01,
+                    "rate={rate}, bands={num_bands}, ratio={ratio}: gain={actual_gain}, expected={expected_gain}, error={error_db}dB, envelopes={:?}",
+                    [42, 43, 44].map(|bin| plugin.spectral.as_ref().unwrap().bin_states[0][bin].envelope_db)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn spectral_expander_consumes_every_input_sample_across_callback_partitions() {
+    let mut params = non_unity_peak_params(3);
+    params.processing_mode = "spectral".to_string();
+    params.sidechain_hpf_hz = None;
+    let input: Vec<f32> = (0..12_317)
+        .map(|frame| {
+            let t = frame as f64 / 48_000.0;
+            let level = if frame < 4096 { 0.2 } else { 0.015 };
+            (level
+                * ((std::f64::consts::TAU * 997.0 * t).sin()
+                    + 0.25 * (std::f64::consts::TAU * 4317.0 * t).cos())) as f32
+        })
+        .collect();
+    let mut reference = MultibandExpanderPlugin::with_params(1, params.clone());
+    reference.initialize(48_000).unwrap();
+    let expected = render_expander_chunks(&mut reference, &input, &[256]);
+    for pattern in [&[1][..], &[127], &[257], &[4096], &[1, 257, 17, 2048, 3]] {
+        let mut plugin = MultibandExpanderPlugin::with_params(1, params.clone());
+        plugin.initialize(48_000).unwrap();
+        let actual = render_expander_chunks(&mut plugin, &input, pattern);
+        let error = actual
+            .iter()
+            .zip(&expected)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        assert_eq!(
+            error, 0.0,
+            "callback pattern {pattern:?} dropped or shifted input"
         );
     }
 }

@@ -1,8 +1,10 @@
+use crate::GateMode;
 use crate::params::{
     DETECTION_MODES, HPF_ORDERS, default_attack_ms, default_detection_mode, default_hold_ms,
     default_hysteresis_db, default_knee_db, default_link_channels, default_lookahead_ms,
-    default_mix, default_range_db, default_ratio, default_release_ms, default_sidechain_external,
-    default_sidechain_hpf_hz, default_sidechain_hpf_order, default_threshold_db,
+    default_max_boost_db, default_mix, default_range_db, default_ratio, default_release_ms,
+    default_sidechain_external, default_sidechain_hpf_hz, default_sidechain_hpf_order,
+    default_threshold_db,
 };
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -44,7 +46,10 @@ pub struct GatePluginParams {
     /// Maximum attenuation in dB (0 = unlimited). Caps how much the gate attenuates.
     #[serde(default = "default_range_db")]
     pub range_db: f32,
-    /// Hysteresis in dB. Close threshold = threshold - hysteresis.
+    /// Difference in dB between the opening and closing thresholds.
+    ///
+    /// Downward opens at the upper knee edge; Upward/Duck at the lower edge.
+    /// Closing occurs hysteresis dB below that mode's opening level.
     #[serde(default = "default_hysteresis_db")]
     pub hysteresis_db: f32,
     /// Soft knee width in dB (0 = hard knee).
@@ -53,6 +58,12 @@ pub struct GatePluginParams {
     /// Lookahead delay in ms (0 = off, max 20ms). Delays audio so gain is computed from non-delayed signal.
     #[serde(default = "default_lookahead_ms")]
     pub lookahead_ms: f32,
+    /// Dynamics mode; changing it after initialization requires graph reconstruction.
+    #[serde(default)]
+    pub mode: GateMode,
+    /// Maximum upward boost in dB, between zero and 24 dB.
+    #[serde(default = "default_max_boost_db")]
+    pub max_boost_db: f32,
 }
 
 impl Default for GatePluginParams {
@@ -73,6 +84,8 @@ impl Default for GatePluginParams {
             hysteresis_db: default_hysteresis_db(),
             knee_db: default_knee_db(),
             lookahead_ms: default_lookahead_ms(),
+            mode: GateMode::default(),
+            max_boost_db: default_max_boost_db(),
         }
     }
 }

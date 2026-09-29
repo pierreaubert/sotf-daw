@@ -64,6 +64,14 @@ pub(super) struct SpectralState {
     pub(super) output_accumulator_mask: usize,
     /// Number of valid frames ready to drain
     pub(super) output_accumulator_fill: usize,
+    /// Negative-time synthesis prefix still excluded from the OLA ring.
+    pub(super) synthesis_discard: usize,
+    /// One canonical hop of zero continuation, independent of drain capacity.
+    pub(super) drain_cache: Vec<f32>,
+    pub(super) drain_frames: usize,
+    pub(super) drain_read: usize,
+    /// Preserve the original full spectral tail declaration through a dry fade.
+    pub(super) drain_full_support: bool,
     /// Next frame write position (ring)
     pub(super) next_add_position: usize,
     /// Next frame read position (ring)
@@ -75,11 +83,11 @@ pub(super) struct SpectralState {
     /// Interleaved circular delay buffer for the dry signal.
     /// Delays dry by fft_size frames so dry and wet are time-aligned
     /// before the wet/dry mix, preventing comb-filter notches.
-    /// Size: (fft_size - hop_size) * channels floats; cursor wraps at that size.
+    /// Size: fft_size * channels floats; cursor wraps at that size.
     pub(super) dry_delay_buf: Vec<f32>,
     /// Write/read cursor into dry_delay_buf (in floats, not frames).
     pub(super) dry_delay_pos: usize,
-    /// Total size of dry_delay_buf in floats (= (fft_size - hop_size) * channels).
+    /// Total size of dry_delay_buf in floats (= fft_size * channels).
     pub(super) dry_delay_len: usize,
 
     // --- Temporary working buffers ---
@@ -148,7 +156,8 @@ impl SpectralState {
             analysis_window,
             output_scale,
             input_buffers: vec![vec![0.0f32; fft_size]; channels],
-            input_fill: 0,
+            // Include all preceding Hann-square windows for source time zero.
+            input_fill: fft_size - hop_size,
             bin_states,
             bin_to_band,
             band_attack_hop: vec![0.0; num_bands],
@@ -158,7 +167,12 @@ impl SpectralState {
             _output_accumulator_frames: output_accumulator_frames,
             output_accumulator_mask: output_accumulator_frames - 1,
             output_accumulator_fill: 0,
-            next_add_position: 0,
+            synthesis_discard: fft_size - hop_size,
+            next_add_position: output_accumulator_frames - (fft_size - hop_size),
+            drain_cache: vec![0.0; hop_size * channels],
+            drain_frames: 0,
+            drain_read: 0,
+            drain_full_support: false,
             output_read_position: 0,
             startup_padding_remaining: fft_size,
             dry_delay_buf: vec![0.0f32; dry_delay_len],
@@ -252,7 +266,7 @@ impl SpectralState {
         for buf in &mut self.input_buffers {
             buf.fill(0.0);
         }
-        self.input_fill = 0;
+        self.input_fill = self.fft_size - self.hop_size;
         for ch_states in &mut self.bin_states {
             for s in ch_states.iter_mut() {
                 s.envelope_db = 0.0;
@@ -262,7 +276,12 @@ impl SpectralState {
         }
         self.output_accumulator.fill(0.0);
         self.output_accumulator_fill = 0;
-        self.next_add_position = 0;
+        self.synthesis_discard = self.fft_size - self.hop_size;
+        self.next_add_position = self.output_accumulator_mask + 1 - self.synthesis_discard;
+        self.drain_cache.fill(0.0);
+        self.drain_frames = 0;
+        self.drain_read = 0;
+        self.drain_full_support = false;
         self.output_read_position = 0;
         self.startup_padding_remaining = self.fft_size;
         self.dry_delay_buf.fill(0.0);

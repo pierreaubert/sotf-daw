@@ -7,7 +7,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
@@ -16,6 +17,8 @@ const ALLPASS_SMOOTH_MS: f32 = 20.0;
 const CLEAN_CROSSFADE_MS: f32 = 20.0;
 pub(super) const MAX_DELAY_CHANNELS: usize = 64;
 const MAX_DELAY_SAMPLE_RATE: u32 = 768_000;
+// One bounded continuation chunk; callers may provide smaller destinations.
+const MAX_DRAIN_FRAMES: usize = 1024;
 
 /// Preallocated dual-read-head state for pitch-preserving delay changes.
 /// Read positions remain fixed throughout a transition; only their gains move.
@@ -84,6 +87,10 @@ pub struct DelayPlugin {
     pub(super) allpass_coeff_smoother: Smoother,
     pub(super) cached_parameters: Vec<Parameter>,
     initialized: bool,
+    /// Keep recursive history conservative until initialize/reset clears it.
+    recursive_tail: bool,
+    has_input: bool,
+    drain_remaining: Option<usize>,
 }
 
 impl DelayPlugin {
@@ -226,6 +233,9 @@ impl DelayPlugin {
             allpass_coeff_smoother: Smoother::new(0.5, ALLPASS_SMOOTH_MS, sr),
             cached_parameters: Vec::new(),
             initialized: false,
+            recursive_tail: feedback != 0.0,
+            has_input: false,
+            drain_remaining: None,
         };
         p.rebuild_cached_parameters();
         Ok(p)
@@ -327,6 +337,9 @@ impl DelayPlugin {
             allpass_coeff_smoother: Smoother::new(0.5, ALLPASS_SMOOTH_MS, sr),
             cached_parameters: Vec::new(),
             initialized: false,
+            recursive_tail: false,
+            has_input: false,
+            drain_remaining: None,
         };
         p.rebuild_cached_parameters();
         Ok(p)
@@ -510,6 +523,19 @@ impl DelayPlugin {
 }
 
 impl ParametricInPlacePlugin for DelayPlugin {
+    fn tail_length(&self) -> sotf_host::plugin::TailLength {
+        use sotf_host::plugin::TailLength;
+        if !self.initialized {
+            TailLength::Unknown
+        } else if self.recursive_tail {
+            TailLength::Infinite
+        } else {
+            // Covers every delay read head, interpolation guard, modulation and
+            // transition within the prepared ring. Never infer zero from mix.
+            TailLength::Finite(self.max_samples as u64)
+        }
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Delay", env!("CARGO_PKG_VERSION"), "SotF")
     }
@@ -591,6 +617,16 @@ impl ParametricInPlacePlugin for DelayPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("delay requires reset before changing parameters after drain".into())
+            };
+        }
         let mut delay_ms = self.delay_ms;
         let mut feedback = self.feedback;
         let mut mix = self.mix;
@@ -655,6 +691,7 @@ impl ParametricInPlacePlugin for DelayPlugin {
         self.delay_smoother
             .set_target(delay_ms * self.sample_rate as f32 / 1000.0);
         self.feedback = feedback;
+        self.recursive_tail |= feedback != 0.0;
         self.feedback_smoother.set_target(feedback);
         self.mix = mix;
         self.mix_smoother.set_target(mix);
@@ -682,8 +719,32 @@ impl ParametricInPlacePlugin for DelayPlugin {
         id: ParameterId,
         value: ParameterValue,
     ) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.parametric_get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("delay requires reset before changing parameters after drain".into())
+            };
+        }
         self.parametric_validate_parameter(&id, &value)?;
         self.apply_one_value(id, value)
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "delay_ms" => Some(ParameterValue::Float(self.delay_ms)),
+            "feedback" => Some(ParameterValue::Float(self.feedback)),
+            "mix" => Some(ParameterValue::Float(self.mix)),
+            "lfo_rate_hz" => Some(ParameterValue::Float(self.modulation.rate_hz)),
+            "lfo_depth_ms" => Some(ParameterValue::Float(self.modulation.depth_ms)),
+            "pitch_preserving" => Some(ParameterValue::Bool(self.modulation.pitch_preserving)),
+            "allpass_feedback" => Some(ParameterValue::Bool(self.allpass_feedback)),
+            "allpass_coeff" => Some(ParameterValue::Float(self.allpass_coeff)),
+            _ => parse_channel_delay_id(id.as_str())
+                .and_then(|channel| self.channel_delays_ms.get(channel))
+                .copied()
+                .map(ParameterValue::Float),
+        }
     }
 
     fn parametric_validate_parameter(
@@ -788,13 +849,18 @@ impl ParametricInPlacePlugin for DelayPlugin {
         }
         let feedback_target = self.feedback_smoother.target();
         self.feedback_smoother.reset(feedback_target);
+        self.recursive_tail = feedback_target != 0.0;
         let mix_target = self.mix_smoother.target();
         self.mix_smoother.reset(mix_target);
+        self.has_input = false;
+        self.drain_remaining = None;
         self.initialized = true;
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
         self.buffer.fill(0.0);
         self.write_pos = 0;
         self.modulation.phase = 0.0;
@@ -802,6 +868,7 @@ impl ParametricInPlacePlugin for DelayPlugin {
         self.delay_smoother.reset(global_target);
         let fb_target = self.feedback_smoother.target();
         self.feedback_smoother.reset(fb_target);
+        self.recursive_tail = fb_target != 0.0;
         let mix_target = self.mix_smoother.target();
         self.mix_smoother.reset(mix_target);
         let allpass_mix_target = self.allpass_mix_smoother.target();
@@ -837,20 +904,91 @@ impl ParametricInPlacePlugin for DelayPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        enable_ftz_daz();
-        let num_frames = context.num_frames;
+        if self.initialized && context.sample_rate != self.sample_rate {
+            return Err("delay requires the prepared process sample rate".into());
+        }
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("delay requires reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
 
+    fn drain_output_frames_max(&self) -> usize {
+        if !self.initialized || self.recursive_tail {
+            0
+        } else {
+            self.max_samples.min(MAX_DRAIN_FRAMES)
+        }
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.recursive_tail || !self.has_input {
+            0
+        } else {
+            self.drain_remaining.unwrap_or(self.max_samples)
+        };
+        // Each full-capacity call traverses another MAX_DRAIN_FRAMES ring slots.
+        std::num::NonZeroU64::new(remaining.div_ceil(MAX_DRAIN_FRAMES).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        // Recursive EOS is still unsupported. Preserve the previous no-drain
+        // behavior rather than abort existing renders or guess a tail cutoff.
+        // Tail metadata remains Infinite until reset clears recursive history.
+        if self.recursive_tail {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("delay requires initialization at the drain sample rate".into());
+        }
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("delay drain output must contain whole channel frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        // With no recursive history, every ring write during continuation is
+        // zero. A complete traversal covers all interpolated/modulated taps and
+        // both stationary read heads of an unfinished clean transition.
+        let remaining = self.drain_remaining.unwrap_or(self.max_samples);
+        let frames = (output.len() / self.channels)
+            .min(remaining)
+            .min(MAX_DRAIN_FRAMES);
+        if frames == 0 {
+            return Err("delay drain needs at least one output frame".into());
+        }
+        let samples = frames * self.channels;
+        self.validate_stream_buffer(samples, frames)?;
+        output[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+}
+
+impl DelayPlugin {
+    fn validate_stream_buffer(&self, buffer_len: usize, num_frames: usize) -> PluginResult<()> {
         let expected_len = num_frames
             .checked_mul(self.channels)
             .ok_or_else(|| "delay buffer length overflow".to_string())?;
         if self.channels == 0 {
             return Err("delay requires at least one channel".into());
         }
-        if buffer.len() != expected_len {
+        if buffer_len != expected_len {
             return Err(format!(
                 "delay expected {expected_len} samples for {num_frames} frames and {} channels, got {}",
-                self.channels,
-                buffer.len()
+                self.channels, buffer_len
             ));
         }
         if self.max_samples == 0
@@ -867,6 +1005,19 @@ impl ParametricInPlacePlugin for DelayPlugin {
         {
             return Err("per-channel delay arrays drifted out of sync".into());
         }
+
+        Ok(())
+    }
+
+    fn process_stream(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        enable_ftz_daz();
+        let num_frames = context.num_frames;
+
+        self.validate_stream_buffer(buffer.len(), num_frames)?;
 
         let lfo_active =
             self.modulation.rate_hz > 0.0 && self.modulation.depth_ms > 0.0 && self.sample_rate > 0;
@@ -1010,6 +1161,7 @@ impl DelayPlugin {
                 .ok_or_else(|| "feedback must be a float".to_string())?;
             if v.is_finite() {
                 self.feedback = v;
+                self.recursive_tail |= v != 0.0;
                 self.feedback_smoother.set_target(self.feedback);
             }
         } else if id == self.param_mix {

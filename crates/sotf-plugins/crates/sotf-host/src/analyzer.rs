@@ -7,11 +7,11 @@
 //!
 //! Examples: loudness monitoring, spectrum analysis, phase meters, etc.
 
+// Rust guideline compliant 2026-02-21
 use crate::plugin::{PluginInfo, PluginResult, ProcessContext};
-use arc_swap::ArcSwap;
 use serde::{Deserialize, Serialize};
 use std::any::Any;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 const fn default_integrated_window_seconds() -> u32 {
     3_600
@@ -19,6 +19,10 @@ const fn default_integrated_window_seconds() -> u32 {
 
 const fn default_integrated_mode() -> IntegratedLoudnessMode {
     IntegratedLoudnessMode::Rolling
+}
+
+const fn default_integrated_measurement_running() -> bool {
+    true
 }
 
 /// Policy used for the integrated (I) programme-loudness measurement.
@@ -31,6 +35,74 @@ pub enum IntegratedLoudnessMode {
     /// Retain the complete programme without eviction. If the prepared
     /// capacity is exhausted, the result becomes explicitly unavailable.
     WholeProgram,
+}
+
+/// Retention policy for overlapping three-second loudness-range observations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LoudnessRangeMode {
+    /// Retain the latest configured number of observations, including silence.
+    #[default]
+    Rolling,
+    /// Retain every observation; report exhaustion instead of evicting history.
+    WholeProgram,
+}
+
+/// Prepared storage policy for optional EBU Tech 3342 loudness range.
+///
+/// Capacities from one through 36,000 observations are supported. Two f64
+/// arrays require 16 bytes per observation, excluding fixed bookkeeping.
+/// Ordinary sample rates produce ten observations per second after warmup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LoudnessRangeConfig {
+    pub mode: LoudnessRangeMode,
+    pub capacity_windows: usize,
+}
+
+impl Default for LoudnessRangeConfig {
+    fn default() -> Self {
+        Self {
+            mode: LoudnessRangeMode::Rolling,
+            capacity_windows: 36_000,
+        }
+    }
+}
+
+/// Availability of the optional loudness-range statistic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LoudnessRangeStatus {
+    /// No complete three-second observation has arrived.
+    WarmingUp,
+    /// All retained observations are below the absolute loudness gate.
+    BelowGate,
+    /// The statistic is available, including a valid zero range.
+    Valid,
+    /// Whole-program capacity was exceeded; reset starts a new programme.
+    CapacityExceeded,
+    /// An observation was invalid; reset starts a new programme.
+    MeasurementError,
+}
+
+/// Scalar loudness range in LU, with explicit retention and validity metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LoudnessRangeData {
+    /// Finite nonnegative LU when valid; absent for unavailable measurements.
+    pub range_lu: Option<f64>,
+    /// True after 60 seconds of accepted active I/LRA audio in this epoch.
+    ///
+    /// This clock is independent of numeric range validity and the 100 ms
+    /// observation grid. Consumers should display it only with a finite,
+    /// nonnegative range and `LoudnessRangeStatus::Valid`.
+    #[serde(default)]
+    pub is_stable: bool,
+    pub status: LoudnessRangeStatus,
+    pub mode: LoudnessRangeMode,
+    pub retained_windows: usize,
+    pub observed_windows: u64,
+    pub capacity_windows: usize,
+    /// False when the inherited floor(sample_rate / 10) clock is approximate.
+    pub timebase_is_exact: bool,
 }
 
 /// Current loudness-query failure, separate from ordinary cold-window state.
@@ -49,13 +121,36 @@ pub enum LoudnessQueryError {
 /// Uses preallocated Arcs to allow the audio thread to update data in-place
 /// if the UI thread is not holding every previous version.
 pub struct RealTimeCache<T> {
-    shared: Arc<ArcSwap<T>>,
+    shared: Arc<SharedCache<T>>,
+    /// Producer-local snapshot: callback-side reads need only an Arc clone.
+    current: Arc<T>,
     spare: Option<Arc<T>>,
     fallback_spare: Option<Arc<T>>,
-    /// RT diagnostics: contention count (fallback allocation path taken)
+    /// RT diagnostics: publications skipped because no slot/lock was available.
     contention_count: u64,
     /// RT diagnostics: total update calls
     update_count: u64,
+}
+
+/// Reader handle for a metering cache. These methods are for control/UI threads;
+/// the producer uses [`RealTimeCache::load`] for nonblocking reads.
+pub struct SharedCache<T> {
+    value: Mutex<Arc<T>>,
+}
+
+impl<T> SharedCache<T> {
+    /// Clone the published snapshot while briefly holding the reader lock.
+    pub fn load_full(&self) -> Arc<T> {
+        self.value
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Clone the published snapshot on a control/UI thread.
+    pub fn load(&self) -> Arc<T> {
+        self.load_full()
+    }
 }
 
 impl<T: Clone + Default + Send + Sync> RealTimeCache<T> {
@@ -73,8 +168,18 @@ impl<T: Clone + Default + Send + Sync> RealTimeCache<T> {
     /// cloning one value would make the two outer cache slots share those
     /// buffers and force copy-on-write allocation on the first update.
     pub fn new_pair(shared_value: T, spare_value: T) -> Self {
+        let current = Arc::new(shared_value);
+        let shared = Arc::new(SharedCache {
+            value: Mutex::new(current.clone()),
+        });
+        // The pthread backend (including macOS) lazily allocates its mutex.
+        // Prepare that per-instance resource here on the construction thread,
+        // after its address is fixed inside the Arc. No per-thread setup is
+        // needed when the cache later moves to the audio callback.
+        drop(shared.value.lock().expect("new cache mutex is unpoisoned"));
         Self {
-            shared: Arc::new(ArcSwap::from(Arc::new(shared_value))),
+            shared,
+            current,
             spare: Some(Arc::new(spare_value)),
             fallback_spare: None,
             contention_count: 0,
@@ -86,13 +191,9 @@ impl<T: Clone + Default + Send + Sync> RealTimeCache<T> {
     /// reset paths use this to publish a cleared generation even while a UI
     /// reader is holding both normally alternating generations.
     pub fn new_triplet(shared_value: T, spare_value: T, fallback_value: T) -> Self {
-        Self {
-            shared: Arc::new(ArcSwap::from(Arc::new(shared_value))),
-            spare: Some(Arc::new(spare_value)),
-            fallback_spare: Some(Arc::new(fallback_value)),
-            contention_count: 0,
-            update_count: 0,
-        }
+        let mut cache = Self::new_pair(shared_value, spare_value);
+        cache.fallback_spare = Some(Arc::new(fallback_value));
+        cache
     }
 
     /// Update the cached data using a closure.
@@ -108,6 +209,13 @@ impl<T: Clone + Default + Send + Sync> RealTimeCache<T> {
         F: FnOnce(&mut T),
     {
         self.update_count += 1;
+        // ArcSwap's first swap allocates a thread-local debt record. A
+        // nonblocking publication lock avoids that cold callback allocation;
+        // a busy UI reader simply postpones this metering update.
+        let Ok(mut published) = self.shared.value.try_lock() else {
+            self.contention_count += 1;
+            return;
+        };
         let use_fallback = self
             .spare
             .as_ref()
@@ -117,28 +225,92 @@ impl<T: Clone + Default + Send + Sync> RealTimeCache<T> {
         } else {
             &mut self.spare
         };
-        if slot
-            .as_ref()
-            .is_some_and(|candidate| Arc::strong_count(candidate) == 1)
-        {
-            let mut candidate = slot.take().expect("checked cache spare");
-            let data = Arc::get_mut(&mut candidate).expect("sole cache spare owner");
+        if let Some(data) = slot.as_mut().and_then(Arc::get_mut) {
             update_fn(data);
-            let old_arc = self.shared.swap(candidate);
+            let candidate = slot.take().expect("checked cache spare");
+            let old_arc = std::mem::replace(&mut *published, candidate.clone());
+            // old_arc keeps the previous value alive while its producer-local
+            // reference is replaced; no value is destroyed on this path.
+            self.current = candidate;
             *slot = Some(old_arc);
             return;
         }
         self.contention_count += 1;
     }
 
-    /// Get a handle to the shared state for reading
-    pub fn shared(&self) -> Arc<ArcSwap<T>> {
+    /// Publish an update only when a prepared candidate is writable.
+    ///
+    /// Tries the ordinary spare followed by the fallback spare, checking exclusive
+    /// outer ownership before calling `can_update`. The predicate may inspect at
+    /// most two candidates; `update_fn` runs exactly once if one is accepted.
+    /// Returns `false` without changing the published snapshot when neither is
+    /// ready or the nonblocking publication lock is busy. Each invocation counts
+    /// as one update attempt and a failed invocation counts as one contention.
+    ///
+    /// For nested `Arc` buffers, use [`Arc::get_mut`] inside `can_update` to verify
+    /// exclusive access. Separate strong/weak reference counts are not an atomic
+    /// uniqueness check. The predicate must leave rejected candidates unchanged
+    /// and must not create or export new shared references to accepted buffers.
+    /// The writer should use the same authoritative access and prepared storage.
+    ///
+    /// Slot selection and publication do not allocate or destroy payloads. Both
+    /// callbacks must also avoid heap activity and blocking for realtime use.
+    /// Existing [`Self::update`] behavior is unchanged.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use sotf_host::analyzer::{CorrelationData, RealTimeCache};
+    /// use std::sync::Arc;
+    /// let mut cache = RealTimeCache::new_triplet(
+    ///     CorrelationData::new(2), CorrelationData::new(2), CorrelationData::new(2),
+    /// );
+    /// assert!(cache.update_if(
+    ///     |data| Arc::get_mut(&mut data.matrix).is_some_and(|matrix| matrix.len() == 4),
+    ///     |data| data.samples_seen = 32,
+    /// ));
+    /// ```
+    pub fn update_if<P, F>(&mut self, mut can_update: P, update_fn: F) -> bool
+    where
+        P: FnMut(&mut T) -> bool,
+        F: FnOnce(&mut T),
+    {
+        self.update_count += 1;
+        let Ok(mut published) = self.shared.value.try_lock() else {
+            self.contention_count += 1;
+            return false;
+        };
+        for slot in [&mut self.spare, &mut self.fallback_spare] {
+            let Some(data) = slot.as_mut().and_then(Arc::get_mut) else {
+                continue;
+            };
+            if !can_update(data) {
+                continue;
+            }
+            update_fn(data);
+            let candidate = slot.take().expect("checked cache spare");
+            let old_arc = std::mem::replace(&mut *published, candidate.clone());
+            // Keep both generations owned throughout publication. Rejected
+            // candidates remain in their slots and are never republished.
+            self.current = candidate;
+            *slot = Some(old_arc);
+            return true;
+        }
+        self.contention_count += 1;
+        false
+    }
+
+    /// Get a control/UI reader handle with `load()` and `load_full()` methods.
+    ///
+    /// The handle uses `SharedCache<T>` rather than `ArcSwap<T>` so publishing
+    /// never initializes ArcSwap's allocating thread-local reader bookkeeping.
+    pub fn shared(&self) -> Arc<SharedCache<T>> {
         self.shared.clone()
     }
 
-    /// Load the current data as an Arc
+    /// Load the current data without locking or allocating on the producer thread.
     pub fn load(&self) -> Arc<T> {
-        self.shared.load_full()
+        self.current.clone()
     }
 
     /// RT diagnostics: returns (contention_count, update_count) and resets counters
@@ -269,7 +441,7 @@ impl Default for CorrelationData {
 /// Loudness analyzer data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoudnessData {
-    /// True only when every requested loudness/peak query for this generation
+    /// True only when every basic loudness/peak query for this generation
     /// succeeded. Cold/incomplete windows and meter errors are not encoded as
     /// plausible silence.
     #[serde(default)]
@@ -284,6 +456,19 @@ pub struct LoudnessData {
     /// Whether the owning analyzer is currently accumulating measurements.
     #[serde(default)]
     pub measurement_enabled: bool,
+    /// Whether Integrated Loudness and Loudness Range are accumulating.
+    /// Live momentary, short-term, peak, correlation, and true-peak meters are
+    /// independent of this programme-history control.
+    #[serde(default = "default_integrated_measurement_running")]
+    pub integrated_measurement_running: bool,
+    /// Runtime incarnation assigned to this Loudness Monitor instance. Zero
+    /// identifies snapshots produced before correlated controls were added.
+    #[serde(default)]
+    pub integrated_control_instance_id: u64,
+    /// Highest applied transient lifecycle command published by this runtime
+    /// instance. Zero means no command has been acknowledged yet.
+    #[serde(default)]
+    pub integrated_control_request_id: u64,
     /// Per-query validity. Valid silence is `-inf` with the corresponding bit
     /// set; a cold/incomplete window is `-inf` with the bit clear.
     #[serde(default)]
@@ -304,12 +489,24 @@ pub struct LoudnessData {
     pub momentary_lufs: f64,
     /// Short-term loudness (S) - 3 second window, LUFS
     pub shortterm_lufs: f64,
+    /// Maximum finite Momentary loudness observed on the monitor's 100 ms grid
+    /// during this integrated measurement epoch, in LUFS.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum_momentary_lufs: Option<f64>,
+    /// Maximum finite Short-term loudness observed on the monitor's 100 ms grid
+    /// during this integrated measurement epoch, in LUFS.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum_shortterm_lufs: Option<f64>,
     /// Integrated loudness (I), LUFS. Interpretation is selected by
     /// `integrated_mode`; exact mode never substitutes rolling history.
     pub integrated_lufs: f64,
     /// Integrated-history policy used for this snapshot.
     #[serde(default = "default_integrated_mode")]
     pub integrated_mode: IntegratedLoudnessMode,
+    /// Optional EBU Tech 3342 loudness range. Its status is independent of the
+    /// basic M/S/I/peak validity flags. Missing older serialized fields are off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loudness_range: Option<LoudnessRangeData>,
     /// Current sample peak (0.0 to 1.0+)
     pub peak: f64,
     /// Per-channel sample peaks (0.0 to 1.0+)
@@ -317,8 +514,18 @@ pub struct LoudnessData {
     /// Per-channel true peaks in dBTP (dB True Peak)
     /// True peaks account for inter-sample peaks via oversampling
     pub true_peaks_dbtp: Arc<Vec<f64>>,
-    /// BS.1770 true-peak FIR compliance. The pinned detector is verified only
-    /// at 48 kHz; other rates remain available as explicitly approximate data.
+    /// Maximum finite dBTP observed across channels during this measurement epoch.
+    ///
+    /// `None` means no finite, non-silent true-peak observation has occurred.
+    /// Unsupported rates and cold or silent epochs therefore have no value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum_true_peak_dbtp: Option<f64>,
+    /// Whether the host prepared its supported BS.1770 true-peak path. Rates
+    /// from 8,000 through 2,822,400 Hz are supported; the host uses the
+    /// published FIR phases where their interpolation factors apply and a
+    /// prepared 64-tap windowed-sinc bank at other supported rates. This flag
+    /// describes host rate support, not external certification of programme
+    /// material.
     #[serde(default)]
     pub true_peak_is_compliant: bool,
     /// Rolling-history duration or prepared exact-program capacity.
@@ -349,6 +556,9 @@ impl LoudnessData {
             query_error_generation: 0,
             query_error: None,
             measurement_enabled: true,
+            integrated_measurement_running: true,
+            integrated_control_instance_id: 0,
+            integrated_control_request_id: 0,
             momentary_valid: false,
             shortterm_valid: false,
             integrated_valid: false,
@@ -357,11 +567,15 @@ impl LoudnessData {
             channel_layout_is_compliant: channels <= 2,
             momentary_lufs: f64::NEG_INFINITY,
             shortterm_lufs: f64::NEG_INFINITY,
+            maximum_momentary_lufs: None,
+            maximum_shortterm_lufs: None,
             integrated_lufs: f64::NEG_INFINITY,
             integrated_mode: IntegratedLoudnessMode::Rolling,
+            loudness_range: None,
             peak: 0.0,
             channel_peaks: Arc::new(vec![0.0; channels]),
             true_peaks_dbtp: Arc::new(vec![f64::NEG_INFINITY; channels]),
+            maximum_true_peak_dbtp: None,
             true_peak_is_compliant: false,
             integrated_window_seconds: 3_600,
             correlation_lr: None,
@@ -382,6 +596,9 @@ impl LoudnessData {
         self.query_error_generation = other.query_error_generation;
         self.query_error = other.query_error;
         self.measurement_enabled = other.measurement_enabled;
+        self.integrated_measurement_running = other.integrated_measurement_running;
+        self.integrated_control_instance_id = other.integrated_control_instance_id;
+        self.integrated_control_request_id = other.integrated_control_request_id;
         self.momentary_valid = other.momentary_valid;
         self.shortterm_valid = other.shortterm_valid;
         self.integrated_valid = other.integrated_valid;
@@ -389,12 +606,16 @@ impl LoudnessData {
         self.true_peak_valid = other.true_peak_valid;
         self.channel_layout_is_compliant = other.channel_layout_is_compliant;
         self.shortterm_lufs = other.shortterm_lufs;
+        self.maximum_momentary_lufs = other.maximum_momentary_lufs;
+        self.maximum_shortterm_lufs = other.maximum_shortterm_lufs;
         self.integrated_lufs = other.integrated_lufs;
         self.integrated_mode = other.integrated_mode;
+        self.loudness_range = other.loudness_range;
         self.peak = other.peak;
 
         self.update_peaks(&other.channel_peaks);
         self.update_true_peaks(&other.true_peaks_dbtp);
+        self.maximum_true_peak_dbtp = other.maximum_true_peak_dbtp;
         self.true_peak_is_compliant = other.true_peak_is_compliant;
         self.integrated_window_seconds = other.integrated_window_seconds;
         self.update_correlation_matrix(&other.correlation_matrix);
@@ -445,6 +666,9 @@ impl Default for LoudnessData {
             query_error_generation: 0,
             query_error: None,
             measurement_enabled: false,
+            integrated_measurement_running: true,
+            integrated_control_instance_id: 0,
+            integrated_control_request_id: 0,
             momentary_valid: false,
             shortterm_valid: false,
             integrated_valid: false,
@@ -453,11 +677,15 @@ impl Default for LoudnessData {
             channel_layout_is_compliant: false,
             momentary_lufs: f64::NEG_INFINITY,
             shortterm_lufs: f64::NEG_INFINITY,
+            maximum_momentary_lufs: None,
+            maximum_shortterm_lufs: None,
             integrated_lufs: f64::NEG_INFINITY,
             integrated_mode: IntegratedLoudnessMode::Rolling,
+            loudness_range: None,
             peak: 0.0,
             channel_peaks: Arc::new(Vec::new()),
             true_peaks_dbtp: Arc::new(Vec::new()),
+            maximum_true_peak_dbtp: None,
             true_peak_is_compliant: false,
             integrated_window_seconds: 3_600,
             correlation_lr: None,
@@ -472,11 +700,21 @@ impl Default for LoudnessData {
 pub struct SpectrumData {
     /// Frequency bin centers in Hz
     pub frequencies: Arc<Vec<f32>>,
-    /// Magnitude values in dB
+    /// Integrated band power in dB relative to a full-scale sine.
+    ///
+    /// The spectrum analyzer uses periodic-Hann energy normalization and a
+    /// maximum across channels at each FFT line. For mono, summed linear band
+    /// powers represent twice the window-weighted mean square within the
+    /// displayed range before smoothing, subject to the display floor and
+    /// logarithm rounding. A full-scale Nyquist sequence is
+    /// therefore +3.0103 dB, while an interior coherent full-scale sine is 0 dB.
+    /// These values are not power spectral density per Hz.
+    ///
     /// Shared immutable display slice. The UI can pass this directly to its
     /// spectrum element without allocating a Vec-to-slice copy each render.
     pub magnitudes: Arc<[f32]>,
-    /// Peak magnitude across all bins
+    /// Maximum coherent FFT-line amplitude in the displayed range, in dBFS.
+    /// Full-scale coherent interior and Nyquist tones both have 0 dBFS peaks.
     pub peak_magnitude: f32,
 }
 
@@ -525,6 +763,44 @@ impl Default for SpectrumData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cold_thread_publication_and_reads_never_allocate_or_wait_for_ui() {
+        let mut cache = RealTimeCache::new_triplet(1i32, 0, 0);
+        let shared = cache.shared();
+        let reader = shared.clone();
+        // Construct on one thread and exercise the first publication on a
+        // different thread, as a host does with its audio callback.
+        cache = std::thread::spawn(move || {
+            crate::assert_no_allocs("cold metering publication", || {
+                cache.update(|value| *value = 2);
+                assert_eq!(*cache.load(), 2);
+            });
+            cache
+        })
+        .join()
+        .unwrap();
+        assert_eq!(*shared.load_full(), 2);
+        let lock = reader.value.lock().unwrap();
+        crate::assert_no_allocs("contended publication and callback read", || {
+            cache.update(|value| *value = 3);
+            assert_eq!(*cache.load(), 2);
+        });
+        drop(lock);
+        cache.update(|value| *value = 4);
+        assert_eq!(*shared.load_full(), 4);
+        assert_eq!(cache.take_contention_stats(), (1, 3));
+    }
+
+    #[test]
+    fn weak_reader_prevents_reuse_without_panicking() {
+        let mut cache = RealTimeCache::new(1i32);
+        let weak = Arc::downgrade(&cache.load());
+        cache.update(|value| *value = 2);
+        cache.update(|value| *value = 3);
+        assert_eq!(*cache.load(), 2);
+        assert_eq!(*weak.upgrade().unwrap(), 1);
+    }
 
     /// Create a RealTimeCache, update it, load it -- verify the loaded value
     /// matches what was written. Drops intermediate Arcs to avoid contention,
@@ -587,5 +863,97 @@ mod tests {
         let data = cache.load();
         assert_eq!(data.level, -12.5);
         assert_eq!(data.count, 42);
+    }
+    #[test]
+    fn conditional_cache_tries_fallback_and_runs_writer_exactly_once() {
+        let mut cache = RealTimeCache::new_triplet(10i32, 20, 30);
+        let mut visited = [0; 2];
+        let mut visits = 0;
+        let mut writes = 0;
+        assert!(cache.update_if(
+            |data| {
+                visited[visits] = *data;
+                visits += 1;
+                *data == 30
+            },
+            |data| {
+                writes += 1;
+                *data = 99;
+            },
+        ));
+        assert_eq!(visited, [20, 30]);
+        assert_eq!(visits, 2);
+        assert_eq!(writes, 1);
+        assert_eq!(*cache.load(), 99);
+        assert_eq!(*cache.shared().load(), 99);
+        assert_eq!(cache.take_contention_stats(), (0, 1));
+    }
+
+    #[test]
+    fn conditional_cache_rejection_preserves_publication_identity_and_counts_one_attempt() {
+        let mut cache = RealTimeCache::new_triplet(10i32, 20, 30);
+        let original = cache.load();
+        let shared = cache.shared();
+        let mut visits = 0;
+        assert!(!cache.update_if(
+            |_| {
+                visits += 1;
+                false
+            },
+            |_| panic!("writer must not run without a ready candidate"),
+        ));
+        assert_eq!(visits, 2);
+        assert!(Arc::ptr_eq(&original, &cache.load()));
+        assert!(Arc::ptr_eq(&original, &shared.load()));
+        assert_eq!(*original, 10);
+        assert_eq!(cache.take_contention_stats(), (1, 1));
+        // The ordinary API retains its original unconditional behavior.
+        cache.update(|data| *data = 42);
+        assert_eq!(*cache.load(), 42);
+        assert_eq!(cache.take_contention_stats(), (0, 1));
+    }
+
+    #[test]
+    fn conditional_cache_busy_publication_does_not_call_readiness_or_writer() {
+        let mut cache = RealTimeCache::new_triplet(10i32, 20, 30);
+        let original = cache.load();
+        let shared = cache.shared();
+        let lock = shared.value.lock().unwrap();
+        assert!(!cache.update_if(
+            |_| panic!("readiness must not run while publication is busy"),
+            |_| panic!("writer must not run while publication is busy"),
+        ));
+        assert!(Arc::ptr_eq(&original, &cache.load()));
+        assert_eq!(cache.take_contention_stats(), (1, 1));
+        drop(lock);
+        assert!(cache.update_if(|_| true, |data| *data = 77));
+        assert_eq!(*shared.load(), 77);
+        assert_eq!(cache.take_contention_stats(), (0, 1));
+    }
+
+    #[test]
+    fn conditional_cache_uses_authoritative_nested_access_and_preserves_rejected_payload() {
+        let mut cache = RealTimeCache::new_triplet(
+            CorrelationData::new(2),
+            CorrelationData::new(2),
+            CorrelationData::new(2),
+        );
+        let weak = Arc::downgrade(&cache.load().matrix);
+        let readiness = |data: &mut CorrelationData| {
+            Arc::get_mut(&mut data.matrix).is_some_and(|matrix| matrix.len() == 4)
+        };
+        assert!(cache.update_if(readiness, |data| data.samples_seen = 32));
+        let first = cache.load();
+        assert!(cache.update_if(readiness, |data| data.samples_seen = 64));
+        assert_eq!(cache.load().samples_seen, 64);
+        assert_eq!(weak.upgrade().unwrap().as_slice(), &[1.0, 0.0, 0.0, 1.0]);
+        let current = cache.load();
+        // First spare has a retained nested Weak; fallback has a retained outer Arc.
+        assert!(!cache.update_if(readiness, |_| panic!("both candidates are retained")));
+        assert!(Arc::ptr_eq(&current, &cache.load()));
+        assert_eq!(cache.take_contention_stats(), (1, 3));
+        drop(first);
+        assert!(cache.update_if(readiness, |data| data.samples_seen = 128));
+        assert_eq!(cache.load().samples_seen, 128);
     }
 }

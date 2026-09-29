@@ -72,13 +72,28 @@ pub const PARAMS: &[ParamSpec] = &[
         .scaled(100.0)
         .output()
         .doc("Dry/wet mix"),
+    // Append controls to preserve the indices used by older hosts and presets.
+    ParamSpec::float("Range", "range_db", 60.0, 0.0, 60.0, 0.5, "dB", "Dynamics")
+        .doc("Maximum gain reduction; zero disables reduction"),
+    ParamSpec::float(
+        "Stereo Link",
+        "stereo_link",
+        0.0,
+        0.0,
+        1.0,
+        0.01,
+        "%",
+        "Detection",
+    )
+    .scaled(100.0)
+    .doc("Link all channel gains to the strongest reduction to preserve the stereo image"),
 ];
 
 // ============================================================================
 // UI Layout
 // ============================================================================
 
-/// De-Esser: idx 0=frequency, 1=q, 2=threshold, 3=ratio, 4=attack, 5=release, 6=mode, 7=mix
+/// De-Esser controls preserve indices 0–7; range and stereo link use 8–9.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::selector(6), // mode
@@ -90,6 +105,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             &[
                 ControlSpec::slider(0), // frequency
                 ControlSpec::slider(1), // q
+                ControlSpec::slider(9), // stereo link
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.85)),
@@ -101,6 +117,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(3), // ratio
                 ControlSpec::slider(4), // attack
                 ControlSpec::slider(5), // release
+                ControlSpec::slider(8), // range
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -148,6 +165,12 @@ pub struct Params {
     pub mode: String,
     #[serde(default = "d_mix")]
     pub mix: f64,
+    /// Maximum gain reduction in decibels.
+    #[serde(default = "d_range_db")]
+    pub range_db: f64,
+    /// Channel linking from independent (zero) to fully linked (one).
+    #[serde(default = "d_stereo_link")]
+    pub stereo_link: f64,
 }
 
 fn d_frequency() -> f64 {
@@ -173,6 +196,12 @@ fn d_mode() -> String {
 }
 fn d_mix() -> f64 {
     pk(PARAMS, "mix").default_f64()
+}
+fn d_range_db() -> f64 {
+    pk(PARAMS, "range_db").default_f64()
+}
+fn d_stereo_link() -> f64 {
+    pk(PARAMS, "stereo_link").default_f64()
 }
 
 /// Public default helpers used by `DeEsserPluginParams` so its serde defaults
@@ -202,6 +231,16 @@ pub fn default_mix() -> f32 {
     d_mix() as f32
 }
 
+/// Returns the maximum reduction used by presets without a range control.
+pub fn default_range_db() -> f32 {
+    d_range_db() as f32
+}
+
+/// Returns independent channel processing for presets without a link control.
+pub fn default_stereo_link() -> f32 {
+    d_stereo_link() as f32
+}
+
 impl Default for Params {
     fn default() -> Self {
         Self {
@@ -213,6 +252,8 @@ impl Default for Params {
             release: d_release(),
             mode: d_mode(),
             mix: d_mix(),
+            range_db: d_range_db(),
+            stereo_link: d_stereo_link(),
         }
     }
 }
@@ -242,6 +283,8 @@ impl PluginParamDef for Params {
                     .unwrap_or(1) as f64,
             ),
             7 => Some(self.mix),
+            8 => Some(self.range_db),
+            9 => Some(self.stereo_link),
             _ => None,
         }
     }
@@ -261,6 +304,8 @@ impl PluginParamDef for Params {
                 }
             }
             7 => self.mix = PARAMS[7].clamp_f64(value),
+            8 => self.range_db = PARAMS[8].clamp_f64(value),
+            9 => self.stereo_link = PARAMS[9].clamp_f64(value),
             _ => {}
         }
     }
@@ -303,6 +348,8 @@ mod tests {
         assert_eq!(original.release, restored.release);
         assert_eq!(original.mode, restored.mode);
         assert_eq!(original.mix, restored.mix);
+        assert_eq!(original.range_db, restored.range_db);
+        assert_eq!(original.stereo_link, restored.stereo_link);
     }
 
     #[test]
@@ -316,5 +363,7 @@ mod tests {
         assert_eq!(p.release, pk(PARAMS, "release").default_f64());
         assert_eq!(p.mode, MODES[1]);
         assert_eq!(p.mix, pk(PARAMS, "mix").default_f64());
+        assert_eq!(p.range_db, pk(PARAMS, "range_db").default_f64());
+        assert_eq!(p.stereo_link, pk(PARAMS, "stereo_link").default_f64());
     }
 }

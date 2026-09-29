@@ -1,0 +1,17 @@
+# AUD114 implemented resampler: independent review
+
+2026-09-28. Read-only review of `sotf-plugin-binaural/src/hrtf/resample.rs`, its public `tests/sofa_resampling.rs`, the approved proposal, and pinned registry Rubato 1.0.1 `synchro.rs`. No resampler production edits.
+
+No correctness blocker found in the reviewed correction.
+
+- Positive represented source/target rates precede division. Exact M×2×N length and byte-size checks precede indexing or allocation. Matching-rate valid input returns without changing samples or metadata. Empty valid data takes the explicit no-backend route, with checked duration metadata conversion.
+- Integer GCD geometry rounds the previous reduced-grid multiplier upward to an even value. Both input I and output O are even, so the physical sinc center `(I/2)*(O/I)` equals reported integer delay O/2. Existing even grids are retained; odd multipliers change kernel size/cutoff as disclosed.
+- The 262144-frame grid cap bounds both doubled FFT transforms, rather than merely the final IR storage. Unreduced multiplier×rate arithmetic is checked before construction. Bounded I and reduced input are exactly representable in f32, with an exact integer quotient; actual backend next/max dimensions and delay are nevertheless verified before processing.
+- The retained duration L is computed once as ceil(N*target/source). Full-capacity calls are bounded by ceil((O/2+L)/O); output timeline multiplication is checked first. Because O/I=target/source, this count also submits every original source frame and at least half an input quantum beyond its end. No final source suffix is left in an unprocessed scheduling remainder: FixedSync::Both consumes one complete prepared quantum.
+- Every final partial input is explicitly zero-filled, followed by full zero quanta. Returned read/write counts must equal the prepared quantum; missing backend output cannot be silently replaced by successful zero padding. Intersecting each emitted block with [delay,delay+L) covers every destination exactly once, without removing physical source delay.
+- One prepared two-channel resampler is reset per measurement; both channel buffers are refilled on every call. The reversed-measurement regression independently detects cross-measurement history leakage. All output and metadata replacement occurs only after all local work succeeds.
+- The independent physical-peak fixtures use startup/interior/final source impulses and preserve the pre-correction assertions. The complex-response fixture places the impulse sufficiently far from the retained-window boundaries for the chosen kernel and uses the independent analytic rate-scaled shift theorem; it does not mistake finite-window edge cropping for a full-kernel response.
+
+Full Binaural verification: `cargo test -p sotf-plugin-binaural` passed126 tests, no failures/ignored, `/tmp/sotf-sofa-binaural-full.log`. Includes the five new resampling tests and AUD109 ownership regression. Strict all-target Clippy passed, `/tmp/sotf-sofa-binaural-clippy.log`.
+
+Scope limits: exported IRs retain exactly the stated finite physical window, not an entire infinite sinc response. Kernel and passband effects follow the pinned backend; no added gain normalization. Existing nearest-integer source-rate interpretation and f32 public metadata remain unchanged. Opaque FFT planning remains backend-owned control-thread work; this review does not turn allocator exhaustion into a universal recoverability guarantee.

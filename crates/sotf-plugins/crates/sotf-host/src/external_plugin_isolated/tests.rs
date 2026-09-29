@@ -491,7 +491,10 @@ fn isolated_external_plugin_propagates_supervisor_crash_loop_quarantine() {
     let reason = plugin
         .worker_quarantine_reason()
         .expect("quarantine must record a reason");
-    assert!(reason.contains("quarantined"), "unexpected reason: {reason}");
+    assert!(
+        reason.contains("quarantined"),
+        "unexpected reason: {reason}"
+    );
     assert!(plugin.ensure_worker_running_event().is_err());
 
     // A quarantined plugin renders the local fallback instead of touching

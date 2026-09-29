@@ -37,3 +37,21 @@ changes the plugin latency from 0 to exactly 1024 samples.
 
 The plugin must be initialized at a supported nonzero sample rate before
 processing, and each `ProcessContext` must use that same rate.
+
+## Finite spectral streams
+
+Spectral mode implements `drain`: after `T>0` accepted frames it returns
+`2048 + floor((T-1)/256)*256 - T` frames of zero-input continuation, including
+remaining transform overlap and the aligned dry path. The native tail bound is
+2047 frames, and the prepared drain cache holds one 256-frame hop. Any positive
+channel-aligned destination capacity is accepted, and unused samples stay
+untouched. Empty streams complete immediately.
+
+The first successful spectral drain closes the stream; nonempty input and
+parameter changes require reset or reinitialization. Invalid rates/capacities
+consume no history, completion is stable, and callbacks allocate or free no
+storage. Existing startup timing remains unchanged.
+
+Conventional mode retains its existing unknown-tail declaration and no-drain
+behavior. Its recursive lowpass can produce audio after input ends while
+reduction is active; spectral finite-stream support does not cover that mode.

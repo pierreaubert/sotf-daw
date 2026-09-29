@@ -8,6 +8,7 @@ pub(super) struct PlaybackState {
     pub(super) muted: Arc<AtomicBool>,
     pub(super) volume_ramp: VolumeRampState,
     pub(super) flush_requested: Arc<AtomicBool>,
+    pub(super) callback_active: AtomicBool,
 }
 
 impl PlaybackState {
@@ -18,6 +19,7 @@ impl PlaybackState {
             muted: Arc::new(AtomicBool::new(false)),
             volume_ramp: VolumeRampState::new(1.0),
             flush_requested: Arc::new(AtomicBool::new(false)),
+            callback_active: AtomicBool::new(false),
         }
     }
 }

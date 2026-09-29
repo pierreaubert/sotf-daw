@@ -10,11 +10,11 @@ use super::types::TransientShaperPluginParams;
 use crate::params::PARAMS as TS;
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::param_specs::find_by_key as pk;
-use sotf_host::parameters::{Parameter, ParameterImportance, ParameterValue};
+use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext, TailLength,
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
@@ -240,6 +240,55 @@ impl TransientShaperPlugin {
             1.0 + excess / (1.0 + excess)
         }
     }
+    fn apply_value_ref(&mut self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        match id.as_str() {
+            "attack" => {
+                if let Some(v) = value.as_float()
+                    && v.is_finite()
+                {
+                    self.attack_amount = (v / 100.0).clamp(-1.0, 1.0);
+                    self.attack_smoother.set_target(self.attack_amount);
+                }
+            }
+            "sustain" => {
+                if let Some(v) = value.as_float()
+                    && v.is_finite()
+                {
+                    self.sustain_amount = (v / 100.0).clamp(-1.0, 1.0);
+                    self.sustain_smoother.set_target(self.sustain_amount);
+                }
+            }
+            "sensitivity" => {
+                if let Some(v) = value.as_float()
+                    && v.is_finite()
+                {
+                    self.sensitivity_db = v.clamp(-12.0, 12.0);
+                    self.sensitivity_smoother
+                        .set_target(Self::sensitivity_threshold(self.sensitivity_db));
+                }
+            }
+            "output_gain" => {
+                if let Some(v) = value.as_float()
+                    && v.is_finite()
+                {
+                    self.output_gain_db = v.clamp(-12.0, 12.0);
+                    self.output_gain_smoother
+                        .set_target(Self::db_to_linear(self.output_gain_db));
+                }
+            }
+            "mix" => {
+                if let Some(v) = value.as_float()
+                    && v.is_finite()
+                {
+                    self.mix = v.clamp(0.0, 1.0);
+                    self.mix_smoother.set_target(self.mix);
+                }
+            }
+            _ => return Err(format!("Unknown parameter: {}", id)),
+        }
+        self.update_cached_parameter(id.as_str(), value);
+        Ok(())
+    }
 }
 
 impl ParametricInPlacePlugin for TransientShaperPlugin {
@@ -251,6 +300,16 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         PluginCostClass::Dynamics
     }
 
+    fn tail_length(&self) -> TailLength {
+        // Envelopes and smoothed controls only scale the current sample. Their
+        // decay cannot emit audio after the input becomes zero.
+        TailLength::Finite(0)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        Some(std::num::NonZeroU64::MIN)
+    }
+
     fn compile_metadata(&self) -> PluginCompileMetadata {
         PluginCompileMetadata::nonlinear(PluginCostClass::Dynamics, None, 0, false)
     }
@@ -259,8 +318,39 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         self.channels
     }
 
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.parametric_validate_parameter(&id, &value)?;
+        self.apply_value_ref(&id, &value)
+    }
+
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .map(|parameter| parameter.default_value.clone())
     }
 
     fn current_values(&self) -> ParameterSet {
@@ -272,53 +362,8 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        for (id, value) in values {
-            match id.as_str() {
-                "attack" => {
-                    if let Some(v) = value.as_float()
-                        && v.is_finite()
-                    {
-                        self.attack_amount = (v / 100.0).clamp(-1.0, 1.0);
-                        self.attack_smoother.set_target(self.attack_amount);
-                    }
-                }
-                "sustain" => {
-                    if let Some(v) = value.as_float()
-                        && v.is_finite()
-                    {
-                        self.sustain_amount = (v / 100.0).clamp(-1.0, 1.0);
-                        self.sustain_smoother.set_target(self.sustain_amount);
-                    }
-                }
-                "sensitivity" => {
-                    if let Some(v) = value.as_float()
-                        && v.is_finite()
-                    {
-                        self.sensitivity_db = v.clamp(-12.0, 12.0);
-                        self.sensitivity_smoother
-                            .set_target(Self::sensitivity_threshold(self.sensitivity_db));
-                    }
-                }
-                "output_gain" => {
-                    if let Some(v) = value.as_float()
-                        && v.is_finite()
-                    {
-                        self.output_gain_db = v.clamp(-12.0, 12.0);
-                        self.output_gain_smoother
-                            .set_target(Self::db_to_linear(self.output_gain_db));
-                    }
-                }
-                "mix" => {
-                    if let Some(v) = value.as_float()
-                        && v.is_finite()
-                    {
-                        self.mix = v.clamp(0.0, 1.0);
-                        self.mix_smoother.set_target(self.mix);
-                    }
-                }
-                _ => return Err(format!("Unknown parameter: {}", id)),
-            }
-            self.update_cached_parameter(id.as_str(), &value);
+        for (id, value) in &values {
+            self.apply_value_ref(id, value)?;
         }
         Ok(())
     }

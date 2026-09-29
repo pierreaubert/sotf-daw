@@ -2,6 +2,7 @@ use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use std::any::Any;
 use std::sync::Arc;
 
+pub(crate) mod bounded_in_place;
 mod in_place_plugin;
 mod in_place_plugin_adapter;
 mod loop_range;
@@ -30,6 +31,23 @@ pub use process_context::*;
 pub use time_signature::*;
 pub use transport_info::*;
 pub use types::*;
+
+/// Bound on a plugin's response after its input becomes zero.
+///
+/// This counts output-rate frames from the last input sample, including emitted
+/// delay and filter support once. It is independent of per-call drain capacity
+/// and does not count down as silence is processed. Bounds cover retained state,
+/// transitions and internal modulation with no future input, events or changes.
+/// An unaudited bound must remain `Unknown`; it must not be treated as zero.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TailLength {
+    /// A conservative finite bound in output-rate frames. Zero is memoryless.
+    Finite(u64),
+    /// Recursive or autonomous output without a proven finite termination bound.
+    Infinite,
+    /// The plugin has not established a response bound.
+    Unknown,
+}
 
 /// Validate the common realtime block contract before any plugin state advances.
 ///
@@ -231,6 +249,38 @@ pub trait Plugin: Send {
         0
     }
 
+    /// Prepare bounded end-of-stream work before its call bound is queried.
+    ///
+    /// Hosts validate the output destination before calling this hook. It must
+    /// be allocation-free, bounded, and idempotent until reset or new accepted
+    /// input. It must not increase the preflighted output capacity or change
+    /// channel layout or output sample rate. Any generated audio stays in
+    /// prepared plugin storage for `drain`.
+    /// Ordinary plugins need no preparation; wrappers may finish bounded input
+    /// padding before querying their child's current-state drain bound.
+    ///
+    /// # Errors
+    /// Validation failures must preserve state. A failure after DSP has advanced
+    /// may require reset; implementations must reject retries in that state.
+    fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Bound successful full-capacity drain calls through the first complete result.
+    ///
+    /// Query after successful `begin_drain`. The bound includes zero-output
+    /// progress and a terminal call, with no new input, reset, or accepted
+    /// parameter change. The destination must hold `drain_output_frames_max()`
+    /// frames. This is a work bound, independent of `tail_length`; a maximum
+    /// output capacity alone does not prove minimum progress. Queries must not
+    /// allocate, block, or adopt asynchronously prepared state.
+    ///
+    /// `None` leaves the work bound unknown; hosts may enforce a finite fallback
+    /// allowance. Empty/completed state may return a bound of one.
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        None
+    }
+
     /// Advance end-of-stream state without accepting new programme samples.
     ///
     /// Implementations must be object-safe, allocation-free, transactional on
@@ -321,10 +371,37 @@ pub trait Plugin: Send {
         Ok(frames)
     }
 
-    /// Get the processing latency in samples (if any)
+    /// Get the processing latency in output-rate frames (if any).
+    /// The host converts these units when paths cross sample-rate boundaries.
     /// This is used to compensate for algorithmic delays
     fn latency_samples(&self) -> usize {
         0
+    }
+
+    /// Current zero-input response bound; see [`TailLength`].
+    /// This scalar query must not allocate, block, or reset processing state.
+    fn tail_length(&self) -> TailLength {
+        TailLength::Unknown
+    }
+
+    /// Physical signal delay in concatenated emitted audio, measured in output-rate frames.
+    ///
+    /// Offline renderers trim this delay after concatenating the frames actually
+    /// returned by processing. Include filter group delay and emitted startup
+    /// zero padding. Exclude callback buffering that merely postpones when a
+    /// plugin returns samples without adding samples to that emitted stream.
+    ///
+    /// The value must be finite and nonnegative. Fractional frames preserve
+    /// a group-delay estimate through cascaded rate converters; the largest
+    /// emitted impulse sample can lie at a neighboring integer frame and
+    /// depends on resampling phase.
+    ///
+    /// The default matches [`Plugin::latency_samples`]. Variable-rate plugins
+    /// whose realtime scheduling latency includes non-emitting chunk buffering
+    /// override this value. Realtime scheduling and graph delay compensation
+    /// continue to use `latency_samples`.
+    fn signal_delay_samples(&self) -> f64 {
+        self.latency_samples() as f64
     }
 
     /// Minimum input-rate queued-work horizon for worst-case realtime work.

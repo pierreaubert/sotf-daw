@@ -228,10 +228,17 @@ fn xtc_disabled_state_passes_through() {
     let context = ProcessContext::new(44100, num_frames);
     plugin.process(&input, &mut output, &context).unwrap();
 
-    for i in 0..num_frames {
-        assert!((output[i * 2] - 0.3).abs() < 1e-5);
-        assert!((output[i * 2 + 1] - (-0.3)).abs() < 1e-5);
-    }
+    assert!(output.iter().all(|&sample| sample == 0.0));
+    let delay = plugin.latency_samples();
+    let mut tail = vec![0.0; delay * 2];
+    plugin
+        .process(
+            &vec![0.0; delay * 2],
+            &mut tail,
+            &ProcessContext::new(44100, delay),
+        )
+        .unwrap();
+    assert_eq!(&tail[(delay - num_frames) * 2..], &input);
 }
 
 #[test]
@@ -260,12 +267,15 @@ fn xtc_state_change_enable_disable() {
     let energy_enabled: f32 = out_enabled.iter().map(|s| s * s).sum();
     let energy_disabled: f32 = out_disabled.iter().map(|s| s * s).sum();
 
-    // Disabled state should be a close pass-through of the input.
-    let input_energy: f32 = input.iter().map(|s| s * s).sum();
-    assert!(
-        (energy_disabled - input_energy).abs() < 1e-3,
-        "disabled state should pass input through nearly unchanged"
-    );
+    // Once the 10 ms fade ends, dry output is exact and still aligned to N.
+    let delay = plugin.latency_samples();
+    for frame in 441..num_frames {
+        let source_frame = (num_frames + frame - delay) % num_frames;
+        assert_eq!(
+            &out_disabled[frame * 2..frame * 2 + 2],
+            &input[source_frame * 2..source_frame * 2 + 2]
+        );
+    }
 
     // Enabled state should differ from disabled/pass-through.
     assert!(

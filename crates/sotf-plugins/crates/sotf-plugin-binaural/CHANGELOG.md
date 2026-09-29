@@ -1,3 +1,11 @@
+# Unreleased
+
+## Maintenance
+
+- Resample HRIRs with `Fft::new_custom`, preserving the historical
+  single-sub-chunk geometry and BlackmanHarris2 window on the workspace
+  Rubato 5 fork. Geometry checks and output are unchanged.
+
 # 0.5.22
 
 ## Fixes

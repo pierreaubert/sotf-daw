@@ -39,7 +39,7 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .doc("Level below which expansion starts"),
     ParamSpec::float("Ratio", "ratio", 2.0, 1.0, 20.0, 0.1, ":1", "Dynamics")
-        .doc("Expansion amount (input:output)"),
+        .doc("Output dB change per input dB below threshold"),
     ParamSpec::float("Attack", "attack", 1.0, 0.1, 50.0, 0.1, "ms", "Timing")
         .doc("Time to reach full expansion"),
     ParamSpec::float(
@@ -197,7 +197,7 @@ pub const GLOBAL_PARAMS: &[ParamSpec] = multiband_global_params![
     )
     .doc("Global expansion threshold"),
     ParamSpec::float("Ratio", "ratio", 2.0, 1.0, 20.0, 0.1, ":1", "Global")
-        .doc("Global expansion ratio"),
+        .doc("Output dB change per input dB below threshold"),
     ParamSpec::float("Attack", "attack", 1.0, 0.1, 50.0, 0.1, "ms", "Global")
         .doc("Global attack time"),
     ParamSpec::float(
@@ -286,7 +286,7 @@ pub const BAND_TEMPLATE: &[ParamSpec] = &[
     )
     .doc("Band expansion threshold"),
     ParamSpec::float("Ratio", "ratio", 2.0, 1.0, 20.0, 0.1, ":1", "Band")
-        .doc("Band expansion ratio"),
+        .doc("Output dB change per input dB below threshold"),
     ParamSpec::float("Attack", "attack", 1.0, 0.1, 50.0, 0.1, "ms", "Band").doc("Band attack time"),
     ParamSpec::float("Release", "release", 100.0, 10.0, 2000.0, 5.0, "ms", "Band")
         .doc("Band release time"),

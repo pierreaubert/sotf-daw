@@ -25,14 +25,34 @@ use sotf_plugin_analog_common::{
 define_choice_string_deserializer!(deserialize_analog_model, MODEL_NAMES);
 
 pub const PARAMS: &[ParamSpec] = &[
-    ParamSpec::float("Threshold", "threshold", -0.1, -20.0, 0.0, 0.1, "dB", "Dynamics")
-        .doc("Ceiling level (max output)"),
-    ParamSpec::float("Release", "release", 50.0, 10.0, 1000.0, 5.0, "ms", "Timing")
-        .doc("Time to return to unity gain"),
-    ParamSpec::float("Lookahead", "lookahead", 5.0, 0.0, 20.0, 0.5, "ms", "Timing")
-        .structural()
-        .setup()
-        .doc("Graph latency / pre-delay for predictive peak catching"),
+    ParamSpec::float(
+        "Threshold",
+        "threshold",
+        -0.1,
+        -20.0,
+        0.0,
+        0.1,
+        "dB",
+        "Dynamics",
+    )
+    .doc("Ceiling level (max output)"),
+    ParamSpec::float(
+        "Release", "release", 50.0, 10.0, 1000.0, 5.0, "ms", "Timing",
+    )
+    .doc("Time to return to unity gain"),
+    ParamSpec::float(
+        "Lookahead",
+        "lookahead",
+        5.0,
+        0.0,
+        20.0,
+        0.5,
+        "ms",
+        "Timing",
+    )
+    .structural()
+    .setup()
+    .doc("Graph latency / pre-delay for predictive peak catching"),
     ParamSpec::bool_labeled("Soft Knee", "soft", false, "Soft", "Hard", "Dynamics")
         .setup()
         .doc("One-dB gain-computer knee vs hard limiting onset"),
@@ -51,14 +71,14 @@ pub const PARAMS: &[ParamSpec] = &[
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[ControlSpec::slider(2), ControlSpec::toggle(3), ControlSpec::toggle(4)],
+    config: &[
+        ControlSpec::slider(2),
+        ControlSpec::toggle(3),
+        ControlSpec::toggle(4),
+    ],
     main: &[
-        ControlGroup::new(
-            "DYNAMICS",
-            "DYNAMICS",
-            &[ControlSpec::slider(0)],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("DYNAMICS", "DYNAMICS", &[ControlSpec::slider(0)])
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "ANALOG",
             "ANALOG",
@@ -70,12 +90,8 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.9)),
-        ControlGroup::new(
-            "TIMING",
-            "TIMING",
-            &[ControlSpec::slider(1)],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        ControlGroup::new("TIMING", "TIMING", &[ControlSpec::slider(1)])
+            .with_layout(GroupLayoutHints::inferred().priority(0.5)),
         ControlGroup::new(
             "OUTPUT",
             "OUTPUT",

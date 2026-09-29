@@ -278,7 +278,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -289,7 +289,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -665,27 +665,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "audio-core"
-version = "0.2.1"
+name = "audio-codec-algorithms"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93ebbf82d06013f4c41fe71303feb980cddd78496d904d06be627972de51a24"
+checksum = "1254ebf6529f3763c491acfb5ab6e960809e3c75a38584cc664f8c5667fb7107"
 
 [[package]]
 name = "audioadapter"
-version = "2.0.1"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98e72b98fa467adcb7a88c5d1b8b686193185c81b9bf9c3fa3ac3524180cd55c"
-dependencies = [
- "audio-core",
- "libm",
- "num-traits",
-]
+checksum = "d1292ef9edf681b7426ed089004b021a42896492f58bd0c909ad44e5faec9ac4"
 
 [[package]]
 name = "audioadapter-buffers"
-version = "2.0.0"
+version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6af89882334c4e501faa08992888593ada468f9e1ab211635c32f9ada7786e0"
+checksum = "46289a81a3bfa26d0f8b2415f8ca9decde9a66308a150568af5c102381b3c8ce"
 dependencies = [
  "audioadapter",
  "audioadapter-sample",
@@ -694,11 +689,11 @@ dependencies = [
 
 [[package]]
 name = "audioadapter-sample"
-version = "2.0.0"
+version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e9a3d502fec0b21aa420febe0b110875cf8a7057c49e83a0cace1df6a73e03e"
+checksum = "5258faecf4edbe35ec483bda9b1f7438e6b391891819269c6b5461aeaa0e8d7d"
 dependencies = [
- "audio-core",
+ "audio-codec-algorithms",
  "num-traits",
 ]
 
@@ -730,6 +725,12 @@ dependencies = [
  "fs_extra",
  "pkg-config",
 ]
+
+[[package]]
+name = "az"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5eb007b7cacc6c660343e96f650fedf4b5a77512399eb952ca6642cf8d13f7"
 
 [[package]]
 name = "backtrace"
@@ -2120,7 +2121,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2358,7 +2359,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2496,6 +2497,18 @@ name = "finl_unicode"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80bb028c8b4148c9ee0cca68fcd9add6044e81d3619f48577ddf13a263d047a2"
+
+[[package]]
+name = "fixed"
+version = "1.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9af2cbf772fa6d1c11358f92ef554cb6b386201210bcf0e91fb7fba8a907fb40"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "typenum",
+]
 
 [[package]]
 name = "fixedbitset"
@@ -4983,8 +4996,7 @@ dependencies = [
 
 [[package]]
 name = "math-dsp"
-version = "0.5.30"
-source = "git+https://github.com/pierreaubert/math-audio#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+version = "0.5.31"
 dependencies = [
  "clap",
  "hound",
@@ -5004,7 +5016,6 @@ dependencies = [
 [[package]]
 name = "math-iir-fir"
 version = "0.5.24"
-source = "git+https://github.com/pierreaubert/math-audio#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
 dependencies = [
  "base64 0.22.1",
  "byteorder",
@@ -5097,6 +5108,29 @@ name = "midi-consts"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f2dd5c7f8aaf48a76e389068ab25ed80bdbc226b887f9013844c415698c9952"
+
+[[package]]
+name = "midi2"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "045ac1820331197e7d5eaea018cda72b9a2e89977ba6d440d1de7b55afff9f8c"
+dependencies = [
+ "derive_more",
+ "fixed",
+ "midi2_proc",
+ "ux",
+]
+
+[[package]]
+name = "midi2_proc"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f400af47683fbb91353c616c834f8357e4a342fd805a06852741d745a80550a2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "midir"
@@ -5354,7 +5388,6 @@ dependencies = [
 [[package]]
 name = "nih_plug"
 version = "0.0.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#de421011f41a6d10fc8c7a6084e4f4dee0143683"
 dependencies = [
  "anyhow",
  "anymap3",
@@ -5385,7 +5418,6 @@ dependencies = [
 [[package]]
 name = "nih_plug_derive"
 version = "0.1.0"
-source = "git+https://github.com/robbert-vdh/nih-plug.git#de421011f41a6d10fc8c7a6084e4f4dee0143683"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6608,8 +6640,12 @@ dependencies = [
 name = "plugins-nih"
 version = "0.5.4"
 dependencies = [
+ "assert_no_alloc",
+ "clap-sys",
+ "crossbeam",
  "log",
  "nih_plug",
+ "parking_lot",
  "plugins-bridge",
  "serde",
  "serde_json",
@@ -6952,7 +6988,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7486,9 +7522,7 @@ checksum = "9278fb35b3e730abe136e9b395b5b81b96d06b9f5478a50f0c8430a2237b22de"
 
 [[package]]
 name = "rubato"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90173154a8a14e6adb109ea641743bc95ec81c093d94e70c6763565f7108ebeb"
+version = "5.0.0"
 dependencies = [
  "audioadapter",
  "audioadapter-buffers",
@@ -7628,7 +7662,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7685,7 +7719,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8281,7 +8315,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8406,13 +8440,16 @@ dependencies = [
 
 [[package]]
 name = "sotf-iamf"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "approx",
  "log",
  "proptest",
  "sotf-host",
  "sotf-plugin-ambisonics",
+ "symphonia-bundle-flac",
+ "symphonia-codec-aac",
+ "symphonia-core",
  "thiserror 2.0.21",
 ]
 
@@ -8425,6 +8462,7 @@ dependencies = [
  "directories",
  "env_logger",
  "log",
+ "midi2",
  "midir",
  "parking_lot",
  "proptest",
@@ -8572,7 +8610,6 @@ dependencies = [
 name = "sotf-plugin-binaural"
 version = "0.5.22"
 dependencies = [
- "arc-swap",
  "audioadapter-buffers",
  "criterion",
  "hound",
@@ -8603,7 +8640,6 @@ dependencies = [
 name = "sotf-plugin-convolution"
 version = "0.5.11"
 dependencies = [
- "arc-swap",
  "audioadapter-buffers",
  "log",
  "plugins-spatial",
@@ -8733,6 +8769,7 @@ dependencies = [
  "plugins-gpui",
  "proptest",
  "serde",
+ "serde_json",
  "sotf-host",
  "sotf-midi",
 ]
@@ -8886,7 +8923,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-resampler"
-version = "0.5.27"
+version = "0.6.0"
 dependencies = [
  "audioadapter-buffers",
  "log",
@@ -8968,18 +9005,19 @@ dependencies = [
 name = "sotf-plugin-xtc"
 version = "0.5.42"
 dependencies = [
- "arc-swap",
  "criterion",
  "math-dsp",
  "realfft",
  "rustfft 6.4.1",
  "serde",
  "serde_json",
+ "sofa-reader",
  "sotf-host",
  "symphonia",
  "symphonia-codec-pcm",
  "symphonia-core",
  "symphonia-format-riff",
+ "tempfile",
 ]
 
 [[package]]
@@ -9158,7 +9196,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "psm",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9680,10 +9718,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand 2.5.0",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9716,7 +9754,7 @@ dependencies = [
  "parking_lot",
  "rustix 1.1.5",
  "signal-hook 0.3.18",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -10350,7 +10388,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset",
  "tempfile",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -10531,6 +10569,12 @@ dependencies = [
  "sha1_smol",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "ux"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b59fc5417e036e53226bbebd90196825d358624fd5577432c4e486c95b1b096"
 
 [[package]]
 name = "value-bag"
@@ -11287,7 +11331,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

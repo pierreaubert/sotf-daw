@@ -1,0 +1,1454 @@
+--- a/crates/sotf-engine/src/engine/processing_thread.rs
++++ b/crates/sotf-engine/src/engine/processing_thread.rs
+@@ -81,6 +81,10 @@
+     next_request_id: AtomicU64,
+     thread_handle: Option<std::thread::JoinHandle<()>>,
+     host_generation: Arc<AtomicU64>,
++    /// Manager-owned state: false means a failed/incomplete transition, which
++    /// cannot restart without rebuilding the engine.
++    pub(in crate::engine) output_transition: Option<(u64, bool)>,
++    pub(in crate::engine) next_output_transition: u64,
+ }
+ 
+ impl ProcessingThread {
+@@ -100,6 +104,8 @@
+                 next_request_id: AtomicU64::new(1),
+                 thread_handle: None,
+                 host_generation: Arc::new(AtomicU64::new(0)),
++                output_transition: None,
++                next_output_transition: 1,
+             },
+             command_rx,
+         )
+@@ -174,6 +180,8 @@
+             next_request_id: AtomicU64::new(1),
+             thread_handle: Some(thread_handle),
+             host_generation,
++            output_transition: None,
++            next_output_transition: 1,
+         })
+     }
+ 
+@@ -183,6 +191,8 @@
+         let expects_response = matches!(
+             command,
+             ProcessingCommand::CommitHostUpdate(_)
++                | ProcessingCommand::HoldOutput { .. }
++                | ProcessingCommand::ReleaseOutput { .. }
+                 | ProcessingCommand::SetParameter { .. }
+                 | ProcessingCommand::Bypass(_)
+                 | ProcessingCommand::GetPluginData(_)
+--- a/crates/sotf-engine/src/engine/playback_thread.rs
++++ b/crates/sotf-engine/src/engine/playback_thread.rs
+@@ -1,6 +1,6 @@
+ use super::{
+     HostUpdateTicket, PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest,
+-    ProcessingMessage, ThreadEvent,
++    ProcessingMessage, ThreadEvent, PlaybackTransitionOperation, PlaybackTransitionRequest,
+ };
+ use crate::OutputAccessMode;
+ use std::sync::mpsc::{Receiver, Sender, SyncSender};
+@@ -192,6 +192,44 @@
+         }
+     }
+ 
++    pub(in crate::engine) fn transition(
++        &self,
++        transition_id: u64,
++        operation: PlaybackTransitionOperation,
++    ) -> Result<PlaybackConfiguration, String> {
++        let (reply_tx, reply_rx) = std::sync::mpsc::sync_channel(1);
++        let ticket = HostUpdateTicket::new();
++        self.send_command(PlaybackCommand::Transition(PlaybackTransitionRequest {
++            transition_id, operation, ticket: ticket.clone(), reply_tx,
++        }))?;
++        match reply_rx.recv_timeout(PLAYBACK_RECONFIGURE_TIMEOUT) {
++            Ok(result) => result,
++            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
++                Err("Playback reconfiguration reply channel disconnected".to_string())
++            }
++            Err(std::sync::mpsc::RecvTimeoutError::Timeout) if ticket.cancel() => Err(format!(
++                "Playback reconfiguration timed out and was cancelled before installation after {}ms",
++                PLAYBACK_RECONFIGURE_TIMEOUT.as_millis()
++            )),
++            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
++                loop {
++                    match reply_rx.recv_timeout(std::time::Duration::from_millis(50)) {
++                        Ok(result) => break result,
++                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
++                            break Err("Playback reconfiguration worker exited before replying"
++                                .to_string());
++                        }
++                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) if self.is_finished() => {
++                            break Err("Playback reconfiguration worker stopped before replying"
++                                .to_string());
++                        }
++                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
++                    }
++                }
++            }
++        }
++    }
++
+     /// Whether the worker has stopped before the manager requested shutdown.
+     pub fn is_finished(&self) -> bool {
+         self.thread_handle
+--- a/crates/sotf-engine/src/engine/manager_thread.rs
++++ b/crates/sotf-engine/src/engine/manager_thread.rs
+@@ -35,6 +35,7 @@
+ mod types;
+ pub(crate) mod validate;
+ mod wait;
++mod output_transition;
+ 
+ use config_update_queue::run_manager_thread;
+ 
+--- a/crates/sotf-engine/src/engine/manager_thread/wait.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/wait.rs
+@@ -108,6 +108,9 @@
+                 }
+                 super::super::ProcessingResponse::PluginData(_)
+                 | super::super::ProcessingResponse::ParameterUpdated { .. }
++                | super::super::ProcessingResponse::OutputHeld { .. }
++                | super::super::ProcessingResponse::OutputReleased { .. }
++                | super::super::ProcessingResponse::OutputFormatUpdated { .. }
+                 | super::super::ProcessingResponse::Ok => {
+                     continue;
+                 }
+--- a/crates/sotf-engine/src/engine/manager_thread/commands/stop.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/commands/stop.rs
+@@ -1,5 +1,5 @@
+ use super::{ManagerCommandHandler, ManagerContext, ManagerResponse};
+-use crate::engine::{DecoderCommand, PlaybackCommand, PlaybackState};
++use crate::engine::{DecoderCommand, PlaybackState, ProcessingHoldInput};
+ use std::sync::Arc;
+ 
+ /// Stop playback and clear the current source.
+@@ -8,6 +8,11 @@
+ impl ManagerCommandHandler for StopCommand {
+     fn execute(&self, ctx: &mut ManagerContext) -> ManagerResponse {
+         log::debug!("[Manager Thread] Stop");
++
++        let (transition_id, _) = match super::super::output_transition::hold_playback(ctx.processing, ctx.playback) {
++            Ok(transition) => transition,
++            Err(error) => return ManagerResponse::Error(format!("Stop could not hold playback; output silence is unconfirmed: {error}")),
++        };
+ 
+         let request_id = match ctx.decoder.send_command(DecoderCommand::Stop) {
+             Ok(request_id) => request_id,
+@@ -21,14 +26,16 @@
+             return ManagerResponse::Error(e);
+         }
+ 
+-        // Best-effort: the playback thread may have already exited after
+-        // end-of-stream drain. This is expected during auto-advance.
+-        if let Err(e) = ctx.playback.send_command(PlaybackCommand::Stop) {
+-            log::debug!(
+-                "[Manager Thread] Stop send to playback failed (already exited): {}",
+-                e
+-            );
+-        }
++        let (source, _) = match super::super::output_transition::hold_processing(
++            ctx.processing, transition_id, ProcessingHoldInput::DiscardQuiescedStream,
++        ) {
++            Ok(metadata) => metadata,
++            Err(error) => return ManagerResponse::Error(error),
++        };
++        if let Err(error) = super::super::output_transition::configure(
++            ctx.playback, transition_id, source, ctx.config.output_channels, true,
++        ) { return ManagerResponse::Error(error); }
++        ctx.processing.output_transition = Some((transition_id, true));
+ 
+         let mut new_state = (**ctx.state.load()).clone();
+         new_state.playback_state = PlaybackState::Stopped;
+--- a/crates/sotf-engine/src/engine/manager_thread/commands/play.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/commands/play.rs
+@@ -11,6 +11,9 @@
+         let source = &self.0;
+         log::debug!("[Manager Thread] Play: {}", source.display_name());
+ 
++        if let Err(error) = super::super::output_transition::ensure_restartable(ctx.processing) {
++            return ManagerResponse::Error(error);
++        }
+         let request_id = match ctx
+             .decoder
+             .send_command(DecoderCommand::Play(source.clone()))
+@@ -25,6 +28,9 @@
+             std::time::Duration::from_millis(super::super::consts::DECODER_COMMAND_TIMEOUT_MS),
+         ) {
+             Ok(()) => {
++                if let Err(error) = super::super::output_transition::restart_stopped(ctx.processing, ctx.playback) {
++                    return ManagerResponse::Error(error);
++                }
+                 if let Err(e) = ctx.playback.send_command(PlaybackCommand::Resume) {
+                     return ManagerResponse::Error(e);
+                 }
+--- a/crates/sotf-engine/src/engine/manager_thread/commands/play_at.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/commands/play_at.rs
+@@ -16,6 +16,9 @@
+             position
+         );
+ 
++        if let Err(error) = super::super::output_transition::ensure_restartable(ctx.processing) {
++            return ManagerResponse::Error(error);
++        }
+         let request_id = match ctx
+             .decoder
+             .send_command(DecoderCommand::PlayAt(source.clone(), position))
+@@ -30,6 +33,9 @@
+             std::time::Duration::from_millis(super::super::consts::DECODER_COMMAND_TIMEOUT_MS),
+         ) {
+             Ok(()) => {
++                if let Err(error) = super::super::output_transition::restart_stopped(ctx.processing, ctx.playback) {
++                    return ManagerResponse::Error(error);
++                }
+                 if let Err(e) = ctx.playback.send_command(PlaybackCommand::Resume) {
+                     return ManagerResponse::Error(e);
+                 }
+--- a/crates/sotf-engine/src/engine/manager_thread/commands/resume.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/commands/resume.rs
+@@ -9,6 +9,9 @@
+     fn execute(&self, ctx: &mut ManagerContext) -> ManagerResponse {
+         log::debug!("[Manager Thread] Resume");
+ 
++        if let Err(error) = super::super::output_transition::ensure_restartable(ctx.processing) {
++            return ManagerResponse::Error(error);
++        }
+         let request_id = match ctx.decoder.send_command(DecoderCommand::Resume) {
+             Ok(request_id) => request_id,
+             Err(e) => return ManagerResponse::Error(e),
+@@ -20,6 +23,9 @@
+             std::time::Duration::from_millis(super::super::consts::DECODER_COMMAND_TIMEOUT_MS),
+         ) {
+             Ok(()) => {
++                if let Err(error) = super::super::output_transition::restart_stopped(ctx.processing, ctx.playback) {
++                    return ManagerResponse::Error(error);
++                }
+                 if let Err(e) = ctx.playback.send_command(PlaybackCommand::Resume) {
+                     return ManagerResponse::Error(e);
+                 }
+--- a/crates/sotf-engine/src/engine/manager_thread/commands/bypass_processing.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/commands/bypass_processing.rs
+@@ -1,5 +1,5 @@
+ use super::{ManagerCommandHandler, ManagerContext, ManagerResponse};
+-use crate::engine::ProcessingCommand;
++use crate::engine::{ProcessingCommand, ProcessingResponse, ProcessingHoldInput, PlaybackConfiguration};
+ use std::sync::Arc;
+ 
+ /// Bypass or re-enable the processing chain.
+@@ -10,26 +10,36 @@
+         let bypass = self.0;
+         log::debug!("[Manager Thread] Bypass processing: {}", bypass);
+ 
+-        let request_id = match ctx
+-            .processing
+-            .send_command(ProcessingCommand::Bypass(bypass))
+-        {
+-            Ok(request_id) => request_id,
+-            Err(e) => return ManagerResponse::Error(e),
+-        };
+-
+-        match super::super::wait::wait_for_processing_ack(
+-            ctx.processing,
+-            request_id,
+-            std::time::Duration::from_millis(super::super::consts::PROCESSING_COMMAND_TIMEOUT_MS),
+-        ) {
+-            Ok(()) => {
++        let result = (|| -> Result<(), String> {
++            let (id, previously_stopped) = super::super::output_transition::hold_playback(ctx.processing, ctx.playback)?;
++            super::super::output_transition::hold_processing(ctx.processing, id, ProcessingHoldInput::RetainInput)?;
++            let request = ctx.processing.send_command(ProcessingCommand::Bypass(bypass))?;
++            let ProcessingResponse::OutputFormatUpdated { output_channels, output_sample_rate, latency_samples } =
++                super::super::output_transition::wait_response(ctx.processing, request)?
++            else { return Err("unexpected bypass output metadata".into()); };
++            let actual = super::super::output_transition::configure(ctx.playback, id,
++                PlaybackConfiguration { sample_rate: output_sample_rate, channels: output_channels },
++                ctx.config.output_channels, false)?;
++            if previously_stopped { ctx.processing.output_transition = Some((id, true)); }
++            else { super::super::output_transition::release(ctx.processing, ctx.playback, id)?; }
++            let mut new_state = (**ctx.state.load()).clone();
++            new_state.processing_bypassed = bypass;
++            new_state.num_channels = output_channels;
++            new_state.sample_rate = actual.sample_rate;
++            new_state.playback_channels = actual.channels;
++            new_state.plugin_latency_samples = latency_samples;
++            ctx.state.store(Arc::new(new_state));
++            Ok(())
++        })();
++        match result {
++            Ok(()) => ManagerResponse::Ok,
++            Err(error) => {
+                 let mut new_state = (**ctx.state.load()).clone();
+-                new_state.processing_bypassed = bypass;
++                new_state.playback_state = crate::PlaybackState::Stopped;
++                new_state.last_error = Some(error.clone());
+                 ctx.state.store(Arc::new(new_state));
+-                ManagerResponse::Ok
++                ManagerResponse::Error(error)
+             }
+-            Err(e) => ManagerResponse::Error(e),
+         }
+     }
+ }
+--- a/crates/sotf-engine/src/engine/processing_thread/processing_state.rs
++++ b/crates/sotf-engine/src/engine/processing_thread/processing_state.rs
+@@ -57,6 +57,7 @@
+     /// Number of channels
+     pub(super) channels: usize,
+     pub(super) bypassed: bool,
++    last_output_transition: u64,
+     pub(super) process_buffer: Vec<f32>,
+     /// Buffer for previous host during crossfade
+     pub(super) prev_process_buffer: Vec<f32>,
+@@ -114,6 +115,7 @@
+             host_generation: Arc::new(AtomicU64::new(0)),
+             channels,
+             bypassed: false,
++            last_output_transition: 0,
+             // Pre-sized for the worst-case processing block so the hot path only reuses memory.
+             process_buffer: Vec::with_capacity(MAX_PROCESSING_SAMPLE_CAPACITY),
+             prev_process_buffer: Vec::with_capacity(MAX_PROCESSING_SAMPLE_CAPACITY),
+@@ -558,6 +560,11 @@
+         return CommandOutcome::Continue;
+     }
+     match command {
++        ProcessingCommand::HoldOutput { .. } | ProcessingCommand::ReleaseOutput { .. } => {
++            response_tx.send(ProcessingResponse::Error(
++                "output transitions require a worker publication boundary".into()
++            )).ok();
++        }
+         ProcessingCommand::CommitHostUpdate(update) => {
+             let output_channels = update.output_channels;
+             log::trace!(
+@@ -665,7 +672,11 @@
+             }
+             state.bypassed = bypass;
+             log::debug!("[Processing Thread] Bypass: {}", bypass);
+-            response_tx.send(ProcessingResponse::Ok).ok();
++            response_tx.send(ProcessingResponse::OutputFormatUpdated {
++                output_channels: state.output_channels(),
++                output_sample_rate: state.output_sample_rate(state.sample_rate),
++                latency_samples: if bypass { 0 } else { state.host.total_latency_samples() },
++            }).ok();
+         }
+         ProcessingCommand::GetPluginData(index) => match state.host.get_plugin_data(index) {
+             Some(data) => {
+@@ -767,6 +778,86 @@
+         // the processing hot path.
+         state.cache_fallback_count += 1;
+         false
++    }
++}
++
++/// Pauses at the exact call site that owns an unsent frame or stream marker.
++/// Retained EOS/Flush remain on that stack until release, so an interrupted
++/// drain cannot lose the only terminal marker for a finite stream.
++struct PublicationBoundary<'a> {
++    decoder_rx: &'a Receiver<DecoderMessage>,
++    decoder_recycle_tx: &'a SyncSender<Vec<f32>>,
++    command_rx: &'a Receiver<ProcessingRequest>,
++    response_tx: &'a Sender<ProcessingReply>,
++    event_tx: &'a crossbeam::channel::Sender<ThreadEvent>,
++}
++
++impl PublicationBoundary<'_> {
++    fn handle(&self, mut request: ProcessingRequest, state: &mut ProcessingState) -> CommandOutcome {
++        let mut held = None;
++        let mut discarded = false;
++        loop {
++            let response = CorrelatedResponseSender { request_id: request.id, inner: self.response_tx };
++            match request.command {
++                ProcessingCommand::HoldOutput { transition_id, input } => {
++                    if !request.ticket.try_claim() {
++                        response.send(ProcessingResponse::Error("output hold was cancelled".into())).ok();
++                    } else if held.is_some_and(|active| active != transition_id)
++                        || (held.is_none() && transition_id <= state.last_output_transition)
++                    {
++                        response.send(ProcessingResponse::Error("stale or conflicting output hold".into())).ok();
++                    } else {
++                        held = Some(transition_id);
++                        state.last_output_transition = transition_id;
++                        if input == super::super::ProcessingHoldInput::DiscardQuiescedStream {
++                            while let Ok(message) = self.decoder_rx.try_recv() {
++                                if let DecoderMessage::Frame(frame) = message
++                                    && let Err(error) = self.decoder_recycle_tx.try_send(frame.data)
++                                {
++                                    let (std::sync::mpsc::TrySendError::Full(data)
++                                        | std::sync::mpsc::TrySendError::Disconnected(data)) = error;
++                                    state.retire(GcItem::Buffer(data));
++                                }
++                            }
++                            state.reset();
++                            discarded = true;
++                        }
++                        response.send(ProcessingResponse::OutputHeld {
++                            transition_id,
++                            output_channels: state.output_channels(),
++                            output_sample_rate: state.output_sample_rate(state.sample_rate),
++                            latency_samples: if state.bypassed { 0 } else { state.host.total_latency_samples() },
++                        }).ok();
++                    }
++                }
++                ProcessingCommand::ReleaseOutput { transition_id } => {
++                    if !request.ticket.try_claim() {
++                        response.send(ProcessingResponse::Error("output release was cancelled".into())).ok();
++                    } else if held != Some(transition_id) {
++                        response.send(ProcessingResponse::Error("output release does not match active hold".into())).ok();
++                    } else {
++                        response.send(ProcessingResponse::OutputReleased { transition_id }).ok();
++                        return if discarded { CommandOutcome::Stopped } else { CommandOutcome::Continue };
++                    }
++                }
++                _ => {
++                    let outcome = handle_processing_command(request, state, self.response_tx, self.event_tx);
++                    if held.is_none() || outcome == CommandOutcome::Shutdown {
++                        return outcome;
++                    }
++                    discarded |= outcome == CommandOutcome::Stopped;
++                }
++            }
++            if held.is_none() {
++                return CommandOutcome::Continue;
++            }
++            // No audio publication or decoder consumption while held. Shutdown,
++            // host commits, and matching releases remain command-responsive.
++            request = match self.command_rx.recv() {
++                Ok(request) => request,
++                Err(_) => return CommandOutcome::Shutdown,
++            };
++        }
+     }
+ }
+ 
+@@ -816,12 +907,20 @@
+         channels
+     );
+ 
++    let boundary = PublicationBoundary {
++        decoder_rx: &decoder_rx,
++        decoder_recycle_tx: &decoder_recycle_tx,
++        command_rx: &command_rx,
++        response_tx: &response_tx,
++        event_tx: &event_tx,
++    };
++
+     let mut decoder_stream_active = true;
+ 
+     'processing: loop {
+         // Check for commands (non-blocking)
+         if let Ok(request) = command_rx.try_recv() {
+-            match handle_processing_command(request, &mut state, &response_tx, &event_tx) {
++            match boundary.handle(request, &mut state) {
+                 CommandOutcome::Shutdown => break,
+                 CommandOutcome::Stopped => decoder_stream_active = false,
+                 CommandOutcome::Continue => {}
+@@ -951,12 +1050,7 @@
+                             match send_or_interrupt(&message_tx, &command_rx, msg) {
+                                 Ok(Some((cmd, unsent))) => {
+                                     pending_msg = unsent;
+-                                    let outcome = handle_processing_command(
+-                                        cmd,
+-                                        &mut state,
+-                                        &response_tx,
+-                                        &event_tx,
+-                                    );
++                                    let outcome = boundary.handle(cmd, &mut state);
+                                     if outcome != CommandOutcome::Continue {
+                                         decoder_stream_active = false;
+                                         if let Some(ProcessingMessage::Frame(frame)) =
+@@ -1018,12 +1112,7 @@
+                     // A drain step can make progress without emitting frames,
+                     // so it must also observe commands between plugin calls.
+                     if let Ok(command) = command_rx.try_recv() {
+-                        match handle_processing_command(
+-                            command,
+-                            &mut state,
+-                            &response_tx,
+-                            &event_tx,
+-                        ) {
++                        match boundary.handle(command, &mut state) {
+                             CommandOutcome::Shutdown => break 'processing,
+                             CommandOutcome::Stopped => {
+                                 decoder_stream_active = false;
+@@ -1090,12 +1179,7 @@
+                             match send_or_interrupt(&message_tx, &command_rx, message) {
+                                 Ok(Some((command, unsent))) => {
+                                     pending = unsent;
+-                                    let outcome = handle_processing_command(
+-                                        command,
+-                                        &mut state,
+-                                        &response_tx,
+-                                        &event_tx,
+-                                    );
++                                    let outcome = boundary.handle(command, &mut state);
+                                     let format_changed = state.output_channels() != output_channels
+                                         || state.output_sample_rate(state.sample_rate)
+                                             != output_sample_rate;
+@@ -1144,31 +1228,14 @@
+                 while let Some(msg) = pending_msg.take() {
+                     match send_or_interrupt(&message_tx, &command_rx, msg) {
+                         Ok(Some((cmd, unsent))) => {
+-                            let old_format = (
+-                                state.output_channels(),
+-                                state.output_sample_rate(state.sample_rate),
+-                            );
+                             pending_msg = unsent;
+-                            match handle_processing_command(
+-                                cmd,
+-                                &mut state,
+-                                &response_tx,
+-                                &event_tx,
+-                            ) {
++                            match boundary.handle(cmd, &mut state) {
+                                 CommandOutcome::Shutdown => break 'processing,
+                                 CommandOutcome::Stopped => {
+                                     decoder_stream_active = false;
+                                     pending_msg = None;
+                                 }
+                                 CommandOutcome::Continue => {}
+-                            }
+-                            if old_format
+-                                != (
+-                                    state.output_channels(),
+-                                    state.output_sample_rate(state.sample_rate),
+-                                )
+-                            {
+-                                pending_msg = None;
+                             }
+                         }
+                         Ok(None) => {}
+@@ -1189,23 +1256,14 @@
+                 while let Some(msg) = pending_msg.take() {
+                     match send_or_interrupt(&message_tx, &command_rx, msg) {
+                         Ok(Some((cmd, unsent))) => {
+-                            let old_channels = state.channels;
+                             pending_msg = unsent;
+-                            match handle_processing_command(
+-                                cmd,
+-                                &mut state,
+-                                &response_tx,
+-                                &event_tx,
+-                            ) {
++                            match boundary.handle(cmd, &mut state) {
+                                 CommandOutcome::Shutdown => break 'processing,
+                                 CommandOutcome::Stopped => {
+                                     decoder_stream_active = false;
+                                     pending_msg = None;
+                                 }
+                                 CommandOutcome::Continue => {}
+-                            }
+-                            if state.channels != old_channels {
+-                                pending_msg = None;
+                             }
+                         }
+                         Ok(None) => {}
+--- a/crates/sotf-engine/src/engine/processing_thread/tests.rs
++++ b/crates/sotf-engine/src/engine/processing_thread/tests.rs
+@@ -41,6 +41,7 @@
+ mod crossfade_clock;
+ mod eos;
+ mod misc;
++mod protocol;
+ mod test;
+ 
+ #[test]
+--- a/crates/sotf-engine/src/engine/processing_thread/tests/eos.rs
++++ b/crates/sotf-engine/src/engine/processing_thread/tests/eos.rs
+@@ -268,7 +268,7 @@
+         .unwrap();
+     assert!(matches!(
+         worker.response_rx.recv_timeout(WAIT).unwrap().response,
+-        ProcessingResponse::Ok
++        ProcessingResponse::OutputFormatUpdated { .. }
+     ));
+     worker.send_frame(0.75);
+     let ProcessingMessage::Frame(frame) = worker.output().recv_timeout(WAIT).unwrap() else {
+@@ -322,7 +322,7 @@
+         .unwrap();
+     assert!(matches!(
+         worker.response_rx.recv_timeout(WAIT).unwrap().response,
+-        ProcessingResponse::Ok
++        ProcessingResponse::OutputFormatUpdated { .. }
+     ));
+     worker.send_frame(0.75);
+     let ProcessingMessage::Frame(frame) = worker.output().recv_timeout(WAIT).unwrap() else {
+@@ -430,7 +430,7 @@
+     // the first tail frame is still unsent on the rendezvous channel.
+     assert!(matches!(
+         worker.response_rx.recv_timeout(WAIT).unwrap().response,
+-        ProcessingResponse::Ok
++        ProcessingResponse::OutputFormatUpdated { .. }
+     ));
+     assert!(matches!(
+         worker.output().recv_timeout(WAIT).unwrap(),
+@@ -491,7 +491,7 @@
+             .unwrap();
+         assert!(matches!(
+             worker.response_rx.recv_timeout(WAIT).unwrap().response,
+-            ProcessingResponse::Ok
++            ProcessingResponse::OutputFormatUpdated { .. }
+         ));
+         worker.send_frame(0.75);
+         let ProcessingMessage::Frame(frame) = worker.output().recv_timeout(WAIT).unwrap() else {
+--- a/crates/sotf-engine/src/engine/playback_thread/runtime.rs
++++ b/crates/sotf-engine/src/engine/playback_thread/runtime.rs
+@@ -1,8 +1,10 @@
+ use super::super::{
+-    PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, ProcessingMessage,
++    PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, PlaybackTransitionRequest,
++    PlaybackTransitionOperation, ProcessingMessage,
+     ThreadEvent, plan_output_access,
+ };
+ use super::build::build_output_stream;
++use super::super::output_transition::PlaybackAcceptance;
+ #[cfg(target_os = "macos")]
+ use super::core_audio_exclusive_mode_guard::CoreAudioExclusiveModeGuard;
+ use super::coreaudio_mod::coreaudio_output_device_id;
+@@ -123,6 +125,9 @@
+     state: Arc<PlaybackState>,
+     buffer_capacity: usize,
+     conversion_buffer: Vec<f32>,
++    acceptance: PlaybackAcceptance,
++    pending_transition: Option<(PlaybackTransitionRequest, Instant)>,
++    retained_end_of_stream: bool,
+     accounting: PlaybackAccounting,
+     drain: DrainState,
+     recovery: RecoveryState,
+@@ -390,6 +395,9 @@
+             state,
+             buffer_capacity,
+             conversion_buffer,
++            acceptance: PlaybackAcceptance::new(PlaybackConfiguration { sample_rate, channels: initial_channels }),
++            pending_transition: None,
++            retained_end_of_stream: false,
+             accounting: PlaybackAccounting::default(),
+             drain: DrainState {
+                 end_of_stream: false,
+@@ -430,7 +438,8 @@
+                 break;
+             }
+ 
+-            if self.wait_for_flush_drain() == RuntimeDecision::Continue {
++            if self.complete_pending_transition() == RuntimeDecision::Break { break; }
++            if self.wait_for_flush_drain() == RuntimeDecision::Continue && !self.acceptance.is_held() {
+                 continue;
+             }
+ 
+@@ -457,6 +466,7 @@
+ 
+     fn handle_command(&mut self, command: PlaybackCommand) -> RuntimeDecision {
+         match command {
++            PlaybackCommand::Transition(request) => self.handle_transition(request),
+             PlaybackCommand::SetVolume(vol) => {
+                 self.state.volume.store(vol.to_bits(), Ordering::Relaxed);
+                 RuntimeDecision::Proceed
+@@ -476,6 +486,7 @@
+                     &self.producer,
+                     self.buffer_capacity,
+                 ));
++                self.resume_retained_end_of_stream();
+                 RuntimeDecision::Proceed
+             }
+             PlaybackCommand::UpdateSampleRate(new_sample_rate) => {
+@@ -497,6 +508,96 @@
+                 RuntimeDecision::Break
+             }
+         }
++    }
++
++    fn current_configuration(&self) -> PlaybackConfiguration {
++        PlaybackConfiguration { sample_rate: self.config.sample_rate, channels: self.logical_channels }
++    }
++
++    fn resume_retained_end_of_stream(&mut self) {
++        if self.retained_end_of_stream && !self.acceptance.is_held() && !self.drain.drops_frames() {
++            self.retained_end_of_stream = false;
++            self.drain.end_of_stream = true;
++            self.drain.drain_start = Some(Instant::now());
++        }
++    }
++
++    fn handle_transition(&mut self, request: PlaybackTransitionRequest) -> RuntimeDecision {
++        if !request.ticket.try_begin_execution() {
++            request.reply_tx.send(Err("playback transition cancelled before execution".into())).ok();
++            return RuntimeDecision::Proceed;
++        }
++        let result = match request.operation {
++            PlaybackTransitionOperation::Hold => {
++                if !request.ticket.try_complete_execution() {
++                    Err("playback hold cancelled".to_string())
++                } else {
++                    self.acceptance.hold(request.transition_id).map_err(str::to_string).map(|()| {
++                        self.retained_end_of_stream |= self.drain.end_of_stream;
++                        self.drain.end_of_stream = false;
++                        self.drain.drain_start = None;
++                        request_flush(&self.state);
++                        self.current_configuration()
++                    })
++                }
++            }
++            PlaybackTransitionOperation::Configure { source, hardware, .. } => {
++                let validation = self.acceptance.begin_configuration(request.transition_id).map_err(str::to_string)
++                    .and_then(|()| {
++                        if self.pending_transition.is_some() { Err("playback configuration already pending".into()) }
++                        else if source.sample_rate == 0 || source.channels == 0 || source.sample_rate != hardware.sample_rate {
++                            Err("playback source and hardware clocks must match a nonzero format".into())
++                        } else { Ok(()) }
++                    });
++                if let Err(error) = validation { Err(error) }
++                else {
++                    // Processing has acknowledged no further publication. Any
++                    // queued markers are retained until their ownership is
++                    // explicitly transferred by successful configuration.
++                    self.drain_pending_messages();
++                    request_flush(&self.state);
++                    self.pending_transition = Some((request, Instant::now()));
++                    return RuntimeDecision::Proceed;
++                }
++            }
++            PlaybackTransitionOperation::Release => {
++                if self.pending_transition.is_some() { Err("playback configuration has not completed".into()) }
++                else if !request.ticket.try_complete_execution() { Err("playback release cancelled".into()) }
++                else {
++                    self.acceptance.release(request.transition_id).map_err(str::to_string).map(|()| {
++                        self.resume_retained_end_of_stream();
++                        self.current_configuration()
++                    })
++                }
++            }
++        };
++        request.reply_tx.send(result).ok();
++        RuntimeDecision::Proceed
++    }
++
++    fn complete_pending_transition(&mut self) -> RuntimeDecision {
++        let Some((request, started)) = self.pending_transition.take() else { return RuntimeDecision::Proceed; };
++        if !flush_completed(&self.state, &self.producer, self.buffer_capacity) {
++            if started.elapsed() >= Duration::from_secs(4) {
++                request.ticket.cancel();
++                request.reply_tx.send(Err("playback callback flush timed out; output remains held".into())).ok();
++            } else { self.pending_transition = Some((request, started)); }
++            return RuntimeDecision::Proceed;
++        }
++        let PlaybackTransitionOperation::Configure { source, hardware, discard_stream } = request.operation else { unreachable!() };
++        let (decision, mut result) = self.reconfigure_output(hardware, &request.ticket);
++        if let Ok(actual) = &result {
++            if actual.sample_rate != source.sample_rate {
++                result = Err("configured hardware clock differs from source clock; output remains held".into());
++            } else if let Err(error) = self.acceptance.configured(request.transition_id, source) {
++                result = Err(error.into());
++            } else {
++                self.drain.stream_flushed(true);
++                if discard_stream { self.retained_end_of_stream = false; }
++            }
++        }
++        request.reply_tx.send(result).ok();
++        decision
+     }
+ 
+     fn handle_reconfigure_request(
+@@ -1291,7 +1392,7 @@
+     }
+ 
+     fn handle_frame(&mut self, frame: super::super::AudioFrame) -> RuntimeDecision {
+-        if self.drain.drops_frames() {
++        if self.drain.drops_frames() || !self.acceptance.accepts(&frame) {
+             self.accounting.frames_dropped += 1;
+             recycle_frame_data(&self.recycle_tx, frame.data, "flush drop");
+             return RuntimeDecision::Continue;
+@@ -1315,7 +1416,7 @@
+                     recycle_frame_data(&self.recycle_tx, frame.data, "shutdown frame drop");
+                     return RuntimeDecision::Break;
+                 }
+-                if self.drain.drops_frames() {
++                if self.drain.drops_frames() || !self.acceptance.accepts(&frame) {
+                     self.accounting.frames_dropped += 1;
+                     recycle_frame_data(&self.recycle_tx, frame.data, "paused frame drop");
+                     return RuntimeDecision::Continue;
+@@ -1364,6 +1465,10 @@
+     }
+ 
+     fn handle_end_of_stream(&mut self) -> RuntimeDecision {
++        if self.acceptance.is_held() {
++            self.retained_end_of_stream = true;
++            return RuntimeDecision::Continue;
++        }
+         if self.drain.drops_frames() {
+             return RuntimeDecision::Continue;
+         }
+@@ -1374,6 +1479,7 @@
+     }
+ 
+     fn handle_flush(&mut self) -> RuntimeDecision {
++        self.retained_end_of_stream = false;
+         request_flush(&self.state);
+         let completed = flush_completed(&self.state, &self.producer, self.buffer_capacity);
+         if completed {
+@@ -1521,8 +1627,11 @@
+     fn drain_pending_messages(&mut self) -> usize {
+         let mut drained = 0;
+         while let Ok(message) = self.message_rx.try_recv() {
+-            if let ProcessingMessage::Frame(frame) = message {
+-                recycle_frame_data(&self.recycle_tx, frame.data, "rebuild stale frame");
++            match message {
++                ProcessingMessage::Frame(frame) => recycle_frame_data(&self.recycle_tx, frame.data, "rebuild stale frame"),
++                ProcessingMessage::EndOfStream if self.acceptance.is_held() => self.retained_end_of_stream = true,
++                ProcessingMessage::Flush if self.acceptance.is_held() => self.retained_end_of_stream = false,
++                _ => {}
+             }
+             drained += 1;
+         }
+--- /dev/null
++++ b/crates/sotf-engine/src/engine/output_transition.rs
+@@ -0,0 +1,99 @@
++//! Allocation-free output acceptance shared by desktop and RemoteIO workers.
++
++use super::{AudioFrame, PlaybackConfiguration};
++
++pub(super) struct PlaybackAcceptance {
++    source: PlaybackConfiguration,
++    held: Option<u64>,
++    last_transition: u64,
++    configured: bool,
++}
++
++impl PlaybackAcceptance {
++    pub(super) fn new(source: PlaybackConfiguration) -> Self {
++        Self { source, held: None, last_transition: 0, configured: true }
++    }
++
++    pub(super) fn hold(&mut self, id: u64) -> Result<(), &'static str> {
++        if self.held == Some(id) { return Ok(()); }
++        if self.held.is_some() || id <= self.last_transition {
++            return Err("stale or conflicting playback output hold");
++        }
++        self.held = Some(id);
++        self.last_transition = id;
++        self.configured = false;
++        Ok(())
++    }
++
++    pub(super) fn validate(&self, id: u64) -> Result<(), &'static str> {
++        if self.held == Some(id) { Ok(()) }
++        else { Err("playback transition does not match active hold") }
++    }
++
++    pub(super) fn begin_configuration(&mut self, id: u64) -> Result<(), &'static str> {
++        self.validate(id)?;
++        self.configured = false;
++        Ok(())
++    }
++
++    /// Called only after queue/callback flush and hardware configuration succeed.
++    pub(super) fn configured(&mut self, id: u64, source: PlaybackConfiguration) -> Result<(), &'static str> {
++        self.validate(id)?;
++        if source.sample_rate == 0 || source.channels == 0 {
++            return Err("playback source format must have a nonzero rate and channel count");
++        }
++        self.source = source;
++        self.configured = true;
++        Ok(())
++    }
++
++    pub(super) fn release(&mut self, id: u64) -> Result<(), &'static str> {
++        self.validate(id)?;
++        if !self.configured { return Err("playback output was not configured while held"); }
++        self.held = None;
++        Ok(())
++    }
++
++    pub(super) fn is_held(&self) -> bool { self.held.is_some() }
++
++    pub(super) fn accepts(&self, frame: &AudioFrame) -> bool {
++        !self.is_held() && frame.sample_rate == self.source.sample_rate
++            && frame.num_channels == self.source.channels
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn stale_release_and_failed_configuration_keep_output_held() {
++        let format = PlaybackConfiguration { sample_rate: 48_000, channels: 6 };
++        let mut acceptance = PlaybackAcceptance::new(format);
++        let frame = AudioFrame::new(vec![0.5; 6], 1, 6, 48_000);
++        assert!(acceptance.accepts(&frame));
++        acceptance.hold(4).unwrap();
++        assert!(acceptance.release(4).is_err());
++        assert!(acceptance.configured(3, format).is_err());
++        assert!(acceptance.hold(5).is_err());
++        assert!(!acceptance.accepts(&frame));
++        acceptance.configured(4, format).unwrap();
++        assert!(acceptance.release(3).is_err());
++        acceptance.release(4).unwrap();
++        assert!(acceptance.accepts(&frame));
++        assert!(acceptance.hold(4).is_err());
++        acceptance.hold(5).unwrap();
++        assert!(acceptance.release(4).is_err());
++    }
++
++    #[test]
++    fn acceptance_checks_source_clock_and_width_independent_of_hardware_routing() {
++        let mut acceptance = PlaybackAcceptance::new(PlaybackConfiguration { sample_rate: 48_000, channels: 6 });
++        acceptance.hold(1).unwrap();
++        acceptance.configured(1, PlaybackConfiguration { sample_rate: 96_000, channels: 4 }).unwrap();
++        acceptance.release(1).unwrap();
++        assert!(acceptance.accepts(&AudioFrame::new(vec![1.0; 4], 1, 4, 96_000)));
++        assert!(!acceptance.accepts(&AudioFrame::new(vec![1.0; 4], 1, 4, 48_000)));
++        assert!(!acceptance.accepts(&AudioFrame::new(vec![1.0; 2], 1, 2, 96_000)));
++    }
++}
+--- /dev/null
++++ b/crates/sotf-engine/src/engine/manager_thread/output_transition.rs
+@@ -0,0 +1,88 @@
++//! Ordered output barriers. A failed transaction stays held until engine rebuild.
++
++use crate::engine::{PlaybackConfiguration, PlaybackThread, PlaybackTransitionOperation,
++    ProcessingCommand, ProcessingHoldInput, ProcessingResponse, ProcessingThread};
++use std::time::{Duration, Instant};
++
++pub(super) fn wait_response(processing: &ProcessingThread, request: u64) -> Result<ProcessingResponse, String> {
++    let deadline = Instant::now() + Duration::from_secs(5);
++    let mut claimed = false;
++    loop {
++        if let Some(response) = processing.try_recv_response_for(request) {
++            return match response { ProcessingResponse::Error(error) => Err(error), response => Ok(response) };
++        }
++        if !claimed && Instant::now() >= deadline {
++            if processing.cancel_request(request) {
++                processing.abandon_request(request);
++                return Err("output transition timed out before processing claimed it".into());
++            }
++            claimed = true;
++        }
++        if processing.is_finished() { return Err("processing worker exited during output transition".into()); }
++        std::thread::sleep(Duration::from_millis(1));
++    }
++}
++
++/// Establish acceptance hold before any upstream wait that can encounter a
++/// full data queue. Playback keeps recycling while held, releasing backpressure.
++pub(super) fn hold_playback(processing: &mut ProcessingThread, playback: &PlaybackThread) -> Result<(u64, bool), String> {
++    let (id, previously_stopped) = match processing.output_transition {
++        Some((id, true)) => (id, true),
++        Some((_, false)) => return Err("output transition failed; rebuild the engine before restarting".into()),
++        None => {
++            let id = processing.next_output_transition;
++            processing.next_output_transition = id.checked_add(1).ok_or("output transition IDs exhausted")?;
++            (id, false)
++        }
++    };
++    processing.output_transition = Some((id, false));
++    playback.transition(id, PlaybackTransitionOperation::Hold)?;
++    Ok((id, previously_stopped))
++}
++
++pub(super) fn hold_processing(processing: &ProcessingThread, id: u64, input: ProcessingHoldInput) -> Result<(PlaybackConfiguration, usize), String> {
++    let request = processing.send_command(ProcessingCommand::HoldOutput { transition_id: id, input })?;
++    match wait_response(processing, request)? {
++        ProcessingResponse::OutputHeld { transition_id, output_channels, output_sample_rate, latency_samples } if transition_id == id =>
++            Ok((PlaybackConfiguration { sample_rate: output_sample_rate, channels: output_channels }, latency_samples)),
++        _ => Err("processing replied with an unexpected output hold acknowledgement".into()),
++    }
++}
++
++pub(super) fn configure(playback: &PlaybackThread, id: u64, source: PlaybackConfiguration, channel_limit: usize, discard_stream: bool) -> Result<PlaybackConfiguration, String> {
++    let hardware = PlaybackConfiguration {
++        sample_rate: source.sample_rate,
++        channels: if channel_limit == 0 { source.channels } else { source.channels.min(channel_limit) },
++    };
++    playback.transition(id, PlaybackTransitionOperation::Configure { source, hardware, discard_stream })
++}
++
++pub(super) fn release(processing: &mut ProcessingThread, playback: &PlaybackThread, id: u64) -> Result<(), String> {
++    playback.transition(id, PlaybackTransitionOperation::Release)?;
++    let request = processing.send_command(ProcessingCommand::ReleaseOutput { transition_id: id })?;
++    match wait_response(processing, request)? {
++        ProcessingResponse::OutputReleased { transition_id } if transition_id == id => { processing.output_transition = None; Ok(()) }
++        _ => Err("processing replied with an unexpected output release acknowledgement".into()),
++    }
++}
++
++/// Successful Stop has already emptied input/output queues and configured the
++/// device. Its initial Play Flush fits while processing remains held.
++pub(super) fn restart_stopped(processing: &mut ProcessingThread, playback: &PlaybackThread) -> Result<(), String> {
++    match processing.output_transition {
++        Some((id, true)) => {
++            // Clear pause while acceptance is still held. The following
++            // acknowledged Release is ordered after Resume on the same FIFO.
++            playback.send_command(crate::engine::PlaybackCommand::Resume)?;
++            release(processing, playback, id)
++        },
++        Some((_, false)) => Err("output transition failed; rebuild the engine before restarting".into()),
++        None => Ok(()),
++    }
++}
++
++pub(super) fn ensure_restartable(processing: &ProcessingThread) -> Result<(), String> {
++    if matches!(processing.output_transition, Some((_, false))) {
++        Err("output transition failed; rebuild the engine before restarting".into())
++    } else { Ok(()) }
++}
+--- /dev/null
++++ b/crates/sotf-engine/src/engine/processing_thread/tests/protocol.rs
+@@ -0,0 +1,249 @@
++//! Output contract and stream boundaries on the real processing worker.
++
++use super::super::processing_state::run_processing_thread;
++use super::super::{ProcessingReply, ProcessingRequest};
++use super::request;
++use crate::engine::{
++    AudioFrame, DecoderMessage, GcItem, PreparedHostUpdate, ProcessingCommand, ProcessingMessage,
++    ProcessingResponse, ProcessingHoldInput, ThreadEvent,
++};
++use arc_swap::ArcSwap;
++use sotf_plugins::{
++    Parameter, ParameterId, ParameterValue, Plugin, PluginHost, PluginInfo, ProcessContext,
++};
++use std::sync::Arc;
++use std::sync::atomic::AtomicU64;
++use std::sync::mpsc::{self, Receiver, Sender};
++use std::thread::JoinHandle;
++use std::time::Duration;
++
++const WAIT: Duration = Duration::from_secs(2);
++
++/// Exact zero-order 2x converter: independent frame and duration oracle.
++struct DoubleRate;
++
++impl Plugin for DoubleRate {
++    fn info(&self) -> PluginInfo {
++        PluginInfo::new("Protocol rate probe", "1", "Test")
++    }
++    fn input_channels(&self) -> usize {
++        1
++    }
++    fn output_channels(&self) -> usize {
++        1
++    }
++    fn parameters(&self) -> Vec<Parameter> {
++        Vec::new()
++    }
++    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
++        Err("No parameters".into())
++    }
++    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
++        None
++    }
++    fn output_sample_rate(&self, _: u32) -> u32 {
++        96_000
++    }
++    fn output_frames_for_input(&self, frames: usize) -> usize {
++        frames * 2
++    }
++    fn process(
++        &mut self,
++        input: &[f32],
++        output: &mut [f32],
++        context: &ProcessContext,
++    ) -> Result<usize, String> {
++        assert_eq!(context.sample_rate, 48_000);
++        for (frame, &sample) in input.iter().enumerate() {
++            output[frame * 2..frame * 2 + 2].fill(sample);
++        }
++        Ok(context.num_frames * 2)
++    }
++}
++
++struct Worker {
++    decoder_tx: Option<Sender<DecoderMessage>>,
++    command_tx: Sender<ProcessingRequest>,
++    response_rx: Receiver<ProcessingReply>,
++    output_rx: Option<Receiver<ProcessingMessage>>,
++    decoder_recycle_rx: Receiver<Vec<f32>>,
++    thread: Option<JoinHandle<Result<(), String>>>,
++    _gc_rx: crossbeam::channel::Receiver<GcItem>,
++    _event_rx: crossbeam::channel::Receiver<ThreadEvent>,
++}
++
++impl Worker {
++    fn new() -> Self {
++        let (decoder_tx, decoder_rx) = mpsc::channel();
++        let (output_tx, output_rx) = mpsc::sync_channel(0);
++        let (command_tx, command_rx) = mpsc::channel();
++        let (response_tx, response_rx) = mpsc::channel();
++        let (event_tx, event_rx) = crossbeam::channel::bounded(32);
++        let (gc_tx, gc_rx) = crossbeam::channel::bounded(32);
++        let (_recycle_tx, recycle_rx) = mpsc::channel();
++        let (decoder_recycle_tx, decoder_recycle_rx) = mpsc::sync_channel(8);
++        let thread = std::thread::spawn(move || {
++            run_processing_thread(
++                decoder_rx,
++                output_tx,
++                command_rx,
++                response_tx,
++                event_tx,
++                48_000,
++                1,
++                Arc::new(ArcSwap::from_pointee(Vec::new())),
++                gc_tx,
++                recycle_rx,
++                decoder_recycle_tx,
++                Arc::new(AtomicU64::new(0)),
++                #[cfg(feature = "streaming")]
++                None,
++            )
++        });
++        let worker = Self {
++            decoder_tx: Some(decoder_tx),
++            command_tx,
++            response_rx,
++            output_rx: Some(output_rx),
++            decoder_recycle_rx,
++            thread: Some(thread),
++            _gc_rx: gc_rx,
++            _event_rx: event_rx,
++        };
++        let mut host = PluginHost::new(1, 48_000);
++        host.add_plugin(Box::new(DoubleRate)).unwrap();
++        host.build().unwrap();
++        worker.commit(host, 96_000);
++        worker.send_frame(0.25);
++        let frame = worker.frame();
++        assert_eq!(frame.sample_rate, 96_000);
++        assert_eq!(frame.data, [0.25, 0.25]);
++        worker.decoder_recycle_rx.recv_timeout(WAIT).unwrap();
++        worker
++    }
++
++    fn commit(&self, host: PluginHost, rate: u32) {
++        let update = PreparedHostUpdate::prepare(host, 48_000, 1, 0).unwrap();
++        self.command_tx
++            .send(request(ProcessingCommand::CommitHostUpdate(update)))
++            .unwrap();
++        let response = self.response_rx.recv_timeout(WAIT).unwrap().response;
++        assert!(matches!(response,
++            ProcessingResponse::PluginChainUpdated { output_sample_rate, output_channels: 1, .. }
++                if output_sample_rate == rate));
++    }
++
++    fn send_frame(&self, sample: f32) {
++        self.decoder_tx
++            .as_ref()
++            .unwrap()
++            .send(DecoderMessage::Frame(
++                AudioFrame::try_new(vec![sample], 1, 1, 48_000).unwrap(),
++            ))
++            .unwrap();
++    }
++
++    fn pending_frame(&self, sample: f32) {
++        self.send_frame(sample);
++        // This buffer is recycled after rendering but before the rendezvous
++        // send. The old frame cannot be delivered until frame() is called.
++        self.decoder_recycle_rx.recv_timeout(WAIT).unwrap();
++    }
++
++    fn hold(&self, id: u64, input: ProcessingHoldInput) {
++        self.command_tx.send(request(ProcessingCommand::HoldOutput { transition_id: id, input })).unwrap();
++        assert!(matches!(self.response_rx.recv_timeout(WAIT).unwrap().response,
++            ProcessingResponse::OutputHeld { transition_id, .. } if transition_id == id));
++    }
++
++    fn release(&self, id: u64) {
++        self.command_tx.send(request(ProcessingCommand::ReleaseOutput { transition_id: id })).unwrap();
++        assert!(matches!(self.response_rx.recv_timeout(WAIT).unwrap().response,
++            ProcessingResponse::OutputReleased { transition_id } if transition_id == id));
++    }
++
++    fn acknowledge_bypass(&self, bypass: bool) -> u32 {
++        self.command_tx.send(request(ProcessingCommand::Bypass(bypass))).unwrap();
++        let ProcessingResponse::OutputFormatUpdated { output_sample_rate, .. } =
++            self.response_rx.recv_timeout(WAIT).unwrap().response else { panic!("expected bypass output metadata"); };
++        output_sample_rate
++    }
++
++    fn frame(&self) -> AudioFrame {
++        let ProcessingMessage::Frame(frame) =
++            self.output_rx.as_ref().unwrap().recv_timeout(WAIT).unwrap()
++        else {
++            panic!("expected audio frame");
++        };
++        frame
++    }
++}
++
++impl Drop for Worker {
++    fn drop(&mut self) {
++        // Failed assertions must not leave the real worker blocked on either
++        // data channel. Disconnect them before joining the worker.
++        drop(self.output_rx.take());
++        drop(self.decoder_tx.take());
++        self.command_tx
++            .send(request(ProcessingCommand::Shutdown))
++            .ok();
++        if let Some(thread) = self.thread.take() {
++            thread.join().unwrap().unwrap();
++        }
++    }
++}
++
++#[test]
++fn rate_only_commit_discards_old_clock_pending_output() {
++    let worker = Worker::new();
++    worker.pending_frame(0.5);
++    let mut host = PluginHost::new(1, 48_000);
++    host.build().unwrap();
++    worker.commit(host, 48_000);
++    worker.send_frame(0.75);
++    let frame = worker.frame();
++    assert_eq!(
++        frame.sample_rate, 48_000,
++        "old clock after new-format commit acknowledgement"
++    );
++    assert_eq!(frame.data, [0.75]);
++}
++
++#[test]
++fn stop_barrier_retires_frames_queued_by_quiesced_decoder() {
++    let worker = Worker::new();
++    worker.pending_frame(0.5);
++    worker.send_frame(0.6);
++    // No further decoder writes occur until the Stop command barrier. This
++    // models a successful decoder Stop acknowledgement in the manager.
++    worker.hold(1, ProcessingHoldInput::DiscardQuiescedStream);
++    worker.send_frame(0.75);
++    assert!(worker.output_rx.as_ref().unwrap().try_recv().is_err());
++    worker.release(1);
++    assert_eq!(
++        worker.frame().data,
++        [0.75, 0.75],
++        "pre-stop decoder frame escaped the barrier"
++    );
++}
++
++#[test]
++fn bypass_reports_the_new_clock_before_held_audio_is_released() {
++    let worker = Worker::new();
++    worker.hold(1, ProcessingHoldInput::RetainInput);
++    let accepted_rate = worker.acknowledge_bypass(true);
++    assert_eq!(accepted_rate, 48_000);
++    worker.send_frame(0.75);
++    assert!(worker.output_rx.as_ref().unwrap().try_recv().is_err());
++    worker.release(1);
++    let frame = worker.frame();
++    assert_eq!(frame.sample_rate, accepted_rate);
++    assert_eq!(frame.num_frames, 1);
++    assert_eq!(frame.data, [0.75]);
++    worker.hold(2, ProcessingHoldInput::RetainInput);
++    assert_eq!(worker.acknowledge_bypass(false), 96_000);
++    worker.release(2);
++    worker.send_frame(0.9);
++    assert_eq!(worker.frame().data, [0.9, 0.9]);
++}
+--- a/crates/sotf-engine/src/engine/types.rs
++++ b/crates/sotf-engine/src/engine/types.rs
+@@ -143,6 +143,36 @@
+     pub(super) reply_tx: std::sync::mpsc::SyncSender<Result<PlaybackConfiguration, String>>,
+ }
+ 
++/// Input ownership at an acknowledged processing publication boundary.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum ProcessingHoldInput {
++    /// Preserve queued input and any already-consumed Flush/EOS marker.
++    RetainInput,
++    /// The caller has acknowledged decoder quiescence; retire its old stream.
++    DiscardQuiescedStream,
++}
++
++/// Operations in a manager-serialized output transition. Ordinary Resume
++/// cannot release this hold, and release IDs must match the active transition.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum PlaybackTransitionOperation {
++    Hold,
++    Configure {
++        source: PlaybackConfiguration,
++        hardware: PlaybackConfiguration,
++        discard_stream: bool,
++    },
++    Release,
++}
++
++#[derive(Clone, Debug)]
++pub struct PlaybackTransitionRequest {
++    pub(super) transition_id: u64,
++    pub(super) operation: PlaybackTransitionOperation,
++    pub(super) ticket: HostUpdateTicket,
++    pub(super) reply_tx: std::sync::mpsc::SyncSender<Result<PlaybackConfiguration, String>>,
++}
++
+ impl PreparedHostUpdate {
+     /// Validate and prepare a host replacement on a control/worker thread.
+     pub fn prepare(
+@@ -357,6 +387,15 @@
+ 
+ /// Commands for the processing thread
+ pub enum ProcessingCommand {
++    /// Hold output publication until a matching release. Queue retirement is
++    /// only valid after an acknowledged decoder Stop.
++    HoldOutput {
++        transition_id: u64,
++        input: ProcessingHoldInput,
++    },
++    ReleaseOutput {
++        transition_id: u64,
++    },
+     /// Commit a fully validated and allocation-prepared plugin-host replacement.
+     CommitHostUpdate(PreparedHostUpdate),
+     /// Set a plugin parameter
+@@ -381,6 +420,13 @@
+ impl std::fmt::Debug for ProcessingCommand {
+     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+         match self {
++            Self::HoldOutput { transition_id, input } => f
++                .debug_struct("HoldOutput")
++                .field("transition_id", transition_id)
++                .field("input", input)
++                .finish(),
++            Self::ReleaseOutput { transition_id } =>
++                f.debug_tuple("ReleaseOutput").field(transition_id).finish(),
+             Self::CommitHostUpdate(update) => {
+                 f.debug_tuple("CommitHostUpdate").field(update).finish()
+             }
+@@ -411,6 +457,19 @@
+ pub enum ProcessingResponse {
+     /// Ok response
+     Ok,
++    OutputHeld {
++        transition_id: u64,
++        output_channels: usize,
++        output_sample_rate: u32,
++        latency_samples: usize,
++    },
++    OutputReleased { transition_id: u64 },
++    /// Effective output format after bypass changes, including its clock.
++    OutputFormatUpdated {
++        output_channels: usize,
++        output_sample_rate: u32,
++        latency_samples: usize,
++    },
+     /// Plugin chain updated with new output channel count and latency
+     PluginChainUpdated {
+         generation: u64,
+@@ -435,6 +494,8 @@
+ /// Commands for the playback thread
+ #[derive(Clone, Debug)]
+ pub enum PlaybackCommand {
++    /// Acknowledged publication/acceptance barrier coordinated by the manager.
++    Transition(PlaybackTransitionRequest),
+     /// Set output volume (linear, 0.0 = silence, 1.0 = unity)
+     SetVolume(f32),
+     /// Mute/unmute
+--- a/crates/sotf-engine/src/engine/manager_thread/apply.rs
++++ b/crates/sotf-engine/src/engine/manager_thread/apply.rs
+@@ -108,6 +108,20 @@
+     state.store(Arc::new(new_state));
+ }
+ 
++fn configure_transition(
++    processing: &mut ProcessingThread,
++    playback: &PlaybackThread,
++    id: u64,
++    previously_stopped: bool,
++    source: super::super::PlaybackConfiguration,
++    channel_limit: usize,
++) -> Result<super::super::PlaybackConfiguration, String> {
++    let actual = super::output_transition::configure(playback, id, source, channel_limit, false)?;
++    if previously_stopped { processing.output_transition = Some((id, true)); }
++    else { super::output_transition::release(processing, playback, id)?; }
++    Ok(actual)
++}
++
+ /// Apply a plugin update with proper synchronization.
+ /// A failed candidate is never committed, so the active host remains unchanged.
+ /// Waits for confirmation from processing thread and updates playback thread if needed.
+@@ -183,7 +197,17 @@
+     .map_err(|message| ConfigError::PluginBuild {
+         diagnostic: PluginBuildDiagnostic::host(message),
+     })?;
++    let needs_barrier = prepared.output_channels != current.num_channels
++        || prepared.output_sample_rate != current.sample_rate
++        || processing.output_transition.is_some();
+     drop(current);
++    let barrier = if needs_barrier {
++        let (id, previously_stopped) = super::output_transition::hold_playback(processing, playback)
++            .map_err(|reason| ConfigError::ProcessingError { reason })?;
++        super::output_transition::hold_processing(processing, id, super::super::ProcessingHoldInput::RetainInput)
++            .map_err(|reason| ConfigError::ProcessingError { reason })?;
++        Some((id, previously_stopped))
++    } else { None };
+     let (generation, request_id, ticket) = processing.send_host_update(prepared).map_err(|_| {
+         log::error!("[Manager Thread] Failed to send CommitHostUpdate command: disconnected");
+         ConfigError::ChannelDisconnected
+@@ -212,16 +236,12 @@
+     let current = state.load();
+     let old_playback_channels = current.playback_channels;
+     let old_sample_rate = current.sample_rate;
+-    let playback_channels = if playback_channel_limit > 0 {
+-        output_channels.min(playback_channel_limit)
+-    } else {
+-        output_channels
+-    };
+     let mut new_state = (**current).clone();
+     drop(current);
+     let (actual_playback_channels, actual_playback_sample_rate) =
+-        if playback_channels != old_playback_channels || output_sample_rate != old_sample_rate {
+-            match playback.reconfigure(output_sample_rate, playback_channels) {
++        if let Some((id, previously_stopped)) = barrier {
++            match configure_transition(processing, playback, id, previously_stopped,
++                super::super::PlaybackConfiguration { sample_rate: output_sample_rate, channels: output_channels }, playback_channel_limit) {
+                 Ok(actual) => (actual.channels, actual.sample_rate),
+                 Err(error) => {
+                     let reason = format!(
+@@ -343,7 +363,17 @@
+     .map_err(|message| ConfigError::PluginBuild {
+         diagnostic: PluginBuildDiagnostic::host(message),
+     })?;
++    let needs_barrier = prepared.output_channels != current.num_channels
++        || prepared.output_sample_rate != current.sample_rate
++        || processing.output_transition.is_some();
+     drop(current);
++    let barrier = if needs_barrier {
++        let (id, previously_stopped) = super::output_transition::hold_playback(processing, playback)
++            .map_err(|reason| ConfigError::ProcessingError { reason })?;
++        super::output_transition::hold_processing(processing, id, super::super::ProcessingHoldInput::RetainInput)
++            .map_err(|reason| ConfigError::ProcessingError { reason })?;
++        Some((id, previously_stopped))
++    } else { None };
+     let (generation, request_id, ticket) = processing
+         .send_host_update(prepared)
+         .map_err(|_| ConfigError::ChannelDisconnected)?;
+@@ -355,18 +385,11 @@
+     let timeout = estimate_graph_update_timeout(&graph_config);
+     let (output_channels, output_sample_rate, latency_samples) =
+         wait_for_plugin_chain_update(processing, request_id, generation, &ticket, timeout)?;
+-    let playback_channels = if playback_channel_limit > 0 {
+-        output_channels.min(playback_channel_limit)
+-    } else {
+-        output_channels
+-    };
+ 
+     let mut new_state = (**state.load()).clone();
+-    let (actual_playback_channels, actual_playback_sample_rate) = if playback_channels
+-        != old_playback_channels
+-        || output_sample_rate != old_sample_rate
+-    {
+-        match playback.reconfigure(output_sample_rate, playback_channels) {
++    let (actual_playback_channels, actual_playback_sample_rate) = if let Some((id, previously_stopped)) = barrier {
++        match configure_transition(processing, playback, id, previously_stopped,
++            super::super::PlaybackConfiguration { sample_rate: output_sample_rate, channels: output_channels }, playback_channel_limit) {
+             Ok(actual) => (actual.channels, actual.sample_rate),
+             Err(error) => {
+                 let reason = format!(
+--- a/crates/sotf-engine/src/engine/mod.rs
++++ b/crates/sotf-engine/src/engine/mod.rs
+@@ -26,6 +26,7 @@
+ pub use network_endpoint::{NetworkEndpointBackend, NetworkEndpointPlan, plan_network_endpoint};
+ 
+ mod output_access;
++mod output_transition;
+ pub use output_access::{OutputAccessBackend, OutputAccessPlan, plan_output_access};
+ 
+ pub(crate) mod output_dither;

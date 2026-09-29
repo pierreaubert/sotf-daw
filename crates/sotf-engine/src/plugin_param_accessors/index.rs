@@ -8,6 +8,14 @@ use super::hpf::hpf_orders;
 use super::speaker::speaker_configs;
 use sotf_plugins::{CrossfeedMode, CrossfeedPreset, SpectralTiltCorrection, TiltReferenceFreq};
 
+pub(super) fn gate_mode_to_index(mode: &sotf_plugins::GateMode) -> f64 {
+    mode.index() as f64
+}
+
+pub(super) fn index_to_gate_mode(index: f64) -> sotf_plugins::GateMode {
+    sotf_plugins::GateMode::from_index(index as usize).unwrap_or_default()
+}
+
 pub(super) fn index_to_speaker_config(index: f64) -> String {
     let idx = index as usize;
     speaker_configs().get(idx).unwrap_or(&"5.1").to_string()

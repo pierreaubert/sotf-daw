@@ -1363,3 +1363,6 @@ fn test_non_finite_input_is_sanitized_and_state_recovers() {
         );
     }
 }
+
+#[path = "tests/finite_stream.rs"]
+mod finite_stream;

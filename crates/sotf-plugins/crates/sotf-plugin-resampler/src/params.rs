@@ -19,7 +19,7 @@ pub const PARAMS: &[ParamSpec] = &[
     .doc("Resampling quality: fast (64-tap), medium (128-tap), high (256-tap) sinc filter"),
     ParamSpec::bool_param("Dynamic Ratio", "dynamic_ratio", false, "Ratio")
         .setup()
-        .doc("Enable runtime ratio changes without rebuilding the resampler"),
+        .doc("Enable ratio updates. Equal-rate mode changes require a fresh or reset stream; the runtime descriptor is structural for equal-rate instances and realtime otherwise."),
     ParamSpec::float("Ratio", "ratio", 1.0, 0.25, 4.0, 0.01, "", "Ratio")
         .doc("Current resampling ratio (only adjustable when Dynamic Ratio is enabled)"),
 ];

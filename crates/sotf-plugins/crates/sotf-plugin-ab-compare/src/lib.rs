@@ -16,6 +16,8 @@ pub mod params;
 
 #[path = "lib/abcompare_plugin.rs"]
 mod abcompare_plugin;
+#[cfg(test)]
+mod auto_gain_tests;
 #[path = "lib/delay_line.rs"]
 mod delay_line;
 #[cfg(test)]

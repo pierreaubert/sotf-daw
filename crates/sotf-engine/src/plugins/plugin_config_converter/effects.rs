@@ -211,6 +211,8 @@ pub fn convert_analog_compressor(
         analog_color,
         analog_character,
         analog_trim,
+        range_db,
+        hold_ms,
     } = settings
     else {
         return None;
@@ -231,6 +233,8 @@ pub fn convert_analog_compressor(
             "analog_color": *analog_color,
             "analog_character": *analog_character,
             "analog_trim": *analog_trim,
+            "range_db": *range_db,
+            "hold_ms": *hold_ms,
         }),
     ))
 }

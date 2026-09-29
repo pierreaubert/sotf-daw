@@ -86,6 +86,7 @@ pub struct ABComparePlugin {
     pub(super) empty_path_fast_gain: f32,
 
     pub(super) cache: RealTimeCache<ABCompareData>,
+    /// Frames elapsed since the last loudness target and diagnostic update.
     pub(super) cache_update_counter: usize,
     pub(super) cached_parameters: Vec<Parameter>,
 }
@@ -274,7 +275,7 @@ impl ABComparePlugin {
             last_peaks: [0.0; 2],
             empty_path_fast_gain: 0.0,
             cache: RealTimeCache::new(ABCompareData::default()),
-            cache_update_counter: (sample_rate / 20) as usize,
+            cache_update_counter: 0,
             cached_parameters: Vec::new(),
         };
         p.recompute_empty_path_fast_gain();
@@ -493,17 +494,17 @@ impl ABComparePlugin {
         output: &mut [f32],
         num_frames: usize,
     ) -> Result<(), String> {
-        let do_measure = self.advance_diagnostic_scheduler(num_frames);
-
-        if self.auto_gain.is_enabled() {
-            self.auto_gain.ingest_input(input)?;
-            self.auto_gain.ingest_output(input)?;
-        }
-        if do_measure && self.auto_gain.is_enabled() {
-            self.auto_gain.refresh_input_measurement();
-            self.auto_gain.refresh_output_measurement();
-            self.last_peaks[0] = self.auto_gain.last_input_peak();
-            self.last_peaks[1] = self.auto_gain.last_output_peak();
+        let mut frame = 0;
+        while frame < num_frames {
+            let count = self.frames_until_measurement().min(num_frames - frame);
+            let samples = &input[frame * self.num_channels..(frame + count) * self.num_channels];
+            if self.auto_gain.is_enabled() {
+                self.auto_gain.ingest_input(samples)?;
+                self.auto_gain.ingest_output(samples)?;
+            }
+            self.auto_gain.next_n(count);
+            self.finish_measurement_segment(count);
+            frame += count;
         }
 
         let gain = self.empty_path_fast_gain;
@@ -516,35 +517,40 @@ impl ABComparePlugin {
             }
         }
 
-        self.auto_gain.next_n(num_frames);
-
-        if do_measure {
-            let data = ABCompareData {
-                loudness_a_lufs: self.auto_gain.last_input_lufs(),
-                loudness_b_lufs: self.auto_gain.last_output_lufs(),
-                auto_gain_db: self.auto_gain.current_gain_db(),
-                peak_a: self.last_peaks[0],
-                peak_b: self.last_peaks[1],
-                current_mix: self.transition_smoothers.mix.current(),
-                bypass_active: self.bypass,
-            };
-            self.cache.update(|d| {
-                *d = data;
-            });
-        }
-
         Ok(())
     }
 
-    fn advance_diagnostic_scheduler(&mut self, frames: usize) -> bool {
+    fn frames_until_measurement(&self) -> usize {
+        // Refresh at 20 Hz on the sample clock, independently of callback size.
         let interval = (self.sample_rate as usize / 20).max(1);
-        self.cache_update_counter = self.cache_update_counter.saturating_add(frames);
-        if self.cache_update_counter >= interval {
-            self.cache_update_counter %= interval;
-            true
-        } else {
-            false
+        interval - self.cache_update_counter
+    }
+
+    fn finish_measurement_segment(&mut self, frames: usize) {
+        debug_assert!(frames <= self.frames_until_measurement());
+        self.cache_update_counter += frames;
+        if self.frames_until_measurement() != 0 {
+            return;
         }
+        self.cache_update_counter = 0;
+        // The segment has already been rendered with its previous gain target.
+        // These statistics may change only the samples following this boundary.
+        if self.auto_gain.is_enabled() {
+            self.auto_gain.refresh_input_measurement();
+            self.auto_gain.refresh_output_measurement();
+            self.last_peaks[0] = self.auto_gain.last_input_peak();
+            self.last_peaks[1] = self.auto_gain.last_output_peak();
+        }
+        let data = ABCompareData {
+            loudness_a_lufs: self.auto_gain.last_input_lufs(),
+            loudness_b_lufs: self.auto_gain.last_output_lufs(),
+            auto_gain_db: self.auto_gain.current_gain_db(),
+            peak_a: self.last_peaks[0],
+            peak_b: self.last_peaks[1],
+            current_mix: self.transition_smoothers.mix.current(),
+            bypass_active: self.bypass,
+        };
+        self.cache.update(|d| *d = data);
     }
 
     /// Rebuild the bandpass filter pair for the current band mask settings.
@@ -972,7 +978,7 @@ impl Plugin for ABComparePlugin {
                 buffer.resize(max_buffer, 0.0);
             }
         }
-        self.cache_update_counter = (sample_rate as usize / 20).max(1);
+        self.cache_update_counter = 0;
 
         Ok(())
     }
@@ -997,7 +1003,7 @@ impl Plugin for ABComparePlugin {
 
         // Reset peak values
         self.last_peaks = [0.0; 2];
-        self.cache_update_counter = (self.sample_rate as usize / 20).max(1);
+        self.cache_update_counter = 0;
 
         // Reset band mask filters
         self.band_mask_hp.clear();
@@ -1089,26 +1095,6 @@ impl Plugin for ABComparePlugin {
         self.delay_b
             .process(&mut self.buffers[1][..expected_samples]);
 
-        // Measure loudness and peaks using AutoGain (throttled)
-        // A's output is the "input reference" (what we want B to match)
-        // B's output is the "output to compensate"
-        let do_measure = self.advance_diagnostic_scheduler(context.num_frames);
-
-        if self.auto_gain.is_enabled() {
-            self.auto_gain
-                .ingest_input(&self.buffers[0][..expected_samples])?;
-            self.auto_gain
-                .ingest_output(&self.buffers[1][..expected_samples])?;
-        }
-
-        if do_measure && self.auto_gain.is_enabled() {
-            self.auto_gain.refresh_input_measurement();
-            self.auto_gain.refresh_output_measurement();
-            // Cache peak values for get_data()
-            self.last_peaks[0] = self.auto_gain.last_input_peak();
-            self.last_peaks[1] = self.auto_gain.last_output_peak();
-        }
-
         // Determine target mix value. Only call set_target when the desired
         // target differs from the smoother's current target — avoids redundant
         // per-block work when the mix is settled.
@@ -1132,53 +1118,53 @@ impl Plugin for ABComparePlugin {
         let sign_b: f32 = if self.phase_invert[1] { -1.0 } else { 1.0 };
         let band_mask_active = self.band_mask_active();
 
-        // Process sample-by-sample
-        for frame in 0..context.num_frames {
-            // Tick smoothers into loop
-            let gain_linear = self.auto_gain.next_gain_linear();
-            let current_mix = self.transition_smoothers.mix.advance();
-            let bypass_mix = self.transition_smoothers.bypass.advance();
-
-            for ch in 0..self.num_channels {
-                let idx = frame * self.num_channels + ch;
-                let dry_sample = output[idx];
-                let sample_a = self.buffers[0][idx] * sign_a;
-                let sample_b = self.buffers[1][idx] * gain_linear * sign_b;
-
-                let mut wet_sample = if self.difference_mode {
-                    // Difference mode: output A - B
-                    sample_a - sample_b
-                } else {
-                    // Unity-preserving same-source crossfade.
-                    // mix: -1 = pure A, +1 = pure B
-                    let mix_01 = (current_mix + 1.0) / 2.0; // 0 = A, 1 = B
-                    let gain_a = 1.0 - mix_01;
-                    let gain_b = mix_01;
-                    sample_a * gain_a + sample_b * gain_b
-                };
-
-                if band_mask_active {
-                    wet_sample = self.band_mask_hp[ch].process(wet_sample as f64) as f32;
-                    wet_sample = self.band_mask_lp[ch].process(wet_sample as f64) as f32;
-                }
-                output[idx] = wet_sample * (1.0 - bypass_mix) + dry_sample * bypass_mix;
+        // Subdivide only metering and mixing. Nested processors still receive
+        // the original callback, and no extra scratch buffers are necessary.
+        let mut segment_start = 0;
+        while segment_start < context.num_frames {
+            let count = self
+                .frames_until_measurement()
+                .min(context.num_frames - segment_start);
+            let segment_end = segment_start + count;
+            if self.auto_gain.is_enabled() {
+                let samples = segment_start * self.num_channels..segment_end * self.num_channels;
+                self.auto_gain
+                    .ingest_input(&self.buffers[0][samples.clone()])?;
+                self.auto_gain.ingest_output(&self.buffers[1][samples])?;
             }
-        }
+            for frame in segment_start..segment_end {
+                // Tick smoothers into loop
+                let gain_linear = self.auto_gain.next_gain_linear();
+                let current_mix = self.transition_smoothers.mix.advance();
+                let bypass_mix = self.transition_smoothers.bypass.advance();
 
-        // Update diagnostic cache (throttled)
-        if do_measure {
-            let data = ABCompareData {
-                loudness_a_lufs: self.auto_gain.last_input_lufs(),
-                loudness_b_lufs: self.auto_gain.last_output_lufs(),
-                auto_gain_db: self.auto_gain.current_gain_db(),
-                peak_a: self.last_peaks[0],
-                peak_b: self.last_peaks[1],
-                current_mix: self.transition_smoothers.mix.current(),
-                bypass_active: self.bypass,
-            };
-            self.cache.update(|d| {
-                *d = data;
-            });
+                for ch in 0..self.num_channels {
+                    let idx = frame * self.num_channels + ch;
+                    let dry_sample = output[idx];
+                    let sample_a = self.buffers[0][idx] * sign_a;
+                    let sample_b = self.buffers[1][idx] * gain_linear * sign_b;
+
+                    let mut wet_sample = if self.difference_mode {
+                        // Difference mode: output A - B
+                        sample_a - sample_b
+                    } else {
+                        // Unity-preserving same-source crossfade.
+                        // mix: -1 = pure A, +1 = pure B
+                        let mix_01 = (current_mix + 1.0) / 2.0; // 0 = A, 1 = B
+                        let gain_a = 1.0 - mix_01;
+                        let gain_b = mix_01;
+                        sample_a * gain_a + sample_b * gain_b
+                    };
+
+                    if band_mask_active {
+                        wet_sample = self.band_mask_hp[ch].process(wet_sample as f64) as f32;
+                        wet_sample = self.band_mask_lp[ch].process(wet_sample as f64) as f32;
+                    }
+                    output[idx] = wet_sample * (1.0 - bypass_mix) + dry_sample * bypass_mix;
+                }
+            }
+            self.finish_measurement_segment(count);
+            segment_start = segment_end;
         }
 
         Ok(context.num_frames)

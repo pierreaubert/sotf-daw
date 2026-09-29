@@ -1,3 +1,11 @@
+## Unreleased audit corrections (2026-09-28)
+
+- Preserve RNNoise model output while correcting total reported latency to 960
+  frames and aligning dry output at that delay. The existing 480-frame framing
+  queue and 1920-sample rings are retained. Empty calls no longer latch bypass.
+- Verify the full wet stream against direct model blocks and output-clock
+  transitions against an independent 960-frame dry shift.
+
 # 0.5.14
 
 - Add the preallocated `SpectralHissReducer`: a causal 1024-point WOLA path

@@ -29,12 +29,14 @@ fn test_xtc_stft_roundtrip_gain() {
 
     plugin.process(&input, &mut output, &context).unwrap();
 
-    // Skip latency (fft_size - hop_size)
-    let skip = fft_size;
+    // Compare each emitted frame with the source at the declared fixed delay.
+    let latency = plugin.latency_samples();
+    assert_eq!(latency, fft_size);
+    assert!(output[..latency * 2].iter().all(|&sample| sample == 0.0));
     let mut max_diff = 0.0_f32;
-    for i in skip..num_frames - skip {
-        let diff_l = (output[i * 2] - input[i * 2]).abs();
-        let diff_r = (output[i * 2 + 1] - input[i * 2 + 1]).abs();
+    for i in latency..num_frames {
+        let diff_l = (output[i * 2] - input[(i - latency) * 2]).abs();
+        let diff_r = (output[i * 2 + 1] - input[(i - latency) * 2 + 1]).abs();
         max_diff = max_diff.max(diff_l).max(diff_r);
     }
 

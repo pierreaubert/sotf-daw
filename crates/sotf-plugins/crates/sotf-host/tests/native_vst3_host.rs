@@ -3,6 +3,7 @@
 use sotf_host::external_plugin::{
     ExternalHostingBackend, ExternalPlugin, PluginDescriptor, PluginFormat, PluginScanStatus,
 };
+use sotf_host::parameters::ParameterValue;
 use sotf_host::plugin::{
     MidiEvent, MidiMessage, ParameterEvent, Plugin, ProcessContext, TransportInfo,
 };
@@ -78,6 +79,25 @@ fn native_vst3_gain_processes_audio() {
         assert!((actual - expected).abs() < 1.0e-5);
     }
 
+    // Do not replay the default-value automation event while measuring a
+    // nondefault gain. A fractional value also checks the parameter's type.
+    let context = ProcessContext::new(48_000, frames);
+    let gain_db = -6.5_f32;
+    // The VST3 controller supplies plain-value conversion, so this host API
+    // exposes dB rather than the normalized wire representation.
+    assert_eq!(gain.min_value, Some(ParameterValue::Float(-60.0)));
+    assert_eq!(gain.max_value, Some(ParameterValue::Float(20.0)));
+    plugin
+        .set_parameter(gain.id, ParameterValue::Float(gain_db))
+        .expect("queue fractional VST3 gain");
+    for _ in 0..256 {
+        plugin.process(&input, &mut output, &context).unwrap();
+    }
+    let expected_gain = 10.0_f32.powf(gain_db / 20.0);
+    for (actual, original) in output.iter().zip(&input) {
+        assert!((actual - original * expected_gain).abs() < 1.0e-5);
+    }
+
     let preset = plugin.serialize().expect("save VST3 state");
     let state = preset
         .external_plugin_state()
@@ -88,24 +108,12 @@ fn native_vst3_gain_processes_audio() {
     let mut restored =
         ExternalPlugin::from_placeholder_state(&state, 48_000).expect("restore VST3 state");
     let mut restored_output = vec![0.0; input.len()];
-    restored
-        .process(&input, &mut restored_output, &context)
-        .unwrap();
-    assert_eq!(restored_output, output);
-
-    let minimum = gain.min_value.expect("gain minimum");
-    plugin
-        .set_parameter(gain.id, minimum)
-        .expect("queue non-default VST3 gain");
-    let mut attenuated = vec![0.0; input.len()];
-    for _ in 0..32 {
-        plugin.process(&input, &mut attenuated, &context).unwrap();
+    for _ in 0..256 {
+        restored
+            .process(&input, &mut restored_output, &context)
+            .unwrap();
     }
-    assert!(
-        attenuated
-            .iter()
-            .zip(&input)
-            .any(|(actual, original)| (actual - original).abs() > 1.0e-4),
-        "VST3 parameter event did not change native processing"
-    );
+    for (actual, original) in restored_output.iter().zip(&input) {
+        assert!((actual - original * expected_gain).abs() < 1.0e-5);
+    }
 }

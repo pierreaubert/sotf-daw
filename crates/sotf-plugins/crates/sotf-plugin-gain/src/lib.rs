@@ -377,6 +377,10 @@ impl GainPlugin {
 }
 
 impl ParametricPlugin for GainPlugin {
+    fn tail_length(&self) -> sotf_host::plugin::TailLength {
+        sotf_host::plugin::TailLength::Finite(0)
+    }
+
     fn plugin_info(&self) -> PluginInfo {
         PluginInfo::new("Gain", env!("CARGO_PKG_VERSION"), "Sotf")
     }

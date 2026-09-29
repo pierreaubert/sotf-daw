@@ -1836,14 +1836,14 @@ fn test_rebuild_cached_parameters_band_count() {
 #[test]
 fn test_param_value_all_indices() {
     let p = MultibandCompressorPlugin::new(2);
-    for i in 0..=16 {
+    for i in 0..crate::params::GLOBAL_PARAMS.len() {
         assert!(
             p.param_value(i).is_some(),
             "param_value({}) should return Some",
             i
         );
     }
-    assert!(p.param_value(17).is_none());
+    assert!(p.param_value(crate::params::GLOBAL_PARAMS.len()).is_none());
     assert!(p.param_value(100).is_none());
 }
 

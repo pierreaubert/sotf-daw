@@ -588,7 +588,7 @@ fn test_reset_clears_state() {
     p.process(&input, &mut output, &ProcessContext::new(48000, 100))
         .unwrap();
     p.reset();
-    assert_eq!(p.input_fill, 0);
+    assert_eq!(p.input_fill, HOP_SIZE);
     assert_eq!(p.output_accumulator_fill, 0);
 }
 

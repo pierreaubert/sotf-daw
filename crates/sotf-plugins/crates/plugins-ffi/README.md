@@ -93,3 +93,22 @@ parameter, state, preset, and event functions). `plugins-nih` remains the
 Rust-native VST3 plugin wrapper; this FFI surface is for external host
 languages that need a stable C ABI. The descriptor reports no native COM
 factory yet; hosts should call the exported C ABI directly.
+
+### Gate modes
+
+Gate supports downward, upward, and duck modes through constructor JSON and
+transactional state restoration. Changing mode requires reconstruction; maximum
+boost remains a realtime normalized parameter. Existing presets default to
+Downward with a 12 dB maximum boost.
+
+With `sidechain_external: true`, construct stereo Gate with 4 inputs and 2
+outputs. Each input frame contains `[program L, program R, key L, key R]`;
+output frames contain only `[program L, program R]`. The C factory translates
+requested output width into Gate's program width and validates both buses.
+State restoration preserves the external-key route. Other requested bus shapes
+must match the selected Gate configuration exactly.
+
+The shared adapter prepares bounded scratch during initialization and can
+process arbitrarily large Rust callbacks without callback allocation. C callers
+still use the existing `_sotf_max_callback_frames` preparation setting (4096 by
+default, up to 65536), independently of the adapter's private scratch chunk size.

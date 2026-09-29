@@ -1,3 +1,4 @@
+// Rust guideline compliant 2026-02-21
 use rustfft::num_complex::Complex;
 
 /// Pre-computed HRTF transfer functions for the XTC plant matrix.
@@ -14,6 +15,8 @@ pub(crate) struct HrtfTransferFunctions {
     pub h_rl: Vec<Complex<f32>>,
     /// Speaker R -> Right ear (ipsilateral)
     pub h_rr: Vec<Complex<f32>>,
+    /// Common causal SOFA offset represented by the source impulse responses.
+    pub delay_rebase_seconds: f64,
 }
 
 /// Cached geometry values to avoid repeated computation in the hot loop.
