@@ -11,10 +11,10 @@ pub use midi_message::*;
 pub use mmc::{MmcCommand, MmcField, MmcResponse, MmcShuttleSpeed};
 pub use mtc::{MtcFrameRate, MtcQuarterFrameAssembler, MtcQuarterFrameKind, MtcTime};
 pub use sysex::{
-    BulkTuningDump, GmMode, IdentityReply, ManufacturerId, MasterControl, Realtime,
-    ScaleChannels, ScaleOctaveDump, SingleNoteChange, TuningFrequency,
+    BulkTuningDump, GmMode, IdentityReply, ManufacturerId, MasterControl, Realtime, ScaleChannels,
+    ScaleOctaveDump, SingleNoteChange, TuningFrequency,
 };
 pub use ump::{
-    Midi2Voice, NoteAttribute, SysexStatus, UmpMessage, UmpUtility, GROUP_MAX, SYSEX7_CAPACITY,
-    SYSEX8_CAPACITY,
+    GROUP_MAX, Midi2Voice, NoteAttribute, SYSEX7_CAPACITY, SYSEX8_CAPACITY, SysexStatus,
+    UmpMessage, UmpUtility,
 };

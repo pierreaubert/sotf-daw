@@ -180,8 +180,8 @@ impl TuningFrequency {
 
     /// Convert to Hertz: 440 Hz reference on semitone 69.
     pub fn frequency_hz(&self) -> f64 {
-        let cents = f64::from(self.semitone) * 100.0 - 6900.0
-            + f64::from(self.fraction) * 100.0 / 16384.0;
+        let cents =
+            f64::from(self.semitone) * 100.0 - 6900.0 + f64::from(self.fraction) * 100.0 / 16384.0;
         440.0 * 2f64.powf(cents / 1200.0)
     }
 
@@ -506,10 +506,7 @@ impl ScaleChannels {
 }
 
 /// Decode the `ff gg hh [payload]` tail of a scale/octave change message.
-fn decode_scale_tail(
-    body: &[u8],
-    payload: usize,
-) -> Option<(ScaleChannels, &[u8])> {
+fn decode_scale_tail(body: &[u8], payload: usize) -> Option<(ScaleChannels, &[u8])> {
     match body {
         [ff, gg, hh, rest @ ..] if rest.len() == payload => {
             let channels = ScaleChannels {
@@ -568,9 +565,7 @@ pub fn encode_scale_octave(
 
 /// Decode a Scale/Octave 2-byte change (sub `09`), returning
 /// `(realtime, device, channels, 14-bit values C..B, 8192 = equal)`.
-pub fn decode_scale_octave_14(
-    bytes: &[u8],
-) -> Option<(Realtime, u8, ScaleChannels, [u16; 12])> {
+pub fn decode_scale_octave_14(bytes: &[u8]) -> Option<(Realtime, u8, ScaleChannels, [u16; 12])> {
     let (realtime, device, body) = tuning_prefix(bytes, 0x09)?;
     let (channels, data) = decode_scale_tail(body, SCALE_PITCH_CLASSES * 2)?;
     let mut values = [0u16; SCALE_PITCH_CLASSES];
@@ -921,11 +916,13 @@ mod tests {
             fraction: 16384 - 1,
         };
         assert!(sharp.frequency_hz() > 440.0);
-        assert!(TuningFrequency {
-            semitone: 0x7F,
-            fraction: 0x3FFF
-        }
-        .is_no_change());
+        assert!(
+            TuningFrequency {
+                semitone: 0x7F,
+                fraction: 0x3FFF
+            }
+            .is_no_change()
+        );
     }
 
     #[test]
@@ -951,17 +948,19 @@ mod tests {
         assert_eq!(
             bytes,
             vec![
-                0xF0, 0x7F, 0x7F, 0x08, 0x02, 0x00, 0x02, 69, 69, 0x00, 0x00, 60, 60, 0x40,
-                0x00, 0xF7
+                0xF0, 0x7F, 0x7F, 0x08, 0x02, 0x00, 0x02, 69, 69, 0x00, 0x00, 60, 60, 0x40, 0x00,
+                0xF7
             ]
         );
         let (realtime, device, bank, program, decoded) = decode_single_note(&bytes).unwrap();
-        assert_eq!((realtime, device, bank, program), (Realtime::Yes, 0x7F, None, 0));
+        assert_eq!(
+            (realtime, device, bank, program),
+            (Realtime::Yes, 0x7F, None, 0)
+        );
         assert_eq!(decoded, changes);
         // Bank form on either header.
         for realtime in [Realtime::Yes, Realtime::No] {
-            let bytes =
-                encode_single_note(realtime, 0x10, Some(2), 5, &changes[..1]).unwrap();
+            let bytes = encode_single_note(realtime, 0x10, Some(2), 5, &changes[..1]).unwrap();
             let decoded = decode_single_note(&bytes).unwrap();
             assert_eq!(decoded.0, realtime);
             assert_eq!(decoded.2, Some(2));
@@ -970,7 +969,9 @@ mod tests {
         // Bank-less non-real-time is rejected on encode.
         assert!(encode_single_note(Realtime::No, 0x7F, None, 0, &changes).is_err());
         // Declared count must match the payload.
-        assert!(decode_single_note(&[0xF0, 0x7F, 0x7F, 0x08, 0x02, 0x00, 0x02, 69, 0xF7]).is_none());
+        assert!(
+            decode_single_note(&[0xF0, 0x7F, 0x7F, 0x08, 0x02, 0x00, 0x02, 69, 0xF7]).is_none()
+        );
     }
 
     #[test]
@@ -980,10 +981,7 @@ mod tests {
             gg: 0x7F,
             hh: 0x7F,
         };
-        assert_eq!(
-            channels.channels(),
-            (1..=14u8).collect::<Vec<u8>>()
-        );
+        assert_eq!(channels.channels(), (1..=14u8).collect::<Vec<u8>>());
         let mut offsets = [0i8; 12];
         offsets[0] = -64;
         offsets[9] = 63;
@@ -1015,7 +1013,11 @@ mod tests {
         let bytes = encode_scale_octave_14(
             Realtime::No,
             0x7F,
-            ScaleChannels { ff: 3, gg: 0, hh: 0 },
+            ScaleChannels {
+                ff: 3,
+                gg: 0,
+                hh: 0,
+            },
             &values,
         )
         .unwrap();
@@ -1089,6 +1091,15 @@ mod tests {
         };
         let bytes2 = encode_scale_dump(0x7F, &dump2).unwrap();
         assert_eq!(decode_scale_dump(&bytes2).unwrap().1.data.len(), 24);
-        assert!(encode_scale_dump(0x7F, &ScaleOctaveDump { data: vec![0; 13], ..dump }).is_err());
+        assert!(
+            encode_scale_dump(
+                0x7F,
+                &ScaleOctaveDump {
+                    data: vec![0; 13],
+                    ..dump
+                }
+            )
+            .is_err()
+        );
     }
 }

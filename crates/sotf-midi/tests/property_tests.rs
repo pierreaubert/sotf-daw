@@ -9,7 +9,9 @@
 
 use proptest::prelude::*;
 use sotf_audio_player_midi::smf::parse_smf;
-use sotf_audio_player_midi::{DeviceConfig, DeviceProfile, MidiConfig, MidiMessage};
+use sotf_audio_player_midi::{
+    DeviceConfig, DeviceProfile, MidiConfig, MidiMessage, MtcQuarterFrameKind,
+};
 
 // ============================================================================
 // VLQ helpers (mirrors SMF spec for round-trip testing)
@@ -74,8 +76,8 @@ fn system_message_strategy() -> impl Strategy<Value = MidiMessage> {
         Just(0xFC),
         Just(0xFE),
         Just(0xFF),
-        // 1-data-byte system common
-        Just(0xF1),
+        // 1-data-byte system common (0xF1 is NOT generic: it strictly
+        // decodes to typed MtcQuarterFrame, covered by its own arm below)
         Just(0xF3),
         // 2-data-byte system common
         Just(0xF2),
@@ -162,6 +164,27 @@ fn midi_message_strategy() -> impl Strategy<Value = MidiMessage> {
         }),
         // System common / realtime
         system_message_strategy(),
+        // MTC quarter-frame (per-kind valid value ranges only: MSB
+        // kinds reject out-of-range values on decode by design)
+        prop_oneof![
+            Just(MtcQuarterFrameKind::FrameLsb),
+            Just(MtcQuarterFrameKind::FrameMsb),
+            Just(MtcQuarterFrameKind::SecondsLsb),
+            Just(MtcQuarterFrameKind::SecondsMsb),
+            Just(MtcQuarterFrameKind::MinutesLsb),
+            Just(MtcQuarterFrameKind::MinutesMsb),
+            Just(MtcQuarterFrameKind::HoursLsb),
+            Just(MtcQuarterFrameKind::HoursMsbRate),
+        ]
+        .prop_flat_map(|kind| {
+            let max = match kind {
+                MtcQuarterFrameKind::FrameMsb => 1u8,
+                MtcQuarterFrameKind::SecondsMsb | MtcQuarterFrameKind::MinutesMsb => 5,
+                MtcQuarterFrameKind::HoursMsbRate => 7,
+                _ => 15,
+            };
+            (0u8..=max).prop_map(move |value| MidiMessage::MtcQuarterFrame { kind, value })
+        }),
         // Raw undefined system status (0xF4 and 0xF5 are the only undefined ones)
         prop::collection::vec(0u8..=255, 1..8).prop_filter_map(
             "status must be undefined system",

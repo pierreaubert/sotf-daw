@@ -96,11 +96,11 @@ pub use manager::{MidiManager, enumerate_input_devices, enumerate_output_devices
 pub use mapping::{ControlBinding, MidiMapping, MidiOverlay, ValueScaling};
 pub use mapping_engine::{MappingAction, MidiMappingEngine};
 pub use message::{
-    BulkTuningDump, GmMode, IdentityReply, ManufacturerId, MasterControl, Midi2Voice,
-    MmcCommand, MmcField, MmcResponse, MmcShuttleSpeed, MidiMessage, MtcFrameRate,
+    BulkTuningDump, GROUP_MAX, GmMode, IdentityReply, ManufacturerId, MasterControl, Midi2Voice,
+    MidiMessage, MmcCommand, MmcField, MmcResponse, MmcShuttleSpeed, MtcFrameRate,
     MtcQuarterFrameAssembler, MtcQuarterFrameKind, MtcTime, NoteAttribute, Realtime,
-    ScaleChannels, ScaleOctaveDump, SingleNoteChange, SysexStatus, TuningFrequency, UmpMessage,
-    UmpUtility, GROUP_MAX, SYSEX7_CAPACITY, SYSEX8_CAPACITY,
+    SYSEX7_CAPACITY, SYSEX8_CAPACITY, ScaleChannels, ScaleOctaveDump, SingleNoteChange,
+    SysexStatus, TuningFrequency, UmpMessage, UmpUtility,
 };
 pub use sequencer::{MidiClip, MidiEvent, MidiRegion};
 pub use surfaces::{

@@ -70,7 +70,11 @@ pub enum MidiMessage {
     Mmc { device: u8, command: MmcCommand },
 
     /// MMC response (Universal Real Time SysEx Sub-ID#1 `07`).
-    MmcResponse { device: u8, state: u8, data: Vec<u8> },
+    MmcResponse {
+        device: u8,
+        state: u8,
+        data: Vec<u8>,
+    },
 
     /// Identity Request (`F0 7E <device> 06 01 F7`).
     IdentityRequest { device: u8 },
@@ -144,10 +148,16 @@ pub enum MidiMessage {
     MtsBulkRequestBank { device: u8, bank: u8, program: u8 },
 
     /// MTS Bulk Tuning Dump Reply (sub `01`, 408 bytes; boxed for size).
-    MtsBulkDump { device: u8, dump: Box<BulkTuningDump> },
+    MtsBulkDump {
+        device: u8,
+        dump: Box<BulkTuningDump>,
+    },
 
     /// MTS Scale/Octave Dump, 1-byte (sub `05`) or 2-byte (sub `06`).
-    MtsScaleOctaveDump { device: u8, dump: Box<ScaleOctaveDump> },
+    MtsScaleOctaveDump {
+        device: u8,
+        dump: Box<ScaleOctaveDump>,
+    },
 
     /// Raw MIDI bytes (for unsupported messages)
     Raw { data: Vec<u8> },
@@ -416,7 +426,11 @@ impl MidiMessage {
                 }
                 bytes.len()
             }
-            MidiMessage::MmcResponse { device, state, data } => {
+            MidiMessage::MmcResponse {
+                device,
+                state,
+                data,
+            } => {
                 let response = MmcResponse {
                     device: *device,
                     state: *state,
@@ -509,17 +523,17 @@ impl MidiMessage {
             MidiMessage::MtcQuarterFrame { kind, value } => {
                 vec![0xF1, kind.to_byte(*value)]
             }
-            MidiMessage::Mmc { device, command } => {
-                command.to_sysex(*device).unwrap_or_default()
+            MidiMessage::Mmc { device, command } => command.to_sysex(*device).unwrap_or_default(),
+            MidiMessage::MmcResponse {
+                device,
+                state,
+                data,
+            } => MmcResponse {
+                device: *device,
+                state: *state,
+                data: data.clone(),
             }
-            MidiMessage::MmcResponse { device, state, data } => {
-                MmcResponse {
-                    device: *device,
-                    state: *state,
-                    data: data.clone(),
-                }
-                .to_sysex()
-            }
+            .to_sysex(),
             MidiMessage::IdentityRequest { device } => {
                 super::sysex::encode_identity_request(*device)
             }
@@ -541,11 +555,9 @@ impl MidiMessage {
             MidiMessage::GmSystem { device, mode } => {
                 super::sysex::encode_gm_system(*device, *mode)
             }
-            MidiMessage::MasterControl { device, control } => super::sysex::encode_master_control(
-                *device,
-                *control,
-            )
-            .unwrap_or_default(),
+            MidiMessage::MasterControl { device, control } => {
+                super::sysex::encode_master_control(*device, *control).unwrap_or_default()
+            }
             MidiMessage::MtsSingleNote {
                 realtime,
                 device,
@@ -645,7 +657,11 @@ impl MidiMessage {
             MidiMessage::Mmc { device, command } => {
                 format!("MMC: dev={:#04X} {:?}", device, command)
             }
-            MidiMessage::MmcResponse { device, state, data } => {
+            MidiMessage::MmcResponse {
+                device,
+                state,
+                data,
+            } => {
                 format!(
                     "MMC Response: dev={:#04X} state={:#04X} {} bytes",
                     device,
@@ -778,9 +794,7 @@ fn parse_system_exclusive(bytes: &[u8]) -> MidiMessage {
             changes,
         };
     }
-    if let Some((realtime, device, channels, offsets)) =
-        super::sysex::decode_scale_octave(bytes)
-    {
+    if let Some((realtime, device, channels, offsets)) = super::sysex::decode_scale_octave(bytes) {
         return MidiMessage::MtsScaleOctave {
             realtime,
             device,
@@ -788,8 +802,7 @@ fn parse_system_exclusive(bytes: &[u8]) -> MidiMessage {
             offsets,
         };
     }
-    if let Some((realtime, device, channels, values)) =
-        super::sysex::decode_scale_octave_14(bytes)
+    if let Some((realtime, device, channels, values)) = super::sysex::decode_scale_octave_14(bytes)
     {
         return MidiMessage::MtsScaleOctave14 {
             realtime,
@@ -1259,13 +1272,21 @@ mod tests {
             MidiMessage::MtsScaleOctave {
                 realtime: Realtime::No,
                 device: 0x7F,
-                channels: ScaleChannels { ff: 0, gg: 0, hh: 1 },
+                channels: ScaleChannels {
+                    ff: 0,
+                    gg: 0,
+                    hh: 1,
+                },
                 offsets: [0; 12],
             },
             MidiMessage::MtsScaleOctave14 {
                 realtime: Realtime::No,
                 device: 0x7F,
-                channels: ScaleChannels { ff: 0, gg: 0, hh: 1 },
+                channels: ScaleChannels {
+                    ff: 0,
+                    gg: 0,
+                    hh: 1,
+                },
                 values: [8192; 12],
             },
             MidiMessage::MtsBulkRequest {
@@ -1461,13 +1482,13 @@ mod tests {
     #[test]
     fn test_mtc_full_frame_parses_from_sysex() {
         let time = MtcTime::new(MtcFrameRate::Fps25, 8, 15, 45, 20).unwrap();
-        let msg = MidiMessage::MtcFullFrame {
-            device: 0x10,
-            time,
-        };
+        let msg = MidiMessage::MtcFullFrame { device: 0x10, time };
         let bytes = msg.to_bytes();
         // 25 fps -> rate bits 01, hours 8 -> 0x28.
-        assert_eq!(bytes, vec![0xF0, 0x7F, 0x10, 0x01, 0x01, 0x28, 15, 45, 20, 0xF7]);
+        assert_eq!(
+            bytes,
+            vec![0xF0, 0x7F, 0x10, 0x01, 0x01, 0x28, 15, 45, 20, 0xF7]
+        );
         assert_eq!(MidiMessage::from_bytes(&bytes).unwrap(), msg);
         let mut out = [0u8; 10];
         let n = msg.write_to(&mut out);
@@ -1481,7 +1502,9 @@ mod tests {
         let bytes = vec![0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x20, 0xF7];
         assert_eq!(
             MidiMessage::from_bytes(&bytes).unwrap(),
-            MidiMessage::SystemExclusive { data: bytes.clone() }
+            MidiMessage::SystemExclusive {
+                data: bytes.clone()
+            }
         );
         // Drop-frame gap time in a full frame: well-shaped but invalid.
         let bytes = vec![0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x41, 0x01, 0x00, 0x00, 0xF7];
@@ -1538,7 +1561,11 @@ mod tests {
             MidiMessage::Mmc {
                 device: 0x7F,
                 command: MmcCommand::Shuttle {
-                    speed: MmcShuttleSpeed { sh: 0x41, sm: 0, sl: 0 },
+                    speed: MmcShuttleSpeed {
+                        sh: 0x41,
+                        sm: 0,
+                        sl: 0,
+                    },
                 },
             },
         ] {

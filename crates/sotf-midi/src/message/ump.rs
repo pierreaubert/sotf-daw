@@ -412,9 +412,7 @@ impl UmpMessage {
                 bytes,
             } => {
                 check_group(*group)?;
-                if bytes.len() > SYSEX7_CAPACITY
-                    || bytes.iter().any(|byte| byte & 0x80 != 0)
-                {
+                if bytes.len() > SYSEX7_CAPACITY || bytes.iter().any(|byte| byte & 0x80 != 0) {
                     return Err(MidiError::InvalidMessage(format!(
                         "SysEx7 chunk takes at most {SYSEX7_CAPACITY} 7-bit bytes, got {}",
                         bytes.len()
@@ -495,11 +493,7 @@ impl UmpMessage {
             0x4 => decode_voice2(group, &words[..2])?,
             0x5 => decode_sysex8(group, &words[..4])?,
             0x8..=0xE => {
-                check_raw_packet(
-                    &[words[0], words[1], words[2], words[3]],
-                    message_type,
-                )
-                .ok()?;
+                check_raw_packet(&[words[0], words[1], words[2], words[3]], message_type).ok()?;
                 Self::FlexData {
                     words: [words[0], words[1], words[2], words[3]],
                 }
@@ -562,10 +556,7 @@ fn check_system_status(status: u8, d1: u8, d2: u8) -> Result<()> {
         MidiError::InvalidMessage(format!("bad UMP system status: {status:#04X}"))
     })?;
     let bytes = [d1, d2];
-    if bytes.iter().any(|byte| byte & 0x80 != 0)
-        || (want < 2 && d2 != 0)
-        || (want < 1 && d1 != 0)
-    {
+    if bytes.iter().any(|byte| byte & 0x80 != 0) || (want < 2 && d2 != 0) || (want < 1 && d1 != 0) {
         return Err(MidiError::InvalidMessage(format!(
             "bad UMP system payload for status {status:#04X}"
         )));
@@ -698,7 +689,9 @@ fn encode_voice2(group: u8, message: &Midi2Voice) -> Result<Vec<u32>> {
                 "MIDI 2.0 channel out of range: {channel}"
             )));
         }
-        Ok((0x40 | u32::from(group & 0x0F)) << 24 | (u32::from(status) << 20) | (u32::from(channel) << 16))
+        Ok((0x40 | u32::from(group & 0x0F)) << 24
+            | (u32::from(status) << 20)
+            | (u32::from(channel) << 16))
     };
     let check_note = |note: u8| -> Result<()> {
         if note > 0x7F {
@@ -736,9 +729,7 @@ fn encode_voice2(group: u8, message: &Midi2Voice) -> Result<Vec<u32>> {
             };
             check_note(*note)?;
             let (kind, data) = attribute.encode();
-            words[0] = header(status, *channel)?
-                | (u32::from(*note) << 8)
-                | u32::from(kind);
+            words[0] = header(status, *channel)? | (u32::from(*note) << 8) | u32::from(kind);
             words[1] = (u32::from(*velocity) << 16) | u32::from(data);
         }
         Midi2Voice::PolyPressure {
@@ -777,9 +768,7 @@ fn encode_voice2(group: u8, message: &Midi2Voice) -> Result<Vec<u32>> {
             };
             check_note(*note)?;
             check_index(*index, "controller")?;
-            words[0] = header(status, *channel)?
-                | (u32::from(*note) << 8)
-                | u32::from(*index);
+            words[0] = header(status, *channel)? | (u32::from(*note) << 8) | u32::from(*index);
             words[1] = *value;
         }
         Midi2Voice::Registered { .. }
@@ -815,9 +804,7 @@ fn encode_voice2(group: u8, message: &Midi2Voice) -> Result<Vec<u32>> {
             };
             check_index(*bank, "bank")?;
             check_index(*index, "controller")?;
-            words[0] = header(status, *channel)?
-                | (u32::from(*bank) << 8)
-                | u32::from(*index);
+            words[0] = header(status, *channel)? | (u32::from(*bank) << 8) | u32::from(*index);
             words[1] = *value;
         }
         Midi2Voice::PerNotePitchBend {
@@ -1025,27 +1012,30 @@ fn decode_voice2(group: u8, words: &[u32]) -> Option<UmpMessage> {
         }
         _ => return None,
     };
-    Some(UmpMessage::Midi2Voice { group, message: message? })
+    Some(UmpMessage::Midi2Voice {
+        group,
+        message: message?,
+    })
 }
 
 /// Split a SysEx7 payload into framed chunks (Complete for one,
 /// Start/Continue/End otherwise). Payload bytes must be 7-bit.
 pub fn sysex7_packets(group: u8, bytes: &[u8]) -> Result<Vec<UmpMessage>> {
-    chunk_packets(group, bytes, SYSEX7_CAPACITY, true, |group, status, chunk| {
-        UmpMessage::Sysex7 {
+    chunk_packets(
+        group,
+        bytes,
+        SYSEX7_CAPACITY,
+        true,
+        |group, status, chunk| UmpMessage::Sysex7 {
             group,
             status,
             bytes: chunk.to_vec(),
-        }
-    })
+        },
+    )
 }
 
 /// Split a SysEx8 payload into framed chunks with a stream id.
-pub fn sysex8_packets(
-    group: u8,
-    stream_id: u8,
-    bytes: &[u8],
-) -> Result<Vec<UmpMessage>> {
+pub fn sysex8_packets(group: u8, stream_id: u8, bytes: &[u8]) -> Result<Vec<UmpMessage>> {
     chunk_packets(
         group,
         bytes,
@@ -1208,8 +1198,7 @@ mod tests {
         use midi2::{Channeled, Grouped};
 
         // MIDI 1.0 note-on.
-        let reference =
-            midi2::channel_voice1::NoteOn::try_from(&[0x2D9E_753D_u32][..]).unwrap();
+        let reference = midi2::channel_voice1::NoteOn::try_from(&[0x2D9E_753D_u32][..]).unwrap();
         let UmpMessage::Midi1Voice { group, message } =
             &UmpMessage::decode(&[0x2D9E_753D]).unwrap().0
         else {
@@ -1235,8 +1224,7 @@ mod tests {
 
         // MIDI 2.0 note-on with pitch attribute.
         let reference =
-            midi2::channel_voice2::NoteOn::try_from(&[0x4898_5E03_u32, 0x6A14_E98A][..])
-                .unwrap();
+            midi2::channel_voice2::NoteOn::try_from(&[0x4898_5E03_u32, 0x6A14_E98A][..]).unwrap();
         let UmpMessage::Midi2Voice { group, message } =
             &UmpMessage::decode(&[0x4898_5E03, 0x6A14_E98A]).unwrap().0
         else {
@@ -1260,8 +1248,7 @@ mod tests {
                 reference.velocity(),
             )
         );
-        let midi2::channel_voice2::NoteAttribute::Pitch7_9(fixed) =
-            reference.attribute().unwrap()
+        let midi2::channel_voice2::NoteAttribute::Pitch7_9(fixed) = reference.attribute().unwrap()
         else {
             panic!("expected pitch attribute");
         };
@@ -1326,8 +1313,7 @@ mod tests {
         );
 
         // System common time code.
-        let reference =
-            midi2::system_common::TimeCode::try_from(&[0x15F1_5F00_u32][..]).unwrap();
+        let reference = midi2::system_common::TimeCode::try_from(&[0x15F1_5F00_u32][..]).unwrap();
         let UmpMessage::SystemCommon {
             group,
             status,
@@ -1385,17 +1371,20 @@ mod tests {
         // Tune request is system, not voice.
         assert_eq!(UmpMessage::decode(&[0x20F6_0000]), None);
         // Zero velocity decodes as a velocity-0 note-on.
-        assert_eq!(UmpMessage::decode(&[0x2090_4000]), Some((
-            UmpMessage::Midi1Voice {
-                group: 0,
-                message: Box::new(MidiMessage::NoteOn {
-                    channel: 0,
-                    note: 64,
-                    velocity: 0,
-                }),
-            },
-            1
-        )));
+        assert_eq!(
+            UmpMessage::decode(&[0x2090_4000]),
+            Some((
+                UmpMessage::Midi1Voice {
+                    group: 0,
+                    message: Box::new(MidiMessage::NoteOn {
+                        channel: 0,
+                        note: 64,
+                        velocity: 0,
+                    }),
+                },
+                1
+            ))
+        );
         // Program change carries one data byte with a zero pad.
         assert_eq!(
             UmpMessage::decode(&[0x20C0_0500]).unwrap().0,
@@ -1415,14 +1404,8 @@ mod tests {
     fn sysex7_chunks_and_rejects_high_bits() {
         let packets = sysex7_packets(2, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]).unwrap();
         assert_eq!(packets.len(), 2);
-        assert_eq!(
-            packets[0].encode().unwrap(),
-            vec![0x3216_0102, 0x0304_0506]
-        );
-        assert_eq!(
-            packets[1].encode().unwrap(),
-            vec![0x3231_0700, 0x0000_0000]
-        );
+        assert_eq!(packets[0].encode().unwrap(), vec![0x3216_0102, 0x0304_0506]);
+        assert_eq!(packets[1].encode().unwrap(), vec![0x3231_0700, 0x0000_0000]);
         for packet in &packets {
             let words = packet.encode().unwrap();
             let (decoded, used) = UmpMessage::decode(&words).unwrap();
@@ -1514,10 +1497,7 @@ mod tests {
         assert_eq!(used, 4);
         assert_eq!(message.encode().unwrap(), words.to_vec());
         // Wrong wrapper for the type is rejected.
-        assert_eq!(
-            UmpMessage::Stream { words }.encode().ok(),
-            None
-        );
+        assert_eq!(UmpMessage::Stream { words }.encode().ok(), None);
         // Reserved types are rejected.
         assert_eq!(UmpMessage::decode(&[0x6000_0000]), None);
         // Short streams are rejected.

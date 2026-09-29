@@ -296,7 +296,8 @@ impl MtcQuarterFrameAssembler {
     pub fn time(&self) -> Option<MtcTime> {
         let get = |kind: MtcQuarterFrameKind| -> Option<u8> { self.pieces[kind as usize] };
 
-        let frames = get(MtcQuarterFrameKind::FrameLsb)? | (get(MtcQuarterFrameKind::FrameMsb)? << 4);
+        let frames =
+            get(MtcQuarterFrameKind::FrameLsb)? | (get(MtcQuarterFrameKind::FrameMsb)? << 4);
         let seconds =
             get(MtcQuarterFrameKind::SecondsLsb)? | (get(MtcQuarterFrameKind::SecondsMsb)? << 4);
         let minutes =
@@ -393,7 +394,16 @@ mod tests {
     #[test]
     fn assembler_collects_ordered_and_unordered_pieces() {
         // 10:20:30:12 at 30 fps -> nibbles per type 0..7.
-        let pieces = [(0u8, 0x2u8), (1, 0x1), (2, 0xE), (3, 0x1), (4, 0x4), (5, 0x1), (6, 0xA), (7, 0x6)];
+        let pieces = [
+            (0u8, 0x2u8),
+            (1, 0x1),
+            (2, 0xE),
+            (3, 0x1),
+            (4, 0x4),
+            (5, 0x1),
+            (6, 0xA),
+            (7, 0x6),
+        ];
         for order in [true, false] {
             let mut assembler = MtcQuarterFrameAssembler::new();
             assert_eq!(assembler.time(), None);
@@ -419,7 +429,16 @@ mod tests {
     fn assembler_rejects_invalid_time_and_resets() {
         let mut assembler = MtcQuarterFrameAssembler::new();
         // 29.97 drop-frame 01:01:00:00 — a gap time.
-        for (kind, value) in [(0u8, 0u8), (1, 0), (2, 0), (3, 0), (4, 1), (5, 0), (6, 1), (7, 0x4)] {
+        for (kind, value) in [
+            (0u8, 0u8),
+            (1, 0),
+            (2, 0),
+            (3, 0),
+            (4, 1),
+            (5, 0),
+            (6, 1),
+            (7, 0x4),
+        ] {
             assembler
                 .push(MtcQuarterFrameKind::from_nibble(kind).unwrap(), value)
                 .unwrap();

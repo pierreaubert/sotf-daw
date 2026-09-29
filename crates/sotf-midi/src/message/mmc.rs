@@ -195,9 +195,9 @@ impl MmcCommand {
                 params.extend_from_slice(track_bitmap);
                 Ok(params)
             }
-            Self::MaskedWrite { fields }
-            | Self::Read { fields }
-            | Self::Procedure { fields } => encode_fields(fields),
+            Self::MaskedWrite { fields } | Self::Read { fields } | Self::Procedure { fields } => {
+                encode_fields(fields)
+            }
             Self::Locate { time, subframes } => Ok(vec![
                 0x06,
                 0x01,
@@ -207,9 +207,9 @@ impl MmcCommand {
                 time.frames,
                 subframes & 0x7F,
             ]),
-            Self::VariablePlay { speed }
-            | Self::Search { speed }
-            | Self::Shuttle { speed } => Ok(vec![0x03, speed.sh, speed.sm, speed.sl]),
+            Self::VariablePlay { speed } | Self::Search { speed } | Self::Shuttle { speed } => {
+                Ok(vec![0x03, speed.sh, speed.sm, speed.sl])
+            }
             Self::Step { steps } => {
                 // 7-bit two's complement spans -64..=63.
                 if *steps < -64 || *steps > 63 {
@@ -392,13 +392,7 @@ impl MmcResponse {
     /// Encode a complete response message.
     pub fn to_sysex(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(6 + self.data.len());
-        bytes.extend_from_slice(&[
-            0xF0,
-            0x7F,
-            self.device & 0x7F,
-            0x07,
-            self.state & 0x7F,
-        ]);
+        bytes.extend_from_slice(&[0xF0, 0x7F, self.device & 0x7F, 0x07, self.state & 0x7F]);
         for byte in &self.data {
             bytes.push(byte & 0x7F);
         }
@@ -524,9 +518,7 @@ mod tests {
 
     #[test]
     fn simple_commands_reject_trailing_params() {
-        assert!(
-            MmcCommand::from_sysex(&[0xF0, 0x7F, 0x7F, 0x06, 0x01, 0x00, 0xF7]).is_none()
-        );
+        assert!(MmcCommand::from_sysex(&[0xF0, 0x7F, 0x7F, 0x06, 0x01, 0x00, 0xF7]).is_none());
     }
 
     #[test]
@@ -537,7 +529,9 @@ mod tests {
         let bytes = command.to_sysex(0x01).unwrap();
         assert_eq!(
             bytes,
-            vec![0xF0, 0x7F, 0x01, 0x06, 0x40, 0x04, 0x4F, 0x02, 0x05, 0x01, 0xF7]
+            vec![
+                0xF0, 0x7F, 0x01, 0x06, 0x40, 0x04, 0x4F, 0x02, 0x05, 0x01, 0xF7
+            ]
         );
         let (device, decoded) = MmcCommand::from_sysex(&bytes).unwrap();
         assert_eq!(device, 0x01);
@@ -605,7 +599,11 @@ mod tests {
         // Encode refuses values outside 7-bit two's complement.
         assert!(MmcCommand::Step { steps: 64 }.to_sysex(0x7F).is_err());
         assert!(MmcCommand::Step { steps: -65 }.to_sysex(0x7F).is_err());
-        assert!(MmcCommand::AssignTrackCounter { counter: 0x8000 }.to_sysex(0x7F).is_err());
+        assert!(
+            MmcCommand::AssignTrackCounter { counter: 0x8000 }
+                .to_sysex(0x7F)
+                .is_err()
+        );
     }
 
     #[test]
@@ -666,14 +664,10 @@ mod tests {
     fn rejects_non_mmc_sysex() {
         // MTC full frame is not an MMC command.
         assert!(
-            MmcCommand::from_sysex(&[
-                0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x6A, 20, 30, 12, 0xF7
-            ])
-            .is_none()
+            MmcCommand::from_sysex(&[0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x6A, 20, 30, 12, 0xF7])
+                .is_none()
         );
         // High bit in device id.
-        assert!(
-            MmcCommand::from_sysex(&[0xF0, 0x7F, 0x80, 0x06, 0x01, 0xF7]).is_none()
-        );
+        assert!(MmcCommand::from_sysex(&[0xF0, 0x7F, 0x80, 0x06, 0x01, 0xF7]).is_none());
     }
 }

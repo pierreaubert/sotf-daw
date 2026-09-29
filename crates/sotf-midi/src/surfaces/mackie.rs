@@ -550,7 +550,11 @@ pub fn decode_vpot(message: &MidiMessage) -> Option<(u8, i8)> {
             value,
         } if *channel == CHANNEL && (VPOT_CC_START..VPOT_CC_START + 8).contains(controller) => {
             let magnitude = (value & 0x3F) as i8;
-            let delta = if value & 0x40 != 0 { -magnitude } else { magnitude };
+            let delta = if value & 0x40 != 0 {
+                -magnitude
+            } else {
+                magnitude
+            };
             Some((controller - VPOT_CC_START, delta))
         }
         _ => None,
@@ -567,7 +571,11 @@ pub fn decode_jog(message: &MidiMessage) -> Option<i8> {
             value,
         } if *channel == CHANNEL && *controller == JOG_CC => {
             let magnitude = (value & 0x3F) as i8;
-            Some(if value & 0x40 != 0 { -magnitude } else { magnitude })
+            Some(if value & 0x40 != 0 {
+                -magnitude
+            } else {
+                magnitude
+            })
         }
         _ => None,
     }
@@ -575,7 +583,12 @@ pub fn decode_jog(message: &MidiMessage) -> Option<i8> {
 
 /// Drive a VPot LED ring (CC 48-55): `0LMMVVVV` — center LED flag, mode,
 /// and position 0-11 (positions above 11 saturate, matching hardware).
-pub fn vpot_ring(strip: u8, mode: MackieRingMode, position: u8, center_led: bool) -> Result<MidiMessage> {
+pub fn vpot_ring(
+    strip: u8,
+    mode: MackieRingMode,
+    position: u8,
+    center_led: bool,
+) -> Result<MidiMessage> {
     if strip > 7 {
         return Err(MidiError::InvalidMessage(format!(
             "MCU VPot strip out of range: {strip}"
@@ -883,21 +896,21 @@ mod tests {
                 assert_eq!(MackieButton::from_note(button.note()), Some(button));
             }
         }
-        assert_eq!(
-            MackieButton::from_note(54),
-            Some(MackieButton::Function(1))
-        );
-        assert_eq!(
-            MackieButton::from_note(61),
-            Some(MackieButton::Function(8))
-        );
+        assert_eq!(MackieButton::from_note(54), Some(MackieButton::Function(1)));
+        assert_eq!(MackieButton::from_note(61), Some(MackieButton::Function(8)));
         assert_eq!(
             MackieButton::from_note(94),
             Some(MackieButton::Transport(MackieTransport::Play))
         );
         assert_eq!(MackieButton::from_note(70), Some(MackieButton::Shift));
-        assert_eq!(MackieButton::from_note(112), Some(MackieButton::MasterTouch));
-        assert_eq!(MackieButton::from_note(115), Some(MackieButton::RudeSoloLed));
+        assert_eq!(
+            MackieButton::from_note(112),
+            Some(MackieButton::MasterTouch)
+        );
+        assert_eq!(
+            MackieButton::from_note(115),
+            Some(MackieButton::RudeSoloLed)
+        );
         assert_eq!(MackieButton::from_note(118), Some(MackieButton::RelayClick));
         assert_eq!(MackieButton::from_note(116), None);
         assert_eq!(MackieButton::from_note(119), None);
@@ -952,7 +965,11 @@ mod tests {
             assert_eq!(decode_fader(&message), Some((strip, value)));
             assert_eq!(
                 message.to_bytes(),
-                vec![0xE0 | strip, (value & 0x7F) as u8, ((value >> 7) & 0x7F) as u8]
+                vec![
+                    0xE0 | strip,
+                    (value & 0x7F) as u8,
+                    ((value >> 7) & 0x7F) as u8
+                ]
             );
         }
         assert!(fader_position(9, 0).is_err());
@@ -1021,7 +1038,9 @@ mod tests {
         assert_eq!(messages.len(), 1);
         assert_eq!(
             messages[0].to_bytes(),
-            vec![0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0x00, b'h', b'e', b'l', b'l', b'o', 0xF7]
+            vec![
+                0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, 0x00, b'h', b'e', b'l', b'l', b'o', 0xF7
+            ]
         );
         let long = "x".repeat(120);
         let messages = lcd_write(0x00, &long).unwrap();
@@ -1068,16 +1087,13 @@ mod tests {
     #[test]
     fn meters_round_trip() {
         let message = meter(7, MackieMeterLevel::Clip).unwrap();
-        assert_eq!(
-            message.to_bytes(),
-            vec![0xD0, (7 << 4) | 0x0C]
-        );
-        assert_eq!(
-            decode_meter(&message),
-            Some((7, MackieMeterLevel::Clip))
-        );
+        assert_eq!(message.to_bytes(), vec![0xD0, (7 << 4) | 0x0C]);
+        assert_eq!(decode_meter(&message), Some((7, MackieMeterLevel::Clip)));
         assert!(meter(8, MackieMeterLevel::Off).is_err());
-        assert_eq!(MackieMeterLevel::from_nibble(0xF), Some(MackieMeterLevel::ClearOverload));
+        assert_eq!(
+            MackieMeterLevel::from_nibble(0xF),
+            Some(MackieMeterLevel::ClearOverload)
+        );
     }
 
     #[test]
@@ -1088,7 +1104,9 @@ mod tests {
         );
         assert_eq!(
             host_connection_confirm(b"ABC1234").to_bytes(),
-            vec![0xF0, 0x00, 0x00, 0x66, 0x14, 0x03, b'A', b'B', b'C', b'1', b'2', b'3', b'4', 0xF7]
+            vec![
+                0xF0, 0x00, 0x00, 0x66, 0x14, 0x03, b'A', b'B', b'C', b'1', b'2', b'3', b'4', 0xF7
+            ]
         );
         assert_eq!(
             backlight(15).unwrap().to_bytes(),

@@ -440,15 +440,15 @@ impl HuiFaderStream {
         match half {
             Half::Hi(hi) => {
                 self.pending_hi[zone] = Some(hi);
-                self.pending_lo[zone].take().map(|lo| {
-                    (zone as u8, (((hi as u16) << 7) | lo as u16) & 0x3FFF)
-                })
+                self.pending_lo[zone]
+                    .take()
+                    .map(|lo| (zone as u8, (((hi as u16) << 7) | lo as u16) & 0x3FFF))
             }
             Half::Lo(lo) => {
                 self.pending_lo[zone] = Some(lo);
-                self.pending_hi[zone].take().map(|hi| {
-                    (zone as u8, (((hi as u16) << 7) | lo as u16) & 0x3FFF)
-                })
+                self.pending_hi[zone]
+                    .take()
+                    .map(|hi| (zone as u8, (((hi as u16) << 7) | lo as u16) & 0x3FFF))
             }
         }
     }
@@ -506,13 +506,7 @@ pub fn decode_jog(message: &MidiMessage) -> Option<i8> {
 
 /// Whether a message is the HUI reset command (MIDI status `0xFF`).
 pub fn is_system_reset(message: &MidiMessage) -> bool {
-    matches!(
-        message,
-        MidiMessage::System {
-            status: 0xFF,
-            ..
-        }
-    )
+    matches!(message, MidiMessage::System { status: 0xFF, .. })
 }
 
 #[cfg(test)]
@@ -550,7 +544,10 @@ mod tests {
     fn main_display_frames_zones() {
         let message = main_display(&[(0, "Track 01"), (7, "12:34")]).unwrap();
         let bytes = message.to_bytes();
-        assert_eq!(&bytes[..8], &[0xF0, 0x00, 0x00, 0x66, 0x05, 0x00, 0x12, 0x00]);
+        assert_eq!(
+            &bytes[..8],
+            &[0xF0, 0x00, 0x00, 0x66, 0x05, 0x00, 0x12, 0x00]
+        );
         assert_eq!(&bytes[8..18], b"Track 01  ");
         assert_eq!(bytes[18], 0x07);
         assert_eq!(&bytes[19..29], b"12:34     ");
@@ -565,8 +562,8 @@ mod tests {
         assert_eq!(
             message.to_bytes(),
             vec![
-                0xF0, 0x00, 0x00, 0x66, 0x05, 0x00, 0x11, 0x04, 0x13, 0x02, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0xF7
+                0xF0, 0x00, 0x00, 0x66, 0x05, 0x00, 0x11, 0x04, 0x13, 0x02, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0xF7
             ]
         );
         assert!(timecode(&[0x20]).is_err());
@@ -577,10 +574,7 @@ mod tests {
     fn meters_round_trip() {
         let message = meter(5, HuiMeterSide::Left, 0x0C).unwrap();
         assert_eq!(message.to_bytes(), vec![0xA0, 0x05, 0x1C]);
-        assert_eq!(
-            decode_meter(&message),
-            Some((5, HuiMeterSide::Left, 0x0C))
-        );
+        assert_eq!(decode_meter(&message), Some((5, HuiMeterSide::Left, 0x0C)));
         let right = meter(0, HuiMeterSide::Right, 3).unwrap();
         assert_eq!(decode_meter(&right), Some((0, HuiMeterSide::Right, 3)));
         assert!(meter(8, HuiMeterSide::Left, 0).is_err());

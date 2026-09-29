@@ -11,4 +11,7 @@ pub mod mackie;
 pub use hui::{
     HuiFaderStream, HuiMeterSide, HuiSwitch, HuiSwitchStream, SELECT_ASSIGN_STRIP, ZONE_FOOTSWITCH,
 };
-pub use mackie::{MackieAssign, MackieButton, MackieCursor, MackieMeterLevel, MackieRingMode, MackieTransport, MackieView};
+pub use mackie::{
+    MackieAssign, MackieButton, MackieCursor, MackieMeterLevel, MackieRingMode, MackieTransport,
+    MackieView,
+};
