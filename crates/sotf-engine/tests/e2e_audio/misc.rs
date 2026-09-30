@@ -1,7 +1,8 @@
 use hound::{WavSpec, WavWriter};
 use serde_json::json;
 use sotf_audio::engine::PluginConfig;
-use sotf_audio::signal_recorder::record_and_analyze;
+use sotf_audio::engine_playback::EnginePlayback;
+use sotf_audio::signal_recorder::record_and_analyze_with;
 use sotf_audio::signals::{gen_log_sweep, gen_pink_noise};
 use std::env;
 use std::path::PathBuf;
@@ -66,7 +67,8 @@ pub(super) fn sweep_loopback(
 
     write_wav_file(&temp_wav, &sweep, sample_rate)?;
 
-    record_and_analyze(
+    record_and_analyze_with(
+        &mut EnginePlayback::new(true, "record_and_analyze"),
         &temp_wav,
         &recorded_wav,
         &sweep,

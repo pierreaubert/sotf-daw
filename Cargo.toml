@@ -80,6 +80,7 @@ readme = "README.md"
 [workspace.dependencies]
 driver-common = { path = "crates/driver-common" }
 driver-hal = { path = "crates/driver-hal" }
+sotf-capture = { path = "../sotf-capture" }
 plugins-denoiser = { path = "crates/sotf-plugins/crates/plugins-denoiser" }
 plugins-gpui = { path = "crates/sotf-plugins/crates/plugins-gpui" }
 plugins-inference = { path = "crates/sotf-plugins/crates/plugins-inference" }
