@@ -99,19 +99,27 @@ fn frequency_set_get_roundtrip() {
 }
 
 #[test]
-fn mode_set_get_roundtrip() {
+fn mode_is_structural_and_requires_rebuild() {
     let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    plugin
-        .set_parameter(
-            ParameterId::from("mode"),
-            ParameterValue::String("highpass".into()),
-        )
-        .unwrap();
+    plugin.initialize(SR).unwrap();
+    assert_eq!(plugin.output_channels(), 1);
+    assert!(
+        plugin
+            .set_parameter(
+                ParameterId::from("mode"),
+                ParameterValue::String("highpass".into()),
+            )
+            .is_err()
+    );
     let got = plugin
         .get_parameter(&ParameterId::from("mode"))
         .and_then(|v| v.as_string().map(|s| s.to_owned()))
         .unwrap();
-    assert_eq!(got, "highpass");
+    assert_eq!(got, "lowpass");
+    assert_eq!(plugin.output_channels(), 1);
+
+    let both = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
+    assert_eq!(both.output_channels(), 2);
 }
 
 #[test]
@@ -205,7 +213,8 @@ fn from_params_happy_path() {
         extra_frequencies: vec![2000.0],
         fir_taps: None,
         channel_frequencies_hz: vec![],
-        channel_modes: vec![],
+        channel_modes: Some(vec![]),
+        topology: None,
     };
     let mut plugin = CrossoverPlugin::from_params(2, &params).unwrap();
     assert_eq!(plugin.input_channels(), 2);

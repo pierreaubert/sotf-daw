@@ -1,7 +1,7 @@
 [package]
 name = "sotf-plugin-ambisonics"
 description = "SOTF Ambisonics Decoder plugin - selectable mode matching or AllRAD/VBAP from HOA to speaker layouts"
-version = "0.5.9"
+version = "0.6.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -23,6 +23,10 @@ required-features = ["qa"]
 
 [[bench]]
 name = "ambisonics-benchmark"
+harness = false
+
+[[bench]]
+name = "aud133_benchmark"
 harness = false
 
 [dependencies]

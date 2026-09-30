@@ -39,6 +39,7 @@ use super::libc::libc_free;
 use super::libc::libc_malloc;
 use super::misc::sanitize_filename_component;
 use super::misc::set_last_error;
+use super::misc::set_last_error_static;
 pub use super::parameter_map::{ParameterInfo, ParameterMap};
 use super::process::process_impl;
 use super::process::process_with_ffi_events_impl;
@@ -51,6 +52,8 @@ use std::os::raw::{c_char, c_double, c_int};
 use std::panic::{self, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
+
+const PRESET_UT_TYPE_JSON: &str = "org.spinorama.sotf.plugin-preset";
 
 fn load_changed_state(
     plugin: &mut dyn sotf_host::plugin::Plugin,
@@ -82,17 +85,132 @@ fn load_changed_state(
     plugins_bridge::state::load_state(plugin, &changes)
 }
 
-fn replace_plugin_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+fn is_dynamic_eq_shelf_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(plugin_type, "DynamicEQ" | "dynamic_eq" | "dynamic-eq") {
+        return false;
+    }
+    let Some((band, field)) = param_id
+        .strip_prefix("band_")
+        .and_then(|suffix| suffix.split_once('_'))
+    else {
+        return false;
+    };
+    band.parse::<usize>().is_ok_and(|index| index < 8) && matches!(field, "shape" | "shelf_slope")
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PluginStateRestoreKind {
+    Partial,
+    Preset,
+}
+
+fn replace_plugin_from_state(
+    handle: &mut PluginHandle,
+    state: &[u8],
+    restore_kind: PluginStateRestoreKind,
+) -> Result<(), String> {
+    if matches!(
+        handle.plugin_type.as_str(),
+        "DynamicEQ" | "dynamic_eq" | "dynamic-eq"
+    ) {
+        return replace_dynamic_eq_from_state(handle, state);
+    }
     if handle.plugin_type == "LinearPhaseEQ" {
         return replace_linear_phase_eq_from_state(handle, state);
     }
+    if matches!(handle.plugin_type.as_str(), "Crossover" | "crossover") {
+        return replace_crossover_from_state(handle, state, restore_kind);
+    }
+    if matches!(
+        handle.plugin_type.as_str(),
+        "BandSplit" | "band_split" | "bandsplit"
+    ) {
+        return replace_band_split_from_state(handle, state);
+    }
+
+    let current = plugins_bridge::state::save_state(&*handle.plugin);
+    let mut replacement_config = handle.config_json.clone();
+    let (current_state, incoming_state) =
+        if matches!(handle.plugin_type.as_str(), "Convolution" | "convolution") {
+            let mut current_values: serde_json::Map<String, serde_json::Value> =
+                serde_json::from_slice(&current).map_err(|error| {
+                    format!("Failed to capture current Convolution state: {error}")
+                })?;
+            let mut incoming_values: serde_json::Map<String, serde_json::Value> =
+                serde_json::from_slice(state)
+                    .map_err(|error| format!("Failed to parse Convolution state: {error}"))?;
+
+            let mut config: serde_json::Value = match handle.config_json.trim() {
+                "" | "null" | "{}" => serde_json::json!({}),
+                config => serde_json::from_str(config)
+                    .map_err(|error| format!("Failed to parse Convolution config: {error}"))?,
+            };
+            let config_object = config
+                .as_object_mut()
+                .ok_or_else(|| "Convolution config must be a JSON object".to_string())?;
+            let configured_mode = config_object
+                .get("true_stereo")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+            let current_mode = match current_values.get("true_stereo") {
+                Some(serde_json::Value::Bool(enabled)) => *enabled,
+                Some(_) => {
+                    return Err("Current Convolution true_stereo state is not a boolean".into());
+                }
+                None => configured_mode,
+            };
+            let next_mode = match incoming_values.get("true_stereo") {
+                None => current_mode,
+                Some(serde_json::Value::Bool(enabled)) => *enabled,
+                Some(_) => return Err("Convolution true_stereo state must be a boolean".into()),
+            };
+
+            // Structural routing is constructor state: instantiate the replacement
+            // in the requested mode before replaying ordinary partial parameters.
+            // If the mode changes, apply an incoming IR path to construction too;
+            // otherwise a legacy two-channel IR in the old config can reject a
+            // valid four-channel preset before its saved IR path is restored.
+            // Leave the original config bytes alone when routing is unchanged.
+            if next_mode != current_mode {
+                let incoming_ir_file = incoming_values
+                    .get("ir_file")
+                    .filter(|value| value.is_string())
+                    .cloned();
+                let current_ir_file = current_values
+                    .get("ir_file")
+                    .filter(|value| value.is_string())
+                    .cloned();
+                config_object.insert("true_stereo".into(), serde_json::Value::Bool(next_mode));
+                if let Some(ir_file) = incoming_ir_file.clone().or(current_ir_file) {
+                    config_object.insert("ir_file".into(), ir_file);
+                    current_values.remove("ir_file");
+                    if incoming_ir_file.is_some() {
+                        incoming_values.remove("ir_file");
+                    }
+                }
+                replacement_config = serde_json::to_string(&config)
+                    .map_err(|error| format!("Failed to serialize Convolution config: {error}"))?;
+            }
+            current_values.remove("true_stereo");
+            incoming_values.remove("true_stereo");
+            (
+                serde_json::to_vec(&current_values).map_err(|error| {
+                    format!("Failed to serialize current Convolution state: {error}")
+                })?,
+                serde_json::to_vec(&incoming_values).map_err(|error| {
+                    format!("Failed to serialize incoming Convolution state: {error}")
+                })?,
+            )
+        } else {
+            (current, state.to_vec())
+        };
 
     // Construct from the original configuration: the flat parameter snapshot
     // does not contain every resource, routing matrix, or setup option.
     // All fallible work runs on a separate instance on the control thread.
     let mut replacement = super::plugin_factory::create_unprepared_plugin(
         &handle.plugin_type,
-        &handle.config_json,
+        &replacement_config,
         handle.input_channels,
         handle.output_channels,
         handle.sample_rate,
@@ -100,9 +218,8 @@ fn replace_plugin_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<
     // Preserve live automation when a partial preset omits a parameter. Only
     // replay values that differ from the constructor, avoiding unnecessary
     // writes to setup parameters already represented by the original config.
-    let current = plugins_bridge::state::save_state(&*handle.plugin);
-    load_changed_state(&mut *replacement, &current, &handle.plugin_type)?;
-    load_changed_state(&mut *replacement, state, &handle.plugin_type)?;
+    load_changed_state(&mut *replacement, &current_state, &handle.plugin_type)?;
+    load_changed_state(&mut *replacement, &incoming_state, &handle.plugin_type)?;
 
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
@@ -119,6 +236,447 @@ fn replace_plugin_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<
     // Keep ParameterMap storage alive: foreign ParameterInfo pointers remain
     // valid until plugin_destroy. A rejected preset never touches live DSP.
     handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn is_crossover_runtime_id(id: &str) -> bool {
+    matches!(id, "type" | "frequency" | "mode" | "fir_taps")
+        || id
+            .strip_prefix("frequency_")
+            .is_some_and(|suffix| suffix.parse::<usize>().is_ok())
+        || id
+            .strip_prefix("channel_frequency_")
+            .is_some_and(|suffix| suffix.parse::<usize>().is_ok())
+        || id
+            .strip_prefix("channel_mode_")
+            .is_some_and(|suffix| suffix.parse::<usize>().is_ok())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum CrossoverRuntimeLayout {
+    Bands {
+        has_second_split: bool,
+        has_third_split: bool,
+    },
+    PerChannel {
+        channels: usize,
+    },
+}
+
+fn crossover_runtime_layout(
+    state: &serde_json::Map<String, serde_json::Value>,
+) -> Result<CrossoverRuntimeLayout, String> {
+    let mut channel_frequencies = std::collections::BTreeSet::new();
+    let mut channel_modes = std::collections::BTreeSet::new();
+    for id in state.keys() {
+        if let Some(suffix) = id.strip_prefix("channel_frequency_")
+            && let Ok(channel) = suffix.parse::<usize>()
+        {
+            channel_frequencies.insert(channel);
+        }
+        if let Some(suffix) = id.strip_prefix("channel_mode_")
+            && let Ok(channel) = suffix.parse::<usize>()
+        {
+            channel_modes.insert(channel);
+        }
+    }
+
+    if !channel_frequencies.is_empty() || !channel_modes.is_empty() {
+        if state.contains_key("frequency")
+            || state.contains_key("mode")
+            || state.contains_key("frequency_2")
+            || state.contains_key("frequency_3")
+        {
+            return Err("Crossover preset mixes per-channel and band runtime controls".into());
+        }
+        let channel_count = channel_frequencies.len();
+        let expected_channels: std::collections::BTreeSet<_> = (0..channel_count).collect();
+        if channel_count == 0
+            || channel_frequencies != expected_channels
+            || channel_modes != expected_channels
+        {
+            return Err("Crossover preset has an incomplete per-channel runtime layout".into());
+        }
+        return Ok(CrossoverRuntimeLayout::PerChannel {
+            channels: channel_count,
+        });
+    }
+
+    let has_second_split = state.contains_key("frequency_2");
+    let has_third_split = state.contains_key("frequency_3");
+    if has_third_split && !has_second_split {
+        return Err("Crossover preset has a third split without a second split".into());
+    }
+    Ok(CrossoverRuntimeLayout::Bands {
+        has_second_split,
+        has_third_split,
+    })
+}
+
+fn replace_crossover_from_state(
+    handle: &mut PluginHandle,
+    state: &[u8],
+    restore_kind: PluginStateRestoreKind,
+) -> Result<(), String> {
+    let current_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current Crossover state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse Crossover state: {error}"))?;
+    if restore_kind == PluginStateRestoreKind::Preset {
+        let current_layout = crossover_runtime_layout(&current_state)?;
+        let preset_layout = crossover_runtime_layout(&incoming_state)?;
+        if current_layout != preset_layout {
+            return Err(format!(
+                "Crossover preset topology {preset_layout:?} does not match handle topology {current_layout:?}"
+            ));
+        }
+    }
+    let current_type = current_state
+        .get("type")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "Current Crossover type state must be a string".to_string())?
+        .to_owned();
+    let current_type = sotf_plugins::plugin_crossover::canonical_crossover_type(&current_type)?;
+    let requested_type = match incoming_state.get("type") {
+        Some(serde_json::Value::String(value)) => {
+            sotf_plugins::plugin_crossover::canonical_crossover_type(value)?
+        }
+        Some(_) => return Err("Crossover type state must be a string".into()),
+        None => current_type,
+    };
+    let requested_fir = requested_type == "LinearPhase";
+
+    // State import is a partial merge, matching the public FFI contract.
+    // Known Crossover IDs absent from this instance identify a topology change;
+    // inactive FIR taps and unknown keys retain the generic loader's ignore
+    // behavior unless the requested family activates that FIR control.
+    for key in incoming_state.keys() {
+        if is_crossover_runtime_id(key) && !current_state.contains_key(key) && key != "fir_taps" {
+            return Err(format!(
+                "Crossover state parameter '{key}' changes the active topology; create a new handle"
+            ));
+        }
+    }
+    let mut merged_state = current_state;
+    for (key, value) in incoming_state {
+        if is_crossover_runtime_id(&key)
+            && (key != "fir_taps" || requested_fir || current_type == "LinearPhase")
+        {
+            merged_state.insert(key, value);
+        }
+    }
+    merged_state.insert(
+        "type".into(),
+        serde_json::Value::String(requested_type.to_owned()),
+    );
+
+    let is_per_channel = merged_state
+        .keys()
+        .any(|key| key.starts_with("channel_frequency_"));
+    let crossover_type = merged_state
+        .get("type")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "Crossover type state must be a string".to_string())?;
+
+    let mut config: serde_json::Value = match handle.config_json.trim() {
+        "" | "null" | "{}" => serde_json::json!({}),
+        config => serde_json::from_str(config)
+            .map_err(|error| format!("Failed to parse Crossover config: {error}"))?,
+    };
+    let config_object = config
+        .as_object_mut()
+        .ok_or_else(|| "Crossover config must be a JSON object".to_string())?;
+    config_object.insert(
+        "type".into(),
+        serde_json::Value::String(crossover_type.to_owned()),
+    );
+
+    if is_per_channel {
+        let mut frequencies = Vec::new();
+        let mut modes = Vec::new();
+        loop {
+            let channel = frequencies.len();
+            let frequency_id = format!("channel_frequency_{channel}");
+            let Some(frequency) = merged_state.get(&frequency_id) else {
+                break;
+            };
+            let frequency = frequency
+                .as_f64()
+                .ok_or_else(|| format!("Crossover {frequency_id} must be numeric"))?;
+            if !frequency.is_finite() {
+                return Err(format!("Crossover {frequency_id} must be finite"));
+            }
+            let mode_id = format!("channel_mode_{channel}");
+            let mode = merged_state
+                .get(&mode_id)
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| format!("Crossover {mode_id} must be a string"))?;
+            frequencies.push(serde_json::Value::from(frequency));
+            modes.push(serde_json::Value::String(mode.to_owned()));
+        }
+        if frequencies.len() != handle.input_channels {
+            return Err(format!(
+                "Crossover per-channel state has {} cutoffs for {} input channels",
+                frequencies.len(),
+                handle.input_channels
+            ));
+        }
+        // Keep dormant global frequency/mode and multiway values from the
+        // constructor config. Complete explicit channel modes select the live
+        // route, so dormant `output=both` remains valid.
+        config_object.insert(
+            "channel_frequencies_hz".into(),
+            serde_json::Value::Array(frequencies),
+        );
+        config_object.insert("channel_modes".into(), serde_json::Value::Array(modes));
+    } else {
+        let frequency = merged_state
+            .get("frequency")
+            .and_then(serde_json::Value::as_f64)
+            .ok_or_else(|| "Crossover frequency state must be numeric".to_string())?;
+        if !frequency.is_finite() {
+            return Err("Crossover frequency state must be finite".into());
+        }
+        let mode = merged_state
+            .get("mode")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| "Crossover mode state must be a string".to_string())?;
+        let mut extra_frequencies = Vec::new();
+        let mut ordered_frequencies = vec![frequency];
+        for index in 2..=3 {
+            let id = format!("frequency_{index}");
+            let Some(value) = merged_state.get(&id) else {
+                break;
+            };
+            let value = value
+                .as_f64()
+                .ok_or_else(|| format!("Crossover {id} state must be numeric"))?;
+            if !value.is_finite() {
+                return Err(format!("Crossover {id} state must be finite"));
+            }
+            ordered_frequencies.push(value);
+            extra_frequencies.push(serde_json::Value::from(value));
+        }
+        if ordered_frequencies
+            .windows(2)
+            .any(|pair| pair[0] >= pair[1])
+        {
+            return Err("Crossover cutoff frequencies must be strictly increasing".into());
+        }
+        config_object.insert("frequency".into(), serde_json::Value::from(frequency));
+        config_object.insert("output".into(), serde_json::Value::String(mode.to_owned()));
+        config_object.insert(
+            "extra_frequencies".into(),
+            serde_json::Value::Array(extra_frequencies),
+        );
+        if crossover_type == "LinearPhase"
+            && let Some(fir_taps) = merged_state.get("fir_taps")
+        {
+            let fir_taps = fir_taps
+                .as_i64()
+                .ok_or_else(|| "Crossover fir_taps state must be an integer".to_string())?;
+            config_object.insert("fir_taps".into(), serde_json::Value::from(fir_taps));
+        }
+    }
+
+    let replacement_config = serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize Crossover config: {error}"))?;
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored Crossover channel layout differs from the handle layout".into());
+    }
+
+    // The runtime map changes when a restore enters or leaves FIR mode, and
+    // its default values track the committed state. Keep every old map alive
+    // because C callers may retain any previously returned info pointer.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn replace_dynamic_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    // Partial presets merge into the full live snapshot, which includes all
+    // eight slots even when fewer bands currently process audio.
+    let mut merged_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current DynamicEQ state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse DynamicEQ state: {error}"))?;
+    merged_state.extend(incoming_state);
+    let merged_state = serde_json::to_vec(&merged_state)
+        .map_err(|error| format!("Failed to merge DynamicEQ state: {error}"))?;
+    let replacement_config = super::plugin_factory::merge_dynamic_eq_state_into_config(
+        &handle.config_json,
+        &merged_state,
+    )?;
+
+    // Construct, prepare, and initialize a separate instance. The live
+    // plugin, constructor config, and parameter-map pointers remain untouched
+    // until every fallible operation and layout check has succeeded.
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored DynamicEQ channel layout differs from the handle layout".into());
+    }
+
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn replace_band_split_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    let mut merged_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current BandSplit state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse BandSplit state: {error}"))?;
+    merged_state.extend(incoming_state);
+
+    let choice = |key: &str| -> Result<usize, String> {
+        let value = merged_state
+            .get(key)
+            .and_then(serde_json::Value::as_i64)
+            .ok_or_else(|| format!("BandSplit {key} must be a choice index"))?;
+        usize::try_from(value).map_err(|_| format!("BandSplit {key} choice is out of range"))
+    };
+    let cutoff = |key: &str| -> Result<f64, String> {
+        let value = merged_state
+            .get(key)
+            .and_then(serde_json::Value::as_f64)
+            .ok_or_else(|| format!("BandSplit {key} must be numeric"))?;
+        if !value.is_finite() {
+            return Err(format!("BandSplit {key} must be finite"));
+        }
+        Ok(value)
+    };
+
+    // These values are choice indices in the public parameter state and
+    // constructor values in plugin configuration. Build the full active
+    // cutoff vector before applying any setters, so a coordinated shift such
+    // as [1000, 2000, 3000] -> [2000, 3000, 4000] never passes through an
+    // invalid intermediate ordering.
+    let band_count = choice("num_bands")?
+        .checked_add(2)
+        .filter(|count| (2..=4).contains(count))
+        .ok_or_else(|| "BandSplit num_bands choice is out of range".to_string())?;
+    let expected_outputs = handle
+        .input_channels
+        .checked_mul(band_count)
+        .ok_or_else(|| "BandSplit output channel count overflow".to_string())?;
+    if expected_outputs != handle.output_channels {
+        return Err(format!(
+            "BandSplit restore changes output geometry from {} to {}; create a new handle",
+            handle.output_channels, expected_outputs
+        ));
+    }
+
+    let crossover_type = match choice("type")? {
+        0 => "LR24",
+        1 => "LR48",
+        _ => return Err("BandSplit type choice is out of range".into()),
+    };
+    let recombination_mode = match choice("recombination_mode")? {
+        0 => "legacy_cascade",
+        1 => "phase_compensated",
+        _ => return Err("BandSplit recombination_mode choice is out of range".into()),
+    };
+    let mut frequencies = Vec::with_capacity(band_count - 1);
+    for key in ["frequency", "frequency_2", "frequency_3"]
+        .into_iter()
+        .take(band_count - 1)
+    {
+        frequencies.push(cutoff(key)?);
+    }
+
+    let mut config: serde_json::Value = match handle.config_json.trim() {
+        "" | "null" | "{}" => serde_json::json!({}),
+        config => serde_json::from_str(config)
+            .map_err(|error| format!("Failed to parse BandSplit config: {error}"))?,
+    };
+    let config_object = config
+        .as_object_mut()
+        .ok_or_else(|| "BandSplit config must be a JSON object".to_string())?;
+    // `crossover_type` is a supported legacy alias for the canonical `type`
+    // constructor field. Remove it before inserting the new canonical value,
+    // otherwise serde sees both names for one field and rejects the rebuild.
+    config_object.remove("crossover_type");
+    config_object.insert(
+        "frequencies".into(),
+        serde_json::to_value(&frequencies)
+            .map_err(|error| format!("Failed to serialize BandSplit cutoffs: {error}"))?,
+    );
+    config_object.insert(
+        "explicit_frequencies".into(),
+        serde_json::to_value(&frequencies)
+            .map_err(|error| format!("Failed to serialize BandSplit explicit cutoffs: {error}"))?,
+    );
+    config_object.insert("num_bands".into(), serde_json::json!(band_count));
+    config_object.insert("type".into(), serde_json::json!(crossover_type));
+    config_object.insert(
+        "recombination_mode".into(),
+        serde_json::json!(recombination_mode),
+    );
+    // Inactive cutoffs remain visible and serializable when this same-width
+    // handle later reopens a wider band configuration.
+    for key in ["frequency", "frequency_2", "frequency_3"] {
+        config_object.insert(key.into(), serde_json::json!(cutoff(key)?));
+    }
+    let replacement_config = serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize BandSplit config: {error}"))?;
+
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    // Reapply non-constructor controls such as band gains. Structural and
+    // cutoff values already match the replacement constructor, so the
+    // changed-only loader will not replay them in an unsafe order.
+    let merged_state = serde_json::to_vec(&merged_state)
+        .map_err(|error| format!("Failed to serialize merged BandSplit state: {error}"))?;
+    load_changed_state(&mut *replacement, &merged_state, &handle.plugin_type)?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored plugin channel layout differs from the handle layout".into());
+    }
+
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
     Ok(())
 }
 
@@ -416,6 +974,7 @@ pub extern "C" fn plugin_create(
             plugin_type: plugin_type_str.to_string(),
             config_json: config_str.to_string(),
             parameter_map,
+            retired_parameter_maps: Vec::new(),
             sample_rate,
             max_callback_frames,
             input_channels,
@@ -841,6 +1400,34 @@ pub extern "C" fn plugin_get_parameter_info(
     }
 }
 
+/// Get one choice label for a parameter in its enumerated ABI position.
+///
+/// The returned pointer references a static NUL-terminated string and is
+/// valid for the process lifetime. It is `NULL` when the index does not
+/// identify a supported choice parameter or when `choice_index` is invalid.
+///
+/// # Safety
+/// * `handle` must be `NULL` or a live plugin handle.
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_get_parameter_choice_label(
+    handle: *const PluginHandle,
+    parameter_index: usize,
+    choice_index: usize,
+) -> *const c_char {
+    if handle.is_null() {
+        return ptr::null();
+    }
+
+    // SAFETY: the caller promises a live handle; the method only reads its
+    // immutable parameter map and returns a process-static string pointer.
+    unsafe {
+        (&*handle)
+            .parameter_map
+            .choice_label_at(parameter_index, choice_index)
+            .unwrap_or(ptr::null())
+    }
+}
+
 /// Set a parameter value (normalized 0.0-1.0).
 ///
 /// # Arguments
@@ -877,6 +1464,11 @@ pub extern "C" fn plugin_set_parameter(
                 return PluginError::InvalidUtf8;
             }
         };
+
+        if is_dynamic_eq_shelf_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(c"Dynamic EQ shelf shape and slope require state restoration");
+            return PluginError::InvalidParameter;
+        }
 
         match handle_ref.parameter_map.set_normalized(
             &mut *handle_ref.plugin,
@@ -1056,7 +1648,8 @@ pub extern "C" fn plugin_load_state(
         let handle_ref = &mut *handle;
         let slice = slice::from_raw_parts(data, len);
 
-        let load_result = replace_plugin_from_state(handle_ref, slice);
+        let load_result =
+            replace_plugin_from_state(handle_ref, slice, PluginStateRestoreKind::Partial);
         match load_result {
             Ok(_) => PluginError::Success,
             Err(e) => {
@@ -1120,7 +1713,7 @@ pub extern "C" fn plugin_export_preset_json(
         let info = handle_ref.plugin.info();
         let document = serde_json::json!({
             "schema_version": 1,
-            "ut_type": "org.spinorama.sotf.plugin-preset",
+            "ut_type": PRESET_UT_TYPE_JSON,
             "file_extension": "sotfpreset",
             "preset_name": name,
             "plugin_type": handle_ref.plugin_type,
@@ -1183,6 +1776,34 @@ pub extern "C" fn plugin_import_preset_json(
             }
         };
 
+        if document
+            .get("schema_version")
+            .and_then(serde_json::Value::as_u64)
+            != Some(1)
+        {
+            set_last_error("Preset JSON schema_version must be integer 1");
+            return PluginError::InvalidConfig;
+        }
+        if document.get("ut_type").and_then(serde_json::Value::as_str) != Some(PRESET_UT_TYPE_JSON)
+        {
+            set_last_error("Preset JSON has an unsupported ut_type");
+            return PluginError::InvalidConfig;
+        }
+        let Some(preset_plugin_type) = document
+            .get("plugin_type")
+            .and_then(serde_json::Value::as_str)
+        else {
+            set_last_error("Preset JSON is missing a string plugin_type");
+            return PluginError::InvalidConfig;
+        };
+        if !super::plugin_factory::preset_import_type_matches_target(
+            &handle_ref.plugin_type,
+            preset_plugin_type,
+        ) {
+            set_last_error("Preset plugin_type does not match the current plugin family");
+            return PluginError::InvalidConfig;
+        }
+
         let Some(state_values) = document.get("state").and_then(|state| state.as_array()) else {
             set_last_error("Preset JSON is missing a state byte array");
             return PluginError::InvalidConfig;
@@ -1204,7 +1825,23 @@ pub extern "C" fn plugin_import_preset_json(
             state.push(byte);
         }
 
-        let load_result = replace_plugin_from_state(handle_ref, &state);
+        let state = if matches!(
+            handle_ref.plugin_type.as_str(),
+            "DynamicEQ" | "dynamic_eq" | "dynamic-eq"
+        ) {
+            match super::plugin_factory::add_dynamic_eq_preset_shelf_defaults(&state) {
+                Ok(state) => state,
+                Err(error) => {
+                    set_last_error(&format!("Invalid DynamicEQ preset state: {error}"));
+                    return PluginError::InvalidConfig;
+                }
+            }
+        } else {
+            state
+        };
+
+        let load_result =
+            replace_plugin_from_state(handle_ref, &state, PluginStateRestoreKind::Preset);
         match load_result {
             Ok(_) => PluginError::Success,
             Err(e) => {

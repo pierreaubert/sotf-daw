@@ -1,0 +1,29 @@
+{
+  "case": "full_same_four_way",
+  "preset": true,
+  "expected_status": 0,
+  "status": 0,
+  "error": "",
+  "state_matches": true,
+  "audio_exact": true,
+  "max_residual": 0.0,
+  "control_sensitivity": 0.2318870797753334,
+  "audio": {
+    "actual": {
+      "file": "full_same_four_way/actual.f32le",
+      "samples": 1272,
+      "sha256": "d9ba9b512324eee4eaab176df8ef31cbb0799a4e9d8fcbe209be879c90204559"
+    },
+    "reference": {
+      "file": "full_same_four_way/reference.f32le",
+      "samples": 1272,
+      "sha256": "d9ba9b512324eee4eaab176df8ef31cbb0799a4e9d8fcbe209be879c90204559"
+    },
+    "cold_target": {
+      "file": "full_same_four_way/cold_target.f32le",
+      "samples": 1272,
+      "sha256": "ed8e2b3019344053b8e14cdea8d8e8d89edfc6ce199afb9fea5d4c79c9a65b6a"
+    }
+  },
+  "passed": true
+}

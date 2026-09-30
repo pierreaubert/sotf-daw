@@ -29,7 +29,38 @@ budget.
 
 ### Multi-Channel Support
 
-When the IR file has multiple channels, each audio channel is convolved with the corresponding IR channel. If the IR is mono, it is applied identically to all channels.
+With the default `true_stereo: false`, audio channels select IR channels cyclically. A mono IR is
+applied to every channel. A stereo plugin using a four-channel IR keeps the historical mapping:
+left uses IR channel 0 and right uses channel 1; channels 2 and 3 are unused.
+
+### True Stereo
+
+Enable **True Stereo** in the Advanced controls to apply all four paths of a stereo reverb IR.
+This requires a stereo plugin and a four-channel file in the following order:
+
+| IR channel | Path | Input | Output |
+|------------|------|-------|--------|
+| 0 | LL | Left | Left |
+| 1 | LR | Left | Right |
+| 2 | RL | Right | Left |
+| 3 | RR | Right | Right |
+
+The two paths feeding each output are summed before the normal dry/wet blend and gain.
+The default is off, so existing presets keep their original sound. Changing this setting rebuilds
+the plugin. It is a setup choice, not an automatable switch. UPC, NUPC and the direct-head mode
+all support true-stereo routing with their normal latency.
+
+```json
+{
+  "ir_file": "/path/to/ll_lr_rl_rr.wav",
+  "true_stereo": true,
+  "mix": 0.3,
+  "gain_db": 0.0
+}
+```
+
+True Stereo may be enabled before choosing an IR. Until a valid IR is loaded, the plugin passes
+latency-aligned dry audio. A mono or two-channel IR cannot be loaded in this mode.
 
 ## Demos
 
@@ -120,7 +151,8 @@ When the IR file has multiple channels, each audio channel is convolved with the
 - Failed replacements preserve the last working IR. Hosts can inspect `load_status()` for
   idle/loading/ready/failed state.
 - SIMD-optimized complex multiply-accumulate is used for the frequency-domain convolution.
-- Mono IRs are automatically applied to all channels. Multi-channel IRs require matching channel counts.
+- Default routing applies mono IRs to every channel and cycles shorter multi-channel IRs.
+  True Stereo requires the four-channel mapping above.
 
 ## Signal Flow
 

@@ -1,0 +1,51 @@
+{
+  "actual_exec_command": "flock -x /tmp/sotf-daw-audit-cargo.lock /bin/bash /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-cpu-peak-shelf-r1/run-capture.sh",
+  "actual_exec_session_id": 83390,
+  "actual_terminal_exit_code": 0,
+  "build_command": "flock -x /tmp/sotf-daw-audit-cargo.lock env CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target TMPDIR=/tmp CARGO_NET_OFFLINE=true cargo test --offline --locked --release -p sotf-plugin-dynamic-eq --test aud139_cpu_shape_comparison --no-run",
+  "build_exit_code": 0,
+  "build_log": "/tmp/sotf-aud139-cpu-shape-release-build-r2.log",
+  "build_session": 31808,
+  "build_source_manifest": "not captured before or during build; measurement source manifest is captured after build and before measurement only",
+  "copied_executable": "bin/aud139_cpu_shape_comparison-release",
+  "copied_executable_sha256": "62fc8e4c026c6920212bde6b7e6a64b7934d9029e36f7db8aa4d64f4a48bb2f0",
+  "measurement_command": "flock -x /tmp/sotf-daw-audit-cargo.lock taskset -c 8 <copied Release test binary> --exact capture_aud139_matched_peak_and_shelf_callback_cpu --ignored --nocapture",
+  "measurement_design": {
+    "band_counts": [
+      4,
+      8
+    ],
+    "callback_frames": [
+      64,
+      256,
+      1024
+    ],
+    "channel_counts": [
+      2,
+      8
+    ],
+    "frames_per_trial": 65536,
+    "measured_trials_per_shape": 7,
+    "peak_to_shelf_budget_ratio": 1.25,
+    "sample_rate_hz": 48000,
+    "shape_order": "warmup round r visits shape index (r + offset) modulo 3; measured round t uses (t + offset) modulo 3. Thus every shape leads at least twice; raw per-shape trials are printed.",
+    "shapes": [
+      "Peak",
+      "LowShelf",
+      "HighShelf"
+    ],
+    "shelf_slope": 0.75,
+    "timing_scope": "only process_in_place callback loops; plugin/input/context setup and reset outside timing; matching tone input/settings across shapes; complete 65536-frame processing.",
+    "warmup_trials_per_shape": 2
+  },
+  "measurement_log": "logs/release-cpu-8.log",
+  "post_measurement_source_manifest": "manifests/measurement-source-end.json",
+  "selected_source_archive_directory": "selected-source/",
+  "task": "AUD139 matched Release callback CPU comparison: Peak, LowShelf, HighShelf",
+  "toolchain": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "original_process_affinity": "pid 3's current affinity list: 0-127",
+    "requested_measurement_cpu": 8,
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8"
+  }
+}

@@ -215,7 +215,7 @@ fn test_parallel_processing_disabled() {
     #[allow(deprecated)]
     let mut g = DawHost::new_default(48000);
     #[allow(deprecated)]
-    g.set_parallel_enabled(false);
+    g.set_parallel_enabled(false).unwrap();
     let n1 = g
         .add_node(
             "g1".into(),

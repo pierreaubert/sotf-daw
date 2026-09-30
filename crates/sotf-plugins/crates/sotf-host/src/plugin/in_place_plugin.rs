@@ -95,6 +95,16 @@ pub trait InPlacePlugin: Send {
         0
     }
 
+    /// Finish already accepted asynchronous work before querying EOS metadata.
+    /// See [`super::Plugin::prepare_drain_metadata`].
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Refresh native metadata on the plugin's serialized control thread.
+    /// See [`super::Plugin::refresh_control_thread_metadata`].
+    fn refresh_control_thread_metadata(&mut self) {}
+
     /// Prepare bounded, idempotent EOS work; see [`super::Plugin::begin_drain`].
     fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
         Ok(())

@@ -18,8 +18,10 @@ const IDLE_EMPTY_SLEEP_PROCESSING_MS: u64 = 1;
 
 /// Maximum engine block size (frames) used to pre-size processing scratch buffers.
 const MAX_ENGINE_BLOCK_FRAMES: usize = 8192;
-/// Maximum channel count used to pre-size processing scratch buffers.
-const MAX_ENGINE_CHANNELS: usize = crate::EngineConfig::MAX_CHANNELS;
+/// Maximum input width prepared for processing, crossfade and recycle-fallback
+/// buffers. This also covers a newly installed wide-input host before any
+/// callback has a chance to grow its scratch storage.
+const MAX_ENGINE_CHANNELS: usize = crate::EngineConfig::MAX_INPUT_CHANNELS;
 /// Worst-case interleaved sample count for one engine block.
 const MAX_ENGINE_SAMPLE_CAPACITY: usize = MAX_ENGINE_BLOCK_FRAMES * MAX_ENGINE_CHANNELS;
 /// Headroom for plugins that expand channels or sample rate (e.g. resamplers).
@@ -232,7 +234,7 @@ impl ProcessingState {
         }
     }
 
-    fn recycle_output_buffer_locally(&mut self, mut data: Vec<f32>) {
+    pub(super) fn recycle_output_buffer_locally(&mut self, mut data: Vec<f32>) {
         data.clear();
         if self.recycle_fallback_pool.len() < RECYCLE_FALLBACK_POOL_SIZE {
             self.recycle_fallback_pool.push(data);

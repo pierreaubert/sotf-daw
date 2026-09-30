@@ -1,0 +1,7 @@
+7a2e6f0d4b9c8fb67a081393b0ef0482f1d2a03d85e5d2519231193380e488b4  audit/artifacts/aud135-isolated-vst3-worker-r2/README.md
+6617421b150507482cb702cebec24c9e17c45831c71e7181c75df5316ace723b  audit/artifacts/aud135-isolated-vst3-worker-r2/source-executed/native_vst3_host.rs
+6617421b150507482cb702cebec24c9e17c45831c71e7181c75df5316ace723b  audit/artifacts/aud135-isolated-vst3-worker-r2/source-current/native_vst3_host.rs
+41b56cbcb96c240370273e06358f19ed29d0e674f1fbcf2a49b7abc8cab44b63  audit/artifacts/aud135-isolated-vst3-worker-r2/source-current/vst3_backend.rs
+9acc959d76077dd27ed5fc05c1cac29724dddd80655779663d5c2d8bd246130b  audit/artifacts/aud135-isolated-vst3-worker-r2/source-historical-r1/native_vst3_host.rs
+70c827a2cafd867111a6ae739d457c5955b7b0824f2cd3d23684fa325d848d76  audit/artifacts/aud135-isolated-vst3-worker-r2/logs/worker-current-r3.log
+fa48f3277ce3578902c83e9b614cc79f72910ad126add89f7f02c27f2324c12e  audit/artifacts/aud135-isolated-vst3-worker-r2/logs/clippy-current-r3.log

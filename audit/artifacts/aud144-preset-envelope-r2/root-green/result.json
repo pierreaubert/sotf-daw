@@ -1,0 +1,200 @@
+{
+  "library": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r2/libplugins_ffi.so",
+  "library_sha256": "17ada1bd75f5174e8510d75131ba2ca880538302619eda9c633bc16710caa4f2",
+  "probe_sha256": "107d5b64fb106c3d593749d2c14a9688288da727ecf495d6e2a5ad020cec39ac",
+  "config": {
+    "num_bands": 4,
+    "threshold": -24.0,
+    "ratio": 3.0,
+    "attack_ms": 2.0,
+    "release_ms": 55.0,
+    "knee": 3.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "bands": [
+      {
+        "gain": 6.0
+      }
+    ]
+  },
+  "results": [
+    {
+      "case": "unchanged",
+      "expected_accept": true,
+      "return_code": 0,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": false,
+      "max_continuation_residual": 0.029786840081214905,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "unchanged-live.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74",
+        "unchanged-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "unchanged-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "editable_name",
+      "expected_accept": true,
+      "return_code": 0,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": false,
+      "max_continuation_residual": 0.029786840081214905,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "editable_name-live.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74",
+        "editable_name-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "editable_name-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "wrong_plugin",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "wrong_plugin-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "wrong_plugin-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "wrong_plugin-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "missing_plugin",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "missing_plugin-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_plugin-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_plugin-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "typed_plugin",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "typed_plugin-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_plugin-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_plugin-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "future_schema",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "future_schema-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "future_schema-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "future_schema-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "missing_schema",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "missing_schema-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_schema-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_schema-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "typed_schema",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "typed_schema-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_schema-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_schema-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "wrong_ut_type",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "wrong_ut_type-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "wrong_ut_type-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "wrong_ut_type-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "missing_ut_type",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "missing_ut_type-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_ut_type-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "missing_ut_type-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    },
+    {
+      "case": "typed_ut_type",
+      "expected_accept": false,
+      "return_code": -8,
+      "payload_bytes_unchanged": true,
+      "saved_state_unchanged": true,
+      "continuation_exact": true,
+      "max_continuation_residual": 0.0,
+      "cold_sensitivity_max": 0.029786840081214905,
+      "samples_per_vector": 1272,
+      "audio_sha256": {
+        "typed_ut_type-live.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_ut_type-twin.f32le": "b18563596bce61c30d8fccbc682832be3cdc9d5275bc7130c27321ebaacc244c",
+        "typed_ut_type-cold.f32le": "7dfe4a39118369765c9274b2268e18d01e53b6bf090c51a989df91fc426eba74"
+      }
+    }
+  ],
+  "failed_refusal_cases": [],
+  "scope": "Control-thread C ABI import/state/audio continuation; no callback heap or AU runtime claim"
+}

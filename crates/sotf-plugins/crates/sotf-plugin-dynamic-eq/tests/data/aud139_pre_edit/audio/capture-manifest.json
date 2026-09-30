@@ -1,0 +1,143 @@
+{
+  "behavior_checks": {
+    "inactive_peak_is_transparent": true,
+    "linked_boost_vs_linked_cut_rms": 0.019351699253732958,
+    "linked_vs_unlinked_boost_rms": 0.00469454099257481
+  },
+  "capture_scope": "plugin crate public constructor/process and serialized parameter roundtrip; C ABI full state/preset capture is separate",
+  "cases": [
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": true,
+      "name": "linked_boost",
+      "output_file": "linked_boost.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "linked_boost.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": true,
+      "name": "linked_cut",
+      "output_file": "linked_cut.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "linked_cut.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": false,
+      "name": "unlinked_boost",
+      "output_file": "unlinked_boost.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "unlinked_boost.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": false,
+      "name": "unlinked_cut",
+      "output_file": "unlinked_cut.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "unlinked_cut.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": true,
+      "name": "inactive_peak",
+      "output_file": "inactive_peak.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "inactive_peak.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 8192,
+      "linked_detection": true,
+      "name": "solo_peak",
+      "output_file": "solo_peak.f32le",
+      "parameter_roundtrip": "DynamicEqPluginParams serde serialize -> deserialize before processing",
+      "params_file": "solo_peak.params.json",
+      "partition_frames": [
+        1,
+        17,
+        251,
+        3,
+        509,
+        64,
+        1021,
+        127,
+        5
+      ],
+      "sample_rate_hz": 48000
+    }
+  ],
+  "channels": 2,
+  "feature": "AUD139 Dynamic EQ shelf baseline",
+  "frames": 8192,
+  "implementation_state": "pre-edit Peak-only DynamicEqPlugin",
+  "input_file": "stereo-input.f32le",
+  "input_signal": "stereo deterministic multi-tone with four level regions; L/R amplitudes and phases differ",
+  "sample_rate_hz": 48000
+}

@@ -92,6 +92,16 @@ pub trait ParametricPlugin: Send {
         0
     }
 
+    /// Finish already accepted asynchronous work before querying EOS metadata.
+    /// See [`Plugin::prepare_drain_metadata`].
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Refresh native metadata on the plugin's serialized control thread.
+    /// See [`Plugin::refresh_control_thread_metadata`].
+    fn refresh_control_thread_metadata(&mut self) {}
+
     /// Prepare bounded, idempotent EOS work; see [`Plugin::begin_drain`].
     fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
         Ok(())
@@ -329,6 +339,14 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
 
     fn drain_output_frames_max(&self) -> usize {
         self.plugin.drain_output_frames_max()
+    }
+
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        self.plugin.prepare_drain_metadata()
+    }
+
+    fn refresh_control_thread_metadata(&mut self) {
+        self.plugin.refresh_control_thread_metadata()
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {

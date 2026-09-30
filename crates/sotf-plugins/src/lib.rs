@@ -365,7 +365,7 @@ pub use plugin_aae::{AaePlugin, params::AaePluginParams};
 pub use plugin_ab_compare::{ABComparePlugin, ABComparePluginParams};
 pub use plugin_aec::{AecPlugin, AecPluginParams};
 pub use plugin_band_merge::{BandMergePlugin, BandMergePluginParams};
-pub use plugin_band_split::{BandSplitPlugin, BandSplitPluginParams};
+pub use plugin_band_split::{BandSplitPlugin, BandSplitPluginParams, BandSplitRecombinationMode};
 pub use plugin_beamformer::{BeamformerPlugin, BeamformerPluginParams, BeamformerType};
 pub use plugin_binaural::{BinauralDecoderParams, BinauralDecoderPlugin, RoomModel};
 pub use plugin_channel_mute_solo::{ChannelMuteSoloParams, ChannelMuteSoloPlugin, ChannelState};

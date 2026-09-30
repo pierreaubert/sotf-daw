@@ -26,6 +26,7 @@ use arc_swap::ArcSwap;
 use sotf_plugins::ExternalPluginProcessEvent;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use sotf_plugins::IsolatedExternalPluginWorkerReport;
+use sotf_plugins::PluginHost;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use sotf_plugins::{PluginSandboxBackendCode, PluginSandboxStatusCode};
 
@@ -35,6 +36,89 @@ fn request(command: ProcessingCommand) -> super::ProcessingRequest {
         command,
         ticket: super::ProcessingCommandTicket::new(),
     }
+}
+
+#[test]
+fn processing_scratch_prepares_order_seven_input_extent() {
+    let mut state = ProcessingState::new(
+        2,
+        48_000,
+        #[cfg(feature = "streaming")]
+        None,
+    );
+    let max_frames = crate::EngineConfig::MAX_FRAME_SIZE;
+    let max_channels = crate::EngineConfig::MAX_INPUT_CHANNELS;
+    let expected_samples = max_frames * max_channels * 2;
+    assert!(state.process_buffer.capacity() >= expected_samples);
+    assert!(state.prev_process_buffer.capacity() >= expected_samples);
+    assert_eq!(state.recycle_fallback_pool.len(), 4);
+    assert!(
+        state
+            .recycle_fallback_pool
+            .iter()
+            .all(|buffer| buffer.capacity() >= expected_samples)
+    );
+
+    // Emulate a host replacement that widens the input before the processing
+    // thread sees its first callback. All fixed scratch storage was reserved
+    // from the engine-wide bound at construction time.
+    let process_ptr = state.process_buffer.as_ptr();
+    let previous_ptr = state.prev_process_buffer.as_ptr();
+    ProcessingState::prepare_scratch_buffer(&mut state.process_buffer, expected_samples);
+    ProcessingState::prepare_scratch_buffer(&mut state.prev_process_buffer, expected_samples);
+    assert_eq!(state.process_buffer.as_ptr(), process_ptr);
+    assert_eq!(state.prev_process_buffer.as_ptr(), previous_ptr);
+
+    let fallback_ptrs = state
+        .recycle_fallback_pool
+        .iter()
+        .map(Vec::as_ptr)
+        .collect::<Vec<_>>();
+    assert!(fallback_ptrs.iter().all(|pointer| !pointer.is_null()));
+
+    // Run the widest frame through the current and previous host paths. The
+    // previous-host buffer is sized from its host topology and input frame
+    // count, so this exercises the largest crossfade scratch request too.
+    *state.host = PluginHost::new(max_channels, 48_000);
+    state.prev_host = Some(Box::new(PluginHost::new(max_channels, 48_000)));
+    state.channels = max_channels;
+    state.crossfade_progress = 0.0;
+    let input = vec![0.0; max_frames * max_channels];
+    let mut output = vec![0.0; max_frames * max_channels];
+    assert_eq!(
+        state
+            .process_frame(&input, &mut output, max_frames)
+            .unwrap(),
+        max_frames
+    );
+    assert!(
+        state.prev_host.is_none(),
+        "full block should settle the crossfade"
+    );
+    assert_eq!(state.process_buffer.as_ptr(), process_ptr);
+    assert_eq!(state.prev_process_buffer.as_ptr(), previous_ptr);
+    assert!(state.process_buffer.capacity() >= expected_samples);
+    assert!(state.prev_process_buffer.capacity() >= expected_samples);
+    assert_eq!(
+        state
+            .recycle_fallback_pool
+            .iter()
+            .map(Vec::as_ptr)
+            .collect::<Vec<_>>(),
+        fallback_ptrs,
+        "processing the maximum frame must not resize recycle fallback storage"
+    );
+
+    let recycle = state.recycle_fallback_pool.pop().unwrap();
+    let recycle_ptr = recycle.as_ptr();
+    let mut recycle = recycle;
+    ProcessingState::prepare_scratch_buffer(&mut recycle, expected_samples);
+    state.recycle_output_buffer_locally(recycle);
+    assert_eq!(state.recycle_fallback_pool.len(), 4);
+    assert_eq!(
+        state.recycle_fallback_pool.last().unwrap().as_ptr(),
+        recycle_ptr
+    );
 }
 use std::sync::Arc;
 

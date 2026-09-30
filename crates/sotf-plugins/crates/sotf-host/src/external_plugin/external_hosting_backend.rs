@@ -1,3 +1,4 @@
+use super::external_plugin_state::NativePluginAudioSetup;
 use super::format::format_feature;
 use super::format::format_label;
 #[cfg(feature = "external-plugin-au")]
@@ -75,14 +76,15 @@ pub(super) fn try_load_dynamic_backend(
     backend: ExternalHostingBackend,
     sample_rate: u32,
     max_block_frames: usize,
+    audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Option<Box<dyn NativeExternalPluginBackend>>, String> {
     match backend {
         ExternalHostingBackend::Passthrough => Ok(None),
         ExternalHostingBackend::Clap => {
-            load_clap_backend(descriptor, sample_rate, max_block_frames).map(Some)
+            load_clap_backend(descriptor, sample_rate, max_block_frames, audio_setup).map(Some)
         }
         ExternalHostingBackend::Vst3 => {
-            load_vst3_backend(descriptor, sample_rate, max_block_frames).map(Some)
+            load_vst3_backend(descriptor, sample_rate, max_block_frames, audio_setup).map(Some)
         }
         ExternalHostingBackend::AudioUnit => {
             load_audio_unit_backend(descriptor, sample_rate, max_block_frames).map(Some)

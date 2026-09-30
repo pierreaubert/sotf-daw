@@ -1,0 +1,4 @@
+f7d26feed0fdda8eecc60abd79cad483a25c361108736d1b8c4d1382e5c012d0  crates/sotf-plugins/crates/plugins-nih/src/params.rs
+c2efacc628bcf171daa2102fcf597b7684f6e494f9e672e7942d920f207404ab  crates/sotf-plugins/crates/plugins-nih/src/lib.rs
+065a026ae6f06db9dcdd37bccf93a50abcec13483c94be167c3bc390208024d2  crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs
+bca9e342fd7d67eeab4731da90301649fd22c675195533d84e4203bcedebaf69  crates/sotf-plugins/crates/sotf-plugin-convolution/src/params.rs

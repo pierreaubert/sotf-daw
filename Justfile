@@ -35,6 +35,10 @@ check:
 test:
 	{{cargo}} test --workspace {{ffi_exclude}} --lib --bins --tests --examples
 
+[group('test')]
+ntest:
+	{{cargo}} nextest run --workspace {{ffi_exclude}} --lib --bins --tests --examples
+
 # Feature-gated sandbox end-to-end: real worker binary under the enforced
 # Linux sandbox (Landlock + seccomp child-process denial). Not covered by
 # `test` above, which uses default features.

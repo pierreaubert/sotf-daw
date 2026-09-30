@@ -4,6 +4,8 @@
 //! this catalog so every exposed concept independently satisfies release gates
 //! without parallel hand-maintained lists.
 
+// Rust guideline compliant 2026-02-21
+
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -91,7 +93,7 @@ pub enum PluginMaturity {
 pub const STANDARD_CHANNEL_WIDTHS: &[usize] = &[1, 2, 4, 6, 8, 12];
 pub const MONO_CHANNEL_WIDTH: &[usize] = &[1];
 pub const STEREO_CHANNEL_WIDTH: &[usize] = &[2];
-pub const AMBISONIC_WIDTHS: &[usize] = &[4, 9, 16];
+pub const AMBISONIC_WIDTHS: &[usize] = &[4, 9, 16, 25, 36, 49, 64];
 /// Backward-compatible alias retained for callers that still name FOA while
 /// using the complete Ambisonics-width admission contract.
 pub const FIRST_ORDER_AMBISONIC_WIDTH: &[usize] = AMBISONIC_WIDTHS;

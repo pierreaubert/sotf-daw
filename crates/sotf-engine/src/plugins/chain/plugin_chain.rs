@@ -8,6 +8,96 @@ use super::misc::upmixer_settings_output_channels;
 use super::types::PluginPreset;
 use super::types::PluginPresetRaw;
 use crate::engine::PluginConfig;
+use sotf_plugins::plugin_crossover::CrossoverTopology;
+
+fn band_split_routed_band_count(num_bands: usize, frequencies: Option<&[f64]>) -> usize {
+    frequencies
+        .map(|cutoffs| cutoffs.len().saturating_add(1))
+        .unwrap_or(num_bands)
+        .clamp(2, 4)
+}
+
+fn band_split_output_channels(
+    input_channels: usize,
+    num_bands: usize,
+    frequencies: Option<&[f64]>,
+) -> usize {
+    input_channels.saturating_mul(band_split_routed_band_count(num_bands, frequencies))
+}
+
+fn crossover_output_channels(
+    input_channels: usize,
+    topology: Option<CrossoverTopology>,
+    output: &str,
+    extra_frequencies: &[f64],
+    channel_frequencies_hz: Option<&[f64]>,
+) -> usize {
+    let topology = topology.unwrap_or_else(|| {
+        if channel_frequencies_hz.is_some_and(|frequencies| !frequencies.is_empty())
+            && extra_frequencies.is_empty()
+        {
+            CrossoverTopology::PerChannel
+        } else {
+            CrossoverTopology::Bands
+        }
+    });
+    if topology == CrossoverTopology::PerChannel || !output.eq_ignore_ascii_case("both") {
+        return input_channels;
+    }
+
+    let bands = extra_frequencies.len().saturating_add(2).clamp(2, 4);
+    input_channels.saturating_mul(bands)
+}
+
+fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> usize {
+    match settings {
+        PluginSettings::Upmixer {
+            speaker_config,
+            output: UpmixerOutputSettings {
+                binaural_preview, ..
+            },
+            ..
+        } => upmixer_settings_output_channels(speaker_config, *binaural_preview),
+        PluginSettings::AAE { speaker_config, .. } => upmixer_output_channels(speaker_config),
+        PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
+            upmixer_output_channels(target_layout)
+        }
+        PluginSettings::BinauralDecoder { .. }
+        | PluginSettings::Downmix { .. }
+        | PluginSettings::MonoToStereo { .. } => 2,
+        PluginSettings::Matrix {
+            output_channels, ..
+        } => *output_channels,
+        PluginSettings::External { state } => state.descriptor.audio_outputs,
+        PluginSettings::BandSplit {
+            num_bands,
+            frequencies,
+            ..
+        } => band_split_output_channels(input_channels, *num_bands, frequencies.as_deref()),
+        PluginSettings::BandMerge { bands, .. } => {
+            let bands = if *bands > 0 { *bands } else { 2 };
+            if input_channels >= bands && input_channels.is_multiple_of(bands) {
+                input_channels / bands
+            } else {
+                input_channels
+            }
+        }
+        PluginSettings::Crossover {
+            output,
+            topology,
+            extra_frequencies,
+            channel_frequencies_hz,
+            ..
+        } => crossover_output_channels(
+            input_channels,
+            *topology,
+            output,
+            extra_frequencies,
+            channel_frequencies_hz.as_deref(),
+        ),
+        _ => input_channels,
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PluginChain {
@@ -683,49 +773,14 @@ impl PluginChain {
     /// Returns the output channel count of the plugin chain given the input channel count.
     /// If no channel-changing plugin is found, the input channel count passes through unchanged.
     pub fn output_channels_for_input(&self, input_channels: usize) -> usize {
-        // Walk backwards through the chain to find the last channel-count-changing plugin
-        for plugin in self.plugins.iter().rev() {
+        let mut current_channels = input_channels;
+        for plugin in &self.plugins {
             if !plugin.enabled || plugin.suspended {
                 continue;
             }
-
-            match &plugin.settings {
-                PluginSettings::Upmixer {
-                    speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
-                    ..
-                } => {
-                    return upmixer_settings_output_channels(speaker_config, *binaural_preview);
-                }
-                PluginSettings::AAE { speaker_config, .. } => {
-                    return upmixer_output_channels(speaker_config);
-                }
-                PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                    return upmixer_output_channels(target_layout);
-                }
-                PluginSettings::BinauralDecoder { .. } => {
-                    return 2;
-                }
-                PluginSettings::Downmix { .. } => {
-                    return 2;
-                }
-                PluginSettings::MonoToStereo { .. } => {
-                    return 2;
-                }
-                PluginSettings::Matrix {
-                    output_channels, ..
-                } => {
-                    return *output_channels;
-                }
-                _ => continue,
-            }
+            current_channels = plugin_output_channels(&plugin.settings, current_channels);
         }
-
-        // No channel-changing plugin found, input channels pass through
-        input_channels
+        current_channels
     }
 
     /// Adapt the matrix plugin to match the file's channel count.
@@ -829,47 +884,7 @@ impl PluginChain {
                 continue;
             }
 
-            // Track channel changes through the chain
-            match &plugin.settings {
-                PluginSettings::Upmixer {
-                    speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
-                    ..
-                } => {
-                    running_channels =
-                        upmixer_settings_output_channels(speaker_config, *binaural_preview);
-                }
-                PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                    running_channels = upmixer_output_channels(target_layout);
-                }
-                PluginSettings::BinauralDecoder { .. } => {
-                    running_channels = 2;
-                }
-                PluginSettings::Downmix { .. } => {
-                    running_channels = 2;
-                }
-                PluginSettings::MonoToStereo { .. } => {
-                    running_channels = 2;
-                }
-                PluginSettings::Matrix {
-                    output_channels, ..
-                } => {
-                    running_channels = *output_channels;
-                }
-                PluginSettings::External { state } => {
-                    running_channels = state.descriptor.audio_outputs;
-                }
-                PluginSettings::BandSplit { .. } => {
-                    running_channels *= 2;
-                }
-                PluginSettings::BandMerge { bands, .. } => {
-                    running_channels /= if *bands > 0 { *bands } else { 2 };
-                }
-                _ => {}
-            }
+            running_channels = plugin_output_channels(&plugin.settings, running_channels);
         }
 
         conflicts
@@ -1304,11 +1319,21 @@ impl PluginChain {
                     channels,
                     frequency,
                     crossover_type,
+                    frequencies,
+                    recombination_mode,
+                    num_bands,
+                    frequency_2,
+                    frequency_3,
                 } if *channels != current_channels => {
                     updated_settings = Some(PluginSettings::BandSplit {
                         channels: current_channels,
                         frequency: *frequency,
                         crossover_type: crossover_type.clone(),
+                        frequencies: frequencies.clone(),
+                        recombination_mode: *recombination_mode,
+                        num_bands: *num_bands,
+                        frequency_2: *frequency_2,
+                        frequency_3: *frequency_3,
                     });
                 }
                 PluginSettings::BandMerge { channels, bands } if *channels != current_channels => {
@@ -1326,46 +1351,8 @@ impl PluginChain {
 
             // Update output channels for next plugin
             if self.plugins[i].enabled && !self.plugins[i].suspended {
-                match &self.plugins[i].settings {
-                    PluginSettings::Upmixer {
-                        speaker_config,
-                        output:
-                            UpmixerOutputSettings {
-                                binaural_preview, ..
-                            },
-                        ..
-                    } => {
-                        current_channels =
-                            upmixer_settings_output_channels(speaker_config, *binaural_preview);
-                    }
-                    PluginSettings::AAE { speaker_config, .. } => {
-                        current_channels = upmixer_output_channels(speaker_config);
-                    }
-                    PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                        current_channels = upmixer_output_channels(target_layout);
-                    }
-                    PluginSettings::BinauralDecoder { .. } => {
-                        current_channels = 2;
-                    }
-                    PluginSettings::Matrix {
-                        output_channels, ..
-                    } => {
-                        current_channels = *output_channels;
-                    }
-                    PluginSettings::Downmix { .. } => {
-                        current_channels = 2; // Downmix always produces stereo
-                    }
-                    PluginSettings::MonoToStereo { .. } => {
-                        current_channels = 2; // MonoToStereo always produces stereo
-                    }
-                    PluginSettings::BandSplit { .. } => {
-                        current_channels *= 2; // Split into 2 bands
-                    }
-                    PluginSettings::BandMerge { bands, .. } => {
-                        current_channels /= if *bands > 0 { *bands } else { 2 };
-                    }
-                    _ => {}
-                }
+                current_channels =
+                    plugin_output_channels(&self.plugins[i].settings, current_channels);
             }
         }
     }
@@ -2275,6 +2262,127 @@ mod tests {
                 panic!("expected Gain");
             }
         }
+    }
+
+    #[test]
+    fn test_update_channels_bandsplit_merge_for_two_three_and_four_bands() {
+        for routed_bands in 2..=4 {
+            let mut chain = PluginChain::new();
+            chain.add_plugin(&PluginType::BandSplit).unwrap();
+            if let Some(split) = chain.get_plugin_mut(0) {
+                let PluginSettings::BandSplit { num_bands, .. } = &mut split.settings else {
+                    panic!("expected BandSplit");
+                };
+                *num_bands = routed_bands;
+            }
+            assert_eq!(
+                chain.output_channels_for_input(2),
+                2 * routed_bands,
+                "BandSplit output width for {routed_bands} bands"
+            );
+            chain.add_plugin(&PluginType::BandMerge).unwrap();
+            if let Some(merge) = chain.get_plugin_mut(1) {
+                let PluginSettings::BandMerge { bands, .. } = &mut merge.settings else {
+                    panic!("expected BandMerge");
+                };
+                *bands = routed_bands;
+            }
+            chain.add_plugin(&PluginType::Gain).unwrap();
+            chain.update_channel_dependent_plugins();
+
+            let expected_split_channels = 2 * routed_bands;
+            let PluginSettings::BandSplit { channels, .. } = &chain.get_plugin(0).unwrap().settings
+            else {
+                panic!("expected BandSplit");
+            };
+            assert_eq!(*channels, 2);
+            let PluginSettings::BandMerge { channels, .. } = &chain.get_plugin(1).unwrap().settings
+            else {
+                panic!("expected BandMerge");
+            };
+            assert_eq!(*channels, expected_split_channels);
+            let PluginSettings::Gain { channels, .. } = &chain.get_plugin(2).unwrap().settings
+            else {
+                panic!("expected Gain");
+            };
+            assert_eq!(*channels, 2, "split/merge with {routed_bands} bands");
+            assert_eq!(chain.output_channels_for_input(2), 2);
+        }
+    }
+
+    #[test]
+    fn crossover_width_tracks_active_topology_and_band_merge() {
+        let mut chain = PluginChain::new();
+        chain.add_plugin(&PluginType::Crossover).unwrap();
+        if let PluginSettings::Crossover {
+            output,
+            topology,
+            extra_frequencies,
+            channel_frequencies_hz,
+            channel_modes,
+            ..
+        } = &mut chain.get_plugin_mut(0).unwrap().settings
+        {
+            *output = "both".to_string();
+            *topology = Some(CrossoverTopology::Bands);
+            *extra_frequencies = vec![3_000.0, 8_000.0];
+            *channel_frequencies_hz = Some(vec![600.0, 1_200.0, 1_800.0, 2_400.0]);
+            *channel_modes = Some(vec![
+                "lowpass".to_string(),
+                "highpass".to_string(),
+                "mute".to_string(),
+                "passthrough".to_string(),
+            ]);
+        }
+        assert_eq!(chain.output_channels_for_input(4), 16);
+
+        chain.add_plugin(&PluginType::BandMerge).unwrap();
+        if let PluginSettings::BandMerge { bands, .. } =
+            &mut chain.get_plugin_mut(1).unwrap().settings
+        {
+            *bands = 4;
+        }
+        chain.add_plugin(&PluginType::Gain).unwrap();
+        chain.update_channel_dependent_plugins_for_input(4);
+        assert_eq!(chain.output_channels_for_input(4), 4);
+        let PluginSettings::BandMerge { channels, .. } = &chain.get_plugin(1).unwrap().settings
+        else {
+            panic!("expected BandMerge");
+        };
+        assert_eq!(*channels, 16);
+        let PluginSettings::Gain { channels, .. } = &chain.get_plugin(2).unwrap().settings else {
+            panic!("expected Gain");
+        };
+        assert_eq!(*channels, 4);
+        chain.remove_plugin(1);
+
+        if let PluginSettings::Crossover {
+            output, topology, ..
+        } = &mut chain.get_plugin_mut(0).unwrap().settings
+        {
+            *output = "highpass".to_string();
+            *topology = Some(CrossoverTopology::Bands);
+        }
+        assert_eq!(chain.output_channels_for_input(4), 4);
+
+        if let PluginSettings::Crossover { output, .. } =
+            &mut chain.get_plugin_mut(0).unwrap().settings
+        {
+            *output = "lowpass".to_string();
+        }
+        assert_eq!(chain.output_channels_for_input(4), 4);
+
+        if let PluginSettings::Crossover {
+            output, topology, ..
+        } = &mut chain.get_plugin_mut(0).unwrap().settings
+        {
+            *output = "both".to_string();
+            *topology = Some(CrossoverTopology::PerChannel);
+        }
+        assert_eq!(chain.output_channels_for_input(4), 4);
+
+        chain.toggle_plugin(0);
+        assert_eq!(chain.output_channels_for_input(4), 4);
     }
 
     #[test]

@@ -1,0 +1,12 @@
+e9e75befcb45cd738350b928d2e38b47e72ff08e49d15423cf49efbe8f05fb8c  audit/artifacts/aud142-ffi-state-validation-r2/full-lib.log
+8cd6b695899cd213964a4cf44e0438c2c103da3e4ff9a7336442686b5b23846d  audit/artifacts/aud142-ffi-state-validation-r2/strict-clippy-after-guard.log
+4698ea08b0d470ea22b32116974013fac38a5d6c63c026b2140b483e253b5f52  audit/artifacts/aud142-ffi-state-validation-r2/strict-clippy-final.log
+dbf3d2fd2c6697a092860022240ac8d67a304fe106a8649c8486c545140970f5  audit/artifacts/aud142-ffi-state-validation-r2/focused-preset-r3.log
+85abf01c2c05ab2bf17736c9bf3f6d0a7c6f8ee27065774a4acbacb63cdff80c  audit/artifacts/aud142-ffi-state-validation-r2/focused-preset-r4.log
+b15247214be923000b7353ef9732706ba8fc38a8d755187779302d6a31f19b3e  audit/artifacts/aud142-ffi-state-validation-r2/cdylib-build.log
+9a33291b6b2575c8338be9d7161d74561b1d165b28e1912e32efd62dea83e377  audit/artifacts/aud142-ffi-state-validation-r2/cdylib-receipt.md
+575645031a36edde5e0db1f9c2a4e2f20e9556bcd5a8dbe29c6f9a18a08518f2  audit/artifacts/aud142-ffi-state-validation-r2/build-source-start.sha256
+575645031a36edde5e0db1f9c2a4e2f20e9556bcd5a8dbe29c6f9a18a08518f2  audit/artifacts/aud142-ffi-state-validation-r2/build-source-end.sha256
+d883decaaa3885dda8ada50ef64811403d944205cce436e4fdc6d320731776ad  audit/artifacts/aud142-ffi-state-validation-r2/source-paths.txt
+a1b4fe4d15c1dd0936d36c4fbf4ce051d03e80d54608984dcabbe55fec34c814  audit/artifacts/aud142-ffi-state-validation-r2/sources.tar.gz
+c1b9d80a651e3ae2fe81d79edaf460ea200a87fae8f60a8b671ddfc66337b81f  audit/artifacts/aud142-ffi-state-validation-r2/cdylib-artifact-sha256.txt

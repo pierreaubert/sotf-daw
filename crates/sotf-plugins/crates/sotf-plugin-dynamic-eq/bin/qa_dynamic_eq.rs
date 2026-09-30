@@ -29,6 +29,7 @@ fn main() {
             band_ratio: 4.0,
             active: true,
             solo: false,
+            ..Default::default()
         }],
     };
 

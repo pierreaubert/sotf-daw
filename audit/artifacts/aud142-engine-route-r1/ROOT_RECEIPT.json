@@ -1,0 +1,58 @@
+{
+  "scope": "Crossover typed engine route and public core configuration; native schema/UI and independent Astra core/CPU review remain open",
+  "gates": {
+    "focused_crossover_engine": "7 passed, terminal 0; legacy minimal factory, 13 families, width modes, invalid candidates, full 257-frame Crossover -> BandMerge vector",
+    "existing_engine_width": "17 passed before two equivalent lint idiom fixes",
+    "full_crossover_package": "117 passed, 2 manual captures ignored, terminal 0",
+    "strict_engine_clippy": "all targets, warnings denied, terminal 0"
+  },
+  "prior_failures": "Focused r1 failed a structural-parameter test expectation; corrected to a real settings/config/factory roundtrip. Width/Clippy r1 passed 17 width tests but failed two style lints; equivalent saturating_mul/is_multiple_of fixes are covered by final engine Clippy. Converter null-array defect was found by root source inspection and corrected before these focused runs; no executed red is claimed.",
+  "provenance": "Selected 9 files archived after final gates with owner-reported no intervening edits. Archive copy hashes are stable across copy. No pre-run selected-source manifests or fully bound compiled executable were captured. Cargo flock serializes Cargo; other host dependencies may have been edited in the shared checkout.",
+  "owner": "Luna xhigh; Astra review pending",
+  "counts_by_test_binary": [
+    [
+      59,
+      0
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      6,
+      0
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      5,
+      0
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      29,
+      0
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      0,
+      0
+    ]
+  ]
+}

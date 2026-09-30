@@ -25,7 +25,7 @@ fn plugin(
 fn single_band_outputs_exact_zero_immediately_after_program_for_every_matrix_family() {
     let mut cases = 0;
     for algorithm in ["mode_matching", "allrad"] {
-        for order in 1..=3 {
+        for order in 1..=7 {
             for layout in ["5.1", "7.1.4", "9.1.6"] {
                 for weighting in [false, true] {
                     let mut p = plugin(order, layout, algorithm, weighting, false);
@@ -72,13 +72,13 @@ fn single_band_outputs_exact_zero_immediately_after_program_for_every_matrix_fam
             }
         }
     }
-    assert_eq!(cases, 36);
+    assert_eq!(cases, 84);
 }
 
 #[test]
 fn dual_band_retains_actual_filter_response_and_unknown_audio_support() {
     for algorithm in ["mode_matching", "allrad"] {
-        for order in 1..=3 {
+        for order in 1..=7 {
             let mut p = plugin(order, "7.1.4", algorithm, true, true);
             assert_eq!(p.tail_length(), TailLength::Unknown);
             p.initialize(48000).unwrap();

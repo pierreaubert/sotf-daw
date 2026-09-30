@@ -1,0 +1,24 @@
+{
+  "issue": "AUD142",
+  "scope": "focused core numerical, scalar automation and public per-channel lifecycle additions",
+  "final_test_source_sha256": "a940291a62b8d0a14efdf6a38fef8fe9a6004bd54f3e8a2ac44ec08c7d781bfb",
+  "tests": {
+    "passed": 10,
+    "failed": 0,
+    "ignored": 0
+  },
+  "final_test_log_sha256": "61757da35ef1ae61472dcac352b9b68fe18ed5c16e9b59c989ee12593c1f2c8d",
+  "strict_target_clippy": "exit 0",
+  "strict_target_clippy_log_sha256": "045a09aa291c63d511a34f195efc7e8f75faa3a26df949ad2719ed400b1593f8",
+  "final_source_rustfmt": "owner reported passed",
+  "source_capture": "post-gate selected snapshot, owner reports no intervening edits; seven entries stable across archive creation",
+  "limitations": [
+    "No pre-build complete source manifest or executable binding",
+    "Not full package/workspace gate",
+    "No native ABI, engine EOS or app UI acceptance",
+    "Astra re-review remains pending"
+  ],
+  "previous_checkpoint": "audit/artifacts/aud142-post-core",
+  "cutoff_contract": "20<=fc<=20000 and fc<0.495*Fs; exact3960@8k refuses, admitted probe uses preceding f32",
+  "root_source_review": "r3 gaps BW42 reverse and per-channel regular/irregular corrected in r4; original quantitative limits retained"
+}

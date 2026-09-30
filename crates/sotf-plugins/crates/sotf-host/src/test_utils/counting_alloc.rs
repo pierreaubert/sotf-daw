@@ -1,5 +1,4 @@
-use super::misc::ALLOC_COUNT;
-use super::misc::COUNTING_ENABLED;
+use super::misc::{ALLOC_COUNT, COUNTING_ENABLED, DEALLOC_COUNT};
 use std::alloc::{GlobalAlloc, Layout, System};
 
 pub struct CountingAlloc;
@@ -18,6 +17,11 @@ unsafe impl GlobalAlloc for CountingAlloc {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let _ = COUNTING_ENABLED.try_with(|enabled| {
+            if enabled.get() {
+                let _ = DEALLOC_COUNT.try_with(|count| count.set(count.get() + 1));
+            }
+        });
         unsafe { System.dealloc(ptr, layout) }
     }
 }

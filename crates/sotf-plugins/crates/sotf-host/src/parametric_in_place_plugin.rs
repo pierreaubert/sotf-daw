@@ -61,6 +61,15 @@ pub trait ParametricInPlacePlugin: Send {
         false
     }
 
+    /// Guarantees identity frame geometry for every supported process block.
+    ///
+    /// This is separate from bounded-subdivision support: an implementation
+    /// may preserve frame count without promising partition-invariant state.
+    /// Override only when every valid call returns exactly `context.num_frames`.
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        false
+    }
+
     /// Parameter metadata. May be dynamic (e.g. per-channel gains).
     fn parameter_schema(&self) -> ParameterSchema;
 
@@ -97,6 +106,16 @@ pub trait ParametricInPlacePlugin: Send {
     fn drain_output_frames_max(&self) -> usize {
         0
     }
+
+    /// Finish already accepted asynchronous work before querying EOS metadata.
+    /// See [`Plugin::prepare_drain_metadata`].
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Refresh native metadata on the plugin's serialized control thread.
+    /// See [`Plugin::refresh_control_thread_metadata`].
+    fn refresh_control_thread_metadata(&mut self) {}
 
     /// Prepare bounded, idempotent EOS work; see [`Plugin::begin_drain`].
     fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
@@ -396,6 +415,14 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.drain_output_frames_max()
     }
 
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        self.plugin.prepare_drain_metadata()
+    }
+
+    fn refresh_control_thread_metadata(&mut self) {
+        self.plugin.refresh_control_thread_metadata()
+    }
+
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
         self.plugin.begin_drain(context)
     }
@@ -452,6 +479,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
 
     fn output_channels(&self) -> usize {
         self.plugin.channels()
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        self.plugin.guarantees_identity_frame_geometry()
     }
 
     fn parameters(&self) -> Vec<Parameter> {
@@ -581,6 +612,14 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
 
     fn drain_output_frames_max(&self) -> usize {
         self.plugin.drain_output_frames_max()
+    }
+
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        self.plugin.prepare_drain_metadata()
+    }
+
+    fn refresh_control_thread_metadata(&mut self) {
+        self.plugin.refresh_control_thread_metadata()
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {

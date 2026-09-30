@@ -1,7 +1,7 @@
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
 use sotf_host::{CountingAlloc, assert_no_allocs, run_standard_tests};
-use sotf_plugin_band_split::{BandSplitPlugin, BandSplitPluginParams};
+use sotf_plugin_band_split::{BandSplitPlugin, BandSplitPluginParams, BandSplitRecombinationMode};
 use std::f32::consts::PI;
 use std::time::{Duration, Instant};
 
@@ -13,9 +13,13 @@ fn main() {
     let in_ch = 1;
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 1000.0,
         num_bands: 2,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
 
     let mut plugin = BandSplitPlugin::from_params(in_ch, &params).unwrap();
@@ -62,7 +66,8 @@ fn main() {
     run_standard_tests(&mut plugin, "BandSplitPlugin");
 
     verify_supported_rates_and_layouts();
-    benchmark_worst_case_automation();
+    benchmark_setup();
+    benchmark_automated_callback();
 
     println!("\n[ALL PASS] BandSplit QA Complete.");
 }
@@ -84,7 +89,34 @@ fn verify_supported_rates_and_layouts() {
     }
 }
 
-fn benchmark_worst_case_automation() {
+fn benchmark_setup() {
+    const ITERATIONS: usize = 400;
+    const CHANNELS: usize = 12;
+
+    let mut durations = Vec::with_capacity(ITERATIONS);
+    for _ in 0..ITERATIONS {
+        let started = Instant::now();
+        let mut plugin =
+            BandSplitPlugin::new_multiband(CHANNELS, &[200.0, 2_000.0, 8_000.0], "LR48").unwrap();
+        plugin.initialize(48_000).unwrap();
+        std::hint::black_box(&mut plugin);
+        durations.push(started.elapsed());
+        drop(plugin);
+    }
+
+    durations.sort_unstable();
+    let percentile = |p: usize| durations[(durations.len() - 1) * p / 100];
+    let maximum = *durations.last().unwrap_or(&Duration::ZERO);
+    println!(
+        "BandSplit 12ch/4-band LR48 setup (construct + initialize): p50={:?}, p95={:?}, p99={:?}, max={:?}",
+        percentile(50),
+        percentile(95),
+        percentile(99),
+        maximum
+    );
+}
+
+fn benchmark_automated_callback() {
     const CHANNELS: usize = 12;
     const FRAMES: usize = 512;
     let mut plugin =
@@ -121,7 +153,7 @@ fn benchmark_worst_case_automation() {
     let percentile = |p: usize| durations[(durations.len() - 1) * p / 100];
     let maximum = *durations.last().unwrap_or(&Duration::ZERO);
     println!(
-        "Band Split 12ch/4-band LR48 automation: p50={:?}, p95={:?}, p99={:?}, max={:?}, zero process allocations",
+        "BandSplit 12ch/4-band LR48 automated 512-frame callback: p50={:?}, p95={:?}, p99={:?}, max={:?}, zero process allocations",
         percentile(50),
         percentile(95),
         percentile(99),

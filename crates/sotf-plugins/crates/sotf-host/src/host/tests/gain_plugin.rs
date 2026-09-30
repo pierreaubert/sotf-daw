@@ -210,7 +210,8 @@ fn test_automation_basic() {
             values: vec![0.25, 0.75],
             samples_per_step: num_frames,
         },
-    );
+    )
+    .unwrap();
     let input = vec![1.0f32; num_frames * 2];
     let mut output = vec![0.0f32; num_frames * 2];
 

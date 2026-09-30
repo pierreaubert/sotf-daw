@@ -1,0 +1,17 @@
+d459f96241203116eb3c9ba1e95c0f01590a82fbfa5831fcd593c1742c57a2e1  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/capture-manifest.json
+da89b0901c7ed1ce0b1e549d3206ba9726b7d758aaac2093fba22feb454d816c  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/inactive_peak.f32le
+80518302ae9764413b1b8221c8da6073788cee74155302d496b3e1afe723a2b0  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/inactive_peak.params.json
+56b3f38b421626c32d8ed7ff33d7b35c1322fd327159e957a6d381682de60768  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/linked_boost.f32le
+5da611cd937421cb929f18436cb0ae173e23b8bc8cda74a660282684dd7630de  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/linked_boost.params.json
+bb6b9be8b740d109f98fdef063470b18a625f31adea560ab31182e3879145e65  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/linked_cut.f32le
+8ead750be8c1b8b2ac30338e9c2a34b29a1c9738530e48f7bdca327976d7ce14  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/linked_cut.params.json
+76865572fa7c8a09590c22d50709e05b6ece7621cf6e285282f4bf91ba27a3a2  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/solo_peak.f32le
+703fbf4ffa5c72f0449e8acf58e4dc3c33c9b74fdb80600dd65d08496229a012  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/solo_peak.params.json
+da89b0901c7ed1ce0b1e549d3206ba9726b7d758aaac2093fba22feb454d816c  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/stereo-input.f32le
+5c4c0337a76be270fc27640931a782ccbf2f0817ba9f7f919fd108262291b895  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/unlinked_boost.f32le
+a1f3334d49b0488d2d323ec802a1d8c8e37a9f53b0dbbcbd7e2926b8fbc17755  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/unlinked_boost.params.json
+ba9098a26270599b4106e4c8215acbd7e5cdb3a20d64d2d2e91fc1e4bb99c67b  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/unlinked_cut.f32le
+b46580b12367a7593e4abcfee5f1a6cc62ca80ee4533ef698fce6d6ec1235cdc  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/audio/unlinked_cut.params.json
+eab19a9cce787bdcf68ee42820ffd03b0b8436587a9914e1e207bfb948ce8701  crates/sotf-plugins/crates/plugins-ffi/tests/data/aud139_pre_edit/cabi/dynamic-eq-parameter-addresses.json
+6bad16ced6405a7b6c879e96b3b21b1796e8aff305de6ffab67f4a1327de0b61  crates/sotf-plugins/crates/plugins-ffi/tests/data/aud139_pre_edit/cabi/dynamic-eq-preset.json
+58d0d90eb5c264c27e44b0b5309bb66ebb39cb492a2ef667ead84cfddf017e9f  crates/sotf-plugins/crates/plugins-ffi/tests/data/aud139_pre_edit/cabi/dynamic-eq-state.json

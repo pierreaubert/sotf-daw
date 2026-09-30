@@ -54,6 +54,103 @@ fn band_merge_factory_rejects_invalid_or_unknown_state() {
 }
 
 #[test]
+fn convolution_factory_reconstructs_opt_in_true_stereo_and_keeps_neutral_prehydration() {
+    use sotf_plugin_convolution::params::Params as ConvolutionState;
+
+    for invalid in [serde_json::json!("yes"), serde_json::Value::Null] {
+        let parameters = serde_json::json!({
+            "ir_file": "",
+            "mix": 1.0,
+            "gain_db": 0.0,
+            "true_stereo": invalid
+        });
+        assert!(
+            create_plugin("convolution", &parameters, 2, 48_000).is_err(),
+            "non-boolean true_stereo value was accepted: {parameters}"
+        );
+    }
+
+    for channels in [1, 3] {
+        assert!(
+            create_plugin(
+                "convolution",
+                &serde_json::json!({
+                    "ir_file": "",
+                    "mix": 1.0,
+                    "gain_db": 0.0,
+                    "true_stereo": true
+                }),
+                channels,
+                48_000,
+            )
+            .is_err(),
+            "true-stereo mode accepted {channels} plugin channels"
+        );
+    }
+
+    let state = ConvolutionState {
+        true_stereo: true,
+        ..ConvolutionState::default()
+    };
+    let mut persisted = serde_json::to_value(state).expect("serialize host convolution state");
+    persisted
+        .as_object_mut()
+        .expect("convolution state serializes as an object")
+        .insert("ir_file".into(), serde_json::Value::String(String::new()));
+
+    let mut plugin = create_plugin("convolution", &persisted, 2, 48_000)
+        .expect("persisted true-stereo state should construct through the factory");
+    let id = ParameterId::from("true_stereo");
+    assert_eq!(plugin.get_parameter(&id), Some(ParameterValue::Bool(true)));
+    assert!(
+        plugin
+            .set_parameter(id, ParameterValue::Bool(false))
+            .is_err(),
+        "structural routing mode must require reconstruction"
+    );
+
+    // A matrix-configured plugin with no IR is a defined neutral pre-load route:
+    // it retains the normal NUPC dry latency and then reproduces both channels.
+    plugin.initialize(48_000).unwrap();
+    let latency = plugin.latency_samples();
+    let frames = latency + 64;
+    let mut input = vec![0.0_f32; frames * 2];
+    input[0] = 0.5;
+    input[1] = -0.25;
+    input[14] = -0.75;
+    input[15] = 0.125;
+    let mut output = vec![0.0_f32; input.len()];
+    plugin
+        .process(
+            &input,
+            &mut output,
+            &sotf_host::ProcessContext::new(48_000, frames),
+        )
+        .unwrap();
+    assert!(
+        output[..latency * 2]
+            .iter()
+            .all(|sample| sample.abs() < 1e-7)
+    );
+    for frame in 0..64 {
+        assert_eq!(output[(frame + latency) * 2], input[frame * 2]);
+        assert_eq!(output[(frame + latency) * 2 + 1], input[frame * 2 + 1]);
+    }
+
+    let legacy = create_plugin(
+        "convolution",
+        &serde_json::json!({"ir_file": "", "mix": 1.0, "gain_db": 0.0}),
+        2,
+        48_000,
+    )
+    .expect("old convolution preset should still construct");
+    assert_eq!(
+        legacy.get_parameter(&ParameterId::from("true_stereo")),
+        Some(ParameterValue::Bool(false))
+    );
+}
+
+#[test]
 fn band_split_factory_rejects_invalid_topology_and_unknown_state() {
     assert!(create_plugin("band_split", &serde_json::json!({}), 0, 48_000).is_err());
     for parameters in [
@@ -77,6 +174,60 @@ fn band_split_factory_rejects_invalid_topology_and_unknown_state() {
     .expect("valid Band Split preset must construct");
     assert_eq!(plugin.input_channels(), 12);
     assert_eq!(plugin.output_channels(), 48);
+}
+
+#[test]
+fn band_split_factory_normalizes_toolbar_choice_forms_without_reinterpreting_counts() {
+    let mode_forms = [
+        (serde_json::json!(0), 0),
+        (serde_json::json!(1), 1),
+        (serde_json::json!("Legacy Cascade"), 0),
+        (serde_json::json!("Phase Compensated"), 1),
+    ];
+    for (mode_form, expected_mode) in mode_forms {
+        for (band_label, expected_bands) in [("2 Bands", 2), ("3 Bands", 3), ("4 Bands", 4)] {
+            let plugin = create_plugin(
+                "band_split",
+                &serde_json::json!({
+                    "recombination_mode": mode_form,
+                    "num_bands": band_label
+                }),
+                2,
+                48_000,
+            )
+            .expect("toolbar choice labels and mode indices must construct");
+            assert_eq!(plugin.output_channels(), 2 * expected_bands);
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("recombination_mode")),
+                Some(ParameterValue::Int(expected_mode))
+            );
+        }
+    }
+
+    // Constructor configs already use actual counts. Preserve those values,
+    // including 2, instead of interpreting them as toolbar choice indices.
+    for band_count in 2..=4 {
+        let plugin = create_plugin(
+            "band_split",
+            &serde_json::json!({ "num_bands": band_count }),
+            2,
+            48_000,
+        )
+        .expect("actual constructor band counts remain valid");
+        assert_eq!(plugin.output_channels(), 2 * band_count);
+    }
+    for invalid_count in [0, 1, 5] {
+        assert!(
+            create_plugin(
+                "band_split",
+                &serde_json::json!({ "num_bands": invalid_count }),
+                2,
+                48_000,
+            )
+            .is_err(),
+            "invalid actual band count {invalid_count} must remain rejected"
+        );
+    }
 }
 
 #[test]
@@ -175,9 +326,17 @@ fn ambisonics_catalog_admits_every_supported_order() {
     let entry = catalog_entry("ambisonics_decoder").unwrap();
     assert_eq!(
         entry.metadata.channel_layout.supported_inputs,
-        super::catalog::PluginSupportedInputLayouts::Enumerated(&[4, 9, 16])
+        super::catalog::PluginSupportedInputLayouts::Enumerated(&[4, 9, 16, 25, 36, 49, 64])
     );
-    for (order, channels, layout) in [(1, 4, "5.1"), (2, 9, "7.1.4"), (3, 16, "9.1.6")] {
+    for (order, channels, layout) in [
+        (1, 4, "5.1"),
+        (2, 9, "7.1.4"),
+        (3, 16, "9.1.6"),
+        (4, 25, "5.1"),
+        (5, 36, "5.1"),
+        (6, 49, "5.1"),
+        (7, 64, "5.1"),
+    ] {
         let plugin = create_plugin(
             "ambisonics_decoder",
             &serde_json::json!({"order": order, "target_layout": layout}),
@@ -289,9 +448,17 @@ fn ambisonics_catalog_matches_factory_order_contract() {
     else {
         panic!("Ambisonics channel contract must enumerate supported HOA widths");
     };
-    assert_eq!(widths, &[4, 9, 16]);
+    assert_eq!(widths, &[4, 9, 16, 25, 36, 49, 64]);
 
-    for (channels, order, layout) in [(4, 1, "5.1"), (9, 2, "7.1.4"), (16, 3, "9.1.6")] {
+    for (channels, order, layout) in [
+        (4, 1, "5.1"),
+        (9, 2, "7.1.4"),
+        (16, 3, "9.1.6"),
+        (25, 4, "5.1"),
+        (36, 5, "5.1"),
+        (49, 6, "5.1"),
+        (64, 7, "5.1"),
+    ] {
         let mut plugin = create_plugin(
             "ambisonics_decoder",
             &serde_json::json!({
@@ -323,6 +490,17 @@ fn ambisonics_catalog_matches_factory_order_contract() {
         assert!(output.iter().all(|sample| sample.is_finite()));
         assert!(output.iter().any(|sample| sample.abs() > 1.0e-6));
     }
+
+    let mismatched_order = create_plugin(
+        "ambisonics_decoder",
+        &serde_json::json!({"order": 1, "target_layout": "5.1"}),
+        64,
+        48_000,
+    );
+    assert!(
+        matches!(mismatched_order, Err(error) if error.contains("Order-1 ambisonics requires 4 input channels")),
+        "an explicit order must still reject a mismatched input width"
+    );
 }
 
 #[test]

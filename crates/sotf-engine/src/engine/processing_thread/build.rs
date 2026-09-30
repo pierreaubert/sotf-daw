@@ -11,11 +11,27 @@ fn plugin_instance_id(parameters: &serde_json::Value) -> Option<usize> {
         .and_then(|value| usize::try_from(value).ok())
 }
 
+fn requires_complete_channel_route_candidate(plugin_type: &str) -> bool {
+    plugin_type.eq_ignore_ascii_case("band_split")
+        || plugin_type.eq_ignore_ascii_case("bandsplit")
+        || plugin_type.eq_ignore_ascii_case("crossover")
+}
+
+fn complete_channel_route_label(plugin_type: &str) -> &'static str {
+    if plugin_type.eq_ignore_ascii_case("crossover") {
+        "Crossover"
+    } else {
+        "BandSplit"
+    }
+}
+
 /// Build a plugin host from configs.
 ///
 /// Plugins that fail to create or have channel mismatches are skipped rather
-/// than aborting the entire chain. The second element of the returned tuple
-/// contains warnings about skipped plugins.
+/// than aborting the entire chain, except BandSplit and Crossover: skipping a
+/// requested channel-routing plugin would silently commit a different route
+/// and output layout. The second element of the returned tuple contains
+/// warnings about other skipped plugins.
 pub fn build_plugin_host(
     configs: &[PluginConfig],
     sample_rate: u32,
@@ -57,19 +73,30 @@ pub fn build_plugin_host_with_policy(
             Ok(plugin) => {
                 // Check channel compatibility
                 if plugin.input_channels() != current_channels {
-                    let msg = format!(
-                        "Plugin '{}' skipped: expects {} input channels, but chain provides {}",
-                        config.plugin_type,
+                    let reason = format!(
+                        "expects {} input channels, but chain provides {}",
                         plugin.input_channels(),
                         current_channels
                     );
-                    log::warn!("[Processing Thread] {}", msg);
-                    warnings.push(PluginBuildDiagnostic::chain_plugin(
+                    let msg = if requires_complete_channel_route_candidate(&config.plugin_type) {
+                        format!(
+                            "{} candidate rejected: {reason}",
+                            complete_channel_route_label(&config.plugin_type)
+                        )
+                    } else {
+                        format!("Plugin '{}' skipped: {reason}", config.plugin_type)
+                    };
+                    let diagnostic = PluginBuildDiagnostic::chain_plugin(
                         i,
                         plugin_instance_id(&config.parameters),
                         &config.plugin_type,
-                        msg,
-                    ));
+                        msg.clone(),
+                    );
+                    log::warn!("[Processing Thread] {}", msg);
+                    if requires_complete_channel_route_candidate(&config.plugin_type) {
+                        return Err(diagnostic);
+                    }
+                    warnings.push(diagnostic);
                     continue;
                 }
 
@@ -96,14 +123,25 @@ pub fn build_plugin_host_with_policy(
                 })?;
             }
             Err(e) => {
-                let msg = format!("Plugin '{}' skipped: {}", config.plugin_type, e);
+                let msg = if requires_complete_channel_route_candidate(&config.plugin_type) {
+                    format!(
+                        "{} candidate rejected: {e}",
+                        complete_channel_route_label(&config.plugin_type)
+                    )
+                } else {
+                    format!("Plugin '{}' skipped: {}", config.plugin_type, e)
+                };
                 log::warn!("[Processing Thread] {}", msg);
-                warnings.push(PluginBuildDiagnostic::chain_plugin(
+                let diagnostic = PluginBuildDiagnostic::chain_plugin(
                     i,
                     plugin_instance_id(&config.parameters),
                     &config.plugin_type,
                     msg,
-                ));
+                );
+                if requires_complete_channel_route_candidate(&config.plugin_type) {
+                    return Err(diagnostic);
+                }
+                warnings.push(diagnostic);
             }
         }
     }
@@ -278,3 +316,7 @@ pub fn build_plugin_graph_host_with_policy(
 
     Ok((host, Vec::new()))
 }
+
+#[cfg(test)]
+#[path = "build/aud142_crossover_tests.rs"]
+mod aud142_crossover_tests;

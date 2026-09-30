@@ -27,9 +27,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 fn unavailable_test_plugin(descriptor: &PluginDescriptor, sample_rate: u32) -> ExternalPlugin {
     ExternalPlugin {
         descriptor: descriptor.clone(),
+        discovery_descriptor: descriptor.clone(),
+        audio_setup: None,
         input_channels: descriptor.audio_inputs,
         output_channels: descriptor.audio_outputs.max(1),
         sample_rate,
+        max_block_frames: ExternalPlugin::DEFAULT_MAX_BLOCK_FRAMES,
         parameters: Vec::new(),
         hosting_backend: ExternalHostingBackend::Passthrough,
         restore_error: Some("intentional non-runnable test placeholder".to_string()),
@@ -93,10 +96,13 @@ fn negotiated_maximum_native_block_is_allocation_free() {
         output_channels: 2,
     };
     let mut plugin = ExternalPlugin {
+        discovery_descriptor: descriptor.clone(),
         descriptor,
+        audio_setup: None,
         input_channels: 2,
         output_channels: 2,
         sample_rate: 48_000,
+        max_block_frames,
         parameters: Vec::new(),
         hosting_backend: ExternalHostingBackend::Clap,
         restore_error: None,

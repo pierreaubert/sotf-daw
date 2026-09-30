@@ -1,0 +1,35 @@
+{
+  "scope": "AUD139 Dynamic EQ C FFI state/descriptor checkpoint; awaiting Astra review",
+  "result": {
+    "focused_state": {
+      "passed": 6,
+      "ignored": 1
+    },
+    "full_ffi_library": {
+      "passed": 78,
+      "ignored": 1
+    },
+    "ffi_clippy_all_targets_no_deps": "exit 0"
+  },
+  "commands": [
+    "cargo test --offline --locked -p plugins-ffi --lib aud139_ -- --nocapture",
+    "cargo test --offline --locked -p plugins-ffi --lib",
+    "cargo clippy --offline --locked --no-deps -p plugins-ffi --all-targets -- -D warnings"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target",
+    "TMPDIR": "/tmp",
+    "CARGO_NET_OFFLINE": "true",
+    "SOTF_FFI_SKIP_HEADER_SYNC": "1"
+  },
+  "selected_source_copy": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-ffi-r1/selected-source",
+  "limitations": [
+    "Selected manifests are not complete transitive dependency snapshots.",
+    "Focused state r4 source manifest had two invalid paths; do not use it as complete source evidence.",
+    "Crossover source changed between full-library and scoped lint gates; both original manifests are retained.",
+    "The current source copy matches the scoped lint manifest, not every historical full-library file.",
+    "Headers match one another and declare choice labels; header generation was skipped.",
+    "Engine/offline, native, mounted UI, CPU and AUD144 preset envelope identity validation are separate open work.",
+    "No Astra FFI acceptance has been obtained."
+  ]
+}

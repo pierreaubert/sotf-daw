@@ -1,0 +1,9 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud142_iir_families.rs": "a940291a62b8d0a14efdf6a38fef8fe9a6004bd54f3e8a2ac44ec08c7d781bfb",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/lib.rs": "be81d588e5fda072055e1ed41afb7669ef7076305d02452ca1938c3a2c4a6e16",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/iir_family.rs": "4c0c921fa89a8175e93bb494eb3f5b2946b280e5b43a2c3e08da2198a693271e",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/params.rs": "cf01159263fcf3eb1a5feb386d06cbc6989c4d8c11c6e6a8c51eb232f957ef2c",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/Cargo.toml": "5f4d616c6fd4c2ee56ca24464ad7f7a09cff64dfddb097c5b23143460dea0f22",
+  "Cargo.toml": "669a7e1485f9ab70a9449a2d31cacd8e6479778b9b6212c4f661280bb23f07f2",
+  "Cargo.lock": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18"
+}

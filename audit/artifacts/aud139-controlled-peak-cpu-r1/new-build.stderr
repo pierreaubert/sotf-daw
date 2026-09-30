@@ -1,0 +1,12 @@
+warning: patch `coreaudio-rs v0.13.1 (/home/pierre/src/all_of_sotf/sotf-daw/crates/3rdparties/coreaudio-rs)` was not used in the crate graph
+warning: patch `nnnoiseless v0.1.1 (/home/pierre/src/all_of_sotf/sotf-daw/crates/3rdparties/nnnoiseless)` was not used in the crate graph
+warning: patch `wgpu v29.0.3 (https://github.com/zed-industries/wgpu.git?rev=357a0c56e0070480ad9daea5d2eaa83150b79e88#357a0c56)` was not used in the crate graph
+warning: patch `wgpu-core v29.0.3 (https://github.com/zed-industries/wgpu.git?rev=357a0c56e0070480ad9daea5d2eaa83150b79e88#357a0c56)` was not used in the crate graph
+warning: patch `wgpu-hal v29.0.3 (https://github.com/zed-industries/wgpu.git?rev=357a0c56e0070480ad9daea5d2eaa83150b79e88#357a0c56)` was not used in the crate graph
+warning: patch `nih_plug v0.0.0 (/home/pierre/src/all_of_sotf/sotf-daw/crates/3rdparties/nih-plug)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+error: cannot update the lock file /tmp/sotf-aud139-controlled-cpu-r2/new/Cargo.lock because --locked was passed to prevent this
+help: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.

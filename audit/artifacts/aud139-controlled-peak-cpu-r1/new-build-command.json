@@ -1,0 +1,13 @@
+[
+  "cargo",
+  "test",
+  "--offline",
+  "--locked",
+  "--release",
+  "--manifest-path",
+  "/tmp/sotf-aud139-controlled-cpu-r2/new/Cargo.toml",
+  "--test",
+  "aud139_cpu_baseline",
+  "--no-run",
+  "--message-format=json"
+]

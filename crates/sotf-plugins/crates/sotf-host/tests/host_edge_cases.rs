@@ -380,7 +380,8 @@ fn host_wraps_plugin_with_preferred_oversampling_factor() {
 #[test]
 fn host_honors_disabled_oversampling_preference() {
     let mut host = DawHost::new(2, SAMPLE_RATE);
-    host.set_plugin_preferred_oversampling_enabled(false);
+    host.set_plugin_preferred_oversampling_enabled(false)
+        .unwrap();
     host.add_plugin(Box::new(PrefersOversamplingPlugin {
         channels: 2,
         factor: 4,

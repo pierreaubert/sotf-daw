@@ -1,0 +1,29 @@
+{
+  "case": "Bessel12",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": -8,
+  "state_matches_source": false,
+  "audio_matches_fresh": false,
+  "fresh_max_residual": 0.31079295836389065,
+  "old_family_sensitivity": 0.2840467095375061,
+  "audio": {
+    "actual": {
+      "file": "valid_Bessel12/actual.f32le",
+      "samples": 3572,
+      "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+    },
+    "reference": {
+      "file": "valid_Bessel12/reference.f32le",
+      "samples": 3572,
+      "sha256": "82528d46f59ce93c5288f5b101231e16fcc6c86107ad970989839dd45e45f266"
+    },
+    "old_family": {
+      "file": "valid_Bessel12/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": false
+}

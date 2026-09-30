@@ -1,7 +1,7 @@
 use super::PluginFuzzer;
 use rand::RngExt;
 use rand::rngs::StdRng;
-use sotf_plugins::{BandSplitPlugin, BandSplitPluginParams, Plugin};
+use sotf_plugins::{BandSplitPlugin, BandSplitPluginParams, BandSplitRecombinationMode, Plugin};
 
 pub(super) struct BandSplitFuzzer;
 
@@ -12,9 +12,13 @@ impl PluginFuzzer for BandSplitFuzzer {
 
         let params = BandSplitPluginParams {
             frequencies: vec![],
+            explicit_frequencies: None,
+            frequency_2: None,
+            frequency_3: None,
             num_bands: 2,
             frequency,
             crossover_type: crossover_type.to_string(),
+            recombination_mode: BandSplitRecombinationMode::LegacyCascade,
         };
 
         let plugin = BandSplitPlugin::from_params(channels, &params)

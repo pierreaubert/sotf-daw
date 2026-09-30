@@ -6,6 +6,7 @@ use super::render_progress::RenderProgress;
 use super::types::OutputFormat;
 use crate::decoder::source::AudioSource;
 use crate::engine::PluginConfig;
+use crate::plugins::{PluginSettings, PluginType};
 use std::path::Path;
 
 mod endpoint_composition;
@@ -47,6 +48,158 @@ fn create_constant_test_wav(
         writer.write_sample(value).unwrap();
     }
     writer.finalize().unwrap();
+}
+
+fn create_stereo_tone_test_wav(path: &Path, sample_rate: u32, num_frames: usize) {
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+    let mut writer = hound::WavWriter::create(path, spec).unwrap();
+    for frame in 0..num_frames {
+        let time = frame as f64 / f64::from(sample_rate);
+        writer
+            .write_sample((std::f64::consts::TAU * 2_000.0 * time).sin() as f32 * 0.5)
+            .unwrap();
+        writer
+            .write_sample((std::f64::consts::TAU * 7_000.0 * time).cos() as f32 * 0.3)
+            .unwrap();
+    }
+    writer.finalize().unwrap();
+}
+
+fn typed_band_split_config(
+    frequencies: Option<Vec<f64>>,
+    num_bands: usize,
+    crossover_type: &str,
+    phase_compensated: bool,
+) -> PluginConfig {
+    let mut settings = PluginSettings::default_for(&PluginType::BandSplit).unwrap();
+    let primary_frequency = frequencies
+        .as_ref()
+        .and_then(|frequencies| frequencies.first())
+        .copied()
+        .unwrap_or(900.0);
+    let second_frequency = frequencies
+        .as_ref()
+        .and_then(|frequencies| frequencies.get(1))
+        .copied()
+        .unwrap_or(4_000.0);
+    let third_frequency = frequencies
+        .as_ref()
+        .and_then(|frequencies| frequencies.get(2))
+        .copied()
+        .unwrap_or(12_000.0);
+    if let PluginSettings::BandSplit {
+        channels,
+        frequency,
+        crossover_type: setting_type,
+        frequencies: setting_frequencies,
+        recombination_mode,
+        num_bands: setting_bands,
+        frequency_2,
+        frequency_3,
+    } = &mut settings
+    {
+        *channels = 2;
+        *frequency = primary_frequency;
+        *setting_type = crossover_type.to_string();
+        *setting_frequencies = frequencies;
+        *recombination_mode = serde_json::from_value(if phase_compensated {
+            serde_json::json!("phase_compensated")
+        } else {
+            serde_json::json!("legacy_cascade")
+        })
+        .unwrap();
+        *setting_bands = num_bands;
+        *frequency_2 = second_frequency;
+        *frequency_3 = third_frequency;
+    } else {
+        unreachable!("BandSplit default returned another plugin settings variant");
+    }
+    settings.to_plugin_config(48_000.0)
+}
+
+type BandSplitComplex = (f64, f64);
+
+fn complex_add(left: BandSplitComplex, right: BandSplitComplex) -> BandSplitComplex {
+    (left.0 + right.0, left.1 + right.1)
+}
+
+fn complex_mul(left: BandSplitComplex, right: BandSplitComplex) -> BandSplitComplex {
+    (
+        left.0 * right.0 - left.1 * right.1,
+        left.0 * right.1 + left.1 * right.0,
+    )
+}
+
+fn complex_reciprocal(value: BandSplitComplex) -> BandSplitComplex {
+    let norm_squared = value.0 * value.0 + value.1 * value.1;
+    (value.0 / norm_squared, -value.1 / norm_squared)
+}
+
+fn complex_power(value: BandSplitComplex, power: u32) -> BandSplitComplex {
+    (0..power).fold((1.0, 0.0), |product, _| complex_mul(product, value))
+}
+
+fn independent_lr_allpass_response(
+    slope: &str,
+    probe_hz: f64,
+    cutoff_hz: f64,
+    sample_rate: u32,
+) -> BandSplitComplex {
+    let normalized = (std::f64::consts::PI * probe_hz / f64::from(sample_rate)).tan()
+        / (std::f64::consts::PI * cutoff_hz / f64::from(sample_rate)).tan();
+    let s = (0.0, normalized);
+    let s_squared = complex_mul(s, s);
+    let (denominator, high_order) = match slope {
+        "LR24" => {
+            let section = (
+                s_squared.0 + 1.0,
+                s_squared.1 + std::f64::consts::SQRT_2 * normalized,
+            );
+            (complex_mul(section, section), 4)
+        }
+        "LR48" => {
+            let q1 = 1.0 / (2.0 * (std::f64::consts::PI / 8.0).sin());
+            let q2 = 1.0 / (2.0 * (3.0 * std::f64::consts::PI / 8.0).sin());
+            let first = (s_squared.0 + 1.0, s_squared.1 + normalized / q1);
+            let second = (s_squared.0 + 1.0, s_squared.1 + normalized / q2);
+            let butterworth_fourth = complex_mul(first, second);
+            (complex_mul(butterworth_fourth, butterworth_fourth), 8)
+        }
+        _ => panic!("unsupported BandSplit slope {slope}"),
+    };
+    let low = complex_reciprocal(denominator);
+    let high = complex_mul(complex_power(s, high_order), low);
+    complex_add(low, high)
+}
+
+fn independent_split_merge_response(
+    slope: &str,
+    frequencies: &[f64],
+    probe_hz: f64,
+    sample_rate: u32,
+) -> BandSplitComplex {
+    frequencies.iter().fold((1.0, 0.0), |product, cutoff| {
+        complex_mul(
+            product,
+            independent_lr_allpass_response(slope, probe_hz, *cutoff, sample_rate),
+        )
+    })
+}
+
+fn typed_band_merge_config(num_bands: usize) -> PluginConfig {
+    let mut settings = PluginSettings::default_for(&PluginType::BandMerge).unwrap();
+    if let PluginSettings::BandMerge { channels, bands } = &mut settings {
+        *channels = 2;
+        *bands = num_bands;
+    } else {
+        unreachable!("BandMerge default returned another plugin settings variant");
+    }
+    settings.to_plugin_config(48_000.0)
 }
 
 fn create_impulse_test_wav(path: &Path, num_frames: usize, impulse_frames: &[usize]) {
@@ -494,6 +647,134 @@ fn test_offline_render_rejects_invalid_configuration() {
 }
 
 #[test]
+fn offline_typed_bandsplit_merge_preserves_phase_compensated_audio() {
+    let dir = std::env::temp_dir().join(format!(
+        "sotf_aud143_offline_bandsplit_{}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let input_path = dir.join("input.wav");
+    let sample_rate = 48_000;
+    let frames = sample_rate as usize;
+    create_stereo_tone_test_wav(&input_path, sample_rate, frames);
+
+    let cases: [(usize, &[f64]); 3] = [
+        (2, &[4_000.0]),
+        (3, &[900.0, 4_000.0]),
+        (4, &[900.0, 3_000.0, 6_500.0]),
+    ];
+    for slope in ["LR24", "LR48"] {
+        for (bands, cutoffs_hz) in cases {
+            let output_path = dir.join(format!("output-{slope}-{bands}.wav"));
+            let mut config = OfflineRenderConfig::new(
+                AudioSource::File(input_path.clone()),
+                output_path.clone(),
+            );
+            config.frame_size = 512;
+            config.plugins = vec![
+                typed_band_split_config(Some(cutoffs_hz.to_vec()), bands, slope, true),
+                typed_band_merge_config(bands),
+            ];
+            render_offline(&config, None).unwrap();
+
+            let reader = hound::WavReader::open(&output_path).unwrap();
+            assert_eq!(
+                reader.spec().sample_rate,
+                sample_rate,
+                "{slope}, {bands} bands"
+            );
+            assert_eq!(reader.spec().channels, 2, "{slope}, {bands} bands");
+            let output: Vec<f32> = reader.into_samples::<f32>().map(Result::unwrap).collect();
+            assert_eq!(output.len(), frames * 2, "{slope}, {bands} bands");
+            assert!(
+                output.iter().all(|sample| sample.is_finite()),
+                "{slope}, {bands} bands"
+            );
+
+            // Compare the complete settled output against an independently
+            // derived bilinear LR24/LR48 all-pass product, not a second render
+            // of the same implementation. Startup recursion is excluded.
+            let responses = [
+                independent_split_merge_response(slope, cutoffs_hz, 2_000.0, sample_rate),
+                independent_split_merge_response(slope, cutoffs_hz, 7_000.0, sample_rate),
+            ];
+            for (channel, frequency) in [2_000.0, 7_000.0].into_iter().enumerate() {
+                let response = responses[channel];
+                let magnitude = response.0.hypot(response.1);
+                assert!(
+                    (magnitude - 1.0).abs() <= 0.005,
+                    "{slope}, {bands} bands, {frequency} Hz independent all-pass magnitude {magnitude}"
+                );
+            }
+
+            let start_frame = 12_000;
+            let mut error_power = 0.0;
+            let mut input_power = 0.0;
+            let mut max_sample_residual = 0.0_f64;
+            for frame in start_frame..frames {
+                let time = frame as f64 / f64::from(sample_rate);
+                let phases = [
+                    std::f64::consts::TAU * 2_000.0 * time,
+                    std::f64::consts::TAU * 7_000.0 * time + std::f64::consts::FRAC_PI_2,
+                ];
+                for channel in 0..2 {
+                    let input_amplitude = if channel == 0 { 0.5 } else { 0.3 };
+                    let response = responses[channel];
+                    let expected = input_amplitude
+                        * response.0.hypot(response.1)
+                        * (phases[channel] + response.1.atan2(response.0)).sin();
+                    let actual = f64::from(output[frame * 2 + channel]);
+                    let residual = (actual - expected).abs();
+                    error_power += residual * residual;
+                    max_sample_residual = max_sample_residual.max(residual);
+                    input_power += (input_amplitude * phases[channel].sin()).powi(2);
+                }
+            }
+            let normalized_rms = (error_power / input_power).sqrt();
+            assert!(
+                normalized_rms <= 0.002,
+                "{slope}, {bands} bands settled full-waveform residual {normalized_rms}, max={max_sample_residual}"
+            );
+            assert!(output.iter().any(|sample| sample.abs() > 0.1));
+            let (frames, remainder) = output.as_chunks::<2>();
+            assert!(remainder.is_empty());
+            assert!(
+                frames.iter().any(|frame| (frame[0] - frame[1]).abs() > 0.1),
+                "{slope}, {bands} bands collapsed distinct channels"
+            );
+            println!(
+                "AUD143 offline {slope} {bands}-band route: settled waveform normalized RMS={normalized_rms:.8e}, max-absolute={max_sample_residual:.8e}"
+            );
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn offline_explicit_empty_bandsplit_does_not_truncate_destination() {
+    let dir = std::env::temp_dir().join(format!(
+        "sotf_aud143_offline_bandsplit_empty_{}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let input_path = dir.join("input.wav");
+    let output_path = dir.join("output.wav");
+    create_stereo_tone_test_wav(&input_path, 48_000, 1024);
+    let original = b"preserve existing offline destination";
+    std::fs::write(&output_path, original).unwrap();
+
+    let mut config = OfflineRenderConfig::new(AudioSource::File(input_path), output_path.clone());
+    config.plugins = vec![typed_band_split_config(Some(Vec::new()), 2, "LR24", true)];
+    let error = render_offline(&config, None).unwrap_err();
+    assert!(
+        error.contains("At least one crossover frequency is required"),
+        "unexpected typed BandSplit factory error: {error}"
+    );
+    assert_eq!(std::fs::read(&output_path).unwrap(), original);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn test_render_timeline() {
     use crate::timeline::clip::{Clip, Region};
     use crate::timeline::timeline::Timeline;
@@ -695,4 +976,194 @@ fn render_timeline_restores_loop_range_when_progress_panics() {
     assert!(!tl.transport.playing);
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn offline_dynamic_eq_shelf_settings_match_separately_configured_core() {
+    use sotf_plugins::{DynEqBandParams, ProcessContext, create_plugin};
+
+    fn band(shape: &str, frequency: f32, gain: f32, shelf_slope: f32) -> DynEqBandParams {
+        serde_json::from_value(serde_json::json!({
+            "shape": shape,
+            "shelf_slope": shelf_slope,
+            "frequency": frequency,
+            "q": 0.707,
+            "gain": gain,
+            "band_threshold": -48.0,
+            "band_ratio": 4.0,
+            "active": true,
+            "solo": false,
+        }))
+        .expect("typed DynamicEQ shelf band deserializes")
+    }
+
+    let sample_rate = 48_000_u32;
+    let source_frames = 4_099_usize;
+    let directory = tempfile::tempdir().expect("create temporary render directory");
+    let input_path = directory.path().join("dynamic-eq-input.wav");
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample: 32,
+        sample_format: hound::SampleFormat::Float,
+    };
+    let mut writer = hound::WavWriter::create(&input_path, spec).unwrap();
+    let mut input = Vec::with_capacity(source_frames * 2);
+    for frame in 0..source_frames {
+        let time = frame as f64 / f64::from(sample_rate);
+        let tone = |frequency: f64, phase: f64, amplitude: f64| {
+            (amplitude * (std::f64::consts::TAU * frequency * time + phase).sin()) as f32
+        };
+        let left = tone(90.0, 0.0, 0.18) + tone(720.0, 0.3, 0.13) + tone(6_800.0, -0.2, 0.08);
+        let right = tone(140.0, 0.2, 0.16) + tone(1_600.0, -0.4, 0.11) + tone(8_100.0, 0.5, 0.07);
+        input.extend([left, right]);
+        writer.write_sample(left).unwrap();
+        writer.write_sample(right).unwrap();
+    }
+    writer.finalize().unwrap();
+
+    let reference_parameters = serde_json::json!({
+        "num_bands": 2,
+        "threshold": -48.0,
+        "ratio": 4.0,
+        "attack_ms": 5.0,
+        "release_ms": 50.0,
+        "knee": 3.0,
+        "link_channels": true,
+        "mix": 1.0,
+        "bands": [
+            {
+                "frequency": 250.0,
+                "q": 0.707,
+                "gain": 8.0,
+                "band_threshold": -48.0,
+                "band_ratio": 4.0,
+                "active": true,
+                "solo": false,
+                "shape": "low_shelf",
+                "shelf_slope": 0.7
+            },
+            {
+                "frequency": 6_000.0,
+                "q": 0.707,
+                "gain": -7.0,
+                "band_threshold": -48.0,
+                "band_ratio": 4.0,
+                "active": true,
+                "solo": false,
+                "shape": "high_shelf",
+                "shelf_slope": 0.8
+            }
+        ]
+    });
+
+    let settings = PluginSettings::DynamicEq {
+        num_bands: 2.0,
+        threshold: -48.0,
+        ratio: 4.0,
+        attack: 5.0,
+        release: 50.0,
+        knee: 3.0,
+        link_channels: true,
+        mix: 1.0,
+        bands: vec![
+            band("low_shelf", 250.0, 8.0, 0.7),
+            band("high_shelf", 6_000.0, -7.0, 0.8),
+        ],
+    };
+    let plugin_config = settings.to_plugin_config(f64::from(sample_rate));
+    assert_eq!(plugin_config.plugin_type, "dynamic_eq");
+    assert_eq!(plugin_config.parameters["bands"][0]["shape"], "low_shelf");
+    assert_eq!(plugin_config.parameters["bands"][1]["shape"], "high_shelf");
+    assert_eq!(
+        plugin_config.parameters["bands"][0]["shelf_slope"]
+            .as_f64()
+            .unwrap() as f32,
+        0.7_f32
+    );
+    assert_eq!(
+        plugin_config.parameters["bands"][1]["shelf_slope"]
+            .as_f64()
+            .unwrap() as f32,
+        0.8_f32
+    );
+
+    let mut first_render: Option<Vec<f32>> = None;
+    for frame_size in [127, 257, 1_024] {
+        let output_path = directory
+            .path()
+            .join(format!("dynamic-eq-output-{frame_size}.wav"));
+        let mut config =
+            OfflineRenderConfig::new(AudioSource::File(input_path.clone()), output_path.clone());
+        config.plugins = vec![plugin_config.clone()];
+        config.frame_size = frame_size;
+        render_offline(&config, None).expect("engine offline render succeeds");
+
+        let rendered_reader = hound::WavReader::open(&output_path).unwrap();
+        assert_eq!(rendered_reader.spec().channels, 2);
+        assert_eq!(rendered_reader.spec().sample_rate, sample_rate);
+        let rendered = rendered_reader
+            .into_samples::<f32>()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        // `render_offline` adds no post-program tail; its default export is
+        // exactly the source duration after compensating chain latency.
+        assert_eq!(rendered.len(), source_frames * 2);
+        assert!(rendered.iter().all(|sample| sample.is_finite()));
+
+        let mut reference = create_plugin("dynamic_eq", &reference_parameters, 2, sample_rate)
+            .expect("independent explicit shelf config constructs the accepted core");
+        reference.initialize(sample_rate).unwrap();
+        let mut expected = vec![f32::NAN; input.len()];
+        let mut start_frame = 0;
+        while start_frame < source_frames {
+            let block_frames = (source_frames - start_frame).min(frame_size);
+            let sample_start = start_frame * 2;
+            let sample_end = sample_start + block_frames * 2;
+            let context = ProcessContext::new(sample_rate, block_frames);
+            assert_eq!(
+                reference
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut expected[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("reference core processes the same block"),
+                block_frames
+            );
+            start_frame += block_frames;
+        }
+        assert!(expected.iter().all(|sample| sample.is_finite()));
+
+        let max_error = rendered
+            .iter()
+            .zip(&expected)
+            .map(|(actual, expected)| (actual - expected).abs())
+            .fold(0.0_f32, f32::max);
+        let rms_error = rendered
+            .iter()
+            .zip(&expected)
+            .map(|(actual, expected)| f64::from(actual - expected).powi(2))
+            .sum::<f64>()
+            / rendered.len() as f64;
+        let rms_error = rms_error.sqrt();
+        assert!(max_error <= 2.0e-6, "max sample error {max_error}");
+        assert!(rms_error <= 2.0e-7, "RMS sample error {rms_error}");
+
+        if let Some(baseline) = &first_render {
+            let partition_error = rendered
+                .iter()
+                .zip(baseline)
+                .map(|(actual, baseline)| f64::from(actual - baseline).powi(2))
+                .sum::<f64>()
+                / rendered.len() as f64;
+            let partition_error = partition_error.sqrt();
+            assert!(
+                partition_error <= 2.0e-7,
+                "frame_size {frame_size} partition RMS {partition_error}"
+            );
+        } else {
+            first_render = Some(rendered);
+        }
+    }
 }

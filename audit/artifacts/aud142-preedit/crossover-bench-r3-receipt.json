@@ -1,0 +1,62 @@
+{
+  "audit_id": "AUD142",
+  "run": "crossover-preedit-criterion-r3",
+  "status": "completed",
+  "started_at_utc": "2026-09-30T06:12:33.180766342Z",
+  "finished_at_utc": "2026-09-30T06:14:25.441841257Z",
+  "build": {
+    "command": "flock /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo bench --offline --locked -p sotf-plugin-crossover --bench crossover-block-benchmark --no-run",
+    "log": "audit/artifacts/aud142-preedit/logs/crossover-bench-no-run-r1.log",
+    "log_sha256": "6156fbdc3709d1bedac354c824894a459508823199ce2ae37c12a440f9fa611c",
+    "binary": "crates/sotf-plugins/target/release/deps/crossover_block_benchmark-0f503e773e194c2e",
+    "binary_sha256": "06eafe84b566e4a10b9123c1a14e83fd16c6d20fef183a8e61e05dec26566e87",
+    "binary_archive": "audit/artifacts/aud142-preedit/crossover-benchmark-r3.tar.gz",
+    "binary_archive_sha256": "e7da1160ccc9e29b8327acccbd499ddcdf81522c1fc428042080fbc14a6cb6d6",
+    "benchmark_source_sha256": "bccca5d341a43cba59d9629c0d0fee24e4feceea83d4ecfec0eb9ede066c4220",
+    "crossover_plugin_source_sha256": "0c4357938dcf6b74141eee65416592b5c6db0b3a61a0efebcf9e8a742df28053",
+    "cargo_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18"
+  },
+  "timing": {
+    "command": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/crossover_block_benchmark-0f503e773e194c2e --bench --noplot --sample-size 30 --warm-up-time 1 --measurement-time 2",
+    "working_directory": "/tmp/aud142-crossover-criterion-r3",
+    "criterion_data_directory": "/tmp/aud142-crossover-criterion-r3/target/criterion",
+    "log": "audit/artifacts/aud142-preedit/logs/crossover-bench-timing-r3.log",
+    "log_sha256": "6d5f7df3c947a2cedf883839c71250c62e0d81fa45c734e75f38689b80abf501",
+    "durable_criterion_data": "audit/artifacts/aud142-preedit/criterion-r3",
+    "summary_csv": "audit/artifacts/aud142-preedit/crossover-bench-summary-r3.csv",
+    "summary_csv_sha256": "7fb5c95533ed50593744f6e0b0e02c65fd707b6ed41714dddac5a8fc7416fe8a",
+    "benchmark_cases": 31,
+    "sample_size_per_case": 30,
+    "case_groups": {
+      "crossover_setup_and_initialize": 7,
+      "crossover_lr_interleaved_blocks": 12,
+      "crossover_fir_interleaved_blocks": 12
+    },
+    "sample_and_estimate_files_verified": true,
+    "exit_code": 0
+  },
+  "machine": {
+    "cpu": "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
+    "logical_cpu_count": 128,
+    "allowed_cpu_list": "0-127",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "environment_files": [
+      "audit/artifacts/aud142-preedit/lscpu.txt",
+      "audit/artifacts/aud142-preedit/rustc-vv.txt",
+      "audit/artifacts/aud142-preedit/uname.txt"
+    ],
+    "load_and_process_snapshot": {
+      "captured_at_utc": "2026-09-30T06:09:15Z",
+      "minutes_before_run_start": 3.3,
+      "load_average_1_5_15m": [12.70, 22.83, 28.44],
+      "visible_top_process": "codex, 25% CPU; no local Cargo process",
+      "allowed_cpu_list": "0-127"
+    }
+  },
+  "interpretation_limits": [
+    "Processing numbers are per process call with the same initialized plugin reused across samples; the timer does not include setup.",
+    "Setup numbers cover construction and initialize in one iteration, followed by dropping the plugin.",
+    "These are throughput baselines from this host and run window, not worst-case execution-time guarantees.",
+    "The pre-run load snapshot is 3.3 minutes before Criterion began; other host-level load may not be visible in the container process list."
+  ]
+}

@@ -1,10 +1,11 @@
 use super::PluginIpcParameterEvent;
+use super::PluginIpcTailLength;
 use super::consts::{MAX_PLUGIN_IPC_MIDI_EVENTS, MAX_PLUGIN_IPC_PARAMETER_EVENTS};
 use super::plugin_ipc_layout::PluginIpcLayout;
 use super::plugin_ipc_state::PluginIpcState;
 use super::secure_plugin_shared_memory::SecurePluginSharedMemory;
 use crate::plugin::{MidiEvent, MidiMessage, ParameterEvent};
-use crate::plugin::{Plugin, ProcessContext};
+use crate::plugin::{Plugin, ProcessContext, TailLength};
 
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{PluginInfo, PluginResult};
@@ -67,6 +68,23 @@ fn test_secure_plugin_shared_memory_roundtrip() {
     assert_eq!(shared.worker_latency_samples(), None);
     shared.publish_worker_latency_samples(384);
     assert_eq!(shared.worker_latency_samples(), Some(384));
+    assert_eq!(shared.worker_tail_length(), PluginIpcTailLength::Unknown);
+    for (tail, expected) in [
+        (TailLength::Finite(0), PluginIpcTailLength::Finite(0)),
+        (
+            TailLength::Finite(8_192),
+            PluginIpcTailLength::Finite(8_192),
+        ),
+        (
+            TailLength::Finite(u64::from(u32::MAX - 1)),
+            PluginIpcTailLength::Infinite,
+        ),
+        (TailLength::Infinite, PluginIpcTailLength::Infinite),
+        (TailLength::Unknown, PluginIpcTailLength::Unknown),
+    ] {
+        shared.publish_worker_tail_length(tail);
+        assert_eq!(shared.worker_tail_length(), expected);
+    }
 
     let (input, output) = shared.audio_slices_mut();
     assert_eq!(input.len(), 256);

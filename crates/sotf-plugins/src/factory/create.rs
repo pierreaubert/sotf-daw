@@ -218,10 +218,21 @@ pub fn create_plugin(
         }
 
         "convolution" => {
+            let true_stereo = match parameters.get("true_stereo") {
+                Some(value) => value.as_bool().ok_or_else(|| {
+                    "Failed to parse convolution params: true_stereo must be a boolean".to_string()
+                })?,
+                None => false,
+            };
             let params: ConvolutionPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse convolution params: {e}"))?;
-            let plugin = ConvolutionPlugin::from_params(channels, sample_rate, params)
-                .map_err(|e| format!("Failed to create convolution plugin: {e}"))?;
+            let plugin = ConvolutionPlugin::from_params_with_routing(
+                channels,
+                sample_rate,
+                params,
+                true_stereo,
+            )
+            .map_err(|e| format!("Failed to create convolution plugin: {e}"))?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
@@ -588,7 +599,8 @@ pub fn create_plugin(
         }
 
         "band_split" => {
-            let params: BandSplitPluginParams = serde_json::from_value(parameters.clone())
+            let normalized = normalize_band_split_toolbar_choice_forms(parameters);
+            let params: BandSplitPluginParams = serde_json::from_value(normalized)
                 .map_err(|e| format!("Failed to parse band_split params: {e}"))?;
             let plugin = BandSplitPlugin::from_params(channels, &params)?;
             Ok(Box::new(plugin))
@@ -677,10 +689,22 @@ pub fn create_plugin(
             let descriptor = parse_external_plugin_descriptor(parameters)
                 .map_err(|e| format!("Failed to parse external plugin descriptor: {e}"))?;
             let external_state = parse_external_plugin_state(parameters, &descriptor)?;
-            if descriptor.audio_inputs != 0 && descriptor.audio_inputs != channels {
+            let (required_input_channels, setup_is_explicit) = match external_state
+                .as_ref()
+                .and_then(|state| state.audio_setup.as_ref())
+            {
+                Some(setup) => (setup.channel_counts()?.0, true),
+                None => (descriptor.audio_inputs, false),
+            };
+            if required_input_channels != 0 && required_input_channels != channels {
+                let requirement = if setup_is_explicit {
+                    "setup requires"
+                } else {
+                    "requires"
+                };
                 return Err(format!(
-                    "External plugin '{}' requires {} input channels, got {channels}",
-                    descriptor.name, descriptor.audio_inputs
+                    "External plugin '{}' {requirement} {required_input_channels} input channels, got {channels}",
+                    descriptor.name
                 ));
             }
 
@@ -725,6 +749,51 @@ pub fn create_plugin(
 
         other => Err(format!("Unknown plugin type: {other}")),
     }
+}
+
+/// The Studio toolbar emits choice parameters as their visible labels or as
+/// numeric indices. BandSplit's serialized constructor state uses enum strings
+/// and an actual band count, so translate only those unambiguous toolbar forms
+/// before deserializing. Numeric `num_bands` values retain their constructor
+/// meaning (2, 3, or 4 bands).
+fn normalize_band_split_toolbar_choice_forms(parameters: &serde_json::Value) -> serde_json::Value {
+    let mut normalized = parameters.clone();
+    let Some(fields) = normalized.as_object_mut() else {
+        return normalized;
+    };
+
+    if let Some(mode) = fields.get("recombination_mode") {
+        let canonical_mode = match mode {
+            serde_json::Value::Number(index) => match index.as_i64() {
+                Some(0) => Some("legacy_cascade"),
+                Some(1) => Some("phase_compensated"),
+                _ => None,
+            },
+            serde_json::Value::String(label) => match label.as_str() {
+                "Legacy Cascade" => Some("legacy_cascade"),
+                "Phase Compensated" => Some("phase_compensated"),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(mode) = canonical_mode {
+            fields.insert("recombination_mode".to_string(), serde_json::json!(mode));
+        }
+    }
+
+    if let Some(bands) = fields.get("num_bands") {
+        let band_count = match bands.as_str() {
+            Some("2 Bands") => Some(2),
+            Some("3 Bands") => Some(3),
+            Some("4 Bands") => Some(4),
+            _ => None,
+        };
+        if let Some(band_count) = band_count {
+            fields.insert("num_bands".to_string(), serde_json::json!(band_count));
+        }
+    }
+
+    normalized
 }
 
 fn require_graph_input_channels(

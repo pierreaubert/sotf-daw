@@ -1,0 +1,136 @@
+{
+  "old": [
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///tmp/sotf-aud139-controlled-cpu-r2/old#aud139-dynamic-eq-cpu-old@0.5.11",
+      "manifest_path": "/tmp/sotf-aud139-controlled-cpu-r2/old/Cargo.toml",
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "sotf_plugin_dynamic_eq",
+        "src_path": "/tmp/sotf-aud139-controlled-cpu-r2/old/src/lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": false
+      },
+      "features": [],
+      "filenames": [
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/libsotf_plugin_dynamic_eq-e4231e42d816ad5d.rlib",
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/libsotf_plugin_dynamic_eq-e4231e42d816ad5d.rmeta"
+      ],
+      "executable": null,
+      "fresh": false
+    },
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///tmp/sotf-aud139-controlled-cpu-r2/old#aud139-dynamic-eq-cpu-old@0.5.11",
+      "manifest_path": "/tmp/sotf-aud139-controlled-cpu-r2/old/Cargo.toml",
+      "target": {
+        "kind": [
+          "test"
+        ],
+        "crate_types": [
+          "bin"
+        ],
+        "name": "aud139_cpu_baseline",
+        "src_path": "/tmp/sotf-aud139-controlled-cpu-r2/old/tests/aud139_cpu_baseline.rs",
+        "edition": "2024",
+        "doc": false,
+        "doctest": false,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "features": [],
+      "filenames": [
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/aud139_cpu_baseline-13f5aec5eb7fa5db"
+      ],
+      "executable": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/aud139_cpu_baseline-13f5aec5eb7fa5db",
+      "fresh": false
+    }
+  ],
+  "new": [
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///tmp/sotf-aud139-controlled-cpu-r2/new#aud139-dynamic-eq-cpu-new@0.5.11",
+      "manifest_path": "/tmp/sotf-aud139-controlled-cpu-r2/new/Cargo.toml",
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "sotf_plugin_dynamic_eq",
+        "src_path": "/tmp/sotf-aud139-controlled-cpu-r2/new/src/lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": false
+      },
+      "features": [],
+      "filenames": [
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/libsotf_plugin_dynamic_eq-4e0f5d7f3380b2b7.rlib",
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/libsotf_plugin_dynamic_eq-4e0f5d7f3380b2b7.rmeta"
+      ],
+      "executable": null,
+      "fresh": false
+    },
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///tmp/sotf-aud139-controlled-cpu-r2/new#aud139-dynamic-eq-cpu-new@0.5.11",
+      "manifest_path": "/tmp/sotf-aud139-controlled-cpu-r2/new/Cargo.toml",
+      "target": {
+        "kind": [
+          "test"
+        ],
+        "crate_types": [
+          "bin"
+        ],
+        "name": "aud139_cpu_baseline",
+        "src_path": "/tmp/sotf-aud139-controlled-cpu-r2/new/tests/aud139_cpu_baseline.rs",
+        "edition": "2024",
+        "doc": false,
+        "doctest": false,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": true
+      },
+      "features": [],
+      "filenames": [
+        "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/aud139_cpu_baseline-884032dfeb19b6ff"
+      ],
+      "executable": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/release/deps/aud139_cpu_baseline-884032dfeb19b6ff",
+      "fresh": false
+    }
+  ]
+}

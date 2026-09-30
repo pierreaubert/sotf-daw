@@ -1,0 +1,11 @@
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  Cargo.lock
+41c739e4dd9aa134b74b4c49f60a2a9e4c907e888908960a9dc307b2603b1bb5  crates/sotf-plugins/crates/plugins-nih/src/params_default_sync_tests.rs
+8c7804412e492ec2b2171cdfa54d2338e09e2751c7aeb11f054fdb2a80833d2d  crates/sotf-plugins/crates/plugins-nih/src/params.rs
+b7d925d7aa5508da920d51abe09dcc1fcd75202a21d47e8474ebc48ccef02cac  crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs
+1dff3bcd85ff7525e43cf98e7b46879f78feb34ca7c85eb9c4524fd641cc69e6  crates/sotf-plugins/crates/plugins-nih/src/native_crossover.rs
+728db3746a96251d9ab54af7249109d45e805743b8251b4e65bb2ec6349e7c17  crates/sotf-plugins/crates/plugins-nih/src/params/configuration.rs
+c454aa31cff584d79c50be7977229c31b00b653740e4157d62765797952704b1  crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs
+949756b2a81139cf31fb9f1bce5d984e18134bb4165039524881dfa1399ac76d  crates/sotf-plugins/crates/sotf-plugin-crossover/src/types.rs
+cf01159263fcf3eb1a5feb386d06cbc6989c4d8c11c6e6a8c51eb232f957ef2c  crates/sotf-plugins/crates/sotf-plugin-crossover/src/params.rs
+8531adc2d85a2830d810b53408a63403929bffbfce5ce660ef627507b030162f  crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_kind.rs
+423112f2ecb611d8bcd59cf9410f32c746d0b36e06fe00601deae235800bb241  crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_mode.rs

@@ -1,0 +1,31 @@
+{
+  "status": "Executed comparison: 12/12 matched Peak cases within 1.10 budget; Astra review pending",
+  "exe_bindings": {
+    "old": {
+      "path": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-controlled-peak-cpu-r1/old-cpu-executable",
+      "sha256": "01d7c86b99d8c7d2b83dc37009e227e8202479642aa3a32c97c7ae74e290362c"
+    },
+    "new": {
+      "path": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-controlled-peak-cpu-r1/new-cpu-executable",
+      "sha256": "aa88e917a165f48030ad8ed39684947c75f3223cabea78f1de0c1a3e8fe1772f"
+    }
+  },
+  "source_scope": "Frozen old/new variant bytes and byte-identical archived benchmark are in variant-sources.tar.gz. 475 selected local dependency/config files were hash-stable over both real compilations; those hashes are preserved. Their historical bytes are not all archived. Not a complete transitive-source archive.",
+  "dependencies": "Final offline/locked metadata agrees excluding variant package identities. Both use identical current sibling math paths; this is not a historical dependency reconstruction.",
+  "build_scope": "Separate package names force genuinely distinct freshly compiled library and benchmark artifacts. Old build used offline/locked. Initial new locked command refused temporary lock normalization; subsequent offline command normalized only its temporary lock and built successfully. Final metadata for both is offline/locked.",
+  "selected_build_input_count": 475,
+  "selected_start_end_hashes_equal": true,
+  "invalid_attempt": {
+    "reason": "Same package identities reused one compiled executable; no timing was run with that attempt. Preserved for audit.",
+    "executable_hashes": {
+      "old": "06dc4c1438b062c7c3250459451908715095eee5ba924577dd24f7ba4e432fe8",
+      "new": "06dc4c1438b062c7c3250459451908715095eee5ba924577dd24f7ba4e432fe8"
+    }
+  },
+  "limitations": [
+    "Peak only; matched shelf comparison still pending",
+    "No native synchronization, setup/reset CPU or WCET conclusion",
+    "Timing receipt captures ABBA order and one CPU affinity; no guarantee of exclusive hardware utilization",
+    "Current source closure/build artifacts are not the historical pre-edit captured compiler/dependency closure"
+  ]
+}

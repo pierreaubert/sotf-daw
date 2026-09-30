@@ -1,8 +1,8 @@
 use super::crossover_mode::CrossoverMode;
 use super::misc::MAX_BANDS;
 use super::misc::parse_crossover_type_index;
-use super::types::BandSplitPluginParams;
-use crate::params::{CROSSOVER_TYPES, PARAMS as BS};
+use super::types::{BandSplitPluginParams, BandSplitRecombinationMode};
+use crate::params::{BAND_COUNTS, CROSSOVER_TYPES, PARAMS as BS};
 use sotf_host::param_bridge;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{
@@ -17,12 +17,32 @@ use sotf_host::smoothing::{LinearSmoother, LogSmoother};
 /// callback boundaries.
 pub(super) const COEFFICIENT_UPDATE_INTERVAL: usize = 8;
 
+fn take_parameter_by_id(
+    parameters: &mut Vec<sotf_host::parameters::Parameter>,
+    id: &str,
+) -> Option<sotf_host::parameters::Parameter> {
+    let index = parameters
+        .iter()
+        .position(|parameter| parameter.id.as_str() == id)?;
+    Some(parameters.remove(index))
+}
+
+fn frequency_parameter_index(id: &str) -> Option<usize> {
+    id.strip_prefix("frequency_")?
+        .parse::<usize>()
+        .ok()?
+        .checked_sub(1)
+}
+
 pub struct BandSplitPlugin {
     pub(super) input_channels: usize,
     pub(super) sample_rate: u32,
     pub(super) num_bands: usize,
+    pub(super) recombination_mode: BandSplitRecombinationMode,
     pub(super) crossover: CrossoverMode,
     pub(super) freq_smoothers: Vec<LogSmoother>,
+    /// Retain cutoff values for static parameters even when a band is inactive.
+    pub(super) frequency_targets: [f32; MAX_BANDS - 1],
     pub(super) applied_frequencies: Vec<f32>,
     pub(super) coefficient_update_countdown: usize,
     #[cfg(test)]
@@ -36,10 +56,8 @@ pub struct BandSplitPlugin {
     /// Crossover type string for param_bridge (Choice index <-> string)
     pub(super) crossover_type_index: usize,
     pub(super) cached_parameters: Vec<sotf_host::parameters::Parameter>,
-    /// Pre-built parameter IDs and display names for the dynamic frequency and
-    /// per-band gain parameters, so `rebuild_cached_parameters` does not
-    /// re-format them on every call.
-    pub(super) dynamic_param_keys: Vec<(ParameterId, String)>,
+    /// Pre-built parameter IDs and display names for per-band gain parameters,
+    /// so `rebuild_cached_parameters` does not format them repeatedly.
     pub(super) band_gain_param_keys: Vec<(ParameterId, String)>,
     /// Pre-allocated flat scratch buffer: [num_bands * input_channels] for per-frame band output.
     pub(super) band_flat: Vec<f32>,
@@ -69,6 +87,20 @@ impl BandSplitPlugin {
         frequencies: &[f64],
         crossover_type: &str,
     ) -> Result<Self, String> {
+        Self::new_multiband_with_mode(
+            input_channels,
+            frequencies,
+            crossover_type,
+            BandSplitRecombinationMode::LegacyCascade,
+        )
+    }
+
+    pub fn new_multiband_with_mode(
+        input_channels: usize,
+        frequencies: &[f64],
+        crossover_type: &str,
+        recombination_mode: BandSplitRecombinationMode,
+    ) -> Result<Self, String> {
         if frequencies.is_empty() {
             return Err("At least one crossover frequency is required".to_string());
         }
@@ -93,6 +125,12 @@ impl BandSplitPlugin {
         Self::validate_frequencies(frequencies, 48_000)?;
         let sr = 48000;
         let freq_f32: Vec<f32> = frequencies.iter().map(|&f| f as f32).collect();
+        let mut frequency_targets = [
+            BS[0].default_f64() as f32,
+            BS[4].default_f64() as f32,
+            BS[5].default_f64() as f32,
+        ];
+        frequency_targets[..freq_f32.len()].copy_from_slice(&freq_f32);
 
         let smoothers = frequencies
             .iter()
@@ -111,15 +149,22 @@ impl BandSplitPlugin {
         ];
 
         let crossover_type_index = parse_crossover_type_index(crossover_type);
-        let (dynamic_param_keys, band_gain_param_keys) =
-            Self::build_param_keys(num_bands, frequencies.len());
+        let band_gain_param_keys = Self::build_param_keys(num_bands);
 
         let mut p = Self {
             input_channels,
             sample_rate: sr,
             num_bands,
-            crossover: CrossoverMode::new(&freq_f32, sr, input_channels, crossover_type_index),
+            recombination_mode,
+            crossover: CrossoverMode::new(
+                &freq_f32,
+                sr,
+                input_channels,
+                crossover_type_index,
+                recombination_mode,
+            ),
             freq_smoothers: smoothers,
+            frequency_targets,
             applied_frequencies: freq_f32,
             coefficient_update_countdown: 0,
             #[cfg(test)]
@@ -129,7 +174,6 @@ impl BandSplitPlugin {
             band_gain_smoothers: gain_smoothers,
             crossover_type_index,
             cached_parameters: Vec::new(),
-            dynamic_param_keys,
             band_gain_param_keys,
             band_flat: vec![0.0f32; output_channels],
             initialized: false,
@@ -181,17 +225,7 @@ impl BandSplitPlugin {
         clippy::type_complexity,
         reason = "parameter key tuple is the natural representation for this helper"
     )]
-    fn build_param_keys(
-        num_bands: usize,
-        num_frequencies: usize,
-    ) -> (Vec<(ParameterId, String)>, Vec<(ParameterId, String)>) {
-        let dynamic_param_keys: Vec<_> = (1..num_frequencies)
-            .map(|i| {
-                let id = format!("frequency_{}", i + 1);
-                let name = format!("Frequency {}", i + 1);
-                (ParameterId::from(id.as_str()), name)
-            })
-            .collect();
+    fn build_param_keys(num_bands: usize) -> Vec<(ParameterId, String)> {
         let band_gain_param_keys: Vec<_> = (0..num_bands)
             .map(|i| {
                 let id = format!("band_{}_gain_db", i);
@@ -199,14 +233,16 @@ impl BandSplitPlugin {
                 (ParameterId::from(id.as_str()), name)
             })
             .collect();
-        (dynamic_param_keys, band_gain_param_keys)
+        band_gain_param_keys
     }
 
     pub fn from_params(
         input_channels: usize,
         params: &BandSplitPluginParams,
     ) -> Result<Self, String> {
-        let freqs = if !params.frequencies.is_empty() {
+        let freqs = if let Some(frequencies) = &params.explicit_frequencies {
+            frequencies.clone()
+        } else if !params.frequencies.is_empty() {
             params.frequencies.clone()
         } else {
             // Use num_bands to determine the number of crossover frequencies.
@@ -215,33 +251,53 @@ impl BandSplitPlugin {
                 3 => {
                     // Default 3-band: split at frequency and two octaves up.
                     let f1 = params.frequency;
-                    let f2 = (f1 * 4.0).min(20000.0);
+                    let f2 = params.frequency_2.unwrap_or((f1 * 4.0).min(20000.0));
                     vec![f1, f2]
                 }
                 4 => {
                     // Default 4-band: two octaves per split.
                     let f1 = params.frequency;
-                    let f2 = (f1 * 4.0).min(20000.0);
-                    let f3 = (f2 * 4.0).min(20000.0);
+                    let f2 = params.frequency_2.unwrap_or((f1 * 4.0).min(20000.0));
+                    let f3 = params.frequency_3.unwrap_or((f2 * 4.0).min(20000.0));
                     vec![f1, f2, f3]
                 }
                 n => return Err(format!("Unsupported num_bands: {} (must be 2-4)", n)),
             }
         };
-        Self::new_multiband(input_channels, &freqs, &params.crossover_type)
+        let mut plugin = Self::new_multiband_with_mode(
+            input_channels,
+            &freqs,
+            &params.crossover_type,
+            params.recombination_mode,
+        )?;
+        for (index, configured) in [(1usize, params.frequency_2), (2, params.frequency_3)] {
+            if index < freqs.len() {
+                continue;
+            }
+            if let Some(frequency) = configured {
+                if !frequency.is_finite() || !(20.0..=20_000.0).contains(&frequency) {
+                    return Err(format!(
+                        "frequency {} must be finite and within 20..=20000 Hz",
+                        index + 1
+                    ));
+                }
+                plugin.frequency_targets[index] = frequency as f32;
+            }
+        }
+        plugin.rebuild_cached_parameters();
+        Ok(plugin)
     }
 
     /// Get the f64 value of parameter at PARAMS index.
     /// Order must match params::PARAMS exactly.
     pub(super) fn param_value(&self, index: usize) -> Option<f64> {
         match index {
-            0 => Some(
-                self.freq_smoothers
-                    .first()
-                    .map(|s| s.target() as f64)
-                    .unwrap_or(300.0),
-            ),
+            0 => Some(self.frequency_targets[0] as f64),
             1 => Some(self.crossover_type_index as f64),
+            2 => Some(self.recombination_mode.index() as f64),
+            3 => Some(self.num_bands.saturating_sub(2).min(2) as f64),
+            4 => Some(self.frequency_targets[1] as f64),
+            5 => Some(self.frequency_targets[2] as f64),
             _ => None,
         }
     }
@@ -251,35 +307,55 @@ impl BandSplitPlugin {
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
         match index {
             0 => {
+                let frequency = BS[0].clamp_f64(value) as f32;
+                self.frequency_targets[0] = frequency;
                 if let Some(s) = self.freq_smoothers.first_mut() {
-                    s.set_target(BS[0].clamp_f64(value) as f32);
+                    s.set_target(frequency);
                 }
             }
             1 => {
                 self.crossover_type_index = (value as usize).min(CROSSOVER_TYPES.len() - 1);
+            }
+            2 => {
+                self.recombination_mode =
+                    BandSplitRecombinationMode::from_index(value.round().clamp(0.0, 1.0) as usize);
+            }
+            4 | 5 => {
+                let cutoff_index = index - 3;
+                let frequency = BS[index].clamp_f64(value) as f32;
+                self.frequency_targets[cutoff_index] = frequency;
+                if let Some(smoother) = self.freq_smoothers.get_mut(cutoff_index) {
+                    smoother.set_target(frequency);
+                }
             }
             _ => {}
         }
     }
 
     pub(super) fn rebuild_cached_parameters(&mut self) {
-        // Start with the static PARAMS entries (frequency, crossover_type)
-        let mut params = param_bridge::build_parameters(BS, |i| self.param_value(i));
-        // Add dynamic frequency parameters (frequency_2, frequency_3, ...)
-        for ((_i, smoother), (id, name)) in self
-            .freq_smoothers
-            .iter()
-            .enumerate()
-            .skip(1)
-            .zip(self.dynamic_param_keys.iter())
+        // All routing controls are static schema entries; the host layout
+        // conditionally shows the additional cutoffs for 3/4-band instances.
+        let mut remaining = param_bridge::build_parameters(BS, |i| self.param_value(i));
+        let mut params = Vec::with_capacity(remaining.len() + self.band_gain_param_keys.len());
+
+        // Keep the legacy public parameter ordering stable. Before the new
+        // routing controls were added, clients saw frequency, type, active
+        // extra cutoffs, then per-band gains. New static controls are appended
+        // after that sequence.
+        for key in ["frequency", "type"] {
+            if let Some(parameter) = take_parameter_by_id(&mut remaining, key) {
+                params.push(parameter);
+            }
+        }
+        if self.num_bands > 2
+            && let Some(parameter) = take_parameter_by_id(&mut remaining, "frequency_2")
         {
-            params.push(sotf_host::parameters::Parameter::new_float(
-                &id.0,
-                name,
-                smoother.target(),
-                20.0,
-                20000.0,
-            ));
+            params.push(parameter);
+        }
+        if self.num_bands > 3
+            && let Some(parameter) = take_parameter_by_id(&mut remaining, "frequency_3")
+        {
+            params.push(parameter);
         }
         // Add dynamic per-band gain parameters
         for (i, (id, name)) in self.band_gain_param_keys.iter().enumerate() {
@@ -294,6 +370,17 @@ impl BandSplitPlugin {
                 .with_group("Band Gains"),
             );
         }
+        for key in [
+            "frequency_2",
+            "frequency_3",
+            "recombination_mode",
+            "num_bands",
+        ] {
+            if let Some(parameter) = take_parameter_by_id(&mut remaining, key) {
+                params.push(parameter);
+            }
+        }
+        params.extend(remaining);
         self.cached_parameters = params;
     }
 
@@ -337,6 +424,7 @@ impl Plugin for BandSplitPlugin {
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
         let name = &id.0;
         let previous_crossover_type = self.crossover_type_index;
+        let previous_recombination_mode = self.recombination_mode;
 
         if (id.as_str() == "type" || id.as_str() == "crossover_type") && self.initialized {
             let requested = value
@@ -350,6 +438,28 @@ impl Plugin for BandSplitPlugin {
             }
             return Err("crossover_type is structural; rebuild the plugin".to_string());
         }
+        if id.as_str() == "recombination_mode" {
+            let requested = value
+                .as_int()
+                .ok_or_else(|| "recombination_mode must be a choice index".to_string())?;
+            if !(0..BandSplitRecombinationMode::LABELS.len() as i32).contains(&requested) {
+                return Err("recombination_mode choice index is out of range".to_string());
+            }
+            if requested as usize != self.recombination_mode.index() && self.initialized {
+                return Err("recombination_mode is structural; rebuild the plugin".to_string());
+            }
+        }
+        if id.as_str() == "num_bands" {
+            let requested = value
+                .as_int()
+                .ok_or_else(|| "num_bands must be a choice index".to_string())?;
+            if !(0..BAND_COUNTS.len() as i32).contains(&requested) {
+                return Err("num_bands choice index is out of range".to_string());
+            }
+            if requested as usize + 2 != self.num_bands {
+                return Err("num_bands is structural; rebuild the plugin".to_string());
+            }
+        }
         if (id.as_str() == "type" || id.as_str() == "crossover_type")
             && !matches!(value, ParameterValue::Int(index) if (0..CROSSOVER_TYPES.len() as i32).contains(&index))
         {
@@ -360,6 +470,15 @@ impl Plugin for BandSplitPlugin {
                 .as_float()
                 .ok_or_else(|| "frequency must be a float".to_string())?;
             self.validate_frequency_target(0, frequency)?;
+        }
+        if let Some(index) = frequency_parameter_index(id.as_str())
+            && index > 0
+            && index < self.freq_smoothers.len()
+        {
+            let frequency = value
+                .as_float()
+                .ok_or_else(|| "frequency must be a float".to_string())?;
+            self.validate_frequency_target(index, frequency)?;
         }
 
         // Try static PARAMS first (frequency at index 0, crossover_type at index 1)
@@ -376,7 +495,22 @@ impl Plugin for BandSplitPlugin {
                     self.sample_rate,
                     self.input_channels,
                     self.crossover_type_index,
+                    self.recombination_mode,
                 );
+            } else if idx == 2 && self.recombination_mode != previous_recombination_mode {
+                let freqs: Vec<f32> = self.freq_smoothers.iter().map(|s| s.target()).collect();
+                self.crossover.reinit(
+                    &freqs,
+                    self.sample_rate,
+                    self.input_channels,
+                    self.crossover_type_index,
+                    self.recombination_mode,
+                );
+            } else if idx >= 4
+                && let Some(smoother_index) = idx.checked_sub(3)
+                && let Some(smoother) = self.freq_smoothers.get(smoother_index)
+            {
+                self.validate_frequency_target(smoother_index, smoother.target())?;
             }
             self.update_cached_parameter(&id, value);
             return Ok(());
@@ -402,24 +536,6 @@ impl Plugin for BandSplitPlugin {
             return Ok(());
         }
 
-        // Match dynamic "frequency_N" (index N-1, for multiband splits)
-        if let Some(suffix) = name.strip_prefix("frequency_")
-            && let Ok(n) = suffix.parse::<usize>()
-        {
-            let Some(i) = n.checked_sub(1) else {
-                return Err(format!("Unknown parameter: {id}"));
-            };
-            if i < self.freq_smoothers.len() {
-                let v = value
-                    .as_float()
-                    .ok_or_else(|| "frequency must be a float".to_string())?;
-                self.validate_frequency_target(i, v)?;
-                self.freq_smoothers[i].set_target(v);
-                self.update_cached_parameter(&id, ParameterValue::Float(v));
-                return Ok(());
-            }
-        }
-
         Err(format!("Unknown parameter: {}", id))
     }
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
@@ -437,16 +553,6 @@ impl Plugin for BandSplitPlugin {
             && band_idx < self.num_bands
         {
             return Some(ParameterValue::Float(self.band_gains_db[band_idx]));
-        }
-
-        // Match dynamic "frequency_N"
-        if let Some(suffix) = name.strip_prefix("frequency_")
-            && let Ok(n) = suffix.parse::<usize>()
-        {
-            let i = n.checked_sub(1)?;
-            if i < self.freq_smoothers.len() {
-                return Some(ParameterValue::Float(self.freq_smoothers[i].target()));
-            }
         }
 
         None
@@ -471,6 +577,7 @@ impl Plugin for BandSplitPlugin {
             sample_rate,
             self.input_channels,
             self.crossover_type_index,
+            self.recombination_mode,
         );
         self.applied_frequencies.copy_from_slice(&freqs);
         self.coefficient_update_countdown = 0;
@@ -482,16 +589,15 @@ impl Plugin for BandSplitPlugin {
         Ok(())
     }
     fn reset(&mut self) {
-        self.crossover.reset();
         for (i, s) in self.band_gain_smoothers.iter_mut().enumerate() {
             s.reset(self.band_gains_linear[i]);
         }
         for (i, smoother) in self.freq_smoothers.iter_mut().enumerate() {
             let target = smoother.target();
             smoother.reset(target);
-            self.crossover.set_frequency(i, target);
             self.applied_frequencies[i] = target;
         }
+        self.crossover.reset(&self.applied_frequencies);
         self.coefficient_update_countdown = 0;
     }
 
@@ -574,6 +680,8 @@ impl Plugin for BandSplitPlugin {
                 self.crossover
                     .process_frame(frame_input, &mut band_slices[..nb]);
             }
+            self.crossover
+                .compensate_intermediate_bands(&mut self.band_flat, nb, in_ch);
 
             // Interleave bands into output: [band0_ch0, band0_ch1, band1_ch0, band1_ch1, ...]
             // Per-sample gain smoothing: advance each smoother by one sample to

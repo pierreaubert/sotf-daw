@@ -1,7 +1,7 @@
 use super::band_split_plugin::BandSplitPlugin;
 use super::crossover_mode::CrossoverMode;
 use super::misc::{MAX_BANDS, parse_crossover_type_index};
-use super::types::BandSplitPluginParams;
+use super::types::{BandSplitPluginParams, BandSplitRecombinationMode};
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
 use sotf_host::smoothing::LogSmoother;
@@ -86,7 +86,13 @@ fn control_rate_automation_tracks_per_sample_reference_without_zipper_energy() {
             .process(&input, &mut actual, &ProcessContext::new(48_000, frames))
             .unwrap();
 
-        let mut reference = CrossoverMode::new(&[500.0], 48_000, 1, kind_index);
+        let mut reference = CrossoverMode::new(
+            &[500.0],
+            48_000,
+            1,
+            kind_index,
+            BandSplitRecombinationMode::LegacyCascade,
+        );
         let mut smoother = LogSmoother::new(500.0, 20.0, 48_000);
         smoother.set_target(8_000.0);
         let mut expected = vec![0.0; frames * 2];
@@ -289,6 +295,49 @@ fn reset_during_frequency_ramp_matches_fresh_target_state() {
 }
 
 #[test]
+fn reset_forces_sub_threshold_lr24_and_lr48_cutoff_targets() {
+    for (crossover_type, target) in [("LR24", 1_000.000_5_f32), ("LR48", 1_000.05_f32)] {
+        let mut reset = BandSplitPlugin::new(1, 1_000.0, crossover_type).unwrap();
+        reset.initialize(48_000).unwrap();
+        reset
+            .set_parameter(
+                ParameterId::from("frequency"),
+                ParameterValue::Float(target),
+            )
+            .unwrap();
+
+        let warm_input: Vec<f32> = (0..4_096)
+            .map(|sample| (sample as f32 * 0.037).sin() * 0.31)
+            .collect();
+        let mut warm_output = vec![0.0; warm_input.len() * 2];
+        reset
+            .process(
+                &warm_input,
+                &mut warm_output,
+                &ProcessContext::new(48_000, warm_input.len()),
+            )
+            .unwrap();
+        assert!(warm_output.iter().any(|sample| sample.abs() > 1e-5));
+        reset.reset();
+
+        let mut fresh = BandSplitPlugin::new(1, f64::from(target), crossover_type).unwrap();
+        fresh.initialize(48_000).unwrap();
+        let input: Vec<f32> = (0..512)
+            .map(|sample| (sample as f32 * 0.071).cos() * 0.23)
+            .collect();
+        let mut reset_output = vec![0.0; input.len() * 2];
+        let mut fresh_output = vec![0.0; input.len() * 2];
+        let context = ProcessContext::new(48_000, input.len());
+        reset.process(&input, &mut reset_output, &context).unwrap();
+        fresh.process(&input, &mut fresh_output, &context).unwrap();
+        assert_eq!(
+            reset_output, fresh_output,
+            "{crossover_type} target {target}"
+        );
+    }
+}
+
+#[test]
 fn plugin_info_and_compile_metadata_match_runtime_contract() {
     let plugin = BandSplitPlugin::new_multiband(2, &[500.0, 2_000.0], "LR48").unwrap();
     assert_eq!(plugin.info().version, env!("CARGO_PKG_VERSION"));
@@ -354,9 +403,13 @@ fn test_band_split_stereo_three_bands() {
 fn test_band_split_from_params_3_bands() {
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 500.0,
         num_bands: 3,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     let p = BandSplitPlugin::from_params(1, &params).unwrap();
     assert_eq!(p.output_channels(), 3);
@@ -366,9 +419,13 @@ fn test_band_split_from_params_3_bands() {
 fn test_band_split_from_params_4_bands() {
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 200.0,
         num_bands: 4,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     let p = BandSplitPlugin::from_params(1, &params).unwrap();
     assert_eq!(p.output_channels(), 4);
@@ -378,9 +435,13 @@ fn test_band_split_from_params_4_bands() {
 fn test_band_split_from_params_frequency_spread_is_geometric() {
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 500.0,
         num_bands: 3,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     let p = BandSplitPlugin::from_params(1, &params).unwrap();
     let freq2 = p
@@ -391,9 +452,13 @@ fn test_band_split_from_params_frequency_spread_is_geometric() {
 
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 500.0,
         num_bands: 4,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     let p = BandSplitPlugin::from_params(1, &params).unwrap();
     let freq2 = p
@@ -676,17 +741,25 @@ fn test_parse_crossover_type_index() {
 fn test_from_params_unsupported_num_bands_errors() {
     let params_one = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 500.0,
         num_bands: 1,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     assert!(BandSplitPlugin::from_params(1, &params_one).is_err());
 
     let params_five = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 500.0,
         num_bands: 5,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     assert!(BandSplitPlugin::from_params(1, &params_five).is_err());
 }
@@ -695,9 +768,13 @@ fn test_from_params_unsupported_num_bands_errors() {
 fn test_from_params_2_bands_default() {
     let params = BandSplitPluginParams {
         frequencies: vec![],
+        explicit_frequencies: None,
+        frequency_2: None,
+        frequency_3: None,
         frequency: 750.0,
         num_bands: 2,
         crossover_type: "LR24".to_string(),
+        recombination_mode: BandSplitRecombinationMode::LegacyCascade,
     };
     let p = BandSplitPlugin::from_params(1, &params).unwrap();
     assert_eq!(p.num_bands, 2);
@@ -834,17 +911,14 @@ fn test_max_bands_constant_matches_too_many_bands_error() {
     assert!(result.is_err());
 }
 
-/// Dynamic frequency and per-band gain parameter IDs must be cached at
-/// construction and reused by `rebuild_cached_parameters`.
+/// Static cutoff/mode schema and per-band gain parameter IDs must be stable
+/// across `rebuild_cached_parameters`.
 #[test]
 fn test_param_keys_are_cached_and_reused() {
     let mut p = BandSplitPlugin::new_multiband(1, &[200.0, 2000.0, 10000.0], "LR24").unwrap();
 
-    // 3 frequencies -> frequency_2, frequency_3 cached; 4 bands -> band_0..band_3 gain keys.
-    assert_eq!(p.dynamic_param_keys.len(), 2);
-    assert_eq!(p.dynamic_param_keys[0].0, ParameterId::from("frequency_2"));
-    assert_eq!(p.dynamic_param_keys[0].1, "Frequency 2");
-    assert_eq!(p.dynamic_param_keys[1].0, ParameterId::from("frequency_3"));
+    // Four-band UI schema includes both additional cutoffs; gain keys remain
+    // instance-sized and cached.
     assert_eq!(p.band_gain_param_keys.len(), 4);
     assert_eq!(
         p.band_gain_param_keys[0].0,
@@ -856,19 +930,19 @@ fn test_param_keys_are_cached_and_reused() {
         ParameterId::from("band_3_gain_db")
     );
 
-    let keys_before = (p.dynamic_param_keys.clone(), p.band_gain_param_keys.clone());
+    let keys_before = p.band_gain_param_keys.clone();
     p.rebuild_cached_parameters();
-    assert_eq!(
-        (p.dynamic_param_keys.clone(), p.band_gain_param_keys.clone()),
-        keys_before
-    );
+    assert_eq!(p.band_gain_param_keys, keys_before);
 
     let params = p.parameters();
-    assert!(
-        params
-            .iter()
-            .any(|param| param.id == ParameterId::from("frequency_2"))
-    );
+    for id in [
+        "frequency_2",
+        "frequency_3",
+        "recombination_mode",
+        "num_bands",
+    ] {
+        assert!(params.iter().any(|param| param.id == ParameterId::from(id)));
+    }
     assert!(
         params
             .iter()

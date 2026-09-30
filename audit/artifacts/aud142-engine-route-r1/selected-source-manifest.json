@@ -1,0 +1,11 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/types.rs": "949756b2a81139cf31fb9f1bce5d984e18134bb4165039524881dfa1399ac76d",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs": "7e4c54303d090f214eefc88a68302cfe844249833c0d8b137b7b48b42615ed9f",
+  "crates/sotf-engine/src/plugins/plugin_settings.rs": "100290eb9130eab19670c7b14af7fe19d4dee538fff8a7342d2383a103976d04",
+  "crates/sotf-engine/src/plugins/plugin_config_converter/spatial.rs": "a326ac2bda38ed9cbe2e1bb01186588de33b15beb8e4300479ea2e87a698356d",
+  "crates/sotf-engine/src/plugin_param_accessors/crossover.rs": "223b60f060ca518afc3897328c594b45a7d38ffe3e11462b366e9e575cd65925",
+  "crates/sotf-engine/src/plugin_param_accessors/tests.rs": "d7dd284590ca7ce88b97230edcf37968f6c90b6c21cf5f784a2eee113590ca27",
+  "crates/sotf-engine/src/plugins/chain/plugin_chain.rs": "a76ebeeeb8a03b562395bc761fcb469e32b89f4f9948435e268fc41b7ae10001",
+  "crates/sotf-engine/src/engine/processing_thread/build.rs": "013dc255394c7d54dad5a519481644b3a05503eccc57989bd738de52b2958dfc",
+  "crates/sotf-engine/src/engine/processing_thread/build/aud142_crossover_tests.rs": "25b65bce3006435a7f4172dea5219b2f69a3e954f2ac3f52b4795311ba71defd"
+}

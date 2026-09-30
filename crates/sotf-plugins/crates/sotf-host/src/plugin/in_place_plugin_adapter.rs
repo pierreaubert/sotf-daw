@@ -203,6 +203,14 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         self.plugin.drain_output_frames_max()
     }
 
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        self.plugin.prepare_drain_metadata()
+    }
+
+    fn refresh_control_thread_metadata(&mut self) {
+        self.plugin.refresh_control_thread_metadata()
+    }
+
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
         self.plugin.begin_drain(context)
     }

@@ -1,0 +1,4 @@
+c454aa31cff584d79c50be7977229c31b00b653740e4157d62765797952704b1  crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs
+3294c6139d02a9fdf206acfcae2b086497331580793600085fd560fd6f450fc8  crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_realtime.rs
+8c7804412e492ec2b2171cdfa54d2338e09e2751c7aeb11f054fdb2a80833d2d  crates/sotf-plugins/crates/plugins-nih/src/params.rs
+697f015886aba38706468715d0d82ef5ff1aa0e67f232555c2505c3db521e2c5  crates/sotf-plugins/crates/plugins-nih/src/aud142_native_schema_tests.rs

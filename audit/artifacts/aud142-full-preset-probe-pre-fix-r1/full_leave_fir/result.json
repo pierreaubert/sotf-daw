@@ -1,0 +1,29 @@
+{
+  "case": "full_leave_fir",
+  "preset": true,
+  "expected_status": 0,
+  "status": 0,
+  "error": "",
+  "state_matches": true,
+  "audio_exact": true,
+  "max_residual": 0.0,
+  "control_sensitivity": 0.08511108160018921,
+  "audio": {
+    "actual": {
+      "file": "full_leave_fir/actual.f32le",
+      "samples": 1272,
+      "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+    },
+    "reference": {
+      "file": "full_leave_fir/reference.f32le",
+      "samples": 1272,
+      "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+    },
+    "cold_target": {
+      "file": "full_leave_fir/cold_target.f32le",
+      "samples": 1272,
+      "sha256": "526e2f24000d825c5787709ef96f62c5368e392760d4ee60c5c16d641e2baf6b"
+    }
+  },
+  "passed": true
+}

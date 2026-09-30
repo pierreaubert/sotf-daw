@@ -1,0 +1,6 @@
+d4795ef1b08a8363f77e0640e149c736edbcc9100d7b56eed344dfa2321ba4c5  receipt.json
+c2efacc628bcf171daa2102fcf597b7684f6e494f9e672e7942d920f207404ab  selected-source/crates/sotf-plugins/crates/plugins-nih/src/lib.rs
+f7d26feed0fdda8eecc60abd79cad483a25c361108736d1b8c4d1382e5c012d0  selected-source/crates/sotf-plugins/crates/plugins-nih/src/params.rs
+065a026ae6f06db9dcdd37bccf93a50abcec13483c94be167c3bc390208024d2  selected-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs
+bca9e342fd7d67eeab4731da90301649fd22c675195533d84e4203bcedebaf69  selected-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/params.rs
+d4c45cf07b7cc00fe76568b0e9a71989ac2803eaf5a99a8d895f241a251e2b09  source-sha256.txt

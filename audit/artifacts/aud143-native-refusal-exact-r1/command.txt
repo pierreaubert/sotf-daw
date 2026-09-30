@@ -1,0 +1,4 @@
+Working directory: /home/pierre/src/all_of_sotf/sotf-daw
+
+set -o pipefail
+env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target CARGO_NET_OFFLINE=true SOTF_TEST_BANDSPLIT_CLAP_PLUGIN=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud143-bandsplit-native-route-r3/BandSplit.clap SOTF_TEST_BANDSPLIT_VST3_PLUGIN=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud143-bandsplit-native-route-r3/BandSplit.vst3 flock -x /tmp/sotf-daw-audit-cargo.lock cargo test --offline --locked -p sotf-plugins --features external-plugin-clap,external-plugin-vst3 --test native_bandsplit_external_host rejects_conflicting_candidate -- --nocapture 2>&1 | tee audit/artifacts/aud143-native-refusal-exact-r1/focused-late-refusal.log

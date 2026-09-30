@@ -13,6 +13,52 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 #[test]
+fn decoder_scratch_and_frame_pool_prepare_sixty_four_channels() {
+    let (_recycle_tx, recycle_rx) = std::sync::mpsc::sync_channel(1);
+    let mut state = DecoderState::new(recycle_rx, DsdOutputMode::Disabled);
+    let samples =
+        crate::EngineConfig::MAX_FRAME_SIZE * crate::EngineConfig::MAX_INPUT_CHANNELS;
+
+    assert!(state.resampler_buffer.data.capacity() >= samples * 2);
+    assert!(state.resample_output_buffer.capacity() >= samples * 2);
+    assert!(state.resample_staging.data.capacity() >= samples * 4);
+    assert!(state.chunk_buffer.capacity() >= samples);
+    assert!(state.frame_send_buffer.capacity() >= samples);
+    assert_eq!(state.frame_buffer_pool.len(), 8);
+    assert!(state
+        .frame_buffer_pool
+        .iter()
+        .all(|buffer| buffer.capacity() >= samples));
+
+    let mut scratch = [
+        &mut state.resampler_buffer.data,
+        &mut state.resample_output_buffer,
+        &mut state.resample_staging.data,
+        &mut state.chunk_buffer,
+        &mut state.frame_send_buffer,
+    ];
+    let mut original_ptrs = Vec::with_capacity(scratch.len());
+    for (index, buffer) in scratch.iter_mut().enumerate() {
+        let required = match index {
+            0 | 1 => samples * 2,
+            2 => samples * 4,
+            _ => samples,
+        };
+        original_ptrs.push(buffer.as_ptr());
+        DecoderState::ensure_buffer_len(buffer, required).unwrap();
+    }
+    for (buffer, original_ptr) in scratch.iter().zip(original_ptrs) {
+        assert_eq!(buffer.as_ptr(), original_ptr);
+    }
+
+    for buffer in &mut state.frame_buffer_pool {
+        let original_ptr = buffer.as_ptr();
+        DecoderState::ensure_buffer_len(buffer, samples).unwrap();
+        assert_eq!(buffer.as_ptr(), original_ptr);
+    }
+}
+
+#[test]
 fn decoder_shutdown_does_not_block_on_a_stuck_worker() {
     let (command_tx, _command_rx) = std::sync::mpsc::channel();
     let (_response_tx, response_rx) = std::sync::mpsc::channel();

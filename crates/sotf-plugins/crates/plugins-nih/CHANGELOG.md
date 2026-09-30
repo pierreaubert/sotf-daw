@@ -1,3 +1,12 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Expose fixed native schemas for higher-order Ambisonics, Crossover topology, DynamicEQ shelves and BandSplit phase compensation.
+- Add deferred DynamicEQ structural restart and retry handling for CLAP and VST3, including Linux host-runloop dispatch and saved-state restoration.
+- Correct optional auxiliary output buffer handling and preserve the active graph on refused preparation.
+- Keep scalar control synchronization allocation-free and use plugin-aware synchronization for dormant Crossover controls.
+
 # 0.5.4 (unreleased)
 
 ## Fixes

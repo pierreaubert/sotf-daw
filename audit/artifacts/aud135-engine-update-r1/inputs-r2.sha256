@@ -1,0 +1,4 @@
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  Cargo.lock
+eb2c796ca69889e42c5b83e1ffe92f2d83dd40aa7bb64ee8d3f4c19f504adf15  crates/sotf-engine/src/engine/manager_thread/apply.rs
+7dfc7b96519b0d884a3b06633c009e3024f0a5a46a418236f43596699f74a3b8  crates/sotf-plugins/target/audit-artifacts/aud135-native-late-restore-r1/Ambisonics.vst3/Contents/x86_64-linux/ambisonics.so
+f175030c15dde44066dcbc3585bc9c9349bb8e9e9ed8b9bdb9e9a8d723f3ff45  crates/sotf-plugins/target/debug/sotf-external-plugin-worker

@@ -1,0 +1,2 @@
+d8ed320790fd445edd515922dc54b8b67a30fa04204d72936c849cf77cb025e3  crates/sotf-plugins/target/audit-artifacts/aud142-ffi-state-r1/libplugins_ffi.so
+34b254aad2fc720174511e3233273fc81cfcb784e0ac5da5bb019cec73e674d1  audit/artifacts/aud142-ffi-state-validation-r1/cdylib-build.log

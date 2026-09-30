@@ -1,0 +1,155 @@
+{
+  "accepted_max": 1.25,
+  "actual_affinity_observed": "launcher child reported affinity list 8; CPU 8 was requested with taskset",
+  "case_groups": 12,
+  "case_ratios": [
+    {
+      "bands": 4,
+      "callback_frames": 64,
+      "channels": 2,
+      "high_shelf_median_ns": 12383550,
+      "high_shelf_ratio": 0.925338,
+      "low_shelf_median_ns": 11209817,
+      "low_shelf_ratio": 0.837633,
+      "peak_median_ns": 13382731
+    },
+    {
+      "bands": 4,
+      "callback_frames": 256,
+      "channels": 2,
+      "high_shelf_median_ns": 12324998,
+      "high_shelf_ratio": 0.914807,
+      "low_shelf_median_ns": 11176814,
+      "low_shelf_ratio": 0.829585,
+      "peak_median_ns": 13472782
+    },
+    {
+      "bands": 4,
+      "callback_frames": 1024,
+      "channels": 2,
+      "high_shelf_median_ns": 12347731,
+      "high_shelf_ratio": 0.923374,
+      "low_shelf_median_ns": 11256885,
+      "low_shelf_ratio": 0.8418,
+      "peak_median_ns": 13372402
+    },
+    {
+      "bands": 8,
+      "callback_frames": 64,
+      "channels": 2,
+      "high_shelf_median_ns": 23956303,
+      "high_shelf_ratio": 0.886491,
+      "low_shelf_median_ns": 21743593,
+      "low_shelf_ratio": 0.804611,
+      "peak_median_ns": 27023741
+    },
+    {
+      "bands": 8,
+      "callback_frames": 256,
+      "channels": 2,
+      "high_shelf_median_ns": 24027598,
+      "high_shelf_ratio": 0.887528,
+      "low_shelf_median_ns": 21661758,
+      "low_shelf_ratio": 0.800139,
+      "peak_median_ns": 27072493
+    },
+    {
+      "bands": 8,
+      "callback_frames": 1024,
+      "channels": 2,
+      "high_shelf_median_ns": 23888144,
+      "high_shelf_ratio": 0.889815,
+      "low_shelf_median_ns": 21583920,
+      "low_shelf_ratio": 0.803984,
+      "peak_median_ns": 26846205
+    },
+    {
+      "bands": 4,
+      "callback_frames": 64,
+      "channels": 8,
+      "high_shelf_median_ns": 19552854,
+      "high_shelf_ratio": 0.842742,
+      "low_shelf_median_ns": 19051586,
+      "low_shelf_ratio": 0.821137,
+      "peak_median_ns": 23201473
+    },
+    {
+      "bands": 4,
+      "callback_frames": 256,
+      "channels": 8,
+      "high_shelf_median_ns": 19891967,
+      "high_shelf_ratio": 0.839074,
+      "low_shelf_median_ns": 19075100,
+      "low_shelf_ratio": 0.804617,
+      "peak_median_ns": 23707051
+    },
+    {
+      "bands": 4,
+      "callback_frames": 1024,
+      "channels": 8,
+      "high_shelf_median_ns": 19643997,
+      "high_shelf_ratio": 0.839444,
+      "low_shelf_median_ns": 19027590,
+      "low_shelf_ratio": 0.813103,
+      "peak_median_ns": 23401211
+    },
+    {
+      "bands": 8,
+      "callback_frames": 64,
+      "channels": 8,
+      "high_shelf_median_ns": 40283409,
+      "high_shelf_ratio": 0.79208,
+      "low_shelf_median_ns": 37859440,
+      "low_shelf_ratio": 0.744418,
+      "peak_median_ns": 50857783
+    },
+    {
+      "bands": 8,
+      "callback_frames": 256,
+      "channels": 8,
+      "high_shelf_median_ns": 40441790,
+      "high_shelf_ratio": 0.792208,
+      "low_shelf_median_ns": 37586372,
+      "low_shelf_ratio": 0.736274,
+      "peak_median_ns": 51049436
+    },
+    {
+      "bands": 8,
+      "callback_frames": 1024,
+      "channels": 8,
+      "high_shelf_median_ns": 40743721,
+      "high_shelf_ratio": 0.804376,
+      "low_shelf_median_ns": 37762676,
+      "low_shelf_ratio": 0.745523,
+      "peak_median_ns": 50652594
+    }
+  ],
+  "copied_release_executable_sha256": "62fc8e4c026c6920212bde6b7e6a64b7934d9029e36f7db8aa4d64f4a48bb2f0",
+  "high_shelf_ratio_max": 0.925338,
+  "high_shelf_ratio_min": 0.79208,
+  "low_shelf_ratio_max": 0.8418,
+  "low_shelf_ratio_min": 0.736274,
+  "max_shelf_to_peak_ratio": 0.925338,
+  "previous_peak_compatibility_context": {
+    "accepted_peak_limit": 1.1,
+    "cases": 12,
+    "measurements_per_variant_and_case": 14,
+    "old_to_new_ratio_max": 1.060697,
+    "old_to_new_ratio_min": 0.989306,
+    "packet": "audit/artifacts/aud139-controlled-peak-cpu-r1",
+    "packet_outer_sha256": "5d3420430d9eff8e3851531d243fcd9e5030962e8b8b0732314c4e2af74853c0"
+  },
+  "raw_rows": 36,
+  "session_id": 83390,
+  "shape_order": "Warmup round r uses (r+offset)%3; measurement round t uses (t+offset)%3; raw shape vectors remain grouped by shape in the executable output.",
+  "source_changes_during_measurement": {},
+  "source_end_manifest_sha256": "184490e472945af861118706447e02f04d345a980e4eb6512fae272479127b73",
+  "source_entry_count": 451,
+  "source_manifest_scope": "post-build / pre-measurement snapshot compared to post-measurement end; exact equality proves source stability during measurement, not build-time source binding. No pre-build manifest was captured.",
+  "source_snapshot_copy": "selected-source/ contains exact byte copies of all 451 selected sources; each copy was verified against both equal start/end manifests.",
+  "source_start_manifest_sha256": "184490e472945af861118706447e02f04d345a980e4eb6512fae272479127b73",
+  "terminal_exit_code": 0,
+  "test_result": "running 1 test; 1 passed, 0 failed, 0 ignored; finished in 10.34s",
+  "trials_per_shape_case": 7,
+  "wrapper_diagnostic": "A non-fatal printf format error affected only the order annotation in the shell log header; benchmark executable still ran and returned exit 0. Exact diagnostic is preserved separately."
+}

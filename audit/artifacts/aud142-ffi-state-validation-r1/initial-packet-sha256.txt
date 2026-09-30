@@ -1,0 +1,6 @@
+dd1e24595f54e63065a00a4a5c2642422d5d78bd4a331c511cce64021b827e12  audit/artifacts/aud142-ffi-state-validation-r1/full-lib.log
+858a605ad4a93004d48ba41fb12d78b26e73fe364671db09d5b82ae88b0781ff  audit/artifacts/aud142-ffi-state-validation-r1/strict-clippy.log
+ab190c754574a797f9eae64c205663e0bce3a354e7d968309583e30e2ac753bb  audit/artifacts/aud142-ffi-state-validation-r1/focused-state.log
+166169caea1f3405effa5ab49370c573a0fafaa4c11fafe05e012e6eb5c67c67  audit/artifacts/aud142-ffi-state-validation-r1/build-source-start.sha256
+d883decaaa3885dda8ada50ef64811403d944205cce436e4fdc6d320731776ad  audit/artifacts/aud142-ffi-state-validation-r1/source-paths.txt
+1be00b61421e88fe785a453155cff45a1cfeab300a92c2898714722e38cf90bf  audit/artifacts/aud142-ffi-state-validation-r1/sources.tar.gz

@@ -1,9 +1,18 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Report the full 960-frame RNNoise signal delay and align dry bypass audio with the enabled path.
+- Drain 960 continuation frames to release accepted program audio at EOF; reset residual recursive state for enabled streams without claiming finite recursive support.
+- Preserve zero-frame callback state and validate drain capacity and lifecycle transitions.
+
 ## Unreleased audit corrections (2026-09-28)
 
 - Add finite native EOF handling when disabled: exactly 960 continuation frames,
   bounded 480-frame calls, incomplete fade support, transactional capacity/rate
-  checks and reset-required controls after finite EOF. Enabled wet support
-  remains unknown. Exact full-program, transition and cold heap checks pass.
+  checks and reset-required controls after finite EOF. Exact full-program,
+  transition and cold heap checks pass. This disabled-path correction makes no
+  claim that the enabled recursive response has finite support.
 
 - Report the full 960-frame RNNoise signal delay (480 model + 480 queue), keeping
   the 480-frame model size and all enabled wet samples unchanged.
@@ -12,8 +21,18 @@
   disabled and transition output timing changes intentionally.
 - Make zero-frame callbacks leave the initial bypass state untouched.
 - Add direct-model waveform, exact dry-delay, every-frame-phase impulse,
-  transition/reset/error and cold allocation/deallocation regressions. No finite
-  tail or native EOF drain is claimed by this correction.
+  transition/reset/error and cold allocation/deallocation regressions. That
+  latency correction did not define an enabled recursive-tail cutoff policy.
+
+## Enabled EOF follow-up (2026-09-29)
+
+- For enabled streams, emit 960 frames of ordinary zero continuation at EOF to
+  release accepted programme audio, then reset residual recursive model and
+  high-pass state. Enabled tail metadata stays `Unknown`; the cutoff is an
+  explicit render policy, not a finite-support claim.
+- Preserve the final analyzer snapshot and make terminal drain and zero-frame
+  process calls state-neutral. Empty streams remain unfrozen; new input and
+  changed `enabled` values after nonempty EOF require reset or reinitialization.
 
 # 0.5.12
 

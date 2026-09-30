@@ -1,0 +1,127 @@
+{
+  "legacy_case_count": 31,
+  "new_family_case_count": 64,
+  "sample_count_per_case": 30,
+  "matched_current_over_archived_r1_ratio_range": [
+    0.9319398224424865,
+    1.0325586385987158
+  ],
+  "matched_current_over_archived_r1_ratio_median": 1.0003073008043089,
+  "current_over_preserved_preedit_r3_ratio_range": [
+    0.9456683923294676,
+    1.0430863352363116
+  ],
+  "current_over_preserved_preedit_r3_ratio_median": 0.9960650025523052,
+  "legacy_archived_r1_max_sample_cv_pct": 13.286803316534431,
+  "legacy_current_r1_max_sample_cv_pct": 6.825931994127863,
+  "legacy_group_ratios": {
+    "crossover_setup_and_initialize": {
+      "case_count": 7,
+      "ratio_min": 0.9693405096124235,
+      "ratio_median": 1.0003073008043089,
+      "ratio_max": 1.0111824306534296
+    },
+    "crossover_lr_interleaved_blocks": {
+      "case_count": 12,
+      "ratio_min": 0.9319398224424865,
+      "ratio_median": 0.998736003801022,
+      "ratio_max": 1.0325586385987158
+    },
+    "crossover_fir_interleaved_blocks": {
+      "case_count": 12,
+      "ratio_min": 0.9651604279372605,
+      "ratio_median": 0.9985139807522196,
+      "ratio_max": 1.0157361520514177
+    }
+  },
+  "new_family_absolute": {
+    "setup_construct_initialize_drop": {
+      "case_count": 16,
+      "median_of_case_medians_ns": 2167.5129934487077,
+      "min_case_median_ns": 1472.0120966233903,
+      "max_case_median_ns": 7643.575919335706,
+      "max_sample_cv_pct": 1.0330215535990932,
+      "case_medians_ns": {
+        "bessel12/2way": 1518.5428135930429,
+        "bessel12/4way": 2245.8707498675144,
+        "bessel12/per_channel": 1949.2896933819065,
+        "bw42/2way": 1785.0715450216971,
+        "bw42/4way": 3048.686770443135,
+        "bw42/per_channel": 2449.9569582814447,
+        "bw48/2way": 1797.9939293598234,
+        "bw48/4way": 3092.2804221251818,
+        "bw48/per_channel": 2484.4018363801806,
+        "bw6/2way": 1537.451421464108,
+        "lr12/2way": 1472.0120966233903,
+        "lr12/4way": 5474.310375235663,
+        "lr12/per_channel": 2089.1552370299005,
+        "lr48/2way": 1824.0417191435768,
+        "lr48/4way": 7643.575919335706,
+        "lr48/per_channel": 2475.0777576853525
+      }
+    },
+    "process_call": {
+      "case_count": 48,
+      "median_of_case_medians_ns": 18403.167606553216,
+      "min_case_median_ns": 656.2495066625979,
+      "max_case_median_ns": 865614.2849999999,
+      "max_sample_cv_pct": 8.507323729627165,
+      "case_medians_ns": {
+        "bessel12/2way/2048": 42338.429273384,
+        "bessel12/2way/32": 677.8604018163578,
+        "bessel12/2way/512": 10605.604110962568,
+        "bessel12/4way/2048": 130861.29086538462,
+        "bessel12/4way/32": 2060.4921178950353,
+        "bessel12/4way/512": 32980.07326547922,
+        "bessel12/per_channel/2048": 40922.98521263851,
+        "bessel12/per_channel/32": 656.2495066625979,
+        "bessel12/per_channel/512": 10259.447712808273,
+        "bw42/2way/2048": 74878.69664090368,
+        "bw42/2way/32": 1179.5569507845175,
+        "bw42/2way/512": 18998.820814977975,
+        "bw42/4way/2048": 230704.3677462888,
+        "bw42/4way/32": 3602.344490934449,
+        "bw42/4way/512": 57248.31737749546,
+        "bw42/per_channel/2048": 71834.21006944444,
+        "bw42/per_channel/32": 1132.3071547713107,
+        "bw42/per_channel/512": 17901.91825980392,
+        "bw48/2way/2048": 74973.02339901478,
+        "bw48/2way/32": 1189.0305832836168,
+        "bw48/2way/512": 18905.066510974408,
+        "bw48/4way/2048": 234319.1442982456,
+        "bw48/4way/32": 3643.4661859438734,
+        "bw48/4way/512": 58445.50426742532,
+        "bw48/per_channel/2048": 71448.80399831649,
+        "bw48/per_channel/32": 1132.1981604165878,
+        "bw48/per_channel/512": 17910.839853896105,
+        "bw6/2way/2048": 42288.03098739496,
+        "bw6/2way/32": 681.5494308300395,
+        "bw6/2way/512": 10567.170135241597,
+        "lr12/2way/2048": 52334.45969592656,
+        "lr12/2way/32": 840.1580102604065,
+        "lr12/2way/512": 13173.460856269114,
+        "lr12/4way/2048": 561604.4546404682,
+        "lr12/4way/32": 8813.73075234192,
+        "lr12/4way/512": 139405.0207373272,
+        "lr12/per_channel/2048": 51808.426159182185,
+        "lr12/per_channel/32": 823.2689925444465,
+        "lr12/per_channel/512": 12942.175532675534,
+        "lr48/2way/2048": 75032.3900862069,
+        "lr48/2way/32": 1199.4017607821338,
+        "lr48/2way/512": 18742.594064088087,
+        "lr48/4way/2048": 865614.2849999999,
+        "lr48/4way/32": 13429.146691176471,
+        "lr48/4way/512": 216132.17916666667,
+        "lr48/per_channel/2048": 71798.5356583072,
+        "lr48/per_channel/32": 1132.0097335795303,
+        "lr48/per_channel/512": 18063.741149018344
+      }
+    }
+  },
+  "limits": [
+    "Throughput samples only; no worst-case execution-time claim.",
+    "Setup times include construct, initialize, and drop; process times cover one call on a reused instance.",
+    "New-family absolute measurements are not compared to the old binary because it has no new-family cases.",
+    "The current run had a changing shared-host load; inspect retained raw samples and CV before interpreting small differences."
+  ]
+}

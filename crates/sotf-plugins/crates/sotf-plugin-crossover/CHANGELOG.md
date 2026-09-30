@@ -1,3 +1,11 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add LR12/LR48, Butterworth slopes from 6 to 48 dB/octave, and Bessel12 alongside existing LR24 and linear-phase FIR modes.
+- Support typed multiway and per-channel configurations with ordered cutoffs, explicit routing and transactional sample-rate validation.
+- Preserve legacy parameter identities and allocation-free scalar updates; add independent complex-response, automation, reset and callback-partition regressions.
+
 # 0.5.30
 
 - Process coefficient-stable LR24 two-way spans with a block kernel that

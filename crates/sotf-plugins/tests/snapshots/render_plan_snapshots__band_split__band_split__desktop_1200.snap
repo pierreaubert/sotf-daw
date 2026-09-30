@@ -20,7 +20,8 @@ expression: plan
   ],
   "columns_collapsed": [],
   "visible_group_ids": [
-    "CROSSOVER"
+    "CROSSOVER",
+    "ROUTING"
   ],
   "overflow_group_ids": [],
   "config_controls": [],
@@ -49,6 +50,36 @@ expression: plan
           "range": [
             0.0,
             1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 2,
+          "param_name": "Recombination",
+          "control_type": "button_set",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "ROUTING",
+      "title": "ROUTING",
+      "controls": [
+        {
+          "param_index": 3,
+          "param_name": "Bands",
+          "control_type": "button_set",
+          "unit": "",
+          "range": [
+            0.0,
+            2.0
           ],
           "read_only": false,
           "enabled": true

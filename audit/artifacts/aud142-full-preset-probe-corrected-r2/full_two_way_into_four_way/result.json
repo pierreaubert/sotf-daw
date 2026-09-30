@@ -1,0 +1,29 @@
+{
+  "case": "full_two_way_into_four_way",
+  "preset": true,
+  "expected_status": -8,
+  "status": -8,
+  "error": "Failed to import preset state: Crossover preset topology Bands { has_second_split: false, has_third_split: false } does not match handle topology Bands { has_second_split: true, has_third_split: true }",
+  "state_matches": true,
+  "audio_exact": true,
+  "max_residual": 0.0,
+  "control_sensitivity": 0.32799150560549606,
+  "audio": {
+    "actual": {
+      "file": "full_two_way_into_four_way/actual.f32le",
+      "samples": 1272,
+      "sha256": "330c67597ad0bb46f7c59d946fced684d94a5321b2087fe5756bb9ecba397ac8"
+    },
+    "reference": {
+      "file": "full_two_way_into_four_way/reference.f32le",
+      "samples": 1272,
+      "sha256": "330c67597ad0bb46f7c59d946fced684d94a5321b2087fe5756bb9ecba397ac8"
+    },
+    "cold_target": {
+      "file": "full_two_way_into_four_way/cold_target.f32le",
+      "samples": 1272,
+      "sha256": "d9ba9b512324eee4eaab176df8ef31cbb0799a4e9d8fcbe209be879c90204559"
+    }
+  },
+  "passed": true
+}

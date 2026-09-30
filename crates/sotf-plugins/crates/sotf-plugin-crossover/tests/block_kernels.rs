@@ -148,7 +148,8 @@ fn every_block_kernel_is_callback_partition_invariant() {
                     extra_frequencies: vec![1_200.0, 6_000.0],
                     fir_taps: Some(63),
                     channel_frequencies_hz: vec![],
-                    channel_modes: vec![],
+                    channel_modes: Some(vec![]),
+                    topology: None,
                 },
             )
             .unwrap(),
@@ -192,7 +193,8 @@ fn steady_block_kernels_allocate_nothing() {
                 extra_frequencies: vec![1_200.0, 6_000.0],
                 fir_taps: Some(63),
                 channel_frequencies_hz: vec![],
-                channel_modes: vec![],
+                channel_modes: Some(vec![]),
+                topology: None,
             },
         )
         .unwrap(),
@@ -220,7 +222,8 @@ fn fir_memory_report_is_exact_and_monotonic() {
             extra_frequencies: vec![],
             fir_taps: Some(63),
             channel_frequencies_hz: vec![],
-            channel_modes: vec![],
+            channel_modes: Some(vec![]),
+            topology: None,
         },
     )
     .unwrap();
@@ -233,7 +236,8 @@ fn fir_memory_report_is_exact_and_monotonic() {
             extra_frequencies: vec![1_200.0, 6_000.0],
             fir_taps: Some(63),
             channel_frequencies_hz: vec![],
-            channel_modes: vec![],
+            channel_modes: Some(vec![]),
+            topology: None,
         },
     )
     .unwrap();

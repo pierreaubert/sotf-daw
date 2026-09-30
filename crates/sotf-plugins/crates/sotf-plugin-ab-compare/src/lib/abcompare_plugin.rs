@@ -1,3 +1,4 @@
+// Rust guideline compliant 2026-02-21
 pub use super::config::*;
 use super::delay_line::DelayLine;
 use super::factory::{build_path_from_config, build_path_from_config_with_factory};
@@ -9,7 +10,8 @@ use sotf_host::host::DawHost;
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext,
 };
 use sotf_host::smoothing::Smoother;
 use std::any::Any;
@@ -18,6 +20,28 @@ use std::sync::Arc;
 pub(super) struct TransitionSmoothers {
     pub(super) mix: Smoother,
     pub(super) bypass: Smoother,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DrainLifecycle {
+    Accepting,
+    Draining,
+    Complete,
+    ResetRequired,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ChildDrainProgress {
+    queued_frames: usize,
+    consumed_frames: usize,
+    complete: bool,
+}
+
+impl ChildDrainProgress {
+    fn queued_remaining(self) -> usize {
+        debug_assert!(self.consumed_frames <= self.queued_frames);
+        self.queued_frames - self.consumed_frames
+    }
 }
 
 /// A/B Comparison Plugin
@@ -71,6 +95,13 @@ pub struct ABComparePlugin {
 
     // Internal buffers
     pub(super) buffers: [Vec<f32>; 2],
+    /// One bounded child-drain result per path; each buffer holds one declared
+    /// `DawHost::drain_output_frames_max()` result.
+    drain_buffers: [Vec<f32>; 2],
+    drain_children: [ChildDrainProgress; 2],
+    drain_delay_remaining: [usize; 3],
+    drain_lifecycle: DrainLifecycle,
+    band_mask_used_since_reset: bool,
 
     // Band mask (bandpass filter for isolating frequency range in comparison)
     pub(super) band_mask_low_hz: f32,
@@ -272,6 +303,11 @@ impl ABComparePlugin {
                 vec![0.0; Self::MAX_REALTIME_FRAMES * num_channels],
                 vec![0.0; Self::MAX_REALTIME_FRAMES * num_channels],
             ],
+            drain_buffers: [Vec::new(), Vec::new()],
+            drain_children: [ChildDrainProgress::default(); 2],
+            drain_delay_remaining: [0; 3],
+            drain_lifecycle: DrainLifecycle::Accepting,
+            band_mask_used_since_reset: false,
             last_peaks: [0.0; 2],
             empty_path_fast_gain: 0.0,
             cache: RealTimeCache::new(ABCompareData::default()),
@@ -604,6 +640,29 @@ impl ABComparePlugin {
         }
     }
 
+    fn reset_band_mask_filter_state(&mut self) {
+        let q = 1.0 / std::f64::consts::SQRT_2;
+        let sample_rate = self.sample_rate as f64;
+        for filter in &mut self.band_mask_hp {
+            *filter = Biquad::new(
+                BiquadFilterType::Highpass,
+                self.band_mask_low_hz as f64,
+                sample_rate,
+                q,
+                0.0,
+            );
+        }
+        for filter in &mut self.band_mask_lp {
+            *filter = Biquad::new(
+                BiquadFilterType::Lowpass,
+                self.band_mask_high_hz as f64,
+                sample_rate,
+                q,
+                0.0,
+            );
+        }
+    }
+
     /// Align both paths by delaying the shorter one.
     ///
     /// Returns an error if either host fails to build (which would make latency
@@ -649,6 +708,257 @@ impl ABComparePlugin {
             .set_delay(lat_a.max(lat_b), self.num_channels);
         Ok(())
     }
+
+    fn mix_prepared_buffers(
+        &mut self,
+        output_with_dry: &mut [f32],
+        num_frames: usize,
+    ) -> PluginResult<()> {
+        let expected_samples = num_frames
+            .checked_mul(self.num_channels)
+            .ok_or_else(|| "A/B Compare block sample count overflow".to_string())?;
+        if expected_samples > self.buffers[0].len()
+            || expected_samples > self.buffers[1].len()
+            || output_with_dry.len() != expected_samples
+        {
+            return Err("A/B Compare mixer received inconsistent frame geometry".into());
+        }
+
+        let sign_a: f32 = if self.phase_invert[0] { -1.0 } else { 1.0 };
+        let sign_b: f32 = if self.phase_invert[1] { -1.0 } else { 1.0 };
+        let band_mask_active = self.band_mask_active();
+
+        let target_mix = match self.mix_mode {
+            MixMode::Potentiometer => self.mix,
+            MixMode::Binary => {
+                if self.selected_path == 0 {
+                    -1.0
+                } else {
+                    1.0
+                }
+            }
+        };
+        if (self.transition_smoothers.mix.target() - target_mix).abs() > f32::EPSILON {
+            self.transition_smoothers.mix.set_target(target_mix);
+            self.recompute_empty_path_fast_gain();
+        }
+
+        let mut segment_start = 0;
+        while segment_start < num_frames {
+            let count = self
+                .frames_until_measurement()
+                .min(num_frames - segment_start);
+            let segment_end = segment_start + count;
+            if self.auto_gain.is_enabled() {
+                let samples = segment_start * self.num_channels..segment_end * self.num_channels;
+                self.auto_gain
+                    .ingest_input(&self.buffers[0][samples.clone()])?;
+                self.auto_gain.ingest_output(&self.buffers[1][samples])?;
+            }
+            for frame in segment_start..segment_end {
+                let gain_linear = self.auto_gain.next_gain_linear();
+                let current_mix = self.transition_smoothers.mix.advance();
+                let bypass_mix = self.transition_smoothers.bypass.advance();
+
+                for ch in 0..self.num_channels {
+                    let idx = frame * self.num_channels + ch;
+                    let dry_sample = output_with_dry[idx];
+                    let sample_a = self.buffers[0][idx] * sign_a;
+                    let sample_b = self.buffers[1][idx] * gain_linear * sign_b;
+
+                    let mut wet_sample = if self.difference_mode {
+                        sample_a - sample_b
+                    } else {
+                        let mix_01 = (current_mix + 1.0) / 2.0;
+                        let gain_a = 1.0 - mix_01;
+                        let gain_b = mix_01;
+                        sample_a * gain_a + sample_b * gain_b
+                    };
+
+                    if band_mask_active {
+                        wet_sample = self.band_mask_hp[ch].process(wet_sample as f64) as f32;
+                        wet_sample = self.band_mask_lp[ch].process(wet_sample as f64) as f32;
+                    }
+                    output_with_dry[idx] =
+                        wet_sample * (1.0 - bypass_mix) + dry_sample * bypass_mix;
+                }
+            }
+            self.finish_measurement_segment(count);
+            segment_start = segment_end;
+        }
+
+        Ok(())
+    }
+
+    fn pump_child_drain(&mut self, child_index: usize) -> PluginResult<()> {
+        if child_index >= self.drain_children.len() {
+            return Err("A/B Compare child drain index is out of range".into());
+        }
+        if self.drain_children[child_index].complete
+            || self.drain_children[child_index].queued_remaining() > 0
+        {
+            return Ok(());
+        }
+
+        self.drain_buffers[child_index].fill(0.0);
+        let result = if child_index == 0 {
+            self.host_a.drain(&mut self.drain_buffers[child_index])
+        } else {
+            self.host_b.drain(&mut self.drain_buffers[child_index])
+        };
+        let result = match result {
+            Ok(result) => result,
+            Err(error) => {
+                self.drain_lifecycle = DrainLifecycle::ResetRequired;
+                return Err(format!(
+                    "A/B Compare child {child_index} drain failed: {error}"
+                ));
+            }
+        };
+        let Some(sample_count) = result.frames.checked_mul(self.num_channels) else {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err("A/B Compare child drain sample count overflow".into());
+        };
+        if sample_count > self.drain_buffers[child_index].len() {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err("A/B Compare child exceeded prepared drain capacity".into());
+        }
+        self.drain_children[child_index] = ChildDrainProgress {
+            queued_frames: result.frames,
+            consumed_frames: 0,
+            complete: result.complete,
+        };
+        Ok(())
+    }
+
+    fn drain_complete(&self) -> bool {
+        self.drain_children
+            .iter()
+            .all(|child| child.complete && child.queued_remaining() == 0)
+            && self.drain_delay_remaining.iter().all(|&frames| frames == 0)
+    }
+
+    fn drain_capacity_frames(&self) -> usize {
+        self.host_a
+            .drain_output_frames_max()
+            .max(self.host_b.drain_output_frames_max())
+            .max(self.delay_a.delay_frames(self.num_channels))
+            .max(self.delay_b.delay_frames(self.num_channels))
+            .max(self.delay_dry.delay_frames(self.num_channels))
+            .min(Self::MAX_REALTIME_FRAMES)
+    }
+
+    fn validate_drain_host(
+        &self,
+        host: &DawHost,
+        drain_buffer: &[f32],
+        path_name: &str,
+    ) -> PluginResult<()> {
+        if host.input_channels() != self.num_channels || host.output_channels() != self.num_channels
+        {
+            return Err(format!(
+                "A/B Compare {path_name} drain requires {} input/output channels, got {}/{}",
+                self.num_channels,
+                host.input_channels(),
+                host.output_channels()
+            ));
+        }
+        if host.output_sample_rate(self.sample_rate) != self.sample_rate {
+            return Err(format!(
+                "A/B Compare {path_name} drain requires a same-rate child path"
+            ));
+        }
+        if !host.has_identity_frame_geometry() {
+            return Err(format!(
+                "A/B Compare {path_name} drain requires every active child node to declare identity frame geometry"
+            ));
+        }
+        let required_samples = host
+            .drain_output_frames_max()
+            .checked_mul(self.num_channels)
+            .ok_or_else(|| format!("A/B Compare {path_name} drain capacity overflow"))?;
+        if required_samples > drain_buffer.len() {
+            return Err(format!(
+                "A/B Compare {path_name} drain staging buffer is smaller than its prepared capacity"
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_drain_path_topology(path_config: &PathConfig, path_name: &str) -> PluginResult<()> {
+        let PathConfig::Graph { nodes, edges } = path_config else {
+            return Ok(());
+        };
+        if nodes.is_empty() {
+            return if edges.is_empty() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "A/B Compare {path_name} drain graph has edges but no nodes"
+                ))
+            };
+        }
+        if edges.len() != nodes.len().saturating_sub(1) {
+            return Err(format!(
+                "A/B Compare {path_name} drain supports only linear Graph paths"
+            ));
+        }
+        for edge in edges {
+            if edge.channel_map.is_some()
+                || edge.destination_offset != 0
+                || !nodes.iter().any(|node| node.id == edge.from)
+                || !nodes.iter().any(|node| node.id == edge.to)
+            {
+                return Err(format!(
+                    "A/B Compare {path_name} drain supports only unmodified linear Graph edges"
+                ));
+            }
+        }
+        for node in nodes {
+            let incoming = edges.iter().filter(|edge| edge.to == node.id).count();
+            let outgoing = edges.iter().filter(|edge| edge.from == node.id).count();
+            if incoming > 1 || outgoing > 1 {
+                return Err(format!(
+                    "A/B Compare {path_name} drain supports only linear Graph paths"
+                ));
+            }
+        }
+
+        let mut roots = nodes
+            .iter()
+            .filter(|node| !edges.iter().any(|edge| edge.to == node.id));
+        let Some(root) = roots.next() else {
+            return Err(format!(
+                "A/B Compare {path_name} drain Graph has no linear source"
+            ));
+        };
+        if roots.next().is_some() {
+            return Err(format!(
+                "A/B Compare {path_name} drain supports only linear Graph paths"
+            ));
+        }
+
+        let mut current_id = root.id.as_str();
+        let mut visited_nodes = 0_usize;
+        loop {
+            visited_nodes += 1;
+            if visited_nodes > nodes.len() {
+                return Err(format!(
+                    "A/B Compare {path_name} drain Graph contains a cycle"
+                ));
+            }
+            let Some(edge) = edges.iter().find(|edge| edge.from == current_id) else {
+                break;
+            };
+            current_id = &edge.to;
+        }
+        if visited_nodes != nodes.len() {
+            return Err(format!(
+                "A/B Compare {path_name} drain supports only connected linear Graph paths"
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl Plugin for ABComparePlugin {
@@ -682,6 +992,9 @@ impl Plugin for ABComparePlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.drain_lifecycle != DrainLifecycle::Accepting {
+            return Err("A/B Compare parameters are frozen until reset after drain begins".into());
+        }
         self.validate_parameter(&id, &value)?;
         if crate::params::PARAMS
             .iter()
@@ -950,6 +1263,18 @@ impl Plugin for ABComparePlugin {
         }
         delay_dry.set_delay(latency_a.max(latency_b), self.num_channels);
 
+        let mut drain_buffers = [Vec::new(), Vec::new()];
+        for (buffer, host) in drain_buffers.iter_mut().zip([&host_a, &host_b]) {
+            let samples = host
+                .drain_output_frames_max()
+                .checked_mul(self.num_channels)
+                .ok_or_else(|| "A/B Compare child drain buffer size overflow".to_string())?;
+            buffer.try_reserve_exact(samples).map_err(|error| {
+                format!("A/B Compare child drain buffer allocation failed: {error}")
+            })?;
+            buffer.resize(samples, 0.0);
+        }
+
         self.sample_rate = sample_rate;
         self.host_a = host_a;
         self.host_b = host_b;
@@ -957,6 +1282,11 @@ impl Plugin for ABComparePlugin {
         self.delay_a = delay_a;
         self.delay_b = delay_b;
         self.delay_dry = delay_dry;
+        self.drain_buffers = drain_buffers;
+        self.drain_children = [ChildDrainProgress::default(); 2];
+        self.drain_delay_remaining = [0; 3];
+        self.drain_lifecycle = DrainLifecycle::Accepting;
+        self.band_mask_used_since_reset = false;
 
         // Reset mix smoother with new sample rate
         self.transition_smoothers.mix =
@@ -1006,14 +1336,18 @@ impl Plugin for ABComparePlugin {
         self.cache_update_counter = 0;
 
         // Reset band mask filters
-        self.band_mask_hp.clear();
-        self.band_mask_lp.clear();
-        self.rebuild_band_mask_filters();
+        self.reset_band_mask_filter_state();
 
         // Clear contents without dropping pre-allocated capacity/length.
         self.buffers[0].fill(0.0);
         self.buffers[1].fill(0.0);
+        self.drain_buffers[0].fill(0.0);
+        self.drain_buffers[1].fill(0.0);
         self.delay_dry.reset();
+        self.drain_children = [ChildDrainProgress::default(); 2];
+        self.drain_delay_remaining = [0; 3];
+        self.drain_lifecycle = DrainLifecycle::Accepting;
+        self.band_mask_used_since_reset = false;
 
         // Update diagnostic cache immediately with reset values
         let data = ABCompareData {
@@ -1057,13 +1391,34 @@ impl Plugin for ABComparePlugin {
             ));
         }
 
+        if context.sample_rate != self.sample_rate {
+            return Err(format!(
+                "A/B Compare was initialized at {} Hz, got a {} Hz process context",
+                self.sample_rate, context.sample_rate
+            ));
+        }
+        if let Some(index) = input.iter().position(|sample| !sample.is_finite()) {
+            return Err(format!(
+                "A/B Compare input contains a non-finite sample at index {index}"
+            ));
+        }
+        if context.num_frames == 0 {
+            return Ok(0);
+        }
+        if self.drain_lifecycle != DrainLifecycle::Accepting {
+            return Err("A/B Compare requires reset before processing after drain begins".into());
+        }
+
         if self.can_use_empty_path_fast_path() {
             // Empty paths make wet and dry audio identical, but bypass state
             // must still advance by the exact number of rendered samples.
             // Resetting here made a transition restart on every callback and
             // therefore made its duration depend on host block partitioning.
             self.transition_smoothers.bypass.next_n(context.num_frames);
-            self.process_empty_path_fast(input, output, context.num_frames)?;
+            if let Err(error) = self.process_empty_path_fast(input, output, context.num_frames) {
+                self.drain_lifecycle = DrainLifecycle::ResetRequired;
+                return Err(error);
+            }
             return Ok(context.num_frames);
         }
 
@@ -1082,12 +1437,22 @@ impl Plugin for ABComparePlugin {
         self.delay_dry.process(output);
 
         // Process path A
-        self.host_a
-            .process(input, &mut self.buffers[0][..expected_samples])?;
+        if let Err(error) = self
+            .host_a
+            .process(input, &mut self.buffers[0][..expected_samples])
+        {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err(error);
+        }
 
         // Process path B
-        self.host_b
-            .process(input, &mut self.buffers[1][..expected_samples])?;
+        if let Err(error) = self
+            .host_b
+            .process(input, &mut self.buffers[1][..expected_samples])
+        {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err(error);
+        }
 
         // Apply latency compensation (delays the shorter path)
         self.delay_a
@@ -1095,79 +1460,197 @@ impl Plugin for ABComparePlugin {
         self.delay_b
             .process(&mut self.buffers[1][..expected_samples]);
 
-        // Determine target mix value. Only call set_target when the desired
-        // target differs from the smoother's current target — avoids redundant
-        // per-block work when the mix is settled.
-        let target_mix = match self.mix_mode {
-            MixMode::Potentiometer => self.mix,
-            MixMode::Binary => {
-                if self.selected_path == 0 {
-                    -1.0
-                } else {
-                    1.0
-                }
-            }
-        };
-        if (self.transition_smoothers.mix.target() - target_mix).abs() > f32::EPSILON {
-            self.transition_smoothers.mix.set_target(target_mix);
-            self.recompute_empty_path_fast_gain();
+        if let Err(error) = self.mix_prepared_buffers(output, context.num_frames) {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err(error);
         }
-
-        // Phase inversion signs
-        let sign_a: f32 = if self.phase_invert[0] { -1.0 } else { 1.0 };
-        let sign_b: f32 = if self.phase_invert[1] { -1.0 } else { 1.0 };
-        let band_mask_active = self.band_mask_active();
-
-        // Subdivide only metering and mixing. Nested processors still receive
-        // the original callback, and no extra scratch buffers are necessary.
-        let mut segment_start = 0;
-        while segment_start < context.num_frames {
-            let count = self
-                .frames_until_measurement()
-                .min(context.num_frames - segment_start);
-            let segment_end = segment_start + count;
-            if self.auto_gain.is_enabled() {
-                let samples = segment_start * self.num_channels..segment_end * self.num_channels;
-                self.auto_gain
-                    .ingest_input(&self.buffers[0][samples.clone()])?;
-                self.auto_gain.ingest_output(&self.buffers[1][samples])?;
-            }
-            for frame in segment_start..segment_end {
-                // Tick smoothers into loop
-                let gain_linear = self.auto_gain.next_gain_linear();
-                let current_mix = self.transition_smoothers.mix.advance();
-                let bypass_mix = self.transition_smoothers.bypass.advance();
-
-                for ch in 0..self.num_channels {
-                    let idx = frame * self.num_channels + ch;
-                    let dry_sample = output[idx];
-                    let sample_a = self.buffers[0][idx] * sign_a;
-                    let sample_b = self.buffers[1][idx] * gain_linear * sign_b;
-
-                    let mut wet_sample = if self.difference_mode {
-                        // Difference mode: output A - B
-                        sample_a - sample_b
-                    } else {
-                        // Unity-preserving same-source crossfade.
-                        // mix: -1 = pure A, +1 = pure B
-                        let mix_01 = (current_mix + 1.0) / 2.0; // 0 = A, 1 = B
-                        let gain_a = 1.0 - mix_01;
-                        let gain_b = mix_01;
-                        sample_a * gain_a + sample_b * gain_b
-                    };
-
-                    if band_mask_active {
-                        wet_sample = self.band_mask_hp[ch].process(wet_sample as f64) as f32;
-                        wet_sample = self.band_mask_lp[ch].process(wet_sample as f64) as f32;
-                    }
-                    output[idx] = wet_sample * (1.0 - bypass_mix) + dry_sample * bypass_mix;
-                }
-            }
-            self.finish_measurement_segment(count);
-            segment_start = segment_end;
+        if self.band_mask_active() {
+            self.band_mask_used_since_reset = true;
         }
 
         Ok(context.num_frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.drain_capacity_frames()
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        if context.num_frames != 0 {
+            return Err("A/B Compare drain preparation requires a zero-frame context".into());
+        }
+        if self.sample_rate == 0 || context.sample_rate != self.sample_rate {
+            return Err(format!(
+                "A/B Compare drain context must use its initialized sample rate of {} Hz",
+                self.sample_rate
+            ));
+        }
+
+        match self.drain_lifecycle {
+            DrainLifecycle::Draining | DrainLifecycle::Complete => return Ok(()),
+            DrainLifecycle::ResetRequired => {
+                return Err("A/B Compare requires reset after a partial processing failure".into());
+            }
+            DrainLifecycle::Accepting => {}
+        }
+
+        if self.band_mask_active() || self.band_mask_used_since_reset {
+            return Err(
+                "A/B Compare cannot drain a stream with current or prior band-mask history; reset is required"
+                    .into(),
+            );
+        }
+        Self::validate_drain_path_topology(&self.path_a_config, "path A")?;
+        Self::validate_drain_path_topology(&self.path_b_config, "path B")?;
+        self.validate_drain_host(&self.host_a, &self.drain_buffers[0], "path A")?;
+        self.validate_drain_host(&self.host_b, &self.drain_buffers[1], "path B")?;
+
+        self.drain_children = [ChildDrainProgress::default(); 2];
+        self.drain_delay_remaining = [
+            self.delay_a.delay_frames(self.num_channels),
+            self.delay_b.delay_frames(self.num_channels),
+            self.delay_dry.delay_frames(self.num_channels),
+        ];
+        self.drain_lifecycle = DrainLifecycle::Draining;
+        Ok(())
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.num_frames != 0 || context.sample_rate != self.sample_rate {
+            return Err(
+                "A/B Compare drain requires a zero-frame context at its initialized rate".into(),
+            );
+        }
+        match self.drain_lifecycle {
+            DrainLifecycle::Complete => return Ok(PluginDrainResult::COMPLETE),
+            DrainLifecycle::ResetRequired => {
+                return Err("A/B Compare requires reset after a partial drain failure".into());
+            }
+            DrainLifecycle::Accepting => {
+                return Err("A/B Compare begin_drain must succeed before drain".into());
+            }
+            DrainLifecycle::Draining => {}
+        }
+
+        if !output.len().is_multiple_of(self.num_channels) {
+            return Err(format!(
+                "A/B Compare drain output must contain whole {}-channel frames",
+                self.num_channels
+            ));
+        }
+        let capacity_frames = self.drain_capacity_frames();
+        let required_samples = capacity_frames
+            .checked_mul(self.num_channels)
+            .ok_or_else(|| "A/B Compare drain output capacity overflow".to_string())?;
+        if output.len() < required_samples {
+            return Err(format!(
+                "A/B Compare drain output too small: need {required_samples} samples, got {}",
+                output.len()
+            ));
+        }
+
+        for child_index in 0..2 {
+            if let Err(error) = self.pump_child_drain(child_index) {
+                self.drain_lifecycle = DrainLifecycle::ResetRequired;
+                return Err(error);
+            }
+        }
+
+        if (0..2).any(|index| {
+            self.drain_children[index].queued_remaining() == 0
+                && !self.drain_children[index].complete
+        }) {
+            return Ok(PluginDrainResult {
+                frames: 0,
+                complete: false,
+            });
+        }
+
+        if self.drain_complete() {
+            self.drain_lifecycle = DrainLifecycle::Complete;
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+
+        let mut frames = capacity_frames;
+        for child_index in 0..2 {
+            let progress = self.drain_children[child_index];
+            let queued = progress.queued_remaining();
+            if queued > 0 {
+                frames = frames.min(queued);
+            } else if progress.complete && self.drain_delay_remaining[child_index] > 0 {
+                frames = frames.min(self.drain_delay_remaining[child_index]);
+            }
+        }
+        if self.drain_delay_remaining[2] > 0 {
+            frames = frames.min(self.drain_delay_remaining[2]);
+        }
+
+        if frames == 0 {
+            if self.drain_complete() {
+                self.drain_lifecycle = DrainLifecycle::Complete;
+                return Ok(PluginDrainResult::COMPLETE);
+            }
+            return Ok(PluginDrainResult {
+                frames: 0,
+                complete: false,
+            });
+        }
+
+        let samples = frames * self.num_channels;
+        self.buffers[0][..samples].fill(0.0);
+        self.buffers[1][..samples].fill(0.0);
+        output[..samples].fill(0.0);
+
+        for child_index in 0..2 {
+            let progress = self.drain_children[child_index];
+            let queued = progress.queued_remaining();
+            let path_buffer = &mut self.buffers[child_index][..samples];
+            if queued > 0 {
+                let start = progress.consumed_frames * self.num_channels;
+                path_buffer
+                    .copy_from_slice(&self.drain_buffers[child_index][start..start + samples]);
+                if child_index == 0 {
+                    self.delay_a.process(path_buffer);
+                } else {
+                    self.delay_b.process(path_buffer);
+                }
+                self.drain_children[child_index].consumed_frames += frames;
+            } else if self.drain_delay_remaining[child_index] > 0 {
+                if child_index == 0 {
+                    self.delay_a.process(path_buffer);
+                } else {
+                    self.delay_b.process(path_buffer);
+                }
+                self.drain_delay_remaining[child_index] -= frames;
+            }
+        }
+
+        let dry_frames = frames.min(self.drain_delay_remaining[2]);
+        if dry_frames > 0 {
+            let dry_samples = dry_frames * self.num_channels;
+            self.delay_dry.process(&mut output[..dry_samples]);
+            self.drain_delay_remaining[2] -= dry_frames;
+        }
+
+        if let Err(error) = self.mix_prepared_buffers(&mut output[..samples], frames) {
+            self.drain_lifecycle = DrainLifecycle::ResetRequired;
+            return Err(error);
+        }
+        if self.drain_complete() {
+            self.drain_lifecycle = DrainLifecycle::Complete;
+            return Ok(PluginDrainResult {
+                frames,
+                complete: true,
+            });
+        }
+        Ok(PluginDrainResult {
+            frames,
+            complete: false,
+        })
     }
 
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {

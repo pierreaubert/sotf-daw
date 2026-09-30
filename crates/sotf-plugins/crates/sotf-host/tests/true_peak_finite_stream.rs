@@ -78,7 +78,7 @@ fn linear_host_drain_measures_final_impulse_without_extending_programme() {
         let input = final_impulse();
         let expected = expected_peak(&input);
         let mut host = DawHost::new(1, 48_000);
-        host.set_compiled_linear_enabled(compiled);
+        host.set_compiled_linear_enabled(compiled).unwrap();
         host.add_plugin(Box::new(LoudnessMonitorPlugin::new(1).unwrap()))
             .unwrap();
         let mut output = vec![f32::NAN; input.len()];
@@ -556,7 +556,7 @@ impl Plugin for FinalImpulseTail {
 fn host_includes_upstream_tail_before_finishing_downstream_meter() {
     for compiled in [false, true] {
         let mut host = DawHost::new(1, 48_000);
-        host.set_compiled_linear_enabled(compiled);
+        host.set_compiled_linear_enabled(compiled).unwrap();
         host.add_plugin(Box::new(FinalImpulseTail(false))).unwrap();
         host.add_plugin(Box::new(LoudnessMonitorPlugin::new(1).unwrap()))
             .unwrap();

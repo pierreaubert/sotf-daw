@@ -370,9 +370,9 @@ pub fn create_decoder_from_source_with_dsd_mode_and_metadata(
                     // as instant EOF, and `sample_rate == 0` makes
                     // `AudioSpec::duration()` panic on `Duration::from_secs_f64(inf)`.
                     // Upper bounds: `PcmDecoder::new` pre-allocates
-                    // `1024 * channels` f32 per decoder (~268 MB at u16::MAX),
-                    // and anything beyond the engine's channel ceiling cannot
-                    // be routed through the processing graph anyway.
+                    // `1024 * channels` f32 per decoder, and anything beyond
+                    // the engine's input limit cannot be routed through the
+                    // processing graph anyway.
                     // `bits_per_sample` must be honest: the wire format is
                     // fixed f32, and the value lands in `AudioSpec` where
                     // `bytes_per_frame()` and UI bitrate displays trust it.
@@ -380,7 +380,7 @@ pub fn create_decoder_from_source_with_dsd_mode_and_metadata(
                     if sample_rate == 0
                         || sample_rate > MAX_SERVICE_SAMPLE_RATE
                         || channels == 0
-                        || channels as usize > crate::EngineConfig::MAX_CHANNELS
+                        || channels as usize > crate::EngineConfig::MAX_INPUT_CHANNELS
                         || bits_per_sample != 32
                     {
                         return Err(AudioDecoderError::ServiceError(format!(
@@ -390,7 +390,7 @@ pub fn create_decoder_from_source_with_dsd_mode_and_metadata(
                             channels,
                             bits_per_sample,
                             MAX_SERVICE_SAMPLE_RATE,
-                            crate::EngineConfig::MAX_CHANNELS,
+                            crate::EngineConfig::MAX_INPUT_CHANNELS,
                         )));
                     }
                     Ok((
@@ -640,6 +640,37 @@ mod tests {
         assert_eq!(frames, 2);
         assert_eq!(dest.samples, pcm_samples);
 
+        // 2a. The service-stream trust boundary accepts the engine's full
+        // 64-channel input width and decodes interleaved sample contents.
+        let wide_samples: Vec<f32> = (0..2 * 64)
+            .map(|index| (index as f32 - 63.0) / 128.0)
+            .collect();
+        let wide_bytes: Vec<u8> = wide_samples
+            .iter()
+            .flat_map(|sample| sample.to_le_bytes())
+            .collect();
+        set_service_stream_resolver(Arc::new(move |_, _| {
+            Ok(ResolvedServiceStream::Pcm {
+                sample_rate: 44_100,
+                channels: 64,
+                bits_per_sample: 32,
+                total_frames: Some(2),
+                reader: Box::new(Cursor::new(wide_bytes.clone())),
+            })
+        }));
+        let (mut wide_decoder, metadata_rx) =
+            create_decoder_from_source_with_dsd_mode_and_metadata(&source, DsdOutputMode::Disabled)
+                .expect("64-channel PCM service stream should decode");
+        assert!(metadata_rx.is_none());
+        assert_eq!(wide_decoder.spec().sample_rate, 44_100);
+        assert_eq!(wide_decoder.spec().channels, 64);
+        assert_eq!(wide_decoder.spec().bits_per_sample, 32);
+        assert_eq!(wide_decoder.spec().total_frames, Some(2));
+        let mut wide_dest = DecodedAudio::new(wide_decoder.spec().clone());
+        let wide_frames = wide_decoder.decode_into(&mut wide_dest).unwrap();
+        assert_eq!(wide_frames, 2);
+        assert_eq!(wide_dest.samples, wide_samples);
+
         // 3. Resolver errors surface as ServiceError.
         set_service_stream_resolver(Arc::new(|_, _| Err("auth expired".to_string())));
         let result = create_decoder_from_source(&source).map(drop);
@@ -688,11 +719,10 @@ mod tests {
         );
 
         // 3d. Out-of-range specs are rejected too: an absurd sample rate, a
-        // channel count above the engine's ceiling (PcmDecoder pre-allocates
-        // 1024 * channels f32 — ~268 MB at u16::MAX), and a dishonest
+        // channel count beyond the 64-channel engine input ceiling, and a dishonest
         // bits_per_sample (the wire format is fixed f32).
         for (sample_rate, channels, bits_per_sample) in
-            [(384_001, 2, 32), (44_100, 17, 32), (44_100, 2, 16)]
+            [(384_001, 2, 32), (44_100, 65, 32), (44_100, 2, 16)]
         {
             set_service_stream_resolver(Arc::new(move |_, _| {
                 Ok(ResolvedServiceStream::Pcm {

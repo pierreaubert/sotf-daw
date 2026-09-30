@@ -6,12 +6,14 @@
 // ACN index: n = l² + l + m  where l = degree (order), m = index (-l..=l)
 // SN3D: Schmidt semi-normalized spherical harmonics
 //
+
+// Rust guideline compliant 2026-02-21
 // Reference: Chapman (2009), Ambisonic principles
 
 use std::f64::consts::PI;
 
 /// Maximum supported Ambisonics order
-pub const MAX_ORDER: usize = 3;
+pub const MAX_ORDER: usize = 7;
 
 /// Number of Ambisonics channels for a given order: (order+1)²
 pub fn channel_count(order: usize) -> usize {
@@ -21,10 +23,9 @@ pub fn channel_count(order: usize) -> usize {
 /// Extract (degree, index) from ACN channel number.
 /// ACN = l² + l + m
 ///
-/// The floating-point sqrt is exact for the values used here (ACN ≤ 15 for
-/// MAX_ORDER = 3), but would break for ACN ≥ 48.  Guard with a debug_assert
-/// so that increasing MAX_ORDER without updating this function fails early in
-/// debug builds.
+/// The floating-point square root followed by truncation yields the degree
+/// for every supported ACN index 0 through 63. Guard the range so unsupported
+/// indices cannot silently map to a different channel.
 pub fn acn_to_degree_index(acn: usize) -> (i32, i32) {
     assert!(
         acn < channel_count(MAX_ORDER),
@@ -167,12 +168,16 @@ mod tests {
         assert_eq!(channel_count(1), 4); // FOA: W, Y, Z, X
         assert_eq!(channel_count(2), 9); // SOA
         assert_eq!(channel_count(3), 16); // TOA
+        assert_eq!(channel_count(4), 25);
+        assert_eq!(channel_count(5), 36);
+        assert_eq!(channel_count(6), 49);
+        assert_eq!(channel_count(7), 64);
     }
 
     /// Every valid ACN index below the supported channel count must decode.
     #[test]
     fn test_acn_to_degree_index_all_valid() {
-        for acn in 0..channel_count(MAX_ORDER) {
+        for acn in 0..64 {
             let (l, m) = acn_to_degree_index(acn);
             // Verify round-trip: l² + l + m == acn
             assert_eq!(

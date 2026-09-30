@@ -1,0 +1,29 @@
+{
+  "case": "multiway",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 8,
+  "status": 0,
+  "state_matches_source": true,
+  "audio_matches_fresh": true,
+  "fresh_max_residual": 0.0,
+  "old_family_sensitivity": 0.5379042327404022,
+  "audio": {
+    "actual": {
+      "file": "valid_multiway/actual.f32le",
+      "samples": 7144,
+      "sha256": "a28892e41fa67d7d2caf418fa1293864c943ad8da94ed50ea040063ae9f37381"
+    },
+    "reference": {
+      "file": "valid_multiway/reference.f32le",
+      "samples": 7144,
+      "sha256": "a28892e41fa67d7d2caf418fa1293864c943ad8da94ed50ea040063ae9f37381"
+    },
+    "old_family": {
+      "file": "valid_multiway/old_family.f32le",
+      "samples": 7144,
+      "sha256": "9f2ac7a922eb6d2b6829c02efbbe3efb707062598f436c89cd1f9db53ca9de2b"
+    }
+  },
+  "passed": true
+}

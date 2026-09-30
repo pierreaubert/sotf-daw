@@ -1,0 +1,29 @@
+{
+  "case": "full_shared_into_per_channel",
+  "preset": true,
+  "expected_status": -8,
+  "status": -8,
+  "error": "Failed to import preset state: Crossover state parameter 'frequency' changes the active topology; create a new handle",
+  "state_matches": true,
+  "audio_exact": true,
+  "max_residual": 0.0,
+  "control_sensitivity": 0.2884675649693236,
+  "audio": {
+    "actual": {
+      "file": "full_shared_into_per_channel/actual.f32le",
+      "samples": 1272,
+      "sha256": "94cc3f859c2a43727ad6bfca33e73c303eca12ab35d1cf8321749968d494da49"
+    },
+    "reference": {
+      "file": "full_shared_into_per_channel/reference.f32le",
+      "samples": 1272,
+      "sha256": "94cc3f859c2a43727ad6bfca33e73c303eca12ab35d1cf8321749968d494da49"
+    },
+    "cold_target": {
+      "file": "full_shared_into_per_channel/cold_target.f32le",
+      "samples": 1272,
+      "sha256": "90b536948a87f28ec12821dcf71fa1f6a0968aceb0cda2498b467f3634c4dbf0"
+    }
+  },
+  "passed": true
+}

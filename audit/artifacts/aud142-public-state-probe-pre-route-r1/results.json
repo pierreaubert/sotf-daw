@@ -1,0 +1,857 @@
+{
+  "library_sha256": "7311b8fa7044084096bbdb219f56656673d7feef86bd8c58943a4147c36e71a8",
+  "probe_sha256": "009db1bc3e2e97baca4a4ea406cab8cec5415d3f61eeab3822118713774895ed",
+  "sample_rate": 48000,
+  "input_channels": 2,
+  "audio_format": "f32le",
+  "scope": "C-ABI state routing and history; production DSP fresh reference, not independent filter math",
+  "rows": [
+    {
+      "case": "LR24",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": 0,
+      "state_matches_source": true,
+      "audio_matches_fresh": true,
+      "fresh_max_residual": 0.0,
+      "old_family_sensitivity": 0.0,
+      "audio": {
+        "actual": {
+          "file": "valid_LR24/actual.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        },
+        "reference": {
+          "file": "valid_LR24/reference.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        },
+        "old_family": {
+          "file": "valid_LR24/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "LinearPhase",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.20619336143136024,
+      "old_family_sensitivity": 0.26681142262032154,
+      "audio": {
+        "actual": {
+          "file": "valid_LinearPhase/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_LinearPhase/reference.f32le",
+          "samples": 3572,
+          "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+        },
+        "old_family": {
+          "file": "valid_LinearPhase/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "LR12",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.26283046044409275,
+      "old_family_sensitivity": 0.5483977496623993,
+      "audio": {
+        "actual": {
+          "file": "valid_LR12/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_LR12/reference.f32le",
+          "samples": 3572,
+          "sha256": "f14f247ef334eae3b9b42fab5fc8bdf3e788e42c4ec17f593762784d947f196a"
+        },
+        "old_family": {
+          "file": "valid_LR12/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "LR48",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.41900455951690674,
+      "old_family_sensitivity": 0.4185345470905304,
+      "audio": {
+        "actual": {
+          "file": "valid_LR48/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_LR48/reference.f32le",
+          "samples": 3572,
+          "sha256": "8e1387b23f3d99d847b0be60dc1a07be6916c31689b5fd1de679fc1409942979"
+        },
+        "old_family": {
+          "file": "valid_LR48/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW6",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.3430141806602478,
+      "old_family_sensitivity": 0.3430141806602478,
+      "audio": {
+        "actual": {
+          "file": "valid_BW6/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW6/reference.f32le",
+          "samples": 3572,
+          "sha256": "074a980dc93e419b11cd0b936c372335ad33e1350e666c46ade14e45d551264a"
+        },
+        "old_family": {
+          "file": "valid_BW6/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW12",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.30955452285706997,
+      "old_family_sensitivity": 0.2638488933444023,
+      "audio": {
+        "actual": {
+          "file": "valid_BW12/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW12/reference.f32le",
+          "samples": 3572,
+          "sha256": "01b5ecd6f329c26252ff4a7c0ee973c7e3c60ff92994f6dc5a66338336bd99de"
+        },
+        "old_family": {
+          "file": "valid_BW12/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW18",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.2993489559739828,
+      "old_family_sensitivity": 0.1670662984251976,
+      "audio": {
+        "actual": {
+          "file": "valid_BW18/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW18/reference.f32le",
+          "samples": 3572,
+          "sha256": "750cf97e5cac48a1af259109f7d79938ad5b8ab6d45430440e3b3505ff01844d"
+        },
+        "old_family": {
+          "file": "valid_BW18/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW24",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.2890592571347952,
+      "old_family_sensitivity": 0.06491389870643616,
+      "audio": {
+        "actual": {
+          "file": "valid_BW24/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW24/reference.f32le",
+          "samples": 3572,
+          "sha256": "7b9d58bc0cdd3977e42558afa1d5f4427bafbe569e64ac14a2875ac6a41725ef"
+        },
+        "old_family": {
+          "file": "valid_BW24/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW30",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.2789925392717123,
+      "old_family_sensitivity": 0.09044976159930229,
+      "audio": {
+        "actual": {
+          "file": "valid_BW30/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW30/reference.f32le",
+          "samples": 3572,
+          "sha256": "82c11f20ce1ea5344a6d36aadc95053d5ff5097688fe5413b6c6127a69ffe771"
+        },
+        "old_family": {
+          "file": "valid_BW30/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW36",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.26922950707376003,
+      "old_family_sensitivity": 0.19342335313558578,
+      "audio": {
+        "actual": {
+          "file": "valid_BW36/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW36/reference.f32le",
+          "samples": 3572,
+          "sha256": "e91cecb3ba053c1fce13ec13e1ae62837b16e66ada7c7becd67e682a04449666"
+        },
+        "old_family": {
+          "file": "valid_BW36/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW42",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.3074077218770981,
+      "old_family_sensitivity": 0.3068130612373352,
+      "audio": {
+        "actual": {
+          "file": "valid_BW42/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW42/reference.f32le",
+          "samples": 3572,
+          "sha256": "05d4c9caab4a6be3ada82bfcc7cc330d8489e11346531aa21cbeac707eb057ec"
+        },
+        "old_family": {
+          "file": "valid_BW42/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "BW48",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.41154588758945465,
+      "old_family_sensitivity": 0.4110451936721802,
+      "audio": {
+        "actual": {
+          "file": "valid_BW48/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_BW48/reference.f32le",
+          "samples": 3572,
+          "sha256": "47457f28f781e0b0f39c049125b4799e72bca9f7baec8a55ae5221459e77a830"
+        },
+        "old_family": {
+          "file": "valid_BW48/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "Bessel12",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.31079295836389065,
+      "old_family_sensitivity": 0.2840467095375061,
+      "audio": {
+        "actual": {
+          "file": "valid_Bessel12/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_Bessel12/reference.f32le",
+          "samples": 3572,
+          "sha256": "82528d46f59ce93c5288f5b101231e16fcc6c86107ad970989839dd45e45f266"
+        },
+        "old_family": {
+          "file": "valid_Bessel12/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "fir_alias_FIR",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.20619336143136024,
+      "old_family_sensitivity": 0.26681142262032154,
+      "audio": {
+        "actual": {
+          "file": "valid_fir_alias_FIR/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_fir_alias_FIR/reference.f32le",
+          "samples": 3572,
+          "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+        },
+        "old_family": {
+          "file": "valid_fir_alias_FIR/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "fir_alias_linear_phase",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.20619336143136024,
+      "old_family_sensitivity": 0.26681142262032154,
+      "audio": {
+        "actual": {
+          "file": "valid_fir_alias_linear_phase/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_fir_alias_linear_phase/reference.f32le",
+          "samples": 3572,
+          "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+        },
+        "old_family": {
+          "file": "valid_fir_alias_linear_phase/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "fir_alias_LPFIR",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 4,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.20619336143136024,
+      "old_family_sensitivity": 0.26681142262032154,
+      "audio": {
+        "actual": {
+          "file": "valid_fir_alias_LPFIR/actual.f32le",
+          "samples": 3572,
+          "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+        },
+        "reference": {
+          "file": "valid_fir_alias_LPFIR/reference.f32le",
+          "samples": 3572,
+          "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+        },
+        "old_family": {
+          "file": "valid_fir_alias_LPFIR/old_family.f32le",
+          "samples": 3572,
+          "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "per_channel",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 2,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.32653388381004333,
+      "old_family_sensitivity": 0.32653388381004333,
+      "audio": {
+        "actual": {
+          "file": "valid_per_channel/actual.f32le",
+          "samples": 1786,
+          "sha256": "e4af221215e7f8cfb988a8a1c9e961de3e1af6fbe2a8ff90f225393a7e85d01e"
+        },
+        "reference": {
+          "file": "valid_per_channel/reference.f32le",
+          "samples": 1786,
+          "sha256": "2751df7e3e5ffa8a47170083ca5815ffff3ff3e045383600a66b3293abe16236"
+        },
+        "old_family": {
+          "file": "valid_per_channel/old_family.f32le",
+          "samples": 1786,
+          "sha256": "3674feebcbb03bdddc47f750493e06029cb7b34d2a9f9c0fa2d7b16e794016d4"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "multiway",
+      "kind": "valid",
+      "expected_status": 0,
+      "outputs": 8,
+      "status": -8,
+      "state_matches_source": false,
+      "audio_matches_fresh": false,
+      "fresh_max_residual": 0.5379042327404022,
+      "old_family_sensitivity": 0.5379042327404022,
+      "audio": {
+        "actual": {
+          "file": "valid_multiway/actual.f32le",
+          "samples": 7144,
+          "sha256": "f7dd32b29f6402db94a26359ab43d79293cd3491e24a5dcc1ac9ba1fefaa01d2"
+        },
+        "reference": {
+          "file": "valid_multiway/reference.f32le",
+          "samples": 7144,
+          "sha256": "a28892e41fa67d7d2caf418fa1293864c943ad8da94ed50ea040063ae9f37381"
+        },
+        "old_family": {
+          "file": "valid_multiway/old_family.f32le",
+          "samples": 7144,
+          "sha256": "9f2ac7a922eb6d2b6829c02efbbe3efb707062598f436c89cd1f9db53ca9de2b"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "unknown_family",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_unknown_family/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_unknown_family/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_unknown_family/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "family_boolean",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_family_boolean/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_family_boolean/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_family_boolean/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "family_null",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_family_null/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_family_null/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_family_null/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "mode_boolean",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_mode_boolean/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_mode_boolean/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_mode_boolean/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "unknown_mode",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_unknown_mode/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_unknown_mode/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_unknown_mode/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "frequency_string",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_frequency_string/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_frequency_string/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_frequency_string/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "frequency_boolean",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_frequency_boolean/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_frequency_boolean/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_frequency_boolean/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "frequency_below_range",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_frequency_below_range/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_frequency_below_range/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_frequency_below_range/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "frequency_above_range",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_frequency_above_range/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_frequency_above_range/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_frequency_above_range/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    },
+    {
+      "case": "new_band",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": 0,
+      "state_unchanged": true,
+      "continuation_exact": false,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_new_band/actual.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        },
+        "twin": {
+          "file": "invalid_new_band/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_new_band/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "per_channel_topology",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": 0,
+      "state_unchanged": true,
+      "continuation_exact": false,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_per_channel_topology/actual.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        },
+        "twin": {
+          "file": "invalid_per_channel_topology/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_per_channel_topology/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": false
+    },
+    {
+      "case": "both_width",
+      "kind": "invalid",
+      "expected_status": -8,
+      "status": -8,
+      "state_unchanged": true,
+      "continuation_exact": true,
+      "cold_sensitivity": 0.2866801027967456,
+      "audio": {
+        "actual": {
+          "file": "invalid_both_width/actual.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "twin": {
+          "file": "invalid_both_width/twin.f32le",
+          "samples": 1272,
+          "sha256": "ab05ae7c1521c8de566e96d47e3698e584b508027509b095ce4fd0faa8a018e4"
+        },
+        "cold": {
+          "file": "invalid_both_width/cold.f32le",
+          "samples": 1272,
+          "sha256": "3c07f2a5a0f0666fde5af2828f0c01491b9d108303fed85a7cb3eb7b8f7f7d33"
+        }
+      },
+      "passed": true
+    }
+  ],
+  "passed": false
+}

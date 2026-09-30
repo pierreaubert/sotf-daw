@@ -1,0 +1,10 @@
+{
+  "command": "python3 audit/tools/aud142_crossover_full_preset_probe.py crates/sotf-plugins/target/audit-artifacts/aud142-ffi-state-r2/libplugins_ffi.so audit/artifacts/aud142-full-preset-probe-corrected-r2",
+  "exit_code": 0,
+  "cases": 8,
+  "failed_cases": [],
+  "library_sha256": "8424bfe9375ca5d621754d330ef1b9acc662392f0d0897fce7bda43bdefcaa73",
+  "probe_sha256": "807544fdf01b6b292b6c237f9042ab8748de387c50c96e5bfcc34940b9531d3f",
+  "scope": "Public full preset topology, partial state merge, populated refusal history and family changes; production DSP route oracle",
+  "limitations": "Public route fidelity uses fresh production DSP reference, not independent filter mathematics; no native/UI/engine or realtime allocation claim."
+}

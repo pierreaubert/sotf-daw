@@ -66,7 +66,7 @@ exclude = ["crates/3rdparties/nih-plug", "crates/3rdparties/rubato"]
 resolver = "3"
 
 [workspace.package]
-version = "0.7.14"
+version = "0.8.0"
 authors = ["Pierre F. Aubert pierre@spinorama.org"]
 description = "SOTF DAW core: engine, plugins, MIDI, IAMF, and driver transport"
 edition = "2024"

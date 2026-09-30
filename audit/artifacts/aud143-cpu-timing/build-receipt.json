@@ -1,0 +1,50 @@
+{
+  "task": "AUD143 final timing executable build receipt",
+  "recorded_utc": "2026-09-30T04:37:43Z",
+  "cargo_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "profile": "release",
+  "offline": true,
+  "locked": true,
+  "fixture_replays": [
+    {
+      "variant": "recovered",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/recovered/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_phase_capture captures_public_legacy_complex_controls_before_phase_changes -- --exact --nocapture --test-threads=1",
+      "log": "/tmp/sotf-aud143/recovered-legacy-fixture-replay.log",
+      "log_sha256": "8a5564df25fc6e6274769bba63ea83a85910026593376044f0fce22b9db25144",
+      "result": "1 passed; exact full-vector fixture comparison"
+    },
+    {
+      "variant": "current",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/current/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_phase_capture captures_public_legacy_complex_controls_before_phase_changes -- --exact --nocapture --test-threads=1",
+      "log": "/tmp/sotf-aud143/current-legacy-fixture-replay.log",
+      "log_sha256": "8a5564df25fc6e6274769bba63ea83a85910026593376044f0fce22b9db25144",
+      "result": "1 passed; exact full-vector fixture comparison"
+    }
+  ],
+  "harness_source_sha256": "c69637034798e1604ef7b8956acc71f8a0225ae2fb38fafee483eaa524c35637",
+  "harness_builds": [
+    {
+      "variant": "recovered",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/recovered/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_cpu --no-run",
+      "build_log": "/tmp/sotf-aud143/recovered-harness-build-timed.log",
+      "build_log_sha256": "ed44d8e0945f4593f1a05e02b640994d4cc63b0e90f5926a092d5acec1869955",
+      "binary": "/tmp/sotf-aud143/binaries/recovered/aud143_cpu_timed",
+      "binary_sha256": "c4be932d4b5463518d374a0ff74d43f2d4382936e8d8231ffdc9d5fe53bbfb38",
+      "result": "clean release compile; executable copied to immutable variant-specific timing path"
+    },
+    {
+      "variant": "current",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/current/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_cpu --no-run",
+      "build_log": "/tmp/sotf-aud143/current-harness-build-timed.log",
+      "build_log_sha256": "25788a26c8b4e000a25128f19e17297c4fb0817a6497c22c911dba593f95bdaa",
+      "binary": "/tmp/sotf-aud143/binaries/current/aud143_cpu_timed",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "result": "clean release compile; executable copied to immutable variant-specific timing path"
+    }
+  ],
+  "historical_build_receipts": [
+    "/tmp/sotf-aud143/build-checkpoint-receipt.json",
+    "/tmp/sotf-aud143/recovered-harness-build-rawsamples.log",
+    "/tmp/sotf-aud143/current-harness-build-rawsamples.log"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "flock",
+    "-x",
+    "/tmp/sotf-daw-audit-cargo.lock",
+    "cargo",
+    "build",
+    "--offline",
+    "--locked",
+    "-p",
+    "plugins-ffi",
+    "--lib"
+  ],
+  "exit_code": 0,
+  "selected_source_matches": true,
+  "selected_files": 339,
+  "scope": "Selected FFI/bridge/host/DynamicEQ/Crossover and workspace manifests; not all transitive dependencies",
+  "header_sync_skipped": true,
+  "library": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r1/libplugins_ffi.so",
+  "library_sha256": "8954f6abe82bd6685b8f4d3142b06dbb2e1f89f7cdb615b3692497d40587c529"
+}

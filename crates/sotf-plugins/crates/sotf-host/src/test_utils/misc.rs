@@ -10,6 +10,7 @@ pub fn generate_dc(db: f32, num_samples: usize) -> Vec<f32> {
 
 thread_local! {
     pub static ALLOC_COUNT: Cell<usize> = const { Cell::new(0) };
+    pub static DEALLOC_COUNT: Cell<usize> = const { Cell::new(0) };
     pub static COUNTING_ENABLED: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -26,6 +27,28 @@ pub fn assert_no_allocs<F: FnOnce()>(label: &str, f: F) {
             label, count
         );
     }
+}
+
+/// Run a closure and assert it performs no heap allocations or deallocations.
+pub fn assert_no_allocs_or_deallocs<F: FnOnce()>(label: &str, f: F) {
+    let (allocations, deallocations) = measure_heap_activity(f);
+    assert_eq!(
+        (allocations, deallocations),
+        (0, 0),
+        "{label} performed heap activity"
+    );
+}
+
+/// Return thread-local allocation and deallocation counts for one closure.
+pub fn measure_heap_activity<F: FnOnce()>(f: F) -> (usize, usize) {
+    ALLOC_COUNT.with(|count| count.set(0));
+    DEALLOC_COUNT.with(|count| count.set(0));
+    COUNTING_ENABLED.with(|enabled| enabled.set(true));
+    f();
+    COUNTING_ENABLED.with(|enabled| enabled.set(false));
+    let allocations = ALLOC_COUNT.with(Cell::get);
+    let deallocations = DEALLOC_COUNT.with(Cell::get);
+    (allocations, deallocations)
 }
 
 /// Run standard QA tests for a plugin:

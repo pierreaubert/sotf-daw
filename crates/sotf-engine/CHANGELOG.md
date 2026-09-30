@@ -1,3 +1,11 @@
+# 1.1.0 (unreleased)
+
+## Changes
+
+- Carry Ambisonics orders through 7, true-stereo convolution, DynamicEQ shelf controls, BandSplit compensation and typed Crossover topology through engine configuration and plugin construction.
+- Preserve the live graph on rejected native replacements and propagate committed channel counts and latency.
+- Drain queued isolated-plugin audio at end of stream, keeping ordinary silence distinct from EOS and preserving the final nonzero program block.
+
 # 1.0.32-33
 
 ## CoreAudio output stability

@@ -374,15 +374,32 @@ pub fn convert_band_split(settings: &PluginSettings, _sample_rate: f64) -> Optio
         channels: _,
         frequency,
         crossover_type,
+        recombination_mode,
+        num_bands,
+        frequency_2,
+        frequency_3,
+        frequencies,
     } = settings
     else {
         return None;
     };
+    let active_frequencies = frequencies.clone().unwrap_or_else(|| match num_bands {
+        2 => vec![*frequency],
+        3 => vec![*frequency, *frequency_2],
+        4 => vec![*frequency, *frequency_2, *frequency_3],
+        _ => Vec::new(),
+    });
     Some(PluginConfig::new(
         "band_split",
         json!({
             "frequency": frequency,
+            "frequencies": active_frequencies,
+            "explicit_frequencies": frequencies,
+            "num_bands": num_bands,
             "type": crossover_type,
+            "recombination_mode": recombination_mode,
+            "frequency_2": frequency_2,
+            "frequency_3": frequency_3,
         }),
     ))
 }
@@ -393,21 +410,31 @@ pub fn convert_crossover(settings: &PluginSettings, _sample_rate: f64) -> Option
         frequency,
         output,
         fir_taps,
+        topology,
+        extra_frequencies,
+        channel_frequencies_hz,
+        channel_modes,
     } = settings
     else {
         return None;
     };
 
-    Some(PluginConfig::new(
-        "crossover",
-        json!({
-            "type": crossover_type,
-            "frequency": frequency,
-            "output": output,
-            "extra_frequencies": [],
-            "fir_taps": fir_taps,
-        }),
-    ))
+    let mut parameters = json!({
+        "type": crossover_type,
+        "frequency": frequency,
+        "output": output,
+        "topology": topology,
+        "extra_frequencies": extra_frequencies,
+        "fir_taps": fir_taps,
+    });
+    if let Some(channel_frequencies_hz) = channel_frequencies_hz {
+        parameters["channel_frequencies_hz"] = json!(channel_frequencies_hz);
+    }
+    if let Some(channel_modes) = channel_modes {
+        parameters["channel_modes"] = json!(channel_modes);
+    }
+
+    Some(PluginConfig::new("crossover", parameters))
 }
 
 pub fn convert_band_merge(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {

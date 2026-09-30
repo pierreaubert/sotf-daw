@@ -1,0 +1,12 @@
+{
+  "command": "python3 audit/tools/aud142_crossover_full_preset_probe.py crates/sotf-plugins/target/audit-artifacts/aud142-ffi-state-r1/libplugins_ffi.so audit/artifacts/aud142-full-preset-probe-pre-fix-r1",
+  "exit_code": 1,
+  "cases": 8,
+  "failed_cases": [
+    "full_two_way_into_four_way"
+  ],
+  "library_sha256": "d8ed320790fd445edd515922dc54b8b67a30fa04204d72936c849cf77cb025e3",
+  "probe_sha256": "807544fdf01b6b292b6c237f9042ab8748de387c50c96e5bfcc34940b9531d3f",
+  "scope": "Public full preset topology, partial state merge, populated refusal history and family changes; production DSP route oracle",
+  "limitations": "Sealed r1 library predates full-preset topology fix; no judgment of concurrently corrected source."
+}

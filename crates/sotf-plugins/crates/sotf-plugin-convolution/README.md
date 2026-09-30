@@ -5,6 +5,28 @@ SOTF realtime impulse-response convolution with uniform and non-uniform partitio
 Normal UPC/NUPC operation reports and preserves 1024 samples of latency, including while no IR is
 loaded or a replacement is pending. The optional NUPC time-domain head reports zero latency.
 
+## True-stereo routing
+
+Enable the structural `true_stereo` option for a stereo input/output plugin and a four-channel IR.
+IR channels must be ordered **LL, LR, RL, RR**, with the first letter identifying the input:
+`wet_left = left * LL + right * RL`, `wet_right = left * LR + right * RR`, where `*` is convolution.
+UPC, NUPC, and the NUPC direct head support this routing. Mix, gain, latency, and drain behavior
+follow the same contracts as ordinary convolution.
+
+The option defaults to `false`. Existing four-channel IR presets retain their original mapping:
+left uses IR channel 0, right uses channel 1, and channels 2 and 3 are unused. True-stereo mode
+requires exactly two plugin channels and exactly four loaded IR channels. It can also be selected
+before loading an IR; the plugin then uses its normal latency-aligned dry path.
+
+Factory JSON and engine presets persist `true_stereo`. Direct Rust callers can use
+`from_params_with_routing(channels, sample_rate, params, true_stereo)`; the existing params struct
+and `from_params` constructor retain their default routing. Changing the mode requires a
+control-thread rebuild. The realtime scalar setter rejects mode changes.
+
+See [usage examples](USAGE.md#true-stereo) for the channel map and configuration.
+
+## Lifecycle
+
 `tail_length()` reports a bound in output-rate frames, including that latency once. After a
 history reset, the bound is `latency + longest_resampled_IR_length - 1`; with no IR it is the dry
 delay alone. The getter uses cached scalar metadata and does not clone the active IR pointer.

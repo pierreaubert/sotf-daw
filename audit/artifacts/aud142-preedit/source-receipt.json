@@ -1,0 +1,539 @@
+{
+  "captured_utc": "2026-09-30T05:13:31.651317+00:00",
+  "scope": "Current Crossover and math-iir-fir package files plus selected workspace manifests/locks before AUD142 new-family implementation. This is source preservation, not an executed compatibility or CPU baseline and not a full transitive dependency snapshot.",
+  "file_selection": "rg --files within the two named package directories, regular files only; explicit workspace manifests/locks",
+  "heads": {
+    "sotf-daw": "93027970f412ce47c0cd2b8e4b7b1a5b0e5f0261",
+    "math-audio": "9174ba7edd52de7349a141a9d173ed9d6b63edca"
+  },
+  "files": [
+    {
+      "path": "math-audio/Cargo.lock",
+      "bytes": 113715,
+      "sha256": "744cba394e6a878d5b89daa25624330b3d84885b668f9073daa58f10a857a32f"
+    },
+    {
+      "path": "math-audio/Cargo.toml",
+      "bytes": 3994,
+      "sha256": "236788c10c42301b23d5798a216f22c80acb339746ad2bfa62be2445c9ef0ed3"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/AGENTS.md",
+      "bytes": 2683,
+      "sha256": "1654d4492fafc1b16a9cbf8debbbc405b0952716e88020d087171d34bcbc759c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/CHANGELOG.md",
+      "bytes": 6481,
+      "sha256": "c605a20711aecac04c3d786ddad81f22bea5414f97ba28fac6958eecb52c86fa"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/Cargo.toml",
+      "bytes": 971,
+      "sha256": "936965cffe59f111c18e9125ee9e81f3948be0877b7d7618c8b06ce6607f5dcf"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/README.md",
+      "bytes": 3876,
+      "sha256": "3232d2f15920c927f16c95c37318dea2c10c15ac4b040f481f308323755231a0"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/REFERENCES.md",
+      "bytes": 18162,
+      "sha256": "33516b95029b8efd3010234689a7b75a5324774ef927fb4d2d06674c4b9dfd02"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/benches/biquad_bench.rs",
+      "bytes": 1635,
+      "sha256": "1c35a81d8113c2ba7cc137c63ff1f8972bb1abb437e370b5862acb400c013580"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/benches/fir_design_bench.rs",
+      "bytes": 1988,
+      "sha256": "5620b6161677246ce924aa0463eb06cb2d91f644b2cf0e06d381a6b34d32a704"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/benches/response_bench.rs",
+      "bytes": 1778,
+      "sha256": "0cb1cdf713258f2ae57c7cf28aca745a960530b71690429d7d971b4fe6eaeb97"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/examples/fir_example.rs",
+      "bytes": 7009,
+      "sha256": "f1481d4d021fc539b271a60c2159819c37e6a3a3b8b369d885b2037cf8119625"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/examples/format_demo.rs",
+      "bytes": 1350,
+      "sha256": "0ab10e6586fd98119c47146924208d79c31a49da81bc531f9817e785b4ca4de1"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/examples/format_rme_room_demo.rs",
+      "bytes": 2043,
+      "sha256": "49877f83d437a50f7a74dd850becc42576e7c6d0030f0728954a2a58ecfcbde6"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/examples/peq_loudness_compensation.rs",
+      "bytes": 3837,
+      "sha256": "ae6a9200aa4d683b46700162c8582bbf81dc67f56e71e90835c82e60cb16823c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/examples/readme_example.rs",
+      "bytes": 2946,
+      "sha256": "82aa80d43618af2b0d43b29656f27edf6c5139fc9ab7ca5c2964d285ea246b9f"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/bin/filter_bench.rs",
+      "bytes": 2604,
+      "sha256": "d2078a9b3e469c10c8d7a36ee4734c8870915ebc3021d53f48a8860685f3bfd5"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/crossover.rs",
+      "bytes": 20758,
+      "sha256": "e6d90e5d27d331591c04d12a5e6d59259ad0efce7f66685bfc17945d10611e1c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/denormals.rs",
+      "bytes": 5160,
+      "sha256": "94b2b0ad67639fe2f347e2c50d4f691f90e26231fc20f05baae138364b25d90b"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/error.rs",
+      "bytes": 5903,
+      "sha256": "adb416259582df9e73cd8cbf41269f94a358788c41153e5a74c9f44e6d7c8181"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt.rs",
+      "bytes": 1154,
+      "sha256": "d5075893bc4f4c078dff30e330a25450584b951ca55d003054e18da369a9d561"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/biquad.rs",
+      "bytes": 6673,
+      "sha256": "8993a61000836b35e4c3139deb19397ddf1ee6b00c743916d1551e1fce270094"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/misc.rs",
+      "bytes": 829,
+      "sha256": "9774bf795482d464c848826113e45812c8be05b09a9cd21f2a1ee7a2c07b55aa"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/tests.rs",
+      "bytes": 11319,
+      "sha256": "bc0ae1a2a99cff1a16f5ed500c12755b73e8016e0d8cb335e4afe307bc4cc347"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir.rs",
+      "bytes": 50235,
+      "sha256": "468ef2586f24f5cae1ac267097770e4bee023ad8a2ce554d04347c3a6cebe5ba"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/design.rs",
+      "bytes": 4686,
+      "sha256": "476c303d171f188439deb0c4a19b09c141920f0e6b212c642ea9356ab51c403e"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/fir_filter_type.rs",
+      "bytes": 1158,
+      "sha256": "def46193fc4c53391073a75c1b17db38bfacee8b52da48f99411ffb2fa1dd751"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/misc.rs",
+      "bytes": 606,
+      "sha256": "7a9b0055a7a4c43ec05e6897f922a04af443d13b4911b00aa164655a51b953f2"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/tests.rs",
+      "bytes": 20663,
+      "sha256": "c4bbfda468de4bba35d37a9ee112f1562bafaf25f45073fe8d287c355ceb3035"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/types.rs",
+      "bytes": 1908,
+      "sha256": "07ff8b663b94f47ab417f93105807bd5c296b5f400af5ed4847298b19f058f56"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/window_type.rs",
+      "bytes": 3219,
+      "sha256": "05b151b8296a884a192a3bbd845247d44de56665e0dd36325fe69c142aa3b7e7"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_crossover.rs",
+      "bytes": 13859,
+      "sha256": "9c769b72b696c79837000f6330af43ac70596a5f5764f43892e3716945a0a2c4"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design.rs",
+      "bytes": 592,
+      "sha256": "4108e7dd82205df1b461d21efa9134f5d4b9b3b8d4ff859c0638f8844b5bc795"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/context.rs",
+      "bytes": 15415,
+      "sha256": "efba1d57826eb85846da0c1a8b78be1c634b4c215d3c46b0c04d5cb27a3e702c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/fir_design_config.rs",
+      "bytes": 1890,
+      "sha256": "8fec1a1e3811a46d4b0e8623ac571a3928994fcae7f1f68d62a06e32cb184664"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/fir_phase.rs",
+      "bytes": 2409,
+      "sha256": "0ded8472c396427f90d66ad2e5627fb5f74f80493ec7a45309627154c5ecde04"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/generate.rs",
+      "bytes": 2442,
+      "sha256": "a148b1286f98cf9e53d305764467e42c6c3245ce0e310da5f32b4ad78aedb370"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/misc.rs",
+      "bytes": 2163,
+      "sha256": "e0d1bfc7fefd7477caa2f032faaae9a6432f5b250b218f0c201bf64adcfce058"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/pre_ringing_config.rs",
+      "bytes": 2896,
+      "sha256": "10ec83bce54e84d1d1dda7a0b0f1dc4d67efd5a54d1f0f78f0688cc1da254f8b"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/tests.rs",
+      "bytes": 18274,
+      "sha256": "08dbdb1a4d200dca2b80bcf65cf305f8a0b775ff6e42d454017ce840ba4817da"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/types.rs",
+      "bytes": 2182,
+      "sha256": "8a60b7de760525885a3ef531780e6cf1a9e0ffe7e54d1699ca5a3706d8cdfb73"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad.rs",
+      "bytes": 35900,
+      "sha256": "51eac7d93dee8e9f213fbfc235272be5dcb398b772bece02b889f37b0bba760a"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/biquad_coefficients.rs",
+      "bytes": 1324,
+      "sha256": "a5d74d48da433c38f8f5cb4dcfc22f4661cec78967ea1613cf09d02f918075b0"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/biquad_filter_type.rs",
+      "bytes": 2834,
+      "sha256": "735a745ebc4562a46a0b491b4a9831cd433a696c7e6e4a44e48fdeb9117ab263"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/tests.rs",
+      "bytes": 12296,
+      "sha256": "19fe6a90b92287fc353cae4a5f895ebd94656a2dfbad376b5195094c297bcfa2"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/tests/misc.rs",
+      "bytes": 17996,
+      "sha256": "8fe2b29acc21018072cfb199eac2369c71cff8d767177e9b0d58125f42be0564"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/types.rs",
+      "bytes": 272,
+      "sha256": "1657af5307c9e6a6993574d2f9cd3b99d2b4509e5cdfaf51a21eb7d49d94ddd6"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad_bank.rs",
+      "bytes": 25758,
+      "sha256": "65e83c8bc0d3beed87658302b8f0da9fefa2fc5176313bb28de7ec1e708fb594"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz.rs",
+      "bytes": 1611,
+      "sha256": "31d0bf2b6dc84d383bbd71cce7f11b58c2374986e1a9dd7db476f05ab2a22af3"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/correction.rs",
+      "bytes": 19927,
+      "sha256": "1186e9255cff432f97257eb509dbcfe43c840b7712c1ba6ecf0759a37b581202"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/correction_fit.rs",
+      "bytes": 27302,
+      "sha256": "5cdb4ace18939a47f43a193980ebaa67d121eb07da4ee25a4d94ec778563812c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/kautz_filter.rs",
+      "bytes": 6329,
+      "sha256": "17a17e12787c2f125edad373e36efe93f052dd868f5e6f55078f2526f30a5801"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/kautz_section.rs",
+      "bytes": 6600,
+      "sha256": "1617dd32f9efbf34f12e5008de46a8ab84f863e22758fd25db88ae9f8b67cc2f"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/misc.rs",
+      "bytes": 2269,
+      "sha256": "0a0b888951dfbf697de7cee41b75750c29bc8a832475a77d4da4ec2b108071bd"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/tests.rs",
+      "bytes": 44347,
+      "sha256": "7d0f065da487a5571a82215738da8c2d392473a4995315067bee6d62f1f45728"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/mod.rs",
+      "bytes": 1291,
+      "sha256": "7882d64dd6be533e60af331abde8270990beebe6a26de2ba2a9acb15b2e1baa7"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq.rs",
+      "bytes": 36870,
+      "sha256": "b481469b02c124ea993698db32ddd62a32e637b71d8f6fa7a40c9622d85f42ce"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/biquad.rs",
+      "bytes": 2556,
+      "sha256": "5041fe578a713f181a5519af4b4f4d9e3eb527cbc4b7bfae44594c9e5696b5ae"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/consts.rs",
+      "bytes": 869,
+      "sha256": "8e2e4c29bf3a7ffd14559e92dc3cdbc2f764f0b5c6ac573fb1b01baf0016057e"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/misc.rs",
+      "bytes": 9885,
+      "sha256": "f0fdf731668c06a09b6e8542cbdec75c0e89be203da58bb7dcb4a772f142707f"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/tests.rs",
+      "bytes": 47250,
+      "sha256": "87a82010118192db60dc2a108ced9d39ab9b06825ef6dced2beb93beb1c0bc92"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/types.rs",
+      "bytes": 450,
+      "sha256": "0e642f582eee178403447b9a5931e0001d796f396c8fb19398067cfbf2dd1503"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad.rs",
+      "bytes": 10692,
+      "sha256": "7fdad2951dff8cb90fa00055b8fd7525c909a6a33414831a2d8f1a1fc0490657"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad/misc.rs",
+      "bytes": 3974,
+      "sha256": "2a74fa7f128c8d58fbf090ca3ad196bfdf8c77ff9720d2b209a3d9cc44370a13"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad/tests.rs",
+      "bytes": 7920,
+      "sha256": "21d00110a6764fa67578492354cb6c8110a87e3ab1f3faafeace9a17ead9b62e"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/lr4_crossover.rs",
+      "bytes": 14564,
+      "sha256": "d753e5f52d145a17b1f2effbf93ca8119c75747ebf85ff26d033b912b69d9af8"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/lr8_crossover.rs",
+      "bytes": 13425,
+      "sha256": "6e990c78ebfcf4674b931c69cbb956d74be2ad9670b0245bb5339bb2411eeb85"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/mod.rs",
+      "bytes": 7467,
+      "sha256": "476e1fae822a2de402217424107315841e43ad9cde80e5e8b3d000cb2f6cc1d7"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth.rs",
+      "bytes": 791,
+      "sha256": "f8ebb97b5a0c3635b783e9b7dd0360b4faa5f705ebf0f955525625150727facf"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/misc.rs",
+      "bytes": 6047,
+      "sha256": "378383df46f728dc9af960608e5517bd09ad980a91aa84bb9768d3cae5cf90bb"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/smooth.rs",
+      "bytes": 3250,
+      "sha256": "3c6bd89b9d069497068c9357956ac0b3b30443c792182251887dd41a5602d13d"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/tests.rs",
+      "bytes": 7748,
+      "sha256": "dbf898c3e160433aa9e6c8f45079569222787788120f7f357eef92e249ca7af3"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/svf.rs",
+      "bytes": 16806,
+      "sha256": "80af15c58f0428391da27f161eed0c1086b816e8ec7559a1bb2d45932eb3961f"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/traits.rs",
+      "bytes": 1469,
+      "sha256": "84b1de53e277d184bcad9999f237402fdf6f960ac6ff1e6f5bade1500902ed22"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/tests/allpass_tests.rs",
+      "bytes": 1912,
+      "sha256": "86687403978c26ab3dd84e7e694db99a175e5cff4fd6974553a8b7c5ae718d90"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/tests/kirkeby-calibration-invariance-regression.rs",
+      "bytes": 1284,
+      "sha256": "eddb358b0086dc7f60c9a703d97f3bd2b77822e320460be3b0f2a9ec69227e67"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/tests/kirkeby-frequency-buffer-regression.rs",
+      "bytes": 2457,
+      "sha256": "bedd5b29634f37f7db8ce55430cc9aede85b1d642657ef5fbf796727283c293a"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/tests/property_tests.proptest-regressions",
+      "bytes": 757,
+      "sha256": "cc0d96fb612a05ab7e9264092246efaad446b45784e9af3d03e60a34000e964c"
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/tests/property_tests.rs",
+      "bytes": 15051,
+      "sha256": "5171e0c720e01158519b48d8d8625978e0d4f5c9faac7a940c1f3d6d15a22a0a"
+    },
+    {
+      "path": "sotf-daw/Cargo.lock",
+      "bytes": 295850,
+      "sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18"
+    },
+    {
+      "path": "sotf-daw/Cargo.toml",
+      "bytes": 16069,
+      "sha256": "669a7e1485f9ab70a9449a2d31cacd8e6479778b9b6212c4f661280bb23f07f2"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/Cargo.toml",
+      "bytes": 5422,
+      "sha256": "a0b225ea0b2117a45f53275fa4380f7cd8f793577c8e9c66a5f0238f0f494429"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/AGENTS.md",
+      "bytes": 2546,
+      "sha256": "52d8596cd11214115176c57e9fe247387cac2f7e1511fd22a3b3dc29068a49bd"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/CHANGELOG.md",
+      "bytes": 11489,
+      "sha256": "e35199e0352efc3d2109b57c8bf6a0248c39f5079712a978486e6d7fb53f47d3"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/Cargo.toml",
+      "bytes": 661,
+      "sha256": "5f4d616c6fd4c2ee56ca24464ad7f7a09cff64dfddb097c5b23143460dea0f22"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/README.md",
+      "bytes": 818,
+      "sha256": "5b9b63bcf9b76f8de1bb1a84a5cd66ebcf3742672c073473af09438d34a128d3"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/benches/crossover-block-benchmark.rs",
+      "bytes": 3969,
+      "sha256": "d9cfef1740e1d3e85976cd5cee7b188259897bf6945f8aaba180ea1f24230222"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/bin/qa_crossover.rs",
+      "bytes": 3346,
+      "sha256": "11e02bdbbb8dfc5027c145e4d74f4f0537c817575194f38e8769bb78f02bbe90"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_kind.rs",
+      "bytes": 838,
+      "sha256": "ecc4e33b59324c7ffe37bc0af4aa763941ca80fc805ad712cbdadabd98ffcda1"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_mode.rs",
+      "bytes": 1100,
+      "sha256": "423112f2ecb611d8bcd59cf9410f32c746d0b36e06fe00601deae235800bb241"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs",
+      "bytes": 53123,
+      "sha256": "0c4357938dcf6b74141eee65416592b5c6db0b3a61a0efebcf9e8a742df28053"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/lib.rs",
+      "bytes": 283,
+      "sha256": "0059298b079b2623fde9737aff2551728eb15115ed84c83212859cf91d96a761"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/misc.rs",
+      "bytes": 236,
+      "sha256": "ee6d7aba51eefb7fe9a3557d1711392896700bde6a5ff349bad5c4c0b307a456"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/params.rs",
+      "bytes": 2019,
+      "sha256": "68b6890c9bcc57fb558313146b7c37a5c91a28b9bca81d4973adf276d798bbd9"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/parse.rs",
+      "bytes": 543,
+      "sha256": "531c4b719b72499adea629f87aedad99e3b5abffc02986068571eee3892a82db"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/per_channel_op_mode.rs",
+      "bytes": 1274,
+      "sha256": "f6a9234d15d365198fed5e521dd895decf0e696000f4dc9a64f631c9c9598890"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/precise_lr4.rs",
+      "bytes": 1321,
+      "sha256": "7974a142a81e8392f4130c0ac1e43c3ea1ccb93667d25dc86355cf9825687b04"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/tests.rs",
+      "bytes": 41521,
+      "sha256": "227b7ecf0945918d8e1220fa115086299b9ea5007c3e531fd02bf2fe08937d85"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/types.rs",
+      "bytes": 1398,
+      "sha256": "b5d069a5905263d7e085735c7cb65b55a9695a741b9ead24ef1ef288607cd3a3"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_baselines.rs",
+      "bytes": 5344,
+      "sha256": "d63af97177d8d5236b1075368b00e9190c1b3e4c9fa3003e706c938e6de7fefa"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_realtime.rs",
+      "bytes": 3459,
+      "sha256": "3a8bdced1c5ef04e424d7b03c3a23f01f8922156ee99a5b0cf8068185d8b2839"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_recombination.rs",
+      "bytes": 24186,
+      "sha256": "7fb35ab37eb50685eba30ef8096bdfa80f1894ebe4afe5230bf4d9ef6013068c"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/block_kernels.rs",
+      "bytes": 9350,
+      "sha256": "c0d89609a3bd7bc361ca9253704ff266b6c75f58dddf3b9409088796fd50542b"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/finite_stream.rs",
+      "bytes": 13847,
+      "sha256": "76012000e2d609a76a03a4946dd064caa752fcf221de035fe30774327e5a546b"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/integration.rs",
+      "bytes": 15963,
+      "sha256": "40638223f7fa6eed3e533754f870b9ae41650cf368d7aa83a13d81435bfcc2af"
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/tests/property_tests.rs",
+      "bytes": 4025,
+      "sha256": "d6aaf6c8eca74c69c81fd67a676668705fcbe062504fc1bb8fd812848c3f6f09"
+    }
+  ],
+  "files_changed_during_capture": [],
+  "archive_sha256": "4970c3ea910a2dd38e5bd72ccaac5aeb7043dcbeca3c45c8831fd51550ee9b1d",
+  "manifest_sha256": "90bd75c0ec2964d7c4be42df792b0391082c98161b5280354bc25190dd0a4d66"
+}

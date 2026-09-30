@@ -1,7 +1,7 @@
 [package]
 name = "sotf-plugin-band-split"
 description = "SOTF Band Split plugin - split signal into frequency bands"
-version = "0.5.5"
+version = "0.6.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -26,5 +26,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+flate2 = "1.1.10"
 proptest = { workspace = true }
 sotf-plugin-band-merge = { workspace = true }

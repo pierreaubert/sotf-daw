@@ -1,0 +1,15 @@
+{
+  "source_packet": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-cpu-peak-shelf-r1",
+  "original_index_sha256": "9a93a19150f43ae1ea38a4e89d60b434cd0fb3a72cb1550d380ba7d593717727",
+  "verified_original_entries": 462,
+  "verified_archived_selected_source_entries": 451,
+  "source_manifest_start_equals_end": true,
+  "scope": "One copied release executable; 12 geometries, Peak/LowShelf/HighShelf, seven trials each; 24 shelf comparisons all <=1.25. Independent parser validated all 36 medians and rounded reported ratios from raw samples.",
+  "provenance_limit": "451 selected source bytes were captured after build and before timing, stable through measurement; this is not a pre/post compile source binding. Native/control synchronization, setup/reset, accuracy and WCET are excluded.",
+  "executable_path": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-cpu-peak-shelf-r1/bin/aud139_cpu_shape_comparison-release",
+  "executable_sha256": "62fc8e4c026c6920212bde6b7e6a64b7934d9029e36f7db8aa4d64f4a48bb2f0",
+  "prior_strict_lint": "Release Clippy without --no-deps failed two then-active host draft style lints; scoped DynamicEQ --no-deps release lint subsequently passed. No full dependency lint pass is inferred.",
+  "original_index_preserved_as": "LUNA_SHA256SUMS; its paths refer to the original packet with full uncompressed snapshot and binary, not this compressed copy.",
+  "receipt_naming_qualification": "Original previous_peak_compatibility_context labels its ratios old_to_new; mathematically the preserved controlled comparison is new/old. Raw original receipt is unchanged.",
+  "status": "Executed scoped CPU evidence; independent Astra review active"
+}

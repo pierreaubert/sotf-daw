@@ -217,6 +217,14 @@ impl Plugin for AutoOversampledPlugin {
         super::misc::OS_CHUNK_SIZE
     }
 
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        self.inner.prepare_drain_metadata()
+    }
+
+    fn refresh_control_thread_metadata(&mut self) {
+        self.inner.refresh_control_thread_metadata()
+    }
+
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
         if self.oversampler.drain_failed() {
             return Err("Oversampler must be reset after a failed drain".into());

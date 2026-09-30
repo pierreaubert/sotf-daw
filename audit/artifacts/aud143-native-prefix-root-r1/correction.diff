@@ -1,0 +1,347 @@
+--- before/crates/3rdparties/nih-plug/src/wrapper/clap/wrapper.rs
++++ after/crates/3rdparties/nih-plug/src/wrapper/clap/wrapper.rs
+@@ -1,9 +1,6 @@
+ use atomic_float::AtomicF32;
+ use atomic_refcell::{AtomicRefCell, AtomicRefMut};
+ use clap_sys::events::{
+-    clap_event_header, clap_event_midi, clap_event_midi_sysex, clap_event_note,
+-    clap_event_note_expression, clap_event_param_gesture, clap_event_param_mod,
+-    clap_event_param_value, clap_event_transport, clap_input_events, clap_output_events,
+     CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_IS_LIVE, CLAP_EVENT_MIDI, CLAP_EVENT_MIDI_SYSEX,
+     CLAP_EVENT_NOTE_CHOKE, CLAP_EVENT_NOTE_END, CLAP_EVENT_NOTE_EXPRESSION, CLAP_EVENT_NOTE_OFF,
+     CLAP_EVENT_NOTE_ON, CLAP_EVENT_PARAM_GESTURE_BEGIN, CLAP_EVENT_PARAM_GESTURE_END,
+@@ -13,56 +10,59 @@
+     CLAP_NOTE_EXPRESSION_VOLUME, CLAP_TRANSPORT_HAS_BEATS_TIMELINE,
+     CLAP_TRANSPORT_HAS_SECONDS_TIMELINE, CLAP_TRANSPORT_HAS_TEMPO,
+     CLAP_TRANSPORT_HAS_TIME_SIGNATURE, CLAP_TRANSPORT_IS_LOOP_ACTIVE, CLAP_TRANSPORT_IS_PLAYING,
+-    CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL,
++    CLAP_TRANSPORT_IS_RECORDING, CLAP_TRANSPORT_IS_WITHIN_PRE_ROLL, clap_event_header,
++    clap_event_midi, clap_event_midi_sysex, clap_event_note, clap_event_note_expression,
++    clap_event_param_gesture, clap_event_param_mod, clap_event_param_value, clap_event_transport,
++    clap_input_events, clap_output_events,
+ };
+ use clap_sys::ext::ambisonic::{
+-    clap_ambisonic_config, clap_plugin_ambisonic, CLAP_AMBISONIC_NORMALIZATION_SN3D,
+-    CLAP_AMBISONIC_ORDERING_ACN, CLAP_EXT_AMBISONIC,
++    CLAP_AMBISONIC_NORMALIZATION_SN3D, CLAP_AMBISONIC_ORDERING_ACN, CLAP_EXT_AMBISONIC,
++    clap_ambisonic_config, clap_plugin_ambisonic,
+ };
+ use clap_sys::ext::audio_ports::{
+-    clap_audio_port_info, clap_plugin_audio_ports, CLAP_AUDIO_PORT_IS_MAIN, CLAP_EXT_AUDIO_PORTS,
+-    CLAP_PORT_MONO, CLAP_PORT_STEREO,
++    CLAP_AUDIO_PORT_IS_MAIN, CLAP_EXT_AUDIO_PORTS, CLAP_PORT_MONO, CLAP_PORT_STEREO,
++    clap_audio_port_info, clap_plugin_audio_ports,
+ };
+ use clap_sys::ext::audio_ports_config::{
+-    clap_audio_ports_config, clap_plugin_audio_ports_config, CLAP_EXT_AUDIO_PORTS_CONFIG,
++    CLAP_EXT_AUDIO_PORTS_CONFIG, clap_audio_ports_config, clap_plugin_audio_ports_config,
+ };
+ use clap_sys::ext::gui::{
+-    clap_gui_resize_hints, clap_host_gui, clap_plugin_gui, clap_window, CLAP_EXT_GUI,
+-    CLAP_WINDOW_API_COCOA, CLAP_WINDOW_API_WIN32, CLAP_WINDOW_API_X11,
++    CLAP_EXT_GUI, CLAP_WINDOW_API_COCOA, CLAP_WINDOW_API_WIN32, CLAP_WINDOW_API_X11,
++    clap_gui_resize_hints, clap_host_gui, clap_plugin_gui, clap_window,
+ };
+-use clap_sys::ext::latency::{clap_host_latency, clap_plugin_latency, CLAP_EXT_LATENCY};
++use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
+ use clap_sys::ext::note_ports::{
+-    clap_note_port_info, clap_plugin_note_ports, CLAP_EXT_NOTE_PORTS, CLAP_NOTE_DIALECT_CLAP,
+-    CLAP_NOTE_DIALECT_MIDI,
++    CLAP_EXT_NOTE_PORTS, CLAP_NOTE_DIALECT_CLAP, CLAP_NOTE_DIALECT_MIDI, clap_note_port_info,
++    clap_plugin_note_ports,
+ };
+ use clap_sys::ext::params::{
+-    clap_host_params, clap_param_info, clap_plugin_params, CLAP_EXT_PARAMS,
+-    CLAP_PARAM_IS_AUTOMATABLE, CLAP_PARAM_IS_BYPASS, CLAP_PARAM_IS_HIDDEN,
++    CLAP_EXT_PARAMS, CLAP_PARAM_IS_AUTOMATABLE, CLAP_PARAM_IS_BYPASS, CLAP_PARAM_IS_HIDDEN,
+     CLAP_PARAM_IS_MODULATABLE, CLAP_PARAM_IS_MODULATABLE_PER_NOTE_ID, CLAP_PARAM_IS_READONLY,
+-    CLAP_PARAM_IS_STEPPED, CLAP_PARAM_RESCAN_VALUES,
++    CLAP_PARAM_IS_STEPPED, CLAP_PARAM_RESCAN_VALUES, clap_host_params, clap_param_info,
++    clap_plugin_params,
+ };
+ use clap_sys::ext::remote_controls::{
+-    clap_plugin_remote_controls, clap_remote_controls_page, CLAP_EXT_REMOTE_CONTROLS,
++    CLAP_EXT_REMOTE_CONTROLS, clap_plugin_remote_controls, clap_remote_controls_page,
+ };
+ use clap_sys::ext::render::{
+-    clap_plugin_render, clap_plugin_render_mode, CLAP_EXT_RENDER, CLAP_RENDER_OFFLINE,
+-    CLAP_RENDER_REALTIME,
++    CLAP_EXT_RENDER, CLAP_RENDER_OFFLINE, CLAP_RENDER_REALTIME, clap_plugin_render,
++    clap_plugin_render_mode,
+ };
+-use clap_sys::ext::state::{clap_plugin_state, CLAP_EXT_STATE};
+-use clap_sys::ext::surround::{clap_plugin_surround, CLAP_EXT_SURROUND};
+-use clap_sys::ext::tail::{clap_host_tail, clap_plugin_tail, CLAP_EXT_TAIL};
+-use clap_sys::ext::thread_check::{clap_host_thread_check, CLAP_EXT_THREAD_CHECK};
++use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
++use clap_sys::ext::surround::{CLAP_EXT_SURROUND, clap_plugin_surround};
++use clap_sys::ext::tail::{CLAP_EXT_TAIL, clap_host_tail, clap_plugin_tail};
++use clap_sys::ext::thread_check::{CLAP_EXT_THREAD_CHECK, clap_host_thread_check};
+ use clap_sys::ext::voice_info::{
+-    clap_host_voice_info, clap_plugin_voice_info, clap_voice_info, CLAP_EXT_VOICE_INFO,
+-    CLAP_VOICE_INFO_SUPPORTS_OVERLAPPING_NOTES,
++    CLAP_EXT_VOICE_INFO, CLAP_VOICE_INFO_SUPPORTS_OVERLAPPING_NOTES, clap_host_voice_info,
++    clap_plugin_voice_info, clap_voice_info,
+ };
+ use clap_sys::fixedpoint::{CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR};
+ use clap_sys::host::clap_host;
+-use clap_sys::id::{clap_id, CLAP_INVALID_ID};
++use clap_sys::id::{CLAP_INVALID_ID, clap_id};
+ use clap_sys::plugin::clap_plugin;
+ use clap_sys::process::{
+-    clap_process, clap_process_status, CLAP_PROCESS_CONTINUE, CLAP_PROCESS_CONTINUE_IF_NOT_QUIET,
+-    CLAP_PROCESS_ERROR, CLAP_PROCESS_TAIL,
++    CLAP_PROCESS_CONTINUE, CLAP_PROCESS_CONTINUE_IF_NOT_QUIET, CLAP_PROCESS_ERROR,
++    CLAP_PROCESS_TAIL, clap_process, clap_process_status,
+ };
+ use clap_sys::stream::{clap_istream, clap_ostream};
+ use crossbeam::atomic::AtomicCell;
+@@ -72,7 +72,7 @@
+ use std::any::Any;
+ use std::borrow::Borrow;
+ use std::collections::{HashMap, HashSet, VecDeque};
+-use std::ffi::{c_void, CStr};
++use std::ffi::{CStr, c_void};
+ use std::mem;
+ use std::num::NonZeroU32;
+ use std::os::raw::c_char;
+@@ -97,7 +97,7 @@
+ use crate::wrapper::clap::util::{read_stream, write_stream};
+ use crate::wrapper::state::{self, PluginState};
+ use crate::wrapper::util::buffer_management::{
+-    audio_layout_bus_channels, audio_layout_bus_count, BufferManager, ChannelPointers,
++    BufferManager, ChannelPointers, audio_layout_bus_channels, audio_layout_bus_count,
+ };
+ use crate::wrapper::util::{
+     clamp_input_event_timing, clamp_output_event_timing, hash_param_id, process_wrapper, strlcpy,
+@@ -154,11 +154,12 @@
+         let required_count = if is_input {
+             usize::from(layout.main_input_channels.is_some())
+         } else {
+-            expected_count
++            usize::from(layout.main_output_channels.is_some())
+         };
+-        // The primary input/output geometry is mandatory. Auxiliary input buses are optional and
+-        // may be short; BufferManager supplies prepared silence for those missing channels. Reject
+-        // unknown surplus buses so they can never be mistaken for part of the declared layout.
++        // The main input and output buses are mandatory when declared. Auxiliary input buses may
++        // be omitted and receive prepared silence. Auxiliary output buses may be omitted only as
++        // a suffix; BufferManager then creates empty slices and skips plugin processing. Validate
++        // every bus that is present and reject unknown surplus buses.
+         if bus_count < required_count
+             || bus_count > expected_count
+             || (bus_count > 0 && buses.is_null())
+@@ -2320,12 +2321,10 @@
+                         }
+                     });
+ 
+-                // If the host does not provide outputs or if it does not provide the required
+-                // number of channels (should not happen, but Ableton Live does this for bypassed
+-                // VST3 plugins) then we'll skip audio processing. In that case
+-                // `buffer_manager.create_buffers` will have set one or more of the output buffers
+-                // to empty slices since there is no storage to point them to. The auxiliary input
+-                // buffers always point to valid storage.
++                // If the host omits an auxiliary output suffix, BufferManager leaves one or more
++                // output slices empty. Skip plugin processing so it cannot access absent buses;
++                // the main output already contains the prepared input copy. Auxiliary inputs
++                // always point to valid storage.
+                 let mut buffer_is_valid = true;
+                 for output_buffer_slice in buffers.main_buffer.as_slice_immutable().iter().chain(
+                     buffers
+@@ -2339,7 +2338,12 @@
+                     }
+                 }
+ 
+-                nih_debug_assert!(buffer_is_valid);
++                if total_buffer_len > 0
++                    && process.audio_outputs_count as usize
++                        == audio_layout_bus_count(current_audio_io_layout, false)
++                {
++                    nih_debug_assert!(buffer_is_valid);
++                }
+ 
+                 // Some of the fields are left empty because CLAP does not provide this information,
+                 // but the methods on [`Transport`] can reconstruct these values from the other
+--- before/crates/3rdparties/nih-plug/src/wrapper/vst3/wrapper.rs
++++ after/crates/3rdparties/nih-plug/src/wrapper/vst3/wrapper.rs
+@@ -68,11 +68,12 @@
+                     .map_or(1, |index| index + 1)
+             }
+         } else {
+-            expected_count
++            usize::from(layout.main_output_channels.is_some())
+         };
+-        // The primary input/output geometry is mandatory. Auxiliary input buses are optional and
+-        // may be short; BufferManager supplies prepared silence for those missing channels. Reject
+-        // unknown surplus buses so they can never be mistaken for part of the declared layout.
++        // The main input and output buses are mandatory when declared. Auxiliary input buses may
++        // be omitted and receive prepared silence. Auxiliary output buses may be omitted only as a
++        // suffix; BufferManager then creates empty slices and skips plugin processing. Validate
++        // every bus that is present and reject unknown surplus buses.
+         if bus_count < 0
+             || (bus_count as usize) < required_count
+             || (bus_count as usize) > expected_count
+@@ -90,10 +91,12 @@
+             let bus_active = is_input
+                 || index >= u64::BITS as usize
+                 || active_output_buses & (1_u64 << index) != 0;
+-            let required_bus = if is_input || !optional_output_buses {
++            let required_bus = if is_input {
+                 index < required_count
++            } else if optional_output_buses {
++                bus_active
+             } else {
+-                bus_active
++                true
+             };
+             let optional_inactive_output = !is_input && optional_output_buses && !bus_active;
+             if bus.num_channels < 0
+@@ -1591,7 +1594,12 @@
+                             .flat_map(|(_, buffer)| buffer.as_slice_immutable().iter())
+                             .all(|slice| slice.len() == block_len);
+                     }
+-                    nih_debug_assert!(buffer_is_valid);
++                    if block_len > 0
++                        && data.num_outputs as usize
++                            == audio_layout_bus_count(current_audio_io_layout, false)
++                    {
++                        nih_debug_assert!(buffer_is_valid);
++                    }
+ 
+                     // Some of the fields are left empty because VST3 does not provide this
+                     // information, but the methods on [`Transport`] can reconstruct these values
+--- before/crates/sotf-plugins/crates/plugins-nih/tests/native_aux_output.rs
++++ after/crates/sotf-plugins/crates/plugins-nih/tests/native_aux_output.rs
+@@ -69,8 +69,8 @@
+         assert!(stereo[0][..frames].iter().all(|sample| *sample == 0.75));
+         assert!(stereo[1][..frames].iter().all(|sample| *sample == -0.75));
+     } else {
+-        // Missing required outputs skip DSP; the provided main input was copied
+-        // to main output by the buffer manager before that validity check.
++        // An omitted auxiliary output suffix skips DSP; the main input was
++        // copied to main output by the buffer manager before that validity check.
+         assert!(main[..frames].iter().all(|sample| *sample == 0.125));
+         assert!(stereo.iter().flatten().all(|sample| *sample == 73.0));
+         if ports == 1 {
+@@ -115,10 +115,11 @@
+     let mut input = [0.125_f32; 257];
+     let mut main = [99.0_f32; 257];
+     let mut mono = [71.0_f32; 257];
++    let mut extra_mono = [83.0_f32; 257];
+     let mut stereo = [[73.0_f32; 257]; 2];
+     let mut input_ptrs = [input.as_mut_ptr()];
+     let mut main_ptrs = [main.as_mut_ptr()];
+-    let mut mono_ptrs = [mono.as_mut_ptr()];
++    let mut mono_ptrs = [mono.as_mut_ptr(), extra_mono.as_mut_ptr()];
+     let mut stereo_ptrs = [stereo[0].as_mut_ptr(), stereo[1].as_mut_ptr()];
+     let bus = |pointers, channels| clap_audio_buffer {
+         data32: pointers,
+@@ -156,6 +157,41 @@
+         assert_ne!(status, CLAP_PROCESS_ERROR);
+         verify_outputs(&main, &mono, &stereo, ports, frames);
+     }
++
++    // A delivered bus with the wrong width remains an error. Keep two live pointers behind the
++    // bad mono declaration so the rejection and safe-silence path are exercised without an
++    // invalid test fixture pointer. Surplus channel storage must remain untouched.
++    main.fill(99.0);
++    mono.fill(71.0);
++    extra_mono.fill(83.0);
++    stereo.iter_mut().for_each(|channel| channel.fill(73.0));
++    output_buses[1].channel_count = 2;
++    let malformed_process = clap_process {
++        steady_time: -1,
++        frames_count: 17,
++        transport: std::ptr::null(),
++        audio_inputs: &input_bus,
++        audio_outputs: output_buses.as_mut_ptr(),
++        audio_inputs_count: 1,
++        audio_outputs_count: 3,
++        in_events: std::ptr::null(),
++        out_events: std::ptr::null(),
++    };
++    // SAFETY: Both pointers supplied for the malformed bus are live and the host arrays remain
++    // valid for the callback. The wrapper must reject its wrong declared channel count.
++    let status = assert_no_alloc::assert_no_alloc(|| unsafe {
++        ((*plugin).process.unwrap())(plugin, &malformed_process)
++    });
++    assert_eq!(status, CLAP_PROCESS_ERROR);
++    assert!(main[..17].iter().all(|sample| *sample == 0.0));
++    assert!(mono[..17].iter().all(|sample| *sample == 0.0));
++    assert!(
++        stereo
++            .iter()
++            .all(|channel| channel[..17].iter().all(|sample| *sample == 0.0))
++    );
++    assert!(extra_mono.iter().all(|sample| *sample == 83.0));
++    assert!(main[17..].iter().all(|sample| *sample == 99.0));
+     // SAFETY: Paired stop/deactivate on the activated instance.
+     unsafe {
+         ((*plugin).stop_processing.unwrap())(plugin);
+@@ -166,7 +202,7 @@
+ #[test]
+ fn vst3_missing_auxiliary_output_never_accesses_hidden_valid_bus() {
+     use nih_plug::wrapper::vst3::{Wrapper, vst3_sys};
+-    use vst3_sys::base::{IPluginBase, IUnknown, kResultOk};
++    use vst3_sys::base::{IPluginBase, IUnknown, kResultFalse, kResultOk};
+     use vst3_sys::vst::{AudioBusBuffers, IAudioProcessor, IComponent, ProcessData, ProcessSetup};
+     use vst3_sys::{ComInterface, VstPtr};
+     let wrapper = Wrapper::<OutputProbe>::new();
+@@ -208,10 +244,11 @@
+         let mut input = [0.125_f32; 257];
+         let mut main = [99.0_f32; 257];
+         let mut mono = [71.0_f32; 257];
++        let mut extra_mono = [83.0_f32; 257];
+         let mut stereo = [[73.0_f32; 257]; 2];
+         let mut input_ptrs = [input.as_mut_ptr().cast()];
+         let mut main_ptrs = [main.as_mut_ptr().cast()];
+-        let mut mono_ptrs = [mono.as_mut_ptr().cast()];
++        let mut mono_ptrs = [mono.as_mut_ptr().cast(), extra_mono.as_mut_ptr().cast()];
+         let mut stereo_ptrs = [stereo[0].as_mut_ptr().cast(), stereo[1].as_mut_ptr().cast()];
+         let bus = |pointers, channels| AudioBusBuffers {
+             num_channels: channels,
+@@ -248,6 +285,44 @@
+             );
+             verify_outputs(&main, &mono, &stereo, ports, frames);
+         }
++
++        // A delivered bus with the wrong width remains an error. Keep two live pointers behind
++        // the bad mono declaration so the rejection and safe-silence path are exercised without
++        // an invalid test fixture pointer. Surplus channel storage must remain untouched.
++        main.fill(99.0);
++        mono.fill(71.0);
++        extra_mono.fill(83.0);
++        stereo.iter_mut().for_each(|channel| channel.fill(73.0));
++        output_buses[1].num_channels = 2;
++        let mut malformed_data = ProcessData {
++            process_mode: 0,
++            symbolic_sample_size: 0,
++            num_samples: 17,
++            num_inputs: 1,
++            num_outputs: 3,
++            inputs: &mut input_bus,
++            outputs: output_buses.as_mut_ptr(),
++            input_param_changes: std::mem::zeroed(),
++            output_param_changes: std::mem::zeroed(),
++            input_events: std::mem::zeroed(),
++            output_events: std::mem::zeroed(),
++            context: std::ptr::null_mut(),
++        };
++        // SAFETY: Both pointers supplied for the malformed bus are live and the host arrays remain
++        // valid for the callback. The wrapper must reject its wrong declared channel count.
++        assert_eq!(
++            assert_no_alloc::assert_no_alloc(|| processor.process(&mut malformed_data)),
++            kResultFalse
++        );
++        assert!(main[..17].iter().all(|sample| *sample == 0.0));
++        assert!(mono[..17].iter().all(|sample| *sample == 0.0));
++        assert!(
++            stereo
++                .iter()
++                .all(|channel| channel[..17].iter().all(|sample| *sample == 0.0))
++        );
++        assert!(extra_mono.iter().all(|sample| *sample == 83.0));
++        assert!(main[17..].iter().all(|sample| *sample == 99.0));
+         assert_eq!(processor.set_processing(0), kResultOk);
+         assert_eq!(component.set_active(0), kResultOk);
+         assert_eq!(component.terminate(), kResultOk);

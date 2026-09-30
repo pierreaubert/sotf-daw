@@ -1,0 +1,3 @@
+edbc3999d63134cbc77fe481db37e653c8f8e03fb8abecfbce17aa95f5de9c1e  audit/artifacts/aud142-ffi-state-r2/receipt.md
+a15a5665f0f94283c4fc58cda69996b0d92d3ffbcddf18ce30220bc686e07826  audit/artifacts/aud142-ffi-state-r2/source-sha256.txt
+ab190c754574a797f9eae64c205663e0bce3a354e7d968309583e30e2ac753bb  audit/artifacts/aud142-ffi-state-r2/focused.log

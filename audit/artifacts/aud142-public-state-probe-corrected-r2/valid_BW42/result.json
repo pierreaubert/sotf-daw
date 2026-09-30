@@ -1,0 +1,29 @@
+{
+  "case": "BW42",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": 0,
+  "state_matches_source": true,
+  "audio_matches_fresh": true,
+  "fresh_max_residual": 0.0,
+  "old_family_sensitivity": 0.3068130612373352,
+  "audio": {
+    "actual": {
+      "file": "valid_BW42/actual.f32le",
+      "samples": 3572,
+      "sha256": "05d4c9caab4a6be3ada82bfcc7cc330d8489e11346531aa21cbeac707eb057ec"
+    },
+    "reference": {
+      "file": "valid_BW42/reference.f32le",
+      "samples": 3572,
+      "sha256": "05d4c9caab4a6be3ada82bfcc7cc330d8489e11346531aa21cbeac707eb057ec"
+    },
+    "old_family": {
+      "file": "valid_BW42/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": true
+}

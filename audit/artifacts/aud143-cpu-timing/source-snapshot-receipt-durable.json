@@ -1,0 +1,508 @@
+{
+  "task": "AUD143 reconstructed controlled comparison, final timing source",
+  "recorded_utc": "2026-09-30T04:41:31Z",
+  "snapshot_roots": {
+    "recovered": "/tmp/sotf-aud143/recovered",
+    "current": "/tmp/sotf-aud143/current"
+  },
+  "sibling_sotf_symlink": "/tmp/sotf-aud143/current/sotf",
+  "archive_path": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud143-preedit-dsp-recovered/source.tar.gz",
+  "archive_sha256": "b499d74680b81b39522e16035f9ff26dc835f28095f8d6f21f8ce04d177bb4c9",
+  "source_manifest_sha256": "b8972995a0d59b37b0b80d90c35d2725275aeaa20eaedf3ce9f9c4823ee9c0d1",
+  "recovery_commits": {
+    "daw": "93027970f412ce47c0cd2b8e4b7b1a5b0e5f0261",
+    "math_audio": "9174ba7edd52de7349a141a9d173ed9d6b63edca"
+  },
+  "selected_file_count": 68,
+  "verified_legacy_non_manifest_file_count": 66,
+  "all_legacy_sources_verified": true,
+  "root_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "recovered_root_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "same_lock": true,
+  "root_manifest_sha256": "669a7e1485f9ab70a9449a2d31cacd8e6479778b9b6212c4f661280bb23f07f2",
+  "plugins_manifest_sha256": "a0b225ea0b2117a45f53275fa4380f7cd8f793577c8e9c66a5f0238f0f494429",
+  "bandsplit_manifest_sha256": "1d7bbcbb8cdc3b93b04db5dbe80ddf750d246d32c76bedb746f874b2f530438c",
+  "harness_path": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/tests/aud143_cpu.rs",
+  "harness_sha256": "c69637034798e1604ef7b8956acc71f8a0225ae2fb38fafee483eaa524c35637",
+  "manifests": "Current manifests and lock were retained in both snapshots; archived Cargo.toml files were not overlaid.",
+  "excluded_paths": [
+    "target/",
+    ".git/",
+    ".tokensave/",
+    "dist/"
+  ],
+  "selected_sources": [
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib.rs",
+      "legacy_sha256": "5694dfbae92cfa4f06ee6a7c332ed27161109070907483389a934fd92058ebdd",
+      "recovered_sha256": "5694dfbae92cfa4f06ee6a7c332ed27161109070907483389a934fd92058ebdd",
+      "current_sha256": "5694dfbae92cfa4f06ee6a7c332ed27161109070907483389a934fd92058ebdd",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/band_split_plugin.rs",
+      "legacy_sha256": "7b5882d3be36fb5599780ab4800ebf1d1dba217de07fc367758a89c50af70459",
+      "recovered_sha256": "7b5882d3be36fb5599780ab4800ebf1d1dba217de07fc367758a89c50af70459",
+      "current_sha256": "84b295f25ab03385007b32d2ca9a5e1b290622c559df95d1a35c79f8493ab000",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/crossover_mode.rs",
+      "legacy_sha256": "ddf0d37c5c5b81f516778b58a89509940e108a11d24722d1a01354248b942384",
+      "recovered_sha256": "ddf0d37c5c5b81f516778b58a89509940e108a11d24722d1a01354248b942384",
+      "current_sha256": "131dab2330d9b1e3ae27c0c83956ca12a7a6869623dfcc06701093a32fca81de",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/default.rs",
+      "legacy_sha256": "45cd05e66044d09e6537122af5d63fd6341680632ec41f629ffb3ca5ae42a62d",
+      "recovered_sha256": "45cd05e66044d09e6537122af5d63fd6341680632ec41f629ffb3ca5ae42a62d",
+      "current_sha256": "45cd05e66044d09e6537122af5d63fd6341680632ec41f629ffb3ca5ae42a62d",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/misc.rs",
+      "legacy_sha256": "fb778639d3b74a189d798d1cc89e6fd8192cec59958f7265b7f6c2c8075424f7",
+      "recovered_sha256": "fb778639d3b74a189d798d1cc89e6fd8192cec59958f7265b7f6c2c8075424f7",
+      "current_sha256": "fb778639d3b74a189d798d1cc89e6fd8192cec59958f7265b7f6c2c8075424f7",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/tests.rs",
+      "legacy_sha256": "56389197c921d00095879b237877a9599de57b5c6e7adbb77de702171e31c47a",
+      "recovered_sha256": "56389197c921d00095879b237877a9599de57b5c6e7adbb77de702171e31c47a",
+      "current_sha256": "2f9710caed395a6cfca18bce7e081353d857f4a8d159bf449a83a75fb76a5e44",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/types.rs",
+      "legacy_sha256": "cb3c8ceab2ef336e8da8a52f31d68f13db93c377b0433c367c5605a6b2f985be",
+      "recovered_sha256": "cb3c8ceab2ef336e8da8a52f31d68f13db93c377b0433c367c5605a6b2f985be",
+      "current_sha256": "4f7eb3db71782f721c99e1e645a9214e5ba22a3ddea42b16b4a3f65a0c00e2b7",
+      "legacy_verified": true
+    },
+    {
+      "path": "sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split/src/params.rs",
+      "legacy_sha256": "7d4741a57100e0b1f9e7854d1f6d2749ddb73b673e5db515cadec40c216a0a98",
+      "recovered_sha256": "7d4741a57100e0b1f9e7854d1f6d2749ddb73b673e5db515cadec40c216a0a98",
+      "current_sha256": "c1a57dc0b9990c8a1166d25b6a8b14697e862e1f5860f14af4d4634337df99c8",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/bin/filter_bench.rs",
+      "legacy_sha256": "d2078a9b3e469c10c8d7a36ee4734c8870915ebc3021d53f48a8860685f3bfd5",
+      "recovered_sha256": "d2078a9b3e469c10c8d7a36ee4734c8870915ebc3021d53f48a8860685f3bfd5",
+      "current_sha256": "d2078a9b3e469c10c8d7a36ee4734c8870915ebc3021d53f48a8860685f3bfd5",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/crossover.rs",
+      "legacy_sha256": "e6d90e5d27d331591c04d12a5e6d59259ad0efce7f66685bfc17945d10611e1c",
+      "recovered_sha256": "e6d90e5d27d331591c04d12a5e6d59259ad0efce7f66685bfc17945d10611e1c",
+      "current_sha256": "e6d90e5d27d331591c04d12a5e6d59259ad0efce7f66685bfc17945d10611e1c",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/denormals.rs",
+      "legacy_sha256": "94b2b0ad67639fe2f347e2c50d4f691f90e26231fc20f05baae138364b25d90b",
+      "recovered_sha256": "94b2b0ad67639fe2f347e2c50d4f691f90e26231fc20f05baae138364b25d90b",
+      "current_sha256": "94b2b0ad67639fe2f347e2c50d4f691f90e26231fc20f05baae138364b25d90b",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/error.rs",
+      "legacy_sha256": "adb416259582df9e73cd8cbf41269f94a358788c41153e5a74c9f44e6d7c8181",
+      "recovered_sha256": "adb416259582df9e73cd8cbf41269f94a358788c41153e5a74c9f44e6d7c8181",
+      "current_sha256": "adb416259582df9e73cd8cbf41269f94a358788c41153e5a74c9f44e6d7c8181",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt.rs",
+      "legacy_sha256": "d5075893bc4f4c078dff30e330a25450584b951ca55d003054e18da369a9d561",
+      "recovered_sha256": "d5075893bc4f4c078dff30e330a25450584b951ca55d003054e18da369a9d561",
+      "current_sha256": "d5075893bc4f4c078dff30e330a25450584b951ca55d003054e18da369a9d561",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/biquad.rs",
+      "legacy_sha256": "8993a61000836b35e4c3139deb19397ddf1ee6b00c743916d1551e1fce270094",
+      "recovered_sha256": "8993a61000836b35e4c3139deb19397ddf1ee6b00c743916d1551e1fce270094",
+      "current_sha256": "8993a61000836b35e4c3139deb19397ddf1ee6b00c743916d1551e1fce270094",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/misc.rs",
+      "legacy_sha256": "9774bf795482d464c848826113e45812c8be05b09a9cd21f2a1ee7a2c07b55aa",
+      "recovered_sha256": "9774bf795482d464c848826113e45812c8be05b09a9cd21f2a1ee7a2c07b55aa",
+      "current_sha256": "9774bf795482d464c848826113e45812c8be05b09a9cd21f2a1ee7a2c07b55aa",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/filtfilt/tests.rs",
+      "legacy_sha256": "bc0ae1a2a99cff1a16f5ed500c12755b73e8016e0d8cb335e4afe307bc4cc347",
+      "recovered_sha256": "bc0ae1a2a99cff1a16f5ed500c12755b73e8016e0d8cb335e4afe307bc4cc347",
+      "current_sha256": "bc0ae1a2a99cff1a16f5ed500c12755b73e8016e0d8cb335e4afe307bc4cc347",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir.rs",
+      "legacy_sha256": "468ef2586f24f5cae1ac267097770e4bee023ad8a2ce554d04347c3a6cebe5ba",
+      "recovered_sha256": "468ef2586f24f5cae1ac267097770e4bee023ad8a2ce554d04347c3a6cebe5ba",
+      "current_sha256": "468ef2586f24f5cae1ac267097770e4bee023ad8a2ce554d04347c3a6cebe5ba",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/design.rs",
+      "legacy_sha256": "476c303d171f188439deb0c4a19b09c141920f0e6b212c642ea9356ab51c403e",
+      "recovered_sha256": "476c303d171f188439deb0c4a19b09c141920f0e6b212c642ea9356ab51c403e",
+      "current_sha256": "476c303d171f188439deb0c4a19b09c141920f0e6b212c642ea9356ab51c403e",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/fir_filter_type.rs",
+      "legacy_sha256": "def46193fc4c53391073a75c1b17db38bfacee8b52da48f99411ffb2fa1dd751",
+      "recovered_sha256": "def46193fc4c53391073a75c1b17db38bfacee8b52da48f99411ffb2fa1dd751",
+      "current_sha256": "def46193fc4c53391073a75c1b17db38bfacee8b52da48f99411ffb2fa1dd751",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/misc.rs",
+      "legacy_sha256": "7a9b0055a7a4c43ec05e6897f922a04af443d13b4911b00aa164655a51b953f2",
+      "recovered_sha256": "7a9b0055a7a4c43ec05e6897f922a04af443d13b4911b00aa164655a51b953f2",
+      "current_sha256": "7a9b0055a7a4c43ec05e6897f922a04af443d13b4911b00aa164655a51b953f2",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/tests.rs",
+      "legacy_sha256": "c4bbfda468de4bba35d37a9ee112f1562bafaf25f45073fe8d287c355ceb3035",
+      "recovered_sha256": "c4bbfda468de4bba35d37a9ee112f1562bafaf25f45073fe8d287c355ceb3035",
+      "current_sha256": "c4bbfda468de4bba35d37a9ee112f1562bafaf25f45073fe8d287c355ceb3035",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/types.rs",
+      "legacy_sha256": "07ff8b663b94f47ab417f93105807bd5c296b5f400af5ed4847298b19f058f56",
+      "recovered_sha256": "07ff8b663b94f47ab417f93105807bd5c296b5f400af5ed4847298b19f058f56",
+      "current_sha256": "07ff8b663b94f47ab417f93105807bd5c296b5f400af5ed4847298b19f058f56",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir/window_type.rs",
+      "legacy_sha256": "05b151b8296a884a192a3bbd845247d44de56665e0dd36325fe69c142aa3b7e7",
+      "recovered_sha256": "05b151b8296a884a192a3bbd845247d44de56665e0dd36325fe69c142aa3b7e7",
+      "current_sha256": "05b151b8296a884a192a3bbd845247d44de56665e0dd36325fe69c142aa3b7e7",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_crossover.rs",
+      "legacy_sha256": "9c769b72b696c79837000f6330af43ac70596a5f5764f43892e3716945a0a2c4",
+      "recovered_sha256": "9c769b72b696c79837000f6330af43ac70596a5f5764f43892e3716945a0a2c4",
+      "current_sha256": "9c769b72b696c79837000f6330af43ac70596a5f5764f43892e3716945a0a2c4",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design.rs",
+      "legacy_sha256": "4108e7dd82205df1b461d21efa9134f5d4b9b3b8d4ff859c0638f8844b5bc795",
+      "recovered_sha256": "4108e7dd82205df1b461d21efa9134f5d4b9b3b8d4ff859c0638f8844b5bc795",
+      "current_sha256": "4108e7dd82205df1b461d21efa9134f5d4b9b3b8d4ff859c0638f8844b5bc795",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/context.rs",
+      "legacy_sha256": "efba1d57826eb85846da0c1a8b78be1c634b4c215d3c46b0c04d5cb27a3e702c",
+      "recovered_sha256": "efba1d57826eb85846da0c1a8b78be1c634b4c215d3c46b0c04d5cb27a3e702c",
+      "current_sha256": "efba1d57826eb85846da0c1a8b78be1c634b4c215d3c46b0c04d5cb27a3e702c",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/fir_design_config.rs",
+      "legacy_sha256": "8fec1a1e3811a46d4b0e8623ac571a3928994fcae7f1f68d62a06e32cb184664",
+      "recovered_sha256": "8fec1a1e3811a46d4b0e8623ac571a3928994fcae7f1f68d62a06e32cb184664",
+      "current_sha256": "8fec1a1e3811a46d4b0e8623ac571a3928994fcae7f1f68d62a06e32cb184664",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/fir_phase.rs",
+      "legacy_sha256": "0ded8472c396427f90d66ad2e5627fb5f74f80493ec7a45309627154c5ecde04",
+      "recovered_sha256": "0ded8472c396427f90d66ad2e5627fb5f74f80493ec7a45309627154c5ecde04",
+      "current_sha256": "0ded8472c396427f90d66ad2e5627fb5f74f80493ec7a45309627154c5ecde04",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/generate.rs",
+      "legacy_sha256": "a148b1286f98cf9e53d305764467e42c6c3245ce0e310da5f32b4ad78aedb370",
+      "recovered_sha256": "a148b1286f98cf9e53d305764467e42c6c3245ce0e310da5f32b4ad78aedb370",
+      "current_sha256": "a148b1286f98cf9e53d305764467e42c6c3245ce0e310da5f32b4ad78aedb370",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/misc.rs",
+      "legacy_sha256": "e0d1bfc7fefd7477caa2f032faaae9a6432f5b250b218f0c201bf64adcfce058",
+      "recovered_sha256": "e0d1bfc7fefd7477caa2f032faaae9a6432f5b250b218f0c201bf64adcfce058",
+      "current_sha256": "e0d1bfc7fefd7477caa2f032faaae9a6432f5b250b218f0c201bf64adcfce058",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/pre_ringing_config.rs",
+      "legacy_sha256": "10ec83bce54e84d1d1dda7a0b0f1dc4d67efd5a54d1f0f78f0688cc1da254f8b",
+      "recovered_sha256": "10ec83bce54e84d1d1dda7a0b0f1dc4d67efd5a54d1f0f78f0688cc1da254f8b",
+      "current_sha256": "10ec83bce54e84d1d1dda7a0b0f1dc4d67efd5a54d1f0f78f0688cc1da254f8b",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/tests.rs",
+      "legacy_sha256": "08dbdb1a4d200dca2b80bcf65cf305f8a0b775ff6e42d454017ce840ba4817da",
+      "recovered_sha256": "08dbdb1a4d200dca2b80bcf65cf305f8a0b775ff6e42d454017ce840ba4817da",
+      "current_sha256": "08dbdb1a4d200dca2b80bcf65cf305f8a0b775ff6e42d454017ce840ba4817da",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/fir_design/types.rs",
+      "legacy_sha256": "8a60b7de760525885a3ef531780e6cf1a9e0ffe7e54d1699ca5a3706d8cdfb73",
+      "recovered_sha256": "8a60b7de760525885a3ef531780e6cf1a9e0ffe7e54d1699ca5a3706d8cdfb73",
+      "current_sha256": "8a60b7de760525885a3ef531780e6cf1a9e0ffe7e54d1699ca5a3706d8cdfb73",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad.rs",
+      "legacy_sha256": "51eac7d93dee8e9f213fbfc235272be5dcb398b772bece02b889f37b0bba760a",
+      "recovered_sha256": "51eac7d93dee8e9f213fbfc235272be5dcb398b772bece02b889f37b0bba760a",
+      "current_sha256": "51eac7d93dee8e9f213fbfc235272be5dcb398b772bece02b889f37b0bba760a",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/biquad_coefficients.rs",
+      "legacy_sha256": "a5d74d48da433c38f8f5cb4dcfc22f4661cec78967ea1613cf09d02f918075b0",
+      "recovered_sha256": "a5d74d48da433c38f8f5cb4dcfc22f4661cec78967ea1613cf09d02f918075b0",
+      "current_sha256": "a5d74d48da433c38f8f5cb4dcfc22f4661cec78967ea1613cf09d02f918075b0",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/biquad_filter_type.rs",
+      "legacy_sha256": "735a745ebc4562a46a0b491b4a9831cd433a696c7e6e4a44e48fdeb9117ab263",
+      "recovered_sha256": "735a745ebc4562a46a0b491b4a9831cd433a696c7e6e4a44e48fdeb9117ab263",
+      "current_sha256": "735a745ebc4562a46a0b491b4a9831cd433a696c7e6e4a44e48fdeb9117ab263",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/tests.rs",
+      "legacy_sha256": "19fe6a90b92287fc353cae4a5f895ebd94656a2dfbad376b5195094c297bcfa2",
+      "recovered_sha256": "19fe6a90b92287fc353cae4a5f895ebd94656a2dfbad376b5195094c297bcfa2",
+      "current_sha256": "19fe6a90b92287fc353cae4a5f895ebd94656a2dfbad376b5195094c297bcfa2",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/tests/misc.rs",
+      "legacy_sha256": "8fe2b29acc21018072cfb199eac2369c71cff8d767177e9b0d58125f42be0564",
+      "recovered_sha256": "8fe2b29acc21018072cfb199eac2369c71cff8d767177e9b0d58125f42be0564",
+      "current_sha256": "8fe2b29acc21018072cfb199eac2369c71cff8d767177e9b0d58125f42be0564",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad/types.rs",
+      "legacy_sha256": "1657af5307c9e6a6993574d2f9cd3b99d2b4509e5cdfaf51a21eb7d49d94ddd6",
+      "recovered_sha256": "1657af5307c9e6a6993574d2f9cd3b99d2b4509e5cdfaf51a21eb7d49d94ddd6",
+      "current_sha256": "1657af5307c9e6a6993574d2f9cd3b99d2b4509e5cdfaf51a21eb7d49d94ddd6",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/biquad_bank.rs",
+      "legacy_sha256": "65e83c8bc0d3beed87658302b8f0da9fefa2fc5176313bb28de7ec1e708fb594",
+      "recovered_sha256": "65e83c8bc0d3beed87658302b8f0da9fefa2fc5176313bb28de7ec1e708fb594",
+      "current_sha256": "65e83c8bc0d3beed87658302b8f0da9fefa2fc5176313bb28de7ec1e708fb594",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz.rs",
+      "legacy_sha256": "31d0bf2b6dc84d383bbd71cce7f11b58c2374986e1a9dd7db476f05ab2a22af3",
+      "recovered_sha256": "31d0bf2b6dc84d383bbd71cce7f11b58c2374986e1a9dd7db476f05ab2a22af3",
+      "current_sha256": "31d0bf2b6dc84d383bbd71cce7f11b58c2374986e1a9dd7db476f05ab2a22af3",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/correction.rs",
+      "legacy_sha256": "1186e9255cff432f97257eb509dbcfe43c840b7712c1ba6ecf0759a37b581202",
+      "recovered_sha256": "1186e9255cff432f97257eb509dbcfe43c840b7712c1ba6ecf0759a37b581202",
+      "current_sha256": "1186e9255cff432f97257eb509dbcfe43c840b7712c1ba6ecf0759a37b581202",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/correction_fit.rs",
+      "legacy_sha256": "5cdb4ace18939a47f43a193980ebaa67d121eb07da4ee25a4d94ec778563812c",
+      "recovered_sha256": "5cdb4ace18939a47f43a193980ebaa67d121eb07da4ee25a4d94ec778563812c",
+      "current_sha256": "5cdb4ace18939a47f43a193980ebaa67d121eb07da4ee25a4d94ec778563812c",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/kautz_filter.rs",
+      "legacy_sha256": "17a17e12787c2f125edad373e36efe93f052dd868f5e6f55078f2526f30a5801",
+      "recovered_sha256": "17a17e12787c2f125edad373e36efe93f052dd868f5e6f55078f2526f30a5801",
+      "current_sha256": "17a17e12787c2f125edad373e36efe93f052dd868f5e6f55078f2526f30a5801",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/kautz_section.rs",
+      "legacy_sha256": "1617dd32f9efbf34f12e5008de46a8ab84f863e22758fd25db88ae9f8b67cc2f",
+      "recovered_sha256": "1617dd32f9efbf34f12e5008de46a8ab84f863e22758fd25db88ae9f8b67cc2f",
+      "current_sha256": "1617dd32f9efbf34f12e5008de46a8ab84f863e22758fd25db88ae9f8b67cc2f",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/misc.rs",
+      "legacy_sha256": "0a0b888951dfbf697de7cee41b75750c29bc8a832475a77d4da4ec2b108071bd",
+      "recovered_sha256": "0a0b888951dfbf697de7cee41b75750c29bc8a832475a77d4da4ec2b108071bd",
+      "current_sha256": "0a0b888951dfbf697de7cee41b75750c29bc8a832475a77d4da4ec2b108071bd",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/kautz/tests.rs",
+      "legacy_sha256": "7d0f065da487a5571a82215738da8c2d392473a4995315067bee6d62f1f45728",
+      "recovered_sha256": "7d0f065da487a5571a82215738da8c2d392473a4995315067bee6d62f1f45728",
+      "current_sha256": "7d0f065da487a5571a82215738da8c2d392473a4995315067bee6d62f1f45728",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/mod.rs",
+      "legacy_sha256": "7882d64dd6be533e60af331abde8270990beebe6a26de2ba2a9acb15b2e1baa7",
+      "recovered_sha256": "7882d64dd6be533e60af331abde8270990beebe6a26de2ba2a9acb15b2e1baa7",
+      "current_sha256": "7882d64dd6be533e60af331abde8270990beebe6a26de2ba2a9acb15b2e1baa7",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq.rs",
+      "legacy_sha256": "b481469b02c124ea993698db32ddd62a32e637b71d8f6fa7a40c9622d85f42ce",
+      "recovered_sha256": "b481469b02c124ea993698db32ddd62a32e637b71d8f6fa7a40c9622d85f42ce",
+      "current_sha256": "b481469b02c124ea993698db32ddd62a32e637b71d8f6fa7a40c9622d85f42ce",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/biquad.rs",
+      "legacy_sha256": "5041fe578a713f181a5519af4b4f4d9e3eb527cbc4b7bfae44594c9e5696b5ae",
+      "recovered_sha256": "5041fe578a713f181a5519af4b4f4d9e3eb527cbc4b7bfae44594c9e5696b5ae",
+      "current_sha256": "5041fe578a713f181a5519af4b4f4d9e3eb527cbc4b7bfae44594c9e5696b5ae",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/consts.rs",
+      "legacy_sha256": "8e2e4c29bf3a7ffd14559e92dc3cdbc2f764f0b5c6ac573fb1b01baf0016057e",
+      "recovered_sha256": "8e2e4c29bf3a7ffd14559e92dc3cdbc2f764f0b5c6ac573fb1b01baf0016057e",
+      "current_sha256": "8e2e4c29bf3a7ffd14559e92dc3cdbc2f764f0b5c6ac573fb1b01baf0016057e",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/misc.rs",
+      "legacy_sha256": "f0fdf731668c06a09b6e8542cbdec75c0e89be203da58bb7dcb4a772f142707f",
+      "recovered_sha256": "f0fdf731668c06a09b6e8542cbdec75c0e89be203da58bb7dcb4a772f142707f",
+      "current_sha256": "f0fdf731668c06a09b6e8542cbdec75c0e89be203da58bb7dcb4a772f142707f",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/tests.rs",
+      "legacy_sha256": "87a82010118192db60dc2a108ced9d39ab9b06825ef6dced2beb93beb1c0bc92",
+      "recovered_sha256": "87a82010118192db60dc2a108ced9d39ab9b06825ef6dced2beb93beb1c0bc92",
+      "current_sha256": "87a82010118192db60dc2a108ced9d39ab9b06825ef6dced2beb93beb1c0bc92",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/peq/types.rs",
+      "legacy_sha256": "0e642f582eee178403447b9a5931e0001d796f396c8fb19398067cfbf2dd1503",
+      "recovered_sha256": "0e642f582eee178403447b9a5931e0001d796f396c8fb19398067cfbf2dd1503",
+      "current_sha256": "0e642f582eee178403447b9a5931e0001d796f396c8fb19398067cfbf2dd1503",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad.rs",
+      "legacy_sha256": "7fdad2951dff8cb90fa00055b8fd7525c909a6a33414831a2d8f1a1fc0490657",
+      "recovered_sha256": "7fdad2951dff8cb90fa00055b8fd7525c909a6a33414831a2d8f1a1fc0490657",
+      "current_sha256": "7fdad2951dff8cb90fa00055b8fd7525c909a6a33414831a2d8f1a1fc0490657",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad/misc.rs",
+      "legacy_sha256": "2a74fa7f128c8d58fbf090ca3ad196bfdf8c77ff9720d2b209a3d9cc44370a13",
+      "recovered_sha256": "2a74fa7f128c8d58fbf090ca3ad196bfdf8c77ff9720d2b209a3d9cc44370a13",
+      "current_sha256": "2a74fa7f128c8d58fbf090ca3ad196bfdf8c77ff9720d2b209a3d9cc44370a13",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/iir/warped_biquad/tests.rs",
+      "legacy_sha256": "21d00110a6764fa67578492354cb6c8110a87e3ab1f3faafeace9a17ead9b62e",
+      "recovered_sha256": "21d00110a6764fa67578492354cb6c8110a87e3ab1f3faafeace9a17ead9b62e",
+      "current_sha256": "21d00110a6764fa67578492354cb6c8110a87e3ab1f3faafeace9a17ead9b62e",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/lr4_crossover.rs",
+      "legacy_sha256": "ae7b04cb4ee9909c614e5fd89a7eb39f2b90345de5a83c96c0e0b9096d8ff088",
+      "recovered_sha256": "ae7b04cb4ee9909c614e5fd89a7eb39f2b90345de5a83c96c0e0b9096d8ff088",
+      "current_sha256": "d753e5f52d145a17b1f2effbf93ca8119c75747ebf85ff26d033b912b69d9af8",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/lr8_crossover.rs",
+      "legacy_sha256": "bb76e344afd9e709430a6fec555743a921bda5c36586e5a7c8b76910f7edb7e8",
+      "recovered_sha256": "bb76e344afd9e709430a6fec555743a921bda5c36586e5a7c8b76910f7edb7e8",
+      "current_sha256": "6e990c78ebfcf4674b931c69cbb956d74be2ad9670b0245bb5339bb2411eeb85",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/mod.rs",
+      "legacy_sha256": "476e1fae822a2de402217424107315841e43ad9cde80e5e8b3d000cb2f6cc1d7",
+      "recovered_sha256": "476e1fae822a2de402217424107315841e43ad9cde80e5e8b3d000cb2f6cc1d7",
+      "current_sha256": "476e1fae822a2de402217424107315841e43ad9cde80e5e8b3d000cb2f6cc1d7",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth.rs",
+      "legacy_sha256": "f8ebb97b5a0c3635b783e9b7dd0360b4faa5f705ebf0f955525625150727facf",
+      "recovered_sha256": "f8ebb97b5a0c3635b783e9b7dd0360b4faa5f705ebf0f955525625150727facf",
+      "current_sha256": "f8ebb97b5a0c3635b783e9b7dd0360b4faa5f705ebf0f955525625150727facf",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/misc.rs",
+      "legacy_sha256": "378383df46f728dc9af960608e5517bd09ad980a91aa84bb9768d3cae5cf90bb",
+      "recovered_sha256": "378383df46f728dc9af960608e5517bd09ad980a91aa84bb9768d3cae5cf90bb",
+      "current_sha256": "378383df46f728dc9af960608e5517bd09ad980a91aa84bb9768d3cae5cf90bb",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/smooth.rs",
+      "legacy_sha256": "3c6bd89b9d069497068c9357956ac0b3b30443c792182251887dd41a5602d13d",
+      "recovered_sha256": "3c6bd89b9d069497068c9357956ac0b3b30443c792182251887dd41a5602d13d",
+      "current_sha256": "3c6bd89b9d069497068c9357956ac0b3b30443c792182251887dd41a5602d13d",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/phase_smooth/tests.rs",
+      "legacy_sha256": "dbf898c3e160433aa9e6c8f45079569222787788120f7f357eef92e249ca7af3",
+      "recovered_sha256": "dbf898c3e160433aa9e6c8f45079569222787788120f7f357eef92e249ca7af3",
+      "current_sha256": "dbf898c3e160433aa9e6c8f45079569222787788120f7f357eef92e249ca7af3",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/svf.rs",
+      "legacy_sha256": "80af15c58f0428391da27f161eed0c1086b816e8ec7559a1bb2d45932eb3961f",
+      "recovered_sha256": "80af15c58f0428391da27f161eed0c1086b816e8ec7559a1bb2d45932eb3961f",
+      "current_sha256": "80af15c58f0428391da27f161eed0c1086b816e8ec7559a1bb2d45932eb3961f",
+      "legacy_verified": true
+    },
+    {
+      "path": "math-audio/crates/math-iir-fir/src/traits.rs",
+      "legacy_sha256": "84b1de53e277d184bcad9999f237402fdf6f960ac6ff1e6f5bade1500902ed22",
+      "recovered_sha256": "84b1de53e277d184bcad9999f237402fdf6f960ac6ff1e6f5bade1500902ed22",
+      "current_sha256": "84b1de53e277d184bcad9999f237402fdf6f960ac6ff1e6f5bade1500902ed22",
+      "legacy_verified": true
+    }
+  ],
+  "durable_archives": {
+    "recovered": {
+      "path": "recovered-selected-source.tar.gz",
+      "sha256": "b499d74680b81b39522e16035f9ff26dc835f28095f8d6f21f8ce04d177bb4c9"
+    },
+    "current": {
+      "path": "current-selected-source.tar.gz",
+      "sha256": "0c3fa84884a2d3566dfb4245ea34d3b023418f5c6ce1d40bb1c345af4a3c168e"
+    }
+  }
+}

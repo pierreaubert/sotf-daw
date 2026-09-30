@@ -1,3 +1,11 @@
+# 0.7.0 (unreleased)
+
+## Changes
+
+- Restore versioned preset envelopes transactionally and reject invalid or incompatible state without changing the active plugin.
+- Migrate FletcherMunson state to LoudnessCompensation while preserving nondefault controls and rendered audio.
+- Carry typed Crossover topology and true-stereo convolution through plugin construction and state restoration.
+
 # 0.6.1 (unreleased)
 
 ## Changed

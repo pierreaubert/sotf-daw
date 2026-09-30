@@ -1,0 +1,7 @@
+427beccf03b6071d2e9d52f7409d2536886643b012f86301937f7ac0fd741fad  crates/sotf-engine/src/engine/manager_thread/apply.rs
+0eb2e3861f8ef86049ee599d972a4729632cbbe22281d2df9bea1275906bdcb1  crates/sotf-plugins/crates/sotf-host/src/external_plugin/vst3_backend.rs
+5e28b7012577eb434b7e8d832e902620c78f709d564072458efbadbd24afc2f6  crates/sotf-plugins/crates/sotf-host/src/external_plugin_isolated/isolated_external_plugin.rs
+a8f15caa4fe8d181695f81b98418ba81219bc14df48ad0be3bbbf5b4295643c2  crates/sotf-plugins/crates/sotf-host/src/external_plugin_worker.rs
+0e4ebf7c268832d87ec9177ef41ffa9da4efe62f4c93ffd16ec3101ce4973b0e  crates/sotf-plugins/crates/sotf-host/src/external_plugin_ipc/secure_plugin_shared_memory.rs
+6b642f849f482c2f4358c0f9423bd09c64d294f48ecf0acdda2f8c7138f3132b  crates/sotf-plugins/target/debug/sotf-external-plugin-worker
+7dfc7b96519b0d884a3b06633c009e3024f0a5a46a418236f43596699f74a3b8  crates/sotf-plugins/target/audit-artifacts/aud135-native-late-restore-r1/Ambisonics.vst3/Contents/x86_64-linux/ambisonics.so

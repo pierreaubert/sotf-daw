@@ -135,7 +135,10 @@ fn validate_process_block_lengths(
 pub struct PluginDrainResult {
     /// Output-rate frames written by this step.
     pub frames: usize,
-    /// `true` when no buffered input or filter tail remains.
+    /// `true` when the plugin's declared drain policy has no remaining output
+    /// for the finalized stream. A plugin may explicitly cut off residual
+    /// recursive state for an `Unknown` response; completion does not make its
+    /// [`TailLength`] finite.
     pub complete: bool,
 }
 
@@ -144,6 +147,233 @@ impl PluginDrainResult {
         frames: 0,
         complete: true,
     };
+}
+
+/// Snapshot of a terminal sink's already prepared frame queue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SinkQueueState {
+    /// Frames retained locally and not yet accepted by the sink transport.
+    pub pending_frames: usize,
+    /// Frames that can be appended without allocating or invoking the writer.
+    pub free_prepared_frames: usize,
+    /// Total prepared queue capacity in frames.
+    pub capacity_frames: usize,
+}
+
+/// The prepared transport geometry owned by a terminal sink.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SinkTransportFormat {
+    /// Prepared sample rate in hertz.
+    pub sample_rate: u32,
+    /// Number of interleaved input channels.
+    pub channels: usize,
+    /// Prepared transport ring capacity in frames.
+    pub buffer_frames: usize,
+}
+
+/// A control-thread plan for replacing a terminal sink's prepared ring size
+/// without dropping its locally retained samples or resetting its host route.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SinkTransportRepreparePlan {
+    /// Ring geometry currently prepared by the sink.
+    pub prepared_format: SinkTransportFormat,
+    /// Ring geometry currently reported by the transport.
+    pub target_format: SinkTransportFormat,
+    /// Pending samples retained locally when this plan was observed.
+    pub pending_frames: usize,
+    /// Logical queue bound after resize. It can exceed the physical ring while
+    /// the existing pending queue is larger than a requested shrink.
+    pub queue_capacity_frames: usize,
+    /// Sink latency after adopting the target ring size.
+    pub latency_samples: usize,
+    /// The writer's configuration-change flag was asserted for this plan.
+    /// Sinks without a monotonic generation must keep it asserted through the
+    /// final format/readiness check and clear it only at commit.
+    pub configuration_changed: bool,
+}
+
+/// Why a control-thread sink recovery is waiting for the transport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkTransportWaitingReason {
+    /// The transport is not currently connected.
+    Disconnected,
+    /// The transport has no usable encryption key.
+    KeyMismatch,
+    /// The transport format could not be read.
+    FormatUnavailable,
+    /// The transport is still reporting a configuration change.
+    ConfigurationChanged,
+}
+
+/// Readiness returned by control-thread recovery of a terminal sink.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkTransportRecoveryStatus {
+    /// The original prepared format is ready for bounded service again.
+    Ready,
+    /// Recovery completed without changing local queues, but service must wait.
+    Waiting(SinkTransportWaitingReason),
+}
+
+/// Failure while recovering a terminal sink without rebuilding its host.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkTransportRecoveryError {
+    /// The sink does not provide control-thread recovery.
+    Unsupported,
+    /// The active transport geometry differs from the geometry prepared by the host.
+    NeedsReprepare {
+        /// Geometry whose queue and latency the host prepared.
+        expected: SinkTransportFormat,
+        /// Current transport geometry, when it could be queried.
+        actual: Option<SinkTransportFormat>,
+    },
+    /// The transport or local queue changed after a reprepare plan was observed.
+    StalePlan,
+    /// The transport operation failed without changing the host-owned queue.
+    Transport(String),
+    /// A staged sink or host buffer allocation failed before geometry commit.
+    Preparation(String),
+    /// The sink violated the promise to preserve its local queue and geometry.
+    ContractViolation,
+}
+
+impl std::fmt::Display for SinkTransportRecoveryError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unsupported => formatter.write_str("terminal sink recovery is unsupported"),
+            Self::NeedsReprepare { expected, actual } => {
+                write!(
+                    formatter,
+                    "terminal sink format changed; expected {expected:?}, got {actual:?}"
+                )
+            }
+            Self::StalePlan => formatter.write_str("terminal sink reprepare plan is stale"),
+            Self::Transport(error) => write!(formatter, "terminal sink recovery failed: {error}"),
+            Self::Preparation(error) => {
+                write!(
+                    formatter,
+                    "terminal sink reprepare could not stage buffers: {error}"
+                )
+            }
+            Self::ContractViolation => {
+                formatter.write_str("terminal sink recovery changed prepared host-owned state")
+            }
+        }
+    }
+}
+
+impl std::error::Error for SinkTransportRecoveryError {}
+
+/// A transactional refusal to admit an upstream terminal-tail chunk.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkTailPreflightError {
+    /// The sink transport object is not available.
+    Unavailable,
+    /// The sink's current format or queue invariants do not match the request.
+    InvalidGeometry,
+    /// The largest atomic chunk does not fit in already prepared storage.
+    CapacityExceeded {
+        /// Maximum frames the producer may return in one drain call.
+        required_frames: usize,
+        /// Frames currently free in the prepared queue.
+        free_frames: usize,
+    },
+}
+
+/// Failure of the append operation after a successful sink preflight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkAppendFailure {
+    /// The producer or sink violated the preflighted geometry/capacity contract.
+    ContractViolation,
+}
+
+/// A terminal sink violated its bounded pending-service contract.
+///
+/// Temporary transport unavailability and backpressure are represented by a
+/// successful queue snapshot with frames still pending. This error is reserved
+/// for an invalid queue or writer contract and requires the host to stop and
+/// recover the stream explicitly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkServiceFailure {
+    /// The sink could not preserve queue invariants while servicing pending data.
+    ContractViolation,
+}
+
+/// Prepared, allocation-free handoff for a terminal sink.
+///
+/// `preflight_append` is read-only. After it succeeds, the host keeps exclusive
+/// mutable access to the plugin while the producer advances and
+/// `append_preflighted` runs. Implementations must accept every aligned block
+/// up to the preflighted maximum without a writer call, allocation,
+/// deallocation, or partial append.
+pub trait TerminalSink: Send {
+    /// Return the current prepared queue occupancy and capacity.
+    fn queue_state(&self) -> SinkQueueState;
+
+    /// Return the physical transport geometry prepared by this sink when it
+    /// differs from the local logical queue bound.
+    fn prepared_transport_format(&self) -> Option<SinkTransportFormat> {
+        None
+    }
+
+    /// Check a conservative maximum chunk before an upstream producer mutates.
+    fn preflight_append(
+        &self,
+        maximum_frames: usize,
+        context: &ProcessContext,
+    ) -> Result<(), SinkTailPreflightError>;
+
+    /// Append a previously preflighted block to retained sink storage.
+    fn append_preflighted(
+        &mut self,
+        input: &[f32],
+        context: &ProcessContext,
+    ) -> Result<(), SinkAppendFailure>;
+
+    /// Make at most two writer attempts for already retained data.
+    ///
+    /// This may change only the prepared pending queue and cached transport
+    /// diagnostics. It must not advance a producer, allocate, adopt transport
+    /// format/capacity, reconnect, or discard pending samples. Recoverable
+    /// backpressure is reported in the returned queue state.
+    fn service_pending(
+        &mut self,
+        context: &ProcessContext,
+    ) -> Result<SinkQueueState, SinkServiceFailure>;
+
+    /// Recover transport state on a control thread without rebuilding the host.
+    ///
+    /// Implementations must retain their local pending samples and prepared
+    /// queue geometry. They must not silently adopt a different sample rate,
+    /// channel count, or ring capacity. A transport ring may be flushed while
+    /// reconnecting; this does not authorize dropping the sink's local queue.
+    fn recover_transport(
+        &mut self,
+        _expected: SinkTransportFormat,
+    ) -> Result<SinkTransportRecoveryStatus, SinkTransportRecoveryError> {
+        Err(SinkTransportRecoveryError::Unsupported)
+    }
+
+    /// Observe a proposed ring-size-only reprepare on a control thread.
+    ///
+    /// The returned plan is a value snapshot. The host stages all fallible
+    /// buffers before passing it to [`Self::reprepare_transport`], and the sink
+    /// must reject a stale plan without changing its local queue geometry.
+    fn reprepare_plan(&self) -> Result<SinkTransportRepreparePlan, SinkTransportRecoveryError> {
+        Err(SinkTransportRecoveryError::Unsupported)
+    }
+
+    /// Adopt a previously observed ring-size plan after staging its resources.
+    ///
+    /// Implementations preserve every locally pending sample on success and
+    /// failure. A transport ring may be flushed as part of the discontinuity;
+    /// the host-owned queue and its geometry are committed only after the
+    /// target format and readiness are revalidated.
+    fn reprepare_transport(
+        &mut self,
+        _plan: SinkTransportRepreparePlan,
+    ) -> Result<SinkTransportRecoveryStatus, SinkTransportRecoveryError> {
+        Err(SinkTransportRecoveryError::Unsupported)
+    }
 }
 
 /// Core plugin trait
@@ -156,6 +386,16 @@ impl PluginDrainResult {
 /// allowing for flexible channel configuration (e.g., stereo to mono,
 /// mono to stereo, surround processing, etc.).
 pub trait Plugin: Send {
+    /// Optional prepared handoff contract for a zero-output terminal sink.
+    fn terminal_sink(&self) -> Option<&dyn TerminalSink> {
+        None
+    }
+
+    /// Mutable access to an opted-in terminal sink's prepared handoff contract.
+    fn terminal_sink_mut(&mut self) -> Option<&mut dyn TerminalSink> {
+        None
+    }
+
     /// Optional typed access for control-thread integrations that need to
     /// discover a concrete plugin wrapper behind `Box<dyn Plugin>`.
     fn as_any(&self) -> Option<&dyn Any> {
@@ -218,6 +458,14 @@ pub trait Plugin: Send {
         // Default: no-op
     }
 
+    /// Reset while reporting failures to a host that must keep transport and
+    /// DSP state synchronized. Existing plugins inherit their normal reset
+    /// behavior; native wrappers can override this to report lifecycle errors.
+    fn reset_checked(&mut self) -> PluginResult<()> {
+        self.reset();
+        Ok(())
+    }
+
     /// Process audio samples
     ///
     /// # Arguments
@@ -248,6 +496,23 @@ pub trait Plugin: Send {
     fn drain_output_frames_max(&self) -> usize {
         0
     }
+
+    /// Prepare current tail metadata for an EOS preflight without starting the
+    /// drain itself. The host calls this only after validating the destination
+    /// capacity. Wrappers forward it to their inner plugin; asynchronous
+    /// plugins may wait, with a bounded timeout, for already accepted input to
+    /// finish so the following `tail_length()` query describes that state.
+    /// This hook must not accept new input or change output geometry. A
+    /// preflight error before drain mutation remains safe to retry.
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        Ok(())
+    }
+
+    /// Refresh metadata that a native format restricts to its serialized
+    /// plugin control thread. This is used by the isolated worker after
+    /// construction and completed controls/process calls; it is not an audio
+    /// callback hook and must not block there.
+    fn refresh_control_thread_metadata(&mut self) {}
 
     /// Prepare bounded end-of-stream work before its call bound is queried.
     ///
@@ -449,6 +714,16 @@ pub trait Plugin: Send {
     /// Plugins that change frame count (like resamplers) should override this.
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         input_frames
+    }
+
+    /// Guarantees identity frame geometry for every supported process block.
+    ///
+    /// Implementations may return `true` only when every valid input frame
+    /// count is preserved by processing. The default is conservative because
+    /// checking a few sample sizes cannot prove this property. Hosts that need
+    /// identity geometry also verify each node's negotiated sample rate.
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        false
     }
 
     /// Returns the output sample rate given an input rate.

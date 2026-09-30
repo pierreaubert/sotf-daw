@@ -1,0 +1,29 @@
+{
+  "case": "fir_alias_FIR",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": 0,
+  "state_matches_source": true,
+  "audio_matches_fresh": true,
+  "fresh_max_residual": 0.0,
+  "old_family_sensitivity": 0.26681142262032154,
+  "audio": {
+    "actual": {
+      "file": "valid_fir_alias_FIR/actual.f32le",
+      "samples": 3572,
+      "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+    },
+    "reference": {
+      "file": "valid_fir_alias_FIR/reference.f32le",
+      "samples": 3572,
+      "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+    },
+    "old_family": {
+      "file": "valid_fir_alias_FIR/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": true
+}

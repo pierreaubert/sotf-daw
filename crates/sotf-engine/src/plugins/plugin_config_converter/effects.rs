@@ -327,6 +327,7 @@ pub fn convert_convolution(settings: &PluginSettings, _sample_rate: f64) -> Opti
         use_nupc,
         zero_latency_head,
         head_taps,
+        true_stereo,
     } = settings
     else {
         return None;
@@ -340,6 +341,7 @@ pub fn convert_convolution(settings: &PluginSettings, _sample_rate: f64) -> Opti
             "use_nupc": use_nupc,
             "zero_latency_head": zero_latency_head,
             "head_taps": head_taps,
+            "true_stereo": true_stereo,
         }),
     ))
 }

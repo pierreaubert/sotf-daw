@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Typed Crossover topology, ordered extra cutoffs and optional per-channel settings.
+- Backward-compatible settings for true-stereo convolution, DynamicEQ shelf
+  shapes/slopes and BandSplit phase compensation; Ambisonics orders through 7.
+
 ## [0.7.10] - 2026-07-08
 
 ### Added

@@ -15,20 +15,22 @@ frame.
 ## Features
 
 - **Regularized mode matching**: Scale-relative SVD/Tikhonov decode with rank, condition, reconstruction-error, and peak-gain diagnostics
-- **AllRAD/VBAP**: Virtual-sphere decode followed by setup-time physical-layout remapping; 64/96/128 virtual speakers for orders 1/2/3
-- **Higher-Order Ambisonics**: Supports orders 1–3 (4, 9, or 16 ACN/SN3D channels)
+- **AllRAD/VBAP**: Virtual-sphere decode followed by setup-time physical-layout remapping; 64/96/128/256/384/512/512 virtual speakers for orders 1–7
+- **Higher-Order Ambisonics**: Supports orders 1–7 (4, 9, 16, 25, 36, 49, or 64 ACN/SN3D channels)
 - **Spherical harmonics**: Full SH evaluation for spatial processing
 - **Layouts**: 5.1, 7.1, 5.1.2, 5.1.4, 7.1.2, 7.1.4, 9.1.4, and 9.1.6
 
-Input channels are ACN ordered and SN3D normalized; orders 1/2/3 require exactly
-4/9/16 input channels. LFE rows are always silent. Output channel order follows
+Input channels are ACN ordered and SN3D normalized; order `N` requires exactly
+`(N+1)²` input channels. The decoder supports the existing named speaker layouts;
+order 7 to those sparse outputs is rank-limited and does not reproduce all 64
+independent spatial modes. LFE rows are always silent. Output channel order follows
 the selected SOTF speaker layout. Structural parameter changes require the host
 to construct and initialize a new plugin instance.
 
 Dual-band mode uses a complementary LR4 split at 700 Hz: the basic matrix feeds
 LF and exact max-rE degree weights feed HF. It requires a sample rate above
 1400 Hz and has frequency-dependent crossover phase but no fixed host-compensated
-latency. Scratch is fixed to two 16-sample frames, so validated host blocks have
+latency. Scratch is fixed to two 64-sample frames, so validated host blocks have
 no plugin-owned frame limit and allocate no callback memory.
 
 Single-band mode declares a zero audio tail: zero input immediately produces

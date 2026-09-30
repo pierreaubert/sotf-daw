@@ -1,0 +1,7 @@
+Final r2 focused test (run from repository root):
+flock /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo test -p sotf-plugin-band-split --test aud143_compensated_lifecycle --offline --locked -- --test-threads=1
+
+Final r2 strict lint (run from repository root):
+flock /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo clippy -p sotf-plugin-band-split --test aud143_compensated_lifecycle --offline --locked -- -D warnings
+
+r1 logs are preserved as an initial pre-correction run. The r2 test and lint logs are the final evidence after adding counted repeated reset/process calls and the positive inadmissible-rate case.

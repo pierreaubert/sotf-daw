@@ -1,0 +1,22 @@
+{
+  "scope": "Controlled old/new Peak source comparison under identical current dependency manifests, compiler and profile; not historical build recreation",
+  "old_archive_sha256": "736c9b538e6511d0eb47a2296e8ccf73955445582980ad820b73d98049b0aa42",
+  "unchanged_shared_harness_sha256": "7e48711da3adf514e91d2433180886308ad7607bfbd9be8d9337a9f3a1b4714a",
+  "live_harness_sha256": "85acf08d98c64a70771441e47498b0f38c86fe840b59a641730e879eeb0cad4e",
+  "root_lock_seed_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "build_manifest_sha256": {
+    "old": "faeefd13a9bad56ab839a4032cdbc1b8e70afec479dddf2cabbaa879c65372fe",
+    "new": "c3a8d074534050f1e273d1fc918935378f9cd83bf5b08dd8b25bf9e648c00aa3"
+  },
+  "release_profile": {
+    "lto": "thin",
+    "codegen-units": 14,
+    "panic": "unwind"
+  },
+  "variants": [
+    "/tmp/sotf-aud139-controlled-cpu-r2/old",
+    "/tmp/sotf-aud139-controlled-cpu-r2/new"
+  ],
+  "next_gate": "Normalize the temporary locks offline, verify resolved dependency sets equal excluding the two variant packages, then require separately compiled and bound executables before matched timings",
+  "limitations": "No shelf CPU variant yet. Manual timing harness is not an accuracy oracle or worst-case execution time proof."
+}

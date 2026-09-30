@@ -6,12 +6,16 @@
 //! - Serializable state (Params struct with serde defaults)
 //! - Index<->field mapping (PluginParamDef impl)
 //!
+
+// Rust guideline compliant 2026-02-21
 //! Adding a parameter: add to PARAMS, add field to Params, add match arms.
 //! Nothing else needs to change.
 
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
-use sotf_host::param_specs::{ParamSpec, find_by_key as pk};
+#[cfg(test)]
+use sotf_host::param_specs::ParamType;
+use sotf_host::param_specs::{find_by_key as pk, ParamSpec};
 use sotf_host::plugin_layout::*;
 use sotf_host::plugin_params::PluginParamDef;
 
@@ -29,9 +33,9 @@ pub const TARGET_LAYOUTS: &[&str] = &[
 pub const ALGORITHMS: &[&str] = &["mode_matching", "allrad"];
 
 pub const PARAMS: &[ParamSpec] = &[
-    ParamSpec::int("Order", "order", 1, 1, 3, 1, "", "Ambisonics")
+    ParamSpec::int("Order", "order", 1, 1, 7, 1, "", "Ambisonics")
         .structural()
-        .doc("Ambisonics order (1-3)"),
+        .doc("Ambisonics order (1-7)"),
     ParamSpec::choice(
         "Target Layout",
         "target_layout",
@@ -234,5 +238,15 @@ mod tests {
     #[test]
     fn plugin_type_key_matches_factory_key() {
         assert_eq!(Params::PLUGIN_TYPE_KEY, "ambisonics_decoder");
+    }
+
+    #[test]
+    fn order_parameter_advertises_full_supported_range() {
+        let ParamType::Int { min, max, .. } = PARAMS[0].param_type else {
+            panic!("order parameter must remain integral");
+        };
+        assert_eq!(min, 1);
+        assert_eq!(max, 7);
+        assert_eq!(PARAMS[0].doc, "Ambisonics order (1-7)");
     }
 }

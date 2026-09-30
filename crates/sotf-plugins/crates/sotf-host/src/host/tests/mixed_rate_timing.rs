@@ -399,7 +399,7 @@ fn fractional_and_buffered_clocks_follow_accepted_frames_through_drain() {
                     host.build().unwrap();
                 }
                 // Embedded hosts repeat the continuous position every callback.
-                host.set_playback_position(position as u64);
+                host.set_playback_position(position as u64).unwrap();
                 let input: Vec<_> = (position..position + frames).map(|i| i as f64).collect();
                 let capacity = host.output_frames_for_input(frames);
                 if runner == 0 {
@@ -523,14 +523,14 @@ fn fractional_clock_seek_and_reset_anchor_the_new_transport_position() {
         for position in [0, 101, 0] {
             host.reset();
             if position == 0 {
-                host.reset_playback_position();
+                host.reset_playback_position().unwrap();
             } else {
-                host.set_playback_position(position);
+                host.set_playback_position(position).unwrap();
             }
             source_origin.store(position, Ordering::Relaxed);
             sink_origin.store(position * 3 / 2, Ordering::Relaxed);
             for offset in 0..3 {
-                host.set_playback_position(position + offset);
+                host.set_playback_position(position + offset).unwrap();
                 let count = if native {
                     host.process_f64(&[0.25], &mut [0.0; 2]).unwrap()
                 } else {

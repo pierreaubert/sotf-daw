@@ -1,0 +1,29 @@
+{
+  "case": "per_channel",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 2,
+  "status": 0,
+  "state_matches_source": true,
+  "audio_matches_fresh": true,
+  "fresh_max_residual": 0.0,
+  "old_family_sensitivity": 0.32653388381004333,
+  "audio": {
+    "actual": {
+      "file": "valid_per_channel/actual.f32le",
+      "samples": 1786,
+      "sha256": "2751df7e3e5ffa8a47170083ca5815ffff3ff3e045383600a66b3293abe16236"
+    },
+    "reference": {
+      "file": "valid_per_channel/reference.f32le",
+      "samples": 1786,
+      "sha256": "2751df7e3e5ffa8a47170083ca5815ffff3ff3e045383600a66b3293abe16236"
+    },
+    "old_family": {
+      "file": "valid_per_channel/old_family.f32le",
+      "samples": 1786,
+      "sha256": "3674feebcbb03bdddc47f750493e06029cb7b34d2a9f9c0fa2d7b16e794016d4"
+    }
+  },
+  "passed": true
+}

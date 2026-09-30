@@ -14,7 +14,7 @@ use std::os::unix::net::UnixDatagram;
 use crate::external_plugin_ipc::PluginIpcParameterEvent;
 use crate::external_plugin_ipc::{
     PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcLayout, PluginIpcState,
-    PluginSandboxRuntimeStatus, SecurePluginSharedMemory,
+    PluginIpcTailLength, PluginSandboxRuntimeStatus, SecurePluginSharedMemory,
 };
 use crate::parameters::{ParameterId, ParameterValue};
 use crate::plugin::{MidiEvent, ProcessContext};
@@ -66,6 +66,7 @@ pub struct ExternalPluginHostProxy {
     timeline_audio: Vec<f32>,
     timeline_status: Vec<ExternalPluginHostBlockStatus>,
     timeline_frame: u64,
+    emitted_degraded_output: bool,
     #[cfg(unix)]
     notifier: Option<UnixDatagram>,
     #[cfg(unix)]
@@ -122,6 +123,7 @@ impl ExternalPluginHostProxy {
                 layout.max_frames as usize * 2
             ],
             timeline_frame: 0,
+            emitted_degraded_output: false,
             #[cfg(unix)]
             notifier,
             #[cfg(unix)]
@@ -178,9 +180,125 @@ impl ExternalPluginHostProxy {
         self.shared.worker_latency_samples()
     }
 
+    /// Return tail metadata only when it belongs to the latest completed
+    /// worker request. A pending or degraded block makes the cached value
+    /// untrustworthy until the worker publishes its completion.
+    pub fn worker_tail_length(&self) -> PluginIpcTailLength {
+        if self.emitted_degraded_output {
+            return PluginIpcTailLength::Unknown;
+        }
+        if let Some(pending) = self.pending
+            && (self.shared.worker_state() != PluginIpcState::WorkerReady
+                || self.shared.worker_sequence() != pending.sequence)
+        {
+            return PluginIpcTailLength::Unknown;
+        }
+        self.shared.worker_tail_length()
+    }
+
     /// Fixed transport latency reserved by the isolated graph contract.
     pub fn pipeline_latency_samples(&self) -> usize {
         self.shared.layout().max_frames as usize
+    }
+
+    /// Whether any callback has already emitted timeout/failure fallback.
+    /// EOS must not report that fallback as successfully drained plugin audio.
+    pub fn emitted_degraded_output(&self) -> bool {
+        self.emitted_degraded_output
+    }
+
+    /// Wait only on the EOS/control thread for the one in-flight worker block.
+    /// Ordinary process callbacks retain their nonblocking fallback policy.
+    pub fn wait_for_pending_for_drain(&mut self, timeout: Duration) -> Result<(), String> {
+        let Some(pending) = self.pending else {
+            return Ok(());
+        };
+        let deadline = Instant::now()
+            .checked_add(timeout)
+            .ok_or_else(|| "external-plugin drain wait is too large".to_string())?;
+        loop {
+            let state = self.shared.worker_state();
+            let sequence = self.shared.worker_sequence();
+            match state {
+                PluginIpcState::WorkerReady if sequence == pending.sequence => {
+                    self.resolve_pending(self.timeline_frame)?;
+                    return Ok(());
+                }
+                PluginIpcState::WorkerReady => {
+                    return Err(format!(
+                        "external-plugin drain found worker sequence {sequence}, expected {}",
+                        pending.sequence
+                    ));
+                }
+                PluginIpcState::WorkerFailed => {
+                    return Err(format!(
+                        "external-plugin worker failed during drain at sequence {sequence}"
+                    ));
+                }
+                _ if Instant::now() >= deadline => {
+                    return Err(format!(
+                        "external-plugin worker did not finish sequence {} before drain timeout",
+                        pending.sequence
+                    ));
+                }
+                _ => std::thread::yield_now(),
+            }
+        }
+    }
+
+    /// Emit already scheduled timeline samples without publishing more input.
+    /// Caller must first resolve the worker's pending block.
+    pub fn flush_timeline_for_drain(
+        &mut self,
+        output: &mut [f32],
+        frames: usize,
+    ) -> Result<ExternalPluginHostBlockStatus, String> {
+        if self.pending.is_some() {
+            return Err("cannot flush external-plugin timeline with a pending worker block".into());
+        }
+        if frames > self.pipeline_latency_samples() {
+            return Err(format!(
+                "external-plugin drain flush has {frames} frames, maximum is {}",
+                self.pipeline_latency_samples()
+            ));
+        }
+        let samples = frames
+            .checked_mul(self.shared.layout().output_channels as usize)
+            .ok_or_else(|| "external-plugin drain output extent overflow".to_string())?;
+        if output.len() < samples {
+            return Err(format!(
+                "external-plugin drain output has {} samples, expected at least {samples}",
+                output.len()
+            ));
+        }
+        let status = self.emit_timeline(&mut output[..samples], frames);
+        self.timeline_frame = self.timeline_frame.saturating_add(frames as u64);
+        Ok(status)
+    }
+
+    /// Clear transport history after the worker confirms Plugin::reset_checked.
+    /// Native DSP and host-owned timeline state therefore restart together.
+    pub fn reset_timeline_after_drain(&mut self) -> Result<(), String> {
+        if self.pending.is_some() {
+            return Err("cannot reset external-plugin timeline with a pending worker block".into());
+        }
+        self.timeline_audio.fill(0.0);
+        self.timeline_status
+            .fill(ExternalPluginHostBlockStatus::Priming);
+        self.last_output.fill(0.0);
+        self.transition_from.fill(0.0);
+        self.transition_remaining = 0;
+        self.previous_status = None;
+        self.timeline_frame = 0;
+        self.emitted_degraded_output = false;
+        self.fallback_delay.fill(0.0);
+        self.fallback_delay_pos = 0;
+        self.deferred_parameter_events.fill(None);
+        self.deferred_midi_events.clear();
+        self.parameter_event_scratch.clear();
+        self.midi_event_scratch.clear();
+        self.shared.clear_block();
+        Ok(())
     }
 
     pub fn request_control(
@@ -640,6 +758,14 @@ impl ExternalPluginHostProxy {
         for frame in 0..frames {
             let ring_frame = (self.timeline_frame as usize + frame) % capacity;
             let status = self.timeline_status[ring_frame];
+            if matches!(
+                status,
+                ExternalPluginHostBlockStatus::TimedOut
+                    | ExternalPluginHostBlockStatus::WorkerFailed
+                    | ExternalPluginHostBlockStatus::WrongSequence
+            ) {
+                self.emitted_degraded_output = true;
+            }
             let processed = status == ExternalPluginHostBlockStatus::Processed;
             if self.previous_status != Some(status) {
                 if self.previous_status.is_some_and(|previous| {

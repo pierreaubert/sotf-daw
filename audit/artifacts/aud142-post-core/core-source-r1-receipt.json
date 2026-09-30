@@ -1,0 +1,30 @@
+{
+  "checkpoint": "AUD142 post-pure-core, before AUD144 and broader Crossover FFI/engine route edits",
+  "selected_file_count": 42,
+  "selected_crossover_package_files": 27,
+  "extra_route_and_workspace_files": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "crates/sotf-plugins/Cargo.toml",
+    "crates/sotf-engine/src/plugins/plugin_settings.rs",
+    "crates/sotf-engine/src/plugins/plugin_type.rs",
+    "crates/sotf-engine/src/plugins/plugin_config_converter.rs",
+    "crates/sotf-engine/src/plugins/plugin_config_converter/spatial.rs",
+    "crates/sotf-engine/src/plugin_param_accessors/crossover.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/tests.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/state_tests.rs",
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/aud142_crossover_baseline_tests.rs"
+  ],
+  "archive": "audit/artifacts/aud142-post-core/core-source-r1.tar.gz",
+  "archive_sha256": "9f5526c535730b8087973f007873689d01331d111b2b1e52392b8d900d4add8d",
+  "manifest": "audit/artifacts/aud142-post-core/core-source-r1.sha256",
+  "manifest_sha256": "456d2ed452801fd97f7843e39215b9749dc381ba2c5712cc20db5784ad2255bc",
+  "sources_unchanged_during_capture": true,
+  "archive_contents_match_manifest": true,
+  "source_root": "/home/pierre/src/all_of_sotf/sotf-daw",
+  "recovery": "Extract the archive from the repository root, then verify core-source-r1.sha256 with sha256sum -c."
+}

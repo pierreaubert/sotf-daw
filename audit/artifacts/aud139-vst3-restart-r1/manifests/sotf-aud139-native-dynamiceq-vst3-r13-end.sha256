@@ -1,0 +1,7 @@
+24836f6f72ef9b40f41b2bb2f30954abe474e18ecb1925d6e988e5535dc9c70c  crates/sotf-plugins/crates/plugins-nih/src/plugin/native_dynamic_eq_vst3_restart.rs
+1b695b4ffef61301ab588a0e36c5c8f6b85e4541fe9561f2e3941557b26c5113  crates/sotf-plugins/crates/plugins-nih/src/lib.rs
+8c7804412e492ec2b2171cdfa54d2338e09e2751c7aeb11f054fdb2a80833d2d  crates/sotf-plugins/crates/plugins-nih/src/params.rs
+b7d925d7aa5508da920d51abe09dcc1fcd75202a21d47e8474ebc48ccef02cac  crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs
+b716317f8bde81a964c25572d5a11bdb5a61c1246caa3995df953a6f06ba5072  crates/3rdparties/nih-plug/src/wrapper/vst3/view.rs
+c919f6d79c3048d8e44161ca5e3fbc2e3cb4030ab6924ea3439a64cbf1dfa22b  crates/3rdparties/nih-plug/src/wrapper/vst3/inner.rs
+39f0b4d2b50e7e01aa34d0466eb7607923b3278fb44a1f5cd4cfc8017d059c90  crates/3rdparties/nih-plug/src/wrapper/vst3/wrapper.rs

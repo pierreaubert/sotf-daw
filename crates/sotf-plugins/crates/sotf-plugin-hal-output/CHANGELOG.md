@@ -1,3 +1,10 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add bounded EOF delivery and recovery handling for the HAL output sink.
+- Make drain, reprepare and readiness transitions transactional, with writer-error cleanup, multi-chunk delivery and large-buffer regressions.
+
 # 0.5.12
 
 ## Fixes

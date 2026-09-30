@@ -121,8 +121,13 @@ impl Default for EngineConfig {
 impl EngineConfig {
     /// Largest block supported by the allocation-free processing contract.
     pub const MAX_FRAME_SIZE: usize = 8192;
-    /// Largest declared engine I/O layout supported without hot-path growth.
-    pub const MAX_CHANNELS: usize = 16;
+    /// Largest declared input layout supported without decoder/processing
+    /// scratch growth. Order-7 Ambisonics requires 64 input channels.
+    pub const MAX_INPUT_CHANNELS: usize = 64;
+    /// Largest output layout supported by the device and playback pipeline.
+    pub const MAX_OUTPUT_CHANNELS: usize = 16;
+    /// Compatibility alias for the historic engine output-channel ceiling.
+    pub const MAX_CHANNELS: usize = Self::MAX_OUTPUT_CHANNELS;
 
     /// Validate values that must hold before the config reaches the engine.
     pub fn validate(&self) -> Result<(), String> {
@@ -153,21 +158,21 @@ impl EngineConfig {
         if self.input_channels == 0 {
             return Err("EngineConfig input_channels must be greater than 0".to_string());
         }
-        if self.input_channels > Self::MAX_CHANNELS {
+        if self.input_channels > Self::MAX_INPUT_CHANNELS {
             return Err(format!(
                 "EngineConfig input_channels {} exceeds allocation-free maximum {}",
                 self.input_channels,
-                Self::MAX_CHANNELS
+                Self::MAX_INPUT_CHANNELS
             ));
         }
         if self.output_channels == 0 {
             return Err("EngineConfig output_channels must be greater than 0".to_string());
         }
-        if self.output_channels > Self::MAX_CHANNELS {
+        if self.output_channels > Self::MAX_OUTPUT_CHANNELS {
             return Err(format!(
                 "EngineConfig output_channels {} exceeds allocation-free maximum {}",
                 self.output_channels,
-                Self::MAX_CHANNELS
+                Self::MAX_OUTPUT_CHANNELS
             ));
         }
         if !self.volume.is_finite() || !(0.0..=1.0).contains(&self.volume) {

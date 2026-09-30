@@ -31,10 +31,13 @@ use super::plugin_sandbox_backend_code::PluginSandboxBackendCode;
 use super::plugin_sandbox_status_code::PluginSandboxStatusCode;
 use super::types::PluginIpcRequest;
 use super::types::PluginSandboxRuntimeStatus;
-use super::{PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcParameterEvent};
+use super::{
+    PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcParameterEvent, PluginIpcTailLength,
+};
 use crate::parameters::{Parameter, ParameterValue};
 use crate::plugin::{
-    LoopRange, MidiEvent, MidiMessage, ParameterEvent, Plugin, ProcessContext, TransportInfo,
+    LoopRange, MidiEvent, MidiMessage, ParameterEvent, Plugin, ProcessContext, TailLength,
+    TransportInfo,
 };
 use memmap2::{MmapMut, MmapOptions};
 use std::fs::File;
@@ -633,6 +636,12 @@ impl SecurePluginSharedMemory {
             }
         };
 
+        // The worker owns the plugin's serialized control/process thread.
+        // Refresh format metadata here; in-process DawHost callbacks only read
+        // cached values and never call UI-thread-only native APIs.
+        plugin.refresh_control_thread_metadata();
+        self.publish_worker_tail_length(plugin.tail_length());
+
         let output_samples = frames * self.layout.output_channels as usize;
         self.output_slice_mut()[..output_samples]
             .copy_from_slice(&output_scratch[..output_samples]);
@@ -706,6 +715,32 @@ impl SecurePluginSharedMemory {
         let header = self.header();
         (header.reserved[3].load(Ordering::Acquire) != 0)
             .then(|| header.reserved[2].load(Ordering::Relaxed) as usize)
+    }
+
+    /// Publish a bounded tail in one atomic word. Very large finite bounds
+    /// become infinite, which is conservative and avoids a torn 64-bit value
+    /// in the stable shared-memory header.
+    pub fn publish_worker_tail_length(&self, tail: TailLength) {
+        let encoded = match tail {
+            TailLength::Unknown => 0,
+            TailLength::Infinite => 1,
+            TailLength::Finite(frames) => u32::try_from(frames)
+                .ok()
+                .filter(|frames| *frames <= u32::MAX - 2)
+                .map_or(1, |frames| frames + 2),
+        };
+        self.header().reserved[4].store(encoded, Ordering::Release);
+    }
+
+    /// Read the latest worker-published tail. The caller must also verify the
+    /// worker has completed any in-flight audio/control request before relying
+    /// on this value.
+    pub fn worker_tail_length(&self) -> PluginIpcTailLength {
+        match self.header().reserved[4].load(Ordering::Acquire) {
+            0 => PluginIpcTailLength::Unknown,
+            1 => PluginIpcTailLength::Infinite,
+            encoded => PluginIpcTailLength::Finite(u64::from(encoded - 2)),
+        }
     }
 
     pub fn audio_slices_mut(&mut self) -> (&mut [f32], &mut [f32]) {

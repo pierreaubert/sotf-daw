@@ -1,0 +1,34 @@
+{
+  "command": "python3 audit/tools/aud142_crossover_state_probe.py crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r3/libplugins_ffi.so audit/artifacts/aud142-public-state-probe-pre-route-r1",
+  "exit_code": 1,
+  "execution_chunk": "73dffd",
+  "library_sha256": "7311b8fa7044084096bbdb219f56656673d7feef86bd8c58943a4147c36e71a8",
+  "probe_sha256": "009db1bc3e2e97baca4a4ea406cab8cec5415d3f61eeab3822118713774895ed",
+  "cases": 30,
+  "failed_cases": [
+    "LinearPhase",
+    "LR12",
+    "LR48",
+    "BW6",
+    "BW12",
+    "BW18",
+    "BW24",
+    "BW30",
+    "BW36",
+    "BW42",
+    "BW48",
+    "Bessel12",
+    "fir_alias_FIR",
+    "fir_alias_linear_phase",
+    "fir_alias_LPFIR",
+    "per_channel",
+    "multiway",
+    "new_band",
+    "per_channel_topology"
+  ],
+  "scope": "Actual exported C ABI state import, full-vector fresh/continuation references and history sensitivity; production DSP references, not independent filter mathematics.",
+  "limitations": [
+    "The immutable library predates the new Crossover FFI state route; this is baseline failure evidence, not a verdict on current edited Rust.",
+    "The library is the prior sealed AUD144 artifact; this probe did not rebuild it or create a new complete transitive source manifest."
+  ]
+}

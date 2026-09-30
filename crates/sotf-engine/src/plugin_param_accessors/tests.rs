@@ -55,6 +55,107 @@ fn validate_all_params_have_layout_coverage() {
     }
 }
 
+#[test]
+fn band_split_explicit_cutoffs_drive_readback_and_migrate_before_edits() {
+    let mut settings = PluginSettings::default_for(&PluginType::BandSplit).unwrap();
+    let PluginSettings::BandSplit { frequencies, .. } = &mut settings else {
+        unreachable!();
+    };
+    *frequencies = Some(vec![100.0, 5_000.0]);
+
+    assert_eq!(settings.param_value(0), Some(100.0));
+    assert_eq!(settings.param_value(3), Some(1.0));
+    assert_eq!(settings.param_value(4), Some(5_000.0));
+    assert_eq!(settings.param_value(5), Some(4_800.0));
+
+    settings.set_param_value(4, 6_100.0);
+    assert_eq!(settings.param_value(0), Some(100.0));
+    assert_eq!(settings.param_value(4), Some(6_100.0));
+    assert_eq!(settings.param_value(3), Some(1.0));
+    let PluginSettings::BandSplit {
+        frequencies,
+        frequency,
+        frequency_2,
+        num_bands,
+        ..
+    } = &settings
+    else {
+        unreachable!();
+    };
+    assert!(frequencies.is_none());
+    assert_eq!(*frequency, 100.0);
+    assert_eq!(*frequency_2, 6_100.0);
+    assert_eq!(*num_bands, 3);
+}
+
+#[test]
+fn band_split_count_edit_keeps_surviving_explicit_cutoffs_and_empty_vector_stays_invalid() {
+    let mut settings = PluginSettings::default_for(&PluginType::BandSplit).unwrap();
+    let PluginSettings::BandSplit { frequencies, .. } = &mut settings else {
+        unreachable!();
+    };
+    *frequencies = Some(vec![100.0, 5_000.0, 15_000.0]);
+
+    settings.set_param_value(3, 0.0);
+    assert_eq!(settings.param_value(0), Some(100.0));
+    assert_eq!(settings.param_value(3), Some(0.0));
+    assert_eq!(settings.param_value(4), Some(5_000.0));
+    assert_eq!(settings.param_value(5), Some(15_000.0));
+    let PluginSettings::BandSplit {
+        frequencies,
+        frequency,
+        frequency_2,
+        frequency_3,
+        num_bands,
+        ..
+    } = &settings
+    else {
+        unreachable!();
+    };
+    assert!(frequencies.is_none());
+    assert_eq!(
+        (*frequency, *frequency_2, *frequency_3),
+        (100.0, 5_000.0, 15_000.0)
+    );
+    assert_eq!(*num_bands, 2);
+
+    let mut invalid = PluginSettings::default_for(&PluginType::BandSplit).unwrap();
+    let PluginSettings::BandSplit {
+        frequencies,
+        frequency,
+        frequency_2,
+        ..
+    } = &mut invalid
+    else {
+        unreachable!();
+    };
+    *frequencies = Some(Vec::new());
+    *frequency = 700.0;
+    *frequency_2 = 2_800.0;
+    assert_eq!(invalid.param_value(0), None);
+    assert_eq!(invalid.param_value(4), None);
+}
+
+#[test]
+fn band_split_empty_explicit_vector_is_forwarded_and_rejected_by_plugin_factory() {
+    let mut settings = PluginSettings::default_for(&PluginType::BandSplit).unwrap();
+    let PluginSettings::BandSplit { frequencies, .. } = &mut settings else {
+        unreachable!();
+    };
+    *frequencies = Some(Vec::new());
+
+    let config = settings.to_plugin_config(48_000.0);
+    assert_eq!(
+        config.parameters["explicit_frequencies"],
+        serde_json::json!([]),
+        "the typed empty vector must not be replaced by scalar defaults"
+    );
+    assert!(
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).is_err(),
+        "the plugin factory must reject an explicit empty cutoff vector"
+    );
+}
+
 /// Validate that every non-structural PARAMS engine_key that `engine_param_at()`
 /// can emit actually exists in the DSP plugin's parameter list.
 ///
@@ -157,6 +258,121 @@ fn crossover_is_exposed_with_editable_layout_and_dsp_config() {
     assert_eq!(config.plugin_type, "crossover");
     sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
         .expect("Crossover settings must create the DSP plugin");
+}
+
+#[test]
+fn crossover_legacy_and_typed_routes_survive_engine_conversion() {
+    use sotf_plugins::plugin_crossover::CrossoverTopology;
+
+    // A saved pre-topology Crossover preset omits the optional arrays. The
+    // converter must keep them omitted because the DSP's legacy Vec fields
+    // accept absence (or an empty list), but not JSON null.
+    let legacy: PluginSettings = serde_json::from_value(serde_json::json!({
+        "Crossover": { "frequency": 750.0 }
+    }))
+    .unwrap();
+    let legacy_config = legacy.to_plugin_config(48_000.0);
+    assert!(
+        legacy_config
+            .parameters
+            .get("channel_frequencies_hz")
+            .is_none()
+    );
+    assert!(legacy_config.parameters.get("channel_modes").is_none());
+    sotf_plugins::create_plugin(
+        &legacy_config.plugin_type,
+        &legacy_config.parameters,
+        2,
+        48_000,
+    )
+    .expect("legacy frequency-only Crossover settings must still reach the factory");
+
+    let mut settings = PluginSettings::default_for(&PluginType::Crossover).unwrap();
+    let PluginSettings::Crossover {
+        crossover_type,
+        output,
+        topology,
+        extra_frequencies,
+        channel_frequencies_hz,
+        channel_modes,
+        ..
+    } = &mut settings
+    else {
+        panic!("expected Crossover settings");
+    };
+    *crossover_type = "LR48".to_string();
+    *output = "both".to_string();
+    *topology = Some(CrossoverTopology::Bands);
+    *extra_frequencies = vec![1_200.0, 5_000.0];
+    *channel_frequencies_hz = Some(vec![500.0, 900.0]);
+    *channel_modes = Some(vec!["lowpass".to_string(), "highpass".to_string()]);
+
+    let encoded = serde_json::to_value(&settings).unwrap();
+    let mut restored: PluginSettings = serde_json::from_value(encoded).unwrap();
+    let config = restored.to_plugin_config(48_000.0);
+    assert_eq!(config.parameters["topology"], "bands");
+    assert_eq!(
+        config.parameters["extra_frequencies"],
+        serde_json::json!([1_200.0, 5_000.0])
+    );
+    assert_eq!(
+        config.parameters["channel_frequencies_hz"],
+        serde_json::json!([500.0, 900.0]),
+        "inactive per-channel cutoffs remain in the full typed state"
+    );
+    assert_eq!(
+        config.parameters["channel_modes"],
+        serde_json::json!(["lowpass", "highpass"])
+    );
+    let plugin = sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+        .expect("explicit bands topology may retain dormant per-channel data");
+    assert_eq!(plugin.output_channels(), 8);
+
+    let PluginSettings::Crossover {
+        topology, output, ..
+    } = &mut restored
+    else {
+        unreachable!();
+    };
+    *topology = Some(CrossoverTopology::PerChannel);
+    *output = "both".to_string();
+    let per_channel_config = restored.to_plugin_config(48_000.0);
+    let plugin = sotf_plugins::create_plugin(
+        &per_channel_config.plugin_type,
+        &per_channel_config.parameters,
+        2,
+        48_000,
+    )
+    .expect("complete explicit per-channel modes make global Both dormant");
+    assert_eq!(plugin.output_channels(), 2);
+}
+
+#[test]
+fn crossover_family_accessors_round_trip_all_choices_and_aliases() {
+    let mut settings = PluginSettings::default_for(&PluginType::Crossover).unwrap();
+    let type_index = param_specs::index_of(settings.param_specs(), "type");
+    let choices = param_specs::crossover::CROSSOVER_TYPES;
+
+    assert_eq!(choices.len(), 13);
+    for (index, choice) in choices.iter().enumerate() {
+        settings.set_param_value(type_index, index as f64);
+        assert_eq!(settings.param_value(type_index), Some(index as f64));
+        assert_eq!(
+            settings.to_plugin_config(48_000.0).parameters["type"],
+            *choice
+        );
+        let config = settings.to_plugin_config(48_000.0);
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+            .unwrap_or_else(|error| panic!("family {choice} must instantiate: {error}"));
+    }
+
+    if let PluginSettings::Crossover { crossover_type, .. } = &mut settings {
+        *crossover_type = "bessel12".to_string();
+    }
+    assert_eq!(settings.param_value(type_index), Some(12.0));
+    let config = settings.to_plugin_config(48_000.0);
+    sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+        .expect("lowercase Bessel12 alias must remain accepted");
 }
 
 #[test]

@@ -1,0 +1,9 @@
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  /home/pierre/src/all_of_sotf/sotf-daw/Cargo.lock
+c02ee279012527ba7ee934ac03fd29f364df2c10c7a9d52c5f906e05e90da755  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs
+92483965d6af3f383be278f609afbdd9a5524c596ae5062f76bd3de24aedbf88  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs
+b2caa1b7dafa02fe59563588e2ba233c3fd778ac55f8ed6b7d3329d7bf0b6af2  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/src/lib/aud139_baseline_tests.rs
+f2da11f6751fadd0d0bdbe202dfe5d286f93ac407839858ddf847a80fb6caaa6  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
+1b1c8a2c953e20427edad792dc6a91a385cd3eeb4906bead9448e843e901d3b3  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host/src/test_utils.rs
+4edb113f6f9eea2185b4fb68caf5dbcb327bca59f39c7cf488908c746c1350cd  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host/src/test_utils/counting_alloc.rs
+9890d620eca67b1197f821e8bb5dc0a68ef595627d9dfcfbc8deb16de27b7160  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs
+843d7e66eabc109956942b952e904a6e276db7adc7011a726e604fed7cf91eb1  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs

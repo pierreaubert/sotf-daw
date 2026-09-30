@@ -1,0 +1,88 @@
+{
+  "audit_id": "AUD142",
+  "run": "crossover-paired-core-r1",
+  "status": "completed",
+  "started_at_utc": "2026-09-30T08:01:13.557334435Z",
+  "finished_at_utc": "2026-09-30T08:09:22.930430888Z",
+  "benchmark_settings": {
+    "mode": "Criterion release executable, no Cargo build during timing",
+    "arguments": ["--bench", "--noplot", "--sample-size", "30", "--warm-up-time", "1", "--measurement-time", "2"],
+    "sample_size_per_case": 30,
+    "legacy_case_groups": {
+      "crossover_setup_and_initialize": 7,
+      "crossover_lr_interleaved_blocks": 12,
+      "crossover_fir_interleaved_blocks": 12
+    },
+    "new_family_case_groups": {
+      "crossover_new_iir_setup": 16,
+      "crossover_new_iir_interleaved_blocks": 48
+    }
+  },
+  "binaries": {
+    "archived_preedit": {
+      "path": "audit/artifacts/aud142-preedit/crossover-benchmark-r3.tar.gz",
+      "archive_sha256": "e7da1160ccc9e29b8327acccbd499ddcdf81522c1fc428042080fbc14a6cb6d6",
+      "unpacked_binary_sha256": "06eafe84b566e4a10b9123c1a14e83fd16c6d20fef183a8e61e05dec26566e87",
+      "runtime_path": "/tmp/aud142-preedit-executable-r1/crossover_block_benchmark-0f503e773e194c2e"
+    },
+    "current_core": {
+      "path": "audit/artifacts/aud142-post-core/crossover-benchmark-r1",
+      "sha256": "712be67ce14286a6b554f60df282eab51bc85c336f8d328dc55be66239760659",
+      "benchmark_source": "crates/sotf-plugins/crates/sotf-plugin-crossover/benches/crossover-block-benchmark.rs",
+      "benchmark_source_sha256": "9805e3cc9dd5bcc87431ac9cdc525e629a128b8077cec7f125d3df729c400ccb",
+      "build_log": "audit/artifacts/aud142-post-core/logs/crossover-bench-build-r1.log",
+      "build_log_sha256": "41a5b76d42bc5955e4e68d24d5868a7575fcb83010240dc68a3d2c291522ae50"
+    }
+  },
+  "command_sequence": [
+    {"variant": "current", "filter": "crossover_setup_and_initialize", "log": "logs/crossover-timing-r1-current-legacy-setup.log", "exit_code": 0},
+    {"variant": "archived", "filter": "crossover_setup_and_initialize", "log": "logs/crossover-timing-r1-archived-legacy-setup.log", "exit_code": 0},
+    {"variant": "archived", "filter": "crossover_lr_interleaved_blocks", "log": "logs/crossover-timing-r1-archived-legacy-lr-process.log", "exit_code": 0},
+    {"variant": "current", "filter": "crossover_lr_interleaved_blocks", "log": "logs/crossover-timing-r1-current-legacy-lr-process.log", "exit_code": 0},
+    {"variant": "archived", "filter": "crossover_fir_interleaved_blocks", "log": "logs/crossover-timing-r1-archived-legacy-fir-process.log", "exit_code": 0},
+    {"variant": "current", "filter": "crossover_fir_interleaved_blocks", "log": "logs/crossover-timing-r1-current-legacy-fir-process.log", "exit_code": 0},
+    {"variant": "current", "filter": "crossover_new_iir_setup", "log": "logs/crossover-timing-r1-current-new-setup.log", "exit_code": 0},
+    {"variant": "current", "filter": "crossover_new_iir_interleaved_blocks", "log": "logs/crossover-timing-r1-current-new-process.log", "exit_code": 0}
+  ],
+  "raw_data": {
+    "archived_criterion_root": "audit/artifacts/aud142-post-core/criterion-r1/archived",
+    "current_criterion_root": "audit/artifacts/aud142-post-core/criterion-r1/current",
+    "archived_sample_json_count": 31,
+    "archived_estimate_json_count": 31,
+    "current_sample_json_count": 95,
+    "current_estimate_json_count": 95,
+    "legacy_ids_match_archived_current_and_preedit_r3": true,
+    "each_sample_json_contains_30_samples": true,
+    "summary_script": "audit/artifacts/aud142-post-core/summarize_crossover_timing.py",
+    "legacy_summary_csv": "audit/artifacts/aud142-post-core/legacy-paired-summary-r1.csv",
+    "legacy_summary_csv_sha256": "f2dccc541e4dd386e4a7f221036c9ebbbf073b081534144e3597d2a6d67597aa",
+    "new_family_summary_csv": "audit/artifacts/aud142-post-core/new-family-summary-r1.csv",
+    "new_family_summary_csv_sha256": "912c03488911c73a77c3fb4a053b57fe60465233462cce2ac5951a48056bd9fd",
+    "summary_json": "audit/artifacts/aud142-post-core/timing-summary-r1.json",
+    "summary_json_sha256": "ef7ae4c66ecfc01d0a89f2ddd7ef683a40ce5c503c3a2bc5cb76065108f2509e"
+  },
+  "machine": {
+    "cpu": "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
+    "logical_cpu_count": 128,
+    "allowed_cpu_list": "0-127",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "pre_window_snapshot_utc": "2026-09-30T07:59:11Z",
+    "pre_window_load_average_1_5_15m": [59.96, 25.78, 19.80],
+    "pre_window_tokensave_status_index_rebuild_in_progress": true,
+    "post_window_snapshot_utc": "2026-09-30T08:10:30Z",
+    "post_window_load_average_1_5_15m": [4.23, 7.48, 12.89],
+    "visible_competing_audit_work": "Root and BandSplit confirmed no CPU-heavy work; Upmixer also confirmed no heavy command. No other local benchmark or Cargo command was active. The container process view did not expose any concurrent benchmark process.",
+    "load_qualification": "Load changed substantially over the window and the pre-window 1-minute average was high. Host-level work is not fully observable in this container; interpret small paired differences cautiously."
+  },
+  "verification": {
+    "root_independent_raw_arithmetic_receipt": "audit/artifacts/aud142-cpu-root-check-r1/receipt.json",
+    "root_receipt_sha256": "e451e8eab91e57984ea77f08e7d235f3289086cd4106488e3a6e1862b05027d1",
+    "scope": "Independent arithmetic/sample-count verification of this same timing run, not a second timing run or feature acceptance."
+  },
+  "interpretation_limits": [
+    "Setup measures construct, initialize, and drop separately from processing.",
+    "Processing measures one call on an initialized/reused instance for 32, 512, or 2048 frames.",
+    "Archived/current comparison uses the exact 31 legacy case IDs and identical settings; new-family times are absolute current-binary values because the old binary has no new-family cases.",
+    "These are throughput samples, not worst-case execution-time evidence or an acceptance claim for the new feature."
+  ]
+}

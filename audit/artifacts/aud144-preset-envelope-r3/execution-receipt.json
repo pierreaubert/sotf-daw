@@ -1,0 +1,149 @@
+{
+  "audit": "AUD144",
+  "revision": "r3",
+  "status": "implementation and local verification complete; Astra review pending",
+  "compatibility_contract": {
+    "factory_aliases": "accepted in either target/saved direction",
+    "legacy_migration": "target LoudnessCompensation accepts saved FletcherMunson",
+    "reverse_migration": "refused by the selected directional contract; not measured in r1/r2",
+    "distinct_families": [
+      ["Compressor", "MultibandCompressor"]
+    ]
+  },
+  "source_files": [
+    {
+      "path": "crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs",
+      "sha256": "72ea3b5fd3d114b3984a420ed052f936e79db03dd78632f6f5842c9ccb2674af",
+      "preserved_copy": "sources/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs",
+      "final_sha256": "9fadf779a82e8297006765d3db09ecb5044c759457c6b1da234f8e9b7bc02f94",
+      "final_preserved_copy": "sources-r2/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs"
+    },
+    {
+      "path": "crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs",
+      "sha256": "104b28ab933bad0b9cd4f7a64cab69aaa201dabab5d638649c42e2b15e144f3a",
+      "preserved_copy": "sources/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs",
+      "final_sha256": "104b28ab933bad0b9cd4f7a64cab69aaa201dabab5d638649c42e2b15e144f3a",
+      "final_preserved_copy": "sources-r2/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs"
+    },
+    {
+      "path": "crates/sotf-plugins/crates/plugins-ffi/src/lib/aud144_preset_envelope_tests.rs",
+      "sha256": "f49b5a9f54ac85967fbb9b0350c52a36e623eee60999f4ce88b01b3eb8b79f73",
+      "preserved_copy": "sources/crates/sotf-plugins/crates/plugins-ffi/src/lib/aud144_preset_envelope_tests.rs",
+      "final_sha256": "f49b5a9f54ac85967fbb9b0350c52a36e623eee60999f4ce88b01b3eb8b79f73",
+      "final_preserved_copy": "sources-r2/crates/sotf-plugins/crates/plugins-ffi/src/lib/aud144_preset_envelope_tests.rs"
+    }
+  ],
+  "selected_source_manifest": {
+    "initial_build": {
+      "path_count": 340,
+      "start_file": "build-source-start.sha256",
+      "end_file": "build-source-end.sha256",
+      "start_sha256": "4d25271308fe05ee76c18004bfaa880b98b6c80de6f15afff52a320147879aba",
+      "end_sha256": "4d25271308fe05ee76c18004bfaa880b98b6c80de6f15afff52a320147879aba",
+      "start_and_end_identical": true
+    },
+    "post_rustfmt_build": {
+      "broad_path_count": 340,
+      "broad_start_file": "build-source-start-r2.sha256",
+      "broad_end_file": "build-source-end-r2.sha256",
+      "broad_start_sha256": "74336a9e300a8aa6d71144ba300d943ae5b4ee1f89c3f9962f3129e7415890a3",
+      "broad_end_sha256": "58e41fc2dfc97719707a4ffac1171ca333de8e940366809fae8148b0df55d437",
+      "sole_difference": "crates/sotf-plugins/crates/sotf-host/tests/native_vst3_host.rs (Band-owned test-only edit; not compiled by plugins-ffi --lib)",
+      "filtered_path_count": 339,
+      "filtered_start_file": "build-source-start-final.sha256",
+      "filtered_end_file": "build-source-end-final.sha256",
+      "filtered_start_sha256": "3bbd068c7489de6725dd1c7f6b510f1c0189e8c6217921c863633aa5f27c614a",
+      "filtered_end_sha256": "3bbd068c7489de6725dd1c7f6b510f1c0189e8c6217921c863633aa5f27c614a",
+      "filtered_start_and_end_identical": true
+    }
+  },
+  "commands": [
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo test --offline --locked -p plugins-ffi --lib aud144_ -- --nocapture",
+      "exit_code": 0,
+      "result": "3 passed, 0 failed",
+      "log": "focused-r1.log",
+      "log_sha256": "103267ae420df1c6fd976161c45d42124b5f128591ce1705cf8934413dba294f"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo test --offline --locked -p plugins-ffi --lib",
+      "exit_code": 0,
+      "result": "82 passed, 0 failed, 1 ignored",
+      "log": "full-r1.log",
+      "log_sha256": "aa8123c310ad9a668e00ccd9aefcf063a6fb8acef85e5b3652bba31fec5e754f"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo clippy --offline --locked -p plugins-ffi --all-targets -- -D warnings",
+      "exit_code": 0,
+      "result": "strict all-target Clippy passed",
+      "log": "clippy-r1.log",
+      "log_sha256": "641fd9e4779fa31a0e2a5c85ddbd24722079f654e2859dc95081c7b9f2e5db6b"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo build --offline --locked -p plugins-ffi --lib",
+      "exit_code": 0,
+      "result": "build passed; 340 selected source hashes unchanged",
+      "log": "build-r1.log",
+      "log_sha256": "0724b1b145169cb2fd6a49bc99090fa96a117e6e17a17d6c4e249ae760e91ae2",
+      "immutable_library": "crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r3/libplugins_ffi.so",
+      "library_sha256": "7311b8fa7044084096bbdb219f56656673d7feef86bd8c58943a4147c36e71a8"
+    },
+    {
+      "command": "python3 audit/tools/aud144_preset_envelope_probe.py crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r3/libplugins_ffi.so audit/artifacts/aud144-preset-envelope-r3/envelope-probe",
+      "exit_code": 0,
+      "result": "nine invalid envelopes refused; two valid controls accepted",
+      "log": "envelope-probe.log",
+      "log_sha256": "b92c3c45fef692be18e1e98c3e952c12cf45af2cbf4fc2a005b22ea1a0d4a4ca",
+      "probe_sha256": "107d5b64fb106c3d593749d2c14a9688288da727ecf495d6e2a5ad020cec39ac",
+      "result": "envelope-probe/result.json",
+      "result_sha256": "417eeadeb5895eca63b818dcb50485d75574b04f4d2e5f0d49f76353d9f4545e"
+    },
+    {
+      "command": "python3 audit/tools/aud144_fletcher_munson_compat_probe.py crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r3/libplugins_ffi.so audit/artifacts/aud144-preset-envelope-r3/fletcher-munson-probe",
+      "exit_code": 0,
+      "result": "state equal; output bit-exact across 9464 samples; default sensitivity 0.27916882932186127",
+      "log": "fletcher-munson-probe.log",
+      "log_sha256": "8f5308be98a9dddcc9d3856bd6ed87deda20607367cda619429a669a45931831",
+      "probe_sha256": "1d337acab2843c8ec261977f761e8c647daeeac31bb18ea38aff6af3d1e0600d",
+      "result": "fletcher-munson-probe/result.json",
+      "result_sha256": "8f5308be98a9dddcc9d3856bd6ed87deda20607367cda619429a669a45931831"
+    }
+  ],
+  "post_rustfmt_gates": [
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo test --offline --locked -p plugins-ffi --lib aud144_ -- --nocapture",
+      "exit_code": 0,
+      "result": "3 passed, 0 failed",
+      "log": "focused-r2.log",
+      "log_sha256": "687fadb12751aa723164681d02ed19c55dbfda4eda6dbc415b7fcd7e7dc98a69"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo test --offline --locked -p plugins-ffi --lib",
+      "exit_code": 0,
+      "result": "82 passed, 0 failed, 1 ignored",
+      "log": "full-r2.log",
+      "log_sha256": "43f46f86d6018446158c3d2f28c2b17de4483713e8d8a4095d4e0000f2deae73"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo clippy --offline --locked -p plugins-ffi --all-targets -- -D warnings",
+      "exit_code": 0,
+      "result": "strict all-target Clippy passed",
+      "log": "clippy-r2.log",
+      "log_sha256": "2b71b94c7809d67e36229947848cee041e436e297521258ae1e937bcbfa782c7"
+    },
+    {
+      "command": "flock -w 900 /tmp/sotf-daw-audit-cargo.lock env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo build --offline --locked -p plugins-ffi --lib",
+      "exit_code": 0,
+      "result": "post-rustfmt build passed; output is byte-identical to the already probed r3 copy",
+      "log": "build-r2.log",
+      "log_sha256": "9eb4c19714b1d9e43ac415f4f3fc33eac9437c378202a1d1db8cce42075d0992",
+      "rebuilt_library_sha256": "7311b8fa7044084096bbdb219f56656673d7feef86bd8c58943a4147c36e71a8",
+      "immutable_copy_cmp": "passed"
+    }
+  ],
+  "root_verification": {
+    "path": "root-probe-verification.json",
+    "sha256": "da61a5a1092cec59079686ddd8c114f9921ea204067a3f2590695945f1190f6a"
+  },
+  "scope": "Public C-ABI preset identity/state/audio regression and selected-source locked build; no AU runtime, callback allocation, or complete transitive source snapshot claim"
+}

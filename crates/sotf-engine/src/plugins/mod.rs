@@ -317,10 +317,15 @@ sotf_plugins::serde_param_default! {
 sotf_plugins::serde_param_default! {
     band_split_specs::PARAMS;
     fn default_band_split_frequency() -> f64 = "frequency";
+    fn default_band_split_frequency_2() -> f64 = "frequency_2";
+    fn default_band_split_frequency_3() -> f64 = "frequency_3";
 }
 sotf_plugins::serde_param_default! {
     band_split_specs::PARAMS;
     fn default_band_split_crossover_type() -> String = "type";
+}
+fn default_band_split_num_bands() -> usize {
+    2
 }
 sotf_plugins::serde_param_default! {
     crossover_specs::PARAMS;

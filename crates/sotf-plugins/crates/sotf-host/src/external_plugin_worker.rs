@@ -16,7 +16,7 @@ use crate::external_plugin_ipc::{
     PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcRequest, SecurePluginSharedMemory,
 };
 use crate::parameters::Parameter;
-use crate::plugin::{MidiEvent, ParameterEvent, Plugin, ProcessContext};
+use crate::plugin::{MidiEvent, ParameterEvent, Plugin, ProcessContext, TailLength};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExternalPluginWorkerStep {
@@ -47,7 +47,10 @@ impl ExternalPluginWorker {
         Self::new(shared, plugin)
     }
 
-    pub fn new(shared: SecurePluginSharedMemory, plugin: Box<dyn Plugin>) -> Result<Self, String> {
+    pub fn new(
+        shared: SecurePluginSharedMemory,
+        mut plugin: Box<dyn Plugin>,
+    ) -> Result<Self, String> {
         let layout = shared.layout();
         let plugin_inputs = plugin.input_channels();
         let plugin_outputs = plugin.output_channels();
@@ -63,7 +66,9 @@ impl ExternalPluginWorker {
                 layout.output_channels
             ));
         }
+        plugin.refresh_control_thread_metadata();
         shared.publish_worker_latency_samples(plugin.latency_samples());
+        shared.publish_worker_tail_length(plugin.tail_length());
 
         let max_input_samples = layout.max_frames as usize * layout.input_channels as usize;
         let max_output_samples = layout.max_frames as usize * layout.output_channels as usize;
@@ -115,15 +120,44 @@ impl ExternalPluginWorker {
             .map_err(|error| format!("failed to read external-plugin control request: {error}"))?
         {
             let response = match request {
-                PluginIpcControlRequest::Describe => PluginIpcControlResponse::Description {
-                    parameters: self.parameters.clone(),
-                },
-                PluginIpcControlRequest::Set { id, value } => self
-                    .plugin
-                    .set_parameter(id, value)
-                    .map_or_else(PluginIpcControlResponse::Error, |_| {
+                PluginIpcControlRequest::Describe => {
+                    self.plugin.refresh_control_thread_metadata();
+                    PluginIpcControlResponse::Description {
+                        parameters: self.parameters.clone(),
+                        tail_length: match self.plugin.tail_length() {
+                            TailLength::Finite(frames) => {
+                                crate::external_plugin_ipc::PluginIpcTailLength::Finite(frames)
+                            }
+                            TailLength::Infinite => {
+                                crate::external_plugin_ipc::PluginIpcTailLength::Infinite
+                            }
+                            TailLength::Unknown => {
+                                crate::external_plugin_ipc::PluginIpcTailLength::Unknown
+                            }
+                        },
+                        identity_frame_geometry: self.plugin.guarantees_identity_frame_geometry(),
+                    }
+                }
+                PluginIpcControlRequest::Reset => match self.plugin.reset_checked() {
+                    Ok(()) => {
+                        self.plugin.refresh_control_thread_metadata();
+                        self.shared
+                            .publish_worker_tail_length(self.plugin.tail_length());
                         PluginIpcControlResponse::Ack
-                    }),
+                    }
+                    Err(error) => PluginIpcControlResponse::Error(error),
+                },
+                PluginIpcControlRequest::Set { id, value } => {
+                    match self.plugin.set_parameter(id, value) {
+                        Ok(()) => {
+                            self.plugin.refresh_control_thread_metadata();
+                            self.shared
+                                .publish_worker_tail_length(self.plugin.tail_length());
+                            PluginIpcControlResponse::Ack
+                        }
+                        Err(error) => PluginIpcControlResponse::Error(error),
+                    }
+                }
                 PluginIpcControlRequest::Get { id } => {
                     PluginIpcControlResponse::Value(self.plugin.get_parameter(&id))
                 }
@@ -131,12 +165,17 @@ impl ExternalPluginWorker {
                     PluginIpcControlResponse::Error,
                     PluginIpcControlResponse::State,
                 ),
-                PluginIpcControlRequest::LoadState { state } => self
-                    .plugin
-                    .load_opaque_state(&state)
-                    .map_or_else(PluginIpcControlResponse::Error, |_| {
-                        PluginIpcControlResponse::Ack
-                    }),
+                PluginIpcControlRequest::LoadState { state } => {
+                    match self.plugin.load_opaque_state(&state) {
+                        Ok(()) => {
+                            self.plugin.refresh_control_thread_metadata();
+                            self.shared
+                                .publish_worker_tail_length(self.plugin.tail_length());
+                            PluginIpcControlResponse::Ack
+                        }
+                        Err(error) => PluginIpcControlResponse::Error(error),
+                    }
+                }
             };
             self.shared
                 .publish_control_response(sequence, &response)
@@ -488,7 +527,7 @@ mod tests {
             ExternalPluginWorkerStep::Controlled
         );
         match host.take_control_response(1).unwrap().unwrap() {
-            PluginIpcControlResponse::Description { parameters } => {
+            PluginIpcControlResponse::Description { parameters, .. } => {
                 assert_eq!(parameters[0].id.as_str(), "value")
             }
             response => panic!("unexpected response: {response:?}"),

@@ -86,6 +86,7 @@ struct PluginIpcControlHeader {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PluginIpcControlRequest {
     Describe,
+    Reset,
     Set {
         id: ParameterId,
         value: ParameterValue,
@@ -99,9 +100,26 @@ pub enum PluginIpcControlRequest {
     },
 }
 
+/// Processing metadata reported by a hosted native plugin. The shared-memory
+/// tail scalar is refreshed after controls and completed audio blocks; this
+/// wire enum remains useful for the initial Describe handshake.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PluginIpcTailLength {
+    Finite(u64),
+    Infinite,
+    #[default]
+    Unknown,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PluginIpcControlResponse {
-    Description { parameters: Vec<Parameter> },
+    Description {
+        parameters: Vec<Parameter>,
+        #[serde(default)]
+        tail_length: PluginIpcTailLength,
+        #[serde(default)]
+        identity_frame_geometry: bool,
+    },
     Value(Option<ParameterValue>),
     State(Vec<u8>),
     Ack,

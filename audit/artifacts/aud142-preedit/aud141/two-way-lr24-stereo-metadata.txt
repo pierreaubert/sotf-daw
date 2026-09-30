@@ -1,0 +1,1 @@
+case=two-way-lr24-stereo;settings=type=LR24;frequency=1250;output=both;sample_rate=48000;frames=12288;input_channels=2;output_channels=4

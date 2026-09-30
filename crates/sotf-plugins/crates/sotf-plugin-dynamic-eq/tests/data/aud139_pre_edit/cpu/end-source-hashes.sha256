@@ -1,0 +1,12 @@
+62a86d1d2c40bc7054eb7292320f7de7d5479679ef69f3dca4ccf028fc38e3d7  crates/sotf-plugin-dynamic-eq/src/lib.rs
+6e59f6ad79eebb086fafc2ce07a3d92266248a11696c969dac307acc4c203df3  crates/sotf-plugin-dynamic-eq/src/lib/dyn_eq_band.rs
+6ae936b4ca90d7f74bfb891c93437f2e379e9579406a7f42b14638bf855d9033  crates/sotf-plugin-dynamic-eq/src/lib/dyn_eq_band_params.rs
+29fdeffe97e64018df0073be164c5ab4c6898a43a38124809ff253c3cb717d98  crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_data.rs
+8e4389fa7a8fdc961727b01513a8e723649db1c30ddb8b722ce2ca2450975498  crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs
+97f404dd96a1a5c1f99278c39fcf163e0936aa33f433462830b79abd2a0cd911  crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin_params.rs
+45ce23b41e2b811d5b637b343f644de4c62a75487ab27a5d64f2f034f0d7aa3b  crates/sotf-plugin-dynamic-eq/src/lib/misc.rs
+0bbaf3e5b3c33029f60750218e6b793c014df82497e8a29505c0f77de59a7e62  crates/sotf-plugin-dynamic-eq/src/lib/tests.rs
+597102fda71cf87d555cd4cbc928d1f63d96107bf171f83a33851b489b3eece0  crates/sotf-plugin-dynamic-eq/src/lib/tests/misc.rs
+3eb798fcaa00f8a66f7b201423790704eaac1485e9be41557f150c251b8b0263  crates/sotf-plugin-dynamic-eq/src/params.rs
+2061a5fd0eaef7d4d42b526d5623897f4ed590a17c045d040b76c95add36df7e  crates/sotf-plugin-dynamic-eq/Cargo.toml
+7e48711da3adf514e91d2433180886308ad7607bfbd9be8d9337a9f3a1b4714a  crates/sotf-plugin-dynamic-eq/tests/aud139_cpu_baseline.rs

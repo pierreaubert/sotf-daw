@@ -1,0 +1,7 @@
+89fb0692e6fcc58c3fc8267da503d3a56a3fbea7af1a2d8859d0994a59ab5499  crates/sotf-plugins/crates/sotf-plugin-band-split/tests/aud143_compensated_lifecycle.rs
+7f6925d89abcd5ad794ea379b810982ca74bf7dc11a1a047841655da8bfd0a05  audit/aud143-controlled-cpu-results.md
+031690c8b817517ed4d87aedf167b016d3c81a55cc5385cb8d1e761eda8ce913  audit/artifacts/aud143-lifecycle/commands.txt
+bddf40f45654c6b78ca5e81952c7c24056a042d63dce7514be31fda4b97d2e94  audit/artifacts/aud143-lifecycle/focused-test-r1-initial.log
+9dcbb7837755047ab2c25279da729451f11d6d91708b7fddc19f9f0fbc1f4397  audit/artifacts/aud143-lifecycle/focused-test-r2-final.log
+432c908669100faed7471bf706b28524e11e49f316b3edbebb14ae20bbe93b86  audit/artifacts/aud143-lifecycle/scoped-clippy-r1-initial.log
+e797d977e9b785e7cd92946a6848cdd4d3152802fea75f572354bc13e3b87008  audit/artifacts/aud143-lifecycle/scoped-clippy-r2-final.log

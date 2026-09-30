@@ -24,7 +24,8 @@ impl PluginFuzzer for CrossoverFuzzer {
             extra_frequencies: vec![],
             fir_taps: None,
             channel_frequencies_hz: vec![],
-            channel_modes: vec![],
+            channel_modes: Some(vec![]),
+            topology: None,
         };
         let plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
 

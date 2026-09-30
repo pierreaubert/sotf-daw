@@ -1,0 +1,15 @@
+{
+  "commands": [
+    {
+      "library_revision": "aud144-preset-envelope-r1",
+      "command": "python3 audit/tools/aud144_fletcher_munson_compat_probe.py crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r1/libplugins_ffi.so audit/artifacts/aud144-fletcher-munson-compat-r1/pre-validator",
+      "exit_code": 0
+    },
+    {
+      "library_revision": "aud144-preset-envelope-r2",
+      "command": "python3 audit/tools/aud144_fletcher_munson_compat_probe.py crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r2/libplugins_ffi.so audit/artifacts/aud144-fletcher-munson-compat-r1/envelope-validator",
+      "exit_code": 1
+    }
+  ],
+  "scope": "Genuine public C ABI legacy FletcherMunson preset import into LoudnessCompensation. Fresh full-state/full-audio equivalence; no rejection continuation, callback heap, reverse migration or native AU claim."
+}

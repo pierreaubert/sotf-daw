@@ -12,7 +12,7 @@ use crate::external_plugin_sandbox::{PluginSandboxLaunchBackend, PluginSandboxPo
 use crate::external_plugin_worker::ExternalPluginWorker;
 use crate::host::DawHost;
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
-use crate::plugin::{Plugin, PluginInfo, PluginResult, ProcessContext};
+use crate::plugin::{ParameterEvent, Plugin, PluginInfo, PluginResult, ProcessContext};
 use std::time::Duration;
 
 use std::path::Path;
@@ -37,6 +37,7 @@ fn descriptor() -> PluginDescriptor {
 
 struct StatefulScalePlugin {
     value: f32,
+    history: f32,
 }
 
 impl Plugin for StatefulScalePlugin {
@@ -72,18 +73,90 @@ impl Plugin for StatefulScalePlugin {
         self.value = f32::from_le_bytes(bytes);
         Ok(())
     }
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        if self.value >= 3.5 {
+            crate::plugin::TailLength::Infinite
+        } else if self.value >= 2.0 {
+            crate::plugin::TailLength::Finite(128)
+        } else {
+            crate::plugin::TailLength::Unknown
+        }
+    }
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        true
+    }
+    fn reset(&mut self) {
+        self.history = 0.0;
+    }
     fn process(
         &mut self,
         input: &[f32],
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        for event in context.parameter_events {
+            if event.parameter_id.as_str() != "value" {
+                return Err("unknown automated parameter".into());
+            }
+            self.value = event
+                .value
+                .as_float()
+                .ok_or_else(|| "expected automated float".to_string())?;
+        }
         for (source, destination) in input[..context.num_frames * 2]
             .iter()
             .zip(&mut output[..context.num_frames * 2])
         {
-            *destination = *source * self.value;
+            *destination = *source * self.value + self.history;
         }
+        self.history = output[context.num_frames * 2 - 1];
+        Ok(context.num_frames)
+    }
+}
+
+struct LongFiniteTailPlugin;
+
+impl Plugin for LongFiniteTailPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Long Finite Tail", "0.1", "test")
+    }
+
+    fn input_channels(&self) -> usize {
+        2
+    }
+
+    fn output_channels(&self) -> usize {
+        2
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        crate::plugin::TailLength::Finite(16_384)
+    }
+
+    fn parameters(&self) -> Vec<Parameter> {
+        Vec::new()
+    }
+
+    fn set_parameter(&mut self, id: ParameterId, _value: ParameterValue) -> PluginResult<()> {
+        Err(format!("unknown parameter '{id}'"))
+    }
+
+    fn get_parameter(&self, _id: &ParameterId) -> Option<ParameterValue> {
+        None
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        true
+    }
+
+    fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let samples = context.num_frames * 2;
+        output[..samples].copy_from_slice(&input[..samples]);
         Ok(context.num_frames)
     }
 }
@@ -112,9 +185,14 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
 
     let worker_shared =
         SecurePluginSharedMemory::open_existing(plugin.proxy.shared_path()).unwrap();
-    let mut worker =
-        ExternalPluginWorker::new(worker_shared, Box::new(StatefulScalePlugin { value: 1.0 }))
-            .unwrap();
+    let mut worker = ExternalPluginWorker::new(
+        worker_shared,
+        Box::new(StatefulScalePlugin {
+            value: 1.0,
+            history: 0.0,
+        }),
+    )
+    .unwrap();
     let running = Arc::new(AtomicBool::new(true));
     let worker_running = Arc::clone(&running);
     let worker_thread = std::thread::spawn(move || {
@@ -129,7 +207,14 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
         .request_control(&PluginIpcControlRequest::Describe, Duration::from_secs(1))
         .unwrap()
     {
-        PluginIpcControlResponse::Description { parameters } => parameters,
+        PluginIpcControlResponse::Description {
+            parameters,
+            identity_frame_geometry,
+            ..
+        } => {
+            plugin.identity_frame_geometry = identity_frame_geometry;
+            parameters
+        }
         response => panic!("unexpected description response: {response:?}"),
     };
     plugin.proxy.configure_parameters(
@@ -144,6 +229,21 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
         .collect();
     plugin.parameters = parameters;
 
+    assert!(
+        plugin
+            .begin_drain(&ProcessContext::new(48_000, 8_192))
+            .is_err()
+    );
+    plugin
+        .set_parameter(ParameterId::from("value"), ParameterValue::Float(4.0))
+        .unwrap();
+    assert_eq!(plugin.tail_length(), crate::plugin::TailLength::Infinite);
+    assert!(
+        plugin
+            .begin_drain(&ProcessContext::new(48_000, 8_192))
+            .is_err()
+    );
+
     plugin
         .set_parameter(ParameterId::from("value"), ParameterValue::Float(2.5))
         .unwrap();
@@ -151,6 +251,31 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
         plugin.get_parameter(&ParameterId::from("value")),
         Some(ParameterValue::Float(2.5))
     );
+    assert_eq!(
+        plugin.tail_length(),
+        crate::plugin::TailLength::Finite(128 + 8_192)
+    );
+    for (value, expected_tail) in [
+        (1.0_f32, crate::plugin::TailLength::Unknown),
+        (2.5_f32, crate::plugin::TailLength::Finite(128 + 8_192)),
+    ] {
+        assert!(matches!(
+            plugin
+                .proxy
+                .request_control(
+                    &PluginIpcControlRequest::LoadState {
+                        state: value.to_le_bytes().to_vec(),
+                    },
+                    Duration::from_secs(1),
+                )
+                .unwrap(),
+            PluginIpcControlResponse::Ack
+        ));
+        assert_eq!(plugin.tail_length(), expected_tail);
+    }
+    plugin
+        .begin_drain(&ProcessContext::new(48_000, 8_192))
+        .unwrap();
     let input = vec![0.4_f32; 8_192 * 2];
     let mut output = vec![0.0_f32; 8_192 * 2];
     plugin
@@ -171,6 +296,46 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
     assert!(
         output.iter().all(|sample| (*sample - 1.0).abs() < 1e-6),
         "audio/control interleave timed out or used stale parameter state"
+    );
+
+    let automation = [ParameterEvent::new(
+        0,
+        ParameterId::from("value"),
+        ParameterValue::Float(4.0),
+    )];
+    plugin
+        .process(
+            &input,
+            &mut output,
+            &ProcessContext::new(48_000, 8_192).with_parameter_events(&automation),
+        )
+        .unwrap();
+    let tail_deadline = std::time::Instant::now() + Duration::from_secs(1);
+    while plugin.tail_length() != crate::plugin::TailLength::Infinite {
+        assert!(
+            std::time::Instant::now() < tail_deadline,
+            "completed automation did not refresh worker tail metadata"
+        );
+        std::thread::yield_now();
+    }
+    plugin
+        .set_parameter(ParameterId::from("value"), ParameterValue::Float(2.5))
+        .unwrap();
+    assert_eq!(
+        plugin.tail_length(),
+        crate::plugin::TailLength::Finite(128 + 8_192)
+    );
+
+    plugin.reset_checked().unwrap();
+    plugin
+        .process(&input, &mut output, &ProcessContext::new(48_000, 8_192))
+        .unwrap();
+    plugin
+        .process(&input, &mut output, &ProcessContext::new(48_000, 8_192))
+        .unwrap();
+    assert!(
+        output.iter().all(|sample| (*sample - 1.0).abs() < 1e-6),
+        "worker reset did not clear recursive processing history"
     );
 
     let state_bytes = match plugin
@@ -195,6 +360,86 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
     let persisted: ExternalPluginState =
         serde_json::from_slice(&std::fs::read(sidecar).unwrap()).unwrap();
     assert_eq!(persisted.opaque_state, captured.opaque_state);
+
+    running.store(false, Ordering::Release);
+    worker_thread.join().unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn isolated_drain_preflight_is_idempotent_across_multiple_native_tail_blocks() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let plugin_file = tempfile::Builder::new().suffix(".clap").tempfile().unwrap();
+    let mut external_descriptor = descriptor();
+    external_descriptor.path = plugin_file.path().to_path_buf();
+    let mut plugin = IsolatedExternalPlugin::new(
+        external_descriptor,
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new("/bin/sleep").arg("30"),
+            start_worker: false,
+            deadline: Duration::from_millis(100),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    plugin.ensure_worker_running().unwrap();
+
+    let worker_shared =
+        SecurePluginSharedMemory::open_existing(plugin.proxy.shared_path()).unwrap();
+    let mut worker =
+        ExternalPluginWorker::new(worker_shared, Box::new(LongFiniteTailPlugin)).unwrap();
+    let running = Arc::new(AtomicBool::new(true));
+    let worker_running = Arc::clone(&running);
+    let worker_thread = std::thread::spawn(move || {
+        while worker_running.load(Ordering::Acquire) {
+            let _ = worker.process_one();
+            std::thread::yield_now();
+        }
+    });
+
+    let description = plugin
+        .proxy
+        .request_control(&PluginIpcControlRequest::Describe, Duration::from_secs(1))
+        .unwrap();
+    let PluginIpcControlResponse::Description {
+        identity_frame_geometry,
+        tail_length: crate::external_plugin_ipc::PluginIpcTailLength::Finite(16_384),
+        ..
+    } = description
+    else {
+        panic!("unexpected long-tail worker description: {description:?}");
+    };
+    plugin.identity_frame_geometry = identity_frame_geometry;
+
+    let source_context = ProcessContext::new(48_000, 0);
+    plugin.begin_drain(&source_context).unwrap();
+    assert_eq!(
+        plugin.tail_length(),
+        crate::plugin::TailLength::Finite(24_576)
+    );
+
+    let mut output = vec![f32::NAN; 8_192 * 2];
+    let mut drained_frames = 0;
+    let mut chunks = 0;
+    loop {
+        // DawHost repeats this metadata preflight before every drain step.
+        plugin.prepare_drain_metadata().unwrap();
+        let result = plugin.drain(&mut output, &source_context).unwrap();
+        drained_frames += result.frames;
+        chunks += 1;
+        assert!(result.frames <= 8_192);
+        if result.complete {
+            break;
+        }
+        assert!(chunks < 5, "finite tail drain did not terminate");
+    }
+
+    assert_eq!(drained_frames, 24_576);
+    assert_eq!(chunks, 3, "two native-tail chunks plus one pipeline chunk");
+    assert!(output.iter().all(|sample| sample.is_finite()));
 
     running.store(false, Ordering::Release);
     worker_thread.join().unwrap();

@@ -1,0 +1,30 @@
+{
+  "num_bands": 2,
+  "threshold": -24.0,
+  "ratio": 4.0,
+  "attack_ms": 2.0,
+  "release_ms": 55.0,
+  "knee": 3.0,
+  "link_channels": true,
+  "mix": 1.0,
+  "bands": [
+    {
+      "frequency": 980.0,
+      "q": 0.9,
+      "gain": -12.0,
+      "band_threshold": -20.0,
+      "band_ratio": 2.0,
+      "active": true,
+      "solo": false
+    },
+    {
+      "frequency": 1000.0,
+      "q": 1.0,
+      "gain": 0.0,
+      "band_threshold": -20.0,
+      "band_ratio": 2.0,
+      "active": false,
+      "solo": false
+    }
+  ]
+}

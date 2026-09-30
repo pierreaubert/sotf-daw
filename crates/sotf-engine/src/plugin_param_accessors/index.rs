@@ -6,7 +6,18 @@ use super::de::de_esser_modes;
 use super::detection::detection_modes;
 use super::hpf::hpf_orders;
 use super::speaker::speaker_configs;
-use sotf_plugins::{CrossfeedMode, CrossfeedPreset, SpectralTiltCorrection, TiltReferenceFreq};
+use sotf_plugins::{
+    BandSplitRecombinationMode, CrossfeedMode, CrossfeedPreset, SpectralTiltCorrection,
+    TiltReferenceFreq,
+};
+
+pub(super) fn index_to_band_split_mode(index: f64) -> BandSplitRecombinationMode {
+    BandSplitRecombinationMode::from_index(index.round().clamp(0.0, 1.0) as usize)
+}
+
+pub(super) fn index_to_band_split_num_bands(index: f64) -> usize {
+    index.round().clamp(0.0, 2.0) as usize + 2
+}
 
 pub(super) fn gate_mode_to_index(mode: &sotf_plugins::GateMode) -> f64 {
     mode.index() as f64

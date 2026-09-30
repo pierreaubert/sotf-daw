@@ -568,4 +568,131 @@ mod tests {
         assert_eq!(config.plugin_type, "loudness_compensation");
         assert_eq!(config.parameters["mode"], 2);
     }
+
+    #[test]
+    fn dynamic_eq_shelf_settings_reach_factory_and_audio_processing() {
+        use sotf_plugins::{DynEqBandParams, ProcessContext, create_plugin};
+
+        fn make_band(shape: &str, frequency: f32, gain: f32, shelf_slope: f32) -> DynEqBandParams {
+            serde_json::from_value(serde_json::json!({
+                "shape": shape,
+                "shelf_slope": shelf_slope,
+                "frequency": frequency,
+                "q": 0.707,
+                "gain": gain,
+                "band_threshold": -48.0,
+                "band_ratio": 4.0,
+                "active": true,
+                "solo": false,
+            }))
+            .expect("DynamicEQ band settings deserialize")
+        }
+
+        fn settings(use_shelves: bool) -> PluginSettings {
+            let (low_shape, high_shape) = if use_shelves {
+                ("low_shelf", "high_shelf")
+            } else {
+                ("peak", "peak")
+            };
+            PluginSettings::DynamicEq {
+                num_bands: 2.0,
+                threshold: -48.0,
+                ratio: 4.0,
+                attack: 5.0,
+                release: 50.0,
+                knee: 3.0,
+                link_channels: true,
+                mix: 1.0,
+                bands: vec![
+                    make_band(low_shape, 250.0, 8.0, 0.7),
+                    make_band(high_shape, 6_000.0, -7.0, 0.8),
+                ],
+            }
+        }
+
+        let registry = PluginConfigConverterRegistry::global();
+        let shelf_config = registry
+            .convert("dynamic_eq", &settings(true), 48_000.0)
+            .expect("DynamicEQ settings converter is registered");
+        assert_eq!(shelf_config.plugin_type, "dynamic_eq");
+        assert_eq!(shelf_config.parameters["bands"][0]["shape"], "low_shelf");
+        assert_eq!(shelf_config.parameters["bands"][1]["shape"], "high_shelf");
+        assert_eq!(
+            shelf_config.parameters["bands"][0]["shelf_slope"]
+                .as_f64()
+                .unwrap() as f32,
+            0.7_f32
+        );
+        assert_eq!(
+            shelf_config.parameters["bands"][1]["shelf_slope"]
+                .as_f64()
+                .unwrap() as f32,
+            0.8_f32
+        );
+
+        let peak_config = registry
+            .convert("dynamic_eq", &settings(false), 48_000.0)
+            .expect("Peak control uses the same settings converter");
+        let mut shelf = create_plugin("dynamic_eq", &shelf_config.parameters, 2, 48_000)
+            .expect("factory constructs configured shelf bands");
+        let mut peak = create_plugin("dynamic_eq", &peak_config.parameters, 2, 48_000)
+            .expect("factory constructs the Peak control");
+        shelf.initialize(48_000).expect("shelf plugin initializes");
+        peak.initialize(48_000).expect("Peak plugin initializes");
+
+        let frames = 8_192;
+        let input: Vec<f32> = (0..frames)
+            .flat_map(|frame| {
+                let time = frame as f64 / 48_000.0;
+                let tone = |frequency: f64, phase: f64| {
+                    (0.22 * (std::f64::consts::TAU * frequency * time + phase).sin()) as f32
+                };
+                [
+                    tone(125.0, 0.0) + tone(1_100.0, 0.3) + tone(7_500.0, -0.2),
+                    tone(180.0, 0.2) + tone(1_700.0, -0.4) + tone(8_200.0, 0.5),
+                ]
+            })
+            .collect();
+        let mut shelf_output = vec![f32::NAN; input.len()];
+        let mut peak_output = vec![f32::NAN; input.len()];
+
+        for block_start in (0..frames).step_by(256) {
+            let sample_start = block_start * 2;
+            let sample_end = sample_start + 256 * 2;
+            let context = ProcessContext::new(48_000, 256);
+            assert_eq!(
+                shelf
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut shelf_output[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("shelf route processes block"),
+                256
+            );
+            assert_eq!(
+                peak.process(
+                    &input[sample_start..sample_end],
+                    &mut peak_output[sample_start..sample_end],
+                    &context,
+                )
+                .expect("Peak control processes block"),
+                256
+            );
+        }
+
+        assert!(shelf_output.iter().all(|sample| sample.is_finite()));
+        assert!(peak_output.iter().all(|sample| sample.is_finite()));
+        let difference_rms = shelf_output
+            .iter()
+            .zip(&peak_output)
+            .map(|(shelf, peak)| f64::from(shelf - peak).powi(2))
+            .sum::<f64>()
+            / shelf_output.len() as f64;
+        let difference_rms = difference_rms.sqrt();
+        assert!(
+            difference_rms > 1.0e-3,
+            "shelf configuration must affect rendered audio; RMS difference was {difference_rms}"
+        );
+    }
 }

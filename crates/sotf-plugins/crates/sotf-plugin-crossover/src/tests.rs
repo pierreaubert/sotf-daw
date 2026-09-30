@@ -3,7 +3,7 @@ use super::crossover_plugin::CrossoverPlugin;
 use super::misc::is_linear_phase_type;
 use super::parse::{parse_channel_freq_id, parse_channel_mode_id};
 use super::per_channel_op_mode::PerChannelOpMode;
-use super::types::CrossoverPluginParams;
+use super::types::{CrossoverPluginParams, CrossoverTopology};
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
 
@@ -583,16 +583,9 @@ fn test_parse_extra_freq_index_rejects_idx_less_than_2() {
 /// §4.1: Unsupported crossover type strings must return an error.
 #[test]
 fn test_unsupported_crossover_type_returns_error() {
-    let result = CrossoverPlugin::new(1, "LR12", 1000.0, "low");
-    assert!(
-        result.is_err(),
-        "LR12 crossover type must be rejected with an error"
-    );
-    let result2 = CrossoverPlugin::new(1, "BW18", 1000.0, "low");
-    assert!(
-        result2.is_err(),
-        "BW18 crossover type must be rejected with an error"
-    );
+    assert!(CrossoverPlugin::new(1, "UnrecognizedFamily", 1000.0, "low").is_err());
+    assert!(CrossoverPlugin::new(1, "LR12", 1000.0, "low").is_ok());
+    assert!(CrossoverPlugin::new(1, "BW18", 1000.0, "low").is_ok());
     // Case-insensitive acceptance of the supported types.
     assert!(CrossoverPlugin::new(1, "lr24", 1000.0, "low").is_ok());
     assert!(CrossoverPlugin::new(1, "LR4", 1000.0, "low").is_ok());
@@ -826,7 +819,8 @@ fn test_per_channel_from_params_rejects_mismatched_channels() {
         extra_frequencies: vec![],
         fir_taps: None,
         channel_frequencies_hz: vec![80.0, 100.0],
-        channel_modes: vec!["highpass".to_string(), "mute".to_string()],
+        channel_modes: Some(vec!["highpass".to_string(), "mute".to_string()]),
+        topology: None,
     };
     // 2 frequencies but channels=3: must error, not silently use 2.
     assert!(CrossoverPlugin::from_params(3, &params).is_err());
@@ -875,7 +869,8 @@ fn test_per_channel_from_params() {
         extra_frequencies: vec![],
         fir_taps: None,
         channel_frequencies_hz: vec![80.0, 100.0],
-        channel_modes: vec!["highpass".to_string(), "mute".to_string()],
+        channel_modes: Some(vec!["highpass".to_string(), "mute".to_string()]),
+        topology: None,
     };
     let p = CrossoverPlugin::from_params(2, &params).unwrap();
     assert!(p.is_per_channel());
@@ -883,6 +878,142 @@ fn test_per_channel_from_params() {
         p.op_modes,
         vec![PerChannelOpMode::Highpass, PerChannelOpMode::Mute]
     );
+}
+
+#[test]
+fn test_complete_channel_modes_make_global_output_dormant() {
+    let explicit_modes = CrossoverPluginParams {
+        crossover_type: "LR24".to_string(),
+        frequency: 0.0,
+        output: "both".to_string(),
+        extra_frequencies: vec![],
+        fir_taps: None,
+        channel_frequencies_hz: vec![800.0, 1_600.0],
+        channel_modes: Some(vec!["lowpass".to_string(), "highpass".to_string()]),
+        topology: None,
+    };
+    let plugin = CrossoverPlugin::from_params(2, &explicit_modes)
+        .expect("complete explicit channel modes select per-channel topology");
+    assert_eq!(
+        plugin.op_modes,
+        vec![PerChannelOpMode::Lowpass, PerChannelOpMode::Highpass]
+    );
+
+    let short_modes_use_scalar_fallback = CrossoverPluginParams {
+        channel_modes: Some(vec!["highpass".to_string()]),
+        topology: None,
+        output: "lowpass".to_string(),
+        ..explicit_modes.clone()
+    };
+    let plugin = CrossoverPlugin::from_params(2, &short_modes_use_scalar_fallback)
+        .expect("short legacy channel mode list uses scalar fallback");
+    assert_eq!(
+        plugin.op_modes,
+        vec![PerChannelOpMode::Highpass, PerChannelOpMode::Lowpass]
+    );
+
+    let empty_modes_use_scalar_fallback = CrossoverPluginParams {
+        channel_modes: Some(vec![]),
+        topology: None,
+        output: "highpass".to_string(),
+        ..explicit_modes.clone()
+    };
+    let plugin = CrossoverPlugin::from_params(2, &empty_modes_use_scalar_fallback)
+        .expect("empty legacy channel mode list uses scalar fallback");
+    assert_eq!(
+        plugin.op_modes,
+        vec![PerChannelOpMode::Highpass, PerChannelOpMode::Highpass]
+    );
+
+    let malformed_explicit_mode = CrossoverPluginParams {
+        channel_modes: Some(vec!["not-a-mode".to_string(), "highpass".to_string()]),
+        topology: None,
+        ..explicit_modes.clone()
+    };
+    assert!(CrossoverPlugin::from_params(2, &malformed_explicit_mode).is_err());
+
+    let overlong_modes = CrossoverPluginParams {
+        channel_modes: Some(vec![
+            "lowpass".to_string(),
+            "highpass".to_string(),
+            "mute".to_string(),
+        ]),
+        topology: None,
+        ..explicit_modes
+    };
+    assert!(CrossoverPlugin::from_params(2, &overlong_modes).is_err());
+}
+
+#[test]
+fn explicit_topology_keeps_dormant_fields_out_of_the_active_route() {
+    let bands = CrossoverPluginParams {
+        crossover_type: "LR24".to_string(),
+        frequency: 800.0,
+        output: "both".to_string(),
+        topology: Some(CrossoverTopology::Bands),
+        extra_frequencies: vec![3_200.0],
+        fir_taps: None,
+        channel_frequencies_hz: vec![100.0, 200.0],
+        channel_modes: Some(vec!["lowpass".to_string(), "highpass".to_string()]),
+    };
+    let plugin = CrossoverPlugin::from_params(2, &bands)
+        .expect("explicit bands topology ignores valid dormant channel arrays");
+    assert!(!plugin.is_per_channel());
+    assert_eq!(plugin.output_channels(), 6);
+
+    let per_channel = CrossoverPluginParams {
+        topology: Some(CrossoverTopology::PerChannel),
+        ..bands
+    };
+    let plugin = CrossoverPlugin::from_params(2, &per_channel)
+        .expect("explicit per-channel topology ignores valid dormant global band data");
+    assert!(plugin.is_per_channel());
+    assert_eq!(plugin.output_channels(), 2);
+    assert_eq!(
+        plugin.op_modes,
+        vec![PerChannelOpMode::Lowpass, PerChannelOpMode::Highpass]
+    );
+}
+
+#[test]
+fn explicit_per_channel_topology_requires_complete_active_values() {
+    let mut params = CrossoverPluginParams {
+        crossover_type: "LR24".to_string(),
+        frequency: 800.0,
+        output: "lowpass".to_string(),
+        topology: Some(CrossoverTopology::PerChannel),
+        extra_frequencies: vec![],
+        fir_taps: None,
+        channel_frequencies_hz: vec![100.0, 200.0],
+        channel_modes: Some(vec!["lowpass".to_string()]),
+    };
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
+
+    params.channel_modes = Some(Vec::new());
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
+
+    params.channel_modes = None;
+    params.output = "both".to_string();
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
+
+    params.channel_frequencies_hz.clear();
+    params.output = "lowpass".to_string();
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
+}
+
+#[test]
+fn legacy_topology_inference_rejects_competing_channel_and_band_arrays() {
+    let params = CrossoverPluginParams {
+        crossover_type: "LR24".to_string(),
+        frequency: 800.0,
+        output: "lowpass".to_string(),
+        topology: None,
+        extra_frequencies: vec![3_200.0],
+        fir_taps: None,
+        channel_frequencies_hz: vec![100.0, 200.0],
+        channel_modes: Some(vec!["lowpass".to_string(), "highpass".to_string()]),
+    };
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
 }
 
 #[test]
@@ -1000,7 +1131,8 @@ fn test_from_params_invalid_output_mode_errors() {
         extra_frequencies: vec![],
         fir_taps: None,
         channel_frequencies_hz: vec![],
-        channel_modes: vec![],
+        channel_modes: Some(vec![]),
+        topology: None,
     };
     assert!(CrossoverPlugin::from_params(1, &params).is_err());
 }
@@ -1014,7 +1146,8 @@ fn test_per_channel_from_params_fills_missing_modes_with_default() {
         extra_frequencies: vec![],
         fir_taps: None,
         channel_frequencies_hz: vec![100.0, 200.0],
-        channel_modes: vec!["highpass".to_string()],
+        channel_modes: Some(vec!["highpass".to_string()]),
+        topology: None,
     };
     let p = CrossoverPlugin::from_params(2, &params).unwrap();
     assert_eq!(

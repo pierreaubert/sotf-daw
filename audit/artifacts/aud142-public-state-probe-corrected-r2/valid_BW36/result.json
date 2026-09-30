@@ -1,0 +1,29 @@
+{
+  "case": "BW36",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": 0,
+  "state_matches_source": true,
+  "audio_matches_fresh": true,
+  "fresh_max_residual": 0.0,
+  "old_family_sensitivity": 0.19342335313558578,
+  "audio": {
+    "actual": {
+      "file": "valid_BW36/actual.f32le",
+      "samples": 3572,
+      "sha256": "e91cecb3ba053c1fce13ec13e1ae62837b16e66ada7c7becd67e682a04449666"
+    },
+    "reference": {
+      "file": "valid_BW36/reference.f32le",
+      "samples": 3572,
+      "sha256": "e91cecb3ba053c1fce13ec13e1ae62837b16e66ada7c7becd67e682a04449666"
+    },
+    "old_family": {
+      "file": "valid_BW36/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": true
+}

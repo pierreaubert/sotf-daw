@@ -259,7 +259,7 @@ fn actual_compiled_host_and_fallback_share_the_same_clock() {
                     .unwrap();
             }
             let mut host = DawHost::new(2, rate);
-            host.set_compiled_linear_enabled(compiled);
+            host.set_compiled_linear_enabled(compiled).unwrap();
             host.add_plugin(hosted).unwrap();
             host.build().unwrap();
             let input = source(rate, rate as usize);
@@ -550,7 +550,7 @@ fn host_prepared_drain_matches_the_same_native_clock_and_finite_suffix() {
         let rate = 48_000;
         let mut direct = configured(rate, factor, None, true);
         let mut host = DawHost::new(2, rate);
-        host.set_compiled_linear_enabled(true);
+        host.set_compiled_linear_enabled(true).unwrap();
         host.add_plugin(configured(rate, factor, None, true))
             .unwrap();
         host.build().unwrap();

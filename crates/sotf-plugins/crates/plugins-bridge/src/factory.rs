@@ -157,6 +157,18 @@ pub fn create_plugin(
         }
 
         "Convolution" | "convolution" => {
+            let config: serde_json::Value =
+                if config_json.trim().is_empty() || matches!(config_json.trim(), "null" | "{}") {
+                    serde_json::json!({})
+                } else {
+                    serde_json::from_str(config_json)
+                        .map_err(|error| format!("Invalid Convolution config: {error}"))?
+                };
+            let true_stereo = match config.get("true_stereo") {
+                None => false,
+                Some(serde_json::Value::Bool(enabled)) => *enabled,
+                Some(_) => return Err("Convolution true_stereo must be a boolean".into()),
+            };
             let defaults = sotf_plugin_convolution::ConvolutionPluginParams::default();
             let params: sotf_plugin_convolution::ConvolutionPluginParams =
                 parse_params_with_defaults(
@@ -167,10 +179,11 @@ pub fn create_plugin(
                         ("gain_db", serde_json::json!(defaults.gain_db)),
                     ],
                 )?;
-            let plugin = sotf_plugin_convolution::ConvolutionPlugin::from_params(
+            let plugin = sotf_plugin_convolution::ConvolutionPlugin::from_params_with_routing(
                 channels,
                 sample_rate,
                 params,
+                true_stereo,
             )?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
@@ -616,6 +629,47 @@ fn parse_params<T: serde::de::DeserializeOwned>(config_json: &str) -> Result<T, 
 mod tests {
     use super::*;
     use sotf_host::plugin::ProcessContext;
+    use std::path::PathBuf;
+
+    fn write_four_path_ir() -> PathBuf {
+        use std::sync::atomic::{AtomicU64, Ordering};
+
+        static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+        let path = std::env::temp_dir().join(format!(
+            "sotf-bridge-true-stereo-{}-{}.wav",
+            std::process::id(),
+            NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        let paths = [
+            [8192_i16, 0, 0],
+            [-4096_i16, 0, 0],
+            [6144_i16, 0, 0],
+            [8192_i16, 2048, 0],
+        ];
+        let channels = paths.len() as u16;
+        let frames = paths[0].len();
+        let data_size = (frames * paths.len() * 2) as u32;
+        let mut bytes = Vec::with_capacity(44 + data_size as usize);
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&(36 + data_size).to_le_bytes());
+        bytes.extend_from_slice(b"WAVEfmt ");
+        bytes.extend_from_slice(&16_u32.to_le_bytes());
+        bytes.extend_from_slice(&1_u16.to_le_bytes());
+        bytes.extend_from_slice(&channels.to_le_bytes());
+        bytes.extend_from_slice(&48_000_u32.to_le_bytes());
+        bytes.extend_from_slice(&(48_000_u32 * channels as u32 * 2).to_le_bytes());
+        bytes.extend_from_slice(&(channels * 2).to_le_bytes());
+        bytes.extend_from_slice(&16_u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&data_size.to_le_bytes());
+        for frame in 0..frames {
+            for path in &paths {
+                bytes.extend_from_slice(&path[frame].to_le_bytes());
+            }
+        }
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }
 
     #[test]
     fn wrapper_defaults_and_aliases_initialize_and_process() {
@@ -741,6 +795,74 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn convolution_true_stereo_json_reaches_audible_bridge_route_and_requires_bool() {
+        let ir_path = write_four_path_ir();
+        let true_config = serde_json::json!({
+            "ir_file": ir_path.to_string_lossy(),
+            "mix": 1.0,
+            "gain_db": 0.0,
+            "true_stereo": true,
+        })
+        .to_string();
+        let mut plugin = create_plugin("Convolution", 2, 48_000, &true_config).unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("true_stereo")),
+            Some(ParameterValue::Bool(true))
+        );
+        plugin.initialize(48_000).unwrap();
+        assert_eq!(plugin.latency_samples(), 1_024);
+        let mut input = vec![0.0_f32; 1_050 * 2];
+        input[0] = 0.5;
+        input[20 * 2 + 1] = 0.25;
+        let mut output = vec![f32::NAN; input.len()];
+        plugin
+            .process(&input, &mut output, &ProcessContext::new(48_000, 1_050))
+            .unwrap();
+        assert!((output[1_024 * 2] - 0.5 * (8192.0 / 32768.0)).abs() < 2e-5);
+        assert!((output[1_024 * 2 + 1] - 0.5 * (-4096.0 / 32768.0)).abs() < 2e-5);
+        assert!((output[1_044 * 2] - 0.25 * (6144.0 / 32768.0)).abs() < 2e-5);
+        assert!((output[1_044 * 2 + 1] - 0.25 * (8192.0 / 32768.0)).abs() < 2e-5);
+
+        let default_plugin = create_plugin(
+            "Convolution",
+            2,
+            48_000,
+            &serde_json::json!({ "ir_file": ir_path.to_string_lossy() }).to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            default_plugin.get_parameter(&ParameterId::from("true_stereo")),
+            Some(ParameterValue::Bool(false))
+        );
+
+        for value in [
+            serde_json::json!("true"),
+            serde_json::Value::Null,
+            serde_json::json!(1),
+        ] {
+            let config = serde_json::json!({
+                "ir_file": ir_path.to_string_lossy(),
+                "true_stereo": value,
+            })
+            .to_string();
+            let error = match create_plugin("Convolution", 2, 48_000, &config) {
+                Ok(_) => panic!("nonboolean true_stereo must fail: {value}"),
+                Err(error) => error,
+            };
+            assert!(error.contains("true_stereo must be a boolean"), "{error}");
+        }
+        let wrong_width = match create_plugin("Convolution", 3, 48_000, &true_config) {
+            Ok(_) => panic!("true-stereo convolution must reject three plugin channels"),
+            Err(error) => error,
+        };
+        assert!(
+            wrong_width.contains("exactly 2 plugin channels"),
+            "{wrong_width}"
+        );
+        let _ = std::fs::remove_file(ir_path);
     }
 
     #[test]
@@ -876,6 +998,96 @@ mod tests {
             let plugin = create_plugin("AmbisonicsDecoder", channels, 48_000, &config).unwrap();
             assert_eq!(plugin.input_channels(), channels);
             assert!(create_plugin("AmbisonicsDecoder", channels - 1, 48_000, &config).is_err());
+        }
+    }
+
+    fn aud135_ordered_input(frames: usize, channels: usize) -> Vec<f32> {
+        (0..frames)
+            .flat_map(|frame| {
+                (0..channels).map(move |channel| {
+                    let code = (frame * 37 + channel * 101 + frame * channel * 13) % 991;
+                    (code as f32 - 495.0) / 8192.0
+                })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn ambisonics_bridge_processes_all_56_ordered_input_output_tuples() {
+        const TARGETS: [(&str, usize); 8] = [
+            ("5.1", 6),
+            ("7.1", 8),
+            ("5.1.2", 8),
+            ("5.1.4", 10),
+            ("7.1.2", 10),
+            ("7.1.4", 12),
+            ("9.1.4", 14),
+            ("9.1.6", 16),
+        ];
+        const FRAMES: usize = 257;
+
+        for order in 1_usize..=7 {
+            let input_channels = (order + 1) * (order + 1);
+            let input = aud135_ordered_input(FRAMES, input_channels);
+            for (layout, output_channels) in TARGETS {
+                let config = serde_json::json!({
+                    "order": order,
+                    "target_layout": layout,
+                })
+                .to_string();
+                let mut plugin =
+                    create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config)
+                        .unwrap_or_else(|error| panic!("order {order} {layout}: {error}"));
+                assert_eq!(
+                    plugin.input_channels(),
+                    input_channels,
+                    "order {order} {layout}"
+                );
+                assert_eq!(
+                    plugin.output_channels(),
+                    output_channels,
+                    "order {order} {layout}"
+                );
+
+                let mut whole = vec![0.0; FRAMES * output_channels];
+                assert_eq!(
+                    plugin
+                        .process(&input, &mut whole, &ProcessContext::new(48_000, FRAMES))
+                        .unwrap(),
+                    FRAMES,
+                    "order {order} {layout} whole block"
+                );
+                assert!(whole.iter().all(|sample| sample.is_finite()));
+                assert!(whole.iter().any(|sample| sample.abs() > 1e-7));
+
+                let mut partitioned_plugin =
+                    create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config).unwrap();
+                let mut partitioned = vec![0.0; whole.len()];
+                let mut offset = 0;
+                for frames in [1, 31, 64, 3, 79, 79] {
+                    let input_start = offset * input_channels;
+                    let input_end = (offset + frames) * input_channels;
+                    let output_start = offset * output_channels;
+                    let output_end = (offset + frames) * output_channels;
+                    assert_eq!(
+                        partitioned_plugin
+                            .process(
+                                &input[input_start..input_end],
+                                &mut partitioned[output_start..output_end],
+                                &ProcessContext::new(48_000, frames),
+                            )
+                            .unwrap(),
+                        frames,
+                        "order {order} {layout} partition at {offset}"
+                    );
+                    offset += frames;
+                }
+                assert_eq!(offset, FRAMES);
+                assert_eq!(
+                    partitioned, whole,
+                    "order {order} {layout} partition output"
+                );
+            }
         }
     }
 

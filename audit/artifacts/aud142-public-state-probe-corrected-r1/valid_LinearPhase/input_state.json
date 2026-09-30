@@ -1,0 +1,6 @@
+{
+  "fir_taps": 63,
+  "frequency": 930.0,
+  "mode": "both",
+  "type": "LinearPhase"
+}

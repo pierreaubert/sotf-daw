@@ -1,7 +1,7 @@
 [package]
 name = "plugins-nih"
 description = "VST3/CLAP plugin wrappers for SOTF audio plugins via nih-plug"
-version = "0.5.4"
+version = "0.6.0"
 edition.workspace = true
 repository.workspace = true
 keywords.workspace = true
@@ -64,6 +64,7 @@ plugins-bridge = { path = "../plugins-bridge" }
 sotf-host = { workspace = true }
 sotf-plugins = { workspace = true }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs"] }
+clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
@@ -72,4 +73,3 @@ log = { workspace = true }
 crossbeam = { workspace = true }
 parking_lot = { workspace = true }
 assert_no_alloc = { git = "https://github.com/robbert-vdh/rust-assert-no-alloc.git", branch = "feature/nested-permit-forbid", features = ["backtrace", "log"] }
-clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }

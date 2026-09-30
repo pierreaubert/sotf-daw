@@ -1080,7 +1080,7 @@ fn test_add_node_auto_wraps_preferred_oversampling_plugin() {
 #[test]
 fn test_preferred_oversampling_can_be_disabled() {
     let mut g = DawHost::new(2, 48000);
-    g.set_plugin_preferred_oversampling_enabled(false);
+    g.set_plugin_preferred_oversampling_enabled(false).unwrap();
     g.add_plugin(Box::new(PrefersOversamplingPlugin {
         inner: ScalerPlugin::new(2, 1.0),
         factor: 2,

@@ -1,0 +1,31 @@
+{
+  "scope": "AUD139 typed settings -> factory and actual stereo offline rendering, awaiting independent Astra review",
+  "tests": {
+    "passed": 2,
+    "failed": 0,
+    "source_frames": 4099,
+    "sample_rate": 48000,
+    "channels": 2,
+    "block_sizes": [
+      127,
+      257,
+      1024
+    ],
+    "maximum_error_limit": 2e-06,
+    "rms_error_limit": 2e-07,
+    "partition_rms_limit": 2e-07
+  },
+  "commands": [
+    "cargo test --offline --locked -p sotf-engine --lib dynamic_eq_shelf",
+    "cargo clippy --offline --locked --no-deps -p sotf-engine --all-targets -- -D warnings"
+  ],
+  "selected_source_copy": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-engine-offline-r1/selected-source",
+  "limitations": [
+    "Only the lint command has verified matching selected start/end source manifests.",
+    "This is selected source, not a complete dependency snapshot.",
+    "The newly preserved test log contains the two-test run. Its original tee path reused engine-route-r2.log and overwrote an earlier one-test log. Old engine-route-r2 manifests belong to the earlier source and are deliberately not included.",
+    "This comparison verifies composition with the separately configured accepted core, not a new independent DSP algorithm oracle.",
+    "Default program-length rendering is covered; recursive tail policy, native controls, mounted UI and CPU remain separate.",
+    "Scoped --no-deps lint does not establish workspace/dependency lint acceptance."
+  ]
+}

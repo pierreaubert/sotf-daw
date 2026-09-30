@@ -1,0 +1,17 @@
+9a2d068fb2999f982a4291cf268d36ed8f826128c1c57e0d858260d6fec082f3  crates/sotf-engine/src/engine/manager_thread/apply.rs
+0eb2e3861f8ef86049ee599d972a4729632cbbe22281d2df9bea1275906bdcb1  crates/sotf-plugins/crates/sotf-host/src/external_plugin/vst3_backend.rs
+5e28b7012577eb434b7e8d832e902620c78f709d564072458efbadbd24afc2f6  crates/sotf-plugins/crates/sotf-host/src/external_plugin_isolated/isolated_external_plugin.rs
+a8f15caa4fe8d181695f81b98418ba81219bc14df48ad0be3bbbf5b4295643c2  crates/sotf-plugins/crates/sotf-host/src/external_plugin_worker.rs
+0c6f00fbc0680764784bba5ac5d43ffae97c150f841a1afc03f15c74ccd517d4  crates/sotf-plugins/crates/sotf-host/src/external_plugin_ipc.rs
+0e4ebf7c268832d87ec9177ef41ffa9da4efe62f4c93ffd16ec3101ce4973b0e  crates/sotf-plugins/crates/sotf-host/src/external_plugin_ipc/secure_plugin_shared_memory.rs
+facaa2c97e7644154b2fc8d92348e0723f250c9366d6768e9f961ffe5d88b312  crates/sotf-plugins/crates/sotf-host/src/external_plugin/native_backend.rs
+dcc6164c90663ea99f8ecd349184af38c14c67c03a277605a078d1a1c81f4e1d  crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs
+6b642f849f482c2f4358c0f9423bd09c64d294f48ecf0acdda2f8c7138f3132b  crates/sotf-plugins/target/debug/sotf-external-plugin-worker
+7dfc7b96519b0d884a3b06633c009e3024f0a5a46a418236f43596699f74a3b8  crates/sotf-plugins/target/audit-artifacts/aud135-native-late-restore-r1/Ambisonics.vst3/Contents/x86_64-linux/ambisonics.so
+a0a47a5f346d8d8e67efb433be689d1d02c849348586199365ce2114bf140bd3  audit/artifacts/aud135-engine-eos-route-r3/logs/host-vst3-tail-r3.log
+decc7192f62b19bb48f4b8503a2ddbf6fe8defe9caf15f66ece216cfcae8e305  audit/artifacts/aud135-engine-eos-route-r3/logs/host-multiblock-drain-r3.log
+d9c0c8928b523332cadb45e26c401892ddaf52c9b260f251287a35723c83ac2e  audit/artifacts/aud135-engine-eos-route-r3/logs/worker-vst3-build-r2.log
+e0e20c8899d664e8cc2accc6321b43e0ed2bc84c4f30b7e821a1d34b44277772  audit/artifacts/aud135-engine-eos-route-r3/logs/engine-eos-nonzero-final-r1.log
+74d8b4270fad753b5f1d86469406813507546bfb6a50c0c0e18f44df1174555a  audit/artifacts/aud135-engine-eos-route-r3/logs/engine-eos-nonzero-final-r2.log
+e9acae7787fc30a97fdbfdaaf1b240b96bf6b03774773ca957eaac91444c5cf5  audit/artifacts/aud135-engine-eos-route-r3/logs/host-clippy-clap-vst3-r1.log
+65ab9ee39e7ed8d4fc88e921d65ca49919f823cdccf8129a0dc82f92b8afefad  audit/artifacts/aud135-engine-eos-route-r3/logs/engine-clippy-vst3-r1.log

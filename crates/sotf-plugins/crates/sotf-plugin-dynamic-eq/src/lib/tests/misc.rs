@@ -53,7 +53,8 @@ fn test_dynamic_eq_passthrough() {
                 band_ratio: 4.0,
                 active: true,
                 solo: false,
-            }],
+                    ..Default::default()
+                }],
         },
     );
     plugin.initialize(sr).unwrap();
@@ -103,7 +104,8 @@ fn test_dynamic_eq_boosts_on_threshold() {
                 band_ratio: 10.0,
                 active: true,
                 solo: false,
-            }],
+                    ..Default::default()
+                }],
         },
     );
     plugin.initialize(sr).unwrap();
@@ -152,7 +154,8 @@ fn test_dynamic_eq_no_boost_below_threshold() {
                 band_ratio: 10.0,
                 active: true,
                 solo: false,
-            }],
+                    ..Default::default()
+                }],
         },
     );
     plugin.initialize(sr).unwrap();
@@ -200,7 +203,8 @@ fn test_dynamic_eq_frequency_selective() {
             band_ratio: 10.0,
             active: true,
             solo: false,
-        }],
+                    ..Default::default()
+                }],
     };
 
     // Test with 1kHz signal (in-band)
@@ -377,6 +381,7 @@ fn test_sidechain_reads_dry_buffer_not_modified_output() {
                         band_ratio: 20.0,
                         active: band0_active,
                         solo: false,
+                        ..Default::default()
                     },
                     DynEqBandParams {
                         frequency: 2000.0,
@@ -386,6 +391,7 @@ fn test_sidechain_reads_dry_buffer_not_modified_output() {
                         band_ratio: 20.0,
                         active: true,
                         solo: false,
+                        ..Default::default()
                     },
                 ],
             },
@@ -461,7 +467,8 @@ fn test_eq_gain_uses_proportion_blend_not_coefficient_update() {
                 band_ratio: 20.0,
                 active: true,
                 solo: false,
-            }],
+                    ..Default::default()
+                }],
         },
     );
     plugin.initialize(sr).unwrap();

@@ -1,0 +1,2 @@
+set -o pipefail
+env TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target CARGO_NET_OFFLINE=true flock -x /tmp/sotf-daw-audit-cargo.lock cargo test --offline --locked --manifest-path crates/sotf-plugins/Cargo.toml -p plugins-nih --no-default-features --features dynamic-eq --lib 2>&1 | tee audit/artifacts/aud139-crossover-default-sync-r2/full-nih-lib.log

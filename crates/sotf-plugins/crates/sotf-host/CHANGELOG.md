@@ -1,3 +1,12 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add bounded finite draining for serial channel-changing plugin chains and explicit identity-frame geometry contracts.
+- Preserve populated native plugin state and bus configuration when candidate restoration or reconfiguration fails.
+- Carry native tail metadata through isolated-worker transport, refresh VST3 metadata outside audio callbacks, and invalidate cached tails on restart requests.
+- Drain pending worker audio and transport latency at EOS; reject unknown or infinite tails where finite channel-changing drain is required. Unsupported VST3 structural restart requests are refused.
+
 # Unreleased
 
 ## Maintenance

@@ -1,0 +1,11 @@
+{
+  "kind": "Root preservation and independent manifest verification",
+  "original_packet": "crates/sotf-plugins/target/audit-artifacts/aud139-dynamic-eq-native-r1",
+  "byte_identical_copy": true,
+  "matching_actual_source_entries": 50,
+  "matching_log_entries": 7,
+  "source_manifest_sha256": "0efa98d7f18c34069d62c249d06cf04bb02c01cdff9c4c91ed494d28ea83797f",
+  "logs_manifest_sha256": "39687f7daa309c2cc58da1c70a91a7225382c3b8105777499a4ab7b4cf440d69",
+  "known_manifest_defect": "Original selected-source manifest includes a stale hash for itself (expected14b19c89..., actual0efa98d7...). All other50entriesmatch. Original retained unchanged; outerindexhashes copiedmanifest as actual bytes and omits its own selfentry.",
+  "provenance_limits": "No pre-run source manifest or build-bound executable in this packet. Source was archived after terminal tests/lint with owner reporting no intervening source changes. This is selected-source checkpoint, not full transitive closure."
+}

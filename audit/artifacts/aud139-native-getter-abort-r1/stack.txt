@@ -1,0 +1,70 @@
+running 1 test
+[New Thread 0x7ffff79ff6c0 (LWP 2157744)]
+[New Thread 0x7ffff77fe6c0 (LWP 2157745)]
+created subject
+created control
+activated both
+memory allocation of 456 bytes failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+Thread 2 "plugin::native_" received signal SIGABRT, Aborted.
+[Switching to Thread 0x7ffff79ff6c0 (LWP 2157744)]
+__pthread_kill_implementation (no_tid=..., signo=..., threadid=...) at ./nptl/pthread_kill.c:44
+warning: 44	./nptl/pthread_kill.c: No such file or directory
+#0  __pthread_kill_implementation (no_tid=..., signo=..., threadid=...) at ./nptl/pthread_kill.c:44
+#1  __pthread_kill_internal (signo=..., threadid=...) at ./nptl/pthread_kill.c:78
+#2  __GI___pthread_kill (threadid=..., signo=...) at ./nptl/pthread_kill.c:89
+#3  0x00007ffff7a4527e in __GI_raise (sig=...) at ../sysdeps/posix/raise.c:26
+#4  0x00007ffff7a288ff in __GI_abort () at ./stdlib/abort.c:79
+#5  0x000055555638e1ba in std::sys::pal::unix::abort_internal () at library/std/src/sys/pal/unix/mod.rs:301
+#6  0x000055555638a379 in std::process::abort () at library/std/src/process.rs:2638
+#7  0x000055555636ee9c in std::alloc::rust_oom::{closure#0} () at library/std/src/alloc.rs:429
+#8  0x00005555563638b9 in std::sys::backtrace::__rust_end_short_backtrace<std::alloc::rust_oom::{closure_env#0}, !> () at library/std/src/sys/backtrace.rs:182
+#9  0x000055555638a1ea in std::alloc::rust_oom () at library/std/src/alloc.rs:424
+#10 0x000055555636fc83 in std::alloc::_::__rust_alloc_error_handler () at library/std/src/alloc.rs:423
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/assert_no_alloc-26ec65f9c37aa2bc.assert_no_alloc.75155dafc2b4d8fb-cgu.0.rcgu.dwo(0xce0f0e135aca7e27) referenced by CU at offset 0xbbd75 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#11 0x00005555563a530c in alloc::alloc::handle_alloc_error::rt_error () at library/alloc/src/alloc.rs:551
+#12 alloc::alloc::handle_alloc_error () at library/alloc/src/alloc.rs:557
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/sotf_plugin_dynamic_eq-bb00aed5c6eec16b.7fij4xv93ji9nlipc09z97iqb.0vtb09j.rcgu.dwo(0x132646c47b590f1f) referenced by CU at offset 0xac9b5 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#13 0x00005555562e7b84 in <assert_no_alloc::AllocDisabler as core::alloc::global::GlobalAlloc>::alloc () at src/lib.rs:172
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/sotf_plugin_dynamic_eq-bb00aed5c6eec16b.bpnn0ycpzj53huadd1mqnb668.05yudey.rcgu.dwo(0x2523fcc45739eadf) referenced by CU at offset 0xacae1 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#14 0x0000555555fa2ecd in <alloc::collections::btree::map::entry::VacantEntry<sotf_host::parameters::ParameterId, sotf_host::parameters::ParameterValue>>::insert_entry () at /home/pierre/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:101
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/sotf_plugin_dynamic_eq-bb00aed5c6eec16b.6o818b6bepn6l8r8sbz07de1m.1f1w57r.rcgu.dwo(0x98c5660a363f05f9) referenced by CU at offset 0xac94d [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#15 0x0000555555fa3924 in <alloc::collections::btree::map::BTreeMap<sotf_host::parameters::ParameterId, sotf_host::parameters::ParameterValue>>::insert () at /home/pierre/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/collections/btree/map/entry.rs:426
+#16 0x0000555555f9faba in <sotf_plugin_dynamic_eq::dynamic_eq_plugin::DynamicEqPlugin as sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin>::current_values () at crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs:501
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.7j8adpi9w40m7bvv1obpj5bfv.0u2ds4t.rcgu.dwo(0x5e3f6760021ebe08) referenced by CU at offset 0x1074 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#17 0x0000555555fa194c in <sotf_plugin_dynamic_eq::dynamic_eq_plugin::DynamicEqPlugin as sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin>::parametric_get_parameter () at crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs:709
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.bg8dnk6iszmp05eqvd6zh5xqc.0eamaik.rcgu.dwo(0xc684a67eb75dbb9f) referenced by CU at offset 0x190c [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#18 0x0000555555a1fc40 in <plugins_nih::params::DynamicParams>::sync_to_plugin () at crates/sotf-plugins/crates/plugins-nih/src/params.rs:376
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.7vk7u20q3xm35lbhra96o1p33.0u2ds4t.rcgu.dwo(0x151abdd9fcd09ed4) referenced by CU at offset 0x11a8 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#19 0x0000555555a56ff5 in <plugins_nih::plugin::SotfDynamicEQ>::process_with_api () at crates/sotf-plugins/crates/plugins-nih/src/lib.rs:83
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.cgfepjmazuwlkmuj813went0d.0u2ds4t.rcgu.dwo(0x58e42be046352ad8) referenced by CU at offset 0x1c0c [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#20 0x0000555555a298f6 in <plugins_nih::plugin::SotfDynamicEQ as nih_plug::plugin::Plugin>::process::<nih_plug::wrapper::clap::context::WrapperProcessContext<plugins_nih::plugin::SotfDynamicEQ>> () at crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs:1013
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.a6fefwxfgp2p2pc0e1i04hhqt.0u2ds4t.rcgu.dwo(0x5f44325491fb5673) referenced by CU at offset 0x15d8 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#21 0x0000555555af2803 in assert_no_alloc::assert_no_alloc::<i32, <nih_plug::wrapper::clap::wrapper::Wrapper<plugins_nih::plugin::SotfDynamicEQ>>::process::{closure#0}> () at crates/3rdparties/nih-plug/src/wrapper/clap/wrapper.rs:2541
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.eojrdqvxz9629h5j9qb0lttx4.0u2ds4t.rcgu.dwo(0xc0e6a1d0750572e9) referenced by CU at offset 0x226c [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#22 0x0000555555a3f8df in nih_plug::wrapper::util::process_wrapper::<i32, <nih_plug::wrapper::clap::wrapper::Wrapper<plugins_nih::plugin::SotfDynamicEQ>>::process::{closure#0}> () at crates/3rdparties/nih-plug/src/wrapper/util.rs:195
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.697rmj7rn83x05tt8cohz43h1.0eamaik.rcgu.dwo(0x13c81de3f3458fb4) referenced by CU at offset 0xd84 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#23 0x0000555555b5fdc0 in <nih_plug::wrapper::clap::wrapper::Wrapper<plugins_nih::plugin::SotfDynamicEQ>>::process () at crates/3rdparties/nih-plug/src/wrapper/clap/wrapper.rs:2252
+#24 0x0000555555a106c6 in <plugins_nih::plugin::native_dynamic_eq_clap_restart::TestPlugin>::process_block () at crates/sotf-plugins/crates/plugins-nih/src/plugin/native_dynamic_eq_clap_restart.rs:209
+warning: Could not find DWO CU /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a.3l6cf3w0250d5q2yrlfe7qke0.0eamaik.rcgu.dwo(0x74d25116f7120b1) referenced by CU at offset 0x728 [in module /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test]
+#25 0x0000555555a110b8 in plugins_nih::plugin::native_dynamic_eq_clap_restart::clap_defers_restart_required_shelf_until_host_reactivation () at crates/sotf-plugins/crates/plugins-nih/src/plugin/native_dynamic_eq_clap_restart.rs:311
+#26 0x00005555559afa69 in <plugins_nih::plugin::native_dynamic_eq_clap_restart::clap_defers_restart_required_shelf_until_host_reactivation::{closure#0} as core::ops::function::FnOnce<()>>::call_once () at crates/sotf-plugins/crates/plugins-nih/src/plugin/native_dynamic_eq_clap_restart.rs:295
+#27 0x0000555555bed8bb in core::ops::function::FnOnce::call_once<fn() -> core::result::Result<(), alloc::string::String>, ()> () at library/core/src/ops/function.rs:250
+#28 test::__rust_begin_short_backtrace<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> () at library/test/src/lib.rs:724
+#29 0x0000555555bfaf05 in test::run_test_in_process::{closure#0} () at library/test/src/lib.rs:747
+#30 core::panic::unwind_safe::{impl#23}::call_once<core::result::Result<(), alloc::string::String>, test::run_test_in_process::{closure_env#0}> () at library/core/src/panic/unwind_safe.rs:275
+#31 std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure_env#0}>, core::result::Result<(), alloc::string::String>> () at library/std/src/panicking.rs:576
+#32 std::panicking::catch_unwind<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure_env#0}>> () at library/std/src/panicking.rs:544
+#33 std::panic::catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure_env#0}>, core::result::Result<(), alloc::string::String>> () at library/std/src/panic.rs:359
+#34 test::run_test_in_process () at library/test/src/lib.rs:747
+#35 test::run_test::{closure#0} () at library/test/src/lib.rs:668
+#36 0x0000555555bf48b4 in test::run_test::{closure#1} () at library/test/src/lib.rs:698
+#37 std::sys::backtrace::__rust_begin_short_backtrace<test::run_test::{closure_env#1}, ()> () at library/std/src/sys/backtrace.rs:166
+#38 0x0000555555bfe052 in std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure#0}<test::run_test::{closure_env#1}, ()> () at library/std/src/thread/lifecycle.rs:70
+#39 core::panic::unwind_safe::{impl#23}::call_once<(), std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<test::run_test::{closure_env#1}, ()>> () at library/core/src/panic/unwind_safe.rs:275
+#40 std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<test::run_test::{closure_env#1}, ()>>, ()> () at library/std/src/panicking.rs:576
+#41 std::panicking::catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<test::run_test::{closure_env#1}, ()>>> () at library/std/src/panicking.rs:544
+#42 std::panic::catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<test::run_test::{closure_env#1}, ()>>, ()> () at library/std/src/panic.rs:359
+#43 std::thread::lifecycle::spawn_unchecked::{closure#1}<test::run_test::{closure_env#1}, ()> () at library/std/src/thread/lifecycle.rs:68
+#44 core::ops::function::FnOnce::call_once<std::thread::lifecycle::spawn_unchecked::{closure_env#1}<test::run_test::{closure_env#1}, ()>, ()> () at library/core/src/ops/function.rs:250

@@ -1,0 +1,6 @@
+42c7fa14304369411b9464cd0a794e394818a8e1025e6e105e88fe60c98dbfd7  audit/artifacts/aud142-ffi-state-validation-r1/cdylib-receipt.md
+166169caea1f3405effa5ab49370c573a0fafaa4c11fafe05e012e6eb5c67c67  audit/artifacts/aud142-ffi-state-validation-r1/build-source-start.sha256
+166169caea1f3405effa5ab49370c573a0fafaa4c11fafe05e012e6eb5c67c67  audit/artifacts/aud142-ffi-state-validation-r1/build-source-end.sha256
+d883decaaa3885dda8ada50ef64811403d944205cce436e4fdc6d320731776ad  audit/artifacts/aud142-ffi-state-validation-r1/source-paths.txt
+1be00b61421e88fe785a453155cff45a1cfeab300a92c2898714722e38cf90bf  audit/artifacts/aud142-ffi-state-validation-r1/sources.tar.gz
+885bae6085c7f39f3d0d8f9b8da48915c66bec6358d28a065847aff9d16b8864  audit/artifacts/aud142-ffi-state-validation-r1/cdylib-artifact-sha256.txt

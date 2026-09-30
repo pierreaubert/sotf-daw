@@ -1,0 +1,39 @@
+--- audit/artifacts/aud143-native-buffer-reuse-r1/sources/native_bandsplit_external_host.rs	2026-09-30 09:50:59.438728777 +0200
++++ crates/sotf-plugins/tests/native_bandsplit_external_host.rs	2026-09-30 15:48:48.980926152 +0200
+@@ -186,7 +186,8 @@
+             let live_audio = render_block(&mut live, &input, &context, 8);
+             let control_audio = render_block(&mut control, &input, &context, 8);
+             let cold_audio = render_block(&mut cold, &input, &context, 8);
+-            assert_waveforms_match(
++            // Both twins loaded the same binary state and received the same two warmup blocks.
++            assert_waveforms_equal(
+                 &live_audio,
+                 &control_audio,
+                 &format!("{format:?} rejected candidate preserves populated DSP state"),
+@@ -547,6 +548,26 @@
+     assert!(max_error <= 2.0e-5, "{route} max sample error {max_error}");
+ }
+ 
++fn assert_waveforms_equal(actual: &[f32], expected: &[f32], route: &str) {
++    assert_eq!(
++        actual.len(),
++        expected.len(),
++        "{route} output lengths differ"
++    );
++    assert!(
++        actual.iter().all(|sample| sample.is_finite()),
++        "{route} actual output must be finite"
++    );
++    assert!(
++        expected.iter().all(|sample| sample.is_finite()),
++        "{route} reference output must be finite"
++    );
++    assert_eq!(
++        actual, expected,
++        "{route} same-binary synchronized continuation must match exactly"
++    );
++}
++
+ fn max_waveform_error(actual: &[f32], expected: &[f32]) -> f32 {
+     assert_eq!(actual.len(), expected.len());
+     assert!(actual.iter().all(|sample| sample.is_finite()));

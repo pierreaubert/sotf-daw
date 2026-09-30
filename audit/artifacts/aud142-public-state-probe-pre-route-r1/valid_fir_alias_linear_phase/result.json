@@ -1,0 +1,29 @@
+{
+  "case": "fir_alias_linear_phase",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": -8,
+  "state_matches_source": false,
+  "audio_matches_fresh": false,
+  "fresh_max_residual": 0.20619336143136024,
+  "old_family_sensitivity": 0.26681142262032154,
+  "audio": {
+    "actual": {
+      "file": "valid_fir_alias_linear_phase/actual.f32le",
+      "samples": 3572,
+      "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+    },
+    "reference": {
+      "file": "valid_fir_alias_linear_phase/reference.f32le",
+      "samples": 3572,
+      "sha256": "eb7821f894b821c26bcba9babbf12320511e68dc688a82c480a0edb0de9fe5c3"
+    },
+    "old_family": {
+      "file": "valid_fir_alias_linear_phase/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": false
+}

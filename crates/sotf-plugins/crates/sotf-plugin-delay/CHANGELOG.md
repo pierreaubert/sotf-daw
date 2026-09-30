@@ -1,3 +1,9 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Declare the existing identity-frame geometry contract so finite host drains can admit Delay in supported serial chains.
+
 # 0.5.11
 
 ## Added

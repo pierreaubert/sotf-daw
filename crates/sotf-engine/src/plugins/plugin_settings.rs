@@ -67,6 +67,9 @@ use super::default_auto_gain_smoothing_ms;
 use super::default_band_merge_bands;
 use super::default_band_split_crossover_type;
 use super::default_band_split_frequency;
+use super::default_band_split_frequency_2;
+use super::default_band_split_frequency_3;
+use super::default_band_split_num_bands;
 use super::default_beamformer_mic_spacing_cm;
 use super::default_beamformer_num_mics;
 use super::default_beamformer_steer_angle_deg;
@@ -332,6 +335,7 @@ use math_audio_iir_fir::BiquadFilterType;
 use serde::{Deserialize, Serialize};
 use sotf_plugins::ExternalPluginState;
 
+use sotf_plugins::BandSplitRecombinationMode;
 use sotf_plugins::param_specs::aae as aae_specs;
 use sotf_plugins::param_specs::ab_compare as ab_compare_specs;
 use sotf_plugins::param_specs::aec as aec_specs;
@@ -374,6 +378,7 @@ use sotf_plugins::param_specs::stereo_imager as stereo_imager_specs;
 use sotf_plugins::param_specs::transient_shaper as transient_shaper_specs;
 use sotf_plugins::param_specs::upmixer as upmixer_specs;
 use sotf_plugins::param_specs::xtc as xtc_specs;
+use sotf_plugins::plugin_crossover::CrossoverTopology;
 
 fn default_true() -> bool {
     true
@@ -966,6 +971,9 @@ pub enum PluginSettings {
         zero_latency_head: bool,
         #[serde(default = "default_head_taps")]
         head_taps: usize,
+        /// Interpret a four-channel stereo IR as LL/LR/RL/RR.
+        #[serde(default)]
+        true_stereo: bool,
     },
     LoudnessMonitor,
     SpectrumAnalyzer {
@@ -1213,7 +1221,7 @@ pub enum PluginSettings {
         band_mask_high_hz: f64,
     },
     Crossover {
-        /// Crossover type: "LR24" or "LinearPhase"
+        /// Crossover family identifier.
         #[serde(rename = "type", default = "default_crossover_type")]
         crossover_type: String,
         /// Primary crossover frequency in Hz
@@ -1225,6 +1233,18 @@ pub enum PluginSettings {
         /// FIR tap count for linear-phase mode
         #[serde(default = "default_crossover_fir_taps")]
         fir_taps: usize,
+        /// Active crossover route; absent legacy values are inferred at runtime.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        topology: Option<CrossoverTopology>,
+        /// Ordered additional crossover cutoffs retained when inactive.
+        #[serde(default)]
+        extra_frequencies: Vec<f64>,
+        /// Per-input-channel cutoffs retained when the band topology is active.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        channel_frequencies_hz: Option<Vec<f64>>,
+        /// Per-input-channel modes retained when the band topology is active.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        channel_modes: Option<Vec<String>>,
     },
     BandSplit {
         /// Number of input channels
@@ -1236,6 +1256,20 @@ pub enum PluginSettings {
         /// Crossover type: "LR24" or "LR48"
         #[serde(default = "default_band_split_crossover_type")]
         crossover_type: String,
+        /// Ordered explicit crossover frequencies. When present, this takes
+        /// precedence over the scalar and per-cutoff compatibility fields.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        frequencies: Option<Vec<f64>>,
+        /// Missing mode in an existing preset retains the historical cascade.
+        #[serde(default)]
+        recombination_mode: BandSplitRecombinationMode,
+        /// Number of routed bands when `frequencies` is absent.
+        #[serde(default = "default_band_split_num_bands")]
+        num_bands: usize,
+        #[serde(default = "default_band_split_frequency_2")]
+        frequency_2: f64,
+        #[serde(default = "default_band_split_frequency_3")]
+        frequency_3: f64,
     },
     BandMerge {
         /// Number of output channels
@@ -2031,6 +2065,7 @@ impl PluginSettings {
                     use_nupc: p(cv, "use_nupc").default_bool(),
                     zero_latency_head: false,
                     head_taps: p(cv, "head_taps").default_usize(),
+                    true_stereo: p(cv, "true_stereo").default_bool(),
                 }
             }
             PluginType::LoudnessMonitor => Self::LoudnessMonitor,
@@ -2197,12 +2232,21 @@ impl PluginSettings {
                     frequency: p(co, "frequency").default_f64(),
                     output: default_crossover_output(),
                     fir_taps: p(co, "fir_taps").default_usize(),
+                    topology: Some(CrossoverTopology::Bands),
+                    extra_frequencies: Vec::new(),
+                    channel_frequencies_hz: None,
+                    channel_modes: None,
                 }
             }
             PluginType::BandSplit => Self::BandSplit {
                 channels: default_channels(),
                 frequency: default_band_split_frequency(),
                 crossover_type: default_band_split_crossover_type(),
+                frequencies: None,
+                recombination_mode: BandSplitRecombinationMode::PhaseCompensated,
+                num_bands: 2,
+                frequency_2: default_band_split_frequency_2(),
+                frequency_3: default_band_split_frequency_3(),
             },
             PluginType::BandMerge => Self::BandMerge {
                 channels: default_channels(),

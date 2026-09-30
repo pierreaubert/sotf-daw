@@ -273,7 +273,7 @@ fn build_tracks(args: &Args, scenario: Scenario) -> Result<Vec<TrackState>, Stri
     (0..scenario.tracks)
         .map(|track| {
             let mut host = DawHost::new(CHANNELS, args.sample_rate);
-            host.set_compiled_linear_enabled(!args.disable_compiled_linear);
+            host.set_compiled_linear_enabled(!args.disable_compiled_linear)?;
             for plugin_index in 0..scenario.plugins_per_track {
                 host.add_plugin(make_plugin(
                     args.chain,
@@ -714,7 +714,7 @@ fn benchmark_scheduling(args: &Args) -> Result<(), String> {
             let mut states = (0..tracks)
                 .map(|_| {
                     let mut host = DawHost::new(CHANNELS, args.sample_rate);
-                    host.set_compiled_linear_enabled(!args.disable_compiled_linear);
+                    host.set_compiled_linear_enabled(!args.disable_compiled_linear)?;
                     for plugin_index in 0..plugins_per_track {
                         host.add_plugin(make_gain(CHANNELS, plugin_index)?)?;
                     }

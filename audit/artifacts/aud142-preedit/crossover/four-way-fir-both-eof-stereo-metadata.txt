@@ -1,0 +1,8 @@
+case=four-way-fir-both-eof-stereo;settings=type=FIR;frequencies=[700,1800,5000];output=both;fir_taps=1025;sample_rate=48000;frames=12288;input_channels=2;output_channels=8;tail_frames=3072
+runtime_parameter_count=6
+index=0;id=type;name=Type;unit=;default=String("LinearPhase");min=None;max=None;logarithmic=false;update_mode=Structural;current=Some(String("LinearPhase"))
+index=1;id=frequency;name=Frequency;unit=;default=Float(700.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(700.0))
+index=2;id=mode;name=Mode;unit=;default=String("both");min=None;max=None;logarithmic=false;update_mode=Realtime;current=Some(String("both"))
+index=3;id=frequency_2;name=Frequency 2;unit=;default=Float(1800.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(1800.0))
+index=4;id=frequency_3;name=Frequency 3;unit=;default=Float(5000.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(5000.0))
+index=5;id=fir_taps;name=FIR Taps;unit=;default=Int(1025);min=Some(Int(31));max=Some(Int(16385));logarithmic=false;update_mode=Realtime;current=Some(Int(1025))

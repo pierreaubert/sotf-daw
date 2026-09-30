@@ -189,3 +189,87 @@ fn clap_gain_descriptor() -> PluginDescriptor {
         scan_status: PluginScanStatus::Loadable,
     }
 }
+
+#[test]
+#[ignore = "requires SOTF_TEST_AMBISONICS_CLAP_PLUGIN to point to the exported Ambisonics CLAP library"]
+fn native_clap_ambisonics_host_default_baseline_and_order_seven_setup() {
+    let descriptor = clap_ambisonics_descriptor();
+    let mut default_plugin = ExternalPlugin::new(&descriptor, 48_000)
+        .expect("load native CLAP Ambisonics default configuration");
+    assert_eq!(default_plugin.input_channels(), 4);
+    assert_eq!(default_plugin.output_channels(), 6);
+
+    let frames = 1024;
+    let mut input = vec![0.0_f32; frames * 4];
+    for frame in 0..frames {
+        for channel in 0..4 {
+            input[frame * 4 + channel] =
+                (((frame * 17 + channel * 131 + frame * channel * 3) % 997) as f32 - 498.0)
+                    * 0.000_02;
+        }
+    }
+    let mut baseline = Vec::with_capacity(frames * 6);
+    for chunk_start in (0..frames).step_by(127) {
+        let count = (frames - chunk_start).min(127);
+        let mut output = vec![f32::NAN; count * 6];
+        let context = ProcessContext::new(48_000, count);
+        default_plugin
+            .process(
+                &input[chunk_start * 4..(chunk_start + count) * 4],
+                &mut output,
+                &context,
+            )
+            .unwrap();
+        assert!(output.iter().all(|sample| sample.is_finite()));
+        baseline.extend(output);
+    }
+    if let Some(directory) = std::env::var_os("SOTF_AUDIT_CAPTURE_DIR") {
+        let directory = PathBuf::from(directory);
+        std::fs::create_dir_all(&directory).expect("create AUD135 baseline directory");
+        let bytes = baseline
+            .iter()
+            .flat_map(|sample| sample.to_le_bytes())
+            .collect::<Vec<_>>();
+        std::fs::write(directory.join("clap-order1-5.1-host.f32le"), bytes)
+            .expect("write CLAP default output baseline");
+    }
+
+    let mut value = serde_json::to_value(ExternalPluginState::new(
+        descriptor,
+        ExternalPluginSandboxMode::InProcess,
+        Vec::new(),
+    ))
+    .unwrap();
+    value["audio_setup"] = serde_json::json!({
+        "type": "ambisonics",
+        "order": 7,
+        "target_layout": "seven_one_four"
+    });
+    let state: ExternalPluginState = serde_json::from_value(value).unwrap();
+    let plugin = ExternalPlugin::from_placeholder_state(&state, 48_000)
+        .expect("restore typed CLAP Ambisonics setup");
+    assert_eq!(plugin.input_channels(), 64);
+    assert_eq!(plugin.output_channels(), 12);
+    assert_eq!(plugin.descriptor().audio_inputs, 64);
+    assert_eq!(plugin.descriptor().audio_outputs, 12);
+}
+
+fn clap_ambisonics_descriptor() -> PluginDescriptor {
+    let path = PathBuf::from(
+        std::env::var_os("SOTF_TEST_AMBISONICS_CLAP_PLUGIN")
+            .expect("SOTF_TEST_AMBISONICS_CLAP_PLUGIN must point to the exported .clap library"),
+    );
+    PluginDescriptor {
+        id: "org.spinorama.sotf.ambisonics".into(),
+        name: "SOTF: Ambisonics Decoder".into(),
+        vendor: "SOTF".into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        format: PluginFormat::Clap,
+        path,
+        audio_inputs: 4,
+        audio_outputs: 6,
+        is_instrument: false,
+        categories: vec!["audio-effect".into()],
+        scan_status: PluginScanStatus::Loadable,
+    }
+}

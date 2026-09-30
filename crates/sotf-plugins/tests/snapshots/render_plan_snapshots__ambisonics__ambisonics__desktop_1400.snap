@@ -31,7 +31,7 @@ expression: plan
       "unit": "",
       "range": [
         1.0,
-        3.0
+        7.0
       ],
       "read_only": false,
       "enabled": true

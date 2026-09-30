@@ -291,7 +291,7 @@ impl_param_accessors! {
     Convolution {
         params: param_specs::convolution::PARAMS,
         layout: Some(&param_specs::convolution::LAYOUT),
-        fields: [ir_file: skip, mix: f64, gain_db: f64, use_nupc: bool, zero_latency_head: bool, head_taps: usize]
+        fields: [ir_file: skip, mix: f64, gain_db: f64, use_nupc: bool, zero_latency_head: bool, head_taps: usize, true_stereo: bool]
     },
     BinauralDecoder {
         params: param_specs::binaural::PARAMS,
@@ -392,11 +392,6 @@ impl_param_accessors! {
             output: [str crossover_output_to_index, index_to_crossover_output],
             fir_taps: usize,
         ]
-    },
-    BandSplit {
-        params: param_specs::band_split::PARAMS,
-        layout: Some(&param_specs::band_split::LAYOUT),
-        fields: [frequency: f64, crossover_type: [str crossover_type_to_index, index_to_crossover_type]]
     },
     BandMerge {
         params: param_specs::band_merge::PARAMS,
@@ -633,6 +628,19 @@ impl_param_accessors! {
     }
     ];
     manual: [
+        BandSplit {
+            params: param_specs::band_split::PARAMS,
+            layout: Some(&param_specs::band_split::LAYOUT),
+            manual: [band_split_param_value, band_split_set_param_value],
+            fields: [
+                frequency: f64,
+                crossover_type: [str crossover_type_to_index, index_to_crossover_type],
+                recombination_mode: [enum band_split_mode_to_index, index_to_band_split_mode],
+                num_bands: [enum band_split_num_bands_to_index, index_to_band_split_num_bands],
+                frequency_2: f64,
+                frequency_3: f64,
+            ]
+        },
         Upmixer {
             params: param_specs::upmixer::PARAMS,
             layout: Some(&param_specs::upmixer::LAYOUT),
@@ -937,13 +945,14 @@ use crossfeed::crossfeed_mode_to_index;
 use crossfeed::crossfeed_preset_to_index;
 use crossover::crossover_output_to_index;
 use crossover::crossover_plugin_type_to_index;
-use crossover::crossover_type_to_index;
 use crossover::index_to_crossover_plugin_type;
+use crossover::{band_split_mode_to_index, band_split_num_bands_to_index};
 use de::de_esser_mode_to_index;
 use detection::detection_mode_to_index;
 use hpf::hpf_order_to_index;
 use index::index_to_aae_room_preset;
 use index::index_to_aae_speaker_config;
+use index::index_to_band_split_mode;
 use index::index_to_crossfeed_mode;
 use index::index_to_crossfeed_preset;
 use index::index_to_crossover_output;

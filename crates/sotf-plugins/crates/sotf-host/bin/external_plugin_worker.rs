@@ -187,7 +187,9 @@ mod desktop {
         } else {
             Box::new(
                 match worker_state.as_ref() {
-                    Some(state) if !state.opaque_state.is_empty() => {
+                    Some(state)
+                        if !state.opaque_state.is_empty() || state.audio_setup.is_some() =>
+                    {
                         ExternalPlugin::from_placeholder_state_with_max_block_frames(
                             state,
                             sample_rate,
@@ -206,7 +208,7 @@ mod desktop {
         #[cfg(not(feature = "worker-test-backend"))]
         let plugin: Box<dyn Plugin> = Box::new(
             match worker_state.as_ref() {
-                Some(state) if !state.opaque_state.is_empty() => {
+                Some(state) if !state.opaque_state.is_empty() || state.audio_setup.is_some() => {
                     ExternalPlugin::from_placeholder_state_with_max_block_frames(
                         state,
                         sample_rate,
@@ -271,11 +273,9 @@ mod desktop {
                 state.sandbox_mode
             ));
         }
-        Ok(ExternalPluginState::new(
-            state.descriptor.clone(),
-            ExternalPluginSandboxMode::InProcess,
-            state.opaque_state.clone(),
-        ))
+        let mut restored = state.clone();
+        restored.sandbox_mode = ExternalPluginSandboxMode::InProcess;
+        Ok(restored)
     }
 
     fn sandbox_policy(args: &Args) -> Result<ExternalPluginSandboxPolicy, String> {

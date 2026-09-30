@@ -1,0 +1,24 @@
+{
+  "scope": "Crossover core valid IIR scalar cutoff cache/validation allocation fix and native fixed-schema configuration/sync tests; actual native ABI/bus/restart delivery not yet verified",
+  "focused_core": "1 passed at r3; earlier r2 counted 39 allocations before cached validation fix",
+  "focused_nih": "6 passed at r5, single threaded; retained legacy linear frequency normalization, Bands/PerChannel adapter, dormant values and audio twin checks",
+  "r5_selected_start_end_matching_files": [
+    "crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_realtime.rs",
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs",
+    "crates/sotf-plugins/crates/plugins-nih/src/aud142_native_schema_tests.rs"
+  ],
+  "post_gate_only_extra_source_files": [
+    "crates/sotf-plugins/crates/plugins-nih/src/native_crossover.rs",
+    "crates/sotf-plugins/crates/plugins-nih/src/params/configuration.rs",
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs"
+  ],
+  "source_archive_stability": "All seven files match before/after archive; only the four selected r5 files have a matching gate start/end manifest. No full dependency closure/build-bound executable. Wrapper is being edited for a later stage and not included.",
+  "production_hashes_r3_vs_r5": {
+    "crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs": true,
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs": true
+  },
+  "historical_failures": "r1 test compilation; r2 exposed actual core allocations and newly introduced skewed frequency mapping; r3/r4 remaining failures were expected runtime fallback values in per-channel tests, with the audio twins matching. All original logs retained.",
+  "review_status": "Awaiting later native review; earlier pure-core numerical checkpoint separately has two focused Astra evidence requests",
+  "next": "Full package and strict lint after production changes, actual ABI restart/layout callbacks, mounted/consuming host routes"
+}

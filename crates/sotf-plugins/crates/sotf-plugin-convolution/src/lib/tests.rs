@@ -1,4 +1,6 @@
-use super::convolution_plugin::{ConvolutionPlugin, try_reclaim};
+use super::convolution_plugin::{
+    ConvolutionPlugin, IrValidationOptions, MAX_IR_MEMORY_BYTES, try_reclaim,
+};
 use super::types::ConvolutionPluginParams;
 use super::types::ConvolutionState;
 use super::types::{ConvolutionLoadStatus, IrLoadCompletion, IrLoadResult, RetiredIrState};
@@ -385,6 +387,100 @@ fn ir_metadata_and_memory_limits_are_enforced_before_planning() {
         )
         .is_err(),
         "channel-expanded NUPC state must respect the memory budget"
+    );
+}
+
+#[test]
+fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
+    let short_four_path_ir = vec![vec![0.0; 4]; 4];
+    let options = |target_sample_rate, output_channels| IrValidationOptions {
+        target_sample_rate,
+        output_channels,
+        use_nupc: true,
+        true_stereo: true,
+        zero_latency_head: false,
+        head_taps: 0,
+    };
+    assert!(
+        ConvolutionPlugin::validate_ir_limits_for_routing(
+            &short_four_path_ir,
+            48_000,
+            options(48_000, 2),
+        )
+        .is_ok()
+    );
+    assert!(
+        ConvolutionPlugin::validate_ir_limits_for_routing(
+            &short_four_path_ir,
+            48_000,
+            options(48_000, 1),
+        )
+        .is_err()
+    );
+    assert!(
+        ConvolutionPlugin::validate_ir_limits_for_routing(
+            &short_four_path_ir[..2],
+            48_000,
+            options(48_000, 2),
+        )
+        .is_err()
+    );
+
+    // The bound is based on actual NUPC partition geometry and every path's
+    // prepared spectra/FDL/work buffers, not a fixed f32-per-sample multiplier.
+    let exact_paths = [2049; 4];
+    let exact_estimate =
+        ConvolutionPlugin::estimated_true_stereo_backend_bytes(&exact_paths, true, false, 0);
+    let min_spectra_and_fdl = exact_paths
+        .iter()
+        .map(|&length| {
+            nupc::plan_partitions(length, PARTITION_SIZE)
+                .iter()
+                .map(|spec| spec.count * spec.fft_size * std::mem::size_of::<Complex<f32>>() * 2)
+                .sum::<usize>()
+        })
+        .sum::<usize>();
+    assert!(exact_estimate >= min_spectra_and_fdl);
+    assert!(exact_estimate > exact_paths.iter().sum::<usize>() * 32);
+    assert_eq!(
+        ConvolutionPlugin::estimated_true_stereo_backend_bytes(&[usize::MAX; 4], true, false, 0),
+        usize::MAX
+    );
+
+    // Find the highest equal source-path length that fits after 8x conversion.
+    // Vectors remain small enough for this boundary test; the actual FFT plans
+    // are counted only in the prepared plugin, not constructed here.
+    let mut low = 1_usize;
+    let mut high = 1_440_000_usize;
+    while low < high {
+        let mid = low + (high - low).div_ceil(2);
+        let target_frames = mid * 8;
+        let estimate = ConvolutionPlugin::estimated_true_stereo_backend_bytes(
+            &[target_frames; 4],
+            true,
+            false,
+            0,
+        );
+        if estimate <= MAX_IR_MEMORY_BYTES {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    let ir = vec![vec![0.0; low]; 4];
+    assert!(
+        ConvolutionPlugin::validate_ir_limits_for_routing(&ir, 48_000, options(384_000, 2),)
+            .is_ok()
+    );
+    let mut over_budget = ir;
+    over_budget.iter_mut().for_each(|path| path.push(0.0));
+    assert!(
+        ConvolutionPlugin::validate_ir_limits_for_routing(
+            &over_budget,
+            48_000,
+            options(384_000, 2),
+        )
+        .is_err()
     );
 }
 

@@ -38,7 +38,7 @@ pub(super) fn configure_host_oversampling(
     host: &mut PluginHost,
     policy: EngineOversamplingPolicy,
 ) -> Result<(), String> {
-    host.set_plugin_preferred_oversampling_enabled(policy.plugin_preferred_enabled());
+    host.set_plugin_preferred_oversampling_enabled(policy.plugin_preferred_enabled())?;
     host.set_forced_oversampling_factor(policy.forced_factor())
 }
 

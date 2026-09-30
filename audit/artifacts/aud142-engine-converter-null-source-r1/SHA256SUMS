@@ -1,0 +1,4 @@
+9d20ddb82213f0a642f631f8750843ba9a6ddec5ab1613ceae3e24cd3a4c416f  receipt.json
+a46c1d03bbf16de88e80115e567c8a50db6ccb5932541b2f1ceffaecf313aff9  selected-source/crates/sotf-engine/src/plugins/plugin_config_converter/spatial.rs
+ed4d405ac94533706d2557f5053fdc26552e860a7230b45c848021ed55b61170  selected-source/crates/sotf-engine/src/plugins/plugin_settings.rs
+949756b2a81139cf31fb9f1bce5d984e18134bb4165039524881dfa1399ac76d  selected-source/crates/sotf-plugins/crates/sotf-plugin-crossover/src/types.rs

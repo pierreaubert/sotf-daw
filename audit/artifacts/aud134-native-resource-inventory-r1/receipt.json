@@ -1,0 +1,17 @@
+{
+  "kind": "current source inspection only",
+  "execution": "No native Convolution resource or audio test executed in this checkpoint",
+  "findings": [
+    "DynamicParams::from_infos_for_plugin explicitly skips FilePath at params.rs:95",
+    "Native Convolution uses generic macro wrapper at plugins-nih/src/lib.rs:244",
+    "DynamicParams Params implementation exposes primitive param_map plus deserialize markers; no resource serialization field in this implementation",
+    "Convolution ir_file is string resource state handled separately from primitive numeric controls"
+  ],
+  "scope": "Reconfirm existing AUD134 native loaded-IR and persistence gap; does not disprove separately accepted core/FFI/GPUI true-stereo paths",
+  "files": [
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs",
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/params.rs"
+  ]
+}

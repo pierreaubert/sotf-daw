@@ -1,0 +1,153 @@
+{
+  "task": "AUD143 final timing executable build receipt",
+  "recorded_utc": "2026-09-30T04:44:09Z",
+  "profile": "release (workspace profile.release uses thin LTO, 14 codegen units, unwind panics)",
+  "offline": true,
+  "locked": true,
+  "cargo_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "harness_source_sha256": "c69637034798e1604ef7b8956acc71f8a0225ae2fb38fafee483eaa524c35637",
+  "source_snapshot_receipt": "source-snapshot-receipt-durable.json",
+  "source_snapshot_receipt_sha256": "517b35dfed62e9068882854b9e6c18b296657b23291aed19fc36f880aca98ba0",
+  "fixture_replays": [
+    {
+      "variant": "recovered",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/recovered/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_phase_capture captures_public_legacy_complex_controls_before_phase_changes -- --exact --nocapture --test-threads=1",
+      "log": "recovered-legacy-fixture-replay.log",
+      "log_sha256": "8a5564df25fc6e6274769bba63ea83a85910026593376044f0fce22b9db25144",
+      "result": "1 passed; exact full-vector fixture comparison"
+    },
+    {
+      "variant": "current",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/current/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_phase_capture captures_public_legacy_complex_controls_before_phase_changes -- --exact --nocapture --test-threads=1",
+      "log": "current-legacy-fixture-replay.log",
+      "log_sha256": "8a5564df25fc6e6274769bba63ea83a85910026593376044f0fce22b9db25144",
+      "result": "1 passed; exact full-vector fixture comparison"
+    }
+  ],
+  "harness_builds": [
+    {
+      "variant": "recovered",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/recovered/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_cpu --no-run",
+      "build_log": "recovered-harness-build-timed.log",
+      "build_log_sha256": "ed44d8e0945f4593f1a05e02b640994d4cc63b0e90f5926a092d5acec1869955",
+      "binary_sha256": "c4be932d4b5463518d374a0ff74d43f2d4382936e8d8231ffdc9d5fe53bbfb38",
+      "binary_archived": false,
+      "result": "clean release compile; executable copied to immutable variant-specific timing path"
+    },
+    {
+      "variant": "current",
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/tmp/sotf-aud143/shared-target cargo test --manifest-path /tmp/sotf-aud143/current/sotf-daw/Cargo.toml -p sotf-plugin-band-split --release --offline --locked --test aud143_cpu --no-run",
+      "build_log": "current-harness-build-timed.log",
+      "build_log_sha256": "25788a26c8b4e000a25128f19e17297c4fb0817a6497c22c911dba593f95bdaa",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "binary_archived": false,
+      "result": "clean release compile; executable copied to immutable variant-specific timing path"
+    }
+  ],
+  "timing_commands": [
+    {
+      "pass": "pass-a",
+      "variant": "recovered-legacy",
+      "command": "AUD143_VARIANT=recovered-legacy aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "c4be932d4b5463518d374a0ff74d43f2d4382936e8d8231ffdc9d5fe53bbfb38",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:38.745465+00:00",
+      "ended_utc": "2026-09-30T04:33:40.934916+00:00",
+      "wall_seconds": 2.189447532000486,
+      "raw_log": "pass-a-recovered-legacy.log",
+      "raw_log_sha256": "e81af3566f3a2683a4ed182486c4c2b06ac92e014bf6467f5a7bd92403770686"
+    },
+    {
+      "pass": "pass-a",
+      "variant": "current-legacy",
+      "command": "AUD143_VARIANT=current-legacy aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:40.961342+00:00",
+      "ended_utc": "2026-09-30T04:33:43.188766+00:00",
+      "wall_seconds": 2.2274225520086475,
+      "raw_log": "pass-a-current-legacy.log",
+      "raw_log_sha256": "6137601eb03eac195969e172e3b2dcc416ad17f0452b5133353e830a4e55dda5"
+    },
+    {
+      "pass": "pass-a",
+      "variant": "current-phase",
+      "command": "AUD143_VARIANT=current-phase aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:43.210751+00:00",
+      "ended_utc": "2026-09-30T04:33:47.127842+00:00",
+      "wall_seconds": 3.9170898069860414,
+      "raw_log": "pass-a-current-phase.log",
+      "raw_log_sha256": "b89e5e373fbd690fb37fb97e421fa9cffc42264762abd11e3516052dfe2daa77"
+    },
+    {
+      "pass": "pass-b",
+      "variant": "current-phase",
+      "command": "AUD143_VARIANT=current-phase aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:47.153377+00:00",
+      "ended_utc": "2026-09-30T04:33:51.063170+00:00",
+      "wall_seconds": 3.909792081976775,
+      "raw_log": "pass-b-current-phase.log",
+      "raw_log_sha256": "e2579e1c3382053a93560db9ae4230f14d6a8d6ecc8733ccf0aaf5b4c6b655a4"
+    },
+    {
+      "pass": "pass-b",
+      "variant": "current-legacy",
+      "command": "AUD143_VARIANT=current-legacy aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "79c3b6fbd830ab692d73e82e4b883b5d3bd49f8e13084ba2addf8912a3ade0d0",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:51.090350+00:00",
+      "ended_utc": "2026-09-30T04:33:53.244769+00:00",
+      "wall_seconds": 2.1544188240077347,
+      "raw_log": "pass-b-current-legacy.log",
+      "raw_log_sha256": "dc272d3744b1d805ac51c7e08bd484e626200ce125d610aae7129ab4fe676750"
+    },
+    {
+      "pass": "pass-b",
+      "variant": "recovered-legacy",
+      "command": "AUD143_VARIANT=recovered-legacy aud143_cpu_timed --exact aud143_controlled_cpu_comparison --nocapture --test-threads=1",
+      "binary_sha256": "c4be932d4b5463518d374a0ff74d43f2d4382936e8d8231ffdc9d5fe53bbfb38",
+      "returncode": 0,
+      "started_utc": "2026-09-30T04:33:53.270870+00:00",
+      "ended_utc": "2026-09-30T04:33:55.422995+00:00",
+      "wall_seconds": 2.152126301021781,
+      "raw_log": "pass-b-recovered-legacy.log",
+      "raw_log_sha256": "fc1917c4728b6a0ab80b86388647fa67a0b95a0bbe9bc52c6120d1d785908b45"
+    }
+  ],
+  "timing_logs": [
+    {
+      "path": "raw-samples.csv",
+      "sha256": "f0006fc9f1a24f771026f7ff3a661b0c9a151ffca294a62c88ca1eab0bfe3806"
+    },
+    {
+      "path": "summary-metrics.json",
+      "sha256": "1d1285c1d14cb5ca389ab0d048078247db4d4cd133be17a87dc3680dcffbd9d3"
+    },
+    {
+      "path": "session-start.json",
+      "sha256": "fe1ed9fab69a7d8dabb90237e950120e08940f1285d5de3e11ed835744404216"
+    },
+    {
+      "path": "session-summary.json",
+      "sha256": "f3181ad5d41bf885182692bed33e6b5bba769cda572e1d32d6f90685761d38c8"
+    },
+    {
+      "path": "source-snapshot-receipt-durable.json",
+      "sha256": "517b35dfed62e9068882854b9e6c18b296657b23291aed19fc36f880aca98ba0"
+    },
+    {
+      "path": "recovered-selected-source.tar.gz",
+      "sha256": "b499d74680b81b39522e16035f9ff26dc835f28095f8d6f21f8ce04d177bb4c9"
+    },
+    {
+      "path": "current-selected-source.tar.gz",
+      "sha256": "0c3fa84884a2d3566dfb4245ea34d3b023418f5c6ce1d40bb1c345af4a3c168e"
+    }
+  ],
+  "historical_build_receipt": "build-receipt.json",
+  "historical_build_receipt_sha256": "24757dbfe06f90d4b0cb5a671601a782f3d2b7bc6be449cb4657de93a5aa966c"
+}

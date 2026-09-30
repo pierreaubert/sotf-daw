@@ -1,0 +1,6 @@
+40fe7d740ba9bf8a07624924c0a1bffe1079c7ea3d8013af79fec532cc3f5f5b  /tmp/sotf-aud139-clap-allocation-fix-r3.log
+b9ecfa88ec81990e4e522be75d9bbbe26507217a7a9908e30da4835407636b7f  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs
+402e6d7be06a0650e1ffb569fe5ac80944d8336dea2849b91b407f6ae4d3e955  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih/src/params_scalar_getter_tests.rs
+75a3839ff3547a00152c2f74823d20357b7434a1701227ecaced00e81bbfe698  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih/src/plugin/native_dynamic_eq_clap_restart.rs
+f7d26feed0fdda8eecc60abd79cad483a25c361108736d1b8c4d1382e5c012d0  /home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih/src/params.rs
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  /home/pierre/src/all_of_sotf/sotf-daw/Cargo.lock

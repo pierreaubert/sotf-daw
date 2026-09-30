@@ -1,0 +1,7 @@
+{
+  "source": "crates/sotf-plugins/target/debug/deps/plugins_nih-f2e3f24304ec659a",
+  "copy": "crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test",
+  "sha256": "c2a37b0ab61c21f27287ab01e21276467976323f9f1caf873ef756fdf3010d87",
+  "source_mtime_ns": 1790760000514181464,
+  "scope": "Executable copied after failed r3 run for direct native debugger reproduction. No assertion of original compile-source completeness."
+}

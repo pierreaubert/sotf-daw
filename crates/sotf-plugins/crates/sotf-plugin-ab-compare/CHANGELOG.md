@@ -1,3 +1,10 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Drain finite same-rate, identity-frame child chains together with path-alignment and dry-delay buffers.
+- Validate drain admission and destination capacity before mutation; require reset after drain failures and reject unsupported recursive band-mask drain.
+
 # 0.5.6
 
 ## Fixes

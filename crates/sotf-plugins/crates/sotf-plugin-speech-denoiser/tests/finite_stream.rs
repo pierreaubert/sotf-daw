@@ -2,7 +2,11 @@
 
 // Rust guideline compliant 2026-02-21
 use sotf_host::{ParameterId, ParameterValue, ParametricInPlacePlugin, ProcessContext, TailLength};
-use sotf_plugin_speech_denoiser::{SpeechDenoiserPlugin, SpeechDenoiserPluginParams};
+use sotf_plugin_speech_denoiser::{
+    SpeechDenoiserData, SpeechDenoiserPlugin, SpeechDenoiserPluginParams,
+};
+use std::fs;
+use std::path::Path;
 
 const RATE: u32 = 48000;
 const DELAY: usize = 960;
@@ -352,19 +356,401 @@ fn rejected_calls_preserve_waveform_and_finite_eof_freezes_controls_until_reset(
 }
 
 #[test]
-fn enabled_wet_eof_retains_its_explicitly_unknown_unfrozen_policy() {
-    let mut plugin = configured(1, true);
-    process(&mut plugin, &[0.25; 479], &[137]);
-    let mut output = [1234.; QUANTUM];
-    let result = plugin
-        .drain(&mut output, &ProcessContext::new(RATE, 0))
-        .unwrap();
-    assert_eq!(result.frames, 0);
-    assert!(result.complete);
-    assert!(output.iter().all(|&x| x == 1234.));
-    assert_eq!(plugin.tail_length(), TailLength::Unknown);
-    assert_eq!(plugin.drain_call_bound().unwrap().get(), 1);
-    process(&mut plugin, &[0.1], &[1]);
-    enabled(&mut plugin, false);
-    assert_eq!(drain(&mut plugin, &[480]).len(), DELAY);
+fn enabled_partial_eof_preserves_accepted_program_and_terminal_state() {
+    for channels in [1, 2] {
+        let input = signal(3 * QUANTUM + 73, channels);
+        let more = signal(7, channels);
+        let mut plugin = configured(channels, true);
+        let mut reference = configured(channels, true);
+
+        // An empty EOF is complete without freezing the next accepted stream.
+        assert!(
+            plugin
+                .drain(&mut [], &ProcessContext::new(RATE, 0))
+                .unwrap()
+                .complete
+        );
+        let mut actual = process(&mut plugin, &input, &[1, 137, 479]);
+        let mut expected = process(&mut reference, &input, &[479, 1, 1024]);
+
+        // A rejected unfinished zero-capacity drain is transactional.
+        assert!(
+            plugin
+                .drain(&mut [], &ProcessContext::new(RATE, 0))
+                .is_err()
+        );
+        assert_eq!(plugin.drain_call_bound().unwrap().get(), 2);
+        actual.extend(process(&mut plugin, &more, &[1]));
+        expected.extend(process(&mut reference, &more, &[17]));
+
+        actual.extend(drain(&mut plugin, &[1, 137, QUANTUM]));
+        expected.extend(process(
+            &mut reference,
+            &vec![0.0; DELAY * channels],
+            &[QUANTUM],
+        ));
+        let omitted_suffix_peak = expected[input.len()..]
+            .iter()
+            .map(|sample| sample.abs())
+            .fold(0.0_f32, f32::max);
+        assert!(
+            omitted_suffix_peak > 1.0e-5,
+            "channels={channels}: omitted suffix is silent (peak={omitted_suffix_peak})"
+        );
+        assert_eq!(actual.len(), expected.len());
+        assert_eq!(actual, expected, "channels={channels}");
+        assert_eq!(plugin.tail_length(), TailLength::Unknown);
+        assert_eq!(plugin.drain_call_bound().unwrap().get(), 1);
+
+        let final_snapshot = *plugin
+            .get_data()
+            .unwrap()
+            .downcast::<SpeechDenoiserData>()
+            .unwrap();
+        assert!(final_snapshot.model_frames > 0);
+
+        // Zero-frame process and repeated complete drain are state-neutral.
+        let mut canary = vec![0.25; channels];
+        assert_eq!(
+            plugin
+                .process_in_place(&mut canary, &ProcessContext::new(RATE, 0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(canary, vec![0.25; channels]);
+        assert_eq!(
+            *plugin
+                .get_data()
+                .unwrap()
+                .downcast::<SpeechDenoiserData>()
+                .unwrap(),
+            final_snapshot
+        );
+        assert!(
+            plugin
+                .drain(&mut [], &ProcessContext::new(RATE, 0))
+                .unwrap()
+                .complete
+        );
+        assert_eq!(plugin.tail_length(), TailLength::Unknown);
+
+        let before = canary.clone();
+        assert!(
+            plugin
+                .process_in_place(&mut canary, &ProcessContext::new(RATE, 1))
+                .is_err()
+        );
+        assert_eq!(canary, before);
+        assert!(plugin
+            .parametric_set_parameter(
+                ParameterId::from("enabled"),
+                ParameterValue::Bool(false),
+            )
+            .is_err());
+
+        // Explicit reset restores a fresh process timeline and clears telemetry.
+        plugin.reset();
+        let reset_snapshot = *plugin
+            .get_data()
+            .unwrap()
+            .downcast::<SpeechDenoiserData>()
+            .unwrap();
+        assert_eq!(reset_snapshot, SpeechDenoiserData::default());
+        let mut fresh = configured(channels, true);
+        assert_eq!(
+            process(&mut plugin, &input, &[1, 137, 479]),
+            process(&mut fresh, &input, &[479, 1, 1024]),
+        );
+    }
+}
+
+#[test]
+fn enabled_eof_matches_zero_continuation_for_every_terminal_model_residue() {
+    for channels in [1, 2] {
+        let mut plugin = configured(channels, true);
+        let mut reference = configured(channels, true);
+        for residue in 1..=QUANTUM {
+            plugin.reset();
+            reference.reset();
+            let input = signal(2 * QUANTUM + residue, channels);
+            let mut actual = process(&mut plugin, &input, &[137, 1, 479]);
+            actual.extend(drain(&mut plugin, &[1, 17, 479, QUANTUM]));
+
+            let mut expected = process(&mut reference, &input, &[481, 17, 8193]);
+            expected.extend(process(
+                &mut reference,
+                &vec![0.0; DELAY * channels],
+                &[17, QUANTUM],
+            ));
+            assert_eq!(actual.len(), input.len() + DELAY * channels);
+            assert_eq!(actual, expected, "channels={channels}, residue={residue}");
+        }
+    }
+}
+
+#[test]
+fn enabled_eof_is_partition_invariant_for_mono_and_stereo() {
+    let partitions: &[&[usize]] = &[
+        &[1],
+        &[17],
+        &[137, 1, 479],
+        &[QUANTUM],
+        &[QUANTUM + 1],
+        &[8193],
+        &[1, 137, 4096],
+    ];
+    let drain_partitions: &[&[usize]] = &[&[1], &[17, 479], &[QUANTUM], &[1, 137, 479, 777]];
+
+    for channels in [1, 2] {
+        let input = signal(3 * QUANTUM + 73, channels);
+        for (index, actual_blocks) in partitions.iter().enumerate() {
+            let reference_blocks = partitions[partitions.len() - 1 - index];
+            let drain_blocks = drain_partitions[index % drain_partitions.len()];
+            let mut plugin = configured(channels, true);
+            let mut reference = configured(channels, true);
+
+            let mut actual = process(&mut plugin, &input, actual_blocks);
+            actual.extend(drain(&mut plugin, drain_blocks));
+            let mut expected = process(&mut reference, &input, reference_blocks);
+            expected.extend(process(
+                &mut reference,
+                &vec![0.0; DELAY * channels],
+                &[QUANTUM],
+            ));
+            assert_eq!(actual, expected, "channels={channels}, partition={index}");
+        }
+    }
+}
+
+#[test]
+fn enabled_eof_after_enable_transitions_matches_zero_continuation() {
+    for channels in [1, 2] {
+        let mut plugin = configured(channels, true);
+        let mut reference = configured(channels, true);
+        let mut actual = Vec::new();
+        let mut expected = Vec::new();
+
+        for (frames, block_pattern) in [(487, &[137, 1][..]), (31, &[17][..])] {
+            let input = signal(frames, channels);
+            actual.extend(process(&mut plugin, &input, block_pattern));
+            expected.extend(process(&mut reference, &input, &[479, 1]));
+        }
+        enabled(&mut plugin, false);
+        enabled(&mut reference, false);
+        let bypassed = signal(19, channels);
+        actual.extend(process(&mut plugin, &bypassed, &[1, 17]));
+        expected.extend(process(&mut reference, &bypassed, &[19]));
+        enabled(&mut plugin, true);
+        enabled(&mut reference, true);
+
+        let final_partial = signal(QUANTUM + 73, channels);
+        actual.extend(process(&mut plugin, &final_partial, &[1, 137, 479]));
+        expected.extend(process(&mut reference, &final_partial, &[480, 481]));
+        actual.extend(drain(&mut plugin, &[1, 479, QUANTUM]));
+        expected.extend(process(
+            &mut reference,
+            &vec![0.0; DELAY * channels],
+            &[137, 1, 479],
+        ));
+
+        assert_eq!(actual, expected, "channels={channels}");
+        assert_eq!(plugin.tail_length(), TailLength::Unknown);
+    }
+}
+
+#[test]
+fn enabled_eof_preflight_errors_do_not_consume_input_or_freeze_the_plugin() {
+    for channels in [1, 2] {
+        let mut plugin = configured(channels, true);
+        let mut reference = configured(channels, true);
+        let input = signal(2 * QUANTUM + 17, channels);
+        let mut actual = process(&mut plugin, &input, &[137, 1]);
+        let mut expected = process(&mut reference, &input, &[QUANTUM]);
+
+        let mut output = vec![1234.0; QUANTUM * channels];
+        assert!(
+            plugin
+                .drain(&mut output, &ProcessContext::new(44100, 0))
+                .is_err()
+        );
+        assert!(output.iter().all(|sample| *sample == 1234.0));
+        if channels == 2 {
+            assert!(
+                plugin
+                    .drain(
+                        &mut output[..QUANTUM * channels - 1],
+                        &ProcessContext::new(RATE, 0)
+                    )
+                    .is_err()
+            );
+            assert!(output.iter().all(|sample| *sample == 1234.0));
+        }
+        assert!(
+            plugin
+                .drain(&mut [], &ProcessContext::new(RATE, 0))
+                .is_err()
+        );
+        assert_eq!(plugin.drain_call_bound().unwrap().get(), 2);
+
+        let more = signal(23, channels);
+        actual.extend(process(&mut plugin, &more, &[1, 17]));
+        expected.extend(process(&mut reference, &more, &[23]));
+        actual.extend(drain(&mut plugin, &[QUANTUM]));
+        expected.extend(process(
+            &mut reference,
+            &vec![0.0; DELAY * channels],
+            &[QUANTUM],
+        ));
+        assert_eq!(actual, expected, "channels={channels}");
+    }
+}
+
+#[test]
+fn enabled_partial_eof_preserves_accepted_program_like_zero_continuation() {
+    let channels = 1;
+    let accepted_frames = 3 * QUANTUM + 73;
+    let input: Vec<f32> = (0..accepted_frames)
+        .map(|frame| {
+            let time = frame as f32 / RATE as f32;
+            let phase = 2.0 * std::f32::consts::PI * 180.0 * time;
+            0.23 * phase.sin() + 0.08 * (2.0 * phase).sin()
+        })
+        .collect();
+
+    let mut actual_plugin = configured(channels, true);
+    let mut reference_plugin = configured(channels, true);
+    let mut actual = process(&mut actual_plugin, &input, &[1, 137, 479]);
+    actual.extend(drain(&mut actual_plugin, &[1, 137, QUANTUM]));
+
+    let mut expected = process(&mut reference_plugin, &input, &[479, 1, 1024]);
+    expected.extend(process(
+        &mut reference_plugin,
+        &vec![0.0; DELAY * channels],
+        &[QUANTUM],
+    ));
+
+    let delayed_program_peak = expected[DELAY * channels..]
+        .iter()
+        .map(|sample| sample.abs())
+        .fold(0.0_f32, f32::max);
+    assert!(delayed_program_peak > 1.0e-5, "reference emitted silence");
+    let omitted_suffix_peak = expected[input.len()..]
+        .iter()
+        .map(|sample| sample.abs())
+        .fold(0.0_f32, f32::max);
+    assert!(
+        omitted_suffix_peak > 1.0e-5,
+        "omitted 960-frame suffix is silent (peak={omitted_suffix_peak})"
+    );
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "accepted frames were not drained"
+    );
+    assert_eq!(
+        actual, expected,
+        "drain differs from ordinary zero continuation"
+    );
+    assert_eq!(actual_plugin.tail_length(), TailLength::Unknown);
+}
+
+fn write_f32le(path: &Path, samples: &[f32]) {
+    let mut bytes = Vec::with_capacity(std::mem::size_of_val(samples));
+    for sample in samples {
+        bytes.extend_from_slice(&sample.to_le_bytes());
+    }
+    fs::write(path, bytes).unwrap();
+}
+
+fn read_f32le(path: &Path) -> Vec<f32> {
+    let bytes = fs::read(path).unwrap();
+    assert!(bytes.len().is_multiple_of(std::mem::size_of::<f32>()));
+    let (chunks, remainder) = bytes.as_chunks::<{ std::mem::size_of::<f32>() }>();
+    assert!(remainder.is_empty());
+    chunks
+        .iter()
+        .map(|chunk| f32::from_le_bytes(*chunk))
+        .collect()
+}
+
+#[test]
+#[ignore = "manual AUD136 pre-edit audio capture"]
+fn capture_aud136_pre_edit_audio_baselines() {
+    let output_dir = std::env::var_os("SOTF_AUDIT_ARTIFACT_DIR")
+        .map(std::path::PathBuf::from)
+        .expect("set SOTF_AUDIT_ARTIFACT_DIR to a target-local audit directory");
+    fs::create_dir_all(&output_dir).unwrap();
+
+    let accepted_frames = 3 * QUANTUM + 73;
+    let input: Vec<f32> = (0..accepted_frames)
+        .map(|frame| {
+            let time = frame as f32 / RATE as f32;
+            let phase = 2.0 * std::f32::consts::PI * 180.0 * time;
+            0.23 * phase.sin() + 0.08 * (2.0 * phase).sin()
+        })
+        .collect();
+    write_f32le(&output_dir.join("input_mono.f32le"), &input);
+
+    let mut enabled_plugin = configured(1, true);
+    let mut enabled_output = process(&mut enabled_plugin, &input, &[479, 1, 1024]);
+    enabled_output.extend(process(&mut enabled_plugin, &vec![0.0; DELAY], &[QUANTUM]));
+    assert_eq!(enabled_output.len(), input.len() + DELAY);
+    assert!(
+        enabled_output[input.len()..]
+            .iter()
+            .any(|sample| sample.abs() > 1.0e-5)
+    );
+    write_f32le(
+        &output_dir.join("enabled_ordinary_process_zero_continuation.f32le"),
+        &enabled_output,
+    );
+
+    let mut disabled_plugin = configured(1, false);
+    let mut disabled_output = process(&mut disabled_plugin, &input, &[479, 1, 1024]);
+    let disabled_tail = drain(&mut disabled_plugin, &[480]);
+    assert_eq!(disabled_tail.len(), DELAY);
+    disabled_output.extend(disabled_tail);
+    assert_eq!(disabled_output.len(), input.len() + DELAY);
+    write_f32le(
+        &output_dir.join("disabled_process_and_drain.f32le"),
+        &disabled_output,
+    );
+    fs::write(
+        output_dir.join("metadata.txt"),
+        format!(
+            "rate_hz={RATE}\nchannels=1\naccepted_frames={accepted_frames}\ncontinuation_frames={DELAY}\nformat=f32le_interleaved\n"
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+#[ignore = "manual AUD136 pre-edit enabled/disabled sample replay"]
+fn replay_aud136_pre_edit_audio_baselines_bit_exact() {
+    let baseline_dir = std::env::var_os("SOTF_AUDIT_BASELINE_DIR")
+        .map(std::path::PathBuf::from)
+        .expect("set SOTF_AUDIT_BASELINE_DIR to the preserved pre-edit audio directory");
+    let input = read_f32le(&baseline_dir.join("input_mono.f32le"));
+    let expected_enabled =
+        fs::read(baseline_dir.join("enabled_ordinary_process_zero_continuation.f32le")).unwrap();
+    let expected_disabled =
+        fs::read(baseline_dir.join("disabled_process_and_drain.f32le")).unwrap();
+
+    let mut enabled_plugin = configured(1, true);
+    let mut enabled_output = process(&mut enabled_plugin, &input, &[479, 1, 1024]);
+    enabled_output.extend(process(&mut enabled_plugin, &vec![0.0; DELAY], &[QUANTUM]));
+    let mut enabled_bytes = Vec::with_capacity(enabled_output.len() * 4);
+    for sample in enabled_output {
+        enabled_bytes.extend_from_slice(&sample.to_le_bytes());
+    }
+    assert_eq!(enabled_bytes, expected_enabled);
+
+    let mut disabled_plugin = configured(1, false);
+    let mut disabled_output = process(&mut disabled_plugin, &input, &[479, 1, 1024]);
+    disabled_output.extend(drain(&mut disabled_plugin, &[QUANTUM]));
+    let mut disabled_bytes = Vec::with_capacity(disabled_output.len() * 4);
+    for sample in disabled_output {
+        disabled_bytes.extend_from_slice(&sample.to_le_bytes());
+    }
+    assert_eq!(disabled_bytes, expected_disabled);
 }

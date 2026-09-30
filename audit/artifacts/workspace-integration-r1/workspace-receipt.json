@@ -1,0 +1,32 @@
+{
+  "command": [
+    "cargo",
+    "nextest",
+    "run",
+    "--offline",
+    "--locked",
+    "--workspace",
+    "--exclude",
+    "sotf-midi",
+    "--exclude",
+    "sotf-iamf",
+    "--no-fail-fast",
+    "--status-level",
+    "fail"
+  ],
+  "cwd": "/tmp/sotf-audit-integration-20260930-r1/sotf-daw",
+  "environment_overrides": {
+    "CARGO_TARGET_DIR": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target",
+    "TMPDIR": "/tmp",
+    "CARGO_NET_OFFLINE": "true",
+    "SOTF_FFI_SKIP_HEADER_SYNC": "1"
+  },
+  "started_unix": 1790747782.01209,
+  "ended_unix": 1790748135.0497038,
+  "exit_code": 100,
+  "log": "/tmp/sotf-audit-workspace-snapshot-r1.log",
+  "log_sha256": "c7071eb46cca7fb72936090483bb7cfade556fe07fcbfabe8dac3caac81a232b",
+  "source_manifest_sha256": "cbd58b06e6ce86c6173cb4053b9660d4fd96ca7e5471d1bd15c29741b92605ff",
+  "changed_source_paths": [],
+  "qualification": "Fixed DAW and patched math source copy; optional sibling streaming metadata resolves via symlink. No native feature, app UI or hardware execution claim."
+}

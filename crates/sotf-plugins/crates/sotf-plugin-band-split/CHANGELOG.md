@@ -1,3 +1,10 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add opt-in phase compensation for multiway LR24/LR48 splitting while preserving legacy behavior by default.
+- Carry compensation through saved state and native controls, with complete split/recombine waveform and lifecycle coverage.
+
 # 0.5.5
 
 ## Fixes (2026-08-12 review closure)

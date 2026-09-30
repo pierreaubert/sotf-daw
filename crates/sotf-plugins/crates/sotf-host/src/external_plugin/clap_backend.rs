@@ -1,4 +1,10 @@
-use super::native_backend::{NativeExternalPluginBackend, NativePluginMetadata};
+use super::external_plugin_state::{
+    NativeAmbisonicsTargetLayout, NativeBandSplitOutputLayout, NativePluginAudioSetup,
+};
+use super::native_backend::{
+    NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata,
+    native_parameter_id,
+};
 use super::plugin_descriptor::{PluginDescriptor, resolve_dynamic_library_path};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -11,8 +17,15 @@ use clap_sys::events::{
     clap_event_param_value, clap_event_transport,
 };
 use clap_sys::events::{clap_event_header, clap_input_events, clap_output_events};
+use clap_sys::ext::ambisonic::{
+    CLAP_AMBISONIC_NORMALIZATION_SN3D, CLAP_AMBISONIC_ORDERING_ACN, CLAP_EXT_AMBISONIC,
+    CLAP_PORT_AMBISONIC, clap_ambisonic_config, clap_plugin_ambisonic,
+};
 use clap_sys::ext::audio_ports::{
-    CLAP_EXT_AUDIO_PORTS, clap_audio_port_info, clap_plugin_audio_ports,
+    CLAP_AUDIO_PORT_IS_MAIN, CLAP_EXT_AUDIO_PORTS, clap_audio_port_info, clap_plugin_audio_ports,
+};
+use clap_sys::ext::audio_ports_config::{
+    CLAP_EXT_AUDIO_PORTS_CONFIG, clap_audio_ports_config, clap_plugin_audio_ports_config,
 };
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_plugin_latency};
 use clap_sys::ext::params::{
@@ -20,9 +33,12 @@ use clap_sys::ext::params::{
     clap_param_info, clap_plugin_params,
 };
 use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
+use clap_sys::ext::surround::{CLAP_EXT_SURROUND, CLAP_PORT_SURROUND, clap_plugin_surround};
+use clap_sys::ext::tail::{CLAP_EXT_TAIL, clap_plugin_tail};
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
 use clap_sys::fixedpoint::{CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR};
 use clap_sys::host::clap_host;
+use clap_sys::id::CLAP_INVALID_ID;
 use clap_sys::plugin::{clap_plugin, clap_plugin_descriptor};
 use clap_sys::process::{CLAP_PROCESS_ERROR, clap_process};
 use clap_sys::stream::{clap_istream, clap_ostream};
@@ -188,6 +204,8 @@ pub(super) struct ClapBackend {
     pending_parameter_events: Vec<clap_event_param_value>,
     automation_events: Vec<clap_event_param_value>,
     midi_events: Vec<clap_event_midi>,
+    sample_rate: f64,
+    is_instrument: bool,
     max_block_frames: usize,
     steady_time: i64,
     active: bool,
@@ -250,6 +268,7 @@ impl ClapBackend {
         descriptor: &PluginDescriptor,
         sample_rate: u32,
         max_block_frames: usize,
+        audio_setup: Option<&NativePluginAudioSetup>,
     ) -> Result<Self, String> {
         let library_path = resolve_dynamic_library_path(descriptor)?;
         let library = ClapLibrary::load(&library_path)?;
@@ -320,6 +339,7 @@ impl ClapBackend {
                 descriptor,
                 sample_rate,
                 max_block_frames,
+                audio_setup,
                 &mut lifecycle,
             )?
         };
@@ -346,6 +366,8 @@ impl ClapBackend {
             pending_parameter_events: Vec::with_capacity(pending_event_capacity),
             automation_events: Vec::with_capacity(1024),
             midi_events: Vec::with_capacity(1024),
+            sample_rate: f64::from(sample_rate),
+            is_instrument: descriptor.is_instrument,
             max_block_frames,
             steady_time: 0,
             active: true,
@@ -362,6 +384,7 @@ impl ClapBackend {
         requested: &PluginDescriptor,
         sample_rate: u32,
         max_block_frames: usize,
+        audio_setup: Option<&NativePluginAudioSetup>,
         lifecycle: &mut ClapLifecycleGuard,
     ) -> Result<(usize, usize), String> {
         // SAFETY: The caller guarantees `plugin` came from the live CLAP
@@ -377,7 +400,11 @@ impl ClapBackend {
                     metadata.name
                 ));
             }
-            let channels = query_audio_channels(plugin, requested, metadata)?;
+            if let Some(setup) = audio_setup {
+                select_audio_setup(plugin, setup, metadata)?;
+            }
+            let channels =
+                query_audio_channels(plugin, requested.is_instrument, metadata, audio_setup)?;
             let activate = (*plugin).activate.ok_or_else(|| {
                 format!("CLAP plugin '{}' has no activate callback", metadata.name)
             })?;
@@ -456,6 +483,18 @@ impl NativeExternalPluginBackend for ClapBackend {
         &self.metadata
     }
 
+    fn reset(&mut self) -> Result<(), String> {
+        // CLAP reset is called on the processing thread while the plugin is
+        // active; this backend is exclusively owned by the worker.
+        unsafe {
+            let reset = (*self.plugin).reset.ok_or_else(|| {
+                format!("CLAP plugin '{}' has no reset callback", self.metadata.name)
+            })?;
+            reset(self.plugin);
+        }
+        Ok(())
+    }
+
     fn parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
     }
@@ -521,6 +560,186 @@ impl NativeExternalPluginBackend for ClapBackend {
             get(self.plugin, binding.clap_id, &mut value)
                 .then(|| parameter_value_from_f64(binding.kind, value))
         }
+    }
+
+    fn ambisonics_layout_parameters(&self) -> Result<Option<(i32, i32)>, String> {
+        let order_index =
+            read_hidden_clap_integer_parameter(self.plugin, &self.metadata.name, "order", 6)?;
+        let target_layout = read_hidden_clap_integer_parameter(
+            self.plugin,
+            &self.metadata.name,
+            "target_layout",
+            7,
+        )?;
+
+        // NIH-plug exposes stepped CLAP values as zero-based step indices.
+        Ok(Some((order_index + 1, target_layout)))
+    }
+
+    fn ambisonics_controls(&self) -> Result<Option<NativeAmbisonicsControls>, String> {
+        if self.metadata.id != "org.spinorama.sotf.ambisonics" {
+            return Ok(None);
+        }
+        let max_re_weighting = read_hidden_clap_integer_parameter(
+            self.plugin,
+            &self.metadata.name,
+            "max_re_weighting",
+            1,
+        )? != 0;
+        let dual_band =
+            read_hidden_clap_integer_parameter(self.plugin, &self.metadata.name, "dual_band", 1)?
+                != 0;
+        let algorithm =
+            read_hidden_clap_integer_parameter(self.plugin, &self.metadata.name, "algorithm", 1)?;
+        Ok(Some(NativeAmbisonicsControls {
+            max_re_weighting,
+            dual_band,
+            algorithm,
+        }))
+    }
+
+    fn band_split_layout_parameters(
+        &self,
+    ) -> Result<Option<(i32, NativeBandSplitOutputLayout)>, String> {
+        if self.metadata.id != "org.spinorama.sotf.band-split" {
+            return Ok(None);
+        }
+        let band_index =
+            read_hidden_clap_integer_parameter(self.plugin, &self.metadata.name, "num_bands", 2)?;
+        Ok(Some((
+            band_index + 2,
+            NativeBandSplitOutputLayout::ClapPacked,
+        )))
+    }
+
+    fn reconfigure_ambisonics_audio_setup(
+        &mut self,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        let recognized = match setup {
+            NativePluginAudioSetup::Ambisonics { .. } => {
+                self.metadata.id == "org.spinorama.sotf.ambisonics"
+            }
+            NativePluginAudioSetup::BandSplit { .. } => {
+                self.metadata.id == "org.spinorama.sotf.band-split"
+            }
+        };
+        if !recognized {
+            return Err(format!(
+                "CLAP plugin '{}' does not match the requested recognized native audio setup",
+                self.metadata.name
+            ));
+        }
+        let (input_channels, output_channels) = setup.channel_counts()?;
+        if self.processing {
+            // SAFETY: The candidate was created and lifecycle callbacks were
+            // validated before this backend took ownership.
+            let stop = unsafe { (*self.plugin).stop_processing }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no stop_processing callback for layout change",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: This is the required lifecycle callback on the unique
+            // candidate instance; the plugin pointer remains live.
+            unsafe { stop(self.plugin) };
+            self.processing = false;
+        }
+        if self.active {
+            // SAFETY: The candidate's plugin vtable remains live and owns the
+            // lifecycle callback for this instance.
+            let deactivate = unsafe { (*self.plugin).deactivate }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no deactivate callback for layout change",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: Processing has stopped and the candidate is exclusively
+            // owned on this control thread.
+            unsafe { deactivate(self.plugin) };
+            self.active = false;
+        }
+
+        // SAFETY: The candidate has been deactivated and CLAP permits audio
+        // port configuration selection in this lifecycle state.
+        unsafe { select_audio_setup(self.plugin, setup, &self.metadata)? };
+        // SAFETY: The plugin is initialized, deactivated, and owns its port
+        // extension table for this synchronous control-thread query.
+        let channels = unsafe {
+            query_audio_channels(self.plugin, self.is_instrument, &self.metadata, Some(setup))?
+        };
+        if channels != (input_channels, output_channels) {
+            return Err(format!(
+                "CLAP Ambisonics configuration negotiated {}→{} channels, expected {input_channels}→{output_channels}",
+                channels.0, channels.1
+            ));
+        }
+        // SAFETY: Querying parameter metadata is synchronous and uses the
+        // candidate's live extension after the new configuration was selected.
+        let (parameters, parameter_bindings) =
+            unsafe { query_parameters(self.plugin, &self.metadata)? };
+
+        // SAFETY: The candidate is initialized and deactivated; its activation
+        // callback and library remain owned by this backend.
+        let activate = unsafe { (*self.plugin).activate }.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' has no activate callback for layout change",
+                self.metadata.name
+            )
+        })?;
+        // SAFETY: Activation parameters retain the original sample rate and
+        // preallocated maximum block contract.
+        if !unsafe {
+            activate(
+                self.plugin,
+                self.sample_rate,
+                1,
+                self.max_block_frames as u32,
+            )
+        } {
+            return Err(format!(
+                "CLAP plugin '{}' refused activation after native audio setup change",
+                self.metadata.name
+            ));
+        }
+        self.active = true;
+        // SAFETY: The plugin has successfully activated and owns this callback.
+        let start = unsafe { (*self.plugin).start_processing }.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' has no start_processing callback after layout change",
+                self.metadata.name
+            )
+        })?;
+        // SAFETY: The plugin is active and the host exclusively owns it.
+        if !unsafe { start(self.plugin) } {
+            return Err(format!(
+                "CLAP plugin '{}' refused to start after native audio setup change",
+                self.metadata.name
+            ));
+        }
+        self.processing = true;
+
+        self.metadata.input_channels = input_channels;
+        self.metadata.output_channels = output_channels;
+        self.input_storage
+            .resize(input_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.output_storage
+            .resize(output_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.parameters = parameters;
+        self.parameter_bindings = parameter_bindings;
+        self.pending_parameter_events.reserve(self.parameters.len());
+        self.rebuild_channel_pointers();
+        Ok(())
+    }
+
+    fn reconfigure_band_split_audio_setup(
+        &mut self,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        if !matches!(setup, NativePluginAudioSetup::BandSplit { .. }) {
+            return Err("CLAP BandSplit reconfiguration received a non-BandSplit setup".into());
+        }
+        self.reconfigure_ambisonics_audio_setup(setup)
     }
 
     fn process(
@@ -799,6 +1018,129 @@ impl NativeExternalPluginBackend for ClapBackend {
                 .unwrap_or(0)
         }
     }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // CLAP process receives one explicit frame count and writes the same
+        // count into the host-owned output buffers; this wrapper validates it.
+        true
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        // SAFETY: The extension pointer and plugin remain owned by this live
+        // backend. CLAP defines every value >= INT32_MAX as an infinite tail.
+        unsafe {
+            plugin_extension::<clap_plugin_tail>(self.plugin, CLAP_EXT_TAIL)
+                .and_then(|tail| (*tail).get)
+                .map(|get| map_clap_tail_length(get(self.plugin)))
+                .unwrap_or(crate::plugin::TailLength::Unknown)
+        }
+    }
+}
+
+fn map_clap_tail_length(frames: u32) -> crate::plugin::TailLength {
+    if frames >= i32::MAX as u32 {
+        crate::plugin::TailLength::Infinite
+    } else {
+        crate::plugin::TailLength::Finite(u64::from(frames))
+    }
+}
+
+#[cfg(test)]
+mod tail_length_tests {
+    use super::map_clap_tail_length;
+    use crate::plugin::TailLength;
+
+    #[test]
+    fn clap_infinite_tail_threshold_is_signed_int32_max() {
+        assert_eq!(
+            map_clap_tail_length(0x7fff_fffe),
+            TailLength::Finite(0x7fff_fffe)
+        );
+        assert_eq!(map_clap_tail_length(0x7fff_ffff), TailLength::Infinite);
+        assert_eq!(map_clap_tail_length(0x8000_0000), TailLength::Infinite);
+        assert_eq!(map_clap_tail_length(u32::MAX), TailLength::Infinite);
+    }
+}
+
+fn read_hidden_clap_integer_parameter(
+    plugin: *const clap_plugin,
+    plugin_name: &str,
+    parameter_key: &str,
+    maximum_step: i32,
+) -> Result<i32, String> {
+    let parameter_id = native_parameter_id(parameter_key);
+
+    // SAFETY: This reads the initialized instance's parameter metadata and
+    // value synchronously. The callbacks and plugin pointer remain owned by
+    // `ClapBackend` for the duration of the query.
+    unsafe {
+        let params = plugin_extension::<clap_plugin_params>(plugin, CLAP_EXT_PARAMS)
+            .ok_or_else(|| format!("CLAP plugin '{plugin_name}' has no params extension"))?;
+        let count =
+            (*params).count.ok_or_else(|| {
+                format!("CLAP plugin '{plugin_name}' has no params count callback")
+            })?(plugin);
+        if count > MAX_EXPOSED_PARAMETERS {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' reported invalid parameter count {count}"
+            ));
+        }
+        let get_info = (*params).get_info.ok_or_else(|| {
+            format!("CLAP plugin '{plugin_name}' has no params metadata callback")
+        })?;
+        let get_value = (*params)
+            .get_value
+            .ok_or_else(|| format!("CLAP plugin '{plugin_name}' has no params value callback"))?;
+
+        let mut matching_info = None;
+        for index in 0..count {
+            let mut info = std::mem::MaybeUninit::<clap_param_info>::zeroed();
+            if !get_info(plugin, index, info.as_mut_ptr()) {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' failed to describe parameter {index}"
+                ));
+            }
+            let info = info.assume_init();
+            if info.id != parameter_id {
+                continue;
+            }
+            if matching_info.is_some() {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' reports duplicate structural parameter id {parameter_id}"
+                ));
+            }
+            let required_flags =
+                CLAP_PARAM_IS_HIDDEN | CLAP_PARAM_IS_READONLY | CLAP_PARAM_IS_STEPPED;
+            if info.flags & required_flags != required_flags
+                || info.min_value != 0.0
+                || info.max_value != f64::from(maximum_step)
+            {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' structural parameter '{parameter_key}' has incompatible metadata"
+                ));
+            }
+            matching_info = Some(info);
+        }
+        if matching_info.is_none() {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' is missing structural parameter '{parameter_key}'"
+            ));
+        }
+
+        let mut value = 0.0;
+        if !get_value(plugin, parameter_id, &mut value) || !value.is_finite() {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' could not read structural parameter '{parameter_key}'"
+            ));
+        }
+        let rounded = value.round();
+        if (value - rounded).abs() > 1.0e-6 || rounded < 0.0 || rounded > f64::from(maximum_step) {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' structural parameter '{parameter_key}' has invalid value {value}"
+            ));
+        }
+        Ok(rounded as i32)
+    }
 }
 
 impl Drop for ClapBackend {
@@ -900,8 +1242,9 @@ unsafe fn descriptor_metadata(
 
 unsafe fn query_audio_channels(
     plugin: *const clap_plugin,
-    requested: &PluginDescriptor,
+    is_instrument: bool,
     metadata: &NativePluginMetadata,
+    audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<(usize, usize), String> {
     // SAFETY: Plugin is initialized and extension data is plugin-owned.
     unsafe {
@@ -934,14 +1277,289 @@ unsafe fn query_audio_channels(
                 metadata.name
             ));
         }
-        if requested.is_instrument != (input_channels == 0) {
+        if is_instrument != (input_channels == 0) {
             return Err(format!(
                 "CLAP plugin '{}' descriptor instrument flag conflicts with its {} input channels",
                 metadata.name, input_channels
             ));
         }
+        if let Some(NativePluginAudioSetup::Ambisonics {
+            order,
+            target_layout,
+        }) = audio_setup
+        {
+            let (expected_input, expected_output) = NativePluginAudioSetup::Ambisonics {
+                order: *order,
+                target_layout: *target_layout,
+            }
+            .channel_counts()?;
+            if input_count != 1
+                || output_count != 1
+                || input_channels != expected_input
+                || output_channels != expected_output
+            {
+                return Err(format!(
+                    "CLAP Ambisonics configuration negotiated {input_channels}→{output_channels} channels across {input_count}→{output_count} ports; expected {expected_input}→{expected_output} on one main port per direction",
+                ));
+            }
+            validate_ambisonics_ports(plugin, ports, metadata, *order, *target_layout)?;
+        }
+        if let Some(NativePluginAudioSetup::BandSplit {
+            num_bands,
+            output_layout: NativeBandSplitOutputLayout::ClapPacked,
+        }) = audio_setup
+        {
+            let expected_output = usize::from(*num_bands) * 2;
+            if input_count != 1
+                || output_count != 1
+                || input_channels != 2
+                || output_channels != expected_output
+            {
+                return Err(format!(
+                    "CLAP BandSplit configuration negotiated {input_channels}→{output_channels} channels across {input_count}→{output_count} ports; expected 2→{expected_output} on one main port per direction"
+                ));
+            }
+        }
         Ok((input_channels, output_channels))
     }
+}
+
+unsafe fn select_audio_setup(
+    plugin: *const clap_plugin,
+    setup: &NativePluginAudioSetup,
+    metadata: &NativePluginMetadata,
+) -> Result<(), String> {
+    let (config_id, expected_input, expected_output, expected_port_type) = match setup {
+        NativePluginAudioSetup::Ambisonics {
+            order,
+            target_layout,
+        } => {
+            let target = target_layout.clap_configuration_target().ok_or_else(|| {
+                "CLAP standard surround does not represent the selected wide target".to_string()
+            })?;
+            let config_id = u32::from(order.saturating_sub(1))
+                .checked_mul(6)
+                .and_then(|base| base.checked_add(target))
+                .ok_or_else(|| "CLAP Ambisonics configuration id overflowed".to_string())?;
+            (
+                config_id,
+                (usize::from(*order) + 1).pow(2),
+                target_layout.output_channels(),
+                Some((CLAP_PORT_AMBISONIC, CLAP_PORT_SURROUND)),
+            )
+        }
+        NativePluginAudioSetup::BandSplit {
+            num_bands,
+            output_layout: NativeBandSplitOutputLayout::ClapPacked,
+        } => (
+            u32::from(*num_bands - 2),
+            2,
+            usize::from(*num_bands) * 2,
+            None,
+        ),
+        NativePluginAudioSetup::BandSplit { .. } => {
+            return Err("CLAP BandSplit setup requires its packed main-port layout".into());
+        }
+    };
+
+    // SAFETY: The plugin was initialized and has not been activated. CLAP
+    // audio-port configurations are selected only in that lifecycle state.
+    unsafe {
+        let configs =
+            plugin_extension::<clap_plugin_audio_ports_config>(plugin, CLAP_EXT_AUDIO_PORTS_CONFIG)
+                .ok_or_else(|| {
+                    format!(
+                        "CLAP native-layout plugin '{}' has no audio-ports-config extension",
+                        metadata.name
+                    )
+                })?;
+        let count = (*configs).count.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no count callback",
+                metadata.name
+            )
+        })?(plugin);
+        let get = (*configs).get.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no get callback",
+                metadata.name
+            )
+        })?;
+        let select = (*configs).select.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no select callback",
+                metadata.name
+            )
+        })?;
+        if config_id >= count {
+            return Err(format!(
+                "CLAP native-layout plugin '{}' does not expose configuration {config_id}",
+                metadata.name,
+            ));
+        }
+        let mut info = std::mem::MaybeUninit::<clap_audio_ports_config>::zeroed();
+        if !get(plugin, config_id, info.as_mut_ptr()) {
+            return Err(format!(
+                "CLAP native-layout plugin '{}' failed to describe configuration {config_id}",
+                metadata.name
+            ));
+        }
+        let info = info.assume_init();
+        if info.id != config_id
+            || !info.has_main_input
+            || !info.has_main_output
+            || info.input_port_count != 1
+            || info.output_port_count != 1
+            || info.main_input_channel_count as usize != expected_input
+            || info.main_output_channel_count as usize != expected_output
+            || expected_port_type.is_some_and(|(input_type, output_type)| {
+                !c_string_matches(info.main_input_port_type, input_type)
+                    || !c_string_matches(info.main_output_port_type, output_type)
+            })
+        {
+            return Err(format!(
+                "CLAP plugin '{}' configuration {config_id} does not match the requested single-main-port layout {expected_input}→{expected_output}",
+                metadata.name
+            ));
+        }
+        if !select(plugin, config_id) {
+            return Err(format!(
+                "CLAP plugin '{}' refused configuration {config_id}",
+                metadata.name
+            ));
+        }
+        Ok(())
+    }
+}
+
+unsafe fn validate_ambisonics_ports(
+    plugin: *const clap_plugin,
+    ports: *const clap_plugin_audio_ports,
+    metadata: &NativePluginMetadata,
+    order: u8,
+    target_layout: NativeAmbisonicsTargetLayout,
+) -> Result<(), String> {
+    // SAFETY: The plugin has selected its configuration, is initialized, and
+    // is not activated. Port/config extension tables remain plugin-owned.
+    unsafe {
+        let get = (*ports).get.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports extension has no get callback",
+                metadata.name
+            )
+        })?;
+        let mut input_info = std::mem::MaybeUninit::<clap_audio_port_info>::zeroed();
+        let mut output_info = std::mem::MaybeUninit::<clap_audio_port_info>::zeroed();
+        if !get(plugin, 0, true, input_info.as_mut_ptr())
+            || !get(plugin, 0, false, output_info.as_mut_ptr())
+        {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' failed to describe its selected main ports",
+                metadata.name
+            ));
+        }
+        let input_info = input_info.assume_init();
+        let output_info = output_info.assume_init();
+        if input_info.flags & CLAP_AUDIO_PORT_IS_MAIN == 0
+            || output_info.flags & CLAP_AUDIO_PORT_IS_MAIN == 0
+            || input_info.in_place_pair != CLAP_INVALID_ID
+            || output_info.in_place_pair != CLAP_INVALID_ID
+            || !c_string_matches(input_info.port_type, CLAP_PORT_AMBISONIC)
+            || !c_string_matches(output_info.port_type, CLAP_PORT_SURROUND)
+        {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' selected ports are not one unaliased ACN main input and surround main output",
+                metadata.name
+            ));
+        }
+
+        let ambisonic = plugin_extension::<clap_plugin_ambisonic>(plugin, CLAP_EXT_AMBISONIC)
+            .ok_or_else(|| {
+                format!(
+                    "CLAP Ambisonics plugin '{}' has no ambisonic metadata extension",
+                    metadata.name
+                )
+            })?;
+        let is_supported = (*ambisonic).is_config_supported.ok_or_else(|| {
+            format!(
+                "CLAP Ambisonics plugin '{}' has no ambisonic config support callback",
+                metadata.name
+            )
+        })?;
+        let get_config = (*ambisonic).get_config.ok_or_else(|| {
+            format!(
+                "CLAP Ambisonics plugin '{}' has no ambisonic config query callback",
+                metadata.name
+            )
+        })?;
+        let requested = clap_ambisonic_config {
+            ordering: CLAP_AMBISONIC_ORDERING_ACN,
+            normalization: CLAP_AMBISONIC_NORMALIZATION_SN3D,
+        };
+        if !is_supported(plugin, &requested) {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' does not support ACN/SN3D input",
+                metadata.name
+            ));
+        }
+        let mut actual = std::mem::MaybeUninit::<clap_ambisonic_config>::zeroed();
+        if !get_config(plugin, true, 0, actual.as_mut_ptr()) {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' failed to report input ordering and normalization",
+                metadata.name
+            ));
+        }
+        let actual = actual.assume_init();
+        if actual.ordering != CLAP_AMBISONIC_ORDERING_ACN
+            || actual.normalization != CLAP_AMBISONIC_NORMALIZATION_SN3D
+        {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' reports input ordering/normalization {}/{}, expected ACN/SN3D for order {order}",
+                metadata.name, actual.ordering, actual.normalization
+            ));
+        }
+
+        let surround = plugin_extension::<clap_plugin_surround>(plugin, CLAP_EXT_SURROUND)
+            .ok_or_else(|| {
+                format!(
+                    "CLAP Ambisonics plugin '{}' has no surround metadata extension",
+                    metadata.name
+                )
+            })?;
+        let get_channel_map = (*surround).get_channel_map.ok_or_else(|| {
+            format!(
+                "CLAP Ambisonics plugin '{}' has no surround channel-map callback",
+                metadata.name
+            )
+        })?;
+        let expected_map = target_layout.clap_channel_map().ok_or_else(|| {
+            "CLAP standard surround does not represent the selected wide target".to_string()
+        })?;
+        let mut actual_map = vec![0u8; expected_map.len()];
+        let map_len = get_channel_map(
+            plugin,
+            false,
+            0,
+            actual_map.as_mut_ptr(),
+            u32::try_from(actual_map.len()).unwrap_or(u32::MAX),
+        );
+        if map_len as usize != expected_map.len() || actual_map.as_slice() != expected_map {
+            return Err(format!(
+                "CLAP Ambisonics plugin '{}' surround map {actual_map:?} does not match requested target {target_layout:?} map {expected_map:?}",
+                metadata.name
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn c_string_matches(pointer: *const c_char, expected: &CStr) -> bool {
+    if pointer.is_null() {
+        return false;
+    }
+    // SAFETY: CLAP port type values are NUL-terminated static strings owned by
+    // the plugin for the lifetime of the instance.
+    unsafe { CStr::from_ptr(pointer) == expected }
 }
 
 unsafe fn query_parameters(

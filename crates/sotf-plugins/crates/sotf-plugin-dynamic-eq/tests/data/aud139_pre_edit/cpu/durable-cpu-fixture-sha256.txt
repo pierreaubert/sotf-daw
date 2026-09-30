@@ -1,0 +1,7 @@
+7e48711da3adf514e91d2433180886308ad7607bfbd9be8d9337a9f3a1b4714a  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/benchmark-source-pre-edit.rs
+1823ca88f7943dcb04c6df2a002b31e8fcf729120fffd2f5e5eaa64ceca907fc  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/cargo-lock.sha256
+1c69c7cb22b6366667a3375931c62d46f7316ea4a28c314587c5e4b3cdd44930  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/end-source-hashes.sha256
+d8acb1fbbdd7424838daff681f4f09ddc0effe9ac713fb9725ca74acbe2c8d37  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/host-lscpu.txt
+7b52d2aafd55ba38dc643a1daf36bf526bb46a4d33f2e8715c383c20d0385591  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/release-pre-edit.txt
+778fbc643a806f0dd123c056e66201d7e8a56a61928ec0a33171be8d6c2d5a37  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/rustc-vv.txt
+1c69c7cb22b6366667a3375931c62d46f7316ea4a28c314587c5e4b3cdd44930  crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/data/aud139_pre_edit/cpu/start-source-hashes.sha256

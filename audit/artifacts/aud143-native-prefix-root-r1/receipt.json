@@ -1,0 +1,40 @@
+{
+  "scope": "Native output-prefix correction after the fixed-source workspace failure; three-file review slice only, not a complete dependency snapshot or larger loaded-host acceptance",
+  "before_source_snapshot": "/tmp/sotf-audit-integration-20260930-r1/sotf-daw",
+  "before_whole_snapshot_manifest": "cbd58b06e6ce86c6173cb4053b9660d4fd96ca7e5471d1bd15c29741b92605ff",
+  "after_source_sha256": {
+    "crates/3rdparties/nih-plug/src/wrapper/clap/wrapper.rs": "485f1449647f5c613b3e4fda622b5c8c57624861f6e1609a3bf686d0b1887592",
+    "crates/3rdparties/nih-plug/src/wrapper/vst3/wrapper.rs": "cc2ad7dfccb110d2e5d61d90740278e96db49e8d7f34f9a68926d9d1ead0bb88",
+    "crates/sotf-plugins/crates/plugins-nih/tests/native_aux_output.rs": "a30823146327c39597533410a563f92ecfc4f9c109565210d5bb3314c793bff3"
+  },
+  "cargo_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "gates": [
+    {
+      "command": "cargo test --offline --locked -p plugins-nih --test native_aux_output -- --nocapture",
+      "log": "prefix-expanded.log",
+      "exit_code": 0,
+      "passed": 2
+    },
+    {
+      "command": "cargo test --offline --locked -p plugins-nih --lib bandsplit -- --nocapture",
+      "log": "bandsplit-mask.log",
+      "exit_code": 0,
+      "passed": 9
+    },
+    {
+      "command": "cargo test --offline --locked -p plugins-nih --lib --tests",
+      "log": "nih-lib-tests.log",
+      "exit_code": 0,
+      "lib_passed": 111,
+      "lib_ignored": 1,
+      "integration_passed": 2
+    },
+    {
+      "command": "cargo clippy --offline --locked -p plugins-nih --all-targets -- -D warnings",
+      "log": "nih-clippy.log",
+      "exit_code": 0
+    }
+  ],
+  "execution": "Owner-reported terminal exits; root inspected each saved log. Owner used shared Cargo flock, explicit warm CARGO_TARGET_DIR and TMPDIR=/tmp.",
+  "qualification": "No full pre/post manifest was captured for all dependencies during these gates. Current selected file hashes match owner-reported values and remained unchanged during this archive copy."
+}

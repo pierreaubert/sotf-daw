@@ -1,0 +1,1023 @@
+{
+  "scope": "Independent re-calculation of persisted Criterion medians and raw sample CV. No independent timing run, WCET guarantee, or Astra acceptance.",
+  "counts": {
+    "paired_legacy": 31,
+    "new": 64,
+    "new_groups": {
+      "crossover_new_iir_interleaved_blocks": 48,
+      "crossover_new_iir_setup": 16
+    }
+  },
+  "paired": [
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_511taps/2048",
+      "current_over_archived": 1.0027585112208834,
+      "archived": {
+        "median_ns": 1590767.1343434344,
+        "raw_cv_pct": 0.23313258583,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 1595155.2833333332,
+        "raw_cv_pct": 0.3485422701792654,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_511taps/32",
+      "current_over_archived": 1.0028018142924704,
+      "archived": {
+        "median_ns": 24824.544779693486,
+        "raw_cv_pct": 0.7547994404112139,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 24894.0985440613,
+        "raw_cv_pct": 0.20391130080853406,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_511taps/512",
+      "current_over_archived": 0.9960797001313985,
+      "archived": {
+        "median_ns": 398022.17803030304,
+        "raw_cv_pct": 0.35989786513210503,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 396461.81173807033,
+        "raw_cv_pct": 0.28419644432272895,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_63taps/2048",
+      "current_over_archived": 1.0057295638670785,
+      "archived": {
+        "median_ns": 207419.59670908592,
+        "raw_cv_pct": 0.24457931185605403,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 208608.02053571428,
+        "raw_cv_pct": 0.2399518753343748,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_63taps/32",
+      "current_over_archived": 1.0157361520514177,
+      "archived": {
+        "median_ns": 3233.631948739092,
+        "raw_cv_pct": 0.18028753782344506,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 3284.5168727627724,
+        "raw_cv_pct": 6.825931994127863,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_2band_63taps/512",
+      "current_over_archived": 1.012876116507775,
+      "archived": {
+        "median_ns": 51778.334457671954,
+        "raw_cv_pct": 0.42128650436076753,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 52445.03832472748,
+        "raw_cv_pct": 0.5448290425876378,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_511taps/2048",
+      "current_over_archived": 1.0009482613730407,
+      "archived": {
+        "median_ns": 4830911.388888889,
+        "raw_cv_pct": 0.19179126594750218,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 4835492.355555555,
+        "raw_cv_pct": 0.2102797884095645,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_511taps/32",
+      "current_over_archived": 0.9938607943763493,
+      "archived": {
+        "median_ns": 75480.47683189655,
+        "raw_cv_pct": 13.286803316534431,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 75017.08666405434,
+        "raw_cv_pct": 0.09269453444892445,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_511taps/512",
+      "current_over_archived": 0.9960476951071691,
+      "archived": {
+        "median_ns": 1207853.1597222222,
+        "raw_cv_pct": 0.23642593458654343,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 1203079.3557692308,
+        "raw_cv_pct": 0.6504764820538523,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_63taps/2048",
+      "current_over_archived": 0.991163116567526,
+      "archived": {
+        "median_ns": 670681.6822751323,
+        "raw_cv_pct": 0.6071981693836007,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 664754.9464285714,
+        "raw_cv_pct": 0.5184077841630221,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_63taps/32",
+      "current_over_archived": 0.9930818615040004,
+      "archived": {
+        "median_ns": 10536.354975728154,
+        "raw_cv_pct": 0.36418516176729554,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 10463.463012763052,
+        "raw_cv_pct": 0.23286356423983084,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_fir_interleaved_blocks/2ch_4band_63taps/512",
+      "current_over_archived": 0.9651604279372605,
+      "archived": {
+        "median_ns": 172219.38540505388,
+        "raw_cv_pct": 0.6689457211653896,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 166219.3357166338,
+        "raw_cv_pct": 0.7279637960609616,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_2band_both/2048",
+      "current_over_archived": 1.015389385256761,
+      "archived": {
+        "median_ns": 29331.84799437016,
+        "raw_cv_pct": 0.23750827320121753,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 29783.247103448277,
+        "raw_cv_pct": 0.24743146296734955,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_2band_both/32",
+      "current_over_archived": 1.0325586385987158,
+      "archived": {
+        "median_ns": 478.352438058457,
+        "raw_cv_pct": 0.787687448587727,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 493.92694221201685,
+        "raw_cv_pct": 0.5674862526466382,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_2band_both/512",
+      "current_over_archived": 1.0096676464543133,
+      "archived": {
+        "median_ns": 7345.352555992584,
+        "raw_cv_pct": 3.51870869895561,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 7416.364827586207,
+        "raw_cv_pct": 0.1314855927673596,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_4band_both/2048",
+      "current_over_archived": 0.937759636753193,
+      "archived": {
+        "median_ns": 556080.3229166667,
+        "raw_cv_pct": 0.2039486451382056,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 521469.6816239316,
+        "raw_cv_pct": 0.11935969604220033,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_4band_both/32",
+      "current_over_archived": 0.9319398224424865,
+      "archived": {
+        "median_ns": 8857.542584227367,
+        "raw_cv_pct": 0.3587177418415342,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 8254.696663221615,
+        "raw_cv_pct": 0.7686665488351531,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/2ch_4band_both/512",
+      "current_over_archived": 0.9764239506531011,
+      "archived": {
+        "median_ns": 134166.11927083333,
+        "raw_cv_pct": 0.18150123417911884,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 131003.01222222223,
+        "raw_cv_pct": 0.20074796111011117,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_4band_both/2048",
+      "current_over_archived": 1.0091445818031395,
+      "archived": {
+        "median_ns": 1767908.6590909092,
+        "raw_cv_pct": 0.2242920437099044,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 1784075.4444444445,
+        "raw_cv_pct": 0.24936624950803732,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_4band_both/32",
+      "current_over_archived": 0.9969186367657746,
+      "archived": {
+        "median_ns": 27544.827372919477,
+        "raw_cv_pct": 0.22686942881104427,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 27459.95175455948,
+        "raw_cv_pct": 0.2624536556465318,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_4band_both/512",
+      "current_over_archived": 0.9916380914200944,
+      "archived": {
+        "median_ns": 446068.3032051282,
+        "raw_cv_pct": 0.36923218095425536,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 442338.3208333333,
+        "raw_cv_pct": 0.16293468910903924,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_per_channel_mixed/2048",
+      "current_over_archived": 1.0005533708362695,
+      "archived": {
+        "median_ns": 94985.72987736901,
+        "raw_cv_pct": 0.20037091957515904,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 95038.29221014492,
+        "raw_cv_pct": 0.4478503040077775,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_per_channel_mixed/32",
+      "current_over_archived": 0.9870936758793122,
+      "archived": {
+        "median_ns": 1504.8641591914347,
+        "raw_cv_pct": 0.19729301794499532,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 1485.4418945953037,
+        "raw_cv_pct": 0.39399482575117045,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_lr_interleaved_blocks/8ch_per_channel_mixed/512",
+      "current_over_archived": 1.020727294789507,
+      "archived": {
+        "median_ns": 23952.931525573193,
+        "raw_cv_pct": 0.13500897829337075,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 24449.410998376625,
+        "raw_cv_pct": 0.6581682171194798,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/fir_2ch_4band_1025taps",
+      "current_over_archived": 1.00242436144112,
+      "archived": {
+        "median_ns": 332016.9716117216,
+        "raw_cv_pct": 0.058381100435215376,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 332821.9007554945,
+        "raw_cv_pct": 0.12618930803524028,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/fir_2ch_4band_511taps",
+      "current_over_archived": 1.0011898914718012,
+      "archived": {
+        "median_ns": 168429.55631868134,
+        "raw_cv_pct": 0.3524384135938928,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 168629.9692113442,
+        "raw_cv_pct": 0.19805416949053234,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/fir_2ch_4band_63taps",
+      "current_over_archived": 1.0003073008043089,
+      "archived": {
+        "median_ns": 24802.973448426572,
+        "raw_cv_pct": 0.1868333548881008,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 24810.595422116527,
+        "raw_cv_pct": 0.384332686604853,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/lr24_2ch_2band",
+      "current_over_archived": 1.0111824306534296,
+      "archived": {
+        "median_ns": 1265.8908360804085,
+        "raw_cv_pct": 1.5245970727241882,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 1280.0465725696897,
+        "raw_cv_pct": 0.20676850135901007,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/lr24_2ch_4band",
+      "current_over_archived": 0.9693405096124235,
+      "archived": {
+        "median_ns": 11867.669943401848,
+        "raw_cv_pct": 3.22386589047083,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 11503.813230849188,
+        "raw_cv_pct": 0.5745310916883521,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/lr24_8ch_4band",
+      "current_over_archived": 0.976127278253747,
+      "archived": {
+        "median_ns": 38306.23333333334,
+        "raw_cv_pct": 6.478770347639536,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 37391.75928381963,
+        "raw_cv_pct": 0.15531017312028642,
+        "samples": 30
+      }
+    },
+    {
+      "id": "crossover_setup_and_initialize/lr24_8ch_per_channel",
+      "current_over_archived": 0.9952147416252264,
+      "archived": {
+        "median_ns": 9544.18638320073,
+        "raw_cv_pct": 0.4243212225940029,
+        "samples": 30
+      },
+      "current": {
+        "median_ns": 9498.514985380118,
+        "raw_cv_pct": 0.412781006079014,
+        "samples": 30
+      }
+    }
+  ],
+  "new": {
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/2048": {
+      "median_ns": 42338.429273384,
+      "raw_cv_pct": 0.4000263306094116,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/32": {
+      "median_ns": 677.8604018163578,
+      "raw_cv_pct": 0.4518413275392073,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/512": {
+      "median_ns": 10605.604110962568,
+      "raw_cv_pct": 0.5666402988298243,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/2048": {
+      "median_ns": 130861.29086538462,
+      "raw_cv_pct": 3.1875325756522757,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/32": {
+      "median_ns": 2060.4921178950353,
+      "raw_cv_pct": 0.27869278288299454,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/512": {
+      "median_ns": 32980.07326547922,
+      "raw_cv_pct": 0.17887493802824248,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/2048": {
+      "median_ns": 40922.98521263851,
+      "raw_cv_pct": 0.10837418603643846,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/32": {
+      "median_ns": 656.2495066625979,
+      "raw_cv_pct": 0.8795947785500972,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/512": {
+      "median_ns": 10259.447712808273,
+      "raw_cv_pct": 0.16186922637220982,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/2048": {
+      "median_ns": 74878.69664090368,
+      "raw_cv_pct": 0.25322604683833017,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/32": {
+      "median_ns": 1179.5569507845175,
+      "raw_cv_pct": 0.36628469700510957,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/512": {
+      "median_ns": 18998.820814977975,
+      "raw_cv_pct": 0.23828989824659866,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/2048": {
+      "median_ns": 230704.3677462888,
+      "raw_cv_pct": 7.701738857237369,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/32": {
+      "median_ns": 3602.344490934449,
+      "raw_cv_pct": 8.507323729627165,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/512": {
+      "median_ns": 57248.31737749546,
+      "raw_cv_pct": 0.1411312255299676,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/2048": {
+      "median_ns": 71834.21006944444,
+      "raw_cv_pct": 0.15189658977039022,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/32": {
+      "median_ns": 1132.3071547713107,
+      "raw_cv_pct": 2.6242068604322726,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/512": {
+      "median_ns": 17901.91825980392,
+      "raw_cv_pct": 0.2505607568342901,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/2048": {
+      "median_ns": 74973.02339901478,
+      "raw_cv_pct": 0.16633628881971305,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/32": {
+      "median_ns": 1189.0305832836168,
+      "raw_cv_pct": 0.37855029611052643,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/512": {
+      "median_ns": 18905.066510974408,
+      "raw_cv_pct": 0.43147674305729306,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/2048": {
+      "median_ns": 234319.1442982456,
+      "raw_cv_pct": 0.26500642400997687,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/32": {
+      "median_ns": 3643.4661859438734,
+      "raw_cv_pct": 0.2536596238438793,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/512": {
+      "median_ns": 58445.50426742532,
+      "raw_cv_pct": 0.1693836276815027,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/2048": {
+      "median_ns": 71448.80399831649,
+      "raw_cv_pct": 0.29179806574973594,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/32": {
+      "median_ns": 1132.1981604165878,
+      "raw_cv_pct": 0.20010504208274713,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/512": {
+      "median_ns": 17910.839853896105,
+      "raw_cv_pct": 0.1632055224285677,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/2048": {
+      "median_ns": 42288.03098739496,
+      "raw_cv_pct": 0.26060404531401066,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/32": {
+      "median_ns": 681.5494308300395,
+      "raw_cv_pct": 0.37913993479403685,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/512": {
+      "median_ns": 10567.170135241597,
+      "raw_cv_pct": 0.4625505016695725,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/2048": {
+      "median_ns": 52334.45969592656,
+      "raw_cv_pct": 0.43774328976347754,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/32": {
+      "median_ns": 840.1580102604065,
+      "raw_cv_pct": 0.4284939476379378,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/512": {
+      "median_ns": 13173.460856269114,
+      "raw_cv_pct": 0.19802561289721163,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/2048": {
+      "median_ns": 561604.4546404682,
+      "raw_cv_pct": 0.4428889746411052,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/32": {
+      "median_ns": 8813.73075234192,
+      "raw_cv_pct": 0.10882984023318241,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/512": {
+      "median_ns": 139405.0207373272,
+      "raw_cv_pct": 0.09801318711448594,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/2048": {
+      "median_ns": 51808.426159182185,
+      "raw_cv_pct": 0.21846520993270693,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/32": {
+      "median_ns": 823.2689925444465,
+      "raw_cv_pct": 0.6249189140549992,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/512": {
+      "median_ns": 12942.175532675534,
+      "raw_cv_pct": 0.2673186937646168,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/2048": {
+      "median_ns": 75032.3900862069,
+      "raw_cv_pct": 1.3570755854299115,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/32": {
+      "median_ns": 1199.4017607821338,
+      "raw_cv_pct": 1.3581119669595554,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/512": {
+      "median_ns": 18742.594064088087,
+      "raw_cv_pct": 0.3071635261018395,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/2048": {
+      "median_ns": 865614.2849999999,
+      "raw_cv_pct": 0.289236141038561,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/32": {
+      "median_ns": 13429.146691176471,
+      "raw_cv_pct": 0.6052796446702416,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/512": {
+      "median_ns": 216132.17916666667,
+      "raw_cv_pct": 0.13430048359593533,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/2048": {
+      "median_ns": 71798.5356583072,
+      "raw_cv_pct": 0.10802438405091362,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/32": {
+      "median_ns": 1132.0097335795303,
+      "raw_cv_pct": 2.521355283413752,
+      "samples": 30
+    },
+    "crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/512": {
+      "median_ns": 18063.741149018344,
+      "raw_cv_pct": 0.24007451695762064,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bessel12_2ch_2way": {
+      "median_ns": 1518.5428135930429,
+      "raw_cv_pct": 0.23320179179613346,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bessel12_2ch_4way": {
+      "median_ns": 2245.8707498675144,
+      "raw_cv_pct": 0.4168295477966794,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bessel12_2ch_per_channel": {
+      "median_ns": 1949.2896933819065,
+      "raw_cv_pct": 0.38982848749852694,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw42_2ch_2way": {
+      "median_ns": 1785.0715450216971,
+      "raw_cv_pct": 0.693372698026093,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw42_2ch_4way": {
+      "median_ns": 3048.686770443135,
+      "raw_cv_pct": 0.24780385640955754,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw42_2ch_per_channel": {
+      "median_ns": 2449.9569582814447,
+      "raw_cv_pct": 0.3163750716419318,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw48_2ch_2way": {
+      "median_ns": 1797.9939293598234,
+      "raw_cv_pct": 0.7438060625271686,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw48_2ch_4way": {
+      "median_ns": 3092.2804221251818,
+      "raw_cv_pct": 1.0330215535990932,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw48_2ch_per_channel": {
+      "median_ns": 2484.4018363801806,
+      "raw_cv_pct": 0.3116059433210136,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/bw6_2ch_2way": {
+      "median_ns": 1537.451421464108,
+      "raw_cv_pct": 0.5239759448991117,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr12_2ch_2way": {
+      "median_ns": 1472.0120966233903,
+      "raw_cv_pct": 0.31844485583828475,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr12_2ch_4way": {
+      "median_ns": 5474.310375235663,
+      "raw_cv_pct": 0.592760178062673,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr12_2ch_per_channel": {
+      "median_ns": 2089.1552370299005,
+      "raw_cv_pct": 0.31837591374882035,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr48_2ch_2way": {
+      "median_ns": 1824.0417191435768,
+      "raw_cv_pct": 0.6343894448584518,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr48_2ch_4way": {
+      "median_ns": 7643.575919335706,
+      "raw_cv_pct": 0.39972028205690024,
+      "samples": 30
+    },
+    "crossover_new_iir_setup/lr48_2ch_per_channel": {
+      "median_ns": 2475.0777576853525,
+      "raw_cv_pct": 0.5721091529798966,
+      "samples": 30
+    }
+  },
+  "input_sha256": {
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/2048/new/sample.json": "bdcdb743400effee050b17460adad332b85ae0d721a492fc80c3d3261906d858",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/2048/new/estimates.json": "ad50bd227369be5d1501a2c495b161c9ff8eb5b8269cf832137cd236ed7e83af",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/32/new/sample.json": "03cf9e115b522997ab9c2a126e6354d3ac65adc69f6c38e5566544ef2bd0d791",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/32/new/estimates.json": "e8048ec7ffbdfcc3af01e75980ef4b295f1d1cb64702028dfc83f1500864d031",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/512/new/sample.json": "1d11fd77e61e74b34ae88b210ed40107983d376ed108126a681788afbb448e93",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_511taps/512/new/estimates.json": "b88fe2c2dd43dc0b6f73de8ebffae81ae26255f1259f436d342a7edb23812fee",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/2048/new/sample.json": "c3ab05eed37c2fdd96aecff412e89e3abbb0a9c75e4ce97f889d54455a902df7",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/2048/new/estimates.json": "f0c22ab5dce53bf779b1a283cae876a1993d7ec2b5ff6f711838d53d57fb345e",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/32/new/sample.json": "230b727be60e8e63d18bbf61e412a25722431987b8ca397c35df310b81b7890c",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/32/new/estimates.json": "e0f481ad918cf39544eebf173c57a02309c4e7443797913edf2455e043ae252d",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/512/new/sample.json": "1e2c6736f0bb06bd4d36798bf3525a4b9fb4e8425f5f71841b3b5746e92a363a",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_2band_63taps/512/new/estimates.json": "ea0e1ad8cf3c163aafdfc2fb0ab0e8af7124b2006af2016d46d4b4bdaa762b62",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/2048/new/sample.json": "093d04ffea24b82015d863f094db9b9716f8adadacc94e4c2f9150d4b499b8ea",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/2048/new/estimates.json": "1645fd310047d02fcee68c69c972081321c21ce1fe0b4c4fd43f714be9041e0f",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/32/new/sample.json": "e677584a220c4e893edd729b19474c79027678cc9426154c7e9fa8b91d94f789",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/32/new/estimates.json": "dec5b662360c7efc5874398cb1a6de38aa2fdde96daacff5f5e217a83f0df746",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/512/new/sample.json": "5709641cd59d320e104cb73aec7eef2e5f5247e565fe24a107cc738ea48e4cbd",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_511taps/512/new/estimates.json": "91e2d4eb264177379b2bc40b168ef3e4a470f3bbcf69240122e0a713eff22c47",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/2048/new/sample.json": "d6cda838f0e188ce30b761af621ceb4ee9fce6c66274ec2216fec272e77a8450",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/2048/new/estimates.json": "d43db2c1e349ef28a909610ee6913d3363d9dbef89589237cf3647da42f14d13",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/32/new/sample.json": "2256592777b1c73d69e6922ec6a150eea38513bd5908a1d3289529a4c3b4b6c8",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/32/new/estimates.json": "1b8794537e3ecb7ace2df3613939ca2696a343c21b7a01ac6f5d2381ba350ff4",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/512/new/sample.json": "bd603658d1703fa3ab33ad9655b9e21074bb5d91f101f98ee4ac0ca8c8f81071",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_fir_interleaved_blocks/2ch_4band_63taps/512/new/estimates.json": "1310915ec1d72c2c83bfca5bc50562f25befee3f3d07e8c300a286dacffe89f7",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/2048/new/sample.json": "70b97dddd8ed84a6e27aaae21db771d7f56f72008473e8127fb692533085dda0",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/2048/new/estimates.json": "31113033e5f44ad0e1eec591bf889d98c76c454a63697d2395089ada6acfbf51",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/32/new/sample.json": "5366a51fdd2e0ba3e03c7e56df32b6194280bdadacb8b4aee988d25bd8cead3f",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/32/new/estimates.json": "e11bb6db2a2185943e3e88ffa85e885a5ca2dfd2e524f675815479ddcc3d789a",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/512/new/sample.json": "36dd89121f6d6ec884afff960c78aca6ea14d3a16c02697f240a9f038bd89f10",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_2band_both/512/new/estimates.json": "85dd222fe9fb5210c3d766bf22c96ab0b121db1d58519e59f2d7a0fb38638a63",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/2048/new/sample.json": "2d6ead65ec7961f43704c9915307c314462129cc74ccbe22a21ae02632ab98d6",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/2048/new/estimates.json": "f98c072f84d8dcd97bef9b560d7e66b35d0be13934f06f2fbef5bd87291e7674",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/32/new/sample.json": "602d40c0376dba741755795dc993fb763d543f100b3c93dea258f825e0a660a6",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/32/new/estimates.json": "6ddb6f76ef86bd7f79298c65f3a6a216ca60fc94b2263f60ec9d1de7d7df9f13",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/512/new/sample.json": "0c4ac1195b77e60b4751d20bc92b806b86763320a8e539d81cd644b069812ccb",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/2ch_4band_both/512/new/estimates.json": "bd9be2e830be5b5e89037b1308a30dad5c414805b40faa20e8b30c83222ecc17",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/2048/new/sample.json": "a7b82804808a71803c53ceb08dadff7fe5e42fb1e7ef1f3949810924ea2a70e4",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/2048/new/estimates.json": "36f5206f6e84d8622f6d72a5e118ecfb22e13aaddd4887facc5113098b556eff",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/32/new/sample.json": "fc306869771a4b4c5a5bc58cae89574324abcdb3a4849b175818d1eeddf01042",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/32/new/estimates.json": "1f70edf8b8e694e817a90b87225483bd65ad2d84bcc32f1efc3fe91cbb9c8449",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/512/new/sample.json": "fad069e976520f1b4513cd392cb3cd0ab2f18bdaeca2e879c5510d6a33dc6e80",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_4band_both/512/new/estimates.json": "83b9846e36e1e387c57567e1a32e22dea91213b1e3d86fac5556d3d295ecb344",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/2048/new/sample.json": "e46a52c7b10e221e43625bbc285d1416c2948bcf4634d6bbe095c60693dc3bca",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/2048/new/estimates.json": "7f1cdc9fd6f6082e1668e2b916820bd69939a94474928653513e43f27cbc9d27",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/32/new/sample.json": "ea8075cfe609436081869588233a0ded6629ff8c5d7c1d35ad7ad3ed9ccc5b90",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/32/new/estimates.json": "93e9f515e0ee3465af3c0068084088048c55f905e791130e7d3c48d7d1217871",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/512/new/sample.json": "f0ed2ca1a7e208b2690a964ba84b24ea98fd84ee33a793253f8195bce495aa89",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/512/new/estimates.json": "5905565e7bb4b64e2acd6f804c8453deddca0788d150b1791c9a468bfcf95fed",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_1025taps/new/sample.json": "1180ab77be703e9a5c4d4a5065bf54eb2ac66decbdf2667ad2946aa9380c7353",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_1025taps/new/estimates.json": "c874059eff3dab2eaf7c2832f724997b5dc76694ee85f281148914b303efcbfc",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_511taps/new/sample.json": "dab50226a1f745d98fca35b981ba3e961d08241de241df821a947a5b780dd1f6",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_511taps/new/estimates.json": "7ae7d2ff8e2a7d4ba7dc9719ac94731fe0b746879a0e7facd7a3c399f9e8da2d",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_63taps/new/sample.json": "021b973176f09f299a24e58126773b97173425fd3464e428dd5bbfc7fa1d61f3",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/fir_2ch_4band_63taps/new/estimates.json": "591a586e0ba15720ca37a2a6acf22aa3332411df3c78383b5c4ab3386fd98d18",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_2ch_2band/new/sample.json": "fe17fcea1002074b9ed8ece818039ebf1d49e5dfde2b37b165a26bc967485fa2",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_2ch_2band/new/estimates.json": "21b3981e479a9dfa21f9a05b709095d7ebc151bc69c11feb44a93baf4d169d96",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_2ch_4band/new/sample.json": "ea1377f76e51f77c49428607889a2f84133d17bc9cf0342cb12c42ea0cf4f574",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_2ch_4band/new/estimates.json": "c1224ff691bef9977f516458de9c05114689acb20d8ca35f352343d3b913a032",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_8ch_4band/new/sample.json": "238614fb40aa0abb8908c4f7f4d53aa2a57c046603bbf0fd09eb463865b0696b",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_8ch_4band/new/estimates.json": "258446ab52e91678b76a645536c3abd6738d3eab557778434404219406a5e79a",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_8ch_per_channel/new/sample.json": "046bbe3694190f21c8869108d183f008f3d3e6cdcddd21dde5e54c41cc6d6d2f",
+    "audit/artifacts/aud142-post-core/criterion-r1/archived/crossover_setup_and_initialize/lr24_8ch_per_channel/new/estimates.json": "e1e8de818d73a2a0d6fbfb4c6e22f2b9ade017ed8a05cc05d0b5dbc07b15dad1",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/2048/new/sample.json": "2e576e0ff785a4c845fab4176f7060d25ebd875f527a213669478e43b8931c08",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/2048/new/estimates.json": "c44a2caee4fa3a86dcf23fb7df6fd7d1aa0af44ad5c65ba84b085e7caaaf311c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/32/new/sample.json": "873985023a5b9ccc9e41fa520ed7589e091fe06295e6352fc36f657bcf15d22f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/32/new/estimates.json": "84429a6841891596e2fc535a38d22a41418fda0766b03c6755d59a6a4799f58f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/512/new/sample.json": "3e00582fe537f417b05db495e0da969a50c7d9e18c941e910489737b4b678065",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_511taps/512/new/estimates.json": "5facbb34b04f3a607b4d12b344d9e33744676232094260ab13f8b7ebcfbd3721",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/2048/new/sample.json": "834f32f5f5c5e815578bcd1931cb96844b293061848c4e9f8916cdb6f27d934e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/2048/new/estimates.json": "0fbffffb6444d4b34f156d82b45bf0546dc6c8c5cf1111dc097fc61adf0375f5",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/32/new/sample.json": "ebc0e1747656a9f6c175efacd5d3e68683d2800af4b25a1e006e50e74af4ea44",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/32/new/estimates.json": "ce54fd8310b5ff9d30347f2a85a5e886f395875f0fc0c4dc97e8b44e19d23df5",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/512/new/sample.json": "60df18ca82071a6d14d877670b17b33f2423f12f9e618f41562e47d75f0d0128",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_2band_63taps/512/new/estimates.json": "7ff35e2eaca50b022d21eef7ed2e88ec4a7f7af4f624d476c72920e520a2f490",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/2048/new/sample.json": "1b87f55d030df23b1bd1d2fe0bdebb8aee7411584cdee022ec81c480bbb0361b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/2048/new/estimates.json": "8dc25938ab4bed646187f7543043ef722028912a3ad23707828e084c12c093c9",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/32/new/sample.json": "094b0cc483543f27da52bbb2cd3911b380ce0d52617e3a32001631d64d80d2e7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/32/new/estimates.json": "fbb39c1a1e9913928c324e412c2fa6d2e188733a8928cc37afec65c40fa7bbca",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/512/new/sample.json": "97db9acfa0ef8e0226f8045fc122dbe7d4e24b87405a64ef632a35a1fc5eb9ae",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_511taps/512/new/estimates.json": "8d065ada36ec9b3c9b835c31195a5dfbb3741da0ec92b51a835a8d00d93bf877",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/2048/new/sample.json": "230239f097fbdd603f6ffdfaaa11ff2da6c944c610dd1da0fc81ded46f12e1ea",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/2048/new/estimates.json": "03d52af7477632be4ef08157abeefac3c3da52162cdd9e47bc0c2c8e341ad2f2",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/32/new/sample.json": "ea75a97f4d2286de5ca7ef0aa3846f233322fd0275f9d1e3d5fb6a81e1ce841f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/32/new/estimates.json": "27e2fc364833f2f5ffa7605712bab7b7d7b64d54f61c8bc3d359c2c625a5cb3e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/512/new/sample.json": "c172e8378393b79d641d864bc0f35096fdabeaa08f9f5cb5eee87745e222f5a6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_fir_interleaved_blocks/2ch_4band_63taps/512/new/estimates.json": "c0ed213829323dc3a94471df7d4b6aeb8c0a5564a96a6e41972eadb890e0d3bf",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/2048/new/sample.json": "30863024ce46b17cccbfddd78aeb7ca1e0c2fcafa5992c1a8ab7b7ceb2370821",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/2048/new/estimates.json": "89257cc50c5e099fc850b44943f05a7927bff0992f569176518f928fe09a8fe1",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/32/new/sample.json": "4385e8597b7da03ab49297449f768a46ecb5cfab0c11e6696a5ca4de26932979",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/32/new/estimates.json": "68593d8b4378e6e7c2d3a8bbf4a93f87f681b882dee4b34add2888b22444c066",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/512/new/sample.json": "c1c8226b6a81904761356ac01d6cc8909449e73b90e893cfedb2b22525775194",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_2band_both/512/new/estimates.json": "ce84385b816f9311e3b85e355867b4328dc235ba68c036aec49aa87b2431f288",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/2048/new/sample.json": "7af926162b225dbdb874f0e99dc07592e8f1adcc034402b81f0f775c16259045",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/2048/new/estimates.json": "596027f4da4ee94f892ce2320aa8835d880c9c4bb751a86f271934afb3736bbc",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/32/new/sample.json": "b0abdc5b4e029d45f2b64d9aa18d8520807c397759b846b6fbfa779d464aeb30",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/32/new/estimates.json": "ddf96ea21c60bc2be54de206fa2d5acc68ee776f426f4fe13b3c1e8ea431da69",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/512/new/sample.json": "555b54a057902f6cceaea2a3415875595a706b57dd0371710b580b47149ea7bc",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/2ch_4band_both/512/new/estimates.json": "6932f23988cf773e766229db7898b69e5a79a5f9703944ceb3e513246fd90e9a",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/2048/new/sample.json": "e719ba1ef5c53e713977285a1c9dd283dbdda85f764854952a34f2b5ae4acd29",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/2048/new/estimates.json": "3fcd37e4dc8b2667ed8203556dcac9f63d40767ae3040cddb2f0ed8352046e6e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/32/new/sample.json": "b7c46d36590f62906a3e8cb8b124c3f695c5b7561e24777f580f25427bcd8367",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/32/new/estimates.json": "ec58814e0bce24e21fc299ddb5dc8814e11f8b80b02febc77a0d687d3e8bdb44",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/512/new/sample.json": "c4d8b096475fd9a3a80d90bbea39a601325591a3de521eeebda7dbb472cdb042",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_4band_both/512/new/estimates.json": "df6554023b26f207336726d52ef8d57758bc99a3ac36d94a2692dedf52036337",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/2048/new/sample.json": "46d8bf1ab074461075448723dcc5b24075188efe2a9a956cc2ae44df0548c0a1",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/2048/new/estimates.json": "1d4328464f70d4a3f572424ef3efc1a52d6d332ef1ab750aaef5702b359bff17",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/32/new/sample.json": "9328beb9f1d408e06964faeaf79836f54a4cfc40bddb279a2d619a6dbf3b718d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/32/new/estimates.json": "ed75144eebadaaacb7a89ceda445c7b3f8328aec41f24fbd790356e203d85bf6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/512/new/sample.json": "3a368716cc456734e72c313b7e9b14402bf2547b25b4f7870188c321213637e5",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_lr_interleaved_blocks/8ch_per_channel_mixed/512/new/estimates.json": "68231c98823baa8c7241d34e3499e67435f38b17d6d46264e5c7bbf93616b0df",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/2048/new/sample.json": "b7cb3ec7928c121b0d2dfd1922b940547a14d805b75912d06e708c25debebbc2",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/2048/new/estimates.json": "75383c6062aa3023de4d53c52e83fbc78974085ecb0e19c41170417ac9ad36b2",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/32/new/sample.json": "811bc8a46cae237c9f0f14e1c81468f0faa5f3f03544c88618cfb229daf2749e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/32/new/estimates.json": "6348cf92fa440cac48dbc94de95007856abfc98d6a1f7c1e31f7e79bf093b019",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/512/new/sample.json": "d5051ff10378c7df8092d4567ded080b50cb4189bf2d75ac85ca8f22b2c73bed",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_2way_both/512/new/estimates.json": "4f68adf0dbadb3a172f1c6909afd764eadfb46e87e4969b7bb678e1ffccbb19f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/2048/new/sample.json": "15afbaa574bf193fed9316f473199e765386974e47301b81112bab1d0d525d77",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/2048/new/estimates.json": "844563497ad9e3cbce899c793fd0d120be6080011d58dc074b74e086cc5bd081",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/32/new/sample.json": "6b5f27893c63fc9be8dcfd2721096fad5bb25051f26a5818b485c7e57e1168ec",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/32/new/estimates.json": "29e062763a9a7ef1e40b125b7dd4b3a002c9370c204c0ac2055d8e1f66b204ff",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/512/new/sample.json": "f86387ba1f0db38a3b5804516524cf2cd6515ab743091f74bf093d01d049a84b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_4way_both/512/new/estimates.json": "161f605eaea6aa4b8e278cec4a577c9eb0ab9dbc26211aee63ce2a7315664f65",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/2048/new/sample.json": "094a4774e331c93b43c66693ed28162943f10b49cb921f9e1336972839b21b2b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/2048/new/estimates.json": "6ab49c180dd6261751e68935b9e1ca1a0ebfc0ceda42e00e861e2e20cbf3ff3d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/32/new/sample.json": "1bd0de434b41d29012e9807b472743c1f29fdd67f30feb24e4152d17fccc2b0d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/32/new/estimates.json": "a16bb62985e7240b7314eb957bb0856832bd7f0b77ccbda2756f352b98c9823d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/512/new/sample.json": "c6a0b5f8bdf40a6c325ab5f645dc2adcb07d827e71de25a0353f0fae95da9605",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bessel12_2ch_per_channel_mixed/512/new/estimates.json": "f07bd7d687c410b3946b58376586bf8cd764f6eeb11ee8d78750408d53e51ba0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/2048/new/sample.json": "753fad41c1ca9e1e3929d9b5d7db8b79a8cd20b6d5d3b4d53b8057ce4b961804",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/2048/new/estimates.json": "9f5604c38920080061aa6123520c8c69db1dff6cf5f7f65a606098322df04291",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/32/new/sample.json": "1e756eac72fd1c93205847ad85962a287d839d0196b8eb15d13ef1a1dc9b4af9",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/32/new/estimates.json": "40ac682c033a8f2e2b5c69a17b7731669b5ef4169e27d6d45f691ed813698fe5",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/512/new/sample.json": "2704dbf90f122b467661c582da30c7df1690fb06fdccf836c268a120fd18d682",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_2way_both/512/new/estimates.json": "216259ff7f68aeca4f12fcfc6657701996c2a0c26a4d07c28493f4aa36a34520",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/2048/new/sample.json": "bb6acbe6290119d78334767c15eaf08b459ca162aa96cc226589f932cedd25ae",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/2048/new/estimates.json": "fa114a81d93fac550a8e01d407d66fae72bfe78de84ba66bd6a23229ba6702f8",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/32/new/sample.json": "b7d141510943e432ed152134762d5dca70eb27ccea496a1362a52800cb73123b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/32/new/estimates.json": "ae83fa739b7e25976587393d5fca8f0cda3c02c5f754ecb53e32d61dd56ecba0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/512/new/sample.json": "e789cd5c4c3c119a8bf1769d94d824203bcb45534f8cb1064cfb83f8ad750da9",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_4way_both/512/new/estimates.json": "44b987917da745f903cf0aea62fc6d13aba3f000d388b16377a94ec8ac1db46d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/2048/new/sample.json": "6f819564742ea2fd0d35f7d506fe2cb63f306b915532ef55b9a6f865498a1f84",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/2048/new/estimates.json": "d1d193458814d35c7ba069100d33a33350ec8e4f2e090298ff810acbea3094b6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/32/new/sample.json": "9025897d3e9fbad12708a8f4aac566737c2127e21df18739ecf46f0925f9936e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/32/new/estimates.json": "5f106cd5f457ab77c1ab924c61e059dc2886f3a512fd74a03cff012dabc2e680",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/512/new/sample.json": "2c8af10f563a0529c5f1c489f0c9461581cc2db79dcaed60edda5d4d499ae813",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw42_2ch_per_channel_mixed/512/new/estimates.json": "ec0d62decf8b7065faf2d40903d421bd7ce028e200a4f39bea1374cb800adf63",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/2048/new/sample.json": "6c24105b24e3c4c99e268a7900dd3517afa4b3c1653902a069c74be0cf49d1b9",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/2048/new/estimates.json": "dde5d42af1025a8ad81bd95a4f3e10575e741dcfe7ecdd6bb294747e40f570c6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/32/new/sample.json": "f6dc3656f9870cf536a944e026255355413d78d809b33326c732867701091457",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/32/new/estimates.json": "4e421a44c8ef7a52c9c64a9848c9d4ec76f160b2bfbf2c36236ef3c02ea22024",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/512/new/sample.json": "d72a7e27c4389b63ff2b9d460751e0403294e6154bdd6778ab1c91d0e8f3b8a7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_2way_both/512/new/estimates.json": "5b815b304d9f109d40efdd4b3c324bc5bd6959370848d5d5172dfade343ef246",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/2048/new/sample.json": "acb214a34d05fb547db80d9b151ca5cc3df8c367207ce7bf221fd8327de7575f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/2048/new/estimates.json": "6d3fb0e49611f2c12e55afda0f16d23018b4197d9e2c650673c9fcb34726b27a",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/32/new/sample.json": "1d134b18a93285932caefcdddcb0b755a7d7f23fcbeba244ffd1758b8a946099",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/32/new/estimates.json": "6af527701a04b88fda8b7203fe22f6bd3994c76b8504d40e3fe8ca6c3358b9df",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/512/new/sample.json": "801c5f2e18ee9b4802663785431c3193cb8a6593aea7c1b5157dbafbe72b5334",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_4way_both/512/new/estimates.json": "80474bab2f899e9382a5db6955b3a92f31d3202f0152262e2858f2cf89d7cfbb",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/2048/new/sample.json": "1d5883b3c7b0eae1dd64ef0d9dfabbd5901ce562c99a84b0fc6759137a53a44e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/2048/new/estimates.json": "58678fcb475e7cc462200da4e183dbac96cf81302feb153c8018fa28c123b20f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/32/new/sample.json": "a04239a7747d2f79eeb45a2487d4d3313c931980564b889ced3e46a3851b9622",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/32/new/estimates.json": "56ba282b21b39a40bcf7f3053a1401edc6fc9bf2a02d33a41758b8ca3b466869",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/512/new/sample.json": "e41de23c4dc49cfc578e0f910a6d3d0061fa0e1b0e09bd933c2672e548b3b829",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw48_2ch_per_channel_mixed/512/new/estimates.json": "32ccc07d176765bfe6094da77968eb4ed74bc576cf6e2b807280a7e6e1945238",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/2048/new/sample.json": "825c421422b3628403a7ae3ef05bc46cc80bbf119e64d5dc0c36792e1d8ec830",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/2048/new/estimates.json": "beda0858a38c46cdce896b4a12c04fde835284bcf883cb875d730675017b0d16",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/32/new/sample.json": "82d849d243b2f22e104da29931157aa22f90e4756f16ef9da63be9c3c72dcd5d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/32/new/estimates.json": "1924b8546ca9000b56825339fe108696495c1d59b4e71e0950fb944723bfbc90",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/512/new/sample.json": "8310a09a07fdaa14f107ef05cb88902250e3c487bcc4f5856e662c17739dbc19",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/bw6_2ch_2way_both/512/new/estimates.json": "d2f74c42080a60949d63da53b169bcb5a6dfe8c811ff335004b29db8d91d6da7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/2048/new/sample.json": "cd1870cc0959bbd3236724d66a20ef6d7469e911fc368260e3f56cffbc7cee63",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/2048/new/estimates.json": "f291c372ece30ab4c8ed05df0290db8712f1751142a057c0bd86db79cbc992f1",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/32/new/sample.json": "9f8cd93bdb9832920cfacb5a130ca6e87463e46bc86c4d1583d6a7f2a72c57c6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/32/new/estimates.json": "2ac47f7bc0d4544a9879b9db817c19257d0a8880d0b504a428f186878940f8a7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/512/new/sample.json": "a9370c473664bac0b19d19d1b35e083ab926f9016928f681c6daa61ce15f048a",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_2way_both/512/new/estimates.json": "e8025306ca238f86d064ba41b3847b8357ae030a30aaff988a54a1b2a514d90d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/2048/new/sample.json": "bc1d75df02db07efdfe62c2e4b221da50a9a87ea96b99ab2d5052b4e3b19f730",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/2048/new/estimates.json": "27a43cede016a14ae8bc4496df03bf3aefad816c28c171f40fba3f19393f4101",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/32/new/sample.json": "0bdcda6160cecad2f66434691a909545e4973cc2060bc9e0365bbcfea3d8d1dc",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/32/new/estimates.json": "31ad704379af294f2301c5cd6de2656d61781d3c30064f107739595f269f9dbd",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/512/new/sample.json": "b9f65da2a231c0d53bfb07d87c55deb2339c8a1aaebe3c63e68d801df5b167ce",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_4way_both/512/new/estimates.json": "52b9c33f7cd1243f5ca28dd071cc66ad5f116fb212ca482c21b287a5f74ffb8f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/2048/new/sample.json": "aaf1162170f3dfa287671bd3b7366ca78b52ded406b4e185afea53f4b3e0e93b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/2048/new/estimates.json": "24a1bc6efd75227f849b699064ea74f0e60190b508ac4bf655bc6c9b2ac7294c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/32/new/sample.json": "caead92532d443b572a4bba2ad910c738eadc77dac614ce7616ce1f5e2987a42",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/32/new/estimates.json": "aa95e186b1e063d42f77245cee3cb5ff4860b49618efbb0dce0585f87a4a6ae1",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/512/new/sample.json": "6c0f4ca7437bc97320bb12574a7d336a0e3321a09d95f483051a19657aa47229",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr12_2ch_per_channel_mixed/512/new/estimates.json": "c9614d2d3581691cd92905b06bc27536e797835f29c800af9431ae2c56b599dd",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/2048/new/sample.json": "668a2b62f2fb25f1cef7cc160290b0d143698a54b82497ed08281cc72d98bd6f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/2048/new/estimates.json": "8b195821cd3fdee33f0b389518ec20a7a3454528493234fe82a8ce7bd7acb1b0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/32/new/sample.json": "3fb7975d598bbcbc8f7f13da2384b087e0fb60b1769ade3bc312d28a4f8a6879",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/32/new/estimates.json": "c1fb52f332eeb6cc9d8c74260fa79fdb55cb1ffd56eda5ab92ec4a9f7c07441e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/512/new/sample.json": "df82c860641e4808b395044e6e0140a8a1aa2f2814541e0052e53e96039b10fb",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_2way_both/512/new/estimates.json": "cef0b52f95b6a437713ac106d75708f66e56adc9e0cc7bff75ffdb910c2be369",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/2048/new/sample.json": "970f70f2194f43c1f8b2a6f83490f09adef8c58a4a7874fc4ba3e2739d6c8323",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/2048/new/estimates.json": "710e2c9bc13b5cc6e977dfbc7396f7dc03ff75b16316ade216dd58f7768c7092",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/32/new/sample.json": "15136f0f2d1f35bb9014ae42353e033e3933c044a7f16a41dee5456f9a56d3fb",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/32/new/estimates.json": "117f7630120b6828e023471a00c9c4463cc1b665655357c4e7e25e9ce93eef1a",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/512/new/sample.json": "ce4bf6e724879bb9eda09f25b639a0fd96a8374df8ee80cf529851be9c2211cd",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_4way_both/512/new/estimates.json": "b72d9f3f8bd5a03a90bade952d4fc75c2358ddd4ab7347bb04699d5647a3d56d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/2048/new/sample.json": "e8023cb176c6c689932565507c88ed691163edf9e7ab56d546448c7f59d92e05",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/2048/new/estimates.json": "1ef664381d60a3af1e436609b6f19e5d0171fdb804b75cf203039bba0ca9d504",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/32/new/sample.json": "2c3e8463114ef240d850e6d746bf1d7b4fc63de80f89e8673e5dd072ddb6420d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/32/new/estimates.json": "bdf795c5fde7dbb91284fa092d71c09a2612440beb2a0e0289ceb212ce96bcbe",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/512/new/sample.json": "18ad121e7d2ab0ec086f2acf673a561b598ea0b9c6f8bd9f69c4a1d8f8c3fc7e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_interleaved_blocks/lr48_2ch_per_channel_mixed/512/new/estimates.json": "b4ba6023eaba961dc7d9a62b049cc050e4d895f5be26c4315a85fe1f684b00b6",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_2way/new/sample.json": "88199e53a6667207f6af2c06e6755ea124d94f52acaff824e674b633e18ce94e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_2way/new/estimates.json": "0e25d6ae2bd10f82a95c6b23923c43e3cd4d308eb0acfbb130f6bfbe4a4230f8",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_4way/new/sample.json": "014b2eb00417301b8beb3958fdd3c72cd820c5acf084c6867519136a0b87b24c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_4way/new/estimates.json": "95fd755944546c9c2a01c14d74afdba63f8e87beab1d893a3d43e1a7d28c5871",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_per_channel/new/sample.json": "e21d00e6520ad7eceb47b34e7b636aeac51e7e577a82d8a9284822f6d8842ad3",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bessel12_2ch_per_channel/new/estimates.json": "2b73578d04ffc8922d3b147cb9540e16933fcea2b334b7be6ed4e8291c60bf8e",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_2way/new/sample.json": "dbbd7b13b9a8b04907fcf4f705112c4c17b7ae2a42eb871925c4f5323e5923c7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_2way/new/estimates.json": "010aa4c7d1e101073d78c6c0f42023b1b5816611a08c79a51a27ee6fedc2aa0a",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_4way/new/sample.json": "a80bd3af955725c995ade5d3c9850930a78af3562c97c5fccd951ac6b95e4283",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_4way/new/estimates.json": "0e89461aaf5f102468ed0935b5bbac25f0f5072ae5bf73484f80d123faf0be2f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_per_channel/new/sample.json": "2a357210673ffa4c0d6e6e9069b75dbca74717327b8c4c72d4df890609e7afcd",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw42_2ch_per_channel/new/estimates.json": "9dd79f0c7d2cb4544af4c0762ee6673cba56e4790ee6cb03fb6b01390c256291",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_2way/new/sample.json": "37989cb8c98ec9cc4501136e57b293bce5ed1d9d20eff3add8d465107ff575f8",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_2way/new/estimates.json": "26985d8f897a2158d556fddf0ea005043f7bc653db48fd78340cdef5a7598543",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_4way/new/sample.json": "7938668619fe4d0fc72f3bfa42aff1cbfc076bcb2aa7e24d97441034e33bd1b5",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_4way/new/estimates.json": "06e8901a030bce15eabea2e539dd5ca874f0c94d6b544bd92983c27416dc6b68",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_per_channel/new/sample.json": "2be52f2c592b18dee34c2928ca2fea31d4538741ecf7a262b0174c704785ed84",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw48_2ch_per_channel/new/estimates.json": "3a7cbb58e1c325fe77ed3e111ef7e26f7d11950ae237f992608c518b631a7ee0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw6_2ch_2way/new/sample.json": "f389d455742b5bba019739e3c8f9bcb03e5cc78d581f7484107a4ca83c1a9c49",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/bw6_2ch_2way/new/estimates.json": "68a2533d9e18d1927d87b29b6c8a98b81261320e69eaa317a60e6b0887d92ff2",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_2way/new/sample.json": "f52f2cc19eaef74af4883b2dc4beb1247921c7b4159f9d67cab4b441b5ac1fcc",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_2way/new/estimates.json": "0ce8fe153bdece4e78f7852927495b05f80aa4484f06302c429d219149e642df",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_4way/new/sample.json": "dc7d62f5e8b7e003098f9ca6a9f64decd56d6f213a64394e44f5958afcbd5da3",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_4way/new/estimates.json": "fea2ce4cb7e47a2ffbc56b442bb03b2301ff758dc68d00be91c00cffe3e7be32",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_per_channel/new/sample.json": "bfa4d9476d3a6effa8c5ac8ba16f6cae8f6aed4444a5e38d9e7868977fb25cf3",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr12_2ch_per_channel/new/estimates.json": "4f58fe5823726d5ac523f0e75cb29b5d57f4d88589b6cf72b387581d3bdefbd2",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_2way/new/sample.json": "d1c1febfb46b80bbddfd57448aa956318ecc36ff56d791ebb0692b3a541e3e7f",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_2way/new/estimates.json": "94c989467cb8e32423a84080c340e1d46e2b40ca655d0308f7cc5cc627e1ceb0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_4way/new/sample.json": "64c2fe17ce95d15fc56fc320607e7650a92be4577f4ff2d1b1027ddb9e5f4276",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_4way/new/estimates.json": "72f8d9307a339173a4124c6b33856e3fa3b215b96e0e34e31eb36f854c7818c0",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_per_channel/new/sample.json": "97219df13d786ccc41f6b2d03a4cc34a1fcc31ef125832fea049a863ad5788df",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_new_iir_setup/lr48_2ch_per_channel/new/estimates.json": "7ae6721f516fa7cd5aa85bd9eade0328be75ad5cd82e2df88c84dddfef0c0926",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_1025taps/new/sample.json": "895de2f4369b910d70e5955f798c355671b9406d89a04b4038cbccb99207234d",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_1025taps/new/estimates.json": "dd458e8e1e9fd820693ecb87feb7698da30a923430681985ce35bc0846aab039",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_511taps/new/sample.json": "395bcaa93be25882aa834d45764244f8b97a7c70d7d458ad665240bde7b90432",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_511taps/new/estimates.json": "20dc82c182b4126e23059130cf452fb2ba8a7738eec99fa5169f3918ab09474c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_63taps/new/sample.json": "66a52316184d1dcfc0482836cb49884cb715dbcb94bc3a939510cff014a9275b",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/fir_2ch_4band_63taps/new/estimates.json": "9232f226264424da403a868fae723687406f88841011e80aedca491c5c5fb26c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_2ch_2band/new/sample.json": "1cb6dc3f12bb4a753be37936d4e9418218fd339b1f3ea9e295bcaed0b880c094",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_2ch_2band/new/estimates.json": "af82f652a615aa73cf102df757f2e3676e49433e05888a45c47f2bb7d2d2c0e4",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_2ch_4band/new/sample.json": "e69bf89c16d2be6024478e8d20d7c4a12b047d3f8928fa86a2dfb38bac6d99e7",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_2ch_4band/new/estimates.json": "48c845054aaba703e4b41fa3ad07a7da102f27e19ad2c28f313a80559e4d77d3",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_8ch_4band/new/sample.json": "cc9d1641389b21214d440e71679898604a08ab41657a729d7d4e18b4e66188a3",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_8ch_4band/new/estimates.json": "4c7827806efd2eebc0db8ee3337f75a153822b4cc8a87817760b461f12ba19be",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_8ch_per_channel/new/sample.json": "5ec1913e2ab8dba4ed293c3462ce2b14ba42f45735e0d7edbebcad054a98738c",
+    "audit/artifacts/aud142-post-core/criterion-r1/current/crossover_setup_and_initialize/lr24_8ch_per_channel/new/estimates.json": "8d99f1820e7ae66f312ee822dd9a4a7bb79b0a5b624c44f70781760f4935dd0d"
+  }
+}

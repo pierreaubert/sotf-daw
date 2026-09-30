@@ -6535,7 +6535,7 @@ dependencies = [
 
 [[package]]
 name = "plugins-bridge"
-version = "0.5.5"
+version = "0.6.0"
 dependencies = [
  "log",
  "serde",
@@ -6596,7 +6596,7 @@ dependencies = [
 
 [[package]]
 name = "plugins-ffi"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "cbindgen",
  "gpui-au",
@@ -6638,7 +6638,7 @@ dependencies = [
 
 [[package]]
 name = "plugins-nih"
-version = "0.5.4"
+version = "0.6.0"
 dependencies = [
  "assert_no_alloc",
  "clap-sys",
@@ -8333,7 +8333,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-engine"
-version = "1.0.33"
+version = "1.1.0"
 dependencies = [
  "arc-swap",
  "bytemuck",
@@ -8400,7 +8400,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-host"
-version = "0.5.105"
+version = "0.6.0"
 dependencies = [
  "arc-swap",
  "audioadapter-buffers",
@@ -8490,7 +8490,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-ab-compare"
-version = "0.5.6"
+version = "0.6.0"
 dependencies = [
  "math-iir-fir",
  "serde",
@@ -8517,7 +8517,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-ambisonics"
-version = "0.5.9"
+version = "0.6.0"
 dependencies = [
  "approx",
  "criterion",
@@ -8583,8 +8583,9 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-band-split"
-version = "0.5.5"
+version = "0.6.0"
 dependencies = [
+ "flate2",
  "proptest",
  "serde",
  "serde_json",
@@ -8638,7 +8639,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-convolution"
-version = "0.5.11"
+version = "0.6.0"
 dependencies = [
  "audioadapter-buffers",
  "log",
@@ -8669,7 +8670,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-crossover"
-version = "0.5.30"
+version = "0.6.0"
 dependencies = [
  "criterion",
  "proptest",
@@ -8701,7 +8702,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-delay"
-version = "0.5.11"
+version = "0.6.0"
 dependencies = [
  "proptest",
  "serde",
@@ -8748,7 +8749,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-dynamic-eq"
-version = "0.5.11"
+version = "0.6.0"
 dependencies = [
  "math-dsp",
  "math-iir-fir",
@@ -8808,7 +8809,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-hal-output"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "driver-hal",
  "log",
@@ -8953,7 +8954,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugin-speech-denoiser"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "hound",
  "plugins-denoiser",
@@ -9022,7 +9023,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-plugins"
-version = "0.7.14"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -9036,6 +9037,7 @@ dependencies = [
  "directories",
  "driver-hal",
  "env_logger",
+ "flate2",
  "hound",
  "id3",
  "insta",

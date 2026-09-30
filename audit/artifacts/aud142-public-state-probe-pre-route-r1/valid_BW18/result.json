@@ -1,0 +1,29 @@
+{
+  "case": "BW18",
+  "kind": "valid",
+  "expected_status": 0,
+  "outputs": 4,
+  "status": -8,
+  "state_matches_source": false,
+  "audio_matches_fresh": false,
+  "fresh_max_residual": 0.2993489559739828,
+  "old_family_sensitivity": 0.1670662984251976,
+  "audio": {
+    "actual": {
+      "file": "valid_BW18/actual.f32le",
+      "samples": 3572,
+      "sha256": "aa809db0160052f3b9916fe14f59c89e7c26bcf722c2c1addd84e2d273c41640"
+    },
+    "reference": {
+      "file": "valid_BW18/reference.f32le",
+      "samples": 3572,
+      "sha256": "750cf97e5cac48a1af259109f7d79938ad5b8ab6d45430440e3b3505ff01844d"
+    },
+    "old_family": {
+      "file": "valid_BW18/old_family.f32le",
+      "samples": 3572,
+      "sha256": "f05c485afd797a24e1caebb4566faa825e0820fbf74e092ee6fc2c0adff0849d"
+    }
+  },
+  "passed": false
+}

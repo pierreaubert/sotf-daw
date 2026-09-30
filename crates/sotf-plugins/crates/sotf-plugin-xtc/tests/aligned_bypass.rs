@@ -136,7 +136,7 @@ fn actual_parallel_host_compensation_aligns_enabled_and_disabled_routes() {
     for n in [128, 512, 2048] {
         for enabled in [false, true] {
             let mut host = DawHost::new(2, 48000);
-            host.set_parallel_enabled(false);
+            host.set_parallel_enabled(false).unwrap();
             let a = host
                 .add_node("xtc".into(), Box::new(make(n, 48000, enabled)))
                 .unwrap();

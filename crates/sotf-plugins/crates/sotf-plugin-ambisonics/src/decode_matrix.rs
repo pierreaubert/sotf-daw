@@ -8,6 +8,8 @@
 // speaker to the physical layout with setup-time VBAP.  Both paths produce a
 // fixed matrix, so process() has identical realtime behavior.
 
+// Rust guideline compliant 2026-02-21
+
 use crate::spherical_harmonics::{self, channel_count, deg_to_rad, spherical_harmonics_vector};
 use nalgebra::DMatrix;
 use sotf_host::speaker_config::SpeakerConfig;
@@ -43,7 +45,7 @@ pub enum DecodeAlgorithm {
 /// Deterministic virtual-sphere size used for each supported HOA order.
 /// The grid is a Fibonacci sphere, which has no pole singularity and provides
 /// full-sphere coverage for VBAP remapping.
-pub const ALLRAD_VIRTUAL_SPEAKERS: &[usize] = &[0, 64, 96, 128];
+pub const ALLRAD_VIRTUAL_SPEAKERS: &[usize] = &[0, 64, 96, 128, 256, 384, 512, 512];
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecodeQuality {
@@ -499,6 +501,40 @@ fn compute_max_re_weights(order: usize) -> Vec<f64> {
             0.612_333_620_718_713_8,
             0.304_746_984_955_207_9,
         ],
+        4 => &[
+            1.0,
+            0.906_179_845_938_664,
+            0.731_742_869_778_131_2,
+            0.501_031_171_044_662,
+            0.245_735_459_094_911_9,
+        ],
+        5 => &[
+            1.0,
+            0.932_469_514_203_152,
+            0.804_249_092_377_393_5,
+            0.628_249_924_643_688_8,
+            0.422_005_009_270_622_8,
+            0.205_712_311_059_622_7,
+        ],
+        6 => &[
+            1.0,
+            0.949_107_912_342_758_4,
+            0.851_208_743_907_443_7,
+            0.713_742_981_601_320_3,
+            0.547_076_886_699_035_9,
+            0.363_628_618_005_559_6,
+            0.176_827_725_006_924_9,
+        ],
+        7 => &[
+            1.0,
+            0.960_289_856_497_536_3,
+            0.883_234_912_738_088_3,
+            0.773_409_308_346_430_4,
+            0.637_293_764_466_675_6,
+            0.482_848_681_050_517_1,
+            0.318_992_129_110_484_2,
+            0.155_018_812_890_350_5,
+        ],
         _ => unreachable!("order must be validated against MAX_ORDER"),
     };
     let ambi_ch = channel_count(order);
@@ -828,3 +864,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "decode_matrix_aud133_tests.rs"]
+mod aud133_tests;

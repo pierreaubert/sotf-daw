@@ -41,7 +41,12 @@ use crate::external_plugin_isolated::IsolatedExternalPlugin;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::external_plugin_process::ExternalPluginProcessEvent;
 use crate::parameters::{ParameterId, ParameterValue};
-use crate::plugin::{Plugin, PluginCompiledOp, PluginCostClass, PluginDrainResult, ProcessContext};
+use crate::plugin::{
+    Plugin, PluginCompiledOp, PluginCostClass, PluginDrainResult, ProcessContext,
+    SinkAppendFailure, SinkQueueState, SinkServiceFailure, SinkTailPreflightError,
+    SinkTransportFormat, SinkTransportRecoveryError as PluginSinkRecoveryError,
+    SinkTransportRecoveryStatus, SinkTransportRepreparePlan, TailLength,
+};
 use arc_swap::ArcSwap;
 use rayon::prelude::*;
 use rtrb::{Consumer, Producer, RingBuffer};
@@ -125,6 +130,250 @@ struct DrainState {
     remaining_calls: Option<u64>,
 }
 
+struct PreparedTerminalSinkBuffers {
+    process_buffers: ProcessBuffers<f32>,
+    process_buffers_f64: ProcessBuffers<f64>,
+    f64_input_scratch: Vec<f32>,
+    f64_output_scratch: Vec<f32>,
+    f64_chain_scratch: Vec<f64>,
+    f64_chain_scratch_alt: Vec<f64>,
+    terminal_sink_staging: Vec<f32>,
+}
+
+fn try_zeroed_vec<T: Copy + Default>(len: usize, label: &str) -> Result<Vec<T>, String> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(len)
+        .map_err(|error| format!("{label} reservation failed: {error}"))?;
+    values.resize(len, T::default());
+    Ok(values)
+}
+
+fn try_copy_vec_with_min_len<T: Copy + Default>(
+    previous: &[T],
+    minimum_len: usize,
+    label: &str,
+) -> Result<Vec<T>, String> {
+    let mut values = try_zeroed_vec(previous.len().max(minimum_len), label)?;
+    values[..previous.len()].copy_from_slice(previous);
+    Ok(values)
+}
+
+fn try_vec_with_capacity<T>(capacity: usize, label: &str) -> Result<Vec<T>, String> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(capacity)
+        .map_err(|error| format!("{label} reservation failed: {error}"))?;
+    Ok(values)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TerminalSinkLifecycle {
+    Running,
+    Draining,
+    Complete,
+    ResetRequired,
+}
+
+/// Result of processing one input block through an explicitly selected sink.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SinkProcessResult {
+    /// Input frames consumed by the host graph and terminal sink.
+    pub input_frames_consumed: usize,
+    /// Frames still retained by the terminal sink after one bounded service step.
+    pub pending_sink_frames: usize,
+}
+
+/// Why sink input could not be admitted before any source callback ran.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkPreflightError {
+    /// Host-owned graph commands must be settled on the control thread first.
+    PendingGraphMutation,
+    /// The graph must be prepared on the control thread before sink processing.
+    GraphNotBuilt,
+    /// The complete block exceeds total prepared sink capacity.
+    InputExceedsCapacity {
+        input_frames: usize,
+        capacity_frames: usize,
+    },
+    /// Input did not match the prepared frame/sample contract.
+    InvalidInput(String),
+    /// The sink refused the read-only admission check.
+    Sink(SinkTailPreflightError),
+}
+
+/// Input consumption disposition after a sink-route failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkInputDisposition {
+    /// No source producer processed this input block.
+    NotAdmitted,
+    /// The whole input block was appended exactly once.
+    Admitted { frames: usize },
+    /// A producer or append may have made partial progress; never replay it.
+    Indeterminate,
+}
+
+/// Failure that poisons the current sink programme until explicit reset.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkFailure {
+    ControlInvalidatedRoute(String),
+    UpstreamProcess(String),
+    InvalidProducedFrameCount { reported: usize, expected: usize },
+    AppendContractViolation,
+    ServiceContractViolation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkProcessError {
+    RetryablePreflight(SinkPreflightError),
+    ResetRequired {
+        cause: SinkFailure,
+        input: SinkInputDisposition,
+    },
+    Lifecycle(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkGraphSettlementResult {
+    /// A single bounded service call ran; graph commands remain queued.
+    ServiceOnly { pending_sink_frames: usize },
+    /// All currently queued commands were applied, built and route-validated.
+    Settled,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkGraphSettlementError {
+    NotRunning,
+    ResetRequired(SinkFailure),
+    Graph(String),
+}
+
+/// Result of one bounded terminal-sink EOF step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SinkDrainResult {
+    /// Source-tail frames appended to the sink's prepared pending queue.
+    pub source_tail_frames_handed_to_sink: usize,
+    /// True only after the source is complete and the sink's pending queue is empty.
+    pub complete: bool,
+}
+
+/// A typed refusal or failure from terminal-sink end-of-stream processing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SinkDrainError {
+    /// Terminal-sink mode was not enabled.
+    ModeDisabled,
+    /// EOF cannot build a graph because building is a separate control operation.
+    GraphNotBuilt,
+    /// Host-owned graph mutations must be settled before EOF begins.
+    PendingGraphMutation,
+    /// The prepared graph is not a supported serial terminal-sink route.
+    InvalidRoute(String),
+    /// A producer does not have the finite tail metadata required by this route.
+    UnsupportedTailMetadata { node_id: NodeId, tail: TailLength },
+    /// The sink cannot reserve the producer's declared maximum tail chunk.
+    SinkPreflight(SinkTailPreflightError),
+    /// Prepared host scratch cannot hold the producer's declared maximum chunk.
+    ScratchCapacity {
+        /// Required interleaved scratch samples.
+        required_samples: usize,
+        /// Samples currently available in prepared scratch.
+        available_samples: usize,
+    },
+    /// An operation failed after EOF began and the host requires reset.
+    ResetRequired(String),
+    /// Another route operation failed before source state advanced.
+    Operation(String),
+}
+
+impl std::fmt::Display for SinkDrainError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ModeDisabled => formatter.write_str("terminal sink mode is not enabled"),
+            Self::GraphNotBuilt => formatter.write_str("terminal sink graph must be built first"),
+            Self::PendingGraphMutation => {
+                formatter.write_str("terminal sink EOF requires graph mutations to be settled")
+            }
+            Self::InvalidRoute(error) | Self::Operation(error) => formatter.write_str(error),
+            Self::UnsupportedTailMetadata { node_id, tail } => write!(
+                formatter,
+                "terminal sink producer {node_id} has unsupported tail metadata {tail:?}"
+            ),
+            Self::SinkPreflight(error) => {
+                write!(formatter, "terminal sink tail preflight failed: {error:?}")
+            }
+            Self::ScratchCapacity {
+                required_samples,
+                available_samples,
+            } => write!(
+                formatter,
+                "terminal tail scratch capacity is too small: need {required_samples} samples, have {available_samples}"
+            ),
+            Self::ResetRequired(error) => {
+                write!(formatter, "terminal sink reset required: {error}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for SinkDrainError {}
+
+impl From<String> for SinkDrainError {
+    fn from(error: String) -> Self {
+        Self::Operation(error)
+    }
+}
+
+impl From<&str> for SinkDrainError {
+    fn from(error: &str) -> Self {
+        Self::Operation(error.to_string())
+    }
+}
+
+/// A host-side refusal or failure from control-thread terminal-sink recovery.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TerminalSinkRecoveryError {
+    /// Terminal-sink mode was not enabled.
+    ModeDisabled,
+    /// The route has not been built and prepared.
+    GraphNotBuilt,
+    /// Recovery is allowed only while the programme is running or draining.
+    InvalidLifecycle,
+    /// Queued graph changes must be explicitly settled first.
+    PendingGraphMutation,
+    /// The current graph no longer satisfies the terminal route contract.
+    InvalidRoute(String),
+    /// The plugin refused or failed transport recovery.
+    Sink(PluginSinkRecoveryError),
+    /// The host could not prepare replacement storage before changing the sink.
+    HostPreparation(String),
+    /// Recovery changed a host-prepared queue, latency, or lifecycle invariant.
+    ContractViolation,
+}
+
+impl std::fmt::Display for TerminalSinkRecoveryError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ModeDisabled => formatter.write_str("terminal sink mode is not enabled"),
+            Self::GraphNotBuilt => formatter.write_str("terminal sink graph must be built first"),
+            Self::InvalidLifecycle => formatter
+                .write_str("terminal sink recovery requires a running or draining programme"),
+            Self::PendingGraphMutation => {
+                formatter.write_str("settle queued graph mutations before sink recovery")
+            }
+            Self::InvalidRoute(error) => formatter.write_str(error),
+            Self::Sink(error) => error.fmt(formatter),
+            Self::HostPreparation(error) => {
+                write!(formatter, "terminal sink host reprepare failed: {error}")
+            }
+            Self::ContractViolation => {
+                formatter.write_str("terminal sink recovery changed prepared host state")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TerminalSinkRecoveryError {}
+
 pub struct DawHost {
     pub(super) nodes: HashMap<NodeId, GraphNode>,
     /// Plugin storage indexed by NodeId — disjoint from `nodes` for borrow checker.
@@ -176,6 +425,10 @@ pub struct DawHost {
     /// the current host callback position.
     node_input_positions: Vec<u64>,
     drain_state: DrainState,
+    terminal_sink_lifecycle: Option<TerminalSinkLifecycle>,
+    terminal_sink_source_complete: bool,
+    terminal_sink_producer_started: bool,
+    terminal_sink_staging: Vec<f32>,
     /// Pre-allocated scratch buffer for automation updates (avoids per-process() heap allocation).
     pub(super) automation_scratch: Vec<(usize, f32)>,
     pub(super) queues: DawQueueEndpoints,
@@ -189,6 +442,94 @@ impl DawHost {
     /// buffers for. Covers all current SOTF engine block sizes; larger blocks
     /// still work but may trigger a one-time allocation on the audio thread.
     const MAX_BLOCK_FRAMES: usize = 8192;
+
+    fn ensure_sink_commands_allowed(&self) -> Result<(), String> {
+        match self.terminal_sink_lifecycle {
+            Some(TerminalSinkLifecycle::Draining)
+            | Some(TerminalSinkLifecycle::Complete)
+            | Some(TerminalSinkLifecycle::ResetRequired) => {
+                Err("terminal sink host is frozen; only DawHost::reset can reopen it".to_string())
+            }
+            Some(TerminalSinkLifecycle::Running) | None => Ok(()),
+        }
+    }
+
+    fn ensure_sink_running(&self) -> Result<(), String> {
+        match self.terminal_sink_lifecycle {
+            Some(TerminalSinkLifecycle::Running) => Ok(()),
+            Some(TerminalSinkLifecycle::Draining) => {
+                Err("terminal sink host is draining; reset before accepting input".to_string())
+            }
+            Some(TerminalSinkLifecycle::Complete) => {
+                Err("terminal sink stream is complete; reset before new input".to_string())
+            }
+            Some(TerminalSinkLifecycle::ResetRequired) => {
+                Err("terminal sink host requires reset after an uncertain failure".to_string())
+            }
+            None => Err("terminal sink mode is not enabled".to_string()),
+        }
+    }
+
+    fn ensure_sink_graph_mutation_allowed(&self) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
+        if self.terminal_sink_lifecycle != Some(TerminalSinkLifecycle::Running) {
+            return Ok(());
+        }
+
+        let Some(sink_id) = self.chain_nodes.last().copied() else {
+            return Ok(());
+        };
+        let Some(sink) = self
+            .plugins
+            .get(sink_id)
+            .and_then(Option::as_ref)
+            .and_then(|plugin| plugin.terminal_sink())
+        else {
+            return Ok(());
+        };
+        let state = sink.queue_state();
+        if state.pending_frames.checked_add(state.free_prepared_frames)
+            != Some(state.capacity_frames)
+        {
+            return Err("terminal sink has invalid prepared queue state".into());
+        }
+        if state.pending_frames > 0 {
+            return Err(
+                "terminal sink has retained audio; service it before direct graph mutation".into(),
+            );
+        }
+        Ok(())
+    }
+
+    fn has_advertised_terminal_sink(&self) -> bool {
+        self.plugins
+            .iter()
+            .flatten()
+            .any(|plugin| plugin.terminal_sink().is_some())
+    }
+
+    /// Opt this host into the explicit terminal-sink process and EOF APIs.
+    ///
+    /// Sink mode requires both asynchronous command producers to remain owned by
+    /// the host. Call this before exporting either command sender.
+    pub fn enable_terminal_sink_mode(&mut self) -> Result<(), String> {
+        if let Some(lifecycle) = self.terminal_sink_lifecycle {
+            return if lifecycle == TerminalSinkLifecycle::Running {
+                Ok(())
+            } else {
+                Err("terminal sink mode cannot be re-enabled after stream activity".into())
+            };
+        }
+        if self.queues.parameter_event_tx.is_none() || self.queues.graph_mutation_tx.is_none() {
+            return Err(
+                "terminal sink mode requires both command producers to remain host-owned".into(),
+            );
+        }
+        self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Running);
+        self.terminal_sink_source_complete = false;
+        self.terminal_sink_producer_started = false;
+        Ok(())
+    }
 
     pub fn new(channels: usize, sample_rate: u32) -> Self {
         let (parameter_event_tx, parameter_event_rx) =
@@ -224,6 +565,10 @@ impl DawHost {
             node_output_sample_rates: Vec::new(),
             node_input_positions: Vec::new(),
             drain_state: DrainState::default(),
+            terminal_sink_lifecycle: None,
+            terminal_sink_source_complete: false,
+            terminal_sink_producer_started: false,
+            terminal_sink_staging: Vec::new(),
             automation_scratch: Vec::new(),
             queues: DawQueueEndpoints {
                 parameter_event_tx: Some(parameter_event_tx),
@@ -261,24 +606,34 @@ impl DawHost {
     pub fn new_default(sr: u32) -> Self {
         Self::new(2, sr)
     }
-    pub fn set_parallel_enabled(&mut self, e: bool) {
+    pub fn set_parallel_enabled(&mut self, e: bool) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.config.parallel_enabled = e;
+        Ok(())
     }
 
-    pub fn set_compiled_linear_enabled(&mut self, enabled: bool) {
+    pub fn set_compiled_linear_enabled(&mut self, enabled: bool) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         if self.config.compiled_linear_enabled != enabled {
             self.config.compiled_linear_enabled = enabled;
             self.built = false;
         }
+        Ok(())
     }
 
     /// Enable or disable plugins' `preferred_oversampling()` requests.
-    pub fn set_plugin_preferred_oversampling_enabled(&mut self, enabled: bool) {
+    pub fn set_plugin_preferred_oversampling_enabled(
+        &mut self,
+        enabled: bool,
+    ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.config.plugin_preferred_oversampling_enabled = enabled;
+        Ok(())
     }
 
     /// Force a host oversampling wrapper around same-I/O plugins.
     pub fn set_forced_oversampling_factor(&mut self, factor: Option<u32>) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         if let Some(factor) = factor
             && factor != 2
             && factor != 4
@@ -298,7 +653,8 @@ impl DawHost {
         node_id: NodeId,
         param_id: ParameterId,
         curve: crate::automation::AutomationCurve,
-    ) {
+    ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         let auto = ParameterAutomation {
             param_id: param_id.clone(),
             mode: crate::automation::AutomationMode::Host,
@@ -310,7 +666,7 @@ impl DawHost {
         let key = (node_id, param_id.clone());
         if let Some(&idx) = self.automation_state.automation_index.get(&key) {
             self.automation_state.automation[idx].automation = auto;
-            return;
+            return Ok(());
         }
         let idx = self.automation_state.automation.len();
         self.automation_state.automation.push(AutomationSlot {
@@ -319,13 +675,19 @@ impl DawHost {
             automation: auto,
         });
         self.automation_state.automation_index.insert(key, idx);
+        Ok(())
     }
 
     /// Remove automation for a specific parameter on a node.
-    pub fn clear_automation(&mut self, node_id: NodeId, param_id: &ParameterId) {
+    pub fn clear_automation(
+        &mut self,
+        node_id: NodeId,
+        param_id: &ParameterId,
+    ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         let key = (node_id, param_id.clone());
         let Some(idx) = self.automation_state.automation_index.remove(&key) else {
-            return;
+            return Ok(());
         };
         self.automation_state.automation.swap_remove(idx);
         if idx < self.automation_state.automation.len() {
@@ -334,33 +696,40 @@ impl DawHost {
                 .automation_index
                 .insert((moved.node_id, moved.param_id.clone()), idx);
         }
+        Ok(())
     }
 
     /// Remove all automation.
-    pub fn clear_all_automation(&mut self) {
+    pub fn clear_all_automation(&mut self) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.automation_state.automation.clear();
         self.automation_state.automation_index.clear();
+        Ok(())
     }
 
     /// Reset playback position to 0.
-    pub fn reset_playback_position(&mut self) {
+    pub fn reset_playback_position(&mut self) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.automation_state.playback_position = 0;
         self.reanchor_node_positions();
         for slot in &mut self.automation_state.automation {
             slot.automation.position = 0;
         }
+        Ok(())
     }
 
     /// Synchronize the host timeline to an externally-owned transport clock.
     ///
     /// Embedded/DAW hosts call this at discontinuities; continuous processing
     /// advances the position internally without any control-thread traffic.
-    pub fn set_playback_position(&mut self, sample_position: u64) {
+    pub fn set_playback_position(&mut self, sample_position: u64) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         let position = usize::try_from(sample_position).unwrap_or(usize::MAX);
         if self.automation_state.playback_position != position {
             self.automation_state.playback_position = position;
             self.reanchor_node_positions();
         }
+        Ok(())
     }
 
     fn reanchor_node_positions(&mut self) {
@@ -422,6 +791,7 @@ impl DawHost {
     }
 
     pub fn add_node(&mut self, name: String, plugin: Box<dyn Plugin>) -> Result<NodeId, String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         let id = self.reserve_node_id();
         self.add_node_with_id_at_rate(id, name, plugin, self.config.sample_rate)?;
         Ok(id)
@@ -443,6 +813,7 @@ impl DawHost {
         mut plugin: Box<dyn Plugin>,
         input_sample_rate: u32,
     ) -> Result<(), String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         if self.nodes.contains_key(&id) {
             return Err(format!("Node {id} already exists"));
         }
@@ -475,6 +846,7 @@ impl DawHost {
     }
 
     pub fn add_edge(&mut self, mut edge: GraphEdge) -> Result<(), String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         if !self.nodes.contains_key(&edge.from_node) || !self.nodes.contains_key(&edge.to_node) {
             return Err("Node not found".into());
         }
@@ -534,10 +906,12 @@ impl DawHost {
     /// to `to`. During processing, sidechain data is appended after the node's
     /// primary audio input channels.
     pub fn add_sidechain_edge(&mut self, from: NodeId, to: NodeId) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.add_edge(GraphEdge::sidechain(from, to))
     }
 
     pub fn build(&mut self) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         if self.has_cycle() {
             return Err("Cycle".into());
         }
@@ -627,10 +1001,20 @@ impl DawHost {
         {
             return Err("Graph outputs have incompatible sample rates; add resamplers before the output mix".into());
         }
+        let prepared_sink_frames = self
+            .chain_nodes
+            .last()
+            .and_then(|&sink_id| self.plugins[sink_id].as_ref())
+            .and_then(|plugin| plugin.terminal_sink())
+            .map_or(Self::MAX_BLOCK_FRAMES, |sink| {
+                sink.queue_state()
+                    .capacity_frames
+                    .max(Self::MAX_BLOCK_FRAMES)
+            });
         let max_graph_frames = self
             .nodes
             .keys()
-            .map(|&id| self.path_output_frames(id, Self::MAX_BLOCK_FRAMES))
+            .map(|&id| self.path_output_frames(id, prepared_sink_frames))
             .max()
             .unwrap_or(Self::MAX_BLOCK_FRAMES)
             .max(Self::MAX_BLOCK_FRAMES);
@@ -641,11 +1025,11 @@ impl DawHost {
         let mut node_buffers_f64 = (0..num_slots).map(|_| None).collect::<Vec<_>>();
         for (&id, node) in &self.nodes {
             node_buffers[id] = Some(NodeBuffer::<f32>::new(
-                self.path_output_frames(id, Self::MAX_BLOCK_FRAMES),
+                self.path_output_frames(id, prepared_sink_frames),
                 node.output_channels(),
             ));
             node_buffers_f64[id] = Some(NodeBuffer::<f64>::new(
-                self.path_output_frames(id, Self::MAX_BLOCK_FRAMES),
+                self.path_output_frames(id, prepared_sink_frames),
                 node.output_channels(),
             ));
         }
@@ -795,8 +1179,288 @@ impl DawHost {
         // Cache total latency so total_latency_samples() is O(1)
         self.cached_latency = Some(self.compute_latency());
         self.compiled_plan = self.compile_render_plan();
+        if let Some(&sink_id) = self.chain_nodes.last()
+            && let Some(sink) = self.plugins[sink_id]
+                .as_ref()
+                .and_then(|plugin| plugin.terminal_sink())
+        {
+            let staging_samples = sink
+                .queue_state()
+                .capacity_frames
+                .checked_mul(self.nodes[&sink_id].input_channels())
+                .ok_or("terminal sink staging size overflow")?;
+            ensure_len(&mut self.terminal_sink_staging, staging_samples);
+        }
         self.built = true;
         self.publish_topology_snapshot();
+        Ok(())
+    }
+
+    fn prepare_terminal_sink_process_buffers<T: AudioSample>(
+        &self,
+        prepared_sink_frames: usize,
+        old_buffers: Option<&ProcessBuffers<T>>,
+    ) -> Result<ProcessBuffers<T>, String> {
+        let num_slots = match self.nodes.keys().copied().max() {
+            Some(max_id) => max_id
+                .checked_add(1)
+                .ok_or_else(|| "node-buffer slot count overflow".to_string())?,
+            None => 0,
+        };
+        let mut node_buffers = Vec::new();
+        node_buffers
+            .try_reserve_exact(num_slots)
+            .map_err(|error| format!("node-buffer slot reservation failed: {error}"))?;
+        node_buffers.resize_with(num_slots, || None);
+
+        for (&id, node) in &self.nodes {
+            let channels = node.output_channels();
+            let old = old_buffers
+                .and_then(|buffers| buffers.node_buffers.get(id))
+                .and_then(Option::as_ref);
+            if channels == 0 {
+                if old.is_some_and(|buffer| {
+                    buffer.num_channels != 0 || buffer.actual_len != 0 || !buffer.data.is_empty()
+                }) {
+                    return Err(format!(
+                        "node {id} zero-width output retained unexpected buffer data"
+                    ));
+                }
+                // A terminal sink has no output buffer. The regular graph
+                // builder represents that slot as an empty NodeBuffer too.
+                node_buffers[id] = Some(NodeBuffer {
+                    data: Vec::new(),
+                    actual_len: 0,
+                    num_channels: 0,
+                });
+                continue;
+            }
+            let frames = self.path_output_frames(id, prepared_sink_frames);
+            let required_samples = frames
+                .checked_mul(channels)
+                .ok_or_else(|| format!("node {id} prepared sample extent overflow"))?;
+            let retained_len = old.map_or(0, |buffer| buffer.actual_len);
+            if let Some(old) = old
+                && (old.num_channels != channels
+                    || retained_len > old.data.len()
+                    || !retained_len.is_multiple_of(channels))
+            {
+                return Err(format!(
+                    "node {id} retained buffer does not match the current graph geometry"
+                ));
+            }
+            let previous_data = old.map_or(&[][..], |buffer| buffer.data.as_slice());
+            let data = try_copy_vec_with_min_len(previous_data, required_samples, "node buffer")?;
+            node_buffers[id] = Some(NodeBuffer {
+                data,
+                actual_len: retained_len,
+                num_channels: channels,
+            });
+        }
+
+        let (graph_scratch_samples, delay_scratch_samples, max_channels) =
+            self.terminal_sink_graph_scratch_extents(prepared_sink_frames)?;
+
+        let mut parallel_scratch = Vec::new();
+        parallel_scratch
+            .try_reserve_exact(num_slots)
+            .map_err(|error| format!("parallel scratch slot reservation failed: {error}"))?;
+        for id in 0..num_slots {
+            if let Some(node) = self.nodes.get(&id) {
+                let input_samples = Self::MAX_BLOCK_FRAMES
+                    .checked_mul(node.input_channels())
+                    .ok_or_else(|| format!("node {id} parallel input extent overflow"))?;
+                let output_samples = Self::MAX_BLOCK_FRAMES
+                    .checked_mul(node.output_channels())
+                    .ok_or_else(|| format!("node {id} parallel output extent overflow"))?;
+                let old = old_buffers.and_then(|buffers| buffers.parallel_scratch.get(id));
+                parallel_scratch.push((
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.0.as_slice()),
+                        input_samples,
+                        "parallel input scratch",
+                    )?,
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.1.as_slice()),
+                        output_samples,
+                        "parallel output scratch",
+                    )?,
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.2.as_slice()),
+                        input_samples,
+                        "parallel merge scratch",
+                    )?,
+                ));
+            } else {
+                let old = old_buffers.and_then(|buffers| buffers.parallel_scratch.get(id));
+                parallel_scratch.push((
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.0.as_slice()),
+                        0,
+                        "parallel input scratch",
+                    )?,
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.1.as_slice()),
+                        0,
+                        "parallel output scratch",
+                    )?,
+                    try_copy_vec_with_min_len(
+                        old.map_or(&[][..], |scratch| scratch.2.as_slice()),
+                        0,
+                        "parallel merge scratch",
+                    )?,
+                ));
+            }
+        }
+
+        let result_capacity = self
+            .stages
+            .iter()
+            .map(|stage| stage.nodes.len())
+            .max()
+            .unwrap_or(0);
+        let parallel_results = try_vec_with_capacity(result_capacity, "parallel results")?;
+
+        Ok(ProcessBuffers {
+            node_buffers,
+            scratch_input: try_copy_vec_with_min_len(
+                old_buffers.map_or(&[][..], |buffers| buffers.scratch_input.as_slice()),
+                graph_scratch_samples,
+                "graph input scratch",
+            )?,
+            scratch_output: try_copy_vec_with_min_len(
+                old_buffers.map_or(&[][..], |buffers| buffers.scratch_output.as_slice()),
+                graph_scratch_samples,
+                "graph output scratch",
+            )?,
+            merge_buffer: try_copy_vec_with_min_len(
+                old_buffers.map_or(&[][..], |buffers| buffers.merge_buffer.as_slice()),
+                graph_scratch_samples,
+                "graph merge scratch",
+            )?,
+            channel_map_buffer: try_copy_vec_with_min_len(
+                old_buffers.map_or(&[][..], |buffers| buffers.channel_map_buffer.as_slice()),
+                graph_scratch_samples,
+                "channel-map scratch",
+            )?,
+            // The old delay objects are moved into this bundle only after the
+            // sink accepts its plan, preserving their ring positions/history.
+            compensation_delays: CompensationDelays::empty(),
+            delay_scratch: try_copy_vec_with_min_len(
+                old_buffers.map_or(&[][..], |buffers| buffers.delay_scratch.as_slice()),
+                delay_scratch_samples.max(max_channels),
+                "graph delay scratch",
+            )?,
+            parallel_scratch,
+            parallel_results,
+        })
+    }
+
+    fn terminal_sink_graph_scratch_extents(
+        &self,
+        prepared_sink_frames: usize,
+    ) -> Result<(usize, usize, usize), String> {
+        let mut graph_samples = 0usize;
+        let mut maximum_channels = 1usize;
+        for (&id, node) in &self.nodes {
+            let channels = node.input_channels().max(node.output_channels());
+            if channels == 0 {
+                return Err(format!("node {id} has zero channel geometry"));
+            }
+            maximum_channels = maximum_channels.max(channels);
+            let frames = self
+                .path_output_frames(id, prepared_sink_frames)
+                .max(Self::MAX_BLOCK_FRAMES);
+            let samples = frames
+                .checked_mul(channels)
+                .ok_or_else(|| format!("node {id} graph scratch extent overflow"))?;
+            graph_samples = graph_samples.max(samples);
+        }
+        let delay_samples = graph_samples
+            .checked_add(maximum_channels)
+            .ok_or_else(|| "graph delay scratch extent overflow".to_string())?;
+        Ok((graph_samples, delay_samples, maximum_channels))
+    }
+
+    fn prepare_terminal_sink_host_buffers(
+        &self,
+        sink_id: NodeId,
+        plan: SinkTransportRepreparePlan,
+    ) -> Result<PreparedTerminalSinkBuffers, String> {
+        let prepared_sink_frames = plan.queue_capacity_frames.max(Self::MAX_BLOCK_FRAMES);
+        let channels = self.nodes[&sink_id].input_channels();
+        let staging_samples = plan
+            .queue_capacity_frames
+            .checked_mul(channels)
+            .ok_or_else(|| "terminal sink staging sample extent overflow".to_string())?;
+        let (graph_scratch_samples, _, _) =
+            self.terminal_sink_graph_scratch_extents(prepared_sink_frames)?;
+
+        Ok(PreparedTerminalSinkBuffers {
+            process_buffers: self.prepare_terminal_sink_process_buffers(
+                prepared_sink_frames,
+                self.process_buffers.as_ref(),
+            )?,
+            process_buffers_f64: self.prepare_terminal_sink_process_buffers(
+                prepared_sink_frames,
+                self.process_buffers_f64.as_ref(),
+            )?,
+            f64_input_scratch: try_copy_vec_with_min_len(
+                &self.config.f64_input_scratch,
+                graph_scratch_samples,
+                "f64 input scratch",
+            )?,
+            f64_output_scratch: try_copy_vec_with_min_len(
+                &self.config.f64_output_scratch,
+                graph_scratch_samples,
+                "f64 output scratch",
+            )?,
+            f64_chain_scratch: try_copy_vec_with_min_len(
+                &self.config.f64_chain_scratch,
+                graph_scratch_samples,
+                "f64 chain scratch",
+            )?,
+            f64_chain_scratch_alt: try_copy_vec_with_min_len(
+                &self.config.f64_chain_scratch_alt,
+                graph_scratch_samples,
+                "alternate f64 chain scratch",
+            )?,
+            terminal_sink_staging: try_copy_vec_with_min_len(
+                &self.terminal_sink_staging,
+                staging_samples,
+                "terminal sink staging",
+            )?,
+        })
+    }
+
+    fn validate_terminal_sink_reprepare_plan(
+        &self,
+        sink_id: NodeId,
+        queue: SinkQueueState,
+        plan: SinkTransportRepreparePlan,
+    ) -> Result<(), String> {
+        let node = &self.nodes[&sink_id];
+        let expected_rate = self.node_input_sample_rates[sink_id];
+        let expected_channels = node.input_channels();
+        if !plan.configuration_changed
+            || plan.prepared_format.sample_rate != expected_rate
+            || plan.prepared_format.channels != expected_channels
+            || plan.target_format.sample_rate != expected_rate
+            || plan.target_format.channels != expected_channels
+            || plan.target_format.buffer_frames == 0
+            || plan.prepared_format.buffer_frames == 0
+            || plan.target_format.buffer_frames == plan.prepared_format.buffer_frames
+            || plan.pending_frames != queue.pending_frames
+            || plan.queue_capacity_frames
+                != plan.target_format.buffer_frames.max(queue.pending_frames)
+        {
+            return Err(
+                "terminal sink reprepare plan does not match the built route and queue".into(),
+            );
+        }
+        plan.queue_capacity_frames
+            .checked_mul(expected_channels)
+            .ok_or_else(|| "terminal sink reprepare queue sample extent overflow".to_string())?;
         Ok(())
     }
 
@@ -904,6 +1568,204 @@ impl DawHost {
         true
     }
 
+    /// Validate the narrower serial topology admitted for channel-changing EOF.
+    /// The ordinary processing path deliberately continues to use
+    /// `is_topologically_linear_chain` so its existing fast-path boundary does
+    /// not change.
+    fn validate_channel_changing_drain_chain(&mut self) -> Result<(), String> {
+        let invalid_topology =
+            || "end-of-stream drain currently requires a linear plugin graph".to_owned();
+        if !self.built
+            || self.chain_nodes.is_empty()
+            || self.chain_nodes.len() != self.nodes.len()
+            || self.input_nodes.len() != 1
+            || self.output_nodes.len() != 1
+            || self.input_nodes[0] != self.chain_nodes[0]
+            || self.output_nodes[0] != *self.chain_nodes.last().unwrap()
+            || self.edges.len() != self.chain_nodes.len().saturating_sub(1)
+        {
+            return Err(invalid_topology());
+        }
+
+        for pair in self.chain_nodes.windows(2) {
+            let Some(edge) = self
+                .edges
+                .iter()
+                .find(|edge| edge.from_node == pair[0] && edge.to_node == pair[1])
+            else {
+                return Err(invalid_topology());
+            };
+            if edge.edge_type != EdgeType::Audio
+                || edge.channel_map.is_some()
+                || edge.destination_offset != 0
+            {
+                return Err(invalid_topology());
+            }
+        }
+
+        let mut expected_input_channels = self.config.initial_input_channels;
+        let mut has_active_width_change = false;
+        for (chain_index, &node_id) in self.chain_nodes.iter().enumerate() {
+            let node = self.nodes.get(&node_id).ok_or_else(invalid_topology)?;
+            let plugin = self
+                .plugins
+                .get_mut(node_id)
+                .and_then(Option::as_deref_mut)
+                .ok_or_else(invalid_topology)?;
+            if node.input_channels() != expected_input_channels {
+                return Err(format!(
+                    "channel-changing drain requires contiguous node widths: expected {expected_input_channels} input channels at '{}', got {}",
+                    node.name,
+                    node.input_channels()
+                ));
+            }
+
+            if node.bypassed {
+                if node.input_channels() != node.output_channels() {
+                    return Err(format!(
+                        "channel-changing drain cannot bypass width-changing node '{}'",
+                        node.name
+                    ));
+                }
+            } else {
+                let input_rate = self
+                    .node_input_sample_rates
+                    .get(node_id)
+                    .copied()
+                    .ok_or_else(invalid_topology)?;
+                let output_rate = self
+                    .node_output_sample_rates
+                    .get(node_id)
+                    .copied()
+                    .ok_or_else(invalid_topology)?;
+                if input_rate != self.config.sample_rate || output_rate != self.config.sample_rate {
+                    return Err(format!(
+                        "channel-changing drain requires the host sample rate at '{}' (host {}, node input {input_rate}, output {output_rate})",
+                        node.name, self.config.sample_rate
+                    ));
+                }
+                if !plugin.guarantees_identity_frame_geometry() {
+                    return Err(format!(
+                        "channel-changing drain requires explicit identity frame geometry at '{}'",
+                        node.name
+                    ));
+                }
+                let metadata_was_prepared = chain_index < self.drain_state.completed_prefix
+                    || (self.drain_state.active_node == Some(node_id) && self.drain_state.prepared);
+                if !metadata_was_prepared {
+                    plugin.prepare_drain_metadata().map_err(|error| {
+                        format!(
+                            "channel-changing drain could not prepare tail metadata at '{}': {error}",
+                            node.name
+                        )
+                    })?;
+                    match plugin.tail_length() {
+                        TailLength::Finite(_) => {}
+                        TailLength::Unknown => {
+                            return Err(format!(
+                                "channel-changing drain requires finite tail metadata at '{}'",
+                                node.name
+                            ));
+                        }
+                        TailLength::Infinite => {
+                            return Err(format!(
+                                "channel-changing drain cannot complete an infinite tail at '{}'",
+                                node.name
+                            ));
+                        }
+                    }
+                }
+                has_active_width_change |= node.input_channels() != node.output_channels();
+            }
+
+            expected_input_channels = node.output_channels();
+        }
+
+        if !has_active_width_change {
+            return Err(invalid_topology());
+        }
+        Ok(())
+    }
+
+    /// Check every scratch extent required by a channel-changing drain before
+    /// any plugin enters its native EOS state. The route has already proved
+    /// identity frame geometry and equal sample rates, so each downstream
+    /// process stage receives the source tail's frame count unchanged.
+    fn validate_channel_changing_drain_scratch(&self) -> Result<(), String> {
+        let buffers = self
+            .process_buffers
+            .as_ref()
+            .ok_or("channel-changing drain requires prepared graph scratch")?;
+        let mut required_input_samples = 0usize;
+        let mut required_output_samples = 0usize;
+
+        for (source_index, &source_id) in self
+            .chain_nodes
+            .iter()
+            .enumerate()
+            .skip(self.drain_state.completed_prefix)
+        {
+            if self.nodes[&source_id].bypassed {
+                continue;
+            }
+            let source = self.plugins[source_id]
+                .as_ref()
+                .ok_or("channel-changing drain source plugin is unavailable")?;
+            let frames = source.drain_output_frames_max();
+            let source_samples = frames
+                .checked_mul(self.nodes[&source_id].output_channels())
+                .ok_or("channel-changing drain source scratch extent overflow")?;
+            required_output_samples = required_output_samples.max(source_samples);
+            let mut channels = self.nodes[&source_id].output_channels();
+
+            for &downstream_id in &self.chain_nodes[source_index + 1..] {
+                let downstream_node = &self.nodes[&downstream_id];
+                if downstream_node.bypassed {
+                    channels = downstream_node.output_channels();
+                    continue;
+                }
+                let input_samples = frames
+                    .checked_mul(channels)
+                    .ok_or("channel-changing drain input scratch extent overflow")?;
+                required_input_samples = required_input_samples.max(input_samples);
+
+                let downstream = self.plugins[downstream_id]
+                    .as_ref()
+                    .ok_or("channel-changing drain downstream plugin is unavailable")?;
+                let output_frames = downstream.output_frames_for_input(frames);
+                if output_frames < frames {
+                    return Err(format!(
+                        "channel-changing drain plugin '{}' reports output capacity {output_frames} below its identity frame count {frames}",
+                        downstream_node.name
+                    ));
+                }
+                let output_samples = output_frames
+                    .checked_mul(downstream_node.output_channels())
+                    .ok_or("channel-changing drain output scratch extent overflow")?;
+                required_output_samples = required_output_samples.max(output_samples);
+
+                // The explicit identity capability is the behavior proof;
+                // output_frames_for_input is only a storage bound. The next
+                // process stage receives the unchanged `frames` count.
+                channels = downstream_node.output_channels();
+            }
+        }
+
+        if required_input_samples > buffers.scratch_input.len() {
+            return Err(format!(
+                "channel-changing drain needs {required_input_samples} input scratch samples, prepared capacity is {}",
+                buffers.scratch_input.len()
+            ));
+        }
+        if required_output_samples > buffers.scratch_output.len() {
+            return Err(format!(
+                "channel-changing drain needs {required_output_samples} output scratch samples, prepared capacity is {}",
+                buffers.scratch_output.len()
+            ));
+        }
+        Ok(())
+    }
+
     pub(super) fn estimate_parallel_node_cost(
         plugin: &dyn Plugin,
         node_id: NodeId,
@@ -957,6 +1819,7 @@ impl DawHost {
     }
 
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> Result<(), String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         let id = self.reserve_node_id();
         self.add_plugin_with_id(id, plugin).map(|_| ())
     }
@@ -966,6 +1829,7 @@ impl DawHost {
         id: NodeId,
         plugin: Box<dyn Plugin>,
     ) -> Result<NodeId, String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         let expected = if self.chain_nodes.is_empty() {
             self.config.initial_input_channels
         } else {
@@ -994,6 +1858,7 @@ impl DawHost {
     }
 
     pub fn remove_plugin(&mut self, index: usize) -> Result<Box<dyn Plugin>, String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         if index >= self.chain_nodes.len() {
             return Err("oob".into());
         }
@@ -1169,6 +2034,160 @@ impl DawHost {
             .unwrap_or(f)
     }
 
+    /// Returns whether every active node guarantees identity frame geometry.
+    ///
+    /// Unlike the cached fast-path hint, this query does not infer identity
+    /// from sampled block sizes. Every non-bypassed node must opt in, and its
+    /// negotiated input and output sample rates must match.
+    pub fn has_identity_frame_geometry(&self) -> bool {
+        self.built
+            && self.nodes.iter().all(|(&node_id, node)| {
+                if node.bypassed {
+                    return true;
+                }
+
+                let same_rate = self
+                    .node_input_sample_rates
+                    .get(node_id)
+                    .zip(self.node_output_sample_rates.get(node_id))
+                    .is_some_and(|(input_rate, output_rate)| input_rate == output_rate);
+                let declared_identity = self
+                    .plugins
+                    .get(node_id)
+                    .and_then(|plugin| plugin.as_deref())
+                    .is_some_and(Plugin::guarantees_identity_frame_geometry);
+
+                same_rate && declared_identity
+            })
+    }
+
+    fn validate_terminal_sink_graph(&self) -> Result<(NodeId, Option<NodeId>), String> {
+        if !self.built {
+            return Err("terminal sink graph must be built before processing".into());
+        }
+        if self.chain_nodes.is_empty()
+            || self.chain_nodes.len() != self.nodes.len()
+            || self.input_nodes.len() != 1
+            || self.output_nodes.len() != 1
+            || self.input_nodes[0] != self.chain_nodes[0]
+            || self.output_nodes[0] != *self.chain_nodes.last().unwrap()
+            || self.edges.len() != self.chain_nodes.len().saturating_sub(1)
+        {
+            return Err("terminal sink route requires one connected serial chain".into());
+        }
+        let first_node = &self.nodes[&self.chain_nodes[0]];
+        if first_node.input_channels() != self.config.initial_input_channels {
+            return Err(format!(
+                "terminal sink route starts with {} channels but the host input has {}",
+                first_node.input_channels(),
+                self.config.initial_input_channels
+            ));
+        }
+        if !self.has_identity_frame_geometry() {
+            return Err(
+                "terminal sink route requires declared identity frame geometry and equal rates"
+                    .into(),
+            );
+        }
+
+        for (index, &node_id) in self.chain_nodes.iter().enumerate() {
+            let node = &self.nodes[&node_id];
+            if node.bypassed {
+                return Err("terminal sink route does not support bypassed nodes".into());
+            }
+            let plugin = self.plugins[node_id]
+                .as_ref()
+                .ok_or("terminal sink route contains a missing plugin")?;
+            if plugin.input_channels() != node.input_channels()
+                || plugin.output_channels() != node.output_channels()
+            {
+                return Err(format!(
+                    "terminal sink route node {node_id} changed its declared channel geometry"
+                ));
+            }
+            if index + 1 < self.chain_nodes.len() && node.input_channels() != node.output_channels()
+            {
+                return Err("terminal sink route requires channel-preserving source nodes".into());
+            }
+            if index > 0 {
+                let previous = self.chain_nodes[index - 1];
+                if self.nodes[&previous].output_channels() != node.input_channels() {
+                    return Err(format!(
+                        "terminal sink route channel mismatch between nodes {previous} and {node_id}"
+                    ));
+                }
+                let edge = self
+                    .edges
+                    .iter()
+                    .find(|edge| edge.from_node == previous && edge.to_node == node_id)
+                    .ok_or("terminal sink route is missing a serial audio edge")?;
+                if edge.edge_type != EdgeType::Audio
+                    || edge.channel_map.is_some()
+                    || edge.destination_offset != 0
+                {
+                    return Err("terminal sink route requires direct serial audio edges".into());
+                }
+            }
+        }
+
+        let sink_id = *self.chain_nodes.last().unwrap();
+        let sink_node = &self.nodes[&sink_id];
+        let sink_plugin = self.plugins[sink_id].as_ref().unwrap();
+        if sink_node.input_channels() == 0
+            || sink_node.output_channels() != 0
+            || sink_plugin.terminal_sink().is_none()
+        {
+            return Err(
+                "terminal chain node does not advertise a zero-output sink contract".into(),
+            );
+        }
+        let source_id = self
+            .chain_nodes
+            .len()
+            .checked_sub(2)
+            .map(|index| self.chain_nodes[index]);
+        if let Some(source_id) = source_id {
+            let source = &self.nodes[&source_id];
+            if source.output_channels() != sink_node.input_channels() {
+                return Err("terminal source and sink channel geometry do not match".into());
+            }
+        }
+        Ok((sink_id, source_id))
+    }
+
+    fn validate_terminal_sink_tail_source(
+        &self,
+        source_id: Option<NodeId>,
+    ) -> Result<(), SinkDrainError> {
+        let Some(sink_id) = self.chain_nodes.last().copied() else {
+            return Err(SinkDrainError::InvalidRoute(
+                "terminal sink route has no sink node".into(),
+            ));
+        };
+        for &node_id in self
+            .chain_nodes
+            .iter()
+            .filter(|&&node_id| node_id != sink_id)
+        {
+            let plugin = self.plugins[node_id]
+                .as_ref()
+                .ok_or_else(|| SinkDrainError::InvalidRoute(format!("missing plugin {node_id}")))?;
+            let tail = plugin.tail_length();
+            if Some(node_id) == source_id {
+                if !matches!(tail, TailLength::Finite(_)) {
+                    return Err(SinkDrainError::UnsupportedTailMetadata { node_id, tail });
+                }
+            } else if tail != TailLength::Finite(0) {
+                return Err(SinkDrainError::UnsupportedTailMetadata { node_id, tail });
+            } else if plugin.drain_output_frames_max() != 0 {
+                return Err(SinkDrainError::InvalidRoute(format!(
+                    "upstream terminal-sink node {node_id} reports drain output despite a zero tail"
+                )));
+            }
+        }
+        Ok(())
+    }
+
     fn path_output_frames(&self, id: NodeId, frames: usize) -> usize {
         let input_frames = self
             .predecessors
@@ -1229,6 +2248,7 @@ impl DawHost {
         id: &str,
         val: super::super::parameters::ParameterValue,
     ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         let &nid = self.chain_nodes.get(index).ok_or("oob")?;
         self.queue_node_parameter(nid, super::super::parameters::ParameterId::from(id), val)
     }
@@ -1307,6 +2327,7 @@ impl DawHost {
         val: super::super::parameters::ParameterValue,
         sample_offset: usize,
     ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.validate_automatable_plugin_parameter(index, id, &val)?;
         let &nid = self.chain_nodes.get(index).ok_or("oob")?;
         self.queue_node_parameter_at(
@@ -1337,6 +2358,7 @@ impl DawHost {
         value: ParameterValue,
         sample_offset: usize,
     ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         if !self.nodes.contains_key(&node_id) {
             return Err("Node not found".into());
         }
@@ -1365,6 +2387,9 @@ impl DawHost {
     /// control/UI side. `DawHost` keeps the consumer and continues draining
     /// events in `process()`.
     pub fn take_parameter_event_sender(&mut self) -> Option<ParameterEventSender> {
+        if self.terminal_sink_lifecycle.is_some() {
+            return None;
+        }
         let chain_nodes = self.chain_nodes.clone();
         let parameters = chain_nodes
             .iter()
@@ -1393,6 +2418,9 @@ impl DawHost {
     /// control/UI side. `DawHost` keeps the consumer, applies queued graph
     /// changes before processing, and publishes the rebuilt topology snapshot.
     pub fn take_graph_mutation_sender(&mut self) -> Option<GraphMutationSender> {
+        if self.terminal_sink_lifecycle.is_some() {
+            return None;
+        }
         self.queues
             .graph_mutation_tx
             .take()
@@ -1413,6 +2441,7 @@ impl DawHost {
         id: &str,
         val: super::super::parameters::ParameterValue,
     ) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         let &nid = self.chain_nodes.get(index).ok_or("oob")?;
         let plugin = self
             .plugins
@@ -1826,6 +2855,7 @@ impl DawHost {
 
     /// Queue a linear-chain plugin append for audio-thread application.
     pub fn queue_add_plugin(&mut self, plugin: Box<dyn Plugin>) -> Result<NodeId, String> {
+        self.ensure_sink_commands_allowed()?;
         let id = self.reserve_node_id();
         self.queue_graph_mutation(GraphMutation::AddPlugin { id, plugin })
             .map(|()| id)
@@ -1837,6 +2867,7 @@ impl DawHost {
         name: String,
         plugin: Box<dyn Plugin>,
     ) -> Result<NodeId, String> {
+        self.ensure_sink_commands_allowed()?;
         let id = self.reserve_node_id();
         self.queue_graph_mutation(GraphMutation::AddNode { id, name, plugin })
             .map(|()| id)
@@ -1844,11 +2875,13 @@ impl DawHost {
 
     /// Queue an edge insertion for audio-thread application.
     pub fn queue_add_edge(&mut self, edge: GraphEdge) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.queue_graph_mutation(GraphMutation::AddEdge(edge))
     }
 
     /// Queue a linear-chain plugin removal for audio-thread application.
     pub fn queue_remove_plugin(&mut self, index: usize) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
         self.queue_graph_mutation(GraphMutation::RemovePlugin { index })
     }
 
@@ -1879,6 +2912,7 @@ impl DawHost {
     /// When bypassed, input is passed directly to output.
     /// Only works for nodes with matching input/output channel counts.
     pub fn bypass_node(&mut self, id: NodeId) -> Result<(), String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         {
             let node = self.nodes.get(&id).ok_or("Node not found")?;
             if node.input_channels != node.output_channels {
@@ -1894,6 +2928,7 @@ impl DawHost {
 
     /// Unbypass a node so its plugin resumes processing.
     pub fn unbypass_node(&mut self, id: NodeId) -> Result<(), String> {
+        self.ensure_sink_graph_mutation_allowed()?;
         if !self.nodes.contains_key(&id) {
             return Err("Node not found".into());
         }
@@ -1950,6 +2985,9 @@ impl DawHost {
     }
 
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<usize, String> {
+        if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
+            return Err("terminal sink graphs require explicit process_to_sink processing".into());
+        }
         self.drain_graph_mutations()?;
         if !self.built {
             self.build()?;
@@ -1973,6 +3011,608 @@ impl DawHost {
             self.drain_state = DrainState::default();
         }
         result
+    }
+
+    /// Process an input block through a prepared graph ending in an opted-in sink.
+    ///
+    /// The block is admitted atomically into prepared sink storage before any
+    /// source plugin or queued parameter event advances. A zero-consumed result
+    /// is a service-only response: retry the same input slice on a later call.
+    pub fn process_to_sink(
+        &mut self,
+        input: &[f32],
+    ) -> Result<SinkProcessResult, SinkProcessError> {
+        self.ensure_sink_running()
+            .map_err(SinkProcessError::Lifecycle)?;
+        if !self.queues.graph_mutation_rx.is_empty() {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::PendingGraphMutation,
+            ));
+        }
+        if !self.built {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::GraphNotBuilt,
+            ));
+        }
+        let (sink_id, _) = self.validate_terminal_sink_graph().map_err(|_error| {
+            SinkProcessError::RetryablePreflight(SinkPreflightError::Sink(
+                SinkTailPreflightError::InvalidGeometry,
+            ))
+        })?;
+        let input_channels = self.input_channels();
+        if input_channels == 0 || !input.len().is_multiple_of(input_channels) {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::InvalidInput(format!(
+                    "terminal sink input must contain whole frames of {input_channels} channels"
+                )),
+            ));
+        }
+        if let Some((index, sample)) = input
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, sample)| !sample.is_finite())
+        {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::InvalidInput(format!(
+                    "host input contains non-finite sample at index {index}: {sample}"
+                )),
+            ));
+        }
+        let input_frames = input.len() / input_channels;
+        self.validate_terminal_sink_input_geometry(input_frames)
+            .map_err(|_| {
+                SinkProcessError::RetryablePreflight(SinkPreflightError::Sink(
+                    SinkTailPreflightError::InvalidGeometry,
+                ))
+            })?;
+
+        let sink_state = self.terminal_sink_queue_state(sink_id).map_err(|_| {
+            SinkProcessError::RetryablePreflight(SinkPreflightError::Sink(
+                SinkTailPreflightError::InvalidGeometry,
+            ))
+        })?;
+        if input_frames > sink_state.capacity_frames {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::InputExceedsCapacity {
+                    input_frames,
+                    capacity_frames: sink_state.capacity_frames,
+                },
+            ));
+        }
+
+        // Empty input is an explicit bounded transport service request. It
+        // never dequeues controls or advances any source/host clock.
+        if input.is_empty() {
+            let pending_sink_frames = if sink_state.pending_frames == 0 {
+                0
+            } else {
+                match self.service_terminal_sink_pending(sink_id) {
+                    Ok(state) => state.pending_frames,
+                    Err(cause) => {
+                        self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                        return Err(SinkProcessError::ResetRequired {
+                            cause,
+                            input: SinkInputDisposition::NotAdmitted,
+                        });
+                    }
+                }
+            };
+            return Ok(SinkProcessResult {
+                input_frames_consumed: 0,
+                pending_sink_frames,
+            });
+        }
+
+        if input_frames > sink_state.free_prepared_frames {
+            let pending_sink_frames = match self.service_terminal_sink_pending(sink_id) {
+                Ok(state) => state.pending_frames,
+                Err(cause) => {
+                    self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                    return Err(SinkProcessError::ResetRequired {
+                        cause,
+                        input: SinkInputDisposition::NotAdmitted,
+                    });
+                }
+            };
+            return Ok(SinkProcessResult {
+                input_frames_consumed: 0,
+                pending_sink_frames,
+            });
+        }
+
+        let sink_position = self.node_input_positions[sink_id];
+        let sink_rate = self.node_input_sample_rates[sink_id];
+        let context =
+            ProcessContext::new(sink_rate, input_frames).with_sample_position(sink_position);
+        self.preflight_terminal_sink_append(sink_id, input_frames, &context)
+            .map_err(SinkProcessError::RetryablePreflight)?;
+        if self.terminal_sink_staging.len() < input.len() {
+            return Err(SinkProcessError::RetryablePreflight(
+                SinkPreflightError::Sink(SinkTailPreflightError::InvalidGeometry),
+            ));
+        }
+
+        self.terminal_sink_producer_started = false;
+        let mut events = std::mem::take(&mut self.queues.parameter_event_scratch);
+        self.drain_parameter_events_into(&mut events);
+        let mut staging = std::mem::take(&mut self.terminal_sink_staging);
+        let block_start_sample = self.automation_state.playback_position as u64;
+        let process_result = self.process_with_parameter_events_to_sink(
+            input,
+            &mut staging[..input.len()],
+            &mut events,
+            block_start_sample,
+        );
+        self.terminal_sink_staging = staging;
+        self.queues.parameter_event_scratch = events;
+        let processed_frames = match process_result {
+            Ok(frames) => frames,
+            Err(error) => {
+                let (cause, disposition) = if self.terminal_sink_producer_started {
+                    (
+                        SinkFailure::UpstreamProcess(error),
+                        SinkInputDisposition::Indeterminate,
+                    )
+                } else {
+                    (
+                        SinkFailure::ControlInvalidatedRoute(error),
+                        SinkInputDisposition::NotAdmitted,
+                    )
+                };
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkProcessError::ResetRequired {
+                    cause,
+                    input: disposition,
+                });
+            }
+        };
+        if processed_frames != input_frames {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(SinkProcessError::ResetRequired {
+                cause: SinkFailure::InvalidProducedFrameCount {
+                    reported: processed_frames,
+                    expected: input_frames,
+                },
+                input: SinkInputDisposition::Indeterminate,
+            });
+        }
+        // The successful preflight reserved this complete block before any
+        // producer advanced. Do not repeat transport or geometry preflight
+        // after processing: a device notification may arrive meanwhile, but it
+        // cannot revoke the already admitted local block.
+        let Some(terminal_sink) = self.plugins[sink_id]
+            .as_mut()
+            .and_then(|plugin| plugin.terminal_sink_mut())
+        else {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(SinkProcessError::ResetRequired {
+                cause: SinkFailure::AppendContractViolation,
+                input: SinkInputDisposition::Indeterminate,
+            });
+        };
+        let append_result =
+            terminal_sink.append_preflighted(&self.terminal_sink_staging[..input.len()], &context);
+        if append_result.is_err() {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(SinkProcessError::ResetRequired {
+                cause: SinkFailure::AppendContractViolation,
+                input: SinkInputDisposition::Indeterminate,
+            });
+        }
+        self.drain_state = DrainState::default();
+
+        let pending_sink_frames = match self.service_terminal_sink_pending(sink_id) {
+            Ok(state) => state.pending_frames,
+            Err(cause) => {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkProcessError::ResetRequired {
+                    cause,
+                    input: SinkInputDisposition::Admitted {
+                        frames: input_frames,
+                    },
+                });
+            }
+        };
+        Ok(SinkProcessResult {
+            input_frames_consumed: input_frames,
+            pending_sink_frames,
+        })
+    }
+
+    /// Settle host-owned queued graph edits while preserving any retained sink
+    /// audio. This is a control-thread operation and may allocate while building.
+    pub fn settle_terminal_sink_graph_mutations(
+        &mut self,
+    ) -> Result<SinkGraphSettlementResult, SinkGraphSettlementError> {
+        if self.terminal_sink_lifecycle != Some(TerminalSinkLifecycle::Running)
+            || self.queues.parameter_event_tx.is_none()
+            || self.queues.graph_mutation_tx.is_none()
+        {
+            return Err(SinkGraphSettlementError::NotRunning);
+        }
+        let sink_id = self
+            .chain_nodes
+            .last()
+            .copied()
+            .filter(|id| {
+                self.plugins
+                    .get(*id)
+                    .and_then(Option::as_ref)
+                    .is_some_and(|plugin| plugin.terminal_sink().is_some())
+            })
+            .ok_or_else(|| {
+                SinkGraphSettlementError::Graph(
+                    "current graph has no prepared terminal sink".into(),
+                )
+            })?;
+        let queue_state = self
+            .terminal_sink_queue_state(sink_id)
+            .map_err(SinkGraphSettlementError::Graph)?;
+        if queue_state.pending_frames > 0 {
+            let pending_sink_frames = self
+                .service_terminal_sink_pending(sink_id)
+                .map_err(|cause| {
+                    self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                    SinkGraphSettlementError::ResetRequired(cause)
+                })?
+                .pending_frames;
+            return Ok(SinkGraphSettlementResult::ServiceOnly {
+                pending_sink_frames,
+            });
+        }
+
+        if !self.queues.graph_mutation_rx.is_empty() {
+            self.built = false;
+            self.drain_graph_mutations()
+                .map_err(SinkGraphSettlementError::Graph)?;
+        }
+        if !self.built {
+            self.build().map_err(SinkGraphSettlementError::Graph)?;
+        }
+        self.validate_terminal_sink_graph()
+            .map_err(SinkGraphSettlementError::Graph)?;
+        Ok(SinkGraphSettlementResult::Settled)
+    }
+
+    /// Recover an owned sink transport without rebuilding or resetting the graph.
+    ///
+    /// Call this from a control thread while the prepared programme is running
+    /// or draining. Recovery preserves the host queue, cached latency, source
+    /// drain cursor, and lifecycle. A changed transport sample rate, channel
+    /// count, or ring capacity returns `NeedsReprepare`; this API does not
+    /// provide a preserving reprepare operation.
+    ///
+    /// # Errors
+    /// Returns an error when the graph is unbuilt, has pending graph mutations,
+    /// is not in a recoverable lifecycle, or the sink cannot retain its
+    /// prepared geometry.
+    pub fn recover_terminal_sink_transport(
+        &mut self,
+    ) -> Result<SinkTransportRecoveryStatus, TerminalSinkRecoveryError> {
+        match self.terminal_sink_lifecycle {
+            None => return Err(TerminalSinkRecoveryError::ModeDisabled),
+            Some(TerminalSinkLifecycle::Running | TerminalSinkLifecycle::Draining) => {}
+            Some(TerminalSinkLifecycle::Complete | TerminalSinkLifecycle::ResetRequired) => {
+                return Err(TerminalSinkRecoveryError::InvalidLifecycle);
+            }
+        }
+        if !self.built {
+            return Err(TerminalSinkRecoveryError::GraphNotBuilt);
+        }
+        if !self.queues.graph_mutation_rx.is_empty() {
+            return Err(TerminalSinkRecoveryError::PendingGraphMutation);
+        }
+        let (sink_id, _) = self
+            .validate_terminal_sink_graph()
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let queue_before = self
+            .terminal_sink_queue_state(sink_id)
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let plugin = self.plugins[sink_id].as_ref().ok_or_else(|| {
+            TerminalSinkRecoveryError::InvalidRoute("terminal sink plugin is missing".into())
+        })?;
+        let expected = plugin
+            .terminal_sink()
+            .and_then(|sink| sink.prepared_transport_format())
+            .unwrap_or_else(|| SinkTransportFormat {
+                sample_rate: self.node_input_sample_rates[sink_id],
+                channels: self.nodes[&sink_id].input_channels(),
+                buffer_frames: queue_before.capacity_frames,
+            });
+        if expected.sample_rate != self.node_input_sample_rates[sink_id]
+            || expected.channels != self.nodes[&sink_id].input_channels()
+            || expected.buffer_frames == 0
+        {
+            return Err(TerminalSinkRecoveryError::InvalidRoute(
+                "terminal sink prepared format does not match the built route".into(),
+            ));
+        }
+        let latency_before = plugin.latency_samples();
+        let cached_latency_before = self.cached_latency;
+        let lifecycle_before = self.terminal_sink_lifecycle;
+        let source_complete_before = self.terminal_sink_source_complete;
+        let drain_cursor_before = (
+            self.drain_state.completed_prefix,
+            self.drain_state.active_node,
+            self.drain_state.prepared,
+            self.drain_state.remaining_calls,
+        );
+        let sink_position_before = self.node_input_positions[sink_id];
+
+        let status = self.plugins[sink_id]
+            .as_mut()
+            .and_then(|plugin| plugin.terminal_sink_mut())
+            .ok_or_else(|| {
+                TerminalSinkRecoveryError::InvalidRoute("terminal sink contract disappeared".into())
+            })?
+            .recover_transport(expected)
+            .map_err(TerminalSinkRecoveryError::Sink)?;
+
+        let queue_after = self
+            .terminal_sink_queue_state(sink_id)
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let latency_after = self.plugins[sink_id]
+            .as_ref()
+            .map_or(usize::MAX, |plugin| plugin.latency_samples());
+        let drain_cursor_after = (
+            self.drain_state.completed_prefix,
+            self.drain_state.active_node,
+            self.drain_state.prepared,
+            self.drain_state.remaining_calls,
+        );
+        if queue_after != queue_before
+            || latency_after != latency_before
+            || self.cached_latency != cached_latency_before
+            || self.terminal_sink_lifecycle != lifecycle_before
+            || self.terminal_sink_source_complete != source_complete_before
+            || drain_cursor_after != drain_cursor_before
+            || self.node_input_positions[sink_id] != sink_position_before
+            || self.validate_terminal_sink_graph().is_err()
+        {
+            return Err(TerminalSinkRecoveryError::ContractViolation);
+        }
+        Ok(status)
+    }
+
+    /// Reprepare host and sink storage after a physical ring-size change.
+    ///
+    /// This control-thread operation preserves the built graph, pending sink
+    /// samples, source clocks, EOF cursor, compensation-delay history, and
+    /// retained per-node output. Only the physical ring size may change; the
+    /// sample rate and channel count must remain the same. Every fallible host
+    /// allocation is staged before the sink is asked to commit its plan.
+    pub fn reprepare_terminal_sink_transport(
+        &mut self,
+    ) -> Result<SinkTransportRecoveryStatus, TerminalSinkRecoveryError> {
+        match self.terminal_sink_lifecycle {
+            None => return Err(TerminalSinkRecoveryError::ModeDisabled),
+            Some(TerminalSinkLifecycle::Running | TerminalSinkLifecycle::Draining) => {}
+            Some(TerminalSinkLifecycle::Complete | TerminalSinkLifecycle::ResetRequired) => {
+                return Err(TerminalSinkRecoveryError::InvalidLifecycle);
+            }
+        }
+        if !self.built {
+            return Err(TerminalSinkRecoveryError::GraphNotBuilt);
+        }
+        if !self.queues.graph_mutation_rx.is_empty() {
+            return Err(TerminalSinkRecoveryError::PendingGraphMutation);
+        }
+        if self.process_buffers.is_none() || self.process_buffers_f64.is_none() {
+            return Err(TerminalSinkRecoveryError::HostPreparation(
+                "built sink route is missing prepared process buffers".into(),
+            ));
+        }
+        let (sink_id, _) = self
+            .validate_terminal_sink_graph()
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let queue_before = self
+            .terminal_sink_queue_state(sink_id)
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let plan = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or_else(|| {
+                TerminalSinkRecoveryError::InvalidRoute("terminal sink contract disappeared".into())
+            })?
+            .reprepare_plan()
+            .map_err(TerminalSinkRecoveryError::Sink)?;
+        self.validate_terminal_sink_reprepare_plan(sink_id, queue_before, plan)
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+
+        let lifecycle_before = self.terminal_sink_lifecycle;
+        let source_complete_before = self.terminal_sink_source_complete;
+        let cached_latency_before = self.cached_latency;
+        let sink_position_before = self.node_input_positions[sink_id];
+        let drain_cursor_before = (
+            self.drain_state.completed_prefix,
+            self.drain_state.active_node,
+            self.drain_state.prepared,
+            self.drain_state.remaining_calls,
+        );
+        let old_plugin_latency = self.plugins[sink_id]
+            .as_ref()
+            .map_or(usize::MAX, |plugin| plugin.latency_samples());
+
+        let mut staged = self
+            .prepare_terminal_sink_host_buffers(sink_id, plan)
+            .map_err(TerminalSinkRecoveryError::HostPreparation)?;
+
+        let current_plan = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or_else(|| {
+                TerminalSinkRecoveryError::InvalidRoute("terminal sink contract disappeared".into())
+            })?
+            .reprepare_plan()
+            .map_err(TerminalSinkRecoveryError::Sink)?;
+        if current_plan != plan
+            || self
+                .terminal_sink_queue_state(sink_id)
+                .map_err(TerminalSinkRecoveryError::InvalidRoute)?
+                != queue_before
+        {
+            return Err(TerminalSinkRecoveryError::Sink(
+                PluginSinkRecoveryError::StalePlan,
+            ));
+        }
+
+        let status = self.plugins[sink_id]
+            .as_mut()
+            .and_then(|plugin| plugin.terminal_sink_mut())
+            .ok_or_else(|| {
+                TerminalSinkRecoveryError::InvalidRoute("terminal sink contract disappeared".into())
+            })?
+            .reprepare_transport(plan)
+            .map_err(TerminalSinkRecoveryError::Sink)?;
+
+        let queue_after = self
+            .terminal_sink_queue_state(sink_id)
+            .map_err(TerminalSinkRecoveryError::InvalidRoute)?;
+        let plugin = self.plugins[sink_id].as_ref().ok_or_else(|| {
+            TerminalSinkRecoveryError::InvalidRoute("terminal sink plugin is missing".into())
+        })?;
+        let plugin_latency = plugin.latency_samples();
+        let prepared_format = plugin
+            .terminal_sink()
+            .and_then(|sink| sink.prepared_transport_format());
+        let drain_cursor_after = (
+            self.drain_state.completed_prefix,
+            self.drain_state.active_node,
+            self.drain_state.prepared,
+            self.drain_state.remaining_calls,
+        );
+        let host_state_unchanged = self.terminal_sink_lifecycle == lifecycle_before
+            && self.terminal_sink_source_complete == source_complete_before
+            && self.cached_latency == cached_latency_before
+            && self.node_input_positions[sink_id] == sink_position_before
+            && drain_cursor_after == drain_cursor_before;
+
+        match status {
+            SinkTransportRecoveryStatus::Waiting(_) => {
+                if queue_after != queue_before
+                    || plugin_latency != old_plugin_latency
+                    || prepared_format.is_none_or(|format| format != plan.prepared_format)
+                    || !host_state_unchanged
+                {
+                    self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                    return Err(TerminalSinkRecoveryError::ContractViolation);
+                }
+                return Ok(status);
+            }
+            SinkTransportRecoveryStatus::Ready => {
+                if queue_after.pending_frames != queue_before.pending_frames
+                    || queue_after.capacity_frames != plan.queue_capacity_frames
+                    || plugin_latency != plan.latency_samples
+                    || prepared_format != Some(plan.target_format)
+                    || !host_state_unchanged
+                {
+                    self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                    return Err(TerminalSinkRecoveryError::ContractViolation);
+                }
+            }
+        }
+
+        let Some(old_f32) = self.process_buffers.take() else {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(TerminalSinkRecoveryError::ContractViolation);
+        };
+        staged.process_buffers.compensation_delays = old_f32.compensation_delays;
+        staged.process_buffers.parallel_results = old_f32.parallel_results;
+        let Some(old_f64) = self.process_buffers_f64.take() else {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(TerminalSinkRecoveryError::ContractViolation);
+        };
+        staged.process_buffers_f64.compensation_delays = old_f64.compensation_delays;
+        staged.process_buffers_f64.parallel_results = old_f64.parallel_results;
+        self.process_buffers = Some(staged.process_buffers);
+        self.process_buffers_f64 = Some(staged.process_buffers_f64);
+        self.config.f64_input_scratch = staged.f64_input_scratch;
+        self.config.f64_output_scratch = staged.f64_output_scratch;
+        self.config.f64_chain_scratch = staged.f64_chain_scratch;
+        self.config.f64_chain_scratch_alt = staged.f64_chain_scratch_alt;
+        self.terminal_sink_staging = staged.terminal_sink_staging;
+        self.cached_latency = Some(self.compute_latency());
+        Ok(SinkTransportRecoveryStatus::Ready)
+    }
+
+    fn terminal_sink_queue_state(&self, sink_id: NodeId) -> Result<SinkQueueState, String> {
+        let state = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or("terminal sink contract disappeared")?
+            .queue_state();
+        if state.pending_frames.checked_add(state.free_prepared_frames)
+            != Some(state.capacity_frames)
+        {
+            return Err("terminal sink queue state has invalid frame geometry".into());
+        }
+        Ok(state)
+    }
+
+    fn preflight_terminal_sink_append(
+        &self,
+        sink_id: NodeId,
+        frames: usize,
+        context: &ProcessContext,
+    ) -> Result<(), SinkPreflightError> {
+        self.terminal_sink_queue_state(sink_id)
+            .map_err(|_| SinkPreflightError::Sink(SinkTailPreflightError::InvalidGeometry))?;
+        self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or(SinkPreflightError::Sink(
+                SinkTailPreflightError::InvalidGeometry,
+            ))?
+            .preflight_append(frames, context)
+            .map_err(SinkPreflightError::Sink)
+    }
+
+    fn service_terminal_sink_pending(
+        &mut self,
+        sink_id: NodeId,
+    ) -> Result<SinkQueueState, SinkFailure> {
+        let sample_rate = self.node_input_sample_rates[sink_id];
+        let sample_position = self.node_input_positions[sink_id];
+        let context = ProcessContext::new(sample_rate, 0).with_sample_position(sample_position);
+        self.plugins[sink_id]
+            .as_mut()
+            .and_then(|plugin| plugin.terminal_sink_mut())
+            .ok_or(SinkFailure::ServiceContractViolation)?
+            .service_pending(&context)
+            .map_err(|SinkServiceFailure::ContractViolation| SinkFailure::ServiceContractViolation)
+    }
+
+    fn validate_terminal_sink_input_geometry(&self, frames: usize) -> Result<(), String> {
+        let (sink_id, _) = self.validate_terminal_sink_graph()?;
+        for &node_id in &self.chain_nodes {
+            let node = &self.nodes[&node_id];
+            let plugin = self.plugins[node_id]
+                .as_ref()
+                .ok_or_else(|| format!("terminal sink route is missing plugin {node_id}"))?;
+            if plugin.input_channels() != node.input_channels()
+                || plugin.output_channels() != node.output_channels()
+            {
+                return Err(format!(
+                    "terminal sink route node {node_id} changed channel geometry"
+                ));
+            }
+            if frames > 0 && node_id != sink_id && plugin.output_frames_for_input(frames) != frames
+            {
+                return Err(format!(
+                    "terminal sink route node {node_id} changed frame geometry"
+                ));
+            }
+            let input_rate = self.node_input_sample_rates[node_id];
+            if plugin.output_sample_rate(input_rate) != self.node_output_sample_rates[node_id]
+                || input_rate != self.node_output_sample_rates[node_id]
+            {
+                return Err(format!(
+                    "terminal sink route node {node_id} changed sample-rate geometry"
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Required conservative frame capacity for one end-of-stream drain step.
@@ -2028,6 +3668,9 @@ impl DawHost {
     /// processing failure. Capacity errors leave audio state unconsumed; queued
     /// graph and parameter changes may already have been applied. Plugin errors need not leave audio state unchanged.
     pub fn drain(&mut self, output: &mut [f32]) -> Result<PluginDrainResult, String> {
+        if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
+            return Err("terminal sink graphs require explicit drain_to_sink handling".into());
+        }
         self.drain_graph_mutations()?;
         // No source frames arrive during EOS: queued offsets apply at this
         // boundary, and each event is consumed once even if capacity is rejected.
@@ -2040,9 +3683,7 @@ impl DawHost {
         if self.nodes.is_empty() {
             return Ok(PluginDrainResult::COMPLETE);
         }
-        if !self.is_topologically_linear_chain() {
-            return Err("end-of-stream drain currently requires a linear plugin graph".to_string());
-        }
+        let channel_changing_drain = !self.is_topologically_linear_chain();
         if self.drain_state.completed_prefix == self.chain_nodes.len() {
             return Ok(PluginDrainResult::COMPLETE);
         }
@@ -2062,6 +3703,12 @@ impl DawHost {
                 "Host drain output too small: need {required_samples} samples, got {}",
                 output.len()
             ));
+        }
+        if channel_changing_drain {
+            self.validate_channel_changing_drain_chain()?;
+        }
+        if channel_changing_drain {
+            self.validate_channel_changing_drain_scratch()?;
         }
 
         let mut guard = BufferGuard::take(&mut self.process_buffers);
@@ -2206,6 +3853,237 @@ impl DawHost {
         Ok(PluginDrainResult::COMPLETE)
     }
 
+    /// Advance one bounded EOF step for a prepared terminal sink route.
+    pub fn drain_to_sink(&mut self) -> Result<SinkDrainResult, SinkDrainError> {
+        match self.terminal_sink_lifecycle {
+            None => return Err(SinkDrainError::ModeDisabled),
+            Some(TerminalSinkLifecycle::Complete) => {
+                return Ok(SinkDrainResult {
+                    source_tail_frames_handed_to_sink: 0,
+                    complete: true,
+                });
+            }
+            Some(TerminalSinkLifecycle::ResetRequired) => {
+                return Err(SinkDrainError::ResetRequired(
+                    "the previous operation had uncertain progress".into(),
+                ));
+            }
+            Some(TerminalSinkLifecycle::Running | TerminalSinkLifecycle::Draining) => {}
+        }
+
+        let first_entry = self.terminal_sink_lifecycle == Some(TerminalSinkLifecycle::Running);
+        if first_entry {
+            if !self.queues.graph_mutation_rx.is_empty() {
+                return Err(SinkDrainError::PendingGraphMutation);
+            }
+            if !self.built {
+                return Err(SinkDrainError::GraphNotBuilt);
+            }
+            let (_, source_id) = self
+                .validate_terminal_sink_graph()
+                .map_err(SinkDrainError::InvalidRoute)?;
+            self.validate_terminal_sink_tail_source(source_id)?;
+
+            let mut events = std::mem::take(&mut self.queues.parameter_event_scratch);
+            self.drain_parameter_events_into(&mut events);
+            for event in events.drain(..) {
+                let _ = self.apply_parameter_event(event);
+            }
+            self.queues.parameter_event_scratch = events;
+            self.drain_state = DrainState::default();
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Draining);
+            self.terminal_sink_source_complete = self.chain_nodes.len() == 1;
+        }
+
+        let (sink_id, source_id) = self
+            .validate_terminal_sink_graph()
+            .map_err(SinkDrainError::InvalidRoute)?;
+        self.validate_terminal_sink_tail_source(source_id)?;
+        let sink_rate = self.node_input_sample_rates[sink_id];
+        let sink_position = self.node_input_positions[sink_id];
+        let sink_state = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or("terminal sink contract disappeared")?
+            .queue_state();
+        if sink_state.pending_frames > 0 {
+            if let Err(cause) = self.service_terminal_sink_pending(sink_id) {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkDrainError::ResetRequired(format!(
+                    "terminal sink service failed: {cause:?}"
+                )));
+            }
+            return Ok(SinkDrainResult {
+                source_tail_frames_handed_to_sink: 0,
+                complete: false,
+            });
+        }
+
+        if self.terminal_sink_source_complete {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Complete);
+            return Ok(SinkDrainResult {
+                source_tail_frames_handed_to_sink: 0,
+                complete: true,
+            });
+        }
+
+        let Some(source_id) = source_id else {
+            self.terminal_sink_source_complete = true;
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Complete);
+            return Ok(SinkDrainResult {
+                source_tail_frames_handed_to_sink: 0,
+                complete: true,
+            });
+        };
+        let source_index = self
+            .chain_nodes
+            .iter()
+            .position(|&node_id| node_id == source_id)
+            .ok_or("terminal tail source is missing from the chain")?;
+        let source_rate = self.node_input_sample_rates[source_id];
+        let source_position = self.node_input_positions[source_id];
+        let maximum_frames = self.plugins[source_id]
+            .as_ref()
+            .ok_or("terminal tail source plugin is missing")?
+            .drain_output_frames_max();
+        let sink_context =
+            ProcessContext::new(sink_rate, maximum_frames).with_sample_position(sink_position);
+        let sink = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or("terminal sink contract disappeared")?;
+        let queue_state = sink.queue_state();
+        if queue_state
+            .pending_frames
+            .saturating_add(queue_state.free_prepared_frames)
+            > queue_state.capacity_frames
+        {
+            return Err("terminal sink queue state has invalid frame geometry".into());
+        }
+        sink.preflight_append(maximum_frames, &sink_context)
+            .map_err(SinkDrainError::SinkPreflight)?;
+
+        let channels = self.nodes[&source_id].output_channels();
+        let maximum_samples = maximum_frames
+            .checked_mul(channels)
+            .ok_or("terminal tail scratch size overflow")?;
+        let buffers = self
+            .process_buffers
+            .as_mut()
+            .ok_or("terminal sink processing buffers are not prepared")?;
+        if buffers.scratch_output.capacity() < maximum_samples {
+            return Err(SinkDrainError::ScratchCapacity {
+                required_samples: maximum_samples,
+                available_samples: buffers.scratch_output.capacity(),
+            });
+        }
+        buffers.scratch_output.resize(maximum_samples, 0.0);
+
+        if self.drain_state.active_node != Some(source_id) {
+            self.drain_state.active_node = Some(source_id);
+            self.drain_state.prepared = false;
+            self.drain_state.remaining_calls = None;
+        }
+        let source_context =
+            ProcessContext::new(source_rate, 0).with_sample_position(source_position);
+        if !self.drain_state.prepared {
+            let prepared = self.plugins[source_id]
+                .as_mut()
+                .unwrap()
+                .begin_drain(&source_context);
+            if let Err(error) = prepared {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkDrainError::ResetRequired(format!(
+                    "terminal tail preparation failed: {error}"
+                )));
+            }
+            self.drain_state.prepared = true;
+        }
+        let remaining = *self.drain_state.remaining_calls.get_or_insert_with(|| {
+            self.plugins[source_id]
+                .as_ref()
+                .unwrap()
+                .drain_call_bound()
+                .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get)
+        });
+        if remaining == 0 {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(SinkDrainError::ResetRequired(
+                "terminal tail source exhausted its drain call bound".into(),
+            ));
+        }
+
+        let result = self.plugins[source_id].as_mut().unwrap().drain(
+            &mut self.process_buffers.as_mut().unwrap().scratch_output[..maximum_samples],
+            &source_context,
+        );
+        let result = match result {
+            Ok(result) => result,
+            Err(error) => {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkDrainError::ResetRequired(format!(
+                    "terminal tail drain failed: {error}"
+                )));
+            }
+        };
+        self.drain_state.remaining_calls = Some(remaining - 1);
+        if result.frames > maximum_frames {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+            return Err(SinkDrainError::ResetRequired(
+                "terminal tail source exceeded its declared capacity".into(),
+            ));
+        }
+        let tail_samples = result
+            .frames
+            .checked_mul(channels)
+            .ok_or("terminal tail output size overflow")?;
+        let mut handed_frames = 0;
+        if result.frames > 0 {
+            let append_context =
+                ProcessContext::new(sink_rate, result.frames).with_sample_position(sink_position);
+            let append = self.plugins[sink_id]
+                .as_mut()
+                .unwrap()
+                .terminal_sink_mut()
+                .ok_or("terminal sink contract disappeared")?
+                .append_preflighted(
+                    &self.process_buffers.as_ref().unwrap().scratch_output[..tail_samples],
+                    &append_context,
+                );
+            if let Err(SinkAppendFailure::ContractViolation) = append {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkDrainError::ResetRequired(
+                    "terminal sink append violated its preflight contract".into(),
+                ));
+            }
+            self.node_input_positions[sink_id] =
+                self.node_input_positions[sink_id].saturating_add(result.frames as u64);
+            handed_frames = result.frames;
+        }
+        if result.complete {
+            self.terminal_sink_source_complete = true;
+            self.drain_state.completed_prefix = source_index + 1;
+            self.drain_state.active_node = None;
+        }
+        let pending = self.plugins[sink_id]
+            .as_ref()
+            .and_then(|plugin| plugin.terminal_sink())
+            .ok_or("terminal sink contract disappeared")?
+            .queue_state()
+            .pending_frames;
+        if self.terminal_sink_source_complete && pending == 0 {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Complete);
+            return Ok(SinkDrainResult {
+                source_tail_frames_handed_to_sink: handed_frames,
+                complete: true,
+            });
+        }
+        Ok(SinkDrainResult {
+            source_tail_frames_handed_to_sink: handed_frames,
+            complete: false,
+        })
+    }
+
     pub(super) fn process_with_parameter_events(
         &mut self,
         input: &[f32],
@@ -2239,6 +4117,69 @@ impl DawHost {
             output,
             self.automation_state.playback_position as u64,
         )
+    }
+
+    fn process_with_parameter_events_to_sink(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        events: &mut Vec<ParameterEvent>,
+        block_start_sample: u64,
+    ) -> Result<usize, String> {
+        if events.is_empty() {
+            return self.process_block_without_parameter_events(input, output, block_start_sample);
+        }
+        let input_channels = self.input_channels();
+        if input_channels == 0 || !input.len().is_multiple_of(input_channels) {
+            return Err("terminal sink input lost whole-frame geometry".into());
+        }
+        let frames = input.len() / input_channels;
+        if output.len() != input.len() {
+            return Err("terminal sink staging does not match the admitted input block".into());
+        }
+        events.sort_by_key(|event| event.sample_offset);
+        events.reverse();
+
+        let mut frame_cursor = 0;
+        let mut processed_frames = 0;
+        while events.last().is_some_and(|event| event.sample_offset == 0) {
+            let event = events.pop().unwrap();
+            let _ = self.apply_parameter_event(event);
+            self.validate_terminal_sink_input_geometry(frames)
+                .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
+        }
+
+        while frame_cursor < frames {
+            let next_event_frame = events
+                .last()
+                .map_or(frames, |event| event.sample_offset.min(frames));
+            if next_event_frame > frame_cursor {
+                let in_start = frame_cursor * input_channels;
+                let in_end = next_event_frame * input_channels;
+                let segment_frames = self.process_block_without_parameter_events(
+                    &input[in_start..in_end],
+                    &mut output[in_start..in_end],
+                    block_start_sample + frame_cursor as u64,
+                )?;
+                processed_frames += segment_frames;
+                frame_cursor = next_event_frame;
+            }
+            while events
+                .last()
+                .is_some_and(|event| event.sample_offset <= frame_cursor)
+            {
+                let event = events.pop().unwrap();
+                let _ = self.apply_parameter_event(event);
+                self.validate_terminal_sink_input_geometry(frames - frame_cursor)
+                    .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
+            }
+        }
+        while let Some(event) = events.pop() {
+            let _ = self.apply_parameter_event(event);
+            self.validate_terminal_sink_input_geometry(0)
+                .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
+        }
+        Ok(processed_frames)
     }
 
     pub(super) fn can_split_parameter_event_block(&self, input: &[f32], output: &[f32]) -> bool {
@@ -2326,8 +4267,14 @@ impl DawHost {
         let max_of = self.output_frames_for_input(nf);
         let out_ch = self.output_channels();
         self.apply_automation_for_block(nf);
+        if self.terminal_sink_lifecycle.is_some() {
+            self.validate_terminal_sink_input_geometry(nf)
+                .map_err(|error| format!("automation invalidated sink route: {error}"))?;
+        }
         let compiled_plan = std::mem::take(&mut self.compiled_plan);
-        if let CompiledRenderPlan::LinearF32(ref plan) = compiled_plan {
+        if self.terminal_sink_lifecycle.is_none()
+            && let CompiledRenderPlan::LinearF32(ref plan) = compiled_plan
+        {
             let result =
                 self.process_compiled_linear_f32_plan(plan, input, output, block_start_sample);
             self.compiled_plan = compiled_plan;
@@ -2348,7 +4295,8 @@ impl DawHost {
 
         for stage in &self.stages {
             if let Some(parallel_result) = Self::process_stage_parallel(
-                self.config.parallel_enabled
+                self.terminal_sink_lifecycle.is_none()
+                    && self.config.parallel_enabled
                     && self.cached_frames_identity
                     && self.cached_rate_identity
                     && !self.has_variable_frame_plugin,
@@ -2407,6 +4355,20 @@ impl DawHost {
                     bufs.scratch_input[..il].copy_from_slice(&bufs.merge_buffer[..il]);
                     il
                 };
+                let terminal_sink_id = self.chain_nodes.last().copied();
+                if self.terminal_sink_lifecycle.is_some() && terminal_sink_id == Some(nid) {
+                    if in_len != output.len() {
+                        return Err(format!(
+                            "terminal sink source produced {} samples; expected {}",
+                            in_len,
+                            output.len()
+                        ));
+                    }
+                    output.copy_from_slice(&bufs.scratch_input[..in_len]);
+                    self.node_input_positions[nid] =
+                        self.node_input_positions[nid].saturating_add(cf as u64);
+                    continue;
+                }
                 if self.bypassed[nid] {
                     // Bypassed: pass input directly to output buffer
                     bufs.node_buffers[nid]
@@ -2429,13 +4391,52 @@ impl DawHost {
                     // always uses the declared output channel count.
                     let process_output_len = ol;
                     ensure_len(&mut bufs.scratch_output, process_output_len);
-                    let out_frames = Self::process_plugin_f32_isolated(
-                        p.as_mut(),
-                        node,
-                        &bufs.scratch_input[..in_len],
-                        &mut bufs.scratch_output[..process_output_len],
-                        &context,
-                    );
+                    if self.terminal_sink_lifecycle.is_some() {
+                        self.terminal_sink_producer_started = true;
+                    }
+                    let out_frames = if self.terminal_sink_lifecycle.is_some() {
+                        // An admitted terminal-sink block cannot use the
+                        // ordinary passthrough fallback: that would hide a
+                        // producer failure after it may have advanced state,
+                        // leaving the caller unable to know whether retrying
+                        // the input would duplicate samples.
+                        match catch_unwind(AssertUnwindSafe(|| {
+                            p.process(
+                                &bufs.scratch_input[..in_len],
+                                &mut bufs.scratch_output[..process_output_len],
+                                &context,
+                            )
+                        })) {
+                            Ok(Ok(frames)) if frames == cf => frames,
+                            Ok(Ok(frames)) => {
+                                return Err(format!(
+                                    "terminal sink producer '{}' (node {nid}) returned {frames} frames; expected {cf}",
+                                    node.name
+                                ));
+                            }
+                            Ok(Err(error)) => {
+                                return Err(format!(
+                                    "terminal sink producer '{}' (node {nid}) process failed: {error}",
+                                    node.name
+                                ));
+                            }
+                            Err(payload) => {
+                                return Err(format!(
+                                    "terminal sink producer '{}' (node {nid}) panicked: {}",
+                                    node.name,
+                                    panic_payload_description(payload.as_ref())
+                                ));
+                            }
+                        }
+                    } else {
+                        Self::process_plugin_f32_isolated(
+                            p.as_mut(),
+                            node,
+                            &bufs.scratch_input[..in_len],
+                            &mut bufs.scratch_output[..process_output_len],
+                            &context,
+                        )
+                    };
                     bufs.node_buffers[nid]
                         .as_mut()
                         .unwrap()
@@ -2446,20 +4447,26 @@ impl DawHost {
                     self.node_input_positions[nid].saturating_add(cf as u64);
             }
         }
-        cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
-        Self::collect_output_from_buffers(
-            &self.output_nodes,
-            &mut bufs.node_buffers,
-            &mut bufs.compensation_delays,
-            output,
-            cf,
-        )
-        .map_err(|e| {
-            crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
-            e
-        })?;
-        if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
-            output[cf * out_ch..].fill(0.0);
+        if self.terminal_sink_lifecycle.is_none() {
+            cf = Self::terminal_output_frames(&self.output_nodes, &bufs.node_buffers)?;
+            Self::collect_output_from_buffers(
+                &self.output_nodes,
+                &mut bufs.node_buffers,
+                &mut bufs.compensation_delays,
+                output,
+                cf,
+            )
+            .map_err(|e| {
+                crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
+                e
+            })?;
+            if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
+                output[cf * out_ch..].fill(0.0);
+                cf = nf;
+            }
+        } else {
+            // The explicit sink route is admitted only for identity frame
+            // geometry, so consumed input frames are the host's frame result.
             cf = nf;
         }
         // Advance playback position for automation
@@ -2947,6 +4954,11 @@ impl DawHost {
     /// declares `supports_f64()`. Graphs containing f32-only plugins use a
     /// scratch-backed f32 compatibility bridge.
     pub fn process_f64(&mut self, input: &[f64], output: &mut [f64]) -> Result<usize, String> {
+        if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
+            return Err(
+                "terminal sink graphs do not support process_f64; use process_to_sink".into(),
+            );
+        }
         self.drain_graph_mutations()?;
         if !self.built {
             self.build()?;
@@ -3891,6 +5903,11 @@ impl DawHost {
 
     pub fn reset(&mut self) {
         self.drain_state = DrainState::default();
+        self.terminal_sink_source_complete = false;
+        self.terminal_sink_producer_started = false;
+        if self.terminal_sink_lifecycle.is_some() {
+            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::Running);
+        }
         self.reanchor_node_positions();
         for &id in self.nodes.keys() {
             if let Some(p) = self.plugins[id].as_mut() {

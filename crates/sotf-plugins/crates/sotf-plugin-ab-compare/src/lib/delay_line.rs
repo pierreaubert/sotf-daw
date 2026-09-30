@@ -1,3 +1,4 @@
+// Rust guideline compliant 2026-02-21
 /// Minimal fixed-delay ring buffer for aligning two processing paths.
 pub(super) struct DelayLine {
     pub(super) buffer: Vec<f32>,
@@ -44,5 +45,10 @@ impl DelayLine {
     pub(super) fn reset(&mut self) {
         self.buffer.fill(0.0);
         self.pos = 0;
+    }
+
+    pub(super) fn delay_frames(&self, channels: usize) -> usize {
+        debug_assert!(channels > 0);
+        self.len / channels
     }
 }

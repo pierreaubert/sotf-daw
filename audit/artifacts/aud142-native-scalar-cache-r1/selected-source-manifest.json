@@ -1,0 +1,9 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs": "c454aa31cff584d79c50be7977229c31b00b653740e4157d62765797952704b1",
+  "crates/sotf-plugins/crates/sotf-plugin-crossover/tests/aud141_realtime.rs": "3294c6139d02a9fdf206acfcae2b086497331580793600085fd560fd6f450fc8",
+  "crates/sotf-plugins/crates/plugins-nih/src/params.rs": "8c7804412e492ec2b2171cdfa54d2338e09e2751c7aeb11f054fdb2a80833d2d",
+  "crates/sotf-plugins/crates/plugins-nih/src/aud142_native_schema_tests.rs": "f1155684b71158aaf0ce6f73cb577d05b38688eeef15e4acee31c69c4b7c9e19",
+  "crates/sotf-plugins/crates/plugins-nih/src/native_crossover.rs": "1dff3bcd85ff7525e43cf98e7b46879f78feb34ca7c85eb9c4524fd641cc69e6",
+  "crates/sotf-plugins/crates/plugins-nih/src/params/configuration.rs": "728db3746a96251d9ab54af7249109d45e805743b8251b4e65bb2ec6349e7c17",
+  "crates/sotf-plugins/crates/plugins-nih/src/lib.rs": "d3dd1ce3149ced84b6c6af75099becc45ef47e439758ad6b01dfcfa8976264ad"
+}

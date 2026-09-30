@@ -1,0 +1,10 @@
+{
+  "command": "python3 audit/tools/aud142_crossover_state_probe.py crates/sotf-plugins/target/audit-artifacts/aud142-ffi-state-r2/libplugins_ffi.so audit/artifacts/aud142-public-state-probe-corrected-r2",
+  "exit_code": 0,
+  "cases": 30,
+  "failed_cases": [],
+  "library_sha256": "8424bfe9375ca5d621754d330ef1b9acc662392f0d0897fce7bda43bdefcaa73",
+  "probe_sha256": "009db1bc3e2e97baca4a4ea406cab8cec5415d3f61eeab3822118713774895ed",
+  "scope": "C-ABI state routing and history; production DSP fresh reference, not independent filter math",
+  "limitations": "Public route fidelity uses fresh production DSP reference, not independent filter mathematics; no native/UI/engine or realtime allocation claim."
+}

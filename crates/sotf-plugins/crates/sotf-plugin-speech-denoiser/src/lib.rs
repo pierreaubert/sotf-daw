@@ -40,6 +40,12 @@ impl Default for SpeechDenoiserPluginParams {
     }
 }
 
+/// RNNoise speech denoiser with a fixed 960-frame processing latency.
+///
+/// Enabled end-of-stream drain emits one 960-frame zero-continuation window to
+/// release accepted programme audio, then resets the backend. The model and
+/// high-pass response remain `Unknown`; this declared render cutoff does not
+/// claim that their natural recursive response is finite.
 pub struct SpeechDenoiserPlugin {
     channels: usize,
     enabled: bool,
@@ -287,6 +293,13 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         if context.num_frames > 0 && self.drain_remaining.is_some() {
             return Err("Speech Denoiser must be reset after drain before processing input".into());
         }
+        // A zero-frame callback is a state-neutral query. In particular, the
+        // final enabled drain resets the backend while retaining its last
+        // published telemetry; forwarding this no-op to the backend would
+        // publish the reset analyzer frame over that final snapshot.
+        if context.num_frames == 0 {
+            return Ok(0);
+        }
         let written = self.process_backend(buffer, context.num_frames)?;
         self.has_input |= written > 0;
         Ok(written)
@@ -307,7 +320,7 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
         self.initialized_sample_rate?;
-        let remaining = if self.enabled || !self.has_input {
+        let remaining = if !self.has_input {
             0
         } else {
             self.drain_remaining.unwrap_or(self.latency_samples())
@@ -329,8 +342,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         if !output.len().is_multiple_of(self.channels) {
             return Err("Speech Denoiser drain requires whole output frames".into());
         }
-        // Wet model/high-pass support remains unknown. Empty streams do not freeze.
-        if self.enabled || !self.has_input {
+        // Empty streams do not freeze, regardless of enabled state.
+        if !self.has_input {
             return Ok(PluginDrainResult::COMPLETE);
         }
         let remaining = self.drain_remaining.unwrap_or(self.latency_samples());
@@ -343,17 +356,23 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         if frames == 0 {
             return Err("Speech Denoiser drain requires positive output capacity".into());
         }
-        // Disabled output reaches pure dry within 481 floating-point fade steps.
-        // The 960-frame dry delay covers that transition and all retained program.
-        // Freezing enabled keeps recursive wet history unobservable afterward.
+        // Freeze changed input/control state as soon as valid drain work begins.
         self.drain_remaining = Some(remaining);
         let samples = frames * self.channels;
         output[..samples].fill(0.0);
         self.process_backend(&mut output[..samples], frames)?;
-        self.drain_remaining = Some(remaining - frames);
+        let next_remaining = remaining - frames;
+        self.drain_remaining = Some(next_remaining);
+        if next_remaining == 0 && self.enabled {
+            // The enabled model/high-pass response is Unknown. Emit the fixed
+            // accepted-program window, then discard any residual recursive
+            // response so COMPLETE is terminal without claiming finite support.
+            // Keep analyzer_cache intact: it holds the last published frame.
+            self.inner.reset();
+        }
         Ok(PluginDrainResult {
             frames,
-            complete: remaining == frames,
+            complete: next_remaining == 0,
         })
     }
 

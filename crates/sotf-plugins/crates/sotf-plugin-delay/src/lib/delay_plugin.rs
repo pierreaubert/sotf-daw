@@ -570,6 +570,10 @@ impl ParametricInPlacePlugin for DelayPlugin {
         self.channels
     }
 
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        true
+    }
+
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
     }

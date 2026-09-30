@@ -1,0 +1,23 @@
+{
+  "kind": "Root source review of concurrently drafted engine route",
+  "findings": [
+    "Optional channel_frequencies_hz converted directly through json! produces null for omitted legacy data",
+    "Core field is Vec<f32> with serde(default), which admits missing field or array rather than null"
+  ],
+  "execution": "No Rust or DSP test executed for this finding. Returned to Luna before next gate.",
+  "selected_files": [
+    {
+      "path": "crates/sotf-engine/src/plugins/plugin_settings.rs",
+      "sha256": "ed4d405ac94533706d2557f5053fdc26552e860a7230b45c848021ed55b61170"
+    },
+    {
+      "path": "crates/sotf-engine/src/plugins/plugin_config_converter/spatial.rs",
+      "sha256": "a46c1d03bbf16de88e80115e567c8a50db6ccb5932541b2f1ceffaecf313aff9"
+    },
+    {
+      "path": "crates/sotf-plugins/crates/sotf-plugin-crossover/src/types.rs",
+      "sha256": "949756b2a81139cf31fb9f1bce5d984e18134bb4165039524881dfa1399ac76d"
+    }
+  ],
+  "scope": "Draft source compatibility risk; does not contradict sealed accepted FFI r2 checkpoint"
+}

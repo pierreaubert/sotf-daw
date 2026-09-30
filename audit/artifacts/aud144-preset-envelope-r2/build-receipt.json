@@ -1,0 +1,27 @@
+{
+  "command": [
+    "flock",
+    "-x",
+    "/tmp/sotf-daw-audit-cargo.lock",
+    "env",
+    "TMPDIR=/tmp",
+    "CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target",
+    "cargo",
+    "build",
+    "--offline",
+    "--locked",
+    "-p",
+    "plugins-ffi",
+    "--lib"
+  ],
+  "exit_code": 0,
+  "selected_files": 340,
+  "selected_source_matches": true,
+  "source_differences": [],
+  "library": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/audit-artifacts/aud144-preset-envelope-r2/libplugins_ffi.so",
+  "library_sha256": "17ada1bd75f5174e8510d75131ba2ca880538302619eda9c633bc16710caa4f2",
+  "r1_library_sha256_after_build": "8954f6abe82bd6685b8f4d3142b06dbb2e1f89f7cdb615b3692497d40587c529",
+  "probe_sha256": "107d5b64fb106c3d593749d2c14a9688288da727ecf495d6e2a5ad020cec39ac",
+  "scope": "Current offline locked FFI cdylib build; selected 340 project source/workspace files compared before and after, not all transitive dependency sources.",
+  "header_sync_skipped": true
+}

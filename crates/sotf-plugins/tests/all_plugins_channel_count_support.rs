@@ -101,11 +101,19 @@ fn default_params(plugin_type: &str, channels: usize) -> serde_json::Value {
             "num_mics": channels,
             "mic_spacing_m": 0.05,
         }),
-        "ambisonics_decoder" => match channels {
-            9 => serde_json::json!({"order": 2, "target_layout": "5.1"}),
-            16 => serde_json::json!({"order": 3, "target_layout": "5.1"}),
-            _ => serde_json::json!({"order": 1, "target_layout": "5.1"}),
-        },
+        "ambisonics_decoder" => {
+            let order = match channels {
+                4 => 1,
+                9 => 2,
+                16 => 3,
+                25 => 4,
+                36 => 5,
+                49 => 6,
+                64 => 7,
+                _ => 1,
+            };
+            serde_json::json!({"order": order, "target_layout": "5.1"})
+        }
         _ => serde_json::json!({}),
     }
 }

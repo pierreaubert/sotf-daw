@@ -78,8 +78,8 @@ typedef struct AtomicParamCache AtomicParamCache;
  * The handle must be released exactly once with [`plugin_destroy`]; after
  * that it is invalid to use the pointer for any other call.
  *
- * The handle owns the plugin instance, the parameter map, the output-event
- * queues, and the channel-count metadata recorded at creation time. All
+ * The handle owns the plugin instance, current and retired parameter maps,
+ * the output-event queues, and the channel-count metadata recorded at creation time. All
  * pointers returned into C memory that are derived from a handle
  * (for example [`plugin_get_parameter_info`], [`plugin_get_info_json`],
  * [`plugin_save_state`], or [`plugin_export_preset_json`]) are only valid
@@ -518,6 +518,20 @@ int plugin_get_parameter_count(const struct PluginHandle *handle);
  */
 const struct ParameterInfo *plugin_get_parameter_info(const struct PluginHandle *handle,
                                                       size_t index);
+
+/**
+ * Get one choice label for a parameter in its enumerated ABI position.
+ *
+ * The returned pointer references a static NUL-terminated string and is
+ * valid for the process lifetime. It is `NULL` when the index does not
+ * identify a supported choice parameter or when `choice_index` is invalid.
+ *
+ * # Safety
+ * * `handle` must be `NULL` or a live plugin handle.
+ */
+const char *plugin_get_parameter_choice_label(const struct PluginHandle *handle,
+                                              size_t parameter_index,
+                                              size_t choice_index);
 
 /**
  * Set a parameter value (normalized 0.0-1.0).

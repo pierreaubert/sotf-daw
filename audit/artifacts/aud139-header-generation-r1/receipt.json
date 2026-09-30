@@ -1,0 +1,30 @@
+{
+  "scope": "AUD139 current C header generation and comparison; not native AU execution",
+  "execution_owner": "luna_upmixer; owner reported terminal success for session70555",
+  "command": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target/debug/build/plugins-ffi-5d994eae67ab5666/build-script-build",
+  "serialization_lock": "/tmp/sotf-daw-audit-cargo.lock",
+  "environment": {
+    "CARGO_MANIFEST_DIR": "/tmp/sotf-aud139-header-verify.PotQtA/plugins-ffi",
+    "CARGO_CFG_TARGET_OS": "linux",
+    "SOTF_FFI_HEADER_DIR": "/tmp/sotf-aud139-header-verify.PotQtA/header-out"
+  },
+  "source_symlinks": {
+    "src": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/src",
+    "cbindgen.toml": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/cbindgen.toml"
+  },
+  "build_script_binary_sha256": "73070671886fb44f6b9192cbd00662a6921142ae4076aebfae09c955d9070021",
+  "build_rs_sha256": "b3f5a33d5d903250f09044927c1adc33d45a95358db08b00ebb9cd5e77c9d354",
+  "header_comparisons": {
+    "/tmp/sotf-aud139-header-verify.PotQtA/header-out/sotf_audio_plugin_ffi.h": "fe3e2512f366a2dc5aa742fe5474fe0e295669d07ed72b108a71c485ccc0d843",
+    "/tmp/sotf-aud139-header-verify.PotQtA/plugins-ffi/SwiftPackage/Sources/SOTFPluginFFI/include/sotf_audio_plugin_ffi.h": "fe3e2512f366a2dc5aa742fe5474fe0e295669d07ed72b108a71c485ccc0d843",
+    "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/sotf_audio_plugin_ffi.h": "fe3e2512f366a2dc5aa742fe5474fe0e295669d07ed72b108a71c485ccc0d843",
+    "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-ffi/SwiftPackage/Sources/SOTFPluginFFI/include/sotf_audio_plugin_ffi.h": "fe3e2512f366a2dc5aa742fe5474fe0e295669d07ed72b108a71c485ccc0d843"
+  },
+  "limitations": [
+    "The minimal manifest has no dependencies/build.rs; the existing build-script binary was executed directly, not through a fresh real-package build.",
+    "Root verified the reported generated/header bytes and generator/source hashes; no standalone generation stdout log was retained.",
+    "Temporary SwiftPackage copy was produced. Conditional AU sibling copy was skipped because the destination parent did not exist.",
+    "No tracked header destination was used for generation. AU Shared delivery/runtime remain unverified.",
+    "FFI package test/lint evidence is separately preserved in aud139-ffi-r1."
+  ]
+}

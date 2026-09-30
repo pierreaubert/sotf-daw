@@ -31,7 +31,147 @@ pub(super) fn f2b(f: f64) -> bool {
     f > 0.5
 }
 
+fn materialize_band_split_cutoffs(
+    frequency: &mut f64,
+    frequency_2: &mut f64,
+    frequency_3: &mut f64,
+    num_bands: &mut usize,
+    frequencies: &mut Option<Vec<f64>>,
+) {
+    let Some(cutoffs) = frequencies.as_ref() else {
+        return;
+    };
+    if !(1..=3).contains(&cutoffs.len())
+        || cutoffs
+            .iter()
+            .any(|cutoff| !cutoff.is_finite() || !(20.0..=20_000.0).contains(cutoff))
+        || cutoffs.windows(2).any(|pair| pair[0] >= pair[1])
+    {
+        // Keep an invalid explicit vector intact so the converter fails instead
+        // of silently replacing it with the compatibility scalar fields.
+        return;
+    }
+
+    *frequency = cutoffs[0];
+    if let Some(&cutoff) = cutoffs.get(1) {
+        *frequency_2 = cutoff;
+    }
+    if let Some(&cutoff) = cutoffs.get(2) {
+        *frequency_3 = cutoff;
+    }
+    *num_bands = cutoffs.len() + 1;
+    *frequencies = None;
+}
+
 impl PluginSettings {
+    pub(super) fn band_split_param_value(&self, index: usize) -> Option<f64> {
+        let Self::BandSplit {
+            frequency,
+            crossover_type,
+            frequencies,
+            recombination_mode,
+            num_bands,
+            frequency_2,
+            frequency_3,
+            ..
+        } = self
+        else {
+            return None;
+        };
+
+        let effective_count = frequencies
+            .as_ref()
+            .map(|cuts| cuts.len().saturating_add(1))
+            .unwrap_or(*num_bands);
+        let effective_frequency = |cutoff_index: usize, fallback: f64| match frequencies {
+            // An explicitly empty vector is invalid input and must remain
+            // visible as such instead of reading stale compatibility fields.
+            Some(cuts) if cuts.is_empty() => None,
+            // Active explicit cutoffs win. Compatibility fields remain useful
+            // for inactive static cutoff controls, such as Frequency 3 on a
+            // three-band instance.
+            Some(cuts) => Some(cuts.get(cutoff_index).copied().unwrap_or(fallback)),
+            None => Some(fallback),
+        };
+
+        match index {
+            0 => effective_frequency(0, *frequency),
+            1 => Some(super::crossover::crossover_type_to_index(crossover_type)),
+            2 => Some(super::band_split_mode_to_index(recombination_mode)),
+            3 => Some(super::band_split_num_bands_to_index(&effective_count)),
+            4 => effective_frequency(1, *frequency_2),
+            5 => effective_frequency(2, *frequency_3),
+            _ => None,
+        }
+    }
+
+    pub(super) fn band_split_set_param_value(&mut self, index: usize, value: f64) {
+        let Self::BandSplit {
+            frequency,
+            crossover_type,
+            frequencies,
+            recombination_mode,
+            num_bands,
+            frequency_2,
+            frequency_3,
+            ..
+        } = self
+        else {
+            return;
+        };
+
+        let specs = param_specs::band_split::PARAMS;
+        match index {
+            0 => {
+                materialize_band_split_cutoffs(
+                    frequency,
+                    frequency_2,
+                    frequency_3,
+                    num_bands,
+                    frequencies,
+                );
+                *frequency = specs[0].clamp_f64(value);
+            }
+            1 => {
+                let last_index = specs[1].choice_labels().len().saturating_sub(1) as f64;
+                *crossover_type =
+                    super::index_to_crossover_type(value.round().clamp(0.0, last_index));
+            }
+            2 => *recombination_mode = super::index_to_band_split_mode(value),
+            3 => {
+                materialize_band_split_cutoffs(
+                    frequency,
+                    frequency_2,
+                    frequency_3,
+                    num_bands,
+                    frequencies,
+                );
+                *num_bands = super::index::index_to_band_split_num_bands(value);
+            }
+            4 => {
+                materialize_band_split_cutoffs(
+                    frequency,
+                    frequency_2,
+                    frequency_3,
+                    num_bands,
+                    frequencies,
+                );
+                *frequency_2 = specs[4].clamp_f64(value);
+            }
+            5 => {
+                materialize_band_split_cutoffs(
+                    frequency,
+                    frequency_2,
+                    frequency_3,
+                    num_bands,
+                    frequencies,
+                );
+                *frequency_3 = specs[5].clamp_f64(value);
+            }
+            _ => {}
+        }
+    }
+
     /// Get the engine parameter key and value string for zero-dropout updates.
     ///
     /// Returns `None` for structural params, file paths, out-of-range indices,

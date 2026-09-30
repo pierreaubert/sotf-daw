@@ -1,10 +1,11 @@
 use super::crossover_kind::CrossoverKind;
 use super::crossover_mode::CrossoverMode;
+use super::iir_family::IirSplit;
 use super::parse::parse_channel_freq_id;
 use super::parse::parse_channel_mode_id;
 use super::per_channel_op_mode::PerChannelOpMode;
 use super::precise_lr4::PreciseLr4 as Lr4Crossover;
-use super::types::CrossoverPluginParams;
+use super::types::{CrossoverPluginParams, CrossoverTopology};
 use sotf_host::fir_crossover::{DEFAULT_FIR_CROSSOVER_TAPS, FirCrossover, MultibandFirCrossover};
 use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
@@ -17,6 +18,35 @@ use sotf_host::smoothing::LogSmoother;
 
 // Bound one drain callback independently of FIR length or destination capacity.
 const FIR_DRAIN_FRAMES: usize = 256;
+const NEW_IIR_MIN_CUTOFF_HZ: f32 = 20.0;
+const NEW_IIR_MAX_CUTOFF_HZ: f32 = 20_000.0;
+// Keep new IIR poles inside the bilinear-transform region used by legacy LR24.
+const NEW_IIR_MAX_SAMPLE_RATE_RATIO: f32 = 0.495;
+const COEFFICIENT_UPDATE_SAMPLES: usize = 16;
+
+fn validate_new_iir_cutoff(frequency: f32, sample_rate: u32) -> Result<(), String> {
+    let sample_rate_limit = sample_rate as f32 * NEW_IIR_MAX_SAMPLE_RATE_RATIO;
+    if !frequency.is_finite()
+        || frequency < NEW_IIR_MIN_CUTOFF_HZ
+        || frequency > NEW_IIR_MAX_CUTOFF_HZ
+        || frequency >= sample_rate_limit
+    {
+        return Err(format!(
+            "new IIR crossover frequency must be finite, in [{NEW_IIR_MIN_CUTOFF_HZ}, {NEW_IIR_MAX_CUTOFF_HZ}] Hz, and below {sample_rate_limit} Hz"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_new_iir_frequencies(frequencies: &[f32], sample_rate: u32) -> Result<(), String> {
+    for &frequency in frequencies {
+        validate_new_iir_cutoff(frequency, sample_rate)?;
+    }
+    if frequencies.windows(2).any(|pair| pair[0] >= pair[1]) {
+        return Err("new IIR crossover frequencies must be strictly increasing".into());
+    }
+    Ok(())
+}
 
 /// Estimated persistent FIR DSP payload owned by a compiled crossover.
 ///
@@ -134,9 +164,18 @@ pub struct CrossoverPlugin {
     pub(super) channel_frequencies_hz: Vec<f32>,
     pub(super) op_modes: Vec<PerChannelOpMode>,
     pub(super) per_channel_lr4: Vec<Lr4Crossover>,
+    /// New-family per-channel split state, one independently owned split per input channel.
+    pub(super) per_channel_iir: Vec<IirSplit>,
     /// Per-channel scratch buffers for the 1-sample-wide low/high outputs.
     pub(super) per_channel_low: Vec<f32>,
     pub(super) per_channel_high: Vec<f32>,
+
+    /// New-family two-way split, absent for the preserved LR24/FIR paths.
+    family_two_way: Option<IirSplit>,
+    /// Phase-coherent LR12/LR48 multiway banks, indexed by output band then split.
+    family_multiband_lr: Option<Vec<Vec<IirSplit>>>,
+    /// Conventional cascaded Butterworth/Bessel splits, indexed by split.
+    family_multiband_serial: Option<Vec<IirSplit>>,
 }
 
 impl CrossoverPlugin {
@@ -198,18 +237,22 @@ impl CrossoverPlugin {
         for &f in extra_frequencies {
             all_freqs.push(f as f32);
         }
-        let nyquist_limit = sr as f32 * 0.5 * 0.99;
-        if all_freqs
-            .iter()
-            .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
-        {
-            return Err(format!(
-                "crossover frequencies must be finite and in (0, {nyquist_limit}) Hz"
-            ));
-        }
-        all_freqs.sort_by(|a, b| a.total_cmp(b));
-        if all_freqs.windows(2).any(|pair| pair[0] == pair[1]) {
-            return Err("crossover frequencies must be unique".into());
+        if kind.is_new_iir() {
+            validate_new_iir_frequencies(&all_freqs, sr)?;
+        } else {
+            let nyquist_limit = sr as f32 * 0.5 * 0.99;
+            if all_freqs
+                .iter()
+                .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
+            {
+                return Err(format!(
+                    "crossover frequencies must be finite and in (0, {nyquist_limit}) Hz"
+                ));
+            }
+            all_freqs.sort_by(|a, b| a.total_cmp(b));
+            if all_freqs.windows(2).any(|pair| pair[0] == pair[1]) {
+                return Err("crossover frequencies must be unique".into());
+            }
         }
 
         let num_bands = all_freqs.len() + 1;
@@ -242,6 +285,29 @@ impl CrossoverPlugin {
             .then(|| MultibandFirCrossover::new(&all_freqs, sr as f32, num_channels, fir_taps));
         let fir_band_alignment = (kind == CrossoverKind::LinearPhase && all_freqs.len() > 1)
             .then(|| FirBandAlignment::new(num_bands, num_channels, (fir_taps - 1) / 2));
+        let family_two_way = (kind.is_new_iir() && all_freqs.len() == 1)
+            .then(|| IirSplit::new(kind, all_freqs[0], sr, num_channels))
+            .transpose()?;
+        let family_multiband_lr = (kind.is_new_iir() && kind.is_lr() && all_freqs.len() > 1)
+            .then(|| {
+                (0..num_bands)
+                    .map(|_| {
+                        all_freqs
+                            .iter()
+                            .map(|&frequency| IirSplit::new(kind, frequency, sr, num_channels))
+                            .collect::<Result<Vec<_>, _>>()
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+        let family_multiband_serial = (kind.is_new_iir() && !kind.is_lr() && all_freqs.len() > 1)
+            .then(|| {
+                all_freqs
+                    .iter()
+                    .map(|&frequency| IirSplit::new(kind, frequency, sr, num_channels))
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
 
         let mut p = Self {
             num_channels,
@@ -268,15 +334,19 @@ impl CrossoverPlugin {
             channel_frequencies_hz: Vec::new(),
             op_modes: Vec::new(),
             per_channel_lr4: Vec::new(),
+            per_channel_iir: Vec::new(),
             per_channel_low: Vec::new(),
             per_channel_high: Vec::new(),
+            family_two_way,
+            family_multiband_lr,
+            family_multiband_serial,
         };
         p.rebuild_cached_parameters();
         Ok(p)
     }
 
     /// Build a crossover plugin in per-channel mode: each channel gets its
-    /// own LR24 crossover with its own cutoff frequency and operation mode
+    /// own IIR crossover with its own cutoff frequency and operation mode
     /// (lowpass / highpass / mute). The plugin remains 1-input / 1-output
     /// per channel; output channel count equals input channel count.
     ///
@@ -297,27 +367,45 @@ impl CrossoverPlugin {
                 channel_modes.len()
             ));
         }
-        let nyquist_limit = 48_000.0 * 0.5 * 0.99;
-        if channel_frequencies_hz
-            .iter()
-            .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
-        {
+        let kind = CrossoverKind::parse(crossover_type)?;
+        if kind == CrossoverKind::LinearPhase {
             return Err(format!(
-                "channel crossover frequencies must be finite and in (0, {nyquist_limit}) Hz"
+                "per-channel crossover does not support LinearPhase, got {crossover_type}"
             ));
         }
-        let kind = CrossoverKind::parse(crossover_type)?;
-        if kind != CrossoverKind::Lr24 {
-            return Err(format!(
-                "per-channel crossover currently only supports LR24, got {crossover_type}"
-            ));
+        if kind.is_new_iir() {
+            for &frequency in &channel_frequencies_hz {
+                validate_new_iir_cutoff(frequency, 48_000)?;
+            }
+        } else {
+            let nyquist_limit = 48_000.0 * 0.5 * 0.99;
+            if channel_frequencies_hz
+                .iter()
+                .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
+            {
+                return Err(format!(
+                    "channel crossover frequencies must be finite and in (0, {nyquist_limit}) Hz"
+                ));
+            }
         }
         let num_channels = channel_frequencies_hz.len();
         let sr = 48000u32;
-        let per_channel_lr4: Vec<Lr4Crossover> = channel_frequencies_hz
-            .iter()
-            .map(|&f| Lr4Crossover::new(f, sr as f32, 1))
-            .collect();
+        let per_channel_lr4: Vec<Lr4Crossover> = if kind == CrossoverKind::Lr24 {
+            channel_frequencies_hz
+                .iter()
+                .map(|&f| Lr4Crossover::new(f, sr as f32, 1))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let per_channel_iir: Vec<IirSplit> = if kind.is_new_iir() {
+            channel_frequencies_hz
+                .iter()
+                .map(|&frequency| IirSplit::new(kind, frequency, sr, 1))
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            Vec::new()
+        };
         // The shared/global crossover and smoothers remain populated but
         // unused in per-channel mode; sized minimally to avoid surprises.
         let primary_freq = channel_frequencies_hz[0];
@@ -346,8 +434,12 @@ impl CrossoverPlugin {
             channel_frequencies_hz,
             op_modes: channel_modes,
             per_channel_lr4,
+            per_channel_iir,
             per_channel_low: vec![0.0; 1],
             per_channel_high: vec![0.0; 1],
+            family_two_way: None,
+            family_multiband_lr: None,
+            family_multiband_serial: None,
         };
         p.rebuild_cached_parameters();
         Ok(p)
@@ -372,7 +464,8 @@ impl CrossoverPlugin {
                     20.0,
                     20000.0,
                 ),
-                Parameter::new_string("mode", "Mode", self.mode.as_str().to_string()),
+                Parameter::new_string("mode", "Mode", self.mode.as_str().to_string())
+                    .with_update_mode(UpdateMode::Structural),
             ]);
         }
 
@@ -427,6 +520,19 @@ impl CrossoverPlugin {
         self.cached_parameters = params;
     }
 
+    /// Update an existing float parameter's value without rebuilding its
+    /// metadata. Realtime IIR cutoff automation must not allocate or release
+    /// the cached parameter strings and ranges.
+    fn update_cached_float_parameter(&mut self, id: &str, value: f32) {
+        if let Some(parameter) = self
+            .cached_parameters
+            .iter_mut()
+            .find(|parameter| parameter.id.as_str() == id)
+        {
+            parameter.default_value = ParameterValue::Float(value);
+        }
+    }
+
     pub(super) fn rebuild_fir_crossovers(&mut self) {
         if self.kind != CrossoverKind::LinearPhase {
             return;
@@ -455,24 +561,78 @@ impl CrossoverPlugin {
         num_channels: usize,
         params: &CrossoverPluginParams,
     ) -> Result<Self, String> {
-        if !params.channel_frequencies_hz.is_empty() {
-            // Per-channel mode: parse channel_modes, falling back to the
-            // scalar `output` mode (lowpass/highpass) when channel_modes is
-            // missing or shorter than channel_frequencies_hz.
-            let default_mode = PerChannelOpMode::from_str(&params.output)?;
-            let mut modes = Vec::with_capacity(params.channel_frequencies_hz.len());
-            for i in 0..params.channel_frequencies_hz.len() {
-                if let Some(s) = params.channel_modes.get(i) {
-                    modes.push(PerChannelOpMode::from_str(s)?);
-                } else {
-                    modes.push(default_mode);
-                }
+        if params
+            .extra_frequencies
+            .iter()
+            .any(|frequency| !frequency.is_finite())
+        {
+            return Err("extra crossover frequencies must be finite".into());
+        }
+        if params
+            .channel_frequencies_hz
+            .iter()
+            .any(|frequency| !frequency.is_finite())
+        {
+            return Err("per-channel crossover frequencies must be finite".into());
+        }
+        let channel_modes = params.channel_modes.as_deref().unwrap_or_default();
+        let parsed_channel_modes = channel_modes
+            .iter()
+            .map(|mode| PerChannelOpMode::from_str(mode))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let topology = match params.topology {
+            Some(topology) => topology,
+            None if !params.channel_frequencies_hz.is_empty()
+                && !params.extra_frequencies.is_empty() =>
+            {
+                return Err(
+                    "crossover topology is ambiguous when channel and extra frequencies are both present"
+                        .into(),
+                );
             }
+            None if !params.channel_frequencies_hz.is_empty() => CrossoverTopology::PerChannel,
+            None => CrossoverTopology::Bands,
+        };
+
+        if topology == CrossoverTopology::PerChannel {
+            // Per-channel mode: a complete explicit mode list selects the
+            // active topology, so the global `output` is dormant and may be
+            // any valid band-mode value (including `both`). Keep the scalar
+            // fallback for legacy callers with empty or short mode lists.
             let expected = params.channel_frequencies_hz.len();
             if expected != num_channels {
                 return Err(format!(
                     "CrossoverPlugin::from_params: channels arg ({num_channels}) does not match channel_frequencies_hz.len() ({expected})"
                 ));
+            }
+            if params.topology == Some(CrossoverTopology::PerChannel)
+                && params.channel_modes.is_some()
+                && channel_modes.len() != expected
+            {
+                return Err(format!(
+                    "explicit per-channel channel_modes must contain {expected} modes, got {}",
+                    channel_modes.len()
+                ));
+            }
+            if channel_modes.len() > expected {
+                return Err(format!(
+                    "channel_modes.len()={} exceeds channel_frequencies_hz.len() ({expected})",
+                    channel_modes.len()
+                ));
+            }
+            let default_mode = if channel_modes.len() == expected {
+                None
+            } else {
+                Some(PerChannelOpMode::from_str(&params.output)?)
+            };
+            let mut modes = Vec::with_capacity(expected);
+            for i in 0..expected {
+                if let Some(mode) = parsed_channel_modes.get(i) {
+                    modes.push(*mode);
+                } else {
+                    modes.push(default_mode.expect("incomplete modes require scalar fallback"));
+                }
             }
             return Self::new_per_channel(
                 &params.crossover_type,
@@ -658,6 +818,162 @@ impl CrossoverPlugin {
         Ok(())
     }
 
+    fn process_new_iir(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        num_frames: usize,
+    ) -> Result<(), String> {
+        let channels = self.num_channels;
+        let output_channels = self.output_channels();
+        let num_bands = self.num_bands();
+
+        if let Some(banks) = self.family_multiband_lr.as_mut() {
+            for frame in 0..num_frames {
+                if self.smoother_subblock_phase == 0 {
+                    let frequency = self.freq_smoother.next_n(COEFFICIENT_UPDATE_SAMPLES);
+                    for bank in banks.iter_mut() {
+                        bank[0].set_frequency(frequency);
+                    }
+                    for (index, smoother) in self.extra_freq_smoothers.iter_mut().enumerate() {
+                        let frequency = smoother.next_n(COEFFICIENT_UPDATE_SAMPLES);
+                        for bank in banks.iter_mut() {
+                            bank[index + 1].set_frequency(frequency);
+                        }
+                    }
+                }
+                self.smoother_subblock_phase =
+                    (self.smoother_subblock_phase + 1) % COEFFICIENT_UPDATE_SAMPLES;
+
+                let input_offset = frame * channels;
+                let output_offset = frame * output_channels;
+                let frame_input = &input[input_offset..input_offset + channels];
+                for (band, bank) in banks.iter_mut().enumerate() {
+                    let band_offset = band * channels;
+                    self.band_flat[band_offset..band_offset + channels]
+                        .copy_from_slice(frame_input);
+                    for (split, crossover) in bank.iter_mut().enumerate() {
+                        crossover.process_frame(
+                            &self.band_flat[band_offset..band_offset + channels],
+                            &mut self.low_buf,
+                            &mut self.high_buf,
+                        );
+                        if band < split {
+                            for (low, high) in self.low_buf.iter_mut().zip(&self.high_buf) {
+                                *low += *high;
+                            }
+                            self.band_flat[band_offset..band_offset + channels]
+                                .copy_from_slice(&self.low_buf);
+                        } else if band == split {
+                            self.band_flat[band_offset..band_offset + channels]
+                                .copy_from_slice(&self.low_buf);
+                        } else {
+                            self.band_flat[band_offset..band_offset + channels]
+                                .copy_from_slice(&self.high_buf);
+                        }
+                    }
+                }
+                match self.mode {
+                    CrossoverMode::Lowpass => output[output_offset..output_offset + channels]
+                        .copy_from_slice(&self.band_flat[..channels]),
+                    CrossoverMode::Highpass => {
+                        let high_offset = (num_bands - 1) * channels;
+                        output[output_offset..output_offset + channels]
+                            .copy_from_slice(&self.band_flat[high_offset..high_offset + channels]);
+                    }
+                    CrossoverMode::Both => output[output_offset..output_offset + output_channels]
+                        .copy_from_slice(&self.band_flat[..output_channels]),
+                }
+            }
+            return Ok(());
+        }
+
+        if let Some(splits) = self.family_multiband_serial.as_mut() {
+            let bands = splits.len() + 1;
+            let residual_offset = (bands - 1) * channels;
+            for frame in 0..num_frames {
+                if self.smoother_subblock_phase == 0 {
+                    let frequency = self.freq_smoother.next_n(COEFFICIENT_UPDATE_SAMPLES);
+                    splits[0].set_frequency(frequency);
+                    for (index, smoother) in self.extra_freq_smoothers.iter_mut().enumerate() {
+                        let frequency = smoother.next_n(COEFFICIENT_UPDATE_SAMPLES);
+                        splits[index + 1].set_frequency(frequency);
+                    }
+                }
+                self.smoother_subblock_phase =
+                    (self.smoother_subblock_phase + 1) % COEFFICIENT_UPDATE_SAMPLES;
+
+                let input_offset = frame * channels;
+                let output_offset = frame * output_channels;
+                let frame_input = &input[input_offset..input_offset + channels];
+                self.band_flat[residual_offset..residual_offset + channels]
+                    .copy_from_slice(frame_input);
+                for (split_index, crossover) in splits.iter_mut().enumerate() {
+                    crossover.process_frame(
+                        &self.band_flat[residual_offset..residual_offset + channels],
+                        &mut self.low_buf,
+                        &mut self.high_buf,
+                    );
+                    let low_offset = split_index * channels;
+                    self.band_flat[low_offset..low_offset + channels]
+                        .copy_from_slice(&self.low_buf);
+                    self.band_flat[residual_offset..residual_offset + channels]
+                        .copy_from_slice(&self.high_buf);
+                }
+                match self.mode {
+                    CrossoverMode::Lowpass => output[output_offset..output_offset + channels]
+                        .copy_from_slice(&self.band_flat[..channels]),
+                    CrossoverMode::Highpass => output[output_offset..output_offset + channels]
+                        .copy_from_slice(
+                            &self.band_flat[residual_offset..residual_offset + channels],
+                        ),
+                    CrossoverMode::Both => output[output_offset..output_offset + output_channels]
+                        .copy_from_slice(&self.band_flat[..output_channels]),
+                }
+            }
+            return Ok(());
+        }
+
+        let crossover = self
+            .family_two_way
+            .as_mut()
+            .ok_or_else(|| "new IIR crossover state is missing; rebuild the graph".to_string())?;
+        let mut frame = 0;
+        while frame < num_frames {
+            if self.smoother_subblock_phase == 0 {
+                let frequency = self.freq_smoother.next_n(COEFFICIENT_UPDATE_SAMPLES);
+                crossover.set_frequency(frequency);
+            }
+            let segment =
+                (COEFFICIENT_UPDATE_SAMPLES - self.smoother_subblock_phase).min(num_frames - frame);
+            for segment_frame in frame..frame + segment {
+                let input_offset = segment_frame * channels;
+                let output_offset = segment_frame * output_channels;
+                crossover.process_frame(
+                    &input[input_offset..input_offset + channels],
+                    &mut self.low_buf,
+                    &mut self.high_buf,
+                );
+                match self.mode {
+                    CrossoverMode::Lowpass => output[output_offset..output_offset + channels]
+                        .copy_from_slice(&self.low_buf),
+                    CrossoverMode::Highpass => output[output_offset..output_offset + channels]
+                        .copy_from_slice(&self.high_buf),
+                    CrossoverMode::Both => {
+                        output[output_offset..output_offset + channels]
+                            .copy_from_slice(&self.low_buf);
+                        output[output_offset + channels..output_offset + output_channels]
+                            .copy_from_slice(&self.high_buf);
+                    }
+                }
+            }
+            frame += segment;
+            self.smoother_subblock_phase =
+                (self.smoother_subblock_phase + segment) % COEFFICIENT_UPDATE_SAMPLES;
+        }
+        Ok(())
+    }
+
     fn fir_support_frames(&self) -> usize {
         // A cascade of S length-L FIR splits has support S*(L-1). An
         // earlier band's alignment adds only half the missing split support,
@@ -795,39 +1111,50 @@ impl Plugin for CrossoverPlugin {
             ));
         }
 
-        self.validate_parameter(&id, &value)?;
+        // `Plugin::validate_parameter()` clones the complete parameter list,
+        // which allocates even for valid scalar automation. Validate against
+        // this instance's already cached metadata instead.
+        self.cached_parameters
+            .iter()
+            .find(|parameter| parameter.id.as_str() == id.as_str())
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?
+            .validate(&value)
+            .map_err(|error| format!("{id}: {error}"))?;
 
         if id.as_str() == "type" {
             Err("crossover type is structural; rebuild the graph to change it".into())
         } else if id.as_str() == "frequency" {
             let val = value.as_float().unwrap_or(1000.0);
             if val.is_finite() {
-                if self.all_frequencies.get(1).is_some_and(|next| val >= *next) {
+                let frequency = val;
+                if self.kind.is_new_iir() {
+                    validate_new_iir_cutoff(frequency, self.sample_rate)?;
+                }
+                if self
+                    .all_frequencies
+                    .get(1)
+                    .is_some_and(|next| frequency >= *next)
+                {
                     return Err("frequency must remain below frequency_2".into());
                 }
-                self.freq_smoother.set_target(val);
+                self.freq_smoother.set_target(frequency);
                 // Update first frequency in multi-way list and re-sort to maintain
                 // sorted order. MultibandLr4Crossover requires sorted frequencies.
                 if !self.all_frequencies.is_empty() {
-                    self.all_frequencies[0] = val;
+                    self.all_frequencies[0] = frequency;
                     self.rebuild_fir_crossovers();
                 }
-                self.rebuild_cached_parameters();
+                self.update_cached_float_parameter("frequency", frequency);
             }
             Ok(())
         } else if id.as_str() == "mode" {
             if let Some(s) = value.as_string() {
                 let new_mode = CrossoverMode::from_str(s)?;
-                let changes_layout = matches!(self.mode, CrossoverMode::Both)
-                    != matches!(new_mode, CrossoverMode::Both);
-                if changes_layout {
+                if new_mode != self.mode {
                     return Err(
-                        "crossover mode changes that alter output channels require graph rebuild"
-                            .into(),
+                        "crossover mode is structural; rebuild the graph to change it".into(),
                     );
                 }
-                self.mode = new_mode;
-                self.rebuild_cached_parameters();
             }
             Ok(())
         } else if let Some(smoother_idx) = Self::parse_extra_freq_index(&id.0) {
@@ -835,19 +1162,23 @@ impl Plugin for CrossoverPlugin {
             if val.is_finite() && smoother_idx < self.extra_freq_smoothers.len() {
                 let freq_idx = smoother_idx + 1; // offset: extra smoothers start at freq index 1
                 if freq_idx < self.all_frequencies.len() {
+                    let frequency = val;
+                    if self.kind.is_new_iir() {
+                        validate_new_iir_cutoff(frequency, self.sample_rate)?;
+                    }
                     let lower = self.all_frequencies[freq_idx - 1];
                     let upper = self.all_frequencies.get(freq_idx + 1).copied();
-                    if val <= lower || upper.is_some_and(|upper| val >= upper) {
+                    if frequency <= lower || upper.is_some_and(|upper| frequency >= upper) {
                         return Err(format!(
                             "frequency_{} must remain between its neighboring crossover points",
                             smoother_idx + 2
                         ));
                     }
-                    self.extra_freq_smoothers[smoother_idx].set_target(val);
-                    self.all_frequencies[freq_idx] = val;
+                    self.extra_freq_smoothers[smoother_idx].set_target(frequency);
+                    self.all_frequencies[freq_idx] = frequency;
                     self.rebuild_fir_crossovers();
+                    self.update_cached_float_parameter(&id.0, frequency);
                 }
-                self.rebuild_cached_parameters();
             }
             Ok(())
         } else if id.as_str() == "fir_taps" {
@@ -866,14 +1197,22 @@ impl Plugin for CrossoverPlugin {
             let val = value
                 .as_float()
                 .ok_or_else(|| "channel frequency must be a float".to_string())?;
-            let nyquist_limit = self.sample_rate as f32 * 0.5 * 0.99;
-            if !val.is_finite() || val <= 0.0 || val >= nyquist_limit {
-                return Err(format!(
-                    "channel frequency must be finite and in (0, {nyquist_limit}) Hz"
-                ));
+            if self.kind.is_new_iir() {
+                validate_new_iir_cutoff(val, self.sample_rate)?;
+            } else {
+                let nyquist_limit = self.sample_rate as f32 * 0.5 * 0.99;
+                if !val.is_finite() || val <= 0.0 || val >= nyquist_limit {
+                    return Err(format!(
+                        "channel frequency must be finite and in (0, {nyquist_limit}) Hz"
+                    ));
+                }
             }
             self.channel_frequencies_hz[ch] = val;
-            self.per_channel_lr4[ch] = Lr4Crossover::new(val, self.sample_rate as f32, 1);
+            if self.kind.is_new_iir() {
+                self.per_channel_iir[ch].set_frequency(val);
+            } else {
+                self.per_channel_lr4[ch] = Lr4Crossover::new(val, self.sample_rate as f32, 1);
+            }
             self.rebuild_cached_parameters();
             Ok(())
         } else if let Some(ch) = parse_channel_mode_id(&id.0) {
@@ -905,22 +1244,30 @@ impl Plugin for CrossoverPlugin {
         } else if id.as_str() == "fir_taps" && self.kind == CrossoverKind::LinearPhase {
             Some(ParameterValue::Int(self.fir_taps as i32))
         } else if let Some(ch) = parse_channel_freq_id(&id.0) {
-            self.channel_frequencies_hz
-                .get(ch)
-                .copied()
-                .map(ParameterValue::Float)
+            if self.is_per_channel() {
+                self.channel_frequencies_hz
+                    .get(ch)
+                    .copied()
+                    .map(ParameterValue::Float)
+            } else {
+                None
+            }
         } else if let Some(ch) = parse_channel_mode_id(&id.0) {
-            self.op_modes.get(ch).map(|m| {
-                ParameterValue::String(
-                    match m {
-                        PerChannelOpMode::Lowpass => "lowpass",
-                        PerChannelOpMode::Highpass => "highpass",
-                        PerChannelOpMode::Mute => "mute",
-                        PerChannelOpMode::Passthrough => "passthrough",
-                    }
-                    .to_string(),
-                )
-            })
+            if self.is_per_channel() {
+                self.op_modes.get(ch).map(|m| {
+                    ParameterValue::String(
+                        match m {
+                            PerChannelOpMode::Lowpass => "lowpass",
+                            PerChannelOpMode::Highpass => "highpass",
+                            PerChannelOpMode::Mute => "mute",
+                            PerChannelOpMode::Passthrough => "passthrough",
+                        }
+                        .to_string(),
+                    )
+                })
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -930,16 +1277,26 @@ impl Plugin for CrossoverPlugin {
         if sample_rate == 0 {
             return Err("crossover sample rate must be greater than zero".into());
         }
-        let nyquist_limit = sample_rate as f32 * 0.5 * 0.99;
-        if self
-            .all_frequencies
-            .iter()
-            .chain(self.channel_frequencies_hz.iter())
-            .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
-        {
-            return Err(format!(
-                "crossover frequency exceeds sample-rate limit {nyquist_limit} Hz"
-            ));
+        if self.kind.is_new_iir() {
+            validate_new_iir_frequencies(&self.all_frequencies, sample_rate)?;
+            for &frequency in &self.channel_frequencies_hz {
+                validate_new_iir_cutoff(frequency, sample_rate)?;
+            }
+        } else {
+            let nyquist_limit = sample_rate as f32 * 0.5 * 0.99;
+            if self
+                .all_frequencies
+                .iter()
+                .chain(self.channel_frequencies_hz.iter())
+                .any(|f| !f.is_finite() || *f <= 0.0 || *f >= nyquist_limit)
+            {
+                return Err(format!(
+                    "crossover frequency exceeds sample-rate limit {nyquist_limit} Hz"
+                ));
+            }
+        }
+        if self.kind.is_new_iir() {
+            self.smoother_subblock_phase = 0;
         }
         self.sample_rate = sample_rate;
         // Clamp all frequencies to just below Nyquist to prevent nonsense biquad
@@ -947,49 +1304,65 @@ impl Plugin for CrossoverPlugin {
         let nyquist_limit = sample_rate as f32 * 0.5 * 0.99;
 
         if self.is_per_channel() {
-            // Mutate the stored values so `get_parameter` and serialization
-            // reflect the clamped reality (otherwise the plugin reports a
-            // frequency it isn't actually running at).
-            for freq in self.channel_frequencies_hz.iter_mut() {
-                *freq = freq.min(nyquist_limit);
+            if self.kind.is_new_iir() {
+                for (split, &frequency) in self
+                    .per_channel_iir
+                    .iter_mut()
+                    .zip(&self.channel_frequencies_hz)
+                {
+                    split.reconfigure(frequency, sample_rate);
+                    split.reset();
+                }
+            } else {
+                // Mutate the stored values so `get_parameter` and serialization
+                // reflect the clamped legacy LR24 realization.
+                for freq in self.channel_frequencies_hz.iter_mut() {
+                    *freq = freq.min(nyquist_limit);
+                }
+                self.per_channel_lr4 = self
+                    .channel_frequencies_hz
+                    .iter()
+                    .map(|&f| {
+                        let clamped = f.min(nyquist_limit);
+                        Lr4Crossover::new(clamped, sample_rate as f32, 1)
+                    })
+                    .collect();
             }
-            self.per_channel_lr4 = self
-                .channel_frequencies_hz
-                .iter()
-                .map(|&f| {
-                    let clamped = f.min(nyquist_limit);
-                    Lr4Crossover::new(clamped, sample_rate as f32, 1)
-                })
-                .collect();
             self.per_channel_low.resize(1, 0.0);
             self.per_channel_high.resize(1, 0.0);
             self.initialized = true;
             return Ok(());
         }
 
-        let clamped_primary = self.freq_smoother.target().min(nyquist_limit);
+        let clamped_primary = if self.kind.is_new_iir() {
+            self.freq_smoother.target()
+        } else {
+            self.freq_smoother.target().min(nyquist_limit)
+        };
         self.freq_smoother = LogSmoother::new(clamped_primary, 20.0, sample_rate);
         self.crossover_2way
             .reinit(clamped_primary, sample_rate as f32, self.num_channels);
+        if let Some(crossover) = self.family_two_way.as_mut() {
+            crossover.reconfigure(clamped_primary, sample_rate);
+            crossover.reset();
+        }
         self.low_buf.resize(self.num_channels, 0.0);
         self.high_buf.resize(self.num_channels, 0.0);
 
+        for (index, smoother) in self.extra_freq_smoothers.iter_mut().enumerate() {
+            let frequency = if self.kind.is_new_iir() {
+                smoother.target()
+            } else {
+                smoother.target().min(nyquist_limit)
+            };
+            self.all_frequencies[index + 1] = frequency;
+            *smoother = LogSmoother::new(frequency, 20.0, sample_rate);
+        }
+        if !self.all_frequencies.is_empty() {
+            self.all_frequencies[0] = clamped_primary;
+        }
+
         if let Some(ref mut banks) = self.multiband {
-            // extra_freq_smoothers[i] corresponds to all_frequencies[i+1].
-            for (freq, smoother) in self
-                .all_frequencies
-                .iter_mut()
-                .skip(1)
-                .zip(self.extra_freq_smoothers.iter_mut())
-            {
-                let clamped = smoother.target().min(nyquist_limit);
-                *freq = clamped;
-                *smoother = LogSmoother::new(clamped, 20.0, sample_rate);
-            }
-            // Clamp all_frequencies[0] (primary, already clamped above).
-            if !self.all_frequencies.is_empty() {
-                self.all_frequencies[0] = clamped_primary;
-            }
             for bank in banks {
                 for (split, crossover) in bank.iter_mut().enumerate() {
                     crossover.reinit(
@@ -998,6 +1371,20 @@ impl Plugin for CrossoverPlugin {
                         self.num_channels,
                     );
                 }
+            }
+        }
+        if let Some(banks) = self.family_multiband_lr.as_mut() {
+            for bank in banks {
+                for (split, crossover) in bank.iter_mut().enumerate() {
+                    crossover.reconfigure(self.all_frequencies[split], sample_rate);
+                    crossover.reset();
+                }
+            }
+        }
+        if let Some(splits) = self.family_multiband_serial.as_mut() {
+            for (split, crossover) in splits.iter_mut().enumerate() {
+                crossover.reconfigure(self.all_frequencies[split], sample_rate);
+                crossover.reset();
             }
         }
         self.rebuild_fir_crossovers();
@@ -1020,6 +1407,9 @@ impl Plugin for CrossoverPlugin {
             for xo in &mut self.per_channel_lr4 {
                 xo.reset();
             }
+            for split in &mut self.per_channel_iir {
+                split.reset();
+            }
             return;
         }
         self.crossover_2way.reset();
@@ -1038,6 +1428,21 @@ impl Plugin for CrossoverPlugin {
                 for crossover in bank {
                     crossover.reset();
                 }
+            }
+        }
+        if let Some(crossover) = self.family_two_way.as_mut() {
+            crossover.reset();
+        }
+        if let Some(banks) = self.family_multiband_lr.as_mut() {
+            for bank in banks {
+                for crossover in bank {
+                    crossover.reset();
+                }
+            }
+        }
+        if let Some(splits) = self.family_multiband_serial.as_mut() {
+            for crossover in splits {
+                crossover.reset();
             }
         }
         if let Some(ref mut mb) = self.fir_multiband {
@@ -1106,11 +1511,19 @@ impl Plugin for CrossoverPlugin {
                         }
                         mode => {
                             let sample_arr = [sample];
-                            self.per_channel_lr4[ch].process_frame(
-                                &sample_arr,
-                                &mut low_scratch,
-                                &mut high_scratch,
-                            );
+                            if self.kind.is_new_iir() {
+                                self.per_channel_iir[ch].process_frame(
+                                    &sample_arr,
+                                    &mut low_scratch,
+                                    &mut high_scratch,
+                                );
+                            } else {
+                                self.per_channel_lr4[ch].process_frame(
+                                    &sample_arr,
+                                    &mut low_scratch,
+                                    &mut high_scratch,
+                                );
+                            }
                             output[out_off + ch] = match mode {
                                 PerChannelOpMode::Lowpass => low_scratch[0],
                                 PerChannelOpMode::Highpass => high_scratch[0],
@@ -1130,6 +1543,8 @@ impl Plugin for CrossoverPlugin {
         if self.kind == CrossoverKind::LinearPhase {
             self.process_fir(Some(input), output, num_frames)?;
             self.fir_has_input = true;
+        } else if self.kind.is_new_iir() {
+            self.process_new_iir(input, output, num_frames)?;
         } else if self.is_multiway() {
             // Multi-way processing
             let num_bands = self.num_bands();
@@ -1169,7 +1584,15 @@ impl Plugin for CrossoverPlugin {
                             &mut self.low_buf,
                             &mut self.high_buf,
                         );
-                        let filtered = if band <= split {
+                        let filtered = if band < split {
+                            // Earlier branches must stay all-pass through later
+                            // splits so their sum telescopes to the product of
+                            // each LR low/high all-pass pair.
+                            for (low, high) in self.low_buf.iter_mut().zip(&self.high_buf) {
+                                *low += *high;
+                            }
+                            &self.low_buf
+                        } else if band == split {
                             &self.low_buf
                         } else {
                             &self.high_buf

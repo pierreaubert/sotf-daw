@@ -1,4 +1,19 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add opt-in true-stereo LL/LR/RL/RR routing for stereo plugins using four-channel impulse responses across uniform, nonuniform and direct-head backends.
+- Carry true-stereo configuration through factories, engine settings and transactional C ABI state restoration; preserve legacy IR routing by default.
+
 # Unreleased
+
+## Features
+
+- Add explicit true-stereo LL/LR/RL/RR routing for two-channel plugins with four-channel IRs,
+  across UPC, NUPC and direct-head backends. The persisted `true_stereo` setup option defaults
+  off, preserving the legacy four-channel IR mapping. Engine/factory and bridge configuration
+  carry the mode; C ABI state restoration rebuilds it transactionally.
+- Expose True Stereo with the other Advanced controls in the Studio convolution panel.
 
 ## Maintenance
 

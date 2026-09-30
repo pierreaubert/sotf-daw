@@ -35,14 +35,23 @@ relative to other tracks when the host recalculates latency compensation.
 When disabled at EOF, native drain returns exactly 960 continuation frames for
 nonempty input, including any unfinished bypass fade and the complete delayed
 dry signal. Each call returns at most 480 frames and leaves unused output space
-untouched. The first valid finite drain freezes input and changed `enabled`
+untouched. The first valid nonempty drain freezes input and changed `enabled`
 controls until reset; same-value snapshots remain accepted. Empty streams do
 not freeze. Drain, metadata queries and reset allocate and free no memory.
 
+At enabled EOF, native drain emits the same 960 frames that ordinary processing
+would produce from 960 zero input frames. This releases the final accepted
+partial model block and fixed processing queue. The plugin then resets the
+backend and discards any remaining recursive model/high-pass response. Enabled
+`TailLength` remains `Unknown`: this is an explicit render cutoff, not a claim
+that the natural response ends after 960 frames. The last published analyzer
+snapshot is retained. After completion, new input and changed `enabled` values
+are rejected until reset or successful reinitialization; empty EOF remains
+unfrozen.
+
 The disabled tail is finite because the output selects pure dry before the
-960-frame continuation ends; the neural model remains warm internally. Enabled
-wet audio still reports unknown tail metadata and returns immediate native drain
-completion. Its recursive high-pass/model response needs a separate render policy.
+960-frame continuation ends; the neural model remains warm internally until
+reset. Both enabled and disabled drain have a maximum 480-frame output call.
 
 `get_data()` exposes a fixed-size `SpeechDenoiserData` snapshot containing the
 22 model gains after RNNoise's inter-frame release smoothing, the bounded VAD

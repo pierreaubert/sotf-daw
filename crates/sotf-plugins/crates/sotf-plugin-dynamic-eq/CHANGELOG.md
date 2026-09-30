@@ -1,3 +1,11 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Add low-shelf and high-shelf band shapes with stored shelf slope and backward-compatible Peak defaults.
+- Treat shape and slope as structural controls; preserve prepared audio until a valid replacement is initialized.
+- Add independent shelf response, lifecycle, allocation and controlled CPU comparison coverage.
+
 # 0.5.11
 
 ## Fixes (2026-08-12 review closure)

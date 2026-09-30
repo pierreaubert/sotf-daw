@@ -1,0 +1,22 @@
+{
+  "library_sha256": "7311b8fa7044084096bbdb219f56656673d7feef86bd8c58943a4147c36e71a8",
+  "probe_sha256": "1d337acab2843c8ec261977f761e8c647daeeac31bb18ea38aff6af3d1e0600d",
+  "config": {
+    "enabled": true,
+    "playback_volume_db": -25.0,
+    "reference_level_db": -14.0,
+    "smoothing_ms": 50.0
+  },
+  "return_code": 0,
+  "error": null,
+  "states_equal": true,
+  "audio_equal": true,
+  "max_residual": 0.0,
+  "default_sensitivity": 0.27916882932186127,
+  "samples_per_vector": 9464,
+  "audio_sha256": {
+    "source.f32le": "80a42a3832e33491b45c7329c692d6aee630e855440c15713dd713835d479caa",
+    "migrated.f32le": "80a42a3832e33491b45c7329c692d6aee630e855440c15713dd713835d479caa",
+    "default.f32le": "36952e6b7d3ef9fe9c9f90b436cd2a5ee7bc5c49fa1cafafa952707e16c4d3f5"
+  }
+}

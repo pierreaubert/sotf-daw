@@ -1,4 +1,8 @@
-use super::native_backend::{NativeExternalPluginBackend, NativePluginMetadata};
+use super::external_plugin_state::{NativeBandSplitOutputLayout, NativePluginAudioSetup};
+use super::native_backend::{
+    NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata,
+    native_parameter_id,
+};
 use super::plugin_descriptor::{PluginDescriptor, resolve_dynamic_library_path};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use libloading::Library;
@@ -8,6 +12,7 @@ use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 use std::ptr;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use vst3_sys::base::{
     IBStream, IPluginBase, IPluginFactory, PClassInfo, kIBSeekCur, kIBSeekEnd, kIBSeekSet,
@@ -16,22 +21,28 @@ use vst3_sys::base::{
 use vst3_sys::utils::{SharedVstPtr, StaticVstPtr, VstPtr};
 use vst3_sys::vst::{
     AudioBusBuffers, BusDirections, BusInfo, Event, EventData, EventTypes, IAudioProcessor,
-    IComponent, IEditController, IEventList, IHostApplication, IParamValueQueue, IParameterChanges,
-    IoModes, K_SAMPLE32, LegacyMidiCCOutEvent, MediaTypes, NoteOffEvent, NoteOnEvent,
-    ParameterFlags, ParameterInfo, ProcessContext as Vst3ProcessContext, ProcessData, ProcessModes,
-    ProcessSetup, SpeakerArrangement,
+    IComponent, IComponentHandler, IEditController, IEventList, IHostApplication, IParamValueQueue,
+    IParameterChanges, IoModes, K_SAMPLE32, LegacyMidiCCOutEvent, MediaTypes, NoteOffEvent,
+    NoteOnEvent, ParameterFlags, ParameterInfo, ProcessContext as Vst3ProcessContext, ProcessData,
+    ProcessModes, ProcessSetup, SpeakerArrangement,
 };
 use vst3_sys::{ComInterface, IID, VST3};
 
 const MAX_FACTORY_CLASSES: i32 = 16_384;
 const MAX_PARAMETERS: i32 = 65_536;
 
-#[VST3(implements(IHostApplication))]
-struct Vst3HostApplication {}
+#[VST3(implements(IHostApplication, IComponentHandler))]
+struct Vst3HostApplication {
+    tail_metadata_generation: Arc<AtomicU64>,
+}
 
 impl Vst3HostApplication {
-    fn new() -> Box<Self> {
-        Self::allocate()
+    fn new() -> (Box<Self>, Arc<AtomicU64>) {
+        let tail_metadata_generation = Arc::new(AtomicU64::new(0));
+        (
+            Self::allocate(Arc::clone(&tail_metadata_generation)),
+            tail_metadata_generation,
+        )
     }
 }
 
@@ -60,6 +71,28 @@ impl IHostApplication for Vst3HostApplication {
             unsafe { *object = ptr::null_mut() };
         }
         vst3_sys::base::kNoInterface
+    }
+}
+
+impl IComponentHandler for Vst3HostApplication {
+    unsafe fn begin_edit(&self, _id: u32) -> tresult {
+        kResultOk
+    }
+
+    unsafe fn perform_edit(&self, _id: u32, _value_normalized: f64) -> tresult {
+        kResultOk
+    }
+
+    unsafe fn end_edit(&self, _id: u32) -> tresult {
+        kResultOk
+    }
+
+    unsafe fn restart_component(&self, _flags: i32) -> tresult {
+        // Invalidate tail metadata conservatively, but do not acknowledge a
+        // component restart: this host does not yet service VST3 lifecycle,
+        // bus, latency, or parameter-cache restart requests.
+        self.tail_metadata_generation.fetch_add(1, Ordering::AcqRel);
+        kResultFalse
     }
 }
 
@@ -382,13 +415,32 @@ pub(super) struct Vst3Backend {
     input_events: VstPtr<dyn IEventList>,
     event_storage: Rc<RefCell<Vec<Event>>>,
     metadata: NativePluginMetadata,
+    output_bus_to_sotf: Option<&'static [usize]>,
+    band_split_output_layout: Option<NativeBandSplitOutputLayout>,
+    output_bus_count: usize,
+    output_bus_widths: [usize; 4],
+    active_output_buses: u64,
     input_storage: Vec<f32>,
     output_storage: Vec<f32>,
     input_ptrs: Vec<*mut f32>,
     output_ptrs: Vec<*mut f32>,
     max_block_frames: usize,
+    sample_rate: f64,
+    cached_tail_length: crate::plugin::TailLength,
+    tail_metadata_generation: Arc<AtomicU64>,
+    cached_tail_generation: u64,
     active: bool,
     processing: bool,
+}
+
+#[derive(Clone, Copy)]
+struct Vst3NegotiatedAudioLayout {
+    input_channels: usize,
+    output_channels: usize,
+    output_bus_count: usize,
+    output_bus_widths: [usize; 4],
+    active_output_buses: u64,
+    band_split_output_layout: Option<NativeBandSplitOutputLayout>,
 }
 
 // SAFETY: The backend is exclusively accessed through `&mut`, and VST3's
@@ -576,6 +628,7 @@ impl Vst3Backend {
         descriptor: &PluginDescriptor,
         sample_rate: u32,
         max_block_frames: usize,
+        audio_setup: Option<&NativePluginAudioSetup>,
     ) -> Result<Self, String> {
         let library_path = resolve_dynamic_library_path(descriptor)?;
         let library = Vst3Library::load(&library_path)?;
@@ -595,8 +648,9 @@ impl Vst3Backend {
             unsafe { select_audio_class(&factory, descriptor, &library_path)? };
         // SAFETY: The generated COM object begins with its IHostApplication
         // interface and ownership is transferred to `VstPtr`.
+        let (host_application, tail_metadata_generation) = Vst3HostApplication::new();
         let host = unsafe {
-            let raw = Box::into_raw(Vst3HostApplication::new());
+            let raw = Box::into_raw(host_application);
             VstPtr::<dyn IHostApplication>::owned(raw.cast())
                 .ok_or_else(|| "failed to allocate VST3 host application".to_string())?
         };
@@ -626,19 +680,22 @@ impl Vst3Backend {
         let mut component_lifecycle = Vst3ComponentLifecycleGuard::new(&component, &processor);
         // SAFETY: All calls below follow VST3's component lifecycle. The guard
         // records completed transitions and unwinds every later error path.
-        let (input_channels, output_channels) = unsafe {
+        let negotiated_audio = unsafe {
             initialize_component(
-                &component,
-                &processor,
-                &host,
-                descriptor,
-                sample_rate,
-                max_block_frames,
+                Vst3ComponentInitialization {
+                    component: &component,
+                    processor: &processor,
+                    host: &host,
+                    requested: descriptor,
+                    sample_rate,
+                    max_block_frames,
+                    audio_setup,
+                },
                 &mut component_lifecycle,
             )?
         };
-        metadata.input_channels = input_channels;
-        metadata.output_channels = output_channels;
+        metadata.input_channels = negotiated_audio.input_channels;
+        metadata.output_channels = negotiated_audio.output_channels;
         // SAFETY: Controller creation uses the live factory and initialized
         // component. A separate controller receives its own initialization.
         let (controller, separate_controller) =
@@ -682,16 +739,62 @@ impl Vst3Backend {
             input_events,
             event_storage,
             metadata,
-            input_storage: vec![0.0; input_channels.saturating_mul(max_block_frames)],
-            output_storage: vec![0.0; output_channels.saturating_mul(max_block_frames)],
-            input_ptrs: Vec::with_capacity(input_channels),
-            output_ptrs: Vec::with_capacity(output_channels),
+            output_bus_to_sotf: match audio_setup {
+                Some(NativePluginAudioSetup::Ambisonics { target_layout, .. }) => {
+                    Some(target_layout.vst3_bus_to_sotf_permutation())
+                }
+                _ => None,
+            },
+            band_split_output_layout: negotiated_audio.band_split_output_layout,
+            output_bus_count: negotiated_audio.output_bus_count,
+            output_bus_widths: negotiated_audio.output_bus_widths,
+            active_output_buses: negotiated_audio.active_output_buses,
+            input_storage: vec![
+                0.0;
+                negotiated_audio
+                    .input_channels
+                    .saturating_mul(max_block_frames)
+            ],
+            output_storage: vec![
+                0.0;
+                negotiated_audio
+                    .output_channels
+                    .saturating_mul(max_block_frames)
+            ],
+            input_ptrs: Vec::with_capacity(negotiated_audio.input_channels),
+            output_ptrs: Vec::with_capacity(negotiated_audio.output_channels),
             max_block_frames,
+            sample_rate: f64::from(sample_rate),
+            cached_tail_length: crate::plugin::TailLength::Unknown,
+            tail_metadata_generation,
+            cached_tail_generation: 0,
             active: true,
             processing: true,
         };
+        // Setup and construction run on the thread that owns this component's
+        // serialized control lifecycle. Cache the UI-thread-only VST3 query so
+        // DawHost drain preflight never calls it from the processing callback.
+        backend.refresh_tail_length_on_control_thread();
         backend.rebuild_channel_pointers();
         Ok(backend)
+    }
+
+    fn refresh_tail_length_on_control_thread(&mut self) {
+        // SAFETY: This method is called only during serialized plugin setup,
+        // state restore, or by ExternalPluginWorker on its single plugin
+        // lifecycle thread. VST3 restricts get_tail_samples to that thread
+        // after setup is complete.
+        let before = self.tail_metadata_generation.load(Ordering::Acquire);
+        // SAFETY: The caller owns the serialized component control lifecycle.
+        let tail_length = unsafe { map_vst3_tail_length(self.processor.get_tail_samples()) };
+        let after = self.tail_metadata_generation.load(Ordering::Acquire);
+        if before == after {
+            self.cached_tail_length = tail_length;
+            self.cached_tail_generation = after;
+        } else {
+            self.cached_tail_length = crate::plugin::TailLength::Unknown;
+            self.cached_tail_generation = before;
+        }
     }
 
     fn rebuild_channel_pointers(&mut self) {
@@ -769,6 +872,24 @@ impl NativeExternalPluginBackend for Vst3Backend {
         &self.metadata
     }
 
+    fn reset(&mut self) -> Result<(), String> {
+        self.cached_tail_length = crate::plugin::TailLength::Unknown;
+        let suspend_result = self.suspend_for_state_load();
+        let reset_result = suspend_result;
+        let resume_result = self.resume_after_state_load();
+        match (reset_result, resume_result) {
+            (Ok(()), Ok(())) => {
+                self.refresh_tail_length_on_control_thread();
+                Ok(())
+            }
+            (Err(error), Ok(())) => Err(error),
+            (Ok(()), Err(error)) => Err(error),
+            (Err(reset), Err(resume)) => {
+                Err(format!("{reset}; additionally failed to resume: {resume}"))
+            }
+        }
+    }
+
     fn parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
     }
@@ -802,6 +923,9 @@ impl NativeExternalPluginBackend for Vst3Backend {
             ));
         }
         // SAFETY: Controller is live and normalized value is finite/in range.
+        // Invalidate only after ID, value, and controller validation passed,
+        // immediately before the native mutation can begin.
+        self.cached_tail_length = crate::plugin::TailLength::Unknown;
         unsafe {
             ensure_ok(
                 controller.set_param_normalized(binding.vst3_id, normalized),
@@ -829,6 +953,403 @@ impl NativeExternalPluginBackend for Vst3Backend {
         );
         let plain = unsafe { controller.normalized_param_to_plain(binding.vst3_id, normalized) };
         plain_to_parameter_value(plain, binding.kind)
+    }
+
+    fn ambisonics_layout_parameters(&self) -> Result<Option<(i32, i32)>, String> {
+        const VST3_PARAMETER_IS_HIDDEN: i32 = 1 << 4;
+
+        let controller = self.controller.as_ref().ok_or_else(|| {
+            format!(
+                "VST3 plugin '{}' has no edit controller for structural readback",
+                self.metadata.name
+            )
+        })?;
+
+        // SAFETY: The initialized edit controller owns the parameter metadata,
+        // plain-value conversion, and values queried below.
+        unsafe {
+            let count = controller.get_parameter_count();
+            if !(0..=MAX_PARAMETERS).contains(&count) {
+                return Err(format!(
+                    "VST3 plugin '{}' reported invalid parameter count {count}",
+                    self.metadata.name
+                ));
+            }
+            let order_id = native_parameter_id("order");
+            let target_layout_id = native_parameter_id("target_layout");
+            let mut order = None;
+            let mut target_layout = None;
+            for index in 0..count {
+                let mut info = std::mem::MaybeUninit::<ParameterInfo>::zeroed();
+                ensure_ok(
+                    controller.get_parameter_info(index, info.as_mut_ptr()),
+                    &self.metadata.name,
+                    "read structural parameter metadata",
+                )?;
+                let info = info.assume_init();
+                let (slot, expected_steps, minimum_value, maximum_value, key) =
+                    if info.id == order_id {
+                        (&mut order, 6, 1.0, 7.0, "order")
+                    } else if info.id == target_layout_id {
+                        (&mut target_layout, 7, 0.0, 7.0, "target_layout")
+                    } else {
+                        continue;
+                    };
+                if slot.is_some() {
+                    return Err(format!(
+                        "VST3 plugin '{}' reports duplicate structural parameter id for '{key}'",
+                        self.metadata.name
+                    ));
+                }
+                let required_flags = ParameterFlags::kIsReadOnly as i32 | VST3_PARAMETER_IS_HIDDEN;
+                if info.flags & required_flags != required_flags
+                    || info.step_count != expected_steps
+                {
+                    return Err(format!(
+                        "VST3 plugin '{}' structural parameter '{key}' has incompatible metadata",
+                        self.metadata.name
+                    ));
+                }
+                let normalized = controller.get_param_normalized(info.id);
+                let plain = controller.normalized_param_to_plain(info.id, normalized);
+                if !plain.is_finite() {
+                    return Err(format!(
+                        "VST3 plugin '{}' structural parameter '{key}' has non-finite value {plain}",
+                        self.metadata.name
+                    ));
+                }
+                let rounded = plain.round();
+                if (plain - rounded).abs() > 1.0e-6
+                    || rounded < minimum_value
+                    || rounded > maximum_value
+                {
+                    return Err(format!(
+                        "VST3 plugin '{}' structural parameter '{key}' has invalid value {plain}",
+                        self.metadata.name
+                    ));
+                }
+                *slot = Some(rounded as i32);
+            }
+            let order = order.ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' is missing structural parameter 'order'",
+                    self.metadata.name
+                )
+            })?;
+            let target_layout = target_layout.ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' is missing structural parameter 'target_layout'",
+                    self.metadata.name
+                )
+            })?;
+            Ok(Some((order, target_layout)))
+        }
+    }
+
+    fn ambisonics_controls(&self) -> Result<Option<NativeAmbisonicsControls>, String> {
+        if !self
+            .metadata
+            .id
+            .eq_ignore_ascii_case("536F7466416D6269736E696330303031")
+        {
+            return Ok(None);
+        }
+        let controller = self.controller.as_ref().ok_or_else(|| {
+            format!(
+                "VST3 plugin '{}' has no edit controller for Ambisonics control readback",
+                self.metadata.name
+            )
+        })?;
+        Ok(Some(NativeAmbisonicsControls {
+            max_re_weighting: read_hidden_vst3_integer_parameter(
+                controller,
+                &self.metadata.name,
+                "max_re_weighting",
+                1,
+                0.0,
+                1.0,
+            )? != 0,
+            dual_band: read_hidden_vst3_integer_parameter(
+                controller,
+                &self.metadata.name,
+                "dual_band",
+                1,
+                0.0,
+                1.0,
+            )? != 0,
+            algorithm: read_hidden_vst3_integer_parameter(
+                controller,
+                &self.metadata.name,
+                "algorithm",
+                1,
+                0.0,
+                1.0,
+            )?,
+        }))
+    }
+
+    fn band_split_layout_parameters(
+        &self,
+    ) -> Result<Option<(i32, NativeBandSplitOutputLayout)>, String> {
+        if !self
+            .metadata
+            .id
+            .eq_ignore_ascii_case("536F746642616E6453706C7430303031")
+        {
+            return Ok(None);
+        }
+        let controller = self.controller.as_ref().ok_or_else(|| {
+            format!(
+                "VST3 plugin '{}' has no edit controller for BandSplit structural readback",
+                self.metadata.name
+            )
+        })?;
+        let band_index = read_hidden_vst3_integer_parameter(
+            controller,
+            &self.metadata.name,
+            "num_bands",
+            2,
+            0.0,
+            2.0,
+        )?;
+        let output_layout = self.band_split_output_layout.ok_or_else(|| {
+            format!(
+                "VST3 plugin '{}' has no selected BandSplit output-bus layout",
+                self.metadata.name
+            )
+        })?;
+        Ok(Some((band_index + 2, output_layout)))
+    }
+
+    fn reconfigure_ambisonics_audio_setup(
+        &mut self,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        if !self
+            .metadata
+            .id
+            .eq_ignore_ascii_case("536F7466416D6269736E696330303031")
+        {
+            return Err(format!(
+                "VST3 plugin '{}' is not the recognized SOTF Ambisonics decoder",
+                self.metadata.name
+            ));
+        }
+        let NativePluginAudioSetup::Ambisonics {
+            order,
+            target_layout,
+        } = setup
+        else {
+            return Err("VST3 Ambisonics reconfiguration received a non-Ambisonics setup".into());
+        };
+        let (input_channels, output_channels) = setup.channel_counts()?;
+
+        self.suspend_for_state_load()?;
+        let mut input_arrangement = ambisonics_speaker_arrangement(*order)?;
+        let mut output_arrangement = target_layout.vst3_speaker_arrangement();
+        // SAFETY: The candidate component is initialized but deactivated. VST3
+        // permits arrangement and process setup changes in this lifecycle state.
+        unsafe {
+            ensure_ok(
+                self.processor.set_bus_arrangements(
+                    &mut input_arrangement,
+                    1,
+                    &mut output_arrangement,
+                    1,
+                ),
+                &self.metadata.name,
+                "renegotiate Ambisonics bus arrangements",
+            )?;
+            let process_setup = ProcessSetup {
+                process_mode: ProcessModes::kRealtime as i32,
+                symbolic_sample_size: K_SAMPLE32,
+                max_samples_per_block: self.max_block_frames as i32,
+                sample_rate: self.sample_rate,
+            };
+            ensure_ok(
+                self.processor.setup_processing(&process_setup),
+                &self.metadata.name,
+                "reconfigure processing after Ambisonics layout change",
+            )?;
+        }
+
+        if self.separate_controller {
+            let state = self.save_state()?.ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' could not serialize component state while renegotiating",
+                    self.metadata.name
+                )
+            })?;
+            let controller = self.controller.as_ref().ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' has no separate controller to synchronize after layout change",
+                    self.metadata.name
+                )
+            })?;
+            let (stream, _bytes) = Vst3MemoryStream::new(&state, false);
+            // SAFETY: The controller synchronously reads a live in-memory
+            // stream; component state bytes and the interface outlive the call.
+            let stream = unsafe {
+                VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
+                    format!(
+                        "failed to allocate controller sync stream for '{}'",
+                        self.metadata.name
+                    )
+                })?
+            };
+            unsafe {
+                ensure_ok(
+                    controller.set_component_state(shared_vst_ptr(&stream)),
+                    &self.metadata.name,
+                    "synchronize controller after Ambisonics layout change",
+                )?;
+            }
+        }
+
+        self.resume_after_state_load()?;
+        self.metadata.input_channels = input_channels;
+        self.metadata.output_channels = output_channels;
+        self.output_bus_to_sotf = Some(target_layout.vst3_bus_to_sotf_permutation());
+        self.band_split_output_layout = None;
+        self.output_bus_count = 1;
+        self.output_bus_widths = [output_channels, 0, 0, 0];
+        self.active_output_buses = 1;
+        self.input_storage
+            .resize(input_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.output_storage
+            .resize(output_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.cached_tail_length = crate::plugin::TailLength::Unknown;
+        self.rebuild_channel_pointers();
+        self.refresh_tail_length_on_control_thread();
+        Ok(())
+    }
+
+    fn reconfigure_band_split_audio_setup(
+        &mut self,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        if !self
+            .metadata
+            .id
+            .eq_ignore_ascii_case("536F746642616E6453706C7430303031")
+        {
+            return Err(format!(
+                "VST3 plugin '{}' is not the recognized SOTF BandSplit",
+                self.metadata.name
+            ));
+        }
+        let NativePluginAudioSetup::BandSplit {
+            num_bands,
+            output_layout,
+        } = setup
+        else {
+            return Err("VST3 BandSplit reconfiguration received a non-BandSplit setup".into());
+        };
+        let (input_channels, output_channels) = setup.channel_counts()?;
+        let (mut output_arrangements, output_bus_widths, active_output_buses) =
+            band_split_vst3_output_buses(*output_layout, usize::from(*num_bands))?;
+        let mut input_arrangement = 0b11;
+
+        self.suspend_for_state_load()?;
+        // SAFETY: The candidate is deactivated and the requested layout uses
+        // the fixed four-bus BandSplit interface published by this wrapper.
+        unsafe {
+            ensure_ok(
+                self.processor.set_bus_arrangements(
+                    &mut input_arrangement,
+                    1,
+                    output_arrangements.as_mut_ptr(),
+                    output_arrangements.len() as i32,
+                ),
+                &self.metadata.name,
+                "renegotiate BandSplit bus arrangements",
+            )?;
+            ensure_ok(
+                self.component.activate_bus(
+                    MediaTypes::kAudio as i32,
+                    BusDirections::kInput as i32,
+                    0,
+                    1,
+                ),
+                &self.metadata.name,
+                "activate BandSplit input bus",
+            )?;
+            for bus_index in 0..output_arrangements.len() {
+                ensure_ok(
+                    self.component.activate_bus(
+                        MediaTypes::kAudio as i32,
+                        BusDirections::kOutput as i32,
+                        bus_index as i32,
+                        u8::from(active_output_buses & (1 << bus_index) != 0),
+                    ),
+                    &self.metadata.name,
+                    "set BandSplit output bus activation",
+                )?;
+            }
+            let process_setup = ProcessSetup {
+                process_mode: ProcessModes::kRealtime as i32,
+                symbolic_sample_size: K_SAMPLE32,
+                max_samples_per_block: self.max_block_frames as i32,
+                sample_rate: self.sample_rate,
+            };
+            ensure_ok(
+                self.processor.setup_processing(&process_setup),
+                &self.metadata.name,
+                "reconfigure processing after BandSplit layout change",
+            )?;
+        }
+
+        // Activating the component reruns the NIH wrapper's initialize
+        // callback, which reads the selected output-bus mask as band count.
+        self.resume_after_state_load()?;
+
+        if self.separate_controller {
+            let state = self.save_state()?.ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' could not serialize component state while renegotiating BandSplit",
+                    self.metadata.name
+                )
+            })?;
+            let controller = self.controller.as_ref().ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' has no separate controller to synchronize after BandSplit layout change",
+                    self.metadata.name
+                )
+            })?;
+            let (stream, _bytes) = Vst3MemoryStream::new(&state, false);
+            // SAFETY: The controller synchronously reads this live memory stream.
+            let stream = unsafe {
+                VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
+                    format!(
+                        "failed to allocate controller sync stream for '{}'",
+                        self.metadata.name
+                    )
+                })?
+            };
+            unsafe {
+                ensure_ok(
+                    controller.set_component_state(shared_vst_ptr(&stream)),
+                    &self.metadata.name,
+                    "synchronize controller after BandSplit layout change",
+                )?;
+            }
+        }
+
+        self.metadata.input_channels = input_channels;
+        self.metadata.output_channels = output_channels;
+        self.band_split_output_layout = Some(*output_layout);
+        self.output_bus_count = output_arrangements.len();
+        self.output_bus_widths = output_bus_widths;
+        self.active_output_buses = active_output_buses;
+        self.output_bus_to_sotf = None;
+        self.input_storage
+            .resize(input_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.output_storage
+            .resize(output_channels.saturating_mul(self.max_block_frames), 0.0);
+        self.cached_tail_length = crate::plugin::TailLength::Unknown;
+        self.rebuild_channel_pointers();
+        self.refresh_tail_length_on_control_thread();
+        Ok(())
     }
 
     fn process(
@@ -871,11 +1392,35 @@ impl NativeExternalPluginBackend for Vst3Backend {
             silence_flags: 0,
             buffers: self.input_ptrs.as_mut_ptr().cast(),
         };
-        let mut output_bus = AudioBusBuffers {
-            num_channels: output_channels as i32,
-            silence_flags: 0,
-            buffers: self.output_ptrs.as_mut_ptr().cast(),
-        };
+        let mut output_buses: [AudioBusBuffers; 4] = std::array::from_fn(|bus_index| {
+            let active = bus_index < self.output_bus_count
+                && self.active_output_buses & (1_u64 << bus_index) != 0;
+            let channel_offset = match self.band_split_output_layout {
+                Some(NativeBandSplitOutputLayout::Vst3Buses) => Some(bus_index * 2),
+                Some(NativeBandSplitOutputLayout::Vst3LegacyPacked) => match bus_index {
+                    0 => Some(0),
+                    1 => Some(4),
+                    2 => Some(6),
+                    _ => None,
+                },
+                Some(NativeBandSplitOutputLayout::ClapPacked) => None,
+                None => (bus_index == 0).then_some(0),
+            };
+            let buffers = channel_offset
+                .filter(|offset| {
+                    active && offset + self.output_bus_widths[bus_index] <= output_channels
+                })
+                .map_or(ptr::null_mut(), |offset| {
+                    // SAFETY: Bus channels are preallocated and `offset + width` was
+                    // checked against the selected output storage before this process call.
+                    unsafe { self.output_ptrs.as_mut_ptr().add(offset).cast() }
+                });
+            AudioBusBuffers {
+                num_channels: self.output_bus_widths[bus_index] as i32,
+                silence_flags: 0,
+                buffers,
+            }
+        });
         if !context.parameter_events.is_empty() {
             let controller = self.controller.as_ref().ok_or_else(|| {
                 format!(
@@ -934,7 +1479,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
             symbolic_sample_size: K_SAMPLE32,
             num_samples: frames as i32,
             num_inputs: i32::from(input_channels != 0),
-            num_outputs: i32::from(output_channels != 0),
+            num_outputs: self.output_bus_count as i32,
             inputs: if input_channels == 0 {
                 ptr::null_mut()
             } else {
@@ -943,7 +1488,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
             outputs: if output_channels == 0 {
                 ptr::null_mut()
             } else {
-                &mut output_bus
+                output_buses.as_mut_ptr()
             },
             // SAFETY: These VST3 ABI fields are nullable interface pointers;
             // vst3-sys models them as transparent raw-pointer wrappers.
@@ -964,6 +1509,12 @@ impl NativeExternalPluginBackend for Vst3Backend {
             output_events: unsafe { null_static_vst_ptr() },
             context: &mut process_context,
         };
+        if !context.parameter_events.is_empty() || !context.midi_events.is_empty() {
+            // VST3 tail queries are control-thread-only. The isolated worker
+            // refreshes after this callback; in-process automation remains
+            // conservatively unknown until an explicit control-thread refresh.
+            self.cached_tail_length = crate::plugin::TailLength::Unknown;
+        }
         // SAFETY: Component is active and processing, buffers are preallocated
         // and valid for `frames`, and this backend has exclusive access.
         let process_result = unsafe {
@@ -980,7 +1531,10 @@ impl NativeExternalPluginBackend for Vst3Backend {
         process_result?;
         for frame in 0..frames {
             for channel in 0..output_channels {
-                output[frame * output_channels + channel] =
+                let sotf_channel = self
+                    .output_bus_to_sotf
+                    .map_or(channel, |permutation| permutation[channel]);
+                output[frame * output_channels + sotf_channel] =
                     self.output_storage[channel * self.max_block_frames + frame];
             }
         }
@@ -1014,6 +1568,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
     }
 
     fn load_state(&mut self, state: &[u8]) -> Result<(), String> {
+        self.cached_tail_length = crate::plugin::TailLength::Unknown;
         self.suspend_for_state_load()?;
         let load_result = (|| {
             let (stream, _bytes) = Vst3MemoryStream::new(state, false);
@@ -1063,7 +1618,10 @@ impl NativeExternalPluginBackend for Vst3Backend {
         })();
         let resume_result = self.resume_after_state_load();
         match (load_result, resume_result) {
-            (Ok(()), Ok(())) => Ok(()),
+            (Ok(()), Ok(())) => {
+                self.refresh_tail_length_on_control_thread();
+                Ok(())
+            }
             (Err(load), Ok(())) => Err(load),
             (Ok(()), Err(resume)) => Err(resume),
             (Err(load), Err(resume)) => {
@@ -1075,6 +1633,102 @@ impl NativeExternalPluginBackend for Vst3Backend {
     fn latency_samples(&self) -> usize {
         // SAFETY: Latency query is valid for the live initialized processor.
         unsafe { self.processor.get_latency_samples() as usize }
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // VST3 process receives a fixed num_samples count, and this wrapper
+        // validates the output bus geometry before accepting the callback.
+        true
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        tail_length_if_generation_is_current(
+            self.cached_tail_length,
+            self.cached_tail_generation,
+            self.tail_metadata_generation.load(Ordering::Acquire),
+        )
+    }
+
+    fn refresh_tail_length(&mut self) -> crate::plugin::TailLength {
+        self.refresh_tail_length_on_control_thread();
+        self.cached_tail_length
+    }
+}
+
+fn map_vst3_tail_length(frames: u32) -> crate::plugin::TailLength {
+    // VST3's kInfiniteTail sentinel is UINT32_MAX. Unlike CLAP, the high
+    // signed-int range remains valid finite frame counts in this ABI.
+    if frames == u32::MAX {
+        crate::plugin::TailLength::Infinite
+    } else {
+        crate::plugin::TailLength::Finite(u64::from(frames))
+    }
+}
+
+fn tail_length_if_generation_is_current(
+    cached: crate::plugin::TailLength,
+    cached_generation: u64,
+    current_generation: u64,
+) -> crate::plugin::TailLength {
+    if cached_generation == current_generation {
+        cached
+    } else {
+        crate::plugin::TailLength::Unknown
+    }
+}
+
+#[cfg(test)]
+mod tail_length_tests {
+    use super::{map_vst3_tail_length, tail_length_if_generation_is_current};
+    use crate::plugin::TailLength;
+
+    #[test]
+    fn vst3_only_uint32_max_is_the_infinite_tail_sentinel() {
+        assert_eq!(
+            map_vst3_tail_length(0x7fff_fffe),
+            TailLength::Finite(0x7fff_fffe)
+        );
+        assert_eq!(
+            map_vst3_tail_length(0x7fff_ffff),
+            TailLength::Finite(0x7fff_ffff)
+        );
+        assert_eq!(
+            map_vst3_tail_length(0x8000_0000),
+            TailLength::Finite(0x8000_0000)
+        );
+        assert_eq!(map_vst3_tail_length(u32::MAX), TailLength::Infinite);
+    }
+
+    #[test]
+    fn component_restart_invalidates_tail_cache_and_refuses_unsupported_restart() {
+        use super::Vst3HostApplication;
+        use std::sync::atomic::Ordering;
+        use vst3_sys::vst::IComponentHandler;
+
+        let (host, generation) = Vst3HostApplication::new();
+        let cached = TailLength::Finite(96);
+        let cached_generation = generation.load(Ordering::Acquire);
+        assert_eq!(
+            tail_length_if_generation_is_current(
+                cached,
+                cached_generation,
+                generation.load(Ordering::Acquire),
+            ),
+            cached
+        );
+
+        // SAFETY: The host callback object is live and owns the generation
+        // counter queried by the assertion below.
+        let result = unsafe { host.restart_component(1 << 10) };
+        assert_eq!(result, vst3_sys::base::kResultFalse);
+        assert_eq!(
+            tail_length_if_generation_is_current(
+                cached,
+                cached_generation,
+                generation.load(Ordering::Acquire),
+            ),
+            TailLength::Unknown
+        );
     }
 }
 
@@ -1109,29 +1763,43 @@ unsafe fn create_edit_controller(
 ) -> Result<(Option<VstPtr<dyn IEditController>>, bool), String> {
     // SAFETY: All interfaces belong to the live initialized module and factory.
     unsafe {
-        if let Some(controller) = component.cast::<dyn IEditController>() {
-            return Ok((Some(controller), false));
-        }
+        let (controller, separate_controller) = if let Some(controller) =
+            component.cast::<dyn IEditController>()
+        {
+            (Some(controller), false)
+        } else {
+            let mut controller_id = IID { data: [0; 16] };
+            if component.get_controller_class_id(&mut controller_id) != kResultOk {
+                return Ok((None, false));
+            }
+            let mut raw = ptr::null_mut();
+            ensure_ok(
+                factory.create_instance(&controller_id, &<dyn IEditController>::IID, &mut raw),
+                plugin_name,
+                "create edit controller",
+            )?;
+            let controller = VstPtr::<dyn IEditController>::owned(raw.cast()).ok_or_else(|| {
+                format!("VST3 factory returned a null edit controller for '{plugin_name}'")
+            })?;
+            ensure_ok(
+                controller.initialize(host.as_ptr().cast()),
+                plugin_name,
+                "initialize edit controller",
+            )?;
+            (Some(controller), true)
+        };
 
-        let mut controller_id = IID { data: [0; 16] };
-        if component.get_controller_class_id(&mut controller_id) != kResultOk {
-            return Ok((None, false));
+        if let Some(controller) = controller.as_ref() {
+            let handler = host
+                .cast::<dyn IComponentHandler>()
+                .ok_or_else(|| "VST3 host application lacks IComponentHandler".to_string())?;
+            ensure_ok(
+                controller.set_component_handler(shared_vst_ptr(&handler)),
+                plugin_name,
+                "install component handler",
+            )?;
         }
-        let mut raw = ptr::null_mut();
-        ensure_ok(
-            factory.create_instance(&controller_id, &<dyn IEditController>::IID, &mut raw),
-            plugin_name,
-            "create edit controller",
-        )?;
-        let controller = VstPtr::<dyn IEditController>::owned(raw.cast()).ok_or_else(|| {
-            format!("VST3 factory returned a null edit controller for '{plugin_name}'")
-        })?;
-        ensure_ok(
-            controller.initialize(host.as_ptr().cast()),
-            plugin_name,
-            "initialize edit controller",
-        )?;
-        Ok((Some(controller), true))
+        Ok((controller, separate_controller))
     }
 }
 
@@ -1222,6 +1890,85 @@ unsafe fn collect_parameters(
             });
         }
         Ok((parameters, bindings))
+    }
+}
+
+fn read_hidden_vst3_integer_parameter(
+    controller: &VstPtr<dyn IEditController>,
+    plugin_name: &str,
+    key: &str,
+    expected_steps: i32,
+    minimum_value: f64,
+    maximum_value: f64,
+) -> Result<i32, String> {
+    const VST3_PARAMETER_IS_HIDDEN: i32 = 1 << 4;
+
+    // SAFETY: The initialized edit controller owns parameter metadata and
+    // conversion methods. Values are copied before this control-thread query
+    // returns, and no plugin pointer escapes it.
+    unsafe {
+        let count = controller.get_parameter_count();
+        if !(0..=MAX_PARAMETERS).contains(&count) {
+            return Err(format!(
+                "VST3 plugin '{plugin_name}' reported invalid parameter count {count}"
+            ));
+        }
+        let expected_id = native_parameter_id(key);
+        let mut found = None;
+        for index in 0..count {
+            let mut info = std::mem::MaybeUninit::<ParameterInfo>::zeroed();
+            ensure_ok(
+                controller.get_parameter_info(index, info.as_mut_ptr()),
+                plugin_name,
+                "read hidden Ambisonics parameter metadata",
+            )?;
+            let info = info.assume_init();
+            if info.id != expected_id {
+                continue;
+            }
+            if found.is_some() {
+                return Err(format!(
+                    "VST3 plugin '{plugin_name}' reports duplicate hidden parameter '{key}'"
+                ));
+            }
+            let required_flags = ParameterFlags::kIsReadOnly as i32 | VST3_PARAMETER_IS_HIDDEN;
+            if info.flags & required_flags != required_flags || info.step_count != expected_steps {
+                return Err(format!(
+                    "VST3 plugin '{plugin_name}' hidden Ambisonics parameter '{key}' has incompatible metadata"
+                ));
+            }
+            let minimum = controller.normalized_param_to_plain(info.id, 0.0);
+            let maximum = controller.normalized_param_to_plain(info.id, 1.0);
+            if !minimum.is_finite()
+                || !maximum.is_finite()
+                || (minimum.min(maximum) - minimum_value).abs() > 1.0e-6
+                || (minimum.max(maximum) - maximum_value).abs() > 1.0e-6
+            {
+                return Err(format!(
+                    "VST3 plugin '{plugin_name}' hidden Ambisonics parameter '{key}' has an incompatible range"
+                ));
+            }
+            let normalized = controller.get_param_normalized(info.id);
+            let plain = controller.normalized_param_to_plain(info.id, normalized);
+            if !plain.is_finite() {
+                return Err(format!(
+                    "VST3 plugin '{plugin_name}' hidden Ambisonics parameter '{key}' is non-finite"
+                ));
+            }
+            let rounded = plain.round();
+            if (plain - rounded).abs() > 1.0e-6
+                || rounded < minimum_value
+                || rounded > maximum_value
+            {
+                return Err(format!(
+                    "VST3 plugin '{plugin_name}' hidden Ambisonics parameter '{key}' has invalid value {plain}"
+                ));
+            }
+            found = Some(rounded as i32);
+        }
+        found.ok_or_else(|| {
+            format!("VST3 plugin '{plugin_name}' is missing hidden Ambisonics parameter '{key}'")
+        })
     }
 }
 
@@ -1465,15 +2212,29 @@ unsafe fn select_audio_class(
     }
 }
 
-unsafe fn initialize_component(
-    component: &VstPtr<dyn IComponent>,
-    processor: &VstPtr<dyn IAudioProcessor>,
-    host: &VstPtr<dyn IHostApplication>,
-    requested: &PluginDescriptor,
+struct Vst3ComponentInitialization<'a> {
+    component: &'a VstPtr<dyn IComponent>,
+    processor: &'a VstPtr<dyn IAudioProcessor>,
+    host: &'a VstPtr<dyn IHostApplication>,
+    requested: &'a PluginDescriptor,
     sample_rate: u32,
     max_block_frames: usize,
+    audio_setup: Option<&'a NativePluginAudioSetup>,
+}
+
+unsafe fn initialize_component(
+    initialization: Vst3ComponentInitialization<'_>,
     lifecycle: &mut Vst3ComponentLifecycleGuard<'_>,
-) -> Result<(usize, usize), String> {
+) -> Result<Vst3NegotiatedAudioLayout, String> {
+    let Vst3ComponentInitialization {
+        component,
+        processor,
+        host,
+        requested,
+        sample_rate,
+        max_block_frames,
+        audio_setup,
+    } = initialization;
     // SAFETY: Caller owns all live COM interfaces and invokes the lifecycle in
     // the required order.
     unsafe {
@@ -1488,22 +2249,103 @@ unsafe fn initialize_component(
             &requested.name,
             "select simple I/O mode",
         )?;
-        let input_channels = audio_bus_channels(component, true, requested)?;
-        let output_channels = audio_bus_channels(component, false, requested)?;
-        if output_channels == 0 {
+        let initial_input_channels = audio_bus_channels(component, true, requested)?;
+        let (initial_output_bus_count, initial_output_bus_widths) = match audio_setup {
+            Some(NativePluginAudioSetup::BandSplit { .. }) => {
+                audio_bus_channel_widths(component, requested)?
+            }
+            _ => {
+                let output_channels = audio_bus_channels(component, false, requested)?;
+                (1, [output_channels, 0, 0, 0])
+            }
+        };
+        let initial_output_channels = initial_output_bus_widths.iter().sum::<usize>();
+        if initial_output_channels == 0 {
             return Err(format!(
                 "VST3 plugin '{}' has no audio output",
                 requested.name
             ));
         }
-        if requested.is_instrument != (input_channels == 0) {
+        if requested.is_instrument != (initial_input_channels == 0) {
             return Err(format!(
-                "VST3 plugin '{}' descriptor instrument flag conflicts with its {input_channels} input channels",
-                requested.name
+                "VST3 plugin '{}' descriptor instrument flag conflicts with its {initial_input_channels} input channels",
+                requested.name,
             ));
         }
-        let mut input_arrangement = speaker_arrangement(input_channels)?;
-        let mut output_arrangement = speaker_arrangement(output_channels)?;
+        let mut input_arrangement;
+        let mut output_arrangements = [0; 4];
+        let (
+            input_channels,
+            output_channels,
+            output_bus_count,
+            output_bus_widths,
+            active_output_buses,
+            band_split_output_layout,
+        ) = match audio_setup {
+            Some(NativePluginAudioSetup::Ambisonics {
+                order,
+                target_layout,
+            }) => {
+                if initial_input_channels == 0 || initial_output_channels == 0 {
+                    return Err(format!(
+                        "VST3 Ambisonics plugin '{}' must expose one input and one output bus before layout negotiation",
+                        requested.name
+                    ));
+                }
+                let (input_channels, output_channels) = NativePluginAudioSetup::Ambisonics {
+                    order: *order,
+                    target_layout: *target_layout,
+                }
+                .channel_counts()?;
+                input_arrangement = ambisonics_speaker_arrangement(*order)?;
+                output_arrangements[0] = target_layout.vst3_speaker_arrangement();
+                (
+                    input_channels,
+                    output_channels,
+                    1,
+                    [output_channels, 0, 0, 0],
+                    1,
+                    None,
+                )
+            }
+            Some(NativePluginAudioSetup::BandSplit {
+                num_bands,
+                output_layout,
+            }) => {
+                if initial_input_channels != 2 || initial_output_bus_count != 4 {
+                    return Err(format!(
+                        "VST3 BandSplit '{}' must expose stereo input and four output bus slots before route selection",
+                        requested.name
+                    ));
+                }
+                let expected_bands = usize::from(*num_bands);
+                let output_channels = expected_bands * 2;
+                input_arrangement = 0b11;
+                let (arrangements, output_bus_widths, active_output_buses) =
+                    band_split_vst3_output_buses(*output_layout, expected_bands)?;
+                output_arrangements = arrangements;
+                (
+                    2,
+                    output_channels,
+                    4,
+                    output_bus_widths,
+                    active_output_buses,
+                    Some(*output_layout),
+                )
+            }
+            None => {
+                input_arrangement = speaker_arrangement(initial_input_channels)?;
+                output_arrangements[0] = speaker_arrangement(initial_output_channels)?;
+                (
+                    initial_input_channels,
+                    initial_output_channels,
+                    1,
+                    [initial_output_channels, 0, 0, 0],
+                    1,
+                    None,
+                )
+            }
+        };
         ensure_ok(
             processor.set_bus_arrangements(
                 if input_channels == 0 {
@@ -1512,8 +2354,8 @@ unsafe fn initialize_component(
                     &mut input_arrangement
                 },
                 i32::from(input_channels != 0),
-                &mut output_arrangement,
-                1,
+                output_arrangements.as_mut_ptr(),
+                output_bus_count as i32,
             ),
             &requested.name,
             "set bus arrangements",
@@ -1530,16 +2372,18 @@ unsafe fn initialize_component(
                 "activate input bus",
             )?;
         }
-        ensure_ok(
-            component.activate_bus(
-                MediaTypes::kAudio as i32,
-                BusDirections::kOutput as i32,
-                0,
-                1,
-            ),
-            &requested.name,
-            "activate output bus",
-        )?;
+        for bus_index in 0..output_bus_count {
+            ensure_ok(
+                component.activate_bus(
+                    MediaTypes::kAudio as i32,
+                    BusDirections::kOutput as i32,
+                    bus_index as i32,
+                    u8::from(active_output_buses & (1 << bus_index) != 0),
+                ),
+                &requested.name,
+                "set output bus activation",
+            )?;
+        }
         let setup = ProcessSetup {
             process_mode: ProcessModes::kRealtime as i32,
             symbolic_sample_size: K_SAMPLE32,
@@ -1563,7 +2407,119 @@ unsafe fn initialize_component(
             "start processing",
         )?;
         lifecycle.processing = true;
-        Ok((input_channels, output_channels))
+        Ok(Vst3NegotiatedAudioLayout {
+            input_channels,
+            output_channels,
+            output_bus_count,
+            output_bus_widths,
+            active_output_buses,
+            band_split_output_layout,
+        })
+    }
+}
+
+fn ambisonics_speaker_arrangement(order: u8) -> Result<SpeakerArrangement, String> {
+    // VST3 uses the standardized ACN speaker bits through order four. Its
+    // order-five through order-seven masks use the low n bits by specification.
+    let arrangement = match order {
+        1 => 0x0000_0000_00f0_0000,
+        2 => 0x0000_07c0_00f0_0000,
+        3 => 0x0003_ffc0_00f0_0000,
+        4 => 0x07ff_ffc0_00f0_0000,
+        5 => (1_u64 << 36) - 1,
+        6 => (1_u64 << 49) - 1,
+        7 => u64::MAX,
+        _ => {
+            return Err(format!(
+                "VST3 Ambisonics order {order} is unsupported; expected an order from 1 through 7"
+            ));
+        }
+    };
+    Ok(arrangement)
+}
+
+fn band_split_vst3_active_bus_mask(
+    output_layout: NativeBandSplitOutputLayout,
+    num_bands: usize,
+) -> Result<u64, String> {
+    match output_layout {
+        NativeBandSplitOutputLayout::Vst3Buses => Ok((1_u64 << num_bands) - 1),
+        NativeBandSplitOutputLayout::Vst3LegacyPacked => Ok(match num_bands {
+            2 => 0b0001,
+            3 => 0b0011,
+            4 => 0b0111,
+            _ => {
+                return Err(format!(
+                    "VST3 legacy BandSplit route cannot represent {num_bands} bands"
+                ));
+            }
+        }),
+        NativeBandSplitOutputLayout::ClapPacked => {
+            Err("VST3 BandSplit cannot use the CLAP packed route".into())
+        }
+    }
+}
+
+fn band_split_vst3_output_buses(
+    output_layout: NativeBandSplitOutputLayout,
+    num_bands: usize,
+) -> Result<([SpeakerArrangement; 4], [usize; 4], u64), String> {
+    if !(2..=4).contains(&num_bands) {
+        return Err(format!(
+            "VST3 BandSplit band count {num_bands} is unsupported; expected two through four"
+        ));
+    }
+    let (arrangements, widths) = match output_layout {
+        NativeBandSplitOutputLayout::Vst3Buses => ([0b11; 4], [2, 2, 2, 2]),
+        NativeBandSplitOutputLayout::Vst3LegacyPacked => ([0b1111, 0b11, 0b11, 0b11], [4, 2, 2, 2]),
+        NativeBandSplitOutputLayout::ClapPacked => {
+            return Err("VST3 BandSplit cannot use the CLAP packed route".into());
+        }
+    };
+    Ok((
+        arrangements,
+        widths,
+        band_split_vst3_active_bus_mask(output_layout, num_bands)?,
+    ))
+}
+
+/// Reads the fixed four-slot output shape used by the recognized BandSplit VST3 wrapper.
+unsafe fn audio_bus_channel_widths(
+    component: &VstPtr<dyn IComponent>,
+    requested: &PluginDescriptor,
+) -> Result<(usize, [usize; 4]), String> {
+    // SAFETY: Component is initialized and the requested bus metadata is plugin-owned.
+    unsafe {
+        let count =
+            component.get_bus_count(MediaTypes::kAudio as i32, BusDirections::kOutput as i32);
+        if !(0..=4).contains(&count) {
+            return Err(format!(
+                "VST3 BandSplit '{}' exposes {count} output audio buses; at most four are supported",
+                requested.name
+            ));
+        }
+        let mut widths = [0; 4];
+        for (index, width) in widths.iter_mut().take(count as usize).enumerate() {
+            let mut info = std::mem::MaybeUninit::<BusInfo>::zeroed();
+            ensure_ok(
+                component.get_bus_info(
+                    MediaTypes::kAudio as i32,
+                    BusDirections::kOutput as i32,
+                    index as i32,
+                    info.as_mut_ptr(),
+                ),
+                &requested.name,
+                "query BandSplit output bus",
+            )?;
+            let channels = info.assume_init().channel_count;
+            *width = usize::try_from(channels).map_err(|_| {
+                format!(
+                    "VST3 BandSplit '{}' reported negative output channel count {channels} on bus {index}",
+                    requested.name
+                )
+            })?;
+        }
+        Ok((count as usize, widths))
     }
 }
 

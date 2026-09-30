@@ -1,3 +1,4 @@
+// Rust guideline compliant 2026-02-21
 use super::consts::DUAL_BAND_CROSSOVER_HZ;
 use super::consts::MAX_AMBI_CHANNELS;
 use super::decode_matrix::DecodeMatrix;
@@ -107,11 +108,19 @@ impl AmbisonicsDecoderPlugin {
             .position(|&layout| layout == self.target_layout)
             .expect("validated target layout must have a parameter choice");
         self.cached_parameters = vec![
-            Parameter::new_int("order", "Ambisonics Order", self.order as i32, 1, 3)
+            Parameter::new_int(
+                "order",
+                "Ambisonics Order",
+                self.order as i32,
+                1,
+                super::spherical_harmonics::MAX_ORDER as i32,
+            )
                 .with_update_mode(pk(PARAMS, "order").update_mode)
                 .with_group("Ambisonics")
                 .with_importance(ParameterImportance::Critical)
-                .with_description("1=FOA(4ch), 2=SOA(9ch), 3=TOA(16ch)")
+                .with_description(
+                    "1=FOA(4ch), 2=SOA(9ch), 3=TOA(16ch), 4=25ch, 5=36ch, 6=49ch, 7=64ch",
+                )
                 .build(),
             Parameter::new_int(
                 "target_layout",
@@ -434,6 +443,11 @@ impl Plugin for AmbisonicsDecoderPlugin {
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         input_frames
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Both successful process paths return exactly context.num_frames.
+        true
     }
 
     fn output_sample_rate(&self, input_rate: u32) -> u32 {

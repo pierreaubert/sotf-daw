@@ -3,7 +3,8 @@
 // Rust guideline compliant 2026-02-21
 use sotf_host::{ParameterId, ParameterValue, ParametricInPlacePlugin, ProcessContext, TailLength};
 use sotf_plugin_speech_denoiser::{
-    SPEECH_DENOISER_FRAME_SIZE, SpeechDenoiserPlugin, SpeechDenoiserPluginParams,
+    SPEECH_DENOISER_FRAME_SIZE, SpeechDenoiserData, SpeechDenoiserPlugin,
+    SpeechDenoiserPluginParams,
 };
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -394,5 +395,53 @@ fn first_disabled_drain_queries_snapshots_and_reset_allocate_and_free_nothing() 
                 .unwrap();
             }
         }
+    }
+}
+
+#[test]
+fn enabled_eof_process_drain_backend_cutoff_and_zero_calls_allocate_and_free_nothing() {
+    for channels in [1, 2] {
+        let mut p = plugin(channels, true);
+        let mut input = vec![0.125; 3 * SPEECH_DENOISER_FRAME_SIZE * channels];
+        let mut output = vec![0.0; SPEECH_DENOISER_FRAME_SIZE * channels];
+        let process_context = ProcessContext::new(RATE, 3 * SPEECH_DENOISER_FRAME_SIZE);
+        let drain_context = ProcessContext::new(RATE, 0);
+        let mut zero_frame_canary = [0.375; 2];
+
+        let counts = counted(|| {
+            assert_eq!(
+                p.process_in_place(&mut input, &process_context).unwrap(),
+                process_context.num_frames
+            );
+            assert_eq!(p.drain_call_bound().unwrap().get(), 2);
+            for call in 0..2 {
+                let result = p.drain(&mut output, &drain_context).unwrap();
+                assert_eq!(result.frames, SPEECH_DENOISER_FRAME_SIZE);
+                assert_eq!(result.complete, call == 1);
+            }
+            assert_eq!(
+                p.process_in_place(
+                    &mut zero_frame_canary[..channels],
+                    &ProcessContext::new(RATE, 0),
+                )
+                .unwrap(),
+                0
+            );
+            assert!(p.drain(&mut [], &drain_context).unwrap().complete);
+        });
+
+        assert_eq!(counts, (0, 0), "channels={channels}");
+        assert_eq!(
+            &zero_frame_canary[..channels],
+            &vec![0.375; channels],
+            "zero-frame process changed its caller buffer"
+        );
+        let snapshot = p
+            .get_data()
+            .unwrap()
+            .downcast::<SpeechDenoiserData>()
+            .unwrap();
+        assert!(snapshot.model_frames > 0, "final telemetry was cleared");
+        assert_eq!(p.tail_length(), TailLength::Unknown);
     }
 }

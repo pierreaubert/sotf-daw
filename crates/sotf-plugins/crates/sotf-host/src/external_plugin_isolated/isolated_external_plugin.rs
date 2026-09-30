@@ -1,16 +1,20 @@
 use super::isolated_external_plugin_config::IsolatedExternalPluginConfig;
 use super::isolated_external_plugin_config::build_worker_launch_command;
 use crate::external_plugin::{
-    ExternalPluginHostingPlan, ExternalPluginSandboxMode, ExternalPluginState, PluginDescriptor,
-    PluginDescriptorProbeCache, plan_external_plugin_hosting,
+    ExternalPluginHostingPlan, ExternalPluginSandboxMode, ExternalPluginState,
+    NativePluginAudioSetup, PluginDescriptor, PluginDescriptorProbeCache,
+    plan_external_plugin_hosting,
 };
 use crate::external_plugin_host::{ExternalPluginHostBlockStatus, ExternalPluginHostProxy};
-use crate::external_plugin_ipc::{PluginIpcControlRequest, PluginIpcControlResponse};
+use crate::external_plugin_ipc::{
+    PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcTailLength,
+};
 use crate::external_plugin_ipc::{PluginIpcLayout, PluginSandboxRuntimeStatus};
 use crate::external_plugin_process::{ExternalPluginProcessEvent, ExternalPluginProcessSupervisor};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use std::collections::HashMap;
 use std::io::Write;
@@ -19,6 +23,7 @@ use std::time::{Duration, Instant};
 
 pub struct IsolatedExternalPlugin {
     pub(super) descriptor: PluginDescriptor,
+    pub(super) audio_setup: Option<NativePluginAudioSetup>,
     pub(super) plugin_instance_id: Option<usize>,
     pub(super) proxy: ExternalPluginHostProxy,
     pub(super) supervisor: Option<ExternalPluginProcessSupervisor>,
@@ -35,6 +40,13 @@ pub struct IsolatedExternalPlugin {
     pub(super) parameters: Vec<Parameter>,
     pub(super) parameter_values: HashMap<ParameterId, ParameterValue>,
     pub(super) control_timeout: Duration,
+    pub(super) identity_frame_geometry: bool,
+    drain_zero_input: Vec<f32>,
+    drain_started: bool,
+    drain_failed: bool,
+    remaining_native_tail_frames: u64,
+    remaining_pipeline_frames: u64,
+    sample_rate: u32,
 }
 
 impl IsolatedExternalPlugin {
@@ -84,8 +96,36 @@ impl IsolatedExternalPlugin {
             }
         }
 
-        let input_channels = descriptor.audio_inputs;
-        let output_channels = descriptor.audio_outputs.max(1);
+        if let (Some(config_setup), Some(state_setup)) = (
+            config.audio_setup.as_ref(),
+            config
+                .initial_state
+                .as_ref()
+                .and_then(|state| state.audio_setup.as_ref()),
+        ) && config_setup != state_setup
+        {
+            return Err(
+                "isolated external plugin config audio setup conflicts with its initial state"
+                    .to_string(),
+            );
+        }
+        let requested_audio_setup = config.audio_setup.as_ref().or_else(|| {
+            config
+                .initial_state
+                .as_ref()
+                .and_then(|state| state.audio_setup.as_ref())
+        });
+        let effective_audio_setup = NativePluginAudioSetup::for_descriptor_or_legacy_default(
+            &descriptor,
+            requested_audio_setup,
+        )?;
+
+        let (input_channels, output_channels) = if let Some(setup) = effective_audio_setup.as_ref()
+        {
+            setup.channel_counts()?
+        } else {
+            (descriptor.audio_inputs, descriptor.audio_outputs.max(1))
+        };
         let layout = PluginIpcLayout::new(
             sample_rate,
             config.max_block_frames,
@@ -94,16 +134,20 @@ impl IsolatedExternalPlugin {
         )
         .map_err(|err| format!("invalid isolated external-plugin layout: {err}"))?;
         let proxy = ExternalPluginHostProxy::new(layout, config.deadline)?;
+        let drain_zero_input = vec![0.0; config.max_block_frames as usize * input_channels];
         let descriptor_json = serde_json::to_string(&descriptor)
             .map_err(|err| format!("failed to serialize external plugin descriptor: {err}"))?;
         let path = proxy.shared_path().with_extension("state.json");
-        let launch_state = config.initial_state.clone().unwrap_or_else(|| {
+        let mut launch_state = config.initial_state.clone().unwrap_or_else(|| {
             ExternalPluginState::new(
                 descriptor.clone(),
                 ExternalPluginSandboxMode::Isolated,
                 Vec::new(),
             )
         });
+        if launch_state.audio_setup.is_none() {
+            launch_state.audio_setup.clone_from(&config.audio_setup);
+        }
         write_initial_state_file(&path, &launch_state)?;
         let state_file_path = Some(path);
         let sandbox_args = match &config.capability_sandbox_policy {
@@ -130,6 +174,7 @@ impl IsolatedExternalPlugin {
 
         let mut plugin = Self {
             descriptor,
+            audio_setup: requested_audio_setup.cloned(),
             plugin_instance_id: config.plugin_instance_id,
             proxy,
             supervisor: Some(supervisor),
@@ -150,6 +195,13 @@ impl IsolatedExternalPlugin {
             parameters: Vec::new(),
             parameter_values: HashMap::new(),
             control_timeout: config.worker_startup_timeout,
+            identity_frame_geometry: false,
+            drain_zero_input,
+            drain_started: false,
+            drain_failed: false,
+            remaining_native_tail_frames: 0,
+            remaining_pipeline_frames: 0,
+            sample_rate,
         };
 
         if let Some(error) = plugin.launch_error.take() {
@@ -187,7 +239,11 @@ impl IsolatedExternalPlugin {
                 &PluginIpcControlRequest::Describe,
                 config.worker_startup_timeout,
             )? {
-                PluginIpcControlResponse::Description { parameters } => {
+                PluginIpcControlResponse::Description {
+                    parameters,
+                    tail_length: _,
+                    identity_frame_geometry,
+                } => {
                     plugin.parameter_values = parameters
                         .iter()
                         .map(|parameter| (parameter.id.clone(), parameter.default_value.clone()))
@@ -199,6 +255,7 @@ impl IsolatedExternalPlugin {
                             .collect(),
                     );
                     plugin.parameters = parameters;
+                    plugin.identity_frame_geometry = identity_frame_geometry;
                 }
                 PluginIpcControlResponse::Error(error) => return Err(error),
                 _ => return Err("external-plugin worker returned invalid description".to_string()),
@@ -221,11 +278,13 @@ impl IsolatedExternalPlugin {
     }
 
     pub fn placeholder_state(&self) -> ExternalPluginState {
-        ExternalPluginState::new(
+        let mut state = ExternalPluginState::new(
             self.descriptor.clone(),
             ExternalPluginSandboxMode::Isolated,
             self.opaque_state.clone(),
-        )
+        );
+        state.audio_setup.clone_from(&self.audio_setup);
+        state
     }
 
     pub fn capture_worker_state(&mut self) -> Result<ExternalPluginState, String> {
@@ -255,7 +314,7 @@ impl IsolatedExternalPlugin {
         sample_rate: u32,
         config: IsolatedExternalPluginConfig,
     ) -> Result<Self, String> {
-        state.validate_descriptor_consistency()?;
+        state.validate()?;
         if state.sandbox_mode != ExternalPluginSandboxMode::Isolated {
             return Err(format!(
                 "External plugin state sandbox mode {:?} cannot restore isolated plugin",
@@ -264,6 +323,7 @@ impl IsolatedExternalPlugin {
         }
         let mut config = config;
         config.initial_state = Some(state.clone());
+        config.audio_setup.clone_from(&state.audio_setup);
         Self::new(state.descriptor.clone(), sample_rate, config)
     }
 
@@ -573,6 +633,100 @@ impl Plugin for IsolatedExternalPlugin {
             .saturating_add(self.proxy.pipeline_latency_samples())
     }
 
+    fn tail_length(&self) -> TailLength {
+        if self.quarantined {
+            return TailLength::Unknown;
+        }
+        let native_tail = match self.proxy.worker_tail_length() {
+            PluginIpcTailLength::Finite(frames) => TailLength::Finite(frames),
+            PluginIpcTailLength::Infinite => TailLength::Infinite,
+            PluginIpcTailLength::Unknown => TailLength::Unknown,
+        };
+        match native_tail {
+            TailLength::Finite(native_frames) => native_frames
+                .checked_add(self.proxy.pipeline_latency_samples() as u64)
+                .map_or(TailLength::Infinite, TailLength::Finite),
+            TailLength::Infinite => TailLength::Infinite,
+            TailLength::Unknown => TailLength::Unknown,
+        }
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        self.identity_frame_geometry
+    }
+
+    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if sample_rate != self.sample_rate {
+            return Err(format!(
+                "isolated external plugin '{}' was prepared at {} Hz, not {sample_rate} Hz",
+                self.descriptor.name, self.sample_rate
+            ));
+        }
+        self.reset_checked()?;
+        if self.quarantined {
+            return Err(self.launch_error.clone().unwrap_or_else(|| {
+                format!(
+                    "isolated external plugin '{}' could not reset its worker timeline",
+                    self.descriptor.name
+                )
+            }));
+        }
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        let _ = self.reset_checked();
+    }
+
+    fn reset_checked(&mut self) -> PluginResult<()> {
+        if self.quarantined {
+            return Err(self.launch_error.clone().unwrap_or_else(|| {
+                format!(
+                    "isolated external plugin '{}' worker is quarantined",
+                    self.descriptor.name
+                )
+            }));
+        }
+        let worker_is_running = self.proxy.worker_latency_samples().is_some();
+        let reset_result = self
+            .proxy
+            .wait_for_pending_for_drain(self.control_timeout)
+            .and_then(|()| {
+                if !worker_is_running {
+                    return Ok(());
+                }
+                match self
+                    .proxy
+                    .request_control(&PluginIpcControlRequest::Reset, self.control_timeout)?
+                {
+                    PluginIpcControlResponse::Ack => Ok(()),
+                    PluginIpcControlResponse::Error(error) => Err(error),
+                    _ => Err("external-plugin worker returned invalid reset response".into()),
+                }
+            });
+        if let Err(error) = reset_result {
+            self.drain_failed = true;
+            self.quarantine_worker(format!(
+                "isolated external plugin '{}' could not reset native DSP state: {error}",
+                self.descriptor.name
+            ));
+            return Err(error);
+        }
+        if let Err(error) = self.proxy.reset_timeline_after_drain() {
+            self.drain_failed = true;
+            self.quarantine_worker(format!(
+                "isolated external plugin '{}' could not reset its IPC timeline: {error}",
+                self.descriptor.name
+            ));
+            return Err(error);
+        }
+        self.drain_started = false;
+        self.drain_failed = false;
+        self.remaining_native_tail_frames = 0;
+        self.remaining_pipeline_frames = 0;
+        Ok(())
+    }
+
     fn parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
     }
@@ -617,7 +771,15 @@ impl Plugin for IsolatedExternalPlugin {
     ) -> PluginResult<usize> {
         self.validate_process_buffers(input, output, context.num_frames)?;
         if self.quarantined {
+            self.drain_started = false;
+            self.remaining_native_tail_frames = 0;
+            self.remaining_pipeline_frames = 0;
             return Ok(self.write_fallback(input, output, context.num_frames));
+        }
+        if self.drain_failed {
+            return Err(
+                "isolated external-plugin drain requires reset after a prior failure".into(),
+            );
         }
 
         let (frames, status) = self
@@ -625,6 +787,9 @@ impl Plugin for IsolatedExternalPlugin {
             .process_block_with_context(input, output, context)
             .map_err(|err| format!("isolated external plugin processing failed: {err}"))?;
         self.record_block_status(status);
+        self.drain_started = false;
+        self.remaining_native_tail_frames = 0;
+        self.remaining_pipeline_frames = 0;
 
         match status {
             ExternalPluginHostBlockStatus::Priming => {}
@@ -656,5 +821,230 @@ impl Plugin for IsolatedExternalPlugin {
         }
 
         Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.proxy.pipeline_latency_samples()
+    }
+
+    fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
+        if self.drain_started {
+            return Ok(());
+        }
+        if self.drain_failed {
+            return Err(
+                "isolated external-plugin metadata cannot be prepared during a drain".into(),
+            );
+        }
+        if self.quarantined {
+            return Err(format!(
+                "isolated external plugin '{}' cannot prepare metadata for a quarantined worker",
+                self.descriptor.name
+            ));
+        }
+        if !self.identity_frame_geometry {
+            return Err(format!(
+                "isolated external plugin '{}' did not report identity frame geometry",
+                self.descriptor.name
+            ));
+        }
+        if self.proxy.emitted_degraded_output() {
+            self.drain_failed = true;
+            return Err(format!(
+                "isolated external plugin '{}' already emitted timeout/failure fallback; refusing to report it as drained DSP audio",
+                self.descriptor.name
+            ));
+        }
+        // EOS is the one bounded blocking point: finish work for input already
+        // accepted by the worker before the host asks for its final tail bound.
+        self.proxy
+            .wait_for_pending_for_drain(self.control_timeout)?;
+        if self.proxy.emitted_degraded_output() {
+            self.drain_failed = true;
+            return Err(format!(
+                "isolated external plugin '{}' already emitted timeout/failure fallback; refusing to report it as drained DSP audio",
+                self.descriptor.name
+            ));
+        }
+        Ok(())
+    }
+
+    fn begin_drain(&mut self, _context: &ProcessContext) -> PluginResult<()> {
+        if self.drain_started {
+            return Ok(());
+        }
+        if self.drain_failed {
+            return Err(
+                "isolated external-plugin drain requires reset after a prior failure".into(),
+            );
+        }
+        if self.quarantined {
+            return Err(format!(
+                "isolated external plugin '{}' cannot drain a quarantined worker",
+                self.descriptor.name
+            ));
+        }
+        if !self.identity_frame_geometry {
+            return Err(format!(
+                "isolated external plugin '{}' did not report identity frame geometry",
+                self.descriptor.name
+            ));
+        }
+        if self.proxy.emitted_degraded_output() {
+            self.drain_failed = true;
+            return Err(format!(
+                "isolated external plugin '{}' already emitted timeout/failure fallback; refusing to report it as drained DSP audio",
+                self.descriptor.name
+            ));
+        }
+        self.prepare_drain_metadata()?;
+        let pipeline_frames = self.proxy.pipeline_latency_samples() as u64;
+        let native_tail_frames = match self.tail_length() {
+            TailLength::Finite(frames) => frames
+                .checked_sub(pipeline_frames)
+                .ok_or_else(|| "isolated external-plugin drain extent underflow".to_string())?,
+            TailLength::Infinite => {
+                return Err(format!(
+                    "isolated external plugin '{}' reports an infinite native tail",
+                    self.descriptor.name
+                ));
+            }
+            TailLength::Unknown => {
+                return Err(format!(
+                    "isolated external plugin '{}' has unknown native tail metadata",
+                    self.descriptor.name
+                ));
+            }
+        };
+        native_tail_frames
+            .checked_add(pipeline_frames)
+            .ok_or_else(|| "isolated external-plugin drain extent overflow".to_string())?;
+
+        self.remaining_native_tail_frames = native_tail_frames;
+        self.remaining_pipeline_frames = pipeline_frames;
+        self.drain_started = true;
+        Ok(())
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.drain_started || self.drain_failed {
+            return None;
+        }
+        let block = u64::try_from(self.drain_output_frames_max()).ok()?.max(1);
+        let ceil_calls = |frames: u64| frames / block + u64::from(!frames.is_multiple_of(block));
+        std::num::NonZeroU64::new(
+            ceil_calls(self.remaining_native_tail_frames)
+                .saturating_add(ceil_calls(self.remaining_pipeline_frames))
+                .max(1),
+        )
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.drain_started || self.drain_failed {
+            return Err("isolated external-plugin drain was not prepared or requires reset".into());
+        }
+        if self.proxy.emitted_degraded_output() {
+            self.drain_failed = true;
+            return Err(
+                "isolated external-plugin drain encountered previously emitted fallback audio"
+                    .into(),
+            );
+        }
+        let max_frames = self.drain_output_frames_max();
+        if max_frames == 0 {
+            return Err("isolated external-plugin drain requires positive frame capacity".into());
+        }
+        let channels = self.output_channels;
+        if output.len() < max_frames.saturating_mul(channels) {
+            return Err(format!(
+                "isolated external-plugin drain output is too small: need {} samples, got {}",
+                max_frames.saturating_mul(channels),
+                output.len()
+            ));
+        }
+
+        let result = (|| {
+            if self.remaining_native_tail_frames > 0 {
+                let frames = usize::try_from(self.remaining_native_tail_frames)
+                    .unwrap_or(usize::MAX)
+                    .min(max_frames);
+                let input_samples = frames.checked_mul(self.input_channels).ok_or_else(|| {
+                    "isolated external-plugin drain input extent overflow".to_string()
+                })?;
+                let output_samples = frames.checked_mul(channels).ok_or_else(|| {
+                    "isolated external-plugin drain output extent overflow".to_string()
+                })?;
+                let mut drain_context = *context;
+                drain_context.num_frames = frames;
+                self.drain_zero_input[..input_samples].fill(0.0);
+                self.proxy
+                    .wait_for_pending_for_drain(self.control_timeout)?;
+                let (processed, status) = self.proxy.process_block_with_context(
+                    &self.drain_zero_input[..input_samples],
+                    &mut output[..output_samples],
+                    &drain_context,
+                )?;
+                if processed != frames
+                    || !matches!(
+                        status,
+                        ExternalPluginHostBlockStatus::Processed
+                            | ExternalPluginHostBlockStatus::Priming
+                    )
+                    || self.proxy.emitted_degraded_output()
+                {
+                    Err(format!(
+                        "isolated external-plugin native-tail drain returned {processed}/{frames} frames with {status:?}"
+                    ))
+                } else {
+                    self.remaining_native_tail_frames -= frames as u64;
+                    Ok(PluginDrainResult {
+                        frames,
+                        complete: false,
+                    })
+                }
+            } else if self.remaining_pipeline_frames > 0 {
+                let frames = usize::try_from(self.remaining_pipeline_frames)
+                    .unwrap_or(usize::MAX)
+                    .min(max_frames);
+                let output_samples = frames
+                    .checked_mul(channels)
+                    .ok_or_else(|| "isolated external-plugin flush extent overflow".to_string())?;
+                self.proxy
+                    .wait_for_pending_for_drain(self.control_timeout)?;
+                let status = self
+                    .proxy
+                    .flush_timeline_for_drain(&mut output[..output_samples], frames)?;
+                if !matches!(
+                    status,
+                    ExternalPluginHostBlockStatus::Processed
+                        | ExternalPluginHostBlockStatus::Priming
+                ) || self.proxy.emitted_degraded_output()
+                {
+                    Err(format!(
+                        "isolated external-plugin pipeline flush returned {status:?}"
+                    ))
+                } else {
+                    self.remaining_pipeline_frames -= frames as u64;
+                    let complete = self.remaining_pipeline_frames == 0;
+                    if complete {
+                        self.drain_started = false;
+                    }
+                    Ok(PluginDrainResult { frames, complete })
+                }
+            } else {
+                self.drain_started = false;
+                Ok(PluginDrainResult::COMPLETE)
+            }
+        })();
+
+        if result.is_err() {
+            self.drain_failed = true;
+            self.drain_started = false;
+        }
+        result
     }
 }

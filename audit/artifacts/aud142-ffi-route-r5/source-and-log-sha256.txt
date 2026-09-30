@@ -1,0 +1,10 @@
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  Cargo.lock
+a0b225ea0b2117a45f53275fa4380f7cd8f793577c8e9c66a5f0238f0f494429  crates/sotf-plugins/Cargo.toml
+9df0c41f0e78d5de82637db5473f975f43d9798a8ea94ed0e33f4de80abaeff9  crates/sotf-plugins/crates/plugins-ffi/Cargo.toml
+5f4d616c6fd4c2ee56ca24464ad7f7a09cff64dfddb097c5b23143460dea0f22  crates/sotf-plugins/crates/sotf-plugin-crossover/Cargo.toml
+1244009ac799d6d20284770722194ef2ce0f9f243121a8750fd91414523ba6e3  crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs
+02951613ffb8f803e50d7d989d65b63b44cf999851dc81f6036061d9c18993a2  crates/sotf-plugins/crates/sotf-plugin-crossover/src/tests.rs
+0c5ba1dc7c4554b353c415d479010a910f12e9993bcef88e9d85b94b22d51f57  crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
+b99a63128e220149934fc824c8d28a217b3e3955956c616872a0ba045810f912  crates/sotf-plugins/crates/plugins-ffi/src/lib/aud142_crossover_route_tests.rs
+db7231265ab682c46414ce840369da6b4ac06c141c9ea70265a5fd0db9f51e93  crates/sotf-plugins/crates/plugins-ffi/src/lib.rs
+afe214954cfa9e30fe6a1a5d8cde087b7455b3ba9155cb6bfb06ac9625decc13  audit/artifacts/aud142-ffi-route-r5/focused.log

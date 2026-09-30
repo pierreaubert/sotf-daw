@@ -1,3 +1,9 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Carry true-stereo convolution configuration through bridge factory construction.
+
 # 0.5.5
 
 ## Fixes (2026-08-12 review follow-up)

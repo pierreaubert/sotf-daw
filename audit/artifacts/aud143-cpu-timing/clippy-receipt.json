@@ -1,0 +1,21 @@
+{
+  "task": "Scoped lint evidence for AUD143 CPU harness",
+  "recorded_utc": "2026-09-30T04:48:59Z",
+  "cargo_lock_sha256": "db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18",
+  "attempts": [
+    {
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo clippy --manifest-path Cargo.toml -p sotf-plugin-band-split --all-targets --release --offline --locked -- -D warnings",
+      "log": "bandsplit-clippy.log",
+      "log_sha256": "9ca0c33ec314267764c5cd98741689e06265bf3cb334094c5ba5349119731738",
+      "exit_code": 101,
+      "result": "fails before lint completion: release test target realtime_parameters.rs imports CountingAlloc/assert_no_allocs, cfg-gated by qa, test or debug_assertions; dependency does not enable qa and release disables debug_assertions."
+    },
+    {
+      "command": "TMPDIR=/tmp CARGO_TARGET_DIR=/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target cargo clippy --manifest-path Cargo.toml -p sotf-plugin-band-split --test aud143_cpu --release --offline --locked -- -D warnings",
+      "log": "aud143-cpu-helper-clippy.log",
+      "log_sha256": "9ba21e9ae2f9eaebeb075bb454cb4e4f2f949f247ac35e99e04f280f42ea9df4",
+      "exit_code": 0,
+      "result": "new AUD143 CPU test target passes warning-denied Clippy."
+    }
+  ]
+}

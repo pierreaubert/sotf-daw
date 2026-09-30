@@ -76,7 +76,7 @@ impl EmbeddedAudioEngine {
                 output.len()
             ));
         }
-        self.host.set_playback_position(sample_position);
+        self.host.set_playback_position(sample_position)?;
         self.host.process(input, &mut output[..required])
     }
 
@@ -125,7 +125,9 @@ impl EmbeddedAudioEngine {
     /// Reset plugin history after a transport discontinuity or loop jump.
     pub fn reset_transport(&mut self, sample_position: u64) {
         self.host.reset();
-        self.host.set_playback_position(sample_position);
+        self.host
+            .set_playback_position(sample_position)
+            .expect("host reset reopens sink lifecycle before repositioning");
     }
 
     /// Maximum input block size accepted without growing host scratch storage.

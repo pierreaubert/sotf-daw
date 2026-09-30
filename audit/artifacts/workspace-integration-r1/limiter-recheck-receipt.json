@@ -1,0 +1,33 @@
+{
+  "command": [
+    "cargo",
+    "nextest",
+    "run",
+    "--offline",
+    "--locked",
+    "--workspace",
+    "--exclude",
+    "sotf-midi",
+    "--exclude",
+    "sotf-iamf",
+    "-E",
+    "test(=test_limiter_plugin_timing)",
+    "--test-threads",
+    "1",
+    "--no-capture"
+  ],
+  "cwd": "/tmp/sotf-audit-integration-20260930-r1/sotf-daw",
+  "environment_overrides": {
+    "CARGO_TARGET_DIR": "/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/target",
+    "TMPDIR": "/tmp",
+    "CARGO_NET_OFFLINE": "true",
+    "SOTF_FFI_SKIP_HEADER_SYNC": "1"
+  },
+  "serialization": "flock -x /tmp/sotf-daw-audit-cargo.lock",
+  "exit_code": 0,
+  "result": "1 passed; 6289 filtered/ignored; P99 60.925 microseconds",
+  "changed_source_paths": [],
+  "qualification": "One isolated timing rerun on the same source copy; does not turn the failed broad run green or establish hard realtime guarantees",
+  "archive": "crates/sotf-plugins/target/audit-artifacts/workspace-integration-r1/source.tar.gz",
+  "archive_sha256": "cb0de3dbedeebe85bfc65905f262a9ecdb776d4f54fc085fd8db0e8d39aff489"
+}

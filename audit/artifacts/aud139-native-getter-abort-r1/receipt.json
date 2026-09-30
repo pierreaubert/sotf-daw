@@ -1,0 +1,13 @@
+{
+  "debugger_command": "gdb --batch -nx -nh -ex 'set pagination off' -ex 'set debuginfod enabled off' -ex 'set print frame-arguments none' -ex run -ex 'bt 45' --args crates/sotf-plugins/target/audit-artifacts/aud139-clap-abort-r1/plugins-nih-test plugin::native_dynamic_eq_clap_restart::clap_defers_restart_required_shelf_until_host_reactivation --exact --nocapture",
+  "debugger_exit_code": 0,
+  "inferior_result": "SIGABRT during first ordinary Peak CLAP callback, before restart control write",
+  "raw_gdb_log_sha256": "f86b811e95ec7257d457fe81a05a7ef3d155b899797a5f5deb00ffe0fd32945c",
+  "captured_getter_source_sha256": "9890d620eca67b1197f821e8bb5dc0a68ef595627d9dfcfbc8deb16de27b7160",
+  "limitations": [
+    "Default sandbox ptrace attempt failed before launching the test; escalation was approved for the bounded child-process trace.",
+    "Split-DWARF files were missing; GDB still resolved the relevant symbol names and source locations.",
+    "Copied executable was captured after r3 failure, without an original build-bound binary hash. This new debugger run independently reproduces the allocation on that copied executable.",
+    "Captured getter source confirms the allocating implementation but is not a complete build-source snapshot."
+  ]
+}

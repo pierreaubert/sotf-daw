@@ -1,0 +1,28 @@
+   Compiling either v1.18.0
+   Compiling rayon v1.12.0
+   Compiling ndarray v0.17.2
+   Compiling math-iir-fir v0.5.24 (/home/pierre/src/all_of_sotf/math-audio/crates/math-iir-fir)
+   Compiling oxiblas-ndarray v0.2.2
+   Compiling math-dsp v0.5.31 (/home/pierre/src/all_of_sotf/math-audio/crates/math-dsp)
+   Compiling sotf-host v0.5.105 (/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+   Compiling sotf-plugin-dynamic-eq v0.5.11 (/home/pierre/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)
+    Finished `release` profile [optimized] target(s) in 18.16s
+     Running tests/aud139_cpu_baseline.rs (target/release/deps/aud139_cpu_baseline-e52ac34e9703506a)
+
+running 1 test
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=4 callback_frames=64 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=13282320 median_ns_per_frame=202.672 median_ns_per_callback=12971.016 trial_ns=[13259406, 13305474, 13300544, 13278232, 13315633, 13282320, 13276679]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=4 callback_frames=256 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=13309201 median_ns_per_frame=203.082 median_ns_per_callback=51989.066 trial_ns=[13274935, 13337595, 13301175, 13315011, 13307858, 13327505, 13309201]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=4 callback_frames=1024 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=13270056 median_ns_per_frame=202.485 median_ns_per_callback=207344.625 trial_ns=[13245520, 13256811, 13301757, 13301385, 13292579, 13200635, 13270056]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=8 callback_frames=64 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=27105013 median_ns_per_frame=413.590 median_ns_per_callback=26469.739 trial_ns=[27151481, 27066891, 27105013, 27152743, 27026204, 27151471, 27093030]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=8 callback_frames=256 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=26927197 median_ns_per_frame=410.876 median_ns_per_callback=105184.363 trial_ns=[26947215, 26933158, 26914883, 26927197, 26941904, 26888984, 26914863]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=2 bands=8 callback_frames=1024 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=26950901 median_ns_per_frame=411.238 median_ns_per_callback=421107.828 trial_ns=[26950901, 26929280, 27036944, 27048466, 27027557, 26944409, 26919021]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=4 callback_frames=64 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=23137498 median_ns_per_frame=353.050 median_ns_per_callback=22595.213 trial_ns=[23140313, 23152717, 23167996, 23134302, 23111919, 23137498, 23107812]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=4 callback_frames=256 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=23279547 median_ns_per_frame=355.218 median_ns_per_callback=90935.730 trial_ns=[23279547, 23282732, 23325965, 23168316, 23227859, 23265921, 23299094]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=4 callback_frames=1024 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=23103563 median_ns_per_frame=352.532 median_ns_per_callback=360993.172 trial_ns=[23152516, 23090379, 23079538, 22980090, 23116237, 23103563, 23103864]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=8 callback_frames=64 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=49990092 median_ns_per_frame=762.788 median_ns_per_callback=48818.449 trial_ns=[49998549, 50001103, 49973231, 49937874, 49990092, 49860106, 50029597]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=8 callback_frames=256 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=50295782 median_ns_per_frame=767.453 median_ns_per_callback=196467.898 trial_ns=[50275494, 50264022, 50324707, 50295782, 50341248, 52672975, 50277567]
+AUD139_CPU case=pre_edit profile=release sample_rate=48000 channels=8 bands=8 callback_frames=1024 frames_per_trial=65536 warmups=2 measured_trials=7 median_ns=50097076 median_ns_per_frame=764.421 median_ns_per_callback=782766.812 trial_ns=[50097076, 50173901, 50041130, 50054334, 50137131, 50152320, 50021743]
+test capture_aud139_optimized_callback_cpu_baseline ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.82s
+

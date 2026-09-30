@@ -362,7 +362,9 @@ fn test_preset_json_import_rejects_oversized_state_array() {
     let handle = plugin_create(plugin_type.as_ptr(), config.as_ptr(), 48000, 2, 2);
     assert!(!handle.is_null());
 
-    let mut document = String::from("{\"state\":[");
+    let mut document = String::from(
+        "{\"schema_version\":1,\"ut_type\":\"org.spinorama.sotf.plugin-preset\",\"plugin_type\":\"EQ\",\"state\":[",
+    );
     document.extend(std::iter::repeat_n("0,", MAX_PRESET_STATE_BYTES));
     document.push_str("0]}");
 
@@ -842,6 +844,9 @@ fn linear_phase_eq_preset_import_rebuilds_alias_and_updates_structure() {
         "band_0_active":true
     }"#;
     let document = serde_json::to_vec(&serde_json::json!({
+        "schema_version": 1,
+        "ut_type": "org.spinorama.sotf.plugin-preset",
+        "plugin_type": "linear_phase_eq",
         "state": state.as_slice(),
     }))
     .unwrap();
@@ -855,6 +860,114 @@ fn linear_phase_eq_preset_import_rebuilds_alias_and_updates_structure() {
     assert!((normalized_parameter(handle, "band_0_gain") - 0.375).abs() < 1e-6);
 
     plugin_destroy(handle);
+}
+
+fn aud135_ordered_input(frames: usize, channels: usize) -> Vec<f32> {
+    (0..frames)
+        .flat_map(|frame| {
+            (0..channels).map(move |channel| {
+                let code = (frame * 37 + channel * 101 + frame * channel * 13) % 991;
+                (code as f32 - 495.0) / 8192.0
+            })
+        })
+        .collect()
+}
+
+#[test]
+fn ambisonics_ffi_process_matches_bridge_for_all_56_ordered_tuples() {
+    const TARGETS: [(&str, usize); 8] = [
+        ("5.1", 6),
+        ("7.1", 8),
+        ("5.1.2", 8),
+        ("5.1.4", 10),
+        ("7.1.2", 10),
+        ("7.1.4", 12),
+        ("9.1.4", 14),
+        ("9.1.6", 16),
+    ];
+    const FRAMES: usize = 257;
+
+    let capture_dir = std::env::var_os("SOTF_AUD135_CAPTURE_DIR");
+    let mut captured = Vec::new();
+    captured.extend_from_slice(b"SOTF-AUD135-FFI\0");
+
+    for order in 1_usize..=7 {
+        let input_channels = (order + 1) * (order + 1);
+        let input = aud135_ordered_input(FRAMES, input_channels);
+        for (layout_index, (layout, output_channels)) in TARGETS.iter().copied().enumerate() {
+            let config = serde_json::json!({
+                "order": order,
+                "target_layout": layout,
+            })
+            .to_string();
+            let plugin_type = CString::new("AmbisonicsDecoder").unwrap();
+            let config_c = CString::new(config.as_str()).unwrap();
+            let handle = plugin_create(
+                plugin_type.as_ptr(),
+                config_c.as_ptr(),
+                48_000,
+                input_channels,
+                output_channels,
+            );
+            assert!(
+                !handle.is_null(),
+                "order {order} {layout}: {}",
+                last_error_string()
+            );
+
+            let mut actual = vec![0.0_f32; FRAMES * output_channels];
+            assert_eq!(
+                plugin_process(handle, input.as_ptr(), actual.as_mut_ptr(), FRAMES),
+                PluginError::Success as c_int,
+                "order {order} {layout}: {}",
+                last_error_string()
+            );
+
+            let mut reference =
+                plugins_bridge::create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config)
+                    .unwrap_or_else(|error| panic!("bridge order {order} {layout}: {error}"));
+            assert_eq!(reference.input_channels(), input_channels);
+            assert_eq!(reference.output_channels(), output_channels);
+            let mut expected = vec![0.0_f32; actual.len()];
+            assert_eq!(
+                reference
+                    .process(
+                        &input,
+                        &mut expected,
+                        &sotf_host::plugin::ProcessContext::new(48_000, FRAMES),
+                    )
+                    .unwrap(),
+                FRAMES
+            );
+            assert!(actual.iter().all(|sample| sample.is_finite()));
+            assert!(actual.iter().any(|sample| sample.abs() > 1e-7));
+            assert_eq!(actual, expected, "order {order} {layout} complete waveform");
+
+            if capture_dir.is_some() {
+                captured.push(order as u8);
+                captured.push(layout_index as u8);
+                captured.extend_from_slice(&(input_channels as u16).to_le_bytes());
+                captured.extend_from_slice(&(output_channels as u16).to_le_bytes());
+                captured.extend_from_slice(&(FRAMES as u32).to_le_bytes());
+                for sample in &actual {
+                    captured.extend_from_slice(&sample.to_le_bytes());
+                }
+            }
+            plugin_destroy(handle);
+        }
+    }
+
+    if let Some(capture_dir) = capture_dir {
+        let capture_dir = std::path::PathBuf::from(capture_dir);
+        std::fs::create_dir_all(&capture_dir).unwrap();
+        let path = capture_dir.join("ambisonics-ffi-all-56.f32le");
+        std::fs::write(&path, &captured).unwrap();
+        eprintln!(
+            "AUD135 FFI waveform baseline: {} bytes at {}",
+            captured.len(),
+            path.display()
+        );
+    }
 }
 
 #[test]

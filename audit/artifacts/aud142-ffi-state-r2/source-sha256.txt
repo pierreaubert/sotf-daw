@@ -1,0 +1,14 @@
+db9133949f6efa67544b407207feea40db05b4b2dd35f9964930415e5cfb1f18  ./Cargo.lock
+a0b225ea0b2117a45f53275fa4380f7cd8f793577c8e9c66a5f0238f0f494429  ./crates/sotf-plugins/Cargo.toml
+9df0c41f0e78d5de82637db5473f975f43d9798a8ea94ed0e33f4de80abaeff9  ./crates/sotf-plugins/crates/plugins-ffi/Cargo.toml
+795dd87d2787a547e45e11c7e5a5bf91250d80f5527ee249453ac1a091ac2a02  ./crates/sotf-plugins/crates/plugins-ffi/src/lib.rs
+6d9afcd9a9b0ac273f178d7150c57c4851b71ed95434546a24b6a66c8b12c0dd  ./crates/sotf-plugins/crates/plugins-ffi/src/lib/aud142_crossover_route_tests.rs
+a964e5401d8908a6987eed55ad47704353232ed014f118f84c6064137a7832b2  ./crates/sotf-plugins/crates/plugins-ffi/src/lib/aud142_crossover_state_tests.rs
+63c3c49278988557f2da75ee577be11223d07e33a6dce384bd81a289140359c5  ./crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs
+963a80884025e6138b750469a0b46950f69626814257f3a20f4f6d594c3a4fba  ./crates/sotf-plugins/crates/plugins-ffi/src/lib/process_tests.rs
+0c5ba1dc7c4554b353c415d479010a910f12e9993bcef88e9d85b94b22d51f57  ./crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
+5f4d616c6fd4c2ee56ca24464ad7f7a09cff64dfddb097c5b23143460dea0f22  ./crates/sotf-plugins/crates/sotf-plugin-crossover/Cargo.toml
+8531adc2d85a2830d810b53408a63403929bffbfce5ce660ef627507b030162f  ./crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_kind.rs
+1244009ac799d6d20284770722194ef2ce0f9f243121a8750fd91414523ba6e3  ./crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs
+be81d588e5fda072055e1ed41afb7669ef7076305d02452ca1938c3a2c4a6e16  ./crates/sotf-plugins/crates/sotf-plugin-crossover/src/lib.rs
+cf01159263fcf3eb1a5feb386d06cbc6989c4d8c11c6e6a8c51eb232f957ef2c  ./crates/sotf-plugins/crates/sotf-plugin-crossover/src/params.rs

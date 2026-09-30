@@ -3,12 +3,12 @@ use super::consts::DEFAULT_MAX_BLOCK_FRAMES;
 use super::consts::DEFAULT_MAX_CONSECUTIVE_BLOCK_FAILURES;
 use super::consts::DEFAULT_WORKER_STARTUP_TIMEOUT_MILLIS;
 use super::misc::decorate_sandbox_launcher_command;
-use crate::ExternalPluginState;
 use crate::external_plugin_process::ExternalPluginWorkerCommand;
 use crate::external_plugin_sandbox::{
     ExternalPluginSandboxPolicy, PluginSandboxLaunchBackend, PluginSandboxPolicy,
     current_plugin_sandbox_launch_backend, default_plugin_sandbox_launcher_command_for_backend,
 };
+use crate::{ExternalPluginState, NativePluginAudioSetup};
 use std::path::Path;
 use std::time::Duration;
 
@@ -27,6 +27,9 @@ pub struct IsolatedExternalPluginConfig {
     pub worker_startup_timeout: Duration,
     pub max_consecutive_block_failures: u32,
     pub initial_state: Option<ExternalPluginState>,
+    /// Explicit native instance layout; when absent, a legacy plugin default
+    /// may be selected from a recognized native identity.
+    pub audio_setup: Option<NativePluginAudioSetup>,
     /// Stable player-side plugin identity when built from a serialized rack or graph.
     pub plugin_instance_id: Option<usize>,
 }
@@ -48,6 +51,7 @@ impl Default for IsolatedExternalPluginConfig {
             worker_startup_timeout: Duration::from_millis(DEFAULT_WORKER_STARTUP_TIMEOUT_MILLIS),
             max_consecutive_block_failures: DEFAULT_MAX_CONSECUTIVE_BLOCK_FAILURES,
             initial_state: None,
+            audio_setup: None,
             plugin_instance_id: None,
         }
     }

@@ -1,3 +1,11 @@
+# 0.8.0 (unreleased)
+
+## Changes
+
+- Expose higher-order Ambisonics, true-stereo convolution, DynamicEQ shelves, additional Crossover families and opt-in BandSplit phase compensation through the canonical plugin factory.
+- Expand full-chain, native CLAP/VST3, state-restoration and numerical accuracy coverage.
+- Add finite channel-changing drain and native replacement integration coverage. Platform and consuming-application follow-up work remains tracked in the audit.
+
 # 0.7.11 (unreleased)
 
 ## QA

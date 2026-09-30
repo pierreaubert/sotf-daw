@@ -270,16 +270,47 @@ fn validate_rejects_sizes_outside_allocation_free_contract() {
     assert!(config.validate().unwrap_err().contains("frame_size"));
 
     let config = EngineConfig {
-        input_channels: EngineConfig::MAX_CHANNELS + 1,
+        input_channels: EngineConfig::MAX_INPUT_CHANNELS + 1,
         ..Default::default()
     };
     assert!(config.validate().unwrap_err().contains("input_channels"));
 
     let config = EngineConfig {
-        output_channels: EngineConfig::MAX_CHANNELS + 1,
+        output_channels: EngineConfig::MAX_OUTPUT_CHANNELS + 1,
         ..Default::default()
     };
     assert!(config.validate().unwrap_err().contains("output_channels"));
+}
+
+#[test]
+fn validate_accepts_order_seven_input_with_sixteen_channel_output() {
+    assert_eq!(EngineConfig::MAX_INPUT_CHANNELS, 64);
+    assert_eq!(EngineConfig::MAX_OUTPUT_CHANNELS, 16);
+
+    let config = EngineConfig {
+        input_channels: 64,
+        output_channels: 16,
+        ..Default::default()
+    };
+    assert!(config.validate().is_ok());
+
+    let input_too_wide = EngineConfig {
+        input_channels: 65,
+        ..config.clone()
+    };
+    assert!(input_too_wide
+        .validate()
+        .unwrap_err()
+        .contains("input_channels"));
+
+    let output_too_wide = EngineConfig {
+        output_channels: 17,
+        ..config
+    };
+    assert!(output_too_wide
+        .validate()
+        .unwrap_err()
+        .contains("output_channels"));
 }
 
 #[test]

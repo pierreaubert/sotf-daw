@@ -1,0 +1,7 @@
+{
+  "basis": "/home/pierre/src/all_of_sotf/sotf-daw/audit/artifacts/aud139-controlled-peak-cpu-r1/build-inputs-start.json",
+  "basis_description": "The prior controlled Peak CPU capture selected the DynamicEQ source/dependency set, host crate, math-audio math-dsp/math-iir-fir sources, lock/configuration, and workspace/package manifests. Temporary old/new snapshot copies were excluded; the new shape comparison integration test was added.",
+  "binary_source_binding_limit": "This manifest records source bytes stable across the manual measurement window only; it does not establish that the files had these exact bytes when the executable was compiled.",
+  "captured_phase": "after Release build and before manual measurement; no pre-build manifest was captured for this executable.",
+  "selected_entry_count": 451
+}

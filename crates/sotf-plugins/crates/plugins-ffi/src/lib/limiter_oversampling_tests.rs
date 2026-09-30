@@ -88,6 +88,16 @@ fn markers() -> Vec<f32> {
     input
 }
 
+fn preset_with_state(state: &[u8]) -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({
+        "schema_version": 1,
+        "ut_type": "org.spinorama.sotf.plugin-preset",
+        "plugin_type": "Limiter",
+        "state": state,
+    }))
+    .unwrap()
+}
+
 #[test]
 fn limiter_ffi_factor_roundtrips_state_and_documents_before_preparation() {
     for rate in [44_100, 48_000, 96_000] {
@@ -129,7 +139,7 @@ fn limiter_ffi_factor_roundtrips_state_and_documents_before_preparation() {
                 }
                 // Omitted setup values in a partial preset preserve the factor.
                 let partial = if document {
-                    serde_json::to_vec(&serde_json::json!({"state":b"{}".to_vec()})).unwrap()
+                    preset_with_state(b"{}")
                 } else {
                     b"{}".to_vec()
                 };
@@ -183,7 +193,7 @@ fn limiter_ffi_rejects_active_factor_changes_and_invalid_presets_transactionally
                 )
                 .unwrap();
                 let payload = if document {
-                    serde_json::to_vec(&serde_json::json!({"state":state})).unwrap()
+                    preset_with_state(&state)
                 } else {
                     state
                 };

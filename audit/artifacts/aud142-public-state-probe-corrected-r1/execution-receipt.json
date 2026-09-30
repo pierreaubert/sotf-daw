@@ -1,0 +1,9 @@
+{
+  "command": "python3 audit/tools/aud142_crossover_state_probe.py crates/sotf-plugins/target/audit-artifacts/aud142-ffi-state-r1/libplugins_ffi.so audit/artifacts/aud142-public-state-probe-corrected-r1",
+  "exit_code": 0,
+  "cases": 30,
+  "failed_cases": [],
+  "library_sha256": "d8ed320790fd445edd515922dc54b8b67a30fa04204d72936c849cf77cb025e3",
+  "probe_sha256": "009db1bc3e2e97baca4a4ea406cab8cec5415d3f61eeab3822118713774895ed",
+  "scope": "Actual public C ABI state import; same unchanged probe as failing pre-route baseline. Fresh production DSP references establish route fidelity, not independent filter mathematics. Full preset topology boundary is a separate pending probe."
+}

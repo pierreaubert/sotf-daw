@@ -1,0 +1,7 @@
+case=four-way-lr24-low-stereo;settings=type=LR24;frequencies=[700,1800,5000];output=low;sample_rate=48000;frames=12288;input_channels=2;output_channels=2;tail_frames=0
+runtime_parameter_count=5
+index=0;id=type;name=Type;unit=;default=String("LR24");min=None;max=None;logarithmic=false;update_mode=Structural;current=Some(String("LR24"))
+index=1;id=frequency;name=Frequency;unit=;default=Float(700.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(700.0))
+index=2;id=mode;name=Mode;unit=;default=String("lowpass");min=None;max=None;logarithmic=false;update_mode=Realtime;current=Some(String("lowpass"))
+index=3;id=frequency_2;name=Frequency 2;unit=;default=Float(1800.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(1800.0))
+index=4;id=frequency_3;name=Frequency 3;unit=;default=Float(5000.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(5000.0))
