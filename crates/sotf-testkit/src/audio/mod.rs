@@ -4,10 +4,12 @@ use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use std::f32::consts::PI;
 use std::path::{Path, PathBuf};
 
-/// Resolve the workspace-level centralized audio test-data directory.
+/// Resolve the owning workspace's centralized audio test-data directory.
 ///
-/// Uses `SOTF_TEST_DATA_ROOT` when set, otherwise resolves from
-/// `CARGO_MANIFEST_DIR` to the workspace root (`data_tests/audio`).
+/// Uses `SOTF_TEST_DATA_ROOT` when set, otherwise resolves from this crate's
+/// own `CARGO_MANIFEST_DIR` to the workspace root (`data_tests/audio`).
+/// Consumers in another workspace (e.g. `sotf`) must resolve their own
+/// workspace's `data_tests` from their own `CARGO_MANIFEST_DIR` instead.
 pub fn test_data_audio_dir() -> PathBuf {
     if let Ok(root) = std::env::var("SOTF_TEST_DATA_ROOT") {
         PathBuf::from(root).join("audio")

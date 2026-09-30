@@ -9578,9 +9578,13 @@ dependencies = [
 name = "sotf-streaming"
 version = "0.8.2"
 dependencies = [
+ "env_logger",
+ "insta",
  "log",
  "m3u8-rs",
+ "proptest",
  "reqwest",
+ "serde_json",
  "symphonia-core",
  "url",
 ]

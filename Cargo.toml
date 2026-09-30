@@ -59,6 +59,7 @@ members = [
     "crates/sotf-plugins/crates/plugins-nih",
     "crates/sotf-plugins/crates/plugins-spatial",
     "crates/sotf-iamf",
+    "crates/sotf-streaming",
     "crates/driver-common",
     "crates/driver-hal",
 ]
@@ -138,9 +139,7 @@ sotf-plugin-upmixer = { path = "crates/sotf-plugins/crates/sotf-plugin-upmixer",
 sotf-plugin-xtc = { path = "crates/sotf-plugins/crates/sotf-plugin-xtc" }
 sotf-plugins = { path = "crates/sotf-plugins", default-features = false }
 
-# Sibling `sotf` checkout (all_of_sotf layout). Optional streaming edge only;
-# the test crates are vendored below so the workspace resolves standalone.
-sotf-streaming = { path = "../sotf/crates/sotf-server/crates/sotf-streaming" }
+sotf-streaming = { path = "crates/sotf-streaming" }
 sotf-test = { path = "crates/sotf-test-macros" }
 sotf-testkit = { path = "crates/sotf-testkit" }
 
@@ -157,7 +156,7 @@ chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 coreaudio-rs = "0.13"
 cpal = "0.17"
-criterion = "0.8.1"
+criterion = "0.8"
 crossbeam = "0.8"
 crossterm = "0.29"
 ctrlc = { version = "3.5", features = ["termination"] }
@@ -172,6 +171,7 @@ gpui-px = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit
 gpui-ui-kit = { version = "0.9", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "c597d1df374cedd0db83c14664328cc5d8a4dc29" }
 hex = "0.4"
 hound = "3.5"
+m3u8-rs = { version = "6" }
 id3 = "1.16.3"
 insta = { version = "1.42", features = ["json"] }
 libc = "0.2"
@@ -196,6 +196,7 @@ rand = "0.10.2"
 ratatui = "0.30"
 rayon = "1.11"
 realfft = "3.5"
+reqwest = { version = "0.13", features = ["json"] }
 rtrb = "0.4"
 # Private fork of rubato 5.0.0 (exact variable-ratio sizing, prepared cutoff
 # tables); the single rubato in this workspace. See crates/3rdparties/rubato/SOTF_FORK.md.
@@ -227,6 +228,7 @@ thiserror = "2.0.17"
 tokio = { version = "1", features = ["rt-multi-thread", "fs", "macros", "io-util", "process", "signal"] }
 toml = "0.8"
 tract-onnx = "0.22"
+url = "2"
 walkdir = "2"
 which = "8"
 windows-sys = "0.61"

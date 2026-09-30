@@ -475,8 +475,9 @@ All 59 included workspace crates are listed below. The integration-file count is
 | [sotf-plugin-xtc](crates/sotf-plugins/crates/sotf-plugin-xtc/Cargo.toml) | SOTF XTC plugin - crosstalk cancellation | 4 | qa-xtc |
 | [sotf-plugins](crates/sotf-plugins/Cargo.toml) | an audio player and recorder that support audio plugins | 31 | — |
 | [sotf-engine](crates/sotf-engine/Cargo.toml) | an audio player and recorder that support audio plugins | 35 | — |
-| [sotf-testkit](crates/sotf-testkit/Cargo.toml) | Shared test fixtures and helpers for the SOTF DAW workspace | 0 | — |
+| [sotf-testkit](crates/sotf-testkit/Cargo.toml) | Shared test fixtures and helpers for the SOTF workspaces | 0 | — |
 | [sotf-test](crates/sotf-test-macros/Cargo.toml) | Proc-macro test tagging attributes for the SOTF workspace | 0 | — |
+| [sotf-streaming](crates/sotf-streaming/Cargo.toml) | HTTP streaming input and live PCM output for SOTF audio engine | 0 | — |
 | [plugins-bridge](crates/sotf-plugins/crates/plugins-bridge/Cargo.toml) | Format-agnostic adapter for SOTF audio plugins (AU, VST3, CLAP) | 2 | — |
 | [plugins-denoiser](crates/sotf-plugins/crates/plugins-denoiser/Cargo.toml) | Shared denoiser DSP blocks for SOTF plugins | 0 | — |
 | [plugins-ffi](crates/sotf-plugins/crates/plugins-ffi/Cargo.toml) | C FFI bindings for SOTF audio plugins (for Audio Unit integration) | 0 | — |

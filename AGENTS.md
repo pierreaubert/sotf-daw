@@ -7,9 +7,11 @@ IAMF support, and driver transport. `sotf` (apps, player, services) and
 ## Sub-crates
 
 - **`sotf-engine`** (`sotf_audio`) -- decode, process, playback, manager
-  runtime. Optional `streaming`/`hls` features wire in `sotf-streaming`,
-  which stays in `../sotf`; the integration is fully `cfg(feature)`-gated
+  runtime. Optional `streaming`/`hls` features wire in the local
+  `crates/sotf-streaming`; the integration is fully `cfg(feature)`-gated
   with no-op fallbacks.
+- **`sotf-streaming`** -- HTTP streaming input and live PCM output for the
+  engine (moved here from `../sotf`; sole consumer is `sotf-engine`).
 - **`sotf-plugins`** -- facade over `sotf-host` (internal/external plugin
   host), ~40 `sotf-plugin-*` DSP crates, and the `plugins-bridge`,
   `plugins-denoiser`, `plugins-ffi`, `plugins-gpui`, `plugins-nih`,
@@ -26,14 +28,11 @@ IAMF support, and driver transport. `sotf` (apps, player, services) and
 
 This workspace must stay independent of `sotf` and `sotf-systemwide`:
 
-- Normal (non-dev, non-optional) dependencies: daw crates only, plus
-  external crates.io/git dependencies. No `../sotf` or `../sotf-systemwide`
-  paths.
-- Allowed exception resolving from the sibling `../sotf` checkout in the
-  `all_of_sotf` layout: the optional `sotf-engine[streaming]` edge to
-  `sotf-streaming`. The test crates (`crates/sotf-testkit`,
-  `crates/sotf-test-macros`, vendored from `sotf` history) are local
-  members, so `cargo metadata` resolves with no sibling checkout present.
+- Dependencies: daw crates only, plus external crates.io/git
+  dependencies. No `../sotf` or `../sotf-systemwide` paths, not even
+  optional or dev-only ones. `sotf-streaming` and the test crates
+  (`crates/sotf-testkit`, `crates/sotf-test-macros`) are local members,
+  so `cargo metadata` resolves with no sibling checkout present.
 - `[patch.crates-io]` mirrors the vendored forks (`nnnoiseless`,
   `coreaudio-rs`) and the Zed `wgpu` fork pins from `sotf`; patches are
   root-workspace configuration and must be repeated here, not inherited.
