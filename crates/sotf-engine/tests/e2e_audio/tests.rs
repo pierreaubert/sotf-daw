@@ -11,7 +11,8 @@ use super::misc::upmixer_plugin;
 use super::misc::write_wav_file;
 use serial_test::serial;
 use sotf_audio::engine::{AudioEngine, PlaybackState, PluginConfig};
-use sotf_audio::signal_recorder::record_and_analyze;
+use sotf_audio::engine_playback::EnginePlayback;
+use sotf_audio::signal_recorder::record_and_analyze_with;
 use sotf_audio::signals::{gen_pink_noise, gen_tone};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -46,7 +47,8 @@ fn test_loopback_tone() {
     write_wav_file(&temp_wav, &tone, config.sample_rate).unwrap();
 
     // Tone cross-correlation may fail (periodic signal), but recording must succeed
-    let result = record_and_analyze(
+    let result = record_and_analyze_with(
+        &mut EnginePlayback::new(true, "record_and_analyze"),
         &temp_wav,
         &recorded_wav,
         &tone,
@@ -154,7 +156,8 @@ fn test_loopback_pink_noise() {
 
     write_wav_file(&temp_wav, &noise, config.sample_rate).unwrap();
 
-    let result = record_and_analyze(
+    let result = record_and_analyze_with(
+        &mut EnginePlayback::new(true, "record_and_analyze"),
         &temp_wav,
         &recorded_wav,
         &noise,

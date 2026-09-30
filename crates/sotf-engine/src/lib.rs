@@ -1,16 +1,8 @@
 #![recursion_limit = "256"]
 
-#[cfg(not(target_os = "ios"))]
-pub mod devices;
-#[cfg(not(target_os = "ios"))]
-pub use devices::SharedAudioState;
-
-#[cfg(target_os = "ios")]
-pub mod devices_stub;
-#[cfg(target_os = "ios")]
-pub use devices_stub as devices;
-#[cfg(target_os = "ios")]
-pub use devices_stub::SharedAudioState;
+// Audio devices (owned by sotf-capture; iOS stub included there).
+pub use sotf_capture::devices;
+pub use sotf_capture::devices::SharedAudioState;
 
 pub mod decoder;
 pub use decoder::{
@@ -33,13 +25,16 @@ pub use preflight::{PreflightError, run_preflight_checks};
 
 pub mod project;
 
-pub mod rate_limit;
+// Rate-limited logging (owned by sotf-capture).
+pub use sotf_capture::rate_limited_log;
 
 pub mod replaygain;
-pub mod signal_recorder;
-pub use signal_recorder::{
+pub use sotf_capture::signal_recorder;
+pub use sotf_capture::signal_recorder::{
     ChannelRecordingInfo, DeviceInfo, RecordingSession, reprocess_recordings,
 };
+#[cfg(not(target_os = "ios"))]
+pub mod engine_playback;
 pub mod timeline;
 pub mod waveform;
 
