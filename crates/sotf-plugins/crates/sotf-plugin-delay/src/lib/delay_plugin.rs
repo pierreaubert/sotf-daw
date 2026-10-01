@@ -15,6 +15,15 @@ use sotf_host::smoothing::Smoother;
 
 const ALLPASS_SMOOTH_MS: f32 = 20.0;
 const CLEAN_CROSSFADE_MS: f32 = 20.0;
+/// Rejection message shared by the factory and runtime per-channel purity
+/// guards so both paths report one contract.
+const PER_CHANNEL_PURITY_ERROR: &str = "per-channel delay mode is a pure routing delay: feedback and LFO must be zero, mix must be one, and allpass/pitch-preserving modes must be disabled";
+
+/// Exact pure-routing mix check: per-channel instances hold exactly `1.0`.
+/// Bit comparison keeps the contract exact without float-equality lints.
+fn is_pure_routing_mix(mix: f32) -> bool {
+    mix.to_bits() == 1.0f32.to_bits()
+}
 pub(super) const MAX_DELAY_CHANNELS: usize = 64;
 const MAX_DELAY_SAMPLE_RATE: u32 = 768_000;
 // One bounded continuation chunk; callers may provide smaller destinations.
@@ -404,6 +413,25 @@ impl DelayPlugin {
                     Parameter::new_float(&id, &name, ms, 0.0, self.max_delay_ms).with_unit("ms"),
                 );
             }
+            // The effect controls stay enumerable so hosts can read back the
+            // pure routing values, but any write that deviates from them is
+            // rejected by the apply paths; mark that in the schema.
+            for param in &mut params {
+                if matches!(
+                    param.id.as_str(),
+                    "feedback"
+                        | "mix"
+                        | "lfo_rate_hz"
+                        | "lfo_depth_ms"
+                        | "allpass_feedback"
+                        | "pitch_preserving"
+                ) {
+                    param.description = Some(
+                        "Unsupported in per-channel routing mode; only the pure value is accepted."
+                            .to_string(),
+                    );
+                }
+            }
         }
         self.cached_parameters = params;
     }
@@ -412,16 +440,13 @@ impl DelayPlugin {
         Self::validate_params(channels, &params)?;
         if !params.channel_delays_ms.is_empty() {
             if params.feedback != 0.0
-                || params.mix != 1.0
+                || !is_pure_routing_mix(params.mix)
                 || params.lfo_rate_hz != 0.0
                 || params.lfo_depth_ms != 0.0
                 || params.allpass_feedback
                 || params.pitch_preserving
             {
-                return Err(
-                    "per-channel delay mode is a pure routing delay: feedback and LFO must be zero, mix must be one, and allpass/pitch-preserving modes must be disabled"
-                        .into(),
-                );
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
             }
             // Per-channel mode: the channels argument must match the
             // per-channel array length — drift here is a wiring bug that
@@ -459,23 +484,35 @@ impl DelayPlugin {
         }
     }
 
+    /// Four-point Lagrange weights at fractional position `frac` in [0, 1).
+    ///
+    /// Nodes `-1, 0, 1, 2` relative to the integer delay; the defining
+    /// Lagrange product expanded once. `lagrange4` and the sub-two-sample
+    /// implicit loop solve share this expansion so the solved tap weights
+    /// cannot drift from the rendered ones.
+    #[inline]
+    fn lagrange4_weights(frac: f32) -> [f32; 4] {
+        let d = frac;
+        let dm1 = d - 1.0;
+        let dm2 = d - 2.0;
+        let dp1 = d + 1.0;
+
+        [
+            -dm1 * dm2 * d / 6.0,
+            dp1 * dm1 * dm2 / 2.0,
+            -dp1 * d * dm2 / 2.0,
+            dp1 * d * dm1 / 6.0,
+        ]
+    }
+
     /// 4-point Lagrange interpolation for fractional delay.
     ///
     /// Given 4 samples y[-1], y[0], y[1], y[2] around the desired read position,
     /// and a fractional part `frac` in [0, 1), interpolates between y[0] and y[1].
     #[inline]
     pub(super) fn lagrange4(y_m1: f32, y_0: f32, y_1: f32, y_2: f32, frac: f32) -> f32 {
-        let d = frac;
-        let dm1 = d - 1.0;
-        let dm2 = d - 2.0;
-        let dp1 = d + 1.0;
-
-        let c0 = -dm1 * dm2 * d / 6.0;
-        let c1 = dp1 * dm1 * dm2 / 2.0;
-        let c2 = -dp1 * d * dm2 / 2.0;
-        let c3 = dp1 * d * dm1 / 6.0;
-
-        c0 * y_m1 + c1 * y_0 + c2 * y_1 + c3 * y_2
+        let weights = Self::lagrange4_weights(frac);
+        weights[0] * y_m1 + weights[1] * y_0 + weights[2] * y_1 + weights[3] * y_2
     }
 
     /// Read a sample from the delay buffer at a given position and channel.
@@ -484,8 +521,32 @@ impl DelayPlugin {
         self.buffer[ch * self.max_samples + pos]
     }
 
+    /// Feedback-loop terms that close through the current frame.
+    ///
+    /// The feedback sample written this frame is
+    /// `loop_gain * delayed + loop_const`: `loop_const` carries the allpass
+    /// filter memory (zero with direct feedback). Both follow from the
+    /// per-frame smoother values and the pre-update allpass state, so they
+    /// are known before the delayed tap is read.
     #[inline]
-    fn read_delayed_sample(&self, delay_samples: f32, ch: usize, input: f32) -> f32 {
+    fn loop_terms(&self, ch: usize, feedback: f32, allpass_mix: f32) -> (f32, f32) {
+        let state = &self.allpass_states[ch];
+        let blend = 1.0 - allpass_mix + allpass_mix * state.coeff;
+        (
+            feedback * blend,
+            feedback * allpass_mix * (state.x1 - state.coeff * state.y1),
+        )
+    }
+
+    #[inline]
+    fn read_delayed_sample(
+        &self,
+        delay_samples: f32,
+        ch: usize,
+        input: f32,
+        loop_gain: f32,
+        loop_const: f32,
+    ) -> f32 {
         if delay_samples <= f32::EPSILON {
             return input;
         }
@@ -499,13 +560,48 @@ impl DelayPlugin {
         let r_m1 = (r0 + 1) & mask;
         let r1 = (r0 + self.max_samples - 1) & mask;
         let r2 = (r1 + self.max_samples - 1) & mask;
-        Self::lagrange4(
-            self.read_buffer(r_m1, ch),
-            self.read_buffer(r0, ch),
-            self.read_buffer(r1, ch),
-            self.read_buffer(r2, ch),
-            frac,
-        )
+        if int_delay >= 2 {
+            return Self::lagrange4(
+                self.read_buffer(r_m1, ch),
+                self.read_buffer(r0, ch),
+                self.read_buffer(r1, ch),
+                self.read_buffer(r2, ch),
+                frac,
+            );
+        }
+        // Sub-two-sample fractional delays: the ring is read before the
+        // current frame is written, so the `y_m1` tap (`int_delay == 1`) and
+        // additionally the `y_0` tap (`int_delay == 0`, where `y_m1` would
+        // need the non-causal future sample) cannot come from the ring. Both
+        // unavailable taps use the current frame value `v`, which closes the
+        // feedback loop implicitly: `v = input + loop_const +
+        // loop_gain * delayed` with `delayed = sub_weight * v + ring_part`.
+        // Solving gives the exact current frame. A plain `input`
+        // substitution would instead scale the loop gain by the substituted
+        // weights (DC gain `1 / (1 - g * (1 - w_m1))`), which destabilizes
+        // high-feedback short delays, so the division below is required for
+        // correctness rather than precision. The denominators are bounded
+        // away from zero by the validated parameter ranges (|feedback| <=
+        // 0.95, allpass mix in [0, 1], |w_m1| <= 0.065 and
+        // w_m1 + w_0 in [-0.07, 1] for frac in [0, 1]).
+        let weights = Self::lagrange4_weights(frac);
+        let y_1 = self.read_buffer(r1, ch);
+        let y_2 = self.read_buffer(r2, ch);
+        let (sub_weight, ring_part) = if int_delay == 0 {
+            // The future tap is extrapolated as the current frame value.
+            (
+                weights[0] + weights[1],
+                weights[2] * y_1 + weights[3] * y_2,
+            )
+        } else {
+            (
+                weights[0],
+                weights[1] * self.read_buffer(r0, ch) + weights[2] * y_1 + weights[3] * y_2,
+            )
+        };
+        let current =
+            (input + loop_const + loop_gain * ring_part) / (1.0 - loop_gain * sub_weight);
+        sub_weight * current + ring_part
     }
 
     /// Compute the effective delay in samples for a given frame, including LFO modulation.
@@ -684,6 +780,18 @@ impl ParametricInPlacePlugin for DelayPlugin {
                     .as_float()
                     .ok_or_else(|| "channel delay must be a float".to_string())?;
             }
+        }
+        // Per-channel instances hold the pure routing values by construction;
+        // the merged batch must keep them, or nothing is applied at all.
+        if self.is_per_channel()
+            && (feedback != 0.0
+                || !is_pure_routing_mix(mix)
+                || lfo_rate_hz != 0.0
+                || lfo_depth_ms != 0.0
+                || allpass_feedback
+                || pitch_preserving)
+        {
+            return Err(PER_CHANNEL_PURITY_ERROR.into());
         }
         if pitch_preserving && (lfo_rate_hz != 0.0 || lfo_depth_ms != 0.0) {
             return Err(
@@ -1099,13 +1207,21 @@ impl DelayPlugin {
                 };
                 let idx = frame * self.channels + ch;
                 let input = buffer[idx];
+                // Loop terms for the sub-two-sample implicit tap solve; read
+                // taps at integer delays of two or more samples ignore them.
+                // Pitch-preserving transitions solve each stationary head
+                // independently (exact outside transitions, where the heads
+                // agree).
+                let (loop_gain, loop_const) = self.loop_terms(ch, fb, allpass_mix);
 
                 let delayed = if self.modulation.pitch_preserving {
                     let current_delay = self.modulation.clean_transition.current_delay_samples[ch];
-                    let current = self.read_delayed_sample(current_delay, ch, input);
+                    let current =
+                        self.read_delayed_sample(current_delay, ch, input, loop_gain, loop_const);
                     if self.modulation.clean_transition.active {
                         let next_delay = self.modulation.clean_transition.next_delay_samples[ch];
-                        let next = self.read_delayed_sample(next_delay, ch, input);
+                        let next =
+                            self.read_delayed_sample(next_delay, ch, input, loop_gain, loop_const);
                         if clean_fade < 0.5 {
                             current * (1.0 - 2.0 * clean_fade)
                         } else {
@@ -1116,7 +1232,7 @@ impl DelayPlugin {
                     }
                 } else {
                     let delay_samples = self.effective_delay_samples(base_delay_samples, lfo_val);
-                    self.read_delayed_sample(delay_samples, ch, input)
+                    self.read_delayed_sample(delay_samples, ch, input, loop_gain, loop_const)
                 };
 
                 let direct_feedback = delayed * fb;
@@ -1163,6 +1279,9 @@ impl DelayPlugin {
             let v = value
                 .as_float()
                 .ok_or_else(|| "feedback must be a float".to_string())?;
+            if self.is_per_channel() && v != 0.0 {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             if v.is_finite() {
                 self.feedback = v;
                 self.recursive_tail |= v != 0.0;
@@ -1172,6 +1291,9 @@ impl DelayPlugin {
             let v = value
                 .as_float()
                 .ok_or_else(|| "mix must be a float".to_string())?;
+            if self.is_per_channel() && !is_pure_routing_mix(v) {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             if v.is_finite() {
                 self.mix = v;
                 self.mix_smoother.set_target(self.mix);
@@ -1180,6 +1302,9 @@ impl DelayPlugin {
             let v = value
                 .as_float()
                 .ok_or_else(|| "lfo_rate_hz must be a float".to_string())?;
+            if self.is_per_channel() && v != 0.0 {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             if v.is_finite() {
                 if self.modulation.pitch_preserving && v != 0.0 {
                     return Err("pitch_preserving mode requires lfo_rate_hz to remain zero".into());
@@ -1190,6 +1315,9 @@ impl DelayPlugin {
             let v = value
                 .as_float()
                 .ok_or_else(|| "lfo_depth_ms must be a float".to_string())?;
+            if self.is_per_channel() && v != 0.0 {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             if v.is_finite() {
                 if self.modulation.pitch_preserving && v != 0.0 {
                     return Err("pitch_preserving mode requires lfo_depth_ms to remain zero".into());
@@ -1205,6 +1333,9 @@ impl DelayPlugin {
             let v = value
                 .as_bool()
                 .ok_or_else(|| "pitch_preserving must be a bool".to_string())?;
+            if self.is_per_channel() && v {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             if v && (self.modulation.rate_hz != 0.0 || self.modulation.depth_ms != 0.0) {
                 return Err(
                     "pitch_preserving mode requires lfo_rate_hz and lfo_depth_ms to be zero".into(),
@@ -1215,6 +1346,9 @@ impl DelayPlugin {
             let v = value
                 .as_bool()
                 .ok_or_else(|| "allpass_feedback must be a bool".to_string())?;
+            if self.is_per_channel() && v {
+                return Err(PER_CHANNEL_PURITY_ERROR.into());
+            }
             self.allpass_feedback = v;
             self.allpass_mix_smoother
                 .set_target(if v { 1.0 } else { 0.0 });

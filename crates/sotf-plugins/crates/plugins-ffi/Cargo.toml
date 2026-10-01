@@ -16,6 +16,7 @@ crate-type = ["staticlib", "cdylib"]
 plugins-bridge = { path = "../plugins-bridge" }
 sotf-host = { workspace = true }
 sotf-plugins = { workspace = true }
+sotf-plugin-ambisonics = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

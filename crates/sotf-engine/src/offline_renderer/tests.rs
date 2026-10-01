@@ -1070,6 +1070,7 @@ fn offline_dynamic_eq_shelf_settings_match_separately_configured_core() {
             band("low_shelf", 250.0, 8.0, 0.7),
             band("high_shelf", 6_000.0, -7.0, 0.8),
         ],
+        stereo_pairs: None,
     };
     let plugin_config = settings.to_plugin_config(f64::from(sample_rate));
     assert_eq!(plugin_config.plugin_type, "dynamic_eq");

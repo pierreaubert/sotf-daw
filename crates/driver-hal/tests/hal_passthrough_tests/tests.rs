@@ -108,6 +108,7 @@ fn test_hal_with_eq_zero_gain_passthrough() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -118,6 +119,7 @@ fn test_hal_with_eq_zero_gain_passthrough() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -128,6 +130,7 @@ fn test_hal_with_eq_zero_gain_passthrough() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -136,6 +139,7 @@ fn test_hal_with_eq_zero_gain_passthrough() {
     let params = EqPluginParams {
         filters: zero_gain_filters,
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 
@@ -224,10 +228,12 @@ fn test_eq_zero_gain_with_silence() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 
@@ -440,10 +446,12 @@ fn test_eq_zero_gain_preserves_full_scale() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 

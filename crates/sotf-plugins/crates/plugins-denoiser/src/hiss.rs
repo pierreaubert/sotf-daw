@@ -11,6 +11,14 @@ pub struct HissReducer {
     cutoff_hz: f32,
     threshold_db: f32,
     strength: f32,
+    // Configuration retained across reset(). Links per-frame reduction
+    // depth across channels; independent by default.
+    linked: bool,
+    // Per-frame staging: detector depth plus the pre-snap low/high split
+    // the gain stage needs. Scratch, sized at construction.
+    frame_depth: Vec<f32>,
+    frame_low: Vec<f32>,
+    frame_high: Vec<f32>,
     lowpass_state: Vec<f32>,
     fast_env: Vec<f32>,
     noise_env: Vec<f32>,
@@ -41,6 +49,10 @@ impl HissReducer {
             cutoff_hz: 4000.0,
             threshold_db: -30.0,
             strength: 0.5,
+            linked: false,
+            frame_depth: vec![0.0; channels],
+            frame_low: vec![0.0; channels],
+            frame_high: vec![0.0; channels],
             lowpass_state: vec![0.0; channels],
             fast_env: vec![0.0; channels],
             noise_env: vec![0.0; channels],
@@ -66,6 +78,20 @@ impl HissReducer {
         reducer
     }
 
+    /// Sets the sample rate, preserving detector state.
+    ///
+    /// Coefficients rebuild and snap immediately, but envelopes, gains,
+    /// and the reducing state machine carry across the call, including
+    /// across a rate change. Call [`reset`](Self::reset) for a fresh
+    /// detector. Spectral
+    /// [`initialize`](crate::spectral_hiss::SpectralHissReducer::initialize)
+    /// differs deliberately: it resets DSP state while retaining
+    /// configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error, leaving all state unchanged, when the sample
+    /// rate is zero.
     pub fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
         if sample_rate == 0 {
             return Err("sample rate must be nonzero".to_string());
@@ -103,7 +129,23 @@ impl HissReducer {
         }
     }
 
+    /// Selects linked-channel reduction.
+    ///
+    /// When set, each frame shares the maximum per-channel reduction
+    /// depth across all channels before gain smoothing, so every channel
+    /// follows one common target gain and the image stays put. Envelopes
+    /// and the per-channel reducing state machine still run unchanged;
+    /// only the depth applied is shared (max-depth link semantics).
+    /// Per-channel gain smoothing with a shared target converges to
+    /// equal gains. Independent by default.
+    pub fn set_linked(&mut self, linked: bool) {
+        self.linked = linked;
+    }
+
     pub fn reset(&mut self) {
+        self.frame_depth.fill(0.0);
+        self.frame_low.fill(0.0);
+        self.frame_high.fill(0.0);
         self.lowpass_state.fill(0.0);
         self.fast_env.fill(0.0);
         self.noise_env.fill(0.0);
@@ -139,7 +181,11 @@ impl HissReducer {
             if (self.wet_mix - self.target_wet_mix).abs() < 1e-8 {
                 self.wet_mix = self.target_wet_mix;
             }
-            for (ch, sample) in frame.iter_mut().enumerate() {
+            // Detection pass: envelopes, reducing state, and staged depth
+            // plus the pre-snap low/high split. Channels own disjoint
+            // state, so running every detector before any gain application
+            // cannot change independent results; store/load is exact.
+            for (ch, sample) in frame.iter().enumerate() {
                 let dry = if sample.is_finite() { *sample } else { 0.0 };
                 let low = self.alpha * dry + (1.0 - self.alpha) * self.lowpass_state[ch];
                 self.lowpass_state[ch] = low;
@@ -189,12 +235,38 @@ impl HissReducer {
                 let level_depth =
                     (1.0 - noise_power / self.threshold_power.max(1e-20)).clamp(0.0, 1.0);
                 let steady_depth = (1.0 - (power_ratio - 1.0).abs()).clamp(0.0, 1.0);
-                let reduction_depth = if self.reducing[ch] {
+                self.frame_depth[ch] = if self.reducing[ch] {
                     level_depth * steady_depth
                 } else {
                     0.0
                 };
-                let target_gain = 1.0 - self.strength * reduction_depth;
+                // Stage the pre-snap split: the denormal snap above may have
+                // rewritten lowpass_state, so recomputing here would differ
+                // by ~1e-20 in snapped cases.
+                self.frame_low[ch] = low;
+                self.frame_high[ch] = high;
+            }
+
+            // Link: share the deepest per-frame reduction across channels.
+            // Depths are clamped to 0.0..=1.0 by construction, so max from
+            // 0.0 over this frame's staged entries only; a ragged tail
+            // chunk must not reuse another frame's staging.
+            let mut shared_depth = 0.0_f32;
+            if self.linked {
+                for depth in self.frame_depth.iter().take(frame.len()) {
+                    shared_depth = shared_depth.max(*depth);
+                }
+            }
+
+            // Gain pass: smooth toward the own (or shared) target and apply.
+            for (ch, sample) in frame.iter_mut().enumerate() {
+                let dry = if sample.is_finite() { *sample } else { 0.0 };
+                let depth = if self.linked {
+                    shared_depth
+                } else {
+                    self.frame_depth[ch]
+                };
+                let target_gain = 1.0 - self.strength * depth;
                 let coeff = if target_gain < self.gain[ch] {
                     self.gain_attack_coeff
                 } else {
@@ -207,7 +279,7 @@ impl HissReducer {
                 let processed = if self.gain[ch] == 1.0 {
                     dry
                 } else {
-                    low + high * self.gain[ch]
+                    self.frame_low[ch] + self.frame_high[ch] * self.gain[ch]
                 };
                 *sample = dry + self.wet_mix * (processed - dry);
             }
@@ -513,5 +585,71 @@ mod tests {
             partition_index += 1;
         }
         assert_eq!(partitioned_signal, whole_signal);
+    }
+
+    #[test]
+    fn new_defaults_to_independent_processing() {
+        let reducer = HissReducer::new(2);
+        assert!(!reducer.linked);
+        assert_eq!(reducer.frame_depth, [0.0; 2]);
+        assert_eq!(reducer.frame_low, [0.0; 2]);
+        assert_eq!(reducer.frame_high, [0.0; 2]);
+    }
+
+    #[test]
+    fn reset_retains_link_setting_and_clears_staging() {
+        let mut reducer = HissReducer::new(2);
+        reducer.set_params(4_000.0, -20.0, 0.8);
+        reducer.set_linked(true);
+        // Per-channel alternating high-frequency content engages the
+        // detector, so the staging buffers hold nonzero depths before
+        // reset. Each channel alternates +0.05/-0.05 every frame (note:
+        // alternating by sample index would park each stereo channel on
+        // DC, which carries no high-band energy and can never engage).
+        // One second gives the 100 ms slow envelope time to settle past
+        // the persistence gate (~69 ms to half level) plus the full 30 ms
+        // persistence window (~1440 frames), so engagement lands near
+        // frame ~4767 with wide margin and the final staged depths sit
+        // near 0.86, genuinely written by engaged high-band history.
+        let frames = 48_000usize;
+        let mut signal: Vec<f32> = Vec::with_capacity(frames * 2);
+        for frame in 0..frames {
+            let sample = if frame % 2 == 0 { 0.05 } else { -0.05 };
+            signal.push(sample);
+            signal.push(sample);
+        }
+        reducer.process(&mut signal);
+        assert!(reducer.frame_depth.iter().any(|depth| *depth > 0.0));
+
+        reducer.reset();
+        assert!(reducer.linked);
+        assert_eq!(reducer.frame_depth, [0.0; 2]);
+        assert_eq!(reducer.frame_low, [0.0; 2]);
+        assert_eq!(reducer.frame_high, [0.0; 2]);
+
+        // A reset linked reducer matches a fresh linked one bit-exactly.
+        let mut fresh = HissReducer::new(2);
+        fresh.set_params(4_000.0, -20.0, 0.8);
+        fresh.set_linked(true);
+        let mut reset_output = signal.clone();
+        let mut fresh_output = signal.clone();
+        reducer.process(&mut reset_output);
+        fresh.process(&mut fresh_output);
+        assert_eq!(reset_output, fresh_output);
+    }
+
+    #[test]
+    fn mono_linked_matches_mono_independent_bit_exactly() {
+        fn render(linked: bool) -> Vec<f32> {
+            let mut reducer = HissReducer::new(1);
+            reducer.set_params(4_000.0, -20.0, 0.8);
+            reducer.set_linked(linked);
+            let mut signal: Vec<f32> = (0..24_000)
+                .map(|i| if i % 2 == 0 { 0.05 } else { -0.05 })
+                .collect();
+            reducer.process(&mut signal);
+            signal
+        }
+        assert_eq!(render(true), render(false));
     }
 }

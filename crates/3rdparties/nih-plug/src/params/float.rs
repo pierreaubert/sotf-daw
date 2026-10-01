@@ -300,6 +300,25 @@ impl FloatParam {
         self.modulated_plain_value()
     }
 
+    /// Set a parameter value while committing a successfully prepared plugin
+    /// state. This is for control-thread initialization only, never automation.
+    #[doc(hidden)]
+    pub fn set_plain_value_for_initialization(&self, value: f32) -> bool {
+        <Self as ParamMut>::set_plain_value(self, value)
+    }
+
+    /// Set a parameter and reset its smoother while committing initialized state.
+    #[doc(hidden)]
+    pub fn set_plain_value_and_reset_smoother_for_initialization(
+        &self,
+        value: f32,
+        sample_rate: f32,
+    ) -> bool {
+        let changed = <Self as ParamMut>::set_plain_value(self, value);
+        <Self as ParamMut>::update_smoother(self, sample_rate, true);
+        changed
+    }
+
     /// The range of valid plain values for this parameter.
     #[inline]
     pub fn range(&self) -> FloatRange {

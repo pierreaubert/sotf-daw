@@ -821,6 +821,7 @@ fn test_per_channel_from_params_rejects_mismatched_channels() {
         channel_frequencies_hz: vec![80.0, 100.0],
         channel_modes: Some(vec!["highpass".to_string(), "mute".to_string()]),
         topology: None,
+        band_count: None,
     };
     // 2 frequencies but channels=3: must error, not silently use 2.
     assert!(CrossoverPlugin::from_params(3, &params).is_err());
@@ -871,6 +872,7 @@ fn test_per_channel_from_params() {
         channel_frequencies_hz: vec![80.0, 100.0],
         channel_modes: Some(vec!["highpass".to_string(), "mute".to_string()]),
         topology: None,
+        band_count: None,
     };
     let p = CrossoverPlugin::from_params(2, &params).unwrap();
     assert!(p.is_per_channel());
@@ -891,6 +893,7 @@ fn test_complete_channel_modes_make_global_output_dormant() {
         channel_frequencies_hz: vec![800.0, 1_600.0],
         channel_modes: Some(vec!["lowpass".to_string(), "highpass".to_string()]),
         topology: None,
+        band_count: None,
     };
     let plugin = CrossoverPlugin::from_params(2, &explicit_modes)
         .expect("complete explicit channel modes select per-channel topology");
@@ -902,6 +905,7 @@ fn test_complete_channel_modes_make_global_output_dormant() {
     let short_modes_use_scalar_fallback = CrossoverPluginParams {
         channel_modes: Some(vec!["highpass".to_string()]),
         topology: None,
+        band_count: None,
         output: "lowpass".to_string(),
         ..explicit_modes.clone()
     };
@@ -915,6 +919,7 @@ fn test_complete_channel_modes_make_global_output_dormant() {
     let empty_modes_use_scalar_fallback = CrossoverPluginParams {
         channel_modes: Some(vec![]),
         topology: None,
+        band_count: None,
         output: "highpass".to_string(),
         ..explicit_modes.clone()
     };
@@ -928,6 +933,7 @@ fn test_complete_channel_modes_make_global_output_dormant() {
     let malformed_explicit_mode = CrossoverPluginParams {
         channel_modes: Some(vec!["not-a-mode".to_string(), "highpass".to_string()]),
         topology: None,
+        band_count: None,
         ..explicit_modes.clone()
     };
     assert!(CrossoverPlugin::from_params(2, &malformed_explicit_mode).is_err());
@@ -939,6 +945,7 @@ fn test_complete_channel_modes_make_global_output_dormant() {
             "mute".to_string(),
         ]),
         topology: None,
+        band_count: None,
         ..explicit_modes
     };
     assert!(CrossoverPlugin::from_params(2, &overlong_modes).is_err());
@@ -951,6 +958,7 @@ fn explicit_topology_keeps_dormant_fields_out_of_the_active_route() {
         frequency: 800.0,
         output: "both".to_string(),
         topology: Some(CrossoverTopology::Bands),
+        band_count: None,
         extra_frequencies: vec![3_200.0],
         fir_taps: None,
         channel_frequencies_hz: vec![100.0, 200.0],
@@ -963,6 +971,7 @@ fn explicit_topology_keeps_dormant_fields_out_of_the_active_route() {
 
     let per_channel = CrossoverPluginParams {
         topology: Some(CrossoverTopology::PerChannel),
+        band_count: None,
         ..bands
     };
     let plugin = CrossoverPlugin::from_params(2, &per_channel)
@@ -976,12 +985,48 @@ fn explicit_topology_keeps_dormant_fields_out_of_the_active_route() {
 }
 
 #[test]
+fn explicit_band_count_activates_prefix_and_rejects_incomplete_state() {
+    let mut params = CrossoverPluginParams {
+        crossover_type: "LR24".into(),
+        frequency: 800.0,
+        output: "both".into(),
+        topology: Some(CrossoverTopology::Bands),
+        band_count: Some(2),
+        // Finite but currently dormant values remain saved without affecting
+        // the active two-band route.
+        extra_frequencies: vec![30_000.0, 600.0],
+        fir_taps: None,
+        channel_frequencies_hz: vec![],
+        channel_modes: Some(vec![]),
+    };
+    let plugin = CrossoverPlugin::from_params(2, &params).unwrap();
+    assert_eq!(plugin.output_channels(), 4);
+
+    params.band_count = Some(3);
+    assert!(
+        CrossoverPlugin::from_params(2, &params).is_err(),
+        "activating an inadmissible dormant cutoff must fail without sorting it"
+    );
+
+    params.extra_frequencies = vec![1_600.0];
+    params.band_count = Some(4);
+    assert!(
+        CrossoverPlugin::from_params(2, &params).is_err(),
+        "an explicit four-band state must supply both active extra cutoffs"
+    );
+
+    params.band_count = Some(5);
+    assert!(CrossoverPlugin::from_params(2, &params).is_err());
+}
+
+#[test]
 fn explicit_per_channel_topology_requires_complete_active_values() {
     let mut params = CrossoverPluginParams {
         crossover_type: "LR24".to_string(),
         frequency: 800.0,
         output: "lowpass".to_string(),
         topology: Some(CrossoverTopology::PerChannel),
+        band_count: None,
         extra_frequencies: vec![],
         fir_taps: None,
         channel_frequencies_hz: vec![100.0, 200.0],
@@ -1008,6 +1053,7 @@ fn legacy_topology_inference_rejects_competing_channel_and_band_arrays() {
         frequency: 800.0,
         output: "lowpass".to_string(),
         topology: None,
+        band_count: None,
         extra_frequencies: vec![3_200.0],
         fir_taps: None,
         channel_frequencies_hz: vec![100.0, 200.0],
@@ -1133,6 +1179,7 @@ fn test_from_params_invalid_output_mode_errors() {
         channel_frequencies_hz: vec![],
         channel_modes: Some(vec![]),
         topology: None,
+        band_count: None,
     };
     assert!(CrossoverPlugin::from_params(1, &params).is_err());
 }
@@ -1148,6 +1195,7 @@ fn test_per_channel_from_params_fills_missing_modes_with_default() {
         channel_frequencies_hz: vec![100.0, 200.0],
         channel_modes: Some(vec!["highpass".to_string()]),
         topology: None,
+        band_count: None,
     };
     let p = CrossoverPlugin::from_params(2, &params).unwrap();
     assert_eq!(

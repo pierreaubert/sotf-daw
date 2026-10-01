@@ -698,8 +698,9 @@ fn vst3_structural_shelf_restart_is_deferred_retryable_and_survives_reload() {
     // component reload.
     subject.pause_processing();
     peak.pause_processing();
-    // Shape is a three-choice index: normalized 0.5 selects choice 1 (Low shelf).
-    subject.set_normalized("band_0_shape", 0.5);
+    // Shape is a four-choice index (Peak/Low/High/Tilt): normalized 1/3
+    // selects choice 1 (Low shelf). Tilt appended at 3 preserves old 0..2.
+    subject.set_normalized("band_0_shape", 1.0 / 3.0);
     subject.set_normalized("band_0_shelf_slope", 0.75);
     assert_eq!(
         subject.plain("band_0_shape", subject.normalized("band_0_shape")),
@@ -732,7 +733,7 @@ fn vst3_structural_shelf_restart_is_deferred_retryable_and_survives_reload() {
     assert_eq!(handler_state.lock().unwrap().calls[1].result, kResultOk);
     subject.pause_processing();
     peak.pause_processing();
-    subject.set_normalized("band_0_shape", 0.5);
+    subject.set_normalized("band_0_shape", 1.0 / 3.0);
     subject.resume_processing();
     peak.resume_processing();
     wait_for_calls(&run_loop_state, &handler_state, 3);
@@ -792,7 +793,8 @@ fn assert_restart_is_not_delivered_without_registered_host_loop(
     set_handler(&instance, &handler);
     assert!(instance.setup_and_activate(SAMPLE_RATE));
     instance.pause_processing();
-    instance.set_normalized("band_0_shape", 0.5);
+    // Four-choice shape: 1/3 selects Low shelf (plain 1); Tilt at 3 preserves old indices.
+    instance.set_normalized("band_0_shape", 1.0 / 3.0);
     instance.set_normalized("band_0_shelf_slope", 0.75);
     let requested_shape = instance.normalized("band_0_shape");
     let requested_slope = instance.normalized("band_0_shelf_slope");

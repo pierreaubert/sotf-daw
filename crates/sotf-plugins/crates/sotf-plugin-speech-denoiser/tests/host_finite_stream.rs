@@ -7,9 +7,19 @@ const CHANNELS: usize = 2;
 const DRAIN_FRAME_CAPACITY: usize = 480;
 
 fn host(sample_rate: u32) -> Result<DawHost, String> {
+    host_with_strength(sample_rate, 1.0)
+}
+
+fn host_with_strength(sample_rate: u32, strength: f32) -> Result<DawHost, String> {
     let mut host = DawHost::new(CHANNELS, sample_rate);
-    let plugin =
-        SpeechDenoiserPlugin::from_params(CHANNELS, SpeechDenoiserPluginParams { enabled: true });
+    let plugin = SpeechDenoiserPlugin::from_params(
+        CHANNELS,
+        SpeechDenoiserPluginParams {
+            enabled: true,
+            strength,
+            ..SpeechDenoiserPluginParams::default()
+        },
+    );
     host.add_plugin(Box::new(ParametricInPlacePluginAdapter::new(plugin)))?;
     Ok(host)
 }
@@ -60,6 +70,24 @@ fn real_host_chain_drain_matches_ordinary_zero_continuation() {
     actual.extend(drain_to_end(&mut actual_host));
 
     let mut reference_host = host(RATE).unwrap();
+    let mut expected = process(&mut reference_host, &input);
+    expected.extend(process(&mut reference_host, &zeros));
+
+    assert_eq!(actual.len(), input.len() + zeros.len());
+    assert_eq!(actual, expected);
+    assert!(actual_host.drain(&mut []).unwrap().complete);
+}
+
+#[test]
+fn real_host_chain_with_strength_matches_zero_continuation() {
+    let input = signal(3 * DRAIN_FRAME_CAPACITY + 73);
+    let zeros = vec![0.0; 960 * CHANNELS];
+
+    let mut actual_host = host_with_strength(RATE, 0.5).unwrap();
+    let mut actual = process(&mut actual_host, &input);
+    actual.extend(drain_to_end(&mut actual_host));
+
+    let mut reference_host = host_with_strength(RATE, 0.5).unwrap();
     let mut expected = process(&mut reference_host, &input);
     expected.extend(process(&mut reference_host, &zeros));
 

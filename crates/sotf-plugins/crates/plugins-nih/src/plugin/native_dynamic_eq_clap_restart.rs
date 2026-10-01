@@ -12,7 +12,7 @@ use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{CLAP_PROCESS_ERROR, clap_process};
 use nih_plug::wrapper::clap::Wrapper;
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
-use sotf_plugins::plugin_dynamic_eq::DynEqShape;
+use sotf_plugins::plugin_dynamic_eq::{DynEqPlacement, DynEqShape};
 use sotf_plugins::{DynEqBandParams, DynamicEqPlugin, DynamicEqPluginParams, ProcessContext};
 use std::cell::Cell;
 use std::ffi::{c_char, c_void};
@@ -158,6 +158,28 @@ impl TestPlugin {
             ((*params).get_value.unwrap())(plugin, hash_param_id(param_id), &mut value)
         });
         value
+    }
+
+    fn param_text(&self, param_id: &str, value: f64) -> String {
+        let plugin = self.clap_plugin();
+        let params = unsafe {
+            ((*plugin).get_extension.unwrap())(plugin, CLAP_EXT_PARAMS.as_ptr())
+                .cast::<clap_plugin_params>()
+        };
+        assert!(!params.is_null());
+        let mut display = vec![0 as c_char; 128];
+        assert!(unsafe {
+            ((*params).value_to_text.unwrap())(
+                plugin,
+                hash_param_id(param_id),
+                value,
+                display.as_mut_ptr(),
+                display.len() as u32,
+            )
+        });
+        // SAFETY: CLAP writes a NUL-terminated C string into the provided buffer.
+        let text = unsafe { std::ffi::CStr::from_ptr(display.as_ptr()) };
+        text.to_string_lossy().into_owned()
     }
 
     fn activate_at_rate(&self, sample_rate: f64) -> bool {
@@ -359,6 +381,7 @@ fn direct_shelf_reference(first_frame: usize, block_count: usize) -> [Vec<f32>; 
             mix: 1.0,
             bands: vec![DynEqBandParams {
                 shape: DynEqShape::LowShelf,
+                placement: DynEqPlacement::Stereo,
                 shelf_slope: linear(0.1, 1.0, 0.75),
                 frequency: linear(20.0, 20_000.0, 0.5),
                 q: 1.0,
@@ -368,6 +391,7 @@ fn direct_shelf_reference(first_frame: usize, block_count: usize) -> [Vec<f32>; 
                 active: true,
                 solo: false,
             }],
+            stereo_pairs: None,
         },
         SAMPLE_RATE as u32,
     )
@@ -415,7 +439,24 @@ fn clap_defers_restart_required_shelf_until_host_reactivation() {
     shelf_reference.set_param("band_0_shape", 1.0);
     shelf_reference.set_param("band_0_shelf_slope", 0.75);
     shelf_reference.set_param("band_0_band_threshold", 0.25);
-    assert_eq!(shelf_reference.get_param("band_0_shape"), 1.0);
+    // CLAP reports stepped integers as normalized*step_count in f32/f64.
+    // Int 0..3 cannot represent 1/3 exactly, so plain 1 reconstructs as
+    // 1.0000000298. Verify via tolerance plus independent label and DSP oracles.
+    let reported = shelf_reference.get_param("band_0_shape");
+    assert!(
+        (reported - 1.0).abs() < 1e-6,
+        "CLAP shape reports Low shelf (plain 1), got {reported}"
+    );
+    assert_eq!(
+        shelf_reference.param_text("band_0_shape", reported),
+        "Low shelf",
+        "independent label oracle for the selected shelf"
+    );
+    assert_eq!(
+        DynEqShape::from_choice_index(1),
+        Some(DynEqShape::LowShelf),
+        "independent DSP oracle: plain 1 is LowShelf, Tilt at 3 preserves old indices"
+    );
     assert_eq!(
         subject.get_param("band_0_shape"),
         peak_control.get_param("band_0_shape")
@@ -430,8 +471,9 @@ fn clap_defers_restart_required_shelf_until_host_reactivation() {
         &peak_control.process_blocks(0, 8),
     );
 
-    // Low shelf is the appended choice with plain value 1. It is stored immediately, but it
-    // must not rebuild or alter the prepared Peak processor on the CLAP parameter callback.
+    // Low shelf is choice 1 (plain value 1); Tilt appended at 3 preserves old
+    // 0..2. It is stored immediately, but it must not rebuild or alter the
+    // prepared Peak processor on the CLAP parameter callback.
     let callback_count_before_change = subject.state().callback_requests.load(Ordering::Acquire);
     subject.set_param("band_0_shape", 1.0);
     subject.set_param("band_0_shelf_slope", 0.75);
@@ -485,7 +527,29 @@ fn clap_defers_restart_required_shelf_until_host_reactivation() {
     // A cutoff above the 8 kHz Nyquist limit makes candidate preparation fail. The pending shelf
     // values must survive that failed attempt so a valid reactivation can prepare them later.
     assert!(!subject.restart_lifecycle_at_rate(8_000.0));
-    assert_eq!(subject.get_param("band_0_shape"), 1.0);
+    // Same f32 normalized roundtrip as above: plain 1 denormalizes from
+    // f32 1/3 in f64, so compare with the numeric-conversion bound and
+    // prove the exact roundtrip plus the authoritative label and index.
+    let shape_after_failed_prepare = subject.get_param("band_0_shape");
+    assert!(
+        (shape_after_failed_prepare - 1.0).abs() < 1e-6,
+        "shape changed after failed preparation: {shape_after_failed_prepare}"
+    );
+    assert_eq!(
+        shape_after_failed_prepare,
+        f64::from(1.0f32 / 3.0f32) * 3.0,
+        "shape roundtrip must exactly match f32 1/3 conversion"
+    );
+    assert_eq!(
+        subject.param_text("band_0_shape", shape_after_failed_prepare),
+        "Low shelf",
+        "independent label oracle after failed preparation"
+    );
+    assert_eq!(
+        DynEqShape::from_choice_index(1),
+        Some(DynEqShape::LowShelf),
+        "independent DSP oracle: plain 1 is LowShelf"
+    );
     let slope_after_failed_prepare = subject.get_param("band_0_shelf_slope");
     assert!(
         (slope_after_failed_prepare - 0.75).abs() < 1.0e-6,

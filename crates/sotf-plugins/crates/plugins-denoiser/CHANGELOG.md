@@ -1,3 +1,78 @@
+## Unreleased (restoration backend fix round 7, 2026-10-01)
+
+- Fix transient-guard false triggering on stationary hiss: the onset
+  detector now compares instantaneous high-band power against a
+  guard-local recent-mean reference (per-channel short EMA, seeded at
+  the first full-window hop, frozen during holds) with a 2.0x firing
+  threshold, instead of the minimum-statistics aggregate. Startup hops
+  hold a partially zero-filled window, so minima from those hops sit
+  far below steady hiss and the old ratio fired spuriously there (hop 1
+  provably, ~13x vs the old 4x threshold). Threshold and seeding carry
+  an independent signal-model derivation plus an arithmetic regression;
+  the guarded peak, no-amplification, coherence, and suppression bounds
+  are unchanged, as are all fixtures. Guard-off renders are bit-identical
+  (only an integer hop counter is unconditional). No version bump.
+- Replace the hiss-only guard identity failure output with a
+  first-difference diagnostic (index, values, differing count). Still
+  bit-exact equality, no tolerance. No version bump.
+
+## Unreleased (restoration backend fix round 6, 2026-10-01)
+
+- Add an opt-in spectral transient guard
+  (`SpectralHissReducer::set_transient_guard`, default off): confirmed
+  broadband onsets lift per-bin targets toward unity and raise gains at
+  transient speed over a short hold, so engaged peaks survive while
+  stationary-hiss suppression between transients is unchanged. Guard-off
+  renders are bit-identical to before (pinned by a new HEAD-identity
+  test on the impulse fixture); guard-on behavior carries the hard
+  transient peak bounds, a no-false-trigger identity pin, and a
+  mid-stream toggle convergence test. No version bump.
+- Correct the time-domain link test oracle (same leakage class as the
+  Hiss R5-T1 fix): re-filtered high-band attenuation on the loud tone is
+  provably capped at -0.15 dB for any gain, so drag is now measured as
+  residual-drag power with backend-derived bounds, plus hard regressions
+  (independent loud channel bit-exact dry, dual-mono identity,
+  leakage-regime pin, f64 leakage-arithmetic test). Time-domain DSP is
+  untouched. No version bump.
+
+## Unreleased (restoration backend fix round, 2026-10-01)
+
+- Add frozen HEAD-baseline identity tests (`tests/legacy_baseline.rs`):
+  engaged spectral (0.65 hiss+tone) and time-domain (0.8 hiss) defaults
+  render bit-exactly against a renamed transcription of the retained HEAD
+  algorithm, mono and stereo at 48 kHz. HEAD baseline only (not the dirty
+  pre-change worktree); no signature changed.
+- Add profile-path selectivity tests: quiet 0.06 tone + hiss with the
+  profile engaged (tonal bin within 1 dB, tone-excluded high-band hiss
+  below -3 dB) and engaged-transient peak bounds (live loss below 3 dB,
+  profile within 3 dB of live), plus live controls and coherence.
+- Add mid-stream coverage: link on/off, curve reshape, and profile
+  enable/disable after divergent histories pin finite output, a
+  no-new-discontinuity jump bound, and 1 dB convergence to the
+  from-start reference; cold first-use realtime paths expect zero
+  allocs/frees; rejected setters expect balanced, bounded error counts;
+  frozen engaged drains decay below -60 dBFS; spectral `initialize`
+  retains configuration and time-domain `initialize` preserves detector
+  state (both pinned behaviorally).
+- Spectral `set_params` now falls back to defaults on non-finite input,
+  matching the time-domain parity behavior. Finite inputs clamp exactly
+  as before, so legacy settings reproduce bit-identically; only
+  non-finite callers observe a change. No version bump.
+
+## Unreleased (restoration backend, 2026-10-01)
+
+- Add default-off shared hooks for captured-profile hiss reduction.
+  `SpectralHissReducer` gains `set_external_noise` (v1 broadband floors
+  mapped to per-bin noise by exact Parseval inversion of the live
+  `noise_rms` formula, spread white; the live gate still applies),
+  `set_curve_gains` (per-bin strength scale, flat reproduces legacy
+  output bit-exactly), and `set_linked` (shared min-gain targets plus a
+  reduce-only-while-every-channel-is-quiet gate). `HissReducer` gains
+  `set_linked` (shared max-depth targets). All setters are
+  finite-range validated and transactional; process/reset/setters stay
+  allocation-free; reset retains configuration. Default construction is
+  bit-identical to before. No version bump.
+
 ## Unreleased audit corrections (2026-09-28)
 
 - Preserve RNNoise model output while correcting total reported latency to 960

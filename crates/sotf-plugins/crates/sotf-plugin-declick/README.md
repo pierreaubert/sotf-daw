@@ -17,6 +17,20 @@ Parameters:
   smoothed over 5 ms.
 - `link_channels`: link decisions in adjacent channel pairs; disable for fully
   independent channels.
+- `mode` (Random/Periodic): periodic repetition tracking with phase
+  prediction; falls back to random-style detection without a lock.
+- `bands` (Fullband/2-band/3-band): complementary multiband detection with a
+  fullband supervisor gate; fullband preserves legacy behavior.
+- `crossover_hz` (80–12000): band split frequency.
+- `frequency_skew` (−1–1): bias detection toward high (+) or low (−) bands.
+- `repair_width` (0–8 samples): symmetric repair extension; adds equal
+  latency on new-mode paths (legacy path stays at eight samples).
+- `audition_residual`: output the aligned residual (removed clicks) instead
+  of repaired audio.
+
+Default settings (random mode, fullband, zero width) use the legacy path
+bit-exactly: eight samples of latency and the accepted detector behavior.
+New-mode paths add only the configured repair width to that latency.
 
 The callback is allocation-free, lock-free, frame-major, and accepts arbitrary
 block sizes. Non-finite input is replaced locally with the last finite sample.
@@ -24,11 +38,12 @@ See `USAGE.md` and `UI.md` for contracts and controls.
 
 ## Finite streams
 
-After a nonempty input stream, `drain` returns exactly eight frames of zero-input
-continuation, including repaired or bypassed audio still held in lookahead. It
-accepts any positive destination capacity aligned to the channel count, returns
-at most eight frames per call, and leaves unused destination samples untouched.
-An empty stream completes without output. The declared tail is eight frames.
+After a nonempty input stream, `drain` returns exactly `latency_samples`
+frames of zero-input continuation (eight by default, plus repair width on
+new-mode paths), including repaired or bypassed audio still held in lookahead.
+It accepts any positive destination capacity aligned to the channel count and
+leaves unused destination samples untouched. An empty stream completes without
+output. The declared tail equals the reported latency.
 
 The first successful drain closes the stream: subsequent nonempty input and
 parameter changes require `reset` or successful reinitialization. Invalid drain

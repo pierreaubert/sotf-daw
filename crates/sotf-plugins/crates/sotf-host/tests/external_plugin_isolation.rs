@@ -281,6 +281,133 @@ fn sandboxed_worker_with_child_denial_still_processes_audio() {
     assert!(!plugin.is_worker_quarantined());
 }
 
+#[test]
+#[cfg(all(
+    target_os = "linux",
+    feature = "worker-test-backend",
+    feature = "external-plugin-clap"
+))]
+fn shipped_worker_recovers_process_failure_only_after_reset() {
+    let (_dir, descriptor) = test_descriptor("external-worker-process-reset");
+    let worker_binary = env!("CARGO_BIN_EXE_sotf-external-plugin-worker");
+    let mut plugin = IsolatedExternalPlugin::new(
+        descriptor,
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new(worker_binary)
+                .arg("--test-passthrough")
+                .arg("--test-fail-first-process")
+                .arg("--test-gain")
+                .arg("2.0")
+                .arg("--idle-sleep-micros")
+                .arg("50"),
+            sandbox_policy: sotf_host::ExternalPluginSandboxPolicy::disabled(),
+            deadline: std::time::Duration::from_secs(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    plugin.ensure_worker_running().unwrap();
+
+    let input: Vec<f32> = (0..8192 * 2).map(|i| (i % 17) as f32 * 0.03125).collect();
+    let context = ProcessContext::new(48_000, 8192);
+    let mut output = vec![f32::NAN; input.len()];
+    assert_eq!(plugin.process(&input, &mut output, &context).unwrap(), 8192);
+
+    let failure_deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while plugin.block_worker_failure_count() == 0 {
+        assert!(
+            std::time::Instant::now() < failure_deadline,
+            "shipped worker did not publish its injected process failure"
+        );
+        assert_eq!(plugin.process(&input, &mut output, &context).unwrap(), 8192);
+    }
+    assert_eq!(plugin.block_worker_failure_count(), 1);
+    assert_eq!(plugin.worker_start_count(), 1);
+    assert_eq!(plugin.worker_exit_count(), 0);
+
+    plugin.reset_checked().unwrap();
+    assert!(plugin.poll_worker().unwrap().is_none());
+    assert_eq!(plugin.worker_start_count(), 1);
+    assert_eq!(plugin.process(&input, &mut output, &context).unwrap(), 8192);
+
+    // Preparing EOS waits for the accepted worker request to publish its
+    // result before the fixed-latency pipeline is drained. The test backend's
+    // 2x gain distinguishes plugin audio from host passthrough fallback.
+    plugin.prepare_drain_metadata().unwrap();
+    plugin.begin_drain(&context).unwrap();
+    let mut drained = vec![f32::NAN; input.len()];
+    let drain = plugin.drain(&mut drained, &context).unwrap();
+    assert_eq!(drain.frames, 8192);
+    assert!(drain.complete);
+    let expected: Vec<f32> = input.iter().map(|sample| sample * 2.0).collect();
+    assert_eq!(
+        drained, expected,
+        "worker output differed from native reference"
+    );
+    assert!(!plugin.is_worker_quarantined());
+}
+
+#[test]
+#[cfg(all(
+    target_os = "linux",
+    feature = "worker-test-backend",
+    feature = "external-plugin-clap"
+))]
+fn shipped_worker_reset_failure_keeps_process_error_latched() {
+    let (_dir, descriptor) = test_descriptor("external-worker-reset-refusal");
+    let worker_binary = env!("CARGO_BIN_EXE_sotf-external-plugin-worker");
+    let mut plugin = IsolatedExternalPlugin::new(
+        descriptor,
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new(worker_binary)
+                .arg("--test-passthrough")
+                .arg("--test-fail-first-process")
+                .arg("--test-fail-reset")
+                .arg("--idle-sleep-micros")
+                .arg("50"),
+            sandbox_policy: sotf_host::ExternalPluginSandboxPolicy::disabled(),
+            deadline: std::time::Duration::from_secs(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    plugin.ensure_worker_running().unwrap();
+
+    let input: Vec<f32> = (0..8192 * 2).map(|i| (i % 13) as f32 * 0.0625).collect();
+    let context = ProcessContext::new(48_000, 8192);
+    let mut output = vec![f32::NAN; input.len()];
+    plugin.process(&input, &mut output, &context).unwrap();
+    let failure_deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while plugin.block_worker_failure_count() == 0 {
+        assert!(
+            std::time::Instant::now() < failure_deadline,
+            "shipped worker did not publish its injected process failure"
+        );
+        plugin.process(&input, &mut output, &context).unwrap();
+    }
+
+    let reset_error = plugin.reset_checked().unwrap_err();
+    assert!(
+        reset_error.contains("injected test-backend reset failure"),
+        "{reset_error}"
+    );
+    assert!(plugin.is_worker_quarantined());
+    assert_eq!(plugin.worker_start_count(), 1);
+    plugin.process(&input, &mut output, &context).unwrap();
+    assert_eq!(
+        output, input,
+        "failed Reset did not retain fallback behavior"
+    );
+    assert_eq!(plugin.block_worker_failure_count(), 1);
+    assert_eq!(
+        plugin.worker_start_count(),
+        1,
+        "failed Reset restarted worker"
+    );
+}
+
 fn test_descriptor(name: &str) -> (tempfile::TempDir, PluginDescriptor) {
     let dir = tempfile::tempdir().unwrap();
     let plugin_path = dir.path().join(format!("{name}.clap"));

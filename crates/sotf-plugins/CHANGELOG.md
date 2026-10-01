@@ -2,6 +2,7 @@
 
 ## Changes
 
+- Add loaded VST3 coverage for inactive bus descriptors and isolated-worker recovery. Verify native Crossover CLAP/VST3 routing across 11 named layouts with 132 independent waveform comparisons, plus populated reconfiguration and recovery after refused structural changes. Consuming-application integration remains under validation.
 - Expose higher-order Ambisonics, true-stereo convolution, DynamicEQ shelves, additional Crossover families and opt-in BandSplit phase compensation through the canonical plugin factory.
 - Expand full-chain, native CLAP/VST3, state-restoration and numerical accuracy coverage.
 - Add finite channel-changing drain and native replacement integration coverage. Platform and consuming-application follow-up work remains tracked in the audit.

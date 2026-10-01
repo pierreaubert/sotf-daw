@@ -94,6 +94,17 @@ mod plugin {
     sotf_nih_plugin!(SotfEQ, plugin_type: "EQ", name: "SOTF: Parametric EQ", clap_id: "org.spinorama.sotf.eq", vst3_class_id: *b"SotfEqPlugin0001", channels: 2);
     nih_plug::nih_export_clap!(SotfEQ);
     nih_plug::nih_export_vst3!(SotfEQ);
+
+    #[cfg(test)]
+    mod native_eq_preedit_tests;
+
+    #[cfg(test)]
+    #[path = "native_eq_wrapper_admission.rs"]
+    mod native_eq_wrapper_admission;
+
+    #[cfg(all(test, target_os = "linux"))]
+    #[path = "native_eq_vst3_wrapper_admission.rs"]
+    mod native_eq_vst3_wrapper_admission;
 }
 
 #[cfg(feature = "compressor")]
@@ -326,6 +337,10 @@ mod plugin {
     sotf_nih_plugin!(SotfCrossover, plugin_type: "Crossover", name: "SOTF: Crossover", clap_id: "org.spinorama.sotf.crossover", vst3_class_id: *b"SotfCrossover001", channels: 2);
     nih_plug::nih_export_clap!(SotfCrossover);
     nih_plug::nih_export_vst3!(SotfCrossover);
+
+    #[cfg(test)]
+    #[path = "../wrapper/native_crossover_vst3_callbacks.rs"]
+    mod native_crossover_vst3_callbacks;
 }
 
 #[cfg(feature = "band-split")]

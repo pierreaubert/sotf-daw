@@ -181,7 +181,7 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
         let Ok(index) = index.parse::<usize>() else {
             continue;
         };
-        if !matches!(field, "type" | "freq" | "q" | "gain" | "active") {
+        if !matches!(field, "type" | "freq" | "q" | "gain" | "active" | "placement") {
             continue;
         }
         if index >= num_filters {
@@ -209,6 +209,28 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
                     .ok_or_else(|| format!("LinearPhaseEQ state '{key}' must be a boolean"))?;
                 band.insert("active".to_string(), active.into());
             }
+            "placement" => {
+                const PLACEMENT_LABELS: [&str; 5] =
+                    ["stereo", "left", "right", "mid", "side"];
+                let placement_index = value
+                    .as_u64()
+                    .and_then(|value| usize::try_from(value).ok())
+                    .filter(|index| *index <= PLACEMENT_LABELS.len())
+                    .ok_or_else(|| {
+                        format!("LinearPhaseEQ state '{key}' must be a placement index in 0..=5")
+                    })?;
+                // LinearPhaseEQ placement: 0 = legacy (absence of the key),
+                // 1 = stereo .. 5 = side. Same 6-choice contract as EQ, unlike
+                // DynamicEQ, where 0 is explicit Stereo with no Legacy.
+                if placement_index == 0 {
+                    band.remove("placement");
+                } else {
+                    band.insert(
+                        "placement".to_string(),
+                        PLACEMENT_LABELS[placement_index - 1].into(),
+                    );
+                }
+            }
             numeric_field => {
                 let number = value
                     .as_f64()
@@ -227,6 +249,45 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
         }
     }
     config.insert("filters".to_string(), filters.into());
+
+    // Pair lists are structural saved state. When the incoming state carries
+    // them they replace the config pairs; otherwise the construction config
+    // pairs survive. Shape-checked here, geometry-checked by the plugin
+    // constructor (disjoint, in-range, nonzero pair count).
+    if let Some(pairs) = state.get("stereo_pairs") {
+        match pairs {
+            serde_json::Value::Null => {
+                config.remove("stereo_pairs");
+            }
+            serde_json::Value::Array(pairs) => {
+                for (pair_index, pair) in pairs.iter().enumerate() {
+                    let valid = pair.as_array().is_some_and(|pair| {
+                        pair.len() == 2
+                            && pair.iter().all(|channel| {
+                                channel
+                                    .as_u64()
+                                    .is_some_and(|channel| usize::try_from(channel).is_ok())
+                            })
+                    });
+                    if !valid {
+                        return Err(format!(
+                            "LinearPhaseEQ state 'stereo_pairs[{pair_index}]' must be a [left, right] channel pair"
+                        ));
+                    }
+                }
+                config.insert(
+                    "stereo_pairs".to_string(),
+                    serde_json::Value::Array(pairs.clone()),
+                );
+            }
+            _ => {
+                return Err(
+                    "LinearPhaseEQ state 'stereo_pairs' must be an array of [left, right] pairs or null"
+                        .to_string(),
+                );
+            }
+        }
+    }
 
     serde_json::to_string(&config)
         .map_err(|error| format!("Failed to serialize rebuilt LinearPhaseEQ config: {error}"))
@@ -250,7 +311,7 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
         "link_channels",
         "mix",
     ];
-    const BAND_FIELDS: [&str; 9] = [
+    const BAND_FIELDS: [&str; 10] = [
         "frequency",
         "q",
         "gain",
@@ -260,6 +321,7 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
         "solo",
         "shape",
         "shelf_slope",
+        "placement",
     ];
 
     let mut config: serde_json::Value =
@@ -276,7 +338,7 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
         .map_err(|error| format!("Failed to parse DynamicEQ state: {error}"))?;
 
     for key in state.keys() {
-        if GLOBAL_KEYS.contains(&key.as_str()) {
+        if GLOBAL_KEYS.contains(&key.as_str()) || key == "stereo_pairs" {
             continue;
         }
         let rest = key
@@ -311,9 +373,16 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
                 }
             }
             "shape" => {
-                if !value.as_i64().is_some_and(|index| (0..=2).contains(&index)) {
+                if !value.as_i64().is_some_and(|index| (0..=3).contains(&index)) {
                     return Err(format!(
-                        "DynamicEQ state '{key}' must be a choice index in 0..=2"
+                        "DynamicEQ state '{key}' must be a choice index in 0..=3"
+                    ));
+                }
+            }
+            "placement" => {
+                if !value.as_i64().is_some_and(|index| (0..=4).contains(&index)) {
+                    return Err(format!(
+                        "DynamicEQ state '{key}' must be a placement index in 0..=4"
                     ));
                 }
             }
@@ -377,13 +446,32 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
                 continue;
             };
             let config_value = if field == "shape" {
+                // Shape indices match DSP `DynEqShape::CHOICE_LABELS` order:
+                // 0=Peak, 1=Low Shelf, 2=High Shelf, 3=Tilt.
                 match value.as_u64() {
                     Some(0) => serde_json::Value::String("peak".to_string()),
                     Some(1) => serde_json::Value::String("low_shelf".to_string()),
                     Some(2) => serde_json::Value::String("high_shelf".to_string()),
+                    Some(3) => serde_json::Value::String("tilt".to_string()),
                     _ => {
                         return Err(format!(
                             "DynamicEQ state '{key}' has an invalid choice index"
+                        ));
+                    }
+                }
+            } else if field == "placement" {
+                // DynamicEQ placement: 0 = explicit Stereo .. 4 = Side (5
+                // choices, no Legacy). Unlike EQ/Linear, 0 does not remove the
+                // key; it writes "stereo".
+                match value.as_u64() {
+                    Some(0) => serde_json::Value::String("stereo".to_string()),
+                    Some(1) => serde_json::Value::String("left".to_string()),
+                    Some(2) => serde_json::Value::String("right".to_string()),
+                    Some(3) => serde_json::Value::String("mid".to_string()),
+                    Some(4) => serde_json::Value::String("side".to_string()),
+                    _ => {
+                        return Err(format!(
+                            "DynamicEQ state '{key}' has an invalid placement index"
                         ));
                     }
                 }
@@ -395,13 +483,53 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
     }
     config.insert("bands".to_string(), bands.into());
 
+    // Pair lists are structural saved state, not realtime parameters. When the
+    // incoming state carries them they replace the config pairs; otherwise the
+    // construction config pairs survive. Shape-checked here, geometry-checked
+    // by the plugin constructor (disjoint, in-range, pair-count limits).
+    if let Some(pairs) = state.get("stereo_pairs") {
+        match pairs {
+            serde_json::Value::Null => {
+                config.remove("stereo_pairs");
+            }
+            serde_json::Value::Array(pairs) => {
+                for (pair_index, pair) in pairs.iter().enumerate() {
+                    let valid = pair.as_array().is_some_and(|pair| {
+                        pair.len() == 2
+                            && pair.iter().all(|channel| {
+                                channel.as_u64().is_some_and(|channel| {
+                                    usize::try_from(channel).is_ok()
+                                })
+                            })
+                    });
+                    if !valid {
+                        return Err(format!(
+                            "DynamicEQ state 'stereo_pairs[{pair_index}]' must be a [left, right] channel pair"
+                        ));
+                    }
+                }
+                config.insert(
+                    "stereo_pairs".to_string(),
+                    serde_json::Value::Array(pairs.clone()),
+                );
+            }
+            _ => {
+                return Err(
+                    "DynamicEQ state 'stereo_pairs' must be an array of [left, right] pairs or null"
+                        .to_string(),
+                );
+            }
+        }
+    }
+
     serde_json::to_string(&config)
         .map_err(|error| format!("Failed to serialize rebuilt DynamicEQ config: {error}"))
 }
 
-/// Apply the legacy Peak defaults that were implicit before DynamicEQ shelf
-/// controls existed. This is only for full preset documents; partial state
-/// loads continue to merge omitted values from the live plugin.
+/// Apply the legacy Peak/Stereo defaults that were implicit before DynamicEQ
+/// shelf and routing controls existed. This is only for full preset
+/// documents; partial state loads continue to merge omitted values from
+/// the live plugin.
 pub(crate) fn add_dynamic_eq_preset_shelf_defaults(state_bytes: &[u8]) -> Result<Vec<u8>, String> {
     const MAX_BANDS: usize = 8;
 
@@ -421,10 +549,406 @@ pub(crate) fn add_dynamic_eq_preset_shelf_defaults(state_bytes: &[u8]) -> Result
         state
             .entry(format!("band_{band_index}_shelf_slope"))
             .or_insert_with(|| serde_json::Value::from(1.0));
+        state
+            .entry(format!("band_{band_index}_placement"))
+            .or_insert_with(|| serde_json::Value::from(0));
     }
 
     serde_json::to_vec(&serde_json::Value::Object(state))
         .map_err(|error| format!("Failed to serialize DynamicEQ preset defaults: {error}"))
+}
+
+/// Merge an EQ flat saved map into its structured constructor config.
+///
+/// Scalar band values, placements, and runtime globals (including the live
+/// `auto_gain_enabled` switch, which is distinct from the constructor's
+/// `auto_gain` measurement struct) stay in the flat map and are replayed
+/// onto the rebuilt plugin through its own setters (which own the compacted
+/// biquad index mapping, placement validation, and value ranges). Only
+/// constructor-owned keys are folded into the config here: `stereo_pairs`
+/// and the optional full-structural `filters` / `channel_filters` arrays
+/// carried by new full presets. Unknown top-level keys are ignored so legacy
+/// raw partial states keep their old semantics; malformed `band_` / `filter_`
+/// addresses fail closed instead of silently landing on the wrong band.
+pub(crate) fn merge_eq_state_into_config(
+    config_json: &str,
+    state_bytes: &[u8],
+) -> Result<String, String> {
+    const MAX_FILTERS: usize = 20;
+    const GLOBAL_KEYS: [&str; 5] = [
+        "max_filters",
+        "tdf2",
+        "topology",
+        "auto_gain_enabled",
+        "oversampling",
+    ];
+    const BAND_FIELDS: [&str; 5] = ["freq", "q", "gain", "filter_type", "order"];
+
+    let mut config: serde_json::Value =
+        if config_json.trim().is_empty() || matches!(config_json.trim(), "null" | "{}") {
+            serde_json::json!({})
+        } else {
+            serde_json::from_str(config_json)
+                .map_err(|error| format!("Failed to parse saved EQ config: {error}"))?
+        };
+    let config = config
+        .as_object_mut()
+        .ok_or_else(|| "EQ constructor config must be a JSON object".to_string())?;
+    let state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state_bytes)
+        .map_err(|error| format!("Failed to parse EQ state: {error}"))?;
+
+    for key in state.keys() {
+        if GLOBAL_KEYS.contains(&key.as_str())
+            || matches!(key.as_str(), "stereo_pairs" | "filters" | "channel_filters")
+        {
+            continue;
+        }
+        if let Some(rest) = key.strip_prefix("band_") {
+            let (index_text, field) = rest
+                .split_once('_')
+                .ok_or_else(|| format!("EQ state parameter '{key}' is malformed"))?;
+            let index = index_text
+                .parse::<usize>()
+                .ok()
+                .filter(|index| *index < MAX_FILTERS)
+                .ok_or_else(|| {
+                    format!("EQ state parameter '{key}' has an invalid band index")
+                })?;
+            if index_text != index.to_string() {
+                return Err(format!(
+                    "EQ state parameter '{key}' has a noncanonical band index"
+                ));
+            }
+            if !BAND_FIELDS.contains(&field) {
+                return Err(format!(
+                    "EQ state parameter '{key}' has an unsupported band field"
+                ));
+            }
+            continue;
+        }
+        if let Some(rest) = key.strip_prefix("filter_") {
+            let index_text = rest.strip_suffix("_placement").ok_or_else(|| {
+                format!("EQ state parameter '{key}' has an unsupported filter field")
+            })?;
+            let index = index_text
+                .parse::<usize>()
+                .ok()
+                .filter(|index| *index < MAX_FILTERS)
+                .ok_or_else(|| {
+                    format!("EQ state parameter '{key}' has an invalid filter index")
+                })?;
+            if index_text != index.to_string() {
+                return Err(format!(
+                    "EQ state parameter '{key}' has a noncanonical filter index"
+                ));
+            }
+            state[key]
+                .as_i64()
+                .filter(|placement| (0..=5).contains(placement))
+                .ok_or_else(|| {
+                    format!("EQ state '{key}' must be a placement index in 0..=5")
+                })?;
+            continue;
+        }
+        // Legacy tolerance: bridge state loads ignore unknown keys, so the
+        // merge must not turn a foreign key into a hard failure.
+    }
+
+    // Constructor-owned keys. Band order and advanced/Kautz entries live in
+    // `filters` and are preserved verbatim unless a full preset replaces them.
+    if let Some(pairs) = state.get("stereo_pairs") {
+        match pairs {
+            serde_json::Value::Null => {
+                config.remove("stereo_pairs");
+            }
+            serde_json::Value::Array(pairs) => {
+                for (pair_index, pair) in pairs.iter().enumerate() {
+                    let valid = pair.as_array().is_some_and(|pair| {
+                        pair.len() == 2
+                            && pair.iter().all(|channel| {
+                                channel
+                                    .as_u64()
+                                    .is_some_and(|channel| usize::try_from(channel).is_ok())
+                            })
+                    });
+                    if !valid {
+                        return Err(format!(
+                            "EQ state 'stereo_pairs[{pair_index}]' must be a [left, right] channel pair"
+                        ));
+                    }
+                }
+                config.insert(
+                    "stereo_pairs".to_string(),
+                    serde_json::Value::Array(pairs.clone()),
+                );
+            }
+            _ => {
+                return Err(
+                    "EQ state 'stereo_pairs' must be an array of [left, right] pairs or null"
+                        .to_string(),
+                );
+            }
+        }
+    }
+    // Full structural presets replace the whole filter vector (band order,
+    // per-filter placement, topology, lambda, Kautz sections). Element-level
+    // validation belongs to the plugin constructor, which rejects unknown
+    // filter types, out-of-range orders, and bad geometry transactionally.
+    if let Some(filters) = state.get("filters") {
+        match filters {
+            serde_json::Value::Array(filters) => {
+                if filters.len() > MAX_FILTERS {
+                    return Err(format!(
+                        "EQ state 'filters' holds {} entries, more than the {MAX_FILTERS} maximum",
+                        filters.len()
+                    ));
+                }
+                config.insert(
+                    "filters".to_string(),
+                    serde_json::Value::Array(filters.clone()),
+                );
+            }
+            _ => return Err("EQ state 'filters' must be an array".to_string()),
+        }
+    }
+    if let Some(channel_filters) = state.get("channel_filters") {
+        match channel_filters {
+            serde_json::Value::Null => {
+                config.remove("channel_filters");
+            }
+            serde_json::Value::Array(channel_filters) => {
+                config.insert(
+                    "channel_filters".to_string(),
+                    serde_json::Value::Array(channel_filters.clone()),
+                );
+            }
+            _ => {
+                return Err(
+                    "EQ state 'channel_filters' must be an array or null".to_string(),
+                );
+            }
+        }
+    }
+
+    serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize rebuilt EQ config: {error}"))
+}
+
+/// Merge a DeEsser flat saved map into its structured constructor config.
+///
+/// State keys use parameter IDs (`attack`, `release`); config keys use
+/// `DeEsserPluginParams` field names (`attack_ms`, `release_ms`). The two
+/// choice states accept both the label strings the plugin snapshot emits
+/// (`"Split-Band"`) and integer indices, normalizing to canonical labels.
+/// Structural values that the live setters reject (detection band, mode,
+/// lookahead, split topology, sidechain route) are folded into the config so
+/// full saved reloads rebuild instead of failing; layout-changing sidechain
+/// flips still fail at bus validation with the live handle preserved.
+pub(crate) fn merge_de_esser_state_into_config(
+    config_json: &str,
+    state_bytes: &[u8],
+) -> Result<String, String> {
+    use sotf_plugins::param_specs::de_esser::{MODES, SPLIT_TOPOLOGIES};
+
+    const KNOWN_KEYS: [&str; 14] = [
+        "frequency",
+        "q",
+        "threshold",
+        "ratio",
+        "attack",
+        "release",
+        "mode",
+        "mix",
+        "range_db",
+        "stereo_link",
+        "lookahead_ms",
+        "split_topology",
+        "ms_mode",
+        "sidechain_external",
+    ];
+
+    let mut config: serde_json::Value =
+        if config_json.trim().is_empty() || matches!(config_json.trim(), "null" | "{}") {
+            serde_json::json!({})
+        } else {
+            serde_json::from_str(config_json)
+                .map_err(|error| format!("Failed to parse saved DeEsser config: {error}"))?
+        };
+    let config = config
+        .as_object_mut()
+        .ok_or_else(|| "DeEsser constructor config must be a JSON object".to_string())?;
+    let state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state_bytes)
+        .map_err(|error| format!("Failed to parse DeEsser state: {error}"))?;
+
+    for key in state.keys() {
+        if !KNOWN_KEYS.contains(&key.as_str()) {
+            return Err(format!(
+                "DeEsser state contains unsupported parameter '{key}'"
+            ));
+        }
+    }
+
+    for (state_key, config_key) in [
+        ("frequency", "frequency"),
+        ("q", "q"),
+        ("threshold", "threshold"),
+        ("ratio", "ratio"),
+        ("attack", "attack_ms"),
+        ("release", "release_ms"),
+        ("mix", "mix"),
+        ("range_db", "range_db"),
+        ("stereo_link", "stereo_link"),
+        ("lookahead_ms", "lookahead_ms"),
+    ] {
+        if let Some(value) = state.get(state_key) {
+            if !value.as_f64().is_some_and(f64::is_finite) {
+                return Err(format!("DeEsser state '{state_key}' must be a finite number"));
+            }
+            config.insert(config_key.to_string(), value.clone());
+        }
+    }
+    for key in ["ms_mode", "sidechain_external"] {
+        if let Some(value) = state.get(key) {
+            if !value.is_boolean() {
+                return Err(format!("DeEsser state '{key}' must be a boolean"));
+            }
+            config.insert(key.to_string(), value.clone());
+        }
+    }
+    // Choice states arrive either as the label strings the snapshot emits
+    // or as integer indices from hand-authored documents; both normalize
+    // to the canonical label the constructor deserializer expects.
+    let choice_label = |key: &str, labels: &[&str]| -> Result<Option<String>, String> {
+        let Some(value) = state.get(key) else {
+            return Ok(None);
+        };
+        if let Some(index) = value
+            .as_u64()
+            .and_then(|index| usize::try_from(index).ok())
+            .filter(|index| *index < labels.len())
+        {
+            return Ok(Some(labels[index].to_string()));
+        }
+        if let Some(label) = value.as_str() {
+            if let Some(canonical) = labels
+                .iter()
+                .find(|candidate| candidate.eq_ignore_ascii_case(label))
+            {
+                return Ok(Some((*canonical).to_string()));
+            }
+        }
+        Err(format!(
+            "DeEsser state '{key}' must be one of {} or a choice index in 0..={}",
+            labels.join("/"),
+            labels.len() - 1
+        ))
+    };
+    if let Some(mode) = choice_label("mode", MODES)? {
+        config.insert("mode".to_string(), mode.into());
+    }
+    if let Some(topology) = choice_label("split_topology", SPLIT_TOPOLOGIES)? {
+        config.insert("split_topology".to_string(), topology.into());
+    }
+
+    serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize rebuilt DeEsser config: {error}"))
+}
+
+/// Merge an Ambisonics flat saved map into its structured constructor config.
+///
+/// Choice indices map back to layout/algorithm labels; the custom geometry
+/// object rides in the construction config (it is not a flat parameter) and
+/// is preserved across structural reloads. Selecting `custom` without
+/// geometry fails closed and names the limitation instead of silently
+/// building a named decoder.
+pub(crate) fn merge_ambisonics_state_into_config(
+    config_json: &str,
+    state_bytes: &[u8],
+) -> Result<String, String> {
+    use sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY;
+    use sotf_plugin_ambisonics::params::{ALGORITHMS, TARGET_LAYOUTS};
+
+    const KNOWN_KEYS: [&str; 5] = [
+        "order",
+        "target_layout",
+        "max_re_weighting",
+        "dual_band",
+        "algorithm",
+    ];
+
+    let mut config: serde_json::Value =
+        if config_json.trim().is_empty() || matches!(config_json.trim(), "null" | "{}") {
+            serde_json::json!({})
+        } else {
+            serde_json::from_str(config_json)
+                .map_err(|error| format!("Failed to parse saved Ambisonics config: {error}"))?
+        };
+    let config = config
+        .as_object_mut()
+        .ok_or_else(|| "Ambisonics constructor config must be a JSON object".to_string())?;
+    let state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state_bytes)
+        .map_err(|error| format!("Failed to parse Ambisonics state: {error}"))?;
+
+    for key in state.keys() {
+        if !KNOWN_KEYS.contains(&key.as_str()) {
+            return Err(format!(
+                "Ambisonics state contains unsupported parameter '{key}'"
+            ));
+        }
+    }
+
+    if let Some(value) = state.get("order") {
+        let order = value
+            .as_i64()
+            .filter(|order| (1..=7).contains(order))
+            .ok_or_else(|| "Ambisonics state 'order' must be an integer in 1..=7".to_string())?;
+        config.insert("order".to_string(), order.into());
+    }
+    if let Some(value) = state.get("target_layout") {
+        let index = value
+            .as_u64()
+            .and_then(|index| usize::try_from(index).ok())
+            .filter(|index| *index < TARGET_LAYOUTS.len())
+            .ok_or_else(|| {
+                format!(
+                    "Ambisonics state 'target_layout' must be a choice index in 0..={}",
+                    TARGET_LAYOUTS.len() - 1
+                )
+            })?;
+        if TARGET_LAYOUTS[index] == CUSTOM_LAYOUT_KEY {
+            if config.get("custom_layout").is_none() {
+                return Err(
+                    "Ambisonics state selects the custom target without custom geometry: the saved config has no \"custom_layout\" object"
+                        .to_string(),
+                );
+            }
+            config.insert("target_layout".to_string(), CUSTOM_LAYOUT_KEY.into());
+        } else {
+            config.insert("target_layout".to_string(), TARGET_LAYOUTS[index].into());
+            config.remove("custom_layout");
+        }
+    }
+    for key in ["max_re_weighting", "dual_band"] {
+        if let Some(value) = state.get(key) {
+            if !value.is_boolean() {
+                return Err(format!("Ambisonics state '{key}' must be a boolean"));
+            }
+            config.insert(key.to_string(), value.clone());
+        }
+    }
+    if let Some(value) = state.get("algorithm") {
+        let index = value
+            .as_u64()
+            .and_then(|index| usize::try_from(index).ok())
+            .filter(|index| *index < ALGORITHMS.len())
+            .ok_or_else(|| {
+                "Ambisonics state 'algorithm' must be a choice index in 0..=1".to_string()
+            })?;
+        config.insert("algorithm".to_string(), ALGORITHMS[index].into());
+    }
+
+    serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize rebuilt Ambisonics config: {error}"))
 }
 
 fn normalized_type_is(plugin_type: &str, expected: &str) -> bool {
@@ -566,6 +1090,80 @@ pub(crate) fn create_plugin_with_max_callback(
     }
 }
 
+/// Report whether a DeEsser construction config requests the external key bus.
+///
+/// Unparseable configs return false so the bridge parse error (not a width
+/// guess) surfaces to the caller.
+fn de_esser_config_is_external_sidechain(plugin_config: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(plugin_config)
+        .ok()
+        .and_then(|config| config.get("sidechain_external").cloned())
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
+}
+
+/// Report whether an Ambisonics construction config selects the custom target.
+fn ambisonics_config_selects_custom(plugin_config: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(plugin_config)
+        .ok()
+        .and_then(|config| config.get("target_layout").cloned())
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .is_some_and(|layout| layout == sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY)
+}
+
+/// Construct a custom-geometry Ambisonics decoder via the direct DSP route.
+///
+/// Bare `"custom"` without a `custom_layout` object fails closed with the
+/// limitation named; geometry itself is validated by the plugin constructor
+/// (bounded speaker count, finite angles, single LFE, well-conditioned
+/// solve), never defaulted.
+///
+/// The bridge (`plugins-bridge/src/factory.rs`) and facade
+/// (`sotf-plugins/src/factory/create.rs`) now have their own custom routes.
+/// The FFI keeps this direct route rather than delegating: it validates both
+/// the input bus (order-derived) and the output bus (layout-derived) against
+/// the requested FFI layout before returning, emits the FFI-specific
+/// fail-closed message naming `custom_layout`, and serves state restores that
+/// must preserve `custom_layout` across rebuilds. Triple-route equivalence
+/// (FFI/bridge/facade channel counts plus bit-identical renders) is pinned by
+/// `ambisonics_triple_route_equivalence_ffi_bridge_facade`.
+fn create_custom_ambisonics_plugin(
+    plugin_config: &str,
+    input_channels: usize,
+    output_channels: usize,
+    sample_rate: u32,
+) -> Result<Box<dyn Plugin>, String> {
+    use sotf_plugin_ambisonics::custom_layout::{CUSTOM_LAYOUT_KEY, CustomDecoderConfig};
+
+    let raw: serde_json::Value = serde_json::from_str(plugin_config)
+        .map_err(|error| format!("Invalid Ambisonics custom configuration JSON: {error}"))?;
+    if raw.get("custom_layout").is_none() {
+        return Err(format!(
+            "Ambisonics target \"{CUSTOM_LAYOUT_KEY}\" requires a \"custom_layout\" geometry object; the FFI cannot build a custom decoder without speaker positions"
+        ));
+    }
+    let config: CustomDecoderConfig = serde_json::from_value(raw)
+        .map_err(|error| format!("Invalid Ambisonics custom configuration: {error}"))?;
+    let mut plugin = sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&config)?;
+    if plugin.input_channels() != input_channels {
+        return Err(format!(
+            "Custom Ambisonics order-{} decoder has {} input channels, requested {input_channels}",
+            config.params.order,
+            plugin.input_channels()
+        ));
+    }
+    if plugin.output_channels() != output_channels {
+        return Err(format!(
+            "Custom Ambisonics layout '{}' has {} output channels, requested {output_channels}",
+            config.custom_layout.name,
+            plugin.output_channels()
+        ));
+    }
+    // Mirror the bridge named route, which initializes eagerly.
+    plugin.initialize(sample_rate)?;
+    Ok(Box::new(plugin))
+}
+
 // State restoration must apply structural settings before selecting native
 // processing adapters (in particular, the oversampling factor).
 pub(crate) fn create_unprepared_plugin(
@@ -586,16 +1184,34 @@ pub(crate) fn create_unprepared_plugin(
     // FFI construction metadata belongs to the facade, not the plugin schema.
     // Consume it before deserializing strict `deny_unknown_fields` configs.
     let plugin_config = plugin_config_without_ffi_metadata(config_json)?;
+    // Custom Ambisonics geometry uses the direct DSP route (see
+    // `create_custom_ambisonics_plugin` for why it does not delegate to the
+    // bridge custom route); bare "custom" without geometry fails closed.
+    if matches!(plugin_type, "AmbisonicsDecoder" | "ambisonics_decoder")
+        && ambisonics_config_selects_custom(&plugin_config)
+    {
+        return create_custom_ambisonics_plugin(
+            &plugin_config,
+            input_channels,
+            output_channels,
+            sample_rate,
+        );
+    }
     // BandMerge's legacy bridge constructor takes the merged output width;
-    // Gate also takes program/output width. Other routes take input width.
+    // Gate also takes program/output width, as does an externally-keyed
+    // DeEsser (its input bus is program + key). Other routes take input width.
     // Validate both actual buses so inconsistent sidechain/band counts cannot
     // bypass the requested FFI layout.
-    let constructor_channels =
-        if matches!(plugin_type, "BandMerge" | "band_merge" | "Gate" | "gate") {
-            output_channels
-        } else {
-            input_channels
-        };
+    let constructor_channels = if matches!(
+        plugin_type,
+        "BandMerge" | "band_merge" | "Gate" | "gate"
+    ) || (matches!(plugin_type, "DeEsser" | "de_esser")
+        && de_esser_config_is_external_sidechain(&plugin_config))
+    {
+        output_channels
+    } else {
+        input_channels
+    };
     let plugin = plugins_bridge::create_plugin(
         plugin_type,
         constructor_channels,

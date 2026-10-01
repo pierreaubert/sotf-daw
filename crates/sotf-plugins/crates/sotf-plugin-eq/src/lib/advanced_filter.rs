@@ -66,18 +66,32 @@ impl AdvancedFilter {
         }
     }
 
-    pub(super) fn apply_sample_rate(&mut self, sample_rate: f64) -> Result<(), String> {
+    /// Prepare a replacement realization at a new processing rate without mutating this one.
+    /// Warped filters retain their recursive history when retuned; Kautz filters
+    /// preserve the legacy behavior of rebuilding their state at a new rate.
+    ///
+    /// Initialization is a transaction: a later invalid Kautz pole must not
+    /// leave an earlier Warped filter or channel prepared at a different rate.
+    pub(super) fn reconfigured(&self, sample_rate: f64) -> Result<Self, String> {
         match self {
             Self::Warped {
                 filter,
                 automatic_lambda,
             } => {
+                validate_freq_q_gain(filter.freq, filter.q, filter.db_gain)?;
+                validate_sample_rate(sample_rate)?;
                 let lambda = if *automatic_lambda {
                     bark_lambda(sample_rate)
                 } else {
                     filter.lambda
                 };
-                filter.update_params(
+                if !lambda.is_finite() || !(-0.9999..=0.9999).contains(&lambda) {
+                    return Err(format!(
+                        "Invalid warped_biquad lambda {lambda}: expected finite value in [-0.9999, 0.9999]"
+                    ));
+                }
+                let mut replacement = filter.clone();
+                replacement.update_params(
                     filter.filter_type,
                     filter.freq,
                     sample_rate,
@@ -85,9 +99,15 @@ impl AdvancedFilter {
                     filter.db_gain,
                     lambda,
                 );
-                Ok(())
+                Ok(Self::Warped {
+                    filter: replacement,
+                    automatic_lambda: *automatic_lambda,
+                })
             }
-            Self::Kautz(filter) => filter.apply_sample_rate(sample_rate),
+            Self::Kautz(filter) => Ok(Self::Kautz(KautzRuntime::new(
+                filter.sections.clone(),
+                sample_rate,
+            )?)),
         }
     }
 

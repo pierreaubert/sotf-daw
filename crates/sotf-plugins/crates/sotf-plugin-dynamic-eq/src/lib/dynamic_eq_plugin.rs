@@ -4,10 +4,10 @@ use super::dynamic_eq_plugin_params::DynamicEqPluginParams;
 use super::misc::DB_CONVERSION_FACTOR;
 use super::misc::EPSILON;
 use crate::params::{
-    BAND_PARAMS, DynEqShape, MAX_BANDS, PARAMS as DQ, SHELF_PARAMS, default_attack_ms,
-    default_frequency, default_gain, default_knee, default_link_channels, default_mix,
-    default_num_bands, default_q, default_ratio, default_release_ms, default_shelf_slope,
-    default_threshold,
+    BAND_PARAMS, DynEqPlacement, DynEqShape, MAX_BANDS, PARAMS as DQ, ROUTING_PARAMS, SHELF_PARAMS,
+    default_attack_ms, default_frequency, default_gain, default_knee, default_link_channels,
+    default_mix, default_num_bands, default_q, default_ratio, default_release_ms,
+    default_shelf_slope, default_threshold,
 };
 use math_audio_dsp::fast_math::fast_log10;
 use sotf_host::analyzer::RealTimeCache;
@@ -43,6 +43,12 @@ pub struct DynamicEqPlugin {
     // Per-band state (pre-allocated for MAX_BANDS)
     pub(super) bands: Vec<DynEqBand>,
 
+    // Disjoint channel pairs used by Left/Right/Mid/Side bands. Two-channel
+    // instances default to `[[0, 1]]`. Stereo-only instances never read this
+    // on the audio path, but explicit pairs are still validated fail-fast;
+    // routed bands with empty pairs bypass silently on `from_params` (README).
+    pub(super) stereo_pairs: Vec<[usize; 2]>,
+
     // Smoothers
     pub(super) mix_smoother: Smoother,
     pub(super) threshold_smoother: Smoother,
@@ -72,6 +78,79 @@ fn is_canonical_decimal_index(index: &str) -> bool {
     !index.is_empty()
         && index.bytes().all(|byte| byte.is_ascii_digit())
         && (index == "0" || !index.starts_with('0'))
+}
+
+/// Default pair geometry: stereo instances use channels `[[0, 1]]`; other
+/// channel counts start with no pairs until explicit geometry is provided.
+fn default_stereo_pairs(channels: usize) -> Vec<[usize; 2]> {
+    if channels == 2 {
+        vec![[0, 1]]
+    } else {
+        Vec::new()
+    }
+}
+
+/// Validate explicit pair geometry, mirroring the `sotf-plugin-eq` contract:
+/// pairs must be in range, use distinct channels, and stay disjoint. Routed
+/// bands require at least one pair; two-channel input defaults to `[[0, 1]]`.
+fn validate_stereo_pairs(
+    num_channels: usize,
+    pairs: Option<&[[usize; 2]]>,
+    required: bool,
+) -> Result<Vec<[usize; 2]>, String> {
+    if let Some(pairs) = pairs {
+        let mut occupied = vec![false; num_channels];
+        for [left, right] in pairs {
+            if *left >= num_channels || *right >= num_channels {
+                return Err(format!(
+                    "Dynamic EQ stereo pair [{left}, {right}] exceeds {num_channels} input channels"
+                ));
+            }
+            if left == right {
+                return Err(format!(
+                    "Dynamic EQ stereo pair [{left}, {right}] must use distinct channels"
+                ));
+            }
+            if occupied[*left] || occupied[*right] {
+                return Err(format!(
+                    "Dynamic EQ stereo pairs must be disjoint; channel {} is repeated",
+                    if occupied[*left] { left } else { right }
+                ));
+            }
+            occupied[*left] = true;
+            occupied[*right] = true;
+        }
+    }
+
+    if required {
+        if num_channels < 2 {
+            return Err("Dynamic EQ L/R/M/S placement requires at least two input channels".into());
+        }
+        match pairs {
+            Some(pairs) if !pairs.is_empty() => Ok(pairs.to_vec()),
+            Some(_) => Err("Dynamic EQ L/R/M/S placement requires at least one stereo pair".into()),
+            None if num_channels == 2 => Ok(vec![[0, 1]]),
+            None => Err(format!(
+                "Dynamic EQ L/R/M/S placement on {num_channels} channels requires explicit stereo_pairs"
+            )),
+        }
+    } else if let Some(pairs) = pairs {
+        Ok(pairs.to_vec())
+    } else {
+        Ok(default_stereo_pairs(num_channels))
+    }
+}
+
+/// Best-effort pair resolution for the infallible clamping constructor:
+/// structurally sound explicit geometry is kept, anything else falls back
+/// to the channel-count default. Strict constructors validate instead.
+fn best_effort_stereo_pairs(channels: usize, pairs: Option<&[[usize; 2]]>) -> Vec<[usize; 2]> {
+    match pairs {
+        Some(pairs) if validate_stereo_pairs(channels, Some(pairs), false).is_ok() => {
+            pairs.to_vec()
+        }
+        _ => default_stereo_pairs(channels),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -234,7 +313,7 @@ impl DynamicEqPlugin {
                 "threshold" => "band_threshold",
                 "ratio" => "band_ratio",
                 "frequency" | "q" | "gain" | "band_threshold" | "band_ratio" | "active"
-                | "solo" | "shape" | "shelf_slope" => field,
+                | "solo" | "shape" | "shelf_slope" | "placement" => field,
                 _ => return Err(format!("Unknown dynamic EQ band parameter: {id}")),
             };
             ParameterId::from(format!("band_{index}_{field}"))
@@ -286,6 +365,7 @@ impl DynamicEqPlugin {
             mix,
 
             bands,
+            stereo_pairs: default_stereo_pairs(channels),
 
             mix_smoother: Smoother::new(mix, 5.0, sr),
             threshold_smoother: Smoother::new(threshold, 5.0, sr),
@@ -326,6 +406,7 @@ impl DynamicEqPlugin {
         p.link_channels = params.link_channels;
         p.mix = params.mix.clamp(0.0, 1.0);
         p.mix_smoother.reset(p.mix);
+        p.stereo_pairs = best_effort_stereo_pairs(channels, params.stereo_pairs.as_deref());
 
         // Apply per-band params
         for (i, band_params) in params.bands.iter().enumerate().take(MAX_BANDS) {
@@ -334,6 +415,7 @@ impl DynamicEqPlugin {
             band.q = band_params.q.clamp(0.1, 10.0);
             band.target_gain_db = band_params.gain.clamp(-24.0, 24.0);
             band.shape = band_params.shape;
+            band.placement = band_params.placement;
             band.shelf_slope = if band_params.shelf_slope.is_finite() {
                 band_params.shelf_slope.clamp(0.1, 1.0)
             } else {
@@ -427,6 +509,13 @@ impl DynamicEqPlugin {
         finite_range("knee", params.knee, 0.0, 20.0)?;
         finite_range("mix", params.mix, 0.0, 1.0)?;
 
+        let needs_pairs = params
+            .bands
+            .iter()
+            .any(|band| band.placement.requires_stereo_pair());
+        let _validated_pairs =
+            validate_stereo_pairs(channels, params.stereo_pairs.as_deref(), needs_pairs)?;
+
         let max_frequency = (sample_rate as f32 * 0.475).min(20_000.0);
         for (index, band) in params.bands.iter().enumerate() {
             finite_range(
@@ -470,6 +559,18 @@ impl DynamicEqPlugin {
             {
                 return Err(format!(
                     "Dynamic EQ band_{index} shelf coefficients are invalid"
+                ));
+            }
+            if band.shape == DynEqShape::Tilt
+                && super::dyn_eq_band::design_tilt_coefficients(
+                    band.frequency as f64,
+                    sample_rate as f64,
+                    band.gain as f64,
+                )
+                .is_none()
+            {
+                return Err(format!(
+                    "Dynamic EQ band_{index} tilt coefficients are invalid"
                 ));
             }
         }
@@ -597,8 +698,8 @@ impl DynamicEqPlugin {
             }
             let shape_id = format!("band_{i}_shape");
             params.push(
-                Parameter::new_int(&shape_id, "Shape", self.bands[i].shape.choice_index(), 0, 2)
-                    .with_description("Peak, low shelf, or high shelf filter shape")
+                Parameter::new_int(&shape_id, "Shape", self.bands[i].shape.choice_index(), 0, 3)
+                    .with_description("Peak, low shelf, high shelf, or tilt filter shape")
                     .with_group("EQ")
                     .with_update_mode(UpdateMode::Structural)
                     .with_importance(ParameterImportance::Useful),
@@ -617,10 +718,191 @@ impl DynamicEqPlugin {
                 .with_update_mode(UpdateMode::Structural)
                 .with_importance(ParameterImportance::Useful),
             );
+            let placement_spec = ROUTING_PARAMS[0];
+            params.push(
+                Parameter::new_int(
+                    &format!("band_{i}_placement"),
+                    "Placement",
+                    self.bands[i].placement.choice_index(),
+                    0,
+                    4,
+                )
+                .with_description(placement_spec.doc)
+                .with_group(placement_spec.group)
+                .with_update_mode(UpdateMode::Structural)
+                .with_importance(ParameterImportance::Useful),
+            );
         }
 
         apply_spec_update_modes(&mut params, DQ);
         self.cached_parameters = params;
+    }
+
+    /// Dry detector input of one routed band inside one stereo pair.
+    fn routed_dry_sample(
+        &self,
+        frame: usize,
+        placement: DynEqPlacement,
+        left_ch: usize,
+        right_ch: usize,
+    ) -> f64 {
+        let nc = self.channels;
+        let left = self.dry_buf[frame * nc + left_ch] as f64;
+        let right = self.dry_buf[frame * nc + right_ch] as f64;
+        match placement {
+            DynEqPlacement::Left => left,
+            DynEqPlacement::Right => right,
+            DynEqPlacement::Mid => 0.5 * (left + right),
+            DynEqPlacement::Side => 0.5 * (left - right),
+            DynEqPlacement::Stereo => unreachable!("stereo bands use the direct path"),
+        }
+    }
+
+    /// Process one frame of one routed (non-stereo) band inside its pairs.
+    ///
+    /// Detection reads the dry buffer and the audible EQ edits the working
+    /// buffer serially, exactly like the stereo path. Bands run in ascending
+    /// index order and pairs in `stereo_pairs` order, so routing is
+    /// deterministic. Linked mode shares one envelope driven by the maximum
+    /// routed level; unlinked mode keeps one envelope per pair. Mid and Side
+    /// use the `sotf-plugin-eq` law (`M=(L+R)/2`, `S=(L-R)/2`) with the
+    /// pair's left-channel filter and envelope state.
+    fn process_routed_band(
+        &mut self,
+        frame: usize,
+        band_idx: usize,
+        threshold: f32,
+        band_ratio: f32,
+        knee: f32,
+        buffer: &mut [f32],
+    ) {
+        let nc = self.channels;
+        let placement = self.bands[band_idx].placement;
+        let target_gain_db = self.bands[band_idx].target_gain_db;
+        if self.stereo_pairs.is_empty() {
+            self.monitoring_gr[band_idx] = 0.0;
+            return;
+        }
+
+        if self.link_channels {
+            let mut max_level = 0.0f32;
+            for pair_index in 0..self.stereo_pairs.len() {
+                let [left_ch, right_ch] = self.stereo_pairs[pair_index];
+                if left_ch >= nc || right_ch >= nc {
+                    continue;
+                }
+                let sample = self.routed_dry_sample(frame, placement, left_ch, right_ch);
+                let state_ch = routed_state_channel(placement, left_ch, right_ch);
+                let filtered = self.bands[band_idx].apply_sidechain_bp(state_ch, sample) as f32;
+                max_level = max_level.max(filtered.abs());
+            }
+            let level_db = DB_CONVERSION_FACTOR * fast_log10(max_level.max(EPSILON));
+            let band = &mut self.bands[band_idx];
+            let gr = band.cores[0].calculate_gain_reduction(level_db, threshold, band_ratio, knee);
+            let smoothed = band.cores[0].apply_envelope(0, gr);
+            let proportion = DynEqBand::modulation_proportion(target_gain_db, smoothed);
+            self.monitoring_gr[band_idx] = smoothed;
+            for pair_index in 0..self.stereo_pairs.len() {
+                let [left_ch, right_ch] = self.stereo_pairs[pair_index];
+                if left_ch >= nc || right_ch >= nc {
+                    continue;
+                }
+                let band = &mut self.bands[band_idx];
+                apply_routed_eq(
+                    band, placement, frame, nc, left_ch, right_ch, proportion, &mut *buffer,
+                );
+            }
+        } else {
+            let mut first_envelope = 0.0f32;
+            let mut first = true;
+            for pair_index in 0..self.stereo_pairs.len() {
+                let [left_ch, right_ch] = self.stereo_pairs[pair_index];
+                if left_ch >= nc || right_ch >= nc {
+                    continue;
+                }
+                let sample = self.routed_dry_sample(frame, placement, left_ch, right_ch);
+                let state_ch = routed_state_channel(placement, left_ch, right_ch);
+                let band = &mut self.bands[band_idx];
+                let filtered = band.apply_sidechain_bp(state_ch, sample) as f32;
+                let level_db = DB_CONVERSION_FACTOR * fast_log10(filtered.abs().max(EPSILON));
+                let gr = band.cores[state_ch].calculate_gain_reduction(
+                    level_db,
+                    threshold,
+                    band_ratio,
+                    knee,
+                );
+                let smoothed = band.cores[state_ch].apply_envelope(0, gr);
+                let proportion = DynEqBand::modulation_proportion(target_gain_db, smoothed);
+                if first {
+                    first_envelope = band.cores[state_ch].envelope_db(0);
+                    first = false;
+                }
+                apply_routed_eq(
+                    band, placement, frame, nc, left_ch, right_ch, proportion, &mut *buffer,
+                );
+            }
+            self.monitoring_gr[band_idx] = first_envelope;
+        }
+    }
+}
+
+/// Filter and envelope state channel of one routed pair.
+///
+/// Mid and Side share the pair's left-channel state, mirroring the
+/// `sotf-plugin-eq` ordered route; Left and Right use their own channel.
+fn routed_state_channel(placement: DynEqPlacement, left_ch: usize, right_ch: usize) -> usize {
+    match placement {
+        DynEqPlacement::Right => right_ch,
+        _ => left_ch,
+    }
+}
+
+/// Apply one routed band's held EQ blend inside one stereo pair.
+#[allow(clippy::too_many_arguments)]
+fn apply_routed_eq(
+    band: &mut DynEqBand,
+    placement: DynEqPlacement,
+    frame: usize,
+    channels: usize,
+    left_ch: usize,
+    right_ch: usize,
+    proportion: f32,
+    buffer: &mut [f32],
+) {
+    let left_index = frame * channels + left_ch;
+    let right_index = frame * channels + right_ch;
+    match placement {
+        DynEqPlacement::Left => {
+            let dry = buffer[left_index];
+            let eq_out = band.process_eq(left_ch, dry as f64) as f32;
+            buffer[left_index] = dry + (eq_out - dry) * proportion;
+        }
+        DynEqPlacement::Right => {
+            let dry = buffer[right_index];
+            let eq_out = band.process_eq(right_ch, dry as f64) as f32;
+            buffer[right_index] = dry + (eq_out - dry) * proportion;
+        }
+        DynEqPlacement::Mid => {
+            let left = buffer[left_index] as f64;
+            let right = buffer[right_index] as f64;
+            let mid = 0.5 * (left + right);
+            let side = 0.5 * (left - right);
+            let eq_out = band.process_eq(left_ch, mid);
+            let mid_out = mid + (eq_out - mid) * proportion as f64;
+            buffer[left_index] = (mid_out + side) as f32;
+            buffer[right_index] = (mid_out - side) as f32;
+        }
+        DynEqPlacement::Side => {
+            let left = buffer[left_index] as f64;
+            let right = buffer[right_index] as f64;
+            let mid = 0.5 * (left + right);
+            let side = 0.5 * (left - right);
+            let eq_out = band.process_eq(left_ch, side);
+            let side_out = side + (eq_out - side) * proportion as f64;
+            buffer[left_index] = (mid + side_out) as f32;
+            buffer[right_index] = (mid - side_out) as f32;
+        }
+        DynEqPlacement::Stereo => unreachable!("stereo bands use the direct path"),
     }
 }
 
@@ -710,6 +992,10 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                 ParameterId::from(format!("band_{i}_shelf_slope").as_str()),
                 ParameterValue::Float(band.shelf_slope),
             );
+            values.insert(
+                ParameterId::from(format!("band_{i}_placement").as_str()),
+                ParameterValue::Int(band.placement.choice_index()),
+            );
         }
         values
     }
@@ -736,6 +1022,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                             | "solo"
                             | "shape"
                             | "shelf_slope"
+                            | "placement"
                     )
                 })
         }) {
@@ -827,7 +1114,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                         let band = &mut self.bands[b_idx];
                         match field {
                             "frequency" | "freq" | "q" | "gain" | "active" | "solo" | "shape"
-                            | "shelf_slope" => unreachable!(
+                            | "shelf_slope" | "placement" => unreachable!(
                                 "structural parameters were rejected before batch mutation"
                             ),
                             "threshold" | "band_threshold" => {
@@ -891,6 +1178,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
             "solo" => Some(ParameterValue::Bool(band.solo)),
             "shape" => Some(ParameterValue::Int(band.shape.choice_index())),
             "shelf_slope" => Some(ParameterValue::Float(band.shelf_slope)),
+            "placement" => Some(ParameterValue::Int(band.placement.choice_index())),
             _ => None,
         }
     }
@@ -918,6 +1206,9 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         if sample_rate < 100 {
             return Err(format!("Unsupported Dynamic EQ sample rate: {sample_rate}"));
         }
+        // Conservative policy: preflight every stored slot, including bands
+        // hidden by `num_bands`, so a rate change cannot strand an invalid
+        // stored band that a later layout change would re-expose.
         for (index, band) in self.bands.iter().enumerate() {
             band.preflight_reinitialize(sample_rate)
                 .map_err(|error| format!("Dynamic EQ band_{index} cannot initialize: {error}"))?;
@@ -1006,20 +1297,37 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         for frame in 0..nf {
             let global_threshold = self.threshold_smoother.advance();
             for band_idx in 0..self.num_bands {
-                let band = &mut self.bands[band_idx];
-                if !band.active {
+                let (active, solo, target_gain_db, placement) = {
+                    let band = &self.bands[band_idx];
+                    (band.active, band.solo, band.target_gain_db, band.placement)
+                };
+                if !active {
                     continue;
                 }
-                if any_solo && !band.solo {
+                if any_solo && !solo {
                     continue;
                 }
-                if band.target_gain_db.abs() < 0.01 {
+                if target_gain_db.abs() < 0.01 {
                     self.monitoring_gr[band_idx] = 0.0;
                     continue;
                 }
 
-                let threshold = band.get_effective_threshold(global_threshold);
-                let band_ratio = band.get_effective_ratio(ratio);
+                let threshold = self.bands[band_idx].get_effective_threshold(global_threshold);
+                let band_ratio = self.bands[band_idx].get_effective_ratio(ratio);
+
+                if placement != DynEqPlacement::Stereo {
+                    self.process_routed_band(
+                        frame,
+                        band_idx,
+                        threshold,
+                        band_ratio,
+                        knee,
+                        &mut *buffer,
+                    );
+                    continue;
+                }
+
+                let band = &mut self.bands[band_idx];
 
                 if self.link_channels && nc > 1 {
                     // Linked: max detection across channels.

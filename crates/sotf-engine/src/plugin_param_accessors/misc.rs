@@ -256,6 +256,14 @@ impl PluginSettings {
                     param_specs::multiband_expander::GLOBAL_PARAMS,
                     "detection_mode",
                 );
+                const MULTIBAND_COMPRESSOR_SIDECHAIN_HPF_ORDER_IDX: usize = param_specs::index_of(
+                    param_specs::multiband_compressor::GLOBAL_PARAMS,
+                    "sidechain_hpf_order",
+                );
+                const MULTIBAND_COMPRESSOR_DETECTION_MODE_IDX: usize = param_specs::index_of(
+                    param_specs::multiband_compressor::GLOBAL_PARAMS,
+                    "detection_mode",
+                );
 
                 // String-typed choices need special handling
                 match self {
@@ -303,6 +311,17 @@ impl PluginSettings {
                     }
                     Self::MultibandExpander { detection_mode, .. }
                         if index == MULTIBAND_EXPANDER_DETECTION_MODE_IDX =>
+                    {
+                        Some(detection_mode.clone())
+                    }
+                    Self::MultibandCompressor {
+                        sidechain_hpf_order,
+                        ..
+                    } if index == MULTIBAND_COMPRESSOR_SIDECHAIN_HPF_ORDER_IDX => {
+                        Some(sidechain_hpf_order.clone())
+                    }
+                    Self::MultibandCompressor { detection_mode, .. }
+                        if index == MULTIBAND_COMPRESSOR_DETECTION_MODE_IDX =>
                     {
                         Some(detection_mode.clone())
                     }

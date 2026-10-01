@@ -354,6 +354,7 @@ fn recursive_filter(topology: EqFilterTopology) -> BiquadFilterConfig {
         db_gain: 0.0,
         order: 2,
         topology,
+        placement: None,
         lambda: None,
         kautz_sections: Vec::new(),
     }

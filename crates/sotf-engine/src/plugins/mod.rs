@@ -1,7 +1,7 @@
 //! Plugin type definitions, settings, and utilities
 
 pub use chain::PluginChain;
-pub use eq::{EQFilter, EqFilterTopology, KautzSectionConfig};
+pub use eq::{EQFilter, EqBandPlacement, EqFilterTopology, KautzSectionConfig};
 pub use matrix::{
     apply_matrix_preset, available_matrix_presets, detect_matrix_preset, resize_matrix,
     upmixer_output_channels,
@@ -130,6 +130,10 @@ sotf_plugins::serde_param_default! {
     fn default_de_esser_ratio() -> f64 = "ratio";
     fn default_de_esser_attack() -> f64 = "attack";
     fn default_de_esser_release() -> f64 = "release";
+    fn default_de_esser_lookahead_ms() -> f64 = "lookahead_ms";
+    fn default_de_esser_split_topology() -> String = "split_topology";
+    fn default_de_esser_ms_mode() -> bool = "ms_mode";
+    fn default_de_esser_sidechain_external() -> bool = "sidechain_external";
     fn default_de_esser_mix() -> f64 = "mix";
     fn default_de_esser_range_db() -> f64 = "range_db";
     fn default_de_esser_stereo_link() -> f64 = "stereo_link";
@@ -276,6 +280,12 @@ sotf_plugins::serde_param_default! {
     fn default_declick_enabled() -> bool = "enabled";
     fn default_declick_sensitivity() -> f64 = "sensitivity";
     fn default_declick_link_channels() -> bool = "link_channels";
+    fn default_declick_mode() -> usize = "mode";
+    fn default_declick_bands() -> usize = "bands";
+    fn default_declick_crossover_hz() -> f64 = "crossover_hz";
+    fn default_declick_frequency_skew() -> f64 = "frequency_skew";
+    fn default_declick_repair_width() -> usize = "repair_width";
+    fn default_declick_audition_residual() -> bool = "audition_residual";
 }
 sotf_plugins::serde_param_default! {
     hiss_reducer_specs::PARAMS;
@@ -284,10 +294,18 @@ sotf_plugins::serde_param_default! {
     fn default_hiss_reducer_frequency_hz() -> f64 = "frequency_hz";
     fn default_hiss_reducer_strength() -> f64 = "strength";
     fn default_hiss_reducer_spectral_mode() -> bool = "spectral_mode";
+    fn default_hiss_reducer_use_captured_profile() -> bool = "use_captured_profile";
+    fn default_hiss_reducer_curve_low() -> f64 = "curve_low";
+    fn default_hiss_reducer_curve_mid() -> f64 = "curve_mid";
+    fn default_hiss_reducer_curve_high() -> f64 = "curve_high";
+    fn default_hiss_reducer_link_mode() -> i32 = "link_mode";
+    fn default_hiss_reducer_transient_guard() -> bool = "transient_guard";
 }
 sotf_plugins::serde_param_default! {
     speech_denoiser_specs::PARAMS;
     fn default_speech_denoiser_enabled() -> bool = "enabled";
+    fn default_speech_denoiser_strength() -> f64 = "strength";
+    fn default_speech_denoiser_model() -> String = "model";
 }
 sotf_plugins::serde_param_default! {
     convolution_specs::PARAMS;

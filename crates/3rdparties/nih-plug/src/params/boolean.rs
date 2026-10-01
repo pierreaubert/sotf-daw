@@ -251,6 +251,25 @@ impl BoolParam {
         self.modulated_plain_value()
     }
 
+    /// Set a parameter value while committing a successfully prepared plugin
+    /// state. This is for control-thread initialization only, never automation.
+    #[doc(hidden)]
+    pub fn set_plain_value_for_initialization(&self, value: bool) -> bool {
+        <Self as ParamMut>::set_plain_value(self, value)
+    }
+
+    /// Set a parameter while committing initialized state.
+    #[doc(hidden)]
+    pub fn set_plain_value_and_reset_smoother_for_initialization(
+        &self,
+        value: bool,
+        sample_rate: f32,
+    ) -> bool {
+        let changed = <Self as ParamMut>::set_plain_value(self, value);
+        <Self as ParamMut>::update_smoother(self, sample_rate, true);
+        changed
+    }
+
     /// Enable polyphonic modulation for this parameter. The ID is used to uniquely identify this
     /// parameter in [`NoteEvent::PolyModulation`][crate::prelude::NoteEvent::PolyModulation]
     /// events, and must thus be unique between _all_ polyphonically modulatable parameters. See the
@@ -311,6 +330,16 @@ impl BoolParam {
     /// either the plugin's own GUI or from the host's generic UI.
     pub fn non_automatable(mut self) -> Self {
         self.flags.insert(ParamFlags::NON_AUTOMATABLE);
+        self
+    }
+
+    /// Mark this parameter as requiring a plugin restart after its value changes.
+    ///
+    /// This is intended for structural values that can be changed by the user but cannot be
+    /// applied safely to an already prepared DSP instance. The parameter should also be marked
+    /// [`non_automatable()`][Self::non_automatable].
+    pub fn requires_restart(mut self) -> Self {
+        self.flags.insert(ParamFlags::REQUIRES_RESTART);
         self
     }
 

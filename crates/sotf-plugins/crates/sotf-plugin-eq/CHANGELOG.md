@@ -1,3 +1,28 @@
+# 0.6.0 (unreleased)
+
+## Changes
+
+- Prepare sample-rate changes before committing live state; preserve populated legacy
+  Warped-filter history and leave audio unchanged when reinitialization is rejected.
+- Add per-filter Stereo, Left, Right, Mid and Side placement with validated stereo
+  channel pairs and stored filter ordering when any placement is explicit.
+- Preserve legacy routing when placement is absent; reject conflicting channel
+  banks and invalid pair geometry before changing the active configuration.
+- Add frozen legacy replay and independent full-waveform placement coverage at
+  44.1, 48 and 96 kHz, including cold 2x/4x oversampling prefixes. Add advanced
+  realization route-composition coverage; broader accuracy and consuming
+  application integration remain under validation.
+- Correct nonzero-lambda Warped filter processing and automatic Bark lambda
+  through the math-iir-fir dependency. This intentionally changes the previous
+  incorrect Warped response; cover public EQ output with independent impulse
+  and complex-response checks at 44.1, 48 and 96 kHz.
+- Correct SVF shelf prewarping and gain coefficients through math-iir-fir;
+  verify 48 public EQ impulse responses and 240 complex-response points against
+  independent references at 44.1, 48 and 96 kHz.
+- Retain the selected oversampling factor while global SVF processing runs at
+  the base sample rate without resampler latency; reactivate the selected factor
+  when returning to Biquad processing.
+
 # 0.5.73
 
 ## Fixes

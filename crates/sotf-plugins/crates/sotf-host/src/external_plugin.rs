@@ -20,6 +20,7 @@ mod format;
 mod load;
 mod misc;
 mod native_backend;
+mod native_crossover_layout;
 mod plugin;
 mod plugin_descriptor;
 mod plugin_descriptor_probe_cache;
@@ -35,6 +36,7 @@ mod vst3_backend;
 pub use external_hosting_backend::*;
 pub use external_plugin_state::*;
 pub use misc::*;
+pub use native_crossover_layout::NativeCrossoverStructure;
 pub use plugin::*;
 pub use plugin_descriptor::*;
 pub use plugin_descriptor_probe_cache::*;
@@ -44,7 +46,10 @@ pub use plugin_scanner::*;
 pub use types::*;
 
 use external_hosting_backend::try_load_dynamic_backend;
-use native_backend::{NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata};
+use native_backend::{
+    NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata,
+    native_parameter_id,
+};
 
 pub struct ExternalPlugin {
     descriptor: PluginDescriptor,
@@ -179,6 +184,12 @@ impl ExternalPlugin {
                 descriptor.name
             )
         })?;
+        // A fresh backend selects its audio ports and buses while loading, but
+        // CLAP/VST3 structural controls are applied by the same control-thread
+        // route used for deliberate reconfiguration. Apply them to this new,
+        // still-disposable instance before exposing metadata or audio. State
+        // restoration uses `replacement_backend_for_state()` instead, where
+        // opaque state is loaded first and checked against the persisted setup.
         let mut resolved_descriptor = descriptor.clone();
         let metadata = native_backend.metadata();
         resolved_descriptor.id.clone_from(&metadata.id);
@@ -238,6 +249,9 @@ impl ExternalPlugin {
         new_setup: NativePluginAudioSetup,
     ) -> Result<(), String> {
         new_setup.validate_for_descriptor(&self.discovery_descriptor)?;
+        if matches!(new_setup, NativePluginAudioSetup::Crossover { .. }) {
+            return self.reconfigure_crossover_audio_setup(new_setup);
+        }
         if matches!(new_setup, NativePluginAudioSetup::BandSplit { .. }) {
             return self.reconfigure_band_split_audio_setup(new_setup);
         }
@@ -447,6 +461,221 @@ impl ExternalPlugin {
         Ok(())
     }
 
+    fn reconfigure_crossover_audio_setup(
+        &mut self,
+        new_setup: NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        let current_setup = self.current_crossover_audio_setup()?;
+        let active_backend = self.native_backend.as_ref().ok_or_else(|| {
+            format!(
+                "external plugin '{}' has no active native instance to reconfigure",
+                self.discovery_descriptor.name
+            )
+        })?;
+        let active_structure = active_backend
+            .crossover_layout_parameters()?
+            .ok_or_else(|| {
+                format!(
+                    "external plugin '{}' does not expose the recognized Crossover state schema",
+                    self.descriptor.name
+                )
+            })?;
+        let NativePluginAudioSetup::Crossover {
+            input_layout,
+            output_layout,
+            ..
+        } = &current_setup
+        else {
+            return Err(format!(
+                "external plugin '{}' has a non-Crossover typed setup",
+                self.descriptor.name
+            ));
+        };
+        // Native structural parameters can change before the host accepts a restart.
+        // Keep the named layouts, but describe the saved state using its actual controls.
+        let active_setup = NativePluginAudioSetup::Crossover {
+            input_layout: *input_layout,
+            num_bands: active_structure.num_bands,
+            topology: active_structure.topology,
+            mode: active_structure.mode,
+            output_layout: *output_layout,
+        };
+        let native_structure_matches_setup = active_setup == current_setup;
+        if native_structure_matches_setup {
+            Self::validate_backend_audio_setup_parameters(
+                &**active_backend,
+                &self.discovery_descriptor,
+                &self.descriptor.name,
+                &current_setup,
+            )?;
+        }
+        if native_structure_matches_setup
+            && current_setup == new_setup
+            && self.audio_setup.as_ref() == Some(&new_setup)
+        {
+            return Ok(());
+        }
+
+        let crossover_structural_ids =
+            crossover_structural_parameter_ids(self.discovery_descriptor.format)?;
+        let exposed_parameters = Self::snapshot_exposed_parameters_excluding(
+            &**active_backend,
+            &self.parameters,
+            &self.descriptor.name,
+            &crossover_structural_ids,
+        )?;
+        let current_state = active_backend
+            .save_state()?
+            .ok_or_else(|| {
+                format!(
+                    "external plugin '{}' cannot change Crossover layout because native state is not serializable",
+                    self.descriptor.name
+                )
+            })?;
+
+        let candidate_result = (|| {
+            let mut candidate = self.replacement_backend_for_state(
+                &self.discovery_descriptor,
+                Some(&active_setup),
+                &current_state,
+            )?;
+            Self::validate_exposed_parameter_subset(
+                &*candidate,
+                &exposed_parameters,
+                &self.descriptor.name,
+            )?;
+
+            candidate.reconfigure_crossover_audio_setup(&new_setup)?;
+            Self::validate_backend_audio_setup_parameters(
+                &*candidate,
+                &self.discovery_descriptor,
+                &self.descriptor.name,
+                &new_setup,
+            )?;
+            Self::validate_exposed_parameter_subset(
+                &*candidate,
+                &exposed_parameters,
+                &self.descriptor.name,
+            )?;
+            Ok(candidate)
+        })();
+        let candidate = match candidate_result {
+            Ok(candidate) => candidate,
+            Err(candidate_error) if !native_structure_matches_setup => {
+                // A structurally invalid state, such as FIR plus PerChannel,
+                // may fail before a candidate can be reconfigured. Rewrite
+                // only the recognized structure fields, then restore the
+                // state directly at the explicitly requested valid setup.
+                let repaired_state = crossover_state_with_setup(
+                    &current_state,
+                    self.discovery_descriptor.format,
+                    &new_setup,
+                )
+                .map_err(|repair_error| {
+                    format!(
+                        "external plugin '{}' could not prepare Crossover recovery state after candidate failure ({candidate_error}): {repair_error}",
+                        self.descriptor.name
+                    )
+                })?;
+                let candidate = self
+                    .replacement_backend_for_state(
+                        &self.discovery_descriptor,
+                        Some(&new_setup),
+                        &repaired_state,
+                    )
+                    .map_err(|recovery_error| {
+                        format!(
+                            "external plugin '{}' could not restore the requested Crossover setup after native structure drift (candidate failure: {candidate_error}; repaired-state failure: {recovery_error})",
+                            self.descriptor.name
+                        )
+                    })?;
+                Self::validate_exposed_parameter_subset(
+                    &*candidate,
+                    &exposed_parameters,
+                    &self.descriptor.name,
+                )?;
+                candidate
+            }
+            Err(error) => return Err(error),
+        };
+
+        let new_state = candidate.save_state()?.ok_or_else(|| {
+            format!(
+                "external plugin '{}' cannot commit Crossover layout because candidate state is not serializable",
+                self.descriptor.name
+            )
+        })?;
+        let verifier = self.replacement_backend_for_state(
+            &self.discovery_descriptor,
+            Some(&new_setup),
+            &new_state,
+        )?;
+        Self::validate_backend_audio_setup_parameters(
+            &*verifier,
+            &self.discovery_descriptor,
+            &self.descriptor.name,
+            &new_setup,
+        )?;
+        Self::validate_exposed_parameter_subset(
+            &*verifier,
+            &exposed_parameters,
+            &self.descriptor.name,
+        )?;
+
+        self.audio_setup = Some(new_setup);
+        self.commit_native_backend(candidate, new_state);
+        Ok(())
+    }
+
+    fn current_crossover_audio_setup(&self) -> Result<NativePluginAudioSetup, String> {
+        if let Some(setup @ NativePluginAudioSetup::Crossover { .. }) = self.audio_setup.as_ref() {
+            return Ok(setup.clone());
+        }
+        let backend = self.native_backend.as_ref().ok_or_else(|| {
+            format!(
+                "external plugin '{}' has no active native instance for Crossover layout readback",
+                self.discovery_descriptor.name
+            )
+        })?;
+        let structure = backend.crossover_layout_parameters()?.ok_or_else(|| {
+            format!(
+                "external plugin '{}' does not expose the recognized Crossover state schema",
+                self.discovery_descriptor.name
+            )
+        })?;
+        let input_layout = NativeCrossoverInputLayout::unique_for_channel_count(
+            backend.metadata().input_channels,
+        )
+        .ok_or_else(|| {
+            format!(
+                "external plugin '{}' has {} input channels but no persisted named Crossover layout; an explicit layout is required",
+                self.discovery_descriptor.name,
+                backend.metadata().input_channels
+            )
+        })?;
+        let output_layout = match self.discovery_descriptor.format {
+            PluginFormat::Clap => NativeCrossoverOutputLayout::ClapPacked,
+            PluginFormat::Vst3 => NativeCrossoverOutputLayout::Vst3Buses,
+            PluginFormat::AudioUnit => {
+                return Err("native Crossover setup is unavailable for Audio Unit".into());
+            }
+        };
+        let setup = NativePluginAudioSetup::Crossover {
+            input_layout,
+            num_bands: structure.num_bands,
+            topology: structure.topology,
+            mode: structure.mode,
+            output_layout,
+        };
+        Self::validate_backend_audio_setup_parameters(
+            &**backend,
+            &self.discovery_descriptor,
+            &self.descriptor.name,
+            &setup,
+        )?;
+        Ok(setup)
+    }
+
     pub fn hosting_backend(&self) -> ExternalHostingBackend {
         self.hosting_backend
     }
@@ -605,6 +834,30 @@ impl ExternalPlugin {
                     ));
                 }
             }
+            NativePluginAudioSetup::Crossover {
+                num_bands,
+                topology,
+                mode,
+                ..
+            } => {
+                let expected = NativeCrossoverStructure {
+                    mode: *mode,
+                    topology: *topology,
+                    num_bands: *num_bands,
+                };
+                let actual = backend
+                    .crossover_layout_parameters()?
+                    .ok_or_else(|| {
+                        format!(
+                            "external plugin '{plugin_name}' does not support native Crossover structural readback"
+                        )
+                    })?;
+                if actual != expected {
+                    return Err(format!(
+                        "external plugin '{plugin_name}' audio setup conflicts with native Crossover structural parameters: expected {expected:?}, got {actual:?}"
+                    ));
+                }
+            }
         }
         let (expected_inputs, expected_outputs) = setup.channel_counts()?;
         let metadata = backend.metadata();
@@ -647,8 +900,18 @@ impl ExternalPlugin {
         parameters: &[Parameter],
         plugin_name: &str,
     ) -> Result<Vec<(ParameterId, ParameterValue)>, String> {
+        Self::snapshot_exposed_parameters_excluding(backend, parameters, plugin_name, &[])
+    }
+
+    fn snapshot_exposed_parameters_excluding(
+        backend: &dyn NativeExternalPluginBackend,
+        parameters: &[Parameter],
+        plugin_name: &str,
+        excluded_ids: &[ParameterId],
+    ) -> Result<Vec<(ParameterId, ParameterValue)>, String> {
         parameters
             .iter()
+            .filter(|parameter| !excluded_ids.contains(&parameter.id))
             .map(|parameter| {
                 let value = backend.get_parameter(&parameter.id).ok_or_else(|| {
                     format!(
@@ -674,6 +937,92 @@ impl ExternalPlugin {
                 actual_parameters.len()
             ));
         }
+        for (id, expected_value) in expected {
+            if !actual_parameters
+                .iter()
+                .any(|parameter| parameter.id.as_str() == id.as_str())
+            {
+                return Err(format!(
+                    "external plugin '{plugin_name}' dropped exposed parameter '{id}' during layout reconfiguration"
+                ));
+            }
+            let actual_value = backend.get_parameter(id).ok_or_else(|| {
+                format!(
+                    "external plugin '{plugin_name}' cannot verify exposed parameter '{id}' after layout reconfiguration"
+                )
+            })?;
+            if &actual_value != expected_value {
+                return Err(format!(
+                    "external plugin '{plugin_name}' changed exposed parameter '{id}' from {expected_value} to {actual_value} during layout reconfiguration"
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn restore_exposed_parameters(
+        backend: &mut dyn NativeExternalPluginBackend,
+        expected: &[(ParameterId, ParameterValue)],
+        structural_ids: &[ParameterId],
+        plugin_name: &str,
+    ) -> Result<(), String> {
+        let actual_parameters = backend.parameters();
+        if actual_parameters.len() != expected.len() {
+            return Err(format!(
+                "external plugin '{plugin_name}' changed the exposed parameter count from {} to {} during sample-rate reinitialization",
+                expected.len(),
+                actual_parameters.len()
+            ));
+        }
+
+        for (id, expected_value) in expected {
+            if !actual_parameters
+                .iter()
+                .any(|parameter| parameter.id.as_str() == id.as_str())
+            {
+                return Err(format!(
+                    "external plugin '{plugin_name}' dropped exposed parameter '{id}' during sample-rate reinitialization"
+                ));
+            }
+
+            let actual_value = backend.get_parameter(id).ok_or_else(|| {
+                format!(
+                    "external plugin '{plugin_name}' cannot verify exposed parameter '{id}' during sample-rate reinitialization"
+                )
+            })?;
+            if &actual_value == expected_value {
+                continue;
+            }
+            if structural_ids.contains(id) {
+                return Err(format!(
+                    "external plugin '{plugin_name}' has a pending structural change for '{id}' that conflicts with its restored native audio setup"
+                ));
+            }
+
+            // Native state callbacks capture committed values. Preserve ordinary
+            // control events that were queued after the last process callback.
+            backend.set_parameter(id, expected_value)?;
+            let restored_value = backend.get_parameter(id).ok_or_else(|| {
+                format!(
+                    "external plugin '{plugin_name}' cannot verify restored exposed parameter '{id}' during sample-rate reinitialization"
+                )
+            })?;
+            if &restored_value != expected_value {
+                return Err(format!(
+                    "external plugin '{plugin_name}' did not preserve exposed parameter '{id}' during sample-rate reinitialization: expected {expected_value}, got {restored_value}"
+                ));
+            }
+        }
+
+        Self::validate_exposed_parameters(backend, expected, plugin_name)
+    }
+
+    fn validate_exposed_parameter_subset(
+        backend: &dyn NativeExternalPluginBackend,
+        expected: &[(ParameterId, ParameterValue)],
+        plugin_name: &str,
+    ) -> Result<(), String> {
+        let actual_parameters = backend.parameters();
         for (id, expected_value) in expected {
             if !actual_parameters
                 .iter()
@@ -731,12 +1080,27 @@ impl ExternalPlugin {
         audio_setup: Option<&NativePluginAudioSetup>,
         opaque_state: &[u8],
     ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
+        self.replacement_backend_for_state_at_rate(
+            descriptor,
+            audio_setup,
+            opaque_state,
+            self.sample_rate,
+        )
+    }
+
+    fn replacement_backend_for_state_at_rate(
+        &self,
+        descriptor: &PluginDescriptor,
+        audio_setup: Option<&NativePluginAudioSetup>,
+        opaque_state: &[u8],
+        sample_rate: u32,
+    ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
         let effective_setup =
             NativePluginAudioSetup::for_descriptor_or_legacy_default(descriptor, audio_setup)?;
         let mut backend = try_load_dynamic_backend(
             descriptor,
             self.hosting_backend,
-            self.sample_rate,
+            sample_rate,
             self.max_block_frames,
             effective_setup.as_ref(),
         )?
@@ -746,7 +1110,12 @@ impl ExternalPlugin {
                 descriptor.name
             )
         })?;
-        if !opaque_state.is_empty() {
+        let restore_empty_vst3_state =
+            effective_setup.is_none() && self.hosting_backend == ExternalHostingBackend::Vst3;
+        if !opaque_state.is_empty() || restore_empty_vst3_state {
+            // A no-setup VST3 empty-state restore is still a native callback:
+            // it can fail after mutating or suspending the candidate. Preserve
+            // its result while keeping the installed backend detached from it.
             backend.load_state(opaque_state)?;
         }
         if let Some(setup) = effective_setup.as_ref() {
@@ -820,6 +1189,130 @@ impl ExternalPlugin {
     }
 }
 
+/// Returns the host-facing IDs of native Crossover controls that are changed
+/// by an explicit audio-setup request.
+fn crossover_structural_parameter_ids(format: PluginFormat) -> Result<Vec<ParameterId>, String> {
+    let format_prefix = match format {
+        PluginFormat::Clap => "clap",
+        PluginFormat::Vst3 => "vst3",
+        PluginFormat::AudioUnit => {
+            return Err("native Crossover setup is unavailable for Audio Unit".into());
+        }
+    };
+
+    Ok(["mode", "topology", "band_count"]
+        .into_iter()
+        .map(|key| ParameterId::from(format!("{format_prefix}.{}", native_parameter_id(key))))
+        .collect())
+}
+
+fn audio_setup_structural_parameter_ids(
+    format: PluginFormat,
+    setup: Option<&NativePluginAudioSetup>,
+) -> Result<Vec<ParameterId>, String> {
+    let keys: &[&str] = match setup {
+        Some(NativePluginAudioSetup::Ambisonics { .. }) => &["order", "target_layout"],
+        Some(NativePluginAudioSetup::BandSplit { .. }) => &["num_bands"],
+        Some(NativePluginAudioSetup::Crossover { .. }) => {
+            return crossover_structural_parameter_ids(format);
+        }
+        None => return Ok(Vec::new()),
+    };
+    let format_prefix = match format {
+        PluginFormat::Clap => "clap",
+        PluginFormat::Vst3 => "vst3",
+        PluginFormat::AudioUnit => {
+            return Err("native audio setup is unavailable for Audio Unit".into());
+        }
+    };
+
+    Ok(keys
+        .iter()
+        .map(|key| ParameterId::from(format!("{format_prefix}.{}", native_parameter_id(key))))
+        .collect())
+}
+
+const CLAP_STATE_LENGTH_PREFIX_BYTES: usize = 8;
+
+fn crossover_state_with_setup(
+    opaque_state: &[u8],
+    format: PluginFormat,
+    setup: &NativePluginAudioSetup,
+) -> Result<Vec<u8>, String> {
+    let NativePluginAudioSetup::Crossover {
+        num_bands,
+        topology,
+        mode,
+        ..
+    } = setup
+    else {
+        return Err("Crossover state repair requires a Crossover audio setup".into());
+    };
+    let (clap_prefixed, payload) = match format {
+        PluginFormat::Clap => {
+            let length_bytes = opaque_state
+                .get(..CLAP_STATE_LENGTH_PREFIX_BYTES)
+                .ok_or_else(|| "CLAP Crossover state is missing its length prefix".to_string())?;
+            let length_bytes: [u8; CLAP_STATE_LENGTH_PREFIX_BYTES] = length_bytes
+                .try_into()
+                .map_err(|_| "CLAP Crossover state has an invalid length prefix".to_string())?;
+            let payload = &opaque_state[CLAP_STATE_LENGTH_PREFIX_BYTES..];
+            let expected_length = usize::try_from(u64::from_le_bytes(length_bytes))
+                .map_err(|_| "CLAP Crossover state length does not fit in memory".to_string())?;
+            if payload.len() != expected_length {
+                return Err(format!(
+                    "CLAP Crossover state length prefix describes {expected_length} bytes but contains {}",
+                    payload.len()
+                ));
+            }
+            (true, payload)
+        }
+        PluginFormat::Vst3 => (false, opaque_state),
+        PluginFormat::AudioUnit => {
+            return Err("native Crossover state repair is unavailable for Audio Unit".into());
+        }
+    };
+
+    let mut state: serde_json::Value = serde_json::from_slice(payload)
+        .map_err(|error| format!("failed to parse native Crossover state: {error}"))?;
+    let parameters = state
+        .get_mut("params")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| "native Crossover state has no parameter object".to_string())?;
+    let mode_index = match mode {
+        NativeCrossoverMode::Lowpass => 0,
+        NativeCrossoverMode::Highpass => 1,
+        NativeCrossoverMode::Both => 2,
+    };
+    let topology_index = match topology {
+        NativeCrossoverTopology::Bands => 0,
+        NativeCrossoverTopology::PerChannel => 1,
+    };
+    // These keys and choice indices are the recognized native Crossover state
+    // schema; all other serialized fields remain untouched by the repair.
+    parameters.insert("mode".into(), serde_json::json!({"i32": mode_index}));
+    parameters.insert(
+        "topology".into(),
+        serde_json::json!({"i32": topology_index}),
+    );
+    parameters.insert(
+        "band_count".into(),
+        serde_json::json!({"i32": i32::from(num_bands.saturating_sub(2))}),
+    );
+    let payload = serde_json::to_vec(&state)
+        .map_err(|error| format!("failed to encode repaired Crossover state: {error}"))?;
+    if clap_prefixed {
+        let payload_length = u64::try_from(payload.len())
+            .map_err(|_| "repaired CLAP Crossover state is too large".to_string())?;
+        let mut repaired = Vec::with_capacity(CLAP_STATE_LENGTH_PREFIX_BYTES + payload.len());
+        repaired.extend_from_slice(&payload_length.to_le_bytes());
+        repaired.extend_from_slice(&payload);
+        Ok(repaired)
+    } else {
+        Ok(payload)
+    }
+}
+
 impl Plugin for ExternalPlugin {
     fn info(&self) -> PluginInfo {
         PluginInfo::new(
@@ -853,6 +1346,89 @@ impl Plugin for ExternalPlugin {
         if let Some(backend) = self.native_backend.as_mut() {
             let _ = backend.refresh_tail_length();
         }
+    }
+
+    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+        if sample_rate == 0 {
+            return Err("sample rate must be positive".into());
+        }
+        if sample_rate == self.sample_rate {
+            return Ok(());
+        }
+
+        let effective_audio_setup = NativePluginAudioSetup::for_descriptor_or_legacy_default(
+            &self.discovery_descriptor,
+            self.audio_setup.as_ref(),
+        )?;
+        let structural_parameter_ids = audio_setup_structural_parameter_ids(
+            self.discovery_descriptor.format,
+            effective_audio_setup.as_ref(),
+        )?;
+
+        let active_backend = self.native_backend.as_ref().ok_or_else(|| {
+            format!(
+                "external plugin '{}' has no active native instance to reinitialize",
+                self.descriptor.name
+            )
+        })?;
+        let expected_channels = (
+            active_backend.metadata().input_channels,
+            active_backend.metadata().output_channels,
+        );
+        let exposed_parameters = Self::snapshot_exposed_parameters(
+            &**active_backend,
+            &self.parameters,
+            &self.descriptor.name,
+        )?;
+        let current_state = active_backend
+            .save_state()?
+            .ok_or_else(|| {
+                format!(
+                    "external plugin '{}' cannot change sample rate because native state is not serializable",
+                    self.descriptor.name
+                )
+            })?;
+
+        let mut candidate = self.replacement_backend_for_state_at_rate(
+            &self.discovery_descriptor,
+            self.audio_setup.as_ref(),
+            &current_state,
+            sample_rate,
+        )?;
+        let candidate_metadata = candidate.metadata();
+        if (
+            candidate_metadata.input_channels,
+            candidate_metadata.output_channels,
+        ) != expected_channels
+        {
+            return Err(format!(
+                "external plugin '{}' changed channel geometry from {}→{} to {}→{} while changing sample rate",
+                self.descriptor.name,
+                expected_channels.0,
+                expected_channels.1,
+                candidate_metadata.input_channels,
+                candidate_metadata.output_channels
+            ));
+        }
+        Self::restore_exposed_parameters(
+            &mut *candidate,
+            &exposed_parameters,
+            &structural_parameter_ids,
+            &self.descriptor.name,
+        )?;
+        if let Some(setup) = effective_audio_setup.as_ref() {
+            Self::validate_backend_audio_setup_parameters(
+                &*candidate,
+                &self.discovery_descriptor,
+                &self.descriptor.name,
+                setup,
+            )?;
+        }
+        Self::validate_exposed_parameters(&*candidate, &exposed_parameters, &self.descriptor.name)?;
+
+        self.commit_native_backend(candidate, current_state);
+        self.sample_rate = sample_rate;
+        Ok(())
     }
 
     fn reset(&mut self) {
@@ -922,6 +1498,20 @@ impl Plugin for ExternalPlugin {
             self.audio_setup.as_ref(),
         )?;
         if effective_setup.is_none() {
+            if self.hosting_backend == ExternalHostingBackend::Vst3 {
+                // VST3 state callbacks may deactivate the component before
+                // validating state, including an empty stream. Stage every
+                // attempt on a detached instance so rejection cannot mutate
+                // the installed processor or its tail/history state.
+                let replacement = self.replacement_backend_for_state(
+                    &self.discovery_descriptor,
+                    self.audio_setup.as_ref(),
+                    state,
+                )?;
+                self.commit_native_backend(replacement, state.to_vec());
+                return Ok(());
+            }
+
             self.native_backend
                 .as_mut()
                 .ok_or_else(|| "external plugin has no native backend".to_string())?
@@ -1061,5 +1651,30 @@ impl SerializablePlugin for ExternalPlugin {
                 "external plugin placeholder presets do not store host-side parameters".to_string(),
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod crossover_structural_parameter_id_tests {
+    use super::{PluginFormat, crossover_structural_parameter_ids};
+
+    #[test]
+    fn structural_controls_use_the_exposed_format_specific_numeric_ids() {
+        let clap_ids = crossover_structural_parameter_ids(PluginFormat::Clap).unwrap();
+        assert_eq!(
+            clap_ids.iter().map(|id| id.as_str()).collect::<Vec<_>>(),
+            ["clap.3357091", "clap.1196016239", "clap.645889669"]
+        );
+
+        let vst3_ids = crossover_structural_parameter_ids(PluginFormat::Vst3).unwrap();
+        assert_eq!(
+            vst3_ids.iter().map(|id| id.as_str()).collect::<Vec<_>>(),
+            ["vst3.3357091", "vst3.1196016239", "vst3.645889669"]
+        );
+    }
+
+    #[test]
+    fn crossover_structural_ids_are_unavailable_for_audio_unit() {
+        assert!(crossover_structural_parameter_ids(PluginFormat::AudioUnit).is_err());
     }
 }

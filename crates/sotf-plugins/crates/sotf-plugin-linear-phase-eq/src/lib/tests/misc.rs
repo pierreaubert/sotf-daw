@@ -28,6 +28,7 @@ fn test_linear_phase_eq_passthrough() {
                 q: 1.0,
                 gain_db: 0.0,
                 active: true,
+                placement: None,
             },
             BandConfig {
                 filter_type: "Peak".to_string(),
@@ -35,6 +36,7 @@ fn test_linear_phase_eq_passthrough() {
                 q: 1.0,
                 gain_db: 0.0,
                 active: true,
+                placement: None,
             },
             BandConfig {
                 filter_type: "Peak".to_string(),
@@ -42,8 +44,10 @@ fn test_linear_phase_eq_passthrough() {
                 q: 1.0,
                 gain_db: 0.0,
                 active: true,
+                placement: None,
             },
         ],
+        stereo_pairs: None,
     };
 
     let mut plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
@@ -110,7 +114,9 @@ fn test_linear_phase_eq_boost() {
             q: 1.0,
             gain_db: 6.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let mut plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
@@ -180,7 +186,9 @@ fn test_linear_phase_eq_phase_linearity() {
             q: 1.0,
             gain_db: 6.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let mut plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
@@ -286,7 +294,9 @@ fn test_highpass_attenuates_below_cutoff() {
             q: 0.707,
             gain_db: 0.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let mut plugin = LinearPhaseEqPlugin::from_params(1, sr, params).unwrap();
     let num_frames = 256;
@@ -336,7 +346,9 @@ fn test_lowshelf_cut_attenuates_low_frequencies() {
             q: 0.707,
             gain_db: -12.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let mut plugin = LinearPhaseEqPlugin::from_params(1, sr, params).unwrap();
     let num_frames = 256;
@@ -380,7 +392,9 @@ fn test_lowpass_zero_gain_not_skipped() {
             q: 0.7,
             gain_db: 0.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let mut plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();

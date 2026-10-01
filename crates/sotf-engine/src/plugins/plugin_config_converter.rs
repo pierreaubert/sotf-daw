@@ -151,6 +151,7 @@ fn convert_eq(settings: &PluginSettings, sample_rate: f64) -> Option<PluginConfi
         channels,
         filters,
         channel_filters,
+        stereo_pairs,
         per_channel_mode,
         max_filters: _,
         tdf2,
@@ -162,13 +163,36 @@ fn convert_eq(settings: &PluginSettings, sample_rate: f64) -> Option<PluginConfi
         return None;
     };
 
-    let convert_filters = |filters: &[EQFilter]| -> Vec<serde_json::Value> {
+    let global_has_placement = filters.iter().any(|filter| filter.placement.is_some());
+    let channels_have_placement = channel_filters.as_ref().is_some_and(|channels| {
+        channels
+            .iter()
+            .flatten()
+            .any(|filter| filter.placement.is_some())
+    });
+    let channel_placement_guards: Vec<EQFilter> = channel_filters
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .flatten()
+        .filter(|filter| filter.placement.is_some())
+        .cloned()
+        .collect();
+    let channel_route_requested = global_has_placement || channels_have_placement;
+
+    let convert_filters = |filters: &[EQFilter],
+                           keep_explicit_route: bool,
+                           preserve_disabled: bool|
+     -> Vec<serde_json::Value> {
         use sotf_plugins::plugin_eq::EqFilterTopology;
 
         let any_soloed = filters.iter().any(|f| f.solo);
         filters
             .iter()
             .filter(|f| {
+                if preserve_disabled {
+                    return true;
+                }
                 if f.muted {
                     return false;
                 }
@@ -186,6 +210,11 @@ fn convert_eq(settings: &PluginSettings, sample_rate: f64) -> Option<PluginConfi
                     "db_gain": bq.db_gain,
                     "order": f.order,
                 });
+                if let Some(placement) = f.placement.or_else(|| {
+                    keep_explicit_route.then_some(sotf_plugins::plugin_eq::EqBandPlacement::Stereo)
+                }) {
+                    value["placement"] = serde_json::json!(placement);
+                }
                 if !matches!(f.topology, EqFilterTopology::Biquad) {
                     let obj = value.as_object_mut().expect("json! object");
                     match f.topology {
@@ -212,48 +241,67 @@ fn convert_eq(settings: &PluginSettings, sample_rate: f64) -> Option<PluginConfi
             })
             .collect()
     };
+    let with_stereo_pairs = |mut parameters: serde_json::Value| {
+        if let Some(pairs) = stereo_pairs {
+            parameters["stereo_pairs"] = serde_json::json!(pairs);
+        }
+        parameters
+    };
 
     if *per_channel_mode {
         if let Some(ch_filters) = channel_filters {
-            let channel_filter_configs: Vec<Vec<serde_json::Value>> =
-                ch_filters.iter().map(|f| convert_filters(f)).collect();
-            Some(PluginConfig::new(
-                "eq",
-                serde_json::json!({
-                    "channels": channels,
-                    "channel_filters": channel_filter_configs,
-                    "tdf2": tdf2,
-                    "topology": topology,
-                    "auto_gain": {"enabled": auto_gain_enabled},
-                    "oversampling": oversampling,
-                }),
-            ))
+            let channel_filter_configs: Vec<Vec<serde_json::Value>> = ch_filters
+                .iter()
+                .map(|f| convert_filters(f, channel_route_requested, false))
+                .collect();
+            let mut parameters = serde_json::json!({
+                "channels": channels,
+                "channel_filters": channel_filter_configs,
+                "tdf2": tdf2,
+                "topology": topology,
+                "auto_gain": {"enabled": auto_gain_enabled},
+                "oversampling": oversampling,
+            });
+            // The core rejects explicit placement with per-channel banks. Keep
+            // placements from the dormant global bank visible to that validator
+            // instead of silently dropping an incompatible stored setting.
+            if global_has_placement {
+                parameters["filters"] = serde_json::json!(convert_filters(filters, true, true));
+            } else if channels_have_placement {
+                // Use the inactive global list as a validation carrier for
+                // placement keys from channel banks. The core checks those
+                // keys before selecting channel_filters, including when the
+                // placed source band is muted or removed by solo filtering.
+                parameters["filters"] =
+                    serde_json::json!(convert_filters(&channel_placement_guards, false, true));
+            }
+            Some(PluginConfig::new("eq", with_stereo_pairs(parameters)))
         } else {
-            let filter_configs = convert_filters(filters);
+            let filter_configs = convert_filters(filters, global_has_placement, false);
             Some(PluginConfig::new(
                 "eq",
-                serde_json::json!({
+                with_stereo_pairs(serde_json::json!({
                     "channels": channels,
                     "filters": filter_configs,
                     "tdf2": tdf2,
                     "topology": topology,
                     "auto_gain": {"enabled": auto_gain_enabled},
                     "oversampling": oversampling,
-                }),
+                })),
             ))
         }
     } else {
-        let filter_configs = convert_filters(filters);
+        let filter_configs = convert_filters(filters, global_has_placement, false);
         Some(PluginConfig::new(
             "eq",
-            serde_json::json!({
+            with_stereo_pairs(serde_json::json!({
                 "channels": channels,
                 "filters": filter_configs,
                 "tdf2": tdf2,
                 "topology": topology,
                 "auto_gain": {"enabled": auto_gain_enabled},
                 "oversampling": oversampling,
-            }),
+            })),
         ))
     }
 }
@@ -338,6 +386,22 @@ fn convert_crossfeed(settings: &PluginSettings, _sample_rate: f64) -> Option<Plu
 mod tests {
     use super::*;
     use math_audio_iir_fir::BiquadFilterType;
+    use sotf_plugins::plugin_eq::EqBandPlacement;
+
+    fn global_eq_settings(filters: Vec<EQFilter>) -> PluginSettings {
+        PluginSettings::EQ {
+            channels: 5,
+            filters,
+            channel_filters: None,
+            stereo_pairs: None,
+            per_channel_mode: false,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        }
+    }
 
     #[test]
     fn eq_conversion_preserves_global_and_channel_filter_orders() {
@@ -349,6 +413,7 @@ mod tests {
                     channels: 2,
                     filters: vec![filter.clone()],
                     channel_filters: Some(vec![vec![filter.clone()], vec![filter.clone()]]),
+                    stereo_pairs: None,
                     per_channel_mode,
                     max_filters: 1,
                     tdf2: false,
@@ -369,6 +434,164 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn eq_legacy_conversion_omits_new_optional_route_fields() {
+        let config = convert_eq(
+            &global_eq_settings(vec![EQFilter::new(
+                BiquadFilterType::Peak,
+                1000.0,
+                0.8,
+                2.0,
+            )]),
+            48_000.0,
+        )
+        .unwrap();
+
+        assert!(config.parameters.get("stereo_pairs").is_none());
+        assert!(config.parameters["filters"][0].get("placement").is_none());
+    }
+
+    #[test]
+    fn eq_explicit_route_keeps_order_after_solo_compaction_and_uses_stereo_sentinels() {
+        let mut hidden = EQFilter::new(BiquadFilterType::Peak, 120.0, 0.8, 3.0);
+        hidden.placement = Some(EqBandPlacement::Right);
+        // The only explicit band is removed by solo filtering, but its
+        // presence still opts the surviving filters into the ordered route.
+        let mut first = EQFilter::new(BiquadFilterType::Lowpass, 500.0, 0.8, 0.0);
+        first.solo = true;
+        let mut middle = EQFilter::new(BiquadFilterType::Peak, 1500.0, 0.9, 4.0);
+        middle.solo = true;
+        let mut last = EQFilter::new(BiquadFilterType::Highpass, 4000.0, 0.8, 0.0);
+        last.solo = true;
+
+        let mut settings = global_eq_settings(vec![hidden, first, middle, last]);
+        if let PluginSettings::EQ { stereo_pairs, .. } = &mut settings {
+            *stereo_pairs = Some(vec![[0, 1], [3, 2]]);
+        }
+        let config = convert_eq(&settings, 48_000.0).unwrap();
+        let filters = config.parameters["filters"].as_array().unwrap();
+
+        assert_eq!(filters.len(), 3);
+        assert_eq!(filters[0]["freq"], 500.0);
+        assert_eq!(filters[1]["freq"], 1500.0);
+        assert_eq!(filters[2]["freq"], 4000.0);
+        assert_eq!(filters[0]["placement"], "stereo");
+        assert_eq!(filters[1]["placement"], "stereo");
+        assert_eq!(filters[2]["placement"], "stereo");
+        assert_eq!(
+            config.parameters["stereo_pairs"],
+            serde_json::json!([[0, 1], [3, 2]])
+        );
+    }
+
+    #[test]
+    fn eq_compaction_preserves_surviving_mixed_realization_order() {
+        let mut muted = EQFilter::new(BiquadFilterType::Peak, 200.0, 0.8, 2.0);
+        muted.muted = true;
+        let mut lowpass = EQFilter::new(BiquadFilterType::Lowpass, 500.0, 0.8, 0.0);
+        lowpass.placement = Some(EqBandPlacement::Stereo);
+        let mut kautz = EQFilter::new_kautz(
+            1400.0,
+            0.83,
+            0.0,
+            vec![sotf_plugins::plugin_eq::KautzSectionConfig {
+                pole_freq: 1400.0,
+                q: 0.83,
+                gain: 0.7,
+            }],
+        );
+        kautz.placement = Some(EqBandPlacement::Mid);
+        let mut highpass = EQFilter::new(BiquadFilterType::Highpass, 4200.0, 0.8, 0.0);
+        highpass.placement = Some(EqBandPlacement::Right);
+
+        let config = convert_eq(
+            &global_eq_settings(vec![muted, lowpass, kautz, highpass]),
+            48_000.0,
+        )
+        .unwrap();
+        let filters = config.parameters["filters"].as_array().unwrap();
+        assert_eq!(filters.len(), 3);
+        assert_eq!(filters[0]["filter_type"], "lowpass");
+        assert_eq!(filters[0]["placement"], "stereo");
+        assert_eq!(filters[1]["topology"], "kautz_filter");
+        assert_eq!(filters[1]["placement"], "mid");
+        assert_eq!(filters[2]["filter_type"], "highpass");
+        assert_eq!(filters[2]["placement"], "right");
+    }
+
+    #[test]
+    fn eq_muted_explicit_band_keeps_surviving_global_filters_ordered() {
+        let mut muted = EQFilter::new(BiquadFilterType::Peak, 200.0, 0.8, 2.0);
+        muted.muted = true;
+        muted.placement = Some(EqBandPlacement::Left);
+        let active = EQFilter::new(BiquadFilterType::Peak, 1000.0, 0.8, -3.0);
+
+        let config = convert_eq(&global_eq_settings(vec![muted, active]), 48_000.0).unwrap();
+        let filters = config.parameters["filters"].as_array().unwrap();
+        assert_eq!(filters.len(), 1);
+        assert_eq!(filters[0]["freq"], 1000.0);
+        assert_eq!(filters[0]["placement"], "stereo");
+    }
+
+    #[test]
+    fn eq_per_channel_conversion_retains_incompatible_dormant_global_placement() {
+        let mut dormant = EQFilter::new(BiquadFilterType::Peak, 200.0, 0.8, 2.0);
+        dormant.muted = true;
+        dormant.placement = Some(EqBandPlacement::Left);
+        let active = EQFilter::new(BiquadFilterType::Peak, 1000.0, 0.8, 0.0);
+        let settings = PluginSettings::EQ {
+            channels: 2,
+            filters: vec![dormant],
+            channel_filters: Some(vec![vec![active.clone()], vec![active]]),
+            stereo_pairs: Some(vec![[0, 1]]),
+            per_channel_mode: true,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        };
+
+        let config = convert_eq(&settings, 48_000.0).unwrap();
+        assert_eq!(config.parameters["filters"][0]["placement"], "left");
+        assert_eq!(
+            config.parameters["channel_filters"][0][0]["placement"],
+            "stereo"
+        );
+        assert_eq!(
+            config.parameters["channel_filters"][1][0]["placement"],
+            "stereo"
+        );
+    }
+
+    #[test]
+    fn eq_all_muted_per_channel_placement_remains_visible_to_validation() {
+        let mut placed = EQFilter::new(BiquadFilterType::Peak, 1000.0, 0.8, 3.0);
+        placed.muted = true;
+        placed.placement = Some(EqBandPlacement::Left);
+        let settings = PluginSettings::EQ {
+            channels: 2,
+            filters: Vec::new(),
+            channel_filters: Some(vec![vec![placed], Vec::new()]),
+            stereo_pairs: Some(vec![[0, 1]]),
+            per_channel_mode: true,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        };
+
+        let config = convert_eq(&settings, 48_000.0).unwrap();
+        assert_eq!(config.parameters["filters"][0]["placement"], "left");
+        assert!(
+            config.parameters["channel_filters"][0]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -442,6 +665,7 @@ mod tests {
             channels: 2,
             filters: vec![EQFilter::new(BiquadFilterType::Peak, 1000.0, 1.0, 2.0)],
             channel_filters: None,
+            stereo_pairs: None,
             per_channel_mode: false,
             max_filters: 5,
             tdf2: false,
@@ -607,6 +831,7 @@ mod tests {
                     make_band(low_shape, 250.0, 8.0, 0.7),
                     make_band(high_shape, 6_000.0, -7.0, 0.8),
                 ],
+                stereo_pairs: None,
             }
         }
 
@@ -693,6 +918,399 @@ mod tests {
         assert!(
             difference_rms > 1.0e-3,
             "shelf configuration must affect rendered audio; RMS difference was {difference_rms}"
+        );
+    }
+
+    #[test]
+    fn dynamic_eq_placement_and_pairs_reach_factory_and_audio() {
+        use sotf_plugins::{
+            DynEqBandParams, ParameterId, ParameterValue, ProcessContext, create_plugin,
+            plugin_dynamic_eq::DynEqPlacement,
+        };
+
+        fn placed_band(
+            shape: &str,
+            frequency: f32,
+            gain: f32,
+            placement: DynEqPlacement,
+        ) -> DynEqBandParams {
+            let mut band: DynEqBandParams = serde_json::from_value(serde_json::json!({
+                "shape": shape,
+                "frequency": frequency,
+                "q": 0.707,
+                "gain": gain,
+                "band_threshold": -48.0,
+                "band_ratio": 4.0,
+                "active": true,
+                "solo": false,
+            }))
+            .expect("DynamicEQ band settings deserialize");
+            band.placement = placement;
+            band
+        }
+
+        let settings = PluginSettings::DynamicEq {
+            num_bands: 2.0,
+            threshold: -48.0,
+            ratio: 4.0,
+            attack: 5.0,
+            release: 50.0,
+            knee: 3.0,
+            link_channels: true,
+            mix: 1.0,
+            bands: vec![
+                placed_band("peak", 250.0, 8.0, DynEqPlacement::Left),
+                placed_band("peak", 6_000.0, -7.0, DynEqPlacement::Right),
+            ],
+            stereo_pairs: Some(vec![[0, 1]]),
+        };
+        let registry = PluginConfigConverterRegistry::global();
+        let config = registry
+            .convert("dynamic_eq", &settings, 48_000.0)
+            .expect("DynamicEQ settings converter is registered");
+        assert_eq!(config.parameters["bands"][0]["placement"], "left");
+        assert_eq!(config.parameters["bands"][1]["placement"], "right");
+        assert_eq!(
+            config.parameters["stereo_pairs"],
+            serde_json::json!([[0, 1]])
+        );
+
+        let mut placed =
+            create_plugin("dynamic_eq", &config.parameters, 2, 48_000).expect("factory builds");
+        placed.initialize(48_000).expect("placed plugin initializes");
+        assert_eq!(
+            placed.get_parameter(&ParameterId::from("band_0_placement")),
+            Some(ParameterValue::Int(1))
+        );
+        assert_eq!(
+            placed.get_parameter(&ParameterId::from("band_1_placement")),
+            Some(ParameterValue::Int(2))
+        );
+
+        let stereo_settings = PluginSettings::DynamicEq {
+            num_bands: 2.0,
+            threshold: -48.0,
+            ratio: 4.0,
+            attack: 5.0,
+            release: 50.0,
+            knee: 3.0,
+            link_channels: true,
+            mix: 1.0,
+            bands: vec![
+                placed_band("peak", 250.0, 8.0, DynEqPlacement::Stereo),
+                placed_band("peak", 6_000.0, -7.0, DynEqPlacement::Stereo),
+            ],
+            stereo_pairs: Some(vec![[0, 1]]),
+        };
+        let stereo_config = registry
+            .convert("dynamic_eq", &stereo_settings, 48_000.0)
+            .expect("stereo control converts");
+        let mut stereo = create_plugin("dynamic_eq", &stereo_config.parameters, 2, 48_000)
+            .expect("stereo control builds");
+        stereo.initialize(48_000).expect("stereo control initializes");
+
+        // Default settings carry no pairs; the converter emits explicit
+        // null, which the factory reads as the legacy default.
+        let default_settings =
+            PluginSettings::default_for(&crate::plugins::PluginType::DynamicEq).unwrap();
+        let default_config = registry
+            .convert("dynamic_eq", &default_settings, 48_000.0)
+            .expect("default settings convert");
+        assert_eq!(
+            default_config.parameters["stereo_pairs"],
+            serde_json::Value::Null
+        );
+        create_plugin("dynamic_eq", &default_config.parameters, 2, 48_000)
+            .expect("null pairs build the legacy default");
+
+        let frames = 8_192;
+        let input: Vec<f32> = (0..frames)
+            .flat_map(|frame| {
+                let time = frame as f64 / 48_000.0;
+                let left =
+                    (0.22 * (std::f64::consts::TAU * 250.0 * time).sin()) as f32;
+                let right =
+                    (0.22 * (std::f64::consts::TAU * 6_000.0 * time).sin()) as f32;
+                [left, right]
+            })
+            .collect();
+        let mut placed_output = vec![f32::NAN; input.len()];
+        let mut stereo_output = vec![f32::NAN; input.len()];
+        for block_start in (0..frames).step_by(256) {
+            let sample_start = block_start * 2;
+            let sample_end = sample_start + 256 * 2;
+            let context = ProcessContext::new(48_000, 256);
+            assert_eq!(
+                placed
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut placed_output[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("placed route processes block"),
+                256
+            );
+            assert_eq!(
+                stereo
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut stereo_output[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("stereo control processes block"),
+                256
+            );
+        }
+        assert!(placed_output.iter().all(|sample| sample.is_finite()));
+        assert!(stereo_output.iter().all(|sample| sample.is_finite()));
+        let difference_rms = placed_output
+            .iter()
+            .zip(&stereo_output)
+            .map(|(placed, stereo)| f64::from(placed - stereo).powi(2))
+            .sum::<f64>()
+            / placed_output.len() as f64;
+        let difference_rms = difference_rms.sqrt();
+        assert!(
+            difference_rms > 1.0e-3,
+            "placed bands must steer rendered audio; RMS difference was {difference_rms}"
+        );
+    }
+
+    #[test]
+    fn linear_phase_eq_placement_and_pairs_reach_factory_and_audio() {
+        use sotf_plugins::{ParameterId, ParameterValue, ProcessContext, create_plugin};
+
+        fn peak_filter(
+            frequency: f64,
+            gain_db: f64,
+            placement: Option<EqBandPlacement>,
+        ) -> EQFilter {
+            let mut filter = EQFilter::new(BiquadFilterType::Peak, frequency, 0.8, gain_db);
+            filter.placement = placement;
+            filter
+        }
+
+        fn render(
+            plugin: &mut Box<dyn sotf_plugins::Plugin>,
+            input: &[f32],
+        ) -> Vec<f32> {
+            let mut output = vec![f32::NAN; input.len()];
+            let frames = input.len() / 2;
+            for block_start in (0..frames).step_by(256) {
+                let sample_start = block_start * 2;
+                let sample_end = sample_start + 256 * 2;
+                let context = ProcessContext::new(48_000, 256);
+                assert_eq!(
+                    plugin
+                        .process(
+                            &input[sample_start..sample_end],
+                            &mut output[sample_start..sample_end],
+                            &context,
+                        )
+                        .expect("linear-phase route processes block"),
+                    256
+                );
+            }
+            output
+        }
+
+        let registry = PluginConfigConverterRegistry::global();
+        let mut placed = PluginSettings::default_for(&crate::plugins::PluginType::LinearPhaseEq)
+            .expect("linear-phase defaults");
+        if let PluginSettings::LinearPhaseEq {
+            filters,
+            stereo_pairs,
+            ..
+        } = &mut placed
+        {
+            *filters = vec![
+                peak_filter(250.0, 6.0, Some(EqBandPlacement::Mid)),
+                peak_filter(6_000.0, -6.0, Some(EqBandPlacement::Stereo)),
+            ];
+            *stereo_pairs = Some(vec![[0, 1]]);
+        } else {
+            panic!("expected LinearPhaseEq settings");
+        }
+        let config = registry
+            .convert("linear_phase_eq", &placed, 48_000.0)
+            .expect("linear-phase settings convert");
+        assert_eq!(config.parameters["filters"][0]["placement"], "mid");
+        assert_eq!(config.parameters["filters"][1]["placement"], "stereo");
+        assert_eq!(
+            config.parameters["stereo_pairs"],
+            serde_json::json!([[0, 1]])
+        );
+        let mut placed_plugin =
+            create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
+                .expect("placed filters build");
+        placed_plugin
+            .initialize(48_000)
+            .expect("placed filters initialize");
+        assert_eq!(
+            placed_plugin.get_parameter(&ParameterId::from("band_0_placement")),
+            Some(ParameterValue::Int(4))
+        );
+
+        let mut stereo = PluginSettings::default_for(&crate::plugins::PluginType::LinearPhaseEq)
+            .expect("linear-phase defaults");
+        if let PluginSettings::LinearPhaseEq { filters, .. } = &mut stereo {
+            *filters = vec![
+                peak_filter(250.0, 6.0, Some(EqBandPlacement::Stereo)),
+                peak_filter(6_000.0, -6.0, Some(EqBandPlacement::Stereo)),
+            ];
+        } else {
+            panic!("expected LinearPhaseEq settings");
+        }
+        let stereo_config = registry
+            .convert("linear_phase_eq", &stereo, 48_000.0)
+            .expect("stereo control converts");
+        let mut stereo_plugin =
+            create_plugin("linear_phase_eq", &stereo_config.parameters, 2, 48_000)
+                .expect("stereo control builds");
+        stereo_plugin
+            .initialize(48_000)
+            .expect("stereo control initializes");
+
+        let frames = 8_192;
+        let input: Vec<f32> = (0..frames)
+            .flat_map(|frame| {
+                let time = frame as f64 / 48_000.0;
+                let left = (0.22 * (std::f64::consts::TAU * 250.0 * time).sin()) as f32;
+                let right = (0.22 * (std::f64::consts::TAU * 6_000.0 * time).sin()) as f32;
+                [left, right]
+            })
+            .collect();
+        let placed_output = render(&mut placed_plugin, &input);
+        let stereo_output = render(&mut stereo_plugin, &input);
+        assert!(placed_output.iter().all(|sample| sample.is_finite()));
+        assert!(stereo_output.iter().all(|sample| sample.is_finite()));
+        let difference_rms = placed_output
+            .iter()
+            .zip(&stereo_output)
+            .map(|(placed, stereo)| f64::from(placed - stereo).powi(2))
+            .sum::<f64>()
+            / placed_output.len() as f64;
+        let difference_rms = difference_rms.sqrt();
+        assert!(
+            difference_rms > 1.0e-3,
+            "mid placement must steer rendered audio; RMS difference was {difference_rms}"
+        );
+    }
+
+    #[test]
+    fn linear_phase_eq_legacy_null_placement_matches_stereo_route() {
+        use sotf_plugins::{ProcessContext, create_plugin};
+
+        let registry = PluginConfigConverterRegistry::global();
+        let mut legacy = PluginSettings::default_for(&crate::plugins::PluginType::LinearPhaseEq)
+            .expect("linear-phase defaults");
+        if let PluginSettings::LinearPhaseEq {
+            filters,
+            stereo_pairs,
+            ..
+        } = &mut legacy
+        {
+            *filters = vec![
+                EQFilter::new(BiquadFilterType::Peak, 250.0, 0.8, 6.0),
+                EQFilter::new(BiquadFilterType::Peak, 6_000.0, 0.8, -6.0),
+            ];
+            *stereo_pairs = None;
+        } else {
+            panic!("expected LinearPhaseEq settings");
+        }
+        let config = registry
+            .convert("linear_phase_eq", &legacy, 48_000.0)
+            .expect("legacy settings convert");
+        assert_eq!(
+            config.parameters["filters"][0]["placement"],
+            serde_json::Value::Null
+        );
+        assert_eq!(
+            config.parameters["stereo_pairs"],
+            serde_json::Value::Null
+        );
+        // Old presets omit the new keys entirely and still load.
+        let mut old_preset = serde_json::to_value(&legacy).unwrap();
+        let fields = old_preset["LinearPhaseEq"].as_object_mut().unwrap();
+        fields.remove("stereo_pairs");
+        for filter in fields["filters"].as_array_mut().unwrap() {
+            filter.as_object_mut().unwrap().remove("placement");
+        }
+        let reloaded: PluginSettings = serde_json::from_value(old_preset).unwrap();
+        let reloaded_config = registry
+            .convert("linear_phase_eq", &reloaded, 48_000.0)
+            .expect("old preset converts");
+        assert_eq!(reloaded_config.parameters, config.parameters);
+
+        let mut stereo = legacy.clone();
+        if let PluginSettings::LinearPhaseEq { filters, .. } = &mut stereo {
+            for filter in filters {
+                filter.placement = Some(EqBandPlacement::Stereo);
+            }
+        }
+        let stereo_config = registry
+            .convert("linear_phase_eq", &stereo, 48_000.0)
+            .expect("stereo settings convert");
+        assert_eq!(stereo_config.parameters["filters"][0]["placement"], "stereo");
+
+        let frames = 8_192;
+        let input: Vec<f32> = (0..frames)
+            .flat_map(|frame| {
+                let time = frame as f64 / 48_000.0;
+                let left = (0.22 * (std::f64::consts::TAU * 250.0 * time).sin()) as f32;
+                let right = (0.22 * (std::f64::consts::TAU * 6_000.0 * time).sin()) as f32;
+                [left, right]
+            })
+            .collect();
+        let mut legacy_plugin =
+            create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
+                .expect("legacy null placement builds");
+        legacy_plugin
+            .initialize(48_000)
+            .expect("legacy plugin initializes");
+        let mut stereo_plugin =
+            create_plugin("linear_phase_eq", &stereo_config.parameters, 2, 48_000)
+                .expect("stereo control builds");
+        stereo_plugin
+            .initialize(48_000)
+            .expect("stereo plugin initializes");
+        let mut legacy_output = vec![f32::NAN; input.len()];
+        let mut stereo_output = vec![f32::NAN; input.len()];
+        for block_start in (0..frames).step_by(256) {
+            let sample_start = block_start * 2;
+            let sample_end = sample_start + 256 * 2;
+            let context = ProcessContext::new(48_000, 256);
+            assert_eq!(
+                legacy_plugin
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut legacy_output[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("legacy route processes block"),
+                256
+            );
+            assert_eq!(
+                stereo_plugin
+                    .process(
+                        &input[sample_start..sample_end],
+                        &mut stereo_output[sample_start..sample_end],
+                        &context,
+                    )
+                    .expect("stereo route processes block"),
+                256
+            );
+        }
+        let difference_rms = legacy_output
+            .iter()
+            .zip(&stereo_output)
+            .map(|(legacy, stereo)| f64::from(legacy - stereo).powi(2))
+            .sum::<f64>()
+            / legacy_output.len() as f64;
+        let difference_rms = difference_rms.sqrt();
+        assert!(
+            difference_rms < 1.0e-6,
+            "null placement must match the stereo route; RMS difference was {difference_rms}"
         );
     }
 }

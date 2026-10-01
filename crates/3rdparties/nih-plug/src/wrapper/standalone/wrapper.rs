@@ -83,6 +83,10 @@ pub struct Wrapper<P: Plugin, B: Backend<P>> {
     updated_state_sender: channel::Sender<PluginState>,
     /// The receiver belonging to [`new_state_sender`][Self::new_state_sender].
     updated_state_receiver: channel::Receiver<PluginState>,
+    /// Whether the last GUI state handoff succeeded on the audio thread.
+    /// A refusal retains ownership for a control-thread retry instead of
+    /// being silently dropped.
+    last_gui_state_restore_succeeded: AtomicBool,
     /// The current latency in samples, as set by the plugin through the [`InitContext`] and the
     /// [`ProcessContext`]. This value may not be used depending on the audio backend, but it's
     /// still kept track of to avoid firing debug assertions multiple times for the same latency
@@ -252,6 +256,7 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
             unprocessed_param_changes: ArrayQueue::new(EVENT_QUEUE_CAPACITY),
             updated_state_sender,
             updated_state_receiver,
+            last_gui_state_restore_succeeded: AtomicBool::new(true),
             current_latency: AtomicU32::new(0),
         });
 
@@ -441,8 +446,26 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
             Ok(_) => {
                 // As mentioned above, the state object will be passed back to this thread
                 // so we can deallocate it without blocking.
-                let state = self.updated_state_receiver.recv();
-                drop(state);
+                match self.updated_state_receiver.recv() {
+                    Ok(mut state) => {
+                        // An audio-thread refusal preserves prior params/DSP and
+                        // retains ownership here for a control-thread retry. The
+                        // retry runs on this GUI thread and may allocate.
+                        if !self
+                            .last_gui_state_restore_succeeded
+                            .load(Ordering::Acquire)
+                        {
+                            self.set_state_inner(&mut state, false);
+                        }
+                        drop(state);
+                    }
+                    Err(err) => {
+                        nih_debug_assert_failure!(
+                            "Could not receive state back from the audio thread: {:?}",
+                            err
+                        );
+                    }
+                }
             }
             Err(err) => {
                 nih_debug_assert_failure!(
@@ -565,7 +588,12 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
                     //        alternative that doesn't do that
                     let updated_state = permit_alloc(|| self.updated_state_receiver.try_recv());
                     if let Ok(mut state) = updated_state {
-                        self.set_state_inner(&mut state);
+                        // A refusal leaves live params/DSP untouched without parse,
+                        // migration, or frees. Record the outcome so the GUI retains
+                        // ownership for a control-thread retry instead of dropping.
+                        let succeeded = self.set_state_inner(&mut state, true);
+                        self.last_gui_state_restore_succeeded
+                            .store(succeeded, Ordering::Release);
 
                         // We'll pass the state object back to the GUI thread so deallocation can
                         // happen there without potentially blocking the audio thread
@@ -621,7 +649,13 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
     /// # Notes
     ///
     /// `self.plugin` must _not_ be locked while calling this function or it will deadlock.
-    fn set_state_inner(&self, state: &mut PluginState) -> bool {
+    fn set_state_inner(&self, state: &mut PluginState, is_audio_thread: bool) -> bool {
+        // Expected audio refusals return silently before any work. The
+        // gate is allocation-free and non-mutating; genuine failures
+        // below still hit the debug assert.
+        if is_audio_thread && !P::state_restore_allows_audio_thread(state) {
+            return false;
+        }
         // FIXME: This is obviously not realtime-safe, but loading presets without doing this could
         //        lead to inconsistencies. It's the plugin's responsibility to not perform any
         //        realtime-unsafe work when the initialize function is called a second time if it
@@ -634,6 +668,8 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
                 self.params.clone(),
                 |param_id| self.param_id_to_ptr.get(param_id).copied(),
                 Some(&self.buffer_config),
+                true,
+                is_audio_thread,
             )
         });
         if !success {

@@ -112,4 +112,16 @@ pub struct LimiterData {
     pub is_limiting: bool,
     /// Per-channel inter-sample true peak in dBTP (empty when true_peak is disabled)
     pub isp_dbtp: Vec<f32>,
+    /// Peak emitted-output level in dB, post-gain and post-mix.
+    ///
+    /// Native 1x and 2x/4x both report the maximum absolute final sample over
+    /// the existing 100 ms publication interval. Unaffected by input-only peaks.
+    pub output_peak_db: f32,
+    /// Per-channel final-output inter-sample true peak in dBTP.
+    ///
+    /// Both native and oversampled paths measure the emitted output. The legacy
+    /// `isp_dbtp` field is preserved: native reports input peaks there while the
+    /// oversampled path reports output peaks. New consumers prefer this field.
+    /// Holds -120.0 per channel when true-peak metering is disabled.
+    pub output_isp_dbtp: Vec<f32>,
 }

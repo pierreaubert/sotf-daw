@@ -1,6 +1,7 @@
 use super::super::{
     ChannelConflict, Plugin, PluginSettings, PluginType, UpmixerOutputSettings,
     matrix::{resize_matrix, upmixer_output_channels},
+    valid_ambisonics_custom_layout,
 };
 use super::misc::default_plugin_preset_version;
 use super::misc::plugin_type_from_raw;
@@ -29,6 +30,7 @@ fn crossover_output_channels(
     input_channels: usize,
     topology: Option<CrossoverTopology>,
     output: &str,
+    band_count: Option<usize>,
     extra_frequencies: &[f64],
     channel_frequencies_hz: Option<&[f64]>,
 ) -> usize {
@@ -45,7 +47,10 @@ fn crossover_output_channels(
         return input_channels;
     }
 
-    let bands = extra_frequencies.len().saturating_add(2).clamp(2, 4);
+    let bands = band_count.unwrap_or_else(|| extra_frequencies.len().saturating_add(2));
+    if !(2..=4).contains(&bands) || extra_frequencies.len() < bands - 2 {
+        return input_channels;
+    }
     input_channels.saturating_mul(bands)
 }
 
@@ -59,8 +64,25 @@ fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> u
             ..
         } => upmixer_settings_output_channels(speaker_config, *binaural_preview),
         PluginSettings::AAE { speaker_config, .. } => upmixer_output_channels(speaker_config),
-        PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-            upmixer_output_channels(target_layout)
+        PluginSettings::AmbisonicsDecoder {
+            target_layout,
+            custom_layout,
+            ..
+        } => {
+            if target_layout == "custom" {
+                match custom_layout {
+                    Some(layout) if valid_ambisonics_custom_layout(layout) => {
+                        layout.speakers.len()
+                    }
+                    // Missing or invalid custom geometry is an impossible
+                    // route (External precedent: 0 output channels), never a
+                    // silent named fallback. The factory rejects it
+                    // descriptively at build time.
+                    Some(_) | None => 0,
+                }
+            } else {
+                upmixer_output_channels(target_layout)
+            }
         }
         PluginSettings::BinauralDecoder { .. }
         | PluginSettings::Downmix { .. }
@@ -68,7 +90,10 @@ fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> u
         PluginSettings::Matrix {
             output_channels, ..
         } => *output_channels,
-        PluginSettings::External { state } => state.descriptor.audio_outputs,
+        PluginSettings::External { state } => state
+            .effective_audio_channel_counts()
+            .map(|(_, output_channels)| output_channels)
+            .unwrap_or(0),
         PluginSettings::BandSplit {
             num_bands,
             frequencies,
@@ -85,6 +110,7 @@ fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> u
         PluginSettings::Crossover {
             output,
             topology,
+            band_count,
             extra_frequencies,
             channel_frequencies_hz,
             ..
@@ -92,6 +118,7 @@ fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> u
             input_channels,
             *topology,
             output,
+            *band_count,
             extra_frequencies,
             channel_frequencies_hz.as_deref(),
         ),
@@ -676,7 +703,12 @@ impl PluginChain {
                     config = Some(speaker_config.clone());
                 }
                 PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                    config = Some(target_layout.clone());
+                    // Custom geometry has no named speaker-config ID.
+                    if target_layout == "custom" {
+                        config = None;
+                    } else {
+                        config = Some(target_layout.clone());
+                    }
                 }
                 PluginSettings::BinauralDecoder { .. }
                 | PluginSettings::Downmix { .. }
@@ -753,7 +785,12 @@ impl PluginChain {
                     });
                 }
                 PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                    config = Some(target_layout.clone());
+                    // Custom geometry has no named speaker-config ID.
+                    if target_layout == "custom" {
+                        config = None;
+                    } else {
+                        config = Some(target_layout.clone());
+                    }
                 }
                 PluginSettings::BinauralDecoder { .. }
                 | PluginSettings::Downmix { .. }
@@ -811,8 +848,25 @@ impl PluginChain {
                     running_channels = upmixer_output_channels(speaker_config);
                     continue;
                 }
-                PluginSettings::AmbisonicsDecoder { target_layout, .. } => {
-                    running_channels = upmixer_output_channels(target_layout);
+                PluginSettings::AmbisonicsDecoder {
+                    target_layout,
+                    custom_layout,
+                    ..
+                } => {
+                    if target_layout == "custom" {
+                        match custom_layout {
+                            Some(layout) if valid_ambisonics_custom_layout(layout) => {
+                                running_channels = layout.speakers.len();
+                            }
+                            // Impossible route; the factory rejects it
+                            // descriptively at build time.
+                            Some(_) | None => {
+                                running_channels = 0;
+                            }
+                        }
+                    } else {
+                        running_channels = upmixer_output_channels(target_layout);
+                    }
                     continue;
                 }
                 PluginSettings::BinauralDecoder { .. } => {
@@ -975,8 +1029,15 @@ impl PluginChain {
 
     /// Load the plugin chain from a JSON file.
     ///
-    /// Individual plugins that fail to deserialize are skipped (not fatal).
-    /// The returned `Vec<String>` contains warnings about skipped plugins.
+    /// Individual plugins that fail to deserialize or fail custom-geometry
+    /// validation are skipped (not fatal). The returned `Vec<String>` is the
+    /// user-visible surface for those skips: callers must surface each warning
+    /// (log + UI toast/dialog) rather than silently rendering a re-routed
+    /// chain. Skipped plugins leave a width gap: downstream width planning
+    /// sees a 0-channel impossible route for the missing stage, and factory
+    /// build of the degraded chain fails loudly if the gap cannot be routed.
+    /// This is a deliberate degradation policy, not a transaction; no broader
+    /// manager/queue change is involved.
     ///
     /// # Arguments
     /// * `presets_dir` - Directory containing the preset files
@@ -1045,7 +1106,15 @@ impl PluginChain {
 
         for (i, raw) in raw_preset.plugins.iter().enumerate() {
             match serde_json::from_value::<Plugin>(raw.clone()) {
-                Ok(plugin) => loaded_plugins.push(plugin),
+                Ok(plugin) => match plugin.settings.validate_custom_geometry() {
+                    Ok(()) => loaded_plugins.push(plugin),
+                    Err(e) => {
+                        let ptype = plugin_type_from_raw(raw);
+                        let msg = format!("Plugin {} ('{}') skipped: {}", i, ptype, e);
+                        crate::rate_limited_log!(warn, 5, "{}", msg);
+                        warnings.push(msg);
+                    }
+                },
                 Err(e) => {
                     let ptype = plugin_type_from_raw(raw);
                     let msg = format!("Plugin {} ('{}') skipped: {}", i, ptype, e);
@@ -1185,6 +1254,7 @@ impl PluginChain {
                     channels,
                     filters,
                     channel_filters,
+                    stereo_pairs,
                     per_channel_mode,
                     max_filters,
                     tdf2,
@@ -1208,6 +1278,7 @@ impl PluginChain {
                         channels: current_channels,
                         filters: filters.clone(),
                         channel_filters: new_channel_filters,
+                        stereo_pairs: stereo_pairs.clone(),
                         per_channel_mode: new_per_channel_mode,
                         max_filters: *max_filters,
                         tdf2: *tdf2,
@@ -2204,6 +2275,30 @@ mod tests {
     }
 
     #[test]
+    fn test_update_channels_preserves_eq_placement_pairs() {
+        let mut chain = PluginChain::new();
+        chain.add_plugin(&PluginType::EQ).unwrap();
+        if let Some(plugin) = chain.get_plugin_mut(0)
+            && let PluginSettings::EQ { stereo_pairs, .. } = &mut plugin.settings
+        {
+            *stereo_pairs = Some(vec![[0, 1], [3, 2]]);
+        }
+
+        chain.update_channel_dependent_plugins_for_input(5);
+
+        let PluginSettings::EQ {
+            channels,
+            stereo_pairs,
+            ..
+        } = &chain.get_plugin(0).unwrap().settings
+        else {
+            panic!("expected EQ settings");
+        };
+        assert_eq!(*channels, 5);
+        assert_eq!(stereo_pairs.as_deref(), Some(&[[0, 1], [3, 2]][..]));
+    }
+
+    #[test]
     fn test_update_channels_upmixer_then_gain() {
         let mut chain = chain_with_upmixer("7.1");
         chain.add_plugin(&PluginType::Gain).unwrap();
@@ -2317,6 +2412,7 @@ mod tests {
         if let PluginSettings::Crossover {
             output,
             topology,
+            band_count,
             extra_frequencies,
             channel_frequencies_hz,
             channel_modes,
@@ -2325,6 +2421,7 @@ mod tests {
         {
             *output = "both".to_string();
             *topology = Some(CrossoverTopology::Bands);
+            *band_count = Some(4);
             *extra_frequencies = vec![3_000.0, 8_000.0];
             *channel_frequencies_hz = Some(vec![600.0, 1_200.0, 1_800.0, 2_400.0]);
             *channel_modes = Some(vec![
@@ -2606,6 +2703,457 @@ mod tests {
     }
 
     #[test]
+    fn test_output_channels_ambisonics_custom_geometry() {
+        use crate::plugins::{
+            AmbisonicsCustomLayoutSettings, AmbisonicsCustomSpeakerSettings,
+        };
+
+        fn stereo() -> AmbisonicsCustomLayoutSettings {
+            AmbisonicsCustomLayoutSettings {
+                name: "stereo".to_string(),
+                speakers: vec![
+                    AmbisonicsCustomSpeakerSettings {
+                        label: "FL".to_string(),
+                        azimuth_deg: 30.0,
+                        elevation_deg: 0.0,
+                        is_lfe: false,
+                    },
+                    AmbisonicsCustomSpeakerSettings {
+                        label: "FR".to_string(),
+                        azimuth_deg: -30.0,
+                        elevation_deg: 0.0,
+                        is_lfe: false,
+                    },
+                ],
+            }
+        }
+
+        fn set_custom(
+            chain: &mut PluginChain,
+            target_layout: &str,
+            custom_layout: Option<AmbisonicsCustomLayoutSettings>,
+        ) {
+            if let Some(p) = chain.get_plugin_mut(0)
+                && let PluginSettings::AmbisonicsDecoder {
+                    target_layout: current,
+                    custom_layout: geometry,
+                    ..
+                } = &mut p.settings
+            {
+                *current = target_layout.to_string();
+                *geometry = custom_layout;
+            }
+        }
+
+        // Valid custom stereo reports its speaker count and validates.
+        let mut chain = PluginChain::new();
+        chain.add_plugin(&PluginType::AmbisonicsDecoder).unwrap();
+        set_custom(&mut chain, "custom", Some(stereo()));
+        assert_eq!(chain.output_channels_for_input(4), 2);
+        assert!(
+            chain
+                .get_plugin_mut(0)
+                .unwrap()
+                .validate()
+                .is_ok()
+        );
+
+        // Missing geometry is an impossible route, never a silent fallback.
+        set_custom(&mut chain, "custom", None);
+        assert_eq!(chain.output_channels_for_input(4), 0);
+        assert!(
+            chain
+                .get_plugin_mut(0)
+                .unwrap()
+                .validate()
+                .unwrap_err()
+                .contains("requires custom_layout geometry")
+        );
+
+        // Invalid geometry (duplicate labels) is rejected the same way.
+        let mut dup = stereo();
+        dup.speakers[1].label = "FL".to_string();
+        set_custom(&mut chain, "custom", Some(dup));
+        assert_eq!(chain.output_channels_for_input(4), 0);
+        assert!(
+            chain
+                .get_plugin_mut(0)
+                .unwrap()
+                .validate()
+                .is_err()
+        );
+
+        // Above the engine cap (17 speakers) is rejected even though the
+        // DSP ceiling is 64. The error names the engine output-channel ceiling.
+        let mut wide = stereo();
+        wide.speakers = (0..17)
+            .map(|i| AmbisonicsCustomSpeakerSettings {
+                label: format!("S{i}"),
+                azimuth_deg: 0.0,
+                elevation_deg: 0.0,
+                is_lfe: false,
+            })
+            .collect();
+        set_custom(&mut chain, "custom", Some(wide));
+        assert_eq!(chain.output_channels_for_input(4), 0);
+        let cap_error = chain
+            .get_plugin_mut(0)
+            .unwrap()
+            .validate()
+            .unwrap_err();
+        assert!(
+            cap_error.contains("17 speakers")
+                && cap_error.contains("16")
+                && cap_error.contains("MAX_AMBISONICS_CUSTOM_SPEAKERS"),
+            "over-cap rejection must name the ceiling, got: {cap_error}"
+        );
+
+        // A named layout ignores any stale custom payload.
+        set_custom(&mut chain, "5.1", Some(stereo()));
+        assert_eq!(chain.output_channels_for_input(4), 6);
+        assert!(
+            chain
+                .get_plugin_mut(0)
+                .unwrap()
+                .validate()
+                .is_ok()
+        );
+
+        // Full chain: engine settings convert to factory JSON that decodes.
+        set_custom(&mut chain, "custom", Some(stereo()));
+        let settings = chain.get_plugin_mut(0).unwrap().settings.clone();
+        let config = settings.to_plugin_config(48_000.0);
+        assert_eq!(config.parameters["target_layout"], "custom");
+        assert_eq!(config.parameters["custom_layout"]["name"], "stereo");
+        assert_eq!(config.parameters["custom_layout"]["speakers"].as_array().unwrap().len(), 2);
+        let mut plugin =
+            sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 4, 48_000)
+                .unwrap();
+        assert_eq!(plugin.output_channels(), 2);
+        let frames = 8;
+        let mut input = vec![0.0; frames * 4];
+        for frame in 0..frames {
+            input[frame * 4] = 1.0;
+        }
+        let mut output = vec![f32::NAN; frames * 2];
+        assert_eq!(
+            plugin
+                .process(
+                    &input,
+                    &mut output,
+                    &sotf_plugins::ProcessContext::new(48_000, frames),
+                )
+                .unwrap(),
+            frames
+        );
+        assert!(output.iter().all(|sample| sample.is_finite()));
+        assert!(output.iter().any(|sample| sample.abs() > 1.0e-6));
+
+        // Preset load skips invalid custom plugins with a warning instead of
+        // failing the file.
+        let fixture = tempfile::tempdir().unwrap();
+        let preset = serde_json::json!({
+            "version": 2,
+            "plugins": [
+                {
+                    "id": 0,
+                    "enabled": true,
+                    "settings": {
+                        "AmbisonicsDecoder": {
+                            "order": 1,
+                            "target_layout": "custom",
+                            "max_re_weighting": false,
+                            "dual_band": false,
+                            "algorithm": "mode_matching",
+                            "custom_layout": {
+                                "name": "",
+                                "speakers": [
+                                    {"label": "C", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false}
+                                ]
+                            }
+                        }
+                    },
+                    "permanent": false,
+                }
+            ]
+        });
+        std::fs::write(
+            fixture.path().join("bad-custom.json"),
+            serde_json::to_string(&preset).unwrap(),
+        )
+        .unwrap();
+        let mut loaded = PluginChain::new();
+        let warnings = loaded.load_from_file(fixture.path(), "bad-custom").unwrap();
+        assert_eq!(loaded.plugins.len(), 0);
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("custom layout failed validation"));
+
+        // Over-cap presets (17 speakers, valid for DSP/FFI) skip with a
+        // cap-naming warning, not a silent drop.
+        let wide_speakers: Vec<serde_json::Value> = (0..17)
+            .map(|i| {
+                serde_json::json!({"label": format!("S{i}"), "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false})
+            })
+            .collect();
+        let wide_preset = serde_json::json!({
+            "version": 2,
+            "plugins": [
+                {
+                    "id": 0,
+                    "enabled": true,
+                    "settings": {
+                        "AmbisonicsDecoder": {
+                            "order": 1,
+                            "target_layout": "custom",
+                            "max_re_weighting": false,
+                            "dual_band": false,
+                            "algorithm": "mode_matching",
+                            "custom_layout": {
+                                "name": "wide",
+                                "speakers": wide_speakers,
+                            }
+                        }
+                    },
+                    "permanent": false,
+                }
+            ]
+        });
+        std::fs::write(
+            fixture.path().join("wide-custom.json"),
+            serde_json::to_string(&wide_preset).unwrap(),
+        )
+        .unwrap();
+        let mut wide_loaded = PluginChain::new();
+        let wide_warnings = wide_loaded
+            .load_from_file(fixture.path(), "wide-custom")
+            .unwrap();
+        assert_eq!(wide_loaded.plugins.len(), 0);
+        assert_eq!(wide_warnings.len(), 1);
+        assert!(
+            wide_warnings[0].contains("17 speakers")
+                && wide_warnings[0].contains("MAX_AMBISONICS_CUSTOM_SPEAKERS"),
+            "over-cap skip warning must name the ceiling, got: {}",
+            wide_warnings[0]
+        );
+    }
+
+    #[test]
+    fn invalid_custom_ambisonics_mid_chain_fails_loudly_in_widths_and_factory() {
+        // Gain (passthrough) -> invalid custom ambisonics -> Gain. The middle
+        // stage is an impossible route (0 channels), which propagates
+        // downstream instead of silently re-routing, and factory build of the
+        // middle stage fails with a custom-naming error.
+        let mut chain = PluginChain::new();
+        chain.add_plugin(&PluginType::Gain).unwrap();
+        chain.add_plugin(&PluginType::AmbisonicsDecoder).unwrap();
+        chain.add_plugin(&PluginType::Gain).unwrap();
+        if let Some(p) = chain.get_plugin_mut(1)
+            && let PluginSettings::AmbisonicsDecoder {
+                target_layout,
+                custom_layout,
+                ..
+            } = &mut p.settings
+        {
+            *target_layout = "custom".to_string();
+            *custom_layout = None;
+        }
+        assert_eq!(chain.output_channels_for_input(4), 0);
+        assert!(
+            chain
+                .get_plugin_mut(1)
+                .unwrap()
+                .validate()
+                .unwrap_err()
+                .contains("requires custom_layout geometry")
+        );
+        let middle_settings = chain.get_plugin_mut(1).unwrap().settings.clone();
+        let middle_config = middle_settings.to_plugin_config(48_000.0);
+        let factory_error = sotf_plugins::create_plugin(
+            &middle_config.plugin_type,
+            &middle_config.parameters,
+            4,
+            48_000,
+        )
+        .err()
+        .expect("invalid mid-chain plugin must fail factory construction");
+        assert!(
+            factory_error.contains("custom"),
+            "mid-chain factory build must name custom, got: {factory_error}"
+        );
+
+        // Preset load skips the invalid middle with a user-visible warning;
+        // the degraded chain (two gains) reports its own widths honestly.
+        let fixture = tempfile::tempdir().unwrap();
+        let preset = serde_json::json!({
+            "version": 2,
+            "plugins": [
+                {
+                    "id": 0,
+                    "enabled": true,
+                    "settings": {"Gain": {"channels": 4, "gain_db": 0.0, "smoothing_ms": 5.0}},
+                    "permanent": false,
+                },
+                {
+                    "id": 1,
+                    "enabled": true,
+                    "settings": {
+                        "AmbisonicsDecoder": {
+                            "order": 1,
+                            "target_layout": "custom",
+                            "max_re_weighting": false,
+                            "dual_band": false,
+                            "algorithm": "mode_matching"
+                        }
+                    },
+                    "permanent": false,
+                },
+                {
+                    "id": 2,
+                    "enabled": true,
+                    "settings": {"Gain": {"channels": 2, "gain_db": 0.0, "smoothing_ms": 5.0}},
+                    "permanent": false,
+                }
+            ]
+        });
+        std::fs::write(
+            fixture.path().join("mid-bad-custom.json"),
+            serde_json::to_string(&preset).unwrap(),
+        )
+        .unwrap();
+        let mut loaded = PluginChain::new();
+        let warnings = loaded
+            .load_from_file(fixture.path(), "mid-bad-custom")
+            .unwrap();
+        assert_eq!(loaded.plugins.len(), 2);
+        assert_eq!(warnings.len(), 1);
+        assert!(
+            warnings[0].contains("custom"),
+            "mid-chain skip warning must name custom, got: {}",
+            warnings[0]
+        );
+        // Degraded chain (gain->gain) passes widths through; the skip warning
+        // is the loud signal, not a silent re-route.
+        assert_eq!(loaded.output_channels_for_input(4), 4);
+    }
+
+    #[test]
+    fn test_delay_chain_renders_single_echo_and_survives_save_reload() {
+        use crate::engine::build_plugin_host;
+
+        fn delay_chain() -> PluginChain {
+            let mut chain = PluginChain::new();
+            chain.add_plugin(&PluginType::Delay).unwrap();
+            if let Some(p) = chain.get_plugin_mut(0)
+                && let PluginSettings::Delay {
+                    delay_ms,
+                    feedback,
+                    mix,
+                    lfo_rate_hz,
+                    lfo_depth_ms,
+                    allpass_feedback,
+                    ..
+                } = &mut p.settings
+            {
+                *delay_ms = 100.0;
+                *feedback = 0.0;
+                *mix = 1.0;
+                *lfo_rate_hz = 0.0;
+                *lfo_depth_ms = 0.0;
+                *allpass_feedback = false;
+            }
+            chain
+        }
+
+        fn host_configs(chain: &PluginChain) -> Vec<crate::engine::PluginConfig> {
+            chain
+                .plugins()
+                .iter()
+                .filter_map(|plugin| plugin.to_plugin_config(48_000.0))
+                .collect()
+        }
+
+        fn render_impulse(host: &mut sotf_plugins::DawHost) -> Vec<f32> {
+            let frames = 24_000;
+            let mut input = vec![0.0; frames];
+            input[0] = 1.0;
+            let mut output = vec![f32::NAN; frames];
+            for block_start in (0..frames).step_by(1024) {
+                let block_end = (block_start + 1024).min(frames);
+                host.process(&input[block_start..block_end], &mut output[block_start..block_end])
+                    .unwrap();
+            }
+            output
+        }
+
+        // Wet-only 100 ms delay with zero feedback: one echo, clean tail.
+        let chain = delay_chain();
+        let (mut host, _) = build_plugin_host(&host_configs(&chain), 48_000, 1)
+            .expect("delay chain builds");
+        let output = render_impulse(&mut host);
+        assert!(output.iter().all(|sample| sample.is_finite()));
+        assert!(
+            output[0].abs() < 1.0e-6,
+            "full wet carries no dry impulse, got {}",
+            output[0]
+        );
+        assert!(
+            (output[4800] - 1.0).abs() < 1.0e-4,
+            "single echo lands at 100 ms, got {}",
+            output[4800]
+        );
+        assert!(
+            output[9600].abs() < 1.0e-6,
+            "zero feedback leaves no second echo, got {}",
+            output[9600]
+        );
+        assert!(
+            output[9601..].iter().all(|sample| sample.abs() < 1.0e-6),
+            "tail stays clean after the single echo"
+        );
+
+        // Save/reload reproduces the render bit-exactly.
+        let fixture = tempfile::tempdir().unwrap();
+        chain.save_to_file(fixture.path(), "delay-echo").unwrap();
+        let mut reloaded = PluginChain::new();
+        let warnings = reloaded.load_from_file(fixture.path(), "delay-echo").unwrap();
+        assert!(warnings.is_empty());
+        let (mut reloaded_host, _) =
+            build_plugin_host(&host_configs(&reloaded), 48_000, 1).expect("reloaded chain builds");
+        assert_eq!(render_impulse(&mut reloaded_host), output);
+
+        // Out-of-range feedback fails factory construction, so the build
+        // skips the delay with a warning and renders dry passthrough; the
+        // accepted chain still builds and renders the identical echo.
+        let mut bad_chain = delay_chain();
+        if let Some(p) = bad_chain.get_plugin_mut(0)
+            && let PluginSettings::Delay { feedback, .. } = &mut p.settings
+        {
+            *feedback = 0.96;
+        }
+        let (mut degraded_host, warnings) =
+            build_plugin_host(&host_configs(&bad_chain), 48_000, 1)
+                .expect("failed plugins degrade to warnings, not build errors");
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].message.contains("delay"));
+        let dry_output = render_impulse(&mut degraded_host);
+        assert!(
+            (dry_output[0] - 1.0).abs() < 1.0e-6,
+            "skipped delay passes dry, got {}",
+            dry_output[0]
+        );
+        assert!(
+            dry_output[4800].abs() < 1.0e-6,
+            "skipped delay emits no echo, got {}",
+            dry_output[4800]
+        );
+        let (mut fresh_host, fresh_warnings) =
+            build_plugin_host(&host_configs(&chain), 48_000, 1)
+                .expect("accepted chain still builds after rejection");
+        assert!(fresh_warnings.is_empty());
+        assert_eq!(render_impulse(&mut fresh_host), output);
+    }
+
+    #[test]
     fn test_output_channels_for_input_unknown_speaker_config_defaults_to_5_1() {
         let mut chain = PluginChain::new();
         chain.add_plugin(&PluginType::Upmixer).unwrap();
@@ -2686,5 +3234,118 @@ mod tests {
         *input_channels = 4;
 
         assert!(chain.find_channel_conflicts(2).is_empty());
+    }
+
+    #[test]
+    fn external_native_setup_width_flows_to_downstream_channel_contract() {
+        let fixture = tempfile::tempdir().unwrap();
+        let path = fixture.path().join("crossover-channel-flow.clap");
+        std::fs::write(&path, b"fixture").unwrap();
+        let descriptor = PluginDescriptor {
+            id: "org.spinorama.sotf.crossover".into(),
+            name: "SOTF: Crossover".into(),
+            vendor: "SOTF".into(),
+            version: "1.0".into(),
+            format: PluginFormat::Clap,
+            path,
+            // Scanned metadata is intentionally stereo. The instance selects
+            // an eight-channel input and four band-major output buses.
+            audio_inputs: 2,
+            audio_outputs: 2,
+            is_instrument: false,
+            categories: vec!["Effect".into()],
+            scan_status: PluginScanStatus::Loadable,
+        };
+        let mut state =
+            ExternalPluginState::new(descriptor, ExternalPluginSandboxMode::Isolated, Vec::new());
+        state.audio_setup = Some(
+            serde_json::from_value(serde_json::json!({
+                "type": "crossover",
+                "input_layout": "seven_one",
+                "num_bands": 4,
+                "topology": "bands",
+                "mode": "both",
+                "output_layout": "clap_packed"
+            }))
+            .unwrap(),
+        );
+        let external = Plugin::from_settings(0, PluginSettings::External { state }).unwrap();
+
+        let mut chain = PluginChain::new();
+        chain.plugins.push(external);
+        chain.next_id = 1;
+        chain.add_plugin(&PluginType::BandMerge).unwrap();
+        let PluginSettings::BandMerge { bands, .. } = &mut chain.plugins[1].settings else {
+            unreachable!();
+        };
+        *bands = 4;
+        chain.add_plugin(&PluginType::BinauralDecoder).unwrap();
+        let PluginSettings::BinauralDecoder { input_channels, .. } = &mut chain.plugins[2].settings
+        else {
+            unreachable!();
+        };
+        *input_channels = 8;
+
+        assert_eq!(chain.plugins[0].settings.required_input_channels(), Some(8));
+        assert_eq!(plugin_output_channels(&chain.plugins[0].settings, 8), 32);
+        assert!(chain.find_channel_conflicts(8).is_empty());
+        assert_eq!(chain.output_channels_for_input(8), 2);
+    }
+
+    #[test]
+    fn invalid_external_native_setup_does_not_fall_back_to_scanned_width() {
+        let fixture = tempfile::tempdir().unwrap();
+        let path = fixture.path().join("invalid-crossover.clap");
+        std::fs::write(&path, b"fixture").unwrap();
+        let descriptor = PluginDescriptor {
+            id: "org.spinorama.sotf.crossover".into(),
+            name: "SOTF: Crossover".into(),
+            vendor: "SOTF".into(),
+            version: "1.0".into(),
+            format: PluginFormat::Clap,
+            path,
+            audio_inputs: 2,
+            audio_outputs: 2,
+            is_instrument: false,
+            categories: vec!["Effect".into()],
+            scan_status: PluginScanStatus::Loadable,
+        };
+        let valid_plugin = Plugin::from_settings(
+            0,
+            PluginSettings::External {
+                state: ExternalPluginState::new(
+                    descriptor.clone(),
+                    ExternalPluginSandboxMode::Isolated,
+                    Vec::new(),
+                ),
+            },
+        )
+        .unwrap();
+        let mut state =
+            ExternalPluginState::new(descriptor, ExternalPluginSandboxMode::Isolated, Vec::new());
+        state.audio_setup = Some(
+            serde_json::from_value(serde_json::json!({
+                "type": "crossover",
+                "input_layout": "seven_one",
+                "num_bands": 4,
+                "topology": "bands",
+                "mode": "both",
+                "output_layout": "vst3_buses"
+            }))
+            .unwrap(),
+        );
+        let settings = PluginSettings::External { state };
+
+        assert_eq!(settings.required_input_channels(), Some(0));
+        assert_eq!(plugin_output_channels(&settings, 8), 0);
+
+        let mut chain = PluginChain::new();
+        chain.plugins.push(valid_plugin);
+        chain.next_id = 1;
+        chain.plugins[0].settings = settings;
+        let conflicts = chain.find_channel_conflicts(8);
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].required_channels, 0);
+        assert_eq!(conflicts[0].actual_channels, 8);
     }
 }

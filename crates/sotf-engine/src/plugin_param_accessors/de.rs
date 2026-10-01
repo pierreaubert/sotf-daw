@@ -10,3 +10,14 @@ pub(super) fn de_esser_mode_to_index(mode: &str) -> f64 {
         .position(|&m| m == mode)
         .unwrap_or(1) as f64 // default: split-band (index 1)
 }
+
+pub(super) fn de_esser_split_topologies() -> &'static [&'static str] {
+    param_specs::find_by_key(param_specs::de_esser::PARAMS, "split_topology").choice_labels()
+}
+
+pub(super) fn de_esser_split_topology_to_index(topology: &str) -> f64 {
+    de_esser_split_topologies()
+        .iter()
+        .position(|&t| t == topology)
+        .unwrap_or(0) as f64 // default: minimum-phase (index 0)
+}

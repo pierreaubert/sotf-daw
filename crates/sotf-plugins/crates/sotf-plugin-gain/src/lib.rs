@@ -222,6 +222,15 @@ impl GainPlugin {
         self.channel_gains_db.clear();
         self.channel_gains_smoothers.clear();
     }
+    /// Replace every channel gain at once, snapping smoothers to the targets.
+    ///
+    /// Unlike [`Self::set_channel_gain_db`], which ramps from the current
+    /// gain for click-free mid-stream automation, this bulk setter resets each
+    /// channel smoother directly at its new target, so the next rendered block
+    /// already carries the full new gains. Prefer the per-channel setter for
+    /// audible transitions; use this setter for initialization-style bulk
+    /// replacement. Length mismatches and non-finite/out-of-range values are
+    /// rejected without mutating any state.
     pub fn set_channel_gains(&mut self, dbs: Vec<f32>) -> Result<(), String> {
         if dbs.len() != self.channels {
             return Err("Mismatch".into());
@@ -258,6 +267,38 @@ impl GainPlugin {
         self.channel_gains_db[ch] = db;
         self.channel_gains_smoothers[ch].set_target(Self::db_to_linear(db));
         Ok(())
+    }
+    /// Apply an already-validated smoothing time to the stored value and
+    /// every smoother, preserving each smoother's current/target gains.
+    fn apply_smoothing_ms(&mut self, smoothing_ms: f32) {
+        self.smoothing_ms = smoothing_ms;
+        self.global_gain_smoother
+            .set_time(smoothing_ms, self.sample_rate);
+        for smoother in &mut self.channel_gains_smoothers {
+            smoother.set_time(smoothing_ms, self.sample_rate);
+        }
+    }
+    /// Detect a global-mode snapshot for mode-faithful restore.
+    ///
+    /// Returns the global gain when `values` carries `gain_db` plus every
+    /// `gain_db_{ch}` mirror bit-identical to it, which is exactly what
+    /// `current_values` emits for a global-mode instance. Partial sets and
+    /// genuinely per-channel snapshots return `None` and keep the legacy
+    /// in-order application in `apply_values`.
+    fn global_snapshot_gain_db(&self, values: &ParameterSet) -> Option<f32> {
+        let global_db = values.get(&self.param_gain_db)?.as_float()?;
+        let mut mirrored = 0usize;
+        for (id, value) in values {
+            let Some(suffix) = id.as_str().strip_prefix("gain_db_") else {
+                continue;
+            };
+            let channel: usize = suffix.parse().ok()?;
+            if channel >= self.channels || value.as_float() != Some(global_db) {
+                return None;
+            }
+            mirrored += 1;
+        }
+        (mirrored == self.channels).then_some(global_db)
     }
     pub fn gain_db(&self) -> f32 {
         self.global_gain_db
@@ -499,11 +540,7 @@ impl ParametricPlugin for GainPlugin {
                 if value < spec.min_f64() as f32 || value > spec.max_f64() as f32 {
                     return Err(format!("Invalid value for {id}"));
                 }
-                self.smoothing_ms = value;
-                self.global_gain_smoother.set_time(value, self.sample_rate);
-                for smoother in &mut self.channel_gains_smoothers {
-                    smoother.set_time(value, self.sample_rate);
-                }
+                self.apply_smoothing_ms(value);
                 Ok(())
             }
             key => {
@@ -528,6 +565,30 @@ impl ParametricPlugin for GainPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        // Reject malformed sets transactionally: validate every entry before
+        // mutating anything, so a mixed valid/invalid set leaves the accepted
+        // configuration and smoother history fully intact.
+        for (id, value) in &values {
+            self.parametric_validate_parameter(id, value)?;
+        }
+        // Restore global-mode snapshots as global state. `current_values`
+        // always mirrors the global gain into every `gain_db_{N}` entry, so a
+        // full global snapshot is recognizable by value; routing those mirrors
+        // through the per-channel setter would silently convert the instance
+        // to per-channel mode and drop static-gain fusion. Applying `gain_db`
+        // last and skipping the redundant mirrors preserves the mode. An
+        // all-equal per-channel state normalizes to the equivalent global
+        // mode; getters and rendered audio are identical either way.
+        if let Some(global_db) = self.global_snapshot_gain_db(&values) {
+            if let Some(smoothing_ms) = values
+                .get(&self.param_smoothing_ms)
+                .and_then(ParameterValue::as_float)
+            {
+                self.apply_smoothing_ms(smoothing_ms);
+            }
+            self.set_gain_db(global_db);
+            return Ok(());
+        }
         for (id, value) in values {
             match id.as_str() {
                 "gain_db" => {
@@ -540,15 +601,7 @@ impl ParametricPlugin for GainPlugin {
                     let Some(v) = value.as_float().filter(|v| v.is_finite()) else {
                         return Err(format!("Invalid value for {}", id));
                     };
-                    self.smoothing_ms = v.clamp(
-                        pk(GN, "smoothing_ms").min_f64() as f32,
-                        pk(GN, "smoothing_ms").max_f64() as f32,
-                    );
-                    self.global_gain_smoother
-                        .set_time(self.smoothing_ms, self.sample_rate);
-                    for s in &mut self.channel_gains_smoothers {
-                        s.set_time(self.smoothing_ms, self.sample_rate);
-                    }
+                    self.apply_smoothing_ms(v);
                 }
                 key => {
                     let Some(s) = key.strip_prefix("gain_db_") else {

@@ -5,6 +5,10 @@
 - Add low-shelf and high-shelf band shapes with stored shelf slope and backward-compatible Peak defaults.
 - Treat shape and slope as structural controls; preserve prepared audio until a valid replacement is initialized.
 - Add independent shelf response, lifecycle, allocation and controlled CPU comparison coverage.
+- Add a first-order pivot tilt band shape (choice index 3, `tilt` spelling) with a full-band detector, exact DC/pivot/Nyquist laws, and backward-compatible Peak defaults.
+- Add per-band Stereo/Left/Right/Mid/Side placement with explicit `stereo_pairs` geometry, ascending band order, and the `sotf-plugin-eq` Mid/Side law; stereo-only instances keep the exact legacy path.
+- Treat placement as an appended structural control; document the explicit detector/response/cut-boost laws.
+- Add independent tilt response/recurrence/sweep, routing isolation/order, and 44.1/48/96 kHz automation coverage.
 
 # 0.5.11
 

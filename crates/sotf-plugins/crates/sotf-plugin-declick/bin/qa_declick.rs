@@ -2,7 +2,7 @@ use sotf_host::{
     CountingAlloc, ParametricInPlacePlugin, ParametricInPlacePluginAdapter, ProcessContext,
     assert_no_allocs, run_standard_tests,
 };
-use sotf_plugin_declick::DeclickPlugin;
+use sotf_plugin_declick::{DeclickPlugin, DeclickPluginParams};
 use std::time::Instant;
 
 #[global_allocator]
@@ -16,13 +16,54 @@ fn main() {
     println!("\n[Declick active callback matrix]");
     for channels in [1, 2, 8, 40] {
         for block_size in [16, 257, 1024] {
-            run_active_case(channels, block_size);
+            run_active_case(
+                channels,
+                block_size,
+                DeclickPluginParams::default(),
+                "legacy",
+            );
+        }
+    }
+
+    println!("\n[Declick mode matrix]");
+    let modes: Vec<(&str, DeclickPluginParams)> = vec![
+        (
+            "periodic",
+            DeclickPluginParams {
+                mode: 1,
+                sensitivity: 5.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "multiband",
+            DeclickPluginParams {
+                bands: 2,
+                sensitivity: 5.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "widened-residual",
+            DeclickPluginParams {
+                mode: 1,
+                bands: 1,
+                repair_width: 4,
+                audition_residual: true,
+                sensitivity: 5.0,
+                ..Default::default()
+            },
+        ),
+    ];
+    for channels in [1, 2, 8] {
+        for (name, params) in &modes {
+            run_active_case(channels, 257, params.clone(), name);
         }
     }
 }
 
-fn run_active_case(channels: usize, block_size: usize) {
-    let mut plugin = DeclickPlugin::new(channels, 48_000).unwrap();
+fn run_active_case(channels: usize, block_size: usize, params: DeclickPluginParams, name: &str) {
+    let mut plugin = DeclickPlugin::from_params(channels, 48_000, params).unwrap();
     let mut buffer = vec![0.0_f32; channels * block_size];
     for frame in 0..block_size {
         let clean = (frame as f32 * 0.07).sin() * 0.2;
@@ -57,6 +98,6 @@ fn run_active_case(channels: usize, block_size: usize) {
     let deadline = block_size as f64 / 48_000.0 * 1000.0;
     assert!(max < deadline, "callback exceeded its audio deadline");
     println!(
-        "  {channels}ch block={block_size}: p50/p99/max {p50:.3}/{p99:.3}/{max:.3} ms (deadline {deadline:.3} ms)"
+        "  {name} {channels}ch block={block_size}: p50/p99/max {p50:.3}/{p99:.3}/{max:.3} ms (deadline {deadline:.3} ms)"
     );
 }

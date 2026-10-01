@@ -1,8 +1,8 @@
 use atomic_refcell::AtomicRefMut;
 use std::cell::Cell;
 use std::collections::VecDeque;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use vst3_sys::vst::IComponentHandler;
 
 use crate::prelude::{
@@ -235,5 +235,9 @@ impl<P: Vst3Plugin> GuiContext for WrapperGuiContext<P> {
 
     fn set_state(&self, state: PluginState) {
         self.inner.set_state_object_from_gui(state)
+    }
+
+    fn request_component_restart(&self) -> bool {
+        self.inner.request_component_reload()
     }
 }

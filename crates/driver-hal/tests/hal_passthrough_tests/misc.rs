@@ -47,6 +47,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
             db_gain: 0.0, // Zero gain
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -57,6 +58,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
             db_gain: 0.0, // Zero gain
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -67,6 +69,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
             db_gain: 0.0, // Zero gain
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -77,6 +80,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
             db_gain: 0.0, // Zero gain
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -87,6 +91,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
             db_gain: 0.0, // Zero gain
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         },
@@ -95,6 +100,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
     let params = EqPluginParams {
         filters: zero_gain_filters,
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(), // Auto-gain disabled by default
     };
 
@@ -166,6 +172,7 @@ fn test_eq_empty_filters_passthrough_bit_exact() {
     let params = EqPluginParams {
         filters: vec![],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 

@@ -2,6 +2,7 @@ use std::cell::Cell;
 
 thread_local! {
     static ALLOC_COUNT: Cell<usize> = const { Cell::new(0) };
+    static FREE_COUNT: Cell<usize> = const { Cell::new(0) };
     static COUNTING_ENABLED: Cell<bool> = const { Cell::new(false) };
 }
 

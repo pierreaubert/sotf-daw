@@ -688,22 +688,29 @@ impl Plugin for IsolatedExternalPlugin {
             }));
         }
         let worker_is_running = self.proxy.worker_latency_samples().is_some();
-        let reset_result = self
+        let pending_result = self
             .proxy
             .wait_for_pending_for_drain(self.control_timeout)
-            .and_then(|()| {
-                if !worker_is_running {
-                    return Ok(());
-                }
-                match self
-                    .proxy
-                    .request_control(&PluginIpcControlRequest::Reset, self.control_timeout)?
-                {
-                    PluginIpcControlResponse::Ack => Ok(()),
-                    PluginIpcControlResponse::Error(error) => Err(error),
-                    _ => Err("external-plugin worker returned invalid reset response".into()),
+            .or_else(|wait_error| {
+                if self.proxy.discard_failed_pending_for_reset() {
+                    Ok(())
+                } else {
+                    Err(wait_error)
                 }
             });
+        let reset_result = pending_result.and_then(|()| {
+            if !worker_is_running {
+                return Ok(());
+            }
+            match self
+                .proxy
+                .request_control(&PluginIpcControlRequest::Reset, self.control_timeout)?
+            {
+                PluginIpcControlResponse::Ack => Ok(()),
+                PluginIpcControlResponse::Error(error) => Err(error),
+                _ => Err("external-plugin worker returned invalid reset response".into()),
+            }
+        });
         if let Err(error) = reset_result {
             self.drain_failed = true;
             self.quarantine_worker(format!(

@@ -154,17 +154,27 @@ pub const PARAMS: &[ParamSpec] = &[
     .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
     ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Timing")
         .doc("Keep gain reduction at its peak before release"),
+    ParamSpec::bool_param(
+        "Sidechain HPF Enabled",
+        "sidechain_hpf_enabled",
+        false,
+        "Sidechain",
+    )
+    .setup()
+    .structural()
+    .doc("Enable detector high-pass; frequency selects cutoff"),
 ];
 
 /// Single-band compressor UI layout (backward compat, referencing PARAMS indices).
-/// Legacy detector fields remain serializable but have no DSP effect, so their
-/// controls are hidden instead of suggesting an audible operation.
+/// The remaining legacy fields without DSP effect stay hidden instead of
+/// suggesting an audible operation.
 pub const SINGLE_BAND_LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::toggle(8),           // link_channels
-        ControlSpec::knob(9).hide(),      // sidechain_hpf_hz
-        ControlSpec::selector(10).hide(), // sidechain_hpf_order
-        ControlSpec::selector(11).hide(), // detection_mode
+        ControlSpec::toggle(18),          // sidechain_hpf_enabled
+        ControlSpec::knob(9),             // sidechain_hpf_hz
+        ControlSpec::selector(10),        // sidechain_hpf_order
+        ControlSpec::selector(11),        // detection_mode
         ControlSpec::toggle(15).hide(),   // sidechain_external
     ],
     main: &[
@@ -302,6 +312,48 @@ pub const GLOBAL_PARAMS: &[ParamSpec] = multiband_global_params![
         .doc("Maximum gain reduction before makeup; 120 dB disables the limit"),
     ParamSpec::float("Hold", "hold_ms", 0.0, 0.0, 1000.0, 1.0, "ms", "Global")
         .doc("Keep gain reduction at its peak before release"),
+    ParamSpec::float(
+        "Sidechain HPF",
+        "sidechain_hpf_hz",
+        80.0,
+        0.0,
+        200.0,
+        5.0,
+        "Hz",
+        "Global",
+    )
+    .setup()
+    .structural()
+    .doc("High-pass on detector input"),
+    ParamSpec::choice(
+        "Sidechain HPF Order",
+        "sidechain_hpf_order",
+        0,
+        HPF_ORDERS,
+        "Global",
+    )
+    .setup()
+    .structural()
+    .doc("Butterworth HPF slope"),
+    ParamSpec::choice(
+        "Detection Mode",
+        "detection_mode",
+        0,
+        DETECTION_MODES,
+        "Global",
+    )
+    .setup()
+    .structural()
+    .doc("Peak or RMS level detection"),
+    ParamSpec::bool_param(
+        "Sidechain HPF Enabled",
+        "sidechain_hpf_enabled",
+        false,
+        "Global",
+    )
+    .setup()
+    .structural()
+    .doc("Enable detector high-pass; frequency selects cutoff"),
 ];
 
 // ============================================================================
@@ -365,10 +417,12 @@ pub const BAND_TEMPLATE: &[ParamSpec] = &[
 // UI Layout
 // ============================================================================
 
-/// Multiband Compressor: GLOBAL_PARAMS 0-18, BAND_TEMPLATE 0-11 per band.
+/// Multiband Compressor: GLOBAL_PARAMS 0-22, BAND_TEMPLATE 0-11 per band.
 /// Global: 0=bands, 1=preset, 2-5=crossovers, 6=threshold, 7=ratio,
 /// 8=attack, 9=release, 10=knee, 11=mix, 12=link_channels, 13=lookahead, 14=ms_mode,
-/// 15=sidechain_tilt_db, 16=link_amount, 17=range_db, 18=hold_ms
+/// 15=sidechain_tilt_db, 16=link_amount, 17=range_db, 18=hold_ms,
+/// 19=sidechain_hpf_hz, 20=sidechain_hpf_order, 21=detection_mode,
+/// 22=sidechain_hpf_enabled
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::knob(0),     // num_bands
@@ -380,6 +434,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         ControlSpec::toggle(12),  // link_channels (kept for backward compat)
         ControlSpec::slider(16),  // link_amount
         ControlSpec::slider(15),  // sidechain_tilt_db
+        ControlSpec::toggle(22),  // sidechain_hpf_enabled
+        ControlSpec::knob(19),    // sidechain_hpf_hz
+        ControlSpec::selector(20), // sidechain_hpf_order
+        ControlSpec::selector(21), // detection_mode
     ],
     main: &[
         ControlGroup::new(
@@ -516,6 +574,10 @@ pub fn default_sidechain_hpf_order() -> Option<String> {
     None
 }
 
+pub fn default_sidechain_hpf_enabled() -> Option<bool> {
+    None
+}
+
 pub fn default_detection_mode() -> Option<String> {
     None
 }
@@ -581,7 +643,7 @@ mod tests {
             .map(|control| control.param_index)
             .collect();
         hidden.sort_unstable();
-        assert_eq!(hidden, vec![9, 10, 11, 13, 15]);
+        assert_eq!(hidden, vec![13, 15]);
         let groups: Vec<_> = SINGLE_BAND_LAYOUT.main.iter().collect();
         let solved = solve_control_groups(&groups, 320.0).unwrap();
         assert!(solved.find("DYNAMICS").unwrap().visible());

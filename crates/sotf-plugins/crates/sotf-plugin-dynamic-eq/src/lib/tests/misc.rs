@@ -55,6 +55,7 @@ fn test_dynamic_eq_passthrough() {
                 solo: false,
                     ..Default::default()
                 }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -106,6 +107,7 @@ fn test_dynamic_eq_boosts_on_threshold() {
                 solo: false,
                     ..Default::default()
                 }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -156,6 +158,7 @@ fn test_dynamic_eq_no_boost_below_threshold() {
                 solo: false,
                     ..Default::default()
                 }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -205,6 +208,7 @@ fn test_dynamic_eq_frequency_selective() {
             solo: false,
                     ..Default::default()
                 }],
+        stereo_pairs: None,
     };
 
     // Test with 1kHz signal (in-band)
@@ -394,6 +398,7 @@ fn test_sidechain_reads_dry_buffer_not_modified_output() {
                         ..Default::default()
                     },
                 ],
+                stereo_pairs: None,
             },
         )
     };
@@ -469,6 +474,7 @@ fn test_eq_gain_uses_proportion_blend_not_coefficient_update() {
                 solo: false,
                     ..Default::default()
                 }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();

@@ -215,6 +215,7 @@ fn from_params_happy_path() {
         channel_frequencies_hz: vec![],
         channel_modes: Some(vec![]),
         topology: None,
+        band_count: None,
     };
     let mut plugin = CrossoverPlugin::from_params(2, &params).unwrap();
     assert_eq!(plugin.input_channels(), 2);

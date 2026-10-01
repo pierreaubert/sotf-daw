@@ -134,9 +134,11 @@ impl AutoGain {
     }
 
     pub fn set_sample_rate(&mut self, sr: u32) -> Result<(), String> {
+        let input_monitor = GainMeter::new(self.num_channels as u32, sr)?;
+        let output_monitor = GainMeter::new(self.num_channels as u32, sr)?;
         self.sample_rate = sr;
-        self.input_monitor = GainMeter::new(self.num_channels as u32, sr)?;
-        self.output_monitor = GainMeter::new(self.num_channels as u32, sr)?;
+        self.input_monitor = input_monitor;
+        self.output_monitor = output_monitor;
         self.smoothing_coeff = smoothing_coefficient(self.smoothing_ms, sr);
         self.attack_coeff = smoothing_coefficient(20.0, sr);
         self.release_coeff = smoothing_coefficient(300.0, sr);
@@ -547,6 +549,50 @@ mod tests {
             max_gain - min_gain,
             stable_part
         );
+    }
+
+    #[test]
+    fn rejected_sample_rate_preserves_gain_and_smoothing_state() {
+        let params = AutoGainParams {
+            enabled: true,
+            loudness_type: AutoGainLoudnessType::Momentary,
+            max_gain_db: 12.0,
+            smoothing_ms: 40.0,
+        };
+        let mut actual = AutoGain::new(2, 48_000, params.clone()).unwrap();
+        let mut twin = AutoGain::new(2, 48_000, params).unwrap();
+        let input = (0..48_000 * 2)
+            .map(|index| {
+                let frame = index / 2;
+                (std::f32::consts::TAU * 997.0 * frame as f32 / 48_000.0).sin() * 0.55
+            })
+            .collect::<Vec<_>>();
+        let mut measured_output = input.iter().map(|sample| sample * 0.4).collect::<Vec<_>>();
+        for gain in [&mut actual, &mut twin] {
+            gain.measure_input(&input).unwrap();
+            gain.measure_output(&measured_output).unwrap();
+        }
+        actual.apply_compensation(&mut measured_output, input.len() / 2);
+        let mut twin_output = input.iter().map(|sample| sample * 0.4).collect::<Vec<_>>();
+        twin.apply_compensation(&mut twin_output, input.len() / 2);
+        assert!(actual.current_gain_db().abs() > 0.1);
+        assert_eq!(actual.current_gain_db(), twin.current_gain_db());
+
+        assert!(actual.set_sample_rate(9).is_err());
+        actual.set_smoothing_ms(40.0);
+        twin.set_smoothing_ms(40.0);
+        let mut continued_actual = vec![0.2; 512 * 2];
+        let mut continued_twin = continued_actual.clone();
+        actual.apply_compensation(&mut continued_actual, 512);
+        twin.apply_compensation(&mut continued_twin, 512);
+        assert_eq!(continued_actual, continued_twin);
+        assert_eq!(actual.current_gain_db(), twin.current_gain_db());
+
+        let gain_before_valid_change = actual.current_gain_db();
+        actual.set_sample_rate(96_000).unwrap();
+        twin.set_sample_rate(96_000).unwrap();
+        assert_eq!(actual.current_gain_db(), gain_before_valid_change);
+        assert_eq!(actual.current_gain_db(), twin.current_gain_db());
     }
 }
 

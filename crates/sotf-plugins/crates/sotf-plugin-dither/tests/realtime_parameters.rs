@@ -40,7 +40,8 @@ static ALLOCATOR: TrackingAllocator = TrackingAllocator;
 
 #[test]
 fn parameter_reads_updates_processing_and_reset_do_not_allocate_or_free() {
-    for channels in [1, 2, 6] {
+    // 12 channels is the catalog maximum (see CHANGELOG 0.5.12).
+    for channels in [1, 2, 6, 12] {
         let mut plugin = ParametricInPlacePluginAdapter::new(DitherPlugin::new(channels));
         plugin.initialize(96_000).unwrap();
         let ids = ["bit_depth", "noise_shaping", "dither_type"].map(ParameterId::from);

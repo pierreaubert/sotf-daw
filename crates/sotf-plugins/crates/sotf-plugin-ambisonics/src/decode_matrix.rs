@@ -10,8 +10,10 @@
 
 // Rust guideline compliant 2026-02-21
 
+use crate::custom_layout::CustomLayout;
 use crate::spherical_harmonics::{self, channel_count, deg_to_rad, spherical_harmonics_vector};
 use nalgebra::DMatrix;
+use serde::{Deserialize, Serialize};
 use sotf_host::speaker_config::SpeakerConfig;
 
 /// Decode matrix: maps Ambisonics channels to speaker feeds.
@@ -46,6 +48,43 @@ pub enum DecodeAlgorithm {
 /// The grid is a Fibonacci sphere, which has no pole singularity and provides
 /// full-sphere coverage for VBAP remapping.
 pub const ALLRAD_VIRTUAL_SPEAKERS: &[usize] = &[0, 64, 96, 128, 256, 384, 512, 512];
+
+/// Serializable decoder snapshot for layout/decoder export (R2).
+///
+/// Captures the composed coefficient matrix with its construction metadata so
+/// a decoder can be archived, diffed or compared without rebuilding it from
+/// speaker geometry. Exported by [`DecodeMatrix::export`].
+///
+/// Archival/comparison-only: there is deliberately no import path that
+/// rebuilds a live [`DecodeMatrix`] from a snapshot. Decoders are always
+/// reconstructed from validated speaker geometry through `build`,
+/// `build_allrad`, `build_for_custom` or `build_allrad_for_custom`, so the
+/// regularized solve, quality diagnostics and peak-gain bound are
+/// re-verified on every load. Never reinterpret a snapshot as a live
+/// decoder without rebuilding it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DecoderExport {
+    /// Construction algorithm: `"mode_matching"` or `"allrad"`.
+    pub algorithm: String,
+    /// Ambisonics input channels: (order+1) squared.
+    pub ambi_channels: usize,
+    /// Output speaker channels including silent LFE rows.
+    pub speaker_count: usize,
+    /// Virtual speakers used by AllRAD, or zero for mode matching.
+    pub virtual_speaker_count: usize,
+    /// Row-major coefficient matrix [speaker_count x ambi_channels].
+    pub matrix: Vec<f32>,
+    /// max-rE weights per ACN channel (all ones when unweighted).
+    pub max_re_weights: Vec<f32>,
+    /// Retained SVD rank of the design solve (see `DecodeQuality`).
+    pub rank: usize,
+    /// Condition number of the retained design solve.
+    pub condition_number: f64,
+    /// Relative reconstruction error of the design solve.
+    pub reconstruction_error: f64,
+    /// Largest absolute coefficient in the composed matrix.
+    pub peak_coefficient: f64,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecodeQuality {
@@ -264,6 +303,227 @@ impl DecodeMatrix {
         })
     }
 
+    /// Build a mode-matching decode matrix for user-defined geometry.
+    ///
+    /// Same regularized pseudoinverse, max-rE weights, LFE silence and
+    /// peak-gain bound as [`DecodeMatrix::build`]; only the speaker source
+    /// differs. Channel index is the position inside the custom layout.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when the layout or order is invalid (order 0 is
+    /// rejected; only 1 through `MAX_ORDER` are accepted), no non-LFE
+    /// speaker exists, or the composed peak coefficient exceeds 8.0.
+    pub fn build_for_custom(
+        order: usize,
+        layout: &CustomLayout,
+        apply_max_re: bool,
+    ) -> Result<Self, String> {
+        layout.validate()?;
+        validate_custom_order(order)?;
+        let ambi_ch = channel_count(order);
+        let speakers: Vec<(usize, &crate::custom_layout::CustomSpeaker)> = layout
+            .speakers
+            .iter()
+            .enumerate()
+            .filter(|(_, speaker)| !speaker.is_lfe)
+            .collect();
+        let num_speakers = speakers.len();
+
+        if num_speakers == 0 {
+            return Err("No non-LFE speakers in config".into());
+        }
+        let mut y_matrix = vec![0.0_f64; num_speakers * ambi_ch];
+        let mut sh_buffer = vec![0.0_f64; ambi_ch];
+        for (s, (_, speaker)) in speakers.iter().enumerate() {
+            let az = deg_to_rad(f64::from(speaker.azimuth_deg));
+            let el = deg_to_rad(f64::from(speaker.elevation_deg));
+            spherical_harmonics_vector(order, az, el, &mut sh_buffer);
+            let sh = &sh_buffer;
+            for (n, &val) in sh.iter().enumerate() {
+                y_matrix[s * ambi_ch + n] = val;
+            }
+        }
+
+        let (decode, mut quality) = mode_matching_decode(&y_matrix, num_speakers, ambi_ch)?;
+
+        let max_re = if apply_max_re {
+            compute_max_re_weights(order)
+        } else {
+            vec![1.0; ambi_ch]
+        };
+
+        let mut matrix = vec![0.0_f32; num_speakers * ambi_ch];
+        for s in 0..num_speakers {
+            for n in 0..ambi_ch {
+                matrix[s * ambi_ch + n] = (decode[s * ambi_ch + n] * max_re[n] as f64) as f32;
+            }
+        }
+        quality.peak_coefficient = matrix
+            .iter()
+            .map(|value| value.abs() as f64)
+            .fold(0.0, f64::max);
+        if quality.peak_coefficient > 8.0 {
+            return Err(format!(
+                "Ambisonics decode is ill-conditioned: peak coefficient {:.3} exceeds 8.0 (rank {}/{})",
+                quality.peak_coefficient, quality.rank, ambi_ch
+            ));
+        }
+
+        let total_channels = layout.total_channels();
+        let mut full_matrix = vec![0.0_f32; total_channels * ambi_ch];
+        for (s, &(channel, _)) in speakers.iter().enumerate() {
+            for n in 0..ambi_ch {
+                full_matrix[channel * ambi_ch + n] = matrix[s * ambi_ch + n];
+            }
+        }
+
+        Ok(Self {
+            ambi_channels: ambi_ch,
+            speaker_count: total_channels,
+            matrix: full_matrix,
+            max_re_weights: max_re.into_iter().map(|w| w as f32).collect(),
+            algorithm: DecodeAlgorithm::ModeMatching,
+            virtual_speaker_count: 0,
+            quality,
+        })
+    }
+
+    /// Build an AllRAD decoder for user-defined geometry.
+    ///
+    /// Same virtual-sphere decode plus setup-time VBAP remap as
+    /// [`DecodeMatrix::build_allrad`]; only the physical speaker source
+    /// differs. Virtual directions outside the physical VBAP hull fall back to
+    /// the same bounded nearest-speaker projection.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when the layout or order is invalid (order 0 is
+    /// rejected; only 1 through `MAX_ORDER` are accepted), no non-LFE
+    /// speaker exists, or the composed peak coefficient exceeds 8.0.
+    pub fn build_allrad_for_custom(
+        order: usize,
+        layout: &CustomLayout,
+        apply_max_re: bool,
+    ) -> Result<Self, String> {
+        layout.validate()?;
+        validate_custom_order(order)?;
+        let ambi_ch = channel_count(order);
+        let physical: Vec<(usize, &crate::custom_layout::CustomSpeaker)> = layout
+            .speakers
+            .iter()
+            .enumerate()
+            .filter(|(_, speaker)| !speaker.is_lfe)
+            .collect();
+        if physical.is_empty() {
+            return Err("No non-LFE speakers in config".into());
+        }
+
+        let virtual_count = ALLRAD_VIRTUAL_SPEAKERS
+            .get(order)
+            .copied()
+            .ok_or_else(|| format!("No AllRAD grid for order {order}"))?;
+        let directions = fibonacci_sphere(virtual_count);
+
+        let mut virtual_y = vec![0.0_f64; virtual_count * ambi_ch];
+        let mut sh = vec![0.0_f64; ambi_ch];
+        for (index, direction) in directions.iter().enumerate() {
+            spherical_harmonics_vector(order, direction.azimuth, direction.elevation, &mut sh);
+            virtual_y[index * ambi_ch..(index + 1) * ambi_ch].copy_from_slice(&sh);
+        }
+        let (virtual_decode, mut quality) =
+            mode_matching_decode(&virtual_y, virtual_count, ambi_ch)?;
+
+        let max_re = if apply_max_re {
+            compute_max_re_weights(order)
+        } else {
+            vec![1.0; ambi_ch]
+        };
+        for row in 0..virtual_count {
+            for channel in 0..ambi_ch {
+                virtual_y[row * ambi_ch + channel] =
+                    virtual_decode[row * ambi_ch + channel] * max_re[channel];
+            }
+        }
+
+        let total_channels = layout.total_channels();
+        let mut physical_from_virtual = vec![0.0_f64; total_channels * virtual_count];
+        let has_height = physical
+            .iter()
+            .any(|(_, speaker)| speaker.elevation_deg.abs() > 1.0);
+        let physical_vectors: Vec<(usize, [f32; 3])> = physical
+            .iter()
+            .map(|(channel, speaker)| (*channel, speaker.to_cartesian()))
+            .collect();
+        for (virtual_index, direction) in directions.iter().enumerate() {
+            let mut gains = vec![0.0_f64; total_channels];
+            if has_height && direction.elevation.abs() > 1e-8 {
+                vbap_3d(&physical_vectors, direction.vector, &mut gains);
+            } else {
+                vbap_2d(&physical_vectors, direction.azimuth, &mut gains);
+            }
+            for (channel, gain) in gains.into_iter().enumerate() {
+                physical_from_virtual[channel * virtual_count + virtual_index] = gain;
+            }
+        }
+
+        let mut matrix = vec![0.0_f32; total_channels * ambi_ch];
+        for channel in 0..total_channels {
+            for acn in 0..ambi_ch {
+                let mut value = 0.0_f64;
+                for virtual_index in 0..virtual_count {
+                    value += physical_from_virtual[channel * virtual_count + virtual_index]
+                        * virtual_y[virtual_index * ambi_ch + acn];
+                }
+                matrix[channel * ambi_ch + acn] = value as f32;
+            }
+        }
+
+        quality.peak_coefficient = matrix
+            .iter()
+            .map(|value| value.abs() as f64)
+            .fold(0.0, f64::max);
+        if quality.peak_coefficient > 8.0 || !quality.peak_coefficient.is_finite() {
+            return Err(format!(
+                "AllRAD decode is ill-conditioned: peak coefficient {:.3} exceeds 8.0",
+                quality.peak_coefficient
+            ));
+        }
+
+        Ok(Self {
+            ambi_channels: ambi_ch,
+            speaker_count: total_channels,
+            matrix,
+            max_re_weights: max_re.into_iter().map(|weight| weight as f32).collect(),
+            algorithm: DecodeAlgorithm::AllRad,
+            virtual_speaker_count: virtual_count,
+            quality,
+        })
+    }
+
+    /// Snapshots this decoder for export, archival or test comparison.
+    ///
+    /// The returned [`DecoderExport`] is archival/comparison-only (see its
+    /// docs); it cannot be imported back into a live decoder.
+    pub fn export(&self) -> DecoderExport {
+        let quality = self.quality();
+        DecoderExport {
+            algorithm: match self.algorithm {
+                DecodeAlgorithm::ModeMatching => "mode_matching".to_owned(),
+                DecodeAlgorithm::AllRad => "allrad".to_owned(),
+            },
+            ambi_channels: self.ambi_channels,
+            speaker_count: self.speaker_count,
+            virtual_speaker_count: self.virtual_speaker_count,
+            matrix: self.matrix.clone(),
+            max_re_weights: self.max_re_weights.clone(),
+            rank: quality.rank,
+            condition_number: quality.condition_number,
+            reconstruction_error: quality.reconstruction_error,
+            peak_coefficient: quality.peak_coefficient,
+        }
+    }
+
     /// Apply the decode matrix to a frame of Ambisonics input.
     /// `input`: interleaved Ambisonics samples for one frame (length = ambi_channels)
     /// `output`: speaker feeds for one frame (length = speaker_count)
@@ -294,6 +554,23 @@ fn validate_order(order: usize) -> Result<(), String> {
     if order > crate::spherical_harmonics::MAX_ORDER {
         return Err(format!(
             "Ambisonics order must be at most {}, got {order}",
+            crate::spherical_harmonics::MAX_ORDER
+        ));
+    }
+    Ok(())
+}
+
+/// Order guard for the custom builders: 1 through `MAX_ORDER`.
+///
+/// The shared [`validate_order`] only caps the top end (its direct-call
+/// order-0 behavior is frozen legacy for the named builders, whose plugin
+/// constructors reject 0 separately). Custom builders are new API and take
+/// the full guard so `build_for_custom(0)` and
+/// `build_allrad_for_custom(0)` fail instead of entering a degenerate solve.
+fn validate_custom_order(order: usize) -> Result<(), String> {
+    if !(1..=crate::spherical_harmonics::MAX_ORDER).contains(&order) {
+        return Err(format!(
+            "Ambisonics order must be between 1 and {}, got {order}",
             crate::spherical_harmonics::MAX_ORDER
         ));
     }
@@ -735,7 +1012,16 @@ mod tests {
 
     #[test]
     fn shipped_layouts_report_bounded_rank_revealing_quality() {
-        for layout in crate::params::TARGET_LAYOUTS {
+        // `TARGET_LAYOUTS` also carries the user-geometry key, which has no
+        // static config; custom quality is covered by the custom builders'
+        // own bounded-or-reject tests. Pin the skip so it cannot go stale.
+        assert!(
+            crate::params::TARGET_LAYOUTS.contains(&crate::custom_layout::CUSTOM_LAYOUT_KEY)
+        );
+        for layout in crate::params::TARGET_LAYOUTS
+            .iter()
+            .filter(|layout| **layout != crate::custom_layout::CUSTOM_LAYOUT_KEY)
+        {
             let config = get_speaker_config(layout).unwrap();
             for order in 1..=crate::spherical_harmonics::MAX_ORDER {
                 let dm = DecodeMatrix::build(order, config, true).unwrap();
@@ -767,6 +1053,35 @@ mod tests {
         assert!(
             DecodeMatrix::build(crate::spherical_harmonics::MAX_ORDER + 1, config, true).is_err()
         );
+    }
+
+    #[test]
+    fn custom_builders_reject_order_zero_and_above_max() {
+        use crate::custom_layout::{CustomLayout, CustomSpeaker};
+        let layout = CustomLayout {
+            name: "stereo".to_owned(),
+            speakers: vec![
+                CustomSpeaker {
+                    label: "FL".to_owned(),
+                    azimuth_deg: 30.0,
+                    elevation_deg: 0.0,
+                    is_lfe: false,
+                },
+                CustomSpeaker {
+                    label: "FR".to_owned(),
+                    azimuth_deg: -30.0,
+                    elevation_deg: 0.0,
+                    is_lfe: false,
+                },
+            ],
+        };
+        for order in [0, crate::spherical_harmonics::MAX_ORDER + 1] {
+            let mode_matching = DecodeMatrix::build_for_custom(order, &layout, false).unwrap_err();
+            assert!(mode_matching.contains("between 1 and"), "{mode_matching}");
+            let allrad =
+                DecodeMatrix::build_allrad_for_custom(order, &layout, false).unwrap_err();
+            assert!(allrad.contains("between 1 and"), "{allrad}");
+        }
     }
 
     #[test]

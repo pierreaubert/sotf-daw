@@ -10,7 +10,7 @@ use sotf_host::SignalGen;
 use sotf_host::parameters::Parameter;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_plugin::{ParameterSet, ParametricPlugin};
-use sotf_host::plugin::ProcessContext;
+use sotf_host::plugin::{ProcessContext, TailLength};
 
 fn _set_param(plugin: &mut EqPlugin, id: &str, value: ParameterValue) {
     let mut m = ParameterSet::new();
@@ -81,6 +81,7 @@ fn test_from_params_rejects_invalid_standard_filter_values() {
         db_gain: 0.0,
         order: 2,
         topology: EqFilterTopology::Biquad,
+        placement: None,
         lambda: None,
         kautz_sections: Vec::new(),
     };
@@ -174,17 +175,70 @@ fn test_parameter_transition_keeps_per_channel_start_coefficients() {
 }
 
 #[test]
-fn test_svf_and_oversampling_are_rejected_as_unsupported() {
+fn svf_retains_selected_oversampling_but_bypasses_resampler_latency() {
     let mut plugin = EqPlugin::new(1, vec![]);
     plugin.plugin_initialize(48_000).unwrap();
     plugin
         .parametric_set_parameter(ParameterId::from("topology"), ParameterValue::Int(1))
         .unwrap();
-    assert!(
+    for factor in [2, 4] {
         plugin
-            .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(2))
-            .is_err()
+            .parametric_set_parameter(
+                ParameterId::from("oversampling"),
+                ParameterValue::Int(factor),
+            )
+            .unwrap();
+        assert_eq!(
+            plugin.parametric_get_parameter(&ParameterId::from("oversampling")),
+            Some(ParameterValue::Int(factor))
+        );
+        assert_eq!(plugin.latency_samples(), 0);
+        assert!(matches!(plugin.tail_length(), TailLength::Finite(0)));
+        assert_eq!(plugin.auto_gain_reference_delay_frames(), 0);
+    }
+
+    // A selected factor does not impose the oversampler's block cap while an
+    // empty SVF route is active. This also verifies the empty bank processes
+    // real, nonzero input as an identity route instead of falling through to a
+    // missing oversampler.
+    plugin
+        .parametric_set_parameter(
+            ParameterId::from("auto_gain_enabled"),
+            ParameterValue::Bool(false),
+        )
+        .unwrap();
+    let input = (0..=super::eq_plugin::EQ_MAX_BLOCK_FRAMES)
+        .map(|frame| ((frame as f32) * 0.013).sin() * 0.3)
+        .collect::<Vec<_>>();
+    let mut actual = input.clone();
+    assert_eq!(
+        _process_in_place(
+            &mut plugin,
+            &mut actual,
+            &ProcessContext::new(48_000, input.len()),
+        ),
+        input.len()
     );
+    assert_eq!(actual, input, "empty active SVF route is identity");
+    assert!(matches!(plugin.tail_length(), TailLength::Finite(0)));
+
+    let mut factor_first = EqPlugin::new(1, vec![]);
+    factor_first
+        .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(4))
+        .unwrap();
+    factor_first.plugin_initialize(48_000).unwrap();
+    assert!(factor_first.latency_samples() > 0);
+    factor_first
+        .parametric_set_parameter(ParameterId::from("topology"), ParameterValue::Int(1))
+        .unwrap();
+    assert_eq!(factor_first.latency_samples(), 0);
+    assert!(matches!(factor_first.tail_length(), TailLength::Finite(0)));
+    assert_eq!(factor_first.auto_gain_reference_delay_frames(), 0);
+
+    factor_first
+        .parametric_set_parameter(ParameterId::from("topology"), ParameterValue::Int(0))
+        .unwrap();
+    assert!(factor_first.latency_samples() > 0);
     assert_eq!(plugin.latency_samples(), 0);
 }
 
@@ -279,10 +333,12 @@ fn test_eq_allpass_filter_type_parses() {
             db_gain: 0.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let result = EqPlugin::from_params(2, 48000, params);
@@ -304,6 +360,7 @@ fn test_from_params_rejects_q_outside_filter_type_range() {
                 db_gain: 0.0,
                 order: 2,
                 topology: Default::default(),
+                placement: None,
                 lambda: None,
                 kautz_sections: Vec::new(),
             },
@@ -314,11 +371,13 @@ fn test_from_params_rejects_q_outside_filter_type_range() {
                 db_gain: 0.0,
                 order: 2,
                 topology: Default::default(),
+                placement: None,
                 lambda: None,
                 kautz_sections: Vec::new(),
             },
         ],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     assert!(EqPlugin::from_params(1, 48000, params).is_err());
@@ -334,10 +393,12 @@ fn test_eq_warped_biquad_filter_processes() {
             db_gain: 6.0,
             order: 2,
             topology: EqFilterTopology::WarpedBiquad,
+            placement: None,
             lambda: Some(0.5),
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut p = EqPlugin::from_params(1, 48000, params).unwrap();
@@ -374,6 +435,7 @@ fn test_eq_kautz_filter_processes_as_dry_plus_correction() {
             db_gain: 0.0,
             order: 2,
             topology: EqFilterTopology::KautzFilter,
+            placement: None,
             lambda: None,
             kautz_sections: vec![KautzSectionConfig {
                 pole_freq: 100.0,
@@ -382,6 +444,7 @@ fn test_eq_kautz_filter_processes_as_dry_plus_correction() {
             }],
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut p = EqPlugin::from_params(1, 48000, params).unwrap();
@@ -1057,10 +1120,12 @@ fn test_multi_stage_transition_covers_all_stages() {
             db_gain: 0.0,
             order: 4, // 2 stages
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut p = EqPlugin::from_params(1, 48000, params).unwrap();
@@ -1120,10 +1185,12 @@ fn test_from_params_rejects_odd_filter_order() {
             db_gain: 6.0,
             order: 3,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 
@@ -1205,10 +1272,12 @@ fn test_multi_stage_transition_output_is_finite() {
             db_gain: 0.0,
             order: 4,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut p = EqPlugin::from_params(1, 48000, params).unwrap();
@@ -1258,10 +1327,12 @@ fn test_eq_oversampling_12ch_does_not_panic() {
             db_gain: 3.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut p = EqPlugin::from_params(nc, 48000, params).unwrap();
@@ -2107,7 +2178,7 @@ fn test_transition_samples_scales_with_sample_rate() {
 }
 
 #[test]
-fn test_apply_sample_rate_to_advanced_filters() {
+fn test_advanced_filter_reconfiguration_is_detached() {
     let params = EqPluginParams {
         filters: vec![BiquadFilterConfig {
             filter_type: "peak".to_string(),
@@ -2116,14 +2187,182 @@ fn test_apply_sample_rate_to_advanced_filters() {
             db_gain: 6.0,
             order: 2,
             topology: EqFilterTopology::WarpedBiquad,
+            placement: None,
             lambda: Some(0.5),
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
-    let mut p = EqPlugin::from_params(1, 48000, params).unwrap();
-    p.apply_sample_rate_to_advanced_filters(96000.0).unwrap();
+    let p = EqPlugin::from_params(1, 48000, params).unwrap();
+    let original = &p.advanced_filters[0][0];
+    let replacement = original.reconfigured(96_000.0).unwrap();
+    let super::advanced_filter::AdvancedFilter::Warped {
+        filter: old_filter, ..
+    } = original
+    else {
+        panic!("expected original warped filter");
+    };
+    let super::advanced_filter::AdvancedFilter::Warped {
+        filter: new_filter, ..
+    } = replacement
+    else {
+        panic!("expected replacement warped filter");
+    };
+    assert_eq!(old_filter.srate, 48_000.0);
+    assert_eq!(new_filter.srate, 96_000.0);
+}
+
+#[test]
+fn legacy_warped_reinitialize_matches_state_preserving_update_contract() {
+    let params = EqPluginParams {
+        filters: vec![BiquadFilterConfig {
+            filter_type: "peak".to_string(),
+            freq: 1_700.0,
+            q: 1.3,
+            db_gain: 5.0,
+            order: 2,
+            topology: EqFilterTopology::WarpedBiquad,
+            placement: None,
+            lambda: None,
+            kautz_sections: Vec::new(),
+        }],
+        channel_filters: None,
+        stereo_pairs: None,
+        auto_gain: Default::default(),
+    };
+    let mut actual = EqPlugin::from_params(1, 48_000, params.clone()).unwrap();
+    let mut legacy_reference = EqPlugin::from_params(1, 48_000, params).unwrap();
+    actual.plugin_initialize(48_000).unwrap();
+    legacy_reference.plugin_initialize(48_000).unwrap();
+
+    let prefix = (0..2_048)
+        .map(|index| {
+            if index == 0 {
+                0.8
+            } else {
+                (index as f32 * 0.037).sin() * 0.2
+            }
+        })
+        .collect::<Vec<_>>();
+    let prefix_context = ProcessContext::new(48_000, prefix.len());
+    let mut actual_prefix = prefix.clone();
+    let mut legacy_prefix = prefix;
+    _process_in_place(&mut actual, &mut actual_prefix, &prefix_context);
+    _process_in_place(&mut legacy_reference, &mut legacy_prefix, &prefix_context);
+    assert_eq!(actual_prefix, legacy_prefix);
+
+    actual.plugin_initialize(48_000).unwrap();
+
+    // A same-rate reinitialize also updates the realized filter in place in
+    // the legacy route. It must not clear populated WarpedBiquad history.
+    legacy_reference.sample_rate = 48_000;
+    for channel in &mut legacy_reference.advanced_filters {
+        for advanced in channel {
+            match advanced {
+                super::advanced_filter::AdvancedFilter::Warped {
+                    filter,
+                    automatic_lambda,
+                } => {
+                    let lambda = if *automatic_lambda {
+                        math_audio_iir_fir::bark_lambda(48_000.0)
+                    } else {
+                        filter.lambda
+                    };
+                    filter.update_params(
+                        filter.filter_type,
+                        filter.freq,
+                        48_000.0,
+                        filter.q,
+                        filter.db_gain,
+                        lambda,
+                    );
+                }
+                super::advanced_filter::AdvancedFilter::Kautz(filter) => {
+                    filter.apply_sample_rate(48_000.0).unwrap();
+                }
+            }
+        }
+    }
+    legacy_reference.auto_gain.set_sample_rate(48_000).unwrap();
+
+    let same_rate_continuation = (0..1_024)
+        .map(|index| (index as f32 * 0.053).sin() * 0.17)
+        .collect::<Vec<_>>();
+    let same_rate_context = ProcessContext::new(48_000, same_rate_continuation.len());
+    let mut actual_same_rate = same_rate_continuation.clone();
+    let mut expected_same_rate = same_rate_continuation;
+    _process_in_place(&mut actual, &mut actual_same_rate, &same_rate_context);
+    _process_in_place(
+        &mut legacy_reference,
+        &mut expected_same_rate,
+        &same_rate_context,
+    );
+    assert_eq!(actual_same_rate, expected_same_rate);
+
+    let rate_change_prefix = (0..1_024)
+        .map(|index| (index as f32 * 0.029).cos() * 0.11)
+        .collect::<Vec<_>>();
+    let rate_change_prefix_context = ProcessContext::new(48_000, rate_change_prefix.len());
+    let mut actual_rate_change_prefix = rate_change_prefix.clone();
+    let mut expected_rate_change_prefix = rate_change_prefix;
+    _process_in_place(
+        &mut actual,
+        &mut actual_rate_change_prefix,
+        &rate_change_prefix_context,
+    );
+    _process_in_place(
+        &mut legacy_reference,
+        &mut expected_rate_change_prefix,
+        &rate_change_prefix_context,
+    );
+    assert_eq!(actual_rate_change_prefix, expected_rate_change_prefix);
+
+    actual.plugin_initialize(44_100).unwrap();
+
+    // Reproduce the old successful legacy reinitialization contract directly:
+    // WarpedBiquad::update_params changes coefficients/rate without clearing
+    // the allpass and recursive histories.
+    legacy_reference.sample_rate = 44_100;
+    for channel in &mut legacy_reference.advanced_filters {
+        for advanced in channel {
+            match advanced {
+                super::advanced_filter::AdvancedFilter::Warped {
+                    filter,
+                    automatic_lambda,
+                } => {
+                    let lambda = if *automatic_lambda {
+                        math_audio_iir_fir::bark_lambda(44_100.0)
+                    } else {
+                        filter.lambda
+                    };
+                    filter.update_params(
+                        filter.filter_type,
+                        filter.freq,
+                        44_100.0,
+                        filter.q,
+                        filter.db_gain,
+                        lambda,
+                    );
+                }
+                super::advanced_filter::AdvancedFilter::Kautz(filter) => {
+                    filter.apply_sample_rate(44_100.0).unwrap();
+                }
+            }
+        }
+    }
+    legacy_reference.auto_gain.set_sample_rate(44_100).unwrap();
+
+    let continuation = (0..1_024)
+        .map(|index| (index as f32 * 0.061).cos() * 0.13)
+        .collect::<Vec<_>>();
+    let context = ProcessContext::new(44_100, continuation.len());
+    let mut actual_output = continuation.clone();
+    let mut expected_output = continuation;
+    _process_in_place(&mut actual, &mut actual_output, &context);
+    _process_in_place(&mut legacy_reference, &mut expected_output, &context);
+    assert_eq!(actual_output, expected_output);
 }
 
 #[test]
@@ -2136,10 +2375,12 @@ fn test_automatic_warped_lambda_tracks_sample_rate() {
             db_gain: 6.0,
             order: 2,
             topology: EqFilterTopology::WarpedBiquad,
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut plugin = EqPlugin::from_params(1, 44_100, params.clone()).unwrap();

@@ -3,7 +3,9 @@ use sotf_host::{
     CountingAlloc, ParametricInPlacePlugin, ParametricInPlacePluginAdapter, assert_no_allocs,
     run_standard_tests,
 };
-use sotf_plugin_dynamic_eq::{DynEqBandParams, DynamicEqPlugin, DynamicEqPluginParams};
+use sotf_plugin_dynamic_eq::{
+    DynEqBandParams, DynEqPlacement, DynEqShape, DynamicEqPlugin, DynamicEqPluginParams,
+};
 use std::f32::consts::PI;
 
 #[global_allocator]
@@ -31,6 +33,7 @@ fn main() {
             solo: false,
             ..Default::default()
         }],
+        stereo_pairs: None,
     };
 
     let mut inner = DynamicEqPlugin::from_params(channels, params);
@@ -52,6 +55,66 @@ fn main() {
         input_rms, output_rms
     );
     assert!(output_rms.is_finite(), "Output should be finite");
+
+    // Test 2: Tilt shape + routed placement smoke on the new surface.
+    println!("\n[Test 2] Tilt + routed placement smoke");
+    for (channels, pairs) in [(2, None), (4, Some(vec![[0, 1], [2, 3]]))] {
+        let mut routed = DynamicEqPlugin::from_params(
+            channels,
+            DynamicEqPluginParams {
+                num_bands: 2,
+                threshold: -30.0,
+                ratio: 8.0,
+                attack_ms: 1.0,
+                release_ms: 50.0,
+                knee: 0.0,
+                link_channels: false,
+                mix: 1.0,
+                bands: vec![
+                    DynEqBandParams {
+                        shape: DynEqShape::Tilt,
+                        placement: DynEqPlacement::Left,
+                        frequency: 1000.0,
+                        gain: 9.0,
+                        band_threshold: -30.0,
+                        band_ratio: 8.0,
+                        active: true,
+                        solo: false,
+                        ..Default::default()
+                    },
+                    DynEqBandParams {
+                        shape: DynEqShape::Peak,
+                        placement: DynEqPlacement::Right,
+                        frequency: 3000.0,
+                        q: 1.0,
+                        gain: -6.0,
+                        band_threshold: -30.0,
+                        band_ratio: 8.0,
+                        active: true,
+                        solo: false,
+                        ..Default::default()
+                    },
+                ],
+                stereo_pairs: pairs,
+            },
+        );
+        routed.initialize(sample_rate).unwrap();
+        let frames = 8_192;
+        let mut audio = vec![0.0; frames * channels];
+        for frame in 0..frames {
+            let time = frame as f32 / sample_rate as f32;
+            for ch in 0..channels {
+                audio[frame * channels + ch] =
+                    0.4 * (2.0 * PI * 1000.0 * time).sin() + 0.3 * (2.0 * PI * 3000.0 * time).sin();
+            }
+        }
+        let input = audio.clone();
+        let ctx = ProcessContext::new(sample_rate, frames);
+        routed.process_in_place(&mut audio, &ctx).unwrap();
+        assert!(audio.iter().all(|sample| sample.is_finite()));
+        assert_ne!(audio, input, "{channels}ch tilt/routed must engage");
+        println!("  {channels}ch tilt+routed engaged: PASS");
+    }
 
     // Run standard QA tests
     let mut plugin = InPlacePluginAdapter::new(ParametricInPlacePluginAdapter::new(inner));

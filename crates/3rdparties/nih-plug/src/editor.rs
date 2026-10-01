@@ -40,6 +40,16 @@ pub trait Editor: Send {
         context: Arc<dyn GuiContext>,
     ) -> Box<dyn Any + Send>;
 
+    /// Show or hide an already spawned embedded editor without destroying its window or its UI
+    /// state. Hosts call this on their main thread between `set_parent()` and `destroy()`.
+    ///
+    /// The default implementation reports that visibility changes are unsupported. Editors that
+    /// can control their child window should override this and leave the handle alive so a later
+    /// `show()` can reveal the same editor instance.
+    fn set_visible(&self, _editor_handle: &mut dyn Any, _visible: bool) -> bool {
+        false
+    }
+
     /// Returns the (current) size of the editor in pixels as a `(width, height)` pair. This size
     /// must be reported in _logical pixels_, i.e. the size before being multiplied by the DPI
     /// scaling factor to get the actual physical screen pixels.

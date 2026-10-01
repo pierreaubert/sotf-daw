@@ -2,6 +2,9 @@
 
 ## Changes
 
+- Map EQ oversampling selector indices to DSP factors 1/2/4 in both directions, preserving raw saved-state factors and other plugins’ parameter semantics.
+
+- Carry explicit Crossover band counts through factory construction, preserving dormant settings during topology changes.
 - Carry true-stereo convolution configuration through bridge factory construction.
 
 # 0.5.5

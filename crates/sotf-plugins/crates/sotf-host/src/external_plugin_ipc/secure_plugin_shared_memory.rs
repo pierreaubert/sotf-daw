@@ -57,6 +57,14 @@ pub struct SecurePluginSharedMemory {
     pub(super) remove_on_drop: bool,
 }
 
+/// Local result of one worker callback. `PluginFailed` is deliberately kept
+/// separate from transport errors so a concurrent host acknowledgment cannot
+/// erase the worker's classification after the shared failure is published.
+pub(crate) enum WorkerRequestOutcome {
+    Processed(usize),
+    PluginFailed(String),
+}
+
 impl SecurePluginSharedMemory {
     pub fn publish_control_request(
         &mut self,
@@ -260,6 +268,10 @@ impl SecurePluginSharedMemory {
 
     pub fn worker_sequence(&self) -> u64 {
         self.header().worker_sequence.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn worker_failure_status_code(&self) -> u32 {
+        self.header().status_code.load(Ordering::Acquire)
     }
 
     pub fn publish_worker_sequence(&self, sequence: u64) {
@@ -587,6 +599,28 @@ impl SecurePluginSharedMemory {
         output_scratch: &mut [f32],
         context: &ProcessContext,
     ) -> io::Result<usize> {
+        match self.process_worker_request_outcome(
+            plugin,
+            request,
+            input_scratch,
+            output_scratch,
+            context,
+        )? {
+            WorkerRequestOutcome::Processed(frames) => Ok(frames),
+            WorkerRequestOutcome::PluginFailed(error) => Err(invalid_data(format!(
+                "external plugin process failed: {error}"
+            ))),
+        }
+    }
+
+    pub(crate) fn process_worker_request_outcome(
+        &mut self,
+        plugin: &mut dyn Plugin,
+        request: PluginIpcRequest,
+        input_scratch: &mut [f32],
+        output_scratch: &mut [f32],
+        context: &ProcessContext,
+    ) -> io::Result<WorkerRequestOutcome> {
         self.validate_frame_count(request.frames)?;
         if request.sequence != self.host_sequence() {
             return Err(invalid_data("stale external-plugin IPC request sequence"));
@@ -623,9 +657,7 @@ impl SecurePluginSharedMemory {
             }
             Ok(Err(err)) => {
                 self.publish_worker_failure(request.sequence, 1);
-                return Err(invalid_data(format!(
-                    "external plugin process failed: {err}"
-                )));
+                return Ok(WorkerRequestOutcome::PluginFailed(err));
             }
             Err(payload) => {
                 self.publish_worker_failure(request.sequence, 3);
@@ -646,7 +678,7 @@ impl SecurePluginSharedMemory {
         self.output_slice_mut()[..output_samples]
             .copy_from_slice(&output_scratch[..output_samples]);
         self.publish_worker_ready(request.sequence, frames)?;
-        Ok(frames)
+        Ok(WorkerRequestOutcome::Processed(frames))
     }
 
     pub fn publish_worker_ready(&self, sequence: u64, frames: usize) -> io::Result<()> {

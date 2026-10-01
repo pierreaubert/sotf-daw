@@ -54,6 +54,7 @@ fn make(channels: usize, rate: u32, taps: usize, splits: usize, mode: &str) -> C
         channel_frequencies_hz: Vec::new(),
         channel_modes: Some(Vec::new()),
         topology: None,
+        band_count: None,
     };
     let mut plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
     plugin.initialize(rate).unwrap();

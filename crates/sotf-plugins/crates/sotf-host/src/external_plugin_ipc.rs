@@ -34,6 +34,7 @@ pub use plugin_ipc_layout::*;
 pub use plugin_ipc_state::*;
 pub use plugin_sandbox_backend_code::*;
 pub use plugin_sandbox_status_code::*;
+pub(crate) use secure_plugin_shared_memory::WorkerRequestOutcome;
 pub use secure_plugin_shared_memory::*;
 pub use types::*;
 // Re-exported solely for the non-Linux sandbox `platform::enter()` integrity

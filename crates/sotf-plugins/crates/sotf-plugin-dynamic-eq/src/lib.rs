@@ -21,4 +21,5 @@ pub use dyn_eq_band_params::*;
 pub use dynamic_eq_data::*;
 pub use dynamic_eq_plugin::*;
 pub use dynamic_eq_plugin_params::*;
+pub use params::DynEqPlacement;
 pub use params::DynEqShape;

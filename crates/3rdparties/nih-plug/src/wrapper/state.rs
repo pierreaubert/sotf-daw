@@ -89,7 +89,7 @@ pub(crate) unsafe fn serialize_object<'a, P: Plugin>(
     // We'll serialize parameter values as a simple `string_param_id: display_value` map.
     // NOTE: If the plugin is being modulated (and the plugin is a CLAP plugin in Bitwig Studio),
     //       then this should save the values without any modulation applied to it
-    let params: BTreeMap<_, _> = params_iter
+    let mut params: BTreeMap<_, _> = params_iter
         .into_iter()
         .map(|(param_id_str, param_ptr)| match param_ptr {
             ParamPtr::FloatParam(p) => (
@@ -116,6 +116,8 @@ pub(crate) unsafe fn serialize_object<'a, P: Plugin>(
             ),
         })
         .collect();
+
+    params.extend(plugin_params.serialize_parameter_overrides());
 
     // The plugin can also persist arbitrary fields alongside its parameters. This is useful for
     // storing things like sample data.
@@ -176,58 +178,83 @@ pub(crate) unsafe fn deserialize_object<P: Plugin>(
     plugin_params: Arc<dyn Params>,
     params_getter: impl Fn(&str) -> Option<ParamPtr>,
     current_buffer_config: Option<&BufferConfig>,
+    is_active: bool,
+    is_audio_thread: bool,
 ) -> bool {
+    // Audio-thread restores must not reach allocating migration, validation,
+    // or field work. Refuse before `filter_state` runs so the live
+    // parameters and DSP state stay untouched; the host retries on a
+    // control thread. Control-thread restores always proceed.
+    if is_audio_thread && !P::state_restore_allows_audio_thread(state) {
+        return false;
+    }
+
     // This lets the plugin perform migrations on old state if needed
     P::filter_state(state);
 
-    let sample_rate = current_buffer_config.map(|c| c.sample_rate);
-    for (param_id_str, param_value) in &state.params {
-        let param_ptr = match params_getter(param_id_str.as_str()) {
-            Some(ptr) => ptr,
-            None => {
-                nih_debug_assert_failure!("Unknown parameter: {}", param_id_str);
-                continue;
-            }
-        };
+    // Plugins that persist control-thread resources must be able to reject an
+    // unsupported restore before any host-visible parameter is mutated. This
+    // also lets them refuse work that would otherwise be deferred to the end
+    // of an audio callback while the plugin is active.
+    if !plugin_params.validate_state(
+        state,
+        is_active,
+        is_audio_thread,
+        current_buffer_config.map(|config| config.sample_rate),
+    ) {
+        return false;
+    }
 
-        match (param_ptr, param_value) {
-            (ParamPtr::FloatParam(p), ParamValue::F32(v)) => {
-                (*p).set_plain_value(*v);
-            }
-            (ParamPtr::IntParam(p), ParamValue::I32(v)) => {
-                (*p).set_plain_value(*v);
-            }
-            (ParamPtr::BoolParam(p), ParamValue::Bool(v)) => {
-                (*p).set_plain_value(*v);
-            }
-            // Enums are either serialized based on the active variant's index (which may not be the
-            // same as the discriminator), or a custom set stable string ID. The latter allows the
-            // variants to be reordered.
-            (ParamPtr::EnumParam(p), ParamValue::I32(variant_idx)) => {
-                (*p).set_plain_value(*variant_idx);
-            }
-            (ParamPtr::EnumParam(p), ParamValue::String(id)) => {
-                let deserialized_enum = (*p).set_from_id(id);
-                nih_debug_assert!(
-                    deserialized_enum,
-                    "Unknown ID {:?} for enum parameter \"{}\"",
-                    id,
-                    param_id_str,
-                );
-            }
-            (param_ptr, param_value) => {
-                nih_debug_assert_failure!(
-                    "Invalid serialized value {:?} for parameter \"{}\" ({:?})",
-                    param_value,
-                    param_id_str,
-                    param_ptr,
-                );
-            }
-        }
+    if !plugin_params.defer_state_parameter_values() {
+        let sample_rate = current_buffer_config.map(|c| c.sample_rate);
+        for (param_id_str, param_value) in &state.params {
+            let param_ptr = match params_getter(param_id_str.as_str()) {
+                Some(ptr) => ptr,
+                None => {
+                    nih_debug_assert_failure!("Unknown parameter: {}", param_id_str);
+                    continue;
+                }
+            };
 
-        // Make sure everything starts out in sync
-        if let Some(sample_rate) = sample_rate {
-            param_ptr.update_smoother(sample_rate, true);
+            match (param_ptr, param_value) {
+                (ParamPtr::FloatParam(p), ParamValue::F32(v)) => {
+                    (*p).set_plain_value(*v);
+                }
+                (ParamPtr::IntParam(p), ParamValue::I32(v)) => {
+                    (*p).set_plain_value(*v);
+                }
+                (ParamPtr::BoolParam(p), ParamValue::Bool(v)) => {
+                    (*p).set_plain_value(*v);
+                }
+                // Enums are either serialized based on the active variant's index (which may not be the
+                // same as the discriminator), or a custom set stable string ID. The latter allows the
+                // variants to be reordered.
+                (ParamPtr::EnumParam(p), ParamValue::I32(variant_idx)) => {
+                    (*p).set_plain_value(*variant_idx);
+                }
+                (ParamPtr::EnumParam(p), ParamValue::String(id)) => {
+                    let deserialized_enum = (*p).set_from_id(id);
+                    nih_debug_assert!(
+                        deserialized_enum,
+                        "Unknown ID {:?} for enum parameter \"{}\"",
+                        id,
+                        param_id_str,
+                    );
+                }
+                (param_ptr, param_value) => {
+                    nih_debug_assert_failure!(
+                        "Invalid serialized value {:?} for parameter \"{}\" ({:?})",
+                        param_value,
+                        param_id_str,
+                        param_ptr,
+                    );
+                }
+            }
+
+            // Make sure everything starts out in sync
+            if let Some(sample_rate) = sample_rate {
+                param_ptr.update_smoother(sample_rate, true);
+            }
         }
     }
 
@@ -291,4 +318,464 @@ pub(crate) unsafe fn deserialize_json(state: &[u8]) -> Option<PluginState> {
     };
 
     result
+}
+
+#[cfg(test)]
+mod admission_tests {
+    //! Audio-thread state-restore admission: the pre-`filter_state` gate.
+    //!
+    //! These tests use dependency-free dummy plugins, so they build wherever
+    //! the crate builds. The heap-scope test overrides the global allocator
+    //! with a process-wide counter and must run single-threaded
+    //! (`cargo test -p nih_plug -- --test-threads=1`); the behavioral tests
+    //! are race-free under parallel execution. The heap test covers the
+    //! `deserialize_object` gate only; the full audio handoff includes a
+    //! `try_recv` that may allocate (documented `FIXME`), and control-thread
+    //! JSON parsing may also allocate.
+
+    use super::{ParamValue, PluginState, deserialize_json, deserialize_object};
+    use crate::prelude::{
+        AudioIOLayout, AuxiliaryBuffers, BoolParam, Buffer, FloatParam, FloatRange, IntParam,
+        IntRange, Param, ParamPtr, Params, Plugin, ProcessContext, ProcessStatus,
+    };
+    #[cfg(not(feature = "assert_process_allocs"))]
+    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    #[cfg(not(feature = "assert_process_allocs"))]
+    use std::sync::atomic::AtomicBool;
+
+    struct DummyParams;
+
+    // SAFETY: no parameter pointers are exposed.
+    unsafe impl Params for DummyParams {
+        fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
+            Vec::new()
+        }
+    }
+
+    fn dummy_params() -> Arc<dyn Params> {
+        Arc::new(DummyParams)
+    }
+
+    fn empty_state() -> PluginState {
+        PluginState {
+            version: String::from("test"),
+            params: BTreeMap::new(),
+            fields: BTreeMap::new(),
+        }
+    }
+
+    /// Populated parameters with allocating probes. Tracks whether validation
+    /// and field restore ran; both allocate when they run.
+    struct PopulatedParams {
+        float: FloatParam,
+        int: IntParam,
+        flag: BoolParam,
+        validate_calls: AtomicUsize,
+        deserialize_calls: AtomicUsize,
+    }
+
+    impl PopulatedParams {
+        fn new() -> Arc<Self> {
+            Arc::new(Self {
+                float: FloatParam::new(
+                    "Float",
+                    0.5f32,
+                    FloatRange::Linear {
+                        min: 0.0f32,
+                        max: 1.0f32,
+                    },
+                ),
+                int: IntParam::new("Int", 1, IntRange::Linear { min: 0, max: 3 }),
+                flag: BoolParam::new("Flag", true),
+                validate_calls: AtomicUsize::new(0),
+                deserialize_calls: AtomicUsize::new(0),
+            })
+        }
+    }
+
+    // SAFETY: pointers borrow fields of the Arc-kept object, which outlives the test calls.
+    unsafe impl Params for PopulatedParams {
+        fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
+            vec![
+                (
+                    String::from("float"),
+                    ParamPtr::FloatParam(&self.float as *const _),
+                    String::from("Group"),
+                ),
+                (
+                    String::from("int"),
+                    ParamPtr::IntParam(&self.int as *const _),
+                    String::from("Group"),
+                ),
+                (
+                    String::from("flag"),
+                    ParamPtr::BoolParam(&self.flag as *const _),
+                    String::from("Group"),
+                ),
+            ]
+        }
+
+        fn validate_state(
+            &self,
+            _state: &PluginState,
+            _is_active: bool,
+            _is_audio_thread: bool,
+            _sample_rate: Option<f32>,
+        ) -> bool {
+            self.validate_calls.fetch_add(1, Ordering::SeqCst);
+            // Allocating probe: must not run on audio refusal.
+            let probe = vec![1, 2, 3];
+            let _ = probe.len();
+            true
+        }
+
+        fn deserialize_fields(&self, _serialized: &BTreeMap<String, String>) {
+            self.deserialize_calls.fetch_add(1, Ordering::SeqCst);
+            // Allocating probe.
+            let probe = format!("deserialize");
+            let _ = probe.len();
+        }
+    }
+
+    fn populated_state() -> PluginState {
+        let mut params = BTreeMap::new();
+        params.insert(String::from("float"), ParamValue::F32(0.9));
+        params.insert(String::from("int"), ParamValue::I32(2));
+        params.insert(String::from("flag"), ParamValue::Bool(false));
+        let mut fields = BTreeMap::new();
+        fields.insert(String::from("preset"), String::from("kept"));
+        PluginState {
+            version: String::from("test"),
+            params,
+            fields,
+        }
+    }
+
+    /// A plugin that keeps the default admission hook and records migration
+    /// by annotating the state object. An empty parameter map keeps the
+    /// parameter loop (which reports unknown IDs) out of the picture.
+    #[derive(Default)]
+    struct CompatPlugin;
+
+    impl Plugin for CompatPlugin {
+        const NAME: &'static str = "compat admission probe";
+        const VENDOR: &'static str = "test";
+        const URL: &'static str = "https://example.invalid";
+        const EMAIL: &'static str = "test@example.invalid";
+        const VERSION: &'static str = "0.0.0";
+        const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+
+        type SysExMessage = ();
+        type BackgroundTask = ();
+
+        fn params(&self) -> Arc<dyn Params> {
+            dummy_params()
+        }
+
+        fn process(
+            &mut self,
+            _buffer: &mut Buffer,
+            _aux: &mut AuxiliaryBuffers,
+            _context: &mut impl ProcessContext<Self>,
+        ) -> ProcessStatus {
+            ProcessStatus::Normal
+        }
+
+        fn filter_state(state: &mut PluginState) {
+            state
+                .fields
+                .insert(String::from("probe_migrated"), String::from("1"));
+        }
+    }
+
+    /// A plugin that refuses every audio-thread restore. Its `filter_state`
+    /// annotates the state so a test can prove the gate ran first.
+    #[derive(Default)]
+    struct RefusingPlugin;
+
+    impl Plugin for RefusingPlugin {
+        const NAME: &'static str = "refusing admission probe";
+        const VENDOR: &'static str = "test";
+        const URL: &'static str = "https://example.invalid";
+        const EMAIL: &'static str = "test@example.invalid";
+        const VERSION: &'static str = "0.0.0";
+        const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[];
+
+        type SysExMessage = ();
+        type BackgroundTask = ();
+
+        fn params(&self) -> Arc<dyn Params> {
+            dummy_params()
+        }
+
+        fn process(
+            &mut self,
+            _buffer: &mut Buffer,
+            _aux: &mut AuxiliaryBuffers,
+            _context: &mut impl ProcessContext<Self>,
+        ) -> ProcessStatus {
+            ProcessStatus::Normal
+        }
+
+        fn filter_state(state: &mut PluginState) {
+            state
+                .fields
+                .insert(String::from("probe_migrated"), String::from("1"));
+        }
+
+        fn state_restore_allows_audio_thread(state: &PluginState) -> bool {
+            let _ = state;
+            false
+        }
+    }
+
+    #[test]
+    fn default_hook_preserves_audio_thread_restore() {
+        let mut state = empty_state();
+        // SAFETY: the dummy exposes no parameters, so the getter is sound.
+        let restored = unsafe {
+            deserialize_object::<CompatPlugin>(
+                &mut state,
+                dummy_params(),
+                |_| None,
+                None,
+                false,
+                true,
+            )
+        };
+        assert!(restored);
+        assert_eq!(state.fields.get("probe_migrated").as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn refusing_hook_rejects_before_filter_state_without_mutation() {
+        let mut state = empty_state();
+        state
+            .fields
+            .insert(String::from("preset"), String::from("kept"));
+        let fields_before = state.fields.clone();
+        // SAFETY: the dummy exposes no parameters, so the getter is sound.
+        let restored = unsafe {
+            deserialize_object::<RefusingPlugin>(
+                &mut state,
+                dummy_params(),
+                |_| None,
+                None,
+                false,
+                true,
+            )
+        };
+        assert!(!restored);
+        assert!(
+            !state.fields.contains_key("probe_migrated"),
+            "filter_state must not run after an audio-thread refusal"
+        );
+        assert_eq!(state.fields, fields_before);
+        assert!(state.params.is_empty());
+    }
+
+    #[test]
+    fn refusing_hook_allows_control_thread_retry() {
+        let mut state = empty_state();
+        // SAFETY: the dummy exposes no parameters, so the getter is sound.
+        let restored = unsafe {
+            deserialize_object::<RefusingPlugin>(
+                &mut state,
+                dummy_params(),
+                |_| None,
+                None,
+                false,
+                false,
+            )
+        };
+        assert!(restored);
+        assert_eq!(state.fields.get("probe_migrated").as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn refusing_hook_leaves_populated_params_and_fields_untouched() {
+        let params = PopulatedParams::new();
+        let mut state = populated_state();
+        let params_before = state.params.clone();
+        let fields_before = state.fields.clone();
+        let map = params.param_map();
+        let getter = |id: &str| {
+            map.iter()
+                .find(|(key, _, _)| key == id)
+                .map(|(_, ptr, _)| *ptr)
+        };
+        // SAFETY: params Arc outlives the call; getter returns its live pointers.
+        let restored = unsafe {
+            deserialize_object::<RefusingPlugin>(
+                &mut state,
+                params.clone(),
+                getter,
+                None,
+                false,
+                true,
+            )
+        };
+        assert!(!restored);
+        // No filter_state, validation, param write, or field restore ran.
+        assert_eq!(state.params, params_before);
+        assert_eq!(state.fields, fields_before);
+        assert!(!state.fields.contains_key("probe_migrated"));
+        assert_eq!(params.validate_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(params.deserialize_calls.load(Ordering::SeqCst), 0);
+        // Live values untouched: initial 0.5/1/true, not state 0.9/2/false.
+        // SAFETY: params Arc is alive.
+        unsafe {
+            assert_eq!(params.float.unmodulated_plain_value(), 0.5f32);
+            assert_eq!(params.int.unmodulated_plain_value(), 1);
+            assert!(params.flag.unmodulated_plain_value());
+        }
+    }
+
+    #[test]
+    fn control_retry_applies_populated_state_after_audio_refusal() {
+        let params = PopulatedParams::new();
+        let mut state = populated_state();
+        let map = params.param_map();
+        // Audio refusal first; ownership is retained for retry.
+        {
+            let getter = |id: &str| {
+                map.iter()
+                    .find(|(key, _, _)| key == id)
+                    .map(|(_, ptr, _)| *ptr)
+            };
+            // SAFETY: params Arc outlives the call.
+            let refused = unsafe {
+                deserialize_object::<RefusingPlugin>(
+                    &mut state,
+                    params.clone(),
+                    getter,
+                    None,
+                    false,
+                    true,
+                )
+            };
+            assert!(!refused);
+        }
+        // Control retry applies the same retained object.
+        let getter = |id: &str| {
+            map.iter()
+                .find(|(key, _, _)| key == id)
+                .map(|(_, ptr, _)| *ptr)
+        };
+        // SAFETY: params Arc outlives the call.
+        let restored = unsafe {
+            deserialize_object::<RefusingPlugin>(
+                &mut state,
+                params.clone(),
+                getter,
+                None,
+                false,
+                false,
+            )
+        };
+        assert!(restored);
+        assert_eq!(state.fields.get("probe_migrated").as_deref(), Some("1"));
+        assert_eq!(params.validate_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(params.deserialize_calls.load(Ordering::SeqCst), 1);
+        // SAFETY: params Arc is alive.
+        unsafe {
+            assert_eq!(params.float.unmodulated_plain_value(), 0.9f32);
+            assert_eq!(params.int.unmodulated_plain_value(), 2);
+            assert!(!params.flag.unmodulated_plain_value());
+        }
+    }
+
+    #[test]
+    fn malformed_raw_state_is_rejected_before_restore() {
+        // SAFETY: pure parsing, no plugin callbacks involved.
+        assert!(unsafe { deserialize_json(b"\x00\x01not json{{") }.is_none());
+        assert!(unsafe { deserialize_json(b"null") }.is_none());
+        let encoded = serde_json::to_vec(&empty_state()).expect("state serializes");
+        // SAFETY: pure parsing, no plugin callbacks involved.
+        let parsed = unsafe { deserialize_json(&encoded) };
+        assert!(parsed.is_some());
+    }
+
+    // The crate already installs `assert_no_alloc::AllocDisabler` as the
+    // global allocator when `assert_process_allocs` is enabled, so this
+    // counting allocator (and its test) only exists without that feature.
+    #[cfg(not(feature = "assert_process_allocs"))]
+    struct CountingAllocator;
+
+    #[cfg(not(feature = "assert_process_allocs"))]
+    static COUNTING: AtomicBool = AtomicBool::new(false);
+    #[cfg(not(feature = "assert_process_allocs"))]
+    static ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
+    #[cfg(not(feature = "assert_process_allocs"))]
+    static DEALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
+
+    // SAFETY: forwards to the system allocator; the counters are lock-free.
+    #[cfg(not(feature = "assert_process_allocs"))]
+    unsafe impl GlobalAlloc for CountingAllocator {
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            if COUNTING.load(Ordering::SeqCst) {
+                ALLOCATIONS.fetch_add(1, Ordering::SeqCst);
+            }
+            // SAFETY: layout comes from the caller, as required.
+            unsafe { System.alloc(layout) }
+        }
+
+        unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+            if COUNTING.load(Ordering::SeqCst) {
+                DEALLOCATIONS.fetch_add(1, Ordering::SeqCst);
+            }
+            // SAFETY: ptr and layout come from the caller, as required.
+            unsafe { System.dealloc(ptr, layout) }
+        }
+    }
+
+    #[cfg(not(feature = "assert_process_allocs"))]
+    #[global_allocator]
+    static GLOBAL: CountingAllocator = CountingAllocator;
+
+    #[cfg(not(feature = "assert_process_allocs"))]
+    #[test]
+    fn audio_thread_refusal_performs_no_heap_work() {
+        // Process-wide counters: this test is exact only when the test
+        // binary runs single-threaded (`--test-threads=1`). A populated
+        // state with allocating Params probes is the meaningful input: any
+        // validation, param write, or field restore would allocate and fail.
+        let mut state = populated_state();
+        let params = PopulatedParams::new();
+        let params_for_call: Arc<dyn crate::prelude::Params> = params.clone();
+        let map = params.param_map();
+        let getter = |id: &str| {
+            map.iter()
+                .find(|(key, _, _)| key == id)
+                .map(|(_, ptr, _)| *ptr)
+        };
+        COUNTING.store(true, Ordering::SeqCst);
+        let allocations_before = ALLOCATIONS.load(Ordering::SeqCst);
+        let deallocations_before = DEALLOCATIONS.load(Ordering::SeqCst);
+        // SAFETY: params Arc outlives the call; getter returns its live pointers.
+        let restored = unsafe {
+            deserialize_object::<RefusingPlugin>(
+                &mut state,
+                params_for_call,
+                getter,
+                None,
+                false,
+                true,
+            )
+        };
+        let allocations = ALLOCATIONS.load(Ordering::SeqCst) - allocations_before;
+        let deallocations = DEALLOCATIONS.load(Ordering::SeqCst) - deallocations_before;
+        COUNTING.store(false, Ordering::SeqCst);
+        assert!(!restored);
+        assert_eq!(
+            (allocations, deallocations),
+            (0, 0),
+            "audio-thread refusal must not touch the heap"
+        );
+        assert_eq!(params.validate_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(params.deserialize_calls.load(Ordering::SeqCst), 0);
+    }
 }

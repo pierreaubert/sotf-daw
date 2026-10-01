@@ -27,6 +27,7 @@ fn params_for(channels: usize, num_bands: usize) -> DynamicEqPluginParams {
         link_channels: channels > 1,
         mix: 1.0,
         bands: vec![DynEqBandParams::default(); num_bands],
+        stereo_pairs: None,
     };
 
     for (index, band) in params.bands.iter_mut().enumerate() {

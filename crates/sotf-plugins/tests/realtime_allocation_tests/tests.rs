@@ -1,7 +1,8 @@
 use super::consts::BUFFER_SIZE;
 use super::consts::SAMPLE_RATE;
 use super::consts::generate_test_buffer;
-use super::misc::assert_no_allocs;
+use super::misc::assert_no_alloc_or_free;
+use super::misc::{alloc_free_counts, assert_no_allocs, start_counting};
 use serial_test::serial;
 #[cfg(any(
     feature = "external-plugin-clap",
@@ -12,7 +13,10 @@ use sotf_host::external_plugin::ExternalPlugin;
 use sotf_host::{
     ExternalPluginWorker, ExternalPluginWorkerStep, PluginIpcLayout, SecurePluginSharedMemory,
 };
-use sotf_plugin_ambisonics::{AmbisonicsDecoderConfig, AmbisonicsDecoderPlugin};
+use sotf_plugin_ambisonics::{
+    AmbisonicsDecoderConfig, AmbisonicsDecoderPlugin,
+    custom_layout::{CustomDecoderConfig, CustomLayout, CustomSpeaker},
+};
 use sotf_plugins::{
     ABComparePlugin, AaePlugin, AaePluginParams, AecPlugin, AecPluginParams, AutoGain,
     AutoGainParams, BandMergePlugin, BandSplitPlugin, BeamformerPlugin, BinauralDecoderPlugin,
@@ -1445,6 +1449,92 @@ fn test_ambisonics_decoder_zero_alloc() {
         };
         assert_plugin_process_zero_alloc(name, &mut plugin, 1024);
     }
+}
+
+#[test]
+#[serial]
+fn test_ambisonics_decoder_custom_zero_alloc() {
+    let custom = CustomDecoderConfig {
+        params: AmbisonicsDecoderConfig {
+            order: 1,
+            target_layout: "custom".to_owned(),
+            max_re_weighting: true,
+            dual_band: false,
+            algorithm: "mode_matching".to_owned(),
+        },
+        custom_layout: CustomLayout {
+            name: "stereo".to_owned(),
+            speakers: vec![
+                CustomSpeaker {
+                    label: "FL".to_owned(),
+                    azimuth_deg: 30.0,
+                    elevation_deg: 0.0,
+                    is_lfe: false,
+                },
+                CustomSpeaker {
+                    label: "FR".to_owned(),
+                    azimuth_deg: -30.0,
+                    elevation_deg: 0.0,
+                    is_lfe: false,
+                },
+            ],
+        },
+    };
+    let mut plugin = AmbisonicsDecoderPlugin::new_custom(&custom).unwrap();
+    assert_plugin_process_zero_alloc(
+        "AmbisonicsDecoderPlugin::custom::process",
+        &mut plugin,
+        1024,
+    );
+
+    // Drain and reset are also allocation- and free-free on the hot path.
+    // Open scope (not claimed here): automation-path allocation and
+    // loaded-host callback proof.
+    plugin.initialize(SAMPLE_RATE).unwrap();
+    let frames = 256;
+    let input = generate_test_buffer(frames, plugin.input_channels());
+    let mut output = vec![0.0f32; frames * plugin.output_channels()];
+    let ctx = ProcessContext::new(SAMPLE_RATE, frames);
+    for _ in 0..20 {
+        plugin.process(&input, &mut output, &ctx).unwrap();
+    }
+    let mut drain_out = vec![0.0f32; frames * plugin.output_channels()];
+    assert_no_alloc_or_free("AmbisonicsDecoderPlugin::custom::drain", || {
+        for _ in 0..100 {
+            let _ = plugin.drain(&mut drain_out, &ctx);
+        }
+    });
+    assert_no_alloc_or_free("AmbisonicsDecoderPlugin::custom::reset", || {
+        for _ in 0..100 {
+            plugin.reset();
+        }
+    });
+
+    // A refused structural edit preserves audio/state. The refusal returns a
+    // heap-allocated `String` (control-thread contract, like all existing
+    // control rejections), so no (0,0) claim is made for the refusal itself.
+    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.process(&input, &mut output, &ctx).unwrap();
+    let pre_refusal = output.clone();
+    let refusal = plugin.set_parameter(ParameterId::from("target_layout"), ParameterValue::Int(0));
+    let refusal_error = refusal.unwrap_err();
+    assert!(
+        refusal_error.contains("structural"),
+        "custom refusal must name structural rebuild, got: {refusal_error}"
+    );
+    plugin.process(&input, &mut output, &ctx).unwrap();
+    assert_eq!(output, pre_refusal);
+
+    // Destroy/reclaim: dropping the live instance allocates nothing; frees
+    // are expected and reported (no leak check beyond no-alloc-on-drop).
+    let stop = start_counting();
+    drop(plugin);
+    stop();
+    let (allocs, frees) = alloc_free_counts();
+    assert_eq!(
+        allocs, 0,
+        "custom destroy must not allocate, got ({allocs}, {frees})"
+    );
 }
 
 #[test]

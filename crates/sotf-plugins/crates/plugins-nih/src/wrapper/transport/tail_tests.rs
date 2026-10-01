@@ -77,7 +77,7 @@ fn actual_delay_native_tail_keeps_quiet_gap_and_final_echo() {
     state.params.insert("delay_ms".into(), ParamValue::F32(3.0));
     state.params.insert("feedback".into(), ParamValue::F32(0.0));
     state.params.insert("mix".into(), ParamValue::F32(1.0));
-    assert!(host.wrapper.set_state_inner(&mut state));
+    assert!(host.wrapper.set_state_inner(&mut state, false));
     let bound = host.tail_samples();
     assert!((144..i32::MAX as u32).contains(&bound));
     let mut position = 0;

@@ -54,18 +54,60 @@ pub const PARAMS: &[ParamSpec] = &[
         .structural()
         .setup()
         .doc("FIR length for linear-phase mode (odd values are rounded up)"),
+    ParamSpec::choice("Topology", "topology", 0, &["Bands", "Per Channel"], "General")
+        .structural()
+        .setup()
+        .doc("Selects multi-band cutoffs or independent per-channel crossovers"),
+    ParamSpec::choice("Band Count", "band_count", 0, &["2", "3", "4"], "General")
+        .structural()
+        .setup()
+        .doc("Number of output bands when topology is Bands"),
+    ParamSpec::float(
+        "Frequency 2",
+        "frequency_2",
+        3000.0,
+        20.0,
+        20000.0,
+        1.0,
+        "Hz",
+        "General",
+    )
+    .structural()
+    .setup()
+    .doc("Second ordered crossover cutoff for 3-way or 4-way mode"),
+    ParamSpec::float(
+        "Frequency 3",
+        "frequency_3",
+        8000.0,
+        20.0,
+        20000.0,
+        1.0,
+        "Hz",
+        "General",
+    )
+    .structural()
+    .setup()
+    .doc("Third ordered crossover cutoff for 4-way mode"),
 ];
 
-/// Crossover: idx 0=type, 1=frequency, 2=mode, 3=fir_taps.
+/// Crossover: indices 0–3 preserve the original family/frequency/mode/taps order.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::button_set(0, CROSSOVER_TYPES),
         ControlSpec::button_set(2, &["Lowpass", "Highpass", "Both"]),
+        ControlSpec::button_set(4, &["Bands", "Per Channel"]),
+        ControlSpec::button_set(5, &["2", "3", "4"]),
     ],
-    main: &[
-        ControlGroup::new("CROSSOVER", "CROSSOVER", &[ControlSpec::knob_large(1)])
-            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-    ],
+    main: &[ControlGroup::new(
+        "CROSSOVER",
+        "CROSSOVER",
+        &[
+            ControlSpec::knob_large(1),
+            ControlSpec::knob(6),
+            ControlSpec::knob(7),
+        ],
+    )
+    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
     output: &[],
     tabs: &[TabSpec {
         name: "Linear Phase",

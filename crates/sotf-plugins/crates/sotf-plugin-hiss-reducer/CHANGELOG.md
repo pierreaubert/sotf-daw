@@ -1,5 +1,35 @@
 # Unreleased
 
+- Fix the transient-guard proof fixtures to the derived operating points:
+  stationary tone-plus-hiss runs at -20 dBFS (gate open, backend parity),
+  settled/linked/toggle impulses run at the proven unit detection floor,
+  and preservation is pinned worst-case absolute (every peak within
+  -3/+2 dB) with per-impulse prints, multi-period/seed, one-sided linked
+  OR, 44.1 kHz, lowpassed-hiss, and silence-transition coverage. No DSP,
+  default, or API change.
+- Add an opt-in spectral transient guard (`transient_guard`, default off,
+  serde backward default): confirmed broadband onsets lift reduction
+  instead of smearing through shaped steady-state gains, with a ~21 ms
+  startup blind window, shared onset decisions when linked, and
+  allocation-free realtime toggling. Old presets/profiles/defaults never
+  enable it; guard-off audio is bit-identical to previous behavior.
+- Add noise-profile capture (1 s high-band RMS reference), persisted profile
+  restoration, and time-domain threshold following (louder of user threshold
+  and floor + 6 dB). Capture is drain-frozen, reset preserves stored
+  profiles, and trigger/process/reset paths stay allocation-free.
+- Add a spectral-only per-frequency reduction curve (1/4/12 kHz log anchors)
+  and a selectable channel-link mode with full registry/schema/preset
+  round-trip. Per-bin curve application, linked detectors, and spectral
+  profile use require the shared plugins-denoiser backend hooks.
+- Adopt the plugins-denoiser profile/curve/link backend: the stored
+  profile drives spectral per-bin noise, the curve scales spectral
+  per-bin maximum reduction, and linking shares detectors in both
+  modes (spectral vetoes on split program, time-domain shares
+  max depth). Defaults stay bit-identical; the curve remains
+  stored-only in time-domain mode by design.
+- Add independent accuracy suites for capture floors, curve interpolation,
+  hiss/tone/transient separation, expansion law, cross-rate consistency,
+  unity reconstruction, and EOF with profile state.
 - Add finite-stream drain to spectral mode, preserving transform and dry-path
   audio through the derived endpoint using prepared storage. Conventional IIR
   mode retains its unknown-tail/no-drain contract.

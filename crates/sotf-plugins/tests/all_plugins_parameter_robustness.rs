@@ -271,14 +271,23 @@ fn all_plugins_expose_parameters_and_roundtrip_legal_values() {
 
 fn is_dynamic_eq_structural_band_parameter(id: &str) -> bool {
     id.starts_with("band_")
-        && ["_frequency", "_q", "_gain", "_active", "_solo"]
-            .iter()
-            .any(|suffix| id.ends_with(suffix))
+        && [
+            "_frequency",
+            "_q",
+            "_gain",
+            "_active",
+            "_solo",
+            "_shape",
+            "_shelf_slope",
+            "_placement",
+        ]
+        .iter()
+        .any(|suffix| id.ends_with(suffix))
 }
 
 fn is_fir_eq_structural_band_parameter(id: &str) -> bool {
     id.starts_with("band_")
-        && ["_type", "_freq", "_q", "_gain", "_active"]
+        && ["_type", "_freq", "_q", "_gain", "_active", "_placement"]
             .iter()
             .any(|suffix| id.ends_with(suffix))
 }

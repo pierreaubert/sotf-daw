@@ -5,8 +5,25 @@ use super::eq_band::EqBand;
 use super::misc::MAG_RESPONSE_POINTS;
 use super::misc::filter_type_to_index;
 use super::misc::fir_length_from_index;
+use super::misc::index_to_filter_type;
 use super::misc::parse_filter_type;
+use super::misc::placement_to_index;
+use super::misc::resolve_placement;
+use super::ordered::build_route_banks;
+use super::ordered::channel_cascade_response;
+use super::ordered::identity_fir as design_identity_fir;
+use super::ordered::process_route_frame;
+use super::ordered::stage_dtft;
+use super::ordered::validate_stereo_pairs;
+use super::types::BandConfig;
+use super::types::BandSnapshot;
+use super::types::CommitRefusal;
+use super::types::LinearPhaseEqBandPlacement;
 use super::types::LinearPhaseEqPluginParams;
+use super::types::LiveFilterSnapshot;
+use super::types::PreparedBandUpdate;
+use super::types::RouteBanks;
+use super::types::StageBanks;
 use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
 use math_audio_iir_fir::{
     Biquad, BiquadFilterType, FirDesignConfig, FirPhase, WindowType, generate_fir_from_response,
@@ -33,6 +50,13 @@ const NUPC_REALTIME_QUANTUM_FRAMES: usize = 32;
 const REALTIME_SCHEDULER_QUANTUM_FRAMES: usize = 128;
 // Bound zero-continuation work independently of FIR length or caller capacity.
 const DRAIN_FRAMES: usize = 256;
+/// Fixed crossfade step count for committed dynamic band updates.
+///
+/// The blend weight advances `1 / XFADE_FRAMES` per frame from exactly 0 to
+/// exactly 1, so the crossfade spans `XFADE_FRAMES + 1` = 513 frames. Both
+/// routes process every frame during the blend (bounded 2x convolution work)
+/// and the weights hit exactly 0 and 1, so neither end can step.
+pub(crate) const XFADE_FRAMES: usize = 512;
 
 #[allow(
     dead_code,
@@ -54,6 +78,12 @@ pub struct LinearPhaseEqPlugin {
 
     // FIR state
     pub(super) fir_coeffs: Vec<f32>,
+    // Legacy OLA spectrum of `fir_coeffs`, refreshed at build/rebuild only.
+    // Dynamic commits deliberately do not recompute it: the streaming path
+    // convolves through NUPC engines (never this spectrum), so recomputing a
+    // full FFT on the commit thread would be dead bounded-work cost. Treat a
+    // post-commit spectrum as stale; chart code must use the DTFT-based
+    // `channel_complex_response` API instead.
     pub(super) fir_spectrum: Vec<Complex<f32>>,
     pub(super) fir_dirty: bool,
     /// Non-uniform partitioned convolvers with a bounded 32-sample head.
@@ -88,6 +118,24 @@ pub struct LinearPhaseEqPlugin {
     pub(super) mix_smoother: Smoother,
 
     pub(super) cached_parameters: Vec<Parameter>,
+
+    // Ordered per-band cascade route (R1). Empty selects the legacy
+    // single-FIR path, which stays bit-identical in that case.
+    pub(super) ordered_stages: Vec<StageBanks>,
+    pub(super) stereo_pairs: Vec<[usize; 2]>,
+    pub(super) identity_fir: Vec<f32>,
+    // Dynamic band updates (R2): crossfade target, remaining blend frames,
+    // and the last retired bank set awaiting off-thread reclamation.
+    pub(super) xfade_target: Option<RouteBanks>,
+    pub(super) xfade_remaining: usize,
+    pub(super) route_retired: Option<RouteBanks>,
+    // Input frames recorded in the dry ring since the last reset, saturating
+    // at the ring capacity. Used to prime committed update targets.
+    pub(super) history_len: usize,
+    // Preallocated channel-wide scratch: priming input and ordered-route /
+    // crossfade working frames. Never resized after construction.
+    pub(super) prime_frame: Vec<f32>,
+    pub(super) xfade_frame: Vec<f32>,
 }
 
 impl LinearPhaseEqPlugin {
@@ -117,6 +165,8 @@ impl LinearPhaseEqPlugin {
             false,
             1.0,
             Vec::new(),
+            validate_stereo_pairs(channels, None, false)
+                .expect("default stereo pairs cannot fail validation"),
         )
     }
 
@@ -140,6 +190,20 @@ impl LinearPhaseEqPlugin {
         let num_filters = params.num_filters.clamp(1, MAX_FILTERS);
         let sr = sample_rate as f64;
 
+        let needs_pairs = params
+            .filters
+            .iter()
+            .take(num_filters)
+            .any(|fc| fc.placement.is_some_and(|p| p.requires_stereo_pair()));
+        let stereo_pairs =
+            validate_stereo_pairs(channels, params.stereo_pairs.as_deref(), needs_pairs)?;
+        if params.auto_gain && needs_pairs {
+            return Err(
+                "auto_gain is not supported with explicit L/R/M/S placements; use the stereo-linked route"
+                    .into(),
+            );
+        }
+
         let mut bands = Vec::with_capacity(num_filters);
         for (i, fc) in params.filters.iter().enumerate() {
             if i >= num_filters {
@@ -153,6 +217,7 @@ impl LinearPhaseEqPlugin {
                 fc.q,
                 fc.gain_db,
                 fc.active,
+                fc.placement,
                 sr,
             ));
         }
@@ -164,6 +229,7 @@ impl LinearPhaseEqPlugin {
                 1.0,
                 0.0,
                 true,
+                None,
                 sr,
             ));
         }
@@ -178,6 +244,7 @@ impl LinearPhaseEqPlugin {
             params.auto_gain,
             params.mix,
             bands,
+            stereo_pairs,
         ))
     }
 
@@ -213,6 +280,7 @@ impl LinearPhaseEqPlugin {
         auto_gain: bool,
         mix: f32,
         mut bands: Vec<EqBand>,
+        stereo_pairs: Vec<[usize; 2]>,
     ) -> Self {
         let sr = sample_rate as f64;
         // Fill bands to num_filters
@@ -223,6 +291,7 @@ impl LinearPhaseEqPlugin {
                 1.0,
                 0.0,
                 true,
+                None,
                 sr,
             ));
         }
@@ -241,13 +310,19 @@ impl LinearPhaseEqPlugin {
 
         // Max buffer size: generous allocation for typical audio frame sizes
         let max_buf = fft_size * channels;
-        // Fixed-capacity dry ring: reserve the largest supported linear-phase
-        // latency during construction so phase/FIR changes never allocate in
-        // the processing callback.
+        // Fixed-capacity dry ring: reserve the largest supported cascade
+        // response support during construction so phase/FIR changes never
+        // allocate in the processing callback. The ordered cascade route
+        // stacks one stage per band slot, and every stage needs its full
+        // `N - 1 + 32` support (FIR plus NUPC streaming delay) primed after
+        // a dynamic commit, so capacity covers every slot at the longest FIR
+        // (10 * (8191 + 32) = 82230 frames; ~4 MB at 12 channels). The ring
+        // doubles as the input-history store for update priming; streams
+        // longer than capacity prime from the most recent window only.
         let dry_delay_len = FIR_LENGTH_OPTIONS
             .iter()
             .filter_map(|length| length.parse::<usize>().ok())
-            .map(|length| length / 2 + 32)
+            .map(|length| MAX_FILTERS * (length.saturating_sub(1) + 32))
             .max()
             .unwrap_or(1)
             .max(1);
@@ -283,10 +358,30 @@ impl LinearPhaseEqPlugin {
             dry_delay_pos: 0,
             mix_smoother: Smoother::new(mix, 20.0, sample_rate),
             cached_parameters: Vec::new(),
+            ordered_stages: Vec::new(),
+            stereo_pairs,
+            identity_fir: design_identity_fir(fir_length, phase_mode_index),
+            xfade_target: None,
+            xfade_remaining: 0,
+            route_retired: None,
+            history_len: 0,
+            prime_frame: vec![0.0; channels],
+            xfade_frame: vec![0.0; channels],
         };
         plugin.rebuild_cached_parameters();
-        // Build the initial FIR
-        plugin.rebuild_fir();
+        // Ordered route selection: any Left/Right/Mid/Side band slot (active
+        // or not, so dynamic active toggles never change the route or its
+        // latency). The route is fixed for the life of the plugin.
+        let ordered = plugin.bands[..plugin.num_filters.min(plugin.bands.len())]
+            .iter()
+            .any(|band| band.placement.is_some_and(|p| p.requires_stereo_pair()));
+        debug_assert!(!(ordered && auto_gain));
+        if ordered {
+            plugin.rebuild_ordered();
+        } else {
+            // Build the initial FIR
+            plugin.rebuild_fir();
+        }
         plugin.fir_dirty = false;
         plugin
     }
@@ -314,27 +409,35 @@ impl LinearPhaseEqPlugin {
         combined_db
     }
 
-    /// Rebuild FIR coefficients from current band settings.
-    pub(super) fn rebuild_fir(&mut self) {
-        let sr = self.sample_rate as f64;
-        let fir_length = self.fir_length();
-        let nyquist = sr / 2.0;
+    /// Design FIR coefficients from a band slice.
+    ///
+    /// Pure core shared by the legacy path, the ordered stages and off-thread
+    /// update preparation. The operation sequence is the long-established
+    /// design pipeline, so legacy output is unchanged.
+    fn design_fir_coefficients(
+        sample_rate: f64,
+        fir_length: usize,
+        phase_mode_index: usize,
+        bands: &[EqBand],
+        auto_gain: bool,
+        design_freqs: &mut Vec<f64>,
+        design_magnitudes_db: &mut Vec<f64>,
+    ) -> Vec<f32> {
+        let nyquist = sample_rate / 2.0;
 
         // Scale sampling density with FIR length so narrow peaks are captured.
         // For an N-tap FIR we need at least 2*N frequency samples; round to a
         // power-of-two for consistency and clamp to a minimum of MAG_RESPONSE_POINTS.
         let num_points = MAG_RESPONSE_POINTS.max(fir_length * 2).next_power_of_two();
-        self.design_freqs.clear();
-        self.design_magnitudes_db.clear();
-        self.design_freqs.reserve(num_points);
-        self.design_magnitudes_db.reserve(num_points);
+        design_freqs.clear();
+        design_magnitudes_db.clear();
+        design_freqs.reserve(num_points);
+        design_magnitudes_db.reserve(num_points);
 
         // Include DC (1 Hz to avoid log-space interpolation issues with 0)
         // while still using the real combined response at the low end.
-        self.design_freqs.push(1.0);
-        let active_bands = &self.bands[..self.num_filters.min(self.bands.len())];
-        self.design_magnitudes_db
-            .push(Self::band_contribution_db(active_bands, 1.0));
+        design_freqs.push(1.0);
+        design_magnitudes_db.push(Self::band_contribution_db(bands, 1.0));
 
         let log_min = 1.0_f64.ln();
         let log_max = nyquist.ln();
@@ -342,30 +445,28 @@ impl LinearPhaseEqPlugin {
         for i in 1..num_points {
             let t = i as f64 / (num_points - 1) as f64;
             let freq = (log_min + t * (log_max - log_min)).exp();
-            self.design_freqs.push(freq);
+            design_freqs.push(freq);
 
-            self.design_magnitudes_db
-                .push(Self::band_contribution_db(active_bands, freq));
+            design_magnitudes_db.push(Self::band_contribution_db(bands, freq));
         }
 
-        let phase = match self.phase_mode_index {
+        let phase = match phase_mode_index {
             1 => FirPhase::Minimum,
             _ => FirPhase::Linear,
         };
         let config = FirDesignConfig {
             n_taps: fir_length,
-            sample_rate: sr,
+            sample_rate,
             phase,
             window: WindowType::Kaiser,
             ..Default::default()
         };
 
-        let fir_f64 =
-            generate_fir_from_response(&self.design_freqs, &self.design_magnitudes_db, &config);
+        let fir_f64 = generate_fir_from_response(design_freqs, design_magnitudes_db, &config);
 
         // Convert to f32 and store
-        self.fir_coeffs.resize(fir_f64.len(), 0.0);
-        for (dst, src) in self.fir_coeffs.iter_mut().zip(fir_f64.iter()) {
+        let mut fir = vec![0.0f32; fir_f64.len()];
+        for (dst, src) in fir.iter_mut().zip(fir_f64.iter()) {
             *dst = *src as f32;
         }
 
@@ -373,10 +474,9 @@ impl LinearPhaseEqPlugin {
         // as a high-pass) use Nyquist when it is a meaningful passband
         // reference. If both endpoints are null, retain the designed scale
         // instead of amplifying numerical residue.
-        if self.auto_gain {
-            let dc = self.fir_coeffs.iter().sum::<f32>();
-            let nyquist = self
-                .fir_coeffs
+        if auto_gain {
+            let dc = fir.iter().sum::<f32>();
+            let nyquist_gain = fir
                 .iter()
                 .enumerate()
                 .map(|(index, &coefficient)| {
@@ -389,24 +489,83 @@ impl LinearPhaseEqPlugin {
                 .sum::<f32>();
             let reference = if dc.is_finite() && dc.abs() > 1e-4 {
                 Some(dc)
-            } else if nyquist.is_finite() && nyquist.abs() > 1e-4 {
-                Some(nyquist)
+            } else if nyquist_gain.is_finite() && nyquist_gain.abs() > 1e-4 {
+                Some(nyquist_gain)
             } else {
                 None
             };
             if let Some(reference) = reference {
                 let inv = 1.0 / reference;
-                for c in &mut self.fir_coeffs {
+                for c in &mut fir {
                     *c *= inv;
                 }
             }
         }
+        fir
+    }
+
+    /// Rebuild FIR coefficients from current band settings.
+    pub(super) fn rebuild_fir(&mut self) {
+        let sr = self.sample_rate as f64;
+        let fir_length = self.fir_length();
+        let fir = Self::design_fir_coefficients(
+            sr,
+            fir_length,
+            self.phase_mode_index,
+            &self.bands[..self.num_filters.min(self.bands.len())],
+            self.auto_gain,
+            &mut self.design_freqs,
+            &mut self.design_magnitudes_db,
+        );
+
+        self.fir_coeffs.resize(fir.len(), 0.0);
+        self.fir_coeffs.copy_from_slice(&fir);
 
         // Pre-compute FFT of the FIR
         self.compute_fir_spectrum();
         self.convolvers = (0..self.channels)
             .map(|_| NupcEngine::new(&self.fir_coeffs, NUPC_REALTIME_QUANTUM_FRAMES))
             .collect();
+    }
+
+    /// Design every ordered cascade stage from its band slot.
+    ///
+    /// Inactive slots use the explicit identity FIR so the stage count (and
+    /// therefore latency and drain support) never depends on which bands are
+    /// enabled. Auto gain is rejected with placed bands at construction, so
+    /// stages are always designed unnormalized here.
+    pub(super) fn rebuild_ordered(&mut self) {
+        let sr = self.sample_rate as f64;
+        let fir_length = self.fir_length();
+        let phase_mode_index = self.phase_mode_index;
+        let count = self.num_filters.min(self.bands.len());
+        let mut firs = Vec::with_capacity(count);
+        let mut placements = Vec::with_capacity(count);
+        for band in self.bands.iter().take(count) {
+            placements.push(resolve_placement(band.placement));
+            if band.active {
+                firs.push(Self::design_fir_coefficients(
+                    sr,
+                    fir_length,
+                    phase_mode_index,
+                    std::slice::from_ref(band),
+                    false,
+                    &mut self.design_freqs,
+                    &mut self.design_magnitudes_db,
+                ));
+            } else {
+                firs.push(design_identity_fir(fir_length, phase_mode_index));
+            }
+        }
+        let route = build_route_banks(
+            &firs,
+            &placements,
+            &self.stereo_pairs,
+            self.channels,
+            &self.identity_fir,
+            NUPC_REALTIME_QUANTUM_FRAMES,
+        );
+        self.ordered_stages = route.stages;
     }
 
     /// Compute the frequency-domain representation of the FIR.
@@ -515,6 +674,20 @@ impl LinearPhaseEqPlugin {
                 Parameter::new_bool(&format!("band_{}_active", i), "Active", band.active)
                     .with_group(&group)
                     .with_update_mode(UpdateMode::Structural),
+            );
+            params.push(
+                Parameter::new_int(
+                    &format!("band_{}_placement", i),
+                    "Placement",
+                    placement_to_index(band.placement) as i32,
+                    0,
+                    5,
+                )
+                .with_description(
+                    "0 inherits the legacy route; 1=Stereo, 2=Left, 3=Right, 4=Mid, 5=Side",
+                )
+                .with_group(&group)
+                .with_update_mode(UpdateMode::Structural),
             );
         }
 
@@ -629,6 +802,10 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
                 ParameterId::from(format!("band_{}_active", i).as_str()),
                 ParameterValue::Bool(band.active),
             );
+            values.insert(
+                ParameterId::from(format!("band_{}_placement", i).as_str()),
+                ParameterValue::Int(placement_to_index(band.placement) as i32),
+            );
         }
         values
     }
@@ -675,13 +852,23 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         if sample_rate != self.sample_rate {
             self.sample_rate = sample_rate;
             self.mix_smoother = Smoother::new(self.mix_value, 20.0, sample_rate);
+            // A rate change invalidates every prepared convolver, including
+            // any staged dynamic update (control-thread reclamation here is
+            // expected: this path already reallocates designs and banks).
+            self.xfade_target = None;
+            self.route_retired = None;
+            self.xfade_remaining = 0;
             // Rebuild all biquads at new sample rate
             let sr = sample_rate as f64;
             for band in &mut self.bands {
                 band.biquad =
                     Biquad::new(band.filter_type, band.frequency, sr, band.q, band.gain_db);
             }
-            self.rebuild_fir();
+            if self.is_ordered_route() {
+                self.rebuild_ordered();
+            } else {
+                self.rebuild_fir();
+            }
             self.fir_dirty = false;
         }
         if reset_stream {
@@ -700,10 +887,28 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         for convolver in &mut self.convolvers {
             convolver.reset();
         }
+        for stage in &mut self.ordered_stages {
+            for engine in &mut stage.engines {
+                engine.reset();
+            }
+        }
+        if let Some(target) = self.xfade_target.as_mut() {
+            for stage in &mut target.stages {
+                for engine in &mut stage.engines {
+                    engine.reset();
+                }
+            }
+        }
+        // A reset completes a pending dynamic update instantly: the accepted
+        // new configuration becomes current with cleared state. This is a
+        // no-op without an in-flight update, so steady-state reset stays
+        // allocation-free.
+        self.complete_xfade();
         for delay in &mut self.dry_delay {
             delay.fill(0.0);
         }
         self.dry_delay_pos = 0;
+        self.history_len = 0;
         self.mix_smoother = Smoother::new(self.mix_value, 20.0, self.sample_rate);
     }
 
@@ -804,13 +1009,17 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
     }
 
     fn latency_samples(&self) -> usize {
-        if self.phase_mode_index == 0 {
-            // The even-tap designer centers its impulse at N/2. NUPC adds one
-            // 32-sample head partition of streaming latency.
+        // The even-tap designer centers its impulse at N/2. NUPC adds one
+        // 32-sample head partition of streaming latency per convolver stage.
+        // The ordered route stacks one stage per band slot, so its latency
+        // scales with the configured band count; the legacy path keeps the
+        // long-established single-stage value.
+        let per_stage = if self.phase_mode_index == 0 {
             self.fir_length() / 2 + 32
         } else {
             32
-        }
+        };
+        self.ordered_stage_count() * per_stage
     }
 
     fn realtime_quantum_frames(&self) -> usize {
@@ -823,14 +1032,47 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
 }
 
 impl LinearPhaseEqPlugin {
+    /// Report whether the ordered per-band cascade route is active.
+    ///
+    /// The route is fixed at construction: any Left/Right/Mid/Side band slot
+    /// selects it, otherwise the legacy single-FIR path runs bit-identically.
+    pub fn is_ordered_route(&self) -> bool {
+        !self.ordered_stages.is_empty()
+    }
+
+    fn ordered_stage_count(&self) -> usize {
+        if self.is_ordered_route() {
+            self.ordered_stages.len()
+        } else {
+            1
+        }
+    }
+
     fn response_frames(&self) -> usize {
-        // FIR support is coefficient length minus one, plus NUPC's fixed
-        // emitted startup delay. The dry branch is bounded by the same span.
-        (NUPC_REALTIME_QUANTUM_FRAMES + self.fir_coeffs.len().saturating_sub(1))
-            .max(self.latency_samples())
+        if self.is_ordered_route() {
+            // Cascaded stages extend the support additively; every band slot
+            // occupies a stage (identity when inactive) so the count is
+            // stable across dynamic updates.
+            let per_stage =
+                NUPC_REALTIME_QUANTUM_FRAMES + self.fir_length().saturating_sub(1);
+            (per_stage * self.ordered_stages.len()).max(self.latency_samples())
+        } else {
+            // FIR support is coefficient length minus one, plus NUPC's fixed
+            // emitted startup delay. The dry branch is bounded by the same span.
+            (NUPC_REALTIME_QUANTUM_FRAMES + self.fir_coeffs.len().saturating_sub(1))
+                .max(self.latency_samples())
+        }
     }
 
     fn process_stream(&mut self, buffer: &mut [f32], nf: usize) {
+        if self.xfade_target.is_some() {
+            self.process_stream_xfade(buffer, nf);
+            return;
+        }
+        if self.is_ordered_route() {
+            self.process_stream_ordered(buffer, nf);
+            return;
+        }
         let nc = self.channels;
 
         // Save a latency-aligned dry signal for mix. Linear-phase FIR output has
@@ -860,8 +1102,765 @@ impl LinearPhaseEqPlugin {
                 buffer[index] = dry * (1.0 - mix) + wet * mix;
             }
             self.dry_delay_pos = (self.dry_delay_pos + 1) % ring_len;
+            // The dry ring doubles as the input-history store for priming
+            // committed dynamic updates. A single saturating counter cannot
+            // change any audio sample.
+            self.history_len = (self.history_len + 1).min(ring_len);
         }
 
         flush_denormals_inplace(buffer);
+    }
+
+    /// Ordered-route streaming: per-frame cascade with shared dry alignment.
+    ///
+    /// Mirrors the legacy dry/mix/history operation order sample for sample;
+    /// only the wet path differs (band-ordered cascade instead of one shared
+    /// convolution).
+    fn process_stream_ordered(&mut self, buffer: &mut [f32], nf: usize) {
+        let nc = self.channels;
+        let dry_delay = self.latency_samples();
+        let ring_len = self.dry_delay.first().map_or(1, Vec::len);
+        for frame in 0..nf {
+            let ring_pos = self.dry_delay_pos % ring_len;
+            let mix = self.mix_smoother.next_n(1);
+            let read_pos = if dry_delay == 0 {
+                ring_pos
+            } else {
+                (ring_pos + ring_len - dry_delay % ring_len) % ring_len
+            };
+            for ch in 0..nc {
+                self.prime_frame[ch] = buffer[frame * nc + ch];
+            }
+            let (stages, pairs, work) = (
+                &mut self.ordered_stages,
+                &self.stereo_pairs,
+                &mut self.prime_frame[..nc],
+            );
+            process_route_frame(stages, pairs, work);
+            for ch in 0..nc {
+                let index = frame * nc + ch;
+                let sample = buffer[index];
+                let dry = if dry_delay == 0 {
+                    sample
+                } else {
+                    self.dry_delay[ch][read_pos]
+                };
+                self.dry_delay[ch][ring_pos] = sample;
+                let wet = self.prime_frame[ch];
+                buffer[index] = dry * (1.0 - mix) + wet * mix;
+            }
+            self.dry_delay_pos = (self.dry_delay_pos + 1) % ring_len;
+            self.history_len = (self.history_len + 1).min(ring_len);
+        }
+
+        flush_denormals_inplace(buffer);
+    }
+
+    /// Dual-route crossfade streaming for in-flight dynamic updates.
+    ///
+    /// Both the live route and the committed target process every frame so
+    /// both stay state-correct; output blends old-to-new over exactly
+    /// `XFADE_FRAMES + 1` frames with weights hitting exactly 0 and 1, so no
+    /// step can occur at either end. Bounded 2x convolution work per frame,
+    /// no allocation, no deallocation; completes into the retired slot.
+    fn process_stream_xfade(&mut self, buffer: &mut [f32], nf: usize) {
+        let nc = self.channels;
+        let dry_delay = self.latency_samples();
+        let ring_len = self.dry_delay.first().map_or(1, Vec::len);
+        for frame in 0..nf {
+            let ring_pos = self.dry_delay_pos % ring_len;
+            let mix = self.mix_smoother.next_n(1);
+            let read_pos = if dry_delay == 0 {
+                ring_pos
+            } else {
+                (ring_pos + ring_len - dry_delay % ring_len) % ring_len
+            };
+            let weight = 1.0 - self.xfade_remaining as f32 / XFADE_FRAMES as f32;
+            for ch in 0..nc {
+                self.prime_frame[ch] = buffer[frame * nc + ch];
+            }
+            self.process_live_route_frame();
+            self.xfade_frame[..nc].copy_from_slice(&self.prime_frame[..nc]);
+            for ch in 0..nc {
+                self.prime_frame[ch] = buffer[frame * nc + ch];
+            }
+            self.process_target_route_frame();
+            for ch in 0..nc {
+                let index = frame * nc + ch;
+                let sample = buffer[index];
+                let dry = if dry_delay == 0 {
+                    sample
+                } else {
+                    self.dry_delay[ch][read_pos]
+                };
+                self.dry_delay[ch][ring_pos] = sample;
+                let wet_old = self.xfade_frame[ch];
+                let wet_new = self.prime_frame[ch];
+                let wet = wet_old * (1.0 - weight) + wet_new * weight;
+                buffer[index] = dry * (1.0 - mix) + wet * mix;
+            }
+            self.dry_delay_pos = (self.dry_delay_pos + 1) % ring_len;
+            self.history_len = (self.history_len + 1).min(ring_len);
+            if self.xfade_remaining > 0 {
+                self.xfade_remaining -= 1;
+            }
+        }
+        if self.xfade_remaining == 0 {
+            self.complete_xfade();
+        }
+
+        flush_denormals_inplace(buffer);
+    }
+
+    /// Process `prime_frame[..channels]` through the live route in place.
+    fn process_live_route_frame(&mut self) {
+        let nc = self.channels;
+        if self.is_ordered_route() {
+            let (stages, pairs, frame) = (
+                &mut self.ordered_stages,
+                &self.stereo_pairs,
+                &mut self.prime_frame[..nc],
+            );
+            process_route_frame(stages, pairs, frame);
+        } else {
+            for ch in 0..nc {
+                let sample = self.prime_frame[ch];
+                self.prime_frame[ch] = self.convolvers[ch].process_sample(sample);
+            }
+        }
+    }
+
+    /// Process `prime_frame[..channels]` through the crossfade target.
+    ///
+    /// No-op without a target (only reachable transiently while completing).
+    fn process_target_route_frame(&mut self) {
+        let nc = self.channels;
+        let Some(target) = self.xfade_target.as_mut() else {
+            return;
+        };
+        process_route_frame(
+            &mut target.stages,
+            &self.stereo_pairs,
+            &mut self.prime_frame[..nc],
+        );
+    }
+
+    /// Swap the crossfade target into the live route and retire the old banks.
+    ///
+    /// Pointer moves only: no allocation and no deallocation (the retired set
+    /// awaits [`Self::take_retired_route`]). No-op without a target.
+    fn complete_xfade(&mut self) {
+        let Some(mut target) = self.xfade_target.take() else {
+            return;
+        };
+        // Commit refuses a new target while a retired set is unclaimed, so a
+        // completion always retires into an empty slot.
+        debug_assert!(self.route_retired.is_none());
+        if self.is_ordered_route() {
+            for (live, new) in self
+                .ordered_stages
+                .iter_mut()
+                .zip(target.stages.iter_mut())
+            {
+                std::mem::swap(&mut live.engines, &mut new.engines);
+            }
+        } else if let Some(stage) = target.stages.first_mut() {
+            std::mem::swap(&mut self.convolvers, &mut stage.engines);
+        }
+        self.xfade_remaining = 0;
+        self.route_retired = Some(target);
+    }
+
+    /// Feed recorded input history through cold target banks.
+    ///
+    /// Allocation-free: the dry ring is the history store and `prime_frame`
+    /// is preallocated. Output is discarded; convolver state is what matters.
+    /// Partitioned block-phase rounding means primed state matches a
+    /// continuously-run engine within ~1e-6, not bit-exactly.
+    fn prime_target(&mut self, target: &mut RouteBanks, prime_len: usize) {
+        let channels = self.channels;
+        if channels == 0 || prime_len == 0 || target.stages.is_empty() {
+            return;
+        }
+        let Some(ring_len) = self.dry_delay.first().map(Vec::len) else {
+            return;
+        };
+        if ring_len == 0 {
+            return;
+        }
+        let history = self.history_len.min(ring_len);
+        let prime_len = prime_len.min(history);
+        if prime_len == 0 {
+            return;
+        }
+        let oldest = (self.dry_delay_pos + ring_len - history) % ring_len;
+        let start = history - prime_len;
+        for j in 0..prime_len {
+            let index = (oldest + start + j) % ring_len;
+            for (ch, slot) in self.prime_frame.iter_mut().enumerate().take(channels) {
+                *slot = self.dry_delay[ch][index];
+            }
+            process_route_frame(
+                &mut target.stages,
+                &self.stereo_pairs,
+                &mut self.prime_frame[..channels],
+            );
+        }
+    }
+}
+
+impl LinearPhaseEqPlugin {
+    /// Resolved disjoint stereo pairs (two-channel default when unset).
+    pub fn stereo_pairs(&self) -> &[[usize; 2]] {
+        &self.stereo_pairs
+    }
+
+    /// Number of cascade stages (1 on the legacy single-FIR path).
+    pub fn stage_count(&self) -> usize {
+        self.ordered_stage_count()
+    }
+
+    /// One stage's FIR design: stage 0 is the combined FIR on the legacy path.
+    ///
+    /// Returns `None` for an out-of-range stage. During an in-flight dynamic
+    /// update this reports the committed target design (see
+    /// [`Self::try_commit_prepared_update`] for the contract).
+    pub fn stage_fir(&self, stage: usize) -> Option<&[f32]> {
+        if self.is_ordered_route() {
+            self.ordered_stages.get(stage).map(|s| s.fir.as_slice())
+        } else if stage == 0 {
+            Some(self.fir_coeffs.as_slice())
+        } else {
+            None
+        }
+    }
+
+    /// Placement of one band slot: `None` means an invalid band index, and
+    /// `Some(None)` the legacy unset routing.
+    pub fn band_placement(&self, band: usize) -> Option<Option<LinearPhaseEqBandPlacement>> {
+        self.bands.get(band).map(|b| b.placement)
+    }
+
+    /// Channel-aware complex response at `frequency_hz`.
+    ///
+    /// Models the exact processing topology plus the fixed per-stage
+    /// partitioned streaming delay. The chart semantic is the diagonal
+    /// transfer `Tcc`: the response measured on `channel` when only that
+    /// channel is excited (a single-channel impulse DFT agrees with this
+    /// API). Mid/Side stages spread excitation across their pair, so this is
+    /// not the correlated-input response. Returns `None` for an invalid
+    /// channel, an inactive (zero-rate) plugin or an out-of-range frequency.
+    /// Control-thread only: allocates response scratch on ordered routes.
+    ///
+    /// During an in-flight dynamic update ([`Self::update_in_progress`]) this
+    /// reports the committed target design immediately while audio still
+    /// morphs old-to-new over the blend (see
+    /// [`Self::try_commit_prepared_update`] for the contract).
+    pub fn channel_complex_response(
+        &self,
+        channel: usize,
+        frequency_hz: f64,
+    ) -> Option<Complex<f64>> {
+        if channel >= self.channels || self.sample_rate == 0 {
+            return None;
+        }
+        if !frequency_hz.is_finite() || frequency_hz < 0.0 {
+            return None;
+        }
+        let sr = f64::from(self.sample_rate);
+        if frequency_hz > sr * 0.5 {
+            return None;
+        }
+        if self.is_ordered_route() {
+            channel_cascade_response(
+                &self.ordered_stages,
+                &self.stereo_pairs,
+                &self.identity_fir,
+                channel,
+                frequency_hz,
+                sr,
+                NUPC_REALTIME_QUANTUM_FRAMES,
+            )
+        } else {
+            let response = stage_dtft(&self.fir_coeffs, frequency_hz, sr);
+            let streaming = NUPC_REALTIME_QUANTUM_FRAMES as f64;
+            let angle = -std::f64::consts::TAU * frequency_hz * streaming / sr;
+            Some(response * Complex::new(angle.cos(), angle.sin()))
+        }
+    }
+
+    /// Group delay in samples via central phase difference of
+    /// [`Self::channel_complex_response`]. Control-thread only.
+    pub fn channel_group_delay_samples(
+        &self,
+        channel: usize,
+        frequency_hz: f64,
+    ) -> Option<f64> {
+        let sr = f64::from(self.sample_rate);
+        if sr <= 0.0 {
+            return None;
+        }
+        let step = (frequency_hz * 1e-3).max(1.0);
+        let lo_freq = (frequency_hz - step).max(0.0);
+        let hi_freq = (frequency_hz + step).min(sr * 0.5);
+        let span = hi_freq - lo_freq;
+        if span <= 0.0 {
+            return None;
+        }
+        let lo = self.channel_complex_response(channel, lo_freq)?;
+        let hi = self.channel_complex_response(channel, hi_freq)?;
+        let mut delta = hi.im.atan2(hi.re) - lo.im.atan2(lo.re);
+        while delta > std::f64::consts::PI {
+            delta -= std::f64::consts::TAU;
+        }
+        while delta < -std::f64::consts::PI {
+            delta += std::f64::consts::TAU;
+        }
+        Some(-sr * delta / (std::f64::consts::TAU * span))
+    }
+
+    /// Capture the live filter configuration for off-thread update preparation.
+    ///
+    /// Allocates; call on a control thread and hand the snapshot to
+    /// [`Self::prepare_band_update`].
+    pub fn snapshot_config(&self) -> LiveFilterSnapshot {
+        LiveFilterSnapshot {
+            channels: self.channels,
+            sample_rate: self.sample_rate,
+            num_filters: self.num_filters,
+            fir_length_index: self.fir_length_index,
+            phase_mode_index: self.phase_mode_index,
+            auto_gain: self.auto_gain,
+            bands: self
+                .bands
+                .iter()
+                .take(self.num_filters)
+                .map(|band| BandSnapshot {
+                    filter_type_index: filter_type_to_index(band.filter_type),
+                    frequency: band.frequency,
+                    q: band.q,
+                    gain_db: band.gain_db,
+                    active: band.active,
+                    placement: band.placement,
+                })
+                .collect(),
+            stereo_pairs: self.stereo_pairs.clone(),
+        }
+    }
+
+    /// Exact allocation-free comparison of a prepared base against live state.
+    fn snapshot_matches(&self, base: &LiveFilterSnapshot) -> bool {
+        base.channels == self.channels
+            && base.sample_rate == self.sample_rate
+            && base.num_filters == self.num_filters
+            && base.fir_length_index == self.fir_length_index
+            && base.phase_mode_index == self.phase_mode_index
+            && base.auto_gain == self.auto_gain
+            && base.stereo_pairs == self.stereo_pairs
+            && base.bands.len() == self.num_filters.min(self.bands.len())
+            && self
+                .bands
+                .iter()
+                .take(self.num_filters)
+                .zip(base.bands.iter())
+                .all(|(live, snapshot)| {
+                    filter_type_to_index(live.filter_type) == snapshot.filter_type_index
+                        && live.frequency == snapshot.frequency
+                        && live.q == snapshot.q
+                        && live.gain_db == snapshot.gain_db
+                        && live.active == snapshot.active
+                        && live.placement == snapshot.placement
+                })
+    }
+
+    /// Design a dynamic single-band update without touching live state.
+    ///
+    /// Heavy work (FIR design, convolver planning) happens here, so call this
+    /// off the audio thread, then install the result with
+    /// [`Self::try_commit_prepared_update`] (audio thread) or
+    /// [`Self::commit_prepared_update`] (control thread). Only the band's filter shape
+    /// (`filter_type`, `frequency`, `q`, `gain_db`, `active`) may change;
+    /// band index, placement, band count, pairs, FIR length, phase mode and
+    /// auto gain are fingerprinted, so phase mode and latency never change
+    /// across an update.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an out-of-range band index, an unknown filter
+    /// type, out-of-range or non-finite band parameters, or a placement
+    /// change (structural: rebuild the plugin).
+    pub fn prepare_band_update(
+        base: &LiveFilterSnapshot,
+        band_index: usize,
+        new_band: BandConfig,
+    ) -> Result<PreparedBandUpdate, String> {
+        let live_bands = base.num_filters.min(base.bands.len());
+        if band_index >= live_bands {
+            return Err(format!(
+                "band index {band_index} exceeds {live_bands} configured bands"
+            ));
+        }
+        if base.sample_rate == 0 {
+            return Err("sample rate must be positive".into());
+        }
+        let old = &base.bands[band_index];
+        if new_band.placement != old.placement {
+            return Err(
+                "band placement changes are structural; rebuild the plugin to change them".into(),
+            );
+        }
+        let filter_type = parse_filter_type(&new_band.filter_type)?;
+        let sr = f64::from(base.sample_rate);
+        Self::validate_band(new_band.frequency, new_band.q, new_band.gain_db, sr)?;
+        let fir_length = fir_length_from_index(base.fir_length_index);
+
+        let new_snapshot = BandSnapshot {
+            filter_type_index: filter_type_to_index(filter_type),
+            frequency: new_band.frequency,
+            q: new_band.q,
+            gain_db: new_band.gain_db,
+            active: new_band.active,
+            placement: new_band.placement,
+        };
+        // Temporary design bands: snapshot state with the one change applied.
+        let mut design_bands = Vec::with_capacity(base.bands.len());
+        for (index, snapshot) in base.bands.iter().enumerate() {
+            let (filter, frequency, q, gain_db, active) = if index == band_index {
+                (
+                    filter_type,
+                    new_band.frequency,
+                    new_band.q,
+                    new_band.gain_db,
+                    new_band.active,
+                )
+            } else {
+                (
+                    index_to_filter_type(snapshot.filter_type_index),
+                    snapshot.frequency,
+                    snapshot.q,
+                    snapshot.gain_db,
+                    snapshot.active,
+                )
+            };
+            design_bands.push(EqBand::new(
+                filter,
+                frequency,
+                q,
+                gain_db,
+                active,
+                snapshot.placement,
+                sr,
+            ));
+        }
+        let ordered = design_bands
+            .iter()
+            .any(|band| band.placement.is_some_and(|p| p.requires_stereo_pair()));
+        let mut scratch_freqs = Vec::new();
+        let mut scratch_mags = Vec::new();
+        let mut firs = Vec::with_capacity(design_bands.len().max(1));
+        if ordered {
+            for band in &design_bands {
+                if band.active {
+                    firs.push(Self::design_fir_coefficients(
+                        sr,
+                        fir_length,
+                        base.phase_mode_index,
+                        std::slice::from_ref(band),
+                        false,
+                        &mut scratch_freqs,
+                        &mut scratch_mags,
+                    ));
+                } else {
+                    firs.push(design_identity_fir(fir_length, base.phase_mode_index));
+                }
+            }
+        } else {
+            firs.push(Self::design_fir_coefficients(
+                sr,
+                fir_length,
+                base.phase_mode_index,
+                &design_bands,
+                base.auto_gain,
+                &mut scratch_freqs,
+                &mut scratch_mags,
+            ));
+        }
+        let placements: Vec<LinearPhaseEqBandPlacement> = if ordered {
+            design_bands
+                .iter()
+                .map(|band| resolve_placement(band.placement))
+                .collect()
+        } else {
+            vec![LinearPhaseEqBandPlacement::Stereo]
+        };
+        let identity = design_identity_fir(fir_length, base.phase_mode_index);
+        let target = build_route_banks(
+            &firs,
+            &placements,
+            &base.stereo_pairs,
+            base.channels,
+            &identity,
+            NUPC_REALTIME_QUANTUM_FRAMES,
+        );
+        let new_biquad = Biquad::new(
+            filter_type,
+            new_band.frequency,
+            sr,
+            new_band.q,
+            new_band.gain_db,
+        );
+        Ok(PreparedBandUpdate {
+            base: base.clone(),
+            band_index,
+            new_band: new_snapshot,
+            new_biquad,
+            target,
+        })
+    }
+
+    /// Allocation-free range check for a prepared band update.
+    ///
+    /// Mirrors [`Self::validate_band`] without allocating an error message, so
+    /// the realtime commit path can refuse invalid parameters transactionally.
+    fn prepared_band_params_valid(&self, new: &BandSnapshot) -> bool {
+        if new.filter_type_index > 4 || self.sample_rate == 0 {
+            return false;
+        }
+        let sample_rate = f64::from(self.sample_rate);
+        let max_frequency = (sample_rate * 0.5 * 0.99).min(20_000.0);
+        if !new.frequency.is_finite()
+            || new.frequency < 20.0
+            || new.frequency > max_frequency
+        {
+            return false;
+        }
+        if !new.q.is_finite() || !(0.1..=10.0).contains(&new.q) {
+            return false;
+        }
+        if !new.gain_db.is_finite() || !(-24.0..=24.0).contains(&new.gain_db) {
+            return false;
+        }
+        true
+    }
+
+    /// Commit a prepared update on the audio thread.
+    ///
+    /// Realtime-safe entrypoint: validates and installs without allocating or
+    /// freeing, and retains the caller-owned prepared update on refusal. The
+    /// caller keeps `prepared` in its `Option` slot; on success the slot is
+    /// taken (`None`) and the update blends, while on refusal the slot stays
+    /// `Some` for correction or retry. Live band configuration, FIR data and
+    /// cached parameter scalars switch at commit, so controls and the
+    /// chart-facing response APIs report the target design immediately while
+    /// audio morphs old-to-new over the fixed blend (`XFADE_FRAMES` steps over
+    /// `XFADE_FRAMES + 1` frames). Phase mode and latency never change. The
+    /// prepared base snapshot is stashed into the target banks (pointer moves
+    /// only) for off-thread reclamation with the retired route.
+    ///
+    /// All validations run before any priming or live-state mutation, so every
+    /// refusal is transactional: live configuration, populated audio history
+    /// and the prepared resources are untouched. Priming covers at most the
+    /// full cascade response support per channel (`stages * (N - 1 + 32)`
+    /// frames, or the recorded history when shorter).
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CommitRefusal`] without allocating when no update is
+    /// supplied, a blend is in flight, a retired route is unclaimed, the
+    /// stream drained, the base snapshot is stale, or the prepared band,
+    /// placement, topology, FIR length or target freshness does not match the
+    /// live route. The `prepared` slot stays `Some` in every error case.
+    pub fn try_commit_prepared_update(
+        &mut self,
+        prepared: &mut Option<PreparedBandUpdate>,
+    ) -> Result<(), CommitRefusal> {
+        // Validate via a shared borrow; every error leaves `prepared` intact
+        // and performs no priming, so a retained update stays pristine.
+        {
+            let Some(candidate) = prepared.as_ref() else {
+                return Err(CommitRefusal::NoPreparedUpdate);
+            };
+            if self.xfade_target.is_some() || self.xfade_remaining > 0 {
+                return Err(CommitRefusal::UpdateInProgress);
+            }
+            if self.route_retired.is_some() {
+                return Err(CommitRefusal::RetiredUnclaimed);
+            }
+            if self.drain_remaining.is_some() {
+                return Err(CommitRefusal::Drained);
+            }
+            if !self.snapshot_matches(&candidate.base) {
+                return Err(CommitRefusal::StaleBase);
+            }
+            if candidate.band_index >= self.bands.len() {
+                return Err(CommitRefusal::BandIndexOutOfRange {
+                    index: candidate.band_index,
+                    live: self.bands.len(),
+                });
+            }
+            let live_band = &self.bands[candidate.band_index];
+            if candidate.new_band.placement != live_band.placement {
+                return Err(CommitRefusal::PlacementMismatch);
+            }
+            if !self.prepared_band_params_valid(&candidate.new_band) {
+                return Err(CommitRefusal::InvalidBand);
+            }
+            if candidate.target.stashed_base.is_some() {
+                return Err(CommitRefusal::TargetNotFresh);
+            }
+            if self.is_ordered_route() {
+                if candidate.target.stages.len() != self.ordered_stages.len() {
+                    return Err(CommitRefusal::TopologyMismatch);
+                }
+                for (live, new) in self
+                    .ordered_stages
+                    .iter()
+                    .zip(candidate.target.stages.iter())
+                {
+                    if live.placement != new.placement {
+                        return Err(CommitRefusal::TopologyMismatch);
+                    }
+                    if live.fir.len() != new.fir.len() {
+                        return Err(CommitRefusal::FirLengthMismatch);
+                    }
+                }
+            } else {
+                let Some(stage) = candidate.target.stages.first() else {
+                    return Err(CommitRefusal::NoStage);
+                };
+                if candidate.target.stages.len() != 1 {
+                    return Err(CommitRefusal::TopologyMismatch);
+                }
+                if stage.fir.len() != self.fir_coeffs.len() {
+                    return Err(CommitRefusal::FirLengthMismatch);
+                }
+            }
+        }
+        // All checks passed; take ownership and install. The `None` arm is
+        // unreachable after the validation above but stays refusal-typed.
+        let Some(mut owned) = prepared.take() else {
+            return Err(CommitRefusal::NoPreparedUpdate);
+        };
+        // Prime the cold target from recorded input history (bounded,
+        // allocation-free: at most the full cascade response support per
+        // channel, so multi-stage routes and the NUPC streaming delay are
+        // covered, not just one FIR length).
+        let prime_len = self.history_len.min(self.response_frames());
+        self.prime_target(&mut owned.target, prime_len);
+        // Install the new design data. Lengths and placements already match;
+        // copies keep every allocation on the preparation side.
+        if self.is_ordered_route() {
+            for (live, new) in self
+                .ordered_stages
+                .iter_mut()
+                .zip(owned.target.stages.iter())
+            {
+                live.fir.copy_from_slice(&new.fir);
+            }
+        } else {
+            // Validation above guarantees exactly one stage with matching FIR.
+            if let Some(stage) = owned.target.stages.first() {
+                self.fir_coeffs.copy_from_slice(&stage.fir);
+            }
+            // The legacy OLA spectrum is intentionally not recomputed here:
+            // no streaming or chart path reads it (see the field contract),
+            // so a full FFT on the commit thread would be dead work.
+        }
+        let new = owned.new_band;
+        let band_index = owned.band_index;
+        let band = &mut self.bands[band_index];
+        band.filter_type = index_to_filter_type(new.filter_type_index);
+        band.frequency = new.frequency;
+        band.q = new.q;
+        band.gain_db = new.gain_db;
+        band.active = new.active;
+        band.biquad = owned.new_biquad;
+        // Refresh the changed band's cached scalars in place (type, freq, q,
+        // gain, active at 5 + band*6 + {0..4} by construction; placement never
+        // changes here). No allocation: the schema shape is untouched.
+        let base = 5 + band_index * 6;
+        debug_assert_eq!(
+            self.cached_parameters.len(),
+            5 + self.num_filters.min(self.bands.len()) * 6
+        );
+        if let Some(slot) = self.cached_parameters.get_mut(base) {
+            slot.default_value = ParameterValue::Int(new.filter_type_index as i32);
+        }
+        if let Some(slot) = self.cached_parameters.get_mut(base + 1) {
+            slot.default_value = ParameterValue::Float(new.frequency as f32);
+        }
+        if let Some(slot) = self.cached_parameters.get_mut(base + 2) {
+            slot.default_value = ParameterValue::Float(new.q as f32);
+        }
+        if let Some(slot) = self.cached_parameters.get_mut(base + 3) {
+            slot.default_value = ParameterValue::Float(new.gain_db as f32);
+        }
+        if let Some(slot) = self.cached_parameters.get_mut(base + 4) {
+            slot.default_value = ParameterValue::Bool(new.active);
+        }
+        // Stash the prepared base into the target banks (pointer moves only)
+        // instead of dropping it here: dropping would free its two Vecs on the
+        // commit thread. The snapshot rides to the retired slot at blend
+        // completion and is dropped off-thread with the retired banks.
+        let mut target = owned.target;
+        target.stashed_base = Some(owned.base);
+        if self.channels == 0 {
+            // Degenerate: no audio to blend, install immediately.
+            self.xfade_target = Some(target);
+            self.xfade_remaining = 0;
+            self.complete_xfade();
+        } else {
+            self.xfade_target = Some(target);
+            self.xfade_remaining = XFADE_FRAMES;
+        }
+        Ok(())
+    }
+
+    /// Install a prepared update from a control thread.
+    ///
+    /// Compatibility wrapper around [`Self::try_commit_prepared_update`] that
+    /// takes the prepared update by value. Control-thread only: on success it
+    /// performs no allocation, but on refusal it drops the retained prepared
+    /// update (freeing its heap) and allocates the `String` message.
+    /// Audio-thread hosts must call `try_commit_prepared_update` directly with
+    /// a caller-owned `Option` slot so refusals stay allocation-free and the
+    /// prepared resources survive for correction or retry.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same descriptive messages as the realtime refusal variants,
+    /// as an allocated `String`. All errors are transactional for live state;
+    /// only the owned `prepared` value is consumed by this wrapper.
+    pub fn commit_prepared_update(
+        &mut self,
+        prepared: PreparedBandUpdate,
+    ) -> Result<(), String> {
+        let mut slot = Some(prepared);
+        match self.try_commit_prepared_update(&mut slot) {
+            Ok(()) => Ok(()),
+            Err(refusal) => {
+                drop(slot);
+                Err(refusal.to_string())
+            }
+        }
+    }
+
+    /// Reclaim the last retired convolver bank set for off-thread drop.
+    ///
+    /// Call after an update completes (or after `reset`) and before
+    /// committing another update. Dropping the returned banks deallocates
+    /// (convolver state plus the stashed prepared base snapshot);
+    /// do it off the audio thread.
+    pub fn take_retired_route(&mut self) -> Option<RouteBanks> {
+        self.route_retired.take()
+    }
+
+    /// Report whether a dynamic update blend is still in flight.
+    ///
+    /// While this returns true, controls and the chart-facing response APIs
+    /// already report the committed target design; only the audio output is
+    /// still morphing old-to-new (see [`Self::try_commit_prepared_update`]).
+    pub fn update_in_progress(&self) -> bool {
+        self.xfade_target.is_some()
     }
 }

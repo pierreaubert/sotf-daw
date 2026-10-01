@@ -1,5 +1,14 @@
+//! RNNoise speech denoiser host adapter.
+//!
+//! Wraps the shared [`RnnoiseBackend`](plugins_denoiser::rnnoise::RnnoiseBackend)
+//! with SOTF host traits, a suppression-strength blend, and a validated model
+//! registry. Only 48 kHz mono/stereo streams are accepted; other rates and
+//! wider layouts are rejected rather than converted.
+
+pub mod model;
 pub mod params;
 
+pub use crate::model::SpeechDenoiserModel;
 use crate::params::PARAMS as SP;
 use plugins_denoiser::rnnoise::RnnoiseBackend;
 pub use plugins_denoiser::rnnoise::{
@@ -8,6 +17,7 @@ pub use plugins_denoiser::rnnoise::{
 use serde::{Deserialize, Serialize};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::param_bridge;
+use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
@@ -21,26 +31,88 @@ use std::sync::Arc;
 /// RNNoise processes fixed 480-sample frames at 48 kHz.
 pub const SPEECH_DENOISER_FRAME_SIZE: usize = 480;
 
+/// Total signal delay in frames: 480 model frames plus the 480-frame queue.
+pub const SPEECH_DENOISER_LATENCY_FRAMES: usize = 960;
+
+/// Full-scale strength smoothing length in frames (10 ms at 48 kHz).
+///
+/// Matches the 480-sample bypass crossfade convention so suppression changes
+/// are click-free without adding latency.
+const STRENGTH_SMOOTHING_FRAMES: f32 = SPEECH_DENOISER_FRAME_SIZE as f32;
+
+/// Sanitizes one input sample exactly like the backend model path.
+fn sanitize_dry_sample(sample: f32) -> f32 {
+    if sample.is_finite() {
+        sample.clamp(-1.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+/// Rejects non-finite or out-of-range suppression strength.
+fn validate_strength(strength: f32) -> PluginResult<f32> {
+    if !strength.is_finite() {
+        return Err("strength must be finite".to_string());
+    }
+    if !(0.0..=1.0).contains(&strength) {
+        return Err(format!("strength {strength} is outside 0..=1"));
+    }
+    Ok(strength)
+}
+
+/// Resolves a model parameter value to a registry entry.
+///
+/// Accepts an Int choice index or a String label; both name the same entry.
+/// Shared by the transactional pre-check and the commit path so the two can
+/// never disagree about which identities are valid.
+fn resolve_model(value: &ParameterValue) -> PluginResult<SpeechDenoiserModel> {
+    match value {
+        ParameterValue::Int(index) => usize::try_from(*index)
+            .ok()
+            .and_then(SpeechDenoiserModel::from_index)
+            .ok_or_else(|| format!("unknown speech denoiser model index: {index}")),
+        ParameterValue::String(label) => SpeechDenoiserModel::from_label(label)
+            .ok_or_else(|| format!("unknown speech denoiser model: {label:?}")),
+        _ => Err("model must be an Int index or String label".to_string()),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SpeechDenoiserPluginParams {
     #[serde(default = "default_enabled")]
     pub enabled: bool,
+    #[serde(default = "default_strength")]
+    pub strength: f32,
+    #[serde(default)]
+    pub model: SpeechDenoiserModel,
 }
 
 fn default_enabled() -> bool {
     true
 }
 
+fn default_strength() -> f32 {
+    pk(SP, "strength").default_f32()
+}
+
 impl Default for SpeechDenoiserPluginParams {
     fn default() -> Self {
         Self {
             enabled: default_enabled(),
+            strength: default_strength(),
+            model: SpeechDenoiserModel::default(),
         }
     }
 }
 
 /// RNNoise speech denoiser with a fixed 960-frame processing latency.
+///
+/// Suppression strength blends latency-aligned wet and dry audio per sample:
+/// `out = dry + s * (wet - dry)`, where `dry` is the sanitized input delayed
+/// by exactly the 960-frame signal latency and `wet` is the RNNoise output.
+/// Strength slews toward its target over 480 frames; the 0.0 and 1.0 endpoints
+/// emit dry and wet bit-exactly, so default and disabled audio are unchanged.
 ///
 /// Enabled end-of-stream drain emits one 960-frame zero-continuation window to
 /// release accepted programme audio, then resets the backend. The model and
@@ -49,7 +121,12 @@ impl Default for SpeechDenoiserPluginParams {
 pub struct SpeechDenoiserPlugin {
     channels: usize,
     enabled: bool,
+    strength_target: f32,
+    strength_current: f32,
+    model: SpeechDenoiserModel,
     inner: RnnoiseBackend,
+    dry_delay: Vec<Vec<f32>>,
+    dry_pos: usize,
     cached_parameters: Vec<Parameter>,
     initialized_sample_rate: Option<u32>,
     analyzer_cache: RealTimeCache<SpeechDenoiserData>,
@@ -64,10 +141,23 @@ impl SpeechDenoiserPlugin {
     }
 
     pub fn from_params(channels: usize, params: SpeechDenoiserPluginParams) -> Self {
+        // The infallible programmatic constructor clamps defensively; the
+        // fallible factory path (`try_from_params`) rejects bad values so a
+        // malformed saved state can never silently change suppression depth.
+        let strength = if params.strength.is_finite() {
+            params.strength.clamp(0.0, 1.0)
+        } else {
+            default_strength()
+        };
         let mut plugin = Self {
             channels,
             enabled: params.enabled,
+            strength_target: strength,
+            strength_current: strength,
+            model: params.model,
             inner: RnnoiseBackend::new(),
+            dry_delay: Vec::new(),
+            dry_pos: 0,
             cached_parameters: Vec::new(),
             initialized_sample_rate: None,
             analyzer_cache: RealTimeCache::new_triplet(
@@ -92,18 +182,31 @@ impl SpeechDenoiserPlugin {
                 "Speech Denoiser supports mono or stereo only; got {channels} channels"
             ));
         }
+        validate_strength(params.strength)?;
         Ok(Self::from_params(channels, params))
     }
 
     fn param_value(&self, index: usize) -> Option<f64> {
         match index {
             0 => Some(if self.enabled { 1.0 } else { 0.0 }),
+            1 => Some(f64::from(self.strength_target)),
+            2 => Some(self.model.index() as f64),
             _ => None,
         }
     }
 
     fn rebuild_cached_parameters(&mut self) {
         self.cached_parameters = param_bridge::build_parameters(SP, |i| self.param_value(i));
+    }
+
+    fn sync_cached_default(&mut self, id: &ParameterId, value: ParameterValue) {
+        if let Some(parameter) = self
+            .cached_parameters
+            .iter_mut()
+            .find(|parameter| parameter.id == *id)
+        {
+            parameter.default_value = value;
+        }
     }
 
     /// Apply already-owned parameter storage without taking ownership of it.
@@ -113,10 +216,72 @@ impl SpeechDenoiserPlugin {
         for (id, value) in values {
             self.parametric_validate_parameter(id, value)?;
         }
+        // Transactionality (COMMON §2): pre-check the state-dependent
+        // preconditions of every entry before committing any, so a mixed
+        // batch carrying one rejected entry leaves the accepted configuration
+        // and populated history untouched. Each commit below only touches its
+        // own field plus its cached default, and neither drain state nor the
+        // initialized flag changes between the passes, so the commit pass
+        // cannot fail once the pre-check pass succeeds.
+        for (id, value) in values {
+            self.precheck_value_ref(id, value)?;
+        }
         for (id, value) in values {
             self.apply_value_ref(id, value)?;
         }
         Ok(())
+    }
+
+    /// Checks state-dependent preconditions without mutating anything.
+    ///
+    /// Must mirror [`apply_value_ref`](Self::apply_value_ref)'s rejection
+    /// conditions exactly: the transactional batch path runs this for every
+    /// entry before committing any. Allocation-free on success (reads and
+    /// comparisons only); error strings allocate on the rejection path, which
+    /// the host handles off the sample loop.
+    fn precheck_value_ref(&self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        match id.as_str() {
+            "enabled" => {
+                let enabled = value
+                    .as_bool()
+                    .ok_or_else(|| "enabled must be a boolean".to_string())?;
+                if enabled != self.enabled && self.drain_remaining.is_some() {
+                    return Err(
+                        "Speech Denoiser must be reset after drain before changing enabled".into(),
+                    );
+                }
+                Ok(())
+            }
+            "strength" => {
+                let strength = value
+                    .as_float()
+                    .ok_or_else(|| "strength must be a float".to_string())?;
+                validate_strength(strength)?;
+                if strength != self.strength_target && self.drain_remaining.is_some() {
+                    return Err(
+                        "Speech Denoiser must be reset after drain before changing strength".into(),
+                    );
+                }
+                Ok(())
+            }
+            "model" => {
+                let model = resolve_model(value)?;
+                if model != self.model {
+                    if self.drain_remaining.is_some() {
+                        return Err(
+                            "Speech Denoiser must be reset after drain before changing model".into(),
+                        );
+                    }
+                    if self.initialized_sample_rate.is_some() {
+                        return Err(
+                            "Speech Denoiser model changes require graph rebuild".to_string(),
+                        );
+                    }
+                }
+                Ok(())
+            }
+            _ => Err(format!("Unknown parameter: {id}")),
+        }
     }
 
     fn apply_value_ref(&mut self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
@@ -134,34 +299,148 @@ impl SpeechDenoiserPlugin {
                     );
                 }
                 self.enabled = enabled;
-                if let Some(parameter) = self
-                    .cached_parameters
-                    .iter_mut()
-                    .find(|parameter| parameter.id == *id)
-                {
-                    parameter.default_value = ParameterValue::Bool(self.enabled);
+                self.sync_cached_default(id, ParameterValue::Bool(self.enabled));
+                Ok(())
+            }
+            "strength" => {
+                let strength = value
+                    .as_float()
+                    .ok_or_else(|| "strength must be a float".to_string())?;
+                validate_strength(strength)?;
+                if strength == self.strength_target {
+                    return Ok(());
                 }
+                if self.drain_remaining.is_some() {
+                    return Err(
+                        "Speech Denoiser must be reset after drain before changing strength".into(),
+                    );
+                }
+                self.strength_target = strength;
+                self.sync_cached_default(id, ParameterValue::Float(self.strength_target));
+                Ok(())
+            }
+            "model" => {
+                let model = resolve_model(value)?;
+                if model == self.model {
+                    return Ok(());
+                }
+                if self.drain_remaining.is_some() {
+                    return Err(
+                        "Speech Denoiser must be reset after drain before changing model".into(),
+                    );
+                }
+                // Model weights are prepared off the audio callback: changing
+                // the identity of a live instance requires a host graph
+                // rebuild from serialized configuration. The running model
+                // keeps processing until that rebuild succeeds.
+                if self.initialized_sample_rate.is_some() {
+                    return Err(
+                        "Speech Denoiser model changes require graph rebuild".to_string(),
+                    );
+                }
+                self.model = model;
+                self.sync_cached_default(id, ParameterValue::Int(self.model.index() as i32));
                 Ok(())
             }
             _ => Err(format!("Unknown parameter: {id}")),
         }
     }
 
-    fn process_backend(&mut self, buffer: &mut [f32], frames: usize) -> PluginResult<usize> {
+    fn advance_strength(&mut self) {
+        let step = 1.0 / STRENGTH_SMOOTHING_FRAMES;
+        if self.strength_current < self.strength_target {
+            self.strength_current = (self.strength_current + step).min(self.strength_target);
+        } else if self.strength_current > self.strength_target {
+            self.strength_current = (self.strength_current - step).max(self.strength_target);
+        }
+    }
+
+    fn blend_chunk(&mut self, chunk: &mut [f32], dry: &[f32], chunk_frames: usize) {
+        let channels = self.channels;
+        for frame in 0..chunk_frames {
+            self.advance_strength();
+            let strength = self.strength_current;
+            if strength >= 1.0 {
+                // Bit-exact wet passthrough at full suppression.
+                continue;
+            }
+            if strength <= 0.0 {
+                for ch in 0..channels {
+                    chunk[frame * channels + ch] = dry[frame * channels + ch];
+                }
+                continue;
+            }
+            for ch in 0..channels {
+                let wet = chunk[frame * channels + ch];
+                let dry_sample = dry[frame * channels + ch];
+                chunk[frame * channels + ch] = dry_sample + strength * (wet - dry_sample);
+            }
+        }
+    }
+
+    /// Captures dry history, runs one backend chunk, and blends the result.
+    ///
+    /// The backend already subdivides calls into 480-frame pieces internally,
+    /// so per-chunk invocation produces its identical sample sequence while
+    /// bounding the stack scratch used for the aligned dry signal.
+    fn process_chunk(&mut self, chunk: &mut [f32], chunk_frames: usize) -> PluginResult<()> {
+        let channels = self.channels;
+        if channels == 0 || self.dry_delay.len() != channels {
+            return Err("Speech Denoiser dry delay is not initialized".to_string());
+        }
+        debug_assert_eq!(chunk.len(), chunk_frames * channels);
+        debug_assert!(chunk_frames <= SPEECH_DENOISER_FRAME_SIZE);
+        let mut dry_scratch = [0.0f32; SPEECH_DENOISER_FRAME_SIZE * 2];
+        let ring_len = self.dry_delay[0].len();
+        for frame in 0..chunk_frames {
+            for ch in 0..channels {
+                let sanitized = sanitize_dry_sample(chunk[frame * channels + ch]);
+                let pos = self.dry_pos;
+                dry_scratch[frame * channels + ch] = self.dry_delay[ch][pos];
+                self.dry_delay[ch][pos] = sanitized;
+            }
+            self.dry_pos += 1;
+            if self.dry_pos >= ring_len {
+                self.dry_pos = 0;
+            }
+        }
         let written = self
             .inner
-            .process(buffer, frames, self.channels, !self.enabled);
-        if written != frames {
+            .process(chunk, chunk_frames, channels, !self.enabled);
+        if written != chunk_frames {
             return Err(format!(
-                "RNNoise processed {written} of {frames} requested frames"
+                "RNNoise processed {written} of {chunk_frames} requested frames"
             ));
+        }
+        if self.enabled {
+            let dry_len = chunk_frames * channels;
+            self.blend_chunk(chunk, &dry_scratch[..dry_len], chunk_frames);
+        } else {
+            // The bypass path replays backend audio unchanged, but smoothing
+            // state keeps tracking the target so re-enabling starts clean.
+            for _ in 0..chunk_frames {
+                self.advance_strength();
+            }
+        }
+        Ok(())
+    }
+
+    fn process_backend(&mut self, buffer: &mut [f32], frames: usize) -> PluginResult<usize> {
+        let channels = self.channels;
+        let mut processed = 0;
+        while processed < frames {
+            let chunk_frames = (frames - processed).min(SPEECH_DENOISER_FRAME_SIZE);
+            let start = processed * channels;
+            let end = start + chunk_frames * channels;
+            self.process_chunk(&mut buffer[start..end], chunk_frames)?;
+            processed += chunk_frames;
         }
         let analyzer_data = self.inner.analyzer_data();
         if analyzer_data.model_frames != self.published_model_frames {
             self.analyzer_cache.update(|data| *data = analyzer_data);
             self.published_model_frames = analyzer_data.model_frames;
         }
-        Ok(written)
+        Ok(frames)
     }
 }
 
@@ -192,6 +471,21 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         id: &ParameterId,
         value: &ParameterValue,
     ) -> PluginResult<()> {
+        // Choice models travel as an Int index or a String label; both name
+        // the same registry entry and reject unknown identities.
+        if id.as_str() == "model" {
+            return match value {
+                ParameterValue::Int(index) => usize::try_from(*index)
+                    .ok()
+                    .and_then(SpeechDenoiserModel::from_index)
+                    .map(|_| ())
+                    .ok_or_else(|| format!("model: unknown model index {index}")),
+                ParameterValue::String(label) => SpeechDenoiserModel::from_label(label)
+                    .map(|_| ())
+                    .ok_or_else(|| format!("model: unknown model {label:?}")),
+                _ => Err("model: type mismatch (expected Int index or String label)".to_string()),
+            };
+        }
         let parameter = self
             .cached_parameters
             .iter()
@@ -214,6 +508,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         match id.as_str() {
             "enabled" => Some(ParameterValue::Bool(self.enabled)),
+            "strength" => Some(ParameterValue::Float(self.strength_target)),
+            "model" => Some(ParameterValue::Int(self.model.index() as i32)),
             _ => None,
         }
     }
@@ -223,6 +519,14 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         values.insert(
             ParameterId::from("enabled"),
             ParameterValue::Bool(self.enabled),
+        );
+        values.insert(
+            ParameterId::from("strength"),
+            ParameterValue::Float(self.strength_target),
+        );
+        values.insert(
+            ParameterId::from("model"),
+            ParameterValue::Int(self.model.index() as i32),
         );
         values
     }
@@ -238,6 +542,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     /// rate.
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
         self.inner.initialize(sample_rate, self.channels)?;
+        let latency = self.inner.latency_samples();
+        debug_assert_eq!(latency, SPEECH_DENOISER_LATENCY_FRAMES);
+        self.dry_delay = vec![vec![0.0; latency]; self.channels];
+        self.dry_pos = 0;
+        self.strength_current = self.strength_target;
         self.initialized_sample_rate = Some(sample_rate);
         self.has_input = false;
         self.drain_remaining = None;
@@ -249,6 +558,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn reset(&mut self) {
         self.inner.reset();
+        for ring in &mut self.dry_delay {
+            ring.fill(0.0);
+        }
+        self.dry_pos = 0;
+        self.strength_current = self.strength_target;
         self.has_input = false;
         self.drain_remaining = None;
         self.published_model_frames = 0;
@@ -369,6 +683,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
             // response so COMPLETE is terminal without claiming finite support.
             // Keep analyzer_cache intact: it holds the last published frame.
             self.inner.reset();
+            for ring in &mut self.dry_delay {
+                ring.fill(0.0);
+            }
+            self.dry_pos = 0;
+            self.strength_current = self.strength_target;
         }
         Ok(PluginDrainResult {
             frames,

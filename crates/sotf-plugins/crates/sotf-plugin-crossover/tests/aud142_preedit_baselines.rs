@@ -69,6 +69,7 @@ fn make_case(name: &str) -> (CrossoverPlugin, String, usize, bool) {
                     channel_frequencies_hz: Vec::new(),
                     channel_modes: Some(Vec::new()),
                     topology: None,
+                    band_count: None,
                 },
             )
             .unwrap(),

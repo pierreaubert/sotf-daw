@@ -104,8 +104,9 @@ pub struct PluginHandle {
     /// structural parameters cannot be changed after initialization.
     config_json: String,
     parameter_map: ParameterMap,
-    /// Old Crossover maps stay alive after structural state restores so
-    /// previously returned `ParameterInfo` pointers remain valid until destroy.
+    /// Retired maps stay alive after structural state restores (Crossover,
+    /// EQ, DynamicEQ, LinearPhaseEQ, De-esser, Ambisonics) so previously
+    /// returned `ParameterInfo` pointers remain valid until destroy.
     retired_parameter_maps: Vec<ParameterMap>,
     sample_rate: u32,
     max_callback_frames: usize,

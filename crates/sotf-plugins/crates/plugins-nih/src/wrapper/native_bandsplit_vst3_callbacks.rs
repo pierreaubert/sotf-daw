@@ -1,4 +1,12 @@
 //! Exercise BandSplit discovery, compatibility, and audio routing at the VST3 ABI.
+//!
+//! The `vst3_com::vtable` expansion behind `#[VST3]` emits a trailing
+//! semicolon (rust-lang/rust#79813); allowed here because the fix belongs
+//! upstream in vst3-sys, not at this use site.
+#![allow(
+    semicolon_in_expressions_from_non_local_macros,
+    reason = "vst3_com::vtable expansion emits a trailing semicolon; fixed upstream in vst3-sys, not locally"
+)]
 use super::*;
 use nih_plug::wrapper::state::{ParamValue, PluginState};
 use nih_plug::wrapper::vst3::{Wrapper, vst3_sys};
@@ -643,7 +651,7 @@ fn vst3_bandsplit_legacy_packed_process_preserves_old_audio_and_silences_reserve
     assert_output_guards(&output_channels);
 
     // Activating the reserved fourth slot is explicitly supported as a silent output. It does not
-    // imply a fifth DSP band, and the two middle inactive slots may omit their pointer arrays.
+    // imply a fifth DSP band; inactive buses still provide width-sized arrays with null samples.
     // SAFETY: set_processing/set_active stop the current DSP before activation changes.
     unsafe {
         assert_eq!(processor.set_processing(0), kResultOk);
@@ -668,6 +676,8 @@ fn vst3_bandsplit_legacy_packed_process_preserves_old_audio_and_silences_reserve
     let expected = reference_block(reference.as_mut(), &interleaved_input, 4);
     let mut reserved_channels = guarded_output_channels(2);
     let mut reserved_pointers = output_channel_pointers(&mut reserved_channels);
+    let mut inactive_bus_one_pointers = vec![std::ptr::null_mut::<c_void>(); 2];
+    let mut inactive_bus_two_pointers = vec![std::ptr::null_mut::<c_void>(); 2];
     let mut output_buses = [
         AudioBusBuffers {
             num_channels: 4,
@@ -677,12 +687,12 @@ fn vst3_bandsplit_legacy_packed_process_preserves_old_audio_and_silences_reserve
         AudioBusBuffers {
             num_channels: 2,
             silence_flags: 0,
-            buffers: std::ptr::null_mut(),
+            buffers: inactive_bus_one_pointers.as_mut_ptr(),
         },
         AudioBusBuffers {
             num_channels: 2,
             silence_flags: 0,
-            buffers: std::ptr::null_mut(),
+            buffers: inactive_bus_two_pointers.as_mut_ptr(),
         },
         AudioBusBuffers {
             num_channels: 2,
@@ -692,7 +702,8 @@ fn vst3_bandsplit_legacy_packed_process_preserves_old_audio_and_silences_reserve
     ];
     process.num_outputs = 4;
     process.outputs = output_buses.as_mut_ptr();
-    // SAFETY: active bus 0 and reserved bus 3 have valid disjoint buffers; inactive aux buses are null.
+    // SAFETY: every bus has a width-sized pointer array; inactive buses contain null sample
+    // pointers, and active bus 0 plus reserved bus 3 have valid disjoint buffers.
     unsafe { assert_eq!(processor.process(&mut process), kResultOk) };
     assert_bus_matches(&output_channels, 0, &expected, 0, 4, 4);
     assert_output_region_is(&reserved_channels, 0.0);

@@ -220,6 +220,7 @@ fn dynamic_eq_attenuates_triggered_band() {
                 solo: false,
                 ..Default::default()
             }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -270,6 +271,7 @@ fn inactive_band_is_passthrough() {
                 solo: false,
                 ..Default::default()
             }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -316,6 +318,7 @@ fn mix_zero_passthrough() {
                 solo: false,
                 ..Default::default()
             }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -358,6 +361,7 @@ fn from_params_clamps_out_of_bounds() {
         link_channels: false,
         mix: 1.5,
         bands: vec![],
+        stereo_pairs: None,
     };
     let plugin = DynamicEqPlugin::from_params(1, params);
     assert_eq!(

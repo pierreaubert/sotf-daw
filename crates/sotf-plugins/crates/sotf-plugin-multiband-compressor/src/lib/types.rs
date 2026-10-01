@@ -5,8 +5,9 @@ use crate::params::{
     default_knee_db, default_link_amount, default_link_channels, default_lookahead_ms,
     default_makeup_gain, default_measured_auto_makeup, default_mix, default_ms_mode,
     default_num_bands, default_per_band_lookahead_ms, default_program_dependent_release,
-    default_ratio, default_release_ms, default_sidechain_external, default_sidechain_hpf_hz,
-    default_sidechain_hpf_order, default_sidechain_tilt_db, default_threshold_db,
+    default_ratio, default_release_ms, default_sidechain_external, default_sidechain_hpf_enabled,
+    default_sidechain_hpf_hz, default_sidechain_hpf_order, default_sidechain_tilt_db,
+    default_threshold_db,
 };
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_option_deserializer;
@@ -64,6 +65,10 @@ pub struct MultibandCompressorPluginParams {
         deserialize_with = "deserialize_hpf_order"
     )]
     pub sidechain_hpf_order: Option<String>,
+    /// Sidechain HPF enable (single-band compatibility). Absent means
+    /// disabled, so legacy presets without this key keep legacy audio.
+    #[serde(default = "default_sidechain_hpf_enabled")]
+    pub sidechain_hpf_enabled: Option<bool>,
     /// Detection mode (single-band compatibility): "peak" or "rms"
     #[serde(
         default = "default_detection_mode",
@@ -109,6 +114,7 @@ impl Default for MultibandCompressorPluginParams {
             measured_auto_makeup: default_measured_auto_makeup(),
             sidechain_hpf_hz: default_sidechain_hpf_hz(),
             sidechain_hpf_order: default_sidechain_hpf_order(),
+            sidechain_hpf_enabled: default_sidechain_hpf_enabled(),
             detection_mode: default_detection_mode(),
             lookahead_ms: default_lookahead_ms(),
             program_dependent_release: default_program_dependent_release(),
@@ -171,6 +177,7 @@ mod tests {
         assert_eq!(p.measured_auto_makeup, None);
         assert_eq!(p.sidechain_hpf_hz, None);
         assert_eq!(p.sidechain_hpf_order, None);
+        assert_eq!(p.sidechain_hpf_enabled, None);
         assert_eq!(p.detection_mode, None);
         assert_eq!(p.lookahead_ms, None);
         assert_eq!(p.program_dependent_release, None);

@@ -56,7 +56,7 @@ struct IntegratedControlCommand {
 
 fn allocate_loudness_control_instance_id(counter: &AtomicU64) -> Result<u64, String> {
     counter
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
             (current != 0).then(|| current.checked_add(1)).flatten()
         })
         .map_err(|_| "loudness monitor runtime instance ID exhausted".to_string())

@@ -1,4 +1,5 @@
-use super::external_plugin_state::NativeBandSplitOutputLayout;
+use super::external_plugin_state::{NativeBandSplitOutputLayout, NativePluginAudioSetup};
+use super::native_crossover_layout::NativeCrossoverStructure;
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{ProcessContext, TailLength};
 
@@ -64,6 +65,12 @@ pub(super) trait NativeExternalPluginBackend: Send {
         Ok(None)
     }
 
+    /// Reads structural state for the exact supported SOTF Crossover plugin.
+    /// `None` means this backend does not expose the recognized schema.
+    fn crossover_layout_parameters(&self) -> Result<Option<NativeCrossoverStructure>, String> {
+        Ok(None)
+    }
+
     /// Renegotiates a recognized Ambisonics instance while it is deactivated.
     /// The caller only invokes this on a disposable replacement candidate.
     fn reconfigure_ambisonics_audio_setup(
@@ -76,9 +83,17 @@ pub(super) trait NativeExternalPluginBackend: Send {
     /// Selects a deliberate BandSplit route on a disposable candidate instance.
     fn reconfigure_band_split_audio_setup(
         &mut self,
-        _setup: &super::external_plugin_state::NativePluginAudioSetup,
+        _setup: &NativePluginAudioSetup,
     ) -> Result<(), String> {
         Err("native backend does not support deliberate BandSplit reconfiguration".into())
+    }
+
+    /// Selects a deliberate Crossover layout on a disposable candidate.
+    fn reconfigure_crossover_audio_setup(
+        &mut self,
+        _setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        Err("native backend does not support deliberate Crossover reconfiguration".into())
     }
 
     fn process(
@@ -125,7 +140,6 @@ pub(super) trait NativeExternalPluginBackend: Send {
     }
 }
 
-#[cfg(any(feature = "external-plugin-clap", feature = "external-plugin-vst3"))]
 pub(super) fn native_parameter_id(id: &str) -> u32 {
     let mut hash = 0_u32;
     for byte in id.bytes() {

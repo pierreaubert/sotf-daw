@@ -16,7 +16,7 @@ Data flow: Input -> true peak detection (optional, rate-appropriate BS.1770 inte
 
 - `LimiterPlugin` -- Main plugin implementing `ParametricInPlacePlugin`. Uses `TruePeakDetector` and `DualRelease` from sotf-host.
 - `LimiterPluginParams` -- Serde config with limiter parameters.
-- `LimiterData` -- Real-time monitoring: gain reduction (dB), peak level, is_limiting flag, per-channel ISP dBTP.
+- `LimiterData` -- Real-time monitoring: gain reduction (dB), peak level, is_limiting flag, per-channel ISP dBTP, plus output peak dB and per-channel output ISP dBTP (final emitted, additive).
 
 ## Key Public API
 

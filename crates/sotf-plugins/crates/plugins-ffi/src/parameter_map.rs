@@ -118,8 +118,59 @@ const CROSSOVER_MODE_LABELS: [&CStr; 3] = [c"Lowpass", c"Highpass", c"Both"];
 const CROSSOVER_CHANNEL_MODE_LABELS: [&CStr; 4] =
     [c"Lowpass", c"Highpass", c"Mute", c"Passthrough"];
 
+const DYNAMIC_EQ_SHAPE_LABELS: [&CStr; 4] =
+    [c"Peak", c"Low Shelf", c"High Shelf", c"Tilt"];
+/// DynamicEQ placement: 0=Stereo..4=Side (5 choices, no Legacy).
+///
+/// Differs from EQ/Linear, where 0=Legacy/inherit and 1=Stereo..5=Side.
+/// A generic host must not treat DynamicEQ 0 as Legacy: DynamicEQ 0 is an
+/// explicit Stereo request, while EQ/Linear 0 removes the placement key.
+/// See `merge_dynamic_eq_state_into_config` (0 maps to `"stereo"`) versus
+/// the EQ/Linear merges (0 removes the key).
+const DYNAMIC_EQ_PLACEMENT_LABELS: [&CStr; 5] =
+    [c"Stereo", c"Left", c"Right", c"Mid", c"Side"];
+/// EQ placement: 0=Legacy/inherit..5=Side (6 choices).
+///
+/// Choice 0 removes explicit placement from that stored filter (saved field
+/// stays absent); 1=Stereo is an explicit All request, distinct from absence.
+const EQ_PLACEMENT_LABELS: [&CStr; 6] = [
+    c"Legacy",
+    c"Stereo",
+    c"Left",
+    c"Right",
+    c"Mid",
+    c"Side",
+];
+/// LinearPhaseEQ placement: 0=Legacy/inherit..5=Side (6 choices, same as EQ).
+const LINEAR_PHASE_EQ_PLACEMENT_LABELS: [&CStr; 6] = [
+    c"Legacy",
+    c"Stereo",
+    c"Left",
+    c"Right",
+    c"Mid",
+    c"Side",
+];
+
+/// Maximum EQ stored filters exposed as placement addresses.
+///
+/// Matches `sotf-plugin-eq` `MAX_FILTERS` (20). Appended after the 105
+/// legacy addresses (5 globals + 20 bands x 5 fields), so legacy numeric
+/// addresses never move.
+const EQ_PLACEMENT_SLOTS: usize = 20;
+
 fn is_crossover_type(plugin_type: &str) -> bool {
     matches!(plugin_type, "Crossover" | "crossover")
+}
+
+fn is_eq_type(plugin_type: &str) -> bool {
+    matches!(plugin_type, "EQ" | "eq")
+}
+
+fn is_linear_phase_eq_type(plugin_type: &str) -> bool {
+    matches!(
+        plugin_type,
+        "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+    )
 }
 
 fn crossover_string_choices(plugin_type: &str, param_id: &str) -> Option<&'static [&'static str]> {
@@ -225,6 +276,18 @@ impl ParameterMap {
         if let Some((template, max_bands)) = get_appended_band_template(plugin_type) {
             expand_band_params(&mut cached_infos, template, max_bands);
         }
+        // DynamicEQ routing controls follow the shelf block in the same
+        // order as `rebuild_cached_parameters`: legacy fields, shape/slope,
+        // then placement. Appended, so no existing address moves.
+        if let Some((template, max_bands)) = get_appended_routing_template(plugin_type) {
+            expand_band_params(&mut cached_infos, template, max_bands);
+        }
+        // EQ placement addresses follow the 105 legacy addresses (5 globals
+        // plus 20 bands x 5 fields). Keyed by stored filter index so an
+        // advanced entry cannot shift a legacy scalar address.
+        if is_eq_type(plugin_type) {
+            expand_eq_placement_params(&mut cached_infos);
+        }
 
         // Fallback: if no static specs produced params, use Plugin::parameters()
         if cached_infos.is_empty() {
@@ -289,11 +352,22 @@ impl ParameterMap {
         let cached_kinds = cached_ids
             .iter()
             .map(|id| {
-                let template_type =
-                    id.0.strip_prefix("band_")
-                        .and_then(|suffix| suffix.split_once('_'))
-                        .and_then(|(_, field)| band_spec_for_field(plugin_type, field))
-                        .map(|spec| spec.param_type);
+                let template_type = id
+                    .0
+                    .strip_prefix("band_")
+                    .and_then(|suffix| suffix.split_once('_'))
+                    .and_then(|(_, field)| band_spec_for_field(plugin_type, field))
+                    .map(|spec| spec.param_type)
+                    .or_else(|| {
+                        // EQ placement slots exist statically even when the
+                        // live filter bank is shorter; they are Int 0..=5.
+                        eq_placement_index(plugin_type, &id.0).map(|_| ParamType::Int {
+                            default: 0,
+                            min: 0,
+                            max: 5,
+                            step: 1,
+                        })
+                    });
                 let runtime = runtime_parameters
                     .iter()
                     .find(|parameter| parameter.id == *id);
@@ -357,13 +431,34 @@ impl ParameterMap {
         if is_crossover_type(&self.plugin_type) {
             return crossover_choice_label(param_id, choice_index);
         }
-        if is_dynamic_eq_type(&self.plugin_type) && param_id.rsplit_once('_')?.1 == "shape" {
-            return match choice_index {
-                0 => Some(c"Peak".as_ptr()),
-                1 => Some(c"Low Shelf".as_ptr()),
-                2 => Some(c"High Shelf".as_ptr()),
-                _ => None,
-            };
+        if is_dynamic_eq_type(&self.plugin_type) {
+            match param_id.rsplit_once('_')?.1 {
+                "shape" => {
+                    return DYNAMIC_EQ_SHAPE_LABELS
+                        .get(choice_index)
+                        .map(|label| label.as_ptr());
+                }
+                "placement" => {
+                    return DYNAMIC_EQ_PLACEMENT_LABELS
+                        .get(choice_index)
+                        .map(|label| label.as_ptr());
+                }
+                _ => return None,
+            }
+        }
+        if is_eq_type(&self.plugin_type)
+            && eq_placement_index(&self.plugin_type, param_id).is_some()
+        {
+            return EQ_PLACEMENT_LABELS
+                .get(choice_index)
+                .map(|label| label.as_ptr());
+        }
+        if is_linear_phase_eq_type(&self.plugin_type)
+            && param_id.rsplit_once('_').is_some_and(|(_, field)| field == "placement")
+        {
+            return LINEAR_PHASE_EQ_PLACEMENT_LABELS
+                .get(choice_index)
+                .map(|label| label.as_ptr());
         }
         None
     }
@@ -541,8 +636,65 @@ fn get_appended_band_template(
     is_dynamic_eq_type(plugin_type).then_some((dynamic_eq::SHELF_PARAMS, 8))
 }
 
+/// Routing template appended after the DynamicEQ shelf block.
+fn get_appended_routing_template(
+    plugin_type: &str,
+) -> Option<(&'static [sotf_host::param_specs::ParamSpec], usize)> {
+    use sotf_plugins::param_specs::dynamic_eq;
+
+    is_dynamic_eq_type(plugin_type).then_some((dynamic_eq::ROUTING_PARAMS, 8))
+}
+
 fn is_dynamic_eq_type(plugin_type: &str) -> bool {
     matches!(plugin_type, "DynamicEQ" | "dynamic_eq" | "dynamic-eq")
+}
+
+/// Parse an EQ placement address into its stored filter index.
+///
+/// Returns `None` for non-EQ plugin types or malformed IDs. Accepted
+/// form is the canonical `filter_{index}_placement` with
+/// `index < EQ_PLACEMENT_SLOTS` and no leading zeros (`filter_01_placement`
+/// is rejected, matching `merge_eq_state_into_config`, which fails closed
+/// on noncanonical indices).
+fn eq_placement_index(plugin_type: &str, id: &str) -> Option<usize> {
+    if !is_eq_type(plugin_type) {
+        return None;
+    }
+    let rest = id.strip_prefix("filter_")?.strip_suffix("_placement")?;
+    if rest.is_empty() || !rest.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let index: usize = rest.parse().ok()?;
+    if rest != index.to_string() {
+        return None;
+    }
+    (index < EQ_PLACEMENT_SLOTS).then_some(index)
+}
+
+/// Append static EQ placement addresses after the legacy band block.
+///
+/// Emits `filter_{0..20}_placement` as Int 0..=5 (0 = legacy, 1 = stereo,
+/// 2 = left, 3 = right, 4 = mid, 5 = side). Slots beyond the live filter
+/// count are advertised statically: live `plugin_set_parameter` calls are
+/// rejected by the FFI structural guard (state restoration required),
+/// `plugin_get_parameter` returns the -1.0 sentinel (DSP has no value),
+/// and `plugin_load_state` carrying a beyond-bank key fails transactionally
+/// with the live audio/config preserved.
+fn expand_eq_placement_params(cached_infos: &mut Vec<ParameterInfo>) {
+    for index in 0..EQ_PLACEMENT_SLOTS {
+        let id = format!("filter_{index}_placement");
+        let name = format!("Filter {} Placement", index + 1);
+        cached_infos.push(ParameterInfo {
+            id: ffi_cstring_ptr(&id),
+            name: ffi_cstring_ptr(&name),
+            unit: ffi_cstring_ptr(""),
+            min_value: 0.0,
+            max_value: 5.0,
+            default_value: 0.0,
+            steps: 5,
+            logarithmic: false,
+        });
+    }
 }
 
 fn band_spec_for_field(
@@ -552,6 +704,7 @@ fn band_spec_for_field(
     get_band_template(plugin_type)
         .into_iter()
         .chain(get_appended_band_template(plugin_type))
+        .chain(get_appended_routing_template(plugin_type))
         .find_map(|(template, _)| template.iter().find(|spec| spec.engine_key == field))
 }
 
@@ -720,8 +873,49 @@ mod tests {
     fn test_parameter_map_eq() {
         let plugin = plugins_bridge::create_plugin("EQ", 2, 48000, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "EQ");
-        // Five global controls plus 20 bands × five params.
-        assert_eq!(param_map.count(), 5 + 20 * 5);
+        // Five global controls plus 20 bands x five params plus 20 appended
+        // placement addresses. Legacy numeric addresses never move.
+        assert_eq!(param_map.count(), 5 + 20 * 5 + EQ_PLACEMENT_SLOTS);
+        assert_eq!(param_map.param_id_at(105), Some("filter_0_placement"));
+        assert_eq!(param_map.param_id_at(124), Some("filter_19_placement"));
+        let info = param_map.get_info(105).expect("placement info");
+        assert_eq!((info.min_value, info.max_value, info.steps), (0.0, 5.0, 5));
+    }
+
+    #[test]
+    fn eq_oversampling_ffi_roundtrips_choice_indices_and_plugin_factors() {
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, "{}").unwrap();
+        assert_eq!(plugin.info().name, "Parametric EQ");
+        let param_map = ParameterMap::from_plugin(&*plugin, "EQ");
+        let index = (0..param_map.count())
+            .find(|index| param_map.param_id_at(*index) == Some("oversampling"))
+            .expect("oversampling must be exported");
+
+        for (choice_index, factor, normalized) in [(0.0, 1, 0.0), (1.0, 2, 0.5), (2.0, 4, 1.0)] {
+            param_map
+                .set_normalized(&mut *plugin, "oversampling", normalized)
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("oversampling")),
+                Some(ParameterValue::Int(factor))
+            );
+            assert_eq!(
+                param_map.get_normalized(&*plugin, "oversampling"),
+                Some(normalized)
+            );
+
+            param_map
+                .set_denormalized_by_index(&mut *plugin, index, choice_index)
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("oversampling")),
+                Some(ParameterValue::Int(factor))
+            );
+            assert_eq!(
+                param_map.get_denormalized_by_index(&*plugin, index),
+                Some(choice_index)
+            );
+        }
     }
 
     #[test]
@@ -785,10 +979,74 @@ mod tests {
 
     #[test]
     fn test_parameter_map_linear_phase_eq_matches_dsp_band_ids_and_limit() {
-        assert_eq!(band_template_info("LinearPhaseEQ"), Some((5, 10)));
+        assert_eq!(band_template_info("LinearPhaseEQ"), Some((6, 10)));
         let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "LinearPhaseEQ");
-        assert_eq!(param_map.count(), 5 + 10 * 5);
+        assert_eq!(param_map.count(), 5 + 10 * 6);
+        assert_eq!(param_map.param_id_at(5), Some("band_0_type"));
+        assert_eq!(param_map.param_id_at(10), Some("band_0_placement"));
+    }
+
+    #[test]
+    fn test_parameter_map_dynamic_eq_appends_routing_after_shelf_block() {
+        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let param_map = ParameterMap::from_plugin(&*plugin, "DynamicEQ");
+        // 8 globals + 8x7 legacy band fields + 8x2 shelf fields + 8x1 routing.
+        assert_eq!(param_map.count(), 8 + 8 * 7 + 8 * 2 + 8);
+        let legacy_end = 8 + 8 * 7;
+        assert_eq!(
+            param_map.param_id_at(legacy_end),
+            Some("band_0_shape"),
+            "shelf block must start exactly after the legacy stride"
+        );
+        let routing_start = legacy_end + 8 * 2;
+        assert_eq!(
+            param_map.param_id_at(routing_start),
+            Some("band_0_placement"),
+            "routing block must follow the shelf block"
+        );
+        assert_eq!(param_map.param_id_at(routing_start + 7), Some("band_7_placement"));
+    }
+
+    #[test]
+    fn placement_choice_labels_cover_eq_dynamic_and_linear_phase_eq() {
+        for (plugin_type, address, labels) in [
+            ("EQ", "filter_3_placement", ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"]),
+            ("DynamicEQ", "band_1_placement", ["Stereo", "Left", "Right", "Mid", "Side", ""]),
+            (
+                "LinearPhaseEQ",
+                "band_2_placement",
+                ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"],
+            ),
+        ] {
+            let plugin =
+                plugins_bridge::create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
+            let param_map = ParameterMap::from_plugin(&*plugin, plugin_type);
+            let index = (0..param_map.count())
+                .find(|index| param_map.param_id_at(*index) == Some(address))
+                .unwrap_or_else(|| panic!("{address} must be exported for {plugin_type}"));
+            let expected = if plugin_type == "DynamicEQ" {
+                &labels[..5]
+            } else {
+                &labels[..6]
+            };
+            for (choice, label) in expected.iter().enumerate() {
+                let ptr = param_map
+                    .choice_label_at(index, choice)
+                    .unwrap_or_else(|| panic!("missing label {choice} for {address}"));
+                let actual = unsafe { std::ffi::CStr::from_ptr(ptr).to_str().unwrap() };
+                assert_eq!(actual, *label);
+            }
+            assert_eq!(param_map.choice_label_at(index, expected.len()), None);
+        }
+
+        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let param_map = ParameterMap::from_plugin(&*plugin, "DynamicEQ");
+        let index = (0..param_map.count())
+            .find(|index| param_map.param_id_at(*index) == Some("band_0_shape"))
+            .expect("band_0_shape must be exported");
+        let tilt = param_map.choice_label_at(index, 3).expect("tilt label");
+        assert_eq!(unsafe { std::ffi::CStr::from_ptr(tilt).to_str().unwrap() }, "Tilt");
     }
 
     #[test]

@@ -10,8 +10,9 @@
 //! 1. builds the exact default parameters the toolbar offers on Add Plugin
 //!    (`PluginSettings::default_for(..).to_plugin_config(..)`),
 //! 2. requires baseline factory creation to succeed,
-//! 3. requires creation with every choice field set to every valid index
-//!    (int wire form) and every valid label (string wire form).
+//! 3. checks direct JSON forms where they are unambiguous, and sends
+//!    Crossover band-count indices through the settings accessor because its
+//!    stored counts share integer values with toolbar choice indices.
 
 use sotf_audio::{PluginSettings, PluginType};
 use sotf_plugins::factory::{create_plugin, supported_plugin_types};
@@ -107,7 +108,7 @@ fn toolbar_choice_forms_survive_factory_create_for_all_plugins() {
         audited_types += 1;
 
         let hidden_keys = layout_hidden_keys(&settings);
-        for spec in settings.param_specs() {
+        for (spec_index, spec) in settings.param_specs().iter().enumerate() {
             let ParamType::Choice { labels, .. } = spec.param_type else {
                 continue;
             };
@@ -119,6 +120,105 @@ fn toolbar_choice_forms_survive_factory_create_for_all_plugins() {
                 continue;
             }
             audited_fields += 1;
+
+            if plugin_type == "crossover" && spec.engine_key == "topology" {
+                let Some(mode_index) = settings
+                    .param_specs()
+                    .iter()
+                    .position(|candidate| candidate.engine_key == "mode")
+                else {
+                    failures.push("crossover: missing mode choice for topology audit".into());
+                    continue;
+                };
+                for (index, label) in labels.iter().enumerate() {
+                    let mut selected = settings.clone();
+                    if let PluginSettings::Crossover {
+                        channel_frequencies_hz,
+                        channel_modes,
+                        ..
+                    } = &mut selected
+                    {
+                        *channel_frequencies_hz = Some(vec![500.0, 1_000.0]);
+                        *channel_modes = Some(vec!["lowpass".into(), "highpass".into()]);
+                    }
+                    selected.set_param_value(spec_index, index as f64);
+                    selected.set_param_value(mode_index, 2.0);
+                    let config = selected.to_plugin_config(f64::from(SAMPLE_RATE));
+                    let expected_topology = if index == 0 { "bands" } else { "per_channel" };
+                    if config.parameters["topology"] != serde_json::json!(expected_topology) {
+                        failures.push(format!(
+                            "crossover.topology choice {index} ({label:?}) serialized as {}, expected {expected_topology:?}",
+                            config.parameters["topology"]
+                        ));
+                        continue;
+                    }
+                    let expected_width = if index == 0 { 4 } else { 2 };
+                    match create_plugin(
+                        plugin_type,
+                        &config.parameters,
+                        channels,
+                        SAMPLE_RATE,
+                    ) {
+                        Ok(plugin) if plugin.output_channels() == expected_width => {}
+                        Ok(plugin) => failures.push(format!(
+                            "crossover.topology choice {index} ({label:?}) produced {} output channels; expected {expected_width}",
+                            plugin.output_channels(),
+                        )),
+                        Err(error) => failures.push(format!(
+                            "crossover.topology choice {index} ({label:?}) rejected: {error}"
+                        )),
+                    }
+                }
+                continue;
+            }
+
+            // Crossover's stored `band_count` is the actual number of bands
+            // (2, 3, or 4), while the toolbar sends its choice index (0, 1,
+            // or 2). Exercise the real settings accessor that translates
+            // between those representations instead of making the factory
+            // guess whether a JSON integer is a count or an index.
+            if plugin_type == "crossover" && spec.engine_key == "band_count" {
+                let Some(mode_index) = settings
+                    .param_specs()
+                    .iter()
+                    .position(|candidate| candidate.engine_key == "mode")
+                else {
+                    failures.push("crossover: missing mode choice for count-width audit".into());
+                    continue;
+                };
+                for (index, label) in labels.iter().enumerate() {
+                    let mut selected = settings.clone();
+                    selected.set_param_value(spec_index, index as f64);
+                    selected.set_param_value(mode_index, 2.0);
+                    let config = selected.to_plugin_config(f64::from(SAMPLE_RATE));
+                    let expected_count = index + 2;
+                    if config.parameters["band_count"] != serde_json::json!(expected_count) {
+                        failures.push(format!(
+                            "crossover.band_count choice {index} ({label:?}) serialized as {}, expected {expected_count}",
+                            config.parameters["band_count"]
+                        ));
+                        continue;
+                    }
+                    match create_plugin(
+                        plugin_type,
+                        &config.parameters,
+                        channels,
+                        SAMPLE_RATE,
+                    ) {
+                        Ok(plugin) if plugin.output_channels() == 2 * expected_count => {}
+                        Ok(plugin) => failures.push(format!(
+                            "crossover.band_count choice {index} ({label:?}) produced {} output channels; expected {}",
+                            plugin.output_channels(),
+                            2 * expected_count
+                        )),
+                        Err(error) => failures.push(format!(
+                            "crossover.band_count choice {index} ({label:?}) rejected: {error}"
+                        )),
+                    }
+                }
+                continue;
+            }
+
             // The toolbar sends whatever JSON type the daemon defaults carry
             // for this field, so report it: a failure only breaks the UI
             // when the rejected form matches the default's type.

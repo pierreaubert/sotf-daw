@@ -25,6 +25,10 @@ pub struct DynamicEqPluginParams {
     pub mix: f32,
     #[serde(default = "default_bands")]
     pub bands: Vec<DynEqBandParams>,
+    /// Explicit disjoint channel pairs for Left/Right/Mid/Side bands.
+    /// Two-channel input uses `[[0, 1]]` when this value is absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stereo_pairs: Option<Vec<[usize; 2]>>,
 }
 
 impl Default for DynamicEqPluginParams {
@@ -39,6 +43,7 @@ impl Default for DynamicEqPluginParams {
             link_channels: default_link_channels(),
             mix: default_mix(),
             bands: default_bands(),
+            stereo_pairs: None,
         }
     }
 }

@@ -120,6 +120,7 @@ fn from_params_happy_path() {
         frequency_hz: 5000.0,
         strength: 0.25,
         spectral_mode: false,
+        ..HissReducerPluginParams::default()
     };
     let mut plugin = HissReducerPlugin::from_params(2, params);
     assert_eq!(plugin.channels(), 2);
@@ -214,6 +215,7 @@ fn persisted_parameters_are_canonicalized() {
             frequency_hz: f32::INFINITY,
             strength: -2.0,
             spectral_mode: false,
+            ..HissReducerPluginParams::default()
         },
     );
     let values = plugin.current_values();
@@ -367,6 +369,7 @@ fn spectral_plugin(enabled: bool, strength: f32) -> HissReducerPlugin {
             frequency_hz: 4_000.0,
             strength,
             spectral_mode: true,
+            ..HissReducerPluginParams::default()
         },
     );
     plugin.initialize(SR).unwrap();

@@ -43,6 +43,11 @@ impl AutoGainClock {
         self.frames_into_interval = 0;
     }
 
+    #[cfg(test)]
+    pub(super) fn reference_delay_frames(&self, channels: usize) -> usize {
+        self.delay.len() / channels
+    }
+
     pub(super) fn capture(&mut self, input: &[f32]) {
         self.reference[..input.len()].copy_from_slice(input);
     }

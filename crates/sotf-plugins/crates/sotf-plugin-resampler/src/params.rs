@@ -22,4 +22,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("Enable ratio updates. Equal-rate mode changes require a fresh or reset stream; the runtime descriptor is structural for equal-rate instances and realtime otherwise."),
     ParamSpec::float("Ratio", "ratio", 1.0, 0.25, 4.0, 0.01, "", "Ratio")
         .doc("Current resampling ratio (only adjustable when Dynamic Ratio is enabled)"),
+    ParamSpec::bool_param("Cutoff Smoothing", "cutoff_smoothing", false, "Ratio")
+        .setup()
+        .doc("Smooth upward cutoff-table widening at most one prepared table per selection call (control call plus once per backend chunk); downward narrowing stays immediate for alias safety. Default off preserves legacy audio."),
 ];

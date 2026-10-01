@@ -12,6 +12,10 @@ use sotf_host::plugin::ProcessContext;
 mod misc;
 #[path = "tests/shelves.rs"]
 mod shelves;
+#[path = "tests/tilt.rs"]
+mod tilt;
+#[path = "tests/routing.rs"]
+mod routing;
 
 #[test]
 fn test_parameter_roundtrip() {
@@ -271,6 +275,7 @@ fn test_from_params_clamping() {
         link_channels: false,
         mix: 1.5, // clamped to 1
         bands: vec![],
+        stereo_pairs: None,
     };
     let plugin = DynamicEqPlugin::from_params(1, params);
     assert_eq!(plugin.num_bands, MAX_BANDS);
@@ -320,6 +325,7 @@ fn test_solo_mutes_other_bands() {
                     ..Default::default()
                 },
             ],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -361,6 +367,7 @@ fn test_link_channels_uses_shared_gr() {
                 solo: false,
                 ..Default::default()
             }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();
@@ -420,6 +427,7 @@ fn test_inactive_band_passthrough() {
                 solo: false,
                 ..Default::default()
             }],
+            stereo_pairs: None,
         },
     );
     plugin.initialize(sr).unwrap();

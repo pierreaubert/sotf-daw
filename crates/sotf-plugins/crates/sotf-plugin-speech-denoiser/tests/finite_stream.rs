@@ -13,8 +13,13 @@ const DELAY: usize = 960;
 const QUANTUM: usize = 480;
 
 fn configured(channels: usize, enabled: bool) -> SpeechDenoiserPlugin {
-    let mut plugin =
-        SpeechDenoiserPlugin::from_params(channels, SpeechDenoiserPluginParams { enabled });
+    let mut plugin = SpeechDenoiserPlugin::from_params(
+        channels,
+        SpeechDenoiserPluginParams {
+            enabled,
+            ..SpeechDenoiserPluginParams::default()
+        },
+    );
     plugin.initialize(RATE).unwrap();
     plugin
 }

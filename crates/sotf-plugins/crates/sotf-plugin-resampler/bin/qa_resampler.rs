@@ -13,6 +13,12 @@ fn nearest_rank(samples: &[Duration], percentile: usize) -> Duration {
     samples[rank - 1]
 }
 
+fn tone_rms_db(samples: &[f32]) -> f64 {
+    let energy =
+        samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>() / samples.len().max(1) as f64;
+    10.0 * (energy / (0.5 * 0.5 / 2.0)).log10()
+}
+
 fn main() {
     let channels = 2;
     let input_sr = 44100;
@@ -131,6 +137,7 @@ fn main() {
         ResamplerQuality::Medium,
         ResamplerQuality::High,
     ] {
+        let mut quality_samples = Vec::with_capacity(2 * 4 * 5 * SAMPLED_CALLBACKS);
         for &(source_rate, sink_rate) in &[(22_050, 96_000), (96_000, 22_050)] {
             for matrix_channels in [1usize, 2, 8, 16] {
                 for frames in [1usize, 17, 63, 64, 127] {
@@ -192,6 +199,7 @@ fn main() {
                         "{quality:?} {source_rate}->{sink_rate} {matrix_channels}ch/{frames}f p50/p95/p99/max={p50:?}/{p95:?}/{p99:?}/{max:?}, scheduler budget={scheduler_budget:?} (negotiated quantum={callback_deadline:?})"
                     );
                     all_samples.extend_from_slice(&samples);
+                    quality_samples.extend_from_slice(&samples);
 
                     let mut drain =
                         vec![0.0; candidate.drain_output_frames_max() * matrix_channels];
@@ -203,6 +211,14 @@ fn main() {
                 }
             }
         }
+        quality_samples.sort_unstable();
+        println!(
+            "  {quality:?}: p50/p99/max {:.3}/{:.3}/{:.3}ms over {} callbacks",
+            nearest_rank(&quality_samples, 50).as_secs_f64() * 1000.0,
+            nearest_rank(&quality_samples, 99).as_secs_f64() * 1000.0,
+            quality_samples[quality_samples.len() - 1].as_secs_f64() * 1000.0,
+            quality_samples.len()
+        );
     }
     all_samples.sort_unstable();
     println!(
@@ -228,6 +244,107 @@ fn main() {
     println!(
         "  Engine/offline queued-work matrix: PASS (direct fixed-frame FFI use rejects rate changes)"
     );
+
+    println!("\n[Test 7] Cutoff-smoothing transition report");
+    let mut smooth =
+        ResamplerPlugin::with_quality(1, 48_000, 48_000, 256, ResamplerQuality::High).unwrap();
+    let mut instant =
+        ResamplerPlugin::with_quality(1, 48_000, 48_000, 256, ResamplerQuality::High).unwrap();
+    for plugin in [&mut smooth, &mut instant] {
+        plugin.initialize(48_000).unwrap();
+        plugin
+            .set_parameter(
+                "dynamic_ratio".into(),
+                sotf_host::parameters::ParameterValue::Bool(true),
+            )
+            .unwrap();
+    }
+    smooth
+        .set_parameter(
+            "cutoff_smoothing".into(),
+            sotf_host::parameters::ParameterValue::Bool(true),
+        )
+        .unwrap();
+    smooth.set_ratio(0.5, false).unwrap();
+    instant.set_ratio(0.5, false).unwrap();
+    let mut smooth_blocks: Vec<Vec<f32>> = Vec::new();
+    let mut instant_blocks: Vec<Vec<f32>> = Vec::new();
+    let mut position = 0;
+    for block in 0..20 {
+        if block == 8 {
+            smooth.set_ratio(2.0, true).unwrap();
+            instant.set_ratio(2.0, true).unwrap();
+        }
+        let input: Vec<f32> = (0..256)
+            .map(|frame| {
+                (0.5
+                    * (2.0 * std::f64::consts::PI * 18_000.0 * (position + frame) as f64 / 48_000.0)
+                        .sin()) as f32
+            })
+            .collect();
+        position += 256;
+        for (plugin, blocks) in [
+            (&mut smooth, &mut smooth_blocks),
+            (&mut instant, &mut instant_blocks),
+        ] {
+            let mut cell = vec![0.0; plugin.output_frames_for_input(256)];
+            let produced = plugin
+                .process(&input, &mut cell, &ProcessContext::new(48_000, 256))
+                .unwrap();
+            blocks.push(cell[..produced].to_vec());
+        }
+    }
+    for index in 0..=8 {
+        assert_eq!(
+            smooth_blocks[index], instant_blocks[index],
+            "pre-widening block {index} must be bit-exact"
+        );
+    }
+    // Canonical transition window 9..13 (ranks 1..4), shared with the
+    // integration suites (P2-8); the same 3 dB bound applies.
+    let transition_smooth: Vec<f32> =
+        smooth_blocks[9..13].iter().flatten().copied().collect();
+    let transition_instant: Vec<f32> =
+        instant_blocks[9..13].iter().flatten().copied().collect();
+    let peak = transition_smooth
+        .iter()
+        .zip(&transition_instant)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0_f32, f32::max);
+    let hf_smooth = tone_rms_db(&transition_smooth);
+    let hf_instant = tone_rms_db(&transition_instant);
+    println!("  Transition HF energy: smoothed {hf_smooth:.2} dB, instant {hf_instant:.2} dB");
+    assert!(peak > 1e-6, "smoothing must act on transition audio");
+    assert!(
+        hf_smooth < hf_instant - 3.0,
+        "smoothed widening must release HF energy gradually"
+    );
+    for index in 17..20 {
+        assert_eq!(
+            smooth_blocks[index], instant_blocks[index],
+            "converged block {index} must be bit-exact"
+        );
+    }
+    let mut drain_smooth = Vec::new();
+    let mut drain_instant = Vec::new();
+    for (plugin, out) in [(&mut smooth, &mut drain_smooth), (&mut instant, &mut drain_instant)] {
+        loop {
+            let mut cell = vec![0.0; plugin.drain_output_frames_max().max(1)];
+            let result = plugin
+                .drain(&mut cell, &ProcessContext::new(48_000, 0))
+                .unwrap();
+            out.extend_from_slice(&cell[..result.frames]);
+            if result.complete {
+                break;
+            }
+        }
+    }
+    assert_eq!(drain_smooth, drain_instant, "drain must reconverge");
+    let len_smooth: usize = smooth_blocks.iter().map(Vec::len).sum::<usize>() + drain_smooth.len();
+    let len_instant: usize =
+        instant_blocks.iter().map(Vec::len).sum::<usize>() + drain_instant.len();
+    assert_eq!(len_smooth, len_instant, "smoothing must preserve counts");
+    println!("  Smoothed/instant lengths: {len_smooth} frames; tail reconverged: PASS");
 
     println!("\n[ENGINE/OFFLINE SCHEDULING PASS] Resampler QA Complete.");
 }

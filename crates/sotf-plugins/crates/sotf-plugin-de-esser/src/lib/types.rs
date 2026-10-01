@@ -1,11 +1,14 @@
 use crate::params::{
-    MODES, default_attack_ms, default_frequency, default_mix, default_mode, default_q,
-    default_range_db, default_ratio, default_release_ms, default_stereo_link, default_threshold,
+    MODES, SPLIT_TOPOLOGIES, default_attack_ms, default_frequency, default_lookahead_ms,
+    default_mix, default_mode, default_ms_mode, default_q, default_range_db, default_ratio,
+    default_release_ms, default_sidechain_external, default_split_topology, default_stereo_link,
+    default_threshold,
 };
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
 
 define_choice_string_deserializer!(deserialize_mode, MODES);
+define_choice_string_deserializer!(deserialize_split_topology, SPLIT_TOPOLOGIES);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -32,6 +35,21 @@ pub struct DeEsserPluginParams {
     /// Channel linking from independent (zero) to fully linked (one).
     #[serde(default = "default_stereo_link")]
     pub stereo_link: f32,
+    /// Program delay in milliseconds so reduction anticipates sibilance.
+    #[serde(default = "default_lookahead_ms")]
+    pub lookahead_ms: f32,
+    /// Split-band crossover bank: "Minimum-Phase" or "Linear-Phase".
+    #[serde(
+        default = "default_split_topology",
+        deserialize_with = "deserialize_split_topology"
+    )]
+    pub split_topology: String,
+    /// Process Mid/Side instead of Left/Right on stereo instances.
+    #[serde(default = "default_ms_mode")]
+    pub ms_mode: bool,
+    /// Detect from the external key bus instead of the program input.
+    #[serde(default = "default_sidechain_external")]
+    pub sidechain_external: bool,
 }
 
 impl Default for DeEsserPluginParams {
@@ -47,6 +65,10 @@ impl Default for DeEsserPluginParams {
             mix: default_mix(),
             range_db: default_range_db(),
             stereo_link: default_stereo_link(),
+            lookahead_ms: default_lookahead_ms(),
+            split_topology: default_split_topology(),
+            ms_mode: default_ms_mode(),
+            sidechain_external: default_sidechain_external(),
         }
     }
 }
@@ -72,6 +94,16 @@ mod tests {
         assert_eq!(
             p.stereo_link,
             pk(PARAMS, "stereo_link").default_f64() as f32
+        );
+        assert_eq!(
+            p.lookahead_ms,
+            pk(PARAMS, "lookahead_ms").default_f64() as f32
+        );
+        assert_eq!(p.split_topology, crate::params::SPLIT_TOPOLOGIES[0]);
+        assert_eq!(p.ms_mode, pk(PARAMS, "ms_mode").default_bool());
+        assert_eq!(
+            p.sidechain_external,
+            pk(PARAMS, "sidechain_external").default_bool()
         );
     }
 

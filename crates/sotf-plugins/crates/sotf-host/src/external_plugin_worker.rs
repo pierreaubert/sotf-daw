@@ -14,6 +14,7 @@ use std::os::unix::net::UnixDatagram;
 
 use crate::external_plugin_ipc::{
     PluginIpcControlRequest, PluginIpcControlResponse, PluginIpcRequest, SecurePluginSharedMemory,
+    WorkerRequestOutcome,
 };
 use crate::parameters::Parameter;
 use crate::plugin::{MidiEvent, ParameterEvent, Plugin, ProcessContext, TailLength};
@@ -22,7 +23,15 @@ use crate::plugin::{MidiEvent, ParameterEvent, Plugin, ProcessContext, TailLengt
 pub enum ExternalPluginWorkerStep {
     NoRequest,
     Controlled,
-    Processed { sequence: u64, frames: usize },
+    Processed {
+        sequence: u64,
+        frames: usize,
+    },
+    /// A plugin returned an ordinary process error for this exact request.
+    /// The worker stays alive but accepts no more audio until Reset succeeds.
+    ProcessFailed {
+        sequence: u64,
+    },
 }
 
 pub struct ExternalPluginWorker {
@@ -37,6 +46,9 @@ pub struct ExternalPluginWorker {
     #[cfg(unix)]
     wake_path: std::path::PathBuf,
     parameters: Vec<Parameter>,
+    reset_required: bool,
+    #[cfg(test)]
+    classification_hook: Option<Box<dyn FnOnce() + Send>>,
 }
 
 impl ExternalPluginWorker {
@@ -93,6 +105,9 @@ impl ExternalPluginWorker {
             wake_socket,
             #[cfg(unix)]
             wake_path,
+            reset_required: false,
+            #[cfg(test)]
+            classification_hook: None,
         })
     }
 
@@ -119,6 +134,19 @@ impl ExternalPluginWorker {
             .take_control_request()
             .map_err(|error| format!("failed to read external-plugin control request: {error}"))?
         {
+            if self.reset_required && !matches!(request, PluginIpcControlRequest::Reset) {
+                self.shared
+                    .publish_control_response(
+                        sequence,
+                        &PluginIpcControlResponse::Error(
+                            "external-plugin worker requires Reset after a process failure".into(),
+                        ),
+                    )
+                    .map_err(|error| {
+                        format!("failed to publish external-plugin control response: {error}")
+                    })?;
+                return Ok(ExternalPluginWorkerStep::Controlled);
+            }
             let response = match request {
                 PluginIpcControlRequest::Describe => {
                     self.plugin.refresh_control_thread_metadata();
@@ -140,6 +168,7 @@ impl ExternalPluginWorker {
                 }
                 PluginIpcControlRequest::Reset => match self.plugin.reset_checked() {
                     Ok(()) => {
+                        self.reset_required = false;
                         self.plugin.refresh_control_thread_metadata();
                         self.shared
                             .publish_worker_tail_length(self.plugin.tail_length());
@@ -182,6 +211,10 @@ impl ExternalPluginWorker {
                 .map_err(|error| format!("failed to publish control response: {error}"))?;
             return Ok(ExternalPluginWorkerStep::Controlled);
         }
+        if self.reset_required {
+            return Ok(ExternalPluginWorkerStep::NoRequest);
+        }
+
         let Some(request) = self
             .shared
             .take_worker_request()
@@ -213,7 +246,7 @@ impl ExternalPluginWorker {
             let context = ProcessContext::new(self.shared.layout().sample_rate, request.frames)
                 .with_transport(transport)
                 .with_all_events(&self.midi_scratch, &[], &self.parameter_scratch);
-            self.shared.process_worker_request(
+            self.shared.process_worker_request_outcome(
                 self.plugin.as_mut(),
                 request,
                 &mut self.input_scratch,
@@ -222,11 +255,26 @@ impl ExternalPluginWorker {
             )
         }));
 
+        #[cfg(test)]
+        if matches!(&result, Ok(Ok(WorkerRequestOutcome::PluginFailed(_))))
+            && let Some(hook) = self.classification_hook.take()
+        {
+            hook();
+        }
+
         match result {
-            Ok(Ok(frames)) => Ok(ExternalPluginWorkerStep::Processed {
-                sequence: request.sequence,
-                frames,
-            }),
+            Ok(Ok(WorkerRequestOutcome::Processed(frames))) => {
+                Ok(ExternalPluginWorkerStep::Processed {
+                    sequence: request.sequence,
+                    frames,
+                })
+            }
+            Ok(Ok(WorkerRequestOutcome::PluginFailed(_err))) => {
+                self.reset_required = true;
+                Ok(ExternalPluginWorkerStep::ProcessFailed {
+                    sequence: request.sequence,
+                })
+            }
             Ok(Err(err)) => Err(format!("external-plugin worker processing failed: {err}")),
             Err(payload) => {
                 self.shared.publish_worker_failure(request.sequence, 3);
@@ -259,11 +307,30 @@ fn panic_payload_description(payload: &(dyn Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::external_plugin_host::{ExternalPluginHostBlockStatus, ExternalPluginHostProxy};
     use crate::external_plugin_ipc::{PluginIpcLayout, PluginIpcState};
     use crate::parameters::{Parameter, ParameterId, ParameterValue};
     use crate::plugin::{MidiMessage, ParameterEvent, TransportInfo};
     use crate::plugin::{PluginInfo, PluginResult, ProcessContext};
+    use std::sync::mpsc;
     use std::sync::{Arc, Mutex};
+    use std::thread;
+
+    struct ResumeWorkerGate(Option<mpsc::Sender<()>>);
+
+    impl ResumeWorkerGate {
+        fn release(&mut self) {
+            if let Some(sender) = self.0.take() {
+                let _ = sender.send(());
+            }
+        }
+    }
+
+    impl Drop for ResumeWorkerGate {
+        fn drop(&mut self) {
+            self.release();
+        }
+    }
 
     struct ScalePlugin {
         channels: usize,
@@ -316,6 +383,12 @@ mod tests {
 
     struct PanickingPlugin {
         channels: usize,
+    }
+
+    struct RecoverableFailurePlugin {
+        fail_until_reset: bool,
+        fail_reset: bool,
+        gain: f32,
     }
 
     struct ProtocolPlugin {
@@ -411,6 +484,60 @@ mod tests {
         }
     }
 
+    impl Plugin for RecoverableFailurePlugin {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("Recoverable Failure", "0.1", "test")
+        }
+
+        fn input_channels(&self) -> usize {
+            2
+        }
+
+        fn output_channels(&self) -> usize {
+            2
+        }
+
+        fn parameters(&self) -> Vec<Parameter> {
+            Vec::new()
+        }
+
+        fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> PluginResult<()> {
+            Ok(())
+        }
+
+        fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+
+        fn reset(&mut self) {
+            self.fail_until_reset = false;
+        }
+
+        fn reset_checked(&mut self) -> PluginResult<()> {
+            if self.fail_reset {
+                return Err("injected reset refusal".into());
+            }
+            self.reset();
+            Ok(())
+        }
+
+        fn process(
+            &mut self,
+            input: &[f32],
+            output: &mut [f32],
+            context: &ProcessContext,
+        ) -> PluginResult<usize> {
+            if self.fail_until_reset {
+                return Err("injected processing refusal".into());
+            }
+            let samples = context.num_frames * 2;
+            for index in 0..samples {
+                output[index] = input[index] * self.gain;
+            }
+            Ok(context.num_frames)
+        }
+    }
+
     #[test]
     fn test_worker_process_one_publishes_output() {
         let layout = PluginIpcLayout::new(48_000, 128, 2, 2).unwrap();
@@ -445,6 +572,243 @@ mod tests {
             worker.process_one().unwrap(),
             ExternalPluginWorkerStep::NoRequest
         );
+    }
+
+    #[test]
+    fn worker_process_failure_requires_reset_then_accepts_fresh_audio() {
+        let layout = PluginIpcLayout::new(48_000, 128, 2, 2).unwrap();
+        let mut host = SecurePluginSharedMemory::create(layout).unwrap();
+        let worker_shared = SecurePluginSharedMemory::open_existing(host.path()).unwrap();
+        let mut worker = ExternalPluginWorker::new(
+            worker_shared,
+            Box::new(RecoverableFailurePlugin {
+                fail_until_reset: true,
+                fail_reset: false,
+                gain: 1.0,
+            }),
+        )
+        .unwrap();
+
+        let input = vec![0.25, -0.5, 1.0, -1.0];
+        host.publish_host_block(20, 2, &input).unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::ProcessFailed { sequence: 20 }
+        );
+        assert_eq!(host.worker_state(), PluginIpcState::WorkerFailed);
+        assert_eq!(host.worker_sequence(), 20);
+        assert_eq!(host.worker_failure_status_code(), 1);
+
+        host.publish_host_block(21, 2, &input).unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::NoRequest
+        );
+        assert_eq!(host.host_state(), PluginIpcState::HostReady);
+        assert_eq!(
+            host.worker_sequence(),
+            20,
+            "failed-state audio was consumed"
+        );
+
+        host.clear_block();
+        host.publish_control_request(1, &PluginIpcControlRequest::Reset)
+            .unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::Controlled
+        );
+        assert!(matches!(
+            host.take_control_response(1).unwrap(),
+            Some(PluginIpcControlResponse::Ack)
+        ));
+        host.clear_block();
+
+        host.publish_host_block(22, 2, &input).unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::Processed {
+                sequence: 22,
+                frames: 2,
+            }
+        );
+        let mut output = vec![0.0; input.len()];
+        assert_eq!(host.copy_worker_output(&mut output).unwrap(), 2);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn published_process_failure_stays_recoverable_after_proxy_acknowledges_it() {
+        let layout = PluginIpcLayout::new(48_000, 128, 2, 2).unwrap();
+        let mut host = ExternalPluginHostProxy::new(layout, Duration::from_millis(10)).unwrap();
+        let mut observer = SecurePluginSharedMemory::open_existing(host.shared_path()).unwrap();
+        let worker_shared = SecurePluginSharedMemory::open_existing(host.shared_path()).unwrap();
+        let mut worker = ExternalPluginWorker::new(
+            worker_shared,
+            Box::new(RecoverableFailurePlugin {
+                fail_until_reset: true,
+                fail_reset: false,
+                gain: 2.0,
+            }),
+        )
+        .unwrap();
+        let (published_tx, published_rx) = mpsc::channel();
+        let (resume_tx, resume_rx) = mpsc::channel();
+        let mut resume_gate = ResumeWorkerGate(Some(resume_tx));
+        worker.classification_hook = Some(Box::new(move || {
+            let _ = published_tx.send(());
+            let _ = resume_rx.recv();
+        }));
+
+        let input = vec![0.25, -0.5, 1.0, -1.0];
+        let mut output = vec![0.0; input.len()];
+        host.process_block(&input, &mut output, 2).unwrap();
+        let worker_thread = thread::spawn(move || {
+            let result = worker.process_one();
+            (worker, result)
+        });
+
+        let publication_seen = published_rx.recv_timeout(Duration::from_secs(2)).is_ok();
+        let published_state = observer.worker_state();
+        let published_sequence = observer.worker_sequence();
+        let published_status = observer.worker_failure_status_code();
+
+        // This callback runs the real resolve_pending path while the worker is
+        // paused after publication. It observes status 1, clears the shared
+        // block, and latches the proxy before the worker classifies its local
+        // outcome.
+        let (frames, _) = host.process_block(&input, &mut output, 2).unwrap();
+        resume_gate.release();
+        let (mut worker, result) = worker_thread.join().expect("worker thread panicked");
+
+        assert!(
+            publication_seen,
+            "worker did not reach the publication gate"
+        );
+        assert_eq!(published_state, PluginIpcState::WorkerFailed);
+        assert_eq!(published_sequence, 1);
+        assert_eq!(published_status, 1);
+        assert_eq!(frames, 2);
+        assert_eq!(host.worker_failure_count(), 1);
+        assert_eq!(observer.worker_state(), PluginIpcState::Idle);
+        assert_eq!(observer.host_state(), PluginIpcState::Idle);
+        assert_eq!(
+            result.unwrap(),
+            ExternalPluginWorkerStep::ProcessFailed { sequence: 1 }
+        );
+        host.process_block(&input, &mut output, 2).unwrap();
+        assert_eq!(observer.host_state(), PluginIpcState::Idle);
+        assert_eq!(observer.worker_sequence(), 1);
+        assert_eq!(host.worker_failure_count(), 1);
+
+        observer
+            .publish_control_request(1, &PluginIpcControlRequest::Describe)
+            .unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::Controlled
+        );
+        assert!(matches!(
+            observer.take_control_response(1).unwrap(),
+            Some(PluginIpcControlResponse::Error(error))
+                if error == "external-plugin worker requires Reset after a process failure"
+        ));
+        observer.clear_block();
+        observer
+            .publish_control_request(2, &PluginIpcControlRequest::Reset)
+            .unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::Controlled
+        );
+        assert!(matches!(
+            observer.take_control_response(2).unwrap(),
+            Some(PluginIpcControlResponse::Ack)
+        ));
+        observer.clear_block();
+        host.reset_timeline_after_drain().unwrap();
+
+        let mut blocks = Vec::with_capacity(4);
+        for block_index in 0..4 {
+            blocks.push(
+                (0..256)
+                    .map(|sample| (block_index as f32 + 1.0) * (sample as f32 - 64.0) / 128.0)
+                    .collect::<Vec<_>>(),
+            );
+        }
+        let mut outputs = vec![vec![0.0; 256]; 5];
+        for block_index in 0..4 {
+            let (frames, _) = host
+                .process_block_with(&blocks[block_index], &mut outputs[block_index], 128, || {
+                    assert!(matches!(
+                        worker.process_one().unwrap(),
+                        ExternalPluginWorkerStep::Processed { frames: 128, .. }
+                    ));
+                })
+                .unwrap();
+            assert_eq!(frames, 128);
+        }
+        host.wait_for_pending_for_drain(Duration::from_millis(10))
+            .unwrap();
+        assert_eq!(
+            host.flush_timeline_for_drain(&mut outputs[4], 128).unwrap(),
+            ExternalPluginHostBlockStatus::Processed
+        );
+
+        assert!(outputs[0].iter().all(|sample| *sample == 0.0));
+        for block_index in 0..4 {
+            let expected = blocks[block_index]
+                .iter()
+                .map(|sample| *sample * 2.0)
+                .collect::<Vec<_>>();
+            assert_eq!(outputs[block_index + 1], expected);
+        }
+    }
+
+    #[test]
+    fn worker_reset_refusal_keeps_failed_audio_state_latched() {
+        let layout = PluginIpcLayout::new(48_000, 128, 2, 2).unwrap();
+        let mut host = SecurePluginSharedMemory::create(layout).unwrap();
+        let worker_shared = SecurePluginSharedMemory::open_existing(host.path()).unwrap();
+        let mut worker = ExternalPluginWorker::new(
+            worker_shared,
+            Box::new(RecoverableFailurePlugin {
+                fail_until_reset: true,
+                fail_reset: true,
+                gain: 1.0,
+            }),
+        )
+        .unwrap();
+
+        let input = vec![0.25, -0.5, 1.0, -1.0];
+        host.publish_host_block(30, 2, &input).unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::ProcessFailed { sequence: 30 }
+        );
+        host.clear_block();
+        host.publish_control_request(1, &PluginIpcControlRequest::Reset)
+            .unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::Controlled
+        );
+        assert!(matches!(
+            host.take_control_response(1).unwrap(),
+            Some(PluginIpcControlResponse::Error(error)) if error == "injected reset refusal"
+        ));
+        host.clear_block();
+        host.publish_host_block(31, 2, &input).unwrap();
+        assert_eq!(
+            worker.process_one().unwrap(),
+            ExternalPluginWorkerStep::NoRequest
+        );
+        assert_eq!(
+            host.worker_sequence(),
+            30,
+            "failed reset cleared the worker latch"
+        );
+        assert_eq!(host.host_state(), PluginIpcState::HostReady);
     }
 
     #[test]

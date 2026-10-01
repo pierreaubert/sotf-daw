@@ -727,6 +727,8 @@ fn allrad_grid_quadrature_and_virtual_solve_meet_order_specific_limits() {
 
 #[test]
 fn mode_matching_and_allrad_match_independent_references_on_named_layouts() {
+    // Pin the custom-key skip below so it cannot go stale silently.
+    assert!(crate::params::TARGET_LAYOUTS.contains(&crate::custom_layout::CUSTOM_LAYOUT_KEY));
     for (order, &virtual_count) in ALLRAD_VIRTUAL_SPEAKERS.iter().enumerate().skip(1) {
         let columns = (order + 1) * (order + 1);
         let virtual_directions = oracle_directions(virtual_count);
@@ -745,7 +747,12 @@ fn mode_matching_and_allrad_match_independent_references_on_named_layouts() {
         validate_jacobi_reference(&virtual_y, &virtual_svd);
         let (virtual_rank, virtual_condition) = svd_rank_and_condition(&virtual_svd, 1.0e-7);
 
-        for layout in crate::params::TARGET_LAYOUTS {
+        // The appended user-geometry key has no static config; custom
+        // matrices are covered by the dedicated replica/equivalence tests.
+        for layout in crate::params::TARGET_LAYOUTS
+            .iter()
+            .filter(|layout| **layout != crate::custom_layout::CUSTOM_LAYOUT_KEY)
+        {
             let config = get_speaker_config(layout).unwrap();
             let (physical_y, physical_channels) = physical_harmonic_design(config, order);
             let physical_svd = jacobi_svd(&physical_y, physical_channels.len(), columns);

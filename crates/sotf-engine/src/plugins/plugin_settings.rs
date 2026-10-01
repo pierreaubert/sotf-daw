@@ -106,15 +106,25 @@ use super::default_crossover_output;
 use super::default_crossover_type;
 use super::default_de_esser_attack;
 use super::default_de_esser_frequency;
+use super::default_de_esser_lookahead_ms;
 use super::default_de_esser_mix;
+use super::default_de_esser_ms_mode;
 use super::default_de_esser_q;
 use super::default_de_esser_range_db;
 use super::default_de_esser_ratio;
 use super::default_de_esser_release;
+use super::default_de_esser_sidechain_external;
+use super::default_de_esser_split_topology;
 use super::default_de_esser_stereo_link;
 use super::default_de_esser_threshold;
+use super::default_declick_audition_residual;
+use super::default_declick_bands;
+use super::default_declick_crossover_hz;
 use super::default_declick_enabled;
+use super::default_declick_frequency_skew;
 use super::default_declick_link_channels;
+use super::default_declick_mode;
+use super::default_declick_repair_width;
 use super::default_declick_sensitivity;
 use super::default_delay_allpass_coeff;
 use super::default_delay_feedback;
@@ -179,11 +189,17 @@ use super::default_gate_mix;
 use super::default_gate_range_db;
 use super::default_gate_sidechain_hpf_order;
 use super::default_head_taps;
+use super::default_hiss_reducer_curve_high;
+use super::default_hiss_reducer_curve_low;
+use super::default_hiss_reducer_curve_mid;
 use super::default_hiss_reducer_enabled;
 use super::default_hiss_reducer_frequency_hz;
+use super::default_hiss_reducer_link_mode;
 use super::default_hiss_reducer_spectral_mode;
 use super::default_hiss_reducer_strength;
 use super::default_hiss_reducer_threshold_db;
+use super::default_hiss_reducer_transient_guard;
+use super::default_hiss_reducer_use_captured_profile;
 use super::default_lc_mid_enabled;
 use super::default_lc_mid_freq;
 use super::default_lc_mid_gain;
@@ -276,6 +292,8 @@ use super::default_spectrum_min_freq;
 use super::default_spectrum_num_bins;
 use super::default_spectrum_smoothing;
 use super::default_speech_denoiser_enabled;
+use super::default_speech_denoiser_model;
+use super::default_speech_denoiser_strength;
 use super::default_ts_mix;
 use super::default_upmixer_ambient_boost;
 use super::default_upmixer_auto_gain_enabled;
@@ -508,6 +526,132 @@ pub struct UpmixerOutputSettings {
     pub auto_gain_smoothing_ms: f64,
 }
 
+/// One engine-side custom ambisonics loudspeaker position.
+///
+/// Field-for-field mirror of `sotf_plugin_ambisonics::CustomSpeaker` so the
+/// converter passes geometry through as plain JSON without depending on the
+/// plugin crate. Channel index is the position inside
+/// [`AmbisonicsCustomLayoutSettings::speakers`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AmbisonicsCustomSpeakerSettings {
+    /// Short unique label (for example `"FL"` or `"TBL"`).
+    pub label: String,
+    /// Horizontal angle in degrees, -180 to +180.
+    pub azimuth_deg: f32,
+    /// Vertical angle in degrees, -90 to +90.
+    pub elevation_deg: f32,
+    /// True for the low-frequency channel, which is always decoded silent.
+    pub is_lfe: bool,
+}
+
+/// Engine-side user-defined ambisonics loudspeaker layout.
+///
+/// Mirror of `sotf_plugin_ambisonics::CustomLayout`. Carried only when
+/// `target_layout` is `"custom"`; the factory re-validates on construction.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AmbisonicsCustomLayoutSettings {
+    /// User-visible layout name.
+    pub name: String,
+    /// Speaker entries in output-channel order.
+    pub speakers: Vec<AmbisonicsCustomSpeakerSettings>,
+}
+
+/// Engine admission limit for custom ambisonics decoder layouts.
+///
+/// The DSP validates up to 64 speakers. The engine admits at most 16 because
+/// a custom layout's speaker count is its output width, and the engine output
+/// bus is capped at [`crate::types::config::EngineConfig::MAX_OUTPUT_CHANNELS`]
+/// (16, device/playback pipeline ceiling). Layouts with 17-64 speakers remain
+/// constructible via direct DSP, bridge, or FFI construction; engine preset
+/// load skips them with a cap-naming warning (see chain preset gate).
+pub const MAX_AMBISONICS_CUSTOM_SPEAKERS: usize = 16;
+
+/// Maximum custom layout name length, mirroring the DSP bound.
+pub const MAX_AMBISONICS_CUSTOM_NAME_LEN: usize = 64;
+
+/// Maximum custom speaker label length, mirroring the DSP bound.
+pub const MAX_AMBISONICS_CUSTOM_LABEL_LEN: usize = 16;
+
+/// Mirrors `CustomLayout::validate` plus the engine speaker cap.
+///
+/// Returns false for any geometry the DSP would reject (empty or overlong
+/// name, wrong speaker count, empty/duplicate/overlong labels, non-finite or
+/// out-of-range angles, all-LFE) and for layouts above
+/// [`MAX_AMBISONICS_CUSTOM_SPEAKERS`]. Missing geometry (`None`) is handled
+/// by the caller, not here.
+pub fn valid_ambisonics_custom_layout(layout: &AmbisonicsCustomLayoutSettings) -> bool {
+    if layout.name.is_empty() || layout.name.chars().count() > MAX_AMBISONICS_CUSTOM_NAME_LEN {
+        return false;
+    }
+    if layout.speakers.is_empty() || layout.speakers.len() > MAX_AMBISONICS_CUSTOM_SPEAKERS {
+        return false;
+    }
+    if !layout.speakers.iter().any(|speaker| !speaker.is_lfe) {
+        return false;
+    }
+    for (index, speaker) in layout.speakers.iter().enumerate() {
+        if speaker.label.is_empty()
+            || speaker.label.chars().count() > MAX_AMBISONICS_CUSTOM_LABEL_LEN
+        {
+            return false;
+        }
+        if layout.speakers[..index]
+            .iter()
+            .any(|other| other.label == speaker.label)
+        {
+            return false;
+        }
+        if !speaker.azimuth_deg.is_finite()
+            || !speaker.elevation_deg.is_finite()
+            || speaker.azimuth_deg.abs() > 180.0
+            || speaker.elevation_deg.abs() > 90.0
+        {
+            return false;
+        }
+    }
+    true
+}
+
+impl PluginSettings {
+    /// Rejects custom ambisonics geometry that the decoder cannot build.
+    ///
+    /// Named layouts always pass. A `"custom"` target requires present,
+    /// [`valid_ambisonics_custom_layout`] geometry; anything else is an
+    /// error naming the failure. Called from `Plugin::validate` and the
+    /// chain preset loader so invalid custom state never reaches width
+    /// planning or the factory.
+    pub fn validate_custom_geometry(&self) -> Result<(), String> {
+        if let PluginSettings::AmbisonicsDecoder {
+            target_layout,
+            custom_layout,
+            ..
+        } = self
+            && target_layout == "custom"
+        {
+            match custom_layout {
+                Some(layout) if valid_ambisonics_custom_layout(layout) => {}
+                Some(layout) if layout.speakers.len() > MAX_AMBISONICS_CUSTOM_SPEAKERS => {
+                    return Err(format!(
+                        "AmbisonicsDecoder custom layout has {} speakers, exceeding the engine output-channel ceiling of {} (MAX_AMBISONICS_CUSTOM_SPEAKERS); wider layouts need direct DSP/bridge/FFI construction",
+                        layout.speakers.len(),
+                        MAX_AMBISONICS_CUSTOM_SPEAKERS
+                    ));
+                }
+                Some(_) => {
+                    return Err("AmbisonicsDecoder custom layout failed validation".to_owned());
+                }
+                None => {
+                    return Err(
+                        "AmbisonicsDecoder target_layout \"custom\" requires custom_layout geometry"
+                            .to_owned(),
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginSettings {
     EQ {
@@ -519,6 +663,9 @@ pub enum PluginSettings {
         /// Index corresponds to channel index
         #[serde(default, skip_serializing_if = "Option::is_none")]
         channel_filters: Option<Vec<Vec<EQFilter>>>,
+        /// Optional disjoint channel pairs used by explicit Left/Right/Mid/Side placement.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        stereo_pairs: Option<Vec<[usize; 2]>>,
         /// Whether to use per-channel mode (default: false = all channels share same EQ)
         #[serde(default)]
         per_channel_mode: bool,
@@ -657,6 +804,8 @@ pub enum PluginSettings {
         range_db: f64,
         #[serde(default)]
         hold_ms: f64,
+        #[serde(default)] // false (matches plugin default)
+        sidechain_hpf_enabled: bool,
     },
     Limiter {
         threshold_db: f64,
@@ -786,6 +935,14 @@ pub enum PluginSettings {
         range_db: f64,
         #[serde(default)]
         hold_ms: f64,
+        #[serde(default = "default_compressor_sidechain_hpf_hz")]
+        sidechain_hpf_hz: f64,
+        #[serde(default = "default_compressor_sidechain_hpf_order")]
+        sidechain_hpf_order: String,
+        #[serde(default = "default_compressor_detection_mode")]
+        detection_mode: String,
+        #[serde(default)] // false (matches plugin default)
+        sidechain_hpf_enabled: bool,
     },
     MultibandExpander {
         #[serde(default = "default_mb_expander_num_bands")]
@@ -1130,6 +1287,18 @@ pub enum PluginSettings {
         sensitivity: f64,
         #[serde(default = "default_declick_link_channels")]
         link_channels: bool,
+        #[serde(default = "default_declick_mode")]
+        mode: usize,
+        #[serde(default = "default_declick_bands")]
+        bands: usize,
+        #[serde(default = "default_declick_crossover_hz")]
+        crossover_hz: f64,
+        #[serde(default = "default_declick_frequency_skew")]
+        frequency_skew: f64,
+        #[serde(default = "default_declick_repair_width")]
+        repair_width: usize,
+        #[serde(default = "default_declick_audition_residual")]
+        audition_residual: bool,
     },
     HissReducer {
         #[serde(default = "default_hiss_reducer_enabled")]
@@ -1142,10 +1311,37 @@ pub enum PluginSettings {
         strength: f64,
         #[serde(default = "default_hiss_reducer_spectral_mode")]
         spectral_mode: bool,
+        /// Momentary control-thread capture action, not restorable state.
+        /// Carried for accessor/PARAMS parity; the converter drops it from
+        /// factory JSON (the factory denies unknown fields) and presets
+        /// round-trip it as explicitly ignored. The restoration owner owns
+        /// the capture-action path.
+        #[serde(default)]
+        learn_noise: bool,
+        #[serde(default = "default_hiss_reducer_use_captured_profile")]
+        use_captured_profile: bool,
+        /// Momentary control-thread clear action, not restorable state.
+        /// Same capture-action contract as `learn_noise`.
+        #[serde(default)]
+        clear_profile: bool,
+        #[serde(default = "default_hiss_reducer_curve_low")]
+        curve_low: f64,
+        #[serde(default = "default_hiss_reducer_curve_mid")]
+        curve_mid: f64,
+        #[serde(default = "default_hiss_reducer_curve_high")]
+        curve_high: f64,
+        #[serde(default = "default_hiss_reducer_link_mode")]
+        link_mode: i32,
+        #[serde(default = "default_hiss_reducer_transient_guard")]
+        transient_guard: bool,
     },
     SpeechDenoiser {
         #[serde(default = "default_speech_denoiser_enabled")]
         enabled: bool,
+        #[serde(default = "default_speech_denoiser_strength")]
+        strength: f64,
+        #[serde(default = "default_speech_denoiser_model")]
+        model: String,
     },
     Pnd {
         #[serde(default = "default_pnd_correction_strength")]
@@ -1233,6 +1429,9 @@ pub enum PluginSettings {
         /// FIR tap count for linear-phase mode
         #[serde(default = "default_crossover_fir_taps")]
         fir_taps: usize,
+        /// Active number of bands in Bands topology; absent legacy values infer from stored cutoffs.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        band_count: Option<usize>,
         /// Active crossover route; absent legacy values are inferred at runtime.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         topology: Option<CrossoverTopology>,
@@ -1403,6 +1602,8 @@ pub enum PluginSettings {
         dual_band: bool,
         #[serde(default = "default_ambisonics_algorithm")]
         algorithm: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        custom_layout: Option<AmbisonicsCustomLayoutSettings>,
     },
     StereoImager {
         #[serde(default = "default_si_width")]
@@ -1443,6 +1644,14 @@ pub enum PluginSettings {
         range_db: f64,
         #[serde(default = "default_de_esser_stereo_link")]
         stereo_link: f64,
+        #[serde(default = "default_de_esser_lookahead_ms")]
+        lookahead_ms: f64,
+        #[serde(default = "default_de_esser_split_topology")]
+        split_topology: String,
+        #[serde(default = "default_de_esser_ms_mode")]
+        ms_mode: bool,
+        #[serde(default = "default_de_esser_sidechain_external")]
+        sidechain_external: bool,
     },
     TransientShaper {
         #[serde(default)]
@@ -1589,6 +1798,8 @@ pub enum PluginSettings {
         mix: f64,
         #[serde(default = "default_dyneq_bands")]
         bands: Vec<DynEqBandParams>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        stereo_pairs: Option<Vec<[usize; 2]>>,
     },
     #[serde(alias = "FirDesigner")]
     LinearPhaseEq {
@@ -1604,6 +1815,8 @@ pub enum PluginSettings {
         mix: f64,
         #[serde(default)]
         filters: Vec<EQFilter>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        stereo_pairs: Option<Vec<[usize; 2]>>,
     },
     SpectralCompressor {
         #[serde(default = "default_sc_fft_size")]
@@ -1729,9 +1942,14 @@ impl PluginSettings {
                 let channels_per_axis = order.saturating_add(1);
                 Some(channels_per_axis.saturating_mul(channels_per_axis))
             }
-            Self::External { state } if state.descriptor.audio_inputs > 0 => {
-                Some(state.descriptor.audio_inputs)
-            }
+            Self::External { state } => match state.effective_audio_channel_counts() {
+                Ok((input_channels, _)) if input_channels > 0 => Some(input_channels),
+                Ok(_) => None,
+                // Zero cannot be a valid configured stream input. Preserve the
+                // invalid state as an impossible route instead of treating it
+                // as unconstrained or falling back to stale scanned metadata.
+                Err(_) => Some(0),
+            },
             _ => None,
         }
     }
@@ -1770,6 +1988,7 @@ impl PluginSettings {
                     EQFilter::new(BiquadFilterType::Peak, 10000.0, 1.4, 0.0),
                 ],
                 channel_filters: None,
+                stereo_pairs: None,
                 per_channel_mode: false,
                 max_filters: 5,
                 tdf2: false,
@@ -1879,6 +2098,7 @@ impl PluginSettings {
                     sidechain_external: p(c, "sidechain_external").default_bool(),
                     range_db: p(c, "range_db").default_f64(),
                     hold_ms: p(c, "hold_ms").default_f64(),
+                    sidechain_hpf_enabled: p(c, "sidechain_hpf_enabled").default_bool(),
                 }
             }
             PluginType::Limiter => {
@@ -1962,6 +2182,10 @@ impl PluginSettings {
                     link_amount: p(mc, "link_amount").default_f64(),
                     range_db: p(mc, "range_db").default_f64(),
                     hold_ms: p(mc, "hold_ms").default_f64(),
+                    sidechain_hpf_hz: p(mc, "sidechain_hpf_hz").default_f64(),
+                    sidechain_hpf_order: default_compressor_sidechain_hpf_order(),
+                    detection_mode: default_compressor_detection_mode(),
+                    sidechain_hpf_enabled: p(mc, "sidechain_hpf_enabled").default_bool(),
                 }
             }
             PluginType::MultibandExpander => {
@@ -2170,6 +2394,12 @@ impl PluginSettings {
                     enabled: p(dc, "enabled").default_bool(),
                     sensitivity: p(dc, "sensitivity").default_f64(),
                     link_channels: p(dc, "link_channels").default_bool(),
+                    mode: p(dc, "mode").default_usize(),
+                    bands: p(dc, "bands").default_usize(),
+                    crossover_hz: p(dc, "crossover_hz").default_f64(),
+                    frequency_skew: p(dc, "frequency_skew").default_f64(),
+                    repair_width: p(dc, "repair_width").default_usize(),
+                    audition_residual: p(dc, "audition_residual").default_bool(),
                 }
             }
             PluginType::HissReducer => {
@@ -2180,12 +2410,22 @@ impl PluginSettings {
                     frequency_hz: p(hr, "frequency_hz").default_f64(),
                     strength: p(hr, "strength").default_f64(),
                     spectral_mode: p(hr, "spectral_mode").default_bool(),
+                    learn_noise: p(hr, "learn_noise").default_bool(),
+                    use_captured_profile: p(hr, "use_captured_profile").default_bool(),
+                    clear_profile: p(hr, "clear_profile").default_bool(),
+                    curve_low: p(hr, "curve_low").default_f64(),
+                    curve_mid: p(hr, "curve_mid").default_f64(),
+                    curve_high: p(hr, "curve_high").default_f64(),
+                    link_mode: p(hr, "link_mode").default_i32(),
+                    transient_guard: p(hr, "transient_guard").default_bool(),
                 }
             }
             PluginType::SpeechDenoiser => {
                 let sd = speech_denoiser_specs::PARAMS;
                 Self::SpeechDenoiser {
                     enabled: p(sd, "enabled").default_bool(),
+                    strength: p(sd, "strength").default_f64(),
+                    model: p(sd, "model").default_choice_label(),
                 }
             }
             PluginType::Pnd => {
@@ -2232,6 +2472,7 @@ impl PluginSettings {
                     frequency: p(co, "frequency").default_f64(),
                     output: default_crossover_output(),
                     fir_taps: p(co, "fir_taps").default_usize(),
+                    band_count: Some(2),
                     topology: Some(CrossoverTopology::Bands),
                     extra_frequencies: Vec::new(),
                     channel_frequencies_hz: None,
@@ -2338,6 +2579,7 @@ impl PluginSettings {
                     max_re_weighting: p(a, "max_re_weighting").default_bool(),
                     dual_band: p(a, "dual_band").default_bool(),
                     algorithm: p(a, "algorithm").default_choice_label(),
+                    custom_layout: None,
                 }
             }
             PluginType::StereoImager => {
@@ -2366,6 +2608,10 @@ impl PluginSettings {
                     mix: p(de, "mix").default_f64(),
                     range_db: p(de, "range_db").default_f64(),
                     stereo_link: p(de, "stereo_link").default_f64(),
+                    lookahead_ms: p(de, "lookahead_ms").default_f64(),
+                    split_topology: p(de, "split_topology").default_choice_label(),
+                    ms_mode: p(de, "ms_mode").default_bool(),
+                    sidechain_external: p(de, "sidechain_external").default_bool(),
                 }
             }
             PluginType::TransientShaper => {
@@ -2466,6 +2712,7 @@ impl PluginSettings {
                     bands: (0..num_bands as usize)
                         .map(|_| DynEqBandParams::default())
                         .collect(),
+                    stereo_pairs: None,
                 }
             }
             PluginType::LinearPhaseEq => {
@@ -2481,6 +2728,7 @@ impl PluginSettings {
                     auto_gain: p(lp, "auto_gain").default_bool(),
                     mix: p(lp, "mix").default_f64(),
                     filters,
+                    stereo_pairs: None,
                 }
             }
             PluginType::SpectralCompressor => {
@@ -2542,6 +2790,7 @@ impl PluginSettings {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::plugins::EqBandPlacement;
 
     #[test]
     fn every_plugin_default_setting_round_trips_through_preset_json() {
@@ -2568,6 +2817,56 @@ mod tests {
                 plugin_type.name()
             );
         }
+    }
+
+    #[test]
+    fn eq_placement_and_stereo_pairs_are_optional_preset_fields() {
+        let mut settings = PluginSettings::default_for(&PluginType::EQ).unwrap();
+        let legacy_json = serde_json::to_value(&settings).unwrap();
+        let legacy_eq = legacy_json["EQ"].as_object().unwrap();
+        assert!(!legacy_eq.contains_key("stereo_pairs"));
+        assert!(legacy_eq["filters"][0].get("placement").is_none());
+
+        let restored_legacy: PluginSettings = serde_json::from_value(legacy_json).unwrap();
+        let PluginSettings::EQ {
+            filters,
+            stereo_pairs,
+            ..
+        } = restored_legacy
+        else {
+            panic!("expected EQ settings");
+        };
+        assert!(stereo_pairs.is_none());
+        assert!(filters.iter().all(|filter| filter.placement.is_none()));
+
+        let PluginSettings::EQ {
+            filters,
+            stereo_pairs,
+            ..
+        } = &mut settings
+        else {
+            panic!("expected default EQ settings");
+        };
+        filters[0].placement = Some(EqBandPlacement::Left);
+        *stereo_pairs = Some(vec![[0, 1], [3, 2]]);
+        let explicit_json = serde_json::to_value(&settings).unwrap();
+        assert_eq!(explicit_json["EQ"]["filters"][0]["placement"], "left");
+        assert_eq!(
+            explicit_json["EQ"]["stereo_pairs"],
+            serde_json::json!([[0, 1], [3, 2]])
+        );
+
+        let restored: PluginSettings = serde_json::from_value(explicit_json).unwrap();
+        let PluginSettings::EQ {
+            filters,
+            stereo_pairs,
+            ..
+        } = restored
+        else {
+            panic!("expected EQ settings");
+        };
+        assert_eq!(filters[0].placement, Some(EqBandPlacement::Left));
+        assert_eq!(stereo_pairs, Some(vec![[0, 1], [3, 2]]));
     }
 
     #[test]

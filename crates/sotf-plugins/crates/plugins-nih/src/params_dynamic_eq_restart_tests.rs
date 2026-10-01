@@ -59,6 +59,24 @@ fn shelf_shape_and_slope_are_visible_manual_restart_controls() {
         assert!(flags.contains(ParamFlags::NON_AUTOMATABLE), "{slope_id}");
         assert!(flags.contains(ParamFlags::REQUIRES_RESTART), "{slope_id}");
         assert!(!flags.contains(ParamFlags::HIDDEN), "{slope_id}");
+
+        let placement_id = format!("band_{band}_placement");
+        let placement = params
+            .param_map
+            .get(&placement_id)
+            .expect("placement parameter");
+        assert!(
+            !placement.realtime,
+            "{placement_id} must not sync into the running DSP"
+        );
+        assert!(placement.requires_restart, "{placement_id}");
+        let flags = params.int_params[placement.index].flags();
+        assert!(flags.contains(ParamFlags::NON_AUTOMATABLE), "{placement_id}");
+        assert!(
+            flags.contains(ParamFlags::REQUIRES_RESTART),
+            "{placement_id}"
+        );
+        assert!(!flags.contains(ParamFlags::HIDDEN), "{placement_id}");
     }
 
     let shape = &params.int_params[params.param_map["band_0_shape"].index];
@@ -67,8 +85,26 @@ fn shelf_shape_and_slope_are_visible_manual_restart_controls() {
         "Peak",
         "the old value remains the default"
     );
-    assert_eq!(shape.normalized_value_to_string(0.5, false), "Low shelf");
-    assert_eq!(shape.normalized_value_to_string(1.0, false), "High shelf");
+    assert_eq!(
+        shape.normalized_value_to_string(1.0 / 3.0, false),
+        "Low shelf"
+    );
+    assert_eq!(
+        shape.normalized_value_to_string(2.0 / 3.0, false),
+        "High shelf"
+    );
+    assert_eq!(shape.normalized_value_to_string(1.0, false), "Tilt");
+
+    let placement = &params.int_params[params.param_map["band_0_placement"].index];
+    assert_eq!(
+        placement.normalized_value_to_string(0.0, false),
+        "Stereo",
+        "placement default stays stereo"
+    );
+    assert_eq!(placement.normalized_value_to_string(0.25, false), "Left");
+    assert_eq!(placement.normalized_value_to_string(0.5, false), "Right");
+    assert_eq!(placement.normalized_value_to_string(0.75, false), "Mid");
+    assert_eq!(placement.normalized_value_to_string(1.0, false), "Side");
 
     let legacy_peak = &params.param_map["band_0_frequency"];
     let flags = params.float_params[legacy_peak.index].flags();
@@ -111,6 +147,22 @@ fn restartable_shelf_values_do_not_mask_other_structural_changes() {
     assert_eq!(
         baseline.non_restartable_structural_fingerprint(),
         changed_slope.non_restartable_structural_fingerprint()
+    );
+
+    let mut changed_placement_infos = dynamic_eq_infos();
+    changed_placement_infos
+        .iter_mut()
+        .find(|info| info.id == "band_0_placement")
+        .expect("placement info")
+        .default_value = 4.0;
+    let changed_placement = dynamic_eq_params(&changed_placement_infos);
+    assert_ne!(
+        baseline.structural_fingerprint(),
+        changed_placement.structural_fingerprint()
+    );
+    assert_eq!(
+        baseline.non_restartable_structural_fingerprint(),
+        changed_placement.non_restartable_structural_fingerprint()
     );
 
     let mut changed_frequency_infos = dynamic_eq_infos();

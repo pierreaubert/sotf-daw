@@ -1,6 +1,9 @@
 pub mod params;
+pub mod repair;
 
 use crate::params::PARAMS as DC;
+use crate::params::{BANDS_OPTIONS, MODE_OPTIONS};
+use crate::repair::{DelayLine, MAX_LATENCY_SAMPLES, MAX_REPAIR_WIDTH, OwnedEngine};
 use plugins_denoiser::transient::TransientSuppressor;
 use serde::{Deserialize, Serialize};
 use sotf_host::param_bridge;
@@ -13,6 +16,14 @@ use sotf_host::plugin::{
     ProcessContext, TailLength,
 };
 
+sotf_host::define_choice_index_deserializer!(deserialize_mode_param, MODE_OPTIONS);
+sotf_host::define_choice_index_deserializer!(deserialize_bands_param, BANDS_OPTIONS);
+
+/// Serializable declick configuration.
+///
+/// Fields `mode` through `audition_residual` were appended after the frozen
+/// legacy triple; missing keys deserialize to neutral defaults so old saved
+/// state keeps producing the legacy fullband random behavior.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeclickPluginParams {
     #[serde(default = "d_enabled")]
@@ -21,6 +32,18 @@ pub struct DeclickPluginParams {
     pub sensitivity: f32,
     #[serde(default = "d_link_channels")]
     pub link_channels: bool,
+    #[serde(default = "d_mode", deserialize_with = "deserialize_mode_param")]
+    pub mode: usize,
+    #[serde(default = "d_bands", deserialize_with = "deserialize_bands_param")]
+    pub bands: usize,
+    #[serde(default = "d_crossover_hz")]
+    pub crossover_hz: f32,
+    #[serde(default = "d_frequency_skew")]
+    pub frequency_skew: f32,
+    #[serde(default = "d_repair_width")]
+    pub repair_width: usize,
+    #[serde(default = "d_audition_residual")]
+    pub audition_residual: bool,
 }
 
 fn d_enabled() -> bool {
@@ -32,6 +55,24 @@ fn d_sensitivity() -> f32 {
 fn d_link_channels() -> bool {
     pk(DC, "link_channels").default_bool()
 }
+fn d_mode() -> usize {
+    pk(DC, "mode").default_usize()
+}
+fn d_bands() -> usize {
+    pk(DC, "bands").default_usize()
+}
+fn d_crossover_hz() -> f32 {
+    pk(DC, "crossover_hz").default_f32()
+}
+fn d_frequency_skew() -> f32 {
+    pk(DC, "frequency_skew").default_f32()
+}
+fn d_repair_width() -> usize {
+    pk(DC, "repair_width").default_usize()
+}
+fn d_audition_residual() -> bool {
+    pk(DC, "audition_residual").default_bool()
+}
 
 impl Default for DeclickPluginParams {
     fn default() -> Self {
@@ -39,7 +80,92 @@ impl Default for DeclickPluginParams {
             enabled: d_enabled(),
             sensitivity: d_sensitivity(),
             link_channels: d_link_channels(),
+            mode: d_mode(),
+            bands: d_bands(),
+            crossover_hz: d_crossover_hz(),
+            frequency_skew: d_frequency_skew(),
+            repair_width: d_repair_width(),
+            audition_residual: d_audition_residual(),
         }
+    }
+}
+
+/// Legacy fullband random path with its aligned dry tap.
+///
+/// Grouped so drain and process can borrow the path and the drain scratch
+/// buffer as disjoint fields.
+struct LegacyPath {
+    channels: usize,
+    suppressor: TransientSuppressor,
+    dry: DelayLine,
+    work: Vec<f32>,
+    dry_frame: Vec<f32>,
+    mix_current: f32,
+    mix_target: f32,
+    mix_decay: f32,
+}
+
+impl LegacyPath {
+    fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+        Ok(Self {
+            channels,
+            suppressor: TransientSuppressor::new(channels, sample_rate)?,
+            dry: DelayLine::new(channels, plugins_denoiser::transient::LOOKAHEAD_SAMPLES)?,
+            work: vec![0.0; channels],
+            dry_frame: vec![0.0; channels],
+            mix_current: 0.0,
+            mix_target: 0.0,
+            mix_decay: audition_decay(sample_rate),
+        })
+    }
+
+    fn reset(&mut self) {
+        self.suppressor.reset();
+        self.dry.reset();
+        self.work.fill(0.0);
+        self.dry_frame.fill(0.0);
+        self.mix_current = self.mix_target;
+    }
+
+    fn set_sample_rate(&mut self, sample_rate: u32) -> Result<(), String> {
+        self.suppressor.set_sample_rate(sample_rate)?;
+        self.mix_decay = audition_decay(sample_rate);
+        Ok(())
+    }
+
+    fn set_mix_immediate(&mut self, audition: bool) {
+        self.mix_target = if audition { 1.0 } else { 0.0 };
+        self.mix_current = self.mix_target;
+    }
+
+    fn process_frames(&mut self, buffer: &mut [f32]) -> Result<(), String> {
+        if !buffer.len().is_multiple_of(self.channels) {
+            return Err(format!(
+                "declick buffer length {} is not divisible by {} channels",
+                buffer.len(),
+                self.channels
+            ));
+        }
+        for frame in buffer.chunks_exact_mut(self.channels) {
+            self.mix_current =
+                self.mix_current * self.mix_decay + self.mix_target * (1.0 - self.mix_decay);
+            self.work.copy_from_slice(frame);
+            let (dry, work, dry_out) = (&mut self.dry, &self.work, &mut self.dry_frame);
+            dry.push_frame(work, dry_out)?;
+            self.suppressor.process(&mut self.work)?;
+            let mix = self.mix_current;
+            if mix == 0.0 {
+                // Exact repaired output; also avoids `NaN * 0.0` poisoning
+                // the frame if a dry tap ever goes non-finite.
+                frame.copy_from_slice(&self.work);
+            } else {
+                for (c, slot) in frame.iter_mut().enumerate().take(self.channels) {
+                    let residual = self.dry_frame[c] - self.work[c];
+                    *slot = self.work[c] + (residual - self.work[c]) * mix;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -48,7 +174,14 @@ pub struct DeclickPlugin {
     enabled: bool,
     sensitivity: f32,
     link_channels: bool,
-    suppressor: TransientSuppressor,
+    mode: usize,
+    bands: usize,
+    crossover_hz: f32,
+    frequency_skew: f32,
+    repair_width: usize,
+    audition_residual: bool,
+    legacy: LegacyPath,
+    owned: OwnedEngine,
     initialized_sample_rate: u32,
     cached_parameters: Vec<Parameter>,
     has_input: bool,
@@ -77,24 +210,132 @@ impl DeclickPlugin {
         } else {
             d_sensitivity()
         };
-        let mut suppressor = TransientSuppressor::new(channels, sample_rate)?;
-        suppressor.set_sensitivity_immediate(sensitivity);
-        suppressor.set_enabled_immediate(params.enabled);
-        suppressor.set_link_channels(params.link_channels);
+        let crossover_hz = if params.crossover_hz.is_finite() {
+            params.crossover_hz.clamp(80.0, 12_000.0)
+        } else {
+            d_crossover_hz()
+        };
+        let frequency_skew = if params.frequency_skew.is_finite() {
+            params.frequency_skew.clamp(-1.0, 1.0)
+        } else {
+            d_frequency_skew()
+        };
+        // Choice deserialization already rejects out-of-range indices; clamp
+        // programmatic construction the same way sensitivity is canonicalized.
+        let mode = params.mode.min(MODE_OPTIONS.len() - 1);
+        let bands = params.bands.min(BANDS_OPTIONS.len() - 1);
+        let repair_width = params.repair_width.min(MAX_REPAIR_WIDTH);
+        let mut legacy = LegacyPath::new(channels, sample_rate)?;
+        legacy.suppressor.set_sensitivity_immediate(sensitivity);
+        legacy.suppressor.set_enabled_immediate(params.enabled);
+        legacy.suppressor.set_link_channels(params.link_channels);
+        legacy.set_mix_immediate(params.audition_residual);
+        let mut owned = OwnedEngine::new(channels, sample_rate)?;
+        owned.set_bands(bands + 1);
+        owned.set_crossover_hz(crossover_hz, sample_rate);
+        owned.set_repair_width(repair_width);
+        owned.set_periodic(mode == 1);
+        // Skew first: the immediate sensitivity call snapshots per-band
+        // targets, so construction with nonzero skew must not start from
+        // neutral and converge audibly over the first milliseconds.
+        owned.set_skew(frequency_skew);
+        owned.set_sensitivity_immediate(sensitivity);
+        owned.set_enabled_immediate(params.enabled);
+        owned.set_link_channels(params.link_channels);
+        owned.set_audition_immediate(params.audition_residual);
         let mut plugin = Self {
             channels,
             enabled: params.enabled,
             sensitivity,
             link_channels: params.link_channels,
-            suppressor,
+            mode,
+            bands,
+            crossover_hz,
+            frequency_skew,
+            repair_width,
+            audition_residual: params.audition_residual,
+            legacy,
+            owned,
             initialized_sample_rate: sample_rate,
             cached_parameters: Vec::new(),
             has_input: false,
             drain_remaining: None,
-            drain_silence: vec![0.0; channels * plugins_denoiser::transient::LOOKAHEAD_SAMPLES],
+            drain_silence: vec![0.0; channels * MAX_LATENCY_SAMPLES],
         };
         plugin.rebuild_cached_parameters();
         Ok(plugin)
+    }
+
+    /// Legacy routing: random mode, fullband, and zero width use the shared
+    /// suppressor bit-exactly; anything else routes to the owned engine.
+    fn use_legacy(&self) -> bool {
+        self.mode == 0 && self.bands == 0 && self.repair_width == 0
+    }
+
+    fn current_params(&self) -> DeclickPluginParams {
+        DeclickPluginParams {
+            enabled: self.enabled,
+            sensitivity: self.sensitivity,
+            link_channels: self.link_channels,
+            mode: self.mode,
+            bands: self.bands,
+            crossover_hz: self.crossover_hz,
+            frequency_skew: self.frequency_skew,
+            repair_width: self.repair_width,
+            audition_residual: self.audition_residual,
+        }
+    }
+
+    fn commit_params(&mut self, next: &DeclickPluginParams) {
+        if next.enabled != self.enabled {
+            self.enabled = next.enabled;
+            self.legacy.suppressor.set_enabled(next.enabled);
+            self.owned.set_enabled(next.enabled);
+        }
+        if next.sensitivity != self.sensitivity {
+            self.sensitivity = next.sensitivity;
+            self.legacy.suppressor.set_sensitivity(next.sensitivity);
+            self.owned.set_sensitivity(next.sensitivity);
+        }
+        if next.link_channels != self.link_channels {
+            self.link_channels = next.link_channels;
+            self.legacy.suppressor.set_link_channels(next.link_channels);
+            self.owned.set_link_channels(next.link_channels);
+        }
+        if next.frequency_skew != self.frequency_skew {
+            self.frequency_skew = next.frequency_skew;
+            self.owned.set_skew(next.frequency_skew);
+        }
+        if next.audition_residual != self.audition_residual {
+            self.audition_residual = next.audition_residual;
+            self.owned.set_audition(next.audition_residual);
+            self.legacy.mix_target = if next.audition_residual { 1.0 } else { 0.0 };
+        }
+        let structural = next.mode != self.mode
+            || next.bands != self.bands
+            || next.crossover_hz != self.crossover_hz
+            || next.repair_width != self.repair_width;
+        if structural {
+            self.mode = next.mode;
+            self.bands = next.bands;
+            self.crossover_hz = next.crossover_hz;
+            self.repair_width = next.repair_width;
+            self.owned.set_bands(next.bands + 1);
+            self.owned
+                .set_crossover_hz(next.crossover_hz, self.initialized_sample_rate);
+            self.owned.set_repair_width(next.repair_width);
+            self.owned.set_periodic(next.mode == 1);
+            // Topology changed: clear detector/delay history so the new path
+            // restarts with fresh latency. The stream stays open.
+            self.reset_dsp_only();
+        }
+        self.update_cached_values();
+    }
+
+    /// Clear engine and delay history without closing the stream.
+    fn reset_dsp_only(&mut self) {
+        self.legacy.reset();
+        self.owned.reset();
     }
 
     fn param_value(&self, index: usize) -> Option<f64> {
@@ -102,6 +343,12 @@ impl DeclickPlugin {
             0 => Some(if self.enabled { 1.0 } else { 0.0 }),
             1 => Some(self.sensitivity as f64),
             2 => Some(if self.link_channels { 1.0 } else { 0.0 }),
+            3 => Some(self.mode as f64),
+            4 => Some(self.bands as f64),
+            5 => Some(self.crossover_hz as f64),
+            6 => Some(self.frequency_skew as f64),
+            7 => Some(self.repair_width as f64),
+            8 => Some(if self.audition_residual { 1.0 } else { 0.0 }),
             _ => None,
         }
     }
@@ -114,7 +361,19 @@ impl DeclickPlugin {
         self.cached_parameters[0].default_value = ParameterValue::Bool(self.enabled);
         self.cached_parameters[1].default_value = ParameterValue::Float(self.sensitivity);
         self.cached_parameters[2].default_value = ParameterValue::Bool(self.link_channels);
+        self.cached_parameters[3].default_value = ParameterValue::Int(self.mode as i32);
+        self.cached_parameters[4].default_value = ParameterValue::Int(self.bands as i32);
+        self.cached_parameters[5].default_value = ParameterValue::Float(self.crossover_hz);
+        self.cached_parameters[6].default_value = ParameterValue::Float(self.frequency_skew);
+        self.cached_parameters[7].default_value = ParameterValue::Int(self.repair_width as i32);
+        self.cached_parameters[8].default_value = ParameterValue::Bool(self.audition_residual);
     }
+}
+
+fn audition_decay(sample_rate: u32) -> f32 {
+    // 5 ms crossfade shared with the repair mix smoothing convention.
+    let smoothing_samples = sample_rate as f32 * 5.0 * 0.001;
+    (-1.0 / smoothing_samples.max(1.0)).exp()
 }
 
 impl ParametricInPlacePlugin for DeclickPlugin {
@@ -149,6 +408,12 @@ impl ParametricInPlacePlugin for DeclickPlugin {
             "enabled" => Some(ParameterValue::Bool(self.enabled)),
             "sensitivity" => Some(ParameterValue::Float(self.sensitivity)),
             "link_channels" => Some(ParameterValue::Bool(self.link_channels)),
+            "mode" => Some(ParameterValue::Int(self.mode as i32)),
+            "bands" => Some(ParameterValue::Int(self.bands as i32)),
+            "crossover_hz" => Some(ParameterValue::Float(self.crossover_hz)),
+            "frequency_skew" => Some(ParameterValue::Float(self.frequency_skew)),
+            "repair_width" => Some(ParameterValue::Int(self.repair_width as i32)),
+            "audition_residual" => Some(ParameterValue::Bool(self.audition_residual)),
             _ => None,
         }
     }
@@ -167,6 +432,30 @@ impl ParametricInPlacePlugin for DeclickPlugin {
             ParameterId::from("link_channels"),
             ParameterValue::Bool(self.link_channels),
         );
+        values.insert(
+            ParameterId::from("mode"),
+            ParameterValue::Int(self.mode as i32),
+        );
+        values.insert(
+            ParameterId::from("bands"),
+            ParameterValue::Int(self.bands as i32),
+        );
+        values.insert(
+            ParameterId::from("crossover_hz"),
+            ParameterValue::Float(self.crossover_hz),
+        );
+        values.insert(
+            ParameterId::from("frequency_skew"),
+            ParameterValue::Float(self.frequency_skew),
+        );
+        values.insert(
+            ParameterId::from("repair_width"),
+            ParameterValue::Int(self.repair_width as i32),
+        );
+        values.insert(
+            ParameterId::from("audition_residual"),
+            ParameterValue::Bool(self.audition_residual),
+        );
         values
     }
 
@@ -176,30 +465,25 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         }
         // Validate the complete batch before mutating DSP state. The cache is
         // updated in place, so successful automation does not rebuild a Vec.
-        let mut enabled = self.enabled;
-        let mut sensitivity = self.sensitivity;
-        let mut link_channels = self.link_channels;
+        let mut next = self.current_params();
         for (id, value) in &values {
             param_bridge::set_parameter(DC, id, value, |i, v| match i {
-                0 => enabled = v > 0.5,
-                1 => sensitivity = v as f32,
-                2 => link_channels = v > 0.5,
+                0 => next.enabled = v > 0.5,
+                1 => next.sensitivity = v as f32,
+                2 => next.link_channels = v > 0.5,
+                3 => next.mode = v as usize,
+                4 => next.bands = v as usize,
+                5 => next.crossover_hz = v as f32,
+                6 => next.frequency_skew = v as f32,
+                7 => next.repair_width = v as usize,
+                8 => next.audition_residual = v > 0.5,
                 _ => {}
             })?;
         }
-        if enabled != self.enabled {
-            self.enabled = enabled;
-            self.suppressor.set_enabled(enabled);
-        }
-        if sensitivity != self.sensitivity {
-            self.sensitivity = sensitivity;
-            self.suppressor.set_sensitivity(sensitivity);
-        }
-        if link_channels != self.link_channels {
-            self.link_channels = link_channels;
-            self.suppressor.set_link_channels(link_channels);
-        }
-        self.update_cached_values();
+        next.mode = next.mode.min(MODE_OPTIONS.len() - 1);
+        next.bands = next.bands.min(BANDS_OPTIONS.len() - 1);
+        next.repair_width = next.repair_width.min(MAX_REPAIR_WIDTH);
+        self.commit_params(&next);
         Ok(())
     }
 
@@ -211,24 +495,23 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         if self.drain_remaining.is_some() {
             return Err("Reset declick before changing parameters after drain starts".into());
         }
-        let mut numeric = 0.0;
-        let index = param_bridge::set_parameter(DC, &id, &value, |_, value| numeric = value)?;
-        match index {
-            0 => {
-                self.enabled = numeric > 0.5;
-                self.suppressor.set_enabled(self.enabled);
-            }
-            1 => {
-                self.sensitivity = numeric as f32;
-                self.suppressor.set_sensitivity(self.sensitivity);
-            }
-            2 => {
-                self.link_channels = numeric > 0.5;
-                self.suppressor.set_link_channels(self.link_channels);
-            }
-            _ => unreachable!("PARAMS index must be handled"),
-        }
-        self.update_cached_values();
+        let mut next = self.current_params();
+        param_bridge::set_parameter(DC, &id, &value, |i, v| match i {
+            0 => next.enabled = v > 0.5,
+            1 => next.sensitivity = v as f32,
+            2 => next.link_channels = v > 0.5,
+            3 => next.mode = v as usize,
+            4 => next.bands = v as usize,
+            5 => next.crossover_hz = v as f32,
+            6 => next.frequency_skew = v as f32,
+            7 => next.repair_width = v as usize,
+            8 => next.audition_residual = v > 0.5,
+            _ => {}
+        })?;
+        next.mode = next.mode.min(MODE_OPTIONS.len() - 1);
+        next.bands = next.bands.min(BANDS_OPTIONS.len() - 1);
+        next.repair_width = next.repair_width.min(MAX_REPAIR_WIDTH);
+        self.commit_params(&next);
         Ok(())
     }
 
@@ -236,14 +519,15 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         if sample_rate == 0 {
             return Err("declick sample rate must be greater than zero".into());
         }
-        self.suppressor.set_sample_rate(sample_rate)?;
+        self.legacy.set_sample_rate(sample_rate)?;
+        self.owned.set_sample_rate(sample_rate)?;
         self.initialized_sample_rate = sample_rate;
         self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
-        self.suppressor.reset();
+        self.reset_dsp_only();
         self.has_input = false;
         self.drain_remaining = None;
         self.drain_silence.fill(0.0);
@@ -277,17 +561,22 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         if context.num_frames > 0 && self.drain_remaining.is_some() {
             return Err("Reset declick before processing input after drain starts".into());
         }
-        self.suppressor.process(buffer)?;
+        if self.use_legacy() {
+            self.legacy.process_frames(buffer)?;
+        } else {
+            self.owned.process(buffer)?;
+        }
         self.has_input |= context.num_frames > 0;
         Ok(context.num_frames)
     }
 
     fn drain_output_frames_max(&self) -> usize {
-        self.suppressor.latency_samples()
+        self.latency_samples()
     }
 
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
-        // The advertised buffer holds the entire eight-frame continuation.
+        // The advertised buffer holds the entire continuation (up to sixteen
+        // frames), so one call suffices when capacity covers the latency.
         std::num::NonZeroU64::new(1)
     }
 
@@ -309,8 +598,12 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         let frames = remaining.min(output.len() / self.channels);
         let samples = frames * self.channels;
         self.drain_silence[..samples].fill(0.0);
-        self.suppressor
-            .process(&mut self.drain_silence[..samples])?;
+        if self.use_legacy() {
+            self.legacy
+                .process_frames(&mut self.drain_silence[..samples])?;
+        } else {
+            self.owned.process(&mut self.drain_silence[..samples])?;
+        }
         output[..samples].copy_from_slice(&self.drain_silence[..samples]);
         self.drain_remaining = Some(remaining - frames);
         Ok(PluginDrainResult {
@@ -323,10 +616,17 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         // A zero candidate has eight zero future neighbors: any nonzero
         // baseline gives an excursion longer than the repair limit of six.
         // Thus no repaired audio is synthesized after the delayed input ends.
+        // Widened paths extend the same argument to the reported latency:
+        // neighbors join a repair only through the hysteresis gate, which
+        // keeps the return and excursion shape tests unrelaxed.
         TailLength::Finite(self.latency_samples() as u64)
     }
 
     fn latency_samples(&self) -> usize {
-        self.suppressor.latency_samples()
+        if self.use_legacy() {
+            self.legacy.suppressor.latency_samples()
+        } else {
+            self.owned.latency_samples()
+        }
     }
 }

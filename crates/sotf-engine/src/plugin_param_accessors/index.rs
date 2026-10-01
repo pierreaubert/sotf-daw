@@ -2,10 +2,11 @@ use super::aae::aae_room_presets;
 use super::aae::aae_speaker_configs;
 use super::ambisonics::{ambisonics_algorithms, ambisonics_layouts};
 use super::crossover::crossover_types;
-use super::de::de_esser_modes;
+use super::de::{de_esser_modes, de_esser_split_topologies};
 use super::detection::detection_modes;
 use super::hpf::hpf_orders;
 use super::speaker::speaker_configs;
+use super::speech_denoiser::speech_denoiser_models;
 use sotf_plugins::{
     BandSplitRecombinationMode, CrossfeedMode, CrossfeedPreset, SpectralTiltCorrection,
     TiltReferenceFreq,
@@ -38,6 +39,19 @@ pub(super) fn index_to_de_esser_mode(index: f64) -> String {
         .get(idx)
         .unwrap_or(&"Split-Band")
         .to_string()
+}
+
+pub(super) fn index_to_de_esser_split_topology(index: f64) -> String {
+    let idx = index as usize;
+    de_esser_split_topologies()
+        .get(idx)
+        .unwrap_or(&"Minimum-Phase")
+        .to_string()
+}
+
+pub(super) fn index_to_speech_denoiser_model(index: f64) -> String {
+    let idx = index as usize;
+    speech_denoiser_models().get(idx).unwrap_or(&"RNNoise Full").to_string()
 }
 
 pub(super) fn index_to_aae_speaker_config(index: f64) -> String {
@@ -99,15 +113,6 @@ pub(super) fn index_to_ambisonics_algorithm(index: f64) -> String {
 pub(super) fn index_to_crossover_type(index: f64) -> String {
     let idx = index as usize;
     crossover_types().get(idx).unwrap_or(&"LR24").to_string()
-}
-
-pub(super) fn index_to_crossover_output(index: f64) -> String {
-    match index as usize {
-        1 => "highpass",
-        2 => "both",
-        _ => "lowpass",
-    }
-    .to_string()
 }
 
 pub(super) fn index_to_spectral_tilt(index: f64) -> SpectralTiltCorrection {

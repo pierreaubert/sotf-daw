@@ -99,6 +99,7 @@ impl LimiterPlugin {
             cached_parameters: Vec::new(),
             cache: RealTimeCache::new(LimiterData {
                 isp_dbtp: vec![-120.0; channels],
+                output_isp_dbtp: vec![-120.0; channels],
                 ..LimiterData::default()
             }),
         };

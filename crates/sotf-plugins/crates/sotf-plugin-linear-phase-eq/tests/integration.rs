@@ -99,6 +99,7 @@ fn dry_mix_passthrough() {
         auto_gain: false,
         mix: 0.0,
         filters: vec![],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(2, 48000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
@@ -143,6 +144,7 @@ fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
         auto_gain: false,
         mix: 0.5,
         filters: vec![],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
@@ -193,7 +195,9 @@ fn eq_boost_changes_amplitude() {
             q: 1.0,
             gain_db: 9.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
@@ -227,6 +231,7 @@ fn latency_matches_fir_length() {
         auto_gain: false,
         mix: 1.0,
         filters: vec![],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
     let adapter = ParametricInPlacePluginAdapter::new(plugin);
@@ -306,7 +311,9 @@ fn minimum_phase_processes_finite_audio() {
             q: 1.0,
             gain_db: 6.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
@@ -335,6 +342,7 @@ fn wet_impulse_peak_matches_reported_even_tap_latency() {
             auto_gain: false,
             mix: 1.0,
             filters: vec![],
+            stereo_pairs: None,
         },
     )
     .unwrap();
@@ -377,7 +385,9 @@ fn mix_automation_is_block_partition_invariant() {
                     q: 1.0,
                     gain_db: 12.0,
                     active: true,
+                    placement: None,
                 }],
+                stereo_pairs: None,
             },
         )
         .unwrap();

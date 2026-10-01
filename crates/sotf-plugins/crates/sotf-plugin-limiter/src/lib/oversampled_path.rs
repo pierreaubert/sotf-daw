@@ -75,6 +75,7 @@ pub(super) struct OversampledPath {
     input_peaks: [f32; CHUNK],
     output_detectors: Vec<Bs1770TruePeakDetector>,
     peak_accumulator: f32,
+    output_peak_accumulator: f32,
     gain_accumulator: f32,
     isp_accumulator: Vec<f32>,
     meter_frames: usize,
@@ -170,6 +171,7 @@ impl OversampledPath {
                 .map(|_| Bs1770TruePeakDetector::new(rate))
                 .collect(),
             peak_accumulator: 0.0,
+            output_peak_accumulator: 0.0,
             gain_accumulator: 1.0,
             isp_accumulator: vec![0.0; channels],
             meter_frames: 0,
@@ -224,6 +226,7 @@ impl OversampledPath {
             detector.reset();
         }
         self.peak_accumulator = 0.0;
+        self.output_peak_accumulator = 0.0;
         self.gain_accumulator = 1.0;
         self.isp_accumulator.fill(0.0);
         self.meter_frames = 0;
@@ -331,6 +334,8 @@ impl OversampledPath {
                 let mixed_gain = ((1.0 - mix) + mix * wet_gain).clamp(0.0, 1.0);
                 self.gain_accumulator = self.gain_accumulator.min(mixed_gain);
                 audio[index] = (1.0 - mix) * self.dry_scratch[index] + mix * audio[index];
+                self.output_peak_accumulator =
+                    self.output_peak_accumulator.max(audio[index].abs());
                 let peak = self.output_detectors[channel].process_linear(audio[index]);
                 if measure_isp {
                     self.isp_accumulator[channel] = self.isp_accumulator[channel].max(peak);
@@ -349,7 +354,16 @@ impl OversampledPath {
                     data.gain_reduction_db = reduction;
                     data.is_limiting = reduction > 0.01;
                     data.peak_db = 20.0 * self.peak_accumulator.max(1.0e-5).log10();
+                    data.output_peak_db =
+                        20.0 * self.output_peak_accumulator.max(1.0e-5).log10();
                     for (channel, peak) in data.isp_dbtp.iter_mut().enumerate() {
+                        *peak = if measure_isp && self.isp_accumulator[channel] >= 1.0e-12 {
+                            20.0 * self.isp_accumulator[channel].log10()
+                        } else {
+                            -120.0
+                        };
+                    }
+                    for (channel, peak) in data.output_isp_dbtp.iter_mut().enumerate() {
                         *peak = if measure_isp && self.isp_accumulator[channel] >= 1.0e-12 {
                             20.0 * self.isp_accumulator[channel].log10()
                         } else {
@@ -358,6 +372,7 @@ impl OversampledPath {
                     }
                 });
                 self.peak_accumulator = 0.0;
+                self.output_peak_accumulator = 0.0;
                 self.gain_accumulator = 1.0;
                 self.isp_accumulator.fill(0.0);
                 self.meter_frames = 0;
@@ -573,6 +588,7 @@ mod tests {
                 OversampledPath::prepare(2, 48_000, 2, 0.25, controls(), true, 1.0).unwrap();
             let mut cache = RealTimeCache::new(LimiterData {
                 isp_dbtp: vec![-120.0; 2],
+                output_isp_dbtp: vec![-120.0; 2],
                 ..LimiterData::default()
             });
             let first_frame = 20;
@@ -655,6 +671,7 @@ mod tests {
         let mut path = OversampledPath::prepare(1, 48_000, 2, 0.0, controls(), false, 0.5).unwrap();
         let mut cache = RealTimeCache::new(LimiterData {
             isp_dbtp: vec![-120.0],
+            output_isp_dbtp: vec![-120.0],
             ..LimiterData::default()
         });
         for _ in 0..4800 {
@@ -701,6 +718,7 @@ mod capacity_tests {
                     .unwrap();
                     let mut cache = RealTimeCache::new(LimiterData {
                         isp_dbtp: vec![-120.0],
+                        output_isp_dbtp: vec![-120.0],
                         ..LimiterData::default()
                     });
                     let mut input = vec![0.7; 256 + phase];

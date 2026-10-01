@@ -2,8 +2,17 @@
 
 ## Changes
 
+- Reprepare retained native plugins transactionally when their input sample rate changes, preserving queued scalar controls and retaining the existing backend if preparation fails.
+- Restore VST3 state without typed audio setup on a detached candidate, including empty state; rejected restoration preserves populated audio history, resources and tail metadata.
+- Recover native Crossover controls after refused structural changes, including width-changing and invalid FIR PerChannel configurations.
+- Preserve AutoGain meters, gain trajectory and sample-rate state when a requested
+  sample-rate change cannot be prepared.
+- Prepare VST3 bus pointer arrays outside processing, including correctly sized inactive-bus arrays, and validate active channel coverage before processing.
+- Classify isolated-worker acknowledgements per request so concurrent requests cannot overwrite failure results; retain failed reset status until recovery.
 - Add bounded finite draining for serial channel-changing plugin chains and explicit identity-frame geometry contracts.
 - Preserve populated native plugin state and bus configuration when candidate restoration or reconfiguration fails.
+- Apply typed native CLAP/VST3 structural setup before activation, allowing
+  Crossover multi-band output geometry to be prepared during construction.
 - Carry native tail metadata through isolated-worker transport, refresh VST3 metadata outside audio callbacks, and invalidate cached tails on restart requests.
 - Drain pending worker audio and transport latency at EOS; reject unknown or infinite tails where finite channel-changing drain is required. Unsupported VST3 structural restart requests are refused.
 

@@ -20,6 +20,7 @@ fn plugin(
             enabled,
             sensitivity,
             link_channels: linked,
+            ..Default::default()
         },
     )
     .unwrap()
@@ -333,35 +334,97 @@ fn counted(action: impl FnOnce()) -> (usize, usize) {
 
 #[test]
 fn cold_process_drain_and_reset_allocate_and_free_nothing() {
+    // Legacy plus every owned topology: periodic tracking (with its bounded
+    // autocorrelation recompute), multiband crossover/supervisor, widened
+    // latency, and the residual tap.
+    let topologies: Vec<(&str, DeclickPluginParams)> = vec![
+        (
+            "legacy",
+            DeclickPluginParams {
+                sensitivity: 1.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "periodic",
+            DeclickPluginParams {
+                mode: 1,
+                sensitivity: 1.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "multiband-skewed",
+            DeclickPluginParams {
+                bands: 2,
+                crossover_hz: 4000.0,
+                frequency_skew: 0.75,
+                sensitivity: 1.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "widened",
+            DeclickPluginParams {
+                bands: 1,
+                repair_width: 8,
+                sensitivity: 1.0,
+                ..Default::default()
+            },
+        ),
+        (
+            "all-modes",
+            DeclickPluginParams {
+                mode: 1,
+                bands: 2,
+                crossover_hz: 8000.0,
+                frequency_skew: -0.5,
+                repair_width: 8,
+                audition_residual: true,
+                sensitivity: 1.0,
+                ..Default::default()
+            },
+        ),
+    ];
     for channels in [1, 2, 6] {
         for enabled in [false, true] {
-            let p = plugin(channels, 48_000, enabled, 1.0, true);
-            std::thread::spawn(move || {
-                let mut p = p;
-                let mut input = vec![0.25; 33 * channels];
-                let mut output = vec![0.0; 3 * channels];
-                let counts = counted(|| {
-                    for _ in 0..2 {
-                        p.process_in_place(&mut input, &ProcessContext::new(48_000, 33))
-                            .unwrap();
-                        while !p
-                            .drain(&mut output, &ProcessContext::new(48_000, 3))
-                            .unwrap()
-                            .complete
-                        {}
-                        assert!(
-                            p.drain(&mut output, &ProcessContext::new(48_000, 3))
+            for (name, template) in &topologies {
+                let mut params = template.clone();
+                params.enabled = enabled;
+                let p = DeclickPlugin::from_params(channels, 48_000, params).unwrap();
+                // Owned label: `thread::spawn` requires a 'static closure.
+                let label = (*name).to_owned();
+                std::thread::spawn(move || {
+                    let mut p = p;
+                    let mut input = vec![0.25; 33 * channels];
+                    let mut output = vec![0.0; 3 * channels];
+                    let counts = counted(|| {
+                        for _ in 0..2 {
+                            p.process_in_place(&mut input, &ProcessContext::new(48_000, 33))
+                                .unwrap();
+                            while !p
+                                .drain(&mut output, &ProcessContext::new(48_000, 3))
                                 .unwrap()
                                 .complete
-                        );
-                        p.reset();
-                        input.fill(0.25);
-                    }
-                });
-                assert_eq!(counts, (0, 0));
-            })
-            .join()
-            .unwrap();
+                            {}
+                            assert!(
+                                p.drain(&mut output, &ProcessContext::new(48_000, 3))
+                                    .unwrap()
+                                    .complete
+                            );
+                            p.reset();
+                            input.fill(0.25);
+                        }
+                    });
+                    assert_eq!(
+                        counts,
+                        (0, 0),
+                        "{label} channels={channels} enabled={enabled}"
+                    );
+                })
+                .join()
+                .unwrap();
+            }
         }
     }
 }

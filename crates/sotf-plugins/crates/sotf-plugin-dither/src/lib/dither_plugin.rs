@@ -113,7 +113,18 @@ impl DitherPlugin {
     }
 
     fn rng_seed(channel: usize) -> u64 {
-        0xDEAD_BEEF_CAFE_0001_u64.wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+        // Wrapping arithmetic avoids debug overflow panics at high channel
+        // counts. Xorshift stalls forever on a zero state, so map a derived
+        // zero to 1; the raw derivation is nonzero for every supported
+        // layout (pinned by `per_channel_rng_seeds_are_nonzero_and_stable`),
+        // hence this guard changes no supported output.
+        let seed = 0xDEAD_BEEF_CAFE_0001_u64
+            .wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        if seed == 0 {
+            1
+        } else {
+            seed
+        }
     }
 
     pub(super) fn update_scales(&mut self) {
@@ -153,7 +164,8 @@ impl DitherPlugin {
             .iter()
             .zip(delays_samples)
             .map(|(coefficient, delay_samples)| {
-                // history[0] is e[n-1]. Linear interpolation between adjacent
+                // `head` holds e[n-1]; older errors sit at decreasing ring
+                // offsets from it. Linear interpolation between adjacent
                 // past errors realizes sample-rate-scaled (fractional) taps
                 // without allocation or coefficient redesign in the callback.
                 let history_position = (delay_samples - 1.0).max(0.0);
@@ -168,7 +180,7 @@ impl DitherPlugin {
             .sum()
     }
 
-    /// Push a new error into the history ring (most recent at index 0).
+    /// Push a new error into the history ring (most recent at `*head`).
     #[inline(always)]
     pub(super) fn push_error(history: &mut [f32], head: &mut usize, error: f32) {
         *head = (*head + 1) % history.len();
@@ -202,6 +214,34 @@ impl DitherPlugin {
         let a = random_f32(&mut self.rng_state[ch]);
         let b = random_f32(&mut self.rng_state[ch]);
         a - b
+    }
+
+    /// Acceptance predicate for one parameter assignment, without mutating
+    /// state. Accepts exactly what `parametric_set_parameter` accepts: a
+    /// known ID with a matching value type. Out-of-range ints validate
+    /// here and clamp on application. Keep the two in sync.
+    fn validate_value(&self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        if id == &self.param_bit_depth {
+            if value.as_int().is_some() {
+                Ok(())
+            } else {
+                Err("bit_depth must be an int".to_string())
+            }
+        } else if id == &self.param_noise_shaping {
+            if value.as_bool().is_some() {
+                Ok(())
+            } else {
+                Err("noise_shaping must be a bool".to_string())
+            }
+        } else if id == &self.param_dither_type {
+            if value.as_int().is_some() {
+                Ok(())
+            } else {
+                Err("dither_type must be an int".to_string())
+            }
+        } else {
+            Err(format!("Invalid or unknown parameter: {}", id))
+        }
     }
 }
 
@@ -244,6 +284,14 @@ impl ParametricInPlacePlugin for DitherPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        // Validate the whole batch before mutating: a batch mixing valid
+        // and invalid entries must leave the accepted configuration
+        // untouched rather than partially apply. The predicate mirrors
+        // `parametric_set_parameter`; out-of-range ints validate here and
+        // clamp on application exactly as single sets do.
+        for (id, value) in &values {
+            self.validate_value(id, value)?;
+        }
         for (id, value) in values {
             self.parametric_set_parameter(id, value)?;
         }
@@ -386,6 +434,11 @@ impl ParametricInPlacePlugin for DitherPlugin {
                     _ => shaped,
                 };
 
+                // Finite-input contract: direct callers must present finite
+                // samples. A NaN converts via `as i32` to code 0 here and
+                // would poison the shaping history below. The production
+                // adapter rejects non-finite blocks before DSP state
+                // advances, so this only constrains direct DSP callers.
                 let quantized_code = match dither_type {
                     // index 0: TPDF
                     // index 1: no dither, rounded quantization ("None (round)")
