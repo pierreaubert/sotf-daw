@@ -50,6 +50,7 @@ fn params_for_case(name: &'static str) -> DynamicEqPluginParams {
         link_channels: !name.starts_with("unlinked"),
         mix: 1.0,
         bands: vec![DynEqBandParams::default(); 2],
+        stereo_pairs: None,
     };
     for band in &mut params.bands {
         band.active = false;

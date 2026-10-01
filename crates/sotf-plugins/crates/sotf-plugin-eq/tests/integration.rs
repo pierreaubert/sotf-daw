@@ -25,10 +25,12 @@ fn measured_sine_gain_db(filter_type: &str, shelf_hz: f64, test_hz: f32, gain_db
             db_gain: gain_db,
             order: 2,
             topology: EqFilterTopology::Biquad,
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: AutoGainParams::default(),
     };
     let mut plugin = EqPlugin::from_params(1, SAMPLE_RATE, params).unwrap();
@@ -165,10 +167,12 @@ fn from_params_builds_processable_plugin() {
             db_gain: 6.0,
             order: 2,
             topology: EqFilterTopology::Biquad,
+            placement: None,
             lambda: None,
             kautz_sections: vec![],
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: AutoGainParams::default(),
     };
 

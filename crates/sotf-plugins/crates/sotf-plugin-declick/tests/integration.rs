@@ -55,6 +55,7 @@ fn malformed_persisted_sensitivity_is_canonicalized() {
                 enabled: true,
                 sensitivity,
                 link_channels: true,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -132,6 +133,7 @@ fn disabled_path_is_transparent_after_reported_latency() {
             enabled: false,
             sensitivity: 10.0,
             link_channels: true,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -156,6 +158,7 @@ fn enabled_repairs_an_isolated_click_against_clean_reference() {
             enabled: true,
             sensitivity: 3.0,
             link_channels: true,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -225,6 +228,7 @@ fn bypass_keeps_detector_history_warm_for_reentry() {
             enabled: false,
             sensitivity: 2.0,
             link_channels: true,
+            ..Default::default()
         },
     )
     .unwrap();

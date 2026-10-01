@@ -99,6 +99,7 @@ fn analog_prewarped_response(
             s_squared.add(linear).add(constant),
         ),
         DynEqShape::Peak => panic!("Peak has no shelf prototype"),
+        DynEqShape::Tilt => panic!("Tilt has no shelf prototype"),
     };
     numerator.div(denominator).scale(amplitude)
 }
@@ -186,7 +187,7 @@ fn shelf_coefficients_match_independent_prewarped_analog_reference() {
                         let (expected_dc, expected_nyquist) = match shape {
                             DynEqShape::LowShelf => (target_amplitude, 1.0),
                             DynEqShape::HighShelf => (1.0, target_amplitude),
-                            DynEqShape::Peak => unreachable!(),
+                            DynEqShape::Peak | DynEqShape::Tilt => unreachable!(),
                         };
                         assert!((dc - expected_dc).abs() < 1.0e-7);
                         assert!((nyquist - expected_nyquist).abs() < 1.0e-7);
@@ -201,7 +202,7 @@ fn shelf_coefficients_match_independent_prewarped_analog_reference() {
                             let side_direction = match shape {
                                 DynEqShape::LowShelf => -1.0,
                                 DynEqShape::HighShelf => 1.0,
-                                DynEqShape::Peak => unreachable!(),
+                                DynEqShape::Peak | DynEqShape::Tilt => unreachable!(),
                             };
                             for index in 1..=1024 {
                                 let frequency =
@@ -301,6 +302,7 @@ fn analog_prewarped_coefficients(
             k * k - damping * k + amplitude,
         ),
         DynEqShape::Peak => panic!("Peak has no shelf prototype"),
+        DynEqShape::Tilt => panic!("Tilt has no shelf prototype"),
     };
     math_audio_iir_fir::BiquadCoefficients {
         b0: b0 / a0,
@@ -349,6 +351,7 @@ fn butterworth_detector_coefficients(
         DynEqShape::LowShelf => ((1.0 - cosine) * 0.5, 1.0 - cosine, (1.0 - cosine) * 0.5),
         DynEqShape::HighShelf => ((1.0 + cosine) * 0.5, -(1.0 + cosine), (1.0 + cosine) * 0.5),
         DynEqShape::Peak => panic!("Peak has no single shelf detector"),
+        DynEqShape::Tilt => panic!("Tilt has no single shelf detector"),
     };
     let a0 = 1.0 + alpha;
     math_audio_iir_fir::BiquadCoefficients {
@@ -533,6 +536,7 @@ fn make_dynamic_shelf(
                 band_ratio: ratio,
                 ..DynEqBandParams::default()
             }],
+            stereo_pairs: None,
         },
         48_000,
     )
@@ -593,6 +597,7 @@ fn make_mixed_shape_plugin_with_controls(
                     ..DynEqBandParams::default()
                 },
             ],
+            stereo_pairs: None,
         },
         48_000,
     )
@@ -910,6 +915,7 @@ fn public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection() {
                     ..DynEqBandParams::default()
                 },
             ],
+            stereo_pairs: None,
         },
         sample_rate,
     )
@@ -1243,7 +1249,7 @@ fn public_shelf_process_preserves_both_sides_of_the_zero_gain_boundary() {
         let frequency = match shape {
             DynEqShape::LowShelf => 100.0_f64,
             DynEqShape::HighShelf => 8_000.0_f64,
-            DynEqShape::Peak => unreachable!(),
+            DynEqShape::Peak | DynEqShape::Tilt => unreachable!(),
         };
         let input = (0..frames)
             .map(|frame| {
@@ -1301,6 +1307,7 @@ fn make_reinitialization_multiband(sample_rate: u32) -> DynamicEqPlugin {
                     band_ratio: 4.0,
                     active: true,
                     solo: false,
+                    ..DynEqBandParams::default()
                 },
                 DynEqBandParams {
                     shape: DynEqShape::Peak,
@@ -1314,6 +1321,7 @@ fn make_reinitialization_multiband(sample_rate: u32) -> DynamicEqPlugin {
                     ..DynEqBandParams::default()
                 },
             ],
+            stereo_pairs: None,
         },
         sample_rate,
     )

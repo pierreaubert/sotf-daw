@@ -298,6 +298,10 @@ pub struct Wrapper<P: ClapPlugin> {
     /// The receiver belonging to [`updated_state_sender`][Self::updated_state_sender].
     updated_state_receiver: channel::Receiver<PluginState>,
     state_return: crate::wrapper::gui_state_return::GuiStateReturn<PluginState>,
+    /// Whether the last GUI state handoff succeeded on the audio thread.
+    /// Serialized by the GUI exchange lock; a refusal retains ownership for
+    /// a main-thread retry instead of being silently dropped.
+    last_gui_state_restore_succeeded: AtomicBool,
 
     // We'll query all of the host's extensions upfront
     host_callback: ClapPtr<clap_host>,
@@ -738,6 +742,7 @@ impl<P: ClapPlugin> Wrapper<P> {
             updated_state_sender,
             updated_state_receiver,
             state_return: crate::wrapper::gui_state_return::GuiStateReturn::new(),
+            last_gui_state_restore_succeeded: AtomicBool::new(true),
 
             host_callback,
 
@@ -1091,23 +1096,40 @@ impl<P: ClapPlugin> Wrapper<P> {
         self.try_schedule_restart_request();
     }
 
-    fn try_schedule_restart_request(&self) {
-        if !self.is_active.load(Ordering::Acquire)
-            || !self.restart_pending.load(Ordering::Acquire)
-            || self.restart_request_sent.load(Ordering::Acquire)
+    pub fn request_component_restart(&self) -> bool {
+        self.restart_pending.store(true, Ordering::Release);
+        self.restart_request_sent.store(false, Ordering::Release);
+        if !self.is_active.load(Ordering::Acquire) {
+            // The next activation will consume the pending structural state.
+            return true;
+        }
+        self.try_schedule_restart_request()
+    }
+
+    fn try_schedule_restart_request(&self) -> bool {
+        if !self.is_active.load(Ordering::Acquire) || !self.restart_pending.load(Ordering::Acquire)
         {
-            return;
+            return !self.is_active.load(Ordering::Acquire);
+        }
+        if self.restart_request_sent.load(Ordering::Acquire)
+            || self.restart_request_queued.load(Ordering::Acquire)
+        {
+            return true;
         }
 
         if self
             .restart_request_queued
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_ok()
-            && !self.schedule_background(Task::DispatchRestart)
         {
+            if self.schedule_background(Task::DispatchRestart) {
+                return true;
+            }
             // Keep restart_pending set so the next process block or same-value setter retries.
             self.restart_request_queued.store(false, Ordering::Release);
+            return false;
         }
+        self.restart_request_queued.load(Ordering::Acquire)
     }
 
     fn finish_restart_reinitialization(&self) {
@@ -1951,7 +1973,16 @@ impl<P: ClapPlugin> Wrapper<P> {
                     Ok(_) => {
                         // As mentioned above, the state object will be passed back to this thread
                         // so we can deallocate it without blocking.
-                        let state = self.state_return.receive_on_gui();
+                        let mut state = self.state_return.receive_on_gui();
+                        // An audio-thread refusal preserves prior params/DSP and
+                        // retains ownership here for a main-thread retry. The
+                        // retry runs on this control thread and may allocate.
+                        if !self
+                            .last_gui_state_restore_succeeded
+                            .load(Ordering::Acquire)
+                        {
+                            self.set_state_inner(&mut state, false);
+                        }
                         drop(state);
                         break;
                     }
@@ -1967,7 +1998,7 @@ impl<P: ClapPlugin> Wrapper<P> {
             } else {
                 // Otherwise we'll set the state right here and now, since this function should be
                 // called from a GUI thread
-                self.set_state_inner(&mut state);
+                self.set_state_inner(&mut state, false);
                 break;
             }
         }
@@ -2026,7 +2057,13 @@ impl<P: ClapPlugin> Wrapper<P> {
     /// # Notes
     ///
     /// `self.plugin` must _not_ be locked while calling this function or it will deadlock.
-    pub fn set_state_inner(&self, state: &mut PluginState) -> bool {
+    pub fn set_state_inner(&self, state: &mut PluginState, is_audio_thread: bool) -> bool {
+        // Expected audio refusals return silently before any work. The
+        // gate is allocation-free and non-mutating; genuine failures
+        // below still hit the debug assert.
+        if is_audio_thread && !P::state_restore_allows_audio_thread(state) {
+            return false;
+        }
         let audio_io_layout = self.current_audio_io_layout.load();
         let buffer_config = self.current_buffer_config.load();
 
@@ -2042,6 +2079,8 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.params.clone(),
                 state::make_params_getter(&self.param_by_hash, &self.param_id_to_hash),
                 self.current_buffer_config.load().as_ref(),
+                self.is_active.load(Ordering::Acquire),
+                is_audio_thread,
             )
         });
         if !success {
@@ -2584,7 +2623,13 @@ impl<P: ClapPlugin> Wrapper<P> {
             //        doesn't do that
             let updated_state = permit_alloc(|| wrapper.updated_state_receiver.try_recv());
             if let Ok(mut state) = updated_state {
-                wrapper.set_state_inner(&mut state);
+                // A refusal leaves live params/DSP untouched without parse,
+                // migration, or frees. Record the outcome so the GUI retains
+                // ownership for a main-thread retry instead of dropping.
+                let succeeded = wrapper.set_state_inner(&mut state, true);
+                wrapper
+                    .last_gui_state_restore_succeeded
+                    .store(succeeded, Ordering::Release);
 
                 // We'll pass the state object back to the GUI thread so deallocation can happen
                 // there without potentially blocking the audio thread
@@ -3210,15 +3255,30 @@ impl<P: ClapPlugin> Wrapper<P> {
         // This is only relevant for floating windows
     }
 
-    unsafe extern "C" fn ext_gui_show(_plugin: *const clap_plugin) -> bool {
-        // TODO: Does this get used? Is this only for the free-standing window extension? (which we
-        //       don't implement) This wouldn't make any sense for embedded editors.
-        false
+    fn set_editor_visibility(&self, visible: bool) -> bool {
+        let mut editor_handle = self.editor_handle.lock();
+        let Some(editor_handle) = editor_handle.as_mut() else {
+            return false;
+        };
+        let editor = self.editor.borrow();
+        let Some(editor) = editor.as_ref() else {
+            return false;
+        };
+
+        let visible = editor.lock().set_visible(editor_handle.as_mut(), visible);
+        visible
     }
 
-    unsafe extern "C" fn ext_gui_hide(_plugin: *const clap_plugin) -> bool {
-        // TODO: Same as the above
-        false
+    unsafe extern "C" fn ext_gui_show(plugin: *const clap_plugin) -> bool {
+        check_null_ptr!(false, plugin, (*plugin).plugin_data);
+        let wrapper = &*((*plugin).plugin_data as *const Self);
+        wrapper.set_editor_visibility(true)
+    }
+
+    unsafe extern "C" fn ext_gui_hide(plugin: *const clap_plugin) -> bool {
+        check_null_ptr!(false, plugin, (*plugin).plugin_data);
+        let wrapper = &*((*plugin).plugin_data as *const Self);
+        wrapper.set_editor_visibility(false)
     }
 
     unsafe extern "C" fn ext_latency_get(plugin: *const clap_plugin) -> u32 {
@@ -3556,7 +3616,7 @@ impl<P: ClapPlugin> Wrapper<P> {
 
         match state::deserialize_json(&read_buffer) {
             Some(mut state) => {
-                let success = wrapper.set_state_inner(&mut state);
+                let success = wrapper.set_state_inner(&mut state, false);
                 if success {
                     nih_trace!("Loaded state ({} bytes)", read_buffer.len());
                 }

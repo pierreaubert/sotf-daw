@@ -24,6 +24,10 @@ pub struct CrossoverPluginParams {
     /// Explicitly selects the active topology; `None` preserves legacy inference.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topology: Option<CrossoverTopology>,
+    /// Active band count for `Bands`; absent legacy configs infer it from all extra cutoffs.
+    /// The complete cutoff vector remains stored so inactive values survive topology/count changes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub band_count: Option<usize>,
     /// Additional crossover frequencies for 3-way or 4-way mode.
     /// When provided, creates a multi-way crossover. The primary `frequency`
     /// becomes the first crossover point.

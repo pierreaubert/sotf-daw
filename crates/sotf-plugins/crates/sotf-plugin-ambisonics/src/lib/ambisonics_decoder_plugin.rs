@@ -1,6 +1,7 @@
 // Rust guideline compliant 2026-02-21
 use super::consts::DUAL_BAND_CROSSOVER_HZ;
 use super::consts::MAX_AMBI_CHANNELS;
+use super::custom_layout::{CUSTOM_LAYOUT_KEY, CustomDecoderConfig, CustomLayout};
 use super::decode_matrix::DecodeMatrix;
 pub use super::params::Params as AmbisonicsDecoderConfig;
 use super::spherical_harmonics::channel_count;
@@ -25,6 +26,8 @@ pub struct AmbisonicsDecoderPlugin {
     /// max-rE matrix for HF, split at `DUAL_BAND_CROSSOVER_HZ`.
     pub(super) dual_band: bool,
     pub(super) algorithm: String,
+    /// User-defined geometry; `Some` only when `target_layout` is "custom".
+    pub(super) custom_layout: Option<CustomLayout>,
     pub(super) input_channels: usize,
     pub(super) output_channels: usize,
     /// max-rE decode matrix (or the only matrix when `dual_band` is false).
@@ -56,9 +59,15 @@ impl AmbisonicsDecoderPlugin {
         let order = config.order;
         let input_ch = channel_count(order);
 
+        if config.target_layout == CUSTOM_LAYOUT_KEY {
+            return Err(
+                "Custom Ambisonics target requires geometry: use new_custom()".to_owned(),
+            );
+        }
+
         let speaker_config = get_speaker_config(&config.target_layout).ok_or_else(|| {
             format!(
-                "Unknown speaker layout '{}'. Available: 5.0, 5.1, 7.1, 5.1.2, 5.1.4, 7.1.2, 7.1.4, 9.1.4, 9.1.6",
+                "Unknown speaker layout '{}'. Available: 5.0, 5.1, 7.1, 5.1.2, 5.1.4, 7.1.2, 7.1.4, 9.1.4, 9.1.6, custom",
                 config.target_layout
             )
         })?;
@@ -86,6 +95,77 @@ impl AmbisonicsDecoderPlugin {
             max_re_weighting: config.max_re_weighting,
             dual_band: config.dual_band,
             algorithm: config.algorithm.clone(),
+            custom_layout: None,
+            input_channels: input_ch,
+            output_channels: output_ch,
+            decode_matrix: Some(dm),
+            basic_matrix,
+            crossover: None, // created in initialize() when we have the sample rate
+            lf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
+            hf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
+            lf_frame: vec![0.0; output_ch],
+            hf_frame: vec![0.0; output_ch],
+            sample_rate: 48000,
+            cached_parameters: Vec::new(),
+        };
+        plugin.rebuild_cached_parameters();
+        Ok(plugin)
+    }
+
+    /// Builds a decoder for user-defined loudspeaker geometry.
+    ///
+    /// `config.params.target_layout` must be `"custom"` and the custom layout
+    /// must validate. Both decode matrices are prepared transactionally, so a
+    /// failure returns `Err` without a partial instance and the previous
+    /// decoder keeps running; callers rebuild and swap only on `Ok`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message for an invalid order, a non-custom target label,
+    /// invalid geometry, an unknown algorithm, or an ill-conditioned solve.
+    pub fn new_custom(config: &CustomDecoderConfig) -> Result<Self, String> {
+        if !(1..=super::spherical_harmonics::MAX_ORDER).contains(&config.params.order) {
+            return Err(format!(
+                "Ambisonics order must be between 1 and {}, got {}",
+                super::spherical_harmonics::MAX_ORDER,
+                config.params.order
+            ));
+        }
+        if config.params.target_layout != CUSTOM_LAYOUT_KEY {
+            return Err(format!(
+                "new_custom() requires target_layout \"{CUSTOM_LAYOUT_KEY}\", got '{}'",
+                config.params.target_layout
+            ));
+        }
+        config.custom_layout.validate()?;
+        let order = config.params.order;
+        let input_ch = channel_count(order);
+        let layout = &config.custom_layout;
+
+        let build_matrix = |apply_max_re| match config.params.algorithm.as_str() {
+            "mode_matching" => DecodeMatrix::build_for_custom(order, layout, apply_max_re),
+            "allrad" => DecodeMatrix::build_allrad_for_custom(order, layout, apply_max_re),
+            other => Err(format!(
+                "Unknown Ambisonics decode algorithm '{other}'. Available: {}",
+                ALGORITHMS.join(", ")
+            )),
+        };
+        let dm = build_matrix(config.params.max_re_weighting)?;
+        let output_ch = layout.total_channels();
+
+        let basic_matrix = if config.params.dual_band {
+            Some(build_matrix(false)?)
+        } else {
+            None
+        };
+
+        let mut plugin = Self {
+            order,
+            target_layout: CUSTOM_LAYOUT_KEY.to_owned(),
+            max_re_weighting: config.params.max_re_weighting,
+            dual_band: config.params.dual_band,
+            algorithm: config.params.algorithm.clone(),
+            custom_layout: Some(layout.clone()),
             input_channels: input_ch,
             output_channels: output_ch,
             decode_matrix: Some(dm),
@@ -438,6 +518,9 @@ impl Plugin for AmbisonicsDecoderPlugin {
     }
 
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        // Stays `None` for named and custom decoders alike: the host treats
+        // `Some` as analyzer data. Custom geometry saves through the
+        // retained `CustomDecoderConfig` (see `custom_config()`), never here.
         None
     }
 
@@ -462,6 +545,36 @@ impl Plugin for AmbisonicsDecoderPlugin {
 impl AmbisonicsDecoderPlugin {
     pub fn dual_band_scratch_samples(&self) -> usize {
         self.lf_ambi_frame.len() + self.hf_ambi_frame.len()
+    }
+
+    /// Returns the user-defined layout, or `None` for named targets.
+    pub fn custom_layout(&self) -> Option<&CustomLayout> {
+        self.custom_layout.as_ref()
+    }
+
+    /// Rebuilds the construction config for custom instances.
+    ///
+    /// Returns `Some` only for decoders built with [`new_custom`]. Hosts
+    /// persist a custom decoder by retaining the [`CustomDecoderConfig`]
+    /// they constructed (see its save-contract docs); this accessor
+    /// reconstructs that same value from a running instance for typed
+    /// save paths. It is deliberately not exposed through
+    /// `Plugin::get_data`, which the host reserves for analyzer payloads
+    /// (a `Some` there would misclassify the decoder as an analyzer).
+    ///
+    /// [`new_custom`]: Self::new_custom
+    pub fn custom_config(&self) -> Option<CustomDecoderConfig> {
+        let layout = self.custom_layout.clone()?;
+        Some(CustomDecoderConfig {
+            params: AmbisonicsDecoderConfig {
+                order: self.order,
+                target_layout: self.target_layout.clone(),
+                max_re_weighting: self.max_re_weighting,
+                dual_band: self.dual_band,
+                algorithm: self.algorithm.clone(),
+            },
+            custom_layout: layout,
+        })
     }
 }
 
@@ -1011,5 +1124,104 @@ mod tests {
         plugin
             .set_parameter(ParameterId::from("dual_band"), ParameterValue::Bool(false))
             .unwrap();
+    }
+
+    fn custom_stereo_config() -> CustomDecoderConfig {
+        use super::super::custom_layout::CustomSpeaker;
+        CustomDecoderConfig {
+            params: AmbisonicsDecoderConfig {
+                target_layout: CUSTOM_LAYOUT_KEY.to_owned(),
+                ..default_config()
+            },
+            custom_layout: CustomLayout {
+                name: "stereo".to_owned(),
+                speakers: vec![
+                    CustomSpeaker {
+                        label: "FL".to_owned(),
+                        azimuth_deg: 30.0,
+                        elevation_deg: 0.0,
+                        is_lfe: false,
+                    },
+                    CustomSpeaker {
+                        label: "FR".to_owned(),
+                        azimuth_deg: -30.0,
+                        elevation_deg: 0.0,
+                        is_lfe: false,
+                    },
+                ],
+            },
+        }
+    }
+
+    #[test]
+    fn test_new_custom_builds_user_geometry() {
+        let plugin = AmbisonicsDecoderPlugin::new_custom(&custom_stereo_config()).unwrap();
+        assert_eq!(plugin.input_channels(), 4);
+        assert_eq!(plugin.output_channels(), 2);
+        assert_eq!(plugin.target_layout, CUSTOM_LAYOUT_KEY);
+        assert_eq!(plugin.custom_layout().unwrap().name.as_str(), "stereo");
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("target_layout")),
+            Some(ParameterValue::Int(8))
+        );
+    }
+
+    #[test]
+    fn test_new_rejects_bare_custom_target() {
+        let config = AmbisonicsDecoderConfig {
+            target_layout: CUSTOM_LAYOUT_KEY.to_owned(),
+            ..default_config()
+        };
+        let error = AmbisonicsDecoderPlugin::new(&config).unwrap_err();
+        assert!(error.contains("new_custom"), "{error}");
+    }
+
+    #[test]
+    fn test_new_custom_rejects_named_target_and_bad_geometry() {
+        let mut config = custom_stereo_config();
+        config.params.target_layout = "5.1".to_owned();
+        assert!(AmbisonicsDecoderPlugin::new_custom(&config).is_err());
+
+        let mut config = custom_stereo_config();
+        config.custom_layout.speakers.clear();
+        assert!(AmbisonicsDecoderPlugin::new_custom(&config).is_err());
+    }
+
+    #[test]
+    fn test_custom_config_roundtrips_running_instance_bit_identically() {
+        let config = custom_stereo_config();
+        let mut first = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
+        // The reconstructed config must equal the construction config.
+        assert_eq!(first.custom_config().as_ref(), Some(&config));
+        // Named instances have no custom config to save.
+        let named = AmbisonicsDecoderPlugin::new(&default_config()).unwrap();
+        assert_eq!(named.custom_config(), None);
+
+        first.initialize(48_000).unwrap();
+        let input = [0.5_f32, -0.25, 0.125, 0.75];
+        let mut first_out = [0.0_f32; 2];
+        first
+            .process(&input, &mut first_out, &ProcessContext::new(48_000, 1))
+            .unwrap();
+
+        // Save through the agreed route (retained JSON), rebuild, compare.
+        let saved = serde_json::to_string(&first.custom_config().unwrap()).unwrap();
+        let restored: CustomDecoderConfig = serde_json::from_str(&saved).unwrap();
+        assert_eq!(restored, config);
+        let mut second = AmbisonicsDecoderPlugin::new_custom(&restored).unwrap();
+        second.initialize(48_000).unwrap();
+        let mut second_out = [0.0_f32; 2];
+        second
+            .process(&input, &mut second_out, &ProcessContext::new(48_000, 1))
+            .unwrap();
+        assert_eq!(second_out, first_out);
+    }
+
+    #[test]
+    fn test_get_data_stays_none_so_decoder_is_never_an_analyzer() {
+        let named = AmbisonicsDecoderPlugin::new(&default_config()).unwrap();
+        assert!(named.get_data().is_none());
+        let custom = AmbisonicsDecoderPlugin::new_custom(&custom_stereo_config()).unwrap();
+        assert!(custom.get_data().is_none());
     }
 }

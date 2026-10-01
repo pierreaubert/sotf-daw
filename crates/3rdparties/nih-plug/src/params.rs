@@ -301,6 +301,44 @@ pub unsafe trait Params: 'static + Send + Sync {
     /// fine to be able to support custom reusable Params implementations.
     fn param_map(&self) -> Vec<(String, ParamPtr, String)>;
 
+    /// Validate a complete state before any parameter values are changed.
+    ///
+    /// Plugins with control-thread resources can use this hook to reject an
+    /// unsupported restore atomically. `is_active` reflects the wrapper's
+    /// actual lifecycle state, independently of whether it retains a buffer
+    /// configuration from an earlier activation. `is_audio_thread` identifies
+    /// restores deferred until the current process call finishes. Implementors
+    /// must not do blocking resource work in either case. `sample_rate` is the
+    /// current prepared rate when one exists, and is absent before first setup.
+    fn validate_state(
+        &self,
+        _state: &crate::wrapper::state::PluginState,
+        _is_active: bool,
+        _is_audio_thread: bool,
+        _sample_rate: Option<f32>,
+    ) -> bool {
+        true
+    }
+
+    /// Return whether parameter values from the just-validated state should
+    /// be staged until the plugin's prepared instance has been accepted.
+    /// This is intended for plugins whose state restore constructs external
+    /// resources and can therefore fail after validation.
+    fn defer_state_parameter_values(&self) -> bool {
+        false
+    }
+
+    /// Override parameter values serialized while a validated restore is pending.
+    ///
+    /// This lets a fresh, not-yet-initialized plugin save the accepted candidate
+    /// state without publishing it to the live parameter objects before DSP
+    /// preparation succeeds.
+    fn serialize_parameter_overrides(
+        &self,
+    ) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
+        BTreeMap::new()
+    }
+
     /// Serialize all fields marked with `#[persist = "stable_name"]` into a hash map containing
     /// JSON-representations of those fields so they can be written to the plugin's state and
     /// recalled later. This uses [`persist::serialize_field()`] under the hood.
@@ -321,6 +359,27 @@ pub unsafe trait Params: 'static + Send + Sync {
 unsafe impl<P: Params> Params for Arc<P> {
     fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
         self.as_ref().param_map()
+    }
+
+    fn validate_state(
+        &self,
+        state: &crate::wrapper::state::PluginState,
+        is_active: bool,
+        is_audio_thread: bool,
+        sample_rate: Option<f32>,
+    ) -> bool {
+        self.as_ref()
+            .validate_state(state, is_active, is_audio_thread, sample_rate)
+    }
+
+    fn defer_state_parameter_values(&self) -> bool {
+        self.as_ref().defer_state_parameter_values()
+    }
+
+    fn serialize_parameter_overrides(
+        &self,
+    ) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
+        self.as_ref().serialize_parameter_overrides()
     }
 
     fn serialize_fields(&self) -> BTreeMap<String, String> {

@@ -1,5 +1,52 @@
 # Unreleased
 
+- Fixed validation-r5 test setups without weakening bounds: stronger Mid cut
+  for the inactive-slot guard, 2 kHz opposite-gain peaks for the
+  order-noncommutation guard, and twin retired-route reclamation in the
+  retry-after-refusal test. The 96 kHz / 1024-tap / 500 Hz multiband gap is
+  analyzed as a short-FIR resolution limit (see lane fix-r5-result.md); the
+  0.05 dB bound and matrix are unchanged.
+- Added the realtime commit entrypoint `try_commit_prepared_update` with a
+  caller-owned `Option` slot and an allocation-free typed `CommitRefusal`
+  error: success and every refusal perform zero allocations and zero frees,
+  and refusals retain the prepared update for correction or retry. All
+  validations run before priming or live-state mutation, so refusals are
+  fully transactional. `commit_prepared_update` is now the control-thread
+  compatibility wrapper (it allocates its `String` error and frees the
+  prepared update on refusal) and must not be called on the audio thread.
+- Fixed the realtime commit to perform zero frees: the prepared base snapshot
+  is stashed into the target banks for off-thread reclamation with the retired
+  route instead of being dropped on the commit thread.
+- Fixed validation-r3 test setups without weakening bounds: stream beyond
+  cascade latency for the inactive-slot difference guard, use same-frequency
+  opposite-gain peaks for the order-noncommutation guard, cap the 192 kHz
+  analytic band at the 20 kHz validation ceiling, and gate multiband magnitude
+  asserts to probes above the FIR resolution limit (phase asserts unchanged).
+- Fixed the remaining validation-r2 compile/lint failures without behavior
+  changes: `unwrap_err` on the non-`Debug` plugin type, `too_many_arguments`
+  on the `EqBand::update` mirror, `assign_op_pattern` in cascade-response
+  math, and range-loop/`chunks_exact`/type-complexity lints in tests.
+- Fixed the ordered-route channel response to use single-channel (delta)
+  excitation, reporting the diagonal transfer for Mid/Side topologies instead
+  of the correlated-input response; documented the chart semantic.
+- Fixed dynamic-update priming to cover the full cascade response support
+  (`stages * (N - 1 + 32)`) and sized the history ring to the worst case;
+  removed the dead legacy-spectrum FFT from the commit path and documented
+  its staleness contract.
+- Documented that controls/charts report the committed target while audio
+  blends, and clarified the 512-step / 513-frame crossfade naming.
+- Added per-band channel routing (`placement`: stereo/left/right/mid/side) with
+  explicit disjoint `stereo_pairs`, an ordered per-band FIR cascade route, and
+  channel-aware complex response / group-delay APIs. Legacy configs without
+  placements keep the single-FIR path bit-identically.
+- Added dynamic band updates: off-thread `prepare_band_update` plus bounded
+  allocation-free `commit_prepared_update` with a fixed exact-0/1 output
+  crossfade. Phase mode and latency never change across an update; topology,
+  counts, placements, FIR length, phase mode and auto gain stay structural.
+- Extended accuracy coverage: all four tap counts in analytic complex-response
+  and group-delay tests, exact ordered-cascade references, dynamic blend
+  references, refusal atomicity, and legacy preset/audio compatibility tests.
+
 ## 0.5.6 — 2026-08-12
 
 - Replaced callback-sized full-FIR FFT convolution with 32-sample-head

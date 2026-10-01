@@ -1,4 +1,5 @@
 #![allow(clippy::needless_range_loop)]
+use super::cutoff_bank::CutoffBank;
 use super::resampler_plugin::ResamplerPlugin;
 use super::resampler_quality::ResamplerQuality;
 use rubato::Resampler;
@@ -1188,6 +1189,188 @@ fn realtime_quantum_exposes_chunk_boundary_work_budget() {
 }
 
 #[test]
+fn cutoff_bank_ramps_protect_the_narrower_endpoint() {
+    let bank = CutoffBank::new(1.0);
+    let narrow = bank.target_slot(0.5, 0.5);
+    assert!((bank.cutoff_ratio(narrow) - 0.5).abs() < 1e-12);
+    // During an upward ramp the backend still reports the narrow ratio, so
+    // both endpoints resolve to the narrow table. A downward ramp resolves
+    // to its narrow target however it was requested.
+    assert_eq!(bank.target_slot(0.5, 2.0), narrow);
+    assert_eq!(bank.target_slot(2.0, 0.5), narrow);
+    let wide = bank.target_slot(2.0, 2.0);
+    assert!((bank.cutoff_ratio(wide) - 1.0).abs() < 1e-12);
+    assert_eq!(bank.target_slot(1.0, 1.0), wide);
+}
+
+#[test]
+fn cutoff_bank_narrowing_jumps_immediately_in_both_modes() {
+    for smoothing in [false, true] {
+        let mut bank = CutoffBank::new(1.0);
+        bank.set_smoothing(smoothing);
+        assert_eq!(bank.smoothing(), smoothing);
+        assert_eq!(bank.current_slot(), 0);
+        let narrow = bank.target_slot(0.5, 0.5);
+        assert_eq!(bank.advance_toward(narrow), narrow);
+        assert_eq!(bank.current_slot(), narrow);
+        // Holding the target is a no-op in both modes.
+        assert_eq!(bank.advance_toward(narrow), narrow);
+    }
+}
+
+#[test]
+fn cutoff_smoothing_slews_upward_one_table_per_step() {
+    let mut bank = CutoffBank::new(1.0);
+    assert_eq!(bank.table_count(), 10);
+    bank.set_smoothing(true);
+    let narrow = bank.target_slot(0.5, 0.5);
+    let wide = bank.target_slot(2.0, 2.0);
+    assert_eq!(bank.cutoff_rank(narrow), 0);
+    assert_eq!(bank.cutoff_rank(wide), bank.table_count() - 1);
+    assert_eq!(bank.advance_toward(narrow), narrow);
+
+    let step_limit = 2.0_f64.powf(1.0 / 8.0) * (1.0 + 1e-9);
+    let mut previous = narrow;
+    let mut steps = 0;
+    loop {
+        let slot = bank.advance_toward(wide);
+        steps += 1;
+        assert_eq!(
+            bank.cutoff_rank(slot),
+            bank.cutoff_rank(previous) + 1,
+            "smoothed widening must advance exactly one prepared table"
+        );
+        let ratio = bank.cutoff_ratio(slot);
+        let before = bank.cutoff_ratio(previous);
+        assert!(ratio > before, "smoothed widening must increase cutoff");
+        assert!(
+            ratio / before <= step_limit,
+            "one grid interval bounds each widening step"
+        );
+        assert!(steps <= bank.table_count(), "slew must terminate");
+        previous = slot;
+        if slot == wide {
+            break;
+        }
+    }
+    assert_eq!(steps, bank.table_count() - 1);
+    assert_eq!(bank.current_slot(), wide);
+
+    // Without smoothing the same widening jumps in one call.
+    let mut legacy = CutoffBank::new(1.0);
+    assert!(!legacy.smoothing());
+    assert_eq!(legacy.advance_toward(narrow), narrow);
+    assert_eq!(legacy.advance_toward(wide), wide);
+}
+
+#[test]
+fn cutoff_smoothing_downward_change_mid_slew_jumps_immediately() {
+    let mut bank = CutoffBank::new(1.0);
+    bank.set_smoothing(true);
+    let narrow = bank.target_slot(0.5, 0.5);
+    let wide = bank.target_slot(2.0, 2.0);
+    bank.advance_toward(narrow);
+    bank.advance_toward(wide);
+    bank.advance_toward(wide);
+    bank.advance_toward(wide);
+    assert_ne!(bank.current_slot(), wide);
+    // A new downward target preempts the slew in a single call, so the
+    // narrower filter is active before the next backend chunk is rendered.
+    let lower = bank.target_slot(2.0, 0.6);
+    assert!(bank.cutoff_ratio(lower) <= 0.6);
+    assert!(bank.cutoff_ratio(lower) < bank.cutoff_ratio(bank.current_slot()));
+    assert_eq!(bank.advance_toward(lower), lower);
+    assert_eq!(bank.current_slot(), lower);
+    // Reset tracks the backend's return to slot zero and keeps the flag.
+    bank.reset();
+    assert_eq!(bank.current_slot(), 0);
+    assert!(bank.smoothing());
+}
+
+#[test]
+fn cutoff_smoothing_parameter_defaults_off_and_round_trips() {
+    let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
+    assert_eq!(resampler.parameters().len(), 4);
+    assert_eq!(
+        resampler.get_parameter(&ParameterId::from("cutoff_smoothing")),
+        Some(ParameterValue::Bool(false))
+    );
+    resampler
+        .set_parameter(
+            ParameterId::from("cutoff_smoothing"),
+            ParameterValue::Bool(true),
+        )
+        .unwrap();
+    assert_eq!(
+        resampler.get_parameter(&ParameterId::from("cutoff_smoothing")),
+        Some(ParameterValue::Bool(true))
+    );
+    assert!(
+        resampler
+            .set_parameter(ParameterId::from("cutoff_smoothing"), ParameterValue::Int(1))
+            .is_err(),
+        "cutoff_smoothing must reject non-bool values"
+    );
+}
+
+#[test]
+fn signal_delay_matches_documented_equation() {
+    // Independent transcription of the signal_delay_samples contract:
+    // ((sinc_len / 2 - 1 / oversampling_factor) * ratio - 1), floored at
+    // zero, with bit-exact unity passthrough reporting zero delay.
+    fn expected(quality: ResamplerQuality, input_rate: u32, output_rate: u32) -> f64 {
+        if input_rate == output_rate {
+            return 0.0;
+        }
+        let (taps, phases) = match quality {
+            ResamplerQuality::Fast => (64.0, 128.0),
+            ResamplerQuality::Medium => (128.0, 256.0),
+            ResamplerQuality::High => (256.0, 256.0),
+        };
+        ((taps / 2.0 - 1.0 / phases) * output_rate as f64 / input_rate as f64 - 1.0).max(0.0)
+    }
+    for quality in [
+        ResamplerQuality::Fast,
+        ResamplerQuality::Medium,
+        ResamplerQuality::High,
+    ] {
+        for (input_rate, output_rate) in [
+            (44_100, 48_000),
+            (48_000, 44_100),
+            (48_000, 96_000),
+            (96_000, 48_000),
+            (96_000, 24_000),
+            (48_000, 48_000),
+        ] {
+            let narrow = ResamplerPlugin::with_quality(1, input_rate, output_rate, 64, quality)
+                .unwrap()
+                .signal_delay_samples();
+            let wide = ResamplerPlugin::with_quality(1, input_rate, output_rate, 1024, quality)
+                .unwrap()
+                .signal_delay_samples();
+            assert_eq!(
+                narrow, wide,
+                "physical delay must not depend on chunk size"
+            );
+            let reference = expected(quality, input_rate, output_rate);
+            assert!(
+                (narrow - reference).abs() < 1e-9,
+                "{quality:?} {input_rate}->{output_rate}: {narrow} != {reference}"
+            );
+            if input_rate != output_rate {
+                let plugin =
+                    ResamplerPlugin::with_quality(1, input_rate, output_rate, 1024, quality)
+                        .unwrap();
+                assert!(
+                    plugin.latency_samples() as f64 > narrow,
+                    "realtime latency must exceed physical delay"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn test_zero_frame_process_then_flush_returns_zero() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
     resampler.initialize(44100).unwrap();
@@ -1200,4 +1383,81 @@ fn test_zero_frame_process_then_flush_returns_zero() {
     let mut flush_out = vec![0.0_f32; 64 * 2];
     let (flushed, _) = resampler.flush(&mut flush_out).unwrap();
     assert_eq!(flushed, 0);
+}
+
+#[test]
+fn cutoff_bank_nominal_half_has_eighteen_tables_and_slews() {
+    // Nominal 0.5 (48->24): slot0 holds 0.5, grid intervals -8..-1 give 8
+    // distinct cutoffs below (0.25..0.458), intervals 1..8 give 8 distinct
+    // above (0.545..1.0), interval 0 duplicates slot0, and the 0.1% drift
+    // anchor 0.4995 is distinct and inside nominal/2..nominal. Total 18.
+    let mut bank = CutoffBank::new(0.5);
+    assert_eq!(bank.table_count(), 18);
+    bank.set_smoothing(true);
+    let narrow = bank.target_slot(0.25, 0.25);
+    let wide = bank.target_slot(1.0, 1.0);
+    assert_eq!(bank.cutoff_rank(narrow), 0);
+    assert_eq!(bank.cutoff_rank(wide), bank.table_count() - 1);
+    assert!((bank.cutoff_ratio(narrow) - 0.25).abs() < 1e-12);
+    assert!((bank.cutoff_ratio(wide) - 1.0).abs() < 1e-12);
+    assert_eq!(bank.advance_toward(narrow), narrow);
+
+    let step_limit = 2.0_f64.powf(1.0 / 8.0) * (1.0 + 1e-9);
+    let mut previous = narrow;
+    let mut steps = 0;
+    loop {
+        let slot = bank.advance_toward(wide);
+        steps += 1;
+        assert_eq!(
+            bank.cutoff_rank(slot),
+            bank.cutoff_rank(previous) + 1,
+            "smoothed widening must advance exactly one prepared table"
+        );
+        let ratio = bank.cutoff_ratio(slot);
+        let before = bank.cutoff_ratio(previous);
+        assert!(ratio > before, "smoothed widening must increase cutoff");
+        assert!(
+            ratio / before <= step_limit,
+            "one grid interval bounds each widening step"
+        );
+        assert!(steps <= bank.table_count(), "slew must terminate");
+        previous = slot;
+        if slot == wide {
+            break;
+        }
+    }
+    assert_eq!(steps, bank.table_count() - 1);
+    assert_eq!(bank.current_slot(), wide);
+
+    // A downward target preempts the converged wide table immediately.
+    let lower = bank.target_slot(1.0, 0.3);
+    assert!(bank.cutoff_ratio(lower) <= 0.3);
+    assert!(bank.cutoff_ratio(lower) < bank.cutoff_ratio(bank.current_slot()));
+    assert_eq!(bank.advance_toward(lower), lower);
+
+    // Without smoothing the same widening jumps in one call.
+    let mut legacy = CutoffBank::new(0.5);
+    assert_eq!(legacy.advance_toward(narrow), narrow);
+    assert_eq!(legacy.advance_toward(wide), wide);
+}
+
+#[test]
+fn cutoff_bank_upsampling_nominal_is_single_table() {
+    // Nominal 2.0 (48->96): every grid candidate caps at 1.0 (a duplicate
+    // of slot0) and the drift anchor fails its nominal/2 guard
+    // (0.999 < 1.0), so only the nominal table exists and every slew is
+    // trivially immediate. Only ceilings at or above 1.0 are valid here;
+    // a narrower ceiling would select no table.
+    let mut bank = CutoffBank::new(2.0);
+    assert_eq!(bank.table_count(), 1);
+    assert_eq!(bank.target_slot(1.0, 1.0), 0);
+    assert_eq!(bank.target_slot(2.0, 2.0), 0);
+    assert_eq!(bank.target_slot(1.0, 2.0), 0);
+    for smoothing in [false, true] {
+        bank.set_smoothing(smoothing);
+        assert_eq!(bank.advance_toward(0), 0);
+        assert_eq!(bank.current_slot(), 0);
+    }
+    bank.reset();
+    assert_eq!(bank.current_slot(), 0);
 }

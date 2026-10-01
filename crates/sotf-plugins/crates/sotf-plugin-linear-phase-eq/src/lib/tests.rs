@@ -23,6 +23,7 @@ fn test_reducing_num_filters_removes_band_from_design_and_schema() {
         0.707,
         0.0,
         true,
+        None,
         48_000.0,
     );
     plugin.rebuild_fir();
@@ -76,7 +77,9 @@ fn test_from_params_rejects_nonfinite_and_above_nyquist_values() {
             q: 1.0,
             gain_db: 0.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     assert!(LinearPhaseEqPlugin::from_params(1, 48_000, params.clone()).is_err());
     params.filters[0].frequency = 12_000.0;
@@ -105,7 +108,9 @@ fn test_large_block_is_chunked_not_silently_bypassed() {
             q: 1.0,
             gain_db: 12.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let mut plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
     let num_frames = plugin.fft_size + 512;
@@ -146,7 +151,9 @@ fn test_large_block_ola_matches_small_chunks() {
             q: 0.7,
             gain_db: 9.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let mut one_block = LinearPhaseEqPlugin::from_params(channels, sr, params.clone()).unwrap();
     let mut chunked = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
@@ -217,7 +224,7 @@ fn test_rebuild_fir_reuses_design_scratch_vectors() {
     assert!(initial_freq_capacity >= plugin.design_freqs.len());
     assert!(initial_mag_capacity >= plugin.design_magnitudes_db.len());
 
-    plugin.bands[0].update(BiquadFilterType::Peak, 1_000.0, 1.0, 6.0, true, 48_000.0);
+    plugin.bands[0].update(BiquadFilterType::Peak, 1_000.0, 1.0, 6.0, true, None, 48_000.0);
     plugin.rebuild_fir();
 
     assert_eq!(plugin.design_freqs.capacity(), initial_freq_capacity);
@@ -273,7 +280,9 @@ fn test_dc_gain_not_hardcoded() {
             q: 0.7,
             gain_db: -12.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let plugin = LinearPhaseEqPlugin::from_params(channels, sr, params).unwrap();
@@ -301,7 +310,9 @@ fn auto_gain_does_not_explode_highpass_design() {
             q: 0.707,
             gain_db: 0.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
@@ -348,7 +359,9 @@ fn auto_gain_normalizes_lowshelf_dc_to_unity() {
             q: 0.707,
             gain_db: -12.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
@@ -373,7 +386,9 @@ fn auto_gain_keeps_narrow_lowpass_unity_and_bounded() {
             q: 0.707,
             gain_db: 0.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
@@ -534,7 +549,9 @@ fn test_from_params_fills_missing_bands() {
             q: 1.0,
             gain_db: 3.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
     assert_eq!(plugin.bands.len(), 3);
@@ -566,8 +583,8 @@ fn test_parameters_reflect_state() {
 #[test]
 fn test_band_contribution_db_skips_inactive() {
     let sr = 48000.0;
-    let active_band = EqBand::new(BiquadFilterType::Peak, 1000.0, 1.0, 6.0, true, sr);
-    let inactive_band = EqBand::new(BiquadFilterType::Peak, 1000.0, 1.0, 6.0, false, sr);
+    let active_band = EqBand::new(BiquadFilterType::Peak, 1000.0, 1.0, 6.0, true, None, sr);
+    let inactive_band = EqBand::new(BiquadFilterType::Peak, 1000.0, 1.0, 6.0, false, None, sr);
     let with_active = LinearPhaseEqPlugin::band_contribution_db(&[active_band], 1000.0);
     let with_inactive = LinearPhaseEqPlugin::band_contribution_db(&[inactive_band], 1000.0);
     assert!(with_active > 1.0);
@@ -615,7 +632,9 @@ fn test_process_with_mix() {
                 q: 1.0,
                 gain_db: 12.0,
                 active: true,
+                placement: None,
             }],
+            stereo_pairs: None,
         },
     )
     .unwrap();

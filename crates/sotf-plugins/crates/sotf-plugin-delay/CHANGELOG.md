@@ -3,6 +3,15 @@
 ## Changes
 
 - Declare the existing identity-frame geometry contract so finite host drains can admit Delay in supported serial chains.
+- Fractional delays below two samples no longer read stale ring slots: taps
+  the ring cannot supply are solved implicitly through the current frame,
+  which is exact with and without feedback. Integer delays of two or more
+  samples render bit-identically to before.
+- Per-channel routing mode now rejects runtime effect writes that deviate
+  from the pure routing values (feedback/LFO zero, mix one, allpass and
+  pitch-preserving off) on both the single and batch paths, retaining the
+  accepted configuration and history; the parameter schema marks those
+  controls unsupported in per-channel mode.
 
 # 0.5.11
 

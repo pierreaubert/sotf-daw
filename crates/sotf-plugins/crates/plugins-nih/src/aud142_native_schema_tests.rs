@@ -35,7 +35,7 @@ fn native_schema_keeps_frequency_first_and_appends_fixed_ids() {
     let specs = wrapper::get_param_specs("Crossover");
     let ids: Vec<_> = specs.iter().map(|spec| spec.engine_key).collect();
     assert_eq!(
-        ids,
+        &ids[..12],
         [
             "frequency",
             "family",
@@ -51,6 +51,13 @@ fn native_schema_keeps_frequency_first_and_appends_fixed_ids() {
             "channel_mode_1",
         ]
     );
+    assert_eq!(ids.len(), 40, "16 channels add two stable controls each");
+    for channel in 0..16 {
+        assert_eq!(ids[8 + channel * 2], format!("channel_frequency_{channel}"));
+        assert_eq!(ids[9 + channel * 2], format!("channel_mode_{channel}"));
+        assert!(native_crossover::is_structural(ids[8 + channel * 2]));
+        assert!(native_crossover::is_structural(ids[9 + channel * 2]));
+    }
 
     let frequency = &specs[0];
     assert_eq!(frequency.name, "Frequency");
@@ -85,6 +92,7 @@ fn native_schema_keeps_frequency_first_and_appends_fixed_ids() {
     );
     assert!(native_crossover::is_structural("family"));
     assert!(native_crossover::is_structural("channel_frequency_1"));
+    assert!(native_crossover::is_structural("channel_mode_15"));
     assert!(!native_crossover::is_structural("frequency_2"));
 }
 

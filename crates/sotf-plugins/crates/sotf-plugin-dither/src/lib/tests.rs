@@ -2,10 +2,13 @@ use super::dither_plugin::DitherPlugin;
 use super::misc::random_f32;
 use super::misc::xorshift64;
 use super::types::DitherPluginParams;
+use crate::params::Params;
 use rustfft::{FftPlanner, num_complex::Complex};
 use sotf_host::ParametricInPlacePlugin;
+use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::ProcessContext;
+use sotf_host::plugin_params::PluginParamDef;
 
 fn make_context(num_frames: usize) -> ProcessContext<'static> {
     ProcessContext::new(48000, num_frames)
@@ -209,10 +212,11 @@ fn test_dither_quantizes_to_target_depth() {
 }
 
 #[test]
-fn test_noise_shaping_reduces_audible_noise() {
-    // Compare total quantization error with and without noise shaping.
-    // With noise shaping, the error is reshaped (not necessarily reduced in total
-    // energy), but the low-frequency portion should be lower.
+fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
+    // Smoke test: both shaping paths must run to completion and produce
+    // finite, nonzero quantization error. The actual noise-reduction
+    // claim lives in
+    // `f_weighted_noise_shaping_moves_quantization_error_out_of_the_sensitive_band`.
     let num_frames = 8192;
     let channels = 1;
 
@@ -680,4 +684,898 @@ fn zero_channels_rejected_in_from_params() {
             dither_type: 0,
         },
     );
+}
+
+// ============================================================================
+// DITHER-A1: independent final-quantized-error moments
+// ============================================================================
+//
+// Reference result (Wannamaker): 2-LSB peak-to-peak TPDF dither with
+// round-to-nearest quantization gives final error e = Q(x + d) - x with
+// E[e] = 0 and E[e^2] = LSB^2 / 4 for every input x, provided the quantizer
+// does not saturate. This oracle measures the plugin's actual output against
+// that result and shares no code with the implementation.
+
+/// Accepted error bound in LSB units (mean) and LSB^2 units (second
+/// moment), carried over from the AUDIT.md-accepted dither oracle.
+const FINAL_ERROR_MOMENT_TOLERANCE_LSB: f64 = 0.008;
+
+/// Samples per (bit depth, input level) case. The mean estimator has
+/// standard error sqrt(0.25 / N) ~ 0.001 LSB here, so the bound above sits
+/// about eight sigma from the expectation.
+const MOMENT_SAMPLES_PER_CASE: usize = 262_144;
+
+/// DC input levels in LSB units: signed, fractional, and sub-LSB
+/// (|level| < 0.5) cases, all far from the saturation rails.
+const MOMENT_LEVELS_LSB: [f64; 9] = [
+    -64.75, -1.5, -0.4, -0.1, 0.0, 0.1, 0.4, 1.5, 64.75,
+];
+
+/// Exposed bit-depth routes as (choice index, bits) pairs.
+const BIT_DEPTHS_UNDER_TEST: [(usize, i32); 3] = [(0, 16), (1, 20), (2, 24)];
+
+#[test]
+fn final_quantized_error_has_zero_mean_and_quarter_lsb_second_moment() {
+    let mut worst_mean = 0.0_f64;
+    let mut worst_mean_case = (16, 0.0_f64);
+    let mut worst_second = 0.0_f64;
+    let mut worst_second_case = (16, 0.0_f64);
+
+    for (depth_index, bits) in BIT_DEPTHS_UNDER_TEST {
+        let scale = 2.0_f64.powi(bits - 1);
+        for level_lsb in MOMENT_LEVELS_LSB {
+            let mut plugin = DitherPlugin::from_params(
+                1,
+                DitherPluginParams {
+                    bit_depth: depth_index,
+                    noise_shaping: false,
+                    dither_type: 0, // TPDF
+                },
+            );
+            plugin.initialize(48_000).unwrap();
+
+            let input = (level_lsb / scale) as f32;
+            let mut buffer = vec![input; MOMENT_SAMPLES_PER_CASE];
+            plugin
+                .process_in_place(&mut buffer, &make_context(MOMENT_SAMPLES_PER_CASE))
+                .unwrap();
+
+            let input_f64 = f64::from(input);
+            let mut sum = 0.0_f64;
+            let mut sum_squares = 0.0_f64;
+            let mut peak = 0.0_f64;
+            for sample in &buffer {
+                let error_lsb = (f64::from(*sample) - input_f64) * scale;
+                sum += error_lsb;
+                sum_squares += error_lsb * error_lsb;
+                peak = peak.max(error_lsb.abs());
+            }
+            let count = MOMENT_SAMPLES_PER_CASE as f64;
+            let mean = sum / count;
+            let second_moment = sum_squares / count;
+            if mean.abs() > worst_mean {
+                worst_mean = mean.abs();
+                worst_mean_case = (bits, level_lsb);
+            }
+            let second_error = (second_moment - 0.25).abs();
+            if second_error > worst_second {
+                worst_second = second_error;
+                worst_second_case = (bits, level_lsb);
+            }
+            // |TPDF| <= 1 LSB plus |round error| <= 0.5 LSB bounds every sample.
+            assert!(
+                peak <= 1.5 + 1e-6,
+                "peak {peak} LSB exceeds 1.5-LSB bound at {bits} bits, level {level_lsb}"
+            );
+        }
+    }
+
+    let tolerance = FINAL_ERROR_MOMENT_TOLERANCE_LSB;
+    assert!(
+        worst_mean <= tolerance,
+        "worst mean {worst_mean} LSB at {worst_mean_case:?} exceeds {tolerance}"
+    );
+    assert!(
+        worst_second <= tolerance,
+        "worst |E[e^2]-0.25| {worst_second} LSB^2 at {worst_second_case:?} exceeds {tolerance}"
+    );
+}
+
+#[test]
+fn block_partitioning_is_bit_identical() {
+    // Odd chunk sizes plus a partial tail must reproduce one continuous
+    // call exactly: RNG draws and error-feedback history advance per
+    // sample, independent of host block boundaries.
+    const FRAMES: usize = 4096;
+    const CHUNK_FRAMES: usize = 37;
+    const CHANNELS: usize = 2;
+
+    let make_plugin = || {
+        let mut plugin = DitherPlugin::from_params(
+            CHANNELS,
+            DitherPluginParams {
+                bit_depth: 1, // 20-bit
+                noise_shaping: true,
+                dither_type: 0, // TPDF
+            },
+        );
+        plugin.initialize(48_000).unwrap();
+        plugin
+    };
+    let input: Vec<f32> = (0..FRAMES * CHANNELS)
+        .map(|i| (i as f32 * 0.000_269).sin() * 0.4 + 0.000_4)
+        .collect();
+
+    let mut reference = make_plugin();
+    let mut expected = input.clone();
+    reference
+        .process_in_place(&mut expected, &make_context(FRAMES))
+        .unwrap();
+
+    let mut chunked = make_plugin();
+    let mut actual = input.clone();
+    let mut frame = 0;
+    while frame < FRAMES {
+        let len = CHUNK_FRAMES.min(FRAMES - frame);
+        let slice = &mut actual[frame * CHANNELS..(frame + len) * CHANNELS];
+        chunked
+            .process_in_place(slice, &ProcessContext::new(48_000, len))
+            .unwrap();
+        frame += len;
+    }
+
+    assert_eq!(actual, expected);
+}
+
+// ============================================================================
+// DITHER-A2: whiteness, channel independence, seeded reproducibility
+// ============================================================================
+
+/// Correlation bound for effectively independent error samples. A
+/// correlation estimator over N samples has standard deviation ~1/sqrt(N),
+/// so this bound is at least five sigma at every count used below.
+const ERROR_CORRELATION_TOLERANCE: f64 = 0.02;
+
+fn autocorrelation(errors: &[f64], lag: usize) -> f64 {
+    let mean = errors.iter().sum::<f64>() / errors.len() as f64;
+    let mut covariance = 0.0_f64;
+    let mut variance = 0.0_f64;
+    for (index, error) in errors.iter().enumerate() {
+        let centered = error - mean;
+        variance += centered * centered;
+        if index >= lag {
+            covariance += centered * (errors[index - lag] - mean);
+        }
+    }
+    covariance / variance
+}
+
+fn correlation(first: &[f64], second: &[f64]) -> f64 {
+    assert_eq!(first.len(), second.len());
+    let mean_first = first.iter().sum::<f64>() / first.len() as f64;
+    let mean_second = second.iter().sum::<f64>() / second.len() as f64;
+    let mut covariance = 0.0_f64;
+    let mut variance_first = 0.0_f64;
+    let mut variance_second = 0.0_f64;
+    for (a, b) in first.iter().zip(second.iter()) {
+        let centered_a = a - mean_first;
+        let centered_b = b - mean_second;
+        covariance += centered_a * centered_b;
+        variance_first += centered_a * centered_a;
+        variance_second += centered_b * centered_b;
+    }
+    covariance / (variance_first * variance_second).sqrt()
+}
+
+#[test]
+fn unshaped_tpdf_final_error_is_uncorrelated_across_time() {
+    const FRAMES: usize = 100_000;
+    // A fractional-LSB DC input makes every final error an independent
+    // draw (iid dither plus memoryless rounding), so all nonzero lags
+    // of the final error must vanish.
+    let mut plugin = DitherPlugin::from_params(
+        1,
+        DitherPluginParams {
+            bit_depth: 0, // 16-bit
+            noise_shaping: false,
+            dither_type: 0, // TPDF
+        },
+    );
+    plugin.initialize(48_000).unwrap();
+    let input = (0.37 / 32768.0) as f32;
+    let mut buffer = vec![input; FRAMES];
+    plugin
+        .process_in_place(&mut buffer, &make_context(FRAMES))
+        .unwrap();
+
+    let errors: Vec<f64> = buffer
+        .iter()
+        .map(|sample| f64::from(*sample) - f64::from(input))
+        .collect();
+    for lag in 1..=8 {
+        let rho = autocorrelation(&errors, lag);
+        assert!(
+            rho.abs() < ERROR_CORRELATION_TOLERANCE,
+            "lag-{lag} autocorrelation {rho} exceeds {ERROR_CORRELATION_TOLERANCE}"
+        );
+    }
+}
+
+#[test]
+fn unshaped_tpdf_error_spectrum_is_flat() {
+    const SAMPLE_RATE: u32 = 48_000;
+    const FFT_SIZE: usize = 2048;
+    const SEGMENTS: usize = 16;
+    const TOTAL: usize = FFT_SIZE * SEGMENTS;
+    // Same averaged Hann periodogram as the shaped-spectrum test, now
+    // asserting whiteness: TPDF final error carries equal power density in
+    // mid and ultrasonic bands. Record: 48 kHz, N=2048 Hann segments, no
+    // overlap, no padding; interior one-sided bins only, so window gain
+    // cancels in the band ratio. The 1 dB bound is ~10x the estimator
+    // deviation for 16 averaged segments.
+    let mut plugin = DitherPlugin::from_params(
+        1,
+        DitherPluginParams {
+            bit_depth: 0, // 16-bit
+            noise_shaping: false,
+            dither_type: 0, // TPDF
+        },
+    );
+    plugin.initialize(SAMPLE_RATE).unwrap();
+    let input = (0.37 / 32768.0) as f32;
+    let mut quantized = vec![input; TOTAL];
+    plugin
+        .process_in_place(&mut quantized, &ProcessContext::new(SAMPLE_RATE, TOTAL))
+        .unwrap();
+
+    let fft = FftPlanner::<f32>::new().plan_fft_forward(FFT_SIZE);
+    let mut averaged = vec![0.0_f64; FFT_SIZE / 2 + 1];
+    let mut bins = vec![Complex::new(0.0_f32, 0.0_f32); FFT_SIZE];
+    for segment in 0..SEGMENTS {
+        for (index, bin) in bins.iter_mut().enumerate() {
+            let window =
+                0.5 - 0.5 * (2.0 * std::f32::consts::PI * index as f32 / FFT_SIZE as f32).cos();
+            let offset = segment * FFT_SIZE + index;
+            *bin = Complex::new((quantized[offset] - input) * window, 0.0);
+        }
+        fft.process(&mut bins);
+        for (power, bin) in averaged.iter_mut().zip(&bins) {
+            *power += bin.norm_sqr() as f64;
+        }
+    }
+    let bin_hz = f64::from(SAMPLE_RATE) / FFT_SIZE as f64;
+    let density = |low_hz: f64, high_hz: f64| {
+        let mut power = 0.0_f64;
+        let mut count = 0_u32;
+        for (bin, value) in averaged.iter().enumerate() {
+            let frequency = bin as f64 * bin_hz;
+            if frequency >= low_hz && frequency < high_hz {
+                power += value;
+                count += 1;
+            }
+        }
+        power / f64::from(count)
+    };
+    let ratio_db = 10.0 * (density(2_000.0, 8_000.0) / density(16_000.0, 22_000.0)).log10();
+    assert!(
+        ratio_db.abs() < 1.0,
+        "TPDF error spectrum tilted by {ratio_db:.3} dB; expected white"
+    );
+}
+
+#[test]
+fn channel_errors_are_mutually_uncorrelated() {
+    const CHANNELS: usize = 4;
+    const FRAMES: usize = 65_536;
+    // Identical DC on every channel: any cross-channel correlation can
+    // only come from shared RNG state, which per-channel seeds forbid.
+    let mut plugin = DitherPlugin::from_params(
+        CHANNELS,
+        DitherPluginParams {
+            bit_depth: 0, // 16-bit
+            noise_shaping: false,
+            dither_type: 0, // TPDF
+        },
+    );
+    plugin.initialize(48_000).unwrap();
+    let input = (0.37 / 32768.0) as f32;
+    let mut buffer = vec![input; FRAMES * CHANNELS];
+    plugin
+        .process_in_place(&mut buffer, &make_context(FRAMES))
+        .unwrap();
+
+    let errors: Vec<Vec<f64>> = (0..CHANNELS)
+        .map(|channel| {
+            (0..FRAMES)
+                .map(|frame| f64::from(buffer[frame * CHANNELS + channel]) - f64::from(input))
+                .collect()
+        })
+        .collect();
+    for first in 0..CHANNELS {
+        for second in (first + 1)..CHANNELS {
+            let rho = correlation(&errors[first], &errors[second]);
+            assert!(
+                rho.abs() < ERROR_CORRELATION_TOLERANCE,
+                "channel {first}/{second} correlation {rho} exceeds {ERROR_CORRELATION_TOLERANCE}"
+            );
+        }
+    }
+}
+
+#[test]
+fn full_output_is_deterministic_across_instances_and_reset() {
+    // Production uses fixed per-channel xorshift seeds reseeded by reset():
+    // there is no entropy source, so seeded reproducibility and production
+    // behavior coincide by design. This pins that contract on full output,
+    // not just the raw generator.
+    const CHANNELS: usize = 2;
+    const FRAMES: usize = 2048;
+    let input: Vec<f32> = (0..FRAMES * CHANNELS)
+        .map(|i| (i as f32 * 0.001_31).sin() * 0.3 + 0.000_2)
+        .collect();
+
+    let mut first = DitherPlugin::from_params(
+        CHANNELS,
+        DitherPluginParams {
+            bit_depth: 0, // 16-bit
+            noise_shaping: true,
+            dither_type: 0, // TPDF
+        },
+    );
+    first.initialize(48_000).unwrap();
+    let mut second = DitherPlugin::from_params(
+        CHANNELS,
+        DitherPluginParams {
+            bit_depth: 0,
+            noise_shaping: true,
+            dither_type: 0,
+        },
+    );
+    second.initialize(48_000).unwrap();
+
+    let mut output_first = input.clone();
+    first
+        .process_in_place(&mut output_first, &make_context(FRAMES))
+        .unwrap();
+    let mut output_second = input.clone();
+    second
+        .process_in_place(&mut output_second, &make_context(FRAMES))
+        .unwrap();
+    assert_eq!(output_first, output_second);
+
+    first.reset();
+    let mut output_restarted = input.clone();
+    first
+        .process_in_place(&mut output_restarted, &make_context(FRAMES))
+        .unwrap();
+    assert_eq!(output_restarted, output_first);
+}
+
+// ============================================================================
+// DITHER-A3: actual exported PCM identity
+// ============================================================================
+
+/// Independent signed-PCM export conversion: unity gain, round-half-away
+/// from zero, saturating rails. Shares no code with the plugin's float
+/// path; any hidden gain or requantization between DSP output and export
+/// breaks the exact grid-membership assertions below.
+fn export_signed_pcm(sample: f32, bits: i32) -> i32 {
+    let scale = 2.0_f64.powi(bits - 1);
+    let code = (f64::from(sample) * scale).round() as i64;
+    code.clamp(-(1_i64 << (bits - 1)), (1_i64 << (bits - 1)) - 1) as i32
+}
+
+#[test]
+fn exported_pcm_matches_plugin_output_bit_exactly() {
+    for (depth_index, bits) in BIT_DEPTHS_UNDER_TEST {
+        let scale = 2.0_f64.powi(bits - 1);
+        let min_code = -(1_i32 << (bits - 1));
+        let max_code = (1_i32 << (bits - 1)) - 1;
+        for dither_type in 0..3 {
+            for noise_shaping in [false, true] {
+                let mut plugin = DitherPlugin::from_params(
+                    1,
+                    DitherPluginParams {
+                        bit_depth: depth_index,
+                        noise_shaping,
+                        dither_type,
+                    },
+                );
+                plugin.initialize(48_000).unwrap();
+                let mut inputs: Vec<f32> =
+                    (0..1024).map(|i| -1.0 + 2.0 * (i as f32) / 1023.0).collect();
+                for sub_lsb in [0.1_f64, 0.25, 0.4, 0.6] {
+                    inputs.push((sub_lsb / scale) as f32);
+                    inputs.push((-sub_lsb / scale) as f32);
+                }
+                inputs.push(-1.0);
+                inputs.push(1.0);
+                let frames = inputs.len();
+                let mut buffer = inputs.clone();
+                plugin
+                    .process_in_place(&mut buffer, &make_context(frames))
+                    .unwrap();
+                for sample in &buffer {
+                    let code = export_signed_pcm(*sample, bits);
+                    assert!(
+                        (min_code..=max_code).contains(&code),
+                        "exported code {code} outside {bits}-bit range"
+                    );
+                    // Bit-exact grid membership: output * scale is the
+                    // exported integer, so no stage applied gain or
+                    // requantized after the plugin.
+                    assert_eq!(f64::from(*sample) * scale, f64::from(code));
+                }
+            }
+        }
+        // Deterministic modes map the signed endpoints to exact PCM rails.
+        for dither_type in [1_usize, 2] {
+            for (input, expected) in [(-1.0_f32, min_code), (1.0_f32, max_code)] {
+                let mut plugin = DitherPlugin::from_params(
+                    1,
+                    DitherPluginParams {
+                        bit_depth: depth_index,
+                        noise_shaping: false,
+                        dither_type,
+                    },
+                );
+                plugin.initialize(48_000).unwrap();
+                let mut buffer = vec![input];
+                plugin.process_in_place(&mut buffer, &make_context(1)).unwrap();
+                assert_eq!(export_signed_pcm(buffer[0], bits), expected);
+                assert_eq!(buffer[0], expected as f32 / 2.0_f32.powi(bits - 1));
+            }
+        }
+    }
+}
+
+// ============================================================================
+// DITHER-R1: bit-depth, mode, and preset routes
+// ============================================================================
+
+/// Exact-spec quantization oracle: f64 round/truncate of the presented f32
+/// sample with saturating signed rails. Ties round half away from zero,
+/// matching f64::round as the plugin uses it.
+fn reference_quantized_code(input: f32, bits: i32, truncate: bool) -> i32 {
+    let scale = 2.0_f64.powi(bits - 1);
+    let scaled = f64::from(input) * scale;
+    let code = if truncate {
+        scaled.trunc()
+    } else {
+        scaled.round()
+    } as i64;
+    code.clamp(-(1_i64 << (bits - 1)), (1_i64 << (bits - 1)) - 1) as i32
+}
+
+#[test]
+fn quantization_grid_covers_all_depths_and_rounding_modes() {
+    for (depth_index, bits) in BIT_DEPTHS_UNDER_TEST {
+        for truncate in [false, true] {
+            let mut plugin = DitherPlugin::from_params(
+                1,
+                DitherPluginParams {
+                    bit_depth: depth_index,
+                    noise_shaping: false,
+                    dither_type: if truncate { 2 } else { 1 },
+                },
+            );
+            plugin.initialize(48_000).unwrap();
+            // Full-scale sweep, half-LSB tie points, and exact endpoints.
+            let scale = 2.0_f64.powi(bits - 1);
+            let mut inputs: Vec<f32> =
+                (0..512).map(|i| -1.0 + 2.0 * (i as f32) / 511.0).collect();
+            for tie in -3..3 {
+                inputs.push(((f64::from(tie) + 0.5) / scale) as f32);
+            }
+            inputs.extend([-1.0_f32, 1.0_f32]);
+            let frames = inputs.len();
+            let mut buffer = inputs.clone();
+            plugin
+                .process_in_place(&mut buffer, &make_context(frames))
+                .unwrap();
+            for (input, output) in inputs.iter().zip(buffer.iter()) {
+                let expected = reference_quantized_code(*input, bits, truncate);
+                assert_eq!(
+                    export_signed_pcm(*output, bits),
+                    expected,
+                    "input {input} at {bits} bits, truncate={truncate}"
+                );
+                assert_eq!(*output, expected as f32 / 2.0_f32.powi(bits - 1));
+            }
+        }
+    }
+}
+
+#[test]
+fn preset_routes_accept_labels_defaults_and_reject_invalid_state() {
+    // Empty presets take PARAMS defaults: 16-bit, shaping on, TPDF.
+    let empty: DitherPluginParams = serde_json::from_value(serde_json::json!({})).unwrap();
+    assert_eq!(empty.bit_depth, 0);
+    assert!(empty.noise_shaping);
+    assert_eq!(empty.dither_type, 0);
+
+    // Label presets resolve through the choice deserializer.
+    let labeled: DitherPluginParams =
+        serde_json::from_value(serde_json::json!({"bit_depth": "20", "dither_type": "Truncate"}))
+            .unwrap();
+    assert_eq!(labeled.bit_depth, 1);
+    assert!(labeled.noise_shaping);
+    assert_eq!(labeled.dither_type, 2);
+
+    // Numeric and integral-float wire formats are accepted exactly.
+    let wired: DitherPluginParams = serde_json::from_value(serde_json::json!({
+        "bit_depth": 2,
+        "noise_shaping": false,
+        "dither_type": 1.0,
+    }))
+    .unwrap();
+    assert_eq!(wired.bit_depth, 2);
+    assert!(!wired.noise_shaping);
+    assert_eq!(wired.dither_type, 1);
+
+    // Out-of-range indices, unknown labels, and negative choices are
+    // rejected transactionally at parse time.
+    assert!(serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": 3}))
+        .is_err());
+    assert!(
+        serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": "32"}))
+            .is_err()
+    );
+    assert!(
+        serde_json::from_value::<DitherPluginParams>(serde_json::json!({"dither_type": -1}))
+            .is_err()
+    );
+    // Fractional floats are rejected even when in range (the wire format
+    // accepts integral floats only).
+    assert!(
+        serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": 1.5}))
+            .is_err()
+    );
+
+    // from_params clamps out-of-range indices instead of panicking.
+    let clamped = DitherPlugin::from_params(
+        1,
+        DitherPluginParams {
+            bit_depth: 99,
+            noise_shaping: true,
+            dither_type: 99,
+        },
+    );
+    assert_eq!(
+        clamped.get_parameter(&ParameterId::from("bit_depth")),
+        Some(ParameterValue::Int(2))
+    );
+    assert_eq!(
+        clamped.get_parameter(&ParameterId::from("dither_type")),
+        Some(ParameterValue::Int(2))
+    );
+
+    // Serializable Params index mapping clamps through the shared spec.
+    let mut params = Params::default();
+    params.set_param_value(0, 99.0);
+    assert_eq!(params.bit_depth, 2);
+    params.set_param_value(0, -5.0);
+    assert_eq!(params.bit_depth, 0);
+    params.set_param_value(2, 99.0);
+    assert_eq!(params.dither_type, 2);
+    params.set_param_value(1, 0.0);
+    assert!(!params.noise_shaping);
+    assert_eq!(params.param_value(0), Some(0.0));
+    assert_eq!(params.param_value(1), Some(0.0));
+    assert_eq!(params.param_value(2), Some(2.0));
+}
+
+#[test]
+fn schema_latency_and_values_roundtrip_through_plugin_trait() {
+    let plugin = DitherPlugin::new(2);
+    let schema = plugin.parameter_schema();
+    assert_eq!(schema.len(), 3);
+    assert_eq!(schema[0].id.to_string(), "bit_depth");
+    assert_eq!(schema[1].id.to_string(), "noise_shaping");
+    assert_eq!(schema[2].id.to_string(), "dither_type");
+    assert_eq!(schema[0].min_value, Some(ParameterValue::Int(0)));
+    assert_eq!(schema[0].max_value, Some(ParameterValue::Int(2)));
+    assert_eq!(schema[2].min_value, Some(ParameterValue::Int(0)));
+    assert_eq!(schema[2].max_value, Some(ParameterValue::Int(2)));
+
+    // Zero-sample latency matches the catalog's Zero latency model, and
+    // channels are never mixed.
+    let metadata = plugin.compile_metadata();
+    assert_eq!(metadata.latency_samples, 0);
+    assert!(!metadata.channel_mixing);
+    assert_eq!(plugin.channels(), 2);
+
+    // Out-of-range live values clamp at this layer (parse rejects instead).
+    let mut clamped = DitherPlugin::new(1);
+    clamped
+        .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(99))
+        .unwrap();
+    assert_eq!(
+        clamped.get_parameter(&ParameterId::from("bit_depth")),
+        Some(ParameterValue::Int(2))
+    );
+    clamped
+        .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(-3))
+        .unwrap();
+    assert_eq!(
+        clamped.get_parameter(&ParameterId::from("bit_depth")),
+        Some(ParameterValue::Int(0))
+    );
+
+    // current_values feeds apply_values on a fresh instance.
+    let mut source = DitherPlugin::new(2);
+    source
+        .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(2))
+        .unwrap();
+    source
+        .set_parameter(
+            ParameterId::from("noise_shaping"),
+            ParameterValue::Bool(false),
+        )
+        .unwrap();
+    source
+        .set_parameter(ParameterId::from("dither_type"), ParameterValue::Int(1))
+        .unwrap();
+    let mut target = DitherPlugin::new(2);
+    target.apply_values(source.current_values()).unwrap();
+    assert_eq!(
+        target.get_parameter(&ParameterId::from("bit_depth")),
+        Some(ParameterValue::Int(2))
+    );
+    assert_eq!(
+        target.get_parameter(&ParameterId::from("noise_shaping")),
+        Some(ParameterValue::Bool(false))
+    );
+    assert_eq!(
+        target.get_parameter(&ParameterId::from("dither_type")),
+        Some(ParameterValue::Int(1))
+    );
+}
+
+#[test]
+fn apply_values_is_transactional_on_batch_errors() {
+    // A batch mixing valid and invalid entries must apply nothing:
+    // configuration and populated DSP history stay exactly as accepted.
+    // (ParameterSet is a BTreeMap, so iteration order is by key; both
+    // batches below place a valid entry before the invalid one and
+    // therefore partially applied before the R1 fix.)
+    let mut plugin = DitherPlugin::new(2);
+    plugin.initialize(48_000).unwrap();
+    let mut prefix = vec![0.1_f32; 256 * 2];
+    plugin
+        .process_in_place(&mut prefix, &make_context(256))
+        .unwrap();
+
+    let accepted = [
+        plugin.get_parameter(&ParameterId::from("bit_depth")),
+        plugin.get_parameter(&ParameterId::from("noise_shaping")),
+        plugin.get_parameter(&ParameterId::from("dither_type")),
+    ];
+    let history = plugin.error_history.clone();
+    let rng = plugin.rng_state.clone();
+    let assert_untouched = |plugin: &DitherPlugin| {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("bit_depth")),
+            accepted[0]
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("noise_shaping")),
+            accepted[1]
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("dither_type")),
+            accepted[2]
+        );
+        assert_eq!(plugin.error_history, history);
+        assert_eq!(plugin.rng_state, rng);
+    };
+
+    // Valid entry plus unknown ID.
+    let mut batch = ParameterSet::new();
+    batch.insert(ParameterId::from("bit_depth"), ParameterValue::Int(2));
+    batch.insert(ParameterId::from("unknown"), ParameterValue::Int(1));
+    assert!(plugin.apply_values(batch).is_err());
+    assert_untouched(&plugin);
+
+    // Valid entry plus wrong-typed sibling.
+    let mut batch = ParameterSet::new();
+    batch.insert(ParameterId::from("dither_type"), ParameterValue::Int(2));
+    batch.insert(ParameterId::from("noise_shaping"), ParameterValue::Int(1));
+    assert!(plugin.apply_values(batch).is_err());
+    assert_untouched(&plugin);
+
+    // A fully valid batch still applies, preserving clamp semantics.
+    let mut batch = ParameterSet::new();
+    batch.insert(ParameterId::from("bit_depth"), ParameterValue::Int(99));
+    batch.insert(
+        ParameterId::from("noise_shaping"),
+        ParameterValue::Bool(false),
+    );
+    batch.insert(ParameterId::from("dither_type"), ParameterValue::Int(1));
+    plugin.apply_values(batch).unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("bit_depth")),
+        Some(ParameterValue::Int(2))
+    );
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("noise_shaping")),
+        Some(ParameterValue::Bool(false))
+    );
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("dither_type")),
+        Some(ParameterValue::Int(1))
+    );
+}
+
+#[test]
+fn per_channel_rng_seeds_are_nonzero_and_stable() {
+    // The zero-seed guard must be a no-op at every supported layout:
+    // recompute the raw wrapping derivation inline and require nonzero
+    // plus exact equality with production seeds. This also pins the
+    // seeds, so an accidental reseed (an audible output change) fails.
+    for channels in [1, 2, 4, 6, 8, 12] {
+        let states = DitherPlugin::init_rng_states(channels);
+        assert_eq!(states.len(), channels);
+        for (channel, state) in states.iter().enumerate() {
+            let raw = 0xDEAD_BEEF_CAFE_0001_u64
+                .wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+            assert_ne!(raw, 0, "raw seed wrapped to zero at channel {channel}");
+            assert_eq!(*state, raw, "production seed changed at channel {channel}");
+        }
+    }
+}
+
+#[test]
+fn non_default_config_save_reload_reproduces_output_bit_exactly() {
+    // The chain test pins save/reload at defaults; cover a non-default
+    // route (20-bit, shaping off, truncate) end to end. Truncate without
+    // shaping is fully deterministic, so reload must reproduce output
+    // bit-exactly.
+    const CHANNELS: usize = 2;
+    const FRAMES: usize = 1024;
+    let stored = DitherPluginParams {
+        bit_depth: 1, // 20-bit
+        noise_shaping: false,
+        dither_type: 2, // Truncate
+    };
+    let input: Vec<f32> = (0..FRAMES * CHANNELS)
+        .map(|i| (i as f32 * 0.013).sin() * 0.6)
+        .collect();
+    let mut plugin = DitherPlugin::from_params(CHANNELS, stored.clone());
+    plugin.initialize(48_000).unwrap();
+    let mut buffer = input.clone();
+    plugin
+        .process_in_place(&mut buffer, &make_context(FRAMES))
+        .unwrap();
+
+    let json = serde_json::to_value(&stored).unwrap();
+    let reloaded: DitherPluginParams = serde_json::from_value(json).unwrap();
+    assert_eq!(reloaded.bit_depth, 1);
+    assert!(!reloaded.noise_shaping);
+    assert_eq!(reloaded.dither_type, 2);
+    let mut restored = DitherPlugin::from_params(CHANNELS, reloaded);
+    restored.initialize(48_000).unwrap();
+    let mut actual = input.clone();
+    restored
+        .process_in_place(&mut actual, &make_context(FRAMES))
+        .unwrap();
+    assert_eq!(actual, buffer);
+}
+
+#[test]
+fn gain_dither_export_chain_survives_save_reload_and_rejection() {
+    const CHANNELS: usize = 2;
+    const FRAMES: usize = 4800;
+    // Stand-in for upstream processing: the full Gain-plugin chain runs in
+    // the integrator's shared gate, which this worker must not modify.
+    const UPSTREAM_GAIN: f32 = 0.5;
+    // Nonzero programme: 440 Hz sine at -6 dBFS peak, offset per channel.
+    let input: Vec<f32> = (0..FRAMES * CHANNELS)
+        .map(|i| {
+            let frame = (i / CHANNELS) as f32;
+            let channel = (i % CHANNELS) as f32;
+            0.5 * (2.0 * std::f32::consts::PI * 440.0 * frame / 48_000.0 + channel * 1.3).sin()
+        })
+        .collect();
+    let gained: Vec<f32> = input.iter().map(|sample| sample * UPSTREAM_GAIN).collect();
+
+    let stored = DitherPluginParams {
+        bit_depth: 0, // 16-bit
+        noise_shaping: true,
+        dither_type: 0, // TPDF
+    };
+    let mut plugin = DitherPlugin::from_params(CHANNELS, stored.clone());
+    plugin.initialize(48_000).unwrap();
+    let mut buffer = gained.clone();
+    plugin
+        .process_in_place(&mut buffer, &make_context(FRAMES))
+        .unwrap();
+
+    // Final stored samples: every output exports to a saturated 16-bit
+    // code with bit-exact grid membership, and nonzero audio produces a
+    // spread of codes rather than a stuck rail.
+    let mut codes: Vec<i32> = buffer.iter().map(|sample| export_signed_pcm(*sample, 16)).collect();
+    for (sample, code) in buffer.iter().zip(codes.iter()) {
+        assert!((-32_768..=32_767).contains(code));
+        assert_eq!(f64::from(*sample) * 32768.0, f64::from(*code));
+    }
+    codes.sort_unstable();
+    codes.dedup();
+    assert!(
+        codes.len() > 8,
+        "expected a spread of exported codes, got {}",
+        codes.len()
+    );
+
+    // Save/reload roundtrips both state types and reproduces output.
+    let json = serde_json::to_value(&stored).unwrap();
+    let reloaded: DitherPluginParams = serde_json::from_value(json).unwrap();
+    assert_eq!(reloaded.bit_depth, stored.bit_depth);
+    assert_eq!(reloaded.noise_shaping, stored.noise_shaping);
+    assert_eq!(reloaded.dither_type, stored.dither_type);
+    let params_json = serde_json::to_value(Params::default()).unwrap();
+    let params_reloaded: Params = serde_json::from_value(params_json).unwrap();
+    assert_eq!(params_reloaded.bit_depth, Params::default().bit_depth);
+    assert_eq!(params_reloaded.noise_shaping, Params::default().noise_shaping);
+    assert_eq!(params_reloaded.dither_type, Params::default().dither_type);
+    let mut restored = DitherPlugin::from_params(CHANNELS, reloaded);
+    restored.initialize(48_000).unwrap();
+    let mut restored_buffer = gained.clone();
+    restored
+        .process_in_place(&mut restored_buffer, &make_context(FRAMES))
+        .unwrap();
+    assert_eq!(restored_buffer, buffer);
+
+    // Rejected changes retain the accepted configuration and history: a
+    // twin that never sees the rejection must stay bit-identical.
+    let mut candidate = DitherPlugin::from_params(
+        CHANNELS,
+        DitherPluginParams {
+            bit_depth: 0,
+            noise_shaping: true,
+            dither_type: 0,
+        },
+    );
+    candidate.initialize(48_000).unwrap();
+    let mut twin = DitherPlugin::from_params(
+        CHANNELS,
+        DitherPluginParams {
+            bit_depth: 0,
+            noise_shaping: true,
+            dither_type: 0,
+        },
+    );
+    twin.initialize(48_000).unwrap();
+    let prefix_frames = 1024;
+    let mut prefix = gained[..prefix_frames * CHANNELS].to_vec();
+    candidate
+        .process_in_place(&mut prefix, &make_context(prefix_frames))
+        .unwrap();
+    let mut twin_prefix = gained[..prefix_frames * CHANNELS].to_vec();
+    twin.process_in_place(&mut twin_prefix, &make_context(prefix_frames)).unwrap();
+    assert!(
+        candidate
+            .set_parameter(ParameterId::from("unknown"), ParameterValue::Float(0.0))
+            .is_err()
+    );
+    assert!(
+        candidate
+            .set_parameter(ParameterId::from("noise_shaping"), ParameterValue::Int(1))
+            .is_err()
+    );
+    for id in ["bit_depth", "noise_shaping", "dither_type"] {
+        assert_eq!(
+            candidate.get_parameter(&ParameterId::from(id)),
+            twin.get_parameter(&ParameterId::from(id)),
+            "rejection changed {id}"
+        );
+    }
+    let mut suffix = gained[prefix_frames * CHANNELS..].to_vec();
+    let suffix_frames = FRAMES - prefix_frames;
+    candidate
+        .process_in_place(&mut suffix, &make_context(suffix_frames))
+        .unwrap();
+    let mut twin_suffix = gained[prefix_frames * CHANNELS..].to_vec();
+    twin.process_in_place(&mut twin_suffix, &make_context(suffix_frames)).unwrap();
+    assert_eq!(suffix, twin_suffix);
 }

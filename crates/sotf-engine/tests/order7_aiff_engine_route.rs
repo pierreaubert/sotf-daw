@@ -82,6 +82,7 @@ fn sixty_four_channel_aiff_reaches_order_seven_engine_plugin() {
         max_re_weighting: false,
         dual_band: false,
         algorithm: "allrad".to_string(),
+        custom_layout: None,
     }
     .to_plugin_config(TEST_SAMPLE_RATE as f64);
     let config = EngineConfig {

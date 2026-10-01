@@ -13,7 +13,13 @@ const RATE: u32 = 48000;
 const LATENCY: usize = 960;
 
 fn plugin(channels: usize, enabled: bool) -> SpeechDenoiserPlugin {
-    let mut p = SpeechDenoiserPlugin::from_params(channels, SpeechDenoiserPluginParams { enabled });
+    let mut p = SpeechDenoiserPlugin::from_params(
+        channels,
+        SpeechDenoiserPluginParams {
+            enabled,
+            ..SpeechDenoiserPluginParams::default()
+        },
+    );
     p.initialize(RATE).unwrap();
     p
 }

@@ -1,9 +1,1315 @@
 # Audit implementation and validation handoff
 
-Updated 2026-09-30. This plan preserves the user's full objective: audit every
+Updated 2026-10-01. This plan preserves the user's full objective: audit every
 in-scope crate against current professional features, implement missing parts,
 check the complete audio chain, and establish plugin accuracy with independent
 measurements. **MIDI and IAMF are excluded.**
+
+## Current continuation after minor version update, 2026-10-01
+
+Manual parallel execution now starts at the [per-plugin requirements index](requirements/README.md): 51 assignments, common acceptance criteria, shared ownership and an explicit unfinished-edit checkpoint. Implementation workers stopped for this handoff; the current native EQ source still needs compilation and the GPUI receipt patch is incomplete. See [CHECKPOINT.md](requirements/CHECKPOINT.md). This handoff supersedes active-worker descriptions below.
+
+### Current ownership and acceptance
+
+| Work | Current owner | Verified checkpoint | Next required result |
+| --- | --- | --- | --- |
+| AUD135 isolated finite-tail and worker recovery | Bounded checkpoint accepted by Astra medium | Race correction and earlier stateful tail/preflight/reset evidence accepted in AUD135 review | Broader native/application/platform coverage remains open; combined workspace gate pending |
+| AUD142 Crossover UI and routing | Bounded mounted checkpoint accepted by Astra medium | Final r13 serial gate passes 4/4; recovery/positive per-channel route/persistence findings closed. Packet and 39 source/lock bindings verified. Unrelated scoped/dependency lint failures retained | Live-manager audio and native Both completion remain separate; no clean-lint claim |
+| AUD134 native Convolution resources | Bounded resource/restore checkpoints accepted by Astra medium | Linux CLAP GUI r9, exported VST3 editor r5, loaded Convolution resource/reset r5 and transactional empty-state r6 accepted; independent convolution waveform coverage recorded | Host-loaded editor integration, changed-geometry/platform routes and clean native teardown remain open |
+| AUD143 inactive VST3 bus arrays | Bounded checkpoint accepted by Astra medium | Prepared inactive arrays, six loaded descriptor cases under allocation/deallocation guard, loaded waveform/canary 5/5 and strict host lint accepted | Fresh combined native/workspace verification remains separate |
+| AUD142 native Crossover outputs | Bounded persisted-chain checkpoint accepted by Astra medium | 132 native vectors across 11 layouts, loaded refusal recovery, and actual persisted PluginChain planner-to-engine validation accepted for CLAP/VST3; complete captures peak 1.44e-8 and program RMS 3.48e-9 | Realtime deadlines, wider live-manager routes and full application coverage remain open |
+| AUD145 per-band EQ placement | Core, consumer and real manager checkpoints accepted by Astra; Luna finishing regression fixes | Independent base, multirate, advanced and mixed vectors accepted within recorded scopes; factory/host 42 vectors and actual manager refusal/commit/continuing-audio regression accepted | Complete preset/mounted-UI, native/FFI, automation/heap, EOS and wider topology/rate coverage |
+| Whole-workspace audit | Root coordinates | Earlier accepted scopes remain documented below | Finish remaining feature/route/accuracy matrix and run a coherent combined verification gate; full parity is unproven |
+
+MIDI/IAMF remain excluded. Root coordinates and reviews; Luna xhigh implements,
+Astra medium validates, and Luna fixes findings until the affected requirements
+pass. Preserve local user edits and external dependency resolutions. The minor
+version/changelog task is complete in baseline `aa0a3d1`; sibling SOTF's local
+DAW lock identities were synchronized without changing external package records.
+The 2026-10-01 follow-up bumps newly changed EQ from 0.5.73 to 0.6.0,
+updates EQ/NIH changelogs and synchronizes both local EQ lock identities;
+offline locked metadata and whitespace checks pass. Other existing minor bumps
+are retained, and MIDI/IAMF remain unchanged.
+
+### Latest lifecycle and effective-rate work, 2026-10-01
+
+EQ oversampling adapter fix is implemented and verified through the actual C API.
+Dedicated Luna completed both focused tests (1/1 each), strict bridge/FFI
+all-target Clippy and formatting checks. Root verified immutable release library
+SHA-256 `51e438f3c26cb20af86d4fb15c17efe31ad880937c73fae8e57ededcb853e6fc`:
+Off/2x/4x select factors 1/2/4; first 105 metadata entries remain unchanged at
+2/5/32 channels; legacy 1x and raw-factor restored output match frozen vectors
+byte-for-byte, with zero measured restoration error. Limiter index controls
+remain unchanged. Evidence is in `artifacts/aud145-eq-oversampling-fix-r1/` and
+`artifacts/aud145-ffi-oversampling-regression-r1/actual/`. This is adapter and
+compatibility verification, not a new independent multirate accuracy claim.
+Astra medium accepted the adapter/C ABI correction after source review and
+independent binary, audio and selected-source hash checks; see the final
+oversampling correction section in `reviews/AUD145-astra.md`. The source hold
+is released. This does not close native placement or player transaction work.
+Bridge/FFI changelogs updated within existing minor versions.
+
+Current forward ownership: `luna_bandsplit` implements native EQ placement,
+pair commit/lifecycle/layout and subsequent FFI exposure. Its parameter helper
+schema correction is Astra-accepted; actual wrapper integration is still open.
+`luna_eq_response` owns reusable complex response matrices in sibling
+`sotf-player` and the three receipt rollback findings formerly assigned to
+`luna_crossover_design`. The response domain fixes pass the r3 focused gate
+(10/10, all three independent fixture suites included) after correction of the
+widened-f32 Q minimum boundary fixture. Raw r2/r3 logs and selected post-run
+hashes are saved in `artifacts/aud145-player-response-r3/`; Astra medium accepted
+all three domain corrections in `reviews/AUD145-astra.md`. Luna has resumed
+receipt implementation. Receipt band identity, unrelated
+rack structure and retry transaction ownership remain open. The response contract
+must retain channel/pair/band order, advanced-realization phase and effective
+sample-rate semantics. The accepted ordinary-Peak chart fixture is a bounded
+oracle, not evidence that the production chart is complete.
+
+The next oversampled-response implementation contract is recorded in
+`handoffs/aud145-oversampled-response-implementation.md`. Existing independent
+research and 72 actual C ABI complex matrices provide bounded evidence for
+implementation; more reference-only variants are not the current priority.
+Converter-inclusive player implementation, advanced multirate coverage and
+chart consumer integration remain required.
+
+Root added `artifacts/aud145-chart-advanced-reference-r1/`: 48 base-rate
+Warped/Kautz/ordinary mixed-route cases with 336 complex matrices. A separate
+expanded-polynomial impulse recurrence and time-domain routing reproduce all
+matrix columns with maximum error `6.68e-14`; phase, dry-path, lambda-sign and
+section-order negative controls all differ by more than 1. This extends the
+available independent fixtures; production comparison and Astra review remain
+pending, and global SVF/oversampling are outside this packet's scope.
+
+Root also checked the immutable adapter-fix C ABI library with nine combinations
+of 2/5/32 channels and 1x/2x/4x: one 4096-frame call versus 20 irregular calls.
+All output vectors are byte identical; every input remains unchanged and
+NaN-initialized outputs become finite with leading/trailing guards intact.
+`artifacts/aud145-ffi-partitions-r1/` records the executable verifier, receipt
+and exact binary hash. This is bounded partition/buffer evidence, not a heap,
+EOS, full memory-safety or independent accuracy claim; Astra review is pending.
+
+The same immutable C ABI library also passes 63 independent base-rate
+constructor-to-process placement waveform comparisons in
+`artifacts/aud145-ffi-placement-accuracy-r1/`: 42 existing 2/5-channel vectors
+plus 21 new 32-channel cases using endpoint 31 and reversed pair orientation.
+Peak/RMS errors are at most `4.67e-8` / `9.63e-9`, and unpaired channels remain
+exact. This proves the tested JSON construction/processing path, not the still
+unfinished FFI parameter exposure or native/UI route. Astra review is pending.
+
+New actual FFI persistence gap: `artifacts/aud145-ffi-pair-state-probe-r1/`
+shows both raw state and exported preset envelopes omit stereo pairs. Preset
+import succeeds into a fresh differently paired 32-channel instance but retains
+target routing (peak error `0.1427463`, RMS `0.0163906`); matching-pair controls
+are byte exact. Raw partial loading explicitly retains omitted constructor
+config and must preserve that legacy contract. The pending FFI feature must
+add self-contained committed pair persistence for new presets, with detached
+transactional validation and no native-only channel cap. This is a reproduced
+gap, not a passed acceptance gate; owner `luna_bandsplit` has the evidence.
+
+`artifacts/aud145-ffi-advanced-state-probe-r1/` confirms that exported presets
+also omit Kautz section construction data: successful import into a differently
+configured target produces peak/RMS errors `0.78634` / `0.32666`; matching
+constructor controls are byte exact. The new preset representation must retain
+advanced structural EQ data along with pair routes. Warped Peak lambda and
+realization probes have equivalent tested audio and are explicitly inconclusive
+for structural persistence; they are not classified as failures.
+
+The GPUI receipt regression's second attempt compiled but selected zero tests:
+`app`/`ui` are excluded from lib-test builds. The UI owner is moving it to an
+integration/dev-api harness; this result is not counted as a passed regression.
+
+The relocated E2E regression now runs and passes: owner session 94752 is
+terminal exit 0, 1 passed / 258 filtered; root inspected
+`/tmp/aud145-eq-receipt-rollback-r6.log`. It mounts the player view and invokes
+the real acknowledgement poller with a synthetic rejection, restoring the
+pre-edit graph and selected band. It is not a real audio-backend rejection
+measurement. The owner is tightening the queued-update assertion from presence
+to Structural and implementing the overlapping-receipt sequences below. The
+build/source hold is released; native EQ helper implementation can continue.
+
+Latest receipt checkpoint r7 passes **3/3 mounted E2E tests**, 258 filtered,
+owner session 59649 terminal exit 0. Root preserved the inspected log and
+owner-reported invocation in `artifacts/aud145-eq-receipt-rollback-r7/`.
+This adds stale A-success/B-failure restoration with scalar resubmission and
+A-failure/B-failure restoration; the queue assertion now requires Structural.
+Luna yielded its slot and new Astra medium `astra_eq_receipt_review` is
+reviewing this concrete slice. These remain synthetic receipts through the
+actual poller, not a live audio-manager rejection measurement.
+
+Astra's subsequent source review **does not accept the receipt slice**. Three
+blocking cases remain: band insertion/removal corrupts positional scalar merges;
+unrelated plugin additions/removals are lost or resurrected; and merged retries
+clear rollback ownership before acceptance, leaving a rejected retry without
+recovery. The recorded 3/3 gate omits these cases. See the newest receipt section
+in `reviews/AUD145-astra.md` for required regressions. Reopening the prior Luna
+or spawning a replacement currently hits the agent thread limit; ongoing native
+and response workers can continue, and root will reuse a worker after its focused
+checkpoint if necessary. This is not a user-input blocker or acceptance.
+
+Native helper checkpoint now passes **4/4** direct tests (owner session 15301)
+after the fixture was corrected to include dynamic native band metadata.
+The Crossover-feature NIH no-run compile also passed (21705). Packet
+`artifacts/aud145-native-eq-params-r1/` preserves earlier failures, distinguishes
+raw logs from owner-transcribed output, and records selected post-run hashes.
+The helper covers restart flags, draft/committed Apply, saved route and schema
+failure ordering; wrapper/layout/FFI integration is still absent. Native Luna
+yielded its slot. Astra medium `astra_eq_helpers_response_review` is now active
+on this helper and the reusable response module; the thread limit no longer
+prevents this review. The response Luna continues the three receipt corrections.
+
+Astra's helper/response review found four blockers, now returned to Luna:
+native schema validation must reject Float where Int is required; active
+ordinary SVF order >2 must be refused (both core setters reject it); explicit
+Kautz positive finite Q/finite weight domains must remain supported; ordinary
+Biquad admission must enforce core bounds. The advanced matrix reference packet
+was accepted within its stated base-rate scope. Native Luna resumed for the
+exact-type fix; response Luna fixes its three domain issues before continuing
+receipt corrections. Prior passing helper/fixture gates do not close these gaps.
+
+Root's new `artifacts/aud145-multirate-response-research-r1/` investigates a
+converter-inclusive alias-sum approximation for the remaining oversampled chart
+mode. A limited 48 kHz scalar pilot differs from independent FFT-transport
+impulse DTFT by at most `4.69e-10`, with observed block-phase residual below
+`2.97e-10`. This is research only, not exact-LTI or production acceptance;
+the packet states broader verification and matrix/per-band semantics still
+needed before implementation can be accepted.
+
+The multirate research packet now also includes 72 five-channel matrices at
+44.1/48/96 kHz with reversed pairs and noncommuting Left/Mid order. Every matrix
+element matches an independent impulse-basis DTFT within `7.96e-10` against a
+predeclared `1e-8` research threshold. Unpaired channels correctly retain the
+converter/queue response rather than unity. Root then compared these same 72
+matrices with cold impulse outputs from the actual immutable C ABI library:
+all pass, maximum complex error `3.30e-6`, against the predeclared scaled
+`3e-5` bound. `artifacts/aud145-multirate-response-production-r1/` records the
+script, full measured matrices and exact binary hash. This closes that limited
+production-model comparison only; advanced modes, chart implementation, broader
+phase/rate behavior and Astra review remain pending.
+
+Astra accepted the native helper exact-type/range correction after source and
+regression review. The native owner has resumed wrapper/state/layout integration;
+the response-domain and receipt blockers remain assigned to the other Luna.
+
+Luna `luna_eq_response` has now written the reusable sibling response module
+after the scoped sibling-write escalation succeeded. It implements base-rate
+Biquad/Warped/Kautz and global SVF matrices and explicitly rejects unsupported
+oversampled Biquad contexts. Focused fixture tests are starting; no production
+response-math acceptance is claimed yet, and full multirate chart support stays
+open.
+
+Response math reached an owner-reported **7/7** focused gate, including all
+three external ordinary/advanced/SVF fixtures via `--include-ignored`. Those
+three tests now use explicit ignore annotations and require fixture paths;
+missing environment variables cannot silently pass. Source registration and
+strict 1/2/4 factor validation are implemented. Owner session 1511 ended 0;
+stdout was not persisted. `artifacts/aud145-player-response-r1/` records the
+owner-reported command/environment and selected post-run source/fixture hashes,
+not an independently inspected log or a full build seal. Astra review and UI
+consumption remain pending. The same Luna now owns the three receipt fixes,
+avoiding the temporary thread-limit failure when reopening the prior owner.
+
+Root review found a further receipt correctness gap: A succeeds while newer B
+is pending, then B fails; the current retained snapshot restores pre-A despite
+the backend having accepted A. See
+`handoffs/aud145-eq-receipt-stale-success.md`. Luna must advance the committed
+rollback base on successful older receipts without discarding newer desired
+edits, and cover actual-poller multi-receipt sequences before Astra acceptance.
+
+
+Player controller module now passes 31/31 tests (owner session 63581), including
+original-band indexing, placement/pair edits and the dormant global-mode
+transition correction. Sibling constructors/test fixtures required `stereo_pairs`
+integration; a manually seeded graph-width fixture does not prove propagation.
+Rack backend rejection/rollback, mounted controls and matrix response remain
+open. Native preedit schema capture passes 1/1: 125 unique IDs, 20 placement
+IDs defaulting to zero, 43 total hidden controls. Exact observed enumeration
+order is preserved in the artifact but is not asserted stable. The dedicated
+Luna bridge owner has confirmed the `Parametric EQ` identity and is implementing
+the scoped choice/factor conversion.
+
+
+Ownership split for forward progress: fresh Luna xhigh `luna_eq_bridge` owns the
+narrow shared-bridge oversampling conversion and bridge/FFI tests;
+`luna_bandsplit` confirmed no edits to those files and retains native EQ schema,
+pair/lifecycle/layout and later FFI placement work; `luna_crossover_design`
+continues player/GPUI. Root captured successful old C API raw-factor state loads
+at 1/2/4 in `ffi-preedit-r1` (full path `artifacts/aud145-ffi-preedit-r1/`), with
+frozen nonzero outputs. The new selector fix must preserve those state outputs.
+Astra resumes validation when a concrete change is ready; no additional model
+or version changes are required.
+
+
+First player/GPUI implementation is in review. Focused player gate 11036 failed
+before tests because existing sibling EQ literals/patterns omit `stereo_pairs`;
+Luna is integrating defaults at genuine legacy constructors and preserving pair
+intent during channel-width adaptation. Astra also found two required fixes:
+validate dormant global routing before disabling per-channel mode, and preserve
+pre-edit committed UI settings when a linear-rack backend update is rejected.
+Use existing update receipts/revisions; no broad manager protocol rewrite.
+
+Root prepared an actual post-fix C ABI oversampling verifier in
+`artifacts/aud145-ffi-oversampling-regression-r1/verify.py`; its saved expected-red
+run fails on the immutable old library's wrong default Off readback. It checks
+105 metadata entries, 1/2/4 saved factors and normalized roundtrip, non-bypass
+output, unchanged legacy 1x audio at 2/5/32 channels and distinct multirate
+outputs. Luna is implementing the EQ-specific shared-bridge conversion; raw
+factor state and native NIH's existing conversion must remain unchanged.
+
+
+New actual C API finding from the immutable FFI baseline: oversampling choice
+indices are passed directly to the DSP, which expects factors 1/2/4. Normalized
+Off=0 returns -2; 2x=0.5 leaves factor 1; 4x=1 selects factor 2. Reproduction:
+`artifacts/aud145-ffi-preedit-r1/probe_oversampling.py` and its saved JSON output.
+The static specs advertise Off/2x/4x at indices 0/1/2. Luna BandSplit owns the
+adapter conversion in both directions and raw-index entry points, with actual
+C API regression evidence. Existing 105 IDs/metadata stay stable; correcting
+reported default/selection semantics is an intentional fix, not a compatibility
+claim that the faulty normalized values must remain unchanged. Astra is checking
+the shared-bridge boundary before implementation.
+
+
+Root captured actual pre-native-extension FFI compatibility evidence in
+`artifacts/aud145-ffi-preedit-r1/`: 105 C API parameter addresses match at
+2/5/32 channels, with nonzero, non-bypassed 4,096-frame outputs and saved state.
+The immutable cdylib is under target/audit-artifacts; SHA-256 starts 60955d58.
+Seven selected source files match the accepted preedit/workspace snapshot.
+State contains 125 raw keys, including 20 placement=0 values; config omits
+placement/pairs. This is current implicit-route compatibility, not a historical
+missing-placement-ID state. A wrong-key dry fixture is retained separately as
+rejected evidence. Core/FFI source hold is released for Luna implementation.
+
+
+Astra closed the bounded regression cleanup, including both strict lints,
+9-passed/3-ignored helper results and all 14 final source snapshot entries.
+The expanded snapshot is post-run provenance, not an identical pre/post claim.
+Root archived seven native-EQ/FFI/core source files in
+`artifacts/aud145-native-eq-preedit-r1/`, each byte-matching the accepted r3
+workspace snapshot. This is a compatibility source baseline; actual native
+metadata and old runtime-state captures remain separate required evidence.
+
+
+Final decoder cleanup verification is green: three affected EQ targets passed
+9 tests, with 3 ignored (`eq-helper-tests-r1.log`, owner session 24904;
+root verified all three target summaries). Both
+strict lints remain green and the shared EQ source hold is released. Native EQ
+implementation is underway; player/GPUI follows the accepted handoff. The new
+response helper must retain current Warped phase/lambda and Kautz `1 + H`
+semantics rather than recovering phase from scalar dB values; global realization
+and effective-rate context must be represented or any limitation explicit.
+
+
+Strict engine and EQ Clippy now both pass in the r4 regression packet
+(`engine-clippy-r2.log`, `eq-clippy-r2.log`). The final changes are test-helper
+chunking/size idioms and unchanged-value digit grouping. Luna is checking the
+three affected decoding/route test targets, then continuing the player/GPUI
+lane; the native/FFI lane coordinates its shared EQ input window separately.
+
+
+Follow-up lint: strict engine Clippy passed after correcting digit grouping in a
+test literal (same numeric value). EQ strict lint reported two test-helper
+`chunks_exact_to_as_chunks` warnings; Luna owns the shape-preserving decoder
+cleanup and narrow rerun. This does not invalidate the earlier unchanged-source
+workspace result, and no new production failure was observed.
+
+Root prepared `artifacts/aud145-chart-matrix-reference-r1/` for the next GPUI
+response-math work: 60 cases / 420 complex matrices at three rates, including
+cross terms, noncommuting order, reversed pairs, unpaired channels and identity.
+Analytic matrices agree with separate 4,096-sample time-domain basis impulses
+within 2.154e-14; controls reject scalar dB summing, dropped cross terms, transpose,
+reversed band order and reversed pair direction. Scope is base-rate ordinary
+Peak filters only; this is reference validation, not production UI acceptance.
+Astra accepted the final matrix reference and hardening additions, independently
+reproducing all 420 impulse comparisons. The tail observation is specific to
+these cases, not a universal truncation bound.
+
+
+**Combined workspace r3 passed:** 6,369/6,369 tests, 75 skipped, 396 binaries,
+327.035 s test runtime. FFI and both native backends were included; MIDI/IAMF
+excluded. Root session 11519 ended exit 0 at 04:24:59 UTC. All 4,060 selected
+source hashes match before/after. Receipt, source manifests and log are in
+`artifacts/workspace-integration-20261001-r3/`; log SHA-256
+`70285d4fd006e243ca9538c1175aa6deb3fa1d2a8d560d11399aa9f8c53a571b`.
+Skipped loaded-bundle/platform tests are not claimed by this gate. General
+source freeze is lifted; queued engine/EQ strict lint retains its own input hold.
+Next parallel work: Luna BandSplit implements reviewed native EQ placement,
+atomic pair configuration, truthful multichannel layouts and FFI integration;
+Luna Crossover implements player/GPUI placement controls and routing-aware
+response from the existing AUD145 handoffs. Astra medium validates both lanes.
+The full feature-parity and accuracy audit remains incomplete.
+
+
+Current combined gate: workspace r3 is running under root session 11519, including
+FFI and both native backends and excluding only MIDI/IAMF. Exact invocation and
+start manifest are in `artifacts/workspace-integration-20261001-r3/`. Sources are
+held stable through terminal status. Before this run, final Crossover accessor
+tests passed 11/11 (one ignored) and toolbar integration passed 1/1 in the r4
+packet. Astra accepted this bounded correction and verified all ten current
+source-start hashes; final end seal and lint remain pending. Strict engine/EQ lint is queued separately under the shared Cargo lock.
+No passing whole-workspace claim is made until the run finishes.
+
+
+Root completed EQ regression r3 (`artifacts/aud145-eq-regression-r3/`):
+three tests covering all four frozen legacy cases pass, with the two intentionally
+corrected Warped cases checked against independent references and both unaffected
+cases byte-exact. The unaffected right channel is also byte-exact. Corrected
+legacy maximum peak errors are 1.25e-8 and 1.82e-8. A fresh explicit-placement
+multirate capture passes all 84 independent vector comparisons (maximum peak
+1.093e-6, RMS 3.029e-7), exercising the changed ordered planar loop. All 114
+selected EQ/math source and workspace-manifest hashes match before/after;
+this is not a complete dependency closure. Astra independently recomputed the
+comparisons, verified the current hashes and log receipts, and accepted this
+bounded EQ regression checkpoint. The remaining Crossover accessor review is
+separate.
+
+
+Current regression checkpoint: Astra accepted the final NIH test cleanup and
+verified all five current source hashes against identical final manifests
+(`053aca2d…93a0d`). Saved Crossover callback results pass **3/3**, and strict
+Crossover-feature all-target `--no-deps` Clippy passes. The prior dependency lint
+failure remains historical evidence; EQ iterator corrections need their own
+ordered multirate verification. The inactive-buffer comment is corrected.
+Luna Crossover is finishing transactional band-count cutoff materialization,
+actual toolbar coverage and the three legacy replay tests covering four cases.
+Astra confirmed that Bands construction casts stored f64 cutoffs to f32
+(`crossover_plugin.rs` multiway constructor); expansion must reject adjacent
+cutoffs that collapse at this consumer boundary before mutating settings.
+The near-20-kHz refusal regression is part of the pending accessor fix.
+For legacy implicit PerChannel presets, band-count edits now retain dormant
+cutoffs and partial-mode fallback unchanged; selecting Bands materializes the
+stored count transactionally. Astra accepted this source approach; actual
+factory before/after and refusal tests remain pending.
+Root's independent corrected legacy references are accepted; fresh current
+captures remain required. Root prepared workspace r3 including FFI, but has not
+started it while these fixes are being verified. Luna BandSplit is preparing the
+native EQ placement handoff without production edits during this interval.
+
+
+The combined workspace regression finished: **6,268 passed, 10 failed, 69
+skipped across 395 binaries** (6,278 tests run; 287.756 s test time), with both
+native backends enabled and four test threads. All 4,060 selected source hashes
+match before/after. Exact command, logs and manifests are in
+`artifacts/workspace-integration-20261001-r2/`; exit status 100. The first attempt
+stopped before tests because FFI nested metadata needed uncached `clipboard-win
+5.4.1` offline. The retry used the documented FFI exclusion plus MIDI/IAMF.
+
+Five failures are missing native BandSplit bundle environment variables in tests
+that should be explicitly opt-in. Two Ambisonics failures share a broken literal
+alternative macro matcher; the BandSplit VST3 compatibility case rejects its
+reserved silent bus during validation. Luna BandSplit owns these fixes, including
+actual loaded opt-in execution. Luna Crossover owns Crossover toolbar choice
+canonicalization and the legacy EQ replay reconciliation. The EQ fixture must
+preserve original historical bytes and two unaffected exact cases; root is
+constructing independent corrected references for its two Warped cases. Source
+freeze is lifted. No passing whole-workspace claim follows from this run.
+
+Post-run NIH correction checks: two legacy BandSplit callback regressions pass;
+five pinned r3 loaded CLAP/VST3 tests pass when explicitly selected with bundle
+paths. The environment-dependent tests are now opt-in. Current Ambisonics metadata
+and order-7 CLAP callback pass, including a direct Crossover surround-matcher
+assertion. Scoped NIH all-target Clippy with `--no-deps` passes; the dependency-
+including invocation reports two EQ ordered-route iterator lints, assigned to
+Luna Crossover. Astra accepted the bounded reserved-bus and surround-macro fixes in AUD142/AUD143
+reviews. A stale inactive-buffer comment needs a documentation-only correction. Pinned
+r3 artifacts predate this source fix, so loaded results and current callback
+results retain separate scopes.
+
+The FFI cache blocker is now removed: root completed `cargo fetch --locked
+--manifest-path crates/sotf-plugins/crates/plugins-ffi/Cargo.toml` with approved
+registry-cache access. It fetched the missing platform metadata dependencies,
+including `clipboard-win 5.4.1`; the workspace lock hash remains unchanged.
+Separate FFI execution now passes: **91 unit tests passed, 1 ignored**, with
+normal header generation and no selected-source changes across 4,060 hashes.
+Command/log/receipts: `artifacts/ffi-regression-20261001-r1/`. No generated-header
+worktree changes appeared. This is Linux FFI verification, not Apple runtime or
+full new-placement FFI acceptance.
+
+The Crossover factory wire-form regression now passes 1/1, but the actual
+toolbar settings route exposes a further production defect: choosing three or
+four bands leaves `extra_frequencies` empty, and the factory correctly rejects
+the incomplete configuration. Luna is fixing the accessor, with preservation of
+existing/dormant cutoffs and valid shrink/grow behavior; the test must not seed
+missing cutoffs to conceal this route gap. Astra is reviewing that transition.
+
+Root prepared independent corrected references for the two affected legacy
+Warped cases in `artifacts/aud145-legacy-corrected-reference-r1/`, preserving
+the original inputs/settings/output archive. Analog prototypes and the accepted
+independent allpass/modal helpers supply expected samples; no production output
+is used to generate them. Ten negative controls reject. The actual mixed-case
+bytes recovered from the failed workspace assertion match this reference at
+peak 1.24951652e-8 / RMS 2.69436625e-9. The channel-bank case still needs its
+actual capture; its unaffected right channel retains an exact historical check.
+Astra is reviewing the oracle while Luna repairs the regression fixture.
+
+The next AUD145 product-route inspection is recorded in
+`handoffs/aud145-placement-product-route.md`. Current sibling GPUI lacks placement
+controls and still sums scalar band curves; mixed placement requires an ordered
+matrix response. The player per-channel toggle clones explicit placement into
+channel banks before returning a structural update, creating a configuration
+the engine rejects. These are source findings pending executed regressions.
+Astra is reviewing transition semantics and routing-aware UI requirements while
+Luna finishes the native-rate retained-object test correction.
+
+The actual EQ manager commit/audio regression now passes 1/1 using synchronized
+real ProcessingThreads: a rejected typed placement update preserves the next
+warmed continuation, while a valid Mid update commits and its post-crossfade
+blocks match a fresh host from the same typed configuration and differ from the
+old route. Strict engine all-target Clippy with both native features also passes.
+Root verified the terminal logs and all 12 selected current inputs against the
+matching start/end manifests in `artifacts/aud145-manager-real-r1/`. Astra medium accepted this bounded integration checkpoint after verifying the
+logs, manifests and current selected files. Playback is still a command probe,
+not hardware playback. The earlier 42 independent factory-to-host vectors remain
+its numerical foundation.
+
+The typed-native engine/player width resolver passes its two focused planner
+tests. The loaded isolated engine chain Crossover Both4 (8→32), BandMerge
+(32→8), then Matrix selecting channels 0 and 7 (8→2) now passes for both CLAP
+and VST3 in r6. Root independently reran `check_chain.py` against
+`artifacts/aud142-native-consuming-geometry-r1/captures-paced-r2`: peak error
+1.4339689075e-8 and program-interval RMS 3.4720998534e-9 for both formats,
+within unchanged 1e-5/1e-6 bounds. All seven negative controls reject, including
+bypass and a one-frame delay error. The declared 127-frame transport prefix is
+exactly zero; 257 program frames plus transport continuation produce 384 frames.
+
+Earlier runs exposed fixture failures: unknown-trust in-process hosting was
+correctly rejected, discarded diagnostics hid skipped stages, and a subsequent
+CLAP capture was exactly dry passthrough. The green fixture explicitly starts
+workers and paces callbacks by 25 ms; those two changes have not been isolated
+causally. This is controlled offline accuracy, not realtime deadline or EOS
+proof. Prior failures are preserved. The subsequent session 89984 passes 1/1
+from an actual version-2 PluginChain preset: three user rows plus four permanent
+rack rows, six enabled converted configs, conflict-free 8→32→8→2 planning,
+then loaded full-chain processing. Root independently checked both formats in
+`captures-chain-r1`; errors and all seven negative-control results match r6.
+No new production insertion API was required. Astra accepted the bounded typed
+geometry and persisted-chain checkpoint. The 26-entry manifest is post-run,
+not a pre/post run binding; session 89984 terminal output is owner-transcribed
+in `logs/plugin-chain-loaded-r1.receipt.md`. The staged worker hash is recorded
+separately from the different post-run debug-root worker. These limitations do
+not support a complete build-closure or realtime claim.
+
+Retained native sample-rate reinitialization now prepares a detached backend,
+restores state and pending scalar controls, and commits only after validation.
+Luna reports the final loaded regressions passed 2/2 (session 76796): a retained
+CLAP instance follows a real DawHost 96→48 kHz input-rate transition and matches
+a fresh 48 kHz instance while differing from stale 96 kHz processing; a VST3
+missing-IR preparation failure preserves native state, controls, latency, tail,
+and exact warmed continuation. This does not prove whole-graph rollback.
+Reset diagnostics show pending CLAP events survive reset and commit on first
+processing; persisted-state reset and queued-event startup are separate oracles.
+Astra required restore/reset on the actual transitioned instance, rather than
+two fresh 48 kHz objects. Luna corrected the fixture with typed Crossover setup
+and extracted the transitioned native instance. Final r4 passes both loaded
+tests and strict scoped host-test Clippy; all 10 selected current inputs match
+start/end manifests. Astra accepted the bounded rate transition and failure
+preservation checkpoint. Durable evidence: `artifacts/native-retained-rate-r4/`.
+The full graph remains nontransactional on failed rebuild, and the test does not
+establish realtime-safe rate switching.
+
+Root's first combined CLAP/VST3 host library Clippy gate failed on
+`clap_backend.rs::initialize_instance` (eight arguments; limit seven), with
+`--no-deps -- -D warnings`. Log: `/tmp/sotf-host-native-clippy-20261001-r1.log`;
+session 10012 terminated with exit 101. Luna BandSplit removed the redundant
+activation flag argument and derives it from the existing typed setup inside
+the helper. Root rerun session 33442 passes with both native features,
+`--lib --no-deps -- -D warnings`; log
+`/tmp/sotf-host-native-clippy-20261001-r2.log`. This precedes the retained-native
+rate transition implementation and does not validate that later change.
+
+The loaded Convolution missing-resource test exposed a VST3 lifecycle defect:
+failed in-place state restoration also failed reactivation after the original
+IR file was removed. The returned error explicitly reports both failures.
+A 97-frame continuation happened to match the old warmed processor, but this
+is not proof of an active lifecycle; the reported tail became unknown.
+The detached-candidate r4 run now passes successful replacement, independent
+waveform, failed-resource state/tail preservation and populated twin continuation.
+It then fails reset because reactivation reopens the removed original IR file.
+Luna has implemented guarded NIH reuse of the prepared Convolution processor
+using last-successful geometry, structural fingerprints, committed resource path,
+no pending restore/editor state, and scalar prevalidation. Root reviewed those
+guards. Root fresh debug bundle build 38796 passes with 20 selected inputs
+unchanged; loaded VST3 test 24291 passes 1/1 with 21 inputs unchanged, including
+the copied bundle. Valid replacement, rejected-resource populated preservation,
+updated Mix and reset after deleting the original IR now pass complete direct
+convolution waveform checks. See `artifacts/aud134-loaded-convolution-r5/` root
+receipts. Astra found a remaining transaction blocker: empty no-setup VST3
+state bypasses detached restoration and mutates live tail/lifecycle before
+rejection. The focused empty-state red run reproduced `Finite(1027)` becoming
+`Unknown`. Luna now explicitly loads empty state on a detached no-setup VST3
+candidate; the loaded green run passes 1/1, preserving resource state, finite
+tail and nonzero exact populated-twin continuation with the original IR deleted.
+Root inspected both terminal logs in the r5 packet (`empty-state-red-r1.log`
+and `empty-state-green-r1.log`); these first logs have no pre-run source manifest.
+The r6 source-bound rerun passes 1/1 with 21 selected inputs unchanged and
+the immutable r5 bundle. Astra verified current/archive hashes and the populated
+regression, then accepted the bounded empty-state correction in AUD134's review.
+Existing NIH debug lifecycle warnings remain in
+the log; loaded changed-geometry refusal/platform/host editor routes are not
+claimed.
+Preserve the red logs in `artifacts/aud134-loaded-convolution-r1/`;
+the broader lifecycle/platform/editor requirements remain open.
+
+EQ's effective-rate change retains selected oversampling while global SVF runs
+at base rate. The focused unit passes 1/1 and the current library suite passes
+92/92 (`/tmp/sotf-aud145-eq-lib-effective-rate-r1.log`). The public boundary
+integration retry passes 1/1, but its saved-state audio assertion changed from
+exact equality to a numerical bound. Root reconstructed f32 values from the original printed vectors and measured
+peak 5.96046448e-8 and RMS 4.10140179e-9 across 10,240 samples;
+`artifacts/aud145-svf-restore-residual-r1.json` binds that diagnostic to its log.
+The r4 integration passes both original peak/RMS bounds and exact equality
+against fresh DSP configured with the saved f32 scalar values, isolating the
+residual to initial f64 configuration versus f32 scalar serialization. This
+fixture reuses structural configuration and pairs; it is not full preset or
+consumer persistence coverage. The 18 independent mixed realization captures now pass (maximum peak error
+4.6585e-7, RMS 1.46245e-7); root verified all 30 selected source copies against
+the start manifest. All 30 selected source hashes now match start/end and archived copies;
+Astra medium accepted this bounded checkpoint after independently verifying the
+source and reference checksums, comparator and negative controls. Reporting
+corrections and provenance limits are recorded without changing the sealed
+packet in `artifacts/aud145-mixed-review-addendum-r1.json`.
+Consumer persistence and the wider automation/heap/chain gates remain open.
+Luna implemented engine/settings/converter placement and stereo-pair propagation,
+including mute/solo compaction while preserving ordered routing intent, followed
+by actual factory/DawHost audio validation. The focused engine `eq_` gate
+passes 21/21 (session 65397). Retained compiled-host placement fallback passes
+1/1 (59126); the actual settings→converter→factory→DawHost capture passes all
+42 frozen independent vectors (98039), independently rerun by root with exact
+byte-count checks. See `artifacts/aud145-engine-host-root-r1/`. A focused factory
+rejection test also passes 1/1 (75734): invalid all-muted per-channel placement
+is rejected and a separate existing host retains bit-exact twin continuation.
+Manager swap/refusal is not exercised by that test. Final source-bound rerun
+passes 23 tests (one explicitly ignored capture), the explicit 42-vector capture,
+and strict all-target no-deps engine Clippy after fixing two test-reader lints.
+The 18-entry start/end manifests match (SHA256 `55a505e151ae04e4b555b9948f784580c9ae871cb60c67a49cb7d13a914a0958`);
+logs are `/tmp/luna-aud145-eq-engine-consumer-final-tests-r2.log`,
+`/tmp/luna-aud145-eq-engine-consumer-final-capture-r2.log`, and
+`/tmp/luna-aud145-eq-engine-consumer-clippy-r2.log`.
+Astra medium accepted this consumer checkpoint after independently checking
+the 42 captures and source/reference hashes. Root archived the exact logs,
+captures and all 18 hash-matching selected source copies in
+`artifacts/aud145-engine-consumer-final-r2/`; its receipt records the post-run
+copy timing and limited source scope. Actual manager replacement,
+UI/native persistence and heap gates remain open. The compaction edge is recorded in
+`artifacts/aud145-consuming-route-inventory-r1/revalidation-and-compaction-edge.json`.
+
+The actual manager regression exposed a further defect: the linear builder
+reports invalid EQ as a skipped-plugin diagnostic, and the manager previously
+treated only external-plugin diagnostics as fatal. The invalid all-muted
+per-channel placement candidate therefore attempted publication (the command
+probe timed out after 240 ms). Root inspected the failed log
+`/tmp/luna-aud145-eq-manager-invalid-candidate-r1.log` and confirmed both source
+branches. Luna extended the manager's required-update failure guard to EQ;
+the focused actual-manager test now passes 1/1 and strict all-target engine
+Clippy passes with both native features. Root archived logs, the matching
+ten-input start/end manifests and hash-verified post-run source copies in
+`artifacts/aud145-manager-rejection-r1/`. Astra accepted the bounded refusal;
+root then added the original red log and owner-reported command flags, with
+their provenance limits explicitly recorded. The general
+startup builder policy is outside this narrow change, and successful real-worker
+commit/audio remains open. The earlier failed test retains its original status.
+
+Astra also found a reachable retained-native sample-rate defect: removing an
+upstream resampler causes DawHost to call the default no-op ExternalPlugin
+initializer with a new rate while the native backend retains its construction
+rate. Luna xhigh is implementing this separately; see
+`handoffs/native-retained-sample-rate.md`. Plugin-object transactionality and
+whole-graph rollback are distinct: graph removal has already changed topology
+when a subsequent build fails. No runtime fix or green rate-transition gate is
+claimed yet.
+
+Crossover's populated lifecycle fixture has reached actual loaded execution.
+After removing backend-specific error wording assertions, reconciliation r2
+passes the loaded CLAP and VST3 lifecycle fixture: valid route/layout transitions,
+conflicting-state and FIR per-channel refusal with preserved populated twins,
+and actual structural process refusal followed by same-setup recovery and full
+output comparison. The 8 selected source/binary entries match start/end; this
+is not a full dependency closure. Astra accepted the bounded lifecycle/reconciliation checkpoint. The comparison
+is public-DSP composition with peak tolerance, not a new independent coefficient
+oracle. Valid same-width native drift recovery is covered; Luna is now testing
+width-changing and intrinsically invalid drift recovery. The separate drift r1
+gate now passes Both width-changing recovery for CLAP and VST3, but invalid
+FIR/per-channel drift fails CLAP candidate state admission before recovery.
+The failure confirmed that invalid structural state must be repaired before
+candidate activation. The correction prepares a copy of native state with only
+the requested mode/topology/band count changed, preserving other values.
+Recovery-drift r2 passes both tests across CLAP/VST3. Root reran the original
+lifecycle regression (session 6191, 1/1 pass, 8 selected inputs unchanged);
+Astra accepted the bounded correction. The FIR recovery comparison proves a
+fresh DSP epoch and semantic saved-state preservation, not populated continuity.
+Luna is now tracing the native Crossover application/engine consuming route.
+See `artifacts/aud142-native-crossover-lifecycle-r1/logs/recovery-drift-r1.log`.
+Strict host lint is
+deferred until shared host edits cohere; no clean lint claim is made.
+
+### Current native and SVF evidence, 2026-10-01
+
+Astra accepted Convolution's Linux VST3 editor r5 checkpoint: focused callback
+module 4 passed/2 ignored and actual embedded IPlugView under Xvfb 1/1.
+It covers refused reload, retry, retained process automation at mix 0.37,
+fresh-wrapper restoration and independent old/new IR audio including tails.
+The 13 selected source snapshots and copied binary are bound in
+`artifacts/aud134-vst3-editor-r5/receipt.md`. This exercises the exported wrapper
+directly; packaged `.vst3` loading through sotf-host and other platforms remain
+open. See `reviews/AUD134-astra.md` for the bounded acceptance.
+
+Crossover loaded constructor r5 completes all 24 routes for 7.1/9.1.4 in
+CLAP and VST3, independently matching LR24 (maximum peak 1.43e-8, RMS 1.54e-9).
+The first expanded attempt passed 66 CLAP routes but rejected VST3 mono.
+Correcting mono/quad speaker identities and the raw fixture's mono/stereo index
+order yields 2/2 raw callback tests across all 11 layouts. The fresh binary
+`06184618e17635d1c9e57088c41e5b50c984fd641d7b1a59008597fdd38ff40d`
+then passes all 132 loaded CLAP/VST3 routes and independent LR24/state checks
+(maximum peak 1.43e-8, RMS 1.56e-9). See
+`artifacts/aud142-native-crossover-routing-r1/root-independent-all-layouts-r2.json`.
+Astra accepted this bounded cold static checkpoint in `reviews/AUD142-astra.md`.
+This supersedes the table's earlier
+absence of native runtime evidence; populated reconfiguration/refusal, broader
+families and application routes remain incomplete.
+
+Astra accepted the bounded SVF correction after measured red/green evidence:
+36 shelf failures before correction, then 48/48 public vectors and 240/240
+complex points pass unchanged bounds; 15 focused math tests pass. See the
+appended `reviews/AUD145-astra.md` disposition. The next independent public
+capture checkpoint passes 48 non-Peak Warped vectors plus 240 complex points,
+and nine Kautz vectors plus 45 complex points. All 24 archived selected source
+inputs match start/end manifests; this is not the complete dependency closure.
+See `artifacts/aud145-advanced-public-r1/root-verification.json`; Astra medium
+accepted this bounded checkpoint in `reviews/AUD145-astra.md`. Kautz evidence verifies the existing fixed-pole modal contract,
+not a complete orthonormal Kautz basis or full feature parity. Mixed realizations,
+internal-rate/SVF boundaries, automation, heap, host, and engine/native/UI
+persistence remain required.
+
+### Independent Warped accuracy finding, 2026-10-01
+
+Root's independent algebra found that math-audio's audio recurrence implements
+`(z^-1 + lambda)/(1 + lambda*z^-1)`, while its design/response use the opposite
+sign. The automatic Bark coefficient also supplies Hz to the Smith–Abel formula
+specified in kHz. At 48 kHz, explicit lambda0.37, center1379 Hz, Q0.83 and +7 dB,
+the current recurrence predicts only0.5059 dB at the requested center. Actual
+public audio now confirms this: the measured-tone regression reports0.505903 dB,
+and the separate unit-impulse DTFT reports0.5059028858 dB. Both the tone and
+Bark-unit regressions fail before correction, as intended. Public capture r1
+contains nine vectors: three zero-lambda controls pass; all six explicit/automatic
+warped vectors fail the independent comparison. Peak errors span0.2003–0.4113.
+See `artifacts/aud145-warped-public-r1/root-baseline-comparison.json`.
+
+`artifacts/aud145-warped-independent-r1/` contains independent complex and
+expanded-polynomial references plus nine 16,384-frame impulse vectors at
+44.1/48/96 kHz and zero/explicit/automatic lambda. Its45 impulse-DTFT checks agree
+with the analytic response within6.68e-14. Comparator controls reject zero,
+truncated and nonfinite captures with the original AUD145 bounds. Only the zero-lambda
+production controls pass before correction. This finding illustrates why the accepted
+shared-realization routing checks do not establish coefficient/audio accuracy.
+Fixing broken legacy Warped output is intentional correction, not byte-exact
+compatibility; keep historical captures and qualify subsequent replay results.
+
+### Warped correction and independent public gate, 2026-10-01
+
+Luna corrected the allpass recurrence, feedback signs and Bark units in
+math-iir-fir. Ten focused math tests and two public EQ regressions pass.
+`artifacts/aud145-warped-public-r2/` preserves nine public impulse captures;
+root's independent comparison passes all nine vectors and 45 complex points,
+with maximum peak error 5.91e-8 and RMS error 4.64e-10. No fitted gain or delay
+was used. Eight selected source inputs match the run snapshots; this is not a
+complete EQ dependency closure. Astra accepted this bounded static correction
+and public Peak checkpoint; remaining family/dynamic/whole-route gates stay open.
+
+Equal captures across lambda are expected for this retuned RBJ Peak because
+the prototype prewarp and runtime allpass factors cancel. They establish
+response correctness, not a separate perceptual-resolution benefit. Preserve
+the red baseline: the correction intentionally changes broken Warped audio.
+Next, measure the 48 independent SVF cases before correcting the identified
+shelf and response-helper defects; nine independent Kautz cases also await
+production captures. Neither reference's passing controls establish a
+production pass.
+
+### Independent EQ multirate prefix reference, 2026-10-01
+
+Root generated `artifacts/aud145-multirate-reference-r1/`: 84 cases covering the
+existing 42 base-rate placement scenarios at 2x/4x, using their unchanged f32
+inputs, an independent scalar RBJ recurrence at the elevated rate, and NumPy
+f64 FFT transport. The transport settings are derived from actual Rubato 5.0.0
+`Fft::new_custom` geometry and squared periodic Blackman-Harris window design,
+not a halfband assumption. The packet records source hashes and explicitly
+uses 256 frames of startup queue plus resampler delays (512 total base frames).
+DC, delay and unpaired-channel transport self-checks pass. The comparator
+accepts rounded reference data and rejects zeroed, truncated and nonfinite
+controls at the predeclared 3e-5 peak/3e-6 RMS bounds, with no alignment/gain fit.
+Production r2 now captures all 84 cases successfully. Root independently reran
+the comparator: all pass, maximum peak error `1.0925755535851067e-6` and maximum
+RMS error `3.028567880891523e-7`, within the unchanged bounds. Start/end/current
+selected source inputs match. Results are in
+`artifacts/aud145-multirate-production-r2/root-comparison.json`; r1's input-path
+fixture failure is retained. Astra medium accepted this bounded reference/capture
+checkpoint and the separate 56 homogeneous advanced/SVF composition cases in
+`reviews/AUD145-astra.md`. The next relevant run-bound source packet must include
+actual host oversampler/misc and Rubato implementation bytes; this packet only
+records those actual transport files through reference-provenance hashes. Mixed
+Biquad/Warped/Kautz ordering and advanced 2x/4x behavior remain assigned to Luna.
+This is a cold 4096-frame ordinary-processing prefix: it does
+not establish EOS, automation, advanced-filter or full-chain acceptance.
+
+### Native Convolution embedded GUI protocol finding, 2026-10-01
+
+The actual Xvfb CLAP test selected one case and failed at the `show()` callback
+before interaction (`/tmp/sotf-aud134-clap-editor-xvfb-r1.log`). Vendored NIH
+unconditionally returns false from `ext_gui_show`/`ext_gui_hide`; its comment
+questions their applicability to embedded editors. The
+[official CLAP GUI protocol](https://raw.githubusercontent.com/free-audio/clap/main/include/clap/ext/gui.h)
+explicitly includes `show()` after both embedding/floating setup and permits
+subsequent hide/show calls. Their declarations are not restricted to floating
+windows. Root assigned this interoperability gap to Luna Upmixer: retain the
+actual protocol assertion and implement/verify visible embedded show, hide,
+reshow and destruction. A set-parent-only diagnostic cannot close this gap.
+Convolution-feature test compilation itself passed without warnings before
+this runtime failure. Subsequent visibility implementation passes the embedded
+show/hide/reshow assertions, and the actual r4 GUI run delivers the CLAP restart
+callback. The lifecycle still fails later: after a mix event to 0.37, saved state
+contains 0.65. Root traced this to `serialize_parameter_overrides` copying all
+pending editor snapshot values instead of only the structural selection. Luna
+is fixing this and preserving full external-state restore semantics. Evidence
+and source diagnosis: `artifacts/aud134-clap-editor-show-hide-r1/root-serialization-finding.md`.
+The corrected r9 binary now passes the actual embedded CLAP lifecycle1/1 and
+the focused callback module4/4 (GUI ignored there).29 selected sources match
+the run manifests and archived copy. `receipt-r9.md` seals commands, binary,
+screenshots and earlier failures. Astra accepted the bounded Linux CLAP
+checkpoint; hide/show success and post-reshow interaction were demonstrated,
+but hidden-window map state was not independently asserted. macOS/Windows
+visibility and VST3 GUI/packaged routes remain unverified.
+
+### EQ transaction review findings, 2026-10-01
+
+Root's current-source review identified two additional requirements for Luna's
+in-progress detached preparation:
+
+- Legacy WarpedBiquad rate updates preserve delay history (`update_params` in
+  `math-iir-fir/src/iir/warped_biquad.rs`). Replacing them with freshly constructed
+  filters changes populated valid reinitialization; prepare a clone and retune
+  it before commit. Legacy Kautz rate updates already rebuild/reset their state.
+  Verify same-rate and changed-rate continuation against the legacy behavior.
+- EQ rejects zero rate early, but rates 1–9 can reach live Biquad/sample-rate
+  mutation before `AutoGain::set_sample_rate` fails. `GainMeter::new` requires
+  at least 10 Hz, and AutoGain's setter currently mutates its rate before its
+  fallible meter construction. Validate/prepare all fallible state before
+  committing EQ; a populated refusal twin must preserve subsequent audio and
+  metadata, including when AutoGain is disabled.
+
+The first focused packet, `artifacts/aud145-transactional-init-r1/`, has
+matching start/end manifests for ten selected inputs. Root verified those
+hashes against the current files. The two public EQ refusal tests and one
+shared AutoGain refusal test pass. The Warped continuation library gate fails
+before execution because its fixture calls two private sibling-module helpers;
+Luna is fixing the fixture while retaining the failed log. This historical run did not establish an accepted transaction checkpoint.
+
+The corrected r4 packet passes all four focused tests (two EQ refusal cases,
+one Warped continuation case covering same/changed rates, and one AutoGain
+case). Ten selected inputs have identical start/end/current hashes, aggregate
+`e61d6dd37c6c0c85a08d693b9cec0a601c632f27e30d5576b009c42293e526d1`.
+The packet includes a selected source archive/tree and checksums. Root verified
+the results and binding, then held Luna Crossover at this safe point and
+started Astra medium's bounded transaction review. Astra accepted this checkpoint
+without blocking findings; Luna resumed the remaining EQ work. Broader EQ placement
+and whole-chain coverage remain outstanding; the later bounded numerical
+acceptances are recorded above.
+
+The transaction fixes are accepted within the r4 scope. Explicit placement's successful
+structural reset remains intentional. Broader advanced/multirate and public-route
+accuracy gates remain open.
+
+### Native Crossover loaded baseline follow-up, 2026-09-30
+
+Root inspected the terminal r3 loaded-state log: one stateful test passes for
+both formats, covering complete default/Highpass vectors and a synthetic
+frequency-only saved state against the public Crossover DSP. This is routing
+and compatibility evidence, not an independent numerical oracle. The captured
+native parameter map contains twelve IDs. Both mode is refused by both
+formats; VST3 additionally fails to resume that directly modified instance.
+The follow-up must use disposable consuming-host candidates and prove that a
+refused replacement preserves populated active audio. Do not infer direct
+native restore rollback from this baseline.
+
+Log: `artifacts/aud142-native-crossover-baseline-loaded-r3/logs/stateful-baseline.log`.
+The r4 capture now preserves exact native state bytes, input and full output
+vectors, and labels the frequency-only case as synthetic compatibility.
+Root verified all eight waveform files contain 514 finite, nonzero samples;
+CLAP/VST3 input and corresponding outputs are bitwise equal. An independent
+Python f64 bilinear Butterworth cascade then checked all six output vectors:
+maximum peak 1.483e-8/RMS 6.253e-9, within predeclared 1e-5/1e-6 bounds.
+Identity/opposite-mode sensitivity controls fail the bounds as intended.
+No production coefficients or DSP are used in this calculation. The script,
+results and input hashes are in
+`artifacts/aud142-native-crossover-baseline-oracle-r1/`. This remains bounded
+LR24 baseline evidence, pending Astra review; expanded native routing is open.
+
+### Convolution editor compile and EQ baseline progress, 2026-09-30
+
+Root inspected `/tmp/sotf-aud134-native-editor-topology-check-r1.log`: the
+Convolution-feature check finishes successfully in 1.60 seconds after
+constructor-fingerprint binding was added to the pending editor lifecycle.
+This is compile evidence only. Overlapping loads, unrelated structural edits,
+wet automation, native restart servicing and packaged GUI audio remain pending.
+
+Root inspected the final EQ pre-edit baseline r3 under
+`crates/sotf-plugins/target/audit-artifacts/aud145-preedit-baseline-r3/`:
+the terminal capture test passes 1/1, all 19 artifact checksums verify, and all
+10 selected current source/config/lock hashes match before/after. All four
+full captures are finite/nonzero. AutoGain enabled/disabled twins cover 96,000
+frames with RMS difference 0.0667647123; the oversampling fixture reads back 4x.
+The durable packet is now `audit/artifacts/aud145-preedit-baseline-r1/`;
+all 23 entries verify, including a separately corrected reproduction command.
+Index SHA-256: `e6c622323608907e5641f58e4b1bd5cda67451b6d467089cdbe3641a34ba14ea`.
+This is legacy/gap baseline evidence, not placement implementation acceptance.
+Luna reached a safe checkpoint and was interrupted to free the review slot.
+Astra medium is reviewing resolved proposal SHA-256
+`5d77a5a4a725f7bbd96d73e0964c4e61376bbb734ca0eabe3a705474d2512625`
+before any EQ routing edits.
+
+### AUD145 concrete design accepted, 2026-09-30
+
+Astra medium accepted the resolved EQ placement design for bounded
+implementation; see the appended disposition in `reviews/AUD145-astra.md`.
+Root supplied actual baseline source bytes in
+`artifacts/aud145-preedit-source-r1/source.tar.gz`, SHA-256
+`3d02d71878e4399181a280f7ec9c296b1b241a296067e149f2b71447b4984c25`.
+All ten selected inputs match the original capture manifest and each archived
+member was read back byte-for-byte. The original sealed audio packet is unchanged.
+
+Luna resumed after Astra's safe handoff. Before EQ mutation, capture the promised
+matched legacy timing. Preserve serialized absence/inherit for choice zero;
+clearing the last explicit placement must restore legacy dispatch. Detached
+structural construction may allocate on the control thread; zero-heap gates
+apply to realtime processing/application/reset. Multirate EOS numerical
+comparisons use declared tolerance, while frame counts and legacy replay retain
+their exact contracts. No further general proposal gate is required. Core,
+public state/control/native/UI implementation and accuracy review remain open.
+
+### Native integration regression compile checkpoint, 2026-09-30
+
+The Convolution service regression's first run stopped at compilation;
+`/tmp/sotf-aud134-convolution-editor-service-r1.log` records six E0053 errors
+from test contexts still forwarding unit background tasks and three BoolParam
+setter errors. The earlier production feature check passed, but this run
+establishes no behavioral result. Luna is fixing task forwarding and test
+parameter mutation without dropping assertions. Host Crossover re-export
+shadowing warnings are separately assigned to its owner.
+
+Root also identified an exposed-parameter namespace mismatch in Crossover
+reconfiguration: the preservation snapshot excluded plain structural names,
+but public metadata uses clap.<id>/vst3.<id>. Luna acknowledged and is correcting
+the mapping before transaction tests. The typed setup gate remains 3/3;
+backend reconfiguration and actual loaded routes remain unverified.
+
+### Convolution service r4 reaches tests, 2026-09-30
+
+The macro now specializes Convolution background tasks; the focused r4 build
+reaches tests after the host pure-hash helper feature gate is fixed. Log:
+`/tmp/sotf-aud134-convolution-editor-service-r4.log`. One test passes (idle editor
+resource epoch); the lifecycle test fails before its assertions at a missing
+true_stereo parameter. Root traced this to its empty-schema fixture:
+get_param_specs("Convolution") returns no static specs, and the real exported
+wrapper falls back to factory-instance parameter metadata, while the fixture
+omitted that fallback. Luna is correcting the fixture against the real wrapper
+contract. No stale-candidate lifecycle pass is claimed yet. Earlier r2 and r3
+attempts stopped at the host hash-helper cfg error before NIH tests.
+
+### Convolution service green and EQ timing captured, 2026-09-30
+
+Root inspected terminal r5:
+`/tmp/sotf-aud134-convolution-editor-service-r5.log`, SHA-256
+`300ef7a5b97065f8f9c4b125e4393802b9f5b04b7288e329bc9b263fe9b080a0`.
+Both service tests pass: prepared candidate structural refusal/rebuild with
+setter-boundary allowance, and idle editor refresh after external reinitialization.
+The fixture now mirrors the actual exported Convolution parameter fallback.
+Owner reports matching start/end editor/wrapper/params/manifest/lock hashes.
+This is service-level dry-resource evidence; actual native editor selection,
+nonzero IR audio, wet automation, host restart lifecycle and packaged GUI
+acceptance remain required.
+
+EQ pre-edit timing completed from a preserved release executable pinned to
+CPU 0. Root verified 90 positive finite raw samples (five cases, setup/process,
+nine samples each), matching selected source start/end manifests, and raw CSV
+plus executable digests in
+`crates/sotf-plugins/target/audit-artifacts/aud145-preedit-cpu-r1/`.
+The coordinated quiet window is released. The durable packet is now
+`artifacts/aud145-cpu-baseline-r1/`, with all 32 index entries verified by root;
+index SHA-256 `5956d96c226146140dad7c18eeff693f900927fd23cc75bac3118427ad5b60a6`.
+Process snapshots expose only the sandbox PID namespace, so they do not prove
+the whole host was idle. The timing covers direct EqPlugin::process, not
+compiled DawHost delivery; retain that scope and the load/affinity qualification.
+No post-change performance comparison is claimed. All pre-edit requirements
+are satisfied; Luna proceeds with approved EQ routing without another approval
+checkpoint.
+
+### EQ independent baseline and public schema preservation, 2026-09-30
+
+Root's independent f64 scalar recurrence checks the frozen 96,000-frame
+AutoGain-disabled twin: peak 1.48996e-8/RMS 4.12584e-9 within predeclared
+2e-5/2e-6 bounds. The enabled/disabled stereo cross-product residual is
+4.83269e-9 within 1e-7; identity and wrong-link controls fail as intended.
+Script, results and capture hashes: `artifacts/aud145-independent-baseline-r1/`.
+This verifies one base-rate peaking filter and common gain, not placement or
+AutoGain's complete loudness law.
+
+Luna identified working baseline Rust struct literals that need updating when
+placement/pair fields are added. Root clarified that archived sources/audio
+remain immutable; working-tree literals may receive None fields or deserialize
+preserved JSON. Keep the accepted public BiquadFilterConfig/EqPluginParams
+schema extension. Do not divert to a parallel API solely for fixture source
+compatibility while existing public serde continues silently ignoring placement.
+The unchanged JSON-based benchmark remains available for matched measurements.
+
+### EQ schema compile checkpoint, 2026-09-30
+
+Root inspected `/tmp/sotf-aud145-eq-schema-norun-r1.log`: `cargo test
+--offline --locked -p sotf-plugin-eq --all-targets --no-run` finished in
+7.97 seconds and emitted all EQ test/benchmark executables. The only reported
+warning is the not-yet-used `requires_stereo_pair` routing helper. This checks
+the new public placement/pair fields and mechanical literal updates; it does
+not execute tests or establish placement processing, admission/refusal, or
+whole-workspace compatibility. Luna continues the approved routing implementation.
+
+Root also generated 42 independent base-rate placement references in
+`artifacts/aud145-placement-reference-r1/`: three sample rates, two/five channels,
+all five placements and both noncommuting Left/Mid orders. The five-channel
+case has two pairs (one reversed) and an unpaired channel. Standard peaking
+coefficients and f64 recurrence are computed in Python from f32-rounded input,
+without production imports. Mid/Side matrix identity, order sensitivity and
+unpaired identity checks pass. These are reference artifacts awaiting production
+comparison, not EQ placement acceptance; advanced topologies, automation and
+multirate gates remain separate.
+
+Root review of the initial EQ placement setter flagged live sequential
+advanced-filter preparation instead of the accepted detached candidate/commit
+path. Luna must preserve populated state on refusal and clear complete EOF
+bookkeeping on a successful structural transition. This is an implementation
+review finding, not an executed refusal regression or accepted fix.
+
+Root ran `cargo test --offline --locked -p sotf-plugin-eq` after the base-rate
+placement and legacy replay additions: 150 passed, zero failed, two ignored,
+no warnings (session 18857, exit 0). Log and qualified receipt are preserved in
+`artifacts/aud145-eq-package-root-r1/`. The ignored explicit waveform capture
+was checked separately; the historical placement-gap fixture remains ignored.
+This package run has no start/end source manifest and is not a combined
+workspace or advanced-placement accuracy gate.
+
+### Convolution generated lifecycle checkpoint under review, 2026-09-30
+
+The corrected r3 generated-plugin test passes 1/1 (session 93944, exit 0).
+It compares populated old-resource audio through preparation/host deferral,
+changes wet mix while pending, then reinitializes and checks the complete
+four-path output against the independent reference at peak 1e-5/RMS 1e-6.
+The old-IR sensitivity reference now uses matching topology and cold state.
+Earlier r1 selected zero tests; r2 exposed an oversized fixture block, corrected
+by partitioning within the negotiated maximum. Root preserved the log and
+selected current sources in `artifacts/aud134-generated-editor-audio-r3/`.
+Astra medium accepted this bounded checkpoint on 2026-10-01 after both evidence
+corrections passed in `artifacts/aud134-editor-geometry-r3/`: current service
+2/2 and generated lifecycle 2/2, including prepared-candidate geometry change,
+out-of-order completion and successful fresh retry. All 27 archived inputs
+match identical start/end manifests. Root independently verified the logs and
+source bindings. Successful geometry reinitialization resets history; this is
+not preservation across that transition. Luna Upmixer has resumed actual native
+GUI restart callbacks and packaged editor work. Astra is at a safe checkpoint
+for the next implementation review.
+
+### Checkpoint history
+
+The entries below preserve intermediate evidence, including superseded compiler
+failures and review stages. The ownership table above is the current work state.
+
+- Astra accepted AUD134's corrected bounded native callback/resource evidence.
+  Luna resumed the missing native editor and host-serviced IR-selection stage;
+  callback acceptance does not imply packaged editor or standalone runtime proof.
+- AUD143 actual loaded VST3 descriptor probe passes 1/1 and explicitly reports
+  six observations across six modern/legacy 2/3/4-band layouts. Root verified
+  the terminal log `aud143-inactive-vst3-bus-arrays-r1/loaded-descriptor-vst3-r1.log`.
+  Each process/observer call has an allocation/deallocation guard. The loaded
+  bundle is the unchanged accepted fixture (SHA prefix `6f1803cb`), not a fresh
+  build of the current NIH wrappers. Full loaded waveform/canary gates are next.
+
+- Corrected Convolution packet r4 is sealed and back with Astra. Root verified
+  tighter assertions, 2/2 terminal callbacks, and all 19 current/copied source
+  files against the selected manifest with zero mismatches. This addresses both
+  review requests without a production change or broader rerun.
+- AUD143 VST3-feature layout module r2 compiles and passes 1 test; the real
+  BandSplit descriptor probe is ignored pending its required external bundle.
+  Luna is preparing the explicit loaded run. The 1-pass/1-ignored receipt is
+  not presented as callback descriptor or loaded-audio acceptance.
+
+- Crossover mounted r5 remains 1 pass/2 failures with no admission-rejection
+  toast. Luna traced the actual product defect: this controlled toolkit Select
+  was given `on_change` but no `on_toggle`, `is_open` or `on_highlight`, so its
+  handlers cannot open/navigate the menu. Earlier keyboard sequencing theories
+  did not fix the issue. Luna is wiring the required state and retaining actual
+  mounted input tests; no direct-settings bypass is accepted as UI evidence.
+
+- Astra's AUD134 callback review found no new production defect, but withheld
+  acceptance for two evidence conditions: restore original peak <=1e-5 and
+  RMS <=1e-6 waveform bounds, and include omitted changed CLAP/standalone wrapper
+  and typed bool/float/integer smoother sources in the selected manifest/snapshot.
+  Luna resumed to make the focused corrections and rerun both native callbacks.
+- AUD143's first VST3-feature module gate failed during fixture compilation:
+  observer comparisons mixed `c_void` and `f32` pointer types; unused test
+  imports also need removal. No descriptor behavior was executed. An earlier
+  default-feature command selected zero tests and is explicitly not a pass.
+  The corrected gate will follow the current GPUI r5 run to preserve build inputs.
+
+- Convolution callback packet r3 is sealed and under Astra medium review:
+  `audit/artifacts/aud134-native-resource-r3/README.md`. Root verified checksum
+  index and terminal logs. The full library and strict lint ran after the sole
+  test-helper borrow cleanup. Native editor remains absent; cached NIH editor
+  adapters require additional dependencies, and active GUI state restoration
+  requires a supported host lifecycle rather than process-thread resource I/O.
+- Crossover mounted r4 still passes only the live-rate case (1/3); splitting
+  Down/Enter events did not change the selected family. Luna is checking both
+  initial dropdown highlighting and candidate validation with dormant per-channel
+  settings before attributing this to the fixture or product code.
+
+- Mounted Crossover r3 compiles and executes three tests: one passes (actual
+  8 kHz admission/refusal), two fail on family selection before their remaining
+  route assertions. Root verified `/tmp/sotf-aud142-crossover-mounted-r3.log`
+  and matching start/end selected-source manifests. Luna is distinguishing
+  fixture interaction from a real dropdown/listener defect while preserving
+  mounted input coverage. These failures do not establish the later waveform,
+  persistence, unsupported-mode or fixed-width rollback assertions.
+
+- Expanded Convolution VST3 r4 passes 1/1 without warnings. Root read the terminal
+  log and confirmed matching selected-source start/end manifests in
+  `audit/artifacts/aud134-native-resource-r2/`. Proper processing setup now makes
+  the disappearing-file case reach initialization; numeric/path rollback and
+  ordinary dry retry pass, as do explicit clear-resource and legacy dry checks.
+  The callback checkpoint still needs affected regression/lint and Astra review;
+  native editor selection is not implemented by state callback tests.
+
+- Expanded Convolution VST3 r3 failed at the final pending-resource rollback
+  assertion. Root traced the fixture's `try_activate()` call without prior
+  `setup_processing()`: activation failed before Convolution initialization,
+  so the accepted pending resource correctly remained staged. Luna confirmed
+  the failing path and added setup before the intended missing-file activation
+  failure. This is a fixture lifecycle correction, not evidence of broken
+  clear-resource serialization. The corrected expanded gate is still required.
+
+- Native Convolution VST3 callback r2 passes 1/1, confirmed in
+  `audit/artifacts/aud134-native-resource-r2/logs/vst3-focused-r2.log`.
+  Actual IComponent/IBStream restore covers fresh saved bytes, active refusal
+  with preserved continuation, deactivated replacement with distinct IR samples,
+  complete independent four-path waveform and deleted-resource refusal. The
+  first run stopped at a test-macro import error. Explicit VST3 clear-resource/
+  dry and failed-preactivation rollback cases, one test warning, native editor
+  selection and independent review remain open.
+
+- First mounted Crossover gate (`/tmp/sotf-aud142-crossover-mounted-r1.log`,
+  owner session 97855) stopped before executing tests: the fixture partially
+  moved `restored_crossover.extra_frequencies` before audio replay, and had two
+  unused imports. Root verified the compiler output. Luna is correcting this
+  fixture and adding Matrix input adaptation plus an independent band-major
+  merge reference; no mounted behavior is accepted from this compile attempt.
+
+- Astra accepted the AUD135 publication/acknowledgment race correction and
+  bounded finite-tail/preflight/reset-recovery checkpoint. Root read the appended
+  review and dispatched Luna BandSplit to the queued AUD143 inactive VST3 bus
+  array correction. Full workspace, broad native/UI and platform acceptance
+  remain separate.
+- Crossover route review found another width path requiring correction:
+  `PluginGraph::adapt_matrix_to_input` advances BandSplit/BandMerge geometry but
+  omits Crossover, potentially resizing the downstream Matrix incorrectly on
+  track adaptation. Luna Crossover owns the fix and actual adaptation regression,
+  alongside strengthening the mounted route's waveform oracle.
+
+- AUD135 actual-host acknowledgment race regression r2 passes 1/1. Root read
+  both current test and terminal log at
+  `audit/artifacts/aud135-worker-classification-race-r1/logs/worker-proxy-race-r2.log`.
+  The worker pauses after publishing status 1; the real proxy resolves and
+  clears it before worker classification. The test checks the host latch,
+  rejects Describe, observes Reset ACK before timeline reset, and compares four
+  complete gain-2 blocks plus latency flush. The first run is retained as a
+  test-fixture mutability compile failure. Broader affected gates and Astra
+  re-review remain required; previous package gates predate this correction.
+
+- Native Convolution's actual CLAP callback r2 passes 1/1, confirmed by root in
+  `audit/artifacts/aud134-native-resource-r2/logs/clap-state-focused-r2.log`.
+  The fixture replays saved bytes, uses distinct four-path replacement IRs with
+  a complete independent waveform oracle, checks reported latency/tail extent,
+  preserves active history after refusal, compares complete legacy dry output,
+  and checks activation failure/retry after a staged IR disappears. Numeric
+  parameter rollback assertions and one owned unused-mut warning remain to be
+  addressed. This does not establish VST3 lifecycle or reachable native selection.
+
+- Root inspected the AUD135 P1 correction in the live diff: an internal
+  `WorkerRequestOutcome` carries ordinary plugin failures independently of
+  host-cleared shared atomics, while the existing public IPC result API remains
+  compatible. The first deterministic publication gate used raw `clear_block`;
+  Luna is strengthening it to exercise the real host proxy acknowledgment and
+  non-Reset control refusal. No new gate or Astra acceptance is claimed yet.
+  Cargo owners were directed to use the shared flock without circular waits.
+
+- Astra found a remaining AUD135 recovery race in the frozen checkpoint:
+  `process_worker_request` publishes WorkerFailed/status1 before its caller
+  classifies the error by rereading shared state. Host `resolve_pending` can
+  acknowledge and clear that state in between, causing the worker to classify
+  the same recoverable error as fatal and exit. Acceptance is withheld. Required
+  fix: worker-local typed outcome established independently of host-cleared
+  shared state, plus a deterministic host-acknowledgment-between-publication-
+  and-return regression. Astra completed review and supports the finite-tail/
+  preflight evidence; Luna BandSplit is implementing the sole P1 correction
+  before another Astra medium check. See `audit/reviews/AUD135-astra.md`.
+
+- AUD135 finite-tail/worker recovery is now frozen for independent Astra medium
+  review. Handoff: `audit/artifacts/aud135-finite-tail-stateful-r1/worker-recovery-handoff.md`.
+  Final subprocess r5 is 2/2; seven selected host files have identical start/end
+  manifests (`22ea4aa14d571a5c53a3334674e46cbb63b86501c2e4f0fa9bca4aec08d4868a`).
+  Luna BandSplit has yielded; Astra is reviewing the original finite-tail
+  requirements plus the shipped-worker recovery correction. No acceptance is
+  claimed yet; AUD143 inactive VST3 bus-array work remains queued and untouched.
+
+- AUD135 follow-up regression filter passes 134/134 (`worker-proxy-classification-r1.log`),
+  worker binary tests pass 14/14 (`worker-cli-tests-r1.log`), and strict all-target
+  host Clippy r2 passes (`worker-recovery-clippy-r2.log`). Root inspected all
+  terminal result lines. Initial Clippy r1 exposed six test Args literals
+  missing the new test-backend fields; those are corrected. Final-source
+  subprocess replay and packet sealing are in progress before Astra review.
+- Crossover mounted-test preparation found output-width propagation missing
+  from `update_channel_dependent_plugins`, despite correct standalone width
+  calculation. Luna is fixing structural graph refresh and adding downstream
+  BandMerge route coverage; compile success alone did not establish this path.
+
+- AUD135 actual shipped-worker recovery r4 passes 2/2, confirmed by root from
+  `audit/artifacts/aud135-finite-tail-stateful-r1/logs/shipped-worker-recovery-r4.log`.
+  The spawned binary remains alive after the recoverable process error; public
+  Reset followed by metadata synchronization and an 8,192-frame pipeline drain
+  yields the complete 2×gain reference, distinguishable from fallback. Native
+  Reset refusal remains quarantined with fallback. Earlier r2 was a fixture
+  config compile error; r3 passed refusal but caught the test backend's missing
+  identity-frame declaration. Host regression/classification and strict lint
+  gates, packet sealing and Astra acceptance remain pending.
+
+- Native Convolution compile r4 now passes: `cargo check --offline --locked
+  -p plugins-nih --features convolution`, log
+  `/tmp/sotf-aud134-nih-convolution-check-r4.log` (Finished dev profile, 1.42s).
+  Root verified the log. Typed NIH initialization helpers reset smoothers
+  through ParamMut, and validation retains a prior accepted pending state when
+  the replacement is invalid. This is compile evidence only: actual CLAP/VST3
+  lifecycle, resource roundtrip, full audio/EOS and reachable selection remain
+  required before review and acceptance.
+
+- GPUI Crossover compile r6 now passes: `cargo check --offline --locked
+  -p sotf-gpui --features dev-api --lib`, terminal exit 0, log
+  `/tmp/sotf-aud142-gpui-check-r6.log`. Root inspected the completion line;
+  two existing player unused-import warnings remain. This establishes compile
+  compatibility only; mounted controls, persistence and full audio-route gates
+  are next. Earlier r4/r5 compiler errors are historical failed attempts.
+
+- First current-source compiler results: GPUI r4 (`/tmp/sotf-aud142-gpui-check-r4.log`)
+  reached the new panel and failed on six owned callback-context, numeric-type
+  and empty-vector pattern errors. Native Convolution r1
+  (`/tmp/sotf-aud134-nih-convolution-check-r1.log`) reached plugins-nih and failed
+  on a missing bridge helper re-export plus three smoother API calls. Both
+  owners are correcting their code before behavioral gates; neither is an
+  external dependency blocker or passing implementation result.
+
+- Current GPUI build preparation: root synchronized only twelve local DAW
+  package versions in the sibling SOTF lockfile after the minor bumps. Parsed
+  external dependency records are unchanged, and existing user lockfile edits
+  are preserved. This resolved the misleading offline math-test-functions
+  version conflict. Linux-target `cargo fetch --locked` exits 0 without further
+  lock changes; full all-target offline metadata still reported an uncached
+  dashmap 5.5.3. The scoped GPUI compile is being retried, not yet passed.
+- AUD135 worker classification r2 passes its focused reset/fresh-audio unit
+  test (1/1), and the worker binary check passes with test-backend + CLAP.
+  Root inspected `logs/worker-classification-r2.log` in the finite-tail packet.
+  This is not the required spawned-process or ordinary-callback recovery gate.
+
+- User-requested release preparation: workspace/facade 0.8.0, engine 1.1.0,
+  FFI 0.7.0 and twelve other changed packages 0.6.0; matching changelogs updated.
+  MIDI/IAMF and external dependency resolutions remain unchanged. Full
+  `cargo metadata --offline --locked --format-version 1` passes. Current lock
+  SHA-256: `edd61e466ec41393a4ee6228564c79b668546d3e481fd934dc641fc2f39a08bf`. Older packet lock hashes remain historical.
+- AUD139 provenance correction r2 binds 42 selected inputs including all seven
+  changed VST3 production files; focused 2/2 passes. Crossover default-sync
+  correction uses the real wrapper constructor, with focused 1/1, full NIH
+  118 passed/one ignored and strict lint. Astra accepted both bounded packets.
+- AUD135 stateful finite-tail first gate now passes 1/1:
+  `audit/artifacts/aud135-finite-tail-stateful-r1/logs/stateful-focused-r2.log`.
+  A stereo FIR with delay 16,384 is compared against independent f64 scatter
+  convolution over all process/drain samples; native continuation is 16,384
+  frames, pipeline flush is 8,192, final L/R markers are nonzero, and reset
+  replay is exact. Earlier r1 was a fixture compile error. The passing build
+  still warns about a helper reserved for the pending-gate test; this is not
+  strict lint or completion of the requested failure matrix. Root identified
+  tail-slice, IPC publication synchronization and cleanup issues; Luna corrected
+  them before execution. Pending/capacity/timeout/failure cases remain active.
+- AUD135 pending-request coverage now passes in two distinct routes: the
+  stereo begin-drain path (1/1) and actual 2→2→4 channel-changing preflight (1/1).
+  In the latter, short capacity leaves prepare/begin counters at 0/0, a held
+  worker timeout reaches 1/0, and release/retry reaches 2/1. Complete quad audio
+  matches the independent transformed FIR oracle. The exact output sequence is
+  three 8,192-frame nonterminal calls then a zero-frame terminal mapper call.
+  Logs: `audit/artifacts/aud135-finite-tail-stateful-r1/logs/`.
+  Initial channel-changing r1 failed an incorrect three-call expectation;
+  r2 preserves full-vector/count assertions and passes. Post-mutation sticky
+  failure/reset and Unknown/Infinite refusal remain outstanding before review.
+- AUD135 sticky failure r3 exposed a production reset defect after the
+  corrected pipelined fixture observed actual WorkerFailed publication. Public
+  drain reports the failure and later process/begin/prepare refuse, but
+  reset_checked fails on the retained failed pending sequence. Log:
+  `audit/artifacts/aud135-finite-tail-stateful-r1/logs/sticky-failure-focused-r3.log`.
+  Luna is implementing a reset-only discard of an exactly matching, fully
+  published failed request; still-processing/mismatched requests must remain
+  protected, and native Reset must succeed before clearing the sticky state.
+  This was a real red gate. Follow-up `sticky-failure-focused-r4.log` now passes
+  1/1 after a reset-only discard of the exact published WorkerFailed sequence.
+  Native reset ACK precedes latch/timeline clearing; complete fresh replay
+  matches the independent reference. Root inspected the production diff and log.
+  The broader `external-plugin-module-r2.log` passes 25/25 after repairing an
+  existing latency-handshake fixture to service the real native Reset request.
+  Strict lint r1 found four new test-code lints; correction, explicit refusal
+  coverage, packet freezing and Astra validation remain pending.
+  **Full-chain recovery gap discovered during root review:** the test thread
+  ignores `ExternalPluginWorker::process_one()` errors, while the shipped
+  `bin/external_plugin_worker.rs` loop propagates them and exits. Consequently
+  r4 proves reset with a surviving in-process worker only. Luna must cover
+  recovery through the actual subprocess lifecycle (with safe differentiation
+  of recoverable plugin errors from panic/transport failures) before claiming
+  shipped-worker reset recovery. Existing worker-test-backend is the preferred
+  integration seam; do not weaken fatal-error isolation to satisfy the fixture.
+  The first production correction is now present: an exact matching status-1
+  process failure yields `ProcessFailed` and latches the worker until Reset
+  succeeds. Other control requests are refused while latched; panic, invalid
+  frame-count and transport errors remain fatal. Unit fixtures for successful
+  reset/fresh audio and reset refusal have been added. Subprocess evidence and
+  final gates are still pending; this source review is not a passing result.
+  Root found a normal-playback interaction that must also be corrected:
+  `resolve_pending` clears WorkerFailed and the same callback can publish new
+  audio, but the newly latched worker will not consume it. A subsequent public
+  reset then waits on this unconsumed request and quarantines on timeout.
+  Add ordinary process failure → public reset → fresh audio coverage, prevent
+  post-failure submissions, and preserve protection for genuinely active work.
+- AUD143 exact history correction is Astra-accepted.
+- AUD135 actual engine candidate/refusal/retry and nonzero final-program EOS
+  route is supported by Astra. General finite-tail acceptance remains pending:
+  Luna is adding a stateful nonzero multi-transport-block oracle, deterministic
+  pending gate, capacity-before-wait, timeout/retry, sticky failure/reset and
+  explicit Unknown/Infinite refusal. The old count-only test is insufficient.
+- Crossover initial schema/core/engine gate passes: core explicit-count 1/1,
+  engine crossover filter 9/9, log `/tmp/sotf-aud142-ui-schema-r1.log`.
+  The optional typed band_count preserves legacy omission and dormant cutoffs;
+  mounted controls, full compatibility review and broader route gates remain open.
+- Luna Crossover has resumed product UI/app integration; no mounted route is claimed.
+  The first custom panel now validates a cloned candidate using graph input
+  width and the app HAL sample rate before committing settings. Root identified
+  a four-band cutoff-generation failure near the low-rate upper limit despite
+  available valid cutoffs; Luna must fix this and retain the FIR taps control.
+  Follow-up source restores the FIR taps control and distributes new cutoffs
+  through the remaining legal interval. Admission now reads the signal-path
+  rate instead of the HAL preference; root requested a short circuit so live
+  edits do not also perform an unnecessary fallback device-rate probe. Mounted
+  callback, actual route-rate and compatibility gates remain pending.
+  The full audit and coherent combined workspace gate remain open.
+- Baseline `aa0a3d1` now contains the implementation/minor-version batch.
+- AUD143 host ABI follow-up: inactive VST3 bus arrays violate the SDK contract;
+  scoped evidence and requirements are in
+  `audit/handoffs/aud143-inactive-vst3-bus-arrays.md`. Queue after finite-tail work.
+- Luna Upmixer has resumed AUD134 native convolution IR resource/persistence
+  implementation planning, separate from Crossover UI and host drain ownership.
 
 ## Latest retry checkpoint, 2026-09-30
 

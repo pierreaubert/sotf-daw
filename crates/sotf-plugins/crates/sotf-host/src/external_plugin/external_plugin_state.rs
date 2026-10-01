@@ -1,3 +1,8 @@
+use super::native_crossover_layout::NativeCrossoverStructure;
+pub use super::native_crossover_layout::{
+    NativeCrossoverInputLayout, NativeCrossoverMode, NativeCrossoverOutputLayout,
+    NativeCrossoverTopology,
+};
 use super::plugin_descriptor::PluginDescriptor;
 use super::plugin_format::PluginFormat;
 use super::types::ExternalPluginSandboxMode;
@@ -8,6 +13,8 @@ const AMBISONICS_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.ambisonics";
 const AMBISONICS_VST3_CLASS_ID: &str = "536F7466416D6269736E696330303031";
 const BAND_SPLIT_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.band-split";
 const BAND_SPLIT_VST3_CLASS_ID: &str = "536F746642616E6453706C7430303031";
+const CROSSOVER_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.crossover";
+const CROSSOVER_VST3_CLASS_ID: &str = "536F746643726F73736F766572303031";
 
 /// Stable placeholder schema for saving/restoring external plugin state.
 ///
@@ -47,6 +54,18 @@ pub enum NativePluginAudioSetup {
         num_bands: u8,
         /// Format-specific output-bus representation.
         output_layout: NativeBandSplitOutputLayout,
+    },
+    /// Selects an explicit named input layout and native Crossover route.
+    ///
+    /// Mode/topology/count are duplicated with the opaque native state on
+    /// purpose: restore validates that the typed route and native structural
+    /// readback agree before a replacement instance can be committed.
+    Crossover {
+        input_layout: NativeCrossoverInputLayout,
+        num_bands: u8,
+        topology: NativeCrossoverTopology,
+        mode: NativeCrossoverMode,
+        output_layout: NativeCrossoverOutputLayout,
     },
 }
 
@@ -186,6 +205,31 @@ impl NativePluginAudioSetup {
             Self::BandSplit { num_bands, .. } => Err(format!(
                 "BandSplit band count {num_bands} is unsupported; expected two through four"
             )),
+            Self::Crossover {
+                input_layout,
+                num_bands,
+                topology,
+                mode,
+                ..
+            } if (2..=4).contains(num_bands) => {
+                let input_channels = input_layout.channel_count();
+                let output_channels = NativeCrossoverStructure {
+                    mode: *mode,
+                    topology: *topology,
+                    num_bands: *num_bands,
+                }
+                .output_channels(input_channels)
+                .ok_or_else(|| "Crossover output channel count overflowed".to_string())?;
+                if output_channels > 64 {
+                    return Err(format!(
+                        "Crossover route requires {output_channels} output channels; maximum is 64"
+                    ));
+                }
+                Ok((input_channels, output_channels))
+            }
+            Self::Crossover { num_bands, .. } => Err(format!(
+                "Crossover band count {num_bands} is unsupported; expected two through four"
+            )),
         }
     }
 
@@ -227,6 +271,22 @@ impl NativePluginAudioSetup {
                     ..
                 },
             ) if id.eq_ignore_ascii_case(BAND_SPLIT_VST3_CLASS_ID) => Ok(()),
+            (
+                PluginFormat::Clap,
+                CROSSOVER_CLAP_PLUGIN_ID,
+                Self::Crossover {
+                    output_layout: NativeCrossoverOutputLayout::ClapPacked,
+                    ..
+                },
+            ) => Ok(()),
+            (
+                PluginFormat::Vst3,
+                id,
+                Self::Crossover {
+                    output_layout: NativeCrossoverOutputLayout::Vst3Buses,
+                    ..
+                },
+            ) if id.eq_ignore_ascii_case(CROSSOVER_VST3_CLASS_ID) => Ok(()),
             _ => Err(format!(
                 "native Ambisonics setup is not supported for {} plugin identity '{}'",
                 match descriptor.format {
@@ -286,6 +346,22 @@ impl NativePluginAudioSetup {
 impl ExternalPluginState {
     pub const SCHEMA_VERSION: u32 = 1;
 
+    /// Returns the active audio widths for this plugin instance.
+    ///
+    /// A typed native setup describes the negotiated instance route and takes
+    /// precedence over scanned descriptor widths. Without one, the descriptor
+    /// remains the compatibility source. Invalid typed setups are reported so
+    /// route planners cannot silently treat them as the scanned layout.
+    pub fn effective_audio_channel_counts(&self) -> Result<(usize, usize), String> {
+        let Some(setup) = self.audio_setup.as_ref() else {
+            return Ok((self.descriptor.audio_inputs, self.descriptor.audio_outputs));
+        };
+
+        self.validate_descriptor_consistency()?;
+        setup.validate_for_descriptor(&self.descriptor)?;
+        setup.channel_counts()
+    }
+
     pub fn new(
         descriptor: PluginDescriptor,
         sandbox_mode: ExternalPluginSandboxMode,
@@ -328,5 +404,216 @@ impl ExternalPluginState {
             audio_setup.validate_for_descriptor(&self.descriptor)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod crossover_setup_tests {
+    use super::{
+        ExternalPluginState, NativeCrossoverInputLayout as InputLayout,
+        NativeCrossoverMode as Mode, NativeCrossoverOutputLayout as OutputLayout,
+        NativeCrossoverTopology as Topology, NativePluginAudioSetup,
+    };
+    use crate::external_plugin::plugin_descriptor::PluginDescriptor;
+    use crate::external_plugin::plugin_format::PluginFormat;
+    use crate::external_plugin::types::{ExternalPluginSandboxMode, PluginScanStatus};
+    use std::path::PathBuf;
+
+    fn descriptor(format: PluginFormat, id: &str) -> PluginDescriptor {
+        PluginDescriptor {
+            id: id.into(),
+            name: "SOTF: Crossover".into(),
+            vendor: "SOTF".into(),
+            version: "test".into(),
+            format,
+            path: PathBuf::from("/test/crossover"),
+            audio_inputs: 2,
+            audio_outputs: 2,
+            is_instrument: false,
+            categories: Vec::new(),
+            scan_status: PluginScanStatus::Loadable,
+        }
+    }
+
+    fn setup(
+        input_layout: InputLayout,
+        topology: Topology,
+        mode: Mode,
+        num_bands: u8,
+        output_layout: OutputLayout,
+    ) -> NativePluginAudioSetup {
+        NativePluginAudioSetup::Crossover {
+            input_layout,
+            num_bands,
+            topology,
+            mode,
+            output_layout,
+        }
+    }
+
+    #[test]
+    fn crossover_setup_preserves_named_width_and_route_semantics() {
+        let clap = setup(
+            InputLayout::FiveOne,
+            Topology::Bands,
+            Mode::Both,
+            4,
+            OutputLayout::ClapPacked,
+        );
+        let vst3 = setup(
+            InputLayout::FiveOne,
+            Topology::Bands,
+            Mode::Both,
+            4,
+            OutputLayout::Vst3Buses,
+        );
+        assert_eq!(clap.channel_counts().unwrap(), (6, 24));
+        assert_eq!(vst3.channel_counts().unwrap(), (6, 24));
+        assert_eq!(
+            setup(
+                InputLayout::FiveOne,
+                Topology::Bands,
+                Mode::Highpass,
+                4,
+                OutputLayout::ClapPacked,
+            )
+            .channel_counts()
+            .unwrap(),
+            (6, 6)
+        );
+        assert_eq!(
+            setup(
+                InputLayout::FiveOne,
+                Topology::PerChannel,
+                Mode::Both,
+                4,
+                OutputLayout::ClapPacked,
+            )
+            .channel_counts()
+            .unwrap(),
+            (6, 6)
+        );
+    }
+
+    #[test]
+    fn effective_audio_channel_counts_prefers_valid_native_setup() {
+        let descriptor = descriptor(PluginFormat::Clap, "org.spinorama.sotf.crossover");
+        let mut state =
+            ExternalPluginState::new(descriptor, ExternalPluginSandboxMode::Isolated, Vec::new());
+        assert_eq!(state.effective_audio_channel_counts().unwrap(), (2, 2));
+
+        state.audio_setup = Some(setup(
+            InputLayout::SevenOne,
+            Topology::Bands,
+            Mode::Both,
+            4,
+            OutputLayout::ClapPacked,
+        ));
+        assert_eq!(state.effective_audio_channel_counts().unwrap(), (8, 32));
+    }
+
+    #[test]
+    fn effective_audio_channel_counts_rejects_invalid_native_setup() {
+        let descriptor = descriptor(PluginFormat::Clap, "org.spinorama.sotf.crossover");
+        let mut state =
+            ExternalPluginState::new(descriptor, ExternalPluginSandboxMode::Isolated, Vec::new());
+        state.audio_setup = Some(setup(
+            InputLayout::SevenOne,
+            Topology::Bands,
+            Mode::Both,
+            4,
+            OutputLayout::Vst3Buses,
+        ));
+
+        assert!(state.effective_audio_channel_counts().is_err());
+    }
+
+    #[test]
+    fn crossover_setup_is_typed_to_plugin_format_and_round_trips() {
+        let clap_setup = setup(
+            InputLayout::SevenOne,
+            Topology::Bands,
+            Mode::Both,
+            3,
+            OutputLayout::ClapPacked,
+        );
+        let clap_descriptor = descriptor(PluginFormat::Clap, "org.spinorama.sotf.crossover");
+        assert!(clap_setup.validate_for_descriptor(&clap_descriptor).is_ok());
+        let state = ExternalPluginState {
+            schema_version: ExternalPluginState::SCHEMA_VERSION,
+            descriptor: clap_descriptor.clone(),
+            format: clap_descriptor.format,
+            plugin_id: clap_descriptor.id.clone(),
+            plugin_path: clap_descriptor.path.clone(),
+            sandbox_mode: ExternalPluginSandboxMode::InProcess,
+            opaque_state: vec![1, 2, 3],
+            audio_setup: Some(clap_setup),
+        };
+        let encoded = serde_json::to_vec(&state).unwrap();
+        let decoded: ExternalPluginState = serde_json::from_slice(&encoded).unwrap();
+        assert_eq!(decoded, state);
+
+        assert!(
+            setup(
+                InputLayout::Stereo,
+                Topology::Bands,
+                Mode::Both,
+                2,
+                OutputLayout::Vst3Buses,
+            )
+            .validate_for_descriptor(&clap_descriptor)
+            .is_err()
+        );
+        assert!(
+            setup(
+                InputLayout::NineOneSixWide,
+                Topology::Bands,
+                Mode::Both,
+                4,
+                OutputLayout::Vst3Buses,
+            )
+            .validate_for_descriptor(&descriptor(
+                PluginFormat::Vst3,
+                "536F746643726F73736F766572303031",
+            ))
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn crossover_setup_rejects_invalid_band_count_and_device_width_overflow() {
+        assert!(
+            setup(
+                InputLayout::Stereo,
+                Topology::Bands,
+                Mode::Both,
+                1,
+                OutputLayout::ClapPacked,
+            )
+            .channel_counts()
+            .is_err()
+        );
+        assert!(
+            setup(
+                InputLayout::NineOneSixWide,
+                Topology::Bands,
+                Mode::Both,
+                5,
+                OutputLayout::Vst3Buses,
+            )
+            .channel_counts()
+            .is_err()
+        );
+        assert!(
+            setup(
+                InputLayout::NineOneSixWide,
+                Topology::Bands,
+                Mode::Both,
+                4,
+                OutputLayout::Vst3Buses,
+            )
+            .channel_counts()
+            .is_ok_and(|(_, outputs)| outputs == 64)
+        );
     }
 }

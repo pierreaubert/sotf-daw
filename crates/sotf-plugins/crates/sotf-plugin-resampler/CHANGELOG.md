@@ -1,3 +1,32 @@
+# Unreleased
+
+- Add opt-in `cutoff_smoothing` (bool, default off, Realtime): upward
+  cutoff widening slews one prepared table per backend chunk while
+  downward narrowing jumps immediately, preserving alias protection,
+  clocks, counts, drain, and partition invariance. Default-off audio is
+  bit-exact with prior releases.
+- Quantify per-preset transition width, passband ripple, and stopband
+  quality against an independent analytic DTFT, with measured-vs-analytic
+  agreement on an integer-step sweep and an independent direct-sinc
+  end-to-end reference at 44.1/48 kHz; publish per-quality CPU lines in QA.
+- Add allocation-free typed dynamic controls (`try_set_ratio`,
+  `try_set_ratio_relative`, `try_set_cutoff_smoothing` returning the
+  `Copy` `ResamplerControlError`); the `String` API delegates with
+  identical messages and the valid path still allocates nothing.
+- Add slew artifact bounds (analytic HF derivation, 0.1 dB LF, -50 dB
+  coherent residual), full-trajectory checks, nominal-0.5/2.0 bank units,
+  nominal-not-1 / instant-upward / Fast-Medium downward / 8 ch / 96 kHz /
+  preemption / drain-mid-slew / per-block-count / latency coverage, and an
+  asserted 96->24 near-cutoff sweep. Unify QA Test 7 to the 9..13 window.
+- Correct the slew oracles with independent derivations (same bounds):
+  true 2x2 least-squares coherent fit for the non-coherent transition
+  window (same -50 dB bound) and a floor-aware trajectory check with a
+  linear floor from the established 2e-6 alias bound (same 1 dB
+  above-floor monotonic, same per-block coverage, plus a 20 dB
+  above-floor measurability assert). Add cumulative-clock uniformity,
+  fixed-2.0 control-leg, and injected-spur regression coverage
+  distinguishing true artifacts from intended rate/chirp modulation.
+
 # 0.6.0
 
 - Prepare anti-alias cutoff tables for dynamic ratio changes; select a safe cutoff

@@ -567,6 +567,7 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
                 let restart_generation = self.inner.restart_generation.load(Ordering::Acquire);
                 let mut plugin = self.inner.plugin.lock();
                 if plugin.initialize(&audio_io_layout, &buffer_config, &mut init_context) {
+                    self.inner.is_active.store(true, Ordering::SeqCst);
                     self.inner.tail.refresh(plugin.tail_length());
                     // NOTE: We don't call `Plugin::reset()` here. The call is done in `set_process()`
                     //       instead. Otherwise we would call the function twice, and `set_process()` needs
@@ -591,6 +592,7 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
             }
             (true, None) => kResultFalse,
             (false, _) => {
+                self.inner.is_active.store(false, Ordering::SeqCst);
                 self.inner.plugin.lock().deactivate();
                 self.inner.tail.invalidate();
 
@@ -641,7 +643,7 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
 
         match state::deserialize_json(&read_buffer) {
             Some(mut state) => {
-                if self.inner.set_state_inner(&mut state) {
+                if self.inner.set_state_inner(&mut state, false) {
                     nih_trace!("Loaded state ({} bytes)", read_buffer.len());
                     kResultOk
                 } else {
@@ -1958,7 +1960,13 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
             //        doesn't do that
             let updated_state = permit_alloc(|| self.inner.updated_state_receiver.try_recv());
             if let Ok(mut state) = updated_state {
-                self.inner.set_state_inner(&mut state);
+                // A refusal leaves live params/DSP untouched without parse,
+                // migration, or frees. Record the outcome so the GUI retains
+                // ownership for a main-thread retry instead of dropping.
+                let succeeded = self.inner.set_state_inner(&mut state, true);
+                self.inner
+                    .last_gui_state_restore_succeeded
+                    .store(succeeded, Ordering::Release);
 
                 // We'll pass the state object back to the GUI thread so deallocation can happen
                 // there without potentially blocking the audio thread

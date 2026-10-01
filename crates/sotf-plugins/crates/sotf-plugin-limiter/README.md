@@ -83,6 +83,16 @@ Zero-input gain labels are unity. Input peak remains on the native input clock;
 true-peak telemetry measures the final emitted output when enabled. Native 1x
 telemetry is unchanged.
 
+### Output meters
+
+Both native 1x and 2x/4x publish `output_peak_db` (maximum absolute final
+sample per 100 ms interval) and per-channel `output_isp_dbtp` (final-output
+BS.1770 true peak when true-peak metering is enabled, else -120.0). The legacy
+`peak_db`/`isp_dbtp` fields are preserved: native `isp_dbtp` reports input
+peaks while the oversampled path reports output peaks there. New consumers
+prefer `output_isp_dbtp` for a consistent final-output reading. Output meters
+observe emitted audio only; they never change DSP, latency, or existing fields.
+
 Oversampling reduces some nonlinear aliases at additional CPU cost; improvement
 is frequency- and mode-dependent. The final protector itself operates at the
 native rate, and no uniform rejection or monotonic 2x-to-4x improvement is claimed.

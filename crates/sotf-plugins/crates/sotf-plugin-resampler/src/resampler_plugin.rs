@@ -3,7 +3,7 @@ use super::resampler_quality::ResamplerQuality;
 use super::stream_endpoint::StreamEndpoint;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use rubato::{
-    Adjustable, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
+    Adjustable, Async, FixedAsync, Indexing, ResampleError, Resampler, SincInterpolationParameters,
     SincInterpolationType, WindowFunction,
 };
 use sotf_host::param_specs::UpdateMode;
@@ -12,6 +12,44 @@ use sotf_host::plugin::{
     Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
     ProcessContext,
 };
+
+/// Typed refusal for realtime dynamic updates.
+///
+/// `Copy` error owning no heap allocation, so audio-thread automation can
+/// handle refusals without allocating or freeing. The compatibility `String`
+/// API keeps the same messages through [`Display`](std::fmt::Display); valid
+/// calls through either API allocate nothing. Only the dynamic ratio and
+/// cutoff-smoothing controls use this path; structural setup controls stay on
+/// the control thread with the existing `String` API.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ResamplerControlError {
+    /// Stream finalized; reset before changing the named control.
+    Finalized(&'static str),
+    /// Dynamic ratio updates are disabled.
+    DynamicDisabled,
+    /// Backend is missing (defensive; construction always installs one).
+    NotInitialized,
+    /// Backend rejected the ratio (outside nominal/2 through nominal*2).
+    Backend(ResampleError),
+}
+
+impl std::fmt::Display for ResamplerControlError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Finalized(control) => write!(
+                formatter,
+                "stream has been finalized; reset before changing {control}"
+            ),
+            Self::DynamicDisabled => formatter.write_str(
+                "Dynamic ratio is not enabled. Set dynamic_ratio to true first.",
+            ),
+            Self::NotInitialized => formatter.write_str("Resampler not initialized"),
+            Self::Backend(error) => write!(formatter, "Failed to set ratio: {error:?}"),
+        }
+    }
+}
+
+impl std::error::Error for ResamplerControlError {}
 
 /// Resampler plugin using rubato
 ///
@@ -51,6 +89,7 @@ pub struct ResamplerPlugin {
     pub(super) param_quality: ParameterId,
     pub(super) param_dynamic_ratio: ParameterId,
     pub(super) param_ratio: ParameterId,
+    pub(super) param_cutoff_smoothing: ParameterId,
     /// Cached parameters
     pub(super) cached_parameters: Vec<Parameter>,
     /// Set after the host negotiates the configured input rate.
@@ -150,6 +189,7 @@ impl ResamplerPlugin {
             param_quality: ParameterId::from("quality"),
             param_dynamic_ratio: ParameterId::from("dynamic_ratio"),
             param_ratio: ParameterId::from("ratio"),
+            param_cutoff_smoothing: ParameterId::from("cutoff_smoothing"),
             cached_parameters: Vec::new(),
             initialized: false,
             stream_input_frames: 0,
@@ -233,7 +273,11 @@ impl ResamplerPlugin {
             self.output_buffer[ch].fill(0.0);
         }
         self.resampler = Some(resampler);
+        let smoothing = self.cutoffs.smoothing();
         self.cutoffs = cutoffs;
+        // A fresh bank starts untracked at slot zero like its fresh backend;
+        // the smoothing configuration persists across the quality rebuild.
+        self.cutoffs.set_smoothing(smoothing);
         self.current_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
         Ok(())
     }
@@ -265,6 +309,11 @@ impl ResamplerPlugin {
             .with_description(
                 "Current resampling ratio (only adjustable when dynamic_ratio is enabled)",
             ),
+            Parameter::new_bool("cutoff_smoothing", "Cutoff Smoothing", self.cutoffs.smoothing())
+                .with_update_mode(UpdateMode::Realtime)
+                .with_description(
+                    "Smooth upward cutoff widening one prepared table per chunk; downward narrowing stays immediate",
+                ),
         ];
     }
 
@@ -368,6 +417,88 @@ impl ResamplerPlugin {
         self.dynamic_ratio
     }
 
+    /// Set ratio without allocating, for audio-thread automation.
+    ///
+    /// Same cutoff policy as [`Self::set_ratio`]: the allowed range is nominal
+    /// / 2.0 through nominal * 2.0, `ramp` interpolates the change, and the
+    /// selected cutoff never exceeds either ramp endpoint. Neither the valid
+    /// path nor any refusal allocates or frees, and the active ratio is
+    /// unchanged on error. The backend rejects out-of-range, non-finite, and
+    /// non-positive ratios transactionally without touching its state.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use sotf_plugin_resampler::ResamplerPlugin;
+    /// let mut plugin = ResamplerPlugin::new(1, 48_000, 48_000, 256).unwrap();
+    /// // Dynamic updates are disabled by default, so this typed refusal
+    /// // needs no heap allocation.
+    /// assert!(plugin.try_set_ratio(1.5, true).is_err());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ResamplerControlError::Finalized`] after draining has begun,
+    /// [`ResamplerControlError::DynamicDisabled`] when dynamic updates are off,
+    /// [`ResamplerControlError::NotInitialized`] when the backend is missing,
+    /// or [`ResamplerControlError::Backend`] when the backend rejects the
+    /// ratio. The active ratio is unchanged on error.
+    pub fn try_set_ratio(
+        &mut self,
+        new_ratio: f64,
+        ramp: bool,
+    ) -> Result<(), ResamplerControlError> {
+        if self.endpoint.finalized() {
+            return Err(ResamplerControlError::Finalized("ratio"));
+        }
+        if !self.dynamic_ratio {
+            return Err(ResamplerControlError::DynamicDisabled);
+        }
+        let resampler = self
+            .resampler
+            .as_mut()
+            .ok_or(ResamplerControlError::NotInitialized)?;
+        resampler
+            .set_resample_ratio(new_ratio, ramp)
+            .map_err(ResamplerControlError::Backend)?;
+        self.current_ratio = new_ratio;
+        self.cutoffs.select(resampler, new_ratio);
+        Ok(())
+    }
+
+    /// Set cutoff smoothing without allocating, for audio use.
+    ///
+    /// Enables or disables the upward slew; downward narrowing still jumps
+    /// immediately in both modes. Idempotent: setting the current value
+    /// succeeds even after finalization. Neither the valid path nor the
+    /// finalized refusal allocates or frees.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use sotf_plugin_resampler::ResamplerPlugin;
+    /// let mut plugin = ResamplerPlugin::new(1, 48_000, 48_000, 256).unwrap();
+    /// assert!(plugin.try_set_cutoff_smoothing(true).is_ok());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ResamplerControlError::Finalized`] when changing the flag
+    /// after draining has begun. The flag is unchanged on error.
+    pub fn try_set_cutoff_smoothing(
+        &mut self,
+        enabled: bool,
+    ) -> Result<(), ResamplerControlError> {
+        if enabled == self.cutoffs.smoothing() {
+            return Ok(());
+        }
+        if self.endpoint.finalized() {
+            return Err(ResamplerControlError::Finalized("cutoff smoothing"));
+        }
+        self.cutoffs.set_smoothing(enabled);
+        Ok(())
+    }
+
     /// Set the resampling ratio at runtime when dynamic ratio is enabled.
     ///
     /// The allowed range is nominal / 2.0 through nominal * 2.0.
@@ -376,29 +507,24 @@ impl ResamplerPlugin {
     /// Selects a prepared cutoff no higher than either endpoint of the ramp.
     /// Selection preserves filter history and does not allocate. The cutoff grid
     /// can reduce bandwidth by up to 8.3%; a separate 0.1% step covers small
-    /// negative clock drift. Filter changes can introduce spectral transients.
-    /// Rejection near the new Nyquist remains limited by the selected quality.
+    /// negative clock drift. Abrupt widening can introduce spectral transients;
+    /// enabling `cutoff_smoothing` slews upward widening at most one prepared
+    /// table per selection call (the control call plus once per backend chunk;
+    /// ramped upward advances only per chunk) while downward narrowing still
+    /// jumps immediately, so no transient alias burst is exposed. Rejection
+    /// near the new Nyquist remains limited by the selected quality.
+    ///
+    /// Compatibility wrapper around [`Self::try_set_ratio`] with the same
+    /// messages; audio-thread automation should use the typed version so
+    /// refusals never allocate a `String`.
     ///
     /// # Errors
     /// Returns an error if dynamic ratio is disabled or the ratio is outside
     /// the allowed range, non-finite, or non-positive, or draining has begun.
     /// The active ratio is unchanged on error. Reset before updating a finalized stream.
     pub fn set_ratio(&mut self, new_ratio: f64, ramp: bool) -> Result<(), String> {
-        if self.endpoint.finalized() {
-            return Err("stream has been finalized; reset before changing ratio".to_string());
-        }
-        if !self.dynamic_ratio {
-            return Err(
-                "Dynamic ratio is not enabled. Set dynamic_ratio to true first.".to_string(),
-            );
-        }
-        let resampler = self.resampler.as_mut().ok_or("Resampler not initialized")?;
-        resampler
-            .set_resample_ratio(new_ratio, ramp)
-            .map_err(|e| format!("Failed to set ratio: {:?}", e))?;
-        self.current_ratio = new_ratio;
-        self.cutoffs.select(resampler, new_ratio);
-        Ok(())
+        self.try_set_ratio(new_ratio, ramp)
+            .map_err(|error| error.to_string())
     }
 
     /// Finish the current programme using its emitted interpolation clock.
@@ -424,18 +550,49 @@ impl ResamplerPlugin {
         Ok((result.frames, 0))
     }
 
+    /// Scale ratio without allocating, for audio-thread automation.
+    ///
+    /// Multiplies the current target by `rel_ratio`, including successive
+    /// changes; rubato's relative setter instead uses the original ratio.
+    /// Neither the valid path nor any refusal allocates or frees.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use sotf_plugin_resampler::ResamplerPlugin;
+    /// let mut plugin = ResamplerPlugin::new(1, 48_000, 48_000, 256).unwrap();
+    /// assert!(plugin.try_set_ratio_relative(1.01, true).is_err());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error under the same conditions as [`Self::try_set_ratio`],
+    /// with range validation applied to the cumulative ratio. The active
+    /// ratio is unchanged on error.
+    pub fn try_set_ratio_relative(
+        &mut self,
+        rel_ratio: f64,
+        ramp: bool,
+    ) -> Result<(), ResamplerControlError> {
+        // Rubato's relative setter uses the original ratio; this API promises
+        // multiplication of the current target, including successive changes.
+        self.try_set_ratio(self.current_ratio * rel_ratio, ramp)
+    }
+
     /// Multiply the current resampling ratio by a relative factor.
     ///
     /// For example, `rel_ratio=1.01` increases the current target ratio by 1%.
     /// Repeated calls accumulate. Cutoff and ramp behavior match [`Self::set_ratio`].
     ///
+    /// Compatibility wrapper around [`Self::try_set_ratio_relative`];
+    /// audio-thread automation should use the typed version.
+    ///
     /// # Errors
     /// Returns an error under the same conditions as [`Self::set_ratio`], with
     /// range validation applied to the cumulative ratio. The active ratio is unchanged.
     pub fn set_ratio_relative(&mut self, rel_ratio: f64, ramp: bool) -> Result<(), String> {
-        // Rubato's relative setter uses the original ratio; this API promises
-        // multiplication of the current target, including successive changes.
-        self.set_ratio(self.current_ratio * rel_ratio, ramp)
+        self.try_set_ratio_relative(rel_ratio, ramp)
+            .map_err(|error| error.to_string())
     }
 }
 
@@ -543,6 +700,14 @@ impl Plugin for ResamplerPlugin {
             }
             self.set_ratio(v as f64, true)?;
             return Ok(());
+        } else if id == self.param_cutoff_smoothing {
+            let v = value
+                .as_bool()
+                .ok_or_else(|| "cutoff_smoothing must be a bool".to_string())?;
+            // Control-thread wrapper around the allocation-free typed core;
+            // the idempotent and finalized semantics plus messages match.
+            self.try_set_cutoff_smoothing(v)
+                .map_err(|error| error.to_string())?;
         } else {
             return Err(format!("Unknown parameter: {id}"));
         }
@@ -556,6 +721,8 @@ impl Plugin for ResamplerPlugin {
             Some(ParameterValue::Bool(self.dynamic_ratio))
         } else if id == &self.param_ratio {
             Some(ParameterValue::Float(self.current_ratio as f32))
+        } else if id == &self.param_cutoff_smoothing {
+            Some(ParameterValue::Bool(self.cutoffs.smoothing()))
         } else {
             None
         }
@@ -580,6 +747,9 @@ impl Plugin for ResamplerPlugin {
         if let Some(ref mut resampler) = self.resampler {
             resampler.reset();
         }
+        // The backend reset returns to slot zero; track it. The smoothing
+        // configuration persists like the dynamic-ratio permission flag.
+        self.cutoffs.reset();
         // Reset ratio to nominal
         self.current_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
         // Clear residual buffer — zero the data to prevent stale audio leaking through

@@ -238,6 +238,10 @@ impl<P: ClapPlugin> GuiContext for WrapperGuiContext<P> {
     fn set_state(&self, state: crate::wrapper::state::PluginState) {
         self.wrapper.set_state_object_from_gui(state)
     }
+
+    fn request_component_restart(&self) -> bool {
+        self.wrapper.request_component_restart()
+    }
 }
 
 /// A remote control section. The plugin can fill this with information for one or more pages.

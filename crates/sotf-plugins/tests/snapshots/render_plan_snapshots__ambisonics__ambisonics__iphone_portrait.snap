@@ -44,7 +44,7 @@ expression: plan
       "unit": "",
       "range": [
         0.0,
-        7.0
+        8.0
       ],
       "read_only": false,
       "enabled": true

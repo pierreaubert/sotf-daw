@@ -18,6 +18,7 @@ use crate::{
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::{ExternalPluginSandboxTiming, ExternalPluginTrust};
 use sotf_host::parameters::{ParameterId, ParameterValue};
+use sotf_host::plugin::Plugin;
 use std::path::PathBuf;
 
 use tempfile::tempdir;
@@ -293,6 +294,81 @@ fn hiss_reducer_factory_validates_topology_rate_and_persisted_state() {
 }
 
 #[test]
+fn hiss_reducer_factory_carries_transient_guard_through_render_and_reload() {
+    // Guard-on construction from JSON renders real audio; serializing the
+    // construction parameters and recreating re-renders bit-exactly with
+    // the guard still engaged.
+    let parameters = serde_json::json!({
+        "enabled": true,
+        "threshold_db": -35.0,
+        "frequency_hz": 3000.0,
+        "strength": 0.7,
+        "spectral_mode": true,
+        "use_captured_profile": false,
+        "curve_low": 1.0,
+        "curve_mid": 1.0,
+        "curve_high": 1.0,
+        "link_mode": 0,
+        "transient_guard": true,
+    });
+    let frames = 8192;
+    let input: Vec<f32> = (0..frames)
+        .map(|n| {
+            (2.0 * std::f32::consts::PI * 1000.0 * n as f32 / 48_000.0).sin() * 0.4
+                + (2.0 * std::f32::consts::PI * 9000.0 * n as f32 / 48_000.0).sin() * 0.1
+        })
+        .collect();
+    let render = |parameters: &serde_json::Value| {
+        let mut plugin = create_plugin("hiss_reducer", parameters, 1, 48_000).unwrap();
+        plugin.initialize(48_000).unwrap();
+        let mut output = vec![f32::NAN; input.len()];
+        assert_eq!(
+            plugin
+                .process(
+                    &input,
+                    &mut output,
+                    &sotf_host::ProcessContext::new(48_000, frames),
+                )
+                .unwrap(),
+            frames
+        );
+        assert!(output.iter().all(|sample| sample.is_finite()));
+        output
+    };
+    let first = render(&parameters);
+    assert!(first.iter().any(|sample| *sample != 0.0));
+
+    let saved = serde_json::to_string(&parameters).unwrap();
+    let reloaded: serde_json::Value = serde_json::from_str(&saved).unwrap();
+    assert_eq!(reloaded["transient_guard"], true);
+    assert_eq!(render(&reloaded), first);
+    let rebuilt = create_plugin("hiss_reducer", &reloaded, 1, 48_000).unwrap();
+    assert_eq!(
+        rebuilt.get_parameter(&ParameterId::from("transient_guard")),
+        Some(ParameterValue::Bool(true))
+    );
+
+    // Old-state JSON without the key constructs guard-off (serde default)
+    // and renders the legacy path bit-identically to explicit false.
+    let mut legacy = parameters.clone();
+    assert!(
+        legacy
+            .as_object_mut()
+            .unwrap()
+            .remove("transient_guard")
+            .is_some()
+    );
+    let legacy_plugin = create_plugin("hiss_reducer", &legacy, 1, 48_000).unwrap();
+    assert_eq!(
+        legacy_plugin.get_parameter(&ParameterId::from("transient_guard")),
+        Some(ParameterValue::Bool(false))
+    );
+    let mut explicit_off = parameters.clone();
+    explicit_off["transient_guard"] = serde_json::json!(false);
+    assert_eq!(render(&legacy), render(&explicit_off));
+}
+
+#[test]
 fn aec_catalog_factory_and_runtime_schema_are_canonical() {
     let entry = catalog_entry("aec").expect("AEC catalog entry");
     assert_eq!(entry.metadata.owning_crate, "sotf-plugin-aec");
@@ -501,6 +577,299 @@ fn ambisonics_catalog_matches_factory_order_contract() {
         matches!(mismatched_order, Err(error) if error.contains("Order-1 ambisonics requires 4 input channels")),
         "an explicit order must still reject a mismatched input width"
     );
+}
+
+#[test]
+fn ambisonics_factory_custom_geometry_decodes_and_matches_direct_construction() {
+    let parameters = serde_json::json!({
+        "order": 1,
+        "target_layout": "custom",
+        "custom_layout": {
+            "name": "stereo",
+            "speakers": [
+                {"label": "FL", "azimuth_deg": 30.0, "elevation_deg": 0.0, "is_lfe": false},
+                {"label": "FR", "azimuth_deg": -30.0, "elevation_deg": 0.0, "is_lfe": false}
+            ]
+        }
+    });
+    let mut plugin = create_plugin("ambisonics_decoder", &parameters, 4, 48_000)
+        .unwrap_or_else(|error| panic!("custom factory route failed: {error}"));
+    assert_eq!(plugin.input_channels(), 4);
+    // No named layout decodes to two channels, so this width proves the
+    // user-geometry constructor ran.
+    assert_eq!(plugin.output_channels(), 2);
+
+    let custom: sotf_plugin_ambisonics::CustomDecoderConfig =
+        serde_json::from_value(parameters).unwrap();
+    let mut reference =
+        sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom).unwrap();
+    reference.initialize(48_000).unwrap();
+
+    let frames = 8;
+    let mut input = vec![0.0; frames * 4];
+    for frame in 0..frames {
+        input[frame * 4] = 1.0;
+    }
+    let mut output = vec![f32::NAN; frames * 2];
+    assert_eq!(
+        plugin
+            .process(
+                &input,
+                &mut output,
+                &sotf_host::ProcessContext::new(48_000, frames),
+            )
+            .unwrap(),
+        frames
+    );
+    let mut expected = vec![f32::NAN; frames * 2];
+    assert_eq!(
+        reference
+            .process(
+                &input,
+                &mut expected,
+                &sotf_host::ProcessContext::new(48_000, frames),
+            )
+            .unwrap(),
+        frames
+    );
+    assert!(output.iter().all(|sample| sample.is_finite()));
+    assert!(output.iter().any(|sample| sample.abs() > 1.0e-6));
+    assert_eq!(output, expected);
+}
+
+#[test]
+fn ambisonics_factory_custom_routing_accepts_legacy_numeric_targets() {
+    for target in [
+        serde_json::json!("custom"),
+        serde_json::json!(8),
+        serde_json::json!(8.0),
+    ] {
+        let plugin = create_plugin(
+            "ambisonics_decoder",
+            &serde_json::json!({
+                "order": 1,
+                "target_layout": target,
+                "custom_layout": {
+                    "name": "mono",
+                    "speakers": [
+                        {"label": "C", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false}
+                    ]
+                }
+            }),
+            4,
+            48_000,
+        )
+        .unwrap_or_else(|error| panic!("target {target} must route custom: {error}"));
+        assert_eq!(plugin.output_channels(), 1, "target {target}");
+    }
+
+    // Named numerics keep their historical widths.
+    for (target, width) in [
+        (serde_json::json!(0), 6),
+        (serde_json::json!("5.1"), 6),
+        (serde_json::json!(1), 8),
+        (serde_json::json!("9.1.6"), 16),
+    ] {
+        let plugin = create_plugin(
+            "ambisonics_decoder",
+            &serde_json::json!({"order": 1, "target_layout": target}),
+            4,
+            48_000,
+        )
+        .unwrap_or_else(|error| panic!("target {target} must stay named: {error}"));
+        assert_eq!(plugin.output_channels(), width, "target {target}");
+    }
+
+    // Pre-existing JSON without a target keeps the named default.
+    let plugin = create_plugin(
+        "ambisonics_decoder",
+        &serde_json::json!({"order": 1}),
+        4,
+        48_000,
+    )
+    .expect("missing target_layout keeps the named default");
+    assert_eq!(plugin.output_channels(), 6);
+}
+
+#[test]
+fn ambisonics_factory_custom_geometry_rejections_name_custom() {
+    // Missing geometry: routing parses, then the custom constructor errors.
+    let missing = create_plugin(
+        "ambisonics_decoder",
+        &serde_json::json!({"order": 1, "target_layout": "custom"}),
+        4,
+        48_000,
+    );
+    match missing {
+        Err(error) if error.contains("custom") => {}
+        Err(error) => panic!("missing custom geometry must name custom, got Err({error})"),
+        Ok(_) => panic!("missing custom geometry must name custom, got Ok"),
+    }
+
+    let bad_layouts = [
+        // Duplicate labels.
+        serde_json::json!({
+            "name": "stereo",
+            "speakers": [
+                {"label": "FL", "azimuth_deg": 30.0, "elevation_deg": 0.0, "is_lfe": false},
+                {"label": "FL", "azimuth_deg": -30.0, "elevation_deg": 0.0, "is_lfe": false}
+            ]
+        }),
+        // Empty name.
+        serde_json::json!({
+            "name": "",
+            "speakers": [
+                {"label": "C", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false}
+            ]
+        }),
+        // Out-of-range azimuth.
+        serde_json::json!({
+            "name": "mono",
+            "speakers": [
+                {"label": "C", "azimuth_deg": 200.0, "elevation_deg": 0.0, "is_lfe": false}
+            ]
+        }),
+        // All LFE.
+        serde_json::json!({
+            "name": "lfe",
+            "speakers": [
+                {"label": "LFE", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": true}
+            ]
+        }),
+    ];
+    for layout in bad_layouts {
+        let rejected = create_plugin(
+            "ambisonics_decoder",
+            &serde_json::json!({
+                "order": 1,
+                "target_layout": "custom",
+                "custom_layout": layout,
+            }),
+            4,
+            48_000,
+        );
+        match rejected {
+            Err(error) if error.contains("custom") => {}
+            Err(error) => {
+                panic!("malformed custom geometry must name custom, got Err({error})")
+            }
+            Ok(_) => panic!("malformed custom geometry must name custom, got Ok"),
+        }
+    }
+
+    // Unknown string targets still fail at the routing parse, before custom.
+    let unknown = create_plugin(
+        "ambisonics_decoder",
+        &serde_json::json!({"order": 1, "target_layout": "nope"}),
+        4,
+        48_000,
+    );
+    match unknown {
+        Err(error) if error.contains("Failed to parse ambisonics decoder params") => {}
+        Err(error) => panic!("unknown targets must fail routing parse, got Err({error})"),
+        Ok(_) => panic!("unknown targets must fail routing parse, got Ok"),
+    }
+
+    // Wrong input width is still rejected after custom construction.
+    let mismatched = create_plugin(
+        "ambisonics_decoder",
+        &serde_json::json!({
+            "order": 1,
+            "target_layout": "custom",
+            "custom_layout": {
+                "name": "mono",
+                "speakers": [
+                    {"label": "C", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false}
+                ]
+            }
+        }),
+        9,
+        48_000,
+    );
+    match mismatched {
+        Err(error) if error.contains("Order-1 ambisonics requires 4 input channels") => {}
+        Err(error) => panic!("custom must keep the order/width check, got Err({error})"),
+        Ok(_) => panic!("custom must keep the order/width check, got Ok"),
+    }
+}
+
+#[test]
+fn resampler_facade_factory_honors_cutoff_smoothing_and_renders() {
+    // Legacy params (no smoothing key) default to false = bit-exact legacy
+    // audio. Explicit true reaches the instance before any audio flows.
+    // Smoothing alone is inert on a non-dynamic instance (`set_ratio` fails),
+    // so validation enables `dynamic_ratio` before rendering; the full upward
+    // 0.5→2.0 schedule distinction + identical lengths are proven in the
+    // resampler crate's `smooth_cutoff` suite via the concrete API.
+    let mut legacy = create_plugin(
+        "resampler",
+        &serde_json::json!({"input_sample_rate": 48_000, "output_sample_rate": 48_000}),
+        2,
+        48_000,
+    )
+    .expect("legacy resampler params must construct");
+    assert_eq!(
+        legacy.get_parameter(&ParameterId::from("cutoff_smoothing")),
+        Some(ParameterValue::Bool(false))
+    );
+    let mut smoothed = create_plugin(
+        "resampler",
+        &serde_json::json!({
+            "input_sample_rate": 48_000,
+            "output_sample_rate": 48_000,
+            "cutoff_smoothing": true,
+        }),
+        2,
+        48_000,
+    )
+    .expect("smoothing resampler params must construct");
+    assert_eq!(
+        smoothed.get_parameter(&ParameterId::from("cutoff_smoothing")),
+        Some(ParameterValue::Bool(true))
+    );
+
+    for plugin in [&mut legacy, &mut smoothed] {
+        plugin
+            .set_parameter(
+                ParameterId::from("dynamic_ratio"),
+                ParameterValue::Bool(true),
+            )
+            .expect("dynamic_ratio must enable on facade instance");
+        plugin.initialize(48_000).unwrap();
+    }
+    let frames = 512;
+    let input: Vec<f32> = (0..frames * 2)
+        .map(|n| {
+            (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
+        })
+        .collect();
+    let mut legacy_out = vec![f32::NAN; input.len()];
+    let mut smoothed_out = vec![f32::NAN; input.len()];
+    assert_eq!(
+        legacy
+            .process(
+                &input,
+                &mut legacy_out,
+                &sotf_host::ProcessContext::new(48_000, frames),
+            )
+            .unwrap(),
+        frames
+    );
+    assert_eq!(
+        smoothed
+            .process(
+                &input,
+                &mut smoothed_out,
+                &sotf_host::ProcessContext::new(48_000, frames),
+            )
+            .unwrap(),
+        frames
+    );
+    assert_eq!(legacy_out.len(), smoothed_out.len());
+    assert!(legacy_out.iter().all(|sample| sample.is_finite()));
+    assert!(smoothed_out.iter().all(|sample| sample.is_finite()));
+    assert!(legacy_out.iter().any(|sample| *sample != 0.0));
+    assert!(smoothed_out.iter().any(|sample| *sample != 0.0));
 }
 
 #[test]
@@ -841,6 +1210,69 @@ fn crossover_catalog_and_factory_report_compiled_topology() {
         .map(|parameter| parameter.id.as_str())
         .collect();
     assert_eq!(ids, ["type", "frequency", "mode", "frequency_2"]);
+}
+
+#[test]
+fn crossover_factory_canonicalizes_choice_labels_and_preserves_numeric_counts() {
+    let base = serde_json::json!({
+        "type": "LR24",
+        "frequency": 500.0,
+        "output": "both",
+        "extra_frequencies": [2_000.0, 8_000.0],
+        "channel_frequencies_hz": [700.0, 1_400.0],
+        "channel_modes": ["lowpass", "highpass"]
+    });
+
+    for (wire_count, expected_count) in [
+        (serde_json::json!("2"), 2),
+        (serde_json::json!("3"), 3),
+        (serde_json::json!("4"), 4),
+        (serde_json::json!(2), 2),
+        (serde_json::json!(3), 3),
+        (serde_json::json!(4), 4),
+    ] {
+        let mut parameters = base.clone();
+        parameters["band_count"] = wire_count.clone();
+        parameters["topology"] = serde_json::json!("Bands");
+        let plugin = create_plugin("crossover", &parameters, 2, 48_000)
+            .unwrap_or_else(|error| panic!("Crossover count {wire_count} was rejected: {error}"));
+        assert_eq!(
+            plugin.output_channels(),
+            2 * expected_count,
+            "numeric counts remain actual counts and visible labels map to those counts"
+        );
+    }
+
+    for (wire_topology, per_channel) in [
+        (serde_json::json!(0), false),
+        (serde_json::json!("Bands"), false),
+        (serde_json::json!("bands"), false),
+        (serde_json::json!(1), true),
+        (serde_json::json!("Per Channel"), true),
+        (serde_json::json!("per_channel"), true),
+    ] {
+        let mut parameters = base.clone();
+        parameters["band_count"] = serde_json::json!(2);
+        parameters["topology"] = wire_topology.clone();
+        let plugin = create_plugin("crossover", &parameters, 2, 48_000).unwrap_or_else(|error| {
+            panic!("Crossover topology {wire_topology} was rejected: {error}")
+        });
+        assert_eq!(
+            plugin.output_channels(),
+            if per_channel { 2 } else { 4 },
+            "topology form {wire_topology} selected the wrong route"
+        );
+    }
+
+    for invalid_count in [0, 1, 5] {
+        let mut parameters = base.clone();
+        parameters["band_count"] = serde_json::json!(invalid_count);
+        parameters["topology"] = serde_json::json!("bands");
+        assert!(
+            create_plugin("crossover", &parameters, 2, 48_000).is_err(),
+            "invalid numeric band count {invalid_count} must remain invalid"
+        );
+    }
 }
 
 #[test]

@@ -63,7 +63,8 @@ impl Plugin {
 
     /// Revalidate deserialized settings before they are committed to a graph.
     pub fn validate(&self) -> Result<(), String> {
-        Self::validated_default_name(&self.settings).map(|_| ())
+        Self::validated_default_name(&self.settings).map(|_| ())?;
+        self.settings.validate_custom_geometry()
     }
 
     fn validated_default_name(settings: &PluginSettings) -> Result<Option<String>, String> {

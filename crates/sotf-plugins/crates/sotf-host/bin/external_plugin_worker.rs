@@ -19,6 +19,9 @@ mod desktop {
     #[cfg(feature = "worker-test-backend")]
     struct TestPassthroughPlugin {
         channels: usize,
+        gain: f32,
+        fail_first_process: bool,
+        fail_reset: bool,
     }
 
     #[cfg(feature = "worker-test-backend")]
@@ -47,15 +50,40 @@ mod desktop {
             None
         }
 
+        fn reset(&mut self) {
+            self.fail_first_process = false;
+        }
+
+        fn reset_checked(&mut self) -> PluginResult<()> {
+            if self.fail_reset {
+                return Err("injected test-backend reset failure".into());
+            }
+            self.reset();
+            Ok(())
+        }
+
         fn process(
             &mut self,
             input: &[f32],
             output: &mut [f32],
             context: &ProcessContext,
         ) -> PluginResult<usize> {
+            if self.fail_first_process {
+                return Err("injected test-backend process failure".into());
+            }
             let samples = context.num_frames * self.channels;
-            output[..samples].copy_from_slice(&input[..samples]);
+            for (destination, source) in output[..samples].iter_mut().zip(&input[..samples]) {
+                *destination = *source * self.gain;
+            }
             Ok(context.num_frames)
+        }
+
+        fn tail_length(&self) -> sotf_host::TailLength {
+            sotf_host::TailLength::Finite(0)
+        }
+
+        fn guarantees_identity_frame_geometry(&self) -> bool {
+            true
         }
     }
 
@@ -90,6 +118,21 @@ mod desktop {
         #[cfg(feature = "worker-test-backend")]
         #[arg(long)]
         test_passthrough: bool,
+
+        /// Make the test backend return one process error; Reset clears it.
+        #[cfg(feature = "worker-test-backend")]
+        #[arg(long, requires = "test_passthrough")]
+        test_fail_first_process: bool,
+
+        /// Refuse Reset after the injected process error.
+        #[cfg(feature = "worker-test-backend")]
+        #[arg(long, requires = "test_passthrough")]
+        test_fail_reset: bool,
+
+        /// Multiply test-backend audio by this value to distinguish it from host fallback.
+        #[cfg(feature = "worker-test-backend")]
+        #[arg(long, default_value_t = 1.0, requires = "test_passthrough")]
+        test_gain: f32,
 
         /// Exit after the first control request (test backend only).
         #[cfg(feature = "worker-test-backend")]
@@ -183,6 +226,9 @@ mod desktop {
             }
             Box::new(TestPassthroughPlugin {
                 channels: descriptor.audio_inputs,
+                gain: args.test_gain,
+                fail_first_process: args.test_fail_first_process,
+                fail_reset: args.test_fail_reset,
             })
         } else {
             Box::new(
@@ -240,6 +286,11 @@ mod desktop {
         loop {
             match worker.process_one()? {
                 ExternalPluginWorkerStep::Processed { .. } => {
+                    if args.once {
+                        return Ok(());
+                    }
+                }
+                ExternalPluginWorkerStep::ProcessFailed { .. } => {
                     if args.once {
                         return Ok(());
                     }
@@ -453,6 +504,12 @@ mod desktop {
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
                 #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
+                #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,
                 sandbox_timing: "disabled".to_string(),
@@ -518,6 +575,12 @@ mod desktop {
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
                 #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
+                #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,
                 sandbox_timing: "disabled".to_string(),
@@ -543,6 +606,12 @@ mod desktop {
                 once: true,
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
                 #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,
@@ -572,6 +641,12 @@ mod desktop {
                 once: true,
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
                 #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,
@@ -610,6 +685,12 @@ mod desktop {
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
                 #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
+                #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,
                 sandbox_timing: "disabled".to_string(),
@@ -644,6 +725,12 @@ mod desktop {
                 once: true,
                 #[cfg(feature = "worker-test-backend")]
                 test_passthrough: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_first_process: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_fail_reset: false,
+                #[cfg(feature = "worker-test-backend")]
+                test_gain: 1.0,
                 #[cfg(feature = "worker-test-backend")]
                 exit_after_control: false,
                 idle_sleep_micros: 1,

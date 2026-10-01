@@ -63,6 +63,15 @@ pub trait GuiContext: Send + Sync + 'static {
     /// host. If the plugin is currently processing audio, then the parameter values will be
     /// restored at the end of the current processing cycle.
     fn set_state(&self, state: PluginState);
+
+    /// Request a deferred component restart for a prepared structural update.
+    ///
+    /// Implementations must queue the host callback onto its permitted thread. The default keeps
+    /// hosts without a restart route safe; callers should retain the pending value and report that
+    /// manual reactivation is required.
+    fn request_component_restart(&self) -> bool {
+        false
+    }
 }
 
 /// An way to run background tasks from the plugin's GUI, equivalent to the

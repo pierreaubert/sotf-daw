@@ -285,6 +285,41 @@ impl std::ops::DerefMut for ConvolutionPlugin {
 }
 
 impl ConvolutionPlugin {
+    /// Validate a referenced IR without constructing its realtime backend.
+    ///
+    /// This performs control-thread file decoding and the same channel, duration,
+    /// sample-rate, and memory admission checks used by normal IR construction.
+    /// `target_sample_rate` may be omitted when the host has not selected a rate;
+    /// in that case admission is checked at the file's decoded sample rate.
+    ///
+    /// # Errors
+    /// Returns an error when the file cannot be decoded or its routing/resource
+    /// geometry is not supported.
+    #[doc(hidden)]
+    pub fn validate_ir_resource_for_routing(
+        path: &str,
+        target_sample_rate: Option<u32>,
+        output_channels: usize,
+        use_nupc: bool,
+        true_stereo: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Result<(), String> {
+        let (ir_samples, ir_sample_rate) = Self::load_audio_file(path)?;
+        Self::validate_ir_limits_for_routing(
+            &ir_samples,
+            ir_sample_rate,
+            IrValidationOptions {
+                target_sample_rate: target_sample_rate.unwrap_or(ir_sample_rate),
+                output_channels,
+                use_nupc,
+                true_stereo,
+                zero_latency_head,
+                head_taps,
+            },
+        )
+    }
+
     #[cfg(test)]
     pub(super) fn validate_ir_limits(
         ir_samples: &[Vec<f32>],

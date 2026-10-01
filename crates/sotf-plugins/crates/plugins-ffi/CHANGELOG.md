@@ -2,6 +2,8 @@
 
 ## Changes
 
+- Correct EQ Off/2x/4x oversampling selection and readback while preserving existing parameter addresses and legacy/state-restored audio.
+
 - Restore versioned preset envelopes transactionally and reject invalid or incompatible state without changing the active plugin.
 - Migrate FletcherMunson state to LoudnessCompensation while preserving nondefault controls and rendered audio.
 - Carry typed Crossover topology and true-stereo convolution through plugin construction and state restoration.

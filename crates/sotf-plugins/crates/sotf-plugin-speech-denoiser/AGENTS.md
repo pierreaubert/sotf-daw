@@ -4,12 +4,15 @@ RNNoise-based voice denoiser plugin. Wraps the `RnnoiseBackend` block from `plug
 
 ## Architecture
 
-- `lib.rs` — `SpeechDenoiserPluginParams` + `ParametricInPlacePlugin` impl driving `plugins_denoiser::rnnoise::RnnoiseBackend`.
-- `params.rs` — `PARAMS` array (parameter specs).
+- `lib.rs` — `SpeechDenoiserPluginParams` + `ParametricInPlacePlugin` impl driving `plugins_denoiser::rnnoise::RnnoiseBackend`, plus the wrapper 960-frame dry delay and strength blend.
+- `model.rs` — append-only model registry (`MODEL_LABELS`, `SpeechDenoiserModel`).
+- `params.rs` — `PARAMS` array (parameter specs), v2 schema, UI layout.
 
 ## Parameters
 
 - `enabled` — bypass toggle (default: enabled).
+- `strength` — suppression blend 0..1 (default: 1.0 full wet), realtime, 480-frame slew.
+- `model` — bundled model identity (default: `RNNoise Full`), structural; unknown rejected, changed-after-init needs graph rebuild.
 
 ## Features
 

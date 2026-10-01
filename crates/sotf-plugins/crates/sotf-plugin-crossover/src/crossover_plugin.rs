@@ -640,12 +640,34 @@ impl CrossoverPlugin {
                 modes,
             );
         }
+        let band_count = params
+            .band_count
+            .unwrap_or_else(|| params.extra_frequencies.len().saturating_add(2));
+        if !(2..=4).contains(&band_count) {
+            return Err(format!(
+                "crossover band_count must be in [2, 4], got {band_count}"
+            ));
+        }
+        let active_extra_count = band_count - 2;
+        if params.extra_frequencies.len() < active_extra_count {
+            return Err(format!(
+                "crossover band_count {band_count} requires {active_extra_count} active extra frequencies, got {}",
+                params.extra_frequencies.len()
+            ));
+        }
+        let active_extra_frequencies = &params.extra_frequencies[..active_extra_count];
+        if active_extra_frequencies
+            .iter()
+            .any(|frequency| !frequency.is_finite())
+        {
+            return Err("active extra crossover frequencies must be finite".into());
+        }
         Self::new_multiway_with_fir_taps(
             num_channels,
             &params.crossover_type,
             params.frequency,
             &params.output,
-            &params.extra_frequencies,
+            active_extra_frequencies,
             params.fir_taps.unwrap_or(DEFAULT_FIR_CROSSOVER_TAPS),
         )
     }

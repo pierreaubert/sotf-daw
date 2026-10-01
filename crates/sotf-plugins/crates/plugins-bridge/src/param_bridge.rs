@@ -7,6 +7,12 @@ use sotf_host::param_specs::{ParamSpec, ParamType, UpdateMode};
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::Plugin;
 
+const EQ_PLUGIN_INFO_NAME: &str = "Parametric EQ";
+const EQ_OVERSAMPLING_PARAMETER_ID: &str = "oversampling";
+// The EQ bridge schema orders choices as Off, 2x, 4x; the plugin API stores
+// their corresponding processing factors as 1x, 2x, 4x.
+const EQ_OVERSAMPLING_FACTORS: [i32; 3] = [1, 2, 4];
+
 /// Bridge between AU/VST3 normalized parameters and SOTF plugin parameters.
 ///
 /// Built from a slice of `ParamSpec` (the single source of truth for parameter metadata).
@@ -191,7 +197,7 @@ impl ParamBridge {
     pub fn get_normalized(&self, plugin: &dyn Plugin, index: usize) -> Option<f64> {
         let spec = self.specs.get(index)?;
         let value = plugin.get_parameter(&self.ids[index])?;
-        let raw = parameter_value_to_raw(Some(spec), &value)?;
+        let raw = self.raw_value_from_plugin(plugin, spec, &value)?;
         Some(normalize_value(spec, raw))
     }
 
@@ -229,7 +235,10 @@ impl ParamBridge {
         } else {
             (None, plugin.get_parameter(&ParameterId::from(engine_key))?)
         };
-        parameter_value_to_raw(spec, &value)
+        match spec {
+            Some(spec) => self.raw_value_from_plugin(plugin, spec, &value),
+            None => parameter_value_to_raw(None, &value),
+        }
     }
 
     fn value_for_plugin(
@@ -255,7 +264,42 @@ impl ParamBridge {
                 .ok_or_else(|| format!("Invalid choice for {}", spec.engine_key))?;
             return Ok(ParameterValue::String((*label).to_owned()));
         }
+        let raw = if self.is_eq_oversampling_parameter(plugin, spec) {
+            let choice_index = raw.round();
+            if !choice_index.is_finite()
+                || choice_index < 0.0
+                || choice_index >= EQ_OVERSAMPLING_FACTORS.len() as f64
+            {
+                return Err(format!("Invalid choice for {}", spec.engine_key));
+            }
+            f64::from(EQ_OVERSAMPLING_FACTORS[choice_index as usize])
+        } else {
+            raw
+        };
         Ok(raw_to_parameter_value(spec, raw))
+    }
+
+    fn raw_value_from_plugin(
+        &self,
+        plugin: &dyn Plugin,
+        spec: &ParamSpec,
+        value: &ParameterValue,
+    ) -> Option<f64> {
+        let raw = parameter_value_to_raw(Some(spec), value)?;
+        if self.is_eq_oversampling_parameter(plugin, spec) {
+            EQ_OVERSAMPLING_FACTORS
+                .iter()
+                .position(|factor| f64::from(*factor) == raw)
+                .map(|index| index as f64)
+        } else {
+            Some(raw)
+        }
+    }
+
+    fn is_eq_oversampling_parameter(&self, plugin: &dyn Plugin, spec: &ParamSpec) -> bool {
+        spec.engine_key == EQ_OVERSAMPLING_PARAMETER_ID
+            && matches!(spec.param_type, ParamType::Choice { .. })
+            && plugin.info().name == EQ_PLUGIN_INFO_NAME
     }
 }
 
@@ -511,6 +555,37 @@ mod tests {
                 assert!(bridge.set_raw(&mut *plugin, key, other as f64).is_err());
                 assert_eq!(bridge.get_raw(&*plugin, key), Some(index as f64));
             }
+        }
+    }
+
+    #[test]
+    fn parametric_eq_oversampling_choices_map_to_plugin_factors() {
+        let mut plugin = crate::create_plugin("EQ", 2, 48_000, "{}").unwrap();
+        assert_eq!(plugin.info().name, EQ_PLUGIN_INFO_NAME);
+
+        let bridge = ParamBridge::new(sotf_plugin_eq::params::GLOBAL_PARAMS);
+        let index = bridge.find_index(EQ_OVERSAMPLING_PARAMETER_ID).unwrap();
+        for (choice_index, factor, normalized) in [(0.0, 1, 0.0), (1.0, 2, 0.5), (2.0, 4, 1.0)] {
+            bridge
+                .set_normalized(&mut *plugin, index, normalized)
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from(EQ_OVERSAMPLING_PARAMETER_ID)),
+                Some(ParameterValue::Int(factor))
+            );
+            assert_eq!(bridge.get_normalized(&*plugin, index), Some(normalized));
+
+            bridge
+                .set_raw(&mut *plugin, EQ_OVERSAMPLING_PARAMETER_ID, choice_index)
+                .unwrap();
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from(EQ_OVERSAMPLING_PARAMETER_ID)),
+                Some(ParameterValue::Int(factor))
+            );
+            assert_eq!(
+                bridge.get_raw(&*plugin, EQ_OVERSAMPLING_PARAMETER_ID),
+                Some(choice_index)
+            );
         }
     }
 

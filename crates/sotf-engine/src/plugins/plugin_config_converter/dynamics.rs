@@ -24,6 +24,7 @@ pub fn convert_compressor(settings: &PluginSettings, _sample_rate: f64) -> Optio
         sidechain_external,
         range_db,
         hold_ms,
+        sidechain_hpf_enabled,
     } = settings
     else {
         return None;
@@ -38,6 +39,10 @@ pub fn convert_compressor(settings: &PluginSettings, _sample_rate: f64) -> Optio
         "mix": mix,
         "auto_makeup": auto_makeup,
         "link_channels": link_channels,
+        "sidechain_hpf_hz": sidechain_hpf_hz,
+        "sidechain_hpf_order": sidechain_hpf_order,
+        "detection_mode": detection_mode,
+        "sidechain_hpf_enabled": sidechain_hpf_enabled,
         "lookahead_ms": lookahead_ms,
         "measured_auto_makeup": measured_auto_makeup,
         "range_db": range_db,
@@ -47,15 +52,6 @@ pub fn convert_compressor(settings: &PluginSettings, _sample_rate: f64) -> Optio
     // These legacy controls are not implemented by the current DSP. Preserve
     // non-default requests so construction returns the plugin's explicit
     // unsupported-setting error instead of silently dropping user intent.
-    if (*sidechain_hpf_hz - 80.0).abs() > f64::EPSILON {
-        parameters.insert("sidechain_hpf_hz".into(), json!(sidechain_hpf_hz));
-    }
-    if !sidechain_hpf_order.eq_ignore_ascii_case("2nd") {
-        parameters.insert("sidechain_hpf_order".into(), json!(sidechain_hpf_order));
-    }
-    if !detection_mode.eq_ignore_ascii_case("Peak") {
-        parameters.insert("detection_mode".into(), json!(detection_mode));
-    }
     if *program_dependent_release {
         parameters.insert(
             "program_dependent_release".into(),
@@ -218,6 +214,10 @@ pub fn convert_multiband_compressor(
         link_amount,
         range_db,
         hold_ms,
+        sidechain_hpf_hz,
+        sidechain_hpf_order,
+        detection_mode,
+        sidechain_hpf_enabled,
     } = settings
     else {
         return None;
@@ -246,6 +246,10 @@ pub fn convert_multiband_compressor(
             "link_amount": link_amount,
             "range_db": range_db,
             "hold_ms": hold_ms,
+            "sidechain_hpf_hz": sidechain_hpf_hz,
+            "sidechain_hpf_order": sidechain_hpf_order,
+            "detection_mode": detection_mode,
+            "sidechain_hpf_enabled": sidechain_hpf_enabled,
         }),
     ))
 }
@@ -317,6 +321,10 @@ pub fn convert_de_esser(settings: &PluginSettings, _sample_rate: f64) -> Option<
         mix,
         range_db,
         stereo_link,
+        lookahead_ms,
+        split_topology,
+        ms_mode,
+        sidechain_external,
     } = settings
     else {
         return None;
@@ -334,6 +342,10 @@ pub fn convert_de_esser(settings: &PluginSettings, _sample_rate: f64) -> Option<
             "mix": *mix as f32,
             "range_db": *range_db as f32,
             "stereo_link": *stereo_link as f32,
+            "lookahead_ms": *lookahead_ms as f32,
+            "split_topology": split_topology,
+            "ms_mode": ms_mode,
+            "sidechain_external": sidechain_external,
         }),
     ))
 }
@@ -375,6 +387,7 @@ pub fn convert_dynamic_eq(settings: &PluginSettings, _sample_rate: f64) -> Optio
         link_channels,
         mix,
         bands,
+        stereo_pairs,
     } = settings
     else {
         return None;
@@ -391,6 +404,7 @@ pub fn convert_dynamic_eq(settings: &PluginSettings, _sample_rate: f64) -> Optio
             "link_channels": link_channels,
             "mix": *mix as f32,
             "bands": bands,
+            "stereo_pairs": stereo_pairs,
         }),
     ))
 }

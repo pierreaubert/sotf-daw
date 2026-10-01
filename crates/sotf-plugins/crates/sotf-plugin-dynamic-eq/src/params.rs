@@ -25,16 +25,19 @@ pub enum DynEqShape {
     Peak,
     LowShelf,
     HighShelf,
+    Tilt,
 }
 
 impl DynEqShape {
-    pub const CHOICE_LABELS: [&'static str; 3] = ["Peak", "Low Shelf", "High Shelf"];
+    pub const CHOICE_LABELS: [&'static str; 4] =
+        ["Peak", "Low Shelf", "High Shelf", "Tilt"];
 
     pub const fn choice_index(self) -> i32 {
         match self {
             Self::Peak => 0,
             Self::LowShelf => 1,
             Self::HighShelf => 2,
+            Self::Tilt => 3,
         }
     }
 
@@ -43,8 +46,57 @@ impl DynEqShape {
             0 => Some(Self::Peak),
             1 => Some(Self::LowShelf),
             2 => Some(Self::HighShelf),
+            3 => Some(Self::Tilt),
             _ => None,
         }
+    }
+}
+
+/// Stereo-field routing of one dynamic EQ band.
+///
+/// Mirrors the `sotf-plugin-eq` ordered-route contract: `Stereo` processes
+/// every channel, while the other selections act inside each configured
+/// stereo pair. Missing values in older presets default to `Stereo`, which
+/// preserves the exact legacy processing path.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DynEqPlacement {
+    #[default]
+    Stereo,
+    Left,
+    Right,
+    Mid,
+    Side,
+}
+
+impl DynEqPlacement {
+    pub const CHOICE_LABELS: [&'static str; 5] =
+        ["Stereo", "Left", "Right", "Mid", "Side"];
+
+    pub const fn choice_index(self) -> i32 {
+        match self {
+            Self::Stereo => 0,
+            Self::Left => 1,
+            Self::Right => 2,
+            Self::Mid => 3,
+            Self::Side => 4,
+        }
+    }
+
+    pub const fn from_choice_index(index: i32) -> Option<Self> {
+        match index {
+            0 => Some(Self::Stereo),
+            1 => Some(Self::Left),
+            2 => Some(Self::Right),
+            3 => Some(Self::Mid),
+            4 => Some(Self::Side),
+            _ => None,
+        }
+    }
+
+    /// Whether this selection needs configured stereo pair geometry.
+    pub const fn requires_stereo_pair(self) -> bool {
+        !matches!(self, Self::Stereo)
     }
 }
 
@@ -160,11 +212,23 @@ pub const NUM_BAND_PARAMS: usize = 7;
 pub const SHELF_PARAMS: &[ParamSpec] = &[
     ParamSpec::choice("Shape", "shape", 0, &DynEqShape::CHOICE_LABELS, "EQ")
         .structural()
-        .doc("Peak, low shelf, or high shelf filter shape"),
+        .doc("Peak, low shelf, high shelf, or tilt filter shape"),
     ParamSpec::float("Shelf Slope", "shelf_slope", 1.0, 0.1, 1.0, 0.01, "S", "EQ")
         .structural()
         .doc("Shelf transition slope; 1.0 is steepest"),
 ];
+
+/// Appended band routing controls, kept after the shelf block so no existing
+/// parameter ID or C ABI address moves.
+pub const ROUTING_PARAMS: &[ParamSpec] = &[ParamSpec::choice(
+    "Placement",
+    "placement",
+    0,
+    &DynEqPlacement::CHOICE_LABELS,
+    "Channels",
+)
+.structural()
+.doc("Stereo, Left, Right, Mid, or Side band routing")];
 
 // ============================================================================
 // UI Layout
@@ -215,6 +279,8 @@ pub const LAYOUT: PluginLayout = PluginLayout {
 pub struct BandParams {
     #[serde(default)]
     pub shape: DynEqShape,
+    #[serde(default)]
+    pub placement: DynEqPlacement,
     #[serde(default = "d_shelf_slope")]
     pub shelf_slope: f64,
     #[serde(default = "d_frequency")]
@@ -262,6 +328,7 @@ impl Default for BandParams {
     fn default() -> Self {
         Self {
             shape: DynEqShape::default(),
+            placement: DynEqPlacement::default(),
             shelf_slope: d_shelf_slope(),
             frequency: d_frequency(),
             q: d_q(),
@@ -298,6 +365,10 @@ pub struct Params {
     pub mix: f64,
     #[serde(default = "d_bands")]
     pub bands: Vec<BandParams>,
+    /// Explicit disjoint channel pairs for Left/Right/Mid/Side bands.
+    /// Two-channel input uses `[[0, 1]]` when this value is absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stereo_pairs: Option<Vec<[usize; 2]>>,
 }
 
 fn d_num_bands() -> i64 {
@@ -403,6 +474,7 @@ impl Default for Params {
             link_channels: d_link_channels(),
             mix: d_mix(),
             bands: d_bands(),
+            stereo_pairs: None,
         }
     }
 }
@@ -484,6 +556,47 @@ mod tests {
         assert_eq!(original.link_channels, restored.link_channels);
         assert_eq!(original.mix, restored.mix);
         assert_eq!(original.bands.len(), restored.bands.len());
+        assert_eq!(original.stereo_pairs, restored.stereo_pairs);
+        for (left, right) in original.bands.iter().zip(restored.bands.iter()) {
+            assert_eq!(left.shape, right.shape);
+            assert_eq!(left.placement, right.placement);
+        }
+    }
+
+    #[test]
+    fn old_bands_default_to_peak_stereo_without_pairs() {
+        let old_json = r#"{
+            "num_bands": 1,
+            "bands": [{"frequency": 1000.0, "q": 1.0, "gain": 6.0}]
+        }"#;
+        let restored: Params = serde_json::from_str(old_json).unwrap();
+        assert_eq!(restored.stereo_pairs, None);
+        assert_eq!(restored.bands.len(), 1);
+        assert_eq!(restored.bands[0].shape, DynEqShape::Peak);
+        assert_eq!(restored.bands[0].placement, DynEqPlacement::Stereo);
+    }
+
+    #[test]
+    fn placement_choice_roundtrip_covers_all_routes() {
+        for (index, placement) in [
+            DynEqPlacement::Stereo,
+            DynEqPlacement::Left,
+            DynEqPlacement::Right,
+            DynEqPlacement::Mid,
+            DynEqPlacement::Side,
+        ]
+        .iter()
+        .enumerate()
+        {
+            assert_eq!(placement.choice_index(), index as i32);
+            assert_eq!(
+                DynEqPlacement::from_choice_index(index as i32),
+                Some(*placement)
+            );
+        }
+        assert_eq!(DynEqPlacement::from_choice_index(5), None);
+        assert_eq!(DynEqShape::from_choice_index(3), Some(DynEqShape::Tilt));
+        assert_eq!(DynEqShape::from_choice_index(4), None);
     }
 
     #[test]

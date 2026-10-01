@@ -63,7 +63,11 @@ members = [
     "crates/driver-common",
     "crates/driver-hal",
 ]
-exclude = ["crates/3rdparties/nih-plug", "crates/3rdparties/rubato"]
+exclude = [
+    "crates/3rdparties/nih-plug",
+    "crates/3rdparties/nih-plug-egui",
+    "crates/3rdparties/rubato",
+]
 resolver = "3"
 
 [workspace.package]

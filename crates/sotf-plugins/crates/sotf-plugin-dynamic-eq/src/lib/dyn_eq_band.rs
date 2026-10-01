@@ -1,5 +1,5 @@
 use super::misc::bandpass_edges;
-use crate::params::{DynEqShape, default_band_ratio, default_band_threshold};
+use crate::params::{DynEqPlacement, DynEqShape, default_band_ratio, default_band_threshold};
 use math_audio_iir_fir::{Biquad, BiquadCoefficients, BiquadFilterType};
 use sotf_host::dynamics_core::DynamicsCore;
 use sotf_host::dynamics_core::DynamicsMode;
@@ -11,6 +11,8 @@ pub(super) struct DynEqBand {
     pub(super) target_gain_db: f32,
     pub(super) shape: DynEqShape,
     pub(super) shelf_slope: f32,
+    // Stereo-field routing; `Stereo` keeps the exact legacy path.
+    pub(super) placement: DynEqPlacement,
 
     // Per-band dynamics overrides
     pub(super) band_threshold: f32,
@@ -30,9 +32,9 @@ pub(super) struct DynEqBand {
     /// The actual EQ biquad per channel — held at target_gain_db (static coefficients).
     /// Gain modulation is applied as a dry/wet blend, not via coefficient updates.
     pub(super) eq_filters: Vec<Biquad>,
-    /// Prepared full-target shelf coefficients. Peak bands keep the original
-    /// coefficient-owning `Biquad::process` path.
-    shelf_coefficients: Option<BiquadCoefficients<f64>>,
+    /// Prepared full-target non-peak coefficients (shelves and tilt). Peak
+    /// bands keep the original coefficient-owning `Biquad::process` path.
+    non_peak_coefficients: Option<BiquadCoefficients<f64>>,
     /// One DynamicsCore per channel
     pub(super) cores: Vec<DynamicsCore>,
 }
@@ -98,6 +100,7 @@ impl DynEqBand {
             target_gain_db,
             shape: DynEqShape::Peak,
             shelf_slope: 1.0,
+            placement: DynEqPlacement::Stereo,
             band_threshold: default_band_threshold(),
             band_ratio: default_band_ratio(),
             use_band_threshold: false,
@@ -107,7 +110,7 @@ impl DynEqBand {
             sidechain_bp_hp,
             sidechain_bp_lp,
             eq_filters,
-            shelf_coefficients: None,
+            non_peak_coefficients: None,
             cores,
         }
     }
@@ -125,6 +128,9 @@ impl DynEqBand {
             }
             DynEqShape::LowShelf => self.sidechain_bp_lp[ch].process(sample),
             DynEqShape::HighShelf => self.sidechain_bp_hp[ch].process(sample),
+            // Tilt uses a full-band detector: the pivot curve has no single
+            // passband, so the unfiltered routed sample drives the envelope.
+            DynEqShape::Tilt => sample,
         }
     }
 
@@ -154,22 +160,42 @@ impl DynEqBand {
 
         let maximum = Self::max_frequency(sample_rate);
         if !self.frequency.is_finite() || !(20.0..=maximum).contains(&self.frequency) {
+            let kind = if self.shape == DynEqShape::Tilt {
+                "tilt pivot"
+            } else {
+                "shelf cutoff"
+            };
             return Err(format!(
-                "shelf cutoff {} Hz is outside 20..={maximum} Hz at {sample_rate} Hz",
+                "{kind} {} Hz is outside 20..={maximum} Hz at {sample_rate} Hz",
                 self.frequency
             ));
         }
-        if design_shelf_coefficients(
-            self.shape,
-            self.frequency as f64,
-            sample_rate as f64,
-            self.target_gain_db as f64,
-            self.shelf_slope as f64,
-        )
-        .is_none()
-        {
+        let valid = match self.shape {
+            DynEqShape::Tilt => {
+                design_tilt_coefficients(
+                    self.frequency as f64,
+                    sample_rate as f64,
+                    self.target_gain_db as f64,
+                )
+                .is_some()
+            }
+            _ => design_shelf_coefficients(
+                self.shape,
+                self.frequency as f64,
+                sample_rate as f64,
+                self.target_gain_db as f64,
+                self.shelf_slope as f64,
+            )
+            .is_some(),
+        };
+        if !valid {
+            let kind = if self.shape == DynEqShape::Tilt {
+                "tilt"
+            } else {
+                "shelf"
+            };
             return Err(format!(
-                "shelf coefficients are invalid at {} Hz for {sample_rate} Hz",
+                "{kind} coefficients are invalid at {} Hz for {sample_rate} Hz",
                 self.frequency
             ));
         }
@@ -223,6 +249,8 @@ impl DynEqBand {
                     );
                 }
             }
+            // Tilt keeps a full-band detector, so no sidechain rebuild applies.
+            DynEqShape::Tilt => {}
         }
     }
 
@@ -230,7 +258,7 @@ impl DynEqBand {
         self.frequency = self.frequency.clamp(20.0, Self::max_frequency(sample_rate));
         match self.shape {
             DynEqShape::Peak => {
-                self.shelf_coefficients = None;
+                self.non_peak_coefficients = None;
                 // Keep this exact Peak constructor path for legacy compatibility.
                 for eq in &mut self.eq_filters {
                     *eq = Biquad::new(
@@ -242,8 +270,26 @@ impl DynEqBand {
                     );
                 }
             }
+            DynEqShape::Tilt => {
+                self.non_peak_coefficients = design_tilt_coefficients(
+                    self.frequency as f64,
+                    sample_rate as f64,
+                    self.target_gain_db as f64,
+                );
+                // These Biquads carry per-channel recurrence state. Tilt
+                // coefficients are supplied by process_with_coefficients.
+                for eq in &mut self.eq_filters {
+                    *eq = Biquad::new(
+                        BiquadFilterType::Peak,
+                        self.frequency as f64,
+                        sample_rate as f64,
+                        self.q as f64,
+                        0.0,
+                    );
+                }
+            }
             shape => {
-                self.shelf_coefficients = design_shelf_coefficients(
+                self.non_peak_coefficients = design_shelf_coefficients(
                     shape,
                     self.frequency as f64,
                     sample_rate as f64,
@@ -269,11 +315,12 @@ impl DynEqBand {
     pub(super) fn process_eq(&mut self, channel: usize, input: f64) -> f64 {
         if self.shape == DynEqShape::Peak {
             self.eq_filters[channel].process(input)
-        } else if let Some(coefficients) = &self.shelf_coefficients {
+        } else if let Some(coefficients) = &self.non_peak_coefficients {
             self.eq_filters[channel].process_with_coefficients(input, coefficients)
         } else {
-            // Strict constructors validate the shelf design before use. Keep
-            // infallible legacy construction finite if malformed state slips in.
+            // Strict constructors validate the shelf/tilt design before use.
+            // Keep infallible legacy construction finite if malformed state
+            // slips in.
             input
         }
     }
@@ -350,7 +397,9 @@ pub(super) fn design_shelf_coefficients(
             2.0 * ((amplitude - 1.0) - (amplitude + 1.0) * cosine),
             (amplitude + 1.0) - (amplitude - 1.0) * cosine - beta,
         ),
-        DynEqShape::Peak => return None,
+        // Peak and Tilt never reach this shelf-only match; the guard above
+        // rejects them first.
+        _ => return None,
     };
 
     if !a0.is_finite() || a0 <= 0.0 {
@@ -380,6 +429,61 @@ pub(super) fn design_shelf_coefficients(
         || 1.0 + coefficients.a1 + coefficients.a2 <= 0.0
         || 1.0 - coefficients.a1 + coefficients.a2 <= 0.0
     {
+        return None;
+    }
+    Some(coefficients)
+}
+
+/// Design the first-order pivot tilt section on the control thread.
+///
+/// The analog prototype is `H(s) = (s + g*w0) / (g*s + w0)` with
+/// `g = 10^(gain_db/20)`, giving exactly `gain_db` at DC, `-gain_db` at
+/// Nyquist, and 0 dB at the pivot. The pivot is prewarped
+/// (`w0 = 2*fs*tan(pi*pivot/fs)`) so the digital section keeps unity gain
+/// at the pivot. `None` means invalid or unstable inputs/coefficients.
+pub(super) fn design_tilt_coefficients(
+    pivot_hz: f64,
+    sample_rate: f64,
+    gain_db: f64,
+) -> Option<BiquadCoefficients<f64>> {
+    if !pivot_hz.is_finite()
+        || !sample_rate.is_finite()
+        || !gain_db.is_finite()
+        || sample_rate <= 0.0
+        || !(0.0..sample_rate * 0.5).contains(&pivot_hz)
+        || !(-24.0..=24.0).contains(&gain_db)
+    {
+        return None;
+    }
+
+    let gain = 10.0_f64.powf(gain_db / 20.0);
+    let warped = 2.0 * sample_rate * (std::f64::consts::PI * pivot_hz / sample_rate).tan();
+    let bilinear = 2.0 * sample_rate;
+    let a0 = gain * bilinear + warped;
+    if !a0.is_finite() || a0 <= 0.0 || !warped.is_finite() || warped <= 0.0 {
+        return None;
+    }
+    let coefficients = BiquadCoefficients {
+        b0: (bilinear + gain * warped) / a0,
+        b1: (gain * warped - bilinear) / a0,
+        b2: 0.0,
+        a1: (warped - gain * bilinear) / a0,
+        a2: 0.0,
+    };
+    if [
+        coefficients.b0,
+        coefficients.b1,
+        coefficients.a1,
+    ]
+    .iter()
+    .any(|coefficient| !coefficient.is_finite())
+    {
+        return None;
+    }
+    // First-order stability: the single pole must sit inside the unit circle.
+    // The construction above guarantees this for positive pivot and rate;
+    // the check below keeps malformed inputs finite regardless.
+    if coefficients.a1.abs() >= 1.0 {
         return None;
     }
     Some(coefficients)

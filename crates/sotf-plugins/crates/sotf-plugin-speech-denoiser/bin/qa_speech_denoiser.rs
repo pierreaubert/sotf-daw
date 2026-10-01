@@ -45,6 +45,7 @@ fn run_layout(channels: usize) {
 
     let frames = 512;
     let context = ProcessContext::new(48_000, frames);
+    let strengths = [1.0, 0.5, 0.0, 0.75];
     let mut timings = Vec::with_capacity(200);
     for iteration in 0..200 {
         if iteration % 25 == 0 {
@@ -55,12 +56,29 @@ fn run_layout(channels: usize) {
                 )
                 .unwrap();
         }
+        if iteration % 10 == 0 {
+            plugin
+                .set_parameter(
+                    ParameterId::from("strength"),
+                    ParameterValue::Float(strengths[(iteration / 10) % strengths.len()]),
+                )
+                .unwrap();
+        }
         let start = Instant::now();
         plugin
             .process_in_place(&mut buffer[..frames * channels], &context)
             .unwrap();
         timings.push(start.elapsed());
     }
+    // The strength sweep above must leave automation functional and the model
+    // registry on its bundled identity.
+    plugin
+        .set_parameter(ParameterId::from("strength"), ParameterValue::Float(1.0))
+        .unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("model")),
+        Some(ParameterValue::Int(0))
+    );
     timings.sort_unstable();
     let percentile = |percent: usize| timings[(timings.len() - 1) * percent / 100];
     let deadline = Duration::from_secs_f64(frames as f64 / 48_000.0);

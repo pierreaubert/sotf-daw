@@ -4,6 +4,34 @@ use sotf_host::parametric_in_place_plugin::ParametricInPlacePluginAdapter;
 use sotf_host::plugin::Plugin;
 use sotf_host::{ParameterId, ParameterValue, ParametricPlugin, ParametricPluginAdapter};
 
+/// Validate a Convolution IR resource before accepting serialized state.
+///
+/// The file is decoded and checked against the requested routing and backend
+/// limits. This does not construct or publish a realtime plugin instance.
+///
+/// # Errors
+/// Returns an error when the resource cannot be decoded or admitted.
+#[doc(hidden)]
+pub fn validate_convolution_ir_resource(
+    path: &str,
+    target_sample_rate: Option<u32>,
+    output_channels: usize,
+    use_nupc: bool,
+    true_stereo: bool,
+    zero_latency_head: bool,
+    head_taps: usize,
+) -> Result<(), String> {
+    sotf_plugin_convolution::ConvolutionPlugin::validate_ir_resource_for_routing(
+        path,
+        target_sample_rate,
+        output_channels,
+        use_nupc,
+        true_stereo,
+        zero_latency_head,
+        head_taps,
+    )
+}
+
 fn create_nested_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,
@@ -111,6 +139,10 @@ pub fn create_plugin(
 
         "DeEsser" | "de_esser" => {
             let params: sotf_plugin_de_esser::DeEsserPluginParams = parse_params(config_json)?;
+            // `channels` is the program width N. An externally-keyed instance
+            // reports a 2N input bus; the FFI two-bus caller constructs at N
+            // and validates both buses. Single-width engine chains must use
+            // the facade, which rejects external construction loudly.
             let plugin = sotf_plugin_de_esser::DeEsserPlugin::try_from_params_at_sample_rate(
                 channels,
                 params,
@@ -440,18 +472,29 @@ pub fn create_plugin(
         }
 
         "Dither" | "dither" => {
-            let plugin = sotf_plugin_dither::DitherPlugin::new(channels);
+            let params: sotf_plugin_dither::DitherPluginParams = parse_params(config_json)?;
+            let plugin = sotf_plugin_dither::DitherPlugin::from_params(channels, params);
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
         "AmbisonicsDecoder" | "ambisonics_decoder" => {
-            let config: sotf_plugin_ambisonics::AmbisonicsDecoderConfig =
+            let routing: sotf_plugin_ambisonics::AmbisonicsDecoderConfig =
                 parse_params(config_json)?;
-            let mut plugin = sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new(&config)?;
+            // A custom target selects the user-geometry constructor; every
+            // other value keeps the historical named-layout path unchanged.
+            let mut plugin = if routing.target_layout
+                == sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY
+            {
+                let custom: sotf_plugin_ambisonics::CustomDecoderConfig =
+                    parse_params(config_json)?;
+                sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom)?
+            } else {
+                sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new(&routing)?
+            };
             if plugin.input_channels() != channels {
                 return Err(format!(
                     "Order-{} ambisonics requires {} input channels, got {channels}",
-                    config.order,
+                    routing.order,
                     plugin.input_channels()
                 ));
             }
@@ -900,6 +943,232 @@ mod tests {
     }
 
     #[test]
+    fn dither_bridge_honors_explicit_config_and_defaults() {
+        for alias in ["Dither", "dither"] {
+            let mut configured = create_plugin(
+                alias,
+                2,
+                48_000,
+                r#"{"bit_depth": 2, "noise_shaping": false, "dither_type": 1}"#,
+            )
+            .unwrap_or_else(|error| panic!("{alias} explicit config: {error}"));
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("bit_depth")),
+                Some(ParameterValue::Int(2)),
+                "{alias}"
+            );
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("noise_shaping")),
+                Some(ParameterValue::Bool(false)),
+                "{alias}"
+            );
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("dither_type")),
+                Some(ParameterValue::Int(1)),
+                "{alias}"
+            );
+
+            let defaults = create_plugin(alias, 2, 48_000, "{}")
+                .unwrap_or_else(|error| panic!("{alias} empty config: {error}"));
+            assert_eq!(
+                defaults.get_parameter(&ParameterId::from("bit_depth")),
+                Some(ParameterValue::Int(0)),
+                "{alias}"
+            );
+            assert_eq!(
+                defaults.get_parameter(&ParameterId::from("noise_shaping")),
+                Some(ParameterValue::Bool(true)),
+                "{alias}"
+            );
+            assert_eq!(
+                defaults.get_parameter(&ParameterId::from("dither_type")),
+                Some(ParameterValue::Int(0)),
+                "{alias}"
+            );
+
+            // Dither params are lenient (no `deny_unknown_fields`, matching the
+            // denoiser precedent): unknown keys are ignored and known fields
+            // are honored. Out-of-range choice indices are rejected by the
+            // serde choice deserializer at parse time; direct `from_params`
+            // construction clamps instead, so parse owns range truthfulness.
+            let lenient = create_plugin(alias, 2, 48_000, r#"{"bit_depth": 2, "unknown": 1}"#)
+                .unwrap_or_else(|error| panic!("{alias} unknown keys ignored: {error}"));
+            assert_eq!(
+                lenient.get_parameter(&ParameterId::from("bit_depth")),
+                Some(ParameterValue::Int(2)),
+                "{alias}"
+            );
+            assert!(
+                create_plugin(alias, 2, 48_000, r#"{"bit_depth": 99}"#).is_err(),
+                "{alias}"
+            );
+
+            // Audio proof: the explicit config (24-bit, shaping off, round)
+            // renders differently from defaults (16-bit, shaping on, TPDF),
+            // and rejections leave accepted state and audio untouched.
+            configured.initialize(48_000).unwrap();
+            let mut reference = create_plugin(
+                alias,
+                2,
+                48_000,
+                r#"{"bit_depth": 2, "noise_shaping": false, "dither_type": 1}"#,
+            )
+            .unwrap();
+            reference.initialize(48_000).unwrap();
+            let mut defaulted = create_plugin(alias, 2, 48_000, "{}").unwrap();
+            defaulted.initialize(48_000).unwrap();
+
+            let frames = 1024;
+            let input: Vec<f32> = (0..frames * 2)
+                .map(|n| {
+                    (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
+                })
+                .collect();
+            let render = |plugin: &mut Box<dyn Plugin>| {
+                let mut output = vec![f32::NAN; input.len()];
+                let rendered = plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, frames))
+                    .unwrap();
+                assert_eq!(rendered, frames);
+                output
+            };
+            let configured_out = render(&mut configured);
+            let reference_out = render(&mut reference);
+            let default_out = render(&mut defaulted);
+            assert!(
+                configured_out.iter().all(|sample| sample.is_finite()),
+                "{alias}"
+            );
+            assert!(
+                configured_out.iter().any(|sample| *sample != 0.0),
+                "{alias}"
+            );
+            assert_eq!(configured_out, reference_out, "{alias}");
+            assert_ne!(configured_out, default_out, "{alias}");
+
+            assert!(
+                configured
+                    .set_parameter(
+                        ParameterId::from("not_a_param"),
+                        ParameterValue::Float(1.0)
+                    )
+                    .is_err(),
+                "{alias}"
+            );
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("bit_depth")),
+                Some(ParameterValue::Int(2)),
+                "{alias}"
+            );
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("noise_shaping")),
+                Some(ParameterValue::Bool(false)),
+                "{alias}"
+            );
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("dither_type")),
+                Some(ParameterValue::Int(1)),
+                "{alias}"
+            );
+            let post_rejection = render(&mut configured);
+            assert!(
+                post_rejection.iter().all(|sample| sample.is_finite()),
+                "{alias}"
+            );
+            assert!(
+                post_rejection.iter().any(|sample| *sample != 0.0),
+                "{alias}"
+            );
+        }
+    }
+
+    #[test]
+    fn hiss_bridge_honors_transient_guard_and_renders() {
+        for alias in ["HissReducer", "hiss_reducer"] {
+            // Explicit guard-on config is honored through the generic arm.
+            let mut configured = create_plugin(
+                alias,
+                2,
+                48_000,
+                r#"{"spectral_mode": true, "transient_guard": true, "strength": 0.7}"#,
+            )
+            .unwrap_or_else(|error| panic!("{alias} guard config: {error}"));
+            assert_eq!(
+                configured.get_parameter(&ParameterId::from("transient_guard")),
+                Some(ParameterValue::Bool(true)),
+                "{alias}"
+            );
+            // Empty config defaults the guard off (legacy sound preserved).
+            let defaulted = create_plugin(alias, 2, 48_000, "{}")
+                .unwrap_or_else(|error| panic!("{alias} empty config: {error}"));
+            assert_eq!(
+                defaulted.get_parameter(&ParameterId::from("transient_guard")),
+                Some(ParameterValue::Bool(false)),
+                "{alias}"
+            );
+
+            // Audio proof: guard-on renders finite nonzero stereo; a rebuild
+            // from the saved state re-renders bit-exactly.
+            configured.initialize(48_000).unwrap();
+            let frames = 8192;
+            let input: Vec<f32> = (0..frames * 2)
+                .map(|n| {
+                    let t = (n / 2) as f32 / 48_000.0;
+                    (2.0 * std::f32::consts::PI * 1000.0 * t).sin() * 0.4
+                        + (2.0 * std::f32::consts::PI * 9000.0 * t).sin() * 0.1
+                })
+                .collect();
+            let render = |plugin: &mut Box<dyn Plugin>| {
+                let mut output = vec![f32::NAN; input.len()];
+                let rendered = plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, frames))
+                    .unwrap();
+                assert_eq!(rendered, frames);
+                output
+            };
+            let first = render(&mut configured);
+            assert!(first.iter().all(|sample| sample.is_finite()), "{alias}");
+            assert!(first.iter().any(|sample| *sample != 0.0), "{alias}");
+
+            let saved = crate::state::save_state(&*configured);
+            let saved_json: serde_json::Value = serde_json::from_slice(&saved).unwrap();
+            assert_eq!(saved_json["transient_guard"], true, "{alias}");
+            let mut reloaded = create_plugin(alias, 2, 48_000, "{}").unwrap();
+            crate::state::load_state(&mut *reloaded, &saved).unwrap();
+            assert_eq!(
+                reloaded.get_parameter(&ParameterId::from("transient_guard")),
+                Some(ParameterValue::Bool(true)),
+                "{alias}"
+            );
+            reloaded.initialize(48_000).unwrap();
+            assert_eq!(render(&mut reloaded), first, "{alias}");
+
+            // Unknown construction keys still fail closed for the
+            // deny-unknown-fields factory struct while the accepted config
+            // rebuilds verbatim.
+            assert!(
+                create_plugin(
+                    alias,
+                    2,
+                    48_000,
+                    r#"{"transient_guard": true, "obsolete": 1}"#
+                )
+                .is_err(),
+                "{alias}"
+            );
+            let mut rebuilt = create_plugin(
+                alias,
+                2,
+                48_000,
+                r#"{"spectral_mode": true, "transient_guard": true, "strength": 0.7}"#,
+            )
+            .unwrap();
+            rebuilt.initialize(48_000).unwrap();
+            assert_eq!(render(&mut rebuilt), first, "{alias}");
+        }
+    }
+
+    #[test]
     fn ab_compare_bridge_builds_initial_path_with_authoritative_factory() {
         let config = serde_json::json!({
             "path_a": {
@@ -1088,6 +1357,97 @@ mod tests {
                     "order {order} {layout} partition output"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn ambisonics_bridge_custom_geometry_decodes_stereo() {
+        for alias in ["AmbisonicsDecoder", "ambisonics_decoder"] {
+            let config = serde_json::json!({
+                "order": 1,
+                "target_layout": "custom",
+                "custom_layout": {
+                    "name": "stereo",
+                    "speakers": [
+                        {"label": "FL", "azimuth_deg": 30.0, "elevation_deg": 0.0, "is_lfe": false},
+                        {"label": "FR", "azimuth_deg": -30.0, "elevation_deg": 0.0, "is_lfe": false}
+                    ]
+                }
+            })
+            .to_string();
+            let mut plugin = create_plugin(alias, 4, 48_000, &config)
+                .unwrap_or_else(|error| panic!("{alias} custom route failed: {error}"));
+            assert_eq!(plugin.input_channels(), 4, "{alias}");
+            assert_eq!(plugin.output_channels(), 2, "{alias}");
+
+            let frames = 257;
+            // Bridge tests initialize inside create_plugin; process directly.
+            let input = aud135_ordered_input(frames, 4);
+            let mut output = vec![0.0; frames * 2];
+            assert_eq!(
+                plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, frames))
+                    .unwrap(),
+                frames,
+                "{alias}"
+            );
+            assert!(output.iter().all(|sample| sample.is_finite()), "{alias}");
+            assert!(
+                output.iter().any(|sample| sample.abs() > 1e-7),
+                "{alias}"
+            );
+
+            // Bit-identical to direct construction (mirrors the facade test,
+            // so facade == direct and bridge == direct imply facade == bridge;
+            // the FFI triple-route leg is owned by the FFI lane).
+            let custom: sotf_plugin_ambisonics::CustomDecoderConfig =
+                serde_json::from_str(&config).unwrap();
+            let mut reference =
+                sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom).unwrap();
+            reference.initialize(48_000).unwrap();
+            let mut expected = vec![0.0; frames * 2];
+            assert_eq!(
+                reference
+                    .process(&input, &mut expected, &ProcessContext::new(48_000, frames))
+                    .unwrap(),
+                frames,
+                "{alias}"
+            );
+            assert_eq!(output, expected, "{alias}");
+
+            // Rejected geometry keeps the accepted instances untouched.
+            for bad in [
+                serde_json::json!({"order": 1, "target_layout": "custom"}),
+                serde_json::json!({
+                    "order": 1,
+                    "target_layout": "custom",
+                    "custom_layout": {
+                        "name": "dup",
+                        "speakers": [
+                            {"label": "A", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false},
+                            {"label": "A", "azimuth_deg": 0.0, "elevation_deg": 0.0, "is_lfe": false}
+                        ]
+                    }
+                }),
+            ] {
+                assert!(
+                    create_plugin(alias, 4, 48_000, &bad.to_string()).is_err(),
+                    "{alias} must reject {bad}"
+                );
+            }
+            let mut repeat = vec![0.0; frames * 2];
+            assert_eq!(
+                plugin
+                    .process(&input, &mut repeat, &ProcessContext::new(48_000, frames))
+                    .unwrap(),
+                frames,
+                "{alias}"
+            );
+            assert!(repeat.iter().all(|sample| sample.is_finite()), "{alias}");
+            assert!(
+                repeat.iter().any(|sample| sample.abs() > 1e-7),
+                "{alias}"
+            );
         }
     }
 

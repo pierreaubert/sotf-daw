@@ -27,7 +27,17 @@ define_choice_string_deserializer!(deserialize_algorithm, ALGORITHMS);
 // ============================================================================
 
 pub const TARGET_LAYOUTS: &[&str] = &[
-    "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6",
+    "5.1",
+    "7.1",
+    "5.1.2",
+    "5.1.4",
+    "7.1.2",
+    "7.1.4",
+    "9.1.4",
+    "9.1.6",
+    // Appended last: user-defined geometry via `CustomDecoderConfig`.
+    // Existing indices 0-7 are unchanged for saved-state compatibility.
+    crate::custom_layout::CUSTOM_LAYOUT_KEY,
 ];
 
 pub const ALGORITHMS: &[&str] = &["mode_matching", "allrad"];
@@ -88,7 +98,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
 /// All serde defaults are derived from PARAMS — adding a field here with
 /// the correct default function is enough to support old presets that
 /// don't have the new field.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Params {
     #[serde(default = "d_order")]
     pub order: usize,
@@ -215,6 +225,7 @@ mod tests {
         let original = Params::default();
         let json = serde_json::to_value(&original).unwrap();
         let restored: Params = serde_json::from_value(json).unwrap();
+        assert_eq!(original, restored);
         assert_eq!(original.order, restored.order);
         assert_eq!(original.target_layout, restored.target_layout);
         assert_eq!(original.max_re_weighting, restored.max_re_weighting);
@@ -233,6 +244,24 @@ mod tests {
         );
         assert_eq!(p.dual_band, pk(PARAMS, "dual_band").default_bool());
         assert_eq!(p.algorithm, ALGORITHMS[0]);
+    }
+
+    #[test]
+    fn custom_choice_is_appended_without_moving_named_indices() {
+        assert_eq!(
+            TARGET_LAYOUTS,
+            &[
+                "5.1",
+                "7.1",
+                "5.1.2",
+                "5.1.4",
+                "7.1.2",
+                "7.1.4",
+                "9.1.4",
+                "9.1.6",
+                "custom",
+            ]
+        );
     }
 
     #[test]

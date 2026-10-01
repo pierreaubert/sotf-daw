@@ -526,6 +526,13 @@ const struct ParameterInfo *plugin_get_parameter_info(const struct PluginHandle 
  * valid for the process lifetime. It is `NULL` when the index does not
  * identify a supported choice parameter or when `choice_index` is invalid.
  *
+ * Placement index semantics differ by family under the same `_placement`
+ * suffix: EQ/Linear use 0=Legacy/inherit, 1=Stereo, 2=Left, 3=Right, 4=Mid,
+ * 5=Side (6 labels); DynamicEQ uses 0=Stereo, 1=Left, 2=Right, 3=Mid, 4=Side
+ * (5 labels, no Legacy). A generic host must branch on the plugin family
+ * before interpreting index 0. DynamicEQ shape index 3 is Tilt, matching
+ * the DSP `DynEqShape` order.
+ *
  * # Safety
  * * `handle` must be `NULL` or a live plugin handle.
  */

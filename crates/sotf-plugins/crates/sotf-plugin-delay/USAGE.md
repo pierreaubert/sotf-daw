@@ -14,8 +14,8 @@ A feedback delay line that stores audio and plays it back after a configurable t
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Delay Time | 0.1 to 5000 | 100 | ms | Time between the dry signal and the first echo |
-| Feedback | 0 to 95 | 30 | % | Amount of delayed signal fed back into the delay buffer. Higher = more repeats |
+| Delay Time | 0.0 to 5000 | 100 | ms | Time between the dry signal and the first echo (0 = passthrough) |
+| Feedback | -95 to 95 | 30 | % | Amount of delayed signal fed back into the delay buffer. Higher = more repeats; negative values invert the recirculated phase |
 | Mix | 0 to 100 | 50 | % | Dry/wet blend. 0% = dry only, 100% = delayed only |
 
 ### Smooth Parameter Changes
@@ -36,7 +36,16 @@ over 20 ms, and the filter state runs continuously to avoid stale-tail clicks.
 Per-channel mode is reserved for pure RoomEQ routing delays: mix is fixed wet,
 feedback and LFO are zero, and allpass and pitch-preserving modes are disabled.
 Its delay memory is sized from the declared per-channel automation maximum
-rather than the global five-second effect range.
+rather than the global five-second effect range. Effect settings are rejected
+at construction, and runtime writes that deviate from the pure routing values
+are rejected on both the single and batch paths without changing the accepted
+configuration or populated history.
+
+Fractional delays below two samples use a causal four-tap stencil: taps the
+ring cannot yet supply are solved implicitly through the current frame, which
+is exact with and without feedback, while the sub-one-sample future tap is
+extrapolated as the current frame value. The stencil is continuous at every
+integer boundary and preserves the closed-loop DC gain.
 
 ## Demos
 

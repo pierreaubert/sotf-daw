@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use super::types::LinearPhaseEqBandPlacement;
 use math_audio_iir_fir::BiquadFilterType;
 
 /// Number of frequency points to sample for magnitude response.
@@ -47,4 +48,24 @@ pub(super) fn index_to_filter_type(index: usize) -> BiquadFilterType {
         4 => BiquadFilterType::Highpass,
         _ => BiquadFilterType::Peak,
     }
+}
+
+/// Canonical placement parameter encoding: 0 inherits the legacy route,
+/// 1=Stereo, 2=Left, 3=Right, 4=Mid, 5=Side.
+pub(super) fn placement_to_index(placement: Option<LinearPhaseEqBandPlacement>) -> usize {
+    match placement {
+        None => 0,
+        Some(LinearPhaseEqBandPlacement::Stereo) => 1,
+        Some(LinearPhaseEqBandPlacement::Left) => 2,
+        Some(LinearPhaseEqBandPlacement::Right) => 3,
+        Some(LinearPhaseEqBandPlacement::Mid) => 4,
+        Some(LinearPhaseEqBandPlacement::Side) => 5,
+    }
+}
+
+/// Resolve an unset placement to its processing behavior (`Stereo`).
+pub(super) fn resolve_placement(
+    placement: Option<LinearPhaseEqBandPlacement>,
+) -> LinearPhaseEqBandPlacement {
+    placement.unwrap_or(LinearPhaseEqBandPlacement::Stereo)
 }

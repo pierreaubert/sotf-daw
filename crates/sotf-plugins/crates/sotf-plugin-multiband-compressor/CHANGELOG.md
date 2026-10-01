@@ -1,3 +1,17 @@
+## Unreleased detector stages (2026-10-01, fix-compat revision)
+
+- Implement RMS detection (10 ms window) and sidechain HPF (0..200 Hz,
+  2nd/4th order) per band per channel. Additive: defaults stay Peak with
+  the HPF inactive and the legacy detection path is preserved bit-exactly.
+- The HPF is gated by a new appended `sidechain_hpf_enabled` flag (default
+  false); the frequency spec default stays at the legacy 80 Hz with the
+  original range, order labels, and detection labels. Presets without the
+  flag (including old engine saves carrying 80 Hz) render legacy audio;
+  0 Hz bypasses even when enabled. No stored frequency value alone ever
+  activates the filter, so 80 Hz remains a legitimate new-user choice.
+- `program_dependent_release` and `sidechain_external` remain unsupported
+  and are rejected loudly.
+
 ## Unreleased finite stream audit (2026-09-28)
 
 - Recover delayed program audio for proved finite response cases with bounded,

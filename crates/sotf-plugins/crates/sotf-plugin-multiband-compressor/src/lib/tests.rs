@@ -560,7 +560,7 @@ fn test_sidechain_tilt_is_true_tilt() {
 
 /// Regression: stub parameters that have no DSP implementation must not be
 /// exposed in parameters(), to prevent users from toggling controls that
-/// have no audible effect.
+/// have no audible effect. The implemented detector controls must be exposed.
 #[test]
 fn test_stub_params_not_exposed() {
     let mut p = MultibandCompressorPlugin::new(2);
@@ -568,13 +568,19 @@ fn test_stub_params_not_exposed() {
     let params = p.parameters();
     let ids: Vec<&str> = params.iter().map(|par| par.id.as_str()).collect();
 
-    let stubs = [
+    for implemented in &[
         "sidechain_hpf_hz",
         "sidechain_hpf_order",
+        "sidechain_hpf_enabled",
         "detection_mode",
-        "program_dependent_release",
-        "sidechain_external",
-    ];
+    ] {
+        assert!(
+            ids.contains(implemented),
+            "Implemented detector control '{}' must appear in parameters()",
+            implemented
+        );
+    }
+    let stubs = ["program_dependent_release", "sidechain_external"];
     for stub in &stubs {
         assert!(
             !ids.contains(stub),
@@ -722,15 +728,12 @@ fn test_set_parameter_unknown_returns_error() {
     assert!(res.unwrap_err().contains("Unknown parameter"));
 }
 
-/// Regression: legacy single-band sidechain controls have no DSP
+/// Regression: the remaining legacy single-band sidechain controls have no DSP
 /// implementation and must be rejected with a message — never silently
 /// ignored — both before and after initialization.
 #[test]
 fn test_legacy_sidechain_keys_rejected_with_message() {
     let stubs: &[(&str, ParameterValue)] = &[
-        ("sidechain_hpf_hz", ParameterValue::Float(80.0)),
-        ("sidechain_hpf_order", ParameterValue::Int(0)),
-        ("detection_mode", ParameterValue::Int(0)),
         ("program_dependent_release", ParameterValue::Bool(false)),
         ("sidechain_external", ParameterValue::Bool(false)),
     ];
@@ -910,6 +913,54 @@ fn test_set_parameter_global_roundtrips() {
     assert_eq!(
         p.get_parameter(&ParameterId::from("link_amount")).unwrap(),
         ParameterValue::Float(0.5)
+    );
+
+    // sidechain_hpf_hz
+    p.set_parameter(
+        ParameterId::from("sidechain_hpf_hz"),
+        ParameterValue::Float(120.0),
+    )
+    .unwrap();
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_hz"))
+            .unwrap(),
+        ParameterValue::Float(120.0)
+    );
+
+    // sidechain_hpf_order
+    p.set_parameter(
+        ParameterId::from("sidechain_hpf_order"),
+        ParameterValue::Int(1),
+    )
+    .unwrap();
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_order"))
+            .unwrap(),
+        ParameterValue::Int(1)
+    );
+
+    // detection_mode
+    p.set_parameter(
+        ParameterId::from("detection_mode"),
+        ParameterValue::Int(1),
+    )
+    .unwrap();
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("detection_mode"))
+            .unwrap(),
+        ParameterValue::Int(1)
+    );
+
+    // sidechain_hpf_enabled
+    p.set_parameter(
+        ParameterId::from("sidechain_hpf_enabled"),
+        ParameterValue::Bool(true),
+    )
+    .unwrap();
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_enabled"))
+            .unwrap(),
+        ParameterValue::Bool(true)
     );
 }
 
@@ -1456,17 +1507,22 @@ fn test_get_parameter_unknown_band_field_returns_none() {
 #[test]
 fn test_get_parameter_stub_params_return_none() {
     let p = MultibandCompressorPlugin::new(2);
-    assert!(
-        p.get_parameter(&ParameterId::from("sidechain_hpf_hz"))
-            .is_none()
+    // Implemented detector controls expose their defaults.
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_hz")),
+        Some(ParameterValue::Float(80.0))
     );
-    assert!(
-        p.get_parameter(&ParameterId::from("sidechain_hpf_order"))
-            .is_none()
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_enabled")),
+        Some(ParameterValue::Bool(false))
     );
-    assert!(
-        p.get_parameter(&ParameterId::from("detection_mode"))
-            .is_none()
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("sidechain_hpf_order")),
+        Some(ParameterValue::Int(0))
+    );
+    assert_eq!(
+        p.get_parameter(&ParameterId::from("detection_mode")),
+        Some(ParameterValue::Int(0))
     );
     assert!(
         p.get_parameter(&ParameterId::from("program_dependent_release"))
@@ -2506,12 +2562,91 @@ fn fractional_link_amount_is_canonical_and_monotonic() {
 
 #[test]
 fn explicit_unsupported_legacy_sidechain_is_rejected() {
+    for params in [
+        MultibandCompressorPluginParams {
+            num_bands: 1,
+            program_dependent_release: Some(true),
+            ..Default::default()
+        },
+        MultibandCompressorPluginParams {
+            num_bands: 1,
+            sidechain_external: Some(true),
+            ..Default::default()
+        },
+    ] {
+        assert!(MultibandCompressorPlugin::try_from_params(2, params, 48_000).is_err());
+    }
+    // The implemented detector controls are accepted at construction.
     let params = MultibandCompressorPluginParams {
         num_bands: 1,
         sidechain_hpf_hz: Some(80.0),
+        sidechain_hpf_order: Some("4th".to_string()),
+        detection_mode: Some("RMS".to_string()),
+        ..Default::default()
+    };
+    assert!(MultibandCompressorPlugin::try_from_params(2, params, 48_000).is_ok());
+    // Unknown choice labels are still rejected.
+    let params = MultibandCompressorPluginParams {
+        num_bands: 1,
+        detection_mode: Some("average".to_string()),
         ..Default::default()
     };
     assert!(MultibandCompressorPlugin::try_from_params(2, params, 48_000).is_err());
+}
+
+#[test]
+fn legacy_hpf_frequency_without_enabled_keeps_legacy_audio() {
+    // Old engine-style state carries an explicit 80 Hz / 4th / Peak but no
+    // enabled key. The HPF must stay inactive: output bit-identical to the
+    // default construction. Only the enabled flag opts in.
+    fn render(params: MultibandCompressorPluginParams) -> Vec<f32> {
+        let mut plugin =
+            MultibandCompressorPlugin::try_from_params(2, params, 48_000).unwrap();
+        plugin.initialize(48_000).unwrap();
+        let mut block: Vec<f32> = (0..1024)
+            .flat_map(|frame| {
+                let t = frame as f32 / 48_000.0;
+                let sample = 0.5 * (2.0 * std::f32::consts::PI * 50.0 * t).sin()
+                    + 0.25 * (2.0 * std::f32::consts::PI * 1000.0 * t).sin();
+                [sample, sample * 0.5]
+            })
+            .collect();
+        plugin
+            .process_in_place(&mut block, &ProcessContext::new(48_000, 1024))
+            .unwrap();
+        block
+    }
+    let baseline = render(MultibandCompressorPluginParams {
+        num_bands: 1,
+        ..Default::default()
+    });
+    let legacy = render(MultibandCompressorPluginParams {
+        num_bands: 1,
+        sidechain_hpf_hz: Some(80.0),
+        sidechain_hpf_order: Some("4th".to_string()),
+        detection_mode: Some("Peak".to_string()),
+        ..Default::default()
+    });
+    assert_eq!(baseline, legacy);
+    // Opting in changes detection: enabled 80 Hz must differ on LF-heavy
+    // program (same setup, only the enabled flag added).
+    let opted_in = render(MultibandCompressorPluginParams {
+        num_bands: 1,
+        sidechain_hpf_hz: Some(80.0),
+        sidechain_hpf_order: Some("4th".to_string()),
+        sidechain_hpf_enabled: Some(true),
+        detection_mode: Some("Peak".to_string()),
+        ..Default::default()
+    });
+    let max_difference = baseline
+        .iter()
+        .zip(&opted_in)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0_f32, f32::max);
+    assert!(
+        max_difference > 1.0e-4,
+        "enabled 80 Hz HPF must audibly change LF detection, max diff={max_difference}"
+    );
 }
 
 #[test]

@@ -25,7 +25,10 @@ turning Delay into a phase-spread chorus.
 maximum live automation range and size the ring accordingly. The ordinary
 scalar constructor retains the full five-second range; the RoomEQ per-channel
 constructor uses the largest configured route delay and exposes no effect
-controls.
+controls. Effect settings fail at construction, and runtime writes that
+deviate from the pure routing values are rejected without changing the
+accepted configuration or populated history; the parameter schema marks those
+controls unsupported in per-channel mode.
 
 ## Native host tails
 

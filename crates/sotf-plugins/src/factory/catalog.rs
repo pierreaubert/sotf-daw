@@ -1024,7 +1024,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
             true,
         ),
         zero_alloc_evidence(
-            "sotf-plugin-speech-denoiser RNNoise 48 kHz/frame-size contract, disabled delayed transparency, enabled processing, latency, and reset tests"
+            "sotf-plugin-speech-denoiser RNNoise 48 kHz/frame-size contract, disabled delayed transparency, enabled processing, latency, strength/model factory coverage, and reset tests"
         )
     ),
     entry!(

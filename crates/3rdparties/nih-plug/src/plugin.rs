@@ -181,6 +181,45 @@ pub trait Plugin: Default + Send + 'static {
     /// This is an advanced feature that the vast majority of plugins won't need to implement.
     fn filter_state(state: &mut PluginState) {}
 
+    /// Report whether this state may restore on the audio thread.
+    ///
+    /// The wrappers check this before [`filter_state`][Self::filter_state] runs
+    /// whenever a state restore arrives on the audio thread (currently the
+    /// editor-preset handoff applied at the end of a processing cycle; host
+    /// stream loads always run off the audio thread). Returning `false`
+    /// rejects the restore before any migration, validation, parameter write,
+    /// field restore, or reinitialization runs, so the live parameters and
+    /// DSP state stay untouched. The wrapper retains the refused state object
+    /// for a main-thread retry via a control-thread restore; it is not parsed,
+    /// migrated, freed, or dropped on the audio thread. Returning `true` keeps
+    /// the historical behavior.
+    ///
+    /// Override this when any restore step for the given state can allocate,
+    /// lock, or touch the filesystem. That includes allocating work inside
+    /// [`filter_state`][Self::filter_state] itself, but also allocating
+    /// validation or field restores that run later: the presence of a
+    /// migration marker alone does not prove the rest of the path is
+    /// allocation-free. The check itself must not allocate, lock, or mutate
+    /// the state.
+    ///
+    /// Raw host stream deserialization (JSON parsing) runs on the control
+    /// thread and may allocate; the audio handoff carries an already-parsed
+    /// state object and must refuse without further parse, migration, or
+    /// frees. The control thread must never consume a refused state and then
+    /// drop it when migration is unavailable; it retains ownership for retry.
+    ///
+    /// # Note
+    ///
+    /// This gates the plugin's own restore work only. The wrapper's
+    /// editor-preset channel handoff (`try_recv`) is a separate known
+    /// allocation (see the `FIXME` at the audio restore site). A rejected
+    /// restore is retried on the control thread, not silently dropped;
+    /// surface that transaction to the editor or preset path.
+    fn state_restore_allows_audio_thread(state: &PluginState) -> bool {
+        let _ = state;
+        true
+    }
+
     //
     // The following functions follow the lifetime of the plugin.
     //

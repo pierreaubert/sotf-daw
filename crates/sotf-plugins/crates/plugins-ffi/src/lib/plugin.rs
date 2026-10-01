@@ -95,7 +95,138 @@ fn is_dynamic_eq_shelf_structural_id(plugin_type: &str, param_id: &str) -> bool 
     else {
         return false;
     };
-    band.parse::<usize>().is_ok_and(|index| index < 8) && matches!(field, "shape" | "shelf_slope")
+    let Ok(index) = band.parse::<usize>() else {
+        return false;
+    };
+    // Canonical indices only (`band_01_shape` is not a structural address;
+    // it falls through to "unknown parameter", matching the merge's
+    // fail-closed noncanonical rejection).
+    if band != index.to_string() || index >= 8 {
+        return false;
+    }
+    matches!(field, "shape" | "shelf_slope" | "placement")
+}
+
+/// EQ placement addresses use Structural/restart semantics: a placement edit
+/// rebuilds the filter bank and resets DSP history, so it must go through
+/// state restoration (transactional, control thread) rather than a live
+/// setter call.
+fn is_eq_placement_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(plugin_type, "EQ" | "eq") {
+        return false;
+    }
+    let Some(index_text) = param_id
+        .strip_prefix("filter_")
+        .and_then(|rest| rest.strip_suffix("_placement"))
+    else {
+        return false;
+    };
+    let Ok(index) = index_text.parse::<usize>() else {
+        return false;
+    };
+    // Canonical form only; `filter_01_placement` is unknown, matching the
+    // merge's fail-closed rule and `eq_placement_index`.
+    index_text == index.to_string() && index < 20
+}
+
+/// LinearPhaseEQ placement addresses are structural like EQ placement:
+/// the FIR bank rebuilds, so live edits must go through state restoration.
+fn is_linear_phase_eq_placement_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(
+        plugin_type,
+        "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+    ) {
+        return false;
+    }
+    let Some((band, field)) = param_id
+        .strip_prefix("band_")
+        .and_then(|suffix| suffix.split_once('_'))
+    else {
+        return false;
+    };
+    let Ok(index) = band.parse::<usize>() else {
+        return false;
+    };
+    if band != index.to_string() || index >= 10 {
+        return false;
+    }
+    field == "placement"
+}
+
+/// De-esser structural IDs per `sotf-plugin-de-esser` PARAMS.
+///
+/// `frequency`, `q`, `mode`, `lookahead_ms`, `split_topology`, and
+/// `sidechain_external` all rebuild DSP state or bus layout. The live DSP
+/// setters reject changes transactionally ("requires a host rebuild"); the
+/// FFI guard converts that into the uniform C ABI contract ("structural,
+/// requires state restoration") before any live mutation is attempted.
+fn is_de_esser_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(plugin_type, "DeEsser" | "de_esser") {
+        return false;
+    }
+    matches!(
+        param_id,
+        "frequency" | "q" | "mode" | "lookahead_ms" | "split_topology" | "sidechain_external"
+    )
+}
+
+/// Hiss structural IDs per `sotf-plugin-hiss-reducer` PARAMS.
+///
+/// `spectral_mode` swaps the DSP engine (IIR vs STFT) and the live plugin
+/// rejects post-init flips with an allocating `Err(String)`; without this
+/// guard that allocation is reachable from render-thread automation.
+/// `learn_noise`/`clear_profile` are momentary capture commands that must
+/// never fire from the render loop. All three route through state
+/// restoration on the control thread instead. `transient_guard` is
+/// deliberately not structural: it is a plain realtime bool accepted
+/// post-init without allocation.
+fn is_hiss_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(
+        plugin_type,
+        "HissReducer" | "hiss_reducer" | "Hiss" | "hiss"
+    ) {
+        return false;
+    }
+    matches!(param_id, "spectral_mode" | "learn_noise" | "clear_profile")
+}
+
+/// Every Ambisonics parameter is structural (order, target, weighting,
+/// dual-band, algorithm). Live DSP setters reject changes; the FFI guard
+/// gives the uniform restoration error.
+fn is_ambisonics_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(
+        plugin_type,
+        "AmbisonicsDecoder" | "ambisonics_decoder"
+    ) {
+        return false;
+    }
+    matches!(
+        param_id,
+        "order" | "target_layout" | "max_re_weighting" | "dual_band" | "algorithm"
+    )
+}
+
+/// EQ-family constructor-only keys are structural saved state, not realtime
+/// parameters. They have no live setters; addressing them via
+/// `plugin_set_parameter` must fail with the restoration contract, not an
+/// "unknown parameter" that could be mistaken for a typo.
+fn is_eq_family_constructor_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(
+        plugin_type,
+        "EQ" | "eq"
+            | "DynamicEQ"
+            | "dynamic_eq"
+            | "dynamic-eq"
+            | "LinearPhaseEQ"
+            | "linear_phase_eq"
+            | "Linear-Phase-EQ"
+    ) {
+        return false;
+    }
+    matches!(
+        param_id,
+        "stereo_pairs" | "filters" | "channel_filters" | "bands"
+    )
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -117,6 +248,18 @@ fn replace_plugin_from_state(
     }
     if handle.plugin_type == "LinearPhaseEQ" {
         return replace_linear_phase_eq_from_state(handle, state);
+    }
+    if matches!(handle.plugin_type.as_str(), "EQ" | "eq") {
+        return replace_eq_from_state(handle, state);
+    }
+    if matches!(handle.plugin_type.as_str(), "DeEsser" | "de_esser") {
+        return replace_de_esser_from_state(handle, state);
+    }
+    if matches!(
+        handle.plugin_type.as_str(),
+        "AmbisonicsDecoder" | "ambisonics_decoder"
+    ) {
+        return replace_ambisonics_from_state(handle, state);
     }
     if matches!(handle.plugin_type.as_str(), "Crossover" | "crossover") {
         return replace_crossover_from_state(handle, state, restore_kind);
@@ -547,6 +690,159 @@ fn replace_dynamic_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
         return Err("Restored DynamicEQ channel layout differs from the handle layout".into());
     }
 
+    // Rebuild the map so post-restore info/values match the committed plugin;
+    // retired maps stay alive for previously returned info pointers.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn replace_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    // Legacy raw partial-state semantics: omitted values merge from the live
+    // snapshot, which carries every current band, placement, and global.
+    let mut merged_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current EQ state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse EQ state: {error}"))?;
+    merged_state.extend(incoming_state);
+    let merged_bytes = serde_json::to_vec(&merged_state)
+        .map_err(|error| format!("Failed to merge EQ state: {error}"))?;
+    // Constructor-owned keys (pairs, full filter vectors) fold into the
+    // config; band order and advanced/Kautz entries survive verbatim unless
+    // a full preset replaces the filter vector. Runtime globals replay below.
+    let replacement_config =
+        super::plugin_factory::merge_eq_state_into_config(&handle.config_json, &merged_bytes)?;
+
+    // Construct, replay scalars through the plugin's own setters (which own
+    // the compacted biquad mapping and placement/pair validation), then
+    // prepare and initialize. The bridge loader skips the structural
+    // `stereo_pairs` / `filters` / `channel_filters` keys, which have no
+    // parameter setters. Every fallible step precedes the commit, so a
+    // failed restore retains the old audio path and configuration.
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    load_changed_state(&mut *replacement, &merged_bytes, &handle.plugin_type)?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored EQ channel layout differs from the handle layout".into());
+    }
+
+    // Bank-length changes alter live band parameters; rebuild the map like
+    // Crossover so post-restore reads match the committed bank. Retired maps
+    // keep old info pointers valid.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn replace_de_esser_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    // Partial loads merge omitted values from the live snapshot; structural
+    // values the live setters reject (lookahead, split topology, sidechain
+    // route) rebuild through the constructor config instead.
+    let mut merged_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current DeEsser state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse DeEsser state: {error}"))?;
+    merged_state.extend(incoming_state);
+    let merged_bytes = serde_json::to_vec(&merged_state)
+        .map_err(|error| format!("Failed to merge DeEsser state: {error}"))?;
+    let replacement_config = super::plugin_factory::merge_de_esser_state_into_config(
+        &handle.config_json,
+        &merged_bytes,
+    )?;
+
+    // A sidechain-mode flip changes the bus layout (program + key versus
+    // program only) and fails bus validation below with the live handle
+    // preserved; the host must recreate the handle for the new layout.
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored DeEsser channel layout differs from the handle layout".into());
+    }
+
+    // Rebuild the map so post-restore info/values match the committed plugin;
+    // retired maps stay alive for previously returned info pointers.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
+}
+
+fn replace_ambisonics_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    // Every Ambisonics parameter is structural, so any changed value rebuilds
+    // through the constructor config. Custom geometry rides in the config and
+    // survives reloads; selecting custom without geometry fails closed.
+    let mut merged_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::save_state(&*handle.plugin))
+            .map_err(|error| format!("Failed to capture current Ambisonics state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse Ambisonics state: {error}"))?;
+    merged_state.extend(incoming_state);
+    let merged_bytes = serde_json::to_vec(&merged_state)
+        .map_err(|error| format!("Failed to merge Ambisonics state: {error}"))?;
+    let replacement_config = super::plugin_factory::merge_ambisonics_state_into_config(
+        &handle.config_json,
+        &merged_bytes,
+    )?;
+
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored Ambisonics channel layout differs from the handle layout".into());
+    }
+
+    // Rebuild the map so post-restore info/values match the committed plugin;
+    // retired maps stay alive for previously returned info pointers.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
     handle.plugin = replacement;
     handle.config_json = replacement_config;
     Ok(())
@@ -684,6 +980,10 @@ fn replace_band_split_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
 #[path = "state_tests.rs"]
 mod state_tests;
 
+#[cfg(test)]
+#[path = "ffi_integration_tests.rs"]
+mod ffi_integration_tests;
+
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
     state: &[u8],
@@ -727,13 +1027,17 @@ fn replace_linear_phase_eq_from_state(
     )?;
     replacement.initialize(handle.sample_rate)?;
 
-    // LinearPhaseEQ's FFI parameter map is built from static specs and the
-    // maximum band template, so structural changes do not alter it. Retaining
-    // the original allocation also preserves the documented lifetime of
-    // ParameterInfo pointers returned to foreign callers.
+    // Rebuild the map like Crossover so post-restore reads match the
+    // committed plugin. The specs are static, but rebuilding proves it and
+    // keeps old info pointers valid via the retired list.
     //
     // Commit only after parsing, construction, and initialization succeeded.
     // Any earlier error leaves the live plugin and constructor config intact.
+    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
+    handle.retired_parameter_maps.push(std::mem::replace(
+        &mut handle.parameter_map,
+        next_parameter_map,
+    ));
     handle.plugin = replacement;
     handle.config_json = rebuilt_config;
     Ok(())
@@ -1406,6 +1710,13 @@ pub extern "C" fn plugin_get_parameter_info(
 /// valid for the process lifetime. It is `NULL` when the index does not
 /// identify a supported choice parameter or when `choice_index` is invalid.
 ///
+/// Placement index semantics differ by family under the same `_placement`
+/// suffix: EQ/Linear use 0=Legacy/inherit, 1=Stereo, 2=Left, 3=Right, 4=Mid,
+/// 5=Side (6 labels); DynamicEQ uses 0=Stereo, 1=Left, 2=Right, 3=Mid, 4=Side
+/// (5 labels, no Legacy). A generic host must branch on the plugin family
+/// before interpreting index 0. DynamicEQ shape index 3 is Tilt, matching
+/// the DSP `DynEqShape` order.
+///
 /// # Safety
 /// * `handle` must be `NULL` or a live plugin handle.
 #[unsafe(no_mangle)]
@@ -1466,7 +1777,43 @@ pub extern "C" fn plugin_set_parameter(
         };
 
         if is_dynamic_eq_shelf_structural_id(&handle_ref.plugin_type, param_id_str) {
-            set_last_error_static(c"Dynamic EQ shelf shape and slope require state restoration");
+            set_last_error_static(
+                c"Dynamic EQ structural shelf shape, slope, and placement require state restoration",
+            );
+            return PluginError::InvalidParameter;
+        }
+        if is_eq_placement_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(c"EQ structural filter placement requires state restoration");
+            return PluginError::InvalidParameter;
+        }
+        if is_linear_phase_eq_placement_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(
+                c"LinearPhaseEQ structural band placement requires state restoration",
+            );
+            return PluginError::InvalidParameter;
+        }
+        if is_de_esser_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(
+                c"DeEsser structural parameters require state restoration",
+            );
+            return PluginError::InvalidParameter;
+        }
+        if is_hiss_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(
+                c"HissReducer structural parameters require state restoration",
+            );
+            return PluginError::InvalidParameter;
+        }
+        if is_ambisonics_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(
+                c"Ambisonics structural parameters require state restoration",
+            );
+            return PluginError::InvalidParameter;
+        }
+        if is_eq_family_constructor_structural_id(&handle_ref.plugin_type, param_id_str) {
+            set_last_error_static(
+                c"EQ-family structural constructor state requires state restoration",
+            );
             return PluginError::InvalidParameter;
         }
 
@@ -1599,7 +1946,7 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
 
     let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
         let handle_ref = &*handle;
-        let state = plugins_bridge::state::save_state(&*handle_ref.plugin);
+        let state = save_state_with_eq_family_pairs(handle_ref);
         let len = state.len();
         let ptr = state.as_ptr();
 
@@ -1614,6 +1961,58 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
     }));
 
     result.unwrap_or(ptr::null_mut())
+}
+
+/// Save plugin state, injecting the constructor-held pair list for EQ-family
+/// plugins (`EQ`, `DynamicEQ`, `LinearPhaseEQ`).
+///
+/// Pair lists are structural saved state, not realtime parameters, so the
+/// flat parameter snapshot cannot carry them. The handle config tracks the
+/// current pairs across restores; injecting them here makes saved presets
+/// retain pair routing. Handles without explicit pairs export no key, which
+/// the merge functions treat as "retain current". Injection never fails the
+/// save: an unparseable config or snapshot falls back to the plain snapshot
+/// and emits a `log::warn!` naming the plugin type, so a corrupt handle
+/// cannot silently shed pair routing across many saves.
+fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Vec<u8> {
+    let state = plugins_bridge::state::save_state(&*handle.plugin);
+    if !matches!(
+        handle.plugin_type.as_str(),
+        "EQ" | "eq" | "DynamicEQ" | "dynamic_eq" | "dynamic-eq" | "LinearPhaseEQ"
+    ) {
+        return state;
+    }
+    let parsed_config = serde_json::from_str::<serde_json::Value>(&handle.config_json);
+    let pairs = parsed_config
+        .as_ref()
+        .ok()
+        .and_then(|config| config.get("stereo_pairs").cloned());
+    if parsed_config.is_err() {
+        log::warn!(
+            "FFI save_state: {} handle has unparseable config_json; exporting plain snapshot without pair routing",
+            handle.plugin_type
+        );
+        return state;
+    }
+    let Some(pairs) = pairs else {
+        return state;
+    };
+    let Ok(mut map) = serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&state)
+    else {
+        log::warn!(
+            "FFI save_state: {} snapshot is not a JSON object; exporting without injected pair routing",
+            handle.plugin_type
+        );
+        return state;
+    };
+    map.insert("stereo_pairs".to_string(), pairs);
+    serde_json::to_vec(&serde_json::Value::Object(map)).unwrap_or_else(|_| {
+        log::warn!(
+            "FFI save_state: {} pair injection serialization failed; exporting plain snapshot",
+            handle.plugin_type
+        );
+        state
+    })
 }
 
 /// Load plugin state from a JSON byte buffer.
@@ -1709,7 +2108,7 @@ pub extern "C" fn plugin_export_preset_json(
         } else {
             CStr::from_ptr(preset_name).to_str().unwrap_or("Untitled")
         };
-        let state = plugins_bridge::state::save_state(&*handle_ref.plugin);
+        let state = save_state_with_eq_family_pairs(handle_ref);
         let info = handle_ref.plugin.info();
         let document = serde_json::json!({
             "schema_version": 1,

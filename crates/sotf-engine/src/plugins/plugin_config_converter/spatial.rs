@@ -40,6 +40,7 @@ pub fn convert_ambisonics_decoder(
         max_re_weighting,
         dual_band,
         algorithm,
+        custom_layout,
     } = settings
     else {
         return None;
@@ -52,6 +53,7 @@ pub fn convert_ambisonics_decoder(
             "max_re_weighting": max_re_weighting,
             "dual_band": dual_band,
             "algorithm": algorithm,
+            "custom_layout": custom_layout,
         }),
     ))
 }
@@ -410,6 +412,7 @@ pub fn convert_crossover(settings: &PluginSettings, _sample_rate: f64) -> Option
         frequency,
         output,
         fir_taps,
+        band_count,
         topology,
         extra_frequencies,
         channel_frequencies_hz,
@@ -419,11 +422,13 @@ pub fn convert_crossover(settings: &PluginSettings, _sample_rate: f64) -> Option
         return None;
     };
 
+    let effective_band_count = band_count.unwrap_or_else(|| extra_frequencies.len() + 2);
     let mut parameters = json!({
         "type": crossover_type,
         "frequency": frequency,
         "output": output,
         "topology": topology,
+        "band_count": effective_band_count,
         "extra_frequencies": extra_frequencies,
         "fir_taps": fir_taps,
     });

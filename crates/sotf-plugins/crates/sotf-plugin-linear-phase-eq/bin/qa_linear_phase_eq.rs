@@ -32,7 +32,9 @@ fn main() {
             q: 1.0,
             gain_db: 6.0,
             active: true,
+            placement: None,
         }],
+        stereo_pairs: None,
     };
 
     let mut inner = LinearPhaseEqPlugin::from_params(channels, sample_rate, params).unwrap();
@@ -92,7 +94,9 @@ fn main() {
                         q: 1.0,
                         gain_db: 6.0,
                         active: true,
+                        placement: None,
                     }],
+                    stereo_pairs: None,
                 },
             )
             .unwrap();

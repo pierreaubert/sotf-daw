@@ -208,6 +208,10 @@ routing_test!(eq_routing, EqWrapper, "EQ");
 routing_test!(limiter_routing, LimiterWrapper, "Limiter");
 routing_test!(crossfeed_routing, CrossfeedWrapper, "Crossfeed");
 routing_test!(saturation_routing, SaturationWrapper, "Saturation");
+routing_test!(de_esser_routing, DeEsserWrapper, "DeEsser");
+
+#[path = "wrapper/de_esser_sidechain_tests.rs"]
+mod de_esser_sidechain_tests;
 
 #[test]
 fn ambisonics_default_order_one_waveform_matches_pre_edit_capture() {
@@ -865,6 +869,12 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
     assert!(std::hint::black_box(
         <AmbisonicsWrapper as ClapPlugin>::CLAP_SUPPORTS_SURROUND
     ));
+    assert!(std::hint::black_box(crate::sotf_nih_supports_surround!(
+        "Crossover"
+    )));
+    assert!(!std::hint::black_box(crate::sotf_nih_supports_surround!(
+        "BandSplit"
+    )));
     let clap_layouts = <AmbisonicsWrapper as ClapPlugin>::clap_audio_io_layouts();
     assert_eq!(clap_layouts.len(), 42);
     for order_index in 0_usize..7 {
@@ -1311,3 +1321,7 @@ mod native_ambisonics_callbacks;
 
 #[path = "wrapper/native_bandsplit_vst3_callbacks.rs"]
 mod native_bandsplit_vst3_callbacks;
+
+#[cfg(feature = "convolution")]
+#[path = "wrapper/native_convolution_state_callbacks.rs"]
+mod native_convolution_state_callbacks;

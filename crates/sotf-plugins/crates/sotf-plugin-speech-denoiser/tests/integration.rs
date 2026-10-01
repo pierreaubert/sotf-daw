@@ -6,8 +6,8 @@ use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::plugin::ProcessContext;
 use sotf_host::{CountingAlloc, assert_no_allocs};
 use sotf_plugin_speech_denoiser::{
-    RNNOISE_BAND_COUNT, SPEECH_DENOISER_FRAME_SIZE, SpeechDenoiserData, SpeechDenoiserPlugin,
-    SpeechDenoiserPluginParams,
+    RNNOISE_BAND_COUNT, SPEECH_DENOISER_FRAME_SIZE, SpeechDenoiserData, SpeechDenoiserModel,
+    SpeechDenoiserPlugin, SpeechDenoiserPluginParams,
 };
 
 #[global_allocator]
@@ -27,11 +27,17 @@ fn integration_plugin_info_and_channels() {
 fn integration_default_parameters() {
     let plugin = SpeechDenoiserPlugin::new(1);
     let params = plugin.parameters();
-    assert_eq!(params.len(), 1);
+    assert_eq!(params.len(), 3);
     assert_eq!(params[0].id, ParameterId::from("enabled"));
+    assert_eq!(params[1].id, ParameterId::from("strength"));
+    assert_eq!(params[2].id, ParameterId::from("model"));
 
     let v = plugin.get_parameter(&ParameterId::from("enabled")).unwrap();
     assert_eq!(v, ParameterValue::Bool(true));
+    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    assert_eq!(v, ParameterValue::Float(1.0));
+    let v = plugin.get_parameter(&ParameterId::from("model")).unwrap();
+    assert_eq!(v, ParameterValue::Int(0));
 }
 
 #[test]
@@ -50,13 +56,63 @@ fn integration_parameter_roundtrip_and_validation() {
     let v = plugin.get_parameter(&ParameterId::from("enabled")).unwrap();
     assert_eq!(v, ParameterValue::Bool(true));
 
+    plugin
+        .set_parameter(ParameterId::from("strength"), ParameterValue::Float(0.5))
+        .unwrap();
+    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    assert_eq!(v, ParameterValue::Float(0.5));
+
+    // The bundled model accepts its index and label as no-ops.
+    plugin
+        .set_parameter(ParameterId::from("model"), ParameterValue::Int(0))
+        .unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("model"),
+            ParameterValue::String("RNNoise Full".to_string()),
+        )
+        .unwrap();
+
     // Unknown parameter.
-    let res = plugin.set_parameter(ParameterId::from("strength"), ParameterValue::Float(0.5));
+    let res = plugin.set_parameter(ParameterId::from("reduction"), ParameterValue::Float(0.5));
     assert!(res.is_err());
 
     // Type mismatch: enabled expects a bool.
     let res = plugin.set_parameter(ParameterId::from("enabled"), ParameterValue::Float(1.0));
     assert!(res.is_err());
+
+    // Out-of-range strength and unknown models are rejected.
+    for invalid in [
+        ParameterValue::Float(-0.5),
+        ParameterValue::Float(1.5),
+        ParameterValue::Float(f32::NAN),
+    ] {
+        assert!(
+            plugin
+                .set_parameter(ParameterId::from("strength"), invalid)
+                .is_err()
+        );
+    }
+    for invalid in [
+        ParameterValue::Int(1),
+        ParameterValue::String("RNNoise Light".to_string()),
+        ParameterValue::Float(0.0),
+    ] {
+        assert!(
+            plugin
+                .set_parameter(ParameterId::from("model"), invalid)
+                .is_err()
+        );
+    }
+    // Rejected writes retain the accepted configuration.
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("strength")),
+        Some(ParameterValue::Float(0.5))
+    );
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("model")),
+        Some(ParameterValue::Int(0))
+    );
 }
 
 #[test]
@@ -155,10 +211,20 @@ fn integration_process_rejects_bad_block_size_and_buffer() {
 
 #[test]
 fn integration_from_params_applies_initial_state() {
-    let plugin =
-        SpeechDenoiserPlugin::from_params(1, SpeechDenoiserPluginParams { enabled: false });
+    let plugin = SpeechDenoiserPlugin::from_params(
+        1,
+        SpeechDenoiserPluginParams {
+            enabled: false,
+            strength: 0.5,
+            model: SpeechDenoiserModel::RnnoiseFull,
+        },
+    );
     let v = plugin.get_parameter(&ParameterId::from("enabled")).unwrap();
     assert_eq!(v, ParameterValue::Bool(false));
+    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    assert_eq!(v, ParameterValue::Float(0.5));
+    let v = plugin.get_parameter(&ParameterId::from("model")).unwrap();
+    assert_eq!(v, ParameterValue::Int(0));
     assert_eq!(plugin.channels(), 1);
 }
 
@@ -270,14 +336,44 @@ fn construction_and_process_contract_reject_invalid_dimensions_and_rate() {
 fn factory_parameter_json_is_strict_and_backward_compatible() {
     let missing: SpeechDenoiserPluginParams = serde_json::from_str("{}").unwrap();
     assert!(missing.enabled);
+    assert_eq!(missing.strength, 1.0);
+    assert_eq!(missing.model, SpeechDenoiserModel::RnnoiseFull);
+    // V1 state without the appended fields keeps v1 audio by default.
+    let v1: SpeechDenoiserPluginParams = serde_json::from_str(r#"{"enabled":false}"#).unwrap();
+    assert!(!v1.enabled);
+    assert_eq!(v1.strength, 1.0);
+    assert_eq!(v1.model, SpeechDenoiserModel::RnnoiseFull);
     for enabled in [false, true] {
-        let json = format!(r#"{{"enabled":{enabled}}}"#);
-        let decoded: SpeechDenoiserPluginParams = serde_json::from_str(&json).unwrap();
-        assert_eq!(decoded.enabled, enabled);
+        for strength in [0.0, 0.5, 1.0] {
+            let json = format!(r#"{{"enabled":{enabled},"strength":{strength}}}"#);
+            let decoded: SpeechDenoiserPluginParams = serde_json::from_str(&json).unwrap();
+            assert_eq!(decoded.enabled, enabled);
+            assert_eq!(decoded.strength, strength as f32);
+            assert_eq!(decoded.model, SpeechDenoiserModel::RnnoiseFull);
+        }
     }
+    let labeled: SpeechDenoiserPluginParams =
+        serde_json::from_str(r#"{"model":"RNNoise Full"}"#).unwrap();
+    assert_eq!(labeled.model, SpeechDenoiserModel::RnnoiseFull);
+    let indexed: SpeechDenoiserPluginParams = serde_json::from_str(r#"{"model":0}"#).unwrap();
+    assert_eq!(indexed.model, SpeechDenoiserModel::RnnoiseFull);
     assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"enabled":1}"#).is_err());
+    assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"strength":"full"}"#).is_err());
+    assert!(
+        serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"model":"RNNoise Light"}"#).is_err()
+    );
+    assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"model":1}"#).is_err());
     assert!(
         serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"enabled":true,"unknown":1}"#)
             .is_err()
     );
+    // Out-of-range factory strength is rejected, never clamped silently.
+    for strength in [-0.5, 1.5] {
+        let params: SpeechDenoiserPluginParams =
+            serde_json::from_str(&format!(r#"{{"strength":{strength}}}"#)).unwrap();
+        assert!(
+            SpeechDenoiserPlugin::try_from_params(1, params).is_err(),
+            "strength {strength} must be rejected"
+        );
+    }
 }

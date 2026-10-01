@@ -319,6 +319,18 @@ pub fn create_plugin(
         "de_esser" => {
             let params: DeEsserPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse de-esser params: {e}"))?;
+            // External-key de-essers need a 2N input bus (program + key) for
+            // N program channels. This single-width facade cannot route that
+            // bus, and the engine chain is single-width as well, so external
+            // construction fails loudly here instead of returning a flag
+            // without an audio path. Use the FFI two-bus path (input 2N,
+            // output N), which constructs at program width and validates both
+            // buses.
+            if params.sidechain_external {
+                return Err(format!(
+                    "De-esser external sidechain requires a 2N input bus for {channels} program channels (got single-width {channels}); engine single-width chains cannot route the key bus — use the FFI input/output-channel path"
+                ));
+            }
             let plugin =
                 DeEsserPlugin::try_from_params_at_sample_rate(channels, params, sample_rate)
                     .map_err(|e| format!("Invalid de-esser params: {e}"))?;
@@ -487,7 +499,8 @@ pub fn create_plugin(
         }
 
         "crossover" => {
-            let params: CrossoverPluginParams = serde_json::from_value(parameters.clone())
+            let normalized = normalize_crossover_toolbar_choice_forms(parameters);
+            let params: CrossoverPluginParams = serde_json::from_value(normalized)
                 .map_err(|e| format!("Failed to parse crossover params: {e}"))?;
             let plugin = CrossoverPlugin::from_params(channels, &params)?;
             Ok(Box::new(plugin))
@@ -581,6 +594,8 @@ pub fn create_plugin(
                 output_sample_rate: u32,
                 #[serde(default = "default_chunk_size")]
                 chunk_size: usize,
+                #[serde(default)]
+                cutoff_smoothing: bool,
             }
             fn default_chunk_size() -> usize {
                 1024
@@ -588,13 +603,21 @@ pub fn create_plugin(
 
             let params: ResamplerParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse resampler params: {e}"))?;
-            let plugin = ResamplerPlugin::new(
+            let mut plugin = ResamplerPlugin::new(
                 channels,
                 params.input_sample_rate,
                 params.output_sample_rate,
                 params.chunk_size,
             )
             .map_err(|e| format!("Failed to create resampler: {e}"))?;
+            if params.cutoff_smoothing {
+                plugin
+                    .set_parameter(
+                        ParameterId::from("cutoff_smoothing"),
+                        ParameterValue::Bool(true),
+                    )
+                    .map_err(|e| format!("Failed to apply resampler cutoff_smoothing: {e}"))?;
+            }
             Ok(Box::new(plugin))
         }
 
@@ -669,14 +692,26 @@ pub fn create_plugin(
         }
 
         "ambisonics_decoder" => {
-            let config: sotf_plugin_ambisonics::AmbisonicsDecoderConfig =
+            let routing: sotf_plugin_ambisonics::AmbisonicsDecoderConfig =
                 serde_json::from_value(parameters.clone())
                     .map_err(|e| format!("Failed to parse ambisonics decoder params: {e}"))?;
-            let mut plugin = sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new(&config)?;
+            // A custom target selects the user-geometry constructor; every
+            // other value keeps the historical named-layout path unchanged.
+            let mut plugin = if routing.target_layout
+                == sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY
+            {
+                let custom: sotf_plugin_ambisonics::CustomDecoderConfig =
+                    serde_json::from_value(parameters.clone()).map_err(|e| {
+                        format!("Failed to parse custom ambisonics layout: {e}")
+                    })?;
+                sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom)?
+            } else {
+                sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new(&routing)?
+            };
             if plugin.input_channels() != channels {
                 return Err(format!(
                     "Order-{} ambisonics requires {} input channels, got {channels}",
-                    config.order,
+                    routing.order,
                     plugin.input_channels()
                 ));
             }
@@ -790,6 +825,52 @@ fn normalize_band_split_toolbar_choice_forms(parameters: &serde_json::Value) -> 
         };
         if let Some(band_count) = band_count {
             fields.insert("num_bands".to_string(), serde_json::json!(band_count));
+        }
+    }
+
+    normalized
+}
+
+/// Canonicalizes visible Crossover choice forms without changing stored counts.
+///
+/// Topology indices and labels are unambiguous. Band-count labels become actual
+/// counts, while numeric values remain constructor counts rather than choice
+/// indices; `PluginSettings::set_param_value` performs the index conversion at
+/// the toolbar boundary.
+fn normalize_crossover_toolbar_choice_forms(parameters: &serde_json::Value) -> serde_json::Value {
+    let mut normalized = parameters.clone();
+    let Some(fields) = normalized.as_object_mut() else {
+        return normalized;
+    };
+
+    if let Some(topology) = fields.get("topology") {
+        let canonical_topology = match topology {
+            serde_json::Value::Number(index) => match index.as_u64() {
+                Some(0) => Some("bands"),
+                Some(1) => Some("per_channel"),
+                _ => None,
+            },
+            serde_json::Value::String(label) => match label.as_str() {
+                "Bands" => Some("bands"),
+                "Per Channel" => Some("per_channel"),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(topology) = canonical_topology {
+            fields.insert("topology".to_string(), serde_json::json!(topology));
+        }
+    }
+
+    if let Some(count) = fields.get("band_count") {
+        let canonical_count = match count.as_str() {
+            Some("2") => Some(2),
+            Some("3") => Some(3),
+            Some("4") => Some(4),
+            _ => None,
+        };
+        if let Some(count) = canonical_count {
+            fields.insert("band_count".to_string(), serde_json::json!(count));
         }
     }
 

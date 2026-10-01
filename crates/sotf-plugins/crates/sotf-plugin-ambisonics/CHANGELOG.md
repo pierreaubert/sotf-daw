@@ -4,6 +4,8 @@
 
 - Extend named-layout ACN/SN3D decoding through order 7 (64 inputs), with independently checked max-rE weights and deterministic AllRAD grids.
 - Retain lower-order compatibility and report zero native tail for the single-band matrix path; recursive dual-band support remains unknown.
+- Add user-defined loudspeaker layouts: appended `custom` target choice, validated owned geometry, JSON persistence (`CustomDecoderConfig`), transactional `new_custom()` preparation and decoder/layout export. `Params` is unchanged, so existing presets and literal constructions keep working.
+- Fix round R1: derive `PartialEq` on `Params`; skip the `custom` key in named-layout table consumers; document the retained-JSON save contract (`custom_config()` reconstruction, `get_data` stays `None`) and archival-only decoder export; reject order 0 in the custom matrix builders.
 
 ## Unreleased audit extension (AUD133, 2026-09-29)
 

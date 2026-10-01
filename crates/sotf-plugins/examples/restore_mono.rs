@@ -94,6 +94,7 @@ fn main() {
         enabled: true,
         sensitivity: 5.0,
         link_channels: true,
+        ..DeclickPluginParams::default()
     };
     let declick = DeclickPlugin::from_params(1, sample_rate, declick_params)
         .expect("Failed to construct declick");
@@ -119,6 +120,13 @@ fn main() {
         frequency_hz: 3000.0,
         strength: 0.7,
         spectral_mode: false,
+        use_captured_profile: false,
+        curve_low: 1.0,
+        curve_mid: 1.0,
+        curve_high: 1.0,
+        link_mode: 0,
+        transient_guard: false,
+        captured_profile: None,
     };
     let hiss = HissReducerPlugin::from_params(1, hiss_params);
     let mut hiss_plugin = ParametricInPlacePluginAdapter::new(hiss);

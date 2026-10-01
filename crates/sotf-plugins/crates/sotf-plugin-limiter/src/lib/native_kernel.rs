@@ -250,6 +250,12 @@ pub(super) struct NativeKernel {
     pub(super) meter_gr_db: f32,
     /// Per-channel ISP (inter-sample true peak) in linear, tracked across blocks
     pub(super) monitoring_isp_linear: Vec<f32>,
+    /// Metering-only output detectors fed final emitted samples per channel.
+    pub(super) output_meter_detectors: Vec<Bs1770TruePeakDetector>,
+    pub(super) monitoring_output_peak_db: f32,
+    pub(super) meter_output_peak_db: f32,
+    /// Per-channel final-output ISP in linear over the meter interval.
+    pub(super) monitoring_output_isp_linear: Vec<f32>,
     /// Per-channel peak scratch for the current frame.
     pub(super) channel_peaks: Vec<f32>,
     /// Per-channel gain-reduction envelopes for independent/partial linking.
@@ -303,6 +309,12 @@ impl NativeKernel {
             meter_peak_db: -100.0,
             meter_gr_db: 0.0,
             monitoring_isp_linear: vec![0.0; channels],
+            output_meter_detectors: (0..channels)
+                .map(|_| Bs1770TruePeakDetector::new(sr))
+                .collect(),
+            monitoring_output_peak_db: -100.0,
+            meter_output_peak_db: -100.0,
+            monitoring_output_isp_linear: vec![0.0; channels],
             channel_peaks: vec![0.0; channels],
             channel_envelopes: vec![0.0; channels],
             sliding_maxima: (0..channels.max(1))
@@ -359,9 +371,15 @@ impl NativeKernel {
         for detector in &mut self.output_isp_detectors {
             detector.set_sample_rate(sample_rate);
         }
+        self.output_meter_detectors
+            .resize_with(channels, || Bs1770TruePeakDetector::new(sample_rate));
+        for detector in &mut self.output_meter_detectors {
+            detector.set_sample_rate(sample_rate);
+        }
         self.channel_peaks.resize(channels, 0.0);
         self.channel_envelopes.resize(channels, 0.0);
         self.monitoring_isp_linear.resize(channels, 0.0);
+        self.monitoring_output_isp_linear.resize(channels, 0.0);
         self.isp_correction_db = 0.0;
         // Three detector delays give the output stage a full interpolation
         // support of preview after accounting for the detector's own delay.
@@ -392,6 +410,9 @@ impl NativeKernel {
         for det in &mut self.output_isp_detectors {
             det.reset();
         }
+        for det in &mut self.output_meter_detectors {
+            det.reset();
+        }
         self.isp_correction_db = 0.0;
         self.isp_delay_buffer.fill(0.0);
         self.isp_delay_pos = 0;
@@ -410,6 +431,9 @@ impl NativeKernel {
         self.meter_peak_db = -100.0;
         self.meter_gr_db = 0.0;
         self.monitoring_isp_linear.fill(0.0);
+        self.monitoring_output_peak_db = -100.0;
+        self.meter_output_peak_db = -100.0;
+        self.monitoring_output_isp_linear.fill(0.0);
         for maximum in &mut self.sliding_maxima {
             maximum.reset();
         }
@@ -667,6 +691,22 @@ impl NativeKernel {
             self.monitoring_gr_db = self.envelope + self.isp_correction_db;
             self.meter_peak_db = self.meter_peak_db.max(self.monitoring_peak_db);
             self.meter_gr_db = self.meter_gr_db.max(self.monitoring_gr_db);
+            // Output meters observe final emitted samples without changing audio.
+            let mut output_peak = 0.0_f32;
+            for ch in 0..nc {
+                let sample = buffer[frame * controls.channels + ch];
+                output_peak = output_peak.max(sample.abs());
+                if use_true_peak {
+                    let tp = self.output_meter_detectors[ch].process_linear(sample);
+                    if tp > self.monitoring_output_isp_linear[ch] {
+                        self.monitoring_output_isp_linear[ch] = tp;
+                    }
+                }
+            }
+            self.monitoring_output_peak_db = 20.0 * fast_log10(output_peak.max(1.0e-10));
+            self.meter_output_peak_db = self
+                .meter_output_peak_db
+                .max(self.monitoring_output_peak_db);
             self.cache_update_counter += 1;
             if self.cache_update_counter >= meter_interval {
                 self.cache_update_counter = 0;
@@ -688,11 +728,29 @@ impl NativeKernel {
                                 d.isp_dbtp.fill(-120.0);
                             }
                         }
+                        d.output_peak_db = self.meter_output_peak_db;
+                        if d.output_isp_dbtp.len() == controls.channels {
+                            if use_true_peak {
+                                for (ch, &lin) in
+                                    self.monitoring_output_isp_linear.iter().enumerate()
+                                {
+                                    d.output_isp_dbtp[ch] = if lin < 1e-12 {
+                                        -120.0
+                                    } else {
+                                        20.0 * lin.log10()
+                                    };
+                                }
+                            } else {
+                                d.output_isp_dbtp.fill(-120.0);
+                            }
+                        }
                     });
                 }
                 self.meter_peak_db = -100.0;
                 self.meter_gr_db = 0.0;
                 self.monitoring_isp_linear.fill(0.0);
+                self.meter_output_peak_db = -100.0;
+                self.monitoring_output_isp_linear.fill(0.0);
             }
         }
 

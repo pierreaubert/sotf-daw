@@ -74,7 +74,14 @@ fn benchmark_ambisonics(c: &mut Criterion) {
     .unwrap();
     benchmark_plugin(c, "Ambisonics_SOA_7.1.4_512", soa_7_1_4, 512);
 
-    for layout in sotf_plugin_ambisonics::params::TARGET_LAYOUTS {
+    for layout in sotf_plugin_ambisonics::params::TARGET_LAYOUTS
+        .iter()
+        // User geometry needs `new_custom()` with explicit speakers; the
+        // named constructor rejects the bare key by design.
+        .filter(|layout| {
+            **layout != sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY
+        })
+    {
         for dual_band in [false, true] {
             let plugin = AmbisonicsDecoderPlugin::new(&AmbisonicsDecoderConfig {
                 order: 1,

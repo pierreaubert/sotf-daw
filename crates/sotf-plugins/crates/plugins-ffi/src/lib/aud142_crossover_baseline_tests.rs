@@ -32,6 +32,7 @@ fn cases() -> Vec<(&'static str, CrossoverPlugin, Vec<&'static str>)> {
                     channel_frequencies_hz: Vec::new(),
                     channel_modes: Some(Vec::new()),
                     topology: None,
+                    band_count: None,
                 },
             )
             .unwrap(),

@@ -20,6 +20,11 @@ use sotf_host::plugin_params::PluginParamDef;
 
 pub const MODES: &[&str] = &["Wideband", "Split-Band"];
 
+/// Split-band crossover topologies. Minimum-phase keeps the legacy LR4
+/// all-pass response; linear-phase uses a symmetric FIR bank with an explicit
+/// `(taps - 1) / 2` sample delay. Only affects split-band mode.
+pub const SPLIT_TOPOLOGIES: &[&str] = &["Minimum-Phase", "Linear-Phase"];
+
 // ============================================================================
 // Parameter Specifications
 // ============================================================================
@@ -87,28 +92,79 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .scaled(100.0)
     .doc("Link all channel gains to the strongest reduction to preserve the stereo image"),
+    // Timing: lookahead delay (structural: changes reported latency).
+    ParamSpec::float(
+        "Lookahead",
+        "lookahead_ms",
+        0.0,
+        0.0,
+        20.0,
+        0.1,
+        "ms",
+        "Timing",
+    )
+    .structural()
+    .setup()
+    .doc("Delays program audio so gain reduction anticipates sibilance; adds latency"),
+    // Split topology (structural: swaps the split-band crossover bank).
+    ParamSpec::choice(
+        "Split Topology",
+        "split_topology",
+        0,
+        SPLIT_TOPOLOGIES,
+        "Mode",
+    )
+    .structural()
+    .setup()
+    .doc("Split-band crossover: minimum-phase LR4 or linear-phase FIR with explicit delay"),
+    // Mid/Side processing (realtime: stateless per-sample encode/decode).
+    ParamSpec::bool_param("M/S Mode", "ms_mode", false, "Mode")
+        .setup()
+        .doc("Process Mid/Side instead of Left/Right on stereo instances"),
+    // External key input (structural: doubles the input channel width).
+    ParamSpec::bool_labeled(
+        "Ext Sidechain",
+        "sidechain_external",
+        false,
+        "On",
+        "Off",
+        "Detection",
+    )
+    .setup()
+    .structural()
+    .doc("Use external key input for detection; input width doubles"),
 ];
 
 // ============================================================================
 // UI Layout
 // ============================================================================
 
-/// De-Esser controls preserve indices 0–7; range and stereo link use 8–9.
+/// De-Esser controls preserve indices 0–9; lookahead, split topology, M/S
+/// mode and external sidechain use 10–13.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(6), // mode
+        ControlSpec::selector(6),  // mode
+        ControlSpec::selector(11), // split topology
     ],
     main: &[
         ControlGroup::new(
             "detection",
             "DETECTION",
             &[
-                ControlSpec::slider(0), // frequency
-                ControlSpec::slider(1), // q
-                ControlSpec::slider(9), // stereo link
+                ControlSpec::slider(0),  // frequency
+                ControlSpec::slider(1),  // q
+                ControlSpec::slider(9),  // stereo link
+                ControlSpec::toggle(12), // m/s mode
+                ControlSpec::toggle(13), // external sidechain
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.85)),
+        ControlGroup::new(
+            "timing",
+            "TIMING",
+            &[ControlSpec::knob(10)], // lookahead
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
             "dynamics",
             "DYNAMICS",
@@ -171,6 +227,18 @@ pub struct Params {
     /// Channel linking from independent (zero) to fully linked (one).
     #[serde(default = "d_stereo_link")]
     pub stereo_link: f64,
+    /// Program delay in milliseconds so reduction anticipates sibilance.
+    #[serde(default = "d_lookahead_ms")]
+    pub lookahead_ms: f64,
+    /// Split-band crossover bank: "Minimum-Phase" or "Linear-Phase".
+    #[serde(default = "d_split_topology")]
+    pub split_topology: String,
+    /// Process Mid/Side instead of Left/Right on stereo instances.
+    #[serde(default = "d_ms_mode")]
+    pub ms_mode: bool,
+    /// Detect from the external key bus instead of the program input.
+    #[serde(default = "d_sidechain_external")]
+    pub sidechain_external: bool,
 }
 
 fn d_frequency() -> f64 {
@@ -202,6 +270,18 @@ fn d_range_db() -> f64 {
 }
 fn d_stereo_link() -> f64 {
     pk(PARAMS, "stereo_link").default_f64()
+}
+fn d_lookahead_ms() -> f64 {
+    pk(PARAMS, "lookahead_ms").default_f64()
+}
+fn d_split_topology() -> String {
+    SPLIT_TOPOLOGIES[0].to_string()
+}
+fn d_ms_mode() -> bool {
+    pk(PARAMS, "ms_mode").default_bool()
+}
+fn d_sidechain_external() -> bool {
+    pk(PARAMS, "sidechain_external").default_bool()
 }
 
 /// Public default helpers used by `DeEsserPluginParams` so its serde defaults
@@ -241,6 +321,26 @@ pub fn default_stereo_link() -> f32 {
     d_stereo_link() as f32
 }
 
+/// Returns zero program delay for presets without a lookahead control.
+pub fn default_lookahead_ms() -> f32 {
+    d_lookahead_ms() as f32
+}
+
+/// Returns the legacy LR4 split bank for presets without a topology control.
+pub fn default_split_topology() -> String {
+    d_split_topology()
+}
+
+/// Returns Left/Right processing for presets without an M/S control.
+pub fn default_ms_mode() -> bool {
+    d_ms_mode()
+}
+
+/// Returns internal detection for presets without a sidechain control.
+pub fn default_sidechain_external() -> bool {
+    d_sidechain_external()
+}
+
 impl Default for Params {
     fn default() -> Self {
         Self {
@@ -254,6 +354,10 @@ impl Default for Params {
             mix: d_mix(),
             range_db: d_range_db(),
             stereo_link: d_stereo_link(),
+            lookahead_ms: d_lookahead_ms(),
+            split_topology: d_split_topology(),
+            ms_mode: d_ms_mode(),
+            sidechain_external: d_sidechain_external(),
         }
     }
 }
@@ -285,6 +389,15 @@ impl PluginParamDef for Params {
             7 => Some(self.mix),
             8 => Some(self.range_db),
             9 => Some(self.stereo_link),
+            10 => Some(self.lookahead_ms),
+            11 => Some(
+                SPLIT_TOPOLOGIES
+                    .iter()
+                    .position(|&t| t.eq_ignore_ascii_case(&self.split_topology))
+                    .unwrap_or(0) as f64,
+            ),
+            12 => Some(if self.ms_mode { 1.0 } else { 0.0 }),
+            13 => Some(if self.sidechain_external { 1.0 } else { 0.0 }),
             _ => None,
         }
     }
@@ -306,6 +419,15 @@ impl PluginParamDef for Params {
             7 => self.mix = PARAMS[7].clamp_f64(value),
             8 => self.range_db = PARAMS[8].clamp_f64(value),
             9 => self.stereo_link = PARAMS[9].clamp_f64(value),
+            10 => self.lookahead_ms = PARAMS[10].clamp_f64(value),
+            11 => {
+                let idx = value as usize;
+                if let Some(&label) = SPLIT_TOPOLOGIES.get(idx) {
+                    self.split_topology = label.to_string();
+                }
+            }
+            12 => self.ms_mode = PARAMS[12].clamp_f64(value) > 0.5,
+            13 => self.sidechain_external = PARAMS[13].clamp_f64(value) > 0.5,
             _ => {}
         }
     }
@@ -350,6 +472,10 @@ mod tests {
         assert_eq!(original.mix, restored.mix);
         assert_eq!(original.range_db, restored.range_db);
         assert_eq!(original.stereo_link, restored.stereo_link);
+        assert_eq!(original.lookahead_ms, restored.lookahead_ms);
+        assert_eq!(original.split_topology, restored.split_topology);
+        assert_eq!(original.ms_mode, restored.ms_mode);
+        assert_eq!(original.sidechain_external, restored.sidechain_external);
     }
 
     #[test]
@@ -365,5 +491,38 @@ mod tests {
         assert_eq!(p.mix, pk(PARAMS, "mix").default_f64());
         assert_eq!(p.range_db, pk(PARAMS, "range_db").default_f64());
         assert_eq!(p.stereo_link, pk(PARAMS, "stereo_link").default_f64());
+        assert_eq!(p.lookahead_ms, pk(PARAMS, "lookahead_ms").default_f64());
+        assert_eq!(p.split_topology, SPLIT_TOPOLOGIES[0]);
+        assert_eq!(p.ms_mode, pk(PARAMS, "ms_mode").default_bool());
+        assert_eq!(
+            p.sidechain_external,
+            pk(PARAMS, "sidechain_external").default_bool()
+        );
+    }
+
+    #[test]
+    fn appended_controls_keep_legacy_indices() {
+        // Legacy hosts address parameters by index; the audit appends new
+        // controls without renumbering the original ten.
+        let keys: Vec<&str> = PARAMS.iter().map(|spec| spec.engine_key).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "frequency",
+                "q",
+                "threshold",
+                "ratio",
+                "attack",
+                "release",
+                "mode",
+                "mix",
+                "range_db",
+                "stereo_link",
+                "lookahead_ms",
+                "split_topology",
+                "ms_mode",
+                "sidechain_external",
+            ]
+        );
     }
 }

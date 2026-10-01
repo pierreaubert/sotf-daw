@@ -20,7 +20,7 @@ const HOST_BUILD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1
 // of times instead of surfacing this recoverable race to the caller.
 const MAX_STALE_HOST_UPDATE_RETRIES: usize = 2;
 
-fn is_required_external_update_failure(diagnostic: &PluginBuildDiagnostic) -> bool {
+fn is_required_plugin_update_failure(diagnostic: &PluginBuildDiagnostic) -> bool {
     matches!(
         &diagnostic.target,
         crate::PluginBuildTarget::ChainPlugin { .. }
@@ -30,6 +30,8 @@ fn is_required_external_update_failure(diagnostic: &PluginBuildDiagnostic) -> bo
         .is_some_and(|plugin_type| {
             plugin_type.eq_ignore_ascii_case("external")
                 || plugin_type.eq_ignore_ascii_case("external_plugin")
+                || plugin_type.eq_ignore_ascii_case("eq")
+                || plugin_type.eq_ignore_ascii_case("equalizer")
         })
 }
 
@@ -174,9 +176,9 @@ fn apply_plugin_update_once(
     for diagnostic in &build_diagnostics {
         log::warn!("[Manager Thread] {}", diagnostic);
     }
-    let failed_external_candidate = build_diagnostics
+    let failed_required_candidate = build_diagnostics
         .iter()
-        .find(|diagnostic| is_required_external_update_failure(diagnostic))
+        .find(|diagnostic| is_required_plugin_update_failure(diagnostic))
         .cloned();
     // Surface build diagnostics in their dedicated state field. A clean build
     // deliberately clears diagnostics from the previous attempt without
@@ -184,9 +186,9 @@ fn apply_plugin_update_once(
     store_plugin_build_diagnostics(state, build_diagnostics);
 
     // Engine startup retains its documented best-effort plugin policy. A
-    // requested host replacement is a complete candidate, however, so a
-    // skipped external plugin must fail before PreparedHostUpdate is sent.
-    if let Some(diagnostic) = failed_external_candidate {
+    // requested external or EQ route replacement is a complete candidate,
+    // however, so a skipped plugin must fail before PreparedHostUpdate is sent.
+    if let Some(diagnostic) = failed_required_candidate {
         return Err(ConfigError::PluginBuild { diagnostic });
     }
 
@@ -443,6 +445,7 @@ mod tests {
     const NATIVE_ROUTE_ISOLATED_LATENCY_SAMPLES: usize = 8_192;
 
     struct RunningEngineRoute {
+        input_channels: usize,
         processing: ProcessingThread,
         decoder_tx: Sender<DecoderMessage>,
         frame_rx: Receiver<ProcessingMessage>,
@@ -481,6 +484,7 @@ mod tests {
             .expect("start real processing worker");
             let (playback, playback_command_rx) = PlaybackThread::command_probe();
             Self {
+                input_channels,
                 processing,
                 decoder_tx,
                 frame_rx,
@@ -512,13 +516,14 @@ mod tests {
                 &mut self.config_queue,
                 plugins,
                 NATIVE_ROUTE_SAMPLE_RATE,
-                NATIVE_ROUTE_INPUT_CHANNELS,
+                self.input_channels,
                 playback_channel_limit,
                 EngineOversamplingPolicy::PluginPreferred,
             )
         }
 
         fn process(&self, input: Vec<f32>, channels: usize, frames: usize) -> AudioFrame {
+            assert_eq!(channels, self.input_channels);
             self.decoder_tx
                 .send(DecoderMessage::Frame(
                     AudioFrame::try_new(input, frames, channels, NATIVE_ROUTE_SAMPLE_RATE)
@@ -536,11 +541,11 @@ mod tests {
         }
 
         fn start(&mut self, plugins: Vec<PluginConfig>) {
-            self.apply(plugins, NATIVE_ROUTE_INPUT_CHANNELS)
+            self.apply(plugins, self.input_channels)
                 .expect("install initial real plugin host");
             let state = self.state.load();
-            assert_eq!(state.num_channels, NATIVE_ROUTE_INPUT_CHANNELS);
-            assert_eq!(state.playback_channels, NATIVE_ROUTE_INPUT_CHANNELS);
+            assert_eq!(state.num_channels, self.input_channels);
+            assert_eq!(state.playback_channels, self.input_channels);
             assert_eq!(state.sample_rate, NATIVE_ROUTE_SAMPLE_RATE);
             assert!(matches!(
                 self.playback_command_rx
@@ -652,6 +657,52 @@ mod tests {
                 }),
             ),
         ]
+    }
+
+    fn stereo_eq_config(filter: crate::plugins::EQFilter) -> PluginConfig {
+        PluginSettings::EQ {
+            channels: 2,
+            filters: vec![filter],
+            channel_filters: None,
+            stereo_pairs: Some(vec![[0, 1]]),
+            per_channel_mode: false,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        }
+        .to_plugin_config(NATIVE_ROUTE_SAMPLE_RATE as f64)
+    }
+
+    fn eq_route_probe_block(start_frame: usize, frames: usize) -> Vec<f32> {
+        let mut block = vec![0.0; frames * 2];
+        for frame in 0..frames {
+            let sample = (start_frame + frame) as f32;
+            block[frame * 2] = 0.31 * (sample * 0.071).sin() + 0.11 * (sample * 0.019).cos();
+            block[frame * 2 + 1] = 0.23 * (sample * 0.037).sin() - 0.17 * (sample * 0.013).cos();
+        }
+        block
+    }
+
+    fn max_audio_residual(actual: &[f32], expected: &[f32]) -> f32 {
+        assert_eq!(actual.len(), expected.len());
+        actual
+            .iter()
+            .zip(expected)
+            .map(|(actual, expected)| (actual - expected).abs())
+            .fold(0.0, f32::max)
+    }
+
+    fn rms_audio_residual(actual: &[f32], expected: &[f32]) -> f64 {
+        assert_eq!(actual.len(), expected.len());
+        (actual
+            .iter()
+            .zip(expected)
+            .map(|(actual, expected)| f64::from(*actual - *expected).powi(2))
+            .sum::<f64>()
+            / actual.len() as f64)
+            .sqrt()
     }
 
     fn ambisonics_descriptor() -> PluginDescriptor {
@@ -1323,6 +1374,271 @@ mod tests {
             current.plugin_build_diagnostics[0].target,
             crate::PluginBuildTarget::ChainPlugin { plugin_index: 1 }
         ));
+    }
+
+    #[test]
+    fn invalid_eq_per_channel_placement_candidate_does_not_publish_host_update() {
+        use crate::plugins::{EQFilter, EqBandPlacement};
+        use math_audio_iir_fir::BiquadFilterType;
+
+        let (mut processing, processing_commands) = ProcessingThread::command_probe();
+        let (mut playback, playback_commands) = PlaybackThread::command_probe();
+        let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+            num_channels: 2,
+            playback_channels: 2,
+            sample_rate: 48_000,
+            plugin_latency_samples: 321,
+            last_error: Some("existing device diagnostic".to_string()),
+            ..AudioEngineState::default()
+        }));
+        let mut config_queue = ConfigUpdateQueue::new();
+
+        let mut muted_placement = EQFilter::new(BiquadFilterType::Peak, 1_000.0, 0.8, 3.0);
+        muted_placement.muted = true;
+        muted_placement.placement = Some(EqBandPlacement::Mid);
+        let typed_eq = PluginSettings::EQ {
+            channels: 2,
+            filters: Vec::new(),
+            channel_filters: Some(vec![vec![muted_placement.clone()], vec![muted_placement]]),
+            stereo_pairs: Some(vec![[0, 1]]),
+            per_channel_mode: true,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        }
+        .to_plugin_config(48_000.0);
+        assert_eq!(typed_eq.plugin_type, "eq");
+        assert_eq!(typed_eq.parameters["filters"][0]["placement"], "mid");
+        assert!(
+            typed_eq.parameters["channel_filters"][0]
+                .as_array()
+                .expect("first per-channel filter bank")
+                .is_empty()
+        );
+
+        let candidate = vec![
+            PluginConfig::new("gain", serde_json::json!({"gain_db": -3.0})),
+            typed_eq,
+        ];
+        let error = apply_plugin_update(
+            &mut processing,
+            &mut playback,
+            &state,
+            &mut config_queue,
+            candidate,
+            48_000,
+            2,
+            2,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect_err("explicit placement with per-channel banks must reject the candidate");
+
+        assert!(
+            error
+                .to_string()
+                .contains("Per-band placement is not supported with channel_filters"),
+            "candidate failure should identify the incompatible route: {error}"
+        );
+        assert!(matches!(
+            processing_commands.try_recv(),
+            Err(std::sync::mpsc::TryRecvError::Empty)
+        ));
+        assert!(matches!(
+            playback_commands.try_recv(),
+            Err(std::sync::mpsc::TryRecvError::Empty)
+        ));
+
+        let current = state.load();
+        assert_eq!(current.num_channels, 2);
+        assert_eq!(current.playback_channels, 2);
+        assert_eq!(current.sample_rate, 48_000);
+        assert_eq!(current.plugin_latency_samples, 321);
+        assert_eq!(
+            current.last_error.as_deref(),
+            Some("existing device diagnostic")
+        );
+        assert_eq!(current.plugin_build_diagnostics.len(), 1);
+        assert!(matches!(
+            current.plugin_build_diagnostics[0].target,
+            crate::PluginBuildTarget::ChainPlugin { plugin_index: 1 }
+        ));
+    }
+
+    #[test]
+    fn manager_commits_eq_placement_and_processes_replacement_audio() {
+        use crate::plugins::{EQFilter, EqBandPlacement};
+        use math_audio_iir_fir::BiquadFilterType;
+
+        const CHANNELS: usize = 2;
+        const FRAMES: usize = 128;
+
+        let mut old_filter = EQFilter::new(BiquadFilterType::Peak, 1_200.0, 0.83, 6.0);
+        let old_config = stereo_eq_config(old_filter.clone());
+        let mut live = RunningEngineRoute::new(CHANNELS);
+        let mut synchronized_twin = RunningEngineRoute::new(CHANNELS);
+        live.start(vec![old_config.clone()]);
+        synchronized_twin.start(vec![old_config.clone()]);
+
+        let (mut old_reference, old_warnings) = build_plugin_host_with_policy(
+            std::slice::from_ref(&old_config),
+            NATIVE_ROUTE_SAMPLE_RATE,
+            CHANNELS,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect("construct the initial EQ host reference");
+        assert!(old_warnings.is_empty());
+
+        // Let the startup crossfade finish while populating the legacy EQ's
+        // recursive state identically in both real processing workers.
+        for block_index in 0..24 {
+            let input = eq_route_probe_block(block_index * FRAMES, FRAMES);
+            let live_frame = live.process(input.clone(), CHANNELS, FRAMES);
+            let twin_frame = synchronized_twin.process(input.clone(), CHANNELS, FRAMES);
+            let mut expected = vec![0.0; input.len()];
+            assert_eq!(
+                old_reference
+                    .process(&input, &mut expected)
+                    .expect("initial reference host processes"),
+                FRAMES
+            );
+            if block_index >= 20 {
+                assert_eq!(live_frame.data, twin_frame.data);
+                assert!(max_audio_residual(&live_frame.data, &expected) <= 2.0e-6);
+            }
+        }
+
+        let mut rejected_filter = EQFilter::new(BiquadFilterType::Peak, 1_200.0, 0.83, 6.0);
+        rejected_filter.muted = true;
+        rejected_filter.placement = Some(EqBandPlacement::Mid);
+        let rejected_config = PluginSettings::EQ {
+            channels: CHANNELS,
+            filters: Vec::new(),
+            channel_filters: Some(vec![vec![rejected_filter.clone()], vec![rejected_filter]]),
+            stereo_pairs: Some(vec![[0, 1]]),
+            per_channel_mode: true,
+            max_filters: 20,
+            tdf2: false,
+            topology: 0.0,
+            auto_gain_enabled: false,
+            oversampling: 1.0,
+        }
+        .to_plugin_config(NATIVE_ROUTE_SAMPLE_RATE as f64);
+        let before_rejection = {
+            let state = live.state.load();
+            (
+                state.num_channels,
+                state.playback_channels,
+                state.sample_rate,
+                state.plugin_latency_samples,
+                state.last_error.clone(),
+            )
+        };
+        let rejection = live
+            .apply(vec![rejected_config], CHANNELS)
+            .expect_err("incompatible explicit EQ placement must be refused");
+        assert!(
+            rejection
+                .to_string()
+                .contains("Per-band placement is not supported with channel_filters"),
+            "unexpected manager rejection: {rejection}"
+        );
+        let after_rejection = live.state.load();
+        assert_eq!(
+            (
+                after_rejection.num_channels,
+                after_rejection.playback_channels,
+                after_rejection.sample_rate,
+                after_rejection.plugin_latency_samples,
+                after_rejection.last_error.clone(),
+            ),
+            before_rejection
+        );
+        assert!(
+            after_rejection
+                .plugin_build_diagnostics
+                .iter()
+                .any(|diagnostic| {
+                    diagnostic
+                        .message
+                        .contains("Per-band placement is not supported with channel_filters")
+                })
+        );
+
+        let zero_input = vec![0.0; CHANNELS * FRAMES];
+        let continued_live = live.process(zero_input.clone(), CHANNELS, FRAMES);
+        let continued_twin = synchronized_twin.process(zero_input, CHANNELS, FRAMES);
+        assert_eq!(continued_live.data, continued_twin.data);
+        assert!(
+            continued_live
+                .data
+                .iter()
+                .any(|sample| sample.abs() > 1.0e-7),
+            "rejected update must leave populated EQ history processing"
+        );
+
+        old_filter.placement = Some(EqBandPlacement::Mid);
+        let replacement_config = stereo_eq_config(old_filter);
+        live.apply(vec![replacement_config.clone()], CHANNELS)
+            .expect("valid explicit EQ placement commits on a real processing worker");
+        let (mut replacement_reference, replacement_warnings) = build_plugin_host_with_policy(
+            std::slice::from_ref(&replacement_config),
+            NATIVE_ROUTE_SAMPLE_RATE,
+            CHANNELS,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect("construct a fresh host reference for the replacement route");
+        assert!(replacement_warnings.is_empty());
+
+        let mut committed_audio = Vec::new();
+        let mut reference_audio = Vec::new();
+        let mut old_route_audio = Vec::new();
+        for block_index in 0..24 {
+            let start_frame = (25 + block_index) * FRAMES;
+            let input = eq_route_probe_block(start_frame, FRAMES);
+            let committed = live.process(input.clone(), CHANNELS, FRAMES);
+            let old_route = synchronized_twin.process(input.clone(), CHANNELS, FRAMES);
+            let mut expected = vec![0.0; input.len()];
+            assert_eq!(
+                replacement_reference
+                    .process(&input, &mut expected)
+                    .expect("replacement reference host processes"),
+                FRAMES
+            );
+            if block_index >= 20 {
+                assert_eq!(committed.num_channels, CHANNELS);
+                assert_eq!(committed.num_frames, FRAMES);
+                assert_eq!(committed.sample_rate, NATIVE_ROUTE_SAMPLE_RATE);
+                assert!(committed.data.iter().all(|sample| sample.is_finite()));
+                committed_audio.extend_from_slice(&committed.data);
+                reference_audio.extend_from_slice(&expected);
+                old_route_audio.extend_from_slice(&old_route.data);
+            }
+        }
+
+        let max_residual = max_audio_residual(&committed_audio, &reference_audio);
+        let rms_residual = rms_audio_residual(&committed_audio, &reference_audio);
+        assert!(
+            max_residual <= 2.0e-6 && rms_residual <= 2.0e-7,
+            "committed EQ audio differs from fresh explicit-placement host: peak={max_residual}, rms={rms_residual}"
+        );
+        assert!(
+            max_audio_residual(&reference_audio, &old_route_audio) > 1.0e-3,
+            "the new Mid placement must produce audio distinct from the old legacy route"
+        );
+        assert!(matches!(
+            live.playback_command_rx
+                .as_ref()
+                .expect("playback probe remains available")
+                .try_recv(),
+            Err(mpsc::TryRecvError::Empty)
+        ));
+        let committed_state = live.state.load();
+        assert_eq!(committed_state.num_channels, CHANNELS);
+        assert_eq!(committed_state.playback_channels, CHANNELS);
+        assert_eq!(committed_state.sample_rate, NATIVE_ROUTE_SAMPLE_RATE);
+        assert!(committed_state.plugin_build_diagnostics.is_empty());
     }
 
     #[test]

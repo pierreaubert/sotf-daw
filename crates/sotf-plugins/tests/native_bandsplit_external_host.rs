@@ -14,10 +14,15 @@ use std::path::PathBuf;
 
 const SAMPLE_RATE: u32 = 48_000;
 const FRAMES: usize = 1024;
+/// Guard samples bracket callback output so writes beyond its slice are visible.
+const OUTPUT_GUARD_SAMPLES: usize = 8;
+/// A finite value far outside the expected audio range marks untouched guards.
+const OUTPUT_CANARY: f32 = f32::from_bits(0x4f12_3456);
 const BAND_SPLIT_CLAP_ID: &str = "org.spinorama.sotf.band-split";
 const BAND_SPLIT_VST3_CLASS_ID: &str = "536F746642616E6453706C7430303031";
 
 #[test]
+#[ignore = "requires SOTF_TEST_BANDSPLIT_CLAP_PLUGIN to point to the captured BandSplit CLAP library"]
 fn exported_clap_band_counts_process_and_restore_both_channel_pairs() {
     verify_band_split_routes(
         PluginFormat::Clap,
@@ -28,6 +33,7 @@ fn exported_clap_band_counts_process_and_restore_both_channel_pairs() {
 }
 
 #[test]
+#[ignore = "requires SOTF_TEST_BANDSPLIT_VST3_PLUGIN to point to the captured BandSplit VST3 bundle"]
 fn exported_vst3_bus_routes_process_and_restore_all_band_counts() {
     verify_band_split_routes(
         PluginFormat::Vst3,
@@ -38,6 +44,7 @@ fn exported_vst3_bus_routes_process_and_restore_all_band_counts() {
 }
 
 #[test]
+#[ignore = "requires SOTF_TEST_BANDSPLIT_VST3_PLUGIN to point to the captured BandSplit VST3 bundle"]
 fn exported_vst3_old_two_parameter_state_uses_legacy_packed_layout() {
     let descriptor = descriptor(
         PluginFormat::Vst3,
@@ -90,6 +97,7 @@ fn exported_vst3_old_two_parameter_state_uses_legacy_packed_layout() {
 }
 
 #[test]
+#[ignore = "requires SOTF_TEST_BANDSPLIT_CLAP_PLUGIN to point to the captured BandSplit CLAP library"]
 fn exported_clap_rejects_conflicting_candidate_without_losing_populated_audio() {
     verify_conflicting_candidate_is_transactional(
         PluginFormat::Clap,
@@ -100,6 +108,7 @@ fn exported_clap_rejects_conflicting_candidate_without_losing_populated_audio() 
 }
 
 #[test]
+#[ignore = "requires SOTF_TEST_BANDSPLIT_VST3_PLUGIN to point to the captured BandSplit VST3 bundle"]
 fn exported_vst3_rejects_conflicting_candidate_without_losing_populated_audio() {
     verify_conflicting_candidate_is_transactional(
         PluginFormat::Vst3,
@@ -405,13 +414,28 @@ fn render_block(
     context: &ProcessContext<'_>,
     output_channels: usize,
 ) -> Vec<f32> {
-    let mut output = vec![f32::NAN; context.num_frames * output_channels];
+    let output_len = context.num_frames * output_channels;
+    let output_start = OUTPUT_GUARD_SAMPLES;
+    let output_end = output_start + output_len;
+    let mut guarded_output = vec![OUTPUT_CANARY; output_len + OUTPUT_GUARD_SAMPLES * 2];
+    guarded_output[output_start..output_end].fill(f32::NAN);
     assert_eq!(
         plugin
-            .process(input, &mut output, context)
+            .process(
+                input,
+                &mut guarded_output[output_start..output_end],
+                context
+            )
             .expect("process actual external plugin audio"),
         context.num_frames
     );
+    assert!(
+        guarded_output[..output_start]
+            .iter()
+            .chain(&guarded_output[output_end..])
+            .all(|sample| sample.to_bits() == OUTPUT_CANARY.to_bits())
+    );
+    let output = guarded_output[output_start..output_end].to_vec();
     assert!(
         output.iter().all(|sample| sample.is_finite()),
         "external route output must remain finite"
@@ -484,17 +508,21 @@ fn render_daw_host_partitioned(
     input: &[f32],
     output_channels: usize,
 ) -> Vec<f32> {
-    let mut output = vec![f32::NAN; FRAMES * output_channels];
+    let output_len = FRAMES * output_channels;
+    let output_start = OUTPUT_GUARD_SAMPLES;
+    let output_end = output_start + output_len;
+    let mut guarded_output = vec![OUTPUT_CANARY; output_len + OUTPUT_GUARD_SAMPLES * 2];
+    guarded_output[output_start..output_end].fill(f32::NAN);
     let mut frame_offset = 0;
     for block_frames in [127, 509, 383, 5] {
         let input_start = frame_offset * 2;
         let input_end = input_start + block_frames * 2;
-        let output_start = frame_offset * output_channels;
-        let output_end = output_start + block_frames * output_channels;
+        let block_output_start = output_start + frame_offset * output_channels;
+        let block_output_end = block_output_start + block_frames * output_channels;
         assert_eq!(
             host.process(
                 &input[input_start..input_end],
-                &mut output[output_start..output_end],
+                &mut guarded_output[block_output_start..block_output_end],
             )
             .unwrap_or_else(|error| panic!("process public DawHost chain: {error}")),
             block_frames
@@ -502,6 +530,13 @@ fn render_daw_host_partitioned(
         frame_offset += block_frames;
     }
     assert_eq!(frame_offset, FRAMES);
+    assert!(
+        guarded_output[..output_start]
+            .iter()
+            .chain(&guarded_output[output_end..])
+            .all(|sample| sample.to_bits() == OUTPUT_CANARY.to_bits())
+    );
+    let output = guarded_output[output_start..output_end].to_vec();
     assert!(output.iter().all(|sample| sample.is_finite()));
     output
 }

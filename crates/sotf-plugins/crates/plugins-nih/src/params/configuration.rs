@@ -19,20 +19,28 @@ pub fn create_plugin(
     sample_rate: u32,
     params: &DynamicParams,
 ) -> Result<Box<dyn Plugin>, String> {
-    let config = match name {
-        "EQ" => crate::wrapper::eq_config_json(|id| params.value(id)),
-        "LinearPhaseEQ" => params.linear_phase_eq_config_json()?,
-        "Crossover" => crossover_constructor_config(params)?,
-        _ => constructor_config(name, params)?,
-    };
-    let factory_name = if name == "FletcherMunson" {
-        // Both packaged variants expose the LoudnessCompensation parameter
-        // schema, including its mode. The legacy JSON compatibility format
-        // cannot represent that complete saved state.
-        "LoudnessCompensation"
-    } else {
-        name
-    };
+    create_plugin_with_input_channels(
+        name,
+        sample_rate,
+        params,
+        crate::wrapper::plugin_constructor_channels(name),
+    )
+}
+
+/// Construct a DSP instance with a selected native input width.
+///
+/// Crossover uses the negotiated audio layout to size its channel filters.
+/// This work belongs to initialization, never the audio callback.
+///
+/// # Errors
+/// Returns an error when the selected width or saved route is invalid.
+#[doc(hidden)]
+pub fn create_plugin_with_input_channels(
+    name: &str,
+    sample_rate: u32,
+    params: &DynamicParams,
+    selected_input_channels: usize,
+) -> Result<Box<dyn Plugin>, String> {
     let constructor_channels = if name == "AmbisonicsDecoder" {
         let order = params
             .value("order")
@@ -47,8 +55,36 @@ pub fn create_plugin(
         crate::wrapper::ambisonics_io_channels(order, target_layout)
             .ok_or_else(|| "Ambisonics layout is outside the supported range".to_string())?
             .0
+    } else if name == "Crossover" {
+        if !(1..=16).contains(&selected_input_channels) {
+            return Err(format!(
+                "Crossover input width {selected_input_channels} is outside 1..=16"
+            ));
+        }
+        selected_input_channels
     } else {
-        crate::wrapper::plugin_constructor_channels(name)
+        let default_channels = crate::wrapper::plugin_constructor_channels(name);
+        if selected_input_channels != default_channels {
+            return Err(format!(
+                "{name} does not support a selected input width of {selected_input_channels}"
+            ));
+        }
+        default_channels
+    };
+
+    let config = match name {
+        "EQ" => crate::wrapper::eq_config_json(|id| params.value(id)),
+        "LinearPhaseEQ" => params.linear_phase_eq_config_json()?,
+        "Crossover" => crossover_constructor_config(params, constructor_channels)?,
+        _ => constructor_config(name, params)?,
+    };
+    let factory_name = if name == "FletcherMunson" {
+        // Both packaged variants expose the LoudnessCompensation parameter
+        // schema, including its mode. The legacy JSON compatibility format
+        // cannot represent that complete saved state.
+        "LoudnessCompensation"
+    } else {
+        name
     };
     let mut plugin =
         plugins_bridge::create_plugin(factory_name, constructor_channels, sample_rate, &config)?;
@@ -63,11 +99,10 @@ pub fn create_plugin(
     }
     if name == "Crossover" {
         let actual = (plugin.input_channels(), plugin.output_channels());
-        if actual.0 != crate::wrapper::plugin_constructor_channels(name)
-            || !matches!(actual.1, 2 | 4 | 6 | 8)
-        {
+        let expected_outputs = crossover_expected_output_channels(params, constructor_channels)?;
+        if actual != (constructor_channels, expected_outputs) {
             return Err(format!(
-                "Crossover native settings produced unsupported {} input/{} output channels",
+                "Crossover native settings require {constructor_channels} input/{expected_outputs} output channels, got {}/{}",
                 actual.0, actual.1
             ));
         }
@@ -98,11 +133,98 @@ pub fn create_plugin(
         crate::wrapper::plugin_io_channels(name)
     };
     let actual_layout = (plugin.input_channels(), plugin.output_channels());
-    let gate_external_layout = name == "Gate" && actual_layout == (4, 2);
-    if actual_layout != expected_layout && !gate_external_layout {
+    // Gate and DeEsser both expose an optional external key bus as 4-in/2-out.
+    // The wrapper advertises 2-in/2-out; the 4-channel DSP geometry is valid.
+    let external_sidechain_layout =
+        (name == "Gate" || name == "DeEsser") && actual_layout == (4, 2);
+    if actual_layout != expected_layout && !external_sidechain_layout {
         return Err(format!(
             "{name} saved state requires {} input/{} output channels; this wrapper supports {} input/{} output channels",
             actual_layout.0, actual_layout.1, expected_layout.0, expected_layout.1
+        ));
+    }
+    Ok(plugin)
+}
+
+/// Construct a native EQ candidate for one negotiated, equal-width speaker
+/// layout and a validated committed stereo-pair route.
+///
+/// This constructor is called only from the host initialization lifecycle. It
+/// does not run from the audio callback.
+#[doc(hidden)]
+pub fn create_native_eq_plugin(
+    sample_rate: u32,
+    params: &DynamicParams,
+    selected_input_channels: usize,
+    route: &super::EqPairRoute,
+) -> Result<Box<dyn Plugin>, String> {
+    if !(1..=16).contains(&selected_input_channels) {
+        return Err(format!(
+            "EQ native input width {selected_input_channels} is outside 1..=16"
+        ));
+    }
+    let config = crate::wrapper::eq_config_json_with_native_route(
+        |id| params.value(id),
+        route,
+    )?;
+    let mut plugin = plugins_bridge::create_plugin(
+        "EQ",
+        selected_input_channels,
+        sample_rate,
+        &config,
+    )?;
+    crate::wrapper::apply_eq_structural(plugin.as_mut(), |id| params.value(id))?;
+    let actual = (plugin.input_channels(), plugin.output_channels());
+    if actual != (selected_input_channels, selected_input_channels) {
+        return Err(format!(
+            "EQ native layout requires {selected_input_channels} input/{selected_input_channels} output channels, got {}/{}",
+            actual.0, actual.1
+        ));
+    }
+    Ok(plugin)
+}
+
+/// Build and fully prepare a Convolution candidate for the native editor.
+/// The caller must run this on a control/background thread, never from process.
+#[cfg(feature = "convolution")]
+pub(crate) fn create_convolution_editor_candidate(
+    params: &DynamicParams,
+    ir_path: Option<&std::path::Path>,
+    true_stereo: bool,
+    sample_rate: u32,
+    max_frames: usize,
+) -> Result<Box<dyn Plugin>, String> {
+    if sample_rate == 0 || max_frames == 0 {
+        return Err("Convolution editor requires an initialized audio configuration".to_string());
+    }
+    let ir_file = ir_path
+        .map(|path| {
+            path.to_str()
+                .map(str::to_string)
+                .ok_or_else(|| "Impulse response path is not valid UTF-8".to_string())
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let serialized = constructor_config("Convolution", params)?;
+    let mut config: Value = serde_json::from_str(&serialized)
+        .map_err(|error| format!("Convolution editor configuration: {error}"))?;
+    let config = config
+        .as_object_mut()
+        .ok_or_else(|| "Convolution editor configuration is not an object".to_string())?;
+    config.insert("ir_file".to_string(), Value::String(ir_file));
+    config.insert("true_stereo".to_string(), Value::Bool(true_stereo));
+    let serialized = serde_json::to_string(config)
+        .map_err(|error| format!("Convolution editor configuration: {error}"))?;
+
+    let plugin = plugins_bridge::create_plugin("Convolution", 2, sample_rate, &serialized)?;
+    let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, max_frames)?;
+    plugin.initialize(sample_rate)?;
+    params.sync_to_plugin(plugin.as_mut())?;
+    if plugin.input_channels() != 2 || plugin.output_channels() != 2 {
+        return Err(format!(
+            "Convolution editor candidate has unsupported {} input/{} output channels",
+            plugin.input_channels(),
+            plugin.output_channels()
         ));
     }
     Ok(plugin)
@@ -127,7 +249,10 @@ fn scalar_json(value: ParameterValue) -> Value {
     }
 }
 
-fn crossover_constructor_config(params: &DynamicParams) -> Result<String, String> {
+fn crossover_constructor_config(
+    params: &DynamicParams,
+    input_channels: usize,
+) -> Result<String, String> {
     use sotf_plugins::param_specs::crossover::CROSSOVER_TYPES;
 
     let int_value = |id: &str| match params.value(id) {
@@ -180,14 +305,19 @@ fn crossover_constructor_config(params: &DynamicParams) -> Result<String, String
     if band_count_index >= 2 {
         extra_frequencies.push(float_value("frequency_3")?);
     }
-    let channel_modes = ["channel_mode_0", "channel_mode_1"]
-        .into_iter()
-        .map(|id| match int_value(id)? {
-            0 => Ok("lowpass"),
-            1 => Ok("highpass"),
-            2 => Ok("mute"),
-            3 => Ok("passthrough"),
-            index => Err(format!("Crossover {id} choice {index} is out of range")),
+    let channel_frequencies = (0..input_channels)
+        .map(|channel| float_value(&format!("channel_frequency_{channel}")))
+        .collect::<Result<Vec<_>, String>>()?;
+    let channel_modes = (0..input_channels)
+        .map(|channel| {
+            let id = format!("channel_mode_{channel}");
+            match int_value(&id)? {
+                0 => Ok("lowpass"),
+                1 => Ok("highpass"),
+                2 => Ok("mute"),
+                3 => Ok("passthrough"),
+                index => Err(format!("Crossover {id} choice {index} is out of range")),
+            }
         })
         .collect::<Result<Vec<_>, String>>()?;
 
@@ -198,13 +328,36 @@ fn crossover_constructor_config(params: &DynamicParams) -> Result<String, String
         "fir_taps": fir_taps,
         "topology": topology,
         "extra_frequencies": extra_frequencies,
-        "channel_frequencies_hz": [
-            float_value("channel_frequency_0")?,
-            float_value("channel_frequency_1")?,
-        ],
+        "channel_frequencies_hz": channel_frequencies,
         "channel_modes": channel_modes,
     }))
     .map_err(|error| format!("Crossover configuration: {error}"))
+}
+
+fn crossover_expected_output_channels(
+    params: &DynamicParams,
+    input_channels: usize,
+) -> Result<usize, String> {
+    let integer = |id: &str| match params.value(id) {
+        Some(ParameterValue::Int(value)) => Ok(value),
+        _ => Err(format!(
+            "Crossover integer parameter '{id}' is missing or invalid"
+        )),
+    };
+    let per_channel = integer("topology")? == 1;
+    let active_bands = integer("mode")? == 2 && !per_channel;
+    let band_count = if active_bands {
+        usize::try_from(integer("band_count")?)
+            .ok()
+            .and_then(|index| index.checked_add(2))
+            .filter(|count| (2..=4).contains(count))
+            .ok_or_else(|| "Crossover band-count choice is missing or invalid".to_string())?
+    } else {
+        1
+    };
+    input_channels
+        .checked_mul(band_count)
+        .ok_or_else(|| "Crossover output channel count overflowed".to_string())
 }
 
 fn unsupported_legacy_default(
@@ -258,9 +411,17 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
     };
     for entry in params.sync_entries.iter().filter(|entry| !entry.realtime) {
         let id = canonical_id(name, entry.id.as_str());
-        let value = params
-            .value(entry.id.as_str())
-            .expect("owned parameter exists");
+        // HissReducer triggers are momentary commands, not construction state.
+        // Its DSP config denies unknown fields, so exclude them here.
+        if name == "HissReducer" && matches!(id, "learn_noise" | "clear_profile") {
+            continue;
+        }
+        let value = if name == "Convolution" {
+            params.initialization_value(entry.id.as_str())
+        } else {
+            params.value(entry.id.as_str())
+        }
+        .expect("owned parameter exists");
         if unsupported_legacy_default(name, id, &value)? {
             continue;
         }
@@ -282,6 +443,8 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
         };
         let value = if name == "BandSplit" {
             band_split_constructor_value(id, value)?
+        } else if name == "DeEsser" {
+            de_esser_constructor_value(id, value)?
         } else {
             scalar_json(value)
         };
@@ -292,6 +455,13 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
             "bands".to_string(),
             Value::Array(dynamic_bands.into_iter().map(Value::Object).collect()),
         );
+    }
+    if name == "Convolution" {
+        let ir_file = params
+            .convolution_ir_path_for_initialization()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        config.insert("ir_file".to_string(), Value::from(ir_file));
     }
     serde_json::to_string(&config).map_err(|error| format!("{name} configuration: {error}"))
 }
@@ -320,19 +490,47 @@ fn band_split_constructor_value(id: &str, value: ParameterValue) -> Result<Value
     }
 }
 
+fn de_esser_constructor_value(id: &str, value: ParameterValue) -> Result<Value, String> {
+    // Native Choice integers map to the DSP's stable String spellings.
+    match (id, value) {
+        ("mode", ParameterValue::Int(0)) => Ok(Value::from("Wideband")),
+        ("mode", ParameterValue::Int(1)) => Ok(Value::from("Split-Band")),
+        ("mode", ParameterValue::Int(index)) => {
+            Err(format!("DeEsser mode choice {index} is outside 0..=1"))
+        }
+        ("split_topology", ParameterValue::Int(0)) => Ok(Value::from("Minimum-Phase")),
+        ("split_topology", ParameterValue::Int(1)) => Ok(Value::from("Linear-Phase")),
+        ("split_topology", ParameterValue::Int(index)) => Err(format!(
+            "DeEsser split topology choice {index} is outside 0..=1"
+        )),
+        (_, value) => Ok(scalar_json(value)),
+    }
+}
+
 fn dynamic_eq_constructor_value(field: &str, value: ParameterValue) -> Result<Value, String> {
-    if field != "shape" {
+    if field != "shape" && field != "placement" {
         return Ok(scalar_json(value));
     }
 
-    match value {
-        ParameterValue::Int(0) => Ok(Value::from("peak")),
-        ParameterValue::Int(1) => Ok(Value::from("low_shelf")),
-        ParameterValue::Int(2) => Ok(Value::from("high_shelf")),
-        ParameterValue::Int(index) => {
-            Err(format!("DynamicEQ shape choice {index} is outside 0..=2"))
+    match (field, value) {
+        ("shape", ParameterValue::Int(0)) => Ok(Value::from("peak")),
+        ("shape", ParameterValue::Int(1)) => Ok(Value::from("low_shelf")),
+        ("shape", ParameterValue::Int(2)) => Ok(Value::from("high_shelf")),
+        ("shape", ParameterValue::Int(3)) => Ok(Value::from("tilt")),
+        ("shape", ParameterValue::Int(index)) => {
+            Err(format!("DynamicEQ shape choice {index} is outside 0..=3"))
         }
-        _ => Err("DynamicEQ shape choice must be an integer".to_string()),
+        ("shape", _) => Err("DynamicEQ shape choice must be an integer".to_string()),
+        ("placement", ParameterValue::Int(0)) => Ok(Value::from("stereo")),
+        ("placement", ParameterValue::Int(1)) => Ok(Value::from("left")),
+        ("placement", ParameterValue::Int(2)) => Ok(Value::from("right")),
+        ("placement", ParameterValue::Int(3)) => Ok(Value::from("mid")),
+        ("placement", ParameterValue::Int(4)) => Ok(Value::from("side")),
+        ("placement", ParameterValue::Int(index)) => {
+            Err(format!("DynamicEQ placement choice {index} is outside 0..=4"))
+        }
+        ("placement", _) => Err("DynamicEQ placement choice must be an integer".to_string()),
+        _ => unreachable!("guarded by the field check above"),
     }
 }
 
@@ -348,8 +546,13 @@ fn restore_structural_values(
 ) -> Result<(), String> {
     for entry in params.sync_entries.iter().filter(|entry| !entry.realtime) {
         let id = canonical_id(name, entry.id.as_str());
+        // HissReducer triggers are momentary commands, not retained structural
+        // state. Saved true values must not fail retention checks.
+        if name == "HissReducer" && matches!(id, "learn_noise" | "clear_profile") {
+            continue;
+        }
         let mut expected = params
-            .value(entry.id.as_str())
+            .initialization_value(entry.id.as_str())
             .expect("owned parameter exists");
         if unsupported_legacy_default(name, id, &expected)? {
             continue;
@@ -473,9 +676,11 @@ mod tests {
         num_bands: usize,
         shape_indices: &[i32],
         shelf_slopes: &[f64],
+        placement_indices: &[i32],
     ) -> std::sync::Arc<DynamicParams> {
         assert_eq!(shape_indices.len(), 8);
         assert_eq!(shelf_slopes.len(), 8);
+        assert_eq!(placement_indices.len(), 8);
         let config = if num_bands == 4 {
             "{}".to_string()
         } else {
@@ -497,6 +702,8 @@ mod tests {
                     info.default_value = f64::from(shape_indices[band]);
                 } else if field == "shelf_slope" {
                     info.default_value = shelf_slopes[band];
+                } else if field == "placement" {
+                    info.default_value = f64::from(placement_indices[band]);
                 }
             }
         }
@@ -505,7 +712,7 @@ mod tests {
 
     #[test]
     fn dynamiceq_constructor_serializes_all_shapes_and_late_band_slots() {
-        let default_params = dynamic_eq_params(4, &[0; 8], &[1.0; 8]);
+        let default_params = dynamic_eq_params(4, &[0; 8], &[1.0; 8], &[0; 8]);
         let default_config = constructor_config("DynamicEQ", &default_params).unwrap();
         println!("AUD139 DynamicEQ default constructor JSON: {default_config}");
         let parsed_default: Value = serde_json::from_str(&default_config).unwrap();
@@ -525,9 +732,10 @@ mod tests {
         let default_plugin = create_plugin("DynamicEQ", 48_000, &default_params).unwrap();
         assert_eq!(default_plugin.output_channels(), 2);
 
-        let shape_indices = [0, 1, 2, 0, 1, 2, 0, 2];
+        let shape_indices = [0, 1, 2, 3, 0, 1, 2, 3];
         let shelf_slopes = [0.12, 0.23, 0.34, 0.45, 0.56, 0.67, 0.78, 0.89];
-        let params = dynamic_eq_params(8, &shape_indices, &shelf_slopes);
+        let placement_indices = [0, 1, 2, 3, 4, 0, 1, 2];
+        let params = dynamic_eq_params(8, &shape_indices, &shelf_slopes, &placement_indices);
         let config = constructor_config("DynamicEQ", &params).unwrap();
         let parsed: Value = serde_json::from_str(&config).unwrap();
         let bands = parsed["bands"].as_array().unwrap();
@@ -537,10 +745,23 @@ mod tests {
                 0 => "peak",
                 1 => "low_shelf",
                 2 => "high_shelf",
+                3 => "tilt",
+                _ => unreachable!(),
+            };
+            let placement = match placement_indices[index] {
+                0 => "stereo",
+                1 => "left",
+                2 => "right",
+                3 => "mid",
+                4 => "side",
                 _ => unreachable!(),
             };
             let stored_slope = shelf_slopes[index] as f32;
             assert_eq!(band["shape"], shape, "band {index} shape encoding");
+            assert_eq!(
+                band["placement"], placement,
+                "band {index} placement encoding"
+            );
             assert_eq!(
                 band["shelf_slope"].as_f64().unwrap() as f32,
                 stored_slope,
@@ -551,13 +772,19 @@ mod tests {
         let restored = create_plugin("DynamicEQ", 48_000, &params).unwrap();
         assert_eq!(
             restored.get_parameter(&ParameterId::from("band_7_shape")),
-            Some(ParameterValue::Int(2))
+            Some(ParameterValue::Int(3))
         );
         assert_eq!(
             restored.get_parameter(&ParameterId::from("band_7_shelf_slope")),
             Some(ParameterValue::Float(0.89_f32))
         );
-        assert!(dynamic_eq_constructor_value("shape", ParameterValue::Int(3)).is_err());
+        assert_eq!(
+            restored.get_parameter(&ParameterId::from("band_7_placement")),
+            Some(ParameterValue::Int(2))
+        );
+        assert!(dynamic_eq_constructor_value("shape", ParameterValue::Int(4)).is_err());
         assert!(dynamic_eq_constructor_value("shape", ParameterValue::Bool(true)).is_err());
+        assert!(dynamic_eq_constructor_value("placement", ParameterValue::Int(5)).is_err());
+        assert!(dynamic_eq_constructor_value("placement", ParameterValue::Bool(true)).is_err());
     }
 }

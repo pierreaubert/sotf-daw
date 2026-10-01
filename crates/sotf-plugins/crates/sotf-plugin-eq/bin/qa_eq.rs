@@ -27,10 +27,12 @@ fn main() {
             db_gain: 6.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
 
@@ -70,10 +72,12 @@ fn main() {
             db_gain: 6.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut inner_ls_orf =
@@ -116,10 +120,12 @@ fn main() {
             db_gain: 6.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut inner_hs_orf =
@@ -162,10 +168,12 @@ fn main() {
             db_gain: 6.0,
             order: 2,
             topology: Default::default(),
+            placement: None,
             lambda: None,
             kautz_sections: Vec::new(),
         }],
         channel_filters: None,
+        stereo_pairs: None,
         auto_gain: Default::default(),
     };
     let mut inner_pm = EqPlugin::from_params(channels, sample_rate, params_peak_matched).unwrap();

@@ -26,6 +26,7 @@ impl PluginFuzzer for CrossoverFuzzer {
             channel_frequencies_hz: vec![],
             channel_modes: Some(vec![]),
             topology: None,
+            band_count: None,
         };
         let plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
 

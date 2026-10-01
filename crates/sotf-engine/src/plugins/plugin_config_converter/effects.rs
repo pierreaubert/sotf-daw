@@ -534,16 +534,30 @@ pub fn convert_declick(settings: &PluginSettings, _sample_rate: f64) -> Option<P
         enabled,
         sensitivity,
         link_channels,
+        mode,
+        bands,
+        crossover_hz,
+        frequency_skew,
+        repair_width,
+        audition_residual,
     } = settings
     else {
         return None;
     };
+    // The factory/DSP/PARAMS key is `audition_residual` (not `audition`);
+    // emitting the exact key keeps the monitor control audible end to end.
     Some(PluginConfig::new(
         "declick",
         json!({
         "enabled": enabled,
         "sensitivity": sensitivity,
         "link_channels": link_channels,
+        "mode": mode,
+        "bands": bands,
+        "crossover_hz": crossover_hz,
+        "frequency_skew": frequency_skew,
+        "repair_width": repair_width,
+        "audition_residual": audition_residual,
         }),
     ))
 }
@@ -555,10 +569,24 @@ pub fn convert_hiss_reducer(settings: &PluginSettings, _sample_rate: f64) -> Opt
         frequency_hz,
         strength,
         spectral_mode,
+        learn_noise: _,
+        use_captured_profile,
+        clear_profile: _,
+        curve_low,
+        curve_mid,
+        curve_high,
+        link_mode,
+        transient_guard,
     } = settings
     else {
         return None;
     };
+    // `learn_noise`/`clear_profile` are momentary control-thread capture
+    // actions, not restorable state: the hiss factory struct denies unknown
+    // fields and has no trigger keys, so they must not appear in construction
+    // JSON (unlike the lenient denoiser factory, which silently ignores them).
+    // A preset with `learn_noise=true` reloads as a no-op for construction;
+    // the restoration owner owns the capture-action path.
     Some(PluginConfig::new(
         "hiss_reducer",
         json!({
@@ -567,6 +595,12 @@ pub fn convert_hiss_reducer(settings: &PluginSettings, _sample_rate: f64) -> Opt
             "frequency_hz": frequency_hz,
             "strength": strength,
             "spectral_mode": spectral_mode,
+            "use_captured_profile": use_captured_profile,
+            "curve_low": curve_low,
+            "curve_mid": curve_mid,
+            "curve_high": curve_high,
+            "link_mode": link_mode,
+            "transient_guard": transient_guard,
         }),
     ))
 }
@@ -575,13 +609,20 @@ pub fn convert_speech_denoiser(
     settings: &PluginSettings,
     _sample_rate: f64,
 ) -> Option<PluginConfig> {
-    let PluginSettings::SpeechDenoiser { enabled } = settings else {
+    let PluginSettings::SpeechDenoiser {
+        enabled,
+        strength,
+        model,
+    } = settings
+    else {
         return None;
     };
     Some(PluginConfig::new(
         "speech_denoiser",
         json!({
             "enabled": enabled,
+            "strength": strength,
+            "model": model,
         }),
     ))
 }

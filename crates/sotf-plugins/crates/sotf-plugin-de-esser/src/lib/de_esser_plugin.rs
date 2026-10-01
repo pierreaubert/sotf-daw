@@ -1,14 +1,20 @@
 use super::consts::DB_CONVERSION_FACTOR;
 use super::consts::EPSILON;
+use super::consts::FIR_TAPS;
 use super::consts::FIXED_KNEE_DB;
+use super::consts::MAX_DRAIN_FRAMES;
+use super::consts::MAX_LOOKAHEAD_MS;
 use super::de_esser_data::DeEsserData;
 use super::types::DeEsserPluginParams;
 use crate::params::{
-    PARAMS as DE, default_attack_ms, default_frequency, default_mix, default_q, default_range_db,
-    default_ratio, default_release_ms, default_stereo_link, default_threshold,
+    PARAMS as DE, default_attack_ms, default_frequency, default_lookahead_ms, default_mix,
+    default_ms_mode, default_q, default_range_db, default_ratio, default_release_ms,
+    default_sidechain_external, default_stereo_link, default_threshold,
 };
 use math_audio_dsp::fast_math::fast_log10;
 use math_audio_iir_fir::{Biquad, BiquadBank, BiquadFilterType};
+use sotf_host::FirCrossover;
+use sotf_host::LookaheadBuffer;
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::dynamics_core::DynamicsCore;
 use sotf_host::dynamics_core::DynamicsMode;
@@ -18,7 +24,8 @@ use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, Paramet
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
 use sotf_host::plugin::{
-    PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
 };
 use sotf_host::simd::{apply_per_channel_gain_simd, enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
@@ -44,8 +51,29 @@ pub struct DeEsserPlugin {
     /// Reusable per-frame sidechain scratch buffer.
     pub(super) sidechain_frame: Vec<f32>,
 
+    /// Reusable per-frame program scratch: M/S encode, lookahead delay,
+    /// gain application and M/S decode happen here before write-back.
+    pub(super) work_frame: Vec<f32>,
+
     /// Reusable per-frame gain multipliers for SIMD path.
     pub(super) frame_gains: Vec<f32>,
+
+    /// Program delay so gain reduction anticipates sibilance (R1).
+    pub(super) param_lookahead_ms: ParameterId,
+    pub(super) lookahead_ms: f32,
+    pub(super) lookahead_buffers: Vec<LookaheadBuffer>,
+
+    /// Split-band crossover bank selection (R2).
+    pub(super) param_split_topology: ParameterId,
+    /// 0=minimum-phase LR4, 1=linear-phase FIR
+    pub(super) split_topology_index: usize,
+    pub(super) fir_split: Option<FirCrossover<f32>>,
+
+    /// Mid/Side processing and external key input (R3).
+    pub(super) param_ms_mode: ParameterId,
+    pub(super) ms_mode: bool,
+    pub(super) param_sidechain_external: ParameterId,
+    pub(super) sidechain_external: bool,
 
     // Dynamics (one DynamicsCore per channel)
     pub(super) cores: Vec<DynamicsCore>,
@@ -77,6 +105,14 @@ pub struct DeEsserPlugin {
     pub(super) param_release: ParameterId,
     pub(super) release_ms: f32,
 
+    // Lifecycle / end-of-stream drain
+    pub(super) initialized: bool,
+    pub(super) has_input: bool,
+    /// Any `Some` value requires reset before accepting more input.
+    pub(super) drain_remaining: Option<usize>,
+    /// Zero continuation uses input stride; public drain returns program channels only.
+    pub(super) drain_scratch: Vec<f32>,
+
     // Monitoring
     /// Per-channel gain reduction in dB for monitoring
     pub(super) monitoring_gr: Vec<f32>,
@@ -104,7 +140,23 @@ impl DeEsserPlugin {
             hp_filters: Self::make_hp_filters(channels, freq, q, sr),
             lp_filters: Self::make_lp_filters(channels, freq, q, sr),
             sidechain_frame: vec![0.0; channels],
+            work_frame: vec![0.0; channels],
             frame_gains: vec![0.0; channels],
+
+            param_lookahead_ms: ParameterId::from("lookahead_ms"),
+            lookahead_ms: default_lookahead_ms(),
+            lookahead_buffers: (0..channels)
+                .map(|_| LookaheadBuffer::from_ms(MAX_LOOKAHEAD_MS, sr, 1))
+                .collect(),
+
+            param_split_topology: ParameterId::from("split_topology"),
+            split_topology_index: 0, // default: minimum-phase LR4
+            fir_split: None,
+
+            param_ms_mode: ParameterId::from("ms_mode"),
+            ms_mode: default_ms_mode(),
+            param_sidechain_external: ParameterId::from("sidechain_external"),
+            sidechain_external: default_sidechain_external(),
 
             cores: (0..channels)
                 .map(|_| DynamicsCore::new(DynamicsMode::Compress, 1, sr))
@@ -134,6 +186,11 @@ impl DeEsserPlugin {
             attack_ms: default_attack_ms(),
             param_release: ParameterId::from("release"),
             release_ms: default_release_ms(),
+
+            initialized: false,
+            has_input: false,
+            drain_remaining: None,
+            drain_scratch: Vec::new(),
 
             monitoring_gr: vec![0.0; channels],
             cache: RealTimeCache::new(DeEsserData::new(channels)),
@@ -177,6 +234,13 @@ impl DeEsserPlugin {
             "Wideband" | "wideband" => 0,
             _ => 1, // validated Split-Band spelling
         };
+        p.lookahead_ms = params.lookahead_ms;
+        p.split_topology_index = match params.split_topology.as_str() {
+            "Linear-Phase" | "linear-phase" => 1,
+            _ => 0, // validated Minimum-Phase spelling
+        };
+        p.ms_mode = params.ms_mode;
+        p.sidechain_external = params.sidechain_external;
 
         // Update dynamics cores
         for core in &mut p.cores {
@@ -186,6 +250,8 @@ impl DeEsserPlugin {
         // Rebuild filters
         p.rebuild_detection_filters();
         p.rebuild_crossovers();
+        p.update_lookahead_delay();
+        p.rebuild_fir_split();
         p.rebuild_cached_parameters();
         p
     }
@@ -208,11 +274,23 @@ impl DeEsserPlugin {
         if sample_rate == 0 {
             return Err("De-Esser sample rate must be greater than zero".to_string());
         }
+        if params.sidechain_external && channels.checked_mul(2).is_none() {
+            return Err("De-Esser external-sidechain channel count overflows usize".into());
+        }
         if !matches!(
             params.mode.as_str(),
             "Wideband" | "wideband" | "Split-Band" | "split-band"
         ) {
             return Err(format!("Unknown De-Esser mode: {}", params.mode));
+        }
+        if !matches!(
+            params.split_topology.as_str(),
+            "Minimum-Phase" | "minimum-phase" | "Linear-Phase" | "linear-phase"
+        ) {
+            return Err(format!(
+                "Unknown De-Esser split topology: {}",
+                params.split_topology
+            ));
         }
         let ranges = [
             ("frequency", params.frequency, 2000.0, 16000.0),
@@ -224,6 +302,7 @@ impl DeEsserPlugin {
             ("mix", params.mix, 0.0, 1.0),
             ("range_db", params.range_db, 0.0, 60.0),
             ("stereo_link", params.stereo_link, 0.0, 1.0),
+            ("lookahead_ms", params.lookahead_ms, 0.0, 20.0),
         ];
         for (name, value, min, max) in ranges {
             if !value.is_finite() || !(min..=max).contains(&value) {
@@ -304,6 +383,84 @@ impl DeEsserPlugin {
     pub(super) fn rebuild_crossovers(&mut self) {
         for xo in &mut self.crossovers {
             xo.set_frequency(self.frequency);
+        }
+    }
+
+    pub(super) fn split_topology_string(&self) -> String {
+        match self.split_topology_index {
+            1 => "Linear-Phase".to_string(),
+            _ => "Minimum-Phase".to_string(),
+        }
+    }
+
+    /// True when the linear-phase FIR bank carries the split path. The
+    /// topology control is inert in wideband mode.
+    pub(super) fn use_fir_split(&self) -> bool {
+        self.mode_index == 1 && self.split_topology_index == 1
+    }
+
+    /// True when M/S encode/decode wraps the processing path. Stereo
+    /// instances only; other channel counts process discrete channels even
+    /// when M/S mode is enabled.
+    pub(super) fn use_ms(&self) -> bool {
+        self.ms_mode && self.channels == 2
+    }
+
+    pub(super) fn update_lookahead_delay(&mut self) {
+        for buf in &mut self.lookahead_buffers {
+            buf.set_delay_ms(self.lookahead_ms, self.sample_rate);
+        }
+    }
+
+    /// Program delay in samples. A zero lookahead bypasses the delay lines,
+    /// so report zero rather than the ring's minimum one-sample delay.
+    pub(super) fn lookahead_delay_samples(&self) -> usize {
+        if self.lookahead_ms > 0.0 {
+            self.lookahead_buffers
+                .first()
+                .map_or(0, LookaheadBuffer::delay)
+        } else {
+            0
+        }
+    }
+
+    /// Linear-phase split group delay `(taps - 1) / 2`, else zero.
+    pub(super) fn fir_group_delay_samples(&self) -> usize {
+        if self.use_fir_split() {
+            self.fir_split
+                .as_ref()
+                .map_or(0, FirCrossover::latency_samples)
+        } else {
+            0
+        }
+    }
+
+    /// Program frames retained after input stops: the lookahead delay plus
+    /// the full FIR support when the linear-phase bank is active. Recursive
+    /// LR4/detector/envelope tails are cut at drain completion (crossover-LR
+    /// precedent); they scale silence and cannot produce audio by themselves.
+    pub(super) fn retained_frames(&self) -> usize {
+        let fir_support = if self.use_fir_split() {
+            FIR_TAPS - 1
+        } else {
+            0
+        };
+        self.lookahead_delay_samples() + fir_support
+    }
+
+    /// Build or drop the FIR split bank for the current mode, topology,
+    /// frequency, rate and channel count. Structural control only; never
+    /// called from the realtime path.
+    pub(super) fn rebuild_fir_split(&mut self) {
+        if self.use_fir_split() {
+            self.fir_split = Some(FirCrossover::new(
+                self.frequency,
+                self.sample_rate as f32,
+                self.channels,
+                FIR_TAPS,
+            ));
+        } else {
+            self.fir_split = None;
         }
     }
 
@@ -406,6 +563,41 @@ impl DeEsserPlugin {
             .with_description("Link channel gains to the strongest reduction (0 to 1)")
             .with_group("Detection")
             .with_importance(ParameterImportance::Useful),
+            Parameter::new_float(
+                "lookahead_ms",
+                "Lookahead",
+                self.lookahead_ms,
+                pk(DE, "lookahead_ms").min_f64() as f32,
+                pk(DE, "lookahead_ms").max_f64() as f32,
+            )
+            .with_update_mode(UpdateMode::Structural)
+            .with_description(
+                "Program delay in ms so reduction anticipates sibilance (adds latency)",
+            )
+            .with_group("Timing")
+            .with_importance(ParameterImportance::Useful),
+            Parameter::new_string(
+                "split_topology",
+                "Split Topology",
+                self.split_topology_string(),
+            )
+            .with_update_mode(UpdateMode::Structural)
+            .with_description("Split-band crossover: minimum-phase LR4 or linear-phase FIR")
+            .with_group("Mode")
+            .with_importance(ParameterImportance::Useful),
+            Parameter::new_bool("ms_mode", "M/S Mode", self.ms_mode)
+                .with_description("Process Mid/Side instead of Left/Right on stereo instances")
+                .with_group("Mode")
+                .with_importance(ParameterImportance::Useful),
+            Parameter::new_bool(
+                "sidechain_external",
+                "Ext Sidechain",
+                self.sidechain_external,
+            )
+            .with_update_mode(UpdateMode::Structural)
+            .with_description("Detect from the external key bus; input width doubles")
+            .with_group("Detection")
+            .with_importance(ParameterImportance::Useful),
         ];
     }
 
@@ -475,6 +667,38 @@ impl DeEsserPlugin {
                 .as_float()
                 .ok_or_else(|| "stereo_link must be a float".to_string())?;
             self.link_smoother.set_target(self.stereo_link);
+        } else if id == self.param_lookahead_ms {
+            let lookahead_ms = value
+                .as_float()
+                .ok_or_else(|| "lookahead_ms must be a float".to_string())?;
+            if lookahead_ms != self.lookahead_ms {
+                return Err("lookahead_ms is structural and requires a host rebuild".into());
+            }
+        } else if id == self.param_split_topology {
+            let new_index = match value
+                .as_string()
+                .ok_or_else(|| "split_topology must be a string".to_string())?
+            {
+                "Minimum-Phase" | "minimum-phase" => 0,
+                "Linear-Phase" | "linear-phase" => 1,
+                other => {
+                    return Err(format!("Unknown De-Esser split topology: {other}"));
+                }
+            };
+            if new_index != self.split_topology_index {
+                return Err("split_topology is structural and requires a host rebuild".into());
+            }
+        } else if id == self.param_ms_mode {
+            self.ms_mode = value
+                .as_bool()
+                .ok_or_else(|| "ms_mode must be a bool".to_string())?;
+        } else if id == self.param_sidechain_external {
+            let sidechain_external = value
+                .as_bool()
+                .ok_or_else(|| "sidechain_external must be a bool".to_string())?;
+            if sidechain_external != self.sidechain_external {
+                return Err("sidechain_external is structural and requires a host rebuild".into());
+            }
         } else {
             return Err(format!("Unknown parameter: {id}"));
         }
@@ -517,6 +741,242 @@ impl DeEsserPlugin {
                 (-reduction * std::f32::consts::LOG2_10 / DB_CONVERSION_FACTOR).exp2();
         }
     }
+
+    /// Fetch one detector frame: the external key bus when enabled, else the
+    /// program frame. The key region follows the program channels in every
+    /// frame; program writes never touch it, but non-finite/denormal
+    /// sanitization may normalize key samples (gate: "never writes the
+    /// sidechain samples").
+    fn fetch_detector_frame(&mut self, buffer: &[f32], frame_offset: usize) {
+        if self.sidechain_external {
+            let key_offset = frame_offset + self.channels;
+            self.sidechain_frame[..self.channels]
+                .copy_from_slice(&buffer[key_offset..key_offset + self.channels]);
+        } else {
+            self.sidechain_frame[..self.channels]
+                .copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
+        }
+    }
+
+    /// Run the bandpass detector on the fetched frame and refresh gains.
+    fn detect_frame_gains(&mut self) {
+        self.hp_filters
+            .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
+        self.lp_filters
+            .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
+        self.update_frame_gains();
+    }
+
+    /// Delay the program working frame through the lookahead lines. Only
+    /// called when the lookahead setting is positive; a zero lookahead
+    /// bypasses the rings so the path stays bit-identical to legacy output.
+    fn delay_work_frame(&mut self) {
+        for ch in 0..self.channels {
+            let input = self.work_frame[ch];
+            self.work_frame[ch] = self.lookahead_buffers[ch].push(input);
+        }
+    }
+
+    /// Shared stream processor for live input and zero-continuation drain.
+    /// Keeps program width on output; program writes never touch the key
+    /// region (non-finite sanitization below may still normalize it).
+    fn process_stream(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        // Lifecycle guards first (gate precedent): the detector filters, FIR
+        // bank and lookahead delay are only valid after `initialize` at the
+        // matching rate. All guards precede any buffer mutation so rejected
+        // host calls leave the buffer and DSP state untouched.
+        if !self.initialized {
+            return Err("De-Esser must be initialized before processing".into());
+        }
+        if context.sample_rate != self.sample_rate {
+            return Err(format!(
+                "De-Esser process sample rate {} does not match initialized sample rate {}",
+                context.sample_rate, self.sample_rate
+            ));
+        }
+        let num_frames = context.num_frames;
+        // With an external key bus each frame carries program channels
+        // followed by key channels. A short buffer means the key is missing:
+        // reject before any DSP state advances (no silent internal fallback).
+        let stride = self.input_channels();
+        let sample_len = num_frames
+            .checked_mul(stride)
+            .ok_or_else(|| "De-Esser block sample count overflow".to_string())?;
+        if buffer.len() < sample_len {
+            return Err(format!(
+                "De-Esser buffer too small: need {sample_len} samples, got {}",
+                buffer.len()
+            ));
+        }
+
+        let use_lookahead = self.lookahead_ms > 0.0;
+        let use_ms = self.use_ms();
+        let use_fir = self.use_fir_split();
+        if use_fir && self.fir_split.is_none() {
+            return Err(
+                "De-Esser linear-phase split bank is missing; rebuild the graph".to_string(),
+            );
+        }
+
+        for sample in &mut buffer[..sample_len] {
+            if !sample.is_finite() {
+                *sample = 0.0;
+            }
+        }
+
+        // Complete all frame/channel arithmetic and buffer validation before
+        // touching DSP state. This keeps rejected host calls transactional.
+        enable_ftz_daz();
+
+        if self.mode_index == 0 {
+            // ============================================================
+            // Wideband mode
+            // ============================================================
+            for frame in 0..num_frames {
+                let frame_offset = frame * stride;
+                self.work_frame[..self.channels]
+                    .copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
+                self.fetch_detector_frame(buffer, frame_offset);
+                if use_ms {
+                    Self::encode_ms(&mut self.work_frame);
+                    Self::encode_ms(&mut self.sidechain_frame);
+                }
+                self.detect_frame_gains();
+                if use_lookahead {
+                    self.delay_work_frame();
+                }
+
+                // Advance mix smoother once per frame (not per channel) to avoid
+                // block-constant mix that would cause zipper noise during automation.
+                let mix = self.mix_smoother.advance();
+                let dry_mix = 1.0 - mix;
+                for gain in &mut self.frame_gains {
+                    *gain = dry_mix + mix * *gain;
+                }
+                apply_per_channel_gain_simd(
+                    &mut self.work_frame[..self.channels],
+                    self.channels,
+                    &self.frame_gains,
+                );
+                if use_ms {
+                    Self::decode_ms(&mut self.work_frame);
+                }
+                buffer[frame_offset..frame_offset + self.channels]
+                    .copy_from_slice(&self.work_frame[..self.channels]);
+            }
+        } else if use_fir {
+            // ============================================================
+            // Split-band mode, linear-phase FIR bank
+            // ============================================================
+            for frame in 0..num_frames {
+                let frame_offset = frame * stride;
+                self.work_frame[..self.channels]
+                    .copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
+                self.fetch_detector_frame(buffer, frame_offset);
+                if use_ms {
+                    Self::encode_ms(&mut self.work_frame);
+                    Self::encode_ms(&mut self.sidechain_frame);
+                }
+                self.detect_frame_gains();
+                if use_lookahead {
+                    self.delay_work_frame();
+                }
+                // Advance mix smoother once per frame (not per channel) to avoid
+                // block-constant mix that would cause zipper noise during automation.
+                let mix = self.mix_smoother.advance();
+                let fir = self
+                    .fir_split
+                    .as_mut()
+                    .expect("checked linear-phase split bank");
+                for ch in 0..self.channels {
+                    let (low, high) = fir.process_sample(self.work_frame[ch], ch);
+                    let gain = self.frame_gains[ch];
+                    // Low+high is the delayed dry reference. Mix controls only
+                    // the reduction depth, so gain=1 yields the same delayed
+                    // response for every Mix value.
+                    self.work_frame[ch] = low + high * (1.0 + mix * (gain - 1.0));
+                }
+                if use_ms {
+                    Self::decode_ms(&mut self.work_frame);
+                }
+                buffer[frame_offset..frame_offset + self.channels]
+                    .copy_from_slice(&self.work_frame[..self.channels]);
+            }
+        } else {
+            // ============================================================
+            // Split-band mode, minimum-phase LR4 bank
+            // ============================================================
+            for frame in 0..num_frames {
+                let frame_offset = frame * stride;
+                self.work_frame[..self.channels]
+                    .copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
+                self.fetch_detector_frame(buffer, frame_offset);
+                if use_ms {
+                    Self::encode_ms(&mut self.work_frame);
+                    Self::encode_ms(&mut self.sidechain_frame);
+                }
+                self.detect_frame_gains();
+                if use_lookahead {
+                    self.delay_work_frame();
+                }
+                // Advance mix smoother once per frame (not per channel) to avoid
+                // block-constant mix that would cause zipper noise during automation.
+                let mix = self.mix_smoother.advance();
+                for ch in 0..self.channels {
+                    let input = self.work_frame[ch];
+
+                    // Split into low and high bands
+                    let (low, high) = self.crossovers[ch].process(input, 0);
+
+                    let gain = self.frame_gains[ch];
+
+                    // The LR4 low+high sum is the phase-matched dry reference.
+                    // Mix controls only the reduction depth, so gain=1 yields
+                    // the same all-pass response for every Mix value and cannot
+                    // comb-filter a phase-rotated wet path against raw input.
+                    self.work_frame[ch] = low + high * (1.0 + mix * (gain - 1.0));
+                }
+                if use_ms {
+                    Self::decode_ms(&mut self.work_frame);
+                }
+                buffer[frame_offset..frame_offset + self.channels]
+                    .copy_from_slice(&self.work_frame[..self.channels]);
+            }
+        }
+
+        // Update diagnostic cache (throttled)
+        self.cache_counter = self.cache_counter.saturating_add(num_frames);
+        let cache_interval = (self.sample_rate as usize / 30).max(1);
+        if self.cache_counter >= cache_interval {
+            self.cache_counter %= cache_interval;
+            self.cache.update(|d| {
+                d.update(&self.monitoring_gr);
+            });
+        }
+
+        flush_denormals_inplace(&mut buffer[..sample_len]);
+        Ok(num_frames)
+    }
+
+    /// Encode a stereo working frame from Left/Right to Mid/Side.
+    fn encode_ms(frame: &mut [f32]) {
+        let l = frame[0];
+        let r = frame[1];
+        frame[0] = (l + r) * 0.5;
+        frame[1] = (l - r) * 0.5;
+    }
+
+    /// Decode a stereo working frame from Mid/Side to Left/Right.
+    fn decode_ms(frame: &mut [f32]) {
+        let m = frame[0];
+        let s = frame[1];
+        frame[0] = m + s;
+        frame[1] = m - s;
+    }
 }
 
 impl ParametricInPlacePlugin for DeEsserPlugin {
@@ -529,11 +989,38 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
     }
 
     fn compile_metadata(&self) -> PluginCompileMetadata {
-        PluginCompileMetadata::nonlinear(PluginCostClass::Dynamics, None, 0, false)
+        // Report coupling only for effective modes: link needs at least two
+        // channels to mix, M/S needs a stereo instance, while an external key
+        // bus always couples routing (doubled input width).
+        let coupled = (self.stereo_link > 0.0 && self.channels > 1)
+            || self.use_ms()
+            || self.sidechain_external;
+        PluginCompileMetadata::nonlinear(
+            PluginCostClass::Dynamics,
+            None,
+            self.latency_samples(),
+            coupled,
+        )
     }
 
     fn channels(&self) -> usize {
         self.channels
+    }
+
+    fn input_channels(&self) -> usize {
+        if self.sidechain_external {
+            self.channels
+                .checked_mul(2)
+                .expect("validated external-sidechain channel count")
+        } else {
+            self.channels
+        }
+    }
+
+    fn supports_bounded_subdivision(&self) -> bool {
+        // All DSP state advances per sample with no block-size dependence;
+        // only the throttled meter publication may follow subcalls.
+        true
     }
 
     fn parameter_schema(&self) -> ParameterSchema {
@@ -552,6 +1039,10 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
             "mix" => Some(ParameterValue::Float(self.mix)),
             "range_db" => Some(ParameterValue::Float(self.range_db)),
             "stereo_link" => Some(ParameterValue::Float(self.stereo_link)),
+            "lookahead_ms" => Some(ParameterValue::Float(self.lookahead_ms)),
+            "split_topology" => Some(ParameterValue::String(self.split_topology_string())),
+            "ms_mode" => Some(ParameterValue::Bool(self.ms_mode)),
+            "sidechain_external" => Some(ParameterValue::Bool(self.sidechain_external)),
             _ => None,
         }
     }
@@ -589,10 +1080,36 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
             self.param_stereo_link.clone(),
             ParameterValue::Float(self.stereo_link),
         );
+        values.insert(
+            self.param_lookahead_ms.clone(),
+            ParameterValue::Float(self.lookahead_ms),
+        );
+        values.insert(
+            self.param_split_topology.clone(),
+            ParameterValue::String(self.split_topology_string()),
+        );
+        values.insert(
+            self.param_ms_mode.clone(),
+            ParameterValue::Bool(self.ms_mode),
+        );
+        values.insert(
+            self.param_sidechain_external.clone(),
+            ParameterValue::Bool(self.sidechain_external),
+        );
         values
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("De-Esser requires reset before changing parameters after drain".into())
+            };
+        }
         for (id, value) in values {
             self.apply_parameter(id, value)?;
         }
@@ -626,6 +1143,12 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
             return Err("De-Esser sample rate must be greater than zero".to_string());
         }
         Self::validate_detection_band(self.frequency, self.q, sample_rate)?;
+        // Size the drain scratch before mutating DSP state so a capacity
+        // failure leaves the previous configuration untouched.
+        let drain_samples = MAX_DRAIN_FRAMES
+            .checked_mul(self.input_channels())
+            .filter(|samples| *samples <= isize::MAX as usize / std::mem::size_of::<f32>())
+            .ok_or_else(|| "De-Esser drain scratch capacity overflow".to_string())?;
         self.sample_rate = sample_rate;
 
         // Rebuild detection filters for new sample rate
@@ -635,6 +1158,7 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         for xo in &mut self.crossovers {
             xo.reinit(self.frequency, sample_rate as f32, 1);
         }
+        self.rebuild_fir_split();
 
         // Reinit dynamics cores
         for core in &mut self.cores {
@@ -642,10 +1166,22 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
             core.set_attack_release(self.attack_ms, self.release_ms);
         }
 
+        // Resize lookahead delay lines for the new rate, then apply delay.
+        let max_samples = (MAX_LOOKAHEAD_MS * 0.001 * sample_rate as f32).round() as usize;
+        for buf in &mut self.lookahead_buffers {
+            buf.resize(max_samples, 1);
+        }
+        self.update_lookahead_delay();
+
         // Reset smoother
         self.mix_smoother.set_time(5.0, sample_rate);
         self.range_smoother.set_time(5.0, sample_rate);
         self.link_smoother.set_time(5.0, sample_rate);
+
+        self.drain_scratch.resize(drain_samples, 0.0);
+        self.has_input = false;
+        self.drain_remaining = None;
+        self.initialized = true;
 
         Ok(())
     }
@@ -658,12 +1194,23 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         for xo in &mut self.crossovers {
             xo.reset();
         }
+        if let Some(fir) = self.fir_split.as_mut() {
+            fir.reset();
+        }
 
         // Reset dynamics cores
         for core in &mut self.cores {
             core.reset();
         }
 
+        // Reset lookahead delay lines
+        for buf in &mut self.lookahead_buffers {
+            buf.reset();
+        }
+
+        self.has_input = false;
+        self.drain_remaining = None;
+        self.drain_scratch.fill(0.0);
         self.monitoring_gr.fill(0.0);
         self.cache_counter = 0;
         self.mix_smoother.reset(self.mix);
@@ -676,102 +1223,113 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        let num_frames = context.num_frames;
-        let sample_len = num_frames
-            .checked_mul(self.channels)
-            .ok_or_else(|| "De-Esser block sample count overflow".to_string())?;
-        if buffer.len() < sample_len {
-            return Err(format!(
-                "De-Esser buffer too small: need {sample_len} samples, got {}",
-                buffer.len()
-            ));
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("De-Esser requires reset before processing input after drain".into());
         }
-
-        for sample in &mut buffer[..sample_len] {
-            if !sample.is_finite() {
-                *sample = 0.0;
-            }
-        }
-
-        // Complete all frame/channel arithmetic and buffer validation before
-        // touching DSP state. This keeps rejected host calls transactional.
-        enable_ftz_daz();
-
-        if self.mode_index == 0 {
-            // ============================================================
-            // Wideband mode
-            // ============================================================
-            for frame in 0..num_frames {
-                let frame_offset = frame * self.channels;
-                // Process sidechain in a scratch frame to keep the main buffer as output.
-                let frame_samples = &mut self.sidechain_frame[..self.channels];
-                frame_samples.copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
-                self.hp_filters.process_interleaved_frame(frame_samples);
-                self.lp_filters.process_interleaved_frame(frame_samples);
-                self.update_frame_gains();
-
-                // Advance mix smoother once per frame (not per channel) to avoid
-                // block-constant mix that would cause zipper noise during automation.
-                let mix = self.mix_smoother.advance();
-                let dry_mix = 1.0 - mix;
-                for gain in &mut self.frame_gains {
-                    *gain = dry_mix + mix * *gain;
-                }
-                apply_per_channel_gain_simd(
-                    &mut buffer[frame_offset..frame_offset + self.channels],
-                    self.channels,
-                    &self.frame_gains,
-                );
-            }
-        } else {
-            // ============================================================
-            // Split-band mode
-            // ============================================================
-            for frame in 0..num_frames {
-                let frame_offset = frame * self.channels;
-                self.sidechain_frame[..self.channels]
-                    .copy_from_slice(&buffer[frame_offset..frame_offset + self.channels]);
-                self.hp_filters
-                    .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
-                self.lp_filters
-                    .process_interleaved_frame(&mut self.sidechain_frame[..self.channels]);
-                self.update_frame_gains();
-                // Advance mix smoother once per frame (not per channel) to avoid
-                // block-constant mix that would cause zipper noise during automation.
-                let mix = self.mix_smoother.advance();
-                for ch in 0..self.channels {
-                    let idx = frame_offset + ch;
-                    let input = buffer[idx];
-
-                    // Split into low and high bands
-                    let (low, high) = self.crossovers[ch].process(input, 0);
-
-                    let gain = self.frame_gains[ch];
-
-                    // The LR4 low+high sum is the phase-matched dry reference.
-                    // Mix controls only the reduction depth, so gain=1 yields
-                    // the same all-pass response for every Mix value and cannot
-                    // comb-filter a phase-rotated wet path against raw input.
-                    buffer[idx] = low + high * (1.0 + mix * (gain - 1.0));
-                }
-            }
-        }
-
-        // Update diagnostic cache (throttled)
-        self.cache_counter = self.cache_counter.saturating_add(num_frames);
-        let cache_interval = (self.sample_rate as usize / 30).max(1);
-        if self.cache_counter >= cache_interval {
-            self.cache_counter %= cache_interval;
-            self.cache.update(|d| {
-                d.update(&self.monitoring_gr);
-            });
-        }
-
-        flush_denormals_inplace(&mut buffer[..sample_len]);
-        Ok(num_frames)
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
     }
 
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
         Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
+    }
+
+    fn latency_samples(&self) -> usize {
+        self.lookahead_delay_samples() + self.fir_group_delay_samples()
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if !self.initialized {
+            return TailLength::Unknown;
+        }
+        if self.mode_index == 1 && self.split_topology_index == 0 {
+            // LR4 recurrence needs a separate truncation/settled-state policy
+            // (crossover-LR precedent); delay lines still drain exactly.
+            return TailLength::Unknown;
+        }
+        TailLength::Finite(self.retained_frames() as u64)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.retained_frames().min(MAX_DRAIN_FRAMES)
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !self.initialized {
+            return None;
+        }
+        let remaining = if self.has_input {
+            self.drain_remaining
+                .unwrap_or_else(|| self.retained_frames())
+        } else {
+            0
+        };
+        // Every successful full-capacity call consumes up to 256 retained
+        // frames, with completion on the final output call. Empty state still
+        // needs one successful terminal call.
+        std::num::NonZeroU64::new(remaining.div_ceil(MAX_DRAIN_FRAMES).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if !self.initialized || context.sample_rate != self.sample_rate {
+            return Err("De-Esser requires initialization at the drain sample rate".into());
+        }
+        if self.channels == 0 {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("De-Esser drain output must contain whole program-channel frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let remaining = self
+            .drain_remaining
+            .unwrap_or_else(|| self.retained_frames());
+        if remaining == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = (output.len() / self.channels)
+            .min(remaining)
+            .min(MAX_DRAIN_FRAMES);
+        if frames == 0 {
+            return Err("De-Esser drain needs at least one output frame".into());
+        }
+        // Capacity/rate checks precede EOS and output mutation. Taking the
+        // prepared scratch temporarily avoids aliasing it with the DSP state.
+        let stride = self.input_channels();
+        let mut scratch = std::mem::take(&mut self.drain_scratch);
+        let samples = frames
+            .checked_mul(stride)
+            .ok_or_else(|| "De-Esser drain sample count overflow".to_string())?;
+        if scratch.len() < samples {
+            self.drain_scratch = scratch;
+            return Err("De-Esser drain scratch too small; reinitialize the plugin".to_string());
+        }
+        scratch[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        let processed = self.process_stream(&mut scratch[..samples], &drain_context);
+        if processed.is_ok() {
+            for frame in 0..frames {
+                let source = frame * stride;
+                let destination = frame * self.channels;
+                output[destination..destination + self.channels]
+                    .copy_from_slice(&scratch[source..source + self.channels]);
+            }
+        }
+        self.drain_scratch = scratch;
+        processed?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
     }
 }

@@ -105,6 +105,7 @@ fn plugin_with_mix(linked: bool, mix: f32) -> DynamicEqPlugin {
                     ..DynEqBandParams::default()
                 },
             ],
+            stereo_pairs: None,
         },
         48_000,
     )

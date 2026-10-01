@@ -2,6 +2,18 @@
 
 ## Changes
 
+- Add suppression `strength` (0..1, default full wet): latency-aligned
+  `dry + s * (wet - dry)` blend with 480-frame slew and bit-exact 0/1
+  endpoints, constant 960-frame latency, and allocation-free automation.
+- Add structural `model` selection over an append-only registry holding the
+  bundled `RNNoise Full` model: unknown identities rejected, same-value
+  no-op, changed-after-init requires graph rebuild, running model continues
+  on failure.
+- Persist strength/model in schema v2 factory and UI state; v1 `enabled`-only
+  state loads with identical audio. Drain freeze covers the new controls.
+- Apply mixed parameter batches transactionally: every entry is pre-checked
+  before any commits, so a rejected model/enabled change can no longer leave
+  a partially applied strength update (COMMON §2).
 - Report the full 960-frame RNNoise signal delay and align dry bypass audio with the enabled path.
 - Drain 960 continuation frames to release accepted program audio at EOF; reset residual recursive state for enabled streams without claiming finite recursive support.
 - Preserve zero-frame callback state and validate drain capacity and lifecycle transitions.

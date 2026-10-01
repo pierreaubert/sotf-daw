@@ -15,6 +15,7 @@ pub fn convert_linear_phase_eq(
         auto_gain,
         mix,
         filters,
+        stereo_pairs,
     } = settings
     else {
         return None;
@@ -30,6 +31,7 @@ pub fn convert_linear_phase_eq(
                 "q": f.q,
                 "gain_db": f.gain_db,
                 "active": true,
+                "placement": f.placement,
             })
         })
         .collect();
@@ -42,6 +44,7 @@ pub fn convert_linear_phase_eq(
             "auto_gain": auto_gain,
             "mix": *mix as f32,
             "filters": band_configs,
+            "stereo_pairs": stereo_pairs,
         }),
     ))
 }

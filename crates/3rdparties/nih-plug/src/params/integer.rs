@@ -290,6 +290,18 @@ impl IntParam {
         <Self as ParamMut>::set_plain_value(self, value)
     }
 
+    /// Set a parameter and reset its smoother while committing initialized state.
+    #[doc(hidden)]
+    pub fn set_plain_value_and_reset_smoother_for_initialization(
+        &self,
+        value: i32,
+        sample_rate: f32,
+    ) -> bool {
+        let changed = <Self as ParamMut>::set_plain_value(self, value);
+        <Self as ParamMut>::update_smoother(self, sample_rate, true);
+        changed
+    }
+
     /// The range of valid plain values for this parameter.
     #[inline]
     pub fn range(&self) -> IntRange {

@@ -9,6 +9,7 @@ use math_audio_dsp::fast_math::{fast_log10, fast_pow10};
 use math_audio_iir_fir::{Biquad, BiquadFilterType};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::auto_makeup::MeasuredMakeup;
+use sotf_host::detector::{DetectionMode, LevelDetector};
 use sotf_host::lookahead::LookaheadBuffer;
 use sotf_host::lr4_crossover::Lr4Crossover;
 use sotf_host::param_bridge;
@@ -60,15 +61,17 @@ pub struct MultibandCompressorPlugin {
     pub(super) ms_mode: bool,
     pub(super) sidechain_tilt_db: f32,
     pub(super) link_amount: f32,
-    /// Sidechain high-pass frequency (single-band compatibility, not yet applied to DSP)
-    #[allow(dead_code)]
+    /// Sidechain high-pass frequency in Hz. Inert while disabled; 0 Hz
+    /// also bypasses when enabled.
     pub(super) sidechain_hpf_hz: f32,
-    /// Sidechain HPF order (single-band compatibility, not yet applied to DSP)
-    #[allow(dead_code)]
-    pub(super) sidechain_hpf_order: String,
-    /// Detection mode (single-band compatibility, not yet applied to DSP)
-    #[allow(dead_code)]
-    pub(super) detection_mode: String,
+    /// Sidechain HPF enable. Default false preserves legacy no-HPF audio
+    /// for presets without this key, at any stored frequency.
+    pub(super) sidechain_hpf_enabled: bool,
+    /// Sidechain HPF order as an `HPF_ORDERS` index (0 = 2nd, 1 = 4th).
+    /// Stored as an index so live changes never allocate a label string.
+    pub(super) sidechain_hpf_order_index: usize,
+    /// Detection mode as a `DETECTION_MODES` index (0 = Peak, 1 = RMS).
+    pub(super) detection_mode_index: usize,
     /// Program-dependent release (single-band compatibility, not yet applied to DSP)
     #[allow(dead_code)]
     pub(super) program_dependent_release: bool,
@@ -78,6 +81,16 @@ pub struct MultibandCompressorPlugin {
     /// Per-band, per-channel tilt biquad pair (lowshelf + highshelf) for sidechain tilt.
     /// Layout: [band][channel]. Empty when tilt_db ≈ 0.
     pub(super) sidechain_tilt_biquads: Vec<Vec<(Biquad, Biquad)>>,
+    /// Per-band, per-channel sidechain HPF sections. Layout: [band][channel][section].
+    /// Always two preallocated sections; the active prefix (0/1/2) derives from
+    /// `sidechain_hpf_hz`/`sidechain_hpf_order` so live changes never allocate.
+    pub(super) sidechain_hpf_biquads: Vec<Vec<Vec<Biquad>>>,
+    /// Per-band, per-channel level detectors (Peak or 10 ms RMS).
+    /// Layout: [band][channel]. RMS energy buffers stay preallocated so mode
+    /// switches never allocate on the audio path.
+    pub(super) level_detectors: Vec<Vec<LevelDetector>>,
+    /// Per-channel detected-level scratch reused across frames (no audio meaning).
+    pub(super) detect_scratch: Vec<f32>,
     pub(super) band_params: Vec<BandCompressorParams>,
     pub(super) crossover_points: Vec<Lr4Crossover<f32>>,
     pub(super) band_compressors: Vec<BandCompressor>,
@@ -226,16 +239,34 @@ impl MultibandCompressorPlugin {
         if let Some(value) = params.makeup_gain {
             spec_range("makeup_gain", value, SC)?;
         }
-        // Legacy single-band sidechain controls were removed from the DSP
+        if let Some(value) = params.sidechain_hpf_hz {
+            spec_range("sidechain_hpf_hz", value, SC)?;
+        }
+        for (key, labels, value) in [
+            (
+                "sidechain_hpf_order",
+                HPF_ORDERS,
+                params.sidechain_hpf_order.as_deref(),
+            ),
+            (
+                "detection_mode",
+                DETECTION_MODES,
+                params.detection_mode.as_deref(),
+            ),
+        ] {
+            if let Some(value) = value
+                && !labels.iter().any(|label| label.eq_ignore_ascii_case(value))
+            {
+                return Err(format!("{key} must be one of {labels:?}, got {value}"));
+            }
+        }
+        // The remaining legacy single-band sidechain controls have no DSP
         // path: the struct fields survive so old presets still deserialize,
         // but any explicitly present value is rejected here — never silently
         // ignored — matching `set_parameter`, which rejects the same keys
-        // with the same message. A preset claiming filtering that will not
+        // with the same message. A preset claiming behavior that will not
         // happen must fail loudly instead of loading inaudible settings.
         for (key, present) in [
-            ("sidechain_hpf_hz", params.sidechain_hpf_hz.is_some()),
-            ("sidechain_hpf_order", params.sidechain_hpf_order.is_some()),
-            ("detection_mode", params.detection_mode.is_some()),
             (
                 "program_dependent_release",
                 params.program_dependent_release.is_some(),
@@ -407,6 +438,39 @@ impl MultibandCompressorPlugin {
             })
             .collect();
 
+        let sidechain_hpf_hz = params
+            .sidechain_hpf_hz
+            .unwrap_or_else(|| pk(SC, "sidechain_hpf_hz").default_f64() as f32);
+        let sidechain_hpf_enabled = params
+            .sidechain_hpf_enabled
+            .unwrap_or_else(|| pk(SC, "sidechain_hpf_enabled").default_bool());
+        // Infallible constructor: unknown labels normalize to the default
+        // index (the fallible constructor rejects them instead).
+        let sidechain_hpf_order_index = params
+            .sidechain_hpf_order
+            .as_deref()
+            .and_then(|label| {
+                HPF_ORDERS
+                    .iter()
+                    .position(|known| known.eq_ignore_ascii_case(label))
+            })
+            .unwrap_or(0);
+        let detection_mode_index = params
+            .detection_mode
+            .as_deref()
+            .and_then(|label| {
+                DETECTION_MODES
+                    .iter()
+                    .position(|known| known.eq_ignore_ascii_case(label))
+            })
+            .unwrap_or(0);
+        let detector_mode = if Self::detection_is_rms_index(detection_mode_index) {
+            DetectionMode::Rms {
+                window_ms: Self::RMS_WINDOW_MS,
+            }
+        } else {
+            DetectionMode::Peak
+        };
         let mut p = Self {
             channels,
             sample_rate: sr,
@@ -428,15 +492,10 @@ impl MultibandCompressorPlugin {
             ms_mode: params.ms_mode,
             sidechain_tilt_db: params.sidechain_tilt_db,
             link_amount: params.link_amount.clamp(0.0, 1.0),
-            sidechain_hpf_hz: params
-                .sidechain_hpf_hz
-                .unwrap_or_else(|| pk(SC, "sidechain_hpf_hz").default_f64() as f32),
-            sidechain_hpf_order: params
-                .sidechain_hpf_order
-                .unwrap_or_else(|| HPF_ORDERS[0].to_string()),
-            detection_mode: params
-                .detection_mode
-                .unwrap_or_else(|| DETECTION_MODES[0].to_string()),
+            sidechain_hpf_hz,
+            sidechain_hpf_enabled,
+            sidechain_hpf_order_index,
+            detection_mode_index,
             program_dependent_release: params
                 .program_dependent_release
                 .unwrap_or_else(|| pk(SC, "program_dependent_release").default_bool()),
@@ -444,6 +503,21 @@ impl MultibandCompressorPlugin {
                 .sidechain_external
                 .unwrap_or_else(|| pk(SC, "sidechain_external").default_bool()),
             sidechain_tilt_biquads: Vec::new(),
+            sidechain_hpf_biquads: (0..nb)
+                .map(|_| {
+                    (0..channels)
+                        .map(|_| Self::make_hpf_bank(sidechain_hpf_hz, sidechain_hpf_order_index, sr))
+                        .collect()
+                })
+                .collect(),
+            level_detectors: (0..nb)
+                .map(|_| {
+                    (0..channels)
+                        .map(|_| Self::make_detector(detector_mode, sr))
+                        .collect()
+                })
+                .collect(),
+            detect_scratch: vec![0.0; channels],
             band_params,
             crossover_points: Vec::new(),
             band_compressors: bcomps,
@@ -502,6 +576,10 @@ impl MultibandCompressorPlugin {
             16 => Some(self.link_amount as f64),                    // link_amount
             17 => Some(self.range_db as f64),
             18 => Some(self.hold_ms as f64),
+            19 => Some(self.sidechain_hpf_hz as f64), // sidechain_hpf_hz
+            20 => Some(self.sidechain_hpf_order_index as f64), // sidechain_hpf_order
+            21 => Some(self.detection_mode_index as f64), // detection_mode
+            22 => Some(if self.sidechain_hpf_enabled { 1.0 } else { 0.0 }), // sidechain_hpf_enabled
             _ => None,
         }
     }
@@ -529,6 +607,10 @@ impl MultibandCompressorPlugin {
             16 => self.link_amount = MC[16].clamp_f64(value) as f32,            // link_amount
             17 => self.range_db = MC[17].clamp_f64(value) as f32,
             18 => self.hold_ms = MC[18].clamp_f64(value) as f32,
+            19 => self.sidechain_hpf_hz = MC[19].clamp_f64(value) as f32, // sidechain_hpf_hz
+            20 => self.sidechain_hpf_order_index = MC[20].clamp_f64(value) as usize, // sidechain_hpf_order
+            21 => self.detection_mode_index = MC[21].clamp_f64(value) as usize, // detection_mode
+            22 => self.sidechain_hpf_enabled = MC[22].clamp_f64(value) > 0.5, // sidechain_hpf_enabled
             _ => {}
         }
     }
@@ -564,8 +646,9 @@ impl MultibandCompressorPlugin {
             )
             .with_group("Output"),
         );
-        // Unsupported legacy detector controls are deliberately absent from
-        // the runtime schema and rejected when explicitly serialized.
+        // The remaining unsupported legacy controls (program-dependent
+        // release, external sidechain) are deliberately absent from the
+        // runtime schema and rejected when explicitly serialized.
         params.push(
             Parameter::new_float(
                 "lookahead_ms",
@@ -706,6 +789,10 @@ impl MultibandCompressorPlugin {
                 "measured_auto_makeup",
                 "range_db",
                 "hold_ms",
+                "sidechain_hpf_hz",
+                "sidechain_hpf_order",
+                "sidechain_hpf_enabled",
+                "detection_mode",
             ];
             params.retain(|parameter| BROADBAND_KEYS.contains(&parameter.id.as_str()));
         }
@@ -829,6 +916,170 @@ impl MultibandCompressorPlugin {
             kf * kf * (knee / 2.0) * slope
         }
     }
+
+    /// Sliding RMS window matching the Gate/Expander detector contract.
+    const RMS_WINDOW_MS: f32 = 10.0;
+
+    /// Second-order Butterworth Q for the HPF prototype sections.
+    const BUTTERWORTH_Q_ORDER2: f64 = std::f64::consts::FRAC_1_SQRT_2;
+
+    /// Fourth-order Butterworth Q pair (low-Q section first).
+    const BUTTERWORTH_Q_ORDER4: [f64; 2] = [0.541196100146197, 1.3065629648763766];
+
+    /// Maximum preallocated HPF sections per band and channel (4th order).
+    const MAX_HPF_SECTIONS: usize = 2;
+
+    fn detection_is_rms_index(index: usize) -> bool {
+        DETECTION_MODES
+            .get(index)
+            .is_some_and(|label| label.eq_ignore_ascii_case("rms"))
+    }
+
+    fn hpf_active_sections_index(enabled: bool, hz: f32, order_index: usize) -> usize {
+        if !enabled || hz <= 0.0 {
+            0
+        } else if HPF_ORDERS
+            .get(order_index)
+            .is_some_and(|label| label.eq_ignore_ascii_case("4th"))
+        {
+            2
+        } else {
+            1
+        }
+    }
+
+    fn hpf_section_q(section: usize, order_is_4th: bool) -> f64 {
+        if order_is_4th {
+            Self::BUTTERWORTH_Q_ORDER4[section.min(1)]
+        } else {
+            Self::BUTTERWORTH_Q_ORDER2
+        }
+    }
+
+    fn make_detector(mode: DetectionMode, sample_rate: u32) -> LevelDetector {
+        // Always size the RMS energy buffer first so a later Peak->RMS switch
+        // only reuses storage instead of allocating on the audio path.
+        let mut detector = LevelDetector::new(
+            DetectionMode::Rms {
+                window_ms: Self::RMS_WINDOW_MS,
+            },
+            sample_rate.max(1),
+        );
+        detector.set_mode(mode);
+        detector
+    }
+
+    fn make_hpf_bank(hz: f32, order_index: usize, sample_rate: u32) -> Vec<Biquad> {
+        let order_is_4th = HPF_ORDERS
+            .get(order_index)
+            .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
+        // Coefficients must stay valid while disabled; sections are skipped
+        // when the active prefix is empty, so clamp instead of building at 0 Hz.
+        let fc = hz.max(1.0).min(sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        (0..Self::MAX_HPF_SECTIONS)
+            .map(|section| {
+                Biquad::new(
+                    BiquadFilterType::Highpass,
+                    fc,
+                    sample_rate.max(1) as f64,
+                    Self::hpf_section_q(section, order_is_4th),
+                    0.0,
+                )
+            })
+            .collect()
+    }
+
+    /// Refresh HPF coefficients in place; reallocates only when the
+    /// band/channel topology changed (never on the initialized audio path,
+    /// since band count is structural after initialization).
+    pub(super) fn rebuild_sidechain_hpf(&mut self) {
+        let dimensions_match = self.sidechain_hpf_biquads.len() == self.num_bands
+            && self.sidechain_hpf_biquads.iter().all(|band| {
+                band.len() == self.channels
+                    && band.iter().all(|sections| sections.len() == Self::MAX_HPF_SECTIONS)
+            });
+        if !dimensions_match {
+            let hz = self.sidechain_hpf_hz;
+            let order_index = self.sidechain_hpf_order_index;
+            let sample_rate = self.sample_rate;
+            let bands = self.num_bands;
+            let channels = self.channels;
+            self.sidechain_hpf_biquads = (0..bands)
+                .map(|_| {
+                    (0..channels)
+                        .map(|_| Self::make_hpf_bank(hz, order_index, sample_rate))
+                        .collect()
+                })
+                .collect();
+        } else {
+            self.update_sidechain_hpf_coefficients();
+        }
+    }
+
+    fn update_sidechain_hpf_coefficients(&mut self) {
+        let order_is_4th = HPF_ORDERS
+            .get(self.sidechain_hpf_order_index)
+            .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
+        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        for band in &mut self.sidechain_hpf_biquads {
+            for sections in band {
+                for (index, section) in sections.iter_mut().enumerate() {
+                    section.update_params(
+                        BiquadFilterType::Highpass,
+                        fc,
+                        self.sample_rate.max(1) as f64,
+                        Self::hpf_section_q(index, order_is_4th),
+                        0.0,
+                    );
+                }
+            }
+        }
+    }
+
+    fn reset_sidechain_hpf_state(&mut self) {
+        for band in &mut self.sidechain_hpf_biquads {
+            for sections in band {
+                for section in sections {
+                    section.reset();
+                }
+            }
+        }
+    }
+
+    /// Ensure detector topology matches bands/channels, then apply the current
+    /// mode in place. Reallocates only on topology change (pre-init band edits).
+    pub(super) fn sync_detector_topology(&mut self) {
+        let mode = if Self::detection_is_rms_index(self.detection_mode_index) {
+            DetectionMode::Rms {
+                window_ms: Self::RMS_WINDOW_MS,
+            }
+        } else {
+            DetectionMode::Peak
+        };
+        let dimensions_match = self.level_detectors.len() == self.num_bands
+            && self
+                .level_detectors
+                .iter()
+                .all(|band| band.len() == self.channels);
+        if !dimensions_match {
+            let sample_rate = self.sample_rate;
+            let bands = self.num_bands;
+            let channels = self.channels;
+            self.level_detectors = (0..bands)
+                .map(|_| {
+                    (0..channels)
+                        .map(|_| Self::make_detector(mode, sample_rate))
+                        .collect()
+                })
+                .collect();
+        } else {
+            for band in &mut self.level_detectors {
+                for detector in band {
+                    detector.set_mode(mode);
+                }
+            }
+        }
+    }
 }
 
 impl MultibandCompressorPlugin {
@@ -929,6 +1180,8 @@ impl MultibandCompressorPlugin {
                         .resize(nb * self.channels, 0.0);
                     self.update_coefficients();
                     self.rebuild_sidechain_tilt();
+                    self.rebuild_sidechain_hpf();
+                    self.sync_detector_topology();
                 }
                 2..=5 => {
                     // crossover_freq_1..4 changed
@@ -1011,6 +1264,31 @@ impl MultibandCompressorPlugin {
                 16 => {
                     self.link_smoother.set_target(self.link_amount);
                 }
+                19 | 20 | 22 => {
+                    // Sidechain HPF frequency/order/enable: refresh
+                    // coefficients in place and reset filter state.
+                    // Structural-contract controls; the change may click but
+                    // never allocates.
+                    self.update_sidechain_hpf_coefficients();
+                    self.reset_sidechain_hpf_state();
+                }
+                21 => {
+                    // Detection mode: Peak uses abs() directly, RMS uses the
+                    // preallocated sliding window. Buffers stay allocated so
+                    // the switch never allocates on the audio path.
+                    let mode = if Self::detection_is_rms_index(self.detection_mode_index) {
+                        DetectionMode::Rms {
+                            window_ms: Self::RMS_WINDOW_MS,
+                        }
+                    } else {
+                        DetectionMode::Peak
+                    };
+                    for band in &mut self.level_detectors {
+                        for detector in band {
+                            detector.set_mode(mode);
+                        }
+                    }
+                }
                 _ => {}
             }
             self.refresh_schema_before_initialization();
@@ -1052,16 +1330,12 @@ impl MultibandCompressorPlugin {
                 self.refresh_schema_before_initialization();
                 return Ok(());
             }
-            // Legacy single-band sidechain controls have no DSP implementation
-            // in the multiband engine and are absent from parameters().
-            // Reject explicitly (never silently ignore) so old presets fail
-            // loudly instead of loading inaudible settings. Mirrors the
-            // `validate_params` rejection at construction.
-            "sidechain_hpf_hz"
-            | "sidechain_hpf_order"
-            | "detection_mode"
-            | "program_dependent_release"
-            | "sidechain_external" => {
+            // The remaining legacy single-band sidechain controls have no DSP
+            // implementation in the multiband engine and are absent from
+            // parameters(). Reject explicitly (never silently ignore) so old
+            // presets fail loudly instead of loading inaudible settings.
+            // Mirrors the `validate_params` rejection at construction.
+            "program_dependent_release" | "sidechain_external" => {
                 return Err(format!(
                     "{name} is an unsupported legacy sidechain control; remove it instead of loading inaudible settings"
                 ));
@@ -1236,11 +1510,11 @@ impl MultibandCompressorPlugin {
                         .is_some_and(|bp| bp.measured_auto_makeup),
                 ));
             }
-            // Legacy single-band sidechain controls (sidechain_hpf_hz,
-            // sidechain_hpf_order, detection_mode, program_dependent_release,
-            // sidechain_external) have no DSP implementation and are absent
-            // from parameters(). Like any other unknown ID, get_parameter
-            // returns None for them; set_parameter rejects them with a message.
+            // The remaining legacy single-band sidechain controls
+            // (program_dependent_release, sidechain_external) have no DSP
+            // implementation and are absent from parameters(). Like any other
+            // unknown ID, get_parameter returns None for them; set_parameter
+            // rejects them with a message.
             "lookahead_ms" => {
                 return Some(ParameterValue::Float(self.per_band_lookahead_ms));
             }
@@ -1465,6 +1739,16 @@ impl MultibandCompressorPlugin {
             let hold_samples = (hold_ms as f64 * self.sample_rate as f64 / 1000.0).round() as usize;
 
             let use_lookahead = self.per_band_lookahead_ms > 0.0;
+            // New sidechain stages are global; hoist them out of the frame loop.
+            // Peak + inactive HPF (disabled, or 0 Hz) keeps the exact legacy
+            // detection path below.
+            let use_rms = Self::detection_is_rms_index(self.detection_mode_index);
+            let hpf_sections = Self::hpf_active_sections_index(
+                self.sidechain_hpf_enabled,
+                self.sidechain_hpf_hz,
+                self.sidechain_hpf_order_index,
+            );
+            let use_legacy_detection = !use_rms && hpf_sections == 0;
             let bcomp = &mut self.band_compressors[b];
             let smoothers = &mut self.band_smoothers[b];
             let tilt_filters = &mut self.sidechain_tilt_biquads[b];
@@ -1505,19 +1789,21 @@ impl MultibandCompressorPlugin {
                 // Detect max-of-channels level for linked detection
                 // Apply per-band sidechain tilt filter if configured
                 let mut max_det = 0.0f32;
-                if use_ms {
-                    let raw = self.band_buffers[off + frame * self.channels];
-                    let (low, high) = &mut tilt_filters[0];
-                    let filtered = high.process(low.process(raw as f64)) as f32;
-                    max_det = filtered.abs();
-                } else {
-                    for (ch, (low, high)) in tilt_filters.iter_mut().enumerate() {
-                        let raw = self.band_buffers[off + frame * self.channels + ch];
+                if use_legacy_detection {
+                    if use_ms {
+                        let raw = self.band_buffers[off + frame * self.channels];
+                        let (low, high) = &mut tilt_filters[0];
                         let filtered = high.process(low.process(raw as f64)) as f32;
-                        max_det = max_det.max(filtered.abs());
+                        max_det = filtered.abs();
+                    } else {
+                        for (ch, (low, high)) in tilt_filters.iter_mut().enumerate() {
+                            let raw = self.band_buffers[off + frame * self.channels + ch];
+                            let filtered = high.process(low.process(raw as f64)) as f32;
+                            max_det = max_det.max(filtered.abs());
+                        }
                     }
                 }
-                let max_idb = 20.0 * fast_log10(max_det.max(1e-10));
+                let max_idb_legacy = 20.0 * fast_log10(max_det.max(1e-10));
 
                 // Apply lookahead delay: push current frame, get delayed frame
                 if use_lookahead {
@@ -1531,6 +1817,43 @@ impl MultibandCompressorPlugin {
                     );
                 }
 
+                // Full sidechain chain (HPF -> tilt -> Peak/RMS) for the new
+                // detector stages. Each undelayed detection sample is filtered
+                // exactly once; per-channel levels are reused below so filter
+                // and detector state advance consistently for linked and
+                // unlinked blends. In M/S mode the linked level follows Mid.
+                let mut max_idb = max_idb_legacy;
+                if !use_legacy_detection {
+                    max_det = 0.0;
+                    let hpf_bank = &mut self.sidechain_hpf_biquads[b];
+                    let detectors = &mut self.level_detectors[b];
+                    let ms_channels = if use_ms { 1 } else { self.channels };
+                    for ch in 0..self.channels {
+                        let idx = off + frame * self.channels + ch;
+                        let input = if use_lookahead {
+                            self.lookahead_frame_tmp[ch]
+                        } else {
+                            self.band_buffers[idx]
+                        };
+                        let mut x = input as f64;
+                        for section in hpf_bank[ch].iter_mut().take(hpf_sections) {
+                            x = section.process(x);
+                        }
+                        let (low, high) = &mut tilt_filters[ch];
+                        let tilted = high.process(low.process(x)) as f32;
+                        let level = if use_rms {
+                            detectors[ch].process_linear(tilted)
+                        } else {
+                            tilted.abs()
+                        };
+                        self.detect_scratch[ch] = level;
+                        if ch < ms_channels {
+                            max_det = max_det.max(level);
+                        }
+                    }
+                    max_idb = 20.0 * fast_log10(max_det.max(1e-10));
+                }
+
                 for ch in 0..self.channels {
                     let idx = off + frame * self.channels + ch;
                     let detect_raw = if use_lookahead {
@@ -1538,8 +1861,14 @@ impl MultibandCompressorPlugin {
                     } else {
                         self.band_buffers[idx]
                     };
-                    // Apply tilt filter to per-channel detection (reuses same biquads — OK for detection)
-                    let detect_abs = detect_raw.abs();
+                    // Legacy Peak path keeps the historical per-channel abs()
+                    // (tilt applies to the linked level only); the new chain
+                    // reuses the filtered level computed above.
+                    let detect_abs = if use_legacy_detection {
+                        detect_raw.abs()
+                    } else {
+                        self.detect_scratch[ch]
+                    };
                     band_max_abs = band_max_abs.max(self.band_buffers[idx].abs());
 
                     // Blend per-channel and linked detection using link_amount
@@ -1750,6 +2079,26 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         self.build_crossovers();
         self.update_coefficients();
         self.rebuild_sidechain_tilt();
+        self.rebuild_sidechain_hpf();
+        // Detectors store their sample rate; rebuild them with preallocated
+        // RMS buffers (initialization is not on the audio path).
+        let detector_mode = if Self::detection_is_rms_index(self.detection_mode_index) {
+            DetectionMode::Rms {
+                window_ms: Self::RMS_WINDOW_MS,
+            }
+        } else {
+            DetectionMode::Peak
+        };
+        let bands = self.num_bands;
+        let channels = self.channels;
+        self.level_detectors = (0..bands)
+            .map(|_| {
+                (0..channels)
+                    .map(|_| Self::make_detector(detector_mode, sr))
+                    .collect()
+            })
+            .collect();
+        self.detect_scratch.resize(channels, 0.0);
         for smoother in &mut self.band_smoothers {
             smoother.applied_tilt_db = self.tilt_smoother.current();
         }
@@ -1855,6 +2204,14 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
                 high.reset();
             }
         }
+        self.update_sidechain_hpf_coefficients();
+        self.reset_sidechain_hpf_state();
+        for band in &mut self.level_detectors {
+            for detector in band {
+                detector.reset();
+            }
+        }
+        self.detect_scratch.fill(0.0);
     }
 
     fn process_in_place(

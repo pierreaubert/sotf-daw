@@ -36,7 +36,7 @@ de-esser = []
 dynamic-eq = []
 multiband-compressor = []
 multiband-expander = []
-convolution = []
+convolution = ["dep:nih_plug_egui"]
 fletcher-munson = []
 loudness-compensation = []
 channel-mute-solo = []
@@ -64,6 +64,7 @@ plugins-bridge = { path = "../plugins-bridge" }
 sotf-host = { workspace = true }
 sotf-plugins = { workspace = true }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["assert_process_allocs"] }
+nih_plug_egui = { path = "../../../3rdparties/nih-plug-egui", optional = true }
 clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }
 serde = { workspace = true }
 serde_json = { workspace = true }

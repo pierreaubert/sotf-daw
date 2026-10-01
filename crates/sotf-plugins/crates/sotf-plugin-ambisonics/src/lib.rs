@@ -1,3 +1,4 @@
+pub mod custom_layout;
 pub mod decode_matrix;
 pub mod params;
 pub mod spherical_harmonics;
@@ -10,5 +11,6 @@ mod consts;
 mod types;
 
 pub use ambisonics_decoder_plugin::*;
+pub use custom_layout::{CustomDecoderConfig, CustomLayout, CustomSpeaker};
 pub use params::Params as AmbisonicsDecoderConfig;
 pub use types::*;

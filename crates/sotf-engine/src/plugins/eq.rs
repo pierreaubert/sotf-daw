@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 // Re-exported so engine consumers and the plugin pipeline share a single source
 // of truth for the filter topology surface.
-pub use sotf_plugins::plugin_eq::{EqFilterTopology, KautzSectionConfig};
+pub use sotf_plugins::plugin_eq::{EqBandPlacement, EqFilterTopology, KautzSectionConfig};
 
 /// Configuration for a single EQ filter.
 ///
@@ -34,6 +34,10 @@ pub struct EQFilter {
     pub lambda: Option<f64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub kautz_sections: Vec<KautzSectionConfig>,
+    /// Stereo-field placement in the ordered EQ route. `None` preserves the
+    /// historical grouped-by-filter processing path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placement: Option<EqBandPlacement>,
 }
 
 fn default_filter_order() -> usize {
@@ -53,6 +57,7 @@ impl EQFilter {
             topology: EqFilterTopology::Biquad,
             lambda: None,
             kautz_sections: Vec::new(),
+            placement: None,
         }
     }
 
@@ -76,6 +81,7 @@ impl EQFilter {
             topology: EqFilterTopology::WarpedBiquad,
             lambda,
             kautz_sections: Vec::new(),
+            placement: None,
         }
     }
 
@@ -99,6 +105,7 @@ impl EQFilter {
             topology: EqFilterTopology::KautzFilter,
             lambda: None,
             kautz_sections: sections,
+            placement: None,
         }
     }
 

@@ -2,6 +2,7 @@
 
 ## Changes
 
+- Allow explicit two-, three- and four-band selection while retaining dormant cutoff and per-channel settings; preserve legacy band-count inference when the explicit field is absent.
 - Add LR12/LR48, Butterworth slopes from 6 to 48 dB/octave, and Bessel12 alongside existing LR24 and linear-phase FIR modes.
 - Support typed multiway and per-channel configurations with ordered cutoffs, explicit routing and transactional sample-rate validation.
 - Preserve legacy parameter identities and allocation-free scalar updates; add independent complex-response, automation, reset and callback-partition regressions.

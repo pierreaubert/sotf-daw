@@ -62,6 +62,7 @@ pub struct ExternalPluginHostProxy {
     midi_event_scratch: Vec<MidiEvent>,
     deferred_midi_events: Vec<MidiEvent>,
     pending: Option<PendingTimelineBlock>,
+    worker_failure_latched: bool,
     worker_output_scratch: Vec<f32>,
     timeline_audio: Vec<f32>,
     timeline_status: Vec<ExternalPluginHostBlockStatus>,
@@ -110,6 +111,7 @@ impl ExternalPluginHostProxy {
             midi_event_scratch: Vec::with_capacity(1024),
             deferred_midi_events: Vec::with_capacity(1024),
             pending: None,
+            worker_failure_latched: false,
             worker_output_scratch: vec![
                 0.0;
                 layout.max_frames as usize * layout.output_channels as usize
@@ -298,7 +300,26 @@ impl ExternalPluginHostProxy {
         self.parameter_event_scratch.clear();
         self.midi_event_scratch.clear();
         self.shared.clear_block();
+        self.worker_failure_latched = false;
         Ok(())
+    }
+
+    /// Discard a completed failed request only when its failure publication
+    /// matches the exact pending sequence. Reset uses this after ordinary EOS
+    /// waiting reports the worker failure; processing and mismatched requests
+    /// remain pending and cannot be silently skipped.
+    pub fn discard_failed_pending_for_reset(&mut self) -> bool {
+        let Some(pending) = self.pending else {
+            return false;
+        };
+        if self.shared.worker_state() != PluginIpcState::WorkerFailed
+            || self.shared.worker_sequence() != pending.sequence
+        {
+            return false;
+        }
+        self.shared.clear_block();
+        self.pending = None;
+        true
     }
 
     pub fn request_control(
@@ -458,7 +479,7 @@ impl ExternalPluginHostProxy {
         // samples that have already left the callback.
         self.resolve_pending(self.timeline_frame.saturating_add(frames as u64))?;
 
-        if self.pending.is_none() {
+        if self.pending.is_none() && !self.worker_failure_latched {
             self.prepend_deferred_parameter_events()?;
             let midi_count = self
                 .deferred_midi_events
@@ -622,7 +643,13 @@ impl ExternalPluginHostProxy {
                 self.pending = None;
             }
             PluginIpcState::WorkerFailed => {
-                let status = if self.shared.worker_sequence() == pending.sequence {
+                let sequence_matches = self.shared.worker_sequence() == pending.sequence;
+                let recoverable_process_error =
+                    sequence_matches && self.shared.worker_failure_status_code() == 1;
+                if recoverable_process_error {
+                    self.worker_failure_latched = true;
+                }
+                let status = if sequence_matches {
                     self.worker_failure_count = self.worker_failure_count.saturating_add(1);
                     ExternalPluginHostBlockStatus::WorkerFailed
                 } else {
@@ -1254,6 +1281,43 @@ mod tests {
         assert_eq!(status, ExternalPluginHostBlockStatus::WorkerFailed);
         assert_eq!(output, input);
         assert_eq!(proxy.worker_failure_count(), 1);
+    }
+
+    #[test]
+    fn only_matching_plugin_process_failure_latches_audio_until_reset() {
+        for (reported_sequence_offset, status_code, should_latch) in [
+            (0_u64, 1_u32, true),
+            (0, 2, false),
+            (0, 3, false),
+            (1, 1, false),
+        ] {
+            let layout = PluginIpcLayout::new(48_000, 2, 1, 1).unwrap();
+            let mut proxy = ExternalPluginHostProxy::new(layout, Duration::ZERO).unwrap();
+            let input = [0.25_f32, -0.5];
+            let mut output = [0.0_f32; 2];
+
+            proxy.process_block(&input, &mut output, 2).unwrap();
+            let pending = proxy.pending.expect("first process block is pending");
+            let reported_sequence = if reported_sequence_offset == 0 {
+                pending.sequence
+            } else {
+                pending.sequence.saturating_add(reported_sequence_offset)
+            };
+            proxy
+                .shared
+                .publish_worker_failure(reported_sequence, status_code);
+
+            proxy.process_block(&input, &mut output, 2).unwrap();
+
+            assert_eq!(proxy.worker_failure_latched, should_latch);
+            if should_latch {
+                assert!(proxy.pending.is_none());
+                assert_eq!(proxy.shared.host_state(), PluginIpcState::Idle);
+            } else {
+                assert!(proxy.pending.is_some());
+                assert_eq!(proxy.shared.host_state(), PluginIpcState::HostReady);
+            }
+        }
     }
 
     #[test]

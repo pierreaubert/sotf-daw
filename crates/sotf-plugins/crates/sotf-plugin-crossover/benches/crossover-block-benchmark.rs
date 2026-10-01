@@ -147,6 +147,7 @@ fn fir_plugin(channels: usize, bands: usize, taps: usize) -> CrossoverPlugin {
             channel_frequencies_hz: vec![],
             channel_modes: Some(vec![]),
             topology: None,
+            band_count: None,
         },
     )
     .unwrap()

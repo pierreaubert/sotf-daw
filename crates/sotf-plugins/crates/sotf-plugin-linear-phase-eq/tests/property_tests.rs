@@ -26,6 +26,7 @@ fn minimal_plugin() -> LinearPhaseEqPlugin {
             auto_gain: false,
             mix: 1.0,
             filters: vec![],
+            stereo_pairs: None,
         },
     )
     .unwrap()
@@ -64,7 +65,9 @@ proptest! {
                 q: 1.0,
                 gain_db: 6.0,
                 active: true,
+                placement: None,
             }],
+            stereo_pairs: None,
         };
         let mut plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
         let mut buf = buffer.clone();
@@ -105,6 +108,7 @@ proptest! {
             auto_gain: false,
             mix: 0.0,
             filters: vec![],
+            stereo_pairs: None,
         };
         let mut plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
 
@@ -138,6 +142,7 @@ proptest! {
                     q: 1.0,
                     gain_db: 12.0,
                     active: false,
+                    placement: None,
                 },
                 BandConfig {
                     filter_type: "Lowshelf".to_string(),
@@ -145,8 +150,10 @@ proptest! {
                     q: 0.7,
                     gain_db: -12.0,
                     active: false,
+                    placement: None,
                 },
             ],
+            stereo_pairs: None,
         };
         let mut plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
         let latency = plugin.latency_samples();
@@ -190,7 +197,9 @@ proptest! {
                 q: 1.0,
                 gain_db: gain_db as f64,
                 active: true,
+                placement: None,
             }],
+            stereo_pairs: None,
         };
         let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
         let expected = 1024 / 2 + 32;
@@ -215,7 +224,9 @@ proptest! {
                 q: 1.0,
                 gain_db: gain_db as f64,
                 active: true,
+                placement: None,
             }],
+            stereo_pairs: None,
         };
         let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
         prop_assert_eq!(plugin.latency_samples(), 32,

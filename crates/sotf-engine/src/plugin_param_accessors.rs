@@ -240,6 +240,7 @@ impl_param_accessors! {
             lookahead_ms: f64, program_dependent_release: bool, measured_auto_makeup: bool,
             sidechain_external: bool,
             range_db: f64, hold_ms: f64,
+            sidechain_hpf_enabled: bool,
         ]
     },
     Gate {
@@ -345,8 +346,16 @@ impl_param_accessors! {
     Declick {
         params: param_specs::declick::PARAMS,
         layout: Some(&param_specs::declick::LAYOUT),
-        fields: [enabled: bool, sensitivity: f64, link_channels: bool]
+        fields: [
+            enabled: bool, sensitivity: f64, link_channels: bool,
+            mode: usize, bands: usize, crossover_hz: f64,
+            frequency_skew: f64, repair_width: usize, audition_residual: bool,
+        ]
     },
+    // `learn_noise`/`clear_profile` are momentary control-thread capture
+    // actions carried for PARAMS parity; they have no live engine route
+    // (`engine_param_at` returns None) and the converter drops them from
+    // factory JSON. The restoration owner owns the capture-action path.
     HissReducer {
         params: param_specs::hiss_reducer::PARAMS,
         layout: Some(&param_specs::hiss_reducer::LAYOUT),
@@ -354,12 +363,19 @@ impl_param_accessors! {
             enabled: bool, threshold_db: f64, frequency_hz: f64,
             strength: f64,
             spectral_mode: bool,
+            learn_noise: bool, use_captured_profile: bool, clear_profile: bool,
+            curve_low: f64, curve_mid: f64, curve_high: f64,
+            link_mode: i32,
+            transient_guard: bool,
         ]
     },
     SpeechDenoiser {
         params: param_specs::speech_denoiser::PARAMS,
         layout: Some(&param_specs::speech_denoiser::LAYOUT),
-        fields: [enabled: bool]
+        fields: [
+            enabled: bool, strength: f64,
+            model: [str speech_denoiser_model_to_index, index_to_speech_denoiser_model],
+        ]
     },
     Pnd {
         params: param_specs::pnd::PARAMS,
@@ -381,16 +397,6 @@ impl_param_accessors! {
             phase_invert_a: bool, phase_invert_b: bool, difference_mode: bool,
             band_mask_low_hz: f64, band_mask_high_hz: f64,
             path_a_config: skip, path_b_config: skip,
-        ]
-    },
-    Crossover {
-        params: param_specs::crossover::PARAMS,
-        layout: Some(&param_specs::crossover::LAYOUT),
-        fields: [
-            crossover_type: [str crossover_plugin_type_to_index, index_to_crossover_plugin_type],
-            frequency: f64,
-            output: [str crossover_output_to_index, index_to_crossover_output],
-            fir_taps: usize,
         ]
     },
     BandMerge {
@@ -476,6 +482,10 @@ impl_param_accessors! {
             per_band_lookahead_ms: f64, ms_mode: bool,
             sidechain_tilt_db: f64, link_amount: f64,
             range_db: f64, hold_ms: f64,
+            sidechain_hpf_hz: f64,
+            sidechain_hpf_order: [str hpf_order_to_index, index_to_hpf_order],
+            detection_mode: [str detection_mode_to_index, index_to_detection_mode],
+            sidechain_hpf_enabled: bool,
         ]
     },
     MultibandExpander {
@@ -515,6 +525,9 @@ impl_param_accessors! {
             mode: [str de_esser_mode_to_index, index_to_de_esser_mode],
             mix: f64,
             range_db: f64, stereo_link: f64,
+            lookahead_ms: f64,
+            split_topology: [str de_esser_split_topology_to_index, index_to_de_esser_split_topology],
+            ms_mode: bool, sidechain_external: bool,
         ]
     },
     TransientShaper {
@@ -628,6 +641,15 @@ impl_param_accessors! {
     }
     ];
     manual: [
+        Crossover {
+            params: param_specs::crossover::PARAMS,
+            layout: Some(&param_specs::crossover::LAYOUT),
+            manual: [crossover_param_value, crossover_set_param_value],
+            fields: [
+                crossover_type: skip, frequency: skip, output: skip, fir_taps: skip,
+                topology: skip, band_count: skip, frequency_2: skip, frequency_3: skip,
+            ]
+        },
         BandSplit {
             params: param_specs::band_split::PARAMS,
             layout: Some(&param_specs::band_split::LAYOUT),
@@ -935,6 +957,7 @@ mod hpf;
 mod index;
 mod misc;
 mod speaker;
+mod speech_denoiser;
 #[cfg(test)]
 mod tests;
 
@@ -943,11 +966,8 @@ use aae::aae_speaker_config_to_index;
 use ambisonics::{ambisonics_algorithm_to_index, ambisonics_layout_to_index};
 use crossfeed::crossfeed_mode_to_index;
 use crossfeed::crossfeed_preset_to_index;
-use crossover::crossover_output_to_index;
-use crossover::crossover_plugin_type_to_index;
-use crossover::index_to_crossover_plugin_type;
 use crossover::{band_split_mode_to_index, band_split_num_bands_to_index};
-use de::de_esser_mode_to_index;
+use de::{de_esser_mode_to_index, de_esser_split_topology_to_index};
 use detection::detection_mode_to_index;
 use hpf::hpf_order_to_index;
 use index::index_to_aae_room_preset;
@@ -955,12 +975,13 @@ use index::index_to_aae_speaker_config;
 use index::index_to_band_split_mode;
 use index::index_to_crossfeed_mode;
 use index::index_to_crossfeed_preset;
-use index::index_to_crossover_output;
 use index::index_to_crossover_type;
 use index::index_to_de_esser_mode;
+use index::index_to_de_esser_split_topology;
 use index::index_to_detection_mode;
 use index::index_to_hpf_order;
 use index::index_to_speaker_config;
+use index::index_to_speech_denoiser_model;
 use index::index_to_spectral_tilt;
 use index::index_to_tilt_reference;
 use index::{gate_mode_to_index, index_to_gate_mode};
@@ -970,3 +991,4 @@ use misc::f2b;
 use misc::spectral_tilt_to_index;
 use misc::tilt_reference_to_index;
 use speaker::speaker_config_to_index;
+use speech_denoiser::speech_denoiser_model_to_index;

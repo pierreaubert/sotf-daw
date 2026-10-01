@@ -3,8 +3,8 @@ use crossbeam::atomic::AtomicCell;
 use crossbeam::channel::{self, SendTimeoutError};
 use parking_lot::{Mutex, RwLock};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use vst3_sys::base::{kInvalidArgument, kResultOk, tresult};
 use vst3_sys::vst::{IComponentHandler, RestartFlags};
@@ -12,7 +12,7 @@ use vst3_sys::vst::{IComponentHandler, RestartFlags};
 use super::context::{WrapperGuiContext, WrapperInitContext, WrapperProcessContext};
 use super::note_expressions::NoteExpressionController;
 use super::param_units::ParamUnits;
-use super::util::{ObjectPtr, VST3_MIDI_PARAMS_END, VST3_MIDI_PARAMS_START, VstPtr};
+use super::util::{ObjectPtr, VstPtr, VST3_MIDI_PARAMS_END, VST3_MIDI_PARAMS_START};
 #[cfg(target_os = "linux")]
 use super::view::RunLoopEventHandler;
 use super::view::WrapperView;
@@ -78,6 +78,8 @@ pub(crate) struct WrapperInner<P: Vst3Plugin> {
     /// Whether the plugin is currently processing audio. In other words, the last state
     /// `IAudioProcessor::setActive()` has been called with.
     pub is_processing: AtomicBool,
+    /// Whether the component has completed `IComponent::setActive(true)`.
+    pub is_active: AtomicBool,
     /// Latest generation of an opt-in restart-required parameter write.
     pub restart_generation: AtomicU64,
     /// Latest generation successfully prepared by `Plugin::initialize()`.
@@ -146,6 +148,10 @@ pub(crate) struct WrapperInner<P: Vst3Plugin> {
     /// The receiver belonging to [`updated_state_sender`][Self::updated_state_sender].
     pub updated_state_receiver: channel::Receiver<PluginState>,
     pub(crate) state_return: crate::wrapper::gui_state_return::GuiStateReturn<PluginState>,
+    /// Whether the last GUI state handoff succeeded on the audio thread.
+    /// Serialized by the GUI exchange lock; a refusal retains ownership for
+    /// a main-thread retry instead of being silently dropped.
+    pub last_gui_state_restore_succeeded: AtomicBool,
 
     /// The keys from `param_map` in a stable order.
     pub param_hashes: Vec<u32>,
@@ -345,6 +351,7 @@ impl<P: Vst3Plugin> WrapperInner<P> {
             host_context_run_loop: RwLock::new(None),
 
             is_processing: AtomicBool::new(false),
+            is_active: AtomicBool::new(false),
             restart_generation: AtomicU64::new(0),
             restart_applied_generation: AtomicU64::new(0),
             restart_sent_generation: AtomicU64::new(0),
@@ -375,6 +382,7 @@ impl<P: Vst3Plugin> WrapperInner<P> {
             updated_state_sender,
             updated_state_receiver,
             state_return: crate::wrapper::gui_state_return::GuiStateReturn::new(),
+            last_gui_state_restore_succeeded: AtomicBool::new(true),
 
             param_hashes,
             param_by_hash,
@@ -549,6 +557,23 @@ impl<P: Vst3Plugin> WrapperInner<P> {
         self.queue_component_reload_dispatch();
     }
 
+    /// Request a deferred component reload for a prepared editor selection.
+    pub fn request_component_reload(&self) -> bool {
+        if !P::vst3_restart_component_on_required_parameter_change()
+            || self.component_handler.borrow().is_none()
+        {
+            return false;
+        }
+
+        let generation = self.restart_generation.load(Ordering::Acquire);
+        let applied = self.restart_applied_generation.load(Ordering::Acquire);
+        let sent = self.restart_sent_generation.load(Ordering::Acquire);
+        if generation == applied || generation == sent {
+            self.restart_generation.fetch_add(1, Ordering::AcqRel);
+        }
+        self.queue_component_reload_dispatch()
+    }
+
     /// Commit only the generation whose values were actually used by a
     /// successful initialization. If a later write raced initialization, it
     /// remains pending and gets its own deferred request.
@@ -562,25 +587,29 @@ impl<P: Vst3Plugin> WrapperInner<P> {
         self.queue_component_reload_dispatch();
     }
 
-    pub(super) fn queue_component_reload_dispatch(&self) {
+    pub(super) fn queue_component_reload_dispatch(&self) -> bool {
         if !P::vst3_restart_component_on_required_parameter_change() {
-            return;
+            return false;
         }
 
         let generation = self.restart_generation.load(Ordering::Acquire);
         if generation == self.restart_applied_generation.load(Ordering::Acquire)
             || generation == self.restart_sent_generation.load(Ordering::Acquire)
             || self.component_handler.borrow().is_none()
-            || self.restart_dispatch_queued.swap(true, Ordering::AcqRel)
         {
-            return;
+            return generation == self.restart_sent_generation.load(Ordering::Acquire);
+        }
+        if self.restart_dispatch_queued.swap(true, Ordering::AcqRel) {
+            return true;
         }
 
         if !self.schedule_background(Task::DispatchComponentReload) {
             // Keep the generation pending. A repeated host write, including
             // the same value, can retry after queue pressure has cleared.
             self.restart_dispatch_queued.store(false, Ordering::Release);
+            return false;
         }
+        true
     }
 
     fn dispatch_component_reload(&self) {
@@ -681,7 +710,16 @@ impl<P: Vst3Plugin> WrapperInner<P> {
                     Ok(_) => {
                         // As mentioned above, the state object will be passed back to this thread
                         // so we can deallocate it without blocking.
-                        let state = self.state_return.receive_on_gui();
+                        let mut state = self.state_return.receive_on_gui();
+                        // An audio-thread refusal preserves prior params/DSP and
+                        // retains ownership here for a main-thread retry. The
+                        // retry runs on this control thread and may allocate.
+                        if !self
+                            .last_gui_state_restore_succeeded
+                            .load(Ordering::Acquire)
+                        {
+                            self.set_state_inner(&mut state, false);
+                        }
                         drop(state);
                         break;
                     }
@@ -697,7 +735,7 @@ impl<P: Vst3Plugin> WrapperInner<P> {
             } else {
                 // Otherwise we'll set the state right here and now, since this function should be
                 // called from a GUI thread
-                self.set_state_inner(&mut state);
+                self.set_state_inner(&mut state, false);
                 break;
             }
         }
@@ -738,7 +776,13 @@ impl<P: Vst3Plugin> WrapperInner<P> {
     /// # Notes
     ///
     /// `self.plugin` must _not_ be locked while calling this function or it will deadlock.
-    pub fn set_state_inner(&self, state: &mut PluginState) -> bool {
+    pub fn set_state_inner(&self, state: &mut PluginState, is_audio_thread: bool) -> bool {
+        // Expected audio refusals return silently before any work. The
+        // gate is allocation-free and non-mutating; genuine failures
+        // below still hit the debug assert.
+        if is_audio_thread && !P::state_restore_allows_audio_thread(state) {
+            return false;
+        }
         let audio_io_layout = self.current_audio_io_layout.load();
         let buffer_config = self.current_buffer_config.load();
 
@@ -754,6 +798,8 @@ impl<P: Vst3Plugin> WrapperInner<P> {
                 self.params.clone(),
                 state::make_params_getter(&self.param_by_hash, &self.param_id_to_hash),
                 buffer_config.as_ref(),
+                self.is_active.load(Ordering::Acquire),
+                is_audio_thread,
             )
         });
         if !success {

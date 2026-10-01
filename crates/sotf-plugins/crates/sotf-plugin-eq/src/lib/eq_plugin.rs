@@ -15,6 +15,7 @@ use super::misc::create_band_stages;
 use super::misc::scales_prototype_q;
 use super::types::BandTransition;
 use super::types::BiquadFilterConfig;
+use super::types::EqBandPlacement;
 use super::types::EqFilterTopology;
 use super::types::EqPluginParams;
 use math_audio_iir_fir::{Biquad, BiquadFilterType, SvfFilter, SvfFilterType};
@@ -75,6 +76,46 @@ fn filter_type_from_index(index: i32) -> Option<BiquadFilterType> {
     }
 }
 
+fn parse_filter_type(name: &str) -> Result<BiquadFilterType, String> {
+    match name {
+        "peak" | "Peak" => Ok(BiquadFilterType::Peak),
+        "lowshelf" | "Lowshelf" => Ok(BiquadFilterType::Lowshelf),
+        "highshelf" | "Highshelf" => Ok(BiquadFilterType::Highshelf),
+        "lowpass" | "Lowpass" => Ok(BiquadFilterType::Lowpass),
+        "highpass" | "Highpass" => Ok(BiquadFilterType::Highpass),
+        "notch" | "Notch" => Ok(BiquadFilterType::Notch),
+        "bandpass" | "Bandpass" => Ok(BiquadFilterType::Bandpass),
+        "allpass" | "AllPass" => Ok(BiquadFilterType::AllPass),
+        "lowshelf_orf" | "LowshelfOrf" => Ok(BiquadFilterType::LowshelfOrf),
+        "highshelf_orf" | "HighshelfOrf" => Ok(BiquadFilterType::HighshelfOrf),
+        "peak_matched" | "PeakMatched" => Ok(BiquadFilterType::PeakMatched),
+        other => Err(format!("Type: {other}")),
+    }
+}
+
+fn placement_index(placement: Option<EqBandPlacement>) -> i32 {
+    match placement {
+        None => 0,
+        Some(EqBandPlacement::Stereo) => 1,
+        Some(EqBandPlacement::Left) => 2,
+        Some(EqBandPlacement::Right) => 3,
+        Some(EqBandPlacement::Mid) => 4,
+        Some(EqBandPlacement::Side) => 5,
+    }
+}
+
+fn placement_from_index(index: i32) -> Option<Option<EqBandPlacement>> {
+    match index {
+        0 => Some(None),
+        1 => Some(Some(EqBandPlacement::Stereo)),
+        2 => Some(Some(EqBandPlacement::Left)),
+        3 => Some(Some(EqBandPlacement::Right)),
+        4 => Some(Some(EqBandPlacement::Mid)),
+        5 => Some(Some(EqBandPlacement::Side)),
+        _ => None,
+    }
+}
+
 fn svf_type_for(filter_type: BiquadFilterType) -> SvfFilterType {
     match filter_type {
         BiquadFilterType::Peak | BiquadFilterType::PeakMatched => SvfFilterType::Peak,
@@ -86,6 +127,68 @@ fn svf_type_for(filter_type: BiquadFilterType) -> SvfFilterType {
         BiquadFilterType::Notch => SvfFilterType::Notch,
         BiquadFilterType::AllPass => SvfFilterType::Allpass,
     }
+}
+
+fn validate_stereo_pairs(
+    num_channels: usize,
+    pairs: Option<&[[usize; 2]]>,
+    required: bool,
+) -> Result<Vec<[usize; 2]>, String> {
+    if let Some(pairs) = pairs {
+        let mut occupied = vec![false; num_channels];
+        for [left, right] in pairs {
+            if *left >= num_channels || *right >= num_channels {
+                return Err(format!(
+                    "EQ stereo pair [{left}, {right}] exceeds {num_channels} input channels"
+                ));
+            }
+            if left == right {
+                return Err(format!(
+                    "EQ stereo pair [{left}, {right}] must use distinct channels"
+                ));
+            }
+            if occupied[*left] || occupied[*right] {
+                return Err(format!(
+                    "EQ stereo pairs must be disjoint; channel {} is repeated",
+                    if occupied[*left] { left } else { right }
+                ));
+            }
+            occupied[*left] = true;
+            occupied[*right] = true;
+        }
+    }
+
+    if required {
+        if num_channels < 2 {
+            return Err("EQ L/R/M/S placement requires at least two input channels".into());
+        }
+        match pairs {
+            Some(pairs) if !pairs.is_empty() => Ok(pairs.to_vec()),
+            Some(_) => Err("EQ L/R/M/S placement requires at least one stereo pair".into()),
+            None if num_channels == 2 => Ok(vec![[0, 1]]),
+            None => Err(format!(
+                "EQ L/R/M/S placement on {num_channels} channels requires explicit stereo_pairs"
+            )),
+        }
+    } else if let Some(pairs) = pairs {
+        Ok(pairs.to_vec())
+    } else if num_channels == 2 {
+        Ok(vec![[0, 1]])
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[derive(Clone, Copy)]
+enum OrderedFilterStorage {
+    Biquad(usize),
+    Advanced(usize),
+}
+
+#[derive(Clone, Copy)]
+struct OrderedFilter {
+    storage: OrderedFilterStorage,
+    placement: Option<EqBandPlacement>,
 }
 
 pub struct EqPlugin {
@@ -106,9 +209,9 @@ pub struct EqPlugin {
     pub(super) transitions: Vec<Option<BandTransition>>,
     /// Inactive transition storage, recycled without allocation on the audio thread.
     transition_spares: Vec<Option<BandTransition>>,
-    /// Oversampling factor: 1 (off), 2, or 4.
+    /// Requested factor: 1 (off), 2, or 4. Global SVF retains this choice but bypasses transport.
     pub(super) oversampling_factor: u32,
-    /// Oversampling state (None when oversampling_factor == 1).
+    /// Oversampling state (absent at 1x and while global SVF runs at base rate).
     pub(super) oversampler: Option<Oversampler>,
     /// Use Transposed Direct Form II for better numerical stability at high Q.
     pub(super) use_tdf2: bool,
@@ -123,6 +226,14 @@ pub struct EqPlugin {
     /// Advanced filter banks: advanced_filters[channel][filter].
     /// Populated from per-filter `topology=warped_biquad` or `topology=kautz_filter`.
     pub(super) advanced_filters: Vec<Vec<AdvancedFilter>>,
+    /// Original advanced filter descriptions for detached structural rebuilds.
+    advanced_filter_configs: Vec<BiquadFilterConfig>,
+    /// Raw filter order mapped to compact runtime banks for an explicit route.
+    ordered_filters: Vec<OrderedFilter>,
+    /// Cached because this is checked on every process callback.
+    ordered_route_active: bool,
+    /// Disjoint channel pairs used by explicit L/R/M/S filter placements.
+    stereo_pairs: Vec<[usize; 2]>,
     received_input: bool,
     drain_remaining: Option<usize>,
     drain_output: Vec<f32>,
@@ -131,6 +242,24 @@ pub struct EqPlugin {
 }
 
 impl EqPlugin {
+    #[cfg(test)]
+    pub(super) fn auto_gain_reference_delay_frames(&self) -> usize {
+        self.auto_gain_clock
+            .reference_delay_frames(self.num_channels)
+    }
+
+    /// Processing rate multiplier for the currently active realization.
+    ///
+    /// The selected factor remains a saved control while global SVF is active,
+    /// but SVF intentionally bypasses the oversampler and runs at the host rate.
+    fn effective_processing_factor(&self) -> u32 {
+        if self.topology == 1 {
+            1
+        } else {
+            self.oversampling_factor
+        }
+    }
+
     fn finite_response_frames(&self) -> Option<usize> {
         if self.filters.iter().any(|channel| !channel.is_empty())
             || self.svf_filters.iter().any(|channel| !channel.is_empty())
@@ -142,7 +271,7 @@ impl EqPlugin {
         {
             return None;
         }
-        if self.oversampling_factor == 1 {
+        if self.topology == 1 || self.oversampling_factor == 1 {
             Some(0)
         } else {
             self.oversampler
@@ -235,6 +364,19 @@ impl EqPlugin {
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
             advanced_filters: (0..num_channels).map(|_| Vec::new()).collect(),
+            advanced_filter_configs: Vec::new(),
+            ordered_filters: (0..num_bands)
+                .map(|band| OrderedFilter {
+                    storage: OrderedFilterStorage::Biquad(band),
+                    placement: None,
+                })
+                .collect(),
+            ordered_route_active: false,
+            stereo_pairs: if num_channels == 2 {
+                vec![[0, 1]]
+            } else {
+                Vec::new()
+            },
         };
         p.rebuild_cached_parameters();
         p
@@ -362,11 +504,28 @@ impl EqPlugin {
                 }
             }
         }
+        for (index, filter) in self.ordered_filters.iter().enumerate() {
+            let group = format!("Filter {}", index + 1);
+            params.push(
+                Parameter::new_int(
+                    &format!("filter_{index}_placement"),
+                    "Placement",
+                    placement_index(filter.placement),
+                    0,
+                    5,
+                )
+                .with_group(&group)
+                .with_description(
+                    "0 inherits the legacy route; 1=Stereo, 2=Left, 3=Right, 4=Mid, 5=Side",
+                ),
+            );
+        }
         for param in &mut params {
             if matches!(
                 param.id.as_str(),
                 "max_filters" | "topology" | "oversampling"
             ) || param.id.as_str().ends_with("_order")
+                || param.id.as_str().ends_with("_placement")
             {
                 param.update_mode = sotf_host::param_specs::UpdateMode::Structural;
             }
@@ -436,6 +595,14 @@ impl EqPlugin {
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
             advanced_filters: (0..num_channels).map(|_| Vec::new()).collect(),
+            advanced_filter_configs: Vec::new(),
+            ordered_filters: Vec::new(),
+            ordered_route_active: false,
+            stereo_pairs: if num_channels == 2 {
+                vec![[0, 1]]
+            } else {
+                Vec::new()
+            },
         };
         p.rebuild_cached_parameters();
         Ok(p)
@@ -446,29 +613,40 @@ impl EqPlugin {
         sample_rate: u32,
         params: EqPluginParams,
     ) -> Result<Self, String> {
-        use math_audio_iir_fir::BiquadFilterType;
         if num_channels == 0 {
             return Err("EQ requires at least one channel".to_string());
         }
         if sample_rate == 0 {
             return Err("EQ sample rate must be greater than zero".to_string());
         }
-        let parse_filter_type = |s: &str| -> Result<BiquadFilterType, String> {
-            match s {
-                "peak" | "Peak" => Ok(BiquadFilterType::Peak),
-                "lowshelf" | "Lowshelf" => Ok(BiquadFilterType::Lowshelf),
-                "highshelf" | "Highshelf" => Ok(BiquadFilterType::Highshelf),
-                "lowpass" | "Lowpass" => Ok(BiquadFilterType::Lowpass),
-                "highpass" | "Highpass" => Ok(BiquadFilterType::Highpass),
-                "notch" | "Notch" => Ok(BiquadFilterType::Notch),
-                "bandpass" | "Bandpass" => Ok(BiquadFilterType::Bandpass),
-                "allpass" | "AllPass" => Ok(BiquadFilterType::AllPass),
-                "lowshelf_orf" | "LowshelfOrf" => Ok(BiquadFilterType::LowshelfOrf),
-                "highshelf_orf" | "HighshelfOrf" => Ok(BiquadFilterType::HighshelfOrf),
-                "peak_matched" | "PeakMatched" => Ok(BiquadFilterType::PeakMatched),
-                other => Err(format!("Type: {}", other)),
-            }
-        };
+        let has_channel_filters = params.channel_filters.is_some();
+        let global_placement_present = params
+            .filters
+            .iter()
+            .any(|filter| filter.placement.is_some());
+        if let Some(channel_filters) = params.channel_filters.as_ref()
+            && (global_placement_present
+                || channel_filters
+                    .iter()
+                    .flatten()
+                    .any(|filter| filter.placement.is_some()))
+        {
+            return Err(
+                "Per-band placement is not supported with channel_filters; use the ordered shared filter bank"
+                    .into(),
+            );
+        }
+        let needs_stereo_pairs = !has_channel_filters
+            && params.filters.iter().any(|filter| {
+                filter
+                    .placement
+                    .is_some_and(EqBandPlacement::requires_stereo_pair)
+            });
+        let stereo_pairs = validate_stereo_pairs(
+            num_channels,
+            params.stereo_pairs.as_deref(),
+            needs_stereo_pairs,
+        )?;
         let config_to_stages = |f: &BiquadFilterConfig| -> Result<(Vec<Biquad>, usize), String> {
             let filter_type = parse_filter_type(&f.filter_type)?;
             let nyquist = sample_rate as f64 * 0.5;
@@ -563,15 +741,37 @@ impl EqPlugin {
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
                 advanced_filters,
+                advanced_filter_configs: Vec::new(),
+                ordered_filters: Vec::new(),
+                ordered_route_active: false,
+                stereo_pairs,
             }
         } else {
             let mut band_stages = Vec::new();
             let mut band_orders = Vec::new();
+            let mut ordered_filters = Vec::with_capacity(params.filters.len());
+            let mut advanced_index = 0usize;
+            let advanced_filter_configs = params
+                .filters
+                .iter()
+                .filter(|filter| filter.topology != EqFilterTopology::Biquad)
+                .cloned()
+                .collect();
             for f in &params.filters {
                 if f.topology == EqFilterTopology::Biquad {
                     let (stages, order) = config_to_stages(f)?;
+                    ordered_filters.push(OrderedFilter {
+                        storage: OrderedFilterStorage::Biquad(band_stages.len()),
+                        placement: f.placement,
+                    });
                     band_stages.push(stages);
                     band_orders.push(order);
+                } else {
+                    ordered_filters.push(OrderedFilter {
+                        storage: OrderedFilterStorage::Advanced(advanced_index),
+                        placement: f.placement,
+                    });
+                    advanced_index += 1;
                 }
             }
             let num_bands = band_stages.len();
@@ -612,6 +812,12 @@ impl EqPlugin {
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
                 advanced_filters,
+                advanced_filter_configs,
+                ordered_route_active: ordered_filters
+                    .iter()
+                    .any(|filter| filter.placement.is_some()),
+                ordered_filters,
+                stereo_pairs,
             }
         };
         eq.rebuild_cached_parameters();
@@ -651,7 +857,7 @@ impl EqPlugin {
             ));
         }
 
-        let filter_rate = self.sample_rate as f64 * self.oversampling_factor as f64;
+        let filter_rate = self.sample_rate as f64 * f64::from(self.effective_processing_factor());
         let nyquist = self.sample_rate as f64 * 0.5;
         let replacement: Result<Vec<Vec<Vec<Biquad>>>, String> = channel_filters
             .into_iter()
@@ -695,6 +901,9 @@ impl EqPlugin {
         self.band_orders = vec![2; num_bands];
         self.transitions = (0..num_bands).map(|_| None).collect();
         self.advanced_filters = (0..self.num_channels).map(|_| Vec::new()).collect();
+        self.advanced_filter_configs.clear();
+        self.ordered_filters.clear();
+        self.ordered_route_active = false;
         if self.topology == 1 {
             self.rebuild_svf_filters();
         } else {
@@ -707,11 +916,11 @@ impl EqPlugin {
     /// Compute the number of processing-rate samples for the transition.
     ///
     /// The transition counter advances inside the biquad loop. That loop runs
-    /// at the oversampled rate when internal oversampling is active, so scale
-    /// the source-rate five-millisecond duration by the same factor.
+    /// at the active realization rate, which is base-rate for global SVF even
+    /// when a non-1x factor remains selected for a later Biquad route.
     pub(super) fn transition_samples(&self) -> usize {
         (self.sample_rate as f64 * TRANSITION_DURATION_SECS) as usize
-            * self.oversampling_factor as usize
+            * self.effective_processing_factor() as usize
     }
 
     /// Rebuild biquad coefficients at the oversampled rate and reset transitions.
@@ -729,16 +938,68 @@ impl EqPlugin {
         self.recycle_transitions(false);
     }
 
-    pub(super) fn apply_sample_rate_to_advanced_filters(
-        &mut self,
+    fn build_advanced_filter_bank(
+        &self,
         sample_rate: f64,
-    ) -> Result<(), String> {
-        for chain in &mut self.advanced_filters {
-            for filter in chain {
-                filter.apply_sample_rate(sample_rate)?;
+    ) -> Result<Vec<Vec<AdvancedFilter>>, String> {
+        let mut bank = Vec::with_capacity(self.num_channels);
+        for _ in 0..self.num_channels {
+            let mut channel = Vec::with_capacity(self.advanced_filter_configs.len());
+            for config in &self.advanced_filter_configs {
+                let filter = AdvancedFilter::from_config(config, sample_rate, &parse_filter_type)?
+                    .ok_or_else(|| "Advanced EQ filter config resolved to biquad".to_string())?;
+                channel.push(filter);
+            }
+            bank.push(channel);
+        }
+        Ok(bank)
+    }
+
+    fn reconfigure_advanced_filter_bank(
+        &self,
+        sample_rate: f64,
+    ) -> Result<Vec<Vec<AdvancedFilter>>, String> {
+        self.advanced_filters
+            .iter()
+            .map(|channel| {
+                channel
+                    .iter()
+                    .map(|filter| filter.reconfigured(sample_rate))
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn reset_ordered_filter_state(&mut self) {
+        for channel in &mut self.filters {
+            for stages in channel {
+                for stage in stages {
+                    stage.reset();
+                }
             }
         }
-        Ok(())
+        for channel in &mut self.svf_filters {
+            for filter in channel {
+                filter.reset();
+            }
+        }
+        for channel in &mut self.advanced_filters {
+            for filter in channel {
+                filter.reset();
+            }
+        }
+        self.recycle_transitions(false);
+        if let Some(oversampler) = &mut self.oversampler {
+            oversampler.reset();
+        }
+        self.auto_gain.reset();
+        self.auto_gain_clock.reset();
+        self.received_input = false;
+        self.drain_remaining = None;
+        self.drain_output.fill(0.0);
+        self.drain_read = 0;
+        self.drain_frames = 0;
+        self.publish_cleared_meter_diagnostics();
     }
 
     pub(super) fn process_advanced_interleaved(&mut self, buffer: &mut [f32], num_frames: usize) {
@@ -762,6 +1023,195 @@ impl EqPlugin {
     ///
     /// `planar[ch]` has `num_frames` valid samples starting at offset 0.
     /// Processes in place.
+    #[inline]
+    fn process_ordered_scalar(
+        &mut self,
+        filter: OrderedFilter,
+        channel: usize,
+        sample: f64,
+    ) -> f64 {
+        match filter.storage {
+            OrderedFilterStorage::Biquad(index) => {
+                if self.topology == 1
+                    && let Some(svf) = self
+                        .svf_filters
+                        .get_mut(channel)
+                        .and_then(|filters| filters.get_mut(index))
+                {
+                    return svf.process(sample);
+                }
+                let transitions = &self.transitions;
+                let Some(stages) = self
+                    .filters
+                    .get_mut(channel)
+                    .and_then(|filters| filters.get_mut(index))
+                else {
+                    return sample;
+                };
+                let transition = transitions.get(index).and_then(Option::as_ref);
+                let progress = transition.map(|transition| {
+                    if transition.total_samples == 0 {
+                        1.0
+                    } else {
+                        1.0 - transition.samples_remaining as f64 / transition.total_samples as f64
+                    }
+                });
+                let mut output = sample;
+                for (stage_index, stage) in stages.iter_mut().enumerate() {
+                    if let (Some(transition), Some(progress)) = (transition, progress) {
+                        let coefficients = transition
+                            .old_coeffs_per_channel
+                            .get(channel)
+                            .and_then(|coefficients| coefficients.get(stage_index))
+                            .zip(
+                                transition
+                                    .new_coeffs_per_channel
+                                    .get(channel)
+                                    .and_then(|coefficients| coefficients.get(stage_index)),
+                            )
+                            .map_or_else(
+                                || stage.coefficients(),
+                                |(old, new)| old.lerp(new, progress),
+                            );
+                        output = stage.process_with_coefficients(output, &coefficients);
+                    } else {
+                        output = stage.process(output);
+                    }
+                }
+                output
+            }
+            OrderedFilterStorage::Advanced(index) => self
+                .advanced_filters
+                .get_mut(channel)
+                .and_then(|filters| filters.get_mut(index))
+                .map_or(sample, |filter| filter.process(sample)),
+        }
+    }
+
+    fn advance_ordered_transition_clock(&mut self) {
+        for transition in self.transitions.iter_mut().flatten() {
+            if transition.samples_remaining > 0 {
+                transition.samples_remaining -= 1;
+            }
+        }
+    }
+
+    fn process_ordered_interleaved(&mut self, buffer: &mut [f32], num_frames: usize) {
+        let num_channels = self.num_channels;
+        for frame in 0..num_frames {
+            let start = frame * num_channels;
+            for filter_index in 0..self.ordered_filters.len() {
+                let filter = self.ordered_filters[filter_index];
+                match filter.placement.unwrap_or(EqBandPlacement::Stereo) {
+                    EqBandPlacement::Stereo => {
+                        for channel in 0..num_channels {
+                            let index = start + channel;
+                            buffer[index] =
+                                self.process_ordered_scalar(filter, channel, buffer[index] as f64)
+                                    as f32;
+                        }
+                    }
+                    placement => {
+                        for pair_index in 0..self.stereo_pairs.len() {
+                            let [left_channel, right_channel] = self.stereo_pairs[pair_index];
+                            let left_index = start + left_channel;
+                            let right_index = start + right_channel;
+                            let left = buffer[left_index] as f64;
+                            let right = buffer[right_index] as f64;
+                            match placement {
+                                EqBandPlacement::Left => {
+                                    buffer[left_index] =
+                                        self.process_ordered_scalar(filter, left_channel, left)
+                                            as f32;
+                                }
+                                EqBandPlacement::Right => {
+                                    buffer[right_index] =
+                                        self.process_ordered_scalar(filter, right_channel, right)
+                                            as f32;
+                                }
+                                EqBandPlacement::Mid => {
+                                    let mid = 0.5 * (left + right);
+                                    let side = 0.5 * (left - right);
+                                    let mid =
+                                        self.process_ordered_scalar(filter, left_channel, mid);
+                                    buffer[left_index] = (mid + side) as f32;
+                                    buffer[right_index] = (mid - side) as f32;
+                                }
+                                EqBandPlacement::Side => {
+                                    let mid = 0.5 * (left + right);
+                                    let side = 0.5 * (left - right);
+                                    let side =
+                                        self.process_ordered_scalar(filter, left_channel, side);
+                                    buffer[left_index] = (mid + side) as f32;
+                                    buffer[right_index] = (mid - side) as f32;
+                                }
+                                EqBandPlacement::Stereo => unreachable!(),
+                            }
+                        }
+                    }
+                }
+            }
+            self.advance_ordered_transition_clock();
+        }
+    }
+
+    fn process_ordered_planar(&mut self, planar: &mut [Vec<f32>], num_frames: usize) {
+        let num_channels = self.num_channels;
+        let mut frame = 0;
+        while frame < num_frames {
+            for filter_index in 0..self.ordered_filters.len() {
+                let filter = self.ordered_filters[filter_index];
+                match filter.placement.unwrap_or(EqBandPlacement::Stereo) {
+                    EqBandPlacement::Stereo => {
+                        for (channel, samples) in planar.iter_mut().enumerate().take(num_channels) {
+                            let sample = samples[frame] as f64;
+                            samples[frame] =
+                                self.process_ordered_scalar(filter, channel, sample) as f32;
+                        }
+                    }
+                    placement => {
+                        for pair_index in 0..self.stereo_pairs.len() {
+                            let [left_channel, right_channel] = self.stereo_pairs[pair_index];
+                            let left = planar[left_channel][frame] as f64;
+                            let right = planar[right_channel][frame] as f64;
+                            match placement {
+                                EqBandPlacement::Left => {
+                                    planar[left_channel][frame] =
+                                        self.process_ordered_scalar(filter, left_channel, left)
+                                            as f32;
+                                }
+                                EqBandPlacement::Right => {
+                                    planar[right_channel][frame] =
+                                        self.process_ordered_scalar(filter, right_channel, right)
+                                            as f32;
+                                }
+                                EqBandPlacement::Mid => {
+                                    let mid = 0.5 * (left + right);
+                                    let side = 0.5 * (left - right);
+                                    let mid =
+                                        self.process_ordered_scalar(filter, left_channel, mid);
+                                    planar[left_channel][frame] = (mid + side) as f32;
+                                    planar[right_channel][frame] = (mid - side) as f32;
+                                }
+                                EqBandPlacement::Side => {
+                                    let mid = 0.5 * (left + right);
+                                    let side = 0.5 * (left - right);
+                                    let side =
+                                        self.process_ordered_scalar(filter, left_channel, side);
+                                    planar[left_channel][frame] = (mid + side) as f32;
+                                    planar[right_channel][frame] = (mid - side) as f32;
+                                }
+                                EqBandPlacement::Stereo => unreachable!(),
+                            }
+                        }
+                    }
+                }
+            }
+            self.advance_ordered_transition_clock();
+            frame += 1;
+        }
+    }
+
     pub(super) fn process_biquads_planar(&mut self, planar: &mut [Vec<f32>], num_frames: usize) {
         let has_transitions = self.transitions.iter().any(|t| t.is_some());
         if has_transitions {
@@ -910,6 +1360,7 @@ impl EqPlugin {
 
     fn can_process_compiled_biquad_bank(&self) -> bool {
         self.topology != 1
+            && !self.ordered_route_active
             && self.oversampling_factor == 1
             && self.transitions.iter().all(Option::is_none)
     }
@@ -1198,10 +1649,11 @@ impl EqPlugin {
                     new_factor
                 ));
             }
-            if self.topology == 1 && new_factor != 1 {
-                return Err("SVF topology does not support internal oversampling".to_string());
-            }
-            let prepared = if new_factor > 1 {
+            // The selected factor is retained while global SVF is active, but
+            // SVF processing stays at the source rate and must not carry FFT
+            // transport latency or queue state.
+            let uses_oversampling = self.topology != 1;
+            let prepared = if new_factor > 1 && uses_oversampling {
                 Some(self.prepare_oversampler(new_factor as u32)?)
             } else {
                 None
@@ -1211,6 +1663,21 @@ impl EqPlugin {
                 self.sample_rate,
                 prepared.as_ref().map_or(0, Oversampler::latency_samples),
             )?;
+            // A placement route changes the realization's processing domain
+            // when oversampling changes. Build every advanced filter detached
+            // before committing any live filter, clock, or sample-rate state.
+            let prepared_advanced =
+                if uses_oversampling && self.ordered_route_active {
+                    Some(self.build_advanced_filter_bank(
+                        self.sample_rate as f64 * f64::from(new_factor),
+                    )?)
+                } else if uses_oversampling && new_factor == 1 {
+                    // The legacy advanced bank stays at the base rate. Prepare its
+                    // replacement before changing the live biquads or oversampler.
+                    Some(self.reconfigure_advanced_filter_bank(self.sample_rate as f64)?)
+                } else {
+                    None
+                };
             // New measurement/reference epoch, preserving the current and
             // target gain trajectory across control-thread reconstruction.
             self.auto_gain.set_sample_rate(self.sample_rate)?;
@@ -1219,13 +1686,15 @@ impl EqPlugin {
             self.auto_gain_clock = prepared_clock;
             self.publish_cleared_meter_diagnostics();
             // Re-initialize oversampling state (uses current sample_rate)
-            if self.oversampling_factor > 1 {
-                // Recalculate biquad coefficients at oversampled rate
-                let os_rate = self.sample_rate as f64 * self.oversampling_factor as f64;
-                self.apply_sample_rate_to_filters(os_rate);
-            } else {
-                // Restore biquad coefficients at nominal rate
-                self.apply_sample_rate_to_filters(self.sample_rate as f64);
+            if uses_oversampling {
+                let filter_rate = self.sample_rate as f64 * self.oversampling_factor as f64;
+                self.apply_sample_rate_to_filters(filter_rate);
+            }
+            if let Some(advanced_filters) = prepared_advanced {
+                self.advanced_filters = advanced_filters;
+                if uses_oversampling && self.ordered_route_active {
+                    self.reset_ordered_filter_state();
+                }
             }
             self.rebuild_cached_parameters();
         } else if name == "max_filters" {
@@ -1275,13 +1744,34 @@ impl EqPlugin {
                         .to_string(),
                 );
             }
-            if new_topo == 1 && self.oversampling_factor != 1 {
-                return Err(
-                    "SVF topology does not support internal oversampling; disable oversampling first"
-                        .to_string(),
-                );
-            }
             if new_topo != self.topology {
+                let processing_factor = if new_topo == 1 {
+                    1
+                } else {
+                    self.oversampling_factor
+                };
+                let prepared_oversampler = if new_topo != 1 && processing_factor > 1 {
+                    Some(self.prepare_oversampler(processing_factor)?)
+                } else {
+                    None
+                };
+                let prepared_clock = AutoGainClock::new(
+                    self.num_channels,
+                    self.sample_rate,
+                    prepared_oversampler
+                        .as_ref()
+                        .map_or(0, Oversampler::latency_samples),
+                )?;
+                let advanced_rate = if self.ordered_route_active && new_topo != 1 {
+                    self.sample_rate as f64 * f64::from(processing_factor)
+                } else {
+                    self.sample_rate as f64
+                };
+                let prepared_advanced = self.build_advanced_filter_bank(advanced_rate)?;
+                // This is the final fallible preparation step. Do it before
+                // replacing any live route, resampler, or parameter state.
+                self.auto_gain.set_sample_rate(self.sample_rate)?;
+
                 // Biquad and SVF realizations keep unrelated delay state. A
                 // topology change is a realization boundary, so neither the
                 // dormant realization nor an in-flight coefficient
@@ -1294,14 +1784,99 @@ impl EqPlugin {
                     }
                 }
                 self.recycle_transitions(false);
+                let filter_rate = self.sample_rate as f64 * f64::from(processing_factor);
+                self.apply_sample_rate_to_filters(filter_rate);
                 self.topology = new_topo;
+                self.oversampler = prepared_oversampler;
+                self.auto_gain_clock = prepared_clock;
+                self.advanced_filters = prepared_advanced;
                 if new_topo == 1 {
                     self.rebuild_svf_filters();
                 } else {
                     self.svf_filters.clear();
                 }
+                if self.ordered_route_active {
+                    self.reset_ordered_filter_state();
+                } else {
+                    self.reset();
+                }
             }
             self.rebuild_cached_parameters();
+        } else if let Some(rest) = name.strip_prefix("filter_") {
+            if let Some(sep) = rest.find('_') {
+                let filter_index = rest[..sep]
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid filter parameter id: {id}"))?;
+                let field = &rest[sep + 1..];
+                if field != "placement" {
+                    return Err(format!("Unknown field: {field}"));
+                }
+                let parameter = self
+                    .cached_parameters
+                    .iter()
+                    .find(|parameter| parameter.id == id)
+                    .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+                parameter.validate(&value)?;
+                let index = value
+                    .as_int()
+                    .ok_or_else(|| "Placement must be an integer choice".to_string())?;
+                let placement = placement_from_index(index)
+                    .ok_or_else(|| format!("Invalid filter placement choice {index}"))?;
+                let current = self
+                    .ordered_filters
+                    .get(filter_index)
+                    .ok_or_else(|| format!("Unknown filter index {filter_index}"))?;
+                if current.placement != placement {
+                    let needs_pairs =
+                        self.ordered_filters
+                            .iter()
+                            .enumerate()
+                            .any(|(index, filter)| {
+                                let candidate = if index == filter_index {
+                                    placement
+                                } else {
+                                    filter.placement
+                                };
+                                candidate.is_some_and(EqBandPlacement::requires_stereo_pair)
+                            });
+                    let route_active =
+                        self.ordered_filters
+                            .iter()
+                            .enumerate()
+                            .any(|(index, filter)| {
+                                if index == filter_index {
+                                    placement.is_some()
+                                } else {
+                                    filter.placement.is_some()
+                                }
+                            });
+                    validate_stereo_pairs(
+                        self.num_channels,
+                        Some(&self.stereo_pairs),
+                        needs_pairs,
+                    )?;
+                    let advanced_rate = if route_active {
+                        if self.oversampling_factor > 1 && self.topology != 1 {
+                            self.sample_rate as f64 * self.oversampling_factor as f64
+                        } else {
+                            self.sample_rate as f64
+                        }
+                    } else {
+                        self.sample_rate as f64
+                    };
+                    let advanced_filters = self.build_advanced_filter_bank(advanced_rate)?;
+                    self.reset_ordered_filter_state();
+                    self.advanced_filters = advanced_filters;
+                    self.ordered_filters[filter_index].placement = placement;
+                    self.ordered_route_active = self
+                        .ordered_filters
+                        .iter()
+                        .any(|filter| filter.placement.is_some());
+                    self.rebuild_cached_parameters();
+                }
+            } else {
+                return Err(format!("Invalid filter parameter id: {id}"));
+            }
         } else if let Some(rest) = name.strip_prefix("band_") {
             // Parse "band_N_field" without heap allocation.
             // Find the next '_' to split index from field.
@@ -1510,6 +2085,17 @@ impl EqPlugin {
             Some(ParameterValue::Bool(self.use_tdf2))
         } else if name == "topology" {
             Some(ParameterValue::Int(self.topology as i32))
+        } else if let Some(rest) = name.strip_prefix("filter_") {
+            if let Some(sep) = rest.find('_') {
+                let filter_index = rest[..sep].parse::<usize>().ok()?;
+                if &rest[sep + 1..] == "placement" {
+                    return self
+                        .ordered_filters
+                        .get(filter_index)
+                        .map(|filter| ParameterValue::Int(placement_index(filter.placement)));
+                }
+            }
+            None
         } else if let Some(rest) = name.strip_prefix("band_") {
             // Parse "band_N_field" without heap allocation.
             // Find the next '_' to split index from field.
@@ -1549,7 +2135,7 @@ impl EqPlugin {
         if sample_rate == 0 {
             return Err("EQ sample rate must be greater than zero".to_string());
         }
-        let prepared = if self.oversampling_factor > 1 {
+        let prepared = if self.oversampling_factor > 1 && self.topology != 1 {
             Some(self.prepare_oversampler(self.oversampling_factor)?)
         } else {
             None
@@ -1559,11 +2145,37 @@ impl EqPlugin {
             sample_rate,
             prepared.as_ref().map_or(0, Oversampler::latency_samples),
         )?;
+        let filter_rate = sample_rate as f64
+            * if self.topology == 1 {
+                1.0
+            } else {
+                f64::from(self.oversampling_factor)
+            };
+        let advanced_sample_rate = if self.ordered_route_active && self.topology != 1 {
+            filter_rate
+        } else {
+            sample_rate as f64
+        };
+        // Placement routes can interleave realizations, so a later invalid
+        // Kautz/Warped stage must not leave earlier live stages at a new rate.
+        // Prepare the full advanced bank before changing any live sample rate.
+        let prepared_advanced = if self.ordered_route_active {
+            self.build_advanced_filter_bank(advanced_sample_rate)?
+        } else {
+            self.reconfigure_advanced_filter_bank(advanced_sample_rate)?
+        };
+
+        // This is the final fallible preparation step. AutoGain retains its
+        // current gain trajectory while replacing its measurement windows.
+        // Its setter prepares both meters before committing its own rate.
+        self.auto_gain
+            .set_sample_rate(sample_rate)
+            .map_err(|e| e.to_string())?;
         self.sample_rate = sample_rate;
 
-        // Biquad coefficients are designed at the oversampled rate so that
-        // the filter frequency response is correct relative to the true input rate.
-        let filter_rate = sample_rate as f64 * self.oversampling_factor as f64;
+        // Biquad coefficients use the active realization rate. Global SVF
+        // deliberately bypasses transport even when a larger factor remains
+        // selected for a later Biquad topology.
         for chain in &mut self.filters {
             for stages in chain {
                 for f in stages {
@@ -1572,11 +2184,7 @@ impl EqPlugin {
             }
         }
         self.recycle_transitions(false);
-        self.apply_sample_rate_to_advanced_filters(sample_rate as f64)?;
-        self.auto_gain
-            .set_sample_rate(sample_rate)
-            .map_err(|e| e.to_string())?;
-
+        self.advanced_filters = prepared_advanced;
         // Rebuild oversampling state if active
         self.oversampler = prepared;
         self.auto_gain_clock = prepared_clock;
@@ -1588,6 +2196,10 @@ impl EqPlugin {
 
         if self.drain_remaining.is_some() {
             self.reset();
+        } else if self.ordered_route_active {
+            // The ordered route's banks are prepared as a complete new epoch;
+            // reset every realization together so no old-domain history leaks.
+            self.reset_ordered_filter_state();
         } else {
             self.reset_endpoint();
         }
@@ -1651,7 +2263,7 @@ impl EqPlugin {
                 buffer.len()
             ));
         }
-        if self.oversampling_factor > 1 && num_frames > EQ_MAX_BLOCK_FRAMES {
+        if self.effective_processing_factor() > 1 && num_frames > EQ_MAX_BLOCK_FRAMES {
             return Err(format!(
                 "EQ oversampling block too large: maximum {EQ_MAX_BLOCK_FRAMES} frames, got {num_frames}"
             ));
@@ -1674,7 +2286,7 @@ impl EqPlugin {
         enable_ftz_daz();
         let num_frames = context.num_frames;
         let nc = self.num_channels;
-        if self.oversampling_factor > 1 {
+        if self.effective_processing_factor() > 1 {
             // Keep the raw oversampler invocation and its transition wall-clock
             // reconciliation at the original callback boundary.
             self.auto_gain_clock.capture(buffer);
@@ -1703,13 +2315,59 @@ impl EqPlugin {
     }
 
     fn process_raw(&mut self, buffer: &mut [f32], num_frames: usize) -> PluginResult<()> {
+        if self.ordered_route_active {
+            if self.topology == 1 || self.oversampling_factor == 1 {
+                self.process_ordered_interleaved(buffer, num_frames);
+            } else {
+                let mut oversampler = self.oversampler.take().ok_or_else(|| {
+                    "oversampling enabled but oversampler is unavailable".to_string()
+                })?;
+                let mut processed_os_frames = 0usize;
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    oversampler.process(buffer, num_frames, |planar, os_frames| {
+                        processed_os_frames = processed_os_frames.saturating_add(os_frames);
+                        self.process_ordered_planar(planar, os_frames);
+                    })
+                }));
+                self.oversampler = Some(oversampler);
+                match result {
+                    Ok(result) => {
+                        result?;
+                        let elapsed_processing_frames =
+                            num_frames.saturating_mul(self.oversampling_factor as usize);
+                        for transition in &mut self.transitions {
+                            if let Some(state) = transition.as_mut() {
+                                if processed_os_frames < elapsed_processing_frames {
+                                    state.samples_remaining =
+                                        state.samples_remaining.saturating_sub(
+                                            elapsed_processing_frames - processed_os_frames,
+                                        );
+                                } else if processed_os_frames > elapsed_processing_frames {
+                                    state.samples_remaining = state
+                                        .samples_remaining
+                                        .saturating_add(
+                                            processed_os_frames - elapsed_processing_frames,
+                                        )
+                                        .min(state.total_samples);
+                                }
+                            }
+                        }
+                        self.recycle_transitions(true);
+                    }
+                    Err(payload) => std::panic::resume_unwind(payload),
+                }
+            }
+            return Ok(());
+        }
+
         let nc = self.num_channels;
 
-        if self.topology == 1 && !self.svf_filters.is_empty() {
+        if self.topology == 1 {
             // ----------------------------------------------------------------
-            // SVF topology: zero-delay feedback, inherently modulation-stable
-            // No coefficient interpolation needed — SVF handles parameter
-            // changes without transients.
+            // SVF topology: zero-delay feedback. Parameter changes update the
+            // SVF coefficients directly; this avoids Biquad interpolation but
+            // does not promise transient-free behavior for every parameter
+            // jump. An empty SVF bank is a valid identity route.
             // ----------------------------------------------------------------
             for frame in 0..num_frames {
                 for ch in 0..nc {
@@ -1721,7 +2379,7 @@ impl EqPlugin {
                     buffer[idx] = s as f32;
                 }
             }
-        } else if self.oversampling_factor == 1 {
+        } else if self.effective_processing_factor() == 1 {
             // ----------------------------------------------------------------
             // Fast path: no oversampling — process biquads directly
             // ----------------------------------------------------------------

@@ -65,3 +65,28 @@ workspaces are prepared or allocated during initialization. Processing, reset,
 and live `enabled` changes do not allocate. The Audio Unit rejects sample rates
 other than 48 kHz and layouts other than matching mono or stereo during format
 negotiation.
+
+Suppression `strength` (0..1, default 1.0) blends latency-aligned wet and dry
+audio per sample: `out = dry + s * (wet - dry)`, where `dry` is the sanitized
+input delayed by exactly the 960-frame signal latency. Strength slews toward
+its target over 480 frames (10 ms), matching the bypass crossfade; the 0.0
+and 1.0 endpoints emit dry and wet bit-exactly, so default and disabled audio
+are unchanged and latency stays a constant 960 frames. The blend applies only
+when enabled; the disabled path replays backend audio exactly as before.
+Strength automation is realtime-safe and allocation-free; rejected values
+(NaN, infinite, out of range, wrong type) retain the accepted target and
+audio history.
+
+`model` names the bundled inference model (`RNNoise Full`, index 0). It is a
+structural parameter: unknown identities are rejected transactionally with
+the running model continuing unchanged, same-value writes are no-ops, and a
+changed identity on a live instance requires a host graph rebuild from
+serialized configuration so weight preparation never runs on the audio
+thread. The registry is append-only; future models add labels without
+renumbering index 0.
+
+Saved state is schema v2. V1 state carrying only `enabled` loads with
+strength 1.0 and the bundled model, reproducing v1 audio bit-exactly.
+Unknown fields and malformed values are still rejected. Strength and model
+changes freeze once nonempty EOF drain work begins, exactly like `enabled`;
+same-value snapshots remain accepted until reset or reinitialization.

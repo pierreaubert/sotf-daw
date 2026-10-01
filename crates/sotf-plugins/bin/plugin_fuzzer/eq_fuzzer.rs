@@ -40,6 +40,7 @@ impl PluginFuzzer for EqFuzzer {
                 db_gain,
                 order: 2,
                 topology: Default::default(),
+                placement: None,
                 lambda: None,
                 kautz_sections: Vec::new(),
             });
@@ -89,6 +90,7 @@ impl PluginFuzzer for EqFuzzer {
         let params = EqPluginParams {
             filters,
             channel_filters: None,
+            stereo_pairs: None,
             ..Default::default()
         };
         let plugin = EqPlugin::from_params(channels, self.sample_rate, params).unwrap();

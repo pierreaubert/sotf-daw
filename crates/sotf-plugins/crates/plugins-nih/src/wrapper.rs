@@ -2,6 +2,68 @@
 
 use nih_plug::audio_setup::{AudioIOLayout, PortNames, new_nonzero_u32};
 use nih_plug::context::PluginApi;
+use sotf_host::external_plugin::NativeCrossoverInputLayout as CrossoverInputLayout;
+
+#[cfg(feature = "convolution")]
+pub(crate) mod native_convolution_editor;
+
+#[cfg(feature = "convolution")]
+#[doc(hidden)]
+pub type NativeConvolutionBackgroundTask = native_convolution_editor::BackgroundTask;
+
+#[cfg(not(feature = "convolution"))]
+#[doc(hidden)]
+pub type NativeConvolutionBackgroundTask = ();
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_background_task_type {
+    ("Convolution") => {
+        $crate::wrapper::NativeConvolutionBackgroundTask
+    };
+    ($other:literal) => {
+        ()
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_task_executor {
+    ("Convolution", $params:expr, $service:expr) => {{
+        let params = ($params).clone();
+        let service = ($service).clone();
+        Box::new(move |task| {
+            $crate::wrapper::native_convolution_editor::handle_background_task(
+                &params, &service, task,
+            );
+        })
+    }};
+    ($other:literal, $params:expr, $service:expr) => {{ Box::new(|_task| {}) }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_create_editor {
+    ("Convolution", $plugin:ty, $params:expr, $service:expr, $executor:expr) => {{
+        #[cfg(feature = "convolution")]
+        {
+            $crate::wrapper::native_convolution_editor::create_editor::<$plugin>(
+                ($params).clone(),
+                ($service).clone(),
+                $executor,
+            )
+        }
+        #[cfg(not(feature = "convolution"))]
+        {
+            let _ = $executor;
+            None
+        }
+    }};
+    ($other:literal, $plugin:ty, $params:expr, $service:expr, $executor:expr) => {{
+        let _ = $executor;
+        None
+    }};
+}
 
 const AMBISONICS_OUTPUT_WIDTHS: [u32; 8] = [6, 8, 8, 10, 10, 12, 14, 16];
 const AMBISONICS_LAYOUT_NAMES: [&str; 56] = [
@@ -187,6 +249,56 @@ const CLAP_MAP_512: [u8; 8] = [0, 1, 2, 3, 9, 10, 12, 14];
 const CLAP_MAP_712: [u8; 10] = [0, 1, 2, 3, 9, 10, 4, 5, 12, 14];
 const CLAP_MAP_514: [u8; 10] = [0, 1, 2, 3, 9, 10, 12, 14, 15, 17];
 const CLAP_MAP_714: [u8; 12] = [0, 1, 2, 3, 9, 10, 4, 5, 12, 14, 15, 17];
+const CROSSOVER_CLAP_MAP_MONO: [u8; 1] = [clap_sys::ext::surround::CLAP_SURROUND_FC as u8];
+const CROSSOVER_CLAP_MAP_STEREO: [u8; 2] = [
+    clap_sys::ext::surround::CLAP_SURROUND_FL as u8,
+    clap_sys::ext::surround::CLAP_SURROUND_FR as u8,
+];
+const CROSSOVER_CLAP_MAP_QUAD: [u8; 4] = [
+    clap_sys::ext::surround::CLAP_SURROUND_FL as u8,
+    clap_sys::ext::surround::CLAP_SURROUND_FR as u8,
+    clap_sys::ext::surround::CLAP_SURROUND_BL as u8,
+    clap_sys::ext::surround::CLAP_SURROUND_BR as u8,
+];
+const CROSSOVER_CLAP_MAP_914: [u8; 14] = [0, 1, 2, 3, 9, 10, 4, 5, 15, 17, 6, 7, 12, 14];
+const CROSSOVER_CLAP_MAP_916_WIDE: [u8; 16] =
+    [0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 12, 14, 13, 16, 15, 17];
+
+#[doc(hidden)]
+pub fn crossover_clap_channel_map(
+    input_layout_index: usize,
+    is_input: bool,
+    port_index: usize,
+) -> Option<&'static [u8]> {
+    if !is_input || port_index != 0 {
+        return None;
+    }
+    Some(match CROSSOVER_INPUT_LAYOUTS.get(input_layout_index)? {
+        CrossoverInputLayout::Mono => &CROSSOVER_CLAP_MAP_MONO,
+        CrossoverInputLayout::Stereo => &CROSSOVER_CLAP_MAP_STEREO,
+        CrossoverInputLayout::Quad => &CROSSOVER_CLAP_MAP_QUAD,
+        CrossoverInputLayout::FiveOne => &CLAP_MAP_51,
+        CrossoverInputLayout::SevenOne => &CLAP_MAP_71,
+        CrossoverInputLayout::FiveOneTwo => &CLAP_MAP_512,
+        CrossoverInputLayout::FiveOneFour => &CLAP_MAP_514,
+        CrossoverInputLayout::SevenOneTwo => &CLAP_MAP_712,
+        CrossoverInputLayout::SevenOneFour => &CLAP_MAP_714,
+        CrossoverInputLayout::NineOneFour => &CROSSOVER_CLAP_MAP_914,
+        CrossoverInputLayout::NineOneSixWide => &CROSSOVER_CLAP_MAP_916_WIDE,
+    })
+}
+
+#[doc(hidden)]
+pub fn crossover_clap_channel_mask_supported(channel_mask: u64) -> bool {
+    (0..CROSSOVER_INPUT_LAYOUTS.len()).any(|layout_index| {
+        crossover_clap_channel_map(layout_index, true, 0).is_some_and(|channel_map| {
+            channel_map
+                .iter()
+                .fold(0_u64, |mask, channel| mask | (1_u64 << channel))
+                == channel_mask
+        })
+    })
+}
 
 #[doc(hidden)]
 pub fn ambisonics_clap_channel_map(target_layout: usize) -> Option<&'static [u8]> {
@@ -396,37 +508,248 @@ const BAND_SPLIT_VST3_MAX_BUSES: AudioIOLayout = AudioIOLayout {
 pub static BAND_SPLIT_VST3_LAYOUTS: [AudioIOLayout; 2] =
     [BAND_SPLIT_VST3_LEGACY_PACKED, BAND_SPLIT_VST3_MAX_BUSES];
 
-const CROSSOVER_VST3_AUX_OUTPUTS: [std::num::NonZeroU32; 3] =
-    [new_nonzero_u32(2), new_nonzero_u32(2), new_nonzero_u32(2)];
-const CROSSOVER_VST3_AUX_OUTPUT_NAMES: [&str; 3] = ["Band 2", "Band 3", "Band 4"];
+const CROSSOVER_INPUT_LAYOUTS: [CrossoverInputLayout; 11] = [
+    CrossoverInputLayout::Stereo,
+    CrossoverInputLayout::Mono,
+    CrossoverInputLayout::Quad,
+    CrossoverInputLayout::FiveOne,
+    CrossoverInputLayout::SevenOne,
+    CrossoverInputLayout::FiveOneTwo,
+    CrossoverInputLayout::FiveOneFour,
+    CrossoverInputLayout::SevenOneTwo,
+    CrossoverInputLayout::SevenOneFour,
+    CrossoverInputLayout::NineOneFour,
+    CrossoverInputLayout::NineOneSixWide,
+];
 
-const fn crossover_vst3_single_output(
-    layout_name: &'static str,
-    output_name: &'static str,
-) -> AudioIOLayout {
+const CROSSOVER_CLAP_LAYOUT_NAMES: [&str; 44] = [
+    "Crossover Stereo 1x",
+    "Crossover Stereo 2x",
+    "Crossover Stereo 3x",
+    "Crossover Stereo 4x",
+    "Crossover Mono 1x",
+    "Crossover Mono 2x",
+    "Crossover Mono 3x",
+    "Crossover Mono 4x",
+    "Crossover Quad 1x",
+    "Crossover Quad 2x",
+    "Crossover Quad 3x",
+    "Crossover Quad 4x",
+    "Crossover 5.1 1x",
+    "Crossover 5.1 2x",
+    "Crossover 5.1 3x",
+    "Crossover 5.1 4x",
+    "Crossover 7.1 1x",
+    "Crossover 7.1 2x",
+    "Crossover 7.1 3x",
+    "Crossover 7.1 4x",
+    "Crossover 5.1.2 1x",
+    "Crossover 5.1.2 2x",
+    "Crossover 5.1.2 3x",
+    "Crossover 5.1.2 4x",
+    "Crossover 5.1.4 1x",
+    "Crossover 5.1.4 2x",
+    "Crossover 5.1.4 3x",
+    "Crossover 5.1.4 4x",
+    "Crossover 7.1.2 1x",
+    "Crossover 7.1.2 2x",
+    "Crossover 7.1.2 3x",
+    "Crossover 7.1.2 4x",
+    "Crossover 7.1.4 1x",
+    "Crossover 7.1.4 2x",
+    "Crossover 7.1.4 3x",
+    "Crossover 7.1.4 4x",
+    "Crossover 9.1.4 1x",
+    "Crossover 9.1.4 2x",
+    "Crossover 9.1.4 3x",
+    "Crossover 9.1.4 4x",
+    "Crossover 9.1.6 wide 1x",
+    "Crossover 9.1.6 wide 2x",
+    "Crossover 9.1.6 wide 3x",
+    "Crossover 9.1.6 wide 4x",
+];
+
+const CROSSOVER_INPUT_LAYOUT_NAMES: [&str; 11] = [
+    "Stereo Input",
+    "Mono Input",
+    "Quad Input",
+    "5.1 Input",
+    "7.1 Input",
+    "5.1.2 Input",
+    "5.1.4 Input",
+    "7.1.2 Input",
+    "7.1.4 Input",
+    "9.1.4 Input",
+    "9.1.6 Wide Input",
+];
+
+const EQ_NATIVE_LAYOUT_NAMES: [&str; 11] = [
+    "EQ Stereo",
+    "EQ Mono",
+    "EQ Quad",
+    "EQ 5.1",
+    "EQ 7.1",
+    "EQ 5.1.2",
+    "EQ 5.1.4",
+    "EQ 7.1.2",
+    "EQ 7.1.4",
+    "EQ 9.1.4",
+    "EQ 9.1.6 Wide",
+];
+
+const fn eq_native_layout(index: usize) -> AudioIOLayout {
+    let width = CROSSOVER_INPUT_LAYOUTS[index].channel_count() as u32;
     AudioIOLayout {
-        main_input_channels: Some(new_nonzero_u32(2)),
-        main_output_channels: Some(new_nonzero_u32(2)),
+        main_input_channels: Some(new_nonzero_u32(width)),
+        main_output_channels: Some(new_nonzero_u32(width)),
         aux_input_ports: &[],
         aux_output_ports: &[],
         names: PortNames {
-            layout: Some(layout_name),
-            main_input: Some("Stereo Input"),
-            main_output: Some(output_name),
+            layout: Some(EQ_NATIVE_LAYOUT_NAMES[index]),
+            main_input: Some(CROSSOVER_INPUT_LAYOUT_NAMES[index]),
+            main_output: Some("Speaker outputs"),
             ..PortNames::const_default()
         },
     }
 }
 
-const fn crossover_vst3_both_outputs() -> AudioIOLayout {
+const fn make_eq_native_layouts() -> [AudioIOLayout; 11] {
+    let mut layouts = [AudioIOLayout::const_default(); 11];
+    let mut index = 0;
+    while index < layouts.len() {
+        layouts[index] = eq_native_layout(index);
+        index += 1;
+    }
+    layouts
+}
+
+/// Equal-width native EQ layouts for the supported named speaker arrangements.
+#[doc(hidden)]
+pub static EQ_NATIVE_LAYOUTS: [AudioIOLayout; 11] = make_eq_native_layouts();
+
+/// Return the EQ layout index selected by a host API's native layout.
+#[doc(hidden)]
+pub fn eq_native_layout_index(layout: &AudioIOLayout, api: PluginApi) -> Option<usize> {
+    let _ = api;
+    EQ_NATIVE_LAYOUTS
+        .iter()
+        .position(|candidate| candidate == layout)
+}
+
+/// Map a host EQ channel index to the canonical SOTF speaker order.
+#[doc(hidden)]
+pub fn eq_native_channel_to_sotf(
+    layout_index: usize,
+    api: PluginApi,
+    channel: usize,
+) -> Option<usize> {
+    crossover_channel_to_sotf(layout_index, api, channel)
+}
+
+const fn crossover_clap_layout(
+    input_channels: u32,
+    output_channels: u32,
+    input_name: &'static str,
+    layout_name: &'static str,
+) -> AudioIOLayout {
     AudioIOLayout {
-        main_input_channels: Some(new_nonzero_u32(2)),
-        main_output_channels: Some(new_nonzero_u32(2)),
+        main_input_channels: Some(new_nonzero_u32(input_channels)),
+        main_output_channels: Some(new_nonzero_u32(output_channels)),
         aux_input_ports: &[],
-        aux_output_ports: &CROSSOVER_VST3_AUX_OUTPUTS,
+        aux_output_ports: &[],
         names: PortNames {
-            layout: Some("Crossover both bands"),
-            main_input: Some("Stereo Input"),
+            layout: Some(layout_name),
+            main_input: Some(input_name),
+            main_output: Some("Band-major indexed output"),
+            ..PortNames::const_default()
+        },
+    }
+}
+
+const fn make_crossover_clap_layouts() -> [AudioIOLayout; 44] {
+    let mut layouts = [AudioIOLayout::const_default(); 44];
+    let mut layout_index = 0;
+    while layout_index < CROSSOVER_INPUT_LAYOUTS.len() {
+        let input_channels = CROSSOVER_INPUT_LAYOUTS[layout_index].channel_count() as u32;
+        let mut output_variant = 0;
+        while output_variant < 4 {
+            let index = layout_index * 4 + output_variant;
+            let output_channels = input_channels * (output_variant as u32 + 1);
+            layouts[index] = crossover_clap_layout(
+                input_channels,
+                output_channels,
+                CROSSOVER_INPUT_LAYOUT_NAMES[layout_index],
+                CROSSOVER_CLAP_LAYOUT_NAMES[index],
+            );
+            output_variant += 1;
+        }
+        layout_index += 1;
+    }
+    layouts
+}
+
+#[doc(hidden)]
+pub static CROSSOVER_CLAP_LAYOUTS: [AudioIOLayout; 44] = make_crossover_clap_layouts();
+
+const CROSSOVER_VST3_AUX_OUTPUTS_1: [std::num::NonZeroU32; 3] =
+    [new_nonzero_u32(1), new_nonzero_u32(1), new_nonzero_u32(1)];
+const CROSSOVER_VST3_AUX_OUTPUTS_2: [std::num::NonZeroU32; 3] =
+    [new_nonzero_u32(2), new_nonzero_u32(2), new_nonzero_u32(2)];
+const CROSSOVER_VST3_AUX_OUTPUTS_4: [std::num::NonZeroU32; 3] =
+    [new_nonzero_u32(4), new_nonzero_u32(4), new_nonzero_u32(4)];
+const CROSSOVER_VST3_AUX_OUTPUTS_6: [std::num::NonZeroU32; 3] =
+    [new_nonzero_u32(6), new_nonzero_u32(6), new_nonzero_u32(6)];
+const CROSSOVER_VST3_AUX_OUTPUTS_8: [std::num::NonZeroU32; 3] =
+    [new_nonzero_u32(8), new_nonzero_u32(8), new_nonzero_u32(8)];
+const CROSSOVER_VST3_AUX_OUTPUTS_10: [std::num::NonZeroU32; 3] = [
+    new_nonzero_u32(10),
+    new_nonzero_u32(10),
+    new_nonzero_u32(10),
+];
+const CROSSOVER_VST3_AUX_OUTPUTS_12: [std::num::NonZeroU32; 3] = [
+    new_nonzero_u32(12),
+    new_nonzero_u32(12),
+    new_nonzero_u32(12),
+];
+const CROSSOVER_VST3_AUX_OUTPUTS_14: [std::num::NonZeroU32; 3] = [
+    new_nonzero_u32(14),
+    new_nonzero_u32(14),
+    new_nonzero_u32(14),
+];
+const CROSSOVER_VST3_AUX_OUTPUTS_16: [std::num::NonZeroU32; 3] = [
+    new_nonzero_u32(16),
+    new_nonzero_u32(16),
+    new_nonzero_u32(16),
+];
+const CROSSOVER_VST3_AUX_OUTPUT_NAMES: [&str; 3] = ["Band 2", "Band 3", "Band 4"];
+const CROSSOVER_VST3_LAYOUT_NAMES: [&str; 11] = [
+    "Crossover stereo buses",
+    "Crossover mono buses",
+    "Crossover quad buses",
+    "Crossover 5.1 buses",
+    "Crossover 7.1 buses",
+    "Crossover 5.1.2 buses",
+    "Crossover 5.1.4 buses",
+    "Crossover 7.1.2 buses",
+    "Crossover 7.1.4 buses",
+    "Crossover 9.1.4 buses",
+    "Crossover 9.1.6 wide buses",
+];
+
+const fn crossover_vst3_layout(
+    index: usize,
+    input_layout: CrossoverInputLayout,
+    aux_output_ports: &'static [std::num::NonZeroU32; 3],
+) -> AudioIOLayout {
+    let width = input_layout.channel_count() as u32;
+    AudioIOLayout {
+        main_input_channels: Some(new_nonzero_u32(width)),
+        main_output_channels: Some(new_nonzero_u32(width)),
+        aux_input_ports: &[],
+        aux_output_ports,
+        names: PortNames {
+            layout: Some(CROSSOVER_VST3_LAYOUT_NAMES[index]),
+            main_input: Some(CROSSOVER_INPUT_LAYOUT_NAMES[index]),
             main_output: Some("Band 1"),
             aux_outputs: &CROSSOVER_VST3_AUX_OUTPUT_NAMES,
             ..PortNames::const_default()
@@ -435,38 +758,38 @@ const fn crossover_vst3_both_outputs() -> AudioIOLayout {
 }
 
 #[doc(hidden)]
-pub static CROSSOVER_VST3_LAYOUTS: [AudioIOLayout; 4] = [
-    crossover_vst3_single_output("Crossover lowpass", "Low Only"),
-    crossover_vst3_single_output("Crossover highpass", "High Only"),
-    crossover_vst3_single_output("Crossover per-channel", "Per-channel"),
-    crossover_vst3_both_outputs(),
-];
-
-const fn crossover_clap_layout(output_channels: u32, layout_name: &'static str) -> AudioIOLayout {
-    AudioIOLayout {
-        main_input_channels: Some(new_nonzero_u32(2)),
-        main_output_channels: Some(new_nonzero_u32(output_channels)),
-        aux_input_ports: &[],
-        aux_output_ports: &[],
-        names: PortNames {
-            layout: Some(layout_name),
-            main_input: Some("Stereo Input"),
-            main_output: Some(if output_channels == 2 {
-                "Stereo Output"
-            } else {
-                "Band-major indexed output"
-            }),
-            ..PortNames::const_default()
-        },
-    }
-}
-
-#[doc(hidden)]
-pub static CROSSOVER_CLAP_LAYOUTS: [AudioIOLayout; 4] = [
-    crossover_clap_layout(2, "Crossover stereo output"),
-    crossover_clap_layout(4, "Crossover 2-band indexed output"),
-    crossover_clap_layout(6, "Crossover 3-band indexed output"),
-    crossover_clap_layout(8, "Crossover 4-band indexed output"),
+pub static CROSSOVER_VST3_LAYOUTS: [AudioIOLayout; 11] = [
+    crossover_vst3_layout(0, CROSSOVER_INPUT_LAYOUTS[0], &CROSSOVER_VST3_AUX_OUTPUTS_2),
+    crossover_vst3_layout(1, CROSSOVER_INPUT_LAYOUTS[1], &CROSSOVER_VST3_AUX_OUTPUTS_1),
+    crossover_vst3_layout(2, CROSSOVER_INPUT_LAYOUTS[2], &CROSSOVER_VST3_AUX_OUTPUTS_4),
+    crossover_vst3_layout(3, CROSSOVER_INPUT_LAYOUTS[3], &CROSSOVER_VST3_AUX_OUTPUTS_6),
+    crossover_vst3_layout(4, CROSSOVER_INPUT_LAYOUTS[4], &CROSSOVER_VST3_AUX_OUTPUTS_8),
+    crossover_vst3_layout(5, CROSSOVER_INPUT_LAYOUTS[5], &CROSSOVER_VST3_AUX_OUTPUTS_8),
+    crossover_vst3_layout(
+        6,
+        CROSSOVER_INPUT_LAYOUTS[6],
+        &CROSSOVER_VST3_AUX_OUTPUTS_10,
+    ),
+    crossover_vst3_layout(
+        7,
+        CROSSOVER_INPUT_LAYOUTS[7],
+        &CROSSOVER_VST3_AUX_OUTPUTS_10,
+    ),
+    crossover_vst3_layout(
+        8,
+        CROSSOVER_INPUT_LAYOUTS[8],
+        &CROSSOVER_VST3_AUX_OUTPUTS_12,
+    ),
+    crossover_vst3_layout(
+        9,
+        CROSSOVER_INPUT_LAYOUTS[9],
+        &CROSSOVER_VST3_AUX_OUTPUTS_14,
+    ),
+    crossover_vst3_layout(
+        10,
+        CROSSOVER_INPUT_LAYOUTS[10],
+        &CROSSOVER_VST3_AUX_OUTPUTS_16,
+    ),
 ];
 
 #[doc(hidden)]
@@ -474,7 +797,113 @@ pub fn crossover_clap_output_channels(layout: &AudioIOLayout) -> Option<usize> {
     CROSSOVER_CLAP_LAYOUTS
         .iter()
         .position(|candidate| candidate == layout)
-        .map(|index| if index == 0 { 2 } else { (index + 1) * 2 })
+        .and_then(|_| {
+            layout
+                .main_output_channels
+                .map(|channels| channels.get() as usize)
+        })
+}
+
+#[doc(hidden)]
+pub fn crossover_input_layout_index(layout: &AudioIOLayout, api: PluginApi) -> Option<usize> {
+    match api {
+        PluginApi::Clap => CROSSOVER_CLAP_LAYOUTS
+            .iter()
+            .position(|candidate| candidate == layout)
+            .map(|index| index / 4),
+        PluginApi::Vst3 | PluginApi::Standalone => CROSSOVER_VST3_LAYOUTS
+            .iter()
+            .position(|candidate| candidate == layout),
+    }
+}
+
+#[doc(hidden)]
+pub fn crossover_input_layout(index: usize) -> Option<CrossoverInputLayout> {
+    CROSSOVER_INPUT_LAYOUTS.get(index).copied()
+}
+
+#[doc(hidden)]
+pub fn crossover_channel_to_sotf(
+    input_layout_index: usize,
+    api: PluginApi,
+    channel: usize,
+) -> Option<usize> {
+    let layout = *CROSSOVER_INPUT_LAYOUTS.get(input_layout_index)?;
+    if api == PluginApi::Clap {
+        return (channel < layout.channel_count()).then_some(channel);
+    }
+    layout.vst3_bus_to_sotf_permutation().get(channel).copied()
+}
+
+#[doc(hidden)]
+pub fn crossover_input_layout_count() -> usize {
+    CROSSOVER_INPUT_LAYOUTS.len()
+}
+
+#[doc(hidden)]
+pub fn crossover_configured_output_bands(params: &crate::params::DynamicParams) -> Option<usize> {
+    let mode = params.value("mode")?.as_int()?;
+    let topology = params.value("topology")?.as_int()?;
+    let band_count = params.value("band_count")?.as_int()?;
+    crossover_output_band_count(mode, topology, band_count)
+}
+
+#[doc(hidden)]
+pub fn crossover_output_band_count(
+    mode_index: i32,
+    topology_index: i32,
+    band_count_index: i32,
+) -> Option<usize> {
+    if !(0..=2).contains(&mode_index) || !(0..=1).contains(&topology_index) {
+        return None;
+    }
+    if mode_index == 2 && topology_index == 0 {
+        usize::try_from(band_count_index)
+            .ok()
+            .and_then(|index| index.checked_add(2))
+            .filter(|bands| (2..=4).contains(bands))
+    } else {
+        Some(1)
+    }
+}
+
+#[doc(hidden)]
+pub fn crossover_vst3_active_bus_mask(output_bands: usize) -> Option<u64> {
+    (1..=4)
+        .contains(&output_bands)
+        .then(|| (1_u64 << output_bands) - 1)
+}
+
+#[doc(hidden)]
+pub fn crossover_vst3_active_buses_support_structure(
+    active_buses: u64,
+    mode_index: i32,
+    topology_index: i32,
+    band_count_index: i32,
+) -> bool {
+    if active_buses & 1 == 0 || active_buses & !0b1111 != 0 {
+        return false;
+    }
+    crossover_output_band_count(mode_index, topology_index, band_count_index)
+        .and_then(crossover_vst3_active_bus_mask)
+        .is_some_and(|expected_buses| active_buses == expected_buses)
+}
+
+#[doc(hidden)]
+pub fn crossover_vst3_active_buses_match_params(
+    params: &crate::params::DynamicParams,
+    active_buses: u64,
+) -> bool {
+    let Some(mode) = params.value("mode").and_then(|value| value.as_int()) else {
+        return false;
+    };
+    let Some(topology) = params.value("topology").and_then(|value| value.as_int()) else {
+        return false;
+    };
+    let Some(band_count) = params.value("band_count").and_then(|value| value.as_int()) else {
+        return false;
+    };
+    crossover_vst3_active_buses_support_structure(active_buses, mode, topology, band_count)
 }
 
 #[doc(hidden)]
@@ -488,16 +917,22 @@ pub fn crossover_vst3_bus_arrangement(
     is_input: bool,
     bus_index: usize,
 ) -> Option<u64> {
-    if !(0..CROSSOVER_VST3_LAYOUTS.len()).contains(&layout_index) {
+    if layout_index >= CROSSOVER_VST3_LAYOUTS.len() || (is_input && bus_index != 0) {
         return None;
     }
-    if is_input {
-        return (bus_index == 0).then_some(band_split_vst3_stereo_arrangement());
+    if !is_input && bus_index >= 4 {
+        return None;
     }
-    match (layout_index, bus_index) {
-        (0..=2, 0) | (3, 0..=3) => Some(band_split_vst3_stereo_arrangement()),
-        _ => None,
-    }
+    let layout = *CROSSOVER_INPUT_LAYOUTS.get(layout_index)?;
+    Some(match layout.vst3_speaker_arrangement() {
+        Some(arrangement) => arrangement,
+        None => match layout.channel_count() {
+            1 => 0b1,
+            2 => band_split_vst3_stereo_arrangement(),
+            4 => 0b1111,
+            _ => return None,
+        },
+    })
 }
 
 #[doc(hidden)]
@@ -711,10 +1146,31 @@ macro_rules! sotf_nih_layouts {
     ("AmbisonicsDecoder", $default:expr) => {
         &$crate::wrapper::AMBISONICS_VST3_LAYOUTS
     };
+    ("EQ", $default:expr) => {
+        &$crate::wrapper::EQ_NATIVE_LAYOUTS
+    };
     ("BandSplit", $default:expr) => {
         &$crate::wrapper::BAND_SPLIT_VST3_LAYOUTS
     };
+    ("Crossover", $default:expr) => {
+        &$crate::wrapper::CROSSOVER_VST3_LAYOUTS
+    };
     ("Gate", $default:expr) => {{
+        const DEFAULT: nih_plug::prelude::AudioIOLayout = $default;
+        &[
+            DEFAULT,
+            nih_plug::prelude::AudioIOLayout {
+                aux_input_ports: &[nih_plug::audio_setup::new_nonzero_u32(2)],
+                names: nih_plug::audio_setup::PortNames {
+                    layout: Some("Stereo + Sidechain"),
+                    aux_inputs: &["Sidechain"],
+                    ..DEFAULT.names
+                },
+                ..DEFAULT
+            },
+        ]
+    }};
+    ("DeEsser", $default:expr) => {{
         const DEFAULT: nih_plug::prelude::AudioIOLayout = $default;
         &[
             DEFAULT,
@@ -748,6 +1204,23 @@ macro_rules! sotf_nih_is_ambisonics {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! sotf_nih_supports_surround {
+    ("AmbisonicsDecoder") => {
+        true
+    };
+    ("EQ") => {
+        true
+    };
+    ("Crossover") => {
+        true
+    };
+    ($other:literal) => {
+        false
+    };
+}
+
 /// Factory channel argument. BandMerge historically takes the output width.
 pub fn plugin_constructor_channels(plugin_type: &str) -> usize {
     match plugin_type {
@@ -755,6 +1228,20 @@ pub fn plugin_constructor_channels(plugin_type: &str) -> usize {
         "AmbisonicsDecoder" => 4,
         _ => 2,
     }
+}
+
+#[cfg(feature = "convolution")]
+pub(crate) fn convolution_reactivation_is_compatible(
+    prepared_geometry: Option<native_convolution_editor::Geometry>,
+    requested_geometry: native_convolution_editor::Geometry,
+    prepared_structural_fingerprint: u64,
+    requested_structural_fingerprint: u64,
+    prepared_non_restartable_fingerprint: u64,
+    requested_non_restartable_fingerprint: u64,
+) -> bool {
+    prepared_geometry == Some(requested_geometry)
+        && prepared_structural_fingerprint == requested_structural_fingerprint
+        && prepared_non_restartable_fingerprint == requested_non_restartable_fingerprint
 }
 
 /// Generate a complete nih-plug plugin struct from SOTF plugin metadata.
@@ -789,10 +1276,20 @@ macro_rules! sotf_nih_plugin {
             band_split_active_output_buses: u64,
             band_split_last_vst3_output_buses: Option<(usize, u64)>,
             band_split_vst3_legacy_packed: bool,
+            crossover_input_layout_index: usize,
+            crossover_active_output_buses: u64,
+            crossover_host_to_sotf: [usize; 16],
+            eq_native_host_to_sotf: [usize; 16],
             sample_rate: u32,
             structural_fingerprint: u64,
             non_restartable_structural_fingerprint: u64,
             transport: $crate::wrapper::transport::TransportTracker,
+            #[cfg(feature = "convolution")]
+            convolution_editor_service:
+                std::sync::Arc<$crate::wrapper::native_convolution_editor::ConvolutionEditorService>,
+            #[cfg(feature = "convolution")]
+            convolution_prepared_geometry:
+                Option<$crate::wrapper::native_convolution_editor::Geometry>,
         }
 
         impl Default for $struct_name {
@@ -829,6 +1326,14 @@ macro_rules! sotf_nih_plugin {
                     }
                 }
 
+                if matches!($plugin_type, "EQ") {
+                    for info in $crate::params::native_eq_pair_route_param_infos() {
+                        if !infos.iter().any(|existing| existing.id == info.id) {
+                            infos.push(info);
+                        }
+                    }
+                }
+
                 // Expose pre-migration ids to DAW hosts; internal sync and
                 // construction translate back to canonical keys.
                 for info in &mut infos {
@@ -854,10 +1359,18 @@ macro_rules! sotf_nih_plugin {
                     band_split_active_output_buses: 0,
                     band_split_last_vst3_output_buses: None,
                     band_split_vst3_legacy_packed: false,
+                    crossover_input_layout_index: 0,
+                    crossover_active_output_buses: 1,
+                    crossover_host_to_sotf: [0; 16],
+                    eq_native_host_to_sotf: [0; 16],
                     sample_rate: 48000,
                     structural_fingerprint: 0,
                     non_restartable_structural_fingerprint: 0,
                     transport: $crate::wrapper::transport::TransportTracker::default(),
+                    #[cfg(feature = "convolution")]
+                    convolution_editor_service: std::sync::Arc::default(),
+                    #[cfg(feature = "convolution")]
+                    convolution_prepared_geometry: None,
                 }
             }
         }
@@ -909,10 +1422,32 @@ macro_rules! sotf_nih_plugin {
                 });
 
             type SysExMessage = ();
-            type BackgroundTask = ();
+            type BackgroundTask = $crate::sotf_nih_background_task_type!($plugin_type);
 
             fn params(&self) -> std::sync::Arc<dyn nih_plug::prelude::Params> {
                 self.params.clone()
+            }
+
+            #[cfg(feature = "convolution")]
+            fn task_executor(&mut self) -> nih_plug::plugin::TaskExecutor<Self> {
+                $crate::sotf_nih_task_executor!(
+                    $plugin_type,
+                    self.params,
+                    self.convolution_editor_service
+                )
+            }
+
+            fn editor(
+                &mut self,
+                async_executor: nih_plug::prelude::AsyncExecutor<Self>,
+            ) -> Option<Box<dyn nih_plug::prelude::Editor>> {
+                $crate::sotf_nih_create_editor!(
+                    $plugin_type,
+                    Self,
+                    self.params,
+                    self.convolution_editor_service,
+                    async_executor
+                )
             }
 
             fn filter_state(state: &mut nih_plug::wrapper::state::PluginState) {
@@ -920,7 +1455,18 @@ macro_rules! sotf_nih_plugin {
                     $crate::wrapper::migrate_band_split_state(state);
                 } else if matches!($plugin_type, "Crossover") {
                     $crate::wrapper::migrate_crossover_state(state);
+                } else if matches!($plugin_type, "EQ") {
+                    $crate::params::migrate_eq_native_state(state);
                 }
+            }
+
+            fn state_restore_allows_audio_thread(
+                state: &nih_plug::wrapper::state::PluginState,
+            ) -> bool {
+                if matches!($plugin_type, "EQ") {
+                    return $crate::params::eq_state_restore_allows_audio_thread(state);
+                }
+                true
             }
 
             fn initialize(
@@ -929,9 +1475,97 @@ macro_rules! sotf_nih_plugin {
                 buffer_config: &nih_plug::prelude::BufferConfig,
                 context: &mut impl nih_plug::prelude::InitContext<Self>,
             ) -> bool {
+                let mut eq_pair_apply_attempt = matches!($plugin_type, "EQ")
+                    .then(|| $crate::params::EqPairApplyAttempt::new(self.params.clone()));
+                let candidate_sample_rate = buffer_config.sample_rate as u32;
+                if !matches!($plugin_type, "EQ") {
+                    self.sample_rate = candidate_sample_rate;
+                }
+                #[cfg(feature = "convolution")]
+                let convolution_editor_generation = if matches!($plugin_type, "Convolution") {
+                    self.params.convolution_pending_editor_generation()
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "convolution"))]
+                let convolution_editor_generation: Option<u64> = None;
+                let mut convolution_restore_attempt =
+                    (matches!($plugin_type, "Convolution")
+                        && convolution_editor_generation.is_none())
+                    .then(|| {
+                        $crate::params::ConvolutionRestoreAttempt::new(self.params.clone())
+                    });
                 let mut band_split_vst3_output_buses = None;
                 let mut band_split_vst3_layout_index = None;
                 let mut band_split_vst3_legacy_packed = false;
+                let crossover_input_layout_index = if matches!($plugin_type, "Crossover") {
+                    $crate::wrapper::crossover_input_layout_index(
+                        audio_io_layout,
+                        context.plugin_api(),
+                    )
+                } else {
+                    None
+                };
+                let eq_native_input_layout_index = if matches!($plugin_type, "EQ") {
+                    $crate::wrapper::eq_native_layout_index(audio_io_layout, context.plugin_api())
+                } else {
+                    None
+                };
+                if matches!($plugin_type, "EQ") && eq_native_input_layout_index.is_none() {
+                    return false;
+                }
+                if matches!($plugin_type, "Crossover") && crossover_input_layout_index.is_none() {
+                    return false;
+                }
+                let crossover_output_bands = if matches!($plugin_type, "Crossover") {
+                    let Some(output_bands) =
+                        $crate::wrapper::crossover_configured_output_bands(&self.params)
+                    else {
+                        return false;
+                    };
+                    Some(output_bands)
+                } else {
+                    None
+                };
+                let mut crossover_active_output_buses = None;
+                if matches!($plugin_type, "Crossover") {
+                    let input_channels = audio_io_layout
+                        .main_input_channels
+                        .map_or(0, |channels| channels.get() as usize);
+                    let Some(output_bands) = crossover_output_bands else {
+                        return false;
+                    };
+                    match context.plugin_api() {
+                        nih_plug::context::PluginApi::Clap => {
+                            let Some(layout_output_channels) =
+                                $crate::wrapper::crossover_clap_output_channels(audio_io_layout)
+                            else {
+                                return false;
+                            };
+                            if layout_output_channels != input_channels * output_bands {
+                                return false;
+                            }
+                        }
+                        nih_plug::context::PluginApi::Vst3
+                        | nih_plug::context::PluginApi::Standalone => {
+                            let Some(expected_buses) =
+                                $crate::wrapper::crossover_vst3_active_bus_mask(output_bands)
+                            else {
+                                return false;
+                            };
+                            let active_buses = context
+                                .vst3_active_audio_output_buses()
+                                .unwrap_or(expected_buses);
+                            if !$crate::wrapper::crossover_vst3_active_buses_match_params(
+                                &self.params,
+                                active_buses,
+                            ) {
+                                return false;
+                            }
+                            crossover_active_output_buses = Some(active_buses);
+                        }
+                    }
+                }
                 let band_split_num_bands = if matches!($plugin_type, "BandSplit") {
                     if context.plugin_api() == nih_plug::context::PluginApi::Clap {
                         $crate::wrapper::band_split_num_bands_for_clap_layout(audio_io_layout)
@@ -978,6 +1612,8 @@ macro_rules! sotf_nih_plugin {
                 };
                 if !Self::AUDIO_IO_LAYOUTS.contains(audio_io_layout)
                     && band_split_num_bands.is_none()
+                    && crossover_input_layout_index.is_none()
+                    && eq_native_input_layout_index.is_none()
                 {
                     return false;
                 }
@@ -1018,9 +1654,63 @@ macro_rules! sotf_nih_plugin {
                     }
                     self.ambisonics_target_layout = target_layout;
                 }
-                self.main_input_channels = audio_io_layout
+                let candidate_main_input_channels = audio_io_layout
                     .main_input_channels
                     .map_or(0, |channels| channels.get() as usize);
+                if !matches!($plugin_type, "EQ") {
+                    self.main_input_channels = candidate_main_input_channels;
+                }
+                if matches!($plugin_type, "EQ")
+                    && (audio_io_layout.main_output_channels.map_or(0, |channels| channels.get() as usize)
+                        != candidate_main_input_channels
+                        || !audio_io_layout.aux_input_ports.is_empty()
+                        || !audio_io_layout.aux_output_ports.is_empty()
+                        || !(1..=16).contains(&candidate_main_input_channels))
+                {
+                    return false;
+                }
+                let mut crossover_host_to_sotf = [0; 16];
+                if let Some(layout_index) = crossover_input_layout_index {
+                    if self.main_input_channels > crossover_host_to_sotf.len() {
+                        return false;
+                    }
+                    for host_channel in 0..self.main_input_channels {
+                        let Some(sotf_channel) = $crate::wrapper::crossover_channel_to_sotf(
+                            layout_index,
+                            context.plugin_api(),
+                            host_channel,
+                        ) else {
+                            return false;
+                        };
+                        crossover_host_to_sotf[host_channel] = sotf_channel;
+                    }
+                }
+                let mut eq_native_host_to_sotf = [0; 16];
+                if let Some(layout_index) = eq_native_input_layout_index {
+                    if candidate_main_input_channels > eq_native_host_to_sotf.len() {
+                        return false;
+                    }
+                    for host_channel in 0..candidate_main_input_channels {
+                        let Some(sotf_channel) = $crate::wrapper::eq_native_channel_to_sotf(
+                            layout_index,
+                            context.plugin_api(),
+                            host_channel,
+                        ) else {
+                            return false;
+                        };
+                        eq_native_host_to_sotf[host_channel] = sotf_channel;
+                    }
+                }
+                let eq_pair_route = if matches!($plugin_type, "EQ") {
+                    self.params
+                        .eq_pair_route_for_initialization(candidate_main_input_channels)
+                        .ok()
+                } else {
+                    None
+                };
+                if matches!($plugin_type, "EQ") && eq_pair_route.is_none() {
+                    return false;
+                }
                 let main_output_channels = audio_io_layout
                     .main_output_channels
                     .map_or(0, |channels| channels.get() as usize);
@@ -1033,26 +1723,174 @@ macro_rules! sotf_nih_plugin {
                 }
                 let total_declared_outputs = main_output_channels
                     + aux_output_channels.iter().sum::<usize>();
-                self.sample_rate = buffer_config.sample_rate as u32;
+                let total_inputs = audio_io_layout
+                    .main_input_channels
+                    .map_or(0, |channels| channels.get() as usize)
+                    + audio_io_layout
+                        .aux_input_ports
+                        .iter()
+                        .map(|channels| channels.get() as usize)
+                        .sum::<usize>();
                 let max_frames = buffer_config.max_buffer_size as usize;
 
-                match $crate::params::configuration::create_plugin(
-                    $plugin_type,
-                    self.sample_rate,
-                    &self.params,
-                ) {
-                    Ok(mut plugin) => {
+                #[cfg(feature = "convolution")]
+                let convolution_geometry =
+                    $crate::wrapper::native_convolution_editor::Geometry {
+                        sample_rate: candidate_sample_rate,
+                        max_frames,
+                        input_channels: total_inputs,
+                        output_channels: total_declared_outputs,
+                    };
+
+                // VST3 reactivation normally rebuilds the native DSP. For an
+                // unchanged Convolution instance, retain its prepared IR so
+                // reset does not reopen the user's source file. A failed or
+                // pending resource restore, topology change, or host geometry
+                // change must still take the detached-candidate path below.
+                #[cfg(feature = "convolution")]
+                if matches!($plugin_type, "Convolution")
+                    && convolution_editor_generation.is_none()
+                    && $crate::wrapper::convolution_reactivation_is_compatible(
+                        self.convolution_prepared_geometry,
+                        convolution_geometry,
+                        self.structural_fingerprint,
+                        self.params.structural_fingerprint(),
+                        self.non_restartable_structural_fingerprint,
+                        self.params.non_restartable_structural_fingerprint(),
+                    )
+                    && let Some(plugin) = self.inner.as_mut()
+                    && plugin.input_channels() == total_inputs
+                    && plugin.output_channels() == total_declared_outputs
+                    && self
+                        .params
+                        .convolution_prepared_resource_matches(plugin.as_ref())
+                {
+                    if let Err(error) = self
+                        .params
+                        .validate_convolution_realtime_values(plugin.as_ref())
+                    {
+                        log::error!(
+                            "Failed to validate Convolution reactivation parameters: {error}"
+                        );
+                        return false;
+                    }
+                    let latency = match u32::try_from(plugin.latency_samples()) {
+                        Ok(latency) => latency,
+                        Err(_) => {
+                            log::error!("Convolution latency does not fit the host ABI");
+                            return false;
+                        }
+                    };
+                    if let Err(error) = plugin.initialize(candidate_sample_rate) {
+                        log::error!("Failed to reinitialize prepared Convolution: {error}");
+                        return false;
+                    }
+                    if let Err(error) = self.params.sync_to_plugin(plugin.as_mut()) {
+                        // Every scalar value was validated above. This branch
+                        // protects the host contract if a future Convolution
+                        // setter adds a new state-dependent rejection.
+                        log::error!("Failed to sync Convolution reactivation parameters: {error}");
+                        return false;
+                    }
+                    context.set_latency_samples(latency);
+                    self.max_frames = max_frames;
+                    self.main_output_channels = main_output_channels;
+                    self.aux_output_channels = aux_output_channels;
+                    self.aux_output_count = audio_io_layout.aux_output_ports.len();
+                    if let Some(attempt) = convolution_restore_attempt.as_mut() {
+                        attempt.commit(candidate_sample_rate as f32);
+                    }
+                    self.convolution_editor_service
+                        .complete_initialization(convolution_geometry, None);
+                    self.structural_fingerprint = self.params.structural_fingerprint();
+                    self.non_restartable_structural_fingerprint = self
+                        .params
+                        .non_restartable_structural_fingerprint();
+                    self.transport = $crate::wrapper::transport::TransportTracker::default();
+                    return true;
+                }
+
+                #[cfg(feature = "convolution")]
+                let plugin_result = if let Some(generation) = convolution_editor_generation {
+                    self.convolution_editor_service
+                        .take_candidate(
+                            generation,
+                            $crate::wrapper::native_convolution_editor::Geometry {
+                                sample_rate: candidate_sample_rate,
+                                max_frames,
+                                input_channels: total_inputs,
+                                output_channels: total_declared_outputs,
+                            },
+                            self.params.convolution_editor_topology_fingerprint(),
+                        )
+                        .map(|plugin| (plugin, true))
+                } else {
+                    if matches!($plugin_type, "EQ") {
+                        let Some((route, _)) = eq_pair_route.as_ref() else {
+                            return false;
+                        };
+                        $crate::params::configuration::create_native_eq_plugin(
+                            candidate_sample_rate,
+                            &self.params,
+                            candidate_main_input_channels,
+                            route,
+                        )
+                    } else if matches!($plugin_type, "Crossover") {
+                        $crate::params::configuration::create_plugin_with_input_channels(
+                            $plugin_type,
+                            candidate_sample_rate,
+                            &self.params,
+                            candidate_main_input_channels,
+                        )
+                    } else {
+                        $crate::params::configuration::create_plugin(
+                            $plugin_type,
+                            candidate_sample_rate,
+                            &self.params,
+                        )
+                    }
+                    .map(|plugin| (plugin, false))
+                };
+                #[cfg(not(feature = "convolution"))]
+                let plugin_result = if matches!($plugin_type, "EQ") {
+                    let Some((route, _)) = eq_pair_route.as_ref() else {
+                        return false;
+                    };
+                    $crate::params::configuration::create_native_eq_plugin(
+                        candidate_sample_rate,
+                        &self.params,
+                        candidate_main_input_channels,
+                        route,
+                    )
+                } else if matches!($plugin_type, "Crossover") {
+                    $crate::params::configuration::create_plugin_with_input_channels(
+                        $plugin_type,
+                        candidate_sample_rate,
+                        &self.params,
+                        candidate_main_input_channels,
+                    )
+                } else {
+                    $crate::params::configuration::create_plugin(
+                        $plugin_type,
+                        candidate_sample_rate,
+                        &self.params,
+                    )
+                }
+                .map(|plugin| (plugin, false));
+
+                match plugin_result {
+                    Ok((mut plugin, editor_candidate)) => {
                         let input_channels = plugin.input_channels();
                         let output_channels = plugin.output_channels();
                         let main_inputs = audio_io_layout.main_input_channels
                             .map_or(0, |channels| channels.get() as usize);
-                        let total_inputs = main_inputs + audio_io_layout.aux_input_ports
-                            .iter().map(|channels| channels.get() as usize).sum::<usize>();
                         let uses_optional_band_buses = matches!($plugin_type, "BandSplit")
                             && context.plugin_api() == nih_plug::context::PluginApi::Vst3
                             && ($crate::wrapper::band_split_vst3_is_max_bus_layout(
                                 audio_io_layout,
                             ) || band_split_vst3_legacy_packed);
+                        let uses_optional_crossover_buses = matches!($plugin_type, "Crossover")
+                            && context.plugin_api() == nih_plug::context::PluginApi::Vst3;
                         let output_width_matches = if uses_optional_band_buses {
                             band_split_num_bands
                                 .is_some_and(|bands| {
@@ -1060,6 +1898,12 @@ macro_rules! sotf_nih_plugin {
                                         && output_channels
                                             >= audio_io_layout.main_output_channels.map_or(0, |v| v.get() as usize)
                                 })
+                                && output_channels <= total_declared_outputs
+                        } else if uses_optional_crossover_buses {
+                            crossover_output_bands
+                                .is_some_and(|bands| output_channels == input_channels * bands)
+                                && output_channels
+                                    >= audio_io_layout.main_output_channels.map_or(0, |v| v.get() as usize)
                                 && output_channels <= total_declared_outputs
                         } else {
                             output_channels == total_declared_outputs
@@ -1071,13 +1915,19 @@ macro_rules! sotf_nih_plugin {
                                 bands,
                             )
                         });
-                        // Gate's internal detector ignores the optional key bus.
+                        let active_crossover_buses_match = crossover_output_bands
+                            .and_then($crate::wrapper::crossover_vst3_active_bus_mask)
+                            .is_some_and(|expected| {
+                                crossover_active_output_buses == Some(expected)
+                            });
+                        // Gate and De-esser internal detectors ignore the optional key bus.
                         // External detection requires that the host selected it.
-                        let ignores_key_bus = matches!($plugin_type, "Gate")
+                        let ignores_key_bus = matches!($plugin_type, "Gate" | "DeEsser")
                             && input_channels == main_inputs;
                         if (input_channels != total_inputs && !ignores_key_bus)
                             || !output_width_matches
                             || (uses_optional_band_buses && !active_band_buses_match)
+                            || (uses_optional_crossover_buses && !active_crossover_buses_match)
                         {
                             log::error!(
                                 "{} DSP channels do not match the declared host layout",
@@ -1086,31 +1936,33 @@ macro_rules! sotf_nih_plugin {
                             return false;
                         }
 
-                        plugin = match plugins_bridge::prepare_standalone_plugin(plugin, max_frames) {
-                            Ok(plugin) => plugin,
-                            Err(error) => {
-                                log::error!("Failed to prepare {}: {error}", $plugin_type);
-                                return false;
-                            }
-                        };
-                        if matches!($plugin_type, "LinearPhaseEQ") {
-                            plugin = match sotf_host::AsyncTimelinePlugin::new(
-                                plugin,
-                                self.sample_rate,
-                                max_frames,
-                            ) {
-                                Ok(adapter) => Box::new(adapter),
-                                Err(e) => {
-                                    log::error!(
-                                        "Failed to initialize {} adapter: {e}",
-                                        $plugin_type
-                                    );
+                        if !editor_candidate {
+                            plugin = match plugins_bridge::prepare_standalone_plugin(plugin, max_frames) {
+                                Ok(plugin) => plugin,
+                                Err(error) => {
+                                    log::error!("Failed to prepare {}: {error}", $plugin_type);
                                     return false;
                                 }
                             };
-                        } else if let Err(e) = plugin.initialize(self.sample_rate) {
-                            log::error!("Failed to initialize {}: {e}", $plugin_type);
-                            return false;
+                            if matches!($plugin_type, "LinearPhaseEQ") {
+                                plugin = match sotf_host::AsyncTimelinePlugin::new(
+                                    plugin,
+                                    candidate_sample_rate,
+                                    max_frames,
+                                ) {
+                                    Ok(adapter) => Box::new(adapter),
+                                    Err(e) => {
+                                        log::error!(
+                                            "Failed to initialize {} adapter: {e}",
+                                            $plugin_type
+                                        );
+                                        return false;
+                                    }
+                                };
+                            } else if let Err(e) = plugin.initialize(candidate_sample_rate) {
+                                log::error!("Failed to initialize {}: {e}", $plugin_type);
+                                return false;
+                            }
                         }
 
                         // Validate the complete saved state on the control thread.
@@ -1128,11 +1980,23 @@ macro_rules! sotf_nih_plugin {
                                 return false;
                             }
                         };
-                        context.set_latency_samples(latency);
+                        let interleaved_in = vec![0.0; max_frames * input_channels];
+                        let interleaved_out = vec![0.0; max_frames * output_channels];
+                        if let Some((route, publish_draft)) = &eq_pair_route
+                            && let Err(error) = self
+                                .params
+                                .complete_eq_pair_route(route.clone(), *publish_draft)
+                        {
+                            log::error!("Failed to commit native EQ stereo-pair route: {error}");
+                            return false;
+                        }
 
-                        self.interleaved_in = vec![0.0; max_frames * input_channels];
-                        self.interleaved_out = vec![0.0; max_frames * output_channels];
+                        context.set_latency_samples(latency);
+                        self.interleaved_in = interleaved_in;
+                        self.interleaved_out = interleaved_out;
                         self.max_frames = max_frames;
+                        self.sample_rate = candidate_sample_rate;
+                        self.main_input_channels = candidate_main_input_channels;
                         self.main_output_channels = main_output_channels;
                         self.aux_output_channels = aux_output_channels;
                         self.aux_output_count = audio_io_layout.aux_output_ports.len();
@@ -1144,11 +2008,42 @@ macro_rules! sotf_nih_plugin {
                             ));
                         }
                         self.band_split_vst3_legacy_packed = band_split_vst3_legacy_packed;
+                        if let Some(layout_index) = crossover_input_layout_index {
+                            self.crossover_input_layout_index = layout_index;
+                            self.crossover_host_to_sotf = crossover_host_to_sotf;
+                        }
+                        if eq_native_input_layout_index.is_some() {
+                            self.eq_native_host_to_sotf = eq_native_host_to_sotf;
+                        }
+                        if let Some(active_buses) = crossover_active_output_buses {
+                            self.crossover_active_output_buses = active_buses;
+                        }
+                        if convolution_editor_generation.is_some() {
+                            self.params
+                                .complete_convolution_state_restore(candidate_sample_rate as f32);
+                            #[cfg(feature = "convolution")]
+                            if let Some(generation) = convolution_editor_generation {
+                                self.convolution_editor_service.mark_applied(generation);
+                            }
+                        } else if let Some(attempt) = convolution_restore_attempt.as_mut() {
+                            attempt.commit(candidate_sample_rate as f32);
+                        }
+                        #[cfg(feature = "convolution")]
+                        if matches!($plugin_type, "Convolution") {
+                            self.convolution_editor_service.complete_initialization(
+                                convolution_geometry,
+                                self.params.convolution_pending_editor_generation(),
+                            );
+                            self.convolution_prepared_geometry = Some(convolution_geometry);
+                        }
                         self.structural_fingerprint = self.params.structural_fingerprint();
                         self.non_restartable_structural_fingerprint = self
                             .params
                             .non_restartable_structural_fingerprint();
                         self.inner = Some(plugin);
+                        if let Some(attempt) = eq_pair_apply_attempt.as_mut() {
+                            attempt.commit();
+                        }
                         if band_split_num_bands.is_some() {
                             self.params.complete_band_split_layout_restore();
                         }
@@ -1249,9 +2144,18 @@ macro_rules! sotf_nih_plugin {
                 let optional_band_buses = matches!($plugin_type, "BandSplit")
                     && plugin_api == nih_plug::context::PluginApi::Vst3
                     && self.aux_output_count == 3;
+                let optional_crossover_buses = matches!($plugin_type, "Crossover")
+                    && plugin_api == nih_plug::context::PluginApi::Vst3
+                    && self.aux_output_count == 3;
+                let optional_output_buses = optional_band_buses || optional_crossover_buses;
+                let active_output_buses = if optional_crossover_buses {
+                    self.crossover_active_output_buses
+                } else {
+                    self.band_split_active_output_buses
+                };
                 let invalid_aux_output = aux.outputs.len() != self.aux_output_count
                     || aux.outputs.iter().enumerate().any(|(index, output_bus)| {
-                        if optional_band_buses {
+                        if optional_output_buses {
                             let slices = output_bus.as_slice_immutable();
                             slices.len() != self.aux_output_channels[index]
                                 || !(slices.iter().all(|slice| slice.len() == num_frames)
@@ -1261,8 +2165,8 @@ macro_rules! sotf_nih_plugin {
                                 || output_bus.samples() != num_frames
                         }
                     })
-                    || (optional_band_buses
-                        && (self.band_split_active_output_buses & 1 == 0
+                    || (optional_output_buses
+                        && (active_output_buses & 1 == 0
                             || buffer
                                 .as_slice_immutable()
                                 .iter()
@@ -1270,18 +2174,30 @@ macro_rules! sotf_nih_plugin {
                                 .any(|slice| slice.len() != num_frames)
                             || aux.outputs.iter().enumerate().any(|(index, output_bus)| {
                                 let bus_index = index + 1;
-                                let active =
-                                    self.band_split_active_output_buses & (1_u64 << bus_index) != 0;
+                                let active = active_output_buses & (1_u64 << bus_index) != 0;
+                                let source_offset = if optional_crossover_buses {
+                                    Some(bus_index * self.aux_output_channels[index])
+                                } else {
+                                    $crate::wrapper::band_split_vst3_output_channel_offset(
+                                        self.band_split_vst3_legacy_packed,
+                                        bus_index,
+                                    )
+                                };
+                                let legacy_reserved_bus = optional_band_buses
+                                    && self.band_split_vst3_legacy_packed
+                                    && $crate::wrapper::band_split_vst3_is_legacy_reserved_bus(
+                                        bus_index,
+                                    );
                                 active
                                     && (output_bus
                                         .as_slice_immutable()
                                         .iter()
                                         .any(|slice| slice.len() != num_frames)
-                                        || $crate::wrapper::band_split_vst3_output_channel_offset(
-                                            self.band_split_vst3_legacy_packed,
-                                            bus_index,
-                                        )
-                                        .is_some_and(|offset| offset + self.aux_output_channels[index] > output_channels))
+                                        || (!legacy_reserved_bus
+                                            && source_offset.map_or(true, |offset| {
+                                                offset + self.aux_output_channels[index]
+                                                    > output_channels
+                                            })))
                             })));
                 if input_sample_count.is_none()
                     || output_sample_count.is_none()
@@ -1302,9 +2218,25 @@ macro_rules! sotf_nih_plugin {
                     self.params.structural_fingerprint() != self.structural_fingerprint;
                 if structural_state_changed {
                     let non_restartable_state_changed =
-                        !matches!($plugin_type, "DynamicEQ")
-                            || self.params.non_restartable_structural_fingerprint()
-                                != self.non_restartable_structural_fingerprint;
+                        if matches!($plugin_type, "DynamicEQ") {
+                            self.params.non_restartable_structural_fingerprint()
+                                != self.non_restartable_structural_fingerprint
+                        } else if matches!($plugin_type, "Convolution") {
+                            #[cfg(feature = "convolution")]
+                            {
+                                !self
+                                    .convolution_editor_service
+                                    .allows_old_prepared_audio_for(
+                                        self.params.structural_fingerprint(),
+                                    )
+                            }
+                            #[cfg(not(feature = "convolution"))]
+                            {
+                                true
+                            }
+                        } else {
+                            true
+                        };
                     if non_restartable_state_changed {
                         // Construction-sized state is reconstructed by initialize().
                         // Only DynamicEQ's visible, non-automatable shelf controls may
@@ -1331,7 +2263,17 @@ macro_rules! sotf_nih_plugin {
                 // Interleave main inputs and any additional input bus.
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
-                    if ambisonics {
+                    if matches!($plugin_type, "Crossover" | "EQ") {
+                        for host_channel in 0..input_channels {
+                            let sotf_channel = if matches!($plugin_type, "Crossover") {
+                                self.crossover_host_to_sotf[host_channel]
+                            } else {
+                                self.eq_native_host_to_sotf[host_channel]
+                            };
+                            self.interleaved_in[frame * input_channels + sotf_channel] =
+                                channel_slices[host_channel][frame];
+                        }
+                    } else if ambisonics {
                         for ch in 0..input_channels {
                             self.interleaved_in[frame * input_channels + ch] =
                                 channel_slices[ch][frame];
@@ -1367,7 +2309,14 @@ macro_rules! sotf_nih_plugin {
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
                     for ch in 0..self.main_output_channels {
-                        let source_channel = if ambisonics
+                        let source_channel = if matches!($plugin_type, "Crossover") {
+                            let width = self.main_input_channels;
+                            let host_channel = ch % width;
+                            let band = ch / width;
+                            band * width + self.crossover_host_to_sotf[host_channel]
+                        } else if matches!($plugin_type, "EQ") {
+                            self.eq_native_host_to_sotf[ch]
+                        } else if ambisonics
                             && plugin_api == nih_plug::context::PluginApi::Vst3
                         {
                             match $crate::wrapper::ambisonics_vst3_output_to_sotf(
@@ -1400,23 +2349,30 @@ macro_rules! sotf_nih_plugin {
                 for (bus_index, output_bus) in aux.outputs.iter_mut().enumerate() {
                     let bus_channels = self.aux_output_channels[bus_index];
                     let bus_index_vst = bus_index + 1;
-                    if optional_band_buses {
-                        let active = self.band_split_active_output_buses & (1_u64 << bus_index_vst)
-                            != 0;
+                    if optional_output_buses {
+                        let active = active_output_buses & (1_u64 << bus_index_vst) != 0;
                         if !active {
                             continue;
                         }
                         let bus_slices = output_bus.as_slice();
-                        if let Some(source_offset) =
+                        let source_offset = if optional_crossover_buses {
+                            Some(bus_index_vst * bus_channels)
+                        } else {
                             $crate::wrapper::band_split_vst3_output_channel_offset(
                                 self.band_split_vst3_legacy_packed,
                                 bus_index_vst,
                             )
-                        {
+                        };
+                        if let Some(source_offset) = source_offset {
                             for frame in 0..num_frames {
                                 for channel in 0..bus_channels {
+                                    let source_channel = if optional_crossover_buses {
+                                        self.crossover_host_to_sotf[channel]
+                                    } else {
+                                        channel
+                                    };
                                     bus_slices[channel][frame] = self.interleaved_out
-                                        [frame * output_channels + source_offset + channel];
+                                        [frame * output_channels + source_offset + source_channel];
                                 }
                             }
                         } else {
@@ -1437,7 +2393,7 @@ macro_rules! sotf_nih_plugin {
                     }
                     output_channel_offset += bus_channels;
                 }
-                if !optional_band_buses && output_channel_offset != output_channels {
+                if !optional_output_buses && output_channel_offset != output_channels {
                     for channel in channel_slices.iter_mut() {
                         channel.fill(0.0);
                     }
@@ -1461,7 +2417,10 @@ macro_rules! sotf_nih_plugin {
                 &[nih_plug::prelude::Vst3SubCategory::Fx];
 
             fn vst3_restart_component_on_required_parameter_change() -> bool {
-                matches!($plugin_type, "DynamicEQ")
+                matches!(
+                    $plugin_type,
+                    "DynamicEQ" | "Convolution" | "EQ" | "DeEsser"
+                )
             }
 
             fn default_audio_io_layout() -> nih_plug::prelude::AudioIOLayout {
@@ -1470,8 +2429,14 @@ macro_rules! sotf_nih_plugin {
                 let layouts = <Self as nih_plug::prelude::Plugin>::AUDIO_IO_LAYOUTS;
                 if matches!($plugin_type, "BandSplit") {
                     layouts[1]
+                } else if matches!($plugin_type, "Crossover") {
+                    layouts[0]
                 } else {
-                    layouts[if matches!($plugin_type, "Gate") { 1 } else { 0 }]
+                    layouts[if matches!($plugin_type, "Gate" | "DeEsser") {
+                        1
+                    } else {
+                        0
+                    }]
                 }
             }
 
@@ -1488,13 +2453,29 @@ macro_rules! sotf_nih_plugin {
                         is_input,
                         bus_index,
                     )
+                } else if matches!($plugin_type, "Crossover") {
+                    $crate::wrapper::crossover_vst3_bus_arrangement(
+                        layout_index,
+                        is_input,
+                        bus_index,
+                    )
+                } else if matches!($plugin_type, "EQ") {
+                    $crate::wrapper::crossover_vst3_bus_arrangement(
+                        layout_index,
+                        is_input,
+                        bus_index,
+                    )
                 } else {
                     None
                 }
             }
 
             fn vst3_audio_bus_default_active(is_input: bool, bus_index: usize) -> bool {
-                !matches!($plugin_type, "BandSplit") || is_input || bus_index < 2
+                if matches!($plugin_type, "Crossover") {
+                    is_input || bus_index == 0
+                } else {
+                    !matches!($plugin_type, "BandSplit") || is_input || bus_index < 2
+                }
             }
 
             fn vst3_compatibility_layout_index(
@@ -1526,13 +2507,22 @@ macro_rules! sotf_nih_plugin {
                         (1, 0 | 1) => true,
                         _ => false,
                     }
+                } else if matches!($plugin_type, "Crossover") {
+                    if layout_index >= $crate::wrapper::crossover_input_layout_count() {
+                        return false;
+                    }
+                    if is_input {
+                        bus_index == 0
+                    } else {
+                        bus_index == 0
+                    }
                 } else {
                     Self::vst3_audio_bus_default_active(is_input, bus_index)
                 }
             }
 
             fn vst3_allows_inactive_audio_output_buses() -> bool {
-                matches!($plugin_type, "BandSplit")
+                matches!($plugin_type, "BandSplit" | "Crossover")
             }
 
         }
@@ -1547,13 +2537,15 @@ macro_rules! sotf_nih_plugin {
             const CLAP_SUPPORTS_AMBISONIC: bool =
                 $crate::sotf_nih_is_ambisonics!($plugin_type);
             const CLAP_SUPPORTS_SURROUND: bool =
-                $crate::sotf_nih_is_ambisonics!($plugin_type);
+                $crate::sotf_nih_supports_surround!($plugin_type);
 
             fn clap_audio_io_layouts() -> &'static [nih_plug::prelude::AudioIOLayout] {
                 if matches!($plugin_type, "AmbisonicsDecoder") {
                     &$crate::wrapper::AMBISONICS_CLAP_LAYOUTS
                 } else if matches!($plugin_type, "BandSplit") {
                     &$crate::wrapper::BAND_SPLIT_CLAP_LAYOUTS
+                } else if matches!($plugin_type, "Crossover") {
+                    &$crate::wrapper::CROSSOVER_CLAP_LAYOUTS
                 } else {
                     <Self as nih_plug::prelude::Plugin>::AUDIO_IO_LAYOUTS
                 }
@@ -1564,14 +2556,22 @@ macro_rules! sotf_nih_plugin {
                 is_input: bool,
                 port_index: usize,
             ) -> Option<&'static std::ffi::CStr> {
-                if !matches!($plugin_type, "AmbisonicsDecoder") || port_index != 0 {
+                if port_index != 0 {
                     return None;
                 }
-                Some(if is_input {
-                    clap_sys::ext::ambisonic::CLAP_PORT_AMBISONIC
+                if matches!($plugin_type, "AmbisonicsDecoder") {
+                    Some(if is_input {
+                        clap_sys::ext::ambisonic::CLAP_PORT_AMBISONIC
+                    } else {
+                        clap_sys::ext::surround::CLAP_PORT_SURROUND
+                    })
+                } else if matches!($plugin_type, "EQ") {
+                    Some(clap_sys::ext::surround::CLAP_PORT_SURROUND)
+                } else if matches!($plugin_type, "Crossover") && is_input {
+                    Some(clap_sys::ext::surround::CLAP_PORT_SURROUND)
                 } else {
-                    clap_sys::ext::surround::CLAP_PORT_SURROUND
-                })
+                    None
+                }
             }
 
             fn clap_ambisonic_config(
@@ -1595,6 +2595,18 @@ macro_rules! sotf_nih_plugin {
             ) -> Option<&'static [u8]> {
                 if matches!($plugin_type, "AmbisonicsDecoder") && !is_input && port_index == 0 {
                     $crate::wrapper::ambisonics_clap_channel_map(layout_index % 6)
+                } else if matches!($plugin_type, "Crossover") {
+                    $crate::wrapper::crossover_clap_channel_map(
+                        layout_index / 4,
+                        is_input,
+                        port_index,
+                    )
+                } else if matches!($plugin_type, "EQ") {
+                    $crate::wrapper::crossover_clap_channel_map(
+                        layout_index,
+                        true,
+                        port_index,
+                    )
                 } else {
                     None
                 }
@@ -1603,9 +2615,85 @@ macro_rules! sotf_nih_plugin {
             fn clap_surround_channel_mask_supported(channel_mask: u64) -> bool {
                 matches!($plugin_type, "AmbisonicsDecoder")
                     && $crate::wrapper::ambisonics_clap_channel_mask_supported(channel_mask)
+                    || (matches!($plugin_type, "Crossover")
+                        && $crate::wrapper::crossover_clap_channel_mask_supported(channel_mask))
+                    || (matches!($plugin_type, "EQ")
+                        && $crate::wrapper::crossover_clap_channel_mask_supported(channel_mask))
             }
         }
     };
+}
+
+#[cfg(all(test, feature = "convolution"))]
+mod convolution_reactivation_tests {
+    use super::{convolution_reactivation_is_compatible, native_convolution_editor::Geometry};
+
+    const GEOMETRY: Geometry = Geometry {
+        sample_rate: 48_000,
+        max_frames: 256,
+        input_channels: 2,
+        output_channels: 2,
+    };
+
+    #[test]
+    fn prepared_convolution_reuse_rejects_geometry_and_structural_changes() {
+        assert!(convolution_reactivation_is_compatible(
+            Some(GEOMETRY),
+            GEOMETRY,
+            7,
+            7,
+            11,
+            11,
+        ));
+
+        for changed in [
+            Geometry {
+                sample_rate: 44_100,
+                ..GEOMETRY
+            },
+            Geometry {
+                max_frames: 128,
+                ..GEOMETRY
+            },
+            Geometry {
+                input_channels: 1,
+                ..GEOMETRY
+            },
+            Geometry {
+                output_channels: 1,
+                ..GEOMETRY
+            },
+        ] {
+            assert!(!convolution_reactivation_is_compatible(
+                Some(GEOMETRY),
+                changed,
+                7,
+                7,
+                11,
+                11,
+            ));
+        }
+
+        assert!(!convolution_reactivation_is_compatible(
+            Some(GEOMETRY),
+            GEOMETRY,
+            7,
+            8,
+            11,
+            11,
+        ));
+        assert!(!convolution_reactivation_is_compatible(
+            Some(GEOMETRY),
+            GEOMETRY,
+            7,
+            7,
+            11,
+            12,
+        ));
+        assert!(!convolution_reactivation_is_compatible(
+            None, GEOMETRY, 7, 7, 11, 11,
+        ));
+    }
 }
 
 /// Convert an output-clock tail bound to the common native representation.
@@ -1678,6 +2766,88 @@ pub fn eq_config_json(
         .collect();
     let enabled = matches!(value("auto_gain_enabled"), Some(ParameterValue::Bool(true)));
     serde_json::json!({ "filters": filters, "auto_gain": { "enabled": enabled } }).to_string()
+}
+
+/// Build an EQ constructor config with committed native placement and pair
+/// routing. An Inherit placement and a disabled pair route stay absent so old
+/// presets retain their legacy channel behavior.
+#[doc(hidden)]
+pub fn eq_config_json_with_native_route(
+    value: impl Fn(&str) -> Option<sotf_host::parameters::ParameterValue>,
+    route: &crate::params::EqPairRoute,
+) -> Result<String, String> {
+    use sotf_host::parameters::ParameterValue;
+
+    let mut config: serde_json::Value = serde_json::from_str(&eq_config_json(|id| value(id)))
+        .map_err(|error| format!("EQ native configuration is invalid: {error}"))?;
+    let filters = config
+        .get_mut("filters")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "EQ native configuration is missing its filter array".to_string())?;
+    for (band, filter) in filters.iter_mut().enumerate() {
+        let placement_id = format!("filter_{band}_placement");
+        let placement = match value(&placement_id) {
+            Some(ParameterValue::Int(index)) => index,
+            None => 0,
+            Some(_) => {
+                return Err(format!(
+                    "EQ placement parameter '{placement_id}' is not an integer"
+                ));
+            }
+        };
+        let placement_name = match placement {
+            0 => None,
+            1 => Some("stereo"),
+            2 => Some("left"),
+            3 => Some("right"),
+            4 => Some("mid"),
+            5 => Some("side"),
+            index => {
+                return Err(format!(
+                    "EQ placement choice {index} is outside 0..=5 for band {band}"
+                ));
+            }
+        };
+        let object = filter
+            .as_object_mut()
+            .ok_or_else(|| format!("EQ filter {band} is not an object"))?;
+        if let Some(name) = placement_name {
+            object.insert(
+                "placement".to_string(),
+                serde_json::Value::String(name.to_string()),
+            );
+        } else {
+            object.remove("placement");
+        }
+    }
+    let object = config
+        .as_object_mut()
+        .ok_or_else(|| "EQ native configuration is not an object".to_string())?;
+    if route.enabled {
+        if route.pairs.is_empty() || route.pairs.len() > 8 {
+            return Err("EQ native stereo-pair route must contain 1..=8 pairs".to_string());
+        }
+        let mut used = 0_u16;
+        for [first, second] in &route.pairs {
+            if *first >= 16 || *second >= 16 || first == second {
+                return Err(format!("EQ stereo pair [{first}, {second}] is invalid"));
+            }
+            let pair_mask = (1_u16 << first) | (1_u16 << second);
+            if used & pair_mask != 0 {
+                return Err(format!("EQ stereo pair [{first}, {second}] overlaps another pair"));
+            }
+            used |= pair_mask;
+        }
+        object.insert(
+            "stereo_pairs".to_string(),
+            serde_json::to_value(&route.pairs)
+                .map_err(|error| format!("EQ stereo-pair route: {error}"))?,
+        );
+    } else {
+        object.remove("stereo_pairs");
+    }
+    serde_json::to_string(&config)
+        .map_err(|error| format!("EQ native configuration is invalid: {error}"))
 }
 
 /// Apply structural controls on the control thread. Their host representation
@@ -1854,6 +3024,9 @@ pub fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::P
         "LinearPhaseEQ" => linear_phase_eq::PARAMS,
         "SpectralCompressor" => spectral_compressor::PARAMS,
         "AmbisonicsDecoder" => ambisonics::PARAMS,
+        // DeEsser choice controls (mode, split topology) are String-typed at
+        // runtime; specs provide the stable integer Choice metadata.
+        "DeEsser" => de_esser::PARAMS,
         _ => &[],
     }
 }

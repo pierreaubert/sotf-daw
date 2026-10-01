@@ -1,6 +1,6 @@
 use crate::params::{
-    DynEqShape, default_active, default_band_ratio, default_band_threshold, default_frequency,
-    default_gain, default_q, default_shelf_slope, default_solo,
+    DynEqPlacement, DynEqShape, default_active, default_band_ratio, default_band_threshold,
+    default_frequency, default_gain, default_q, default_shelf_slope, default_solo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct DynEqBandParams {
     #[serde(default)]
     pub shape: DynEqShape,
+    #[serde(default)]
+    pub placement: DynEqPlacement,
     #[serde(default = "default_shelf_slope")]
     pub shelf_slope: f32,
     #[serde(default = "default_frequency")]
@@ -30,6 +32,7 @@ impl Default for DynEqBandParams {
     fn default() -> Self {
         Self {
             shape: DynEqShape::default(),
+            placement: DynEqPlacement::default(),
             shelf_slope: default_shelf_slope(),
             frequency: default_frequency(),
             q: default_q(),

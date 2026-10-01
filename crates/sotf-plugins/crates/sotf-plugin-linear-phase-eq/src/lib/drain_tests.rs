@@ -45,6 +45,18 @@ unsafe impl GlobalAlloc for CountAlloc {
 #[global_allocator]
 static ALLOCATOR: CountAlloc = CountAlloc;
 
+/// Run `f` on the calling thread with allocation/free counting enabled.
+///
+/// Returns the observed `(allocations, frees)` alongside `f`'s value.
+/// Shared with the dynamic-update lifecycle tests.
+pub(crate) fn count_allocs<R>(f: impl FnOnce() -> R) -> ((usize, usize), R) {
+    COUNTS.set((0, 0));
+    COUNTING.set(true);
+    let value = f();
+    COUNTING.set(false);
+    (COUNTS.get(), value)
+}
+
 fn make(channels: usize, rate: u32, length: usize, phase: usize, mix: f32) -> LinearPhaseEqPlugin {
     LinearPhaseEqPlugin::from_params(
         channels,
@@ -66,7 +78,9 @@ fn make(channels: usize, rate: u32, length: usize, phase: usize, mix: f32) -> Li
                 q: 0.8,
                 gain_db: 8.0,
                 active: true,
+                placement: None,
             }],
+            stereo_pairs: None,
         },
     )
     .unwrap()

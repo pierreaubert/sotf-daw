@@ -2,6 +2,12 @@
 
 ## Changes
 
+- Materialize ordered Crossover cutoffs when expanding Bands, reject unrepresentable expansions without changing settings, and preserve legacy PerChannel presets while editing dormant band counts.
+
+- Reject invalid EQ replacements before publishing a reduced plugin chain, preserving the running configuration.
+- Derive external-plugin channel planning from validated typed audio setup, including native Crossover multi-band outputs.
+- Preserve EQ filter placement and stereo pairs through settings, preset serialization and plugin construction, including muted-filter routing intent; reject conflicting channel-bank configurations.
+- Persist explicit Crossover band counts and dormant controls while preserving existing parameter indices; validate complete channel geometry before committing structural replacements.
 - Carry Ambisonics orders through 7, true-stereo convolution, DynamicEQ shelf controls, BandSplit compensation and typed Crossover topology through engine configuration and plugin construction.
 - Preserve the live graph on rejected native replacements and propagate committed channel counts and latency.
 - Drain queued isolated-plugin audio at end of stream, keeping ordinary silence distinct from EOS and preserving the final nonzero program block.

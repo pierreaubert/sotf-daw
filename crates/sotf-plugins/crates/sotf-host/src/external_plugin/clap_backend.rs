@@ -5,6 +5,10 @@ use super::native_backend::{
     NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata,
     native_parameter_id,
 };
+use super::native_crossover_layout::{
+    NativeCrossoverMode, NativeCrossoverOutputLayout, NativeCrossoverStructure,
+    NativeCrossoverTopology,
+};
 use super::plugin_descriptor::{PluginDescriptor, resolve_dynamic_library_path};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use clap_sys::audio_buffer::clap_audio_buffer;
@@ -370,11 +374,19 @@ impl ClapBackend {
             is_instrument: descriptor.is_instrument,
             max_block_frames,
             steady_time: 0,
-            active: true,
-            processing: true,
+            active: lifecycle.active,
+            processing: lifecycle.processing,
         };
         lifecycle.disarm();
         backend.rebuild_channel_pointers();
+        if let Some(setup @ NativePluginAudioSetup::Crossover { .. }) = audio_setup {
+            // CLAP plugins may reject activation while their structural mode
+            // and selected output configuration disagree. Reconfigure the
+            // initialized but inactive instance first; this applies the
+            // typed controls, selects the packed layout, and only then
+            // activates and starts processing.
+            backend.reconfigure_crossover_audio_setup(setup)?;
+        }
         Ok(backend)
     }
 
@@ -405,6 +417,11 @@ impl ClapBackend {
             }
             let channels =
                 query_audio_channels(plugin, requested.is_instrument, metadata, audio_setup)?;
+            let defer_activation =
+                matches!(audio_setup, Some(NativePluginAudioSetup::Crossover { .. }));
+            if defer_activation {
+                return Ok(channels);
+            }
             let activate = (*plugin).activate.ok_or_else(|| {
                 format!("CLAP plugin '{}' has no activate callback", metadata.name)
             })?;
@@ -452,6 +469,65 @@ impl ClapBackend {
                     .add(channel * self.max_block_frames)
             });
         }
+    }
+
+    fn apply_crossover_structure(
+        &mut self,
+        num_bands: u8,
+        topology: NativeCrossoverTopology,
+        mode: NativeCrossoverMode,
+    ) -> Result<(), String> {
+        let parameter_id =
+            |key: &str| ParameterId::from(format!("clap.{}", native_parameter_id(key)));
+        let mode_value = match mode {
+            NativeCrossoverMode::Lowpass => 0,
+            NativeCrossoverMode::Highpass => 1,
+            NativeCrossoverMode::Both => 2,
+        };
+        self.set_parameter(&parameter_id("mode"), &ParameterValue::Int(mode_value))?;
+        // Both native backends expose this two-choice parameter as a Bool.
+        self.set_parameter(
+            &parameter_id("topology"),
+            &ParameterValue::Bool(topology == NativeCrossoverTopology::PerChannel),
+        )?;
+        self.set_parameter(
+            &parameter_id("band_count"),
+            &ParameterValue::Int(i32::from(num_bands.saturating_sub(2))),
+        )?;
+
+        let params =
+            unsafe { plugin_extension::<clap_plugin_params>(self.plugin, CLAP_EXT_PARAMS) }
+                .ok_or_else(|| {
+                    format!(
+                        "CLAP plugin '{}' has no params extension",
+                        self.metadata.name
+                    )
+                })?;
+        let flush = unsafe { (*params).flush }.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' has no params flush callback",
+                self.metadata.name
+            )
+        })?;
+        let event_lists = ClapInputEventLists {
+            parameters: &self.pending_parameter_events,
+            automation: &[],
+            midi: &[],
+        };
+        let input_events = clap_input_events {
+            ctx: (&event_lists as *const ClapInputEventLists)
+                .cast_mut()
+                .cast(),
+            size: Some(input_event_count),
+            get: Some(input_event_get),
+        };
+        let output_events = clap_output_events {
+            ctx: ptr::null_mut(),
+            try_push: Some(discard_output_event),
+        };
+        unsafe { flush(self.plugin, &input_events, &output_events) };
+        self.pending_parameter_events.clear();
+        Ok(())
     }
 }
 
@@ -612,6 +688,33 @@ impl NativeExternalPluginBackend for ClapBackend {
         )))
     }
 
+    fn crossover_layout_parameters(&self) -> Result<Option<NativeCrossoverStructure>, String> {
+        if self.metadata.id != "org.spinorama.sotf.crossover" {
+            return Ok(None);
+        }
+        let mode =
+            read_visible_clap_integer_parameter(self.plugin, &self.metadata.name, "mode", 2)?;
+        let topology =
+            read_visible_clap_integer_parameter(self.plugin, &self.metadata.name, "topology", 1)?;
+        let num_bands =
+            read_visible_clap_integer_parameter(self.plugin, &self.metadata.name, "band_count", 2)?
+                + 2;
+        Ok(Some(NativeCrossoverStructure {
+            mode: match mode {
+                0 => NativeCrossoverMode::Lowpass,
+                1 => NativeCrossoverMode::Highpass,
+                2 => NativeCrossoverMode::Both,
+                _ => return Err(format!("invalid native Crossover mode {mode}")),
+            },
+            topology: match topology {
+                0 => NativeCrossoverTopology::Bands,
+                1 => NativeCrossoverTopology::PerChannel,
+                _ => return Err(format!("invalid native Crossover topology {topology}")),
+            },
+            num_bands: num_bands as u8,
+        }))
+    }
+
     fn reconfigure_ambisonics_audio_setup(
         &mut self,
         setup: &NativePluginAudioSetup,
@@ -622,6 +725,10 @@ impl NativeExternalPluginBackend for ClapBackend {
             }
             NativePluginAudioSetup::BandSplit { .. } => {
                 self.metadata.id == "org.spinorama.sotf.band-split"
+            }
+            NativePluginAudioSetup::Crossover { output_layout, .. } => {
+                self.metadata.id == "org.spinorama.sotf.crossover"
+                    && *output_layout == NativeCrossoverOutputLayout::ClapPacked
             }
         };
         if !recognized {
@@ -658,6 +765,16 @@ impl NativeExternalPluginBackend for ClapBackend {
             // owned on this control thread.
             unsafe { deactivate(self.plugin) };
             self.active = false;
+        }
+
+        if let NativePluginAudioSetup::Crossover {
+            num_bands,
+            topology,
+            mode,
+            ..
+        } = setup
+        {
+            self.apply_crossover_structure(*num_bands, *topology, *mode)?;
         }
 
         // SAFETY: The candidate has been deactivated and CLAP permits audio
@@ -738,6 +855,18 @@ impl NativeExternalPluginBackend for ClapBackend {
     ) -> Result<(), String> {
         if !matches!(setup, NativePluginAudioSetup::BandSplit { .. }) {
             return Err("CLAP BandSplit reconfiguration received a non-BandSplit setup".into());
+        }
+        self.reconfigure_ambisonics_audio_setup(setup)
+    }
+
+    fn reconfigure_crossover_audio_setup(
+        &mut self,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        if !matches!(setup, NativePluginAudioSetup::Crossover { .. }) {
+            return Err(
+                "CLAP Crossover reconfiguration requires the recognized packed route".into(),
+            );
         }
         self.reconfigure_ambisonics_audio_setup(setup)
     }
@@ -1143,6 +1272,83 @@ fn read_hidden_clap_integer_parameter(
     }
 }
 
+fn read_visible_clap_integer_parameter(
+    plugin: *const clap_plugin,
+    plugin_name: &str,
+    parameter_key: &str,
+    maximum_step: i32,
+) -> Result<i32, String> {
+    let parameter_id = native_parameter_id(parameter_key);
+    // SAFETY: Structural readback is performed on the initialized candidate
+    // during control-thread setup, never from process().
+    unsafe {
+        let params = plugin_extension::<clap_plugin_params>(plugin, CLAP_EXT_PARAMS)
+            .ok_or_else(|| format!("CLAP plugin '{plugin_name}' has no params extension"))?;
+        let count =
+            (*params).count.ok_or_else(|| {
+                format!("CLAP plugin '{plugin_name}' has no params count callback")
+            })?(plugin);
+        if count > MAX_EXPOSED_PARAMETERS {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' reported invalid parameter count {count}"
+            ));
+        }
+        let get_info = (*params).get_info.ok_or_else(|| {
+            format!("CLAP plugin '{plugin_name}' has no params metadata callback")
+        })?;
+        let get_value = (*params)
+            .get_value
+            .ok_or_else(|| format!("CLAP plugin '{plugin_name}' has no params value callback"))?;
+        let mut found = false;
+        for index in 0..count {
+            let mut info = std::mem::MaybeUninit::<clap_param_info>::zeroed();
+            if !get_info(plugin, index, info.as_mut_ptr()) {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' failed to describe parameter {index}"
+                ));
+            }
+            let info = info.assume_init();
+            if info.id != parameter_id {
+                continue;
+            }
+            if found {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' reports duplicate Crossover parameter '{parameter_key}'"
+                ));
+            }
+            found = true;
+            if info.flags & CLAP_PARAM_IS_STEPPED == 0
+                || info.flags & CLAP_PARAM_IS_HIDDEN != 0
+                || info.flags & CLAP_PARAM_IS_READONLY != 0
+                || info.min_value != 0.0
+                || info.max_value != f64::from(maximum_step)
+            {
+                return Err(format!(
+                    "CLAP plugin '{plugin_name}' Crossover parameter '{parameter_key}' has incompatible metadata"
+                ));
+            }
+        }
+        if !found {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' is missing Crossover parameter '{parameter_key}'"
+            ));
+        }
+        let mut value = 0.0;
+        if !get_value(plugin, parameter_id, &mut value) || !value.is_finite() {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' could not read Crossover parameter '{parameter_key}'"
+            ));
+        }
+        let rounded = value.round();
+        if (value - rounded).abs() > 1.0e-6 || rounded < 0.0 || rounded > f64::from(maximum_step) {
+            return Err(format!(
+                "CLAP plugin '{plugin_name}' Crossover parameter '{parameter_key}' has invalid value {value}"
+            ));
+        }
+        Ok(rounded as i32)
+    }
+}
+
 impl Drop for ClapBackend {
     fn drop(&mut self) {
         // SAFETY: This is the inverse CLAP lifecycle order for the live plugin.
@@ -1320,6 +1526,19 @@ unsafe fn query_audio_channels(
                 ));
             }
         }
+        if let Some(NativePluginAudioSetup::Crossover { input_layout, .. }) = audio_setup {
+            let expected_input = input_layout.channel_count();
+            let expected_output = audio_setup.expect("matched setup").channel_counts()?.1;
+            if input_count != 1
+                || output_count != 1
+                || input_channels != expected_input
+                || output_channels != expected_output
+            {
+                return Err(format!(
+                    "CLAP Crossover configuration negotiated {input_channels}→{output_channels} channels across {input_count}→{output_count} ports; expected {expected_input}→{expected_output} on one main port per direction"
+                ));
+            }
+        }
         Ok((input_channels, output_channels))
     }
 }
@@ -1359,6 +1578,38 @@ unsafe fn select_audio_setup(
         ),
         NativePluginAudioSetup::BandSplit { .. } => {
             return Err("CLAP BandSplit setup requires its packed main-port layout".into());
+        }
+        NativePluginAudioSetup::Crossover {
+            input_layout,
+            num_bands: _,
+            topology,
+            mode,
+            output_layout: NativeCrossoverOutputLayout::ClapPacked,
+        } => {
+            let (expected_input, expected_output) = setup.channel_counts()?;
+            if !matches!(
+                topology,
+                NativeCrossoverTopology::Bands | NativeCrossoverTopology::PerChannel
+            ) || !matches!(
+                mode,
+                NativeCrossoverMode::Lowpass
+                    | NativeCrossoverMode::Highpass
+                    | NativeCrossoverMode::Both
+            ) {
+                return Err("CLAP Crossover setup contains an unsupported topology or mode".into());
+            }
+            let config_id = input_layout
+                .clap_configuration_id(expected_output)
+                .ok_or_else(|| {
+                    format!(
+                        "CLAP Crossover output width {expected_output} is unsupported for {} channels",
+                        input_layout.channel_count()
+                    )
+                })?;
+            (config_id, expected_input, expected_output, None)
+        }
+        NativePluginAudioSetup::Crossover { .. } => {
+            return Err("CLAP Crossover setup requires the packed main-port layout".into());
         }
     };
 
