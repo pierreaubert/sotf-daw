@@ -93,6 +93,15 @@ pub struct ParameterMap {
     /// `None` entries (and every entry for non-DeEsser maps) fail closed:
     /// the refusal path treats them as changed values.
     de_esser_structural_normals: [Option<f64>; DE_ESSER_STRUCTURAL_IDS.len()],
+    /// Committed Speech Denoiser model index.
+    ///
+    /// Snapshotted on the control thread by `from_specs` (construction) and
+    /// refreshed by `refresh_speech_model_index` after every generic-path
+    /// restore commits, so the render-thread structural guard compares the
+    /// requested index against the committed choice without querying the
+    /// live DSP. `None` (and every non-Speech map) fails closed: the guard
+    /// refuses the write rather than risk a structural change.
+    speech_model_index: Option<usize>,
 }
 
 /// Prepared at construction, including inactive band slots from their schema.
@@ -159,6 +168,34 @@ const LINEAR_PHASE_EQ_PLACEMENT_LABELS: [&CStr; 6] = [
     c"Mid",
     c"Side",
 ];
+
+/// Speech Denoiser model identities in stable choice order.
+///
+/// Must match `sotf_plugin_speech_denoiser::model::MODEL_LABELS` entry for
+/// entry: 0 is the bundled full model, 1 and 2 the legacy models. Stored
+/// as process-static `CStr` literals (rather than referencing the plugin
+/// registry) so the C ABI getter returns pointers that need no handle and
+/// never allocate; `ffi_integration_tests` asserts the two stay identical.
+const SPEECH_DENOISER_MODEL_LABELS: [&CStr; 3] =
+    [c"RNNoise Full", c"RNNoise Legacy LQ", c"RNNoise Legacy SH"];
+
+/// Speech Denoiser model choice count.
+///
+/// Single source for the label table length and the realtime setter
+/// guard's quantization bound. A registry change must update the label
+/// table above and every use of this count together.
+pub(crate) const SPEECH_MODEL_CHOICE_COUNT: usize = SPEECH_DENOISER_MODEL_LABELS.len();
+
+fn is_speech_denoiser_type(plugin_type: &str) -> bool {
+    // Factory construction, the ParamSpec table, and the facade registry
+    // all accept these four spellings; `canonical_direct_plugin_type`
+    // leaves them unmodified, so the guard and labels must match every
+    // one to avoid an alias bypass.
+    matches!(
+        plugin_type,
+        "SpeechDenoiser" | "speech_denoiser" | "RNNoise" | "rnnoise"
+    )
+}
 
 /// Maximum EQ stored filters exposed as placement addresses.
 ///
@@ -408,6 +445,7 @@ impl ParameterMap {
             cached_kinds,
             plugin_type: plugin_type.to_string(),
             de_esser_structural_normals: [None; DE_ESSER_STRUCTURAL_IDS.len()],
+            speech_model_index: None,
         };
         // Snapshot the committed structural values on the control thread.
         // `from_specs` already allocates (vectors, C strings), so this live
@@ -421,6 +459,15 @@ impl ParameterMap {
                 *slot = map.get_normalized(plugin, id);
             }
             map.de_esser_structural_normals = normals;
+        }
+        // Snapshot the committed Speech model index on the control thread.
+        // `from_specs` already allocates, so the `ParameterId` construction
+        // and live DSP read never run on the render thread. The generic
+        // restore path keeps the same map across commits, so it refreshes
+        // this snapshot via `refresh_speech_model_index` after swapping in
+        // the replacement.
+        if is_speech_denoiser_type(plugin_type) {
+            map.refresh_speech_model_index(plugin);
         }
         map
     }
@@ -448,10 +495,17 @@ impl ParameterMap {
     }
 
     /// Return a static, NUL-terminated choice label for an enumerated
-    /// parameter. DynamicEQ shelf-shape labels are part of the public C ABI;
-    /// their storage does not depend on a handle or allocate on lookup.
+    /// parameter. DynamicEQ shelf-shape labels and Speech Denoiser model
+    /// labels are part of the public C ABI; their storage does not depend
+    /// on a handle or allocate on lookup. Out-of-range `choice_index`
+    /// values return `None` (a `NULL` C ABI response).
     pub fn choice_label_at(&self, index: usize, choice_index: usize) -> Option<*const c_char> {
         let param_id = self.param_id_at(index)?;
+        if is_speech_denoiser_type(&self.plugin_type) && param_id == "model" {
+            return SPEECH_DENOISER_MODEL_LABELS
+                .get(choice_index)
+                .map(|label| label.as_ptr());
+        }
         if is_crossover_type(&self.plugin_type) {
             return crossover_choice_label(param_id, choice_index);
         }
@@ -631,6 +685,37 @@ impl ParameterMap {
             _ => return None,
         };
         self.de_esser_structural_normals[index]
+    }
+
+    /// Committed Speech Denoiser model index for the realtime guard.
+    ///
+    /// Plain field read: no parsing, formatting, cloning, map lookup, or
+    /// live DSP query, so the render-thread refusal path cannot allocate.
+    /// `None` (non-Speech maps, unreadable state, out-of-range index)
+    /// fails closed and the guard refuses the write.
+    pub(crate) fn speech_model_index(&self) -> Option<usize> {
+        self.speech_model_index
+    }
+
+    /// Re-snapshot the committed Speech model index from a plugin.
+    ///
+    /// Call on the control thread only: construction (`from_specs`) and
+    /// after the generic restore path commits a replacement. The generic
+    /// path reuses the same map across commits, so without this refresh a
+    /// model-changing restore would leave the guard comparing against the
+    /// pre-restore choice. Out-of-range or unreadable values clear the
+    /// snapshot to `None`, which fails closed in the guard.
+    pub(crate) fn refresh_speech_model_index(&mut self, plugin: &dyn Plugin) {
+        if !is_speech_denoiser_type(&self.plugin_type) {
+            return;
+        }
+        let model = ParameterId::from("model");
+        self.speech_model_index = match plugin.get_parameter(&model) {
+            Some(ParameterValue::Int(index)) => usize::try_from(index)
+                .ok()
+                .filter(|index| *index < SPEECH_MODEL_CHOICE_COUNT),
+            _ => None,
+        };
     }
 }
 

@@ -6,11 +6,16 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
 
-/// Cache for verified working sample rates per device.
+/// Cache for verified working sample rates per device, channel count,
+/// and requested rate.
 /// The verification probe (creating test streams) is expensive (~300ms per rate)
 /// and can cause ALSA device locking issues if called repeatedly. Cache the result
 /// so subsequent calls for the same device return immediately.
-pub(super) type VerifiedRateCacheKey = (Option<String>, usize);
+/// The requested rate is part of the key: verification prefers the requester's
+/// rate, so a result verified for one request must never be served to a
+/// different requested rate. A cached fallback is still reused for the same
+/// request without re-probing.
+pub(super) type VerifiedRateCacheKey = (Option<String>, usize, u32);
 
 pub(super) static VERIFIED_RATE_CACHE: LazyLock<Mutex<HashMap<VerifiedRateCacheKey, u32>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -25,8 +30,13 @@ pub fn clear_verified_rate_cache() {
 pub(super) fn verified_rate_cache_key(
     output_device: Option<&str>,
     output_channels: usize,
+    requested_rate: u32,
 ) -> VerifiedRateCacheKey {
-    (output_device.map(|s| s.to_string()), output_channels)
+    (
+        output_device.map(|s| s.to_string()),
+        output_channels,
+        requested_rate,
+    )
 }
 
 pub(super) fn get_cached_verified_rate(cache_key: &VerifiedRateCacheKey) -> Option<u32> {

@@ -18,8 +18,8 @@ pub use factory::{
     PluginPickerExposure, PluginPresetSupport, PluginStabilityEvidence, PluginStabilitySummary,
     PluginSupportedInputLayouts, PluginUiKind, STANDARD_CHANNEL_WIDTHS, STEREO_CHANNEL_WIDTH,
     StabilityEvidenceState, ab_compare_catalog_entries, catalog_entry, create_plugin,
-    generic_app_catalog_entries, is_supported_plugin_type, plugin_stability_summary,
-    supported_plugin_types, validate_plugin_security_config,
+    create_plugin_with_external_key, generic_app_catalog_entries, is_supported_plugin_type,
+    plugin_stability_summary, supported_plugin_types, validate_plugin_security_config,
 };
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub use factory::{

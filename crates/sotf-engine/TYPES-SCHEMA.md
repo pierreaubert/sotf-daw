@@ -63,6 +63,7 @@ Persisted in plugin graph presets.
 | `nodes[].input_channels` | stable | Must be greater than `0`. |
 | `edges[].from_node` | stable | Source node ID. |
 | `edges[].to_node` | stable | Target node ID. |
+| `edges[].kind` | stable | Optional `audio` (default, omitted on serialize) or `sidechain` key-bus feed. |
 
 ## `AudioEngineState`
 

@@ -213,17 +213,64 @@ impl PluginGraphNodeConfig {
     }
 }
 
+/// How a graph edge feeds its target node.
+///
+/// `Audio` (the default) mixes into the target's program bus; `Sidechain`
+/// appends after the program bus into the target's key bus, which the
+/// target's detector reads instead of (or in addition to) the program.
+/// Serialized as `"sidechain"` only when non-default, so audio edges keep
+/// byte-identical persisted form; a missing `kind` field deserializes to
+/// `Audio` so graphs persisted before sidechain routing keep identical
+/// behavior in both directions.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginGraphEdgeKind {
+    /// Program audio mixed into the target's primary input channels.
+    #[default]
+    Audio,
+    /// Key signal appended after the program bus for external detection.
+    Sidechain,
+}
+
+impl PluginGraphEdgeKind {
+    /// Whether this kind keeps the legacy audio-only serialized form.
+    pub fn is_audio(&self) -> bool {
+        matches!(self, PluginGraphEdgeKind::Audio)
+    }
+}
+
 /// An edge connecting two nodes in the plugin graph
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PluginGraphEdgeConfig {
     pub from_node: usize,
     pub to_node: usize,
+    /// Edge kind; defaults to [`PluginGraphEdgeKind::Audio`] when absent
+    /// and is omitted on serialize when audio, so persisted audio-only
+    /// graphs keep byte-identical form in both directions.
+    #[serde(default, skip_serializing_if = "PluginGraphEdgeKind::is_audio")]
+    pub kind: PluginGraphEdgeKind,
 }
 
 impl PluginGraphEdgeConfig {
-    /// Create a plugin graph edge. Endpoint existence is validated by `PluginGraphConfig`.
+    /// Create an audio plugin graph edge. Endpoint existence is validated
+    /// by `PluginGraphConfig`.
     pub fn new(from_node: usize, to_node: usize) -> Self {
-        Self { from_node, to_node }
+        Self {
+            from_node,
+            to_node,
+            kind: PluginGraphEdgeKind::Audio,
+        }
+    }
+
+    /// Create a sidechain plugin graph edge feeding the target's key bus.
+    /// Endpoint existence is validated by `PluginGraphConfig`; key-bus
+    /// geometry is validated when the graph host is built.
+    pub fn sidechain(from_node: usize, to_node: usize) -> Self {
+        Self {
+            from_node,
+            to_node,
+            kind: PluginGraphEdgeKind::Sidechain,
+        }
     }
 }
 
@@ -440,5 +487,88 @@ mod tests {
                 .unwrap_err()
                 .contains("incoming count missing for node 1")
         );
+    }
+
+    #[test]
+    fn edge_kind_defaults_to_audio_and_constructors_agree() {
+        assert_eq!(PluginGraphEdgeKind::default(), PluginGraphEdgeKind::Audio);
+        let audio = PluginGraphEdgeConfig::new(0, 1);
+        assert_eq!(audio.kind, PluginGraphEdgeKind::Audio);
+        let key = PluginGraphEdgeConfig::sidechain(0, 1);
+        assert_eq!(key.from_node, 0);
+        assert_eq!(key.to_node, 1);
+        assert_eq!(key.kind, PluginGraphEdgeKind::Sidechain);
+    }
+
+    #[test]
+    fn edge_kind_is_version_tolerant() {
+        // Graphs persisted before sidechain routing carry no kind field and
+        // must keep audio behavior.
+        let legacy: PluginGraphEdgeConfig =
+            serde_json::from_value(json!({"from_node": 7, "to_node": 42})).unwrap();
+        assert_eq!(legacy.kind, PluginGraphEdgeKind::Audio);
+
+        let explicit_audio: PluginGraphEdgeConfig = serde_json::from_value(json!({
+            "from_node": 7,
+            "to_node": 42,
+            "kind": "audio"
+        }))
+        .unwrap();
+        assert_eq!(explicit_audio, PluginGraphEdgeConfig::new(7, 42));
+
+        let key: PluginGraphEdgeConfig = serde_json::from_value(json!({
+            "from_node": 7,
+            "to_node": 42,
+            "kind": "sidechain"
+        }))
+        .unwrap();
+        assert_eq!(key, PluginGraphEdgeConfig::sidechain(7, 42));
+
+        // Round-trips preserve the kind in both directions, and audio
+        // edges keep the byte-identical legacy form with no kind field.
+        assert_eq!(
+            serde_json::to_value(PluginGraphEdgeConfig::new(7, 42)).unwrap(),
+            json!({"from_node": 7, "to_node": 42})
+        );
+        for edge in [
+            PluginGraphEdgeConfig::new(1, 2),
+            PluginGraphEdgeConfig::sidechain(1, 2),
+        ] {
+            let value = serde_json::to_value(&edge).unwrap();
+            assert_eq!(
+                serde_json::from_value::<PluginGraphEdgeConfig>(value).unwrap(),
+                edge
+            );
+        }
+    }
+
+    #[test]
+    fn plugin_graph_validates_mixed_edge_endpoints_and_cycles() {
+        let error =
+            PluginGraphConfig::try_new(vec![node(1)], vec![PluginGraphEdgeConfig::sidechain(0, 1)])
+                .unwrap_err();
+        assert!(error.contains("from_node"));
+
+        // Sidechain participation does not exempt an edge from DAG order.
+        let error = PluginGraphConfig::try_new(
+            vec![node(0), node(1)],
+            vec![
+                PluginGraphEdgeConfig::new(0, 1),
+                PluginGraphEdgeConfig::sidechain(1, 0),
+            ],
+        )
+        .unwrap_err();
+        assert!(error.contains("acyclic"));
+
+        // A key tap alongside program audio is a valid DAG.
+        let graph = PluginGraphConfig::try_new(
+            vec![node(0), node(1), node(2)],
+            vec![
+                PluginGraphEdgeConfig::new(0, 2),
+                PluginGraphEdgeConfig::sidechain(1, 2),
+            ],
+        )
+        .unwrap();
+        assert_eq!(graph.edges.len(), 2);
     }
 }

@@ -299,6 +299,7 @@ impl CrossfeedPlugin {
             14 => Some(self.params.autogain_target_lufs as f64),
             15 => Some(self.params.autogain_max_gain_db as f64),
             16 => Some(self.params.autogain_smoothing_ms as f64),
+            17 => Some(self.params.head_yaw_deg as f64),
             _ => None,
         }
     }
@@ -343,23 +344,23 @@ impl CrossfeedPlugin {
             14 => params.autogain_target_lufs = CF[14].clamp_f64(value) as f32,
             15 => params.autogain_max_gain_db = CF[15].clamp_f64(value) as f32,
             16 => params.autogain_smoothing_ms = CF[16].clamp_f64(value) as f32,
+            17 => params.head_yaw_deg = CF[17].clamp_f64(value) as f32,
             _ => {}
         }
     }
 
     pub(super) fn rebuild_cached_parameters(&mut self) {
         self.cached_parameters = param_bridge::build_parameters(CF, |i| self.param_value(i));
-        // Append parameters not in PARAMS
-        self.cached_parameters.push(
-            Parameter::new_float(
-                "head_yaw_deg",
-                "Head Yaw",
-                self.params.head_yaw_deg,
-                -90.0,
-                90.0,
-            )
-            .with_group("Head Tracking"),
-        );
+        // The bridge does not copy spec groups into cached metadata; restore
+        // the long-standing Head Tracking group for the yaw control so its
+        // descriptor is unchanged by PARAMS registration.
+        if let Some(yaw) = self
+            .cached_parameters
+            .iter_mut()
+            .find(|param| param.id.as_str() == "head_yaw_deg")
+        {
+            yaw.group = CF[17].group.to_string();
+        }
     }
 
     pub(super) fn update_mb_feed_cache(&mut self) {
@@ -483,6 +484,21 @@ impl CrossfeedPlugin {
         );
     }
 
+    pub(super) fn update_mb_filters_for_rate(&mut self) {
+        // Initialization-only: Lr4Crossover bakes the construction sample
+        // rate into its coefficients and set_frequency never revisits it,
+        // so a plain coefficient update would leave crossovers designed for
+        // the wrong rate. Rebuild the banks at the actual rate; automation
+        // keeps the state-preserving set_frequency path below.
+        let sr = self.sample_rate as f32;
+        self.mb_low_l.reinit(self.params.mb_low_freq_hz, sr, 1);
+        self.mb_high_l
+            .reinit(self.params.mb_mid_high_freq_hz, sr, 1);
+        self.mb_low_r.reinit(self.params.mb_low_freq_hz, sr, 1);
+        self.mb_high_r
+            .reinit(self.params.mb_mid_high_freq_hz, sr, 1);
+    }
+
     pub(super) fn update_mb_filters(&mut self) {
         // Reinitializing the bank discards its delay history and clicks on
         // automation. The crossover API updates coefficients in place.
@@ -497,7 +513,10 @@ impl CrossfeedPlugin {
     pub(super) fn update_filters(&mut self) {
         self.update_bauer_filter();
         self.update_meier_filters();
-        self.update_mb_filters();
+        // Initialization-only (this function runs solely from initialize):
+        // rebuild the multiband banks at the actual rate. Automation uses
+        // update_mb_filters directly and must keep its delay history.
+        self.update_mb_filters_for_rate();
     }
 
     /// Advance head-yaw smoothing and update both fractional ITD paths for one
@@ -635,24 +654,13 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
     }
 
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
-        if id.as_str() == "head_yaw_deg" {
-            Some(ParameterValue::Float(self.params.head_yaw_deg))
-        } else {
-            param_bridge::get_parameter(CF, id, |i| self.param_value(i))
-        }
+        param_bridge::get_parameter(CF, id, |i| self.param_value(i))
     }
 
     fn current_values(&self) -> ParameterSet {
         let mut values = ParameterSet::new();
         for param in &self.cached_parameters {
-            if param.id.as_str() == "head_yaw_deg" {
-                values.insert(
-                    ParameterId::from("head_yaw_deg"),
-                    ParameterValue::Float(self.params.head_yaw_deg),
-                );
-            } else if let Some(v) =
-                param_bridge::get_parameter(CF, &param.id, |i| self.param_value(i))
-            {
+            if let Some(v) = param_bridge::get_parameter(CF, &param.id, |i| self.param_value(i)) {
                 values.insert(param.id.clone(), v);
             }
         }
@@ -700,30 +708,26 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
             if id.as_str() == "preset" {
                 continue;
             }
-            if id.as_str() == "head_yaw_deg" {
-                let v = value
-                    .as_float()
-                    .ok_or_else(|| "head_yaw_deg must be a float".to_string())?;
-                if !v.is_finite() {
-                    return Err("head_yaw_deg must be finite".to_string());
-                }
-                candidate.head_yaw_deg = v.clamp(-90.0, 90.0);
-                yaw_dirty = true;
+            // Yaw keeps its accepted typed contract on the batch path: only
+            // Float values reach the bridge (finite values then clamp like
+            // the realtime path). Other float controls are unaffected.
+            if id.as_str() == "head_yaw_deg" && !matches!(value, ParameterValue::Float(_)) {
+                return Err("head_yaw_deg must be a float".to_string());
+            }
+            let idx = param_bridge::set_parameter(CF, &id, &value, |i, v| {
+                Self::set_param_value_on(&mut candidate, i, v)
+            })?;
+            match idx {
+                0 => mode_dirty = true,
+                3 => mix_dirty = true,
+                4 | 5 => bauer_filter_dirty = true,
+                7 | 8 => mb_filters_dirty = true,
+                9..=11 => mb_feed_dirty = true,
+                13..=16 => autogain_dirty = true,
                 // Do NOT update delay lines here — process_in_place owns delay line updates
                 // via the yaw smoother, preventing the double-discontinuity bug.
-            } else {
-                let idx = param_bridge::set_parameter(CF, &id, &value, |i, v| {
-                    Self::set_param_value_on(&mut candidate, i, v)
-                })?;
-                match idx {
-                    0 => mode_dirty = true,
-                    3 => mix_dirty = true,
-                    4 | 5 => bauer_filter_dirty = true,
-                    7 | 8 => mb_filters_dirty = true,
-                    9..=11 => mb_feed_dirty = true,
-                    13..=16 => autogain_dirty = true,
-                    _ => {}
-                }
+                17 => yaw_dirty = true,
+                _ => {}
             }
         }
 
@@ -765,6 +769,9 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         id: &ParameterId,
         value: &ParameterValue,
     ) -> PluginResult<()> {
+        // Yaw keeps its accepted clamp contract: finite-only validation here,
+        // range clamping in the setter. Strict cached-metadata validation
+        // would reject out-of-range yaw instead of clamping it.
         if id.as_str() == "head_yaw_deg" {
             let yaw = value
                 .as_float()
@@ -819,12 +826,6 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
             autogain_dirty = true;
             mode_dirty = true;
             yaw_dirty = true;
-        } else if id.as_str() == "head_yaw_deg" {
-            let yaw = value
-                .as_float()
-                .ok_or_else(|| "head_yaw_deg must be a float".to_string())?;
-            candidate.head_yaw_deg = yaw.clamp(-90.0, 90.0);
-            yaw_dirty = true;
         } else {
             let index = param_bridge::set_parameter(CF, &id, &value, |i, v| {
                 Self::set_param_value_on(&mut candidate, i, v)
@@ -836,6 +837,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
                 7 | 8 => mb_filters_dirty = true,
                 9..=11 => mb_feed_dirty = true,
                 13..=16 => autogain_dirty = true,
+                17 => yaw_dirty = true,
                 _ => {}
             }
         }
@@ -888,6 +890,12 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
             .map_err(|e| e.to_string())?;
         self.auto_gain.set_enabled(self.params.autogain_enabled);
         self.auto_gain_frames = 0;
+        // Reconfiguration starts from zero state, identical to fresh
+        // construction: rate-relative filter history, crossover banks, and
+        // AutoGain gain/meter state from a previous rate are meaningless
+        // here and must not leak into the new configuration. reset()
+        // retains the coefficients just installed above.
+        self.reset();
         Ok(())
     }
 

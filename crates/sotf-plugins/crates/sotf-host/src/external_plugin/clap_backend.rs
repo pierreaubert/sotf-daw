@@ -204,6 +204,9 @@ pub(super) struct ClapBackend {
     output_storage: Vec<f32>,
     input_ptrs: Vec<*mut f32>,
     output_ptrs: Vec<*mut f32>,
+    /// Width of the second input port when a sidechain route is
+    /// negotiated; zero selects the single-port process path.
+    aux_input_channels: usize,
     parameters: Vec<Parameter>,
     parameter_bindings: Vec<ClapParameterBinding>,
     pending_parameter_events: Vec<clap_event_param_value>,
@@ -366,6 +369,12 @@ impl ClapBackend {
             output_storage: vec![0.0; output_channels.saturating_mul(max_block_frames)],
             input_ptrs: Vec::with_capacity(input_channels),
             output_ptrs: Vec::with_capacity(output_channels),
+            aux_input_channels: match audio_setup {
+                Some(NativePluginAudioSetup::Sidechain { key_channels, .. }) => {
+                    usize::from(*key_channels)
+                }
+                _ => 0,
+            },
             parameters,
             parameter_bindings,
             pending_parameter_events: Vec::with_capacity(pending_event_capacity),
@@ -388,7 +397,141 @@ impl ClapBackend {
             // activates and starts processing.
             backend.reconfigure_crossover_audio_setup(setup)?;
         }
+        if let Some(setup @ NativePluginAudioSetup::AmbisonicsCustom { .. }) = audio_setup {
+            // A fresh backend initializes from the bus alone and records the
+            // width-matching named index. Run the deliberate route so custom
+            // geometry is seeded before activation rebuilds the DSP.
+            backend.reconfigure_ambisonics_audio_setup(setup)?;
+        }
         Ok(backend)
+    }
+
+    fn suspend_for_state_load(&mut self) -> Result<(), String> {
+        if self.processing {
+            // SAFETY: The lifecycle callbacks were validated before this
+            // backend took ownership of the live plugin.
+            let stop = unsafe { (*self.plugin).stop_processing }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no stop_processing callback for state restore",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: This is the required lifecycle callback on the unique
+            // instance; the plugin pointer remains live.
+            unsafe { stop(self.plugin) };
+            self.processing = false;
+        }
+        if self.active {
+            // SAFETY: The plugin vtable remains live and owns the lifecycle
+            // callback for this instance.
+            let deactivate = unsafe { (*self.plugin).deactivate }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no deactivate callback for state restore",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: Processing has stopped and the instance is exclusively
+            // owned on this control thread.
+            unsafe { deactivate(self.plugin) };
+            self.active = false;
+        }
+        Ok(())
+    }
+
+    /// Restores the lifecycle state captured before a state load.
+    ///
+    /// Only restarts what was running: loads issued while deactivated
+    /// (deliberate reseeding) stay deactivated, while active restores
+    /// reactivate so NIH initialization re-runs with staged parameters.
+    fn resume_after_state_load(
+        &mut self,
+        was_processing: bool,
+        was_active: bool,
+    ) -> Result<(), String> {
+        if was_active {
+            // SAFETY: The instance is initialized and deactivated; its
+            // activation callback and library remain owned by this backend.
+            let activate = unsafe { (*self.plugin).activate }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no activate callback after state restore",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: Activation parameters retain the original sample rate
+            // and preallocated maximum block contract.
+            if !unsafe {
+                activate(
+                    self.plugin,
+                    self.sample_rate,
+                    1,
+                    self.max_block_frames as u32,
+                )
+            } {
+                return Err(format!(
+                    "CLAP plugin '{}' refused activation after state restore",
+                    self.metadata.name
+                ));
+            }
+            self.active = true;
+        }
+        if was_processing {
+            // SAFETY: The plugin has successfully activated and owns this callback.
+            let start = unsafe { (*self.plugin).start_processing }.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no start_processing callback after state restore",
+                    self.metadata.name
+                )
+            })?;
+            // SAFETY: The plugin is active and the host exclusively owns it.
+            if !unsafe { start(self.plugin) } {
+                return Err(format!(
+                    "CLAP plugin '{}' refused to start after state restore",
+                    self.metadata.name
+                ));
+            }
+            self.processing = true;
+        }
+        Ok(())
+    }
+
+    /// Writes restored state bytes without lifecycle transitions.
+    ///
+    /// Shared by `load_state` (which suspends and resumes around it).
+    /// Runs deactivated so active structural preflight accepts the state.
+    fn load_state_bytes(&mut self, state: &[u8]) -> Result<(), String> {
+        // SAFETY: Extension lookup and callback use the live initialized plugin
+        // on the non-realtime control path. The reader and byte slice outlive
+        // the synchronous `load` call.
+        unsafe {
+            let extension = plugin_extension::<clap_plugin_state>(self.plugin, CLAP_EXT_STATE)
+                .ok_or_else(|| {
+                    format!(
+                        "CLAP plugin '{}' has persisted state but does not expose clap.state",
+                        self.metadata.name
+                    )
+                })?;
+            let load = (*extension).load.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' has no state load callback",
+                    self.metadata.name
+                )
+            })?;
+            let mut reader = StateReader {
+                bytes: state,
+                offset: 0,
+            };
+            let stream = clap_istream {
+                ctx: (&mut reader as *mut StateReader<'_>).cast(),
+                read: Some(state_read),
+            };
+            if !load(self.plugin, &stream) {
+                return Err(format!(
+                    "CLAP plugin '{}' rejected persisted state",
+                    self.metadata.name
+                ));
+            }
+        }
+        Ok(())
     }
 
     unsafe fn initialize_instance(
@@ -729,6 +872,9 @@ impl NativeExternalPluginBackend for ClapBackend {
                 self.metadata.id == "org.spinorama.sotf.crossover"
                     && *output_layout == NativeCrossoverOutputLayout::ClapPacked
             }
+            // Bus-count changes recreate the instance (see
+            // `reconfigure_audio_setup`); this path never serves them.
+            NativePluginAudioSetup::Sidechain { .. } => false,
         };
         if !recognized {
             return Err(format!(
@@ -764,6 +910,27 @@ impl NativeExternalPluginBackend for ClapBackend {
             // owned on this control thread.
             unsafe { deactivate(self.plugin) };
             self.active = false;
+        }
+
+        if let NativePluginAudioSetup::AmbisonicsCustom { .. } = setup {
+            // NIH `initialize` takes the custom branch only when target 8
+            // plus staged geometry are already installed: derivation from
+            // the bus alone would record the width-matching named index.
+            // Seed the recognized fields while deactivated so the
+            // activation below rebuilds the custom DSP. Named setups keep
+            // their derivation path untouched.
+            let saved = self.save_state()?.ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' cannot seed custom Ambisonics state because native state is not serializable",
+                    self.metadata.name
+                )
+            })?;
+            let seeded = super::ambisonics_state_with_setup(
+                &saved,
+                super::plugin_format::PluginFormat::Clap,
+                setup,
+            )?;
+            self.load_state(&seeded)?;
         }
 
         if let NativePluginAudioSetup::Crossover {
@@ -878,6 +1045,12 @@ impl NativeExternalPluginBackend for ClapBackend {
         output_channels: usize,
         context: &crate::plugin::ProcessContext,
     ) -> Result<(), String> {
+        if !self.active || !self.processing {
+            return Err(format!(
+                "CLAP plugin '{}' is not processing after a failed lifecycle transition; refusing process call",
+                self.metadata.name
+            ));
+        }
         let frames = context.num_frames;
         if frames > self.max_block_frames {
             return Err(format!(
@@ -978,12 +1151,39 @@ impl NativeExternalPluginBackend for ClapBackend {
             });
         }
 
-        let input_buffer = clap_audio_buffer {
-            data32: self.input_ptrs.as_mut_ptr(),
-            data64: ptr::null_mut(),
-            channel_count: input_channels as u32,
-            latency: 0,
-            constant_mask: 0,
+        // A negotiated sidechain route splits the packed instance input
+        // (program channels first, key channels last) across the main
+        // port and the auxiliary key port.
+        let main_inputs = input_channels.saturating_sub(self.aux_input_channels);
+        let input_buffers = [
+            clap_audio_buffer {
+                data32: self.input_ptrs.as_mut_ptr(),
+                data64: ptr::null_mut(),
+                channel_count: main_inputs as u32,
+                latency: 0,
+                constant_mask: 0,
+            },
+            clap_audio_buffer {
+                data32: if self.aux_input_channels == 0 {
+                    ptr::null_mut()
+                } else {
+                    // SAFETY: `main_inputs + aux_input_channels` equals the
+                    // negotiated input width, verified against the channel
+                    // contract above, so the offset stays in bounds.
+                    unsafe { self.input_ptrs.as_mut_ptr().add(main_inputs) }
+                },
+                data64: ptr::null_mut(),
+                channel_count: self.aux_input_channels as u32,
+                latency: 0,
+                constant_mask: 0,
+            },
+        ];
+        let input_port_count: u32 = if input_channels == 0 {
+            0
+        } else if self.aux_input_channels == 0 {
+            1
+        } else {
+            2
         };
         let mut output_buffer = clap_audio_buffer {
             data32: self.output_ptrs.as_mut_ptr(),
@@ -1016,14 +1216,14 @@ impl NativeExternalPluginBackend for ClapBackend {
             audio_inputs: if input_channels == 0 {
                 ptr::null()
             } else {
-                &input_buffer
+                input_buffers.as_ptr()
             },
             audio_outputs: if output_channels == 0 {
                 ptr::null_mut()
             } else {
                 &mut output_buffer
             },
-            audio_inputs_count: u32::from(input_channels != 0),
+            audio_inputs_count: input_port_count,
             audio_outputs_count: u32::from(output_channels != 0),
             in_events: &input_events,
             out_events: &output_events,
@@ -1101,39 +1301,21 @@ impl NativeExternalPluginBackend for ClapBackend {
         if state.is_empty() {
             return Ok(());
         }
-        // SAFETY: Extension lookup and callback use the live initialized plugin
-        // on the non-realtime control path. The reader and byte slice outlive
-        // the synchronous `load` call.
-        unsafe {
-            let extension = plugin_extension::<clap_plugin_state>(self.plugin, CLAP_EXT_STATE)
-                .ok_or_else(|| {
-                    format!(
-                        "CLAP plugin '{}' has persisted state but does not expose clap.state",
-                        self.metadata.name
-                    )
-                })?;
-            let load = (*extension).load.ok_or_else(|| {
-                format!(
-                    "CLAP plugin '{}' has no state load callback",
-                    self.metadata.name
-                )
-            })?;
-            let mut reader = StateReader {
-                bytes: state,
-                offset: 0,
-            };
-            let stream = clap_istream {
-                ctx: (&mut reader as *mut StateReader<'_>).cast(),
-                read: Some(state_read),
-            };
-            if !load(self.plugin, &stream) {
-                return Err(format!(
-                    "CLAP plugin '{}' rejected persisted state",
-                    self.metadata.name
-                ));
+        // Structural preflight refuses while activated, so suspend first and
+        // restore the entry lifecycle state afterwards (mirrors VST3).
+        let was_processing = self.processing;
+        let was_active = self.active;
+        self.suspend_for_state_load()?;
+        let load_result = self.load_state_bytes(state);
+        let resume_result = self.resume_after_state_load(was_processing, was_active);
+        match (load_result, resume_result) {
+            (Ok(()), Ok(())) => Ok(()),
+            (Err(load), Ok(())) => Err(load),
+            (Ok(()), Err(resume)) => Err(resume),
+            (Err(load), Err(resume)) => {
+                Err(format!("{load}; additionally failed to resume: {resume}"))
             }
         }
-        Ok(())
     }
 
     fn latency_samples(&self) -> usize {
@@ -1485,6 +1667,22 @@ unsafe fn query_audio_channels(
         })?;
         let input_count = count(plugin, true);
         let output_count = count(plugin, false);
+        if let Some(NativePluginAudioSetup::Sidechain {
+            main_channels,
+            key_channels,
+        }) = audio_setup
+        {
+            return query_sidechain_channels(
+                ports,
+                plugin,
+                is_instrument,
+                metadata,
+                input_count,
+                output_count,
+                usize::from(*main_channels),
+                usize::from(*key_channels),
+            );
+        }
         if input_count > 1 || output_count > 1 {
             return Err(format!(
                 "CLAP plugin '{}' exposes {input_count} input and {output_count} output buses; SOTF currently supports one main bus per direction",
@@ -1663,6 +1861,22 @@ unsafe fn select_audio_setup(
         }
         NativePluginAudioSetup::Crossover { .. } => {
             return Err("CLAP Crossover setup requires the packed main-port layout".into());
+        }
+        NativePluginAudioSetup::Sidechain {
+            main_channels,
+            key_channels,
+        } => {
+            // SAFETY: Same lifecycle precondition as the caller: the
+            // plugin is initialized and not yet activated, the only
+            // state where CLAP port configurations may be selected.
+            return unsafe {
+                select_sidechain_audio_setup(
+                    plugin,
+                    metadata,
+                    usize::from(*main_channels),
+                    usize::from(*key_channels),
+                )
+            };
         }
     };
 
@@ -2016,6 +2230,144 @@ unsafe fn query_parameters(
     }
 }
 
+unsafe fn select_sidechain_audio_setup(
+    plugin: *const clap_plugin,
+    metadata: &NativePluginMetadata,
+    main_channels: usize,
+    key_channels: usize,
+) -> Result<(), String> {
+    // SAFETY: The plugin was initialized and has not been activated. CLAP
+    // audio-port configurations are selected only in that lifecycle state.
+    unsafe {
+        let configs =
+            plugin_extension::<clap_plugin_audio_ports_config>(plugin, CLAP_EXT_AUDIO_PORTS_CONFIG)
+                .ok_or_else(|| {
+                    format!(
+                        "CLAP sidechain plugin '{}' has no audio-ports-config extension",
+                        metadata.name
+                    )
+                })?;
+        let count = (*configs).count.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no count callback",
+                metadata.name
+            )
+        })?(plugin);
+        let get = (*configs).get.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no get callback",
+                metadata.name
+            )
+        })?;
+        let select = (*configs).select.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports-config extension has no select callback",
+                metadata.name
+            )
+        })?;
+        // Configuration ids are plugin-defined; scan for the main-plus-key
+        // geometry instead of assuming an index. Config descriptors omit
+        // non-main port widths, so the key width is verified through the
+        // audio-ports extension after selection.
+        let mut chosen = None;
+        for config_id in 0..count {
+            let mut info = std::mem::MaybeUninit::<clap_audio_ports_config>::zeroed();
+            if !get(plugin, config_id, info.as_mut_ptr()) {
+                continue;
+            }
+            let info = info.assume_init();
+            if info.id == config_id
+                && info.has_main_input
+                && info.has_main_output
+                && info.input_port_count == 2
+                && info.output_port_count == 1
+                && info.main_input_channel_count as usize == main_channels
+                && info.main_output_channel_count as usize == main_channels
+            {
+                chosen = Some(config_id);
+                break;
+            }
+        }
+        let config_id = chosen.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' exposes no {main_channels}-channel main plus key input configuration",
+                metadata.name
+            )
+        })?;
+        if !select(plugin, config_id) {
+            return Err(format!(
+                "CLAP plugin '{}' refused its sidechain audio configuration {config_id}",
+                metadata.name
+            ));
+        }
+        let ports = plugin_extension::<clap_plugin_audio_ports>(plugin, CLAP_EXT_AUDIO_PORTS)
+            .ok_or_else(|| {
+                format!(
+                    "CLAP plugin '{}' does not expose required clap.audio-ports",
+                    metadata.name
+                )
+            })?;
+        let port_count = (*ports).count.ok_or_else(|| {
+            format!(
+                "CLAP plugin '{}' audio-ports extension has no count callback",
+                metadata.name
+            )
+        })?;
+        let input_ports = port_count(plugin, true);
+        if input_ports != 2 {
+            return Err(format!(
+                "CLAP plugin '{}' sidechain configuration exposes {input_ports} input ports; expected the main bus plus one key bus",
+                metadata.name
+            ));
+        }
+        let key_width = port_channels_at(ports, plugin, true, 1, input_ports, metadata)?;
+        if key_width != key_channels {
+            return Err(format!(
+                "CLAP plugin '{}' sidechain key bus is {key_width} channels; expected {key_channels}",
+                metadata.name
+            ));
+        }
+        Ok(())
+    }
+}
+
+unsafe fn query_sidechain_channels(
+    ports: *const clap_plugin_audio_ports,
+    plugin: *const clap_plugin,
+    is_instrument: bool,
+    metadata: &NativePluginMetadata,
+    input_count: u32,
+    output_count: u32,
+    main_channels: usize,
+    key_channels: usize,
+) -> Result<(usize, usize), String> {
+    // SAFETY: Plugin is initialized and extension data is plugin-owned.
+    unsafe {
+        if input_count != 2 || output_count != 1 {
+            return Err(format!(
+                "CLAP plugin '{}' exposes {input_count} input and {output_count} output buses; the sidechain route requires the main bus plus one key bus and one output bus",
+                metadata.name
+            ));
+        }
+        let main = port_channels_at(ports, plugin, true, 0, input_count, metadata)?;
+        let key = port_channels_at(ports, plugin, true, 1, input_count, metadata)?;
+        let outputs = port_channels(ports, plugin, false, output_count, metadata)?;
+        if main != main_channels || key != key_channels || outputs != main_channels {
+            return Err(format!(
+                "CLAP plugin '{}' sidechain route negotiated {main}+{key} input channels and {outputs} output channels; expected {main_channels}+{key_channels} inputs and {main_channels} outputs",
+                metadata.name
+            ));
+        }
+        if is_instrument {
+            return Err(format!(
+                "CLAP plugin '{}' descriptor instrument flag conflicts with its sidechain input route",
+                metadata.name
+            ));
+        }
+        Ok((main_channels + key_channels, main_channels))
+    }
+}
+
 unsafe fn port_channels(
     ports: *const clap_plugin_audio_ports,
     plugin: *const clap_plugin,
@@ -2023,10 +2375,30 @@ unsafe fn port_channels(
     count: u32,
     metadata: &NativePluginMetadata,
 ) -> Result<usize, String> {
+    // SAFETY: Index 0 is valid whenever count > 0, as the callee checks.
+    unsafe { port_channels_at(ports, plugin, is_input, 0, count, metadata) }
+}
+
+unsafe fn port_channels_at(
+    ports: *const clap_plugin_audio_ports,
+    plugin: *const clap_plugin,
+    is_input: bool,
+    index: u32,
+    count: u32,
+    metadata: &NativePluginMetadata,
+) -> Result<usize, String> {
     if count == 0 {
         return Ok(0);
     }
-    // SAFETY: Caller guarantees a live audio-ports extension and count > 0.
+    if index >= count {
+        return Err(format!(
+            "CLAP plugin '{}' exposes {count} {} audio ports; port {index} is out of range",
+            metadata.name,
+            if is_input { "input" } else { "output" }
+        ));
+    }
+    // SAFETY: Caller guarantees a live audio-ports extension and a
+    // valid port index, checked above.
     unsafe {
         let get = (*ports).get.ok_or_else(|| {
             format!(
@@ -2035,9 +2407,9 @@ unsafe fn port_channels(
             )
         })?;
         let mut info = std::mem::MaybeUninit::<clap_audio_port_info>::zeroed();
-        if !get(plugin, 0, is_input, info.as_mut_ptr()) {
+        if !get(plugin, index, is_input, info.as_mut_ptr()) {
             return Err(format!(
-                "CLAP plugin '{}' failed to describe its {} audio port",
+                "CLAP plugin '{}' failed to describe its {} audio port {index}",
                 metadata.name,
                 if is_input { "input" } else { "output" }
             ));

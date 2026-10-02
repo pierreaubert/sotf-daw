@@ -1,8 +1,11 @@
 use super::super::PluginConfig;
+use super::super::PluginGraphEdgeKind;
 use super::misc::configure_host_oversampling;
 use super::misc::create_plugin;
 use crate::{EngineOversamplingPolicy, PluginBuildDiagnostic};
-use sotf_plugins::{EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost};
+use sotf_plugins::{
+    EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost, create_plugin_with_external_key,
+};
 
 fn plugin_instance_id(parameters: &serde_json::Value) -> Option<usize> {
     parameters
@@ -189,6 +192,9 @@ mod tests {
 /// Graph construction is atomic: every declared node and edge must load before
 /// a host is returned. Skipping a failed node would silently change topology
 /// and can leave an apparently built but disconnected processing DAG.
+/// Sidechain edges map to host key-bus routing; key-bus geometry is
+/// validated here so bus-less or over-wide key routing fails loudly
+/// instead of degrading the render.
 #[allow(dead_code)]
 pub fn build_plugin_graph_host(
     config: &super::super::types::PluginGraphConfig,
@@ -220,9 +226,16 @@ pub fn build_plugin_graph_host_with_policy(
     configure_host_oversampling(&mut host, oversampling_policy)
         .map_err(PluginBuildDiagnostic::host)?;
     let mut id_map: HashMap<usize, usize> = HashMap::new();
+    // Constructed (input, output) widths and types per config node id for
+    // sidechain key-bus validation below.
+    let mut widths: HashMap<usize, (usize, usize)> = HashMap::new();
+    let mut node_types: HashMap<usize, &str> = HashMap::new();
 
     for node_config in &config.nodes {
-        let plugin = create_plugin(
+        // Graph context: external-key buses are routable through sidechain
+        // edges, so keyed nodes construct here. Linear chains keep the
+        // default entry and its loud single-width refusal.
+        let plugin = create_plugin_with_external_key(
             &node_config.plugin_type,
             &node_config.parameters,
             node_config.input_channels,
@@ -239,6 +252,11 @@ pub fn build_plugin_graph_host_with_policy(
                 ),
             )
         })?;
+        widths.insert(
+            node_config.id,
+            (plugin.input_channels(), plugin.output_channels()),
+        );
+        node_types.insert(node_config.id, node_config.plugin_type.as_str());
         let host_id = host
             .add_node(format!("node_{}", node_config.id), plugin)
             .map_err(|error| {
@@ -268,6 +286,11 @@ pub fn build_plugin_graph_host_with_policy(
         id_map.insert(node_config.id, host_id);
     }
 
+    // Key channels already routed per target node id. The host packs each
+    // sidechain edge's source channels consecutively after the target's
+    // program bus in edge order and silently drops overflow, so cumulative
+    // key width is tracked in the same order and refused loudly instead.
+    let mut key_usage: HashMap<usize, usize> = HashMap::new();
     for edge in &config.edges {
         let from = *id_map.get(&edge.from_node).ok_or_else(|| {
             PluginBuildDiagnostic::graph_edge(
@@ -289,7 +312,47 @@ pub fn build_plugin_graph_host_with_policy(
                 ),
             )
         })?;
-        host.add_edge(GraphEdge::new(from, to)).map_err(|error| {
+        let host_edge = match edge.kind {
+            PluginGraphEdgeKind::Audio => GraphEdge::new(from, to),
+            PluginGraphEdgeKind::Sidechain => {
+                // Config validation guarantees both endpoints were built, so
+                // their constructed widths are present.
+                let (target_in, target_out) = widths[&edge.to_node];
+                if target_in <= target_out {
+                    let target_type = node_types[&edge.to_node];
+                    return Err(PluginBuildDiagnostic::graph_edge(
+                        edge.from_node,
+                        edge.to_node,
+                        format!(
+                            "Plugin graph sidechain edge {} -> {} is invalid: node {} ('{}') exposes no key bus ({} in vs {} out)",
+                            edge.from_node,
+                            edge.to_node,
+                            edge.to_node,
+                            target_type,
+                            target_in,
+                            target_out
+                        ),
+                    ));
+                }
+                let key_bus = target_in - target_out;
+                let source_out = widths[&edge.from_node].1;
+                let used = key_usage.entry(edge.to_node).or_default();
+                *used += source_out;
+                if *used > key_bus {
+                    let target_type = node_types[&edge.to_node];
+                    return Err(PluginBuildDiagnostic::graph_edge(
+                        edge.from_node,
+                        edge.to_node,
+                        format!(
+                            "Plugin graph sidechain edge {} -> {} is invalid: routed key width {} exceeds the {}-channel key bus of node {} ('{}')",
+                            edge.from_node, edge.to_node, *used, key_bus, edge.to_node, target_type
+                        ),
+                    ));
+                }
+                GraphEdge::sidechain(from, to)
+            }
+        };
+        host.add_edge(host_edge).map_err(|error| {
             PluginBuildDiagnostic::graph_edge(
                 edge.from_node,
                 edge.to_node,

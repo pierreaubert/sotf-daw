@@ -434,6 +434,7 @@ impl_param_accessors! {
             itd_delay_ms: f64,
             autogain_enabled: bool, autogain_target_lufs: f64,
             autogain_max_gain_db: f64, autogain_smoothing_ms: f64,
+            head_yaw_deg: f64,
         ]
     },
     Delay {

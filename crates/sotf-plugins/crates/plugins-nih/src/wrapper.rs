@@ -1549,6 +1549,9 @@ macro_rules! sotf_nih_plugin {
                 if matches!($plugin_type, "EQ") {
                     return $crate::params::eq_state_restore_allows_audio_thread(state);
                 }
+                if matches!($plugin_type, "SpeechDenoiser") {
+                    return $crate::params::speech_state_restore_allows_audio_thread(state);
+                }
                 true
             }
 

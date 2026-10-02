@@ -8,7 +8,7 @@
 
 // Rust guideline compliant 2026-02-21
 
-use nnnoiseless::{Activation, DenoiseState, RnnModel, parse_rnnn_model};
+use nnnoiseless::{parse_rnnn_model, Activation, DenoiseState, RnnModel};
 use std::borrow::Cow;
 
 const LQ_RNNN: &[u8] = include_bytes!(
@@ -19,8 +19,8 @@ const SH_RNNN: &[u8] = include_bytes!(
 );
 
 /// Root-pinned SHA-256 from `source-manifest.json` (upstream commit 3eee541).
-const LQ_SHA256: &str = "2782bbb3d1643464d370b2fafcf4e5ca7bfff4b7933bd6b6cd4d6b33484d6d7f";
-const SH_SHA256: &str = "de1392ba4a7bf9ecb93fe4cc8ed130309925bd39e9953dcbce6d5afd4f5ce90";
+const LQ_SHA256: &str = "1957528b752799fddf06270bc5469af7cf54c3badc358544ae2abed730943ff9";
+const SH_SHA256: &str = "70bb6685eb0c2a1d18e2918dca3fbfbd39317010b1802eb1b6ea73a92f3fdec0";
 /// FIPS 180-4 empty-string vector; self-checks the hasher below.
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
@@ -112,7 +112,10 @@ fn sha256_hex(data: &[u8]) -> String {
 fn weight_arrays(model: &RnnModel) -> Vec<(&'static str, &Cow<'static, [i8]>)> {
     vec![
         ("input_dense/bias", &model.input_dense.bias),
-        ("input_dense/input_weights", &model.input_dense.input_weights),
+        (
+            "input_dense/input_weights",
+            &model.input_dense.input_weights,
+        ),
         ("vad_gru/bias", &model.vad_gru.bias),
         ("vad_gru/input_weights", &model.vad_gru.input_weights),
         (
@@ -140,18 +143,15 @@ fn weight_arrays(model: &RnnModel) -> Vec<(&'static str, &Cow<'static, [i8]>)> {
             &model.denoise_output.input_weights,
         ),
         ("vad_output/bias", &model.vad_output.bias),
-        (
-            "vad_output/input_weights",
-            &model.vad_output.input_weights,
-        ),
+        ("vad_output/input_weights", &model.vad_output.input_weights),
     ]
 }
 
 #[test]
 fn staged_assets_match_pinned_manifest_hashes() {
     assert_eq!(sha256_hex(b""), EMPTY_SHA256);
-    assert_eq!(LQ_RNNN.len(), 297_227);
-    assert_eq!(SH_RNNN.len(), 297_213);
+    assert_eq!(LQ_RNNN.len(), 297_041);
+    assert_eq!(SH_RNNN.len(), 297_646);
     assert_eq!(sha256_hex(LQ_RNNN), LQ_SHA256);
     assert_eq!(sha256_hex(SH_RNNN), SH_SHA256);
 }
@@ -160,25 +160,44 @@ fn staged_assets_match_pinned_manifest_hashes() {
 fn staged_assets_parse_with_exact_graph_facts() {
     for (name, bytes) in [("lq", LQ_RNNN), ("sh", SH_RNNN)] {
         let model = parse_rnnn_model(bytes).unwrap();
-        assert_eq!((model.input_dense.nb_inputs, model.input_dense.nb_neurons), (42, 24));
-        assert_eq!((model.vad_gru.nb_inputs, model.vad_gru.nb_neurons), (24, 24));
-        assert_eq!((model.noise_gru.nb_inputs, model.noise_gru.nb_neurons), (90, 48));
+        assert_eq!(
+            (model.input_dense.nb_inputs, model.input_dense.nb_neurons),
+            (42, 24)
+        );
+        assert_eq!(
+            (model.vad_gru.nb_inputs, model.vad_gru.nb_neurons),
+            (24, 24)
+        );
+        assert_eq!(
+            (model.noise_gru.nb_inputs, model.noise_gru.nb_neurons),
+            (90, 48)
+        );
         assert_eq!(
             (model.denoise_gru.nb_inputs, model.denoise_gru.nb_neurons),
             (114, 96)
         );
         assert_eq!(
-            (model.denoise_output.nb_inputs, model.denoise_output.nb_neurons),
+            (
+                model.denoise_output.nb_inputs,
+                model.denoise_output.nb_neurons
+            ),
             (96, 22)
         );
-        assert_eq!((model.vad_output.nb_inputs, model.vad_output.nb_neurons), (24, 1));
+        assert_eq!(
+            (model.vad_output.nb_inputs, model.vad_output.nb_neurons),
+            (24, 1)
+        );
         // File activations are honored, including Tanh GRUs that differ from
         // the bundled model's Relu.
         assert_eq!(model.input_dense.activation, Activation::Tanh, "{name}");
         assert_eq!(model.vad_gru.activation, Activation::Tanh, "{name}");
         assert_eq!(model.noise_gru.activation, Activation::Relu, "{name}");
         assert_eq!(model.denoise_gru.activation, Activation::Tanh, "{name}");
-        assert_eq!(model.denoise_output.activation, Activation::Sigmoid, "{name}");
+        assert_eq!(
+            model.denoise_output.activation,
+            Activation::Sigmoid,
+            "{name}"
+        );
         assert_eq!(model.vad_output.activation, Activation::Sigmoid, "{name}");
         let total: usize = weight_arrays(&model).iter().map(|(_, a)| a.len()).sum();
         assert_eq!(total, 87_503, "{name}");
@@ -187,7 +206,7 @@ fn staged_assets_parse_with_exact_graph_facts() {
             .map(|(_, a)| a.iter().filter(|w| **w != 0).count())
             .sum();
         println!("{name}: {nonzero} nonzero of {total} weights");
-        assert!(nonzero > 0, "{name} weights are all zero");
+        assert!(nonzero > 0, "{} weights are all zero", name);
     }
 }
 
@@ -243,43 +262,121 @@ fn staged_transpose_matches_column_major_file_order() {
         let body = text.split_once('\n').unwrap().1;
         let mut tokens = body.split_whitespace();
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.input_dense.input_weights, 42, 24, &format!("{name} input_dense"));
-        check_bias(&mut tokens, &model.input_dense.bias, &format!("{name} input_dense"));
+        check_matrix(
+            &mut tokens,
+            &model.input_dense.input_weights,
+            42,
+            24,
+            &format!("{name} input_dense"),
+        );
+        check_bias(
+            &mut tokens,
+            &model.input_dense.bias,
+            &format!("{name} input_dense"),
+        );
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.vad_gru.input_weights, 24, 72, &format!("{name} vad_gru/in"));
-        check_matrix(&mut tokens, &model.vad_gru.recurrent_weights, 24, 72, &format!("{name} vad_gru/rec"));
+        check_matrix(
+            &mut tokens,
+            &model.vad_gru.input_weights,
+            24,
+            72,
+            &format!("{name} vad_gru/in"),
+        );
+        check_matrix(
+            &mut tokens,
+            &model.vad_gru.recurrent_weights,
+            24,
+            72,
+            &format!("{name} vad_gru/rec"),
+        );
         check_bias(&mut tokens, &model.vad_gru.bias, &format!("{name} vad_gru"));
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.noise_gru.input_weights, 90, 144, &format!("{name} noise_gru/in"));
-        check_matrix(&mut tokens, &model.noise_gru.recurrent_weights, 48, 144, &format!("{name} noise_gru/rec"));
-        check_bias(&mut tokens, &model.noise_gru.bias, &format!("{name} noise_gru"));
+        check_matrix(
+            &mut tokens,
+            &model.noise_gru.input_weights,
+            90,
+            144,
+            &format!("{name} noise_gru/in"),
+        );
+        check_matrix(
+            &mut tokens,
+            &model.noise_gru.recurrent_weights,
+            48,
+            144,
+            &format!("{name} noise_gru/rec"),
+        );
+        check_bias(
+            &mut tokens,
+            &model.noise_gru.bias,
+            &format!("{name} noise_gru"),
+        );
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.denoise_gru.input_weights, 114, 288, &format!("{name} denoise_gru/in"));
-        check_matrix(&mut tokens, &model.denoise_gru.recurrent_weights, 96, 288, &format!("{name} denoise_gru/rec"));
-        check_bias(&mut tokens, &model.denoise_gru.bias, &format!("{name} denoise_gru"));
+        check_matrix(
+            &mut tokens,
+            &model.denoise_gru.input_weights,
+            114,
+            288,
+            &format!("{name} denoise_gru/in"),
+        );
+        check_matrix(
+            &mut tokens,
+            &model.denoise_gru.recurrent_weights,
+            96,
+            288,
+            &format!("{name} denoise_gru/rec"),
+        );
+        check_bias(
+            &mut tokens,
+            &model.denoise_gru.bias,
+            &format!("{name} denoise_gru"),
+        );
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.denoise_output.input_weights, 96, 22, &format!("{name} denoise_output"));
-        check_bias(&mut tokens, &model.denoise_output.bias, &format!("{name} denoise_output"));
+        check_matrix(
+            &mut tokens,
+            &model.denoise_output.input_weights,
+            96,
+            22,
+            &format!("{name} denoise_output"),
+        );
+        check_bias(
+            &mut tokens,
+            &model.denoise_output.bias,
+            &format!("{name} denoise_output"),
+        );
         skip_header(&mut tokens);
-        check_matrix(&mut tokens, &model.vad_output.input_weights, 24, 1, &format!("{name} vad_output"));
-        check_bias(&mut tokens, &model.vad_output.bias, &format!("{name} vad_output"));
-        assert!(tokens.next().is_none(), "{name} has trailing tokens");
+        check_matrix(
+            &mut tokens,
+            &model.vad_output.input_weights,
+            24,
+            1,
+            &format!("{name} vad_output"),
+        );
+        check_bias(
+            &mut tokens,
+            &model.vad_output.bias,
+            &format!("{name} vad_output"),
+        );
+        assert!(tokens.next().is_none(), "{} has trailing tokens", name);
     }
 }
 
 #[test]
 fn loaded_states_infer_deterministically_and_differ_from_bundled() {
     nnnoiseless::prepare();
+    // Stimulus uses the API's 16-bit PCM-scale unit: production scales
+    // normalized audio by 32768 around process_frame, and the upstream
+    // demo assigns raw int16 samples as floats. Normalized-range noise
+    // would pin every model to identical delayed-input passthrough.
     let mut noise = vec![0.0f32; DenoiseState::FRAME_SIZE];
     let mut state = 0xA17Eu32;
     for sample in noise.iter_mut() {
         state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-        *sample = (state as f32 / u32::MAX as f32 - 0.5) * 0.6;
+        *sample = (state as f32 / u32::MAX as f32 - 0.5) * 0.6 * 32768.0;
     }
     for (name, bytes) in [("lq", LQ_RNNN), ("sh", SH_RNNN)] {
         let model = parse_rnnn_model(bytes).unwrap();
-        let mut first = DenoiseState::from_model(model.clone());
-        let mut second = DenoiseState::from_model(model);
+        let mut first = DenoiseState::from_model(model.clone()).unwrap();
+        let mut second = DenoiseState::from_model(model).unwrap();
         let mut bundled = DenoiseState::new();
         let mut out_first = vec![0.0f32; DenoiseState::FRAME_SIZE];
         let mut out_second = vec![0.0f32; DenoiseState::FRAME_SIZE];
@@ -289,7 +386,7 @@ fn loaded_states_infer_deterministically_and_differ_from_bundled() {
             second.process_frame(&mut out_second, &noise);
             bundled.process_frame(&mut out_bundled, &noise);
         }
-        assert!(out_first.iter().all(|s| s.is_finite()), "{name}");
+        assert!(out_first.iter().all(|s| s.is_finite()), "{}", name);
         assert_eq!(out_first, out_second, "{name} is nondeterministic");
         let max_diff = out_first
             .iter()

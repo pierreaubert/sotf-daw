@@ -26,6 +26,8 @@ mod config_update_queue;
 mod consts;
 mod error;
 mod estimate;
+#[cfg(test)]
+mod graph_sidechain_tests;
 mod handle;
 mod misc;
 mod state_helpers;

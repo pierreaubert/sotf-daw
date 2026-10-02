@@ -1,5 +1,13 @@
 # Unreleased
 
+## Features
+
+- Register `head_yaw_deg` as PARAMS index 17 (append-only; indices 0-16
+  frozen) with a Head Tracking layout control, so engine, native, and FFI
+  consumers discover the yaw control instead of silently running yaw 0.0.
+  DSP yaw law, clamp/reject validation, smoother, and preset-reset
+  semantics are unchanged.
+
 ## Fixes
 
 - Publish AutoGain measurements on a causal 10 Hz accepted-sample clock. A
@@ -8,6 +16,28 @@
 - Prepare stereo reference storage at construction. AutoGain-disabled callbacks
   retain their existing frozen-meter policy; reset and initialization restart
   the measurement phase. Raw processing and the separate mix ramp are unchanged.
+- Correct the usage guide: Target LUFS is the honored absolute AutoGain
+  target (not a reserved no-effect control), and the plugin has five modes
+  (Disable/Bauer/Meier/Multiband/HRTF), with ITD and head-yaw controls
+  documented.
+- Rebuild the multiband LR4 banks at the actual sample rate during
+  initialization. The banks previously kept coefficients designed for the
+  44.1 kHz construction rate at every rate, so documented crossover
+  frequencies drifted with the rate (correct only at 44.1 kHz).
+  Automation keeps the state-preserving coefficient path.
+- Reset all DSP state at the end of initialization so reconfiguration
+  starts identical to fresh construction; rate-relative filter history,
+  crossover banks, and AutoGain gain/meter state from a previous rate no
+  longer leak into the new configuration.
+
+## Tests
+
+- Add an independent complex 2x2 transfer oracle per mode (analytic RBJ/LR4/
+  delay reference vs coherent tone projection, 44.1/48/96/192 kHz) with
+  frozen 5e-3 complex and 0.05 rad phase bounds, mono/antiphase fold checks,
+  and compact-HRTF constant pins (gain, shadow slope, delay cap, folds).
+- Add independent settled AutoGain level checks (frozen +-0.5 dB absolute,
+  +-0.1 dB clamp pin) and rate-reconfiguration plus save/reload checks.
 
 # 0.5.14
 

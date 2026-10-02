@@ -49,6 +49,9 @@ mod aud142_crossover_state_tests;
 #[cfg(test)]
 #[path = "lib/aud144_preset_envelope_tests.rs"]
 mod aud144_preset_envelope_tests;
+#[cfg(test)]
+#[path = "lib/ffi_deesser_sidechain_tests.rs"]
+mod ffi_deesser_sidechain_tests;
 #[path = "lib/consts.rs"]
 mod consts;
 #[path = "lib/copy.rs"]

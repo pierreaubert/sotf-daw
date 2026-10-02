@@ -65,8 +65,8 @@ pub use types::{
     IsolatedExternalPluginWorkerStatus, LatencyCompensationMode, NetworkEndpointConfig,
     NetworkEndpointMode, NetworkEndpointStatus, OutputAccessMode, OutputAccessStatus,
     PLUGIN_BUILD_DIAGNOSTIC_PREFIX, PlaybackState, PluginBuildDiagnostic, PluginBuildTarget,
-    PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphNodeConfig, ServiceId,
-    SinkConfig, SinkOpenResult, SinkType, StreamMetadata,
+    PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphEdgeKind,
+    PluginGraphNodeConfig, ServiceId, SinkConfig, SinkOpenResult, SinkType, StreamMetadata,
 };
 
 // Re-export driver-common types for daemon and other consumers

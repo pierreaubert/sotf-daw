@@ -17,7 +17,7 @@ pub use crate::{
     IsolatedExternalPluginWorkerEvent, IsolatedExternalPluginWorkerStatus, LatencyCompensationMode,
     NetworkEndpointConfig, NetworkEndpointMode, NetworkEndpointStatus, OutputAccessMode,
     OutputAccessStatus, PLUGIN_BUILD_DIAGNOSTIC_PREFIX, PlaybackState, PluginBuildDiagnostic,
-    PluginBuildTarget, PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig,
+    PluginBuildTarget, PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphEdgeKind,
     PluginGraphNodeConfig, StreamMetadata,
 };
 

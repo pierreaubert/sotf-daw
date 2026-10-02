@@ -1562,6 +1562,10 @@ pub enum PluginSettings {
         autogain_max_gain_db: f64,
         #[serde(default = "default_crossfeed_autogain_smoothing_ms")]
         autogain_smoothing_ms: f64,
+        // Head tracking (PARAMS index 17; spec default is 0.0, so old saves
+        // without this key load with yaw 0.0 and render legacy audio).
+        #[serde(default)]
+        head_yaw_deg: f64,
     },
     Delay {
         #[serde(default = "default_delay_ms")]
@@ -2548,6 +2552,7 @@ impl PluginSettings {
                     autogain_target_lufs: p(cf, "autogain_target_lufs").default_f64(),
                     autogain_max_gain_db: p(cf, "autogain_max_gain_db").default_f64(),
                     autogain_smoothing_ms: p(cf, "autogain_smoothing_ms").default_f64(),
+                    head_yaw_deg: p(cf, "head_yaw_deg").default_f64(),
                 }
             }
             PluginType::Delay => {

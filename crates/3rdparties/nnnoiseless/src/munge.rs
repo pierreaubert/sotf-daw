@@ -11,6 +11,10 @@
 //! column-major order. This script was used to swap the order, and I've kept in around in case
 //! anyone wants to re-train the model and needs to swap the orders again.
 mod model;
+// The binary embeds the checked-loader module (unused here) so the shared
+// `rnn.rs` validated constructor resolves in this target exactly as in the
+// library; weight reordering below is unchanged.
+mod model_load;
 mod rnn;
 
 use rnn::Activation;

@@ -164,8 +164,16 @@ impl DenoiseState {
     /// like `new()`. Callers build the model off the audio callback (for
     /// example with the checked `.rnnn` loader) and adopt the returned
     /// state under their own quiescence contract.
-    pub fn from_model(model: crate::rnn::RnnModel) -> Box<DenoiseState> {
-        Box::new(DenoiseState {
+    ///
+    /// # Errors
+    ///
+    /// Returns `ModelLoadError::InconsistentModel` when the model
+    /// disagrees with the fixed fork graph; see
+    /// [`RnnState::from_model`](crate::rnn::RnnState::from_model).
+    pub fn from_model(
+        model: crate::rnn::RnnModel,
+    ) -> Result<Box<DenoiseState>, crate::model_load::ModelLoadError> {
+        Ok(Box::new(DenoiseState {
             core: DenoiseCore {
                 analysis_mem: [0.0; FRAME_SIZE],
                 cepstral_mem: [[0.0; NB_BANDS]; CEPS_MEM],
@@ -177,9 +185,9 @@ impl DenoiseState {
                 mem_hp_x: [0.0; 2],
                 lastg: [0.0; NB_BANDS],
             },
-            rnn: crate::rnn::RnnState::from_model(model),
+            rnn: crate::rnn::RnnState::from_model(model)?,
             scratch: DenoiseScratch::new_boxed(),
-        })
+        }))
     }
 
     /// Processes a chunk of samples.

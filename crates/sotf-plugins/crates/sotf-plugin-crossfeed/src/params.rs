@@ -30,6 +30,7 @@ use d::d_bauer_feed_db;
 use d::d_crossfeed_mode;
 use d::d_crossfeed_preset;
 use d::d_enabled;
+use d::d_head_yaw_deg;
 use d::d_itd_delay_ms;
 use d::d_mb_high_feed_db;
 use d::d_mb_low_feed_db;
@@ -82,6 +83,8 @@ pub struct Params {
     pub autogain_max_gain_db: f64,
     #[serde(default = "d_autogain_smoothing_ms")]
     pub autogain_smoothing_ms: f64,
+    #[serde(default = "d_head_yaw_deg")]
+    pub head_yaw_deg: f64,
 }
 
 impl Default for Params {
@@ -104,6 +107,7 @@ impl Default for Params {
             autogain_target_lufs: d_autogain_target_lufs(),
             autogain_max_gain_db: d_autogain_max_gain_db(),
             autogain_smoothing_ms: d_autogain_smoothing_ms(),
+            head_yaw_deg: d_head_yaw_deg(),
         }
     }
 }
@@ -133,6 +137,7 @@ impl PluginParamDef for Params {
             14 => Some(self.autogain_target_lufs),
             15 => Some(self.autogain_max_gain_db),
             16 => Some(self.autogain_smoothing_ms),
+            17 => Some(self.head_yaw_deg),
             _ => None,
         }
     }
@@ -156,6 +161,7 @@ impl PluginParamDef for Params {
             14 => self.autogain_target_lufs = PARAMS[14].clamp_f64(value),
             15 => self.autogain_max_gain_db = PARAMS[15].clamp_f64(value),
             16 => self.autogain_smoothing_ms = PARAMS[16].clamp_f64(value),
+            17 => self.head_yaw_deg = PARAMS[17].clamp_f64(value),
             _ => {}
         }
     }

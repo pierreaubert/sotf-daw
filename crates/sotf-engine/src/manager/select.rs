@@ -10,7 +10,8 @@ use crate::devices::verify_working_sample_rate;
 /// audio callbacks (e.g., dmix configured for 44100Hz but hardware only works at 48000Hz).
 /// The decoder will resample when the file rate differs from the device rate.
 ///
-/// Results are cached per device to avoid repeated expensive probes.
+/// Results are cached per device, channel count, and requested rate
+/// to avoid repeated expensive probes.
 pub fn select_output_sample_rate(file_sample_rate: u32, output_device: Option<&str>) -> u32 {
     select_output_sample_rate_for_channels(file_sample_rate, output_device, 2)
 }
@@ -20,9 +21,28 @@ pub fn select_output_sample_rate_for_channels(
     output_device: Option<&str>,
     output_channels: usize,
 ) -> u32 {
+    select_output_sample_rate_with_verifier(
+        file_sample_rate,
+        output_device,
+        output_channels,
+        verify_working_sample_rate,
+    )
+}
+
+/// Select the output sample rate using an injectable verifier.
+///
+/// Private seam: production passes the hardware verifier; tests pass a
+/// scripted verifier. Selection, caching, and fallback behavior are
+/// identical in both cases.
+pub(super) fn select_output_sample_rate_with_verifier(
+    file_sample_rate: u32,
+    output_device: Option<&str>,
+    output_channels: usize,
+    verify: impl Fn(Option<&str>, u32, usize) -> Option<u32>,
+) -> u32 {
     // Check cache first — avoids repeated 300ms+ probes that can block the UI
     // and cause ALSA device locking issues
-    let cache_key = verified_rate_cache_key(output_device, output_channels);
+    let cache_key = verified_rate_cache_key(output_device, output_channels, file_sample_rate);
     if let Some(cached_rate) = get_cached_verified_rate(&cache_key) {
         if cached_rate == file_sample_rate {
             log::debug!(
@@ -46,9 +66,8 @@ pub fn select_output_sample_rate_for_channels(
 
     // Verify the candidate rate actually produces working audio callbacks.
     // This catches ALSA systems where the reported default rate doesn't work.
-    if let Some(verified_rate) =
-        verify_working_sample_rate(output_device, candidate_rate, output_channels)
-    {
+    // The cache lock is not held across this potentially slow probe.
+    if let Some(verified_rate) = verify(output_device, candidate_rate, output_channels) {
         if verified_rate == file_sample_rate {
             log::info!(
                 "[AudioEngineManager] Verified device rate matches file: {}Hz (no resampling)",

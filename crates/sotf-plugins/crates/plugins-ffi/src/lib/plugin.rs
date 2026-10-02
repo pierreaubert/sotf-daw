@@ -40,6 +40,7 @@ use super::libc::libc_malloc;
 use super::misc::sanitize_filename_component;
 use super::misc::set_last_error;
 use super::misc::set_last_error_static;
+use super::parameter_map::SPEECH_MODEL_CHOICE_COUNT;
 pub use super::parameter_map::{ParameterInfo, ParameterMap};
 use super::process::process_impl;
 use super::process::process_with_ffi_events_impl;
@@ -176,6 +177,37 @@ fn is_de_esser_structural_id(plugin_type: &str, param_id: &str) -> bool {
         param_id,
         "frequency" | "q" | "mode" | "lookahead_ms" | "split_topology" | "sidechain_external"
     )
+}
+
+/// Speech Denoiser structural model selector.
+///
+/// `model` swaps the inference graph; the live plugin rejects post-init
+/// changes with an allocating `Err(String)`, and the generic FFI error
+/// path formats a second allocation, so without this guard every changed
+/// write from render-thread automation allocates (measured 4 alloc/4 free
+/// steady state). `strength` stays realtime. Control-thread state
+/// restoration is unaffected: it rebuilds through
+/// `replace_plugin_from_state`, never this setter.
+fn is_speech_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    if !matches!(
+        plugin_type,
+        "SpeechDenoiser" | "speech_denoiser" | "RNNoise" | "rnnoise"
+    ) {
+        return false;
+    }
+    matches!(param_id, "model")
+}
+
+/// Quantize a normalized Speech model write to a choice index.
+///
+/// Mirrors `ParamBridge` Choice denormalization exactly (clamp, scale,
+/// round, saturate) so the guard accepts precisely the writes the bridge
+/// would map to the committed index. Pure float/integer math, so the
+/// render-thread guard cannot allocate.
+fn speech_model_index_from_normalized(normalized_value: f64) -> usize {
+    let clamped = normalized_value.clamp(0.0, 1.0);
+    let index = (clamped * (SPEECH_MODEL_CHOICE_COUNT - 1) as f64).round() as usize;
+    index.min(SPEECH_MODEL_CHOICE_COUNT - 1)
 }
 
 /// Hiss structural IDs per `sotf-plugin-hiss-reducer` PARAMS.
@@ -534,6 +566,12 @@ fn replace_plugin_from_state(
     // valid until plugin_destroy. A rejected preset never touches live DSP.
     handle.plugin = replacement;
     handle.config_json = replacement_config;
+    // The generic path reuses the same map across commits: refresh the Speech
+    // model snapshot so the realtime guard tracks the committed choice. This
+    // runs on the control thread after the commit; no-ops for other types.
+    handle
+        .parameter_map
+        .refresh_speech_model_index(&*handle.plugin);
     Ok(())
 }
 
@@ -1151,6 +1189,14 @@ mod ffi_integration_tests;
 #[cfg(test)]
 #[path = "hiss_state_tests.rs"]
 mod hiss_state_tests;
+
+#[cfg(test)]
+#[path = "crossfeed_yaw_ffi_tests.rs"]
+mod crossfeed_yaw_ffi_tests;
+
+#[cfg(test)]
+#[path = "compressor_detector_ffi_tests.rs"]
+mod compressor_detector_ffi_tests;
 
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
@@ -1878,6 +1924,11 @@ pub extern "C" fn plugin_get_parameter_info(
 /// before interpreting index 0. DynamicEQ shape index 3 is Tilt, matching
 /// the DSP `DynEqShape` order.
 ///
+/// Speech Denoiser `model` exposes 3 labels in registry order: 0=`RNNoise
+/// Full`, 1=`RNNoise Legacy LQ`, 2=`RNNoise Legacy SH`, matching the DSP
+/// `MODEL_LABELS` and the 0..=2 parameter range. Any other `choice_index`
+/// returns `NULL`, as do the non-choice `enabled`/`strength` parameters.
+///
 /// # Safety
 /// * `handle` must be `NULL` or a live plugin handle.
 #[unsafe(no_mangle)]
@@ -1968,6 +2019,21 @@ pub extern "C" fn plugin_set_parameter(
             set_last_error_static(
                 c"DeEsser structural parameters require state restoration",
             );
+            return PluginError::InvalidParameter;
+        }
+        if is_speech_structural_id(&handle_ref.plugin_type, param_id_str) {
+            // Repeating the committed model is a no-op, matching hosts that
+            // synchronize every parameter; anything else refuses here, before
+            // the generic path can format its allocating error. The committed
+            // index was snapshotted on the control thread at construction and
+            // refreshed on every restore commit, so this probe never queries
+            // the live DSP and cannot allocate.
+            if handle_ref.parameter_map.speech_model_index()
+                == Some(speech_model_index_from_normalized(normalized_value))
+            {
+                return PluginError::Success;
+            }
+            set_last_error_static(c"Speech Denoiser model changes require state restoration");
             return PluginError::InvalidParameter;
         }
         if is_hiss_structural_id(&handle_ref.plugin_type, param_id_str) {

@@ -9,6 +9,8 @@
   flag (including old engine saves carrying 80 Hz) render legacy audio;
   0 Hz bypasses even when enabled. No stored frequency value alone ever
   activates the filter, so 80 Hz remains a legitimate new-user choice.
+  Precision: only the HPF depends on the enabled flag; the Peak/RMS
+  detection mode operates independently (RMS works with the HPF disabled).
 - `program_dependent_release` and `sidechain_external` remain unsupported
   and are rejected loudly.
 

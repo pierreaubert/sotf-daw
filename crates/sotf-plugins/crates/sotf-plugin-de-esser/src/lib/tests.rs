@@ -3320,3 +3320,277 @@ fn compile_metadata_ignores_inert_coupling_modes() {
     .unwrap();
     assert!(mono_ext.compile_metadata().channel_mixing);
 }
+
+#[test]
+fn split_band_ms_mode_engages_sum_and_difference_under_reduction() {
+    // P2-D1: the M/S-vs-L/R unity checks pass vacuously if the split-arm
+    // wrap were dead, and the Wideband divergence test does not execute
+    // the split arms. Left-only sibilance through Split-Band with M/S
+    // must reduce (nontrivial GR asserted on the meter), land L on a
+    // different operating point than the L/R render (a dead wrap renders
+    // bitwise-equal and fails the divergence bound), and keep the silent
+    // R silent through encode/GR/decode. Both topologies.
+    let sample_rate = 48_000u32;
+    for topology in ["Minimum-Phase", "Linear-Phase"] {
+        let render = |ms_mode: bool| {
+            let params = DeEsserPluginParams {
+                frequency: 7000.0,
+                q: 1.5,
+                threshold: -24.0,
+                ratio: 8.0,
+                attack_ms: 0.5,
+                release_ms: 20.0,
+                mode: "Split-Band".to_string(),
+                mix: 1.0,
+                split_topology: topology.to_string(),
+                ms_mode,
+                ..Default::default()
+            };
+            let mut plugin =
+                DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
+            plugin.initialize(sample_rate).unwrap();
+            let frames = sample_rate as usize;
+            let mut buf = vec![0.0f32; frames * 2];
+            for i in 0..frames {
+                buf[i * 2] =
+                    0.5 * (std::f32::consts::TAU * 8_000.0 * i as f32 / sample_rate as f32).sin();
+            }
+            plugin
+                .process_in_place(&mut buf, &ProcessContext::new(sample_rate, frames))
+                .unwrap();
+            (buf, plugin.monitoring_gr.clone())
+        };
+        let (lr, gr_lr) = render(false);
+        let (ms, gr_ms) = render(true);
+        let engaged_lr = gr_lr.iter().copied().fold(0.0f32, f32::max);
+        let engaged_ms = gr_ms.iter().copied().fold(0.0f32, f32::max);
+        // Diagnostic: deterministic measured margins for --nocapture logs.
+        println!("{topology}: engaged GR L/R={engaged_lr:.2} M/S={engaged_ms:.2} dB");
+        // Engagement: both renders must actually reduce (GR well above 0).
+        assert!(
+            engaged_lr > 3.0,
+            "{topology} L/R render must engage GR: {gr_lr:?}"
+        );
+        assert!(
+            engaged_ms > 3.0,
+            "{topology} M/S render must engage GR: {gr_ms:?}"
+        );
+        let half = lr.len() / 2;
+        let left_lr: Vec<f32> = lr[half..].iter().step_by(2).copied().collect();
+        let left_ms: Vec<f32> = ms[half..].iter().step_by(2).copied().collect();
+        let right_ms: Vec<f32> = ms[half..].iter().skip(1).step_by(2).copied().collect();
+        // Mid works the half-level sum, so L lands far from the L/R point;
+        // the 1% bound mirrors the Wideband divergence test.
+        let divergence = (rms(&left_ms) - rms(&left_lr)).abs() / rms(&left_lr);
+        let r_rms = rms(&right_ms);
+        println!("{topology}: L divergence={divergence:.4} R RMS={r_rms:.2e}");
+        assert!(
+            divergence > 0.01,
+            "{topology} M/S must move split-band L off the L/R point: {divergence:.4}"
+        );
+        // M and S carry identical half-level signals, so identical gains
+        // cancel exactly on decode and the silent R stays silent.
+        assert!(
+            r_rms < 1e-9,
+            "{topology} silent R must stay silent in split M/S: {}",
+            rms(&right_ms)
+        );
+    }
+}
+
+#[test]
+fn stereo_drain_preserves_ms_and_eof_contract() {
+    // P2-D2: drain execution is mono-only, leaving the M/S wrap inside
+    // drain unexecuted. Stereo stream + drain with and without M/S must
+    // preserve every program sample (L impulse at (N-1)+latency with its
+    // exact value, silent R throughout), emit exactly the retained tail,
+    // honor the call bound, complete idempotently, and require reset
+    // before further input. The external-key case pins program-only drain
+    // width over the doubled input stride. Pure-delay paths only (LR4
+    // disperses impulses; the mono suite covers its accounting).
+    let sample_rate = 48_000u32;
+    for (mode, topology, lookahead_ms, ms_mode, external) in [
+        ("Wideband", "Minimum-Phase", 2.0f32, false, false),
+        ("Wideband", "Minimum-Phase", 2.0, true, false),
+        ("Split-Band", "Linear-Phase", 0.0, false, false),
+        ("Split-Band", "Linear-Phase", 0.0, true, false),
+        ("Wideband", "Minimum-Phase", 2.0, true, true),
+    ] {
+        let params = DeEsserPluginParams {
+            mode: mode.to_string(),
+            split_topology: topology.to_string(),
+            lookahead_ms,
+            ms_mode,
+            sidechain_external: external,
+            ..unity_params()
+        };
+        let mut plugin =
+            DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
+        plugin.initialize(sample_rate).unwrap();
+        let latency = plugin.latency_samples();
+        let retained = plugin.retained_frames();
+        assert_eq!(plugin.drain_output_frames_max(), retained.min(256));
+        let stride = plugin.input_channels();
+        assert_eq!(stride, if external { 4 } else { 2 });
+        let frames = 4_096;
+        let mut buf = vec![0.0f32; frames * stride];
+        buf[(frames - 1) * stride] = 1.0;
+        plugin
+            .process_in_place(&mut buf, &ProcessContext::new(sample_rate, frames))
+            .unwrap();
+        let bound = plugin.drain_call_bound().unwrap().get() as usize;
+        assert_eq!(bound, retained.div_ceil(256).max(1));
+        // The stream keeps program channels only; the key region (if any)
+        // is deinterleaved before the tail is appended.
+        let mut stream: Vec<f32> = Vec::with_capacity(frames * 2);
+        for frame in 0..frames {
+            stream.extend_from_slice(&buf[frame * stride..frame * stride + 2]);
+        }
+        let mut drained = Vec::new();
+        let last_chunk = if retained.is_multiple_of(256) {
+            256
+        } else {
+            retained % 256
+        };
+        loop {
+            let mut out = vec![0.0f32; 256 * 2];
+            let result = plugin
+                .drain(&mut out, &ProcessContext::new(sample_rate, 256))
+                .unwrap();
+            drained.extend_from_slice(&out[..result.frames * 2]);
+            if result.complete {
+                assert_eq!(result.frames, last_chunk);
+                break;
+            }
+            assert_eq!(result.frames, 256);
+        }
+        assert_eq!(
+            drained.len(),
+            retained * 2,
+            "stereo drained length {mode}/{topology}/ms={ms_mode}/ext={external}"
+        );
+        let drained_len = drained.len();
+        stream.append(&mut drained);
+        assert_eq!(stream.len(), (frames + retained) * 2);
+        let at = (frames - 1 + latency) * 2;
+        let impulse_error = (stream[at] - 1.0).abs();
+        let right: Vec<f32> = stream.iter().skip(1).step_by(2).copied().collect();
+        let r_rms = rms(&right);
+        // Diagnostic: deterministic measured margins for --nocapture logs.
+        println!(
+            "{mode}/{topology}/ms={ms_mode}/ext={external}: drained={drained_len} \
+             retained={} L impulse err={impulse_error:.2e} R RMS={r_rms:.2e}",
+            retained * 2,
+        );
+        assert!(
+            impulse_error < 1e-5,
+            "stereo tail impulse L: got {} at frame {} ({mode}/{topology})",
+            stream[at],
+            at / 2,
+        );
+        assert!(
+            stream[..at].iter().step_by(2).all(|&x| x.abs() < 1e-5),
+            "pre-impulse L tail must be silent ({mode}/{topology})"
+        );
+        assert!(
+            r_rms < 1e-9,
+            "R must stay silent through stereo drain: {} ({mode}/{topology})",
+            rms(&right)
+        );
+        // Terminal drain is complete and idempotent; input needs a reset.
+        let mut out = vec![0.0f32; 256 * 2];
+        let terminal = plugin
+            .drain(&mut out, &ProcessContext::new(sample_rate, 256))
+            .unwrap();
+        assert_eq!((terminal.frames, terminal.complete), (0, true));
+        let mut more = vec![0.0f32; 64 * stride];
+        assert!(
+            plugin
+                .process_in_place(&mut more, &ProcessContext::new(sample_rate, 64))
+                .is_err(),
+            "input after drain must require reset"
+        );
+        plugin.reset();
+        plugin
+            .process_in_place(&mut more, &ProcessContext::new(sample_rate, 64))
+            .unwrap();
+    }
+}
+
+#[test]
+fn reset_replay_matches_fresh_with_populated_detector_and_key() {
+    // P2-D3: reset determinism is proven for internal detection, but no DSP
+    // test replays populated detector/key history against a fresh instance
+    // bitwise. Each config renders engaged audio first (GR asserted above
+    // 3 dB, so detector filters, envelopes, crossovers and delay lines
+    // hold history), then resets, re-renders the identical input, and must
+    // match a fresh instance sample-for-sample, meters included. All cases
+    // use the external key bus; the automation suite already covers
+    // internal-detection reset for both modes.
+    let sample_rate = 48_000u32;
+    for (mode, topology, lookahead_ms, ms_mode) in [
+        ("Split-Band", "Linear-Phase", 2.0f32, true),
+        ("Split-Band", "Minimum-Phase", 5.0, false),
+        ("Wideband", "Minimum-Phase", 2.0, true),
+    ] {
+        let params = || DeEsserPluginParams {
+            frequency: 7000.0,
+            q: 1.5,
+            threshold: -24.0,
+            ratio: 8.0,
+            attack_ms: 0.5,
+            release_ms: 20.0,
+            mode: mode.to_string(),
+            mix: 1.0,
+            split_topology: topology.to_string(),
+            lookahead_ms,
+            ms_mode,
+            sidechain_external: true,
+            ..Default::default()
+        };
+        let frames = 8_192;
+        let input = || {
+            let mut buf = vec![0.0f32; frames * 4];
+            for i in 0..frames {
+                let phase = std::f32::consts::TAU * 8_000.0 * i as f32 / sample_rate as f32;
+                buf[i * 4] = 0.5 * phase.sin();
+                buf[i * 4 + 1] = 0.2 * phase.sin();
+                buf[i * 4 + 2] = 0.5 * phase.sin();
+                buf[i * 4 + 3] = 0.5 * phase.sin();
+            }
+            buf
+        };
+        let mut used =
+            DeEsserPlugin::try_from_params_at_sample_rate(2, params(), sample_rate).unwrap();
+        used.initialize(sample_rate).unwrap();
+        assert_eq!(used.input_channels(), 4);
+        let mut first = input();
+        used.process_in_place(&mut first, &ProcessContext::new(sample_rate, frames))
+            .unwrap();
+        // Populated proof: the hot key must have driven real reduction.
+        assert!(
+            used.monitoring_gr.iter().copied().fold(0.0f32, f32::max) > 3.0,
+            "{mode}/{topology} key render must engage GR: {:?}",
+            used.monitoring_gr
+        );
+        used.reset();
+        let mut fresh =
+            DeEsserPlugin::try_from_params_at_sample_rate(2, params(), sample_rate).unwrap();
+        fresh.initialize(sample_rate).unwrap();
+        let mut replay = input();
+        let mut reference = input();
+        used.process_in_place(&mut replay, &ProcessContext::new(sample_rate, frames))
+            .unwrap();
+        fresh
+            .process_in_place(&mut reference, &ProcessContext::new(sample_rate, frames))
+            .unwrap();
+        assert_eq!(
+            replay, reference,
+            "{mode}/{topology} reset must clear detector/key history bitwise"
+        );
+        assert_eq!(
+            used.monitoring_gr, fresh.monitoring_gr,
+            "{mode}/{topology} reset must clear meters bitwise"
+        );
+    }
+}

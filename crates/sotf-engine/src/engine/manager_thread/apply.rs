@@ -32,6 +32,12 @@ fn is_required_plugin_update_failure(diagnostic: &PluginBuildDiagnostic) -> bool
                 || plugin_type.eq_ignore_ascii_case("external_plugin")
                 || plugin_type.eq_ignore_ascii_case("eq")
                 || plugin_type.eq_ignore_ascii_case("equalizer")
+                // A requested compressor candidate is complete: silently
+                // skipping its failed build would commit a chain without
+                // the compressor (e.g. an unsupported legacy control must
+                // refuse loudly, never vanish from the route).
+                || plugin_type.eq_ignore_ascii_case("compressor")
+                || plugin_type.eq_ignore_ascii_case("multiband_compressor")
         })
 }
 
@@ -1818,5 +1824,457 @@ mod tests {
             current.plugin_build_diagnostics[0].target,
             crate::PluginBuildTarget::GraphNode { node_id: 42 }
         ));
+    }
+
+    #[test]
+    fn manager_rejects_compressor_legacy_candidate_and_continues_twin_history() {
+        // Compressor-specific live candidate proof on the real manager
+        // route: two equivalent populated running chains plus a cold
+        // control. The invalid candidate is refused through
+        // apply_plugin_update; the accepted settings and nonzero next
+        // output agree with the untouched twin, while the cold control
+        // proves the continuation carries retained envelope history.
+        const CHANNELS: usize = 2;
+        const FRAMES: usize = 512;
+
+        fn compressor_config(program_release: bool) -> PluginConfig {
+            PluginSettings::Compressor {
+                threshold_db: -20.0,
+                ratio: 4.0,
+                attack_ms: 5.0,
+                release_ms: 50.0,
+                knee_db: 0.0,
+                makeup_gain_db: 0.0,
+                mix: 1.0,
+                auto_makeup: false,
+                link_channels: true,
+                sidechain_hpf_hz: 80.0,
+                sidechain_hpf_order: "2nd".to_string(),
+                detection_mode: "Peak".to_string(),
+                lookahead_ms: 0.0,
+                program_dependent_release: program_release,
+                measured_auto_makeup: false,
+                sidechain_external: false,
+                range_db: 120.0,
+                hold_ms: 0.0,
+                sidechain_hpf_enabled: false,
+            }
+            .to_plugin_config(NATIVE_ROUTE_SAMPLE_RATE as f64)
+        }
+
+        fn probe_block(start_frame: usize) -> Vec<f32> {
+            let mut block = vec![0.0; FRAMES * CHANNELS];
+            for frame in 0..FRAMES {
+                let t = (start_frame + frame) as f32
+                    / NATIVE_ROUTE_SAMPLE_RATE as f32;
+                let sample =
+                    0.7079 * (2.0 * std::f32::consts::PI * 50.0 * t).sin();
+                block[frame * CHANNELS] = sample;
+                block[frame * CHANNELS + 1] = sample * 0.5;
+            }
+            block
+        }
+
+        let accepted = compressor_config(false);
+        let mut live = RunningEngineRoute::new(CHANNELS);
+        let mut synchronized_twin = RunningEngineRoute::new(CHANNELS);
+        let mut cold_control = RunningEngineRoute::new(CHANNELS);
+        live.start(vec![accepted.clone()]);
+        synchronized_twin.start(vec![accepted.clone()]);
+        cold_control.start(vec![accepted.clone()]);
+
+        // Populate detector/envelope history identically on live + twin.
+        for block_index in 0..24 {
+            let input = probe_block(block_index * FRAMES);
+            let live_frame = live.process(input.clone(), CHANNELS, FRAMES);
+            let twin_frame = synchronized_twin.process(input, CHANNELS, FRAMES);
+            assert_eq!(live_frame.data, twin_frame.data);
+        }
+        // Sanity: the populated chain audibly compresses (not a bypass).
+        let check_input = probe_block(24 * FRAMES);
+        let check = live.process(check_input.clone(), CHANNELS, FRAMES);
+        let twin_check = synchronized_twin.process(check_input, CHANNELS, FRAMES);
+        assert_eq!(check.data, twin_check.data);
+        let peak_out =
+            check.data.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        assert!(peak_out > 1.0e-3, "populated chain is silent");
+        assert!(
+            peak_out < 0.7079 * 0.9,
+            "populated chain is not compressing: {peak_out:.4}"
+        );
+
+        let before_rejection = {
+            let state = live.state.load();
+            (
+                state.num_channels,
+                state.playback_channels,
+                state.sample_rate,
+                state.plugin_latency_samples,
+                state.last_error.clone(),
+            )
+        };
+        let rejection = live
+            .apply(vec![compressor_config(true)], CHANNELS)
+            .expect_err("program-dependent candidate must be refused");
+        assert!(
+            rejection
+                .to_string()
+                .contains("unsupported legacy sidechain control"),
+            "unexpected manager rejection: {rejection}"
+        );
+        let after_rejection = live.state.load();
+        assert_eq!(
+            (
+                after_rejection.num_channels,
+                after_rejection.playback_channels,
+                after_rejection.sample_rate,
+                after_rejection.plugin_latency_samples,
+                after_rejection.last_error.clone(),
+            ),
+            before_rejection
+        );
+        assert!(
+            after_rejection
+                .plugin_build_diagnostics
+                .iter()
+                .any(|diagnostic| {
+                    diagnostic
+                        .message
+                        .contains("unsupported legacy sidechain control")
+                })
+        );
+
+        // Continuation agrees with the untouched twin and stays live.
+        let continued_input = probe_block(25 * FRAMES);
+        let continued_live =
+            live.process(continued_input.clone(), CHANNELS, FRAMES);
+        let continued_twin = synchronized_twin.process(continued_input, CHANNELS, FRAMES);
+        assert_eq!(continued_live.data, continued_twin.data);
+        assert!(
+            continued_live
+                .data
+                .iter()
+                .any(|sample| sample.abs() > 1.0e-3),
+            "rejected update must leave the populated chain processing"
+        );
+        // The cold control proves the continuation carries retained
+        // envelope history rather than a fresh attack transient.
+        let cold_output = cold_control
+            .process(probe_block(25 * FRAMES), CHANNELS, FRAMES)
+            .data;
+        let max_difference = continued_live
+            .data
+            .iter()
+            .zip(cold_output.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_difference > 1.0e-4,
+            "live continuation matches a cold chain; no retained history"
+        );
+        // The refusal must not wedge the route: a next valid update still
+        // applies, adopts audibly, and keeps zero compressor latency.
+        let mut adopted = accepted.clone();
+        adopted.parameters["ratio"] = serde_json::json!(8.0);
+        live.apply(vec![adopted], CHANNELS)
+            .expect("valid update after refusal must apply");
+        let adopted_state = live.state.load();
+        assert_eq!(adopted_state.plugin_latency_samples, 0);
+        assert!(adopted_state.plugin_build_diagnostics.is_empty());
+        let adopted_live = live.process(probe_block(26 * FRAMES), CHANNELS, FRAMES);
+        let stale_twin =
+            synchronized_twin.process(probe_block(26 * FRAMES), CHANNELS, FRAMES);
+        assert!(
+            adopted_live
+                .data
+                .iter()
+                .any(|sample| sample.abs() > 1.0e-3),
+            "adopted chain is silent"
+        );
+        let adoption_difference = adopted_live
+            .data
+            .iter()
+            .zip(stale_twin.data.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            adoption_difference > 1.0e-4,
+            "valid update did not audibly adopt"
+        );
+    }
+
+    #[test]
+    fn manager_rejects_sidechain_graph_candidate_and_continues_keyed_twin_history() {
+        // External-key DeEsser graph proof on the real manager route:
+        // two equivalent populated running graphs plus a cold control.
+        // The invalid sidechain candidate is refused through
+        // apply_plugin_graph_update; the accepted graph and nonzero next
+        // output agree with the untouched twin, while the cold control
+        // proves the continuation carries retained detector history. A
+        // valid replacement then adopts audibly.
+        const CHANNELS: usize = 4;
+        const FRAMES: usize = 512;
+        const BLOCKS: usize = 24;
+
+        fn matrix_params(select: [usize; 2]) -> serde_json::Value {
+            let mut matrix = vec![0.0f32; 8];
+            matrix[select[0]] = 1.0;
+            matrix[4 + select[1]] = 1.0;
+            serde_json::json!({
+                "input_channels": 4,
+                "output_channels": 2,
+                "matrix": matrix,
+            })
+        }
+
+        fn deesser_key_params() -> serde_json::Value {
+            // Long release keeps detector history across block
+            // boundaries so the cold control provably diverges.
+            serde_json::json!({
+                "frequency": 7000.0,
+                "q": 1.5,
+                "threshold": -20.0,
+                "ratio": 8.0,
+                "attack_ms": 0.5,
+                "release_ms": 200.0,
+                "mode": "Wideband",
+                "mix": 1.0,
+                "range_db": 60.0,
+                "stereo_link": 0.0,
+                "lookahead_ms": 0.0,
+                "split_topology": "Minimum-Phase",
+                "ms_mode": false,
+                "sidechain_external": true,
+            })
+        }
+
+        fn gain_params() -> serde_json::Value {
+            serde_json::json!({ "gain_db": 0.0 })
+        }
+
+        fn accepted_graph() -> PluginGraphConfig {
+            PluginGraphConfig::try_new(
+                vec![
+                    PluginGraphNodeConfig::try_new(1, "matrix", matrix_params([0, 1]), 4).unwrap(),
+                    PluginGraphNodeConfig::try_new(2, "matrix", matrix_params([2, 3]), 4).unwrap(),
+                    PluginGraphNodeConfig::try_new(3, "de_esser", deesser_key_params(), 2).unwrap(),
+                ],
+                vec![
+                    PluginGraphEdgeConfig::new(1, 3),
+                    PluginGraphEdgeConfig::sidechain(2, 3),
+                ],
+            )
+            .unwrap()
+        }
+
+        fn invalid_graph() -> PluginGraphConfig {
+            // A sidechain edge into a 2-in/2-out gain node has no key
+            // bus to land on and must be refused transactionally.
+            PluginGraphConfig::try_new(
+                vec![
+                    PluginGraphNodeConfig::try_new(1, "matrix", matrix_params([0, 1]), 4).unwrap(),
+                    PluginGraphNodeConfig::try_new(2, "matrix", matrix_params([2, 3]), 4).unwrap(),
+                    PluginGraphNodeConfig::try_new(3, "gain", gain_params(), 2).unwrap(),
+                ],
+                vec![
+                    PluginGraphEdgeConfig::new(1, 3),
+                    PluginGraphEdgeConfig::sidechain(2, 3),
+                ],
+            )
+            .unwrap()
+        }
+
+        fn probe_block(start_frame: usize) -> Vec<f32> {
+            let mut block = vec![0.0; FRAMES * CHANNELS];
+            for frame in 0..FRAMES {
+                let t = (start_frame + frame) as f32 / NATIVE_ROUTE_SAMPLE_RATE as f32;
+                let program = 0.05 * (std::f32::consts::TAU * 8_000.0 * t).sin();
+                let key = 0.5 * (std::f32::consts::TAU * 8_000.0 * t).sin();
+                block[frame * CHANNELS] = program;
+                block[frame * CHANNELS + 1] = program;
+                block[frame * CHANNELS + 2] = key;
+                block[frame * CHANNELS + 3] = key;
+            }
+            block
+        }
+
+        fn channel_rms(interleaved: &[f32], width: usize, channel: usize) -> f32 {
+            let sum: f32 = interleaved
+                .chunks(width)
+                .map(|frame| frame[channel] * frame[channel])
+                .sum();
+            (sum / (interleaved.len() / width) as f32).sqrt()
+        }
+
+        fn install_graph(route: &mut RunningEngineRoute, graph: PluginGraphConfig) {
+            let responder = route.acknowledge_next_playback_reconfiguration();
+            apply_plugin_graph_update(
+                &mut route.processing,
+                &mut route.playback,
+                &route.state,
+                graph,
+                NATIVE_ROUTE_SAMPLE_RATE,
+                CHANNELS,
+                2,
+                EngineOversamplingPolicy::PluginPreferred,
+            )
+            .expect("accepted keyed de-esser graph must install");
+            let actual = responder.join().expect("playback response thread");
+            assert_eq!(actual.channels, 2);
+            assert_eq!(actual.sample_rate, NATIVE_ROUTE_SAMPLE_RATE);
+            let installed = route.state.load();
+            assert_eq!(installed.num_channels, 2);
+            assert_eq!(installed.playback_channels, 2);
+            assert_eq!(installed.sample_rate, NATIVE_ROUTE_SAMPLE_RATE);
+            assert_eq!(installed.plugin_latency_samples, 0);
+            assert!(installed.plugin_build_diagnostics.is_empty());
+        }
+
+        let mut live = RunningEngineRoute::new(CHANNELS);
+        let mut synchronized_twin = RunningEngineRoute::new(CHANNELS);
+        let mut cold_control = RunningEngineRoute::new(CHANNELS);
+        install_graph(&mut live, accepted_graph());
+        install_graph(&mut synchronized_twin, accepted_graph());
+        install_graph(&mut cold_control, accepted_graph());
+
+        // Populate detector history identically on live + twin.
+        for block_index in 0..BLOCKS {
+            let input = probe_block(block_index * FRAMES);
+            let live_frame = live.process(input.clone(), CHANNELS, FRAMES);
+            let twin_frame = synchronized_twin.process(input, CHANNELS, FRAMES);
+            assert_eq!(live_frame.data, twin_frame.data);
+        }
+        // Sanity: the populated graph audibly reduces (not a bypass).
+        let check_input = probe_block(BLOCKS * FRAMES);
+        let program_rms = channel_rms(&check_input, CHANNELS, 0);
+        let check = live.process(check_input.clone(), CHANNELS, FRAMES);
+        let twin_check = synchronized_twin.process(check_input, CHANNELS, FRAMES);
+        assert_eq!(check.data, twin_check.data);
+        let check_db = 20.0 * (channel_rms(&check.data, 2, 0) / program_rms).log10();
+        assert!(
+            check_db < -6.0,
+            "populated keyed graph must reduce past -6 dB, got {check_db:.2} dB"
+        );
+        assert!(
+            check_db > -20.0,
+            "populated keyed graph must not mute, got {check_db:.2} dB"
+        );
+
+        let before_rejection = {
+            let state = live.state.load();
+            (
+                state.num_channels,
+                state.playback_channels,
+                state.sample_rate,
+                state.plugin_latency_samples,
+                state.last_error.clone(),
+            )
+        };
+        let rejection = apply_plugin_graph_update(
+            &mut live.processing,
+            &mut live.playback,
+            &live.state,
+            invalid_graph(),
+            NATIVE_ROUTE_SAMPLE_RATE,
+            CHANNELS,
+            2,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect_err("key-bus-less sidechain candidate must be refused");
+        assert!(
+            rejection.to_string().contains("sidechain"),
+            "unexpected manager rejection: {rejection}"
+        );
+        let after_rejection = live.state.load();
+        assert_eq!(
+            (
+                after_rejection.num_channels,
+                after_rejection.playback_channels,
+                after_rejection.sample_rate,
+                after_rejection.plugin_latency_samples,
+                after_rejection.last_error.clone(),
+            ),
+            before_rejection
+        );
+        assert!(
+            after_rejection
+                .plugin_build_diagnostics
+                .iter()
+                .any(|diagnostic| {
+                    diagnostic.message.contains("sidechain")
+                        && matches!(
+                            diagnostic.target,
+                            crate::PluginBuildTarget::GraphEdge {
+                                from_node: 2,
+                                to_node: 3
+                            }
+                        )
+                }),
+            "refusal must record an edge-targeted sidechain diagnostic"
+        );
+
+        // Continuation agrees with the untouched twin and stays live.
+        let continued_input = probe_block((BLOCKS + 1) * FRAMES);
+        let continued_live = live.process(continued_input.clone(), CHANNELS, FRAMES);
+        let continued_twin = synchronized_twin.process(continued_input, CHANNELS, FRAMES);
+        assert_eq!(continued_live.data, continued_twin.data);
+        assert!(
+            continued_live
+                .data
+                .iter()
+                .any(|sample| sample.abs() > 1.0e-3),
+            "rejected update must leave the populated graph processing"
+        );
+        // The cold control proves the continuation carries retained
+        // detector history rather than a fresh attack transient.
+        let cold_output = cold_control
+            .process(probe_block((BLOCKS + 1) * FRAMES), CHANNELS, FRAMES)
+            .data;
+        let max_difference = continued_live
+            .data
+            .iter()
+            .zip(cold_output.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_difference > 1.0e-4,
+            "live continuation matches a cold graph; no retained history"
+        );
+        // The refusal must not wedge the route: a valid replacement
+        // still applies, adopts audibly, and keeps zero graph latency.
+        let mut recovery = accepted_graph();
+        assert_eq!(recovery.nodes[2].id, 3);
+        recovery.nodes[2].parameters["threshold"] = serde_json::json!(-6.0);
+        apply_plugin_graph_update(
+            &mut live.processing,
+            &mut live.playback,
+            &live.state,
+            recovery,
+            NATIVE_ROUTE_SAMPLE_RATE,
+            CHANNELS,
+            2,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect("valid replacement after refusal must apply");
+        let adopted_state = live.state.load();
+        assert_eq!(adopted_state.plugin_latency_samples, 0);
+        assert!(adopted_state.plugin_build_diagnostics.is_empty());
+        let adopted_input = probe_block((BLOCKS + 2) * FRAMES);
+        let adopted_live = live.process(adopted_input.clone(), CHANNELS, FRAMES);
+        let stale_twin = synchronized_twin.process(adopted_input, CHANNELS, FRAMES);
+        assert!(
+            adopted_live.data.iter().any(|sample| sample.abs() > 1.0e-3),
+            "adopted graph is silent"
+        );
+        let adoption_difference = adopted_live
+            .data
+            .iter()
+            .zip(stale_twin.data.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            adoption_difference > 1.0e-4,
+            "valid replacement did not audibly adopt"
+        );
     }
 }
