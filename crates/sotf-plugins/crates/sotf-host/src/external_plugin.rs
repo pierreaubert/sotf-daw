@@ -317,13 +317,59 @@ impl ExternalPlugin {
         )?;
         Self::validate_exposed_parameters(&*candidate, &exposed_parameters, &self.descriptor.name)?;
 
-        candidate.reconfigure_ambisonics_audio_setup(&new_setup)?;
-        Self::validate_backend_audio_setup_parameters(
-            &*candidate,
-            &self.discovery_descriptor,
-            &self.descriptor.name,
-            &new_setup,
-        )?;
+        let renegotiate_result = candidate
+            .reconfigure_ambisonics_audio_setup(&new_setup)
+            .and_then(|()| {
+                Self::validate_backend_audio_setup_parameters(
+                    &*candidate,
+                    &self.discovery_descriptor,
+                    &self.descriptor.name,
+                    &new_setup,
+                )
+            });
+        if let Err(renegotiate_error) = renegotiate_result {
+            if !matches!(
+                current_setup,
+                NativePluginAudioSetup::AmbisonicsCustom { .. }
+            ) && !matches!(new_setup, NativePluginAudioSetup::AmbisonicsCustom { .. })
+            {
+                return Err(renegotiate_error);
+            }
+            // A custom-boundary crossing cannot renegotiate from the old
+            // bytes alone: the candidate holds the previous tuple while the
+            // new setup needs different recognized fields. Rewrite only the
+            // recognized fields, then restore the state directly at the
+            // explicitly requested valid setup (Crossover-style recovery).
+            let repaired_state = ambisonics_state_with_setup(
+                &current_state,
+                self.discovery_descriptor.format,
+                &new_setup,
+            )
+            .map_err(|repair_error| {
+                format!(
+                    "external plugin '{}' could not prepare Ambisonics recovery state after candidate failure ({renegotiate_error}): {repair_error}",
+                    self.descriptor.name
+                )
+            })?;
+            candidate = self
+                .replacement_backend_for_state(
+                    &self.discovery_descriptor,
+                    Some(&new_setup),
+                    &repaired_state,
+                )
+                .map_err(|recovery_error| {
+                    format!(
+                        "external plugin '{}' failed Ambisonics recovery at the requested setup after candidate failure ({renegotiate_error}): {recovery_error}",
+                        self.descriptor.name
+                    )
+                })?;
+            Self::validate_backend_audio_setup_parameters(
+                &*candidate,
+                &self.discovery_descriptor,
+                &self.descriptor.name,
+                &new_setup,
+            )?;
+        }
         Self::validate_ambisonics_controls(
             &*candidate,
             &self.discovery_descriptor,
@@ -764,6 +810,16 @@ impl ExternalPlugin {
                     setup,
                 )?;
             }
+            if let Some(NativePluginAudioSetup::AmbisonicsCustom { custom, .. }) =
+                backend_audio_setup.as_ref()
+            {
+                validate_ambisonics_custom_agreement(
+                    &state.opaque_state,
+                    state.descriptor.format,
+                    &state.descriptor.name,
+                    custom,
+                )?;
+            }
         }
         plugin.opaque_state = state.opaque_state.clone();
         Ok(plugin)
@@ -802,6 +858,24 @@ impl ExternalPlugin {
                 let expected = (
                     i32::from(*order),
                     target_layout.plugin_parameter_choice_index(),
+                );
+                let actual = backend
+                    .ambisonics_layout_parameters()?
+                    .ok_or_else(|| {
+                        format!(
+                            "external plugin '{plugin_name}' does not support native Ambisonics structural readback"
+                        )
+                    })?;
+                if actual != expected {
+                    return Err(format!(
+                        "external plugin '{plugin_name}' audio setup conflicts with native structural parameters: expected order/layout {expected:?}, got {actual:?}"
+                    ));
+                }
+            }
+            NativePluginAudioSetup::AmbisonicsCustom { order, .. } => {
+                let expected = (
+                    i32::from(*order),
+                    AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX,
                 );
                 let actual = backend
                     .ambisonics_layout_parameters()?
@@ -1126,6 +1200,17 @@ impl ExternalPlugin {
                 setup,
             )?;
         }
+        if let Some(NativePluginAudioSetup::AmbisonicsCustom { custom, .. }) =
+            effective_setup.as_ref()
+            && !opaque_state.is_empty()
+        {
+            validate_ambisonics_custom_agreement(
+                opaque_state,
+                descriptor.format,
+                &descriptor.name,
+                custom,
+            )?;
+        }
         Ok(backend)
     }
 
@@ -1212,6 +1297,7 @@ fn audio_setup_structural_parameter_ids(
 ) -> Result<Vec<ParameterId>, String> {
     let keys: &[&str] = match setup {
         Some(NativePluginAudioSetup::Ambisonics { .. }) => &["order", "target_layout"],
+        Some(NativePluginAudioSetup::AmbisonicsCustom { .. }) => &["order", "target_layout"],
         Some(NativePluginAudioSetup::BandSplit { .. }) => &["num_bands"],
         Some(NativePluginAudioSetup::Crossover { .. }) => {
             return crossover_structural_parameter_ids(format);
@@ -1304,6 +1390,180 @@ fn crossover_state_with_setup(
     if clap_prefixed {
         let payload_length = u64::try_from(payload.len())
             .map_err(|_| "repaired CLAP Crossover state is too large".to_string())?;
+        let mut repaired = Vec::with_capacity(CLAP_STATE_LENGTH_PREFIX_BYTES + payload.len());
+        repaired.extend_from_slice(&payload_length.to_le_bytes());
+        repaired.extend_from_slice(&payload);
+        Ok(repaired)
+    } else {
+        Ok(payload)
+    }
+}
+
+/// NIH opaque-state field carrying custom Ambisonics geometry.
+///
+/// Part of the recognized native Ambisonics schema, like the hidden
+/// `order`/`target_layout` parameters: the NIH wrapper writes the DSP
+/// custom-layout JSON here when target 8 is active, and the host
+/// validates it against the typed setup geometry. Shared with the NIH
+/// plugin crate so both sides name one field.
+pub const AMBISONICS_CUSTOM_STATE_FIELD: &str = "sotf_ambisonics_custom";
+
+/// Splits a native Ambisonics state blob into its JSON payload.
+///
+/// Returns whether the blob carried the CLAP length prefix alongside
+/// the payload bytes. Mirrors the Crossover repair framing so both
+/// formats keep one recognized parse path.
+fn native_ambisonics_state_payload(
+    opaque_state: &[u8],
+    format: PluginFormat,
+) -> Result<(bool, &[u8]), String> {
+    match format {
+        PluginFormat::Clap => {
+            let length_bytes = opaque_state
+                .get(..CLAP_STATE_LENGTH_PREFIX_BYTES)
+                .ok_or_else(|| "CLAP Ambisonics state is missing its length prefix".to_string())?;
+            let length_bytes: [u8; CLAP_STATE_LENGTH_PREFIX_BYTES] = length_bytes
+                .try_into()
+                .map_err(|_| "CLAP Ambisonics state has an invalid length prefix".to_string())?;
+            let payload = &opaque_state[CLAP_STATE_LENGTH_PREFIX_BYTES..];
+            let expected_length = usize::try_from(u64::from_le_bytes(length_bytes))
+                .map_err(|_| "CLAP Ambisonics state length does not fit in memory".to_string())?;
+            if payload.len() != expected_length {
+                return Err(format!(
+                    "CLAP Ambisonics state length prefix describes {expected_length} bytes but contains {}",
+                    payload.len()
+                ));
+            }
+            Ok((true, payload))
+        }
+        PluginFormat::Vst3 => Ok((false, opaque_state)),
+        PluginFormat::AudioUnit => {
+            Err("native Ambisonics state is unavailable for Audio Unit".into())
+        }
+    }
+}
+
+/// Reads the embedded custom geometry from a native Ambisonics blob.
+///
+/// Returns the parsed custom-layout JSON value carried in the
+/// recognized opaque-state field.
+fn ambisonics_custom_geometry_from_opaque_state(
+    opaque_state: &[u8],
+    format: PluginFormat,
+) -> Result<serde_json::Value, String> {
+    let (_, payload) = native_ambisonics_state_payload(opaque_state, format)?;
+    let state: serde_json::Value = serde_json::from_slice(payload)
+        .map_err(|error| format!("failed to parse native Ambisonics state: {error}"))?;
+    let field = state
+        .get("fields")
+        .and_then(|fields| fields.get(AMBISONICS_CUSTOM_STATE_FIELD))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            "native Ambisonics state carries no custom geometry for the selected custom setup"
+                .to_string()
+        })?;
+    serde_json::from_str(field)
+        .map_err(|error| format!("failed to parse native Ambisonics custom geometry: {error}"))
+}
+
+/// Validates typed custom geometry against the native state field.
+///
+/// The opaque custom geometry must equal the selected setup geometry;
+/// anything else is a wrong-instance restore, never a silent fallback.
+fn validate_ambisonics_custom_agreement(
+    opaque_state: &[u8],
+    format: PluginFormat,
+    plugin_name: &str,
+    expected: &NativeAmbisonicsCustomGeometry,
+) -> Result<(), String> {
+    let actual = ambisonics_custom_geometry_from_opaque_state(opaque_state, format)?;
+    let expected_value = serde_json::to_value(expected)
+        .map_err(|error| format!("failed to encode selected custom Ambisonics geometry: {error}"))?;
+    if actual != expected_value {
+        return Err(format!(
+            "external plugin '{plugin_name}' custom Ambisonics geometry in native state does not match the selected setup"
+        ));
+    }
+    Ok(())
+}
+
+/// Rewrites recognized Ambisonics fields for an explicit setup change.
+///
+/// Sets the structural `order`/`target_layout` parameters and installs
+/// (or removes) the custom geometry field, mirroring the Crossover
+/// state repair. Scalar controls and all other fields stay untouched.
+fn ambisonics_state_with_setup(
+    opaque_state: &[u8],
+    format: PluginFormat,
+    setup: &NativePluginAudioSetup,
+) -> Result<Vec<u8>, String> {
+    let (order, target_index, custom_json) = match setup {
+        NativePluginAudioSetup::Ambisonics {
+            order,
+            target_layout,
+        } => (
+            *order,
+            target_layout.plugin_parameter_choice_index(),
+            None,
+        ),
+        NativePluginAudioSetup::AmbisonicsCustom { order, custom } => {
+            let custom_json = serde_json::to_string(custom).map_err(|error| {
+                format!("failed to encode selected custom Ambisonics geometry: {error}")
+            })?;
+            (*order, AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX, Some(custom_json))
+        }
+        _ => return Err("Ambisonics state repair requires an Ambisonics audio setup".into()),
+    };
+    let (clap_prefixed, payload) = native_ambisonics_state_payload(opaque_state, format)?;
+    let mut state: serde_json::Value = serde_json::from_slice(payload)
+        .map_err(|error| format!("failed to parse native Ambisonics state: {error}"))?;
+    let parameters = state
+        .get_mut("params")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or_else(|| "native Ambisonics state has no parameter object".to_string())?;
+    // These keys and choice indices are the recognized native Ambisonics
+    // state schema; all other serialized fields remain untouched.
+    parameters.insert("order".into(), serde_json::json!({"i32": i32::from(order)}));
+    parameters.insert(
+        "target_layout".into(),
+        serde_json::json!({"i32": target_index}),
+    );
+    match custom_json {
+        Some(custom_json) => {
+            if let Some(fields) = state
+                .get_mut("fields")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                fields.insert(
+                    AMBISONICS_CUSTOM_STATE_FIELD.into(),
+                    serde_json::Value::String(custom_json),
+                );
+            } else {
+                let mut fresh = serde_json::Map::new();
+                fresh.insert(
+                    AMBISONICS_CUSTOM_STATE_FIELD.into(),
+                    serde_json::Value::String(custom_json),
+                );
+                state
+                    .as_object_mut()
+                    .ok_or_else(|| "native Ambisonics state has no top-level object".to_string())?
+                    .insert("fields".into(), serde_json::Value::Object(fresh));
+            }
+        }
+        None => {
+            if let Some(fields) = state
+                .get_mut("fields")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                fields.remove(AMBISONICS_CUSTOM_STATE_FIELD);
+            }
+        }
+    }
+    let payload = serde_json::to_vec(&state)
+        .map_err(|error| format!("failed to encode repaired Ambisonics state: {error}"))?;
+    if clap_prefixed {
+        let payload_length = u64::try_from(payload.len())
+            .map_err(|_| "repaired CLAP Ambisonics state is too large".to_string())?;
         let mut repaired = Vec::with_capacity(CLAP_STATE_LENGTH_PREFIX_BYTES + payload.len());
         repaired.extend_from_slice(&payload_length.to_le_bytes());
         repaired.extend_from_slice(&payload);
@@ -1650,6 +1910,249 @@ impl SerializablePlugin for ExternalPlugin {
             Err(PluginError::InvalidConfiguration(
                 "external plugin placeholder presets do not store host-side parameters".to_string(),
             ))
+        }
+    }
+}
+
+#[cfg(test)]
+mod ambisonics_custom_state_tests {
+    use super::{
+        AMBISONICS_CUSTOM_STATE_FIELD, NativeAmbisonicsCustomGeometry,
+        NativeAmbisonicsCustomSpeaker, NativeAmbisonicsTargetLayout, NativePluginAudioSetup,
+        PluginFormat, ambisonics_state_with_setup, audio_setup_structural_parameter_ids,
+        validate_ambisonics_custom_agreement,
+    };
+
+    fn speaker(
+        label: &str,
+        azimuth_deg: f32,
+        elevation_deg: f32,
+        is_lfe: bool,
+    ) -> NativeAmbisonicsCustomSpeaker {
+        NativeAmbisonicsCustomSpeaker {
+            label: label.to_owned(),
+            azimuth_deg,
+            elevation_deg,
+            is_lfe,
+        }
+    }
+
+    fn custom_geometry() -> NativeAmbisonicsCustomGeometry {
+        NativeAmbisonicsCustomGeometry {
+            name: "moved-lfe".to_owned(),
+            speakers: vec![
+                speaker("FL", 30.0, 0.0, false),
+                speaker("FR", -30.0, 0.0, false),
+                speaker("C", 0.0, 0.0, false),
+                speaker("SL", 90.0, 0.0, false),
+                speaker("SR", -90.0, 0.0, false),
+                speaker("LFE", 0.0, 0.0, true),
+            ],
+        }
+    }
+
+    fn custom_setup() -> NativePluginAudioSetup {
+        NativePluginAudioSetup::AmbisonicsCustom {
+            order: 7,
+            custom: custom_geometry(),
+        }
+    }
+
+    fn named_setup() -> NativePluginAudioSetup {
+        NativePluginAudioSetup::Ambisonics {
+            order: 7,
+            target_layout: NativeAmbisonicsTargetLayout::SevenOneFour,
+        }
+    }
+
+    fn opaque_blob(format: PluginFormat, payload: serde_json::Value) -> Vec<u8> {
+        let bytes = serde_json::to_vec(&payload).unwrap();
+        match format {
+            PluginFormat::Clap => {
+                let length = u64::try_from(bytes.len()).unwrap();
+                let mut blob = length.to_le_bytes().to_vec();
+                blob.extend_from_slice(&bytes);
+                blob
+            }
+            _ => bytes,
+        }
+    }
+
+    fn payload_json(blob: &[u8], format: PluginFormat) -> serde_json::Value {
+        let payload = match format {
+            PluginFormat::Clap => {
+                assert!(blob.len() > 8);
+                let length = u64::from_le_bytes(blob[..8].try_into().unwrap());
+                let length = usize::try_from(length).unwrap();
+                assert_eq!(length, blob.len() - 8);
+                &blob[8..]
+            }
+            _ => blob,
+        };
+        serde_json::from_slice(payload).unwrap()
+    }
+
+    fn named_payload() -> serde_json::Value {
+        serde_json::json!({
+            "version": 1,
+            "params": {
+                "order": {"i32": 7},
+                "target_layout": {"i32": 5},
+                "sentinel": 1
+            },
+            "fields": {}
+        })
+    }
+
+    fn custom_payload() -> serde_json::Value {
+        let mut payload = named_payload();
+        payload["params"]["target_layout"] = serde_json::json!({"i32": 8});
+        let fields = payload
+            .get_mut("fields")
+            .and_then(serde_json::Value::as_object_mut)
+            .unwrap();
+        fields.insert(
+            AMBISONICS_CUSTOM_STATE_FIELD.to_owned(),
+            serde_json::Value::String(serde_json::to_string(&custom_geometry()).unwrap()),
+        );
+        payload
+    }
+
+    #[test]
+    fn custom_agreement_accepts_matching_geometry_on_both_formats() {
+        for format in [PluginFormat::Clap, PluginFormat::Vst3] {
+            let blob = opaque_blob(format, custom_payload());
+            validate_ambisonics_custom_agreement(&blob, format, "ambisonics", &custom_geometry())
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn custom_agreement_rejects_mismatch_missing_and_malformed_field() {
+        let mut other = custom_geometry();
+        other.speakers.swap(0, 1);
+        let mut payload = custom_payload();
+        let fields = payload
+            .get_mut("fields")
+            .and_then(serde_json::Value::as_object_mut)
+            .unwrap();
+        fields.insert(
+            AMBISONICS_CUSTOM_STATE_FIELD.to_owned(),
+            serde_json::Value::String(serde_json::to_string(&other).unwrap()),
+        );
+        let error = validate_ambisonics_custom_agreement(
+            &opaque_blob(PluginFormat::Vst3, payload),
+            PluginFormat::Vst3,
+            "ambisonics",
+            &custom_geometry(),
+        )
+        .unwrap_err();
+        assert!(
+            error.contains("does not match the selected setup"),
+            "unexpected: {error}"
+        );
+        let error = validate_ambisonics_custom_agreement(
+            &opaque_blob(PluginFormat::Vst3, named_payload()),
+            PluginFormat::Vst3,
+            "ambisonics",
+            &custom_geometry(),
+        )
+        .unwrap_err();
+        assert!(
+            error.contains("carries no custom geometry"),
+            "unexpected: {error}"
+        );
+        let mut broken = custom_payload();
+        broken["fields"][AMBISONICS_CUSTOM_STATE_FIELD] =
+            serde_json::Value::String("not json".to_owned());
+        let error = validate_ambisonics_custom_agreement(
+            &opaque_blob(PluginFormat::Vst3, broken),
+            PluginFormat::Vst3,
+            "ambisonics",
+            &custom_geometry(),
+        )
+        .unwrap_err();
+        assert!(
+            error.contains("failed to parse native Ambisonics custom geometry"),
+            "unexpected: {error}"
+        );
+    }
+
+    #[test]
+    fn custom_agreement_rejects_broken_clap_framing() {
+        let payload = serde_json::to_vec(&custom_payload()).unwrap();
+        let error = validate_ambisonics_custom_agreement(
+            &payload[..4],
+            PluginFormat::Clap,
+            "ambisonics",
+            &custom_geometry(),
+        )
+        .unwrap_err();
+        assert!(
+            error.contains("missing its length prefix"),
+            "unexpected: {error}"
+        );
+        let length = u64::try_from(payload.len() + 1).unwrap();
+        let mut wrong_length = length.to_le_bytes().to_vec();
+        wrong_length.extend_from_slice(&payload);
+        let error = validate_ambisonics_custom_agreement(
+            &wrong_length,
+            PluginFormat::Clap,
+            "ambisonics",
+            &custom_geometry(),
+        )
+        .unwrap_err();
+        assert!(error.contains("describes"), "unexpected: {error}");
+    }
+
+    #[test]
+    fn custom_state_rewrite_installs_and_removes_geometry() {
+        for format in [PluginFormat::Clap, PluginFormat::Vst3] {
+            let rewritten = ambisonics_state_with_setup(
+                &opaque_blob(format, named_payload()),
+                format,
+                &custom_setup(),
+            )
+            .unwrap();
+            let value = payload_json(&rewritten, format);
+            assert_eq!(value["params"]["order"], serde_json::json!({"i32": 7}));
+            assert_eq!(
+                value["params"]["target_layout"],
+                serde_json::json!({"i32": 8})
+            );
+            assert_eq!(value["params"]["sentinel"], serde_json::json!(1));
+            let field = value["fields"][AMBISONICS_CUSTOM_STATE_FIELD]
+                .as_str()
+                .unwrap();
+            let decoded: NativeAmbisonicsCustomGeometry =
+                serde_json::from_str(field).unwrap();
+            assert_eq!(decoded, custom_geometry());
+            let rewritten =
+                ambisonics_state_with_setup(&rewritten, format, &named_setup()).unwrap();
+            let value = payload_json(&rewritten, format);
+            assert_eq!(
+                value["params"]["target_layout"],
+                serde_json::json!({"i32": 5})
+            );
+            assert!(
+                value["fields"]
+                    .get(AMBISONICS_CUSTOM_STATE_FIELD)
+                    .is_none()
+            );
+            assert_eq!(value["params"]["sentinel"], serde_json::json!(1));
+        }
+    }
+
+    #[test]
+    fn custom_structural_ids_match_named() {
+        let custom = custom_setup();
+        let named = named_setup();
+        for format in [PluginFormat::Clap, PluginFormat::Vst3] {
+            let custom_ids =
+                audio_setup_structural_parameter_ids(format, Some(&custom)).unwrap();
+            let named_ids = audio_setup_structural_parameter_ids(format, Some(&named)).unwrap();
+            assert_eq!(custom_ids, named_ids);
+            assert_eq!(custom_ids.len(), 2);
         }
     }
 }

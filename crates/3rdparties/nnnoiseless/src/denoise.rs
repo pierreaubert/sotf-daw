@@ -158,6 +158,30 @@ impl DenoiseState {
         })
     }
 
+    /// Creates a `DenoiseState` serving a caller-provided model.
+    ///
+    /// The model is owned by value; recurrent state starts zeroed exactly
+    /// like `new()`. Callers build the model off the audio callback (for
+    /// example with the checked `.rnnn` loader) and adopt the returned
+    /// state under their own quiescence contract.
+    pub fn from_model(model: crate::rnn::RnnModel) -> Box<DenoiseState> {
+        Box::new(DenoiseState {
+            core: DenoiseCore {
+                analysis_mem: [0.0; FRAME_SIZE],
+                cepstral_mem: [[0.0; NB_BANDS]; CEPS_MEM],
+                mem_id: 0,
+                synthesis_mem: [0.0; FRAME_SIZE],
+                pitch_buf: [0.0; PITCH_BUF_SIZE],
+                last_gain: 0.0,
+                last_period: 0,
+                mem_hp_x: [0.0; 2],
+                lastg: [0.0; NB_BANDS],
+            },
+            rnn: crate::rnn::RnnState::from_model(model),
+            scratch: DenoiseScratch::new_boxed(),
+        })
+    }
+
     /// Processes a chunk of samples.
     ///
     /// Both `output` and `input` should be slices of length `DenoiseState::FRAME_SIZE`.

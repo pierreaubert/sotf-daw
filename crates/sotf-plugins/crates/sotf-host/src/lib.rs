@@ -40,6 +40,7 @@ pub mod plugin_layout;
 pub mod plugin_params;
 pub mod rate_limit;
 pub mod render_plan;
+pub mod rt_mailbox;
 pub mod serialization;
 pub mod sofa;
 pub mod speaker_config;

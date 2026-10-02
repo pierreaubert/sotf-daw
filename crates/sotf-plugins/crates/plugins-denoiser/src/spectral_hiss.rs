@@ -1,3 +1,4 @@
+use crate::spectral_profile::validate_spectrum_slice;
 use math_audio_dsp::stft::{RealFftProcessor, generate_hann_window};
 
 pub const SPECTRAL_HISS_FFT_SIZE: usize = 1024;
@@ -37,6 +38,19 @@ const BYPASS_SECONDS: f32 = 0.005;
 // formerly 4x the ~0.5x effective minima) without minima-depth
 // uncertainty.
 const TRANSIENT_ONSET_RATIO: f32 = 2.0;
+// Onset ratio while a measured per-bin spectrum is engaged. Accurate
+// colored suppression settles gains deeper than white-spread minima, so
+// the guard must fire one hop earlier for equal peak protection: every
+// impulse phase has at least two covering hops with Hann weight >= 0.5
+// (of indices r, r+256, r+512, r+768, two fall in [256, 768]), adding at
+// least 427 * 0.25 to the design-bed aggregate of ~160 (ratio >= 1.65),
+// while the stationary instantaneous aggregate fluctuates only ~6%
+// (427-bin sum of near-independent exponential bins), so 1.5 clears
+// false firing by ~8 sigma. 1.5 is the midpoint between the 5-sigma
+// false-fire ceiling (~1.3) and the must-fire floor (1.65). Selected only
+// when a measured spectrum is engaged; white-spread, unprofiled, and
+// guard-off paths keep 2.0 bit-exactly.
+const TRANSIENT_ONSET_RATIO_MEASURED: f32 = 1.5;
 // EMA update weight of the guard-local recent-mean reference. Matches
 // the smoothed_power convention (0.2), tracking stationary level in
 // ~5 hops; frozen during holds so transients never pollute it.
@@ -80,6 +94,15 @@ pub struct SpectralHissReducer {
     // within EXTERNAL_FLOOR_DB_MIN..=MAX by the setter; inert unless
     // use_external_noise is set.
     external_floor_db: Vec<f32>,
+    // Per-channel per-bin measured noise power in live unnormalized |X|^2
+    // units, channel-major (channels * NUM_BINS). Validated finite and
+    // non-negative by the spectral setter; inert unless
+    // use_external_spectrum is set alongside use_external_noise.
+    external_noise_spectrum: Vec<f32>,
+    // Whether the per-bin measured override is engaged. Set only by
+    // set_external_noise_spectrum with Some(...); the v1 floors-only
+    // setter clears it so legacy restores keep white-spread semantics.
+    use_external_spectrum: bool,
     // Per-bin maximum-reduction scale in 0.0..=1.0. All-1.0 reproduces the
     // legacy single-strength behavior bit-exactly.
     curve_gains: Vec<f32>,
@@ -96,6 +119,10 @@ pub struct SpectralHissReducer {
     transient_hold: Vec<u32>,
     transient_ref: Vec<f32>,
     transient_power: Vec<f32>,
+    // A sustained rise longer than one complete FFT window is a level
+    // change, not an isolated impulse. Rebase its reference to prevent an
+    // indefinitely renewed guard after silence.
+    transient_onset_hops: Vec<u32>,
     // Hops processed since construction or reset. Maturity clock for the
     // guard reference; an integer counter, inert for guard-off audio.
     hops_processed: u64,
@@ -140,6 +167,8 @@ impl SpectralHissReducer {
             strength: 0.5,
             use_external_noise: false,
             external_floor_db: vec![EXTERNAL_FLOOR_DB_MIN; channels],
+            external_noise_spectrum: vec![0.0; channels * SPECTRAL_HISS_NUM_BINS],
+            use_external_spectrum: false,
             curve_gains: vec![1.0; SPECTRAL_HISS_NUM_BINS],
             linked: false,
             transient_guard: false,
@@ -147,6 +176,7 @@ impl SpectralHissReducer {
             transient_hold: vec![0; channels],
             transient_ref: vec![0.0; channels],
             transient_power: vec![0.0; channels],
+            transient_onset_hops: vec![0; channels],
             hops_processed: 0,
             bypass: BypassFade {
                 mix: 1.0,
@@ -247,14 +277,15 @@ impl SpectralHissReducer {
     /// FFT-bin aggregate by exactly inverting the live `noise_rms`
     /// Parseval formula, then spread white across the bins at/above the
     /// live cutoff. The live gate still applies, so loud program stays
-    /// untouched. This is a coarse v1 approximation: spreading one
-    /// broadband floor uniformly under/over-estimates colored hiss per
-    /// bin, and a floor measured at a different cutoff or rate covers a
-    /// different band. Floors are broadband references, never a measured
-    /// per-bin spectrum. Disabled by default; copies into pre-sized
-    /// storage and never allocates. Switching off still validates the
-    /// table, so pass the last valid floors to disable an enabled
-    /// reducer in one call.
+    /// untouched. This is the v1 approximation: spreading one broadband
+    /// floor uniformly under/over-estimates colored hiss per bin, and a
+    /// floor measured at a different cutoff or rate covers a different
+    /// band. Floors are broadband references. This setter clears any
+    /// per-bin measured override, so v1 restores keep white-spread
+    /// semantics; use [`Self::set_external_noise_spectrum`] for measured
+    /// spectra. Disabled by default; copies into pre-sized storage and
+    /// never allocates. Switching off still validates the table, so pass
+    /// the last valid floors to disable an enabled reducer in one call.
     ///
     /// # Errors
     ///
@@ -284,6 +315,59 @@ impl SpectralHissReducer {
             }
         }
         self.external_floor_db.copy_from_slice(floor_db_per_channel);
+        self.use_external_noise = enabled;
+        self.use_external_spectrum = false;
+        Ok(())
+    }
+
+    /// Enables captured-profile noise with floors and measured spectrum.
+    ///
+    /// When `spectrum` is `Some`, each hop replaces the minimum-statistics
+    /// per-bin noise with the measured per-bin power for that channel and
+    /// bin (raw unnormalized `|X|^2` in live units, channel-major
+    /// `channels * NUM_BINS`, matching the capture helper output). When
+    /// `None`, behaves exactly like [`Self::set_external_noise`]
+    /// (white-spread fallback). The live gate still applies. Copies into
+    /// pre-sized storage and never allocates.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error, leaving all state unchanged, when floors fail the
+    /// [`Self::set_external_noise`] checks or the spectrum length differs
+    /// from `channels * NUM_BINS` or any power is non-finite or negative.
+    pub fn set_external_noise_spectrum(
+        &mut self,
+        enabled: bool,
+        floor_db_per_channel: &[f32],
+        spectrum: Option<&[f32]>,
+    ) -> Result<(), String> {
+        if floor_db_per_channel.len() != self.channels {
+            return Err(format!(
+                "external noise needs {} floors, got {}",
+                self.channels,
+                floor_db_per_channel.len()
+            ));
+        }
+        for (index, floor) in floor_db_per_channel.iter().enumerate() {
+            if !floor.is_finite()
+                || *floor < EXTERNAL_FLOOR_DB_MIN
+                || *floor > EXTERNAL_FLOOR_DB_MAX
+            {
+                return Err(format!(
+                    "external noise floor {index} is out of range: {floor}"
+                ));
+            }
+        }
+        if let Some(powers) = spectrum {
+            validate_spectrum_slice(powers, self.channels)?;
+        }
+        self.external_floor_db.copy_from_slice(floor_db_per_channel);
+        if let Some(powers) = spectrum {
+            self.external_noise_spectrum.copy_from_slice(powers);
+            self.use_external_spectrum = true;
+        } else {
+            self.use_external_spectrum = false;
+        }
         self.use_external_noise = enabled;
         Ok(())
     }
@@ -381,6 +465,7 @@ impl SpectralHissReducer {
         self.transient_hold.fill(0);
         self.transient_ref.fill(0.0);
         self.transient_power.fill(0.0);
+        self.transient_onset_hops.fill(0);
         self.hops_processed = 0;
         for channel in &mut self.current_min {
             channel.fill(f32::INFINITY);
@@ -432,9 +517,8 @@ impl SpectralHissReducer {
             for bin in cutoff_bin..SPECTRAL_HISS_NUM_BINS {
                 let mut noise = self.current_min[ch][bin];
                 for slot in 0..MIN_HISTORY_SLOTS {
-                    noise = noise.min(
-                        self.minimum_history[ch][slot * SPECTRAL_HISS_NUM_BINS + bin],
-                    );
+                    noise =
+                        noise.min(self.minimum_history[ch][slot * SPECTRAL_HISS_NUM_BINS + bin]);
                 }
                 if noise.is_finite() {
                     aggregate_noise += noise;
@@ -467,9 +551,30 @@ impl SpectralHissReducer {
                 }
                 self.transient_power[ch] = power_aggregate;
                 let reference = self.transient_ref[ch];
-                self.transient_onset[ch] = self.hops_processed >= TRANSIENT_SEED_HOPS
+                // Earlier firing while measured spectra are engaged;
+                // white-spread/unprofiled paths keep 2.0 bit-exactly.
+                let onset_ratio = if self.use_external_noise && self.use_external_spectrum {
+                    TRANSIENT_ONSET_RATIO_MEASURED
+                } else {
+                    TRANSIENT_ONSET_RATIO
+                };
+                let onset = self.hops_processed >= TRANSIENT_SEED_HOPS
                     && reference > 0.0
-                    && power_aggregate > TRANSIENT_ONSET_RATIO * reference;
+                    && power_aggregate > onset_ratio * reference;
+                self.transient_onset_hops[ch] = if onset {
+                    self.transient_onset_hops[ch].saturating_add(1)
+                } else {
+                    0
+                };
+                if self.transient_onset_hops[ch] > TRANSIENT_HOLD_HOPS {
+                    // An impulse can occupy at most N/H = four analysis
+                    // hops. A longer rise must be allowed to establish a
+                    // new stationary reference even while the hold expires.
+                    self.transient_ref[ch] = power_aggregate;
+                    self.transient_onset[ch] = false;
+                } else {
+                    self.transient_onset[ch] = onset;
+                }
             }
         }
 
@@ -527,14 +632,17 @@ impl SpectralHissReducer {
             } else {
                 self.high_band_noise[ch]
             };
-            // Profile per-bin noise for this channel: exactly invert the
-            // live noise_rms formula (rms = sqrt(aggregate/0.375)*sqrt(2)/N,
-            // hence aggregate = (rms*N/sqrt(2))^2*0.375) and spread the
-            // aggregate white across the high band. power[] holds
-            // unnormalized |X|² per bin, not time-domain power: the
-            // broadband floor must pass through this mapping and is never
-            // equated with a power[] entry directly.
-            let profile_per_bin = if self.use_external_noise {
+            // Profile per-bin noise for this channel. Measured spectra
+            // compare directly (same unnormalized |X|^2 units as power[]);
+            // the v1 fallback exactly inverts the live noise_rms formula
+            // (rms = sqrt(aggregate/0.375)*sqrt(2)/N, hence aggregate =
+            // (rms*N/sqrt(2))^2*0.375) and spreads the aggregate white
+            // across the high band. power[] holds unnormalized |X|^2 per
+            // bin, not time-domain power: the broadband floor must pass
+            // through this mapping and is never equated with a power[]
+            // entry directly.
+            let use_measured = self.use_external_noise && self.use_external_spectrum;
+            let profile_per_bin = if self.use_external_noise && !self.use_external_spectrum {
                 let rms = 10.0_f32.powf(self.external_floor_db[ch] / 20.0);
                 let aggregate =
                     (rms * SPECTRAL_HISS_FFT_SIZE as f32 / (2.0_f32).sqrt()).powi(2) * 0.375;
@@ -546,11 +654,12 @@ impl SpectralHissReducer {
                 let power = self.power[ch][bin];
                 let mut noise = self.current_min[ch][bin];
                 for slot in 0..MIN_HISTORY_SLOTS {
-                    noise = noise.min(
-                        self.minimum_history[ch][slot * SPECTRAL_HISS_NUM_BINS + bin],
-                    );
+                    noise =
+                        noise.min(self.minimum_history[ch][slot * SPECTRAL_HISS_NUM_BINS + bin]);
                 }
-                if self.use_external_noise {
+                if use_measured {
+                    noise = self.external_noise_spectrum[ch * SPECTRAL_HISS_NUM_BINS + bin];
+                } else if self.use_external_noise {
                     noise = profile_per_bin;
                 }
 
@@ -883,12 +992,20 @@ mod tests {
         reducer.set_linked(true);
 
         assert!(reducer.set_external_noise(true, &[-40.0]).is_err());
-        assert!(reducer.set_external_noise(true, &[-40.0, f32::NAN]).is_err());
         assert!(
-            reducer.set_external_noise(true, &[-40.0, EXTERNAL_FLOOR_DB_MAX + 1.0]).is_err()
+            reducer
+                .set_external_noise(true, &[-40.0, f32::NAN])
+                .is_err()
         );
         assert!(
-            reducer.set_external_noise(true, &[EXTERNAL_FLOOR_DB_MIN - 1.0, -42.0]).is_err()
+            reducer
+                .set_external_noise(true, &[-40.0, EXTERNAL_FLOOR_DB_MAX + 1.0])
+                .is_err()
+        );
+        assert!(
+            reducer
+                .set_external_noise(true, &[EXTERNAL_FLOOR_DB_MIN - 1.0, -42.0])
+                .is_err()
         );
         assert!(reducer.set_curve_gains(&[1.0; 7]).is_err());
         let mut bad_curve = [1.0; SPECTRAL_HISS_NUM_BINS];
@@ -916,6 +1033,75 @@ mod tests {
         edge_curve[0] = 0.0;
         reducer.set_curve_gains(&edge_curve).unwrap();
         assert_eq!(reducer.curve_gains, edge_curve);
+    }
+
+    #[test]
+    fn spectral_setter_validates_transactionally_and_v1_clears_override() {
+        let mut reducer = SpectralHissReducer::new(1);
+        reducer.initialize(48_000).unwrap();
+        assert!(!reducer.use_external_spectrum);
+
+        let good = vec![2.0; SPECTRAL_HISS_NUM_BINS];
+        reducer
+            .set_external_noise_spectrum(true, &[-40.0], Some(&good))
+            .unwrap();
+        assert!(reducer.use_external_noise);
+        assert!(reducer.use_external_spectrum);
+        assert_eq!(reducer.external_noise_spectrum, good);
+
+        // Bad spectrum lengths/values reject without mutating floors, the
+        // stored spectrum, or the engaged flags.
+        assert!(
+            reducer
+                .set_external_noise_spectrum(true, &[-41.0], Some(&[1.0; 7]))
+                .is_err()
+        );
+        let mut bad = good.clone();
+        bad[9] = f32::NAN;
+        assert!(
+            reducer
+                .set_external_noise_spectrum(true, &[-41.0], Some(&bad))
+                .is_err()
+        );
+        bad[9] = -1.0;
+        assert!(
+            reducer
+                .set_external_noise_spectrum(true, &[-41.0], Some(&bad))
+                .is_err()
+        );
+        assert!(
+            reducer
+                .set_external_noise_spectrum(true, &[f32::NAN], Some(&good))
+                .is_err()
+        );
+        assert!(reducer.use_external_noise);
+        assert!(reducer.use_external_spectrum);
+        assert_eq!(reducer.external_floor_db, [-40.0]);
+        assert_eq!(reducer.external_noise_spectrum, good);
+
+        // None selects the white-spread fallback; the v1 setter clears a
+        // previously engaged override while keeping floors-only behavior.
+        reducer
+            .set_external_noise_spectrum(true, &[-40.0], None)
+            .unwrap();
+        assert!(reducer.use_external_noise);
+        assert!(!reducer.use_external_spectrum);
+        reducer
+            .set_external_noise_spectrum(true, &[-40.0], Some(&good))
+            .unwrap();
+        assert!(reducer.use_external_spectrum);
+        reducer.set_external_noise(true, &[-40.0]).unwrap();
+        assert!(reducer.use_external_noise);
+        assert!(!reducer.use_external_spectrum);
+
+        // Reset retains an engaged spectral configuration like floors.
+        reducer
+            .set_external_noise_spectrum(true, &[-40.0], Some(&good))
+            .unwrap();
+        reducer.reset();
+        assert!(reducer.use_external_noise);
+        assert!(reducer.use_external_spectrum);
+        assert_eq!(reducer.external_noise_spectrum, good);
     }
 
     #[test]

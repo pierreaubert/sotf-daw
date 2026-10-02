@@ -2433,8 +2433,14 @@ impl DawHost {
 
     /// Apply a parameter immediately on the calling thread.
     ///
-    /// This is intended for offline setup, tests, and migration code. Real-time
-    /// control paths should use `set_plugin_parameter()` / `queue_node_parameter()`.
+    /// Control thread only, between blocks: the engine runs this on the
+    /// processing thread for `SetParameter` commands; offline setup, tests,
+    /// and migration code call it directly. Never call from the audio
+    /// callback; use `set_plugin_parameter()` / `queue_node_parameter()`
+    /// for realtime control. Structural parameters still require a
+    /// rebuild, except ids the plugin explicitly opts in via
+    /// `supports_immediate_momentary_control`. Metadata probes fail
+    /// closed: a panicking plugin reports an error without mutation.
     pub fn set_plugin_parameter_immediate(
         &mut self,
         index: usize,
@@ -2443,19 +2449,39 @@ impl DawHost {
     ) -> Result<(), String> {
         self.ensure_sink_commands_allowed()?;
         let &nid = self.chain_nodes.get(index).ok_or("oob")?;
-        let plugin = self
-            .plugins
-            .get(nid)
-            .and_then(Option::as_ref)
-            .ok_or("plugin not found")?;
-        if plugin
-            .parameters()
-            .iter()
-            .find(|parameter| parameter.id.as_str() == id)
-            .is_some_and(|parameter| {
-                parameter.update_mode == crate::param_specs::UpdateMode::Structural
-            })
-        {
+        let (is_structural, momentary_allowed) = {
+            let plugin = self
+                .plugins
+                .get(nid)
+                .and_then(Option::as_ref)
+                .ok_or("plugin not found")?;
+            let parameters = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                plugin.parameters()
+            }))
+            .map_err(|_| {
+                format!("Plugin at index {index} panicked while listing parameters")
+            })?;
+            let is_structural = parameters
+                .iter()
+                .find(|parameter| parameter.id.as_str() == id)
+                .is_some_and(|parameter| {
+                    parameter.update_mode == crate::param_specs::UpdateMode::Structural
+                });
+            let allowed = if is_structural {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    plugin.supports_immediate_momentary_control(
+                        &super::super::parameters::ParameterId::from(id),
+                    )
+                }))
+                .map_err(|_| {
+                    format!("Plugin at index {index} panicked while reporting momentary controls")
+                })?
+            } else {
+                false
+            };
+            (is_structural, allowed)
+        };
+        if is_structural && !momentary_allowed {
             return Err(format!(
                 "Parameter {id} requires rebuilding the plugin chain"
             ));

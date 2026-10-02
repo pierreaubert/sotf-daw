@@ -5,6 +5,7 @@
 
 pub mod buffers;
 pub mod factory;
+pub mod linear_phase_eq_dynamic;
 pub mod param_bridge;
 pub mod standalone;
 pub mod state;

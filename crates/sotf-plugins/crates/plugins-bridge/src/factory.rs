@@ -453,12 +453,12 @@ pub fn create_plugin(
         "LinearPhaseEQ" | "linear_phase_eq" => {
             let params: sotf_plugin_linear_phase_eq::LinearPhaseEqPluginParams =
                 parse_params(config_json)?;
-            let plugin = sotf_plugin_linear_phase_eq::LinearPhaseEqPlugin::from_params(
+            let plugin = crate::linear_phase_eq_dynamic::LinearPhaseEqDynamicPlugin::from_params(
                 channels,
                 sample_rate,
                 params,
             )?;
-            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+            Ok(Box::new(plugin))
         }
 
         "SpectralCompressor" | "spectral_compressor" => {

@@ -47,21 +47,21 @@ fn print_array(name: String, data: &[i8]) {
 }
 
 fn reorder_gru_layer(layer: &rnn::GruLayer, prefix: &'static str) {
-    let weights = reorder_weights(layer.nb_inputs, 3 * layer.nb_neurons, layer.input_weights);
+    let weights = reorder_weights(layer.nb_inputs, 3 * layer.nb_neurons, &layer.input_weights);
     let recurrent = reorder_weights(
         layer.nb_neurons,
         3 * layer.nb_neurons,
-        layer.recurrent_weights,
+        &layer.recurrent_weights,
     );
 
-    print_array(format!("{}_BIAS", prefix), layer.bias);
+    print_array(format!("{}_BIAS", prefix), &layer.bias);
     print_array(format!("{}_WEIGHTS", prefix), &weights);
     print_array(format!("{}_RECURRENT_WEIGHTS", prefix), &recurrent);
     println!(
-        "static {}: GruLayer = GruLayer {{
-        bias: &{}_BIAS,
-        input_weights: &{}_WEIGHTS,
-        recurrent_weights: &{}_RECURRENT_WEIGHTS,
+        "const {}: GruLayer = GruLayer {{
+        bias: Cow::Borrowed(&{}_BIAS),
+        input_weights: Cow::Borrowed(&{}_WEIGHTS),
+        recurrent_weights: Cow::Borrowed(&{}_RECURRENT_WEIGHTS),
         nb_inputs: {},
         nb_neurons: {},
         activation: {},
@@ -77,13 +77,13 @@ fn reorder_gru_layer(layer: &rnn::GruLayer, prefix: &'static str) {
 }
 
 fn reorder_dense_layer(layer: &rnn::DenseLayer, prefix: &'static str) {
-    let weights = reorder_weights(layer.nb_inputs, layer.nb_neurons, layer.input_weights);
-    print_array(format!("{}_BIAS", prefix), layer.bias);
+    let weights = reorder_weights(layer.nb_inputs, layer.nb_neurons, &layer.input_weights);
+    print_array(format!("{}_BIAS", prefix), &layer.bias);
     print_array(format!("{}_WEIGHTS", prefix), &weights);
     println!(
-        "static {}: DenseLayer = DenseLayer {{
-        bias: &{}_BIAS,
-        input_weights: &{}_WEIGHTS,
+        "const {}: DenseLayer = DenseLayer {{
+        bias: Cow::Borrowed(&{}_BIAS),
+        input_weights: Cow::Borrowed(&{}_WEIGHTS),
         nb_inputs: {},
         nb_neurons: {},
         activation: {},
@@ -105,6 +105,7 @@ fn main() {
         // TODO: support generating this file in rust direction.
 
         use crate::rnn::{{Activation, DenseLayer, GruLayer, RnnModel}};
+        use std::borrow::Cow;
         ");
     reorder_dense_layer(&m.input_dense, "INPUT_DENSE");
     reorder_gru_layer(&m.vad_gru, "VAD_GRU");

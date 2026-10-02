@@ -112,15 +112,7 @@ fn render_and_check_output_peak(
     worst_case: &mut String,
 ) {
     let lookahead_ms = if isp { 5.0 } else { 0.0 };
-    let mut plugin = make(
-        rate,
-        channels,
-        oversampling,
-        -6.0,
-        lookahead_ms,
-        isp,
-        mix,
-    );
+    let mut plugin = make(rate, channels, oversampling, -6.0, lookahead_ms, isp, mix);
     let interval = (rate as usize / 10).max(1);
     let frames = interval * 3 + 17;
     let mut input = vec![0.0; frames * channels];
@@ -335,7 +327,14 @@ fn threshold_automation_keeps_output_meters_consistent() {
                 )
                 .unwrap();
         }
-        let count = 257.min(frames - position);
+        // Split the callback at the automation event so a 257-frame quantum
+        // cannot skip the requested sample position.
+        let next_boundary = if position < interval {
+            interval
+        } else {
+            frames
+        };
+        let count = 257.min(next_boundary - position);
         plugin
             .process_in_place(
                 &mut output[position * channels..(position + count) * channels],

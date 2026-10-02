@@ -1216,6 +1216,17 @@ impl PlaybackRuntime {
             return;
         }
 
+        self.send_playback_stats_snapshot("PERIODIC");
+        self.diagnostics.last_diagnostic_log = Instant::now();
+    }
+
+    /// Send one playback statistics snapshot with current counters.
+    ///
+    /// Shared by the periodic diagnostics and the terminal drain snapshot so
+    /// both report identical fields from identical loads. Runs on the
+    /// playback worker thread (never the CPAL callback); the channel send is
+    /// best-effort on the bounded event queue like every other emission.
+    fn send_playback_stats_snapshot(&self, report_kind: &str) {
         let elapsed = self.diagnostics.stream_start_time.elapsed().as_secs_f64();
         let total_cb = self.state.callback_count.load(Ordering::Relaxed);
         let total_cb_samples = self.state.total_callback_samples.load(Ordering::Relaxed);
@@ -1231,8 +1242,9 @@ impl PlaybackRuntime {
                 .unwrap_or(0)
         };
         log::debug!(
-            "[Playback Thread] PERIODIC: callbacks={}, effective={}Hz (expected {}Hz), \
+            "[Playback Thread] {}: callbacks={}, effective={}Hz (expected {}Hz), \
              buffer_fill={}%, blocked={}, dropped={}, received={}, format={:?}",
+            report_kind,
             total_cb,
             effective_hz,
             self.config.sample_rate,
@@ -1255,7 +1267,6 @@ impl PlaybackRuntime {
             },
             "playback stats",
         );
-        self.diagnostics.last_diagnostic_log = Instant::now();
     }
 
     fn emit_output_meter(&mut self) {
@@ -1263,6 +1274,16 @@ impl PlaybackRuntime {
             return;
         }
 
+        self.send_output_meter_snapshot();
+        self.diagnostics.last_meter_report = Instant::now();
+    }
+
+    /// Send one output meter snapshot, swapping the residual peak.
+    ///
+    /// Shared by the periodic meter and the terminal drain snapshot. The
+    /// swap hands the callback-observed residual to the event flow exactly
+    /// once; the manager-side stopped-meter reset is unchanged.
+    fn send_output_meter_snapshot(&self) {
         let peak_linear = f32::from_bits(
             self.state
                 .output_peak_bits
@@ -1277,6 +1298,23 @@ impl PlaybackRuntime {
             },
             "playback output meter",
         );
+    }
+
+    /// Publish final counters plus residual meter before a drained receipt.
+    ///
+    /// Streams shorter than the diagnostics interval would otherwise finish
+    /// with stale zero counters: the ring drains, `PlaybackDrained` fires,
+    /// and no periodic snapshot ever ran. Emitting the terminal snapshot
+    /// first keeps every drained receipt truthful in arrival order — the
+    /// manager observes final counters before `Stopped` — using the same
+    /// fields and loads as the periodic reports (no new stats fields).
+    /// Timer cadence restarts so no duplicate idle-window report follows
+    /// immediately. Timeout versus real-drain receipt semantics are
+    /// unchanged; only the actuals preceding each receipt are published.
+    fn emit_terminal_drain_snapshot(&mut self) {
+        self.send_playback_stats_snapshot("TERMINAL");
+        self.send_output_meter_snapshot();
+        self.diagnostics.last_diagnostic_log = Instant::now();
         self.diagnostics.last_meter_report = Instant::now();
     }
 
@@ -1392,6 +1430,7 @@ impl PlaybackRuntime {
 
         if self.producer.slots() >= self.buffer_capacity {
             log::info!("[Playback Thread] Ring buffer drained, signaling completion");
+            self.emit_terminal_drain_snapshot();
             send_playback_event(
                 &self.event_tx,
                 ThreadEvent::PlaybackDrained,
@@ -1438,6 +1477,7 @@ impl PlaybackRuntime {
                 log::info!(
                     "[Playback Thread] Ring buffer drained (post-disconnect), signaling completion"
                 );
+                self.emit_terminal_drain_snapshot();
                 send_playback_event(
                     &self.event_tx,
                     ThreadEvent::PlaybackDrained,
@@ -1455,7 +1495,11 @@ impl PlaybackRuntime {
         }
     }
 
-    fn emit_drain_timeout_event(&self, error_prefix: &str, error_context: &str) {
+    fn emit_drain_timeout_event(&mut self, error_prefix: &str, error_context: &str) {
+        // Both terminal branches below (stall error or mostly-drained
+        // completion) carry the actual finals first; the timeout-versus-
+        // drain receipt distinction itself is unchanged.
+        self.emit_terminal_drain_snapshot();
         let current_slots = self.producer.slots();
         let drain_percent = (current_slots * 100)
             .checked_div(self.buffer_capacity)
@@ -1488,7 +1532,10 @@ impl PlaybackRuntime {
         }
     }
 
-    fn emit_post_disconnect_timeout_event(&self) {
+    fn emit_post_disconnect_timeout_event(&mut self) {
+        // Both terminal branches below carry the actual finals first; the
+        // timeout-versus-drain receipt distinction itself is unchanged.
+        self.emit_terminal_drain_snapshot();
         let current_slots = self.producer.slots();
         let drain_percent = (current_slots * 100)
             .checked_div(self.buffer_capacity)

@@ -829,13 +829,12 @@ pub(crate) fn merge_de_esser_state_into_config(
         {
             return Ok(Some(labels[index].to_string()));
         }
-        if let Some(label) = value.as_str() {
-            if let Some(canonical) = labels
+        if let Some(label) = value.as_str()
+            && let Some(canonical) = labels
                 .iter()
                 .find(|candidate| candidate.eq_ignore_ascii_case(label))
-            {
-                return Ok(Some((*canonical).to_string()));
-            }
+        {
+            return Ok(Some((*canonical).to_string()));
         }
         Err(format!(
             "DeEsser state '{key}' must be one of {} or a choice index in 0..={}",

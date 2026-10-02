@@ -52,9 +52,16 @@ pub fn create_plugin_with_input_channels(
             .and_then(|value| value.as_int())
             .and_then(|value| usize::try_from(value).ok())
             .ok_or_else(|| "Ambisonics target layout is missing or invalid".to_string())?;
-        crate::wrapper::ambisonics_io_channels(order, target_layout)
-            .ok_or_else(|| "Ambisonics layout is outside the supported range".to_string())?
-            .0
+        if target_layout == crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX {
+            if !(1..=7).contains(&order) {
+                return Err("Ambisonics layout is outside the supported range".to_string());
+            }
+            (order + 1) * (order + 1)
+        } else {
+            crate::wrapper::ambisonics_io_channels(order, target_layout)
+                .ok_or_else(|| "Ambisonics layout is outside the supported range".to_string())?
+                .0
+        }
     } else if name == "Crossover" {
         if !(1..=16).contains(&selected_input_channels) {
             return Err(format!(
@@ -119,8 +126,20 @@ pub fn create_plugin_with_input_channels(
             .and_then(|value| value.as_int())
             .and_then(|value| usize::try_from(value).ok())
             .ok_or_else(|| "Ambisonics target layout is missing or invalid".to_string())?;
-        crate::wrapper::ambisonics_io_channels(order, target_layout)
-            .ok_or_else(|| "Ambisonics layout is outside the supported range".to_string())?
+        if target_layout == crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX {
+            if !(1..=7).contains(&order) {
+                return Err("Ambisonics layout is outside the supported range".to_string());
+            }
+            let geometry = params
+                .ambisonics_custom_layout_for_construction()?
+                .ok_or_else(|| {
+                    "Ambisonics target layout 8 requires staged custom geometry".to_string()
+                })?;
+            ((order + 1) * (order + 1), geometry.total_channels())
+        } else {
+            crate::wrapper::ambisonics_io_channels(order, target_layout)
+                .ok_or_else(|| "Ambisonics layout is outside the supported range".to_string())?
+        }
     } else if name == "BandSplit" {
         let index = params
             .value("num_bands")
@@ -462,6 +481,41 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default();
         config.insert("ir_file".to_string(), Value::from(ir_file));
+    }
+    if name == "HissReducer" {
+        match params.hiss_profile_for_construction() {
+            Ok(Some(profile)) => {
+                let blob = serde_json::to_value(&profile)
+                    .map_err(|error| format!("HissReducer captured_profile: {error}"))?;
+                config.insert("captured_profile".to_string(), blob);
+            }
+            Ok(None) => {}
+            Err(error) => return Err(error),
+        }
+    }
+    if name == "AmbisonicsDecoder" {
+        // Target 8 carries user geometry in `custom_layout`; named targets
+        // ignore the carrier entirely so stale staged geometry can never
+        // block a named construction.
+        let custom_selected = params
+            .value("target_layout")
+            .and_then(|value| value.as_int())
+            .and_then(|value| usize::try_from(value).ok())
+            == Some(crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX);
+        if custom_selected {
+            match params.ambisonics_custom_layout_for_construction()? {
+                Some(geometry) => {
+                    let layout = serde_json::to_value(&geometry)
+                        .map_err(|error| format!("AmbisonicsDecoder custom_layout: {error}"))?;
+                    config.insert("custom_layout".to_string(), layout);
+                }
+                None => {
+                    return Err(
+                        "Ambisonics target layout 8 requires staged custom geometry".to_string(),
+                    );
+                }
+            }
+        }
     }
     serde_json::to_string(&config).map_err(|error| format!("{name} configuration: {error}"))
 }

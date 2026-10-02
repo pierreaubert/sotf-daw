@@ -706,6 +706,20 @@ fn is_supported_ir(path: &Path) -> bool {
         })
 }
 
+pub(crate) fn create_editor<P: Plugin<BackgroundTask = BackgroundTask> + 'static>(
+    params: Arc<DynamicParams>,
+    service: Arc<ConvolutionEditorService>,
+    async_executor: AsyncExecutor<P>,
+) -> Option<Box<dyn Editor>> {
+    let state = ConvolutionEditorState::new(params, service, async_executor);
+    create_egui_editor(
+        EguiState::from_size(720, 520),
+        state,
+        |_context, _state| {},
+        |context, setter, state| state.show(context, setter),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -878,18 +892,4 @@ mod tests {
         service.complete_initialization(geometry, None);
         assert_eq!(service.resource_epoch(), editor_epoch + 1);
     }
-}
-
-pub(crate) fn create_editor<P: Plugin<BackgroundTask = BackgroundTask> + 'static>(
-    params: Arc<DynamicParams>,
-    service: Arc<ConvolutionEditorService>,
-    async_executor: AsyncExecutor<P>,
-) -> Option<Box<dyn Editor>> {
-    let state = ConvolutionEditorState::new(params, service, async_executor);
-    Some(create_egui_editor(
-        EguiState::from_size(720, 520),
-        state,
-        |_context, _state| {},
-        |context, setter, state| state.show(context, setter),
-    )?)
 }

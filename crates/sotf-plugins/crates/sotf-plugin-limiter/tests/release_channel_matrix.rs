@@ -2,8 +2,10 @@
 //!
 //! Covers bursts, two-tone, phase, lookahead, release (+dual), rates,
 //! linked/unlinked/partial channels, and threshold automation. Sample ceiling
-//! bound is 0.00001 dB and reconstructed true-peak bound is 0.1 dB, preserving
-//! existing accepted tolerances. No production fast-math reuse in oracles.
+//! bound is 0.00001 dB in every hard/wet mode. The reconstructed true-peak
+//! bound is 0.1 dB when ISP protection is enabled with covering lookahead.
+//! Disabled protection is still measured, but only promises a sample ceiling.
+//! No production fast-math reuse in oracles.
 
 // Rust guideline compliant 2026-02-21
 use sotf_host::{ParameterId, ParameterValue, ParametricInPlacePlugin, ProcessContext};
@@ -172,6 +174,7 @@ fn burst_sample(pattern: usize, index: usize) -> f32 {
 fn burst_ceiling_holds_across_rate_link_release() {
     let mut worst_sample = f64::MIN;
     let mut worst_tp = f64::MIN;
+    let mut worst_unprotected_tp = f64::MIN;
     let mut worst_case = String::new();
     let mut count = 0;
     for rate in RATES {
@@ -205,12 +208,8 @@ fn burst_ceiling_holds_across_rate_link_release() {
                                         THRESHOLD_DB as f32,
                                         isp,
                                     );
-                                    let emitted = render_full(
-                                        &mut plugin,
-                                        rate,
-                                        &input,
-                                        &[1, 127, 257],
-                                    );
+                                    let emitted =
+                                        render_full(&mut plugin, rate, &input, &[1, 127, 257]);
                                     let peak = sample_peak_db(&emitted);
                                     if peak > worst_sample {
                                         worst_sample = peak;
@@ -226,16 +225,20 @@ fn burst_ceiling_holds_across_rate_link_release() {
                                     for ch in 0..channels {
                                         let stream = channel_stream(&emitted, channels, ch);
                                         let tp = reconstructed_peak_db(&stream, rate);
-                                        if tp > worst_tp {
+                                        if isp && tp > worst_tp {
                                             worst_tp = tp;
                                             worst_case = format!(
                                                 "tp rate={rate} link={link} rel={release_ms} dual={dual} la={lookahead_ms} isp={isp} ch={channels}/{ch} len={length} pat={pattern}"
                                             );
                                         }
-                                        assert!(
-                                            tp <= THRESHOLD_DB + TP_TOLERANCE_DB,
-                                            "TP ceiling {tp:.4} exceeds bound at {worst_case}"
-                                        );
+                                        if isp {
+                                            assert!(
+                                                tp <= THRESHOLD_DB + TP_TOLERANCE_DB,
+                                                "TP ceiling {tp:.4} exceeds bound at {worst_case}"
+                                            );
+                                        } else {
+                                            worst_unprotected_tp = worst_unprotected_tp.max(tp);
+                                        }
                                     }
                                     // Limiter must engage, not pass silence or over-attenuate.
                                     assert!(
@@ -251,9 +254,29 @@ fn burst_ceiling_holds_across_rate_link_release() {
             }
         }
     }
-    eprintln!("burst matrix: {count} renders, worst sample {worst_sample:.6} dB, worst TP {worst_tp:.4} dB at {worst_case}");
+    eprintln!(
+        "burst matrix: {count} renders, worst sample {worst_sample:.6} dB, worst protected TP {worst_tp:.4} dB, unprotected TP {worst_unprotected_tp:.4} dB at {worst_case}"
+    );
     assert!(worst_sample <= THRESHOLD_DB + SAMPLE_TOLERANCE_DB);
     assert!(worst_tp <= THRESHOLD_DB + TP_TOLERANCE_DB);
+}
+
+#[test]
+fn disabled_true_peak_protection_only_promises_the_sample_ceiling() {
+    // A three-sample alternating burst is a counterexample to a true-peak
+    // guarantee when both protection switches and lookahead are disabled.
+    // Keep this case to prevent a future oracle from conflating the modes.
+    let rate = 44_100;
+    let mut input = vec![0.0; 4096];
+    input[2048..2051].copy_from_slice(&[1.1, -1.1, 1.1]);
+    let mut plugin = make(rate, 1, 0.0, 10.0, false, 0.0, THRESHOLD_DB as f32, false);
+    let output = render_full(&mut plugin, rate, &input, &[1, 127, 257]);
+    let sample = sample_peak_db(&output);
+    let reconstructed = reconstructed_peak_db(&output, rate);
+    assert!(sample <= THRESHOLD_DB + SAMPLE_TOLERANCE_DB);
+    assert!(sample > THRESHOLD_DB - 0.001);
+    assert!(reconstructed > THRESHOLD_DB + 0.5,
+        "counterexample must expose intersample overshoot: {reconstructed:.4} dBTP");
 }
 
 #[test]
@@ -423,7 +446,13 @@ fn threshold_automation_with_link_modes_holds_ceiling() {
                     )
                     .unwrap();
             }
-            let count = 257.min(frames - position);
+            // Deliver the threshold event at its exact sample position.
+            let next_boundary = if position < frames / 2 {
+                frames / 2
+            } else {
+                frames
+            };
+            let count = 257.min(next_boundary - position);
             plugin
                 .process_in_place(
                     &mut output[position * channels..(position + count) * channels],
@@ -438,7 +467,11 @@ fn threshold_automation_with_link_modes_holds_ceiling() {
         assert!(sample_peak_db(&output) <= -6.0 + SAMPLE_TOLERANCE_DB + 0.5);
         // Late program (after smoother + latency settle) respects the tighter ceiling.
         let latency = 240; // 5 ms at 48 kHz.
-        let late_start = (frames / 2 + latency + 480) * channels;
+        // The threshold smoother has a 5 ms time constant. Its 12 dB step
+        // needs ln(12/0.3) time constants to enter the unchanged 0.3 dB
+        // bound; two time constants are not a settled automation tail.
+        let settle_frames = (f64::from(rate) * 0.005 * (12.0_f64 / 0.3).ln()).ceil() as usize;
+        let late_start = (frames / 2 + latency + settle_frames) * channels;
         let late = &output[late_start..frames * channels];
         let late_peak = sample_peak_db(late);
         assert!(

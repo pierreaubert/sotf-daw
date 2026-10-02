@@ -6,7 +6,12 @@
 
 use super::processing_thread::build_plugin_host_with_policy;
 use crate::{EngineConfig, PluginBuildDiagnostic};
-use sotf_plugins::{ParameterEventSender, ParameterValue, PluginHost};
+use sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqControlHandle;
+use sotf_plugins::plugin_linear_phase_eq::{
+    BandConfig, CommitRefusal, LinearPhaseEqPlugin, LiveFilterSnapshot, PreparedBandUpdate,
+};
+use sotf_plugins::{Host, ParameterEventSender, ParameterValue, Plugin, PluginHost};
+use std::sync::Arc;
 
 /// Allocation-free-after-build, externally-clocked plugin engine.
 pub struct EmbeddedAudioEngine {
@@ -100,6 +105,200 @@ impl EmbeddedAudioEngine {
     /// the render callback consumes it without locking.
     pub fn take_parameter_event_sender(&mut self) -> Option<ParameterEventSender> {
         self.host.take_parameter_event_sender()
+    }
+
+    /// Clone the shared linear-phase EQ control handle, if present.
+    ///
+    /// Control thread only. The `Arc` routes worker prepared updates and
+    /// retired-bank reclamation without `&mut` engine access; audio never
+    /// locks. Returns `None` for an out-of-range index or a non-EQ plugin.
+    pub fn linear_phase_eq_handle(
+        &self,
+        plugin_index: usize,
+    ) -> Option<Arc<LinearPhaseEqControlHandle>> {
+        let data: Arc<dyn std::any::Any + Send + Sync> =
+            Host::get_plugin_data(&self.host, plugin_index)?;
+        Arc::downcast::<LinearPhaseEqControlHandle>(data).ok()
+    }
+
+    /// Capture a linear-phase EQ live snapshot for worker preparation.
+    ///
+    /// Control thread only; allocates the snapshot. Hand the snapshot plus a
+    /// band edit to `LinearPhaseEqPlugin::prepare_band_update` on a worker,
+    /// then deliver with `linear_phase_eq_submit` or the shared handle.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an out-of-range index or a non-EQ plugin.
+    pub fn linear_phase_eq_snapshot(
+        &self,
+        plugin_index: usize,
+    ) -> Result<LiveFilterSnapshot, String> {
+        let plugin: &dyn Plugin = self
+            .host
+            .get_plugin(plugin_index)
+            .ok_or_else(|| format!("plugin index {plugin_index} out of bounds"))?;
+        let wrapper = plugin
+            .as_any()
+            .and_then(|any| {
+                any.downcast_ref::<
+                    sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqDynamicPlugin,
+                >()
+            })
+            .ok_or_else(|| {
+                format!("plugin index {plugin_index} is not a linear-phase EQ")
+            })?;
+        Ok(wrapper.snapshot_for_update())
+    }
+
+    /// Queue a worker-prepared EQ update for the next render quanta.
+    ///
+    /// Control thread only; nonblocking and bounded. On a full queue the
+    /// payload drops on the calling thread with a loud error; live config
+    /// and history stay untouched.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an out-of-range index, a non-EQ plugin, or a
+    /// full/busy queue.
+    pub fn linear_phase_eq_submit(
+        &self,
+        plugin_index: usize,
+        prepared: PreparedBandUpdate,
+    ) -> Result<(), String> {
+        let handle = self
+            .linear_phase_eq_handle(plugin_index)
+            .ok_or_else(|| {
+                format!("plugin index {plugin_index} is not a linear-phase EQ")
+            })?;
+        handle.try_submit(prepared)
+    }
+
+    /// Snapshot, prepare and queue one EQ band edit on control.
+    ///
+    /// Convenience for control callers without a dedicated worker. Uses the
+    /// existing DSP preparation API, so validation matches the worker path.
+    ///
+    /// # Errors
+    ///
+    /// Returns snapshot, preparation (index, placement, range) or full-queue
+    /// errors. All errors leave live state untouched.
+    pub fn linear_phase_eq_request(
+        &self,
+        plugin_index: usize,
+        band_index: usize,
+        new_band: BandConfig,
+    ) -> Result<(), String> {
+        let base = self.linear_phase_eq_snapshot(plugin_index)?;
+        let prepared =
+            LinearPhaseEqPlugin::prepare_band_update(&base, band_index, new_band)?;
+        self.linear_phase_eq_submit(plugin_index, prepared)
+    }
+
+    /// Drop reclaimable EQ retired banks on the calling thread.
+    ///
+    /// Control thread only. Returns the number reclaimed (zero when unavailable
+    /// or contended; retry later). Call between renders after blends complete.
+    pub fn linear_phase_eq_reclaim(&self, plugin_index: usize) -> usize {
+        self.linear_phase_eq_handle(plugin_index)
+            .map(|handle| handle.try_reclaim())
+            .unwrap_or(0)
+    }
+
+    /// Report the last EQ audio commit refusal, if any.
+    ///
+    /// Control thread only. Reads the wrapper record through the existing
+    /// `get_plugin` plus `as_any` `&self` pattern without locking. Returns
+    /// `None` when no refusal is recorded or the plugin is unavailable.
+    pub fn linear_phase_eq_last_refusal(
+        &self,
+        plugin_index: usize,
+    ) -> Option<CommitRefusal> {
+        let plugin: &dyn Plugin = self.host.get_plugin(plugin_index)?;
+        plugin
+            .as_any()
+            .and_then(|any| {
+                any.downcast_ref::<
+                    sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqDynamicPlugin,
+                >()
+            })
+            .and_then(|wrapper| wrapper.last_refusal())
+    }
+
+    /// Count retained EQ audio-slot updates (`0..=2`).
+    ///
+    /// Control thread only, same `&self` lookup as `linear_phase_eq_snapshot`.
+    /// Returns zero when the plugin is unavailable. Use with
+    /// `linear_phase_eq_last_refusal` to observe a wedged head, then recover
+    /// with `linear_phase_eq_request_cancel`.
+    pub fn linear_phase_eq_pending_len(&self, plugin_index: usize) -> usize {
+        let Some(plugin) = self.host.get_plugin(plugin_index) else {
+            return 0;
+        };
+        plugin
+            .as_any()
+            .and_then(|any| {
+                any.downcast_ref::<
+                    sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqDynamicPlugin,
+                >()
+            })
+            .map(|wrapper| wrapper.pending_len())
+            .unwrap_or(0)
+    }
+
+    /// Request eviction of the EQ audio head slot.
+    ///
+    /// Lock-free control call recording one coalescing cancel generation on
+    /// the shared handle. Audio evicts at most one head payload per quantum
+    /// into a bounded outbox without dropping; observe completion via
+    /// `linear_phase_eq_pending_len` plus `linear_phase_eq_reclaim_cancelled`
+    /// count. Returns false when the plugin is unavailable.
+    pub fn linear_phase_eq_request_cancel(&self, plugin_index: usize) -> bool {
+        match self.linear_phase_eq_handle(plugin_index) {
+            Some(handle) => {
+                handle.request_cancel();
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Drop cancelled EQ head payloads on the calling thread.
+    ///
+    /// Control thread only. Returns the number destroyed off audio (zero when
+    /// unavailable, empty, or contended; retry later).
+    pub fn linear_phase_eq_reclaim_cancelled(&self, plugin_index: usize) -> usize {
+        self.linear_phase_eq_handle(plugin_index)
+            .map(|handle| handle.try_reclaim_cancelled())
+            .unwrap_or(0)
+    }
+
+    /// Read an accepted linear-phase EQ band gain in dB.
+    ///
+    /// Control thread only; reports the committed live config, never a queued
+    /// edit whose render has not changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an out-of-range plugin or band index, a non-EQ
+    /// plugin, or an unreadable control.
+    pub fn linear_phase_eq_band_gain(
+        &self,
+        plugin_index: usize,
+        band_index: usize,
+    ) -> Result<f32, String> {
+        use sotf_plugins::{ParameterId, ParameterValue};
+        let plugin: &dyn Plugin = self
+            .host
+            .get_plugin(plugin_index)
+            .ok_or_else(|| format!("plugin index {plugin_index} out of bounds"))?;
+        let id = ParameterId::from(format!("band_{band_index}_gain").as_str());
+        match plugin.get_parameter(&id) {
+            Some(ParameterValue::Float(gain)) => Ok(gain),
+            other => Err(format!(
+                "plugin index {plugin_index} band {band_index} gain unreadable: {other:?}"
+            )),
+        }
     }
 
     pub fn input_channels(&self) -> usize {

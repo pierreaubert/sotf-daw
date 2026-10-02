@@ -230,8 +230,8 @@ fn aud139_shelf_parameter_descriptors_append_after_legacy_addresses() {
 
     assert_eq!(
         plugin_get_parameter_count(handle_const),
-        80,
-        "the 64-entry Peak prefix is followed by shape/slope for all eight bands"
+        88,
+        "the 64-entry Peak prefix and 16 shape/slope addresses precede eight appended placements"
     );
     for band in 0..8 {
         for (offset, field) in [(0, "shape"), (1, "shelf_slope")] {
@@ -247,13 +247,17 @@ fn aud139_shelf_parameter_descriptors_append_after_legacy_addresses() {
             );
         }
         let shape_index = 64 + band * 2;
-        for (choice_index, expected) in ["Peak", "Low Shelf", "High Shelf"].into_iter().enumerate()
+        for (choice_index, expected) in ["Peak", "Low Shelf", "High Shelf", "Tilt"].into_iter().enumerate()
         {
             let label = plugin_get_parameter_choice_label(handle_const, shape_index, choice_index);
             assert_eq!(c_string(label), expected);
         }
-        assert!(plugin_get_parameter_choice_label(handle_const, shape_index, 3).is_null());
+        assert!(plugin_get_parameter_choice_label(handle_const, shape_index, 4).is_null());
         assert!(plugin_get_parameter_choice_label(handle_const, shape_index + 1, 0).is_null());
+        let placement_info = plugin_get_parameter_info(handle_const, 80 + band);
+        assert!(!placement_info.is_null());
+        // SAFETY: the metadata is borrowed from this live handle.
+        assert_eq!(c_string(unsafe { (*placement_info).id }), format!("band_{band}_placement"));
     }
 
     plugin_destroy(handle);

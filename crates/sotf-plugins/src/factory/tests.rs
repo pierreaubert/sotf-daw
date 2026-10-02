@@ -749,7 +749,7 @@ fn ambisonics_factory_custom_geometry_rejections_name_custom() {
             48_000,
         );
         match rejected {
-            Err(error) if error.contains("custom") => {}
+            Err(error) if error.to_ascii_lowercase().contains("custom") => {}
             Err(error) => {
                 panic!("malformed custom geometry must name custom, got Err({error})")
             }
@@ -757,7 +757,7 @@ fn ambisonics_factory_custom_geometry_rejections_name_custom() {
         }
     }
 
-    // Unknown string targets still fail at the routing parse, before custom.
+    // Unknown string targets fail layout validation before DSP construction.
     let unknown = create_plugin(
         "ambisonics_decoder",
         &serde_json::json!({"order": 1, "target_layout": "nope"}),
@@ -765,9 +765,9 @@ fn ambisonics_factory_custom_geometry_rejections_name_custom() {
         48_000,
     );
     match unknown {
-        Err(error) if error.contains("Failed to parse ambisonics decoder params") => {}
-        Err(error) => panic!("unknown targets must fail routing parse, got Err({error})"),
-        Ok(_) => panic!("unknown targets must fail routing parse, got Ok"),
+        Err(error) if error.contains("Unknown speaker layout 'nope'") => {}
+        Err(error) => panic!("unknown targets must name the invalid layout, got Err({error})"),
+        Ok(_) => panic!("unknown targets must be rejected, got Ok"),
     }
 
     // Wrong input width is still rejected after custom construction.
@@ -843,33 +843,41 @@ fn resampler_facade_factory_honors_cutoff_smoothing_and_renders() {
             (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
         })
         .collect();
-    let mut legacy_out = vec![f32::NAN; input.len()];
-    let mut smoothed_out = vec![f32::NAN; input.len()];
-    assert_eq!(
-        legacy
-            .process(
-                &input,
-                &mut legacy_out,
-                &sotf_host::ProcessContext::new(48_000, frames),
-            )
-            .unwrap(),
-        frames
-    );
-    assert_eq!(
-        smoothed
-            .process(
-                &input,
-                &mut smoothed_out,
-                &sotf_host::ProcessContext::new(48_000, frames),
-            )
-            .unwrap(),
-        frames
-    );
+    let render = |plugin: &mut Box<dyn sotf_host::Plugin>| {
+        // Dynamic unity-rate conversion uses the sinc backend. Its first
+        // short callback buffers input and truthfully produces zero frames.
+        let capacity = plugin.output_frames_for_input(frames);
+        let mut scratch = vec![f32::NAN; capacity * 2 + 4];
+        let written = plugin.process(&input, &mut scratch,
+            &sotf_host::ProcessContext::new(48_000, frames)).unwrap();
+        assert_eq!(written, 0, "sub-chunk input must stay buffered");
+        assert!(scratch[written * 2..].iter().all(|sample| sample.is_nan()));
+        let mut output = scratch[..written * 2].to_vec();
+        let calls = plugin.drain_call_bound().expect("finite resampler drain bound").get();
+        let mut complete = false;
+        for _ in 0..calls {
+            scratch = vec![f32::NAN; plugin.drain_output_frames_max() * 2 + 4];
+            let result = plugin.drain(&mut scratch,
+                &sotf_host::ProcessContext::new(48_000, 0)).unwrap();
+            output.extend_from_slice(&scratch[..result.frames * 2]);
+            assert!(scratch[result.frames * 2..].iter().all(|sample| sample.is_nan()));
+            if result.complete {
+                complete = true;
+                break;
+            }
+        }
+        assert!(complete, "drain must finish inside its declared bound");
+        assert!(output.len() >= input.len(), "retain the signal and interpolation suffix");
+        output
+    };
+    let legacy_out = render(&mut legacy);
+    let smoothed_out = render(&mut smoothed);
     assert_eq!(legacy_out.len(), smoothed_out.len());
     assert!(legacy_out.iter().all(|sample| sample.is_finite()));
     assert!(smoothed_out.iter().all(|sample| sample.is_finite()));
     assert!(legacy_out.iter().any(|sample| *sample != 0.0));
     assert!(smoothed_out.iter().any(|sample| *sample != 0.0));
+    assert_eq!(legacy_out, smoothed_out, "smoothing is inert at a fixed ratio");
 }
 
 #[test]

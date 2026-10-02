@@ -81,6 +81,16 @@ fn integration_parameter_roundtrip_and_validation() {
     let res = plugin.set_parameter(ParameterId::from("enabled"), ParameterValue::Float(1.0));
     assert!(res.is_err());
 
+    // A changed model adopts pre-initialization, then restores to bundled.
+    plugin
+        .set_parameter(ParameterId::from("model"), ParameterValue::Int(1))
+        .unwrap();
+    let v = plugin.get_parameter(&ParameterId::from("model")).unwrap();
+    assert_eq!(v, ParameterValue::Int(1));
+    plugin
+        .set_parameter(ParameterId::from("model"), ParameterValue::Int(0))
+        .unwrap();
+
     // Out-of-range strength and unknown models are rejected.
     for invalid in [
         ParameterValue::Float(-0.5),
@@ -94,7 +104,7 @@ fn integration_parameter_roundtrip_and_validation() {
         );
     }
     for invalid in [
-        ParameterValue::Int(1),
+        ParameterValue::Int(3),
         ParameterValue::String("RNNoise Light".to_string()),
         ParameterValue::Float(0.0),
     ] {
@@ -357,12 +367,21 @@ fn factory_parameter_json_is_strict_and_backward_compatible() {
     assert_eq!(labeled.model, SpeechDenoiserModel::RnnoiseFull);
     let indexed: SpeechDenoiserPluginParams = serde_json::from_str(r#"{"model":0}"#).unwrap();
     assert_eq!(indexed.model, SpeechDenoiserModel::RnnoiseFull);
+    let legacy: SpeechDenoiserPluginParams =
+        serde_json::from_str(r#"{"model":"RNNoise Legacy LQ"}"#).unwrap();
+    assert_eq!(legacy.model, SpeechDenoiserModel::RnnoiseLegacyLq);
+    let indexed_legacy: SpeechDenoiserPluginParams =
+        serde_json::from_str(r#"{"model":2}"#).unwrap();
+    assert_eq!(
+        indexed_legacy.model,
+        SpeechDenoiserModel::RnnoiseLegacySh
+    );
     assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"enabled":1}"#).is_err());
     assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"strength":"full"}"#).is_err());
     assert!(
         serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"model":"RNNoise Light"}"#).is_err()
     );
-    assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"model":1}"#).is_err());
+    assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"model":3}"#).is_err());
     assert!(
         serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"enabled":true,"unknown":1}"#)
             .is_err()

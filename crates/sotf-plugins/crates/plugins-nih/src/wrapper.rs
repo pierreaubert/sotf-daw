@@ -2,7 +2,9 @@
 
 use nih_plug::audio_setup::{AudioIOLayout, PortNames, new_nonzero_u32};
 use nih_plug::context::PluginApi;
-use sotf_host::external_plugin::NativeCrossoverInputLayout as CrossoverInputLayout;
+use sotf_host::external_plugin::{
+    MAX_AMBISONICS_CUSTOM_SPEAKERS, NativeCrossoverInputLayout as CrossoverInputLayout,
+};
 
 #[cfg(feature = "convolution")]
 pub(crate) mod native_convolution_editor;
@@ -66,106 +68,108 @@ macro_rules! sotf_nih_create_editor {
 }
 
 const AMBISONICS_OUTPUT_WIDTHS: [u32; 8] = [6, 8, 8, 10, 10, 12, 14, 16];
+// Canonical DSP slot order per TARGET_LAYOUTS (5.1.4 at 3, 7.1.2 at 4).
 const AMBISONICS_LAYOUT_NAMES: [&str; 56] = [
     "Order 1 - 5.1",
     "Order 1 - 7.1",
     "Order 1 - 5.1.2",
-    "Order 1 - 7.1.2",
     "Order 1 - 5.1.4",
+    "Order 1 - 7.1.2",
     "Order 1 - 7.1.4",
     "Order 1 - 9.1.4",
     "Order 1 - 9.1.6",
     "Order 2 - 5.1",
     "Order 2 - 7.1",
     "Order 2 - 5.1.2",
-    "Order 2 - 7.1.2",
     "Order 2 - 5.1.4",
+    "Order 2 - 7.1.2",
     "Order 2 - 7.1.4",
     "Order 2 - 9.1.4",
     "Order 2 - 9.1.6",
     "Order 3 - 5.1",
     "Order 3 - 7.1",
     "Order 3 - 5.1.2",
-    "Order 3 - 7.1.2",
     "Order 3 - 5.1.4",
+    "Order 3 - 7.1.2",
     "Order 3 - 7.1.4",
     "Order 3 - 9.1.4",
     "Order 3 - 9.1.6",
     "Order 4 - 5.1",
     "Order 4 - 7.1",
     "Order 4 - 5.1.2",
-    "Order 4 - 7.1.2",
     "Order 4 - 5.1.4",
+    "Order 4 - 7.1.2",
     "Order 4 - 7.1.4",
     "Order 4 - 9.1.4",
     "Order 4 - 9.1.6",
     "Order 5 - 5.1",
     "Order 5 - 7.1",
     "Order 5 - 5.1.2",
-    "Order 5 - 7.1.2",
     "Order 5 - 5.1.4",
+    "Order 5 - 7.1.2",
     "Order 5 - 7.1.4",
     "Order 5 - 9.1.4",
     "Order 5 - 9.1.6",
     "Order 6 - 5.1",
     "Order 6 - 7.1",
     "Order 6 - 5.1.2",
-    "Order 6 - 7.1.2",
     "Order 6 - 5.1.4",
+    "Order 6 - 7.1.2",
     "Order 6 - 7.1.4",
     "Order 6 - 9.1.4",
     "Order 6 - 9.1.6",
     "Order 7 - 5.1",
     "Order 7 - 7.1",
     "Order 7 - 5.1.2",
-    "Order 7 - 7.1.2",
     "Order 7 - 5.1.4",
+    "Order 7 - 7.1.2",
     "Order 7 - 7.1.4",
     "Order 7 - 9.1.4",
     "Order 7 - 9.1.6",
 ];
+// Canonical DSP slot order per TARGET_LAYOUTS (5.1.4 at 3, 7.1.2 at 4).
 const CLAP_AMBISONICS_LAYOUT_NAMES: [&str; 42] = [
     "Order 1 - 5.1",
     "Order 1 - 7.1",
     "Order 1 - 5.1.2",
-    "Order 1 - 7.1.2",
     "Order 1 - 5.1.4",
+    "Order 1 - 7.1.2",
     "Order 1 - 7.1.4",
     "Order 2 - 5.1",
     "Order 2 - 7.1",
     "Order 2 - 5.1.2",
-    "Order 2 - 7.1.2",
     "Order 2 - 5.1.4",
+    "Order 2 - 7.1.2",
     "Order 2 - 7.1.4",
     "Order 3 - 5.1",
     "Order 3 - 7.1",
     "Order 3 - 5.1.2",
-    "Order 3 - 7.1.2",
     "Order 3 - 5.1.4",
+    "Order 3 - 7.1.2",
     "Order 3 - 7.1.4",
     "Order 4 - 5.1",
     "Order 4 - 7.1",
     "Order 4 - 5.1.2",
-    "Order 4 - 7.1.2",
     "Order 4 - 5.1.4",
+    "Order 4 - 7.1.2",
     "Order 4 - 7.1.4",
     "Order 5 - 5.1",
     "Order 5 - 7.1",
     "Order 5 - 5.1.2",
-    "Order 5 - 7.1.2",
     "Order 5 - 5.1.4",
+    "Order 5 - 7.1.2",
     "Order 5 - 7.1.4",
     "Order 6 - 5.1",
     "Order 6 - 7.1",
     "Order 6 - 5.1.2",
-    "Order 6 - 7.1.2",
     "Order 6 - 5.1.4",
+    "Order 6 - 7.1.2",
     "Order 6 - 7.1.4",
     "Order 7 - 5.1",
     "Order 7 - 7.1",
     "Order 7 - 5.1.2",
-    "Order 7 - 7.1.2",
     "Order 7 - 5.1.4",
+    "Order 7 - 7.1.2",
     "Order 7 - 7.1.4",
 ];
 
@@ -233,14 +237,83 @@ pub fn ambisonics_vst3_output_to_sotf(target_layout: usize, channel: usize) -> O
         0 => &[0, 1, 2, 3, 4, 5],
         1 => &[0, 1, 2, 3, 6, 7, 4, 5],
         2 => &[0, 1, 2, 3, 4, 5, 6, 7],
-        3 => &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9],
-        4 => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        // Slot 3 is 5.1.4 (identity: SOTF order already matches VST3
+        // bit order); slot 4 is 7.1.2 (sides before backs in SOTF).
+        3 => &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        4 => &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9],
         5 => &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9, 10, 11],
         6 => &[0, 1, 2, 3, 6, 7, 4, 5, 10, 11, 12, 13, 8, 9],
         7 => &[0, 1, 2, 3, 6, 7, 4, 5, 10, 11, 12, 13, 14, 15, 8, 9],
         _ => return None,
     };
     map.get(channel).copied()
+}
+
+/// Map one VST3 output bus channel to its SOTF source channel.
+///
+/// Named targets use the static tables; target 8 reads the negotiated
+/// custom permutation installed during initialization. Returns `None`
+/// for unmapped channels; the process callback silences and reports.
+#[doc(hidden)]
+pub fn ambisonics_vst3_output_to_sotf_custom(
+    target_layout: usize,
+    custom_channels: usize,
+    custom_map: &[usize; MAX_AMBISONICS_CUSTOM_SPEAKERS],
+    channel: usize,
+) -> Option<usize> {
+    if target_layout == crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX {
+        custom_map
+            .get(channel)
+            .copied()
+            .filter(|_| channel < custom_channels)
+    } else {
+        ambisonics_vst3_output_to_sotf(target_layout, channel)
+    }
+}
+
+/// Negotiate a custom-geometry layout during NIH initialization.
+///
+/// Validates the staged-or-committed geometry against the negotiated
+/// order, bus width, and the exact wire bytes the format callbacks
+/// will report for the selected layout, then records target 8 in the
+/// structural parameters. Returns the VST3 bus-to-SOTF permutation
+/// for the audio path, or `None` when the layout is unmapped, the
+/// geometry disagrees with the negotiated bus or wire bytes, or the
+/// structural parameters cannot record target 8. Control thread only.
+#[doc(hidden)]
+pub fn negotiate_ambisonics_custom_layout(
+    params: &crate::params::DynamicParams,
+    order: usize,
+    target_slot: usize,
+    layout_index: usize,
+    output_channels: usize,
+    api: nih_plug::context::PluginApi,
+) -> Option<Vec<usize>> {
+    let expected_clap_map = if api == nih_plug::context::PluginApi::Clap {
+        Some(ambisonics_clap_channel_map(target_slot)?)
+    } else {
+        None
+    };
+    let expected_vst3_mask = if api == nih_plug::context::PluginApi::Clap {
+        None
+    } else {
+        ambisonics_vst3_arrangement(layout_index, false)
+    };
+    let permutation = params
+        .validate_restored_ambisonics_custom_layout(
+            order,
+            output_channels,
+            expected_clap_map,
+            expected_vst3_mask,
+        )
+        .ok()?;
+    params
+        .set_ambisonics_layout(
+            order,
+            crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX,
+        )
+        .ok()?;
+    Some(permutation)
 }
 
 const CLAP_MAP_51: [u8; 6] = [0, 1, 2, 3, 9, 10];
@@ -306,8 +379,8 @@ pub fn ambisonics_clap_channel_map(target_layout: usize) -> Option<&'static [u8]
         0 => &CLAP_MAP_51,
         1 => &CLAP_MAP_71,
         2 => &CLAP_MAP_512,
-        3 => &CLAP_MAP_712,
-        4 => &CLAP_MAP_514,
+        3 => &CLAP_MAP_514,
+        4 => &CLAP_MAP_712,
         5 => &CLAP_MAP_714,
         _ => return None,
     })
@@ -337,8 +410,8 @@ pub fn ambisonics_vst3_arrangement(layout_index: usize, is_input: bool) -> Optio
             0 => 0x0000_0000_0000_003f, // 5.1
             1 => 0x0000_0000_0000_063f, // 7.1 Music
             2 => 0x0000_0000_0000_503f, // 5.1.2
-            3 => 0x0000_0000_0000_563f, // 7.1.2 front heights
-            4 => 0x0000_0000_0002_d03f, // 5.1.4
+            3 => 0x0000_0000_0002_d03f, // 5.1.4
+            4 => 0x0000_0000_0000_563f, // 7.1.2 front heights
             5 => 0x0000_0000_0002_d63f, // 7.1.4
             6 => 0x1800_0000_0002_d63f, // 9.1.4 wide
             7 => 0x1800_0000_0302_d63f, // 9.1.6 wide
@@ -1273,6 +1346,9 @@ macro_rules! sotf_nih_plugin {
             aux_output_channels: [usize; 3],
             aux_output_count: usize,
             ambisonics_target_layout: usize,
+            ambisonics_custom_vst3_to_sotf:
+                [usize; sotf_host::external_plugin::MAX_AMBISONICS_CUSTOM_SPEAKERS],
+            ambisonics_custom_vst3_channels: usize,
             band_split_active_output_buses: u64,
             band_split_last_vst3_output_buses: Option<(usize, u64)>,
             band_split_vst3_legacy_packed: bool,
@@ -1283,6 +1359,7 @@ macro_rules! sotf_nih_plugin {
             sample_rate: u32,
             structural_fingerprint: u64,
             non_restartable_structural_fingerprint: u64,
+            hiss_momentary: $crate::params::hiss_profile::HissMomentaryLatch,
             transport: $crate::wrapper::transport::TransportTracker,
             #[cfg(feature = "convolution")]
             convolution_editor_service:
@@ -1356,6 +1433,9 @@ macro_rules! sotf_nih_plugin {
                     aux_output_channels: [0; 3],
                     aux_output_count: 0,
                     ambisonics_target_layout: 0,
+                    ambisonics_custom_vst3_to_sotf:
+                        [0; sotf_host::external_plugin::MAX_AMBISONICS_CUSTOM_SPEAKERS],
+                    ambisonics_custom_vst3_channels: 0,
                     band_split_active_output_buses: 0,
                     band_split_last_vst3_output_buses: None,
                     band_split_vst3_legacy_packed: false,
@@ -1366,6 +1446,7 @@ macro_rules! sotf_nih_plugin {
                     sample_rate: 48000,
                     structural_fingerprint: 0,
                     non_restartable_structural_fingerprint: 0,
+                    hiss_momentary: $crate::params::hiss_profile::HissMomentaryLatch::default(),
                     transport: $crate::wrapper::transport::TransportTracker::default(),
                     #[cfg(feature = "convolution")]
                     convolution_editor_service: std::sync::Arc::default(),
@@ -1457,6 +1538,8 @@ macro_rules! sotf_nih_plugin {
                     $crate::wrapper::migrate_crossover_state(state);
                 } else if matches!($plugin_type, "EQ") {
                     $crate::params::migrate_eq_native_state(state);
+                } else if matches!($plugin_type, "HissReducer") {
+                    $crate::params::scrub_hiss_momentary_state(state);
                 }
             }
 
@@ -1494,6 +1577,12 @@ macro_rules! sotf_nih_plugin {
                         && convolution_editor_generation.is_none())
                     .then(|| {
                         $crate::params::ConvolutionRestoreAttempt::new(self.params.clone())
+                    });
+                let mut hiss_restore_attempt = matches!($plugin_type, "HissReducer")
+                    .then(|| $crate::params::HissProfileRestoreAttempt::new(self.params.clone()));
+                let mut ambisonics_custom_restore_attempt =
+                    matches!($plugin_type, "AmbisonicsDecoder").then(|| {
+                        $crate::params::AmbisonicsCustomRestoreAttempt::new(self.params.clone())
                     });
                 let mut band_split_vst3_output_buses = None;
                 let mut band_split_vst3_layout_index = None;
@@ -1629,30 +1718,65 @@ macro_rules! sotf_nih_plugin {
                     ) else {
                         return false;
                     };
+                    // VST3 and Standalone both resolve layouts against
+                    // the 8-target VST3 table; only CLAP uses 6 targets.
                     let target_count = if context.plugin_api()
-                        == nih_plug::context::PluginApi::Vst3
+                        == nih_plug::context::PluginApi::Clap
                     {
-                        8
-                    } else {
                         6
+                    } else {
+                        8
                     };
                     let order = layout_index / target_count + 1;
                     let target_layout = layout_index % target_count;
-                    if self
-                        .params
-                        .validate_restored_ambisonics_layout(order, target_layout)
-                        .is_err()
+                    if self.params.value("target_layout")
+                        == Some(sotf_host::parameters::ParameterValue::Int(
+                            $crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX as i32,
+                        ))
                     {
-                        return false;
+                        let output_channels = audio_io_layout
+                            .main_output_channels
+                            .map_or(0, |channels| channels.get() as usize);
+                        let Some(permutation) =
+                            $crate::wrapper::negotiate_ambisonics_custom_layout(
+                                &self.params,
+                                order,
+                                target_layout,
+                                layout_index,
+                                output_channels,
+                                context.plugin_api(),
+                            )
+                        else {
+                            return false;
+                        };
+                        if permutation.len() != output_channels
+                            || output_channels
+                                > sotf_host::external_plugin::MAX_AMBISONICS_CUSTOM_SPEAKERS
+                        {
+                            return false;
+                        }
+                        self.ambisonics_custom_vst3_to_sotf[..output_channels]
+                            .copy_from_slice(&permutation);
+                        self.ambisonics_custom_vst3_channels = output_channels;
+                        self.ambisonics_target_layout =
+                            $crate::params::ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX;
+                    } else {
+                        if self
+                            .params
+                            .validate_restored_ambisonics_layout(order, target_layout)
+                            .is_err()
+                        {
+                            return false;
+                        }
+                        if self
+                            .params
+                            .set_ambisonics_layout(order, target_layout)
+                            .is_err()
+                        {
+                            return false;
+                        }
+                        self.ambisonics_target_layout = target_layout;
                     }
-                    if self
-                        .params
-                        .set_ambisonics_layout(order, target_layout)
-                        .is_err()
-                    {
-                        return false;
-                    }
-                    self.ambisonics_target_layout = target_layout;
                 }
                 let candidate_main_input_channels = audio_io_layout
                     .main_input_channels
@@ -2028,6 +2152,12 @@ macro_rules! sotf_nih_plugin {
                         } else if let Some(attempt) = convolution_restore_attempt.as_mut() {
                             attempt.commit(candidate_sample_rate as f32);
                         }
+                        if let Some(attempt) = hiss_restore_attempt.as_mut() {
+                            attempt.commit();
+                        }
+                        if let Some(attempt) = ambisonics_custom_restore_attempt.as_mut() {
+                            attempt.commit();
+                        }
                         #[cfg(feature = "convolution")]
                         if matches!($plugin_type, "Convolution") {
                             self.convolution_editor_service.complete_initialization(
@@ -2041,6 +2171,25 @@ macro_rules! sotf_nih_plugin {
                             .params
                             .non_restartable_structural_fingerprint();
                         self.inner = Some(plugin);
+                        if matches!($plugin_type, "HissReducer")
+                            && let Some(inner) = self.inner.as_ref()
+                            && let Some(snapshot) =
+                                $crate::params::hiss_profile::hiss_snapshot(inner.as_ref())
+                        {
+                            self.params.install_hiss_snapshot(snapshot);
+                        }
+                        if matches!($plugin_type, "HissReducer")
+                            && let Some(inner) = self.inner.as_ref()
+                        {
+                            let learn_id =
+                                sotf_host::parameters::ParameterId::from("learn_noise");
+                            let clear_id =
+                                sotf_host::parameters::ParameterId::from("clear_profile");
+                            self.hiss_momentary.learn_immediate = inner
+                                .supports_immediate_momentary_control(&learn_id);
+                            self.hiss_momentary.clear_immediate = inner
+                                .supports_immediate_momentary_control(&clear_id);
+                        }
                         if let Some(attempt) = eq_pair_apply_attempt.as_mut() {
                             attempt.commit();
                         }
@@ -2260,6 +2409,19 @@ macro_rules! sotf_nih_plugin {
                     return nih_plug::prelude::ProcessStatus::Error("Parameter update failed");
                 }
 
+                // Hiss host actions: edge-consume the visible momentary
+                // controls into the DSP immediate setters. No allocation,
+                // lock, or rebuild; a rejected forward fails this block.
+                if matches!($plugin_type, "HissReducer")
+                    && self
+                        .params
+                        .forward_hiss_momentary_edges(plugin.as_mut(), &mut self.hiss_momentary)
+                        .is_err()
+                {
+                    $crate::wrapper::silence_host_outputs(buffer, aux);
+                    return nih_plug::prelude::ProcessStatus::Error("Hiss capture control failed");
+                }
+
                 // Interleave main inputs and any additional input bus.
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
@@ -2319,8 +2481,10 @@ macro_rules! sotf_nih_plugin {
                         } else if ambisonics
                             && plugin_api == nih_plug::context::PluginApi::Vst3
                         {
-                            match $crate::wrapper::ambisonics_vst3_output_to_sotf(
+                            match $crate::wrapper::ambisonics_vst3_output_to_sotf_custom(
                                 self.ambisonics_target_layout,
+                                self.ambisonics_custom_vst3_channels,
+                                &self.ambisonics_custom_vst3_to_sotf,
                                 ch,
                             ) {
                                 Some(source_channel) => source_channel,

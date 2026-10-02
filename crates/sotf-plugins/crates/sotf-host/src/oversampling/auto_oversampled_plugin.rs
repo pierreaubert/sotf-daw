@@ -104,6 +104,10 @@ impl Plugin for AutoOversampledPlugin {
         self.inner.get_parameter(id)
     }
 
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        self.inner.supports_immediate_momentary_control(id)
+    }
+
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
         self.inner.initialize(sample_rate * self.factor)?;
         let drain_frames = self.inner.drain_output_frames_max();

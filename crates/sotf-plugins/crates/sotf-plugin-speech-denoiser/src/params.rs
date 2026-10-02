@@ -160,10 +160,12 @@ mod tests {
         assert_eq!(labeled.model, 0);
         let indexed: Params = serde_json::from_str(r#"{"model":0}"#).unwrap();
         assert_eq!(indexed.model, 0);
+        let legacy: Params = serde_json::from_str(r#"{"model":"RNNoise Legacy SH"}"#).unwrap();
+        assert_eq!(legacy.model, 2);
         assert!(serde_json::from_str::<Params>(r#"{"enabled":1}"#).is_err());
         assert!(serde_json::from_str::<Params>(r#"{"strength":"full"}"#).is_err());
         assert!(serde_json::from_str::<Params>(r#"{"model":"RNNoise Light"}"#).is_err());
-        assert!(serde_json::from_str::<Params>(r#"{"model":1}"#).is_err());
+        assert!(serde_json::from_str::<Params>(r#"{"model":3}"#).is_err());
         assert!(serde_json::from_str::<Params>(r#"{"enabled":true,"future":2}"#).is_err());
         assert!(serde_json::from_str::<Params>(r#"{"version":2,"enabled":true}"#).is_err());
     }
@@ -181,6 +183,8 @@ mod tests {
         params.set_param_value(9, 1.0);
         assert!(!params.enabled);
         assert_eq!(params.strength, 1.0);
-        assert_eq!(params.model, 0);
+        assert_eq!(params.model, 2);
+        params.set_param_value(2, 1.0);
+        assert_eq!(params.model, 1);
     }
 }

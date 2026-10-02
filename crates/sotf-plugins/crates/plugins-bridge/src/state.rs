@@ -2,18 +2,44 @@
 //!
 //! Converts a plugin's current parameter state to/from a JSON blob,
 //! suitable for AU `fullState` and VST3 state chunks.
+//!
+//! Hiss Reducer carries its measured noise profile out of band under the
+//! canonical `captured_profile` key (exact v1/v2 `NoiseProfileData`).
+//! Momentary `learn_noise`/`clear_profile` commands are never saved and
+//! never replayed from legacy state.
+
+#[path = "hiss_state.rs"]
+pub mod hiss_state;
 
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::Plugin;
 
-/// Save all plugin parameters to a JSON byte vector.
+/// Save plugin state, failing explicitly on Hiss contention.
 ///
-/// Returns a JSON object mapping parameter ID → value.
-pub fn save_state(plugin: &dyn Plugin) -> Vec<u8> {
+/// Serializes named scalar parameters plus, for actual Hiss instances
+/// identified by the `get_data` snapshot downcast, the exact stored
+/// `captured_profile` blob when present. Momentary Hiss commands are
+/// omitted. Non-Hiss plugins keep the scalar-only shape.
+///
+/// # Errors
+///
+/// Returns an error when a Hiss export contends (`SnapshotBusy`, distinct
+/// from absence) or when serialization fails. Callers must treat `Err` as
+/// a failed save: retry later, never persist a truncated blob.
+///
+/// # Panics
+///
+/// Never panics on valid plugin state.
+pub fn try_save_state(plugin: &dyn Plugin) -> Result<Vec<u8>, String> {
+    let snapshot = hiss_state::hiss_snapshot(plugin);
+    let is_hiss_plugin = snapshot.is_some();
     let params = plugin.parameters();
     let mut map = serde_json::Map::new();
 
     for param in &params {
+        if is_hiss_plugin && hiss_state::is_momentary_id(param.id.as_str()) {
+            continue;
+        }
         if let Some(value) = plugin.get_parameter(&param.id) {
             let json_val = match value {
                 ParameterValue::Float(f) => serde_json::Value::from(f),
@@ -25,7 +51,37 @@ pub fn save_state(plugin: &dyn Plugin) -> Vec<u8> {
         }
     }
 
-    serde_json::to_vec(&serde_json::Value::Object(map)).unwrap_or_default()
+    if let Some(snapshot) = snapshot {
+        match snapshot.try_export() {
+            Ok(Some(export)) => {
+                let profile = serde_json::to_value(&export.profile)
+                    .map_err(|error| format!("Failed to serialize Hiss profile: {error}"))?;
+                map.insert(hiss_state::CAPTURED_PROFILE_KEY.to_string(), profile);
+            }
+            Ok(None) => {}
+            Err(_) => {
+                return Err(
+                    "Hiss profile snapshot busy: retry the save on a later control tick"
+                        .to_string(),
+                );
+            }
+        }
+    }
+
+    serde_json::to_vec(&serde_json::Value::Object(map))
+        .map_err(|error| format!("Failed to serialize plugin state: {error}"))
+}
+
+/// Save all plugin parameters to a JSON byte vector.
+///
+/// Returns a JSON object mapping parameter ID → value, plus the Hiss
+/// `captured_profile` carrier when present. This infallible wrapper exists
+/// for legacy callers: on Hiss contention it returns an empty vector, which
+/// fails parsing on load rather than yielding an apparently valid state
+/// that silently omits a captured profile. Prefer [`try_save_state`] to
+/// distinguish contention from absence.
+pub fn save_state(plugin: &dyn Plugin) -> Vec<u8> {
+    try_save_state(plugin).unwrap_or_default()
 }
 
 /// Load plugin parameters from a JSON byte slice.
@@ -35,12 +91,34 @@ pub fn save_state(plugin: &dyn Plugin) -> Vec<u8> {
 /// Unchanged values are retained without invoking a setter. Changed structural
 /// values still require reconstruction by the caller. This in-place helper is
 /// not transactional: a later setter error can follow earlier successful writes.
+/// Hiss momentary commands never route through setters here and are skipped.
+/// A Hiss state carrying `captured_profile` (install or explicit null clear)
+/// is rejected before any mutation: in-place load cannot install profiles,
+/// so success would silently drop the blob. The FFI transactional restore
+/// owns profile installation; native reconstruction stays open.
+///
+/// # Errors
+///
+/// Returns an error when the bytes are not a JSON object, when a known value
+/// has the wrong type, when a setter fails, or when a Hiss state carries a
+/// profile the in-place path cannot install.
 pub fn load_state(plugin: &mut dyn Plugin, data: &[u8]) -> Result<(), String> {
     let map: serde_json::Map<String, serde_json::Value> =
         serde_json::from_slice(data).map_err(|e| format!("Failed to parse state: {e}"))?;
+    let is_hiss_plugin = hiss_state::is_hiss(&*plugin);
+    if is_hiss_plugin && map.contains_key(hiss_state::CAPTURED_PROFILE_KEY) {
+        return Err(
+            "HissReducer captured_profile requires transactional profile restore; \
+             bridge in-place load cannot install it"
+                .to_string(),
+        );
+    }
     let params = plugin.parameters();
 
     for (key, json_val) in &map {
+        if hiss_state::should_skip_hiss_load_key(is_hiss_plugin, key) {
+            continue;
+        }
         let Some(param) = params.iter().find(|param| param.id.as_str() == key) else {
             continue;
         };

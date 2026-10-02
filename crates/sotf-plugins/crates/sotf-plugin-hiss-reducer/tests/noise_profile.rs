@@ -345,6 +345,7 @@ fn malformed_profile_rejected_transactionally() {
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![f32::NAN],
         frames_analyzed: u64::from(RATE),
+        spectral: None,
     };
     let error = plugin.restore_profile(&corrupt).unwrap_err();
     assert!(error.contains("range"), "unexpected error: {error}");
@@ -364,6 +365,7 @@ fn channel_mismatched_profile_handling() {
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![-40.0],
         frames_analyzed: u64::from(RATE),
+        spectral: None,
     };
     // Preset loading drops well-formed but inapplicable blobs.
     let plugin = HissReducerPlugin::from_params(

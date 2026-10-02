@@ -3,7 +3,10 @@
 use nih_plug::prelude::*;
 use nih_plug::wrapper::state::{ParamValue as NativeParamValue, PluginState};
 use plugins_bridge::param_bridge::{BridgedParamInfo, BridgedParamKind};
+use sotf_host::external_plugin::NativeAmbisonicsCustomGeometry;
 use sotf_host::parameters::{ParameterId, ParameterValue};
+use sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData;
+use sotf_plugins::plugin_hiss_reducer::snapshot::ProfileSnapshot;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -20,6 +23,12 @@ const EQ_NATIVE_CHANNEL_LIMIT: usize = 16;
 // Exported wrapper macros must also resolve these helpers in downstream crates.
 #[doc(hidden)]
 pub mod configuration;
+// Hiss captured-profile field helpers (control thread only).
+#[doc(hidden)]
+pub mod hiss_profile;
+// Ambisonics custom-geometry carrier (control thread only).
+#[doc(hidden)]
+pub mod ambisonics_custom;
 
 #[cfg(test)]
 #[path = "params_default_sync_tests.rs"]
@@ -49,6 +58,14 @@ mod native_eq_route_tests;
 #[path = "params_native_eq_admission_tests.rs"]
 mod native_eq_admission_tests;
 
+#[cfg(test)]
+#[path = "params_hiss_profile_tests.rs"]
+mod hiss_profile_tests;
+
+#[cfg(test)]
+#[path = "params_ambisonics_custom_tests.rs"]
+mod ambisonics_custom_tests;
+
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
     float_params: Vec<FloatParam>,
@@ -63,6 +80,9 @@ pub struct DynamicParams {
     /// initialization must compare those restored hidden values with the
     /// selected audio configuration before synchronizing the selection.
     ambisonics_state_restore_pending: AtomicBool,
+    /// Ambisonics custom-geometry carrier with staged restore.
+    /// Pending geometry commits only after a candidate DSP initializes.
+    ambisonics_custom_state: Option<Mutex<ambisonics_custom::AmbisonicsCustomRestoreState>>,
     /// Set during state migration when a saved BandSplit count must agree with
     /// the selected CLAP output layout before constructing the DSP instance.
     band_split_layout_restore_pending: AtomicBool,
@@ -82,6 +102,15 @@ pub struct DynamicParams {
     /// staged state restore. Pending values are not visible to hosts until a
     /// candidate DSP instance has initialized successfully.
     convolution_state: Option<Mutex<ConvolutionRestoreState>>,
+    /// Hiss captured-profile schema flag.
+    hiss_schema: bool,
+    /// Hiss generation-tagged profile carrier with staged restore.
+    /// Pending values commit only after a candidate DSP initializes.
+    hiss_profile_state: Option<Mutex<HissProfileRestoreState>>,
+    /// Precomputed realtime route for the host learn action.
+    hiss_learn_action: Option<HissMomentaryRoute>,
+    /// Precomputed realtime route for the host clear action.
+    hiss_clear_action: Option<HissMomentaryRoute>,
 }
 
 #[derive(Default)]
@@ -174,6 +203,110 @@ impl Drop for ConvolutionRestoreAttempt {
             self.params.discard_convolution_state_restore();
         }
     }
+}
+
+#[derive(Default)]
+struct HissProfileRestoreState {
+    committed: Option<NoiseProfileData>,
+    committed_generation: Option<u64>,
+    pending_restore: Option<Option<NoiseProfileData>>,
+    pending_generation: Option<u64>,
+    invalid_restore: bool,
+    snapshot: Option<Arc<ProfileSnapshot>>,
+}
+
+/// Clears an uncommitted Hiss restore when candidate initialization fails.
+#[doc(hidden)]
+pub struct HissProfileRestoreAttempt {
+    params: Arc<DynamicParams>,
+    committed: bool,
+}
+
+impl HissProfileRestoreAttempt {
+    /// Start tracking the pending restore for one control-thread initialization.
+    #[doc(hidden)]
+    pub fn new(params: Arc<DynamicParams>) -> Self {
+        Self {
+            params,
+            committed: false,
+        }
+    }
+
+    /// Publish the staged profile after candidate acceptance.
+    #[doc(hidden)]
+    pub fn commit(&mut self) {
+        self.params.complete_hiss_profile_restore();
+        self.committed = true;
+    }
+}
+
+impl Drop for HissProfileRestoreAttempt {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.params.discard_hiss_profile_restore();
+        }
+    }
+}
+
+/// Clears an uncommitted Ambisonics custom restore when candidate initialization fails.
+#[doc(hidden)]
+pub struct AmbisonicsCustomRestoreAttempt {
+    params: Arc<DynamicParams>,
+    committed: bool,
+}
+
+impl AmbisonicsCustomRestoreAttempt {
+    /// Start tracking the pending restore for one control-thread initialization.
+    #[doc(hidden)]
+    pub fn new(params: Arc<DynamicParams>) -> Self {
+        Self {
+            params,
+            committed: false,
+        }
+    }
+
+    /// Publish the staged geometry after candidate acceptance.
+    #[doc(hidden)]
+    pub fn commit(&mut self) {
+        self.params.complete_ambisonics_custom_restore();
+        self.committed = true;
+    }
+}
+
+impl Drop for AmbisonicsCustomRestoreAttempt {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.params.discard_ambisonics_custom_restore();
+        }
+    }
+}
+
+/// Precomputed realtime route for one Hiss host action.
+///
+/// The NIH bool index feeds edge detection and the canonical DSP id feeds
+/// the setter; both resolve once on the control thread so the audio
+/// callback performs no map lookup, hash, or id allocation.
+struct HissMomentaryRoute {
+    bool_index: usize,
+    id: ParameterId,
+}
+
+/// Resolves one Hiss host-action route from built parameters.
+///
+/// Returns `None` unless `canonical_id` names a bool entry, so a future
+/// schema drift disables the action instead of misfiring it.
+fn hiss_momentary_route(
+    param_map: &HashMap<String, ParamEntry>,
+    canonical_id: &str,
+) -> Option<HissMomentaryRoute> {
+    let entry = param_map.get(canonical_id)?;
+    if !matches!(entry.kind, ParamKind::Bool) {
+        return None;
+    }
+    Some(HissMomentaryRoute {
+        bool_index: entry.index,
+        id: ParameterId::from(canonical_id),
+    })
 }
 
 fn float_range_bounds(range: FloatRange) -> (f32, f32) {
@@ -294,9 +427,8 @@ fn is_native_eq_pair_draft_parameter(id: &str) -> bool {
         id,
         "stereo_pairs_enabled" | "stereo_pairs_count" | "stereo_pairs_apply"
     )
-        || (0..EQ_PAIR_SLOT_COUNT).any(|slot| {
-            id == format!("stereo_pair_{slot}_first") || id == format!("stereo_pair_{slot}_second")
-        })
+        || indexed_id(id, "stereo_pair_", "first", EQ_PAIR_SLOT_COUNT).is_some()
+        || indexed_id(id, "stereo_pair_", "second", EQ_PAIR_SLOT_COUNT).is_some()
 }
 
 fn native_eq_choice_labels(id: &str) -> Option<&'static [&'static str]> {
@@ -598,6 +730,21 @@ pub fn eq_state_restore_allows_audio_thread(state: &PluginState) -> bool {
     false
 }
 
+/// Resets Hiss momentaries in an incoming native state before restore.
+///
+/// Forces saved or legacy `learn_noise` and `clear_profile` values to
+/// false so a restore can never replay a capture action. Runs wherever
+/// `filter_state` runs, before parameter application. Ungated like the EQ
+/// migration helper so every macro expansion compiles in every feature.
+#[doc(hidden)]
+pub fn scrub_hiss_momentary_state(state: &mut PluginState) {
+    for id in hiss_profile::HISS_MOMENTARY_IDS {
+        if let Some(value) = state.params.get_mut(id) {
+            *value = NativeParamValue::Bool(false);
+        }
+    }
+}
+
 impl DynamicParams {
     pub fn from_infos(infos: &[BridgedParamInfo]) -> Arc<Self> {
         Self::from_infos_for_plugin("", infos)
@@ -620,6 +767,8 @@ impl DynamicParams {
                 continue;
             }
             let eq_pair_draft = plugin_type == "EQ" && is_native_eq_pair_draft_parameter(&info.id);
+            let hiss_momentary = plugin_type == "HissReducer"
+                && hiss_profile::is_hiss_momentary_id(info.id.as_str());
             let requires_restart = (plugin_type == "DynamicEQ"
                 && is_dynamic_eq_restart_parameter(&info.id))
                 || (plugin_type == "Crossover" && crate::native_crossover::is_structural(&info.id))
@@ -634,6 +783,14 @@ impl DynamicParams {
                 if requires_restart {
                     param = param.non_automatable().requires_restart();
                 } else if eq_pair_draft {
+                    param = param.non_automatable();
+                } else if hiss_momentary {
+                    // Visible manual host actions: NIH maps visible plus
+                    // non-automatable to bare flags on VST3 and CLAP, so
+                    // generic UIs show an interactive control with no
+                    // automation or modulation lanes and no readonly lock.
+                    // Persistence still forces false and restore resets,
+                    // so the controls never replay from state.
                     param = param.non_automatable();
                 } else if !realtime {
                     param = param.hide();
@@ -823,6 +980,17 @@ impl DynamicParams {
             }
         }
 
+        let hiss_learn_action = if plugin_type == "HissReducer" {
+            hiss_momentary_route(&param_map, "learn_noise")
+        } else {
+            None
+        };
+        let hiss_clear_action = if plugin_type == "HissReducer" {
+            hiss_momentary_route(&param_map, "clear_profile")
+        } else {
+            None
+        };
+
         Arc::new(Self {
             float_params,
             bool_params,
@@ -830,6 +998,8 @@ impl DynamicParams {
             param_map,
             sync_entries,
             ambisonics_state_restore_pending: AtomicBool::new(false),
+            ambisonics_custom_state: (plugin_type == "AmbisonicsDecoder")
+                .then(|| Mutex::new(ambisonics_custom::AmbisonicsCustomRestoreState::default())),
             band_split_layout_restore_pending: AtomicBool::new(false),
             crossover_schema: plugin_type == "Crossover",
             eq_schema: plugin_type == "EQ",
@@ -840,6 +1010,11 @@ impl DynamicParams {
             crossover_state_restore_pending: AtomicBool::new(false),
             convolution_state: (plugin_type == "Convolution")
                 .then(|| Mutex::new(ConvolutionRestoreState::default())),
+            hiss_schema: plugin_type == "HissReducer",
+            hiss_profile_state: (plugin_type == "HissReducer")
+                .then(|| Mutex::new(HissProfileRestoreState::default())),
+            hiss_learn_action,
+            hiss_clear_action,
         })
     }
 
@@ -1438,6 +1613,213 @@ impl DynamicParams {
         Ok(values)
     }
 
+    /// Select the Hiss profile for the next construction.
+    ///
+    /// Returns the staged pending profile (or pending clear as `None`) when
+    /// a restore is waiting, otherwise the committed profile. Parameters
+    /// built without the Hiss carrier schema (legacy generic construction)
+    /// carry no profile and build the profile-less shape. Fails only when
+    /// an explicit malformed restore is staged. Call only from
+    /// control-thread init.
+    #[doc(hidden)]
+    pub fn hiss_profile_for_construction(&self) -> Result<Option<NoiseProfileData>, String> {
+        let Some(state) = self.hiss_profile_state.as_ref() else {
+            return Ok(None);
+        };
+        let state = state
+            .lock()
+            .map_err(|_| "Hiss profile state is unavailable".to_string())?;
+        if state.invalid_restore {
+            return Err("saved Hiss captured profile is invalid".to_string());
+        }
+        if let Some(pending) = &state.pending_restore {
+            return Ok(pending.clone());
+        }
+        Ok(state.committed.clone())
+    }
+
+    /// Install the stable Hiss snapshot Arc for control-thread export.
+    ///
+    /// Call once per constructed DSP on the host initialization thread with
+    /// the `get_data` Arc (always `Some` from construction). The snapshot
+    /// is never replaced by the plugin, so retained readers keep payloads
+    /// alive. Never called from the audio callback.
+    #[doc(hidden)]
+    pub fn install_hiss_snapshot(&self, snapshot: Arc<ProfileSnapshot>) {
+        if let Some(state) = &self.hiss_profile_state
+            && let Ok(mut state) = state.lock()
+        {
+            state.snapshot = Some(snapshot);
+        }
+    }
+
+    /// Commit the staged Hiss restore after candidate acceptance.
+    ///
+    /// Publishes a pending profile (or pending clear) to committed with its
+    /// generation and clears the invalid flag. A failed candidate leaves
+    /// committed state untouched via [`HissProfileRestoreAttempt`].
+    #[doc(hidden)]
+    pub fn complete_hiss_profile_restore(&self) {
+        let Some(state) = &self.hiss_profile_state else {
+            return;
+        };
+        let Ok(mut state) = state.lock() else {
+            return;
+        };
+        if let Some(pending) = state.pending_restore.take() {
+            state.committed = pending;
+            state.committed_generation = state.pending_generation.take();
+        }
+        state.invalid_restore = false;
+    }
+
+    fn discard_hiss_profile_restore(&self) {
+        if let Some(state) = &self.hiss_profile_state
+            && let Ok(mut state) = state.lock()
+        {
+            state.pending_restore = None;
+            state.pending_generation = None;
+        }
+    }
+
+    fn reset_hiss_momentaries(&self) {
+        for id in hiss_profile::HISS_MOMENTARY_IDS {
+            if let Some(entry) = self.param_map.get(id)
+                && matches!(entry.kind, ParamKind::Bool)
+            {
+                self.bool_params[entry.index].set_plain_value_for_initialization(false);
+            }
+        }
+    }
+
+    fn validate_hiss_scalar_params(&self, state: &PluginState) -> bool {
+        for (id, serialized) in &state.params {
+            if self.hiss_schema && hiss_profile::is_hiss_momentary_id(id) {
+                if !matches!(serialized, NativeParamValue::Bool(_)) {
+                    return false;
+                }
+                continue;
+            }
+            let Some(entry) = self.param_map.get(id) else {
+                continue;
+            };
+            let valid = match (entry.kind, serialized) {
+                (ParamKind::Float, NativeParamValue::F32(value)) => {
+                    float_value_in_range(&self.float_params[entry.index], *value)
+                }
+                (ParamKind::Bool, NativeParamValue::Bool(_)) => true,
+                (ParamKind::Int, NativeParamValue::I32(value)) => {
+                    int_value_in_range(&self.int_params[entry.index], *value)
+                }
+                _ => false,
+            };
+            if !valid {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn validate_hiss_restore(
+        &self,
+        state: &PluginState,
+        is_active: bool,
+        is_audio_thread: bool,
+    ) -> bool {
+        let Some(restore_state) = &self.hiss_profile_state else {
+            return true;
+        };
+        if state.fields.keys().any(|key| {
+            key.starts_with(hiss_profile::HISS_PROFILE_STATE_FIELD)
+                && key != hiss_profile::HISS_PROFILE_STATE_FIELD
+        }) {
+            return false;
+        }
+        if !self.validate_hiss_scalar_params(state) {
+            return false;
+        }
+        let carries_live_momentary = hiss_profile::HISS_MOMENTARY_IDS.iter().any(|id| {
+            matches!(
+                state.params.get(*id),
+                Some(NativeParamValue::Bool(true))
+            )
+        });
+        if carries_live_momentary && (is_active || is_audio_thread) {
+            return false;
+        }
+        let Some(encoded) = state.fields.get(hiss_profile::HISS_PROFILE_STATE_FIELD) else {
+            return true;
+        };
+        if is_active || is_audio_thread {
+            return false;
+        }
+        let candidate = hiss_profile::decode_hiss_field(encoded, hiss_profile::HISS_NATIVE_CHANNELS);
+        let Ok((generation, profile)) = candidate else {
+            return false;
+        };
+        let Ok(mut restore_state) = restore_state.lock() else {
+            return false;
+        };
+        restore_state.pending_restore = Some(profile);
+        restore_state.pending_generation = Some(generation);
+        restore_state.invalid_restore = false;
+        true
+    }
+
+    fn serialize_hiss_profile_field(&self) -> String {
+        let Some(state) = &self.hiss_profile_state else {
+            return hiss_profile::encode_hiss_field(0, None);
+        };
+        let Ok(state) = state.lock() else {
+            return hiss_profile::encode_hiss_busy();
+        };
+        if let Some(pending) = &state.pending_restore {
+            let generation = state.pending_generation.unwrap_or(0);
+            return hiss_profile::encode_hiss_field(generation, pending.as_ref());
+        }
+        let snapshot = state.snapshot.clone();
+        let committed = state.committed.clone();
+        let committed_generation = state.committed_generation.unwrap_or(0);
+        drop(state);
+        let Some(snapshot) = snapshot else {
+            return hiss_profile::encode_hiss_field(committed_generation, committed.as_ref());
+        };
+        match snapshot.try_export() {
+            Ok(Some(export)) => {
+                let generation = export.generation;
+                let profile = export.profile;
+                if let Some(state) = &self.hiss_profile_state
+                    && let Ok(mut state) = state.lock()
+                    && state.pending_restore.is_none()
+                {
+                    state.committed = Some(profile.clone());
+                    state.committed_generation = Some(generation);
+                }
+                hiss_profile::encode_hiss_field(generation, Some(&profile))
+            }
+            Ok(None) => {
+                let generation = snapshot
+                    .try_status()
+                    .map(|status| status.generation)
+                    .unwrap_or(0);
+                if let Some(state) = &self.hiss_profile_state
+                    && let Ok(mut state) = state.lock()
+                    && state.pending_restore.is_none()
+                {
+                    state.committed = None;
+                    state.committed_generation = Some(generation);
+                }
+                hiss_profile::encode_hiss_field(generation, None)
+            }
+            Err(_) => match committed {
+                Some(profile) => {
+                    hiss_profile::encode_hiss_field(committed_generation, Some(&profile))
+                }
+                None => hiss_profile::encode_hiss_busy(),
+            },
+        }
+    }
+
     /// Allocation-free identity for structural parameters that cannot be changed by a
     /// DynamicEQ host restart. A shelf shape/slope change may differ while the old prepared
     /// plugin keeps processing, but any other construction-sized mismatch remains an error.
@@ -1445,6 +1827,9 @@ impl DynamicParams {
     pub fn non_restartable_structural_fingerprint(&self) -> u64 {
         let mut fingerprint = 0xcbf2_9ce4_8422_2325_u64;
         for entry in self.sync_entries.iter().filter(|entry| {
+            if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
+                return false;
+            }
             if self.eq_schema {
                 !entry.realtime && entry.id.as_str() != "stereo_pairs_apply"
             } else {
@@ -1465,10 +1850,11 @@ impl DynamicParams {
     /// Set the Ambisonics construction parameters selected by the negotiated
     /// native audio layout. This is called on the host initialization thread,
     /// before the DSP instance is built, so the selected bus width and DSP
-    /// order cannot disagree.
+    /// order cannot disagree. Target 8 selects staged custom geometry;
+    /// initialization validates its width before construction.
     #[doc(hidden)]
     pub fn set_ambisonics_layout(&self, order: usize, target_layout: usize) -> Result<(), String> {
-        if !(1..=7).contains(&order) || target_layout >= 8 {
+        if !(1..=7).contains(&order) || target_layout > 8 {
             return Err("Ambisonics layout selection is out of range".to_string());
         }
 
@@ -1535,6 +1921,241 @@ impl DynamicParams {
             ));
         }
         Ok(())
+    }
+
+    /// Staged-or-committed custom geometry for Ambisonics construction.
+    ///
+    /// Control thread only. Mirrors the Hiss carrier: a malformed staged
+    /// restore fails instead of running named, a staged candidate shadows
+    /// the committed geometry until the attempt resolves, and schemas
+    /// without Ambisonics structure report no geometry. A fieldless
+    /// restore records missing-field intent, so target-8 construction
+    /// fails even when committed geometry exists instead of silently
+    /// resurrecting it; the committed geometry itself is preserved.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when the carrier lock is unavailable, a staged
+    /// restore is invalid, or the restored state carries no geometry.
+    #[doc(hidden)]
+    pub fn ambisonics_custom_layout_for_construction(
+        &self,
+    ) -> Result<Option<NativeAmbisonicsCustomGeometry>, String> {
+        let Some(state) = self.ambisonics_custom_state.as_ref() else {
+            return Ok(None);
+        };
+        let state = state
+            .lock()
+            .map_err(|_| "Ambisonics custom geometry state is unavailable".to_string())?;
+        if state.invalid_restore {
+            return Err("saved Ambisonics custom geometry is invalid".to_string());
+        }
+        if let Some(pending) = &state.pending_restore {
+            return Ok(Some(pending.clone()));
+        }
+        if state.missing_field {
+            return Err(
+                "restored Ambisonics state carries no custom geometry; target layout 8 requires staged custom geometry"
+                    .to_string(),
+            );
+        }
+        Ok(state.committed.clone())
+    }
+
+    /// Publish staged custom geometry after candidate acceptance.
+    #[doc(hidden)]
+    pub fn complete_ambisonics_custom_restore(&self) {
+        let Some(state) = &self.ambisonics_custom_state else {
+            return;
+        };
+        let Ok(mut state) = state.lock() else {
+            return;
+        };
+        if let Some(pending) = state.pending_restore.take() {
+            state.committed = Some(pending);
+        }
+        state.invalid_restore = false;
+        state.missing_field = false;
+    }
+
+    fn discard_ambisonics_custom_restore(&self) {
+        if let Some(state) = &self.ambisonics_custom_state
+            && let Ok(mut state) = state.lock()
+        {
+            state.pending_restore = None;
+        }
+    }
+
+    /// Validate a negotiated layout against restored custom geometry.
+    ///
+    /// Consumes the Ambisonics restore marker. A pending restore must
+    /// agree with the negotiated order; a deliberate fresh configuration
+    /// skips the order comparison but still requires staged-or-committed
+    /// geometry (a fieldless restore defeats the committed fallback)
+    /// whose width matches the negotiated bus. The wire
+    /// expectations carry the exact bytes the format callbacks will
+    /// report for the selected layout, so a same-width geometry with
+    /// different roles fails instead of misrouting channels. Returns the
+    /// VST3 bus-to-SOTF permutation for the audio path.
+    ///
+    /// Control thread only: validates, allocates the permutation, and
+    /// locks the carrier.
+    ///
+    /// # Errors
+    ///
+    /// Returns a message when structural parameters are missing, the
+    /// restored target is not custom, a pending restore conflicts with
+    /// the negotiated order, no geometry is staged, or the bus width,
+    /// wire bytes, or permutation disagree with the negotiated layout.
+    #[doc(hidden)]
+    pub fn validate_restored_ambisonics_custom_layout(
+        &self,
+        order: usize,
+        output_channels: usize,
+        expected_clap_map: Option<&[u8]>,
+        expected_vst3_mask: Option<u64>,
+    ) -> Result<Vec<usize>, String> {
+        let restore_pending = self
+            .ambisonics_state_restore_pending
+            .swap(false, Ordering::AcqRel);
+        let structural_value = |id: &str| -> Result<i32, String> {
+            let entry = self
+                .param_map
+                .get(id)
+                .ok_or_else(|| format!("missing Ambisonics structural parameter '{id}'"))?;
+            if entry.realtime || !matches!(entry.kind, ParamKind::Int) {
+                return Err(format!(
+                    "Ambisonics parameter '{id}' is not a structural integer"
+                ));
+            }
+            Ok(self.int_params[entry.index].value())
+        };
+        let restored_target = structural_value("target_layout")?;
+        if restored_target != ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX as i32 {
+            return Err(format!(
+                "Ambisonics custom validation requires target layout 8, got {restored_target}"
+            ));
+        }
+        if restore_pending {
+            let restored_order = structural_value("order")?;
+            let negotiated_order = i32::try_from(order)
+                .map_err(|_| "Ambisonics order does not fit i32".to_string())?;
+            if restored_order != negotiated_order {
+                return Err(format!(
+                    "restored Ambisonics custom order {restored_order} conflicts with negotiated order {negotiated_order}"
+                ));
+            }
+        }
+        let order_u8 =
+            u8::try_from(order).map_err(|_| "Ambisonics order does not fit u8".to_string())?;
+        if !(1..=7).contains(&order_u8) {
+            return Err(format!(
+                "Ambisonics order {order} is unsupported; expected an order from 1 through 7"
+            ));
+        }
+        let geometry = self
+            .ambisonics_custom_layout_for_construction()?
+            .ok_or_else(|| {
+                "Ambisonics target layout 8 has no staged custom geometry".to_string()
+            })?;
+        if geometry.total_channels() != output_channels {
+            return Err(format!(
+                "Ambisonics custom geometry has {} channels; the negotiated layout offers {output_channels}",
+                geometry.total_channels()
+            ));
+        }
+        if let Some(expected) = expected_clap_map {
+            let roles = geometry.clap_role_map()?;
+            if roles.as_slice() != expected {
+                return Err(format!(
+                    "Ambisonics custom geometry roles {roles:?} do not match the selected CLAP configuration map {expected:?}"
+                ));
+            }
+        }
+        let (mask, permutation) = geometry.vst3_arrangement(order_u8)?;
+        if let Some(expected) = expected_vst3_mask
+            && mask != expected
+        {
+            return Err(format!(
+                "Ambisonics custom geometry mask {mask:#x} does not match the selected VST3 arrangement {expected:#x}"
+            ));
+        }
+        if permutation.len() != output_channels {
+            return Err(format!(
+                "Ambisonics custom permutation has {} entries for {output_channels} channels",
+                permutation.len()
+            ));
+        }
+        Ok(permutation)
+    }
+
+    fn has_ambisonics_structure(&self) -> bool {
+        ["order", "target_layout"].iter().all(|id| {
+            self.param_map
+                .get(*id)
+                .is_some_and(|entry| !entry.realtime && matches!(entry.kind, ParamKind::Int))
+        })
+    }
+
+    fn validate_ambisonics_custom_restore(
+        &self,
+        state: &PluginState,
+        is_active: bool,
+        is_audio_thread: bool,
+    ) -> bool {
+        let Some(restore_state) = &self.ambisonics_custom_state else {
+            return true;
+        };
+        if state.fields.keys().any(|key| {
+            key.starts_with(ambisonics_custom::ambisonics_custom_state_field())
+                && key != ambisonics_custom::ambisonics_custom_state_field()
+        }) {
+            return false;
+        }
+        let Some(encoded) = state
+            .fields
+            .get(ambisonics_custom::ambisonics_custom_state_field())
+        else {
+            return true;
+        };
+        if is_active || is_audio_thread {
+            return false;
+        }
+        let Ok(geometry) = ambisonics_custom::decode_ambisonics_custom_field(encoded) else {
+            return false;
+        };
+        let Ok(mut restore_state) = restore_state.lock() else {
+            return false;
+        };
+        restore_state.pending_restore = Some(geometry);
+        restore_state.invalid_restore = false;
+        restore_state.missing_field = false;
+        true
+    }
+
+    fn serialize_ambisonics_custom_field(&self) -> Option<String> {
+        // Canonical saves carry the geometry only for live custom
+        // instances: named instances never emit stale carrier bytes,
+        // and a fieldless restore saves fieldless again so a rejected
+        // state can never heal into a different geometry on reload.
+        let target = self.param_map.get("target_layout").filter(|entry| {
+            !entry.realtime && matches!(entry.kind, ParamKind::Int)
+        })?;
+        if self.int_params[target.index].value()
+            != ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX as i32
+        {
+            return None;
+        }
+        let state = self.ambisonics_custom_state.as_ref()?;
+        let state = state.lock().ok()?;
+        if state.missing_field {
+            return None;
+        }
+        let geometry = state
+            .pending_restore
+            .as_ref()
+            .or(state.committed.as_ref())?;
+        ambisonics_custom::encode_ambisonics_custom_field(geometry).ok()
     }
 
     /// Apply a CLAP BandSplit layout selection before constructing its DSP.
@@ -1625,6 +2246,9 @@ impl DynamicParams {
             if self.eq_schema && is_native_eq_pair_draft_parameter(entry.id.as_str()) {
                 continue;
             }
+            if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
+                continue;
+            }
             let value = self
                 .initialization_value(entry.id.as_str())
                 .unwrap_or_else(|| self.value_for_entry(entry));
@@ -1650,13 +2274,63 @@ impl DynamicParams {
         Ok(())
     }
 
+    /// Forwards Hiss host-action edges to live DSP.
+    ///
+    /// Reads the precomputed host-action bools, compares against the
+    /// wrapper-owned latch, and forwards changed values through the DSP
+    /// setters: both `learn_noise` edges (check starts or restarts a
+    /// capture, uncheck cancels it) and `clear_profile` rising edges
+    /// only, each honored solely when the matching immediate opt-in
+    /// cached at initialization admits it. Absent routes or opt-outs
+    /// consume the edge silently. Safe on the audio callback: indexed
+    /// atomic reads plus bounded setters, no allocation, lock, log, or
+    /// FFT: the cached id crosses the owned-id setter as an `Arc`
+    /// refcount clone. Latches update on attempt and the first setter
+    /// error wins,
+    /// mirroring realtime sync; errors are unreachable past a valid
+    /// initialization.
+    ///
+    /// # Errors
+    ///
+    /// Returns the DSP setter error when a forward is rejected.
+    pub(crate) fn forward_hiss_momentary_edges(
+        &self,
+        plugin: &mut dyn sotf_host::plugin::Plugin,
+        latch: &mut hiss_profile::HissMomentaryLatch,
+    ) -> Result<(), String> {
+        if let Some(route) = &self.hiss_learn_action {
+            let now = self.bool_params[route.bool_index].value();
+            if now != latch.learn {
+                latch.learn = now;
+                if latch.learn_immediate {
+                    plugin.set_parameter(route.id.clone(), ParameterValue::Bool(now))?;
+                }
+            }
+        }
+        if let Some(route) = &self.hiss_clear_action {
+            let now = self.bool_params[route.bool_index].value();
+            if now != latch.clear {
+                latch.clear = now;
+                if now && latch.clear_immediate {
+                    plugin.set_parameter(route.id.clone(), ParameterValue::Bool(true))?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Allocation-free identity for construction-sized parameters. A change
     /// while active requires the host to deactivate/reactivate the instance;
     /// the render thread must never rebuild or destroy the DSP graph.
     #[doc(hidden)]
     pub fn structural_fingerprint(&self) -> u64 {
         let mut fingerprint = 0xcbf2_9ce4_8422_2325_u64;
-        for entry in self.sync_entries.iter().filter(|entry| !entry.realtime) {
+        for entry in self.sync_entries.iter().filter(|entry| {
+            if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
+                return false;
+            }
+            !entry.realtime
+        }) {
             let bits = match entry.kind {
                 ParamKind::Float => self.float_params[entry.index].value().to_bits() as u64,
                 ParamKind::Bool => u64::from(self.bool_params[entry.index].value()),
@@ -1855,6 +2529,8 @@ unsafe impl Params for DynamicParams {
     ) -> bool {
         self.validate_eq_native_state(state)
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
+            && self.validate_hiss_restore(state, is_active, is_audio_thread)
+            && self.validate_ambisonics_custom_restore(state, is_active, is_audio_thread)
     }
 
     fn defer_state_parameter_values(&self) -> bool {
@@ -1876,6 +2552,11 @@ unsafe impl Params for DynamicParams {
                     pairs: Vec::new(),
                 });
             overrides.extend(eq_pair_state_values(&route));
+        }
+        if self.hiss_schema {
+            for id in hiss_profile::HISS_MOMENTARY_IDS {
+                overrides.insert(id.to_string(), NativeParamValue::Bool(false));
+            }
         }
         let Some(state) = &self.convolution_state else {
             return overrides;
@@ -1919,6 +2600,20 @@ unsafe impl Params for DynamicParams {
             fields.insert(
                 EQ_NATIVE_STATE_FIELD.to_string(),
                 serialize_eq_pair_route_field(&route),
+            );
+        }
+        if self.hiss_schema {
+            fields.insert(
+                hiss_profile::HISS_PROFILE_STATE_FIELD.to_string(),
+                self.serialize_hiss_profile_field(),
+            );
+        }
+        if self.has_ambisonics_structure()
+            && let Some(encoded) = self.serialize_ambisonics_custom_field()
+        {
+            fields.insert(
+                ambisonics_custom::ambisonics_custom_state_field().to_string(),
+                encoded,
             );
         }
         let Some(state) = &self.convolution_state else {
@@ -1969,14 +2664,59 @@ unsafe impl Params for DynamicParams {
                 }
             }
         }
-        let is_ambisonics = ["order", "target_layout"].iter().all(|id| {
-            self.param_map
-                .get(*id)
-                .is_some_and(|entry| !entry.realtime && matches!(entry.kind, ParamKind::Int))
-        });
-        if is_ambisonics {
+        if self.hiss_schema {
+            self.reset_hiss_momentaries();
+            if let Some(encoded) = serialized.get(hiss_profile::HISS_PROFILE_STATE_FIELD)
+                && let Some(state) = &self.hiss_profile_state
+                && let Ok(mut state) = state.lock()
+            {
+                match hiss_profile::decode_hiss_field(encoded, hiss_profile::HISS_NATIVE_CHANNELS) {
+                    Ok((generation, profile)) => {
+                        state.pending_restore = Some(profile);
+                        state.pending_generation = Some(generation);
+                        state.invalid_restore = false;
+                    }
+                    Err(_) => {
+                        state.pending_restore = None;
+                        state.pending_generation = None;
+                        state.invalid_restore = true;
+                    }
+                }
+            }
+        }
+        if self.has_ambisonics_structure() {
             self.ambisonics_state_restore_pending
                 .store(true, Ordering::Release);
+            if let Some(state) = &self.ambisonics_custom_state
+                && let Ok(mut state) = state.lock()
+            {
+                match serialized.get(ambisonics_custom::ambisonics_custom_state_field()) {
+                    Some(encoded) => {
+                        match ambisonics_custom::decode_ambisonics_custom_field(encoded) {
+                            Ok(geometry) => {
+                                state.pending_restore = Some(geometry);
+                                state.invalid_restore = false;
+                                state.missing_field = false;
+                            }
+                            Err(_) => {
+                                state.pending_restore = None;
+                                state.invalid_restore = true;
+                                state.missing_field = false;
+                            }
+                        }
+                    }
+                    // A fieldless Ambisonics state is explicit absence,
+                    // not a malformed candidate: clear staged state and
+                    // record missing-field intent so target-8 construction
+                    // fails instead of resurrecting committed geometry.
+                    // The committed geometry itself is preserved.
+                    None => {
+                        state.pending_restore = None;
+                        state.invalid_restore = false;
+                        state.missing_field = true;
+                    }
+                }
+            }
         }
         let has_band_split_layout = self
             .param_map

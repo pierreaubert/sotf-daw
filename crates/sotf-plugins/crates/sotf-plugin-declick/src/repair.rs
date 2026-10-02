@@ -1462,6 +1462,9 @@ mod tests {
                     // addition per band; 1e-6 covers float rounding on
                     // signals below 1.0 with wide margin (ulp ~ 6e-8).
                     assert!(worst < 1.0e-6, "rate={rate} bands={bands} worst={worst}");
+                    eprintln!(
+                        "[declick-accuracy] crossover rate={rate} bands={bands} worst={worst:.6}"
+                    );
                 }
             }
         }
@@ -1523,6 +1526,7 @@ mod tests {
         // Independent implementation of the same operation sequence; 1e-6
         // admits float transcription drift only, not behavior change.
         assert!(worst < 1.0e-6, "worst cross-implementation drift {worst}");
+        eprintln!("[declick-accuracy] legacy cross-implementation drift worst={worst:.6}");
     }
 
     #[test]
@@ -1607,6 +1611,7 @@ mod tests {
             .map(|(a, b)| (a - b).abs())
             .fold(0.0_f32, f32::max);
         assert!(worst < 0.05, "width agreement drift {worst}");
+        eprintln!("[declick-accuracy] width agreement drift worst={worst:.6}");
     }
 
     #[test]
@@ -1684,6 +1689,7 @@ mod tests {
             // Bypassed bands sum through the complementary crossover; only
             // float rounding separates output from the delayed input.
             assert!(worst < 1.0e-6, "bands={bands} worst={worst}");
+            eprintln!("[declick-accuracy] bypassed bands={bands} worst={worst:.6}");
         }
     }
 
@@ -1719,6 +1725,7 @@ mod tests {
         // residual = dry - repaired in f32, so the sum regroups to dry
         // within a few ulps on signals below 4.0.
         assert!(worst < 1.0e-5, "residual identity drift {worst}");
+        eprintln!("[declick-accuracy] residual identity drift worst={worst:.6}");
     }
 
     #[test]
@@ -1743,6 +1750,7 @@ mod tests {
             // Only crossover rounding separates output from delayed input;
             // a vetoed edge would deviate by ~0.5 at every transition.
             assert!(worst < 1.0e-5, "bands={bands} worst={worst}");
+            eprintln!("[declick-accuracy] square edge bands={bands} worst={worst:.6}");
         }
     }
 
@@ -1842,19 +1850,29 @@ mod tests {
             let mut stream = corrupt.clone();
             stream.extend(std::iter::repeat_n(0.0, LOOKAHEAD_SAMPLES));
             engine.process(&mut stream).unwrap();
+            let mut worst_repair = 0.0_f32;
             for frame in 200..203 {
                 let error = (stream[frame + LOOKAHEAD_SAMPLES] - clean[frame]).abs();
+                worst_repair = worst_repair.max(error);
                 assert!(
                     error < 3.0 * 0.05,
                     "bands={bands} frame={frame} error={error}"
                 );
             }
+            eprintln!(
+                "[declick-accuracy] multiband wide-click bands={bands} repair worst={worst_repair:.6}"
+            );
             // Neighboring clean frames stay within the damage bound: the
             // supervisor never confirms them, so bands stay dry.
+            let mut worst_damage = 0.0_f32;
             for frame in [196, 197, 198, 199, 203, 204, 205, 206] {
                 let damage = (stream[frame + LOOKAHEAD_SAMPLES] - clean[frame]).abs();
+                worst_damage = worst_damage.max(damage);
                 assert!(damage < 0.05, "bands={bands} frame={frame} damage={damage}");
             }
+            eprintln!(
+                "[declick-accuracy] multiband wide-click bands={bands} damage worst={worst_damage:.6}"
+            );
         }
     }
 

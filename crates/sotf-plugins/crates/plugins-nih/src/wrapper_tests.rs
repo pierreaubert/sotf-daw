@@ -1,5 +1,6 @@
 //! Process the generated wrappers through NIH buffers, including auxiliary buses.
 use super::*;
+use crate::params::ambisonics_custom::ambisonics_custom_state_field;
 use nih_plug::prelude::*;
 
 // Direct routing tests exercise the common process body. Native transport
@@ -55,6 +56,17 @@ impl<P: Plugin> InitContext<P> for Vst3TestContext {
     fn set_current_voice_capacity(&self, _: u32) {}
 }
 
+struct StandaloneTestContext;
+
+impl<P: Plugin> InitContext<P> for StandaloneTestContext {
+    fn plugin_api(&self) -> PluginApi {
+        PluginApi::Standalone
+    }
+    fn execute(&self, _: P::BackgroundTask) {}
+    fn set_latency_samples(&self, _: u32) {}
+    fn set_current_voice_capacity(&self, _: u32) {}
+}
+
 fn initialize_on_layout<P: Plugin>(plugin: &mut P, layout: &AudioIOLayout, api: PluginApi) {
     let config = BufferConfig {
         sample_rate: 48000.0,
@@ -64,6 +76,8 @@ fn initialize_on_layout<P: Plugin>(plugin: &mut P, layout: &AudioIOLayout, api: 
     };
     let initialized = if api == PluginApi::Vst3 {
         plugin.initialize(layout, &config, &mut Vst3TestContext)
+    } else if api == PluginApi::Standalone {
+        plugin.initialize(layout, &config, &mut StandaloneTestContext)
     } else {
         plugin.initialize(layout, &config, &mut TestContext)
     };
@@ -781,12 +795,24 @@ fn gate_stereo_only_layout_explicitly_rejects_external_key_state() {
 
 #[test]
 fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
+    // Canonical DSP slot order per TARGET_LAYOUTS (pinned by the DSP's own
+    // `custom_choice_is_appended_without_moving_named_indices` test): 5.1.4
+    // at 3, 7.1.2 at 4. Masks derive from the pinned VST3 SDK speaker bits
+    // (kSpeakerSl=9, kSpeakerSr=10); permutations from the SOTF CONFIG
+    // channel order (sides before backs); CLAP maps cross-checked against
+    // the crossover's by-name constant use. Compatibility record: pre-fix
+    // NIH slots 3/4 were swapped (7.1.2 wire at 3, 5.1.4 wire at 4) while
+    // DSP/host indices stayed canonical, so old states with target 3/4
+    // were self-contradictory; they now resolve to canonical DSP meaning.
+    const CANONICAL_TARGETS: [&str; 8] = [
+        "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6",
+    ];
     const OUTPUT_MASKS: [u64; 8] = [
         0x0000_0000_0000_003f,
         0x0000_0000_0000_063f,
         0x0000_0000_0000_503f,
-        0x0000_0000_0000_563f,
         0x0000_0000_0002_d03f,
+        0x0000_0000_0000_563f,
         0x0000_0000_0002_d63f,
         0x1800_0000_0002_d63f,
         0x1800_0000_0302_d63f,
@@ -795,8 +821,8 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
         &[0, 1, 2, 3, 4, 5],
         &[0, 1, 2, 3, 6, 7, 4, 5],
         &[0, 1, 2, 3, 4, 5, 6, 7],
-        &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9],
         &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9],
         &[0, 1, 2, 3, 6, 7, 4, 5, 8, 9, 10, 11],
         &[0, 1, 2, 3, 6, 7, 4, 5, 10, 11, 12, 13, 8, 9],
         &[0, 1, 2, 3, 6, 7, 4, 5, 10, 11, 12, 13, 14, 15, 8, 9],
@@ -805,8 +831,8 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
         &[0, 1, 2, 3, 9, 10],
         &[0, 1, 2, 3, 9, 10, 4, 5],
         &[0, 1, 2, 3, 9, 10, 12, 14],
-        &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14],
         &[0, 1, 2, 3, 9, 10, 12, 14, 15, 17],
+        &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14],
         &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14, 15, 17],
     ];
     let output_widths = [6_u32, 8, 8, 10, 10, 12, 14, 16];
@@ -837,6 +863,12 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
             assert_eq!(
                 layout.main_output_channels.unwrap().get(),
                 output_widths[target]
+            );
+            let expected_name = format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
+            assert_eq!(
+                layout.names.layout,
+                Some(expected_name.as_str()),
+                "VST3 slot {target} must carry its canonical DSP name"
             );
             assert!(layout.aux_input_ports.is_empty());
             assert_eq!(
@@ -886,6 +918,12 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
             assert_eq!(
                 layout.main_output_channels.unwrap().get(),
                 output_widths[target]
+            );
+            let expected_name = format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
+            assert_eq!(
+                layout.names.layout,
+                Some(expected_name.as_str()),
+                "CLAP slot {target} must carry its canonical DSP name"
             );
             assert!(
                 <AmbisonicsWrapper as ClapPlugin>::clap_audio_port_type(index, true, 0)
@@ -938,6 +976,12 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
 #[test]
 fn ambisonics_vst3_and_clap_process_selected_full_input_vectors() {
     const FRAMES: usize = 31;
+    // Canonical DSP slot names per TARGET_LAYOUTS; the reference DSP is
+    // built from the same recorded target, so the wire-bytes pins live in
+    // the metadata test and this loop anchors slot identity via names.
+    const CANONICAL_TARGETS: [&str; 8] = [
+        "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6",
+    ];
     for (api, layouts, layouts_per_order, targets) in [
         (
             PluginApi::Vst3,
@@ -957,6 +1001,12 @@ fn ambisonics_vst3_and_clap_process_selected_full_input_vectors() {
             let target = layout_index % layouts_per_order;
             let input_channels = (order + 1).pow(2);
             let output_channels = output_width(layout).unwrap();
+            let expected_name = format!("Order {order} - {}", CANONICAL_TARGETS[target]);
+            assert_eq!(
+                layout.names.layout,
+                Some(expected_name.as_str()),
+                "api={api:?}, layout={layout_index}: slot identity must match DSP canonical order"
+            );
             let mut wrapper = AmbisonicsWrapper::default();
             initialize_on_layout(&mut wrapper, layout, api);
             assert_eq!(
@@ -1325,3 +1375,310 @@ mod native_bandsplit_vst3_callbacks;
 #[cfg(feature = "convolution")]
 #[path = "wrapper/native_convolution_state_callbacks.rs"]
 mod native_convolution_state_callbacks;
+
+fn ambisonics_custom_test_json(name: &str, speakers: &[(&str, f32, f32, bool)]) -> String {
+    let entries = speakers
+        .iter()
+        .map(|(label, azimuth, elevation, is_lfe)| {
+            serde_json::json!({
+                "label": label,
+                "azimuth_deg": azimuth,
+                "elevation_deg": elevation,
+                "is_lfe": is_lfe,
+            })
+            .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{{\"name\":\"{name}\",\"speakers\":[{entries}]}}")
+}
+
+fn ambisonics_custom_7_1_4_json() -> String {
+    ambisonics_custom_test_json(
+        "custom-7.1.4",
+        &[
+            ("FL", 30.0, 0.0, false),
+            ("FR", -30.0, 0.0, false),
+            ("FC", 0.0, 0.0, false),
+            ("LFE", 0.0, 0.0, true),
+            ("SL", 90.0, 0.0, false),
+            ("SR", -90.0, 0.0, false),
+            ("BL", 150.0, 0.0, false),
+            ("BR", -150.0, 0.0, false),
+            ("TFL", 30.0, 45.0, false),
+            ("TFR", -30.0, 45.0, false),
+            ("TBL", 150.0, 45.0, false),
+            ("TBR", -150.0, 45.0, false),
+        ],
+    )
+}
+
+fn ambisonics_custom_9_1_6_json() -> String {
+    ambisonics_custom_test_json(
+        "custom-9.1.6",
+        &[
+            ("FL", 30.0, 0.0, false),
+            ("FR", -30.0, 0.0, false),
+            ("FC", 0.0, 0.0, false),
+            ("LFE", 0.0, 0.0, true),
+            ("SL", 90.0, 0.0, false),
+            ("SR", -90.0, 0.0, false),
+            ("BL", 150.0, 0.0, false),
+            ("BR", -150.0, 0.0, false),
+            ("WL", 60.0, 0.0, false),
+            ("WR", -60.0, 0.0, false),
+            ("TFL", 30.0, 45.0, false),
+            ("TFR", -30.0, 45.0, false),
+            ("TBL", 150.0, 45.0, false),
+            ("TBR", -150.0, 45.0, false),
+            ("TMiL", 90.0, 45.0, false),
+            ("TMiR", -90.0, 45.0, false),
+        ],
+    )
+}
+
+fn ambisonics_custom_7_1_2_json() -> String {
+    ambisonics_custom_test_json(
+        "custom-7.1.2",
+        &[
+            ("FL", 30.0, 0.0, false),
+            ("FR", -30.0, 0.0, false),
+            ("FC", 0.0, 0.0, false),
+            ("LFE", 0.0, 0.0, true),
+            ("SL", 90.0, 0.0, false),
+            ("SR", -90.0, 0.0, false),
+            ("BL", 150.0, 0.0, false),
+            ("BR", -150.0, 0.0, false),
+            ("TFL", 30.0, 45.0, false),
+            ("TFR", -30.0, 45.0, false),
+        ],
+    )
+}
+
+fn stage_custom_on_wrapper(wrapper: &mut AmbisonicsWrapper, order: usize, field: &str) {
+    wrapper.params.set_ambisonics_layout(order, 8).unwrap();
+    let mut fields = std::collections::BTreeMap::new();
+    fields.insert(ambisonics_custom_state_field().to_string(), field.to_string());
+    wrapper.params.deserialize_fields(&fields);
+}
+
+fn check_custom_wrapper_process(
+    wrapper: &mut AmbisonicsWrapper,
+    api: PluginApi,
+    inputs: usize,
+    outputs: usize,
+    bus_to_sotf: &[usize],
+) {
+    const FRAMES: usize = 31;
+    let input: Vec<f32> = (0..FRAMES)
+        .flat_map(|frame| {
+            (0..inputs).map(move |channel| {
+                let code = (frame * 43 + channel * 71 + frame * channel * 11) % 997;
+                (code as f32 - 498.0) * 0.000_02
+            })
+        })
+        .collect();
+    let mut reference = crate::params::configuration::create_plugin(
+        "AmbisonicsDecoder",
+        48_000,
+        &wrapper.params,
+    )
+    .unwrap();
+    reference = plugins_bridge::prepare_standalone_plugin(reference, FRAMES).unwrap();
+    reference.initialize(48_000).unwrap();
+    let mut expected = vec![0.0; FRAMES * outputs];
+    assert_eq!(
+        reference
+            .process(
+                &input,
+                &mut expected,
+                &sotf_host::plugin::ProcessContext::new(48_000, FRAMES),
+            )
+            .unwrap(),
+        FRAMES
+    );
+    let mut host_channels = vec![vec![0.0; FRAMES]; inputs.max(outputs)];
+    for frame in 0..FRAMES {
+        for channel in 0..inputs {
+            host_channels[channel][frame] = input[frame * inputs + channel];
+        }
+    }
+    let mut buffer = Buffer::default();
+    // SAFETY: the host channel slices are disjoint and remain live through process().
+    unsafe {
+        buffer.set_slices(FRAMES, |slices| {
+            slices.extend(host_channels.iter_mut().map(Vec::as_mut_slice))
+        });
+    }
+    let mut auxiliary = AuxiliaryBuffers {
+        inputs: &mut [],
+        outputs: &mut [],
+    };
+    let status = wrapper.process_with_api(&mut buffer, &mut auxiliary, api, Default::default());
+    assert!(!matches!(status, ProcessStatus::Error(_)), "{status:?}");
+    let mut nonzero = false;
+    for frame in 0..FRAMES {
+        for bus_channel in 0..outputs {
+            let actual = buffer.as_slice_immutable()[bus_channel][frame];
+            assert!(actual.is_finite(), "frame {frame} bus {bus_channel}: {actual}");
+            nonzero |= actual.abs() > 1.0e-6;
+            let reference = expected[frame * outputs + bus_to_sotf[bus_channel]];
+            assert!(
+                (actual - reference).abs() <= 1.0e-6,
+                "frame={frame}, bus={bus_channel}: {actual} vs {reference}"
+            );
+        }
+    }
+    assert!(nonzero, "custom wrapper render is silent");
+}
+
+#[test]
+fn ambisonics_custom_clap_init_processes_matched_layout() {
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_7_1_4_json());
+    let layouts = <AmbisonicsWrapper as ClapPlugin>::clap_audio_io_layouts();
+    initialize_on_layout(&mut wrapper, &layouts[41], PluginApi::Clap);
+    assert_eq!(wrapper.inner.as_ref().unwrap().input_channels(), 64);
+    assert_eq!(wrapper.inner.as_ref().unwrap().output_channels(), 12);
+    assert_eq!(wrapper.ambisonics_target_layout, 8);
+    assert_eq!(wrapper.ambisonics_custom_vst3_channels, 12);
+    let identity: Vec<usize> = (0..12).collect();
+    check_custom_wrapper_process(&mut wrapper, PluginApi::Clap, 64, 12, &identity);
+}
+
+#[test]
+fn ambisonics_custom_vst3_init_installs_host_agreed_permutation() {
+    let json = ambisonics_custom_9_1_6_json();
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &json);
+    let layouts = <AmbisonicsWrapper as Plugin>::AUDIO_IO_LAYOUTS;
+    initialize_on_layout(&mut wrapper, &layouts[55], PluginApi::Vst3);
+    assert_eq!(wrapper.inner.as_ref().unwrap().input_channels(), 64);
+    assert_eq!(wrapper.inner.as_ref().unwrap().output_channels(), 16);
+    let geometry: sotf_host::external_plugin::NativeAmbisonicsCustomGeometry =
+        serde_json::from_str(&json).unwrap();
+    let (mask, expected) = geometry.vst3_arrangement(7).unwrap();
+    assert_eq!(mask, 0x1800_0000_0302_d63f);
+    assert_eq!(
+        &wrapper.ambisonics_custom_vst3_to_sotf[..16],
+        expected.as_slice()
+    );
+    check_custom_wrapper_process(&mut wrapper, PluginApi::Vst3, 64, 16, &expected);
+}
+
+#[test]
+fn ambisonics_custom_init_rejects_mismatched_layouts() {
+    let config = BufferConfig {
+        sample_rate: 48000.0,
+        min_buffer_size: Some(1),
+        max_buffer_size: 257,
+        process_mode: ProcessMode::Realtime,
+    };
+    let clap_layouts = <AmbisonicsWrapper as ClapPlugin>::clap_audio_io_layouts();
+    // Wrong width: 12-channel geometry against the 6-channel 5.1 layout.
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_7_1_4_json());
+    assert!(!wrapper.initialize(&clap_layouts[36], &config, &mut TestContext));
+    // Same width, other roles: 7.1.2-shaped geometry against 5.1.4
+    // (slot 3 in canonical DSP order; pre-F1-fix this slot was mislabeled 4).
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_7_1_2_json());
+    assert!(!wrapper.initialize(&clap_layouts[39], &config, &mut TestContext));
+    // VST3 width mismatch: 16-channel geometry against the 5.1 layout.
+    let vst3_layouts = <AmbisonicsWrapper as Plugin>::AUDIO_IO_LAYOUTS;
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_9_1_6_json());
+    assert!(!wrapper.initialize(&vst3_layouts[48], &config, &mut Vst3TestContext));
+}
+
+#[test]
+fn ambisonics_custom_init_rejects_missing_geometry() {
+    let config = BufferConfig {
+        sample_rate: 48000.0,
+        min_buffer_size: Some(1),
+        max_buffer_size: 257,
+        process_mode: ProcessMode::Realtime,
+    };
+    let clap_layouts = <AmbisonicsWrapper as ClapPlugin>::clap_audio_io_layouts();
+    let mut wrapper = AmbisonicsWrapper::default();
+    wrapper.params.set_ambisonics_layout(7, 8).unwrap();
+    assert!(!wrapper.initialize(&clap_layouts[41], &config, &mut TestContext));
+}
+
+#[test]
+fn ambisonics_custom_init_refuses_fieldless_restore_until_valid_stage() {
+    let config = BufferConfig {
+        sample_rate: 48000.0,
+        min_buffer_size: Some(1),
+        max_buffer_size: 257,
+        process_mode: ProcessMode::Realtime,
+    };
+    let clap_layouts = <AmbisonicsWrapper as ClapPlugin>::clap_audio_io_layouts();
+    // Commit accepted good geometry first through a real initialize.
+    let mut wrapper = AmbisonicsWrapper::default();
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_7_1_4_json());
+    initialize_on_layout(&mut wrapper, &clap_layouts[41], PluginApi::Clap);
+    assert_eq!(wrapper.ambisonics_target_layout, 8);
+    // Real fieldless target-8 restore: structural ints as nih-plug
+    // applies them, then opaque fields without the geometry key.
+    wrapper.params.set_ambisonics_layout(7, 8).unwrap();
+    wrapper
+        .params
+        .deserialize_fields(&std::collections::BTreeMap::new());
+    // Actual initialize on the matching layout refuses, repeatedly:
+    // retry/drop must not silently heal into committed geometry.
+    assert!(
+        !wrapper.initialize(&clap_layouts[41], &config, &mut TestContext),
+        "fieldless restore must refuse init while missing=true"
+    );
+    assert!(
+        !wrapper.initialize(&clap_layouts[41], &config, &mut TestContext),
+        "repeated retry/drop must not silently heal into committed geometry"
+    );
+    // Valid-stage retry succeeds on the same wrapper with real audio IO.
+    stage_custom_on_wrapper(&mut wrapper, 7, &ambisonics_custom_7_1_4_json());
+    initialize_on_layout(&mut wrapper, &clap_layouts[41], PluginApi::Clap);
+    assert_eq!(
+        wrapper.params.value("target_layout"),
+        Some(sotf_host::parameters::ParameterValue::Int(8))
+    );
+    assert_eq!(wrapper.ambisonics_target_layout, 8);
+    assert_eq!(wrapper.inner.as_ref().unwrap().input_channels(), 64);
+    assert_eq!(wrapper.inner.as_ref().unwrap().output_channels(), 12);
+}
+
+#[test]
+fn ambisonics_standalone_init_resolves_8_target_identity_for_high_slots() {
+    // Standalone resolves layouts against the 8-target VST3 table, so the
+    // order/target derivation must divide by 8: a divisor of 6
+    // misidentifies every layout index >= 6 and fails loudly past 47.
+    // This exercises actual `initialize`, not the direct negotiate helper.
+    const WIDTHS: [u32; 8] = [6, 8, 8, 10, 10, 12, 14, 16];
+    let layouts = <AmbisonicsWrapper as Plugin>::AUDIO_IO_LAYOUTS;
+    assert_eq!(layouts.len(), 56);
+    for layout_index in [0, 5, 6, 7, 14, 15, 48, 55] {
+        let order = layout_index / 8 + 1;
+        let target = layout_index % 8;
+        let mut wrapper = AmbisonicsWrapper::default();
+        initialize_on_layout(&mut wrapper, &layouts[layout_index], PluginApi::Standalone);
+        assert_eq!(
+            wrapper.params.value("order"),
+            Some(sotf_host::parameters::ParameterValue::Int(order as i32)),
+            "standalone layout {layout_index} must record order {order}"
+        );
+        assert_eq!(
+            wrapper.params.value("target_layout"),
+            Some(sotf_host::parameters::ParameterValue::Int(target as i32)),
+            "standalone layout {layout_index} must record target {target}"
+        );
+        assert_eq!(wrapper.ambisonics_target_layout, target);
+        assert_eq!(
+            wrapper.inner.as_ref().unwrap().input_channels(),
+            (order + 1) * (order + 1)
+        );
+        assert_eq!(
+            wrapper.inner.as_ref().unwrap().output_channels(),
+            WIDTHS[target] as usize
+        );
+    }
+}

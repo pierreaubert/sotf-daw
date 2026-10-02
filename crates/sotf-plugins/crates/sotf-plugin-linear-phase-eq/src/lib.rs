@@ -1,4 +1,5 @@
 #![allow(clippy::duplicate_mod)]
+pub mod dynamic_host;
 pub mod params;
 
 #[path = "lib/default.rs"]
@@ -26,5 +27,9 @@ mod tests;
 #[path = "lib/types.rs"]
 mod types;
 
+pub use dynamic_host::{
+    LinearPhaseEqAcceptedSnapshot, LinearPhaseEqControlHandle, LinearPhaseEqControlStatus,
+    LinearPhaseEqDynamicPlugin, LinearPhaseEqSnapshotBusy,
+};
 pub use linear_phase_eq_plugin::*;
 pub use types::*;

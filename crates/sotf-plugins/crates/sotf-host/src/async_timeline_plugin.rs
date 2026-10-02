@@ -900,8 +900,6 @@ fn run_worker(
             faulted.store(true, Ordering::Release);
         }
         expected_frame = job.start_frame + quantum_frames as u64;
-        completed_frame.store(expected_frame, Ordering::Release);
-        completed_epoch.store(epoch, Ordering::Release);
         if let Some(mut block) = output_block {
             block.epoch = epoch;
             block.start_frame = job.start_frame;
@@ -920,6 +918,10 @@ fn run_worker(
         if let Err(rtrb::PushError::Full(job)) = input_recycle.push(job) {
             deferred_input_recycle = Some(job);
         }
+        // Completion observers must see the published audio and recycled
+        // input before they submit another callback on the control thread.
+        completed_frame.store(expected_frame, Ordering::Release);
+        completed_epoch.store(epoch, Ordering::Release);
     }
 }
 

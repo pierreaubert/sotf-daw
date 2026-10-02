@@ -9,6 +9,10 @@
   bundled `RNNoise Full` model: unknown identities rejected, same-value
   no-op, changed-after-init requires graph rebuild, running model continues
   on failure.
+- Serve two staged legacy alternates (`RNNoise Legacy LQ`, `RNNoise Legacy
+  SH`) through the checked `.rnnn` v1 loader with transactional
+  initialize/prepare/commit adoption; bundled index, label, default, and
+  audio stay bit-exact.
 - Persist strength/model in schema v2 factory and UI state; v1 `enabled`-only
   state loads with identical audio. Drain freeze covers the new controls.
 - Apply mixed parameter batches transactionally: every entry is pre-checked

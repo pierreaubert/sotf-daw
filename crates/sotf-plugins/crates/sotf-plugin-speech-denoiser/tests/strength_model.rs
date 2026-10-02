@@ -312,7 +312,8 @@ fn model_selection_validates_and_continues_on_failure() {
         let prefix = signal(1024, channels, 0xA0DE1);
         let suffix = signal(1024, channels, 0xFA11);
         let id = ParameterId::from("model");
-        // Same-value adoption is a no-op before and after initialization.
+        // Same-value adoption is a no-op before and after initialization,
+        // while a changed identity adopts freely before initialization.
         let mut pre = SpeechDenoiserPlugin::new(channels);
         pre.parametric_set_parameter(id.clone(), ParameterValue::Int(0))
             .unwrap();
@@ -321,10 +322,14 @@ fn model_selection_validates_and_continues_on_failure() {
             ParameterValue::String("rnnoise full".to_string()),
         )
         .unwrap();
-        assert!(
-            pre.parametric_set_parameter(id.clone(), ParameterValue::Int(1))
-                .is_err()
+        pre.parametric_set_parameter(id.clone(), ParameterValue::Int(1))
+            .unwrap();
+        assert_eq!(
+            pre.parametric_get_parameter(&id),
+            Some(ParameterValue::Int(1))
         );
+        pre.parametric_set_parameter(id.clone(), ParameterValue::Int(0))
+            .unwrap();
         let mut plugin = configured(channels, true, 1.0);
         let mut twin = configured(channels, true, 1.0);
         let mut actual = process(&mut plugin, &prefix, channels, &[137]);
@@ -339,7 +344,7 @@ fn model_selection_validates_and_continues_on_failure() {
             )
             .unwrap();
         for invalid in [
-            ParameterValue::Int(1),
+            ParameterValue::Int(3),
             ParameterValue::Int(-1),
             ParameterValue::String("RNNoise Light".to_string()),
             ParameterValue::String(String::new()),
@@ -349,6 +354,17 @@ fn model_selection_validates_and_continues_on_failure() {
             assert!(
                 plugin.parametric_set_parameter(id.clone(), invalid).is_err(),
                 "channels={channels}"
+            );
+        }
+        // Known-but-changed identities on a live instance require a graph
+        // rebuild rather than a validation error.
+        for changed in [ParameterValue::Int(1), ParameterValue::Int(2)] {
+            let error = plugin
+                .parametric_set_parameter(id.clone(), changed)
+                .unwrap_err();
+            assert!(
+                error.contains("graph rebuild"),
+                "channels={channels}: {error}"
             );
         }
         assert_eq!(
@@ -369,9 +385,8 @@ fn mixed_batch_with_rejected_entry_is_atomic() {
     // (`ParameterSet` iterates deterministically, but the pre-check pass makes
     // order irrelevant by construction).
     //
-    // With a single bundled model, a changed model entry is rejected as an
-    // unknown identity; a valid-but-live model change (structural rebuild
-    // path) becomes testable once the shared multi-model backend lands, and
+    // The changed model entry is a known identity on a live instance, so it
+    // exercises the structural rebuild path (not a validation error) and
     // rides the same pre-check code as the drain-freeze case below.
     for channels in [1, 2] {
         let strength = ParameterId::from("strength");
@@ -467,6 +482,11 @@ fn drain_freezes_strength_and_model_until_reset() {
             plugin
                 .parametric_set_parameter(model.clone(), ParameterValue::Int(0))
                 .unwrap();
+            assert!(
+                plugin
+                    .parametric_set_parameter(model.clone(), ParameterValue::Int(1))
+                    .is_err()
+            );
             let mut values = ParameterSet::new();
             values.insert(strength.clone(), ParameterValue::Float(0.5));
             assert!(plugin.apply_values_realtime(&values).is_err());

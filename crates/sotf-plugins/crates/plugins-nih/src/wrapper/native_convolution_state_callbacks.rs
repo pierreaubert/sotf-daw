@@ -934,7 +934,7 @@ impl NativeVst3 {
             {
                 // SAFETY: `changes` owns the input event graph through this synchronous process
                 // callback, and the event queues retain all point storage for the same lifetime.
-                data.input_param_changes = unsafe { std::mem::transmute(changes.as_ptr()) };
+                data.input_param_changes = unsafe { std::mem::transmute::<*mut *mut nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChangesVTable, nih_plug::wrapper::vst3::vst3_sys::utils::StaticVstPtr<dyn nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChanges>>(changes.as_ptr()) };
             }
             // SAFETY: bus pointers and backing buffers remain valid through this call.
             assert_eq!(unsafe { self.processor.process(&mut data) }, kResultOk);
@@ -1904,7 +1904,7 @@ fn initialize_generated_with_max_frames(
     max_frames: usize,
 ) {
     let layout = <NativeConvolutionStateProbe as ClapPlugin>::clap_audio_io_layouts()
-        .into_iter()
+        .iter()
         .next()
         .expect("generated Convolution CLAP layout");
     let config = BufferConfig {
@@ -1916,7 +1916,7 @@ fn initialize_generated_with_max_frames(
     let mut context = super::TestContext;
     assert!(NihPlugin::initialize(
         plugin,
-        &layout,
+        layout,
         &config,
         &mut context
     ));

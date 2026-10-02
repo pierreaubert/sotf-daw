@@ -366,6 +366,22 @@ pub(super) fn handle_command(
         ManagerCommand::BypassProcessing(bypass) => {
             commands::BypassProcessingCommand(bypass).execute(&mut ctx)
         }
+        ManagerCommand::LinearPhaseEqRequest {
+            plugin_index,
+            band_index,
+            new_band,
+        } => commands::LinearPhaseEqRequestCommand {
+            plugin_index,
+            band_index,
+            new_band,
+        }
+        .execute(&mut ctx),
+        ManagerCommand::LinearPhaseEqCancel { plugin_index } => {
+            commands::LinearPhaseEqCancelCommand { plugin_index }.execute(&mut ctx)
+        }
+        ManagerCommand::LinearPhaseEqStatus { plugin_index } => {
+            commands::LinearPhaseEqStatusCommand { plugin_index }.execute(&mut ctx)
+        }
         #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
         ManagerCommand::MaintainIsolatedExternalPluginWorkers => {
             commands::MaintainIsolatedExternalPluginWorkersCommand.execute(&mut ctx)

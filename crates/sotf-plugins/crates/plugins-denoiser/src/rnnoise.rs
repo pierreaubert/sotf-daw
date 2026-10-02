@@ -7,6 +7,128 @@ const RNNOISE_LATENCY: usize = RNNOISE_MODEL_DELAY + RNNOISE_QUEUE_DELAY;
 const BYPASS_CROSSFADE_SAMPLES: usize = RNNOISE_FRAME_SIZE;
 pub const RNNOISE_BAND_COUNT: usize = nnnoiseless::DENOISE_BAND_COUNT;
 
+/// Embedded legacy weights: leavened-quisling-2018-08-31 (`lq.rnnn`).
+const LEGACY_LQ_RNNN: &[u8] = include_bytes!(
+    "../models/legacy-rnnoise-nu/leavened-quisling-2018-08-31/lq.rnnn"
+);
+/// Embedded legacy weights: somnolent-hogwash-2018-09-01 (`sh.rnnn`).
+const LEGACY_SH_RNNN: &[u8] = include_bytes!(
+    "../models/legacy-rnnoise-nu/somnolent-hogwash-2018-09-01/sh.rnnn"
+);
+
+/// Selects the inference weights a backend serves.
+///
+/// Index 0 is always the bundled model; alternates append without
+/// renumbering. Labels are shared verbatim with the plugin parameter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RnnoiseModelId {
+    /// Bundled full-quality model (builtin fork weights).
+    BundledFull,
+    /// Legacy `lq.rnnn` weights (2018-08-31 suite).
+    LegacyLq,
+    /// Legacy `sh.rnnn` weights (2018-09-01 suite).
+    LegacySh,
+}
+
+impl RnnoiseModelId {
+    /// Stable registry index; 0 is always the bundled model.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::BundledFull => 0,
+            Self::LegacyLq => 1,
+            Self::LegacySh => 2,
+        }
+    }
+
+    /// Stable registry label shared with the plugin parameter.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::BundledFull => "RNNoise Full",
+            Self::LegacyLq => "RNNoise Legacy LQ",
+            Self::LegacySh => "RNNoise Legacy SH",
+        }
+    }
+
+    /// Resolves a registry index, or `None` when out of range.
+    pub const fn from_index(index: usize) -> Option<Self> {
+        match index {
+            0 => Some(Self::BundledFull),
+            1 => Some(Self::LegacyLq),
+            2 => Some(Self::LegacySh),
+            _ => None,
+        }
+    }
+
+    /// Embedded weight bytes, if any (bundled weights live in the fork).
+    pub fn embedded_bytes(self) -> Option<&'static [u8]> {
+        match self {
+            Self::BundledFull => None,
+            Self::LegacyLq => Some(LEGACY_LQ_RNNN),
+            Self::LegacySh => Some(LEGACY_SH_RNNN),
+        }
+    }
+}
+
+/// Provenance and identity for one servable model.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RnnoiseModelInfo {
+    pub id: RnnoiseModelId,
+    pub label: &'static str,
+    pub origin: &'static str,
+    pub sha256: Option<&'static str>,
+}
+
+static AVAILABLE_MODELS: [RnnoiseModelInfo; 3] = [
+    RnnoiseModelInfo {
+        id: RnnoiseModelId::BundledFull,
+        label: "RNNoise Full",
+        origin: "nnnoiseless builtin weights (vendored fork)",
+        sha256: None,
+    },
+    RnnoiseModelInfo {
+        id: RnnoiseModelId::LegacyLq,
+        label: "RNNoise Legacy LQ",
+        origin: "GregorR/rnnoise-models@3eee541 leavened-quisling-2018-08-31/lq.rnnn",
+        sha256: Some("2782bbb3d1643464d370b2fafcf4e5ca7bfff4b7933bd6b6cd4d6b33484d6d7f"),
+    },
+    RnnoiseModelInfo {
+        id: RnnoiseModelId::LegacySh,
+        label: "RNNoise Legacy SH",
+        origin: "GregorR/rnnoise-models@3eee541 somnolent-hogwash-2018-09-01/sh.rnnn",
+        sha256: Some("de1392ba4a7bf9ecb93fe4cc8ed130309925bd39e9953dcbce6d5afd4f5ce90"),
+    },
+];
+
+/// Served models in registry order. Append-only: index 0 stays bundled.
+pub fn available_models() -> &'static [RnnoiseModelInfo] {
+    &AVAILABLE_MODELS
+}
+
+/// Shadow inference states staged off the audio callback.
+///
+/// Built by [`RnnoiseBackend::prepare_model`] (which cannot touch serving
+/// state) and adopted by [`RnnoiseBackend::commit_prepared`] under the
+/// caller's quiescence contract. Dropping an uncommitted bundle retires its
+/// states on the preparing thread.
+pub struct PreparedRnnoiseModel {
+    id: RnnoiseModelId,
+    channels: usize,
+    denoisers: Vec<Box<nnnoiseless::DenoiseState>>,
+    stereo_detector: Option<Box<nnnoiseless::DenoiseState>>,
+}
+
+impl PreparedRnnoiseModel {
+    /// Model identity these states serve.
+    pub fn id(&self) -> RnnoiseModelId {
+        self.id
+    }
+
+    /// Channel count these states were built for.
+    pub fn channels(&self) -> usize {
+        self.channels
+    }
+}
+
 /// Fixed-size, bounded monitoring snapshot for the most recently completed
 /// RNNoise model frame.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -60,6 +182,8 @@ pub struct RnnoiseBackend {
     bypass_mix: f32,
     bypass_target: f32,
     bypass_initialized: bool,
+    /// Currently served inference weights.
+    active_model: RnnoiseModelId,
 }
 
 impl Default for RnnoiseBackend {
@@ -87,14 +211,149 @@ impl RnnoiseBackend {
             bypass_mix: 0.0,
             bypass_target: 0.0,
             bypass_initialized: false,
+            active_model: RnnoiseModelId::BundledFull,
         }
     }
 
     /// Initialise for the given sample rate and channel count.
     ///
     /// Returns `Err` if `sample_rate != 48000`; RNNoise band edges and FFT
-    /// sizes are hard-coded for 48 kHz.
+    /// sizes are hard-coded for 48 kHz. Serves the bundled model.
     pub fn initialize(&mut self, sample_rate: u32, channels: usize) -> Result<(), String> {
+        self.install(sample_rate, channels, RnnoiseModelId::BundledFull)
+    }
+
+    /// Initialise serving the selected model.
+    ///
+    /// Transactional: the model is parsed and its states built into a fresh
+    /// backend first, and the serving backend is replaced only on success.
+    /// A failure (bad rate, bad channel count, or an unloadable model)
+    /// leaves the previous backend — identity and populated history —
+    /// untouched. Runs off the audio callback; parsing and state
+    /// construction allocate, and the retired backend drops here.
+    pub fn initialize_with_model(
+        &mut self,
+        sample_rate: u32,
+        channels: usize,
+        id: RnnoiseModelId,
+    ) -> Result<(), String> {
+        let mut fresh = Self::new();
+        fresh.install(sample_rate, channels, id)?;
+        *self = fresh;
+        Ok(())
+    }
+
+    /// Currently served model identity.
+    pub fn active_model(&self) -> RnnoiseModelId {
+        self.active_model
+    }
+
+    /// Stages shadow inference states for `id` without touching this backend.
+    ///
+    /// Takes `&self`, so a failed preparation cannot disturb the serving
+    /// model or its populated history. Parsing, transposing, and state
+    /// construction all happen here, off the audio callback. Adopt the
+    /// bundle with [`commit_prepared`](Self::commit_prepared) or drop it.
+    pub fn prepare_model(&self, id: RnnoiseModelId) -> Result<PreparedRnnoiseModel, String> {
+        if self.denoisers.is_empty() {
+            return Err("RNNoise backend is not initialized".to_string());
+        }
+        let channels = self.channels;
+        let (denoisers, stereo_detector) = Self::build_states(channels, id)?;
+        Ok(PreparedRnnoiseModel {
+            id,
+            channels,
+            denoisers,
+            stereo_detector,
+        })
+    }
+
+    /// Adopts staged states, starting a fresh signal timeline for the model.
+    ///
+    /// Verifies the bundle's channel count first, then swaps states (pointer
+    /// moves, no allocation), zeroes rings and scratch, resets bypass and
+    /// analyzer generation, and publishes the new identity. The retired
+    /// states drop on the committing thread, so callers commit only on a
+    /// control thread under their quiescence contract — never on audio.
+    pub fn commit_prepared(&mut self, prepared: PreparedRnnoiseModel) -> Result<(), String> {
+        if prepared.channels != self.channels {
+            return Err(format!(
+                "prepared model has {} channels; backend has {}",
+                prepared.channels, self.channels
+            ));
+        }
+        self.denoisers = prepared.denoisers;
+        self.stereo_detector = prepared.stereo_detector;
+        self.active_model = prepared.id;
+        for buffer in self.accum_buffers.iter_mut() {
+            buffer.fill(0.0);
+        }
+        for buffer in self.output_buffers.iter_mut() {
+            buffer.fill(0.0);
+        }
+        for buffer in self.dry_output_buffers.iter_mut() {
+            buffer.fill(0.0);
+        }
+        for buffer in self.scratch_input.iter_mut() {
+            buffer.fill(0.0);
+        }
+        for buffer in self.scratch_output.iter_mut() {
+            buffer.fill(0.0);
+        }
+        self.output_write_pos = RNNOISE_QUEUE_DELAY;
+        self.output_read_pos = 0;
+        self.accum_fill = 0;
+        self.analyzer_data = RnnoiseAnalyzerData::default();
+        self.bypass_mix = 0.0;
+        self.bypass_target = 0.0;
+        self.bypass_initialized = false;
+        Ok(())
+    }
+
+    /// Builds per-channel plus stereo-detector states for one model.
+    fn build_states(
+        channels: usize,
+        id: RnnoiseModelId,
+    ) -> Result<
+        (
+            Vec<Box<nnnoiseless::DenoiseState>>,
+            Option<Box<nnnoiseless::DenoiseState>>,
+        ),
+        String,
+    > {
+        match id.embedded_bytes() {
+            None => Ok((
+                (0..channels)
+                    .map(|_| nnnoiseless::DenoiseState::new())
+                    .collect::<Vec<_>>(),
+                (channels == 2).then(nnnoiseless::DenoiseState::new),
+            )),
+            Some(bytes) => {
+                let model =
+                    nnnoiseless::parse_rnnn_model(bytes).map_err(|error| error.to_string())?;
+                Ok((
+                    (0..channels)
+                        .map(|_| nnnoiseless::DenoiseState::from_model(model.clone()))
+                        .collect::<Vec<_>>(),
+                    (channels == 2)
+                        .then(|| nnnoiseless::DenoiseState::from_model(model.clone())),
+                ))
+            }
+        }
+    }
+
+    /// Validates the format and installs fresh state serving `id`.
+    ///
+    /// On error the backend may be partially assigned, so fallible callers
+    /// install into a fresh backend and swap on success (see
+    /// [`initialize_with_model`](Self::initialize_with_model)). The bundled
+    /// path cannot fail past validation: `DenoiseState::new` is infallible.
+    fn install(
+        &mut self,
+        sample_rate: u32,
+        channels: usize,
+        id: RnnoiseModelId,
+    ) -> Result<(), String> {
         if sample_rate != 48000 {
             return Err(format!(
                 "RNNoise only supports 48 kHz; got {} Hz",
@@ -107,12 +366,11 @@ impl RnnoiseBackend {
             ));
         }
         nnnoiseless::prepare();
+        let (denoisers, stereo_detector) = Self::build_states(channels, id)?;
         self.sample_rate = sample_rate;
         self.channels = channels;
-        self.denoisers = (0..channels)
-            .map(|_| nnnoiseless::DenoiseState::new())
-            .collect::<Vec<_>>();
-        self.stereo_detector = (channels == 2).then(nnnoiseless::DenoiseState::new);
+        self.denoisers = denoisers;
+        self.stereo_detector = stereo_detector;
         self.accum_buffers = vec![vec![0.0; RNNOISE_FRAME_SIZE]; channels];
         // Ring buffer: 4× frame size. With calls subdivided at one frame, the
         // dry write frontier (one frame ahead of wet) is at most three frames
@@ -132,6 +390,7 @@ impl RnnoiseBackend {
         self.bypass_mix = 0.0;
         self.bypass_target = 0.0;
         self.bypass_initialized = false;
+        self.active_model = id;
         Ok(())
     }
 

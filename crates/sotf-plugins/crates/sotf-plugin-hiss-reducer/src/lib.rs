@@ -1,18 +1,26 @@
 pub mod params;
 pub mod profile;
+pub mod snapshot;
 
 use crate::params::PARAMS as HP;
 use crate::profile::{
-    PROFILE_FLOOR_MIN_DB, PROFILE_THRESHOLD_MARGIN_DB, CaptureState, LINK_INDEPENDENT,
-    LINK_LINKED, NoiseProfileData, ReductionCurve,
+    LINK_LABELS, PROFILE_FLOOR_MIN_DB, PROFILE_FORMAT_VERSION, PROFILE_FORMAT_VERSION_V1,
+    PROFILE_THRESHOLD_MARGIN_DB, CaptureState, LINK_INDEPENDENT, LINK_LINKED, NoiseProfileData,
+    ReductionCurve, SpectralProfileData,
 };
+use crate::snapshot::{ProfilePublishMeta, ProfileSnapshot};
 use plugins_denoiser::hiss::HissReducer;
 use plugins_denoiser::spectral_hiss::{
     SPECTRAL_HISS_FFT_SIZE, SPECTRAL_HISS_NUM_BINS, SpectralHissReducer,
 };
+use plugins_denoiser::spectral_profile::{
+    SPECTRAL_PROFILE_FFT_SIZE, SPECTRAL_PROFILE_HOP_SIZE, SPECTRAL_PROFILE_NUM_BINS,
+    SPECTRAL_PROFILE_WINDOW,
+};
 const DRAIN_HOP: usize = SPECTRAL_HISS_FFT_SIZE / 4;
 use serde::{Deserialize, Serialize};
 use sotf_host::param_bridge;
+use sotf_host::param_specs::choice_index_from_label;
 use sotf_host::param_specs::find_by_key as pk;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -21,6 +29,8 @@ use sotf_host::plugin::{
     PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
     ProcessContext, TailLength,
 };
+use std::any::Any;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,7 +53,7 @@ pub struct HissReducerPluginParams {
     pub curve_mid: f32,
     #[serde(default = "d_curve_high")]
     pub curve_high: f32,
-    #[serde(default = "d_link_mode")]
+    #[serde(default = "d_link_mode", deserialize_with = "deserialize_link_mode")]
     pub link_mode: i32,
     /// Opt-in spectral transient guard. Off by default, so old presets,
     /// profiles, and defaults never enable it; stored in both modes but
@@ -86,6 +96,81 @@ fn d_curve_high() -> f32 {
 }
 fn d_link_mode() -> i32 {
     pk(HP, "link_mode").default_i32()
+}
+
+/// Deserializes `link_mode` from an index, integral float, or label.
+///
+/// Mirrors the workspace `define_choice_index_deserializer!` contract for
+/// an `i32` field: exact label match wins with the registry helper's
+/// case-insensitive fallback, integral wire floats (e.g. `1.0`) are
+/// accepted exactly, and unknown labels, fractions, and out-of-range
+/// indices are hard transactional errors (no silent fallback), matching
+/// the factory construction contract.
+fn deserialize_link_mode<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct LinkModeVisitor;
+    impl<'de> serde::de::Visitor<'de> for LinkModeVisitor {
+        type Value = i32;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a link_mode index or label")
+        }
+        fn visit_u64<E>(self, value: u64) -> Result<i32, E>
+        where
+            E: serde::de::Error,
+        {
+            usize::try_from(value)
+                .ok()
+                .filter(|index| *index < LINK_LABELS.len())
+                .and_then(|index| i32::try_from(index).ok())
+                .ok_or_else(|| {
+                    E::custom(format!(
+                        "invalid choice index {value}; expected 0..{}",
+                        LINK_LABELS.len()
+                    ))
+                })
+        }
+        fn visit_i64<E>(self, value: i64) -> Result<i32, E>
+        where
+            E: serde::de::Error,
+        {
+            usize::try_from(value)
+                .ok()
+                .filter(|index| *index < LINK_LABELS.len())
+                .and_then(|index| i32::try_from(index).ok())
+                .ok_or_else(|| {
+                    E::custom(format!(
+                        "invalid choice index {value}; expected 0..{}",
+                        LINK_LABELS.len()
+                    ))
+                })
+        }
+        fn visit_str<E>(self, value: &str) -> Result<i32, E>
+        where
+            E: serde::de::Error,
+        {
+            choice_index_from_label(LINK_LABELS, value)
+                .and_then(|index| i32::try_from(index).ok())
+                .ok_or_else(|| E::custom(format!("unknown choice label {value:?}")))
+        }
+        fn visit_f64<E>(self, value: f64) -> Result<i32, E>
+        where
+            E: serde::de::Error,
+        {
+            // The toolbar/daemon wire format carries integral floats
+            // (e.g. `1.0`); accept them exactly, reject fractions.
+            if value.is_finite() && value.fract() == 0.0 && value >= 0.0 {
+                self.visit_u64(value as u64)
+            } else {
+                Err(E::custom(format!(
+                    "invalid choice index {value}; expected an integral 0..{}",
+                    LINK_LABELS.len()
+                )))
+            }
+        }
+    }
+    deserializer.deserialize_any(LinkModeVisitor)
 }
 fn d_transient_guard() -> bool {
     pk(HP, "transient_guard").default_bool()
@@ -130,11 +215,22 @@ pub struct HissReducerPlugin {
     profile_sample_rate: u32,
     profile_cutoff_hz: f32,
     profile_frames: u64,
+    // Pre-sized measured per-bin spectrum (channels * NUM_BINS, zeros
+    // default), valid only when has_spectral is set. Copied from capture
+    // completion or validated restores; pushed to the backend only at the
+    // capture rate, with v1 white-spread fallback elsewhere.
+    profile_spectrum: Vec<f32>,
+    has_spectral: bool,
+    profile_spectral_hops: u64,
     // Pre-sized per-bin spectral curve table (SPECTRAL_HISS_NUM_BINS,
     // 1.0 default). Rebuilt by refresh_curve_gains() and pushed to the
     // backend by refresh_backend_params(); sized once at construction
     // so control-rate refreshes never allocate.
     curve_gains: Vec<f32>,
+    // Shared profile snapshot published via get_data. Created once at
+    // construction and never replaced, so get_data clones the Arc only
+    // and retained readers keep the payload alive indefinitely.
+    snapshot: Arc<ProfileSnapshot>,
 }
 
 impl HissReducerPlugin {
@@ -175,6 +271,7 @@ impl HissReducerPlugin {
         spectral_reducer.set_enabled(params.enabled);
         spectral_reducer.initialize(sample_rate)?;
         spectral_reducer.set_params(params.frequency_hz, params.threshold_db, params.strength);
+        debug_assert_eq!(SPECTRAL_PROFILE_NUM_BINS, SPECTRAL_HISS_NUM_BINS);
         let mut plugin = Self {
             channels,
             sample_rate,
@@ -195,19 +292,39 @@ impl HissReducerPlugin {
             profile_sample_rate: sample_rate,
             profile_cutoff_hz: 4_000.0,
             profile_frames: 0,
+            profile_spectrum: vec![0.0; channels * SPECTRAL_HISS_NUM_BINS],
+            has_spectral: false,
+            profile_spectral_hops: 0,
             curve_gains: vec![1.0; SPECTRAL_HISS_NUM_BINS],
+            snapshot: Arc::new(ProfileSnapshot::new(channels)),
         };
         if let Some(data) = imported_profile {
             // Canonicalization already validated the shape and the channel
-            // agreement; copy defensively into the pre-sized store.
+            // agreement; copy defensively into the pre-sized store. The
+            // spectral payload is kept at any rate and gated at use time:
+            // only the capture rate engages per-bin comparison, other
+            // rates fall back to the floors.
             if data.floor_db_per_channel.len() == channels {
                 plugin.profile_floor_db.copy_from_slice(&data.floor_db_per_channel);
                 plugin.has_profile = true;
                 plugin.profile_sample_rate = data.sample_rate;
                 plugin.profile_cutoff_hz = data.measurement_cutoff_hz;
                 plugin.profile_frames = data.frames_analyzed;
+                if let Some(spectral) = &data.spectral
+                    && spectral.power_per_channel_bin.len()
+                        == channels * SPECTRAL_HISS_NUM_BINS
+                {
+                    plugin
+                        .profile_spectrum
+                        .copy_from_slice(&spectral.power_per_channel_bin);
+                    plugin.has_spectral = true;
+                    plugin.profile_spectral_hops = spectral.hops_analyzed;
+                }
             }
         }
+        // Publish the initial snapshot (possibly profileless) so get_data
+        // readers observe correct metadata from construction onward.
+        plugin.publish_profile_snapshot();
         plugin.refresh_backend_params();
         plugin.rebuild_cached_parameters();
         Ok(plugin)
@@ -266,7 +383,9 @@ impl HissReducerPlugin {
                 // Corrupt blobs fail the whole load transactionally; a
                 // well-formed blob for another channel count is simply
                 // inapplicable and is dropped. Floors are broadband level
-                // references, so any sample rate stays valid.
+                // references, so any sample rate stays valid; a v2 spectral
+                // payload is kept at any rate and gated at use time (only
+                // the capture rate engages per-bin comparison).
                 data.validate()?;
                 if data.channels != channels {
                     None
@@ -358,8 +477,10 @@ impl HissReducerPlugin {
                     // completes.
                     self.capture
                         .start(self.sample_rate, self.params.frequency_hz)?;
+                    self.publish_capture_progress();
                 } else {
                     self.capture.cancel();
+                    self.publish_capture_progress();
                 }
             }
             "use_captured_profile" => {
@@ -367,6 +488,7 @@ impl HissReducerPlugin {
                     .as_bool()
                     .ok_or_else(|| "use_captured_profile must be a bool".to_string())?;
                 self.refresh_backend_params();
+                self.publish_snapshot_live_flags();
             }
             "clear_profile" => {
                 let fire = value
@@ -453,10 +575,24 @@ impl HissReducerPlugin {
         // release); the assertions only document the contract in tests.
         let curve_result = self.spectral_reducer.set_curve_gains(&self.curve_gains);
         debug_assert!(curve_result.is_ok());
-        let noise_result = self.spectral_reducer.set_external_noise(
-            self.params.use_captured_profile && self.has_profile,
-            &self.profile_floor_db,
-        );
+        // Measured spectra engage only at the capture rate: bins map to
+        // different Hz elsewhere, so cross-rate use falls back to the v1
+        // white-spread floors rather than silently misapplying powers.
+        // Cutoff changes keep per-bin validity (only the gated bin range
+        // shifts), so no cutoff gate is needed here.
+        let use_profile = self.params.use_captured_profile && self.has_profile;
+        let use_spectral =
+            use_profile && self.has_spectral && self.profile_sample_rate == self.sample_rate;
+        let noise_result = if use_spectral {
+            self.spectral_reducer.set_external_noise_spectrum(
+                true,
+                &self.profile_floor_db,
+                Some(&self.profile_spectrum),
+            )
+        } else {
+            self.spectral_reducer
+                .set_external_noise(use_profile, &self.profile_floor_db)
+        };
         debug_assert!(noise_result.is_ok());
         self.spectral_reducer
             .set_linked(self.params.link_mode == LINK_LINKED);
@@ -473,22 +609,92 @@ impl HissReducerPlugin {
     fn clear_stored_profile(&mut self) {
         self.capture.cancel();
         self.has_profile = false;
+        self.has_spectral = false;
         self.profile_floor_db.fill(PROFILE_FLOOR_MIN_DB);
+        self.profile_spectrum.fill(0.0);
         self.profile_frames = 0;
+        self.profile_spectral_hops = 0;
+        self.snapshot
+            .set_capture_progress(false, 0.0);
         self.refresh_backend_params();
+        self.publish_profile_snapshot();
+    }
+
+    /// Publishes the live profile store to the shared snapshot.
+    ///
+    /// Called only when the stored payload or its live flags change
+    /// (construction, capture completion, restore, clear, use toggle,
+    /// rate change). Bounded to the prepared channel/bin width; never
+    /// allocates, frees, locks, logs, or waits.
+    fn publish_profile_snapshot(&mut self) {
+        let meta = ProfilePublishMeta {
+            present: self.has_profile,
+            spectral: self.has_spectral,
+            capture_rate: self.profile_sample_rate,
+            cutoff_hz: self.profile_cutoff_hz,
+            frames: self.profile_frames,
+            hops: self.profile_spectral_hops,
+            use_flag: self.params.use_captured_profile,
+            processing_rate: self.sample_rate,
+        };
+        self.snapshot.publish_profile(
+            &meta,
+            &self.profile_floor_db,
+            &self.profile_spectrum,
+        );
+    }
+
+    /// Publishes live use/rate flags without copying the payload.
+    ///
+    /// Called only on use-flag and processing-rate changes so engagement
+    /// inputs stay consistent with the payload. Never allocates, frees,
+    /// locks, logs, or waits.
+    fn publish_snapshot_live_flags(&mut self) {
+        self.snapshot.publish_live_flags(
+            self.params.use_captured_profile,
+            self.sample_rate,
+        );
+    }
+
+    /// Publishes current capture activity to the shared snapshot.
+    ///
+    /// Point-in-time progress outside the generation protocol; safe on
+    /// the audio callback. Never allocates, frees, locks, logs, or waits.
+    fn publish_capture_progress(&mut self) {
+        self.snapshot
+            .set_capture_progress(self.capture.is_active(), self.capture.progress());
     }
 
     fn export_profile(&self) -> Option<NoiseProfileData> {
         if !self.has_profile {
             return None;
         }
+        let spectral = if self.has_spectral {
+            Some(SpectralProfileData {
+                fft_size: SPECTRAL_PROFILE_FFT_SIZE,
+                hop_size: SPECTRAL_PROFILE_HOP_SIZE,
+                window: SPECTRAL_PROFILE_WINDOW.to_string(),
+                sample_rate: self.profile_sample_rate,
+                channels: self.channels,
+                num_bins: SPECTRAL_PROFILE_NUM_BINS,
+                power_per_channel_bin: self.profile_spectrum.clone(),
+                hops_analyzed: self.profile_spectral_hops,
+            })
+        } else {
+            None
+        };
         Some(NoiseProfileData {
-            format_version: crate::profile::PROFILE_FORMAT_VERSION,
+            format_version: if spectral.is_some() {
+                PROFILE_FORMAT_VERSION
+            } else {
+                PROFILE_FORMAT_VERSION_V1
+            },
             sample_rate: self.profile_sample_rate,
             channels: self.channels,
             measurement_cutoff_hz: self.profile_cutoff_hz,
             floor_db_per_channel: self.profile_floor_db.clone(),
             frames_analyzed: self.profile_frames,
+            spectral,
         })
     }
 
@@ -530,6 +736,43 @@ impl HissReducerPlugin {
             self.profile_cutoff_hz,
             self.profile_frames,
         ))
+    }
+
+    /// Returns true when a measured per-bin spectrum is stored.
+    pub fn has_measured_spectrum(&self) -> bool {
+        self.has_profile && self.has_spectral
+    }
+
+    /// Returns the stored channel-major per-bin powers, if present.
+    ///
+    /// Layout is `channels * SPECTRAL_HISS_NUM_BINS` raw unnormalized
+    /// `|X|^2` means in live units. Valid only alongside [`Self::has_profile`].
+    pub fn measured_spectrum(&self) -> Option<&[f32]> {
+        if self.has_measured_spectrum() {
+            Some(&self.profile_spectrum)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the stored spectral hop count, if a spectrum is present.
+    pub fn profile_spectral_hops(&self) -> Option<u64> {
+        if self.has_measured_spectrum() {
+            Some(self.profile_spectral_hops)
+        } else {
+            None
+        }
+    }
+
+    /// Returns true when live spectral comparison is engaged.
+    ///
+    /// Engagement requires the use flag, a stored spectrum, and a live rate
+    /// equal to the capture rate. Otherwise the backend falls back to the
+    /// v1 white-spread floors (or stays disengaged without a profile).
+    pub fn profile_uses_spectral(&self) -> bool {
+        self.params.use_captured_profile
+            && self.has_measured_spectrum()
+            && self.profile_sample_rate == self.sample_rate
     }
 
     /// Returns the current per-frequency reduction curve.
@@ -589,9 +832,12 @@ impl HissReducerPlugin {
 
     /// Restores a noise profile after validating it transactionally.
     ///
-    /// The previous profile is kept when validation fails. Unlike preset
-    /// loading (which drops channel-mismatched blobs), this explicit call
-    /// rejects them as an error. Borrows the data and never allocates.
+    /// The previous profile (floors and spectrum) is kept when validation
+    /// fails. Unlike preset loading (which drops channel-mismatched blobs),
+    /// this explicit call rejects them as an error. A format-1 restore
+    /// clears any stored spectrum (v1 white-spread semantics); a format-2
+    /// restore installs the validated spectral payload exactly. Borrows the
+    /// data and never allocates.
     pub fn restore_profile(&mut self, data: &NoiseProfileData) -> PluginResult<()> {
         data.validate()?;
         if data.channels != self.channels {
@@ -600,13 +846,33 @@ impl HissReducerPlugin {
                 data.channels, self.channels
             ));
         }
+        if let Some(spectral) = &data.spectral
+            && spectral.power_per_channel_bin.len() != self.channels * SPECTRAL_HISS_NUM_BINS
+        {
+            return Err(format!(
+                "noise profile spectrum has {} powers for {} channels",
+                spectral.power_per_channel_bin.len(),
+                self.channels
+            ));
+        }
         self.profile_floor_db
             .copy_from_slice(&data.floor_db_per_channel);
+        if let Some(spectral) = &data.spectral {
+            self.profile_spectrum
+                .copy_from_slice(&spectral.power_per_channel_bin);
+            self.has_spectral = true;
+            self.profile_spectral_hops = spectral.hops_analyzed;
+        } else {
+            self.profile_spectrum.fill(0.0);
+            self.has_spectral = false;
+            self.profile_spectral_hops = 0;
+        }
         self.has_profile = true;
         self.profile_sample_rate = data.sample_rate;
         self.profile_cutoff_hz = data.measurement_cutoff_hz;
         self.profile_frames = data.frames_analyzed;
         self.refresh_backend_params();
+        self.publish_profile_snapshot();
         Ok(())
     }
 
@@ -746,11 +1012,19 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
                 _ => {}
             })?;
         }
+        let use_changed = next.use_captured_profile != self.params.use_captured_profile;
         self.params = Self::canonicalize_params(next, self.sample_rate, self.channels)?;
         self.reducer.set_enabled(self.params.enabled, false);
         self.spectral_reducer.set_enabled(self.params.enabled);
         self.refresh_backend_params();
+        if use_changed {
+            self.publish_snapshot_live_flags();
+        }
         Ok(())
+    }
+
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        matches!(id.as_str(), "learn_noise" | "clear_profile")
     }
 
     fn parametric_validate_parameter(
@@ -825,10 +1099,18 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         // or cross-cutoff reuse shifts the measured band (~+1.8 dB for
         // white hiss from 48 to 96 kHz at fixed cutoff); the 6 dB
         // engagement margin absorbs this while depth shifts ~±2 dB, so
-        // re-capture after rate/cutoff changes is guidance, not a hard
-        // requirement (see README).
+        // re-capture after rate/cutoff changes is guidance for floors, not
+        // a hard requirement (see README). The measured spectrum is
+        // stricter: it stays stored across rates but engages per-bin only
+        // at the capture rate, falling back to the floors elsewhere; a
+        // cutoff change keeps per-bin validity (only the gated range
+        // shifts), so re-capture after cutoff moves is guidance as well.
         self.capture.cancel();
         self.clear_drain();
+        // The stored profile survives reinitialization; publish the new
+        // processing rate (engagement input) and the cancelled capture.
+        self.publish_snapshot_live_flags();
+        self.publish_capture_progress();
         Ok(())
     }
 
@@ -836,8 +1118,10 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         self.reducer.reset();
         self.spectral_reducer.reset();
         // Reset discards a partial capture and preserves the stored profile
-        // and settings, matching the denoiser capture contract.
+        // (floors and spectrum) and settings, matching the denoiser
+        // capture contract. The stored snapshot keeps its generation.
         self.capture.cancel();
+        self.publish_capture_progress();
         self.clear_drain();
     }
 
@@ -878,13 +1162,20 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
             // take_completed returns None without side effects while the
             // capture is incomplete, so no separate is_complete guard is
             // needed here.
-            if let Some(summary) = self.capture.take_completed(&mut self.profile_floor_db) {
+            if let Some(summary) = self
+                .capture
+                .take_completed(&mut self.profile_floor_db, &mut self.profile_spectrum)
+            {
                 self.has_profile = true;
+                self.has_spectral = true;
                 self.profile_sample_rate = summary.sample_rate;
                 self.profile_cutoff_hz = summary.measurement_cutoff_hz;
                 self.profile_frames = summary.frames_analyzed;
+                self.profile_spectral_hops = summary.spectral_hops_analyzed;
                 self.refresh_backend_params();
+                self.publish_profile_snapshot();
             }
+            self.publish_capture_progress();
         }
         if self.params.spectral_mode {
             self.spectral_reducer.process(buffer);
@@ -976,5 +1267,19 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         } else {
             self.reducer.latency_samples()
         }
+    }
+
+    /// Shares the preallocated profile snapshot with hosted readers.
+    ///
+    /// Always returns `Some` from construction onward so hosts cache data
+    /// availability once. The query clones the snapshot [`Arc`] only: no
+    /// allocation, deallocation, lock, or wait. Downcast to
+    /// [`ProfileSnapshot`](crate::snapshot::ProfileSnapshot) and use its
+    /// control-thread readers; see the [`snapshot`](crate::snapshot)
+    /// module docs for the consistency protocol. Publishing data does not
+    /// change audio classification: latency, tail, and processing paths
+    /// are untouched, and the plugin still processes hosted audio.
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        Some(self.snapshot.clone() as Arc<dyn Any + Send + Sync>)
     }
 }

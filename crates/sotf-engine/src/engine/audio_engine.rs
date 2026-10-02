@@ -5,8 +5,12 @@
 // Coordinates all threads and provides the main API.
 
 use super::*;
-use std::sync::Mutex;
+use sotf_plugins::plugin_linear_phase_eq::BandConfig;
+use sotf_plugins::plugin_linear_phase_eq::dynamic_host::{
+    LinearPhaseEqControlHandle, LinearPhaseEqControlStatus,
+};
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 // Host construction and the subsequent processing-thread commit are each
@@ -175,6 +179,87 @@ impl AudioEngine {
     /// Bypass all processing
     pub fn set_bypass(&self, bypass: bool) -> Result<(), String> {
         self.send_expect_ok(ManagerCommand::BypassProcessing(bypass))
+    }
+
+    /// Fetch the shared linear-phase EQ control handle.
+    ///
+    /// Returns the detached `Arc` behind the wrapper `get_data` transport
+    /// for worker preparation, bounded submit and accepted-state reads. The
+    /// fetch itself traverses the real manager queue into the processing
+    /// thread; later handle calls are direct and lock-free.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an out-of-range index, an unavailable plugin, or
+    /// a plugin that is not a linear-phase EQ.
+    pub fn linear_phase_eq_handle(
+        &self,
+        index: usize,
+    ) -> Result<Arc<LinearPhaseEqControlHandle>, String> {
+        let data = self.get_plugin_data(index)?;
+        Arc::downcast::<LinearPhaseEqControlHandle>(data)
+            .map_err(|_| format!("plugin index {index} is not a linear-phase EQ"))
+    }
+
+    /// Queue one linear-phase EQ band-shape edit.
+    ///
+    /// The manager thread snapshots the accepted base, prepares FIR design
+    /// off audio, and queues the bounded payload; real audio commits the
+    /// existing crossfade. `Ok` means queued, not accepted: observe the
+    /// accepted generation via `linear_phase_eq_status`, and reprepare when
+    /// it reports a `StaleBase` refusal.
+    ///
+    /// # Errors
+    ///
+    /// Returns snapshot, preparation (index, placement, range), full-queue
+    /// or routing errors. All errors leave live state untouched.
+    pub fn linear_phase_eq_request(
+        &self,
+        plugin_index: usize,
+        band_index: usize,
+        new_band: BandConfig,
+    ) -> Result<(), String> {
+        self.send_expect_ok(ManagerCommand::LinearPhaseEqRequest {
+            plugin_index,
+            band_index,
+            new_band,
+        })
+    }
+
+    /// Request eviction of a wedged linear-phase EQ head payload.
+    ///
+    /// Records one coalescing cancel generation; audio evicts at most one
+    /// head per quantum without dropping. Observe completion via
+    /// `linear_phase_eq_status` (retained count plus refusal clearing).
+    ///
+    /// # Errors
+    ///
+    /// Returns a routing error when the plugin is unavailable or not a
+    /// linear-phase EQ.
+    pub fn linear_phase_eq_cancel(&self, plugin_index: usize) -> Result<(), String> {
+        self.send_expect_ok(ManagerCommand::LinearPhaseEqCancel { plugin_index })
+    }
+
+    /// Read linear-phase EQ accepted generation and queue status.
+    ///
+    /// Traverses the real manager queue, then reads the handle lock-free
+    /// mirrors. The generation advances only when real audio accepts a
+    /// commit; the refusal mirror reports reachable outcomes for reprepare
+    /// decisions.
+    ///
+    /// # Errors
+    ///
+    /// Returns a routing error when the plugin is unavailable or not a
+    /// linear-phase EQ.
+    pub fn linear_phase_eq_status(
+        &self,
+        plugin_index: usize,
+    ) -> Result<LinearPhaseEqControlStatus, String> {
+        match self.send_recv(ManagerCommand::LinearPhaseEqStatus { plugin_index })? {
+            ManagerResponse::LinearPhaseEqStatus(status) => Ok(status),
+            ManagerResponse::Error(e) => Err(e),
+            _ => Err("Unexpected response".to_string()),
+        }
     }
 
     /// Poll isolated external plugin worker status.
