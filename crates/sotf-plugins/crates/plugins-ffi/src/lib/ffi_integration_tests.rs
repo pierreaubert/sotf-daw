@@ -1446,6 +1446,202 @@ fn speech_state_round_trips_and_silence_stays_finite() {
     assert_eq!(output.len(), 512 * 2);
 }
 
+#[test]
+fn speech_model_choice_labels_match_canonical_registry_for_all_aliases() {
+    use sotf_plugins::plugin_speech_denoiser::model::MODEL_LABELS;
+
+    // The FFI table is a fixed process-static copy: pin the registry length
+    // so a model addition fails here instead of silently desynchronizing.
+    assert_eq!(MODEL_LABELS.len(), 3, "FFI label table holds 3 entries");
+
+    for alias in ["SpeechDenoiser", "speech_denoiser", "RNNoise", "rnnoise"] {
+        let handle = AbiHandle::create(alias, "{}", 2, 2);
+        assert_eq!(handle.param_count(), 3, "{alias} must expose 3 parameters");
+        assert_eq!(handle.param_id(0), "enabled");
+        assert_eq!(handle.param_id(1), "strength");
+        assert_eq!(handle.param_id(2), "model");
+        // Stable raw range/default for the model choice.
+        let (_, _, _, min, max, default, steps, logarithmic) = handle.param_info(2);
+        assert_eq!(
+            (min, max, default),
+            (0.0, 2.0, 0.0),
+            "{alias} model range/default"
+        );
+        assert_eq!(steps, MODEL_LABELS.len() as u32, "{alias} model steps");
+        assert!(!logarithmic, "{alias} model must scale linearly");
+        // Every registry label resolves at its stable index.
+        for (choice, expected) in MODEL_LABELS.iter().enumerate() {
+            assert_eq!(
+                handle.choice_label(2, choice).as_deref(),
+                Some(*expected),
+                "{alias} choice {choice}"
+            );
+        }
+        // Invalid choice indexes are a documented NULL failure.
+        assert_eq!(
+            handle.choice_label(2, MODEL_LABELS.len()),
+            None,
+            "{alias} fencepost choice"
+        );
+        assert_eq!(
+            handle.choice_label(2, usize::MAX),
+            None,
+            "{alias} huge choice"
+        );
+        // Non-choice parameters have no labels.
+        assert_eq!(
+            handle.choice_label(0, 0),
+            None,
+            "{alias} enabled has no label"
+        );
+        assert_eq!(
+            handle.choice_label(1, 0),
+            None,
+            "{alias} strength has no label"
+        );
+        // Label pointers are process-static: repeated lookups agree.
+        let first = plugin_get_parameter_choice_label(handle.pointer, 2, 1);
+        let second = plugin_get_parameter_choice_label(handle.pointer, 2, 1);
+        assert!(!first.is_null(), "{alias} choice pointer must be live");
+        assert_eq!(first, second, "{alias} choice pointer must be stable");
+    }
+}
+
+#[test]
+fn speech_model_same_and_changed_writes_are_allocation_free() {
+    use sotf_host::test_utils::assert_no_allocs_or_deallocs;
+
+    let handle = AbiHandle::create("SpeechDenoiser", "{}", 1, 1);
+    // Pre-built C strings: CString::new allocates, so it must stay outside
+    // the measured closures below.
+    let model = CString::new("model").unwrap();
+    let strength = CString::new("strength").unwrap();
+    let unknown = CString::new("not_a_parameter").unwrap();
+    let raw = handle.pointer;
+
+    // Same-model no-op at the exact committed normalized value.
+    let mut result = 0;
+    assert_no_allocs_or_deallocs("speech same-model no-op", || {
+        result = plugin_set_parameter(raw, model.as_ptr(), 0.0);
+    });
+    assert_eq!(result, 0, "same model must no-op with Success");
+    // Near-boundary and unclamped values quantizing to the committed index
+    // no-op exactly as the bridge denormalization maps them.
+    for (label, value) in [("near-boundary", 0.1), ("unclamped-low", -1.0)] {
+        assert_no_allocs_or_deallocs(&format!("speech same-index {label} no-op"), || {
+            result = plugin_set_parameter(raw, model.as_ptr(), value);
+        });
+        assert_eq!(result, 0, "{label} maps to the committed index");
+    }
+    // Changed writes refuse statically without allocating.
+    for (label, value) in [("mid", 0.5), ("top", 1.0), ("unclamped-high", 2.0)] {
+        assert_no_allocs_or_deallocs(&format!("speech changed-model {label} refusal"), || {
+            result = plugin_set_parameter(raw, model.as_ptr(), value);
+        });
+        assert_eq!(result, -2, "{label} must refuse with InvalidParameter");
+    }
+    assert_eq!(
+        abi_last_error(),
+        "Speech Denoiser model changes require state restoration"
+    );
+    // Live strength updates still succeed through the realtime path.
+    assert_no_allocs_or_deallocs("speech strength live update", || {
+        result = plugin_set_parameter(raw, strength.as_ptr(), 0.5);
+    });
+    assert_eq!(result, 0, "strength stays realtime");
+    assert_eq!(handle.get_normalized("strength"), 0.5);
+    // Unknown ids keep the generic failure outside the guard's scope.
+    assert_ne!(
+        plugin_set_parameter(raw, unknown.as_ptr(), 0.5),
+        0,
+        "unknown ids must not reach the speech guard as success"
+    );
+}
+
+#[test]
+fn speech_model_restore_refreshes_guard_and_preserves_populated_history() {
+    // All nine model/strength combinations keep state identity through a
+    // fresh control-thread restore, with saved indices 0/1/2 preserved.
+    for model in 0..3 {
+        for strength in [0.0, 0.5, 1.0] {
+            let config = serde_json::json!({"model": model, "strength": strength}).to_string();
+            let origin = AbiHandle::create("SpeechDenoiser", &config, 1, 1);
+            let mut restored = AbiHandle::create("SpeechDenoiser", "{}", 1, 1);
+            let state = origin.save();
+            assert_eq!(
+                restored.load(&state),
+                0,
+                "model {model} strength {strength}: {}",
+                abi_last_error()
+            );
+            let expected: serde_json::Value = serde_json::from_slice(&state).unwrap();
+            let actual: serde_json::Value = serde_json::from_slice(&restored.save()).unwrap();
+            assert_eq!(
+                actual, expected,
+                "model {model} strength {strength} identity"
+            );
+            assert_eq!(actual["model"], serde_json::json!(model));
+        }
+    }
+
+    // Populate DSP history on a legacy model, then prove a refused
+    // changed-model write preserves state bytes and history continuation.
+    let config = serde_json::json!({"model": "RNNoise Legacy SH", "strength": 0.5}).to_string();
+    let mut live = AbiHandle::create("SpeechDenoiser", &config, 1, 1);
+    let mut twin = AbiHandle::create("SpeechDenoiser", &config, 1, 1);
+    let first = sine_interleaved(12001, 1, 440.0, 48_000.0);
+    assert_eq!(live.process(&first), twin.process(&first));
+    let before = live.save();
+    assert_eq!(live.set_normalized("model", 0.0), -2);
+    assert_eq!(
+        abi_last_error(),
+        "Speech Denoiser model changes require state restoration"
+    );
+    assert_eq!(live.save(), before, "refused write must preserve state");
+    let rest = sine_interleaved(8192, 1, 440.0, 48_000.0);
+    let live_rest = live.process(&rest);
+    assert!(
+        peak(&live_rest) > 1e-6,
+        "populated DSP must render nonzero audio"
+    );
+    assert_eq!(
+        live_rest,
+        twin.process(&rest),
+        "history continuation bit-exact"
+    );
+
+    // Malformed model states reject without touching configuration.
+    for payload in [
+        serde_json::json!({"model": "NOT_A_MODEL"}),
+        serde_json::json!({"model": 999}),
+        serde_json::json!({"strength": -1.0}),
+        serde_json::json!({"model": "NOT_A_MODEL", "strength": 0.0}),
+    ] {
+        let bytes = serde_json::to_vec(&payload).unwrap();
+        assert_ne!(live.load(&bytes), 0, "malformed {payload} must reject");
+        assert_eq!(
+            live.save(),
+            before,
+            "malformed {payload} must preserve state"
+        );
+    }
+
+    // Control-thread restore to another model works and refreshes the
+    // guard: the new committed choice no-ops, the old one now refuses.
+    let to_full = serde_json::to_vec(&serde_json::json!({"model": 0})).unwrap();
+    assert_eq!(live.load(&to_full), 0, "{}", abi_last_error());
+    assert_eq!(
+        live.set_normalized("model", 0.0),
+        0,
+        "restored model must no-op"
+    );
+    assert_eq!(
+        live.set_normalized("model", 1.0),
+        -2,
+        "previous model must refuse"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // P0-3: structural live-edit guards refuse with restoration contract.
 // ---------------------------------------------------------------------------

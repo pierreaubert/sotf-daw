@@ -44,11 +44,13 @@ struct LayerSpec {
 
 /// Fixed fork graph in file order.
 ///
-/// Connectivity is enforced by exact dimension match: the noise GRU input
-/// packs dense (24) + VAD state (24) + features (42), and the denoise GRU
-/// input packs dense (24) + VAD state (24) + noise state (48) + the last 18
-/// features. These values are pinned against the builtin `MODEL` by unit
-/// test, so loader and bundled graph cannot drift apart silently.
+/// Connectivity is enforced by exact dimension match and mirrors the
+/// fork's `compute_rnn` assembly: the noise GRU input (90) packs dense
+/// (24) + VAD state (24) + features (42), and the denoise GRU input
+/// (114) packs VAD state (24) + noise state (48) + features (42) with
+/// no dense contribution. These values are pinned against the builtin
+/// `MODEL` by unit test, so loader and bundled graph cannot drift
+/// apart silently.
 const LAYERS: [LayerSpec; 6] = [
     LayerSpec {
         name: "input_dense",
@@ -99,9 +101,7 @@ pub enum ModelLoadError {
     /// No header line (empty input or missing newline).
     MissingHeader,
     /// First line is not exactly the v1 header.
-    BadHeader {
-        found: String,
-    },
+    BadHeader { found: String },
     /// Fewer tokens than the declared graph requires.
     Truncated {
         layer: &'static str,
@@ -110,9 +110,7 @@ pub enum ModelLoadError {
         got: usize,
     },
     /// Tokens remain after the complete graph.
-    TrailingData {
-        extra: usize,
-    },
+    TrailingData { extra: usize },
     /// Declared dimensions outside 1..=128.
     DimensionOutOfRange {
         layer: &'static str,
@@ -128,10 +126,7 @@ pub enum ModelLoadError {
         expected_neurons: usize,
     },
     /// Activation code outside {0, 1, 2}.
-    UnknownActivation {
-        layer: &'static str,
-        code: i32,
-    },
+    UnknownActivation { layer: &'static str, code: i32 },
     /// Token is not a plain `-?\d+` integer.
     InvalidToken {
         layer: &'static str,
@@ -145,6 +140,18 @@ pub enum ModelLoadError {
         array: &'static str,
         index: usize,
         value: i32,
+    },
+    /// Externally built model disagrees with the fork graph.
+    ///
+    /// Returned by [`RnnState::from_model`](crate::rnn::RnnState::from_model)
+    /// when a caller-constructed dimension, slice length, or top-level
+    /// size does not match the fixed graph; the loader never produces
+    /// this because it sets every field from the validated table.
+    InconsistentModel {
+        layer: &'static str,
+        field: &'static str,
+        expected: usize,
+        got: usize,
     },
 }
 
@@ -208,6 +215,15 @@ impl fmt::Display for ModelLoadError {
             } => write!(
                 f,
                 "{layer}/{array}[{index}] value {value} is outside the signed-byte range"
+            ),
+            Self::InconsistentModel {
+                layer,
+                field,
+                expected,
+                got,
+            } => write!(
+                f,
+                "{layer}/{field} is {got} but the fork graph requires {expected}"
             ),
         }
     }
@@ -380,112 +396,140 @@ pub fn parse_rnnn_model(bytes: &[u8]) -> Result<RnnModel, ModelLoadError> {
     }
     let mut tokens = rest.split_whitespace();
 
+    // File order per layer is header, input weights, recurrent weights
+    // (GRU only), then bias. Each array is read into a named local in
+    // that exact sequence before the layer is constructed, so struct
+    // field order can never define the parse order.
     let input_dense_activation = read_header(&mut tokens, &LAYERS[0])?;
+    debug_assert!(!LAYERS[0].gru);
+    let input_dense_weights = read_matrix(
+        &mut tokens,
+        LAYERS[0].name,
+        "input_weights",
+        LAYERS[0].inputs,
+        LAYERS[0].neurons,
+    )?;
+    let input_dense_bias = read_bias(&mut tokens, LAYERS[0].name, LAYERS[0].neurons)?;
     let input_dense = DenseLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[0].name, LAYERS[0].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[0].name,
-            "input_weights",
-            LAYERS[0].inputs,
-            LAYERS[0].neurons,
-        )?),
+        bias: Cow::Owned(input_dense_bias),
+        input_weights: Cow::Owned(input_dense_weights),
         nb_inputs: LAYERS[0].inputs,
         nb_neurons: LAYERS[0].neurons,
         activation: input_dense_activation,
     };
 
     let vad_activation = read_header(&mut tokens, &LAYERS[1])?;
+    debug_assert!(LAYERS[1].gru);
+    let vad_wide = 3 * LAYERS[1].neurons;
+    let vad_input = read_matrix(
+        &mut tokens,
+        LAYERS[1].name,
+        "input_weights",
+        LAYERS[1].inputs,
+        vad_wide,
+    )?;
+    let vad_recurrent = read_matrix(
+        &mut tokens,
+        LAYERS[1].name,
+        "recurrent_weights",
+        LAYERS[1].neurons,
+        vad_wide,
+    )?;
+    let vad_bias = read_bias(&mut tokens, LAYERS[1].name, vad_wide)?;
     let vad_gru = GruLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[1].name, 3 * LAYERS[1].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[1].name,
-            "input_weights",
-            LAYERS[1].inputs,
-            3 * LAYERS[1].neurons,
-        )?),
-        recurrent_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[1].name,
-            "recurrent_weights",
-            LAYERS[1].neurons,
-            3 * LAYERS[1].neurons,
-        )?),
+        bias: Cow::Owned(vad_bias),
+        input_weights: Cow::Owned(vad_input),
+        recurrent_weights: Cow::Owned(vad_recurrent),
         nb_inputs: LAYERS[1].inputs,
         nb_neurons: LAYERS[1].neurons,
         activation: vad_activation,
     };
 
     let noise_activation = read_header(&mut tokens, &LAYERS[2])?;
+    debug_assert!(LAYERS[2].gru);
+    let noise_wide = 3 * LAYERS[2].neurons;
+    let noise_input = read_matrix(
+        &mut tokens,
+        LAYERS[2].name,
+        "input_weights",
+        LAYERS[2].inputs,
+        noise_wide,
+    )?;
+    let noise_recurrent = read_matrix(
+        &mut tokens,
+        LAYERS[2].name,
+        "recurrent_weights",
+        LAYERS[2].neurons,
+        noise_wide,
+    )?;
+    let noise_bias = read_bias(&mut tokens, LAYERS[2].name, noise_wide)?;
     let noise_gru = GruLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[2].name, 3 * LAYERS[2].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[2].name,
-            "input_weights",
-            LAYERS[2].inputs,
-            3 * LAYERS[2].neurons,
-        )?),
-        recurrent_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[2].name,
-            "recurrent_weights",
-            LAYERS[2].neurons,
-            3 * LAYERS[2].neurons,
-        )?),
+        bias: Cow::Owned(noise_bias),
+        input_weights: Cow::Owned(noise_input),
+        recurrent_weights: Cow::Owned(noise_recurrent),
         nb_inputs: LAYERS[2].inputs,
         nb_neurons: LAYERS[2].neurons,
         activation: noise_activation,
     };
 
     let denoise_activation = read_header(&mut tokens, &LAYERS[3])?;
+    debug_assert!(LAYERS[3].gru);
+    let denoise_wide = 3 * LAYERS[3].neurons;
+    let denoise_input = read_matrix(
+        &mut tokens,
+        LAYERS[3].name,
+        "input_weights",
+        LAYERS[3].inputs,
+        denoise_wide,
+    )?;
+    let denoise_recurrent = read_matrix(
+        &mut tokens,
+        LAYERS[3].name,
+        "recurrent_weights",
+        LAYERS[3].neurons,
+        denoise_wide,
+    )?;
+    let denoise_bias = read_bias(&mut tokens, LAYERS[3].name, denoise_wide)?;
     let denoise_gru = GruLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[3].name, 3 * LAYERS[3].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[3].name,
-            "input_weights",
-            LAYERS[3].inputs,
-            3 * LAYERS[3].neurons,
-        )?),
-        recurrent_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[3].name,
-            "recurrent_weights",
-            LAYERS[3].neurons,
-            3 * LAYERS[3].neurons,
-        )?),
+        bias: Cow::Owned(denoise_bias),
+        input_weights: Cow::Owned(denoise_input),
+        recurrent_weights: Cow::Owned(denoise_recurrent),
         nb_inputs: LAYERS[3].inputs,
         nb_neurons: LAYERS[3].neurons,
         activation: denoise_activation,
     };
 
     let denoise_out_activation = read_header(&mut tokens, &LAYERS[4])?;
+    debug_assert!(!LAYERS[4].gru);
+    let denoise_out_weights = read_matrix(
+        &mut tokens,
+        LAYERS[4].name,
+        "input_weights",
+        LAYERS[4].inputs,
+        LAYERS[4].neurons,
+    )?;
+    let denoise_out_bias = read_bias(&mut tokens, LAYERS[4].name, LAYERS[4].neurons)?;
     let denoise_output = DenseLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[4].name, LAYERS[4].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[4].name,
-            "input_weights",
-            LAYERS[4].inputs,
-            LAYERS[4].neurons,
-        )?),
+        bias: Cow::Owned(denoise_out_bias),
+        input_weights: Cow::Owned(denoise_out_weights),
         nb_inputs: LAYERS[4].inputs,
         nb_neurons: LAYERS[4].neurons,
         activation: denoise_out_activation,
     };
 
     let vad_out_activation = read_header(&mut tokens, &LAYERS[5])?;
+    debug_assert!(!LAYERS[5].gru);
+    let vad_out_weights = read_matrix(
+        &mut tokens,
+        LAYERS[5].name,
+        "input_weights",
+        LAYERS[5].inputs,
+        LAYERS[5].neurons,
+    )?;
+    let vad_out_bias = read_bias(&mut tokens, LAYERS[5].name, LAYERS[5].neurons)?;
     let vad_output = DenseLayer {
-        bias: Cow::Owned(read_bias(&mut tokens, LAYERS[5].name, LAYERS[5].neurons)?),
-        input_weights: Cow::Owned(read_matrix(
-            &mut tokens,
-            LAYERS[5].name,
-            "input_weights",
-            LAYERS[5].inputs,
-            LAYERS[5].neurons,
-        )?),
+        bias: Cow::Owned(vad_out_bias),
+        input_weights: Cow::Owned(vad_out_weights),
         nb_inputs: LAYERS[5].inputs,
         nb_neurons: LAYERS[5].neurons,
         activation: vad_out_activation,
@@ -496,6 +540,26 @@ pub fn parse_rnnn_model(bytes: &[u8]) -> Result<RnnModel, ModelLoadError> {
             extra: 1 + tokens.count(),
         });
     }
+
+    // Pin the published totals against the parsed arrays so the table,
+    // the constants, and this function cannot drift apart silently.
+    let weight_count = input_dense.bias.len()
+        + input_dense.input_weights.len()
+        + vad_gru.bias.len()
+        + vad_gru.input_weights.len()
+        + vad_gru.recurrent_weights.len()
+        + noise_gru.bias.len()
+        + noise_gru.input_weights.len()
+        + noise_gru.recurrent_weights.len()
+        + denoise_gru.bias.len()
+        + denoise_gru.input_weights.len()
+        + denoise_gru.recurrent_weights.len()
+        + denoise_output.bias.len()
+        + denoise_output.input_weights.len()
+        + vad_output.bias.len()
+        + vad_output.input_weights.len();
+    debug_assert_eq!(weight_count, RNNN_TOTAL_WEIGHTS);
+    debug_assert_eq!(weight_count + LAYERS.len() * 3, RNNN_TOTAL_TOKENS);
 
     Ok(RnnModel {
         input_dense_size: LAYERS[0].neurons,
@@ -513,6 +577,94 @@ pub fn parse_rnnn_model(bytes: &[u8]) -> Result<RnnModel, ModelLoadError> {
     })
 }
 
+/// Rejects a caller-built model that disagrees with the fork graph.
+///
+/// Checks exact dimensions, exact slice lengths, and exact top-level
+/// sizes for all six layers before any state is allocated, so an
+/// inconsistent model fails here instead of overflowing the fixed
+/// scratch arrays, panicking on indexing, or requesting an absurd
+/// allocation in `from_model`. Dimension checks run before any length
+/// arithmetic, so hostile values like `usize::MAX` cannot overflow.
+pub(crate) fn check_fork_graph(model: &RnnModel) -> Result<(), ModelLoadError> {
+    check_dense(&model.input_dense, model.input_dense_size, &LAYERS[0])?;
+    check_gru(&model.vad_gru, model.vad_gru_size, &LAYERS[1])?;
+    check_gru(&model.noise_gru, model.noise_gru_size, &LAYERS[2])?;
+    check_gru(&model.denoise_gru, model.denoise_gru_size, &LAYERS[3])?;
+    check_dense(&model.denoise_output, model.denoise_output_size, &LAYERS[4])?;
+    check_dense(&model.vad_output, model.vad_output_size, &LAYERS[5])?;
+    Ok(())
+}
+
+fn check_dense(layer: &DenseLayer, size: usize, spec: &LayerSpec) -> Result<(), ModelLoadError> {
+    check_dims(spec, layer.nb_inputs, layer.nb_neurons)?;
+    check_len(spec, "bias", layer.bias.len(), spec.neurons)?;
+    check_len(
+        spec,
+        "input_weights",
+        layer.input_weights.len(),
+        spec.inputs * spec.neurons,
+    )?;
+    check_len(spec, "size", size, spec.neurons)?;
+    Ok(())
+}
+
+fn check_gru(layer: &GruLayer, size: usize, spec: &LayerSpec) -> Result<(), ModelLoadError> {
+    check_dims(spec, layer.nb_inputs, layer.nb_neurons)?;
+    let wide = 3 * spec.neurons;
+    check_len(spec, "bias", layer.bias.len(), wide)?;
+    check_len(
+        spec,
+        "input_weights",
+        layer.input_weights.len(),
+        spec.inputs * wide,
+    )?;
+    check_len(
+        spec,
+        "recurrent_weights",
+        layer.recurrent_weights.len(),
+        spec.neurons * wide,
+    )?;
+    check_len(spec, "size", size, spec.neurons)?;
+    Ok(())
+}
+
+fn check_dims(spec: &LayerSpec, nb_inputs: usize, nb_neurons: usize) -> Result<(), ModelLoadError> {
+    if nb_inputs != spec.inputs {
+        return Err(ModelLoadError::InconsistentModel {
+            layer: spec.name,
+            field: "nb_inputs",
+            expected: spec.inputs,
+            got: nb_inputs,
+        });
+    }
+    if nb_neurons != spec.neurons {
+        return Err(ModelLoadError::InconsistentModel {
+            layer: spec.name,
+            field: "nb_neurons",
+            expected: spec.neurons,
+            got: nb_neurons,
+        });
+    }
+    Ok(())
+}
+
+fn check_len(
+    spec: &LayerSpec,
+    field: &'static str,
+    got: usize,
+    expected: usize,
+) -> Result<(), ModelLoadError> {
+    if got != expected {
+        return Err(ModelLoadError::InconsistentModel {
+            layer: spec.name,
+            field,
+            expected,
+            got,
+        });
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -525,7 +677,7 @@ mod tests {
         use std::fmt::Write as _;
         let mut text = String::from("rnnoise-nu model file version 1\n");
         let mut position = 0;
-        let mut push_values = |text: &mut String, count: usize, position: &mut usize| {
+        let push_values = |text: &mut String, count: usize, position: &mut usize| {
             for _ in 0..count {
                 write!(text, "{} ", weight(*position)).unwrap();
                 *position += 1;
@@ -609,6 +761,167 @@ mod tests {
         }
     }
 
+    /// Builds a full-size synthetic v1 buffer with disjoint weight/bias bands.
+    ///
+    /// Mirrors [`synthetic_buffer`] layout exactly; only the value source
+    /// differs per array kind so an order swap fails loudly.
+    fn synthetic_split_buffer(
+        activations: [i32; 6],
+        weight: &dyn Fn(usize) -> i32,
+        bias: &dyn Fn(usize) -> i32,
+    ) -> Vec<u8> {
+        use std::fmt::Write as _;
+        let mut text = String::from("rnnoise-nu model file version 1\n");
+        let mut weight_position = 0;
+        let mut bias_position = 0;
+        let push_values = |text: &mut String,
+                           count: usize,
+                           position: &mut usize,
+                           value: &dyn Fn(usize) -> i32| {
+            for _ in 0..count {
+                write!(text, "{} ", value(*position)).unwrap();
+                *position += 1;
+            }
+            text.push('\n');
+        };
+        for (layer, code) in LAYERS.iter().zip(activations.iter()) {
+            write!(text, "{} {} {}\n", layer.inputs, layer.neurons, code).unwrap();
+            if layer.gru {
+                let wide = 3 * layer.neurons;
+                push_values(&mut text, layer.inputs * wide, &mut weight_position, weight);
+                push_values(
+                    &mut text,
+                    layer.neurons * wide,
+                    &mut weight_position,
+                    weight,
+                );
+                push_values(&mut text, wide, &mut bias_position, bias);
+            } else {
+                push_values(
+                    &mut text,
+                    layer.inputs * layer.neurons,
+                    &mut weight_position,
+                    weight,
+                );
+                push_values(&mut text, layer.neurons, &mut bias_position, bias);
+            }
+        }
+        text.into_bytes()
+    }
+
+    /// Regression: weights must land in weight arrays, biases in biases.
+    ///
+    /// Weight tokens live in [-3, 3] and bias tokens in [100, 119]; the
+    /// bands are disjoint, so a bias-first reader places weight values
+    /// into the bias arrays and fails every assertion below. Exact
+    /// in-array placement is covered by the transpose oracles; this test
+    /// pins only the stream order per layer.
+    #[test]
+    fn arrays_keep_file_order_weights_before_bias() {
+        fn weight(position: usize) -> i32 {
+            (position % 7) as i32 - 3
+        }
+        fn bias(position: usize) -> i32 {
+            100 + (position % 20) as i32
+        }
+        let bytes = synthetic_split_buffer([0, 1, 2, 0, 1, 2], &weight, &bias);
+        let model = parse_rnnn_model(&bytes).unwrap();
+        let mut position = 0;
+        for parsed in [
+            &model.input_dense.bias,
+            &model.vad_gru.bias,
+            &model.noise_gru.bias,
+            &model.denoise_gru.bias,
+            &model.denoise_output.bias,
+            &model.vad_output.bias,
+        ] {
+            for value in parsed.iter() {
+                assert_eq!(
+                    *value as i32,
+                    bias(position),
+                    "bias stream position {position}"
+                );
+                position += 1;
+            }
+        }
+        for parsed in [
+            &model.input_dense.input_weights,
+            &model.vad_gru.input_weights,
+            &model.vad_gru.recurrent_weights,
+            &model.noise_gru.input_weights,
+            &model.noise_gru.recurrent_weights,
+            &model.denoise_gru.input_weights,
+            &model.denoise_gru.recurrent_weights,
+            &model.denoise_output.input_weights,
+            &model.vad_output.input_weights,
+        ] {
+            for value in parsed.iter() {
+                assert!(
+                    (-3..=3).contains(&(*value as i32)),
+                    "weight band violation: {}",
+                    *value as i32
+                );
+            }
+        }
+    }
+
+    /// `from_model` rejects caller-built graphs without panicking.
+    ///
+    /// Each axis is mutated alone on a builtin clone; every rejection
+    /// carries the layer/field position, and the oversized cases prove
+    /// validation runs before any state allocation.
+    #[test]
+    fn from_model_rejects_inconsistent_graphs() {
+        use crate::rnn::RnnState;
+        assert!(RnnState::from_model(crate::model::MODEL.clone()).is_ok());
+        let mut bad = crate::model::MODEL.clone();
+        bad.input_dense.nb_inputs = 43;
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel { .. })
+        ));
+        let mut bad = crate::model::MODEL.clone();
+        bad.vad_gru.nb_neurons = 25;
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel { .. })
+        ));
+        let mut bad = crate::model::MODEL.clone();
+        bad.input_dense.bias = Cow::Owned(bad.input_dense.bias[..20].to_vec());
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel { .. })
+        ));
+        let mut bad = crate::model::MODEL.clone();
+        let mut long = bad.noise_gru.input_weights.to_vec();
+        long.push(0);
+        bad.noise_gru.input_weights = Cow::Owned(long);
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel { .. })
+        ));
+        let mut bad = crate::model::MODEL.clone();
+        bad.denoise_gru_size = 97;
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel { .. })
+        ));
+        // Absurd dimensions fail the exact-match check before any
+        // allocation or length arithmetic can overflow.
+        let mut bad = crate::model::MODEL.clone();
+        bad.denoise_output.nb_neurons = usize::MAX;
+        assert!(matches!(
+            RnnState::from_model(bad),
+            Err(ModelLoadError::InconsistentModel {
+                layer: "denoise_output",
+                ..
+            })
+        ));
+        let mut bad = crate::model::MODEL.clone();
+        bad.vad_gru_size = usize::MAX;
+        assert!(RnnState::from_model(bad).is_err());
+    }
+
     fn check_matrix(tokens: &mut std::str::SplitWhitespace<'_>, parsed: &[i8], m: usize, n: usize) {
         for j in 0..m {
             for i in 0..n {
@@ -690,7 +1003,10 @@ mod tests {
         assert_eq!(bundled.vad_output_size, 1);
         // Builtin storage stays borrowed: zero-cost, no duplication.
         assert!(matches!(bundled.input_dense.bias, Cow::Borrowed(_)));
-        assert!(matches!(bundled.denoise_gru.recurrent_weights, Cow::Borrowed(_)));
+        assert!(matches!(
+            bundled.denoise_gru.recurrent_weights,
+            Cow::Borrowed(_)
+        ));
     }
 
     /// Splits a valid buffer into header line + tokens for mutation.
@@ -780,12 +1096,12 @@ mod tests {
             parse_rnnn_model(&assemble(&header, &tokens)).unwrap_err(),
             ModelLoadError::InvalidToken { .. }
         ));
-        tokens[3] = String::new();
+        tokens[3] = "-".to_string();
         assert!(matches!(
             parse_rnnn_model(&assemble(&header, &tokens)).unwrap_err(),
-            // An empty token cannot survive whitespace splitting, so this
-            // buffer is short one value: truncation, not a token error.
-            ModelLoadError::Truncated { .. }
+            // A bare minus survives whitespace splitting but is not an
+            // integer: a wire-representable malformed token.
+            ModelLoadError::InvalidToken { .. }
         ));
         let (header, mut tokens) = valid_parts();
         tokens[3] = "128".to_string();
@@ -867,7 +1183,10 @@ mod tests {
                 expected_inputs: 1,
                 expected_neurons: 1,
             },
-            ModelLoadError::UnknownActivation { layer: "l", code: 9 },
+            ModelLoadError::UnknownActivation {
+                layer: "l",
+                code: 9,
+            },
             ModelLoadError::InvalidToken {
                 layer: "l",
                 array: "a",

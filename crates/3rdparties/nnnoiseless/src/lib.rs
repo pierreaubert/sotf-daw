@@ -1,5 +1,5 @@
-pub use denoise::{DENOISE_BAND_COUNT, DenoiseFrameAnalysis, DenoiseState};
-pub use model_load::{ModelLoadError, parse_rnnn_model};
+pub use denoise::{DenoiseFrameAnalysis, DenoiseState, DENOISE_BAND_COUNT};
+pub use model_load::{parse_rnnn_model, ModelLoadError};
 pub use rnn::{Activation, DenseLayer, GruLayer, RnnModel};
 
 mod denoise;

@@ -54,7 +54,7 @@ fn relu(x: f32) -> f32 {
     x.max(0.0)
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Activation {
     Tanh = 0,
     Sigmoid = 1,
@@ -63,6 +63,11 @@ pub enum Activation {
 
 const WEIGHTS_SCALE: f32 = 1.0 / 256.0;
 
+/// Dense layer with signed-byte weights.
+///
+/// Dimensions must match the fixed fork graph exactly, and the slices
+/// must match the dimensions; [`RnnState::from_model`] rejects anything
+/// else before allocating state.
 #[derive(Clone, Debug)]
 pub struct DenseLayer {
     /// An array of length `nb_neurons`.
@@ -74,6 +79,11 @@ pub struct DenseLayer {
     pub activation: Activation,
 }
 
+/// GRU layer with signed-byte weights.
+///
+/// Dimensions must match the fixed fork graph exactly, and the slices
+/// must match the dimensions; [`RnnState::from_model`] rejects anything
+/// else before allocating state.
 #[derive(Clone, Debug)]
 pub struct GruLayer {
     /// An array of length `3 * nb_neurons`.
@@ -87,6 +97,12 @@ pub struct GruLayer {
     pub activation: Activation,
 }
 
+/// Full six-layer model with signed-byte weights.
+///
+/// Every layer must match the fixed fork graph exactly (dimensions,
+/// slice lengths, and top-level sizes); the checked `.rnnn` loader is
+/// the intended producer, and [`RnnState::from_model`] rejects any
+/// hand-built model that disagrees before allocating state.
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct RnnModel {
@@ -119,14 +135,27 @@ pub struct RnnState {
 
 impl RnnState {
     pub fn new() -> RnnState {
-        Self::from_model(crate::model::MODEL.clone())
+        Self::from_model(crate::model::MODEL.clone()).expect("bundled MODEL matches the fork graph")
     }
 
-    pub fn from_model(model: RnnModel) -> RnnState {
+    /// Creates an `RnnState` serving a caller-provided model.
+    ///
+    /// The model is owned by value; recurrent state starts zeroed exactly
+    /// like `new()`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ModelLoadError::InconsistentModel` when any dimension,
+    /// slice length, or top-level size disagrees with the fixed fork
+    /// graph. Validation runs before any allocation, so an inconsistent
+    /// model cannot trigger an oversized allocation, a scratch overflow,
+    /// or an indexing panic.
+    pub fn from_model(model: RnnModel) -> Result<RnnState, crate::model_load::ModelLoadError> {
+        crate::model_load::check_fork_graph(&model)?;
         let vad_gru_state = vec![0.0f32; model.vad_gru_size];
         let noise_gru_state = vec![0.0f32; model.noise_gru_size];
         let denoise_gru_state = vec![0.0f32; model.denoise_gru_size];
-        RnnState {
+        Ok(RnnState {
             model,
             vad_gru_state,
             noise_gru_state,
@@ -137,7 +166,7 @@ impl RnnState {
             gru_z: [0.0; MAX_NEURONS],
             gru_r: [0.0; MAX_NEURONS],
             gru_h: [0.0; MAX_NEURONS],
-        }
+        })
     }
 
     pub fn reset(&mut self) {

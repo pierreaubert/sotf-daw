@@ -25,7 +25,8 @@ expression: plan
     "mode-selector"
   ],
   "overflow_group_ids": [
-    "MULTIBAND"
+    "MULTIBAND",
+    "head-tracking"
   ],
   "config_controls": [
     {
@@ -162,6 +163,24 @@ expression: plan
           "range": [
             -60.0,
             15.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "head-tracking",
+      "title": "HEAD TRACKING",
+      "controls": [
+        {
+          "param_index": 17,
+          "param_name": "Head Yaw",
+          "control_type": "knob",
+          "unit": "deg",
+          "range": [
+            -90.0,
+            90.0
           ],
           "read_only": false,
           "enabled": true

@@ -23,12 +23,14 @@ use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{CLAP_PROCESS_ERROR, clap_process};
 use std::ffi::{CStr, c_char, c_void};
 
+// Canonical DSP slot order per TARGET_LAYOUTS (5.1.4 at 3, 7.1.2 at 4);
+// role bytes equal the host advertised `clap_channel_map` tables.
 const TEST_CLAP_MAPS: [&[u8]; 6] = [
     &[0, 1, 2, 3, 9, 10],
     &[0, 1, 2, 3, 9, 10, 4, 5],
     &[0, 1, 2, 3, 9, 10, 12, 14],
-    &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14],
     &[0, 1, 2, 3, 9, 10, 12, 14, 15, 17],
+    &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14],
     &[0, 1, 2, 3, 9, 10, 4, 5, 12, 14, 15, 17],
 ];
 

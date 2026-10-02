@@ -1,5 +1,6 @@
 use super::catalog::catalog_entry;
 use super::create::create_plugin;
+use super::create::create_plugin_with_external_key;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::create::create_plugin_with_sandbox_grants;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
@@ -261,6 +262,22 @@ fn gate_factory_rejects_invalid_or_unknown_preset_state() {
     )
     .expect("valid Gate preset must construct through the factory");
     assert_eq!(plugin.input_channels(), 2);
+    assert_eq!(plugin.output_channels(), 2);
+}
+
+#[test]
+fn deesser_factory_external_key_opt_in_constructs_while_default_refuses() {
+    let parameters = serde_json::json!({"sidechain_external": true});
+    let error = create_plugin("de_esser", &parameters, 2, 48_000)
+        .err()
+        .expect("default entry must refuse external-key construction");
+    assert!(
+        error.contains("2N") && error.contains("single-width"),
+        "default refusal must stay loud, got: {error}"
+    );
+    let plugin = create_plugin_with_external_key("de_esser", &parameters, 2, 48_000)
+        .expect("graph-context entry must construct the key bus");
+    assert_eq!(plugin.input_channels(), 4);
     assert_eq!(plugin.output_channels(), 2);
 }
 

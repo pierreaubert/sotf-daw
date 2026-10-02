@@ -84,7 +84,16 @@ GregorR/rnnoise-models@3eee541 (see
 `plugins-denoiser/models/legacy-rnnoise-nu/` and its source manifest for
 suites, dates, sizes, and SHA-256); their Tanh VAD/denoise GRUs are honored
 by the checked loader, and all three serve identical framing, 960-frame
-latency, and stereo linking. It is a structural parameter: unknown
+latency, and stereo linking. Independent full-corpus characterization
+(824 pairs, full strength) of the intended weights reports mean SI-SDR
+gains of +4.43 dB (Full), +2.39 dB (LQ), and +3.24 dB (SH), with mean
+STOI deltas of +0.0024 (Full), −0.0074 (LQ), and −0.0061 (SH); the
+legacy alternates lower mean predicted intelligibility despite the
+SI-SDR gains (see
+`audit/continuation-2026-10-01/speech-intelligibility-r1/result-r1.md`
+and `full-results.json` in the same directory). Diagnostics only, not
+quality acceptance; loader repair alone does not close the original
+harsh-condition requirements. It is a structural parameter: unknown
 identities are rejected transactionally with the running model continuing
 unchanged, same-value writes are no-ops, and a changed identity on a live
 instance requires a host graph rebuild from serialized configuration so

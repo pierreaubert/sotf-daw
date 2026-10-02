@@ -441,6 +441,9 @@ pub(super) struct Vst3Backend {
     output_storage: Vec<f32>,
     input_ptrs: Vec<*mut f32>,
     output_ptrs: Vec<*mut f32>,
+    /// Width of the second input bus when a sidechain route is
+    /// negotiated; zero selects the single-bus process path.
+    aux_input_channels: usize,
     output_bus_channel_ptrs: [Vec<*mut f32>; 4],
     #[cfg(test)]
     test_output_bus_observer: Option<fn(&Vst3Backend, &ProcessData) -> bool>,
@@ -813,6 +816,12 @@ impl Vst3Backend {
             ],
             input_ptrs: Vec::with_capacity(negotiated_audio.input_channels),
             output_ptrs: Vec::with_capacity(negotiated_audio.output_channels),
+            aux_input_channels: match audio_setup {
+                Some(NativePluginAudioSetup::Sidechain { key_channels, .. }) => {
+                    usize::from(*key_channels)
+                }
+                _ => 0,
+            },
             output_bus_channel_ptrs: std::array::from_fn(|_| Vec::new()),
             #[cfg(test)]
             test_output_bus_observer: None,
@@ -838,6 +847,12 @@ impl Vst3Backend {
             // the first component activation. Restore candidates enter here
             // with their typed setup, then load opaque state and verify it.
             backend.reconfigure_crossover_audio_setup(setup)?;
+        }
+        if let Some(setup @ NativePluginAudioSetup::AmbisonicsCustom { .. }) = audio_setup {
+            // A fresh backend initializes from the bus alone and records the
+            // width-matching named index. Run the deliberate route so custom
+            // geometry is seeded before activation rebuilds the DSP.
+            backend.reconfigure_ambisonics_audio_setup(setup)?;
         }
         Ok(backend)
     }
@@ -931,6 +946,59 @@ impl Vst3Backend {
                     "restart processing after state restore",
                 )?;
                 self.processing = true;
+            }
+        }
+        Ok(())
+    }
+
+    /// Writes restored component/controller bytes without lifecycle transitions.
+    ///
+    /// Shared by `load_state` (which suspends and resumes around it) and
+    /// Ambisonics custom reseeding (which runs between the reconfigure
+    /// suspend and the arrangement renegotiation, staying deactivated).
+    fn load_component_state_bytes(&mut self, state: &[u8]) -> Result<(), String> {
+        let (stream, _bytes) = Vst3MemoryStream::new(state, false);
+        // SAFETY: Ownership of the generated IBStream object is transferred
+        // to `VstPtr` for the synchronous component state call.
+        let stream = unsafe {
+            VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
+                format!(
+                    "failed to allocate restore stream for '{}'",
+                    self.metadata.name
+                )
+            })?
+        };
+        // SAFETY: The inactive component and readable stream are valid for
+        // the duration of this synchronous state restore.
+        unsafe {
+            ensure_ok(
+                self.component.set_state(shared_vst_ptr(&stream)),
+                &self.metadata.name,
+                "restore component state",
+            )?;
+        }
+        if let Some(controller) = self.controller.as_ref() {
+            let (controller_stream, _bytes) = Vst3MemoryStream::new(state, false);
+            // SAFETY: This independent stream starts at offset zero for the
+            // controller's component-state synchronization call.
+            let controller_stream = unsafe {
+                VstPtr::<dyn IBStream>::owned(Box::into_raw(controller_stream).cast()).ok_or_else(
+                    || {
+                        format!(
+                            "failed to allocate controller restore stream for '{}'",
+                            self.metadata.name
+                        )
+                    },
+                )?
+            };
+            // SAFETY: The initialized controller synchronously borrows the
+            // same component-state bytes from its own stream.
+            unsafe {
+                ensure_ok(
+                    controller.set_component_state(shared_vst_ptr(&controller_stream)),
+                    &self.metadata.name,
+                    "synchronize controller state",
+                )?;
             }
         }
         Ok(())
@@ -1298,6 +1366,26 @@ impl NativeExternalPluginBackend for Vst3Backend {
             validate_vst3_output_bus_layout(None, 1, output_bus_widths, 1, output_channels)?;
 
         self.suspend_for_state_load()?;
+        if let NativePluginAudioSetup::AmbisonicsCustom { .. } = setup {
+            // NIH `initialize` takes the custom branch only when target 8
+            // plus staged geometry are already installed: derivation from
+            // the bus alone would record the width-matching named index.
+            // Seed the recognized fields while suspended (without the
+            // `load_state` resume) so the resume below rebuilds the custom
+            // DSP. Named setups keep their derivation path untouched.
+            let saved = self.save_state()?.ok_or_else(|| {
+                format!(
+                    "VST3 plugin '{}' cannot seed custom Ambisonics state because native state is not serializable",
+                    self.metadata.name
+                )
+            })?;
+            let seeded = super::ambisonics_state_with_setup(
+                &saved,
+                super::plugin_format::PluginFormat::Vst3,
+                setup,
+            )?;
+            self.load_component_state_bytes(&seeded)?;
+        }
         let mut input_arrangement = ambisonics_speaker_arrangement(order)?;
         let mut output_arrangement = arrangement;
         // SAFETY: The candidate component is initialized but deactivated. VST3
@@ -1735,10 +1823,35 @@ impl NativeExternalPluginBackend for Vst3Backend {
                 .fill(0.0);
         }
 
-        let mut input_bus = AudioBusBuffers {
-            num_channels: input_channels as i32,
-            silence_flags: 0,
-            buffers: self.input_ptrs.as_mut_ptr().cast(),
+        // A negotiated sidechain route splits the packed instance input
+        // (program channels first, key channels last) across the main
+        // bus and the auxiliary key bus.
+        let main_inputs = input_channels.saturating_sub(self.aux_input_channels);
+        let mut input_buses = [
+            AudioBusBuffers {
+                num_channels: main_inputs as i32,
+                silence_flags: 0,
+                buffers: self.input_ptrs.as_mut_ptr().cast(),
+            },
+            AudioBusBuffers {
+                num_channels: self.aux_input_channels as i32,
+                silence_flags: 0,
+                buffers: if self.aux_input_channels == 0 {
+                    ptr::null_mut()
+                } else {
+                    // SAFETY: `main_inputs + aux_input_channels` equals the
+                    // negotiated input width, verified against the channel
+                    // contract above, so the offset stays in bounds.
+                    unsafe { self.input_ptrs.as_mut_ptr().add(main_inputs).cast() }
+                },
+            },
+        ];
+        let input_bus_count = if input_channels == 0 {
+            0
+        } else if self.aux_input_channels == 0 {
+            1
+        } else {
+            2
         };
         for bus_index in 0..self.output_bus_count {
             let width = self.output_bus_widths[bus_index];
@@ -1864,12 +1977,12 @@ impl NativeExternalPluginBackend for Vst3Backend {
             process_mode: ProcessModes::kRealtime as i32,
             symbolic_sample_size: K_SAMPLE32,
             num_samples: frames as i32,
-            num_inputs: i32::from(input_channels != 0),
+            num_inputs: input_bus_count,
             num_outputs: self.output_bus_count as i32,
             inputs: if input_channels == 0 {
                 ptr::null_mut()
             } else {
-                &mut input_bus
+                input_buses.as_mut_ptr()
             },
             outputs: if output_channels == 0 {
                 ptr::null_mut()
@@ -1963,52 +2076,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
     fn load_state(&mut self, state: &[u8]) -> Result<(), String> {
         self.cached_tail_length = crate::plugin::TailLength::Unknown;
         self.suspend_for_state_load()?;
-        let load_result = (|| {
-            let (stream, _bytes) = Vst3MemoryStream::new(state, false);
-            // SAFETY: Ownership of the generated IBStream object is transferred
-            // to `VstPtr` for the synchronous component state call.
-            let stream = unsafe {
-                VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
-                    format!(
-                        "failed to allocate restore stream for '{}'",
-                        self.metadata.name
-                    )
-                })?
-            };
-            // SAFETY: The inactive component and readable stream are valid for
-            // the duration of this synchronous state restore.
-            unsafe {
-                ensure_ok(
-                    self.component.set_state(shared_vst_ptr(&stream)),
-                    &self.metadata.name,
-                    "restore component state",
-                )?;
-            }
-            if let Some(controller) = self.controller.as_ref() {
-                let (controller_stream, _bytes) = Vst3MemoryStream::new(state, false);
-                // SAFETY: This independent stream starts at offset zero for the
-                // controller's component-state synchronization call.
-                let controller_stream = unsafe {
-                    VstPtr::<dyn IBStream>::owned(Box::into_raw(controller_stream).cast())
-                        .ok_or_else(|| {
-                            format!(
-                                "failed to allocate controller restore stream for '{}'",
-                                self.metadata.name
-                            )
-                        })?
-                };
-                // SAFETY: The initialized controller synchronously borrows the
-                // same component-state bytes from its own stream.
-                unsafe {
-                    ensure_ok(
-                        controller.set_component_state(shared_vst_ptr(&controller_stream)),
-                        &self.metadata.name,
-                        "synchronize controller state",
-                    )?;
-                }
-            }
-            Ok(())
-        })();
+        let load_result = self.load_component_state_bytes(state);
         let resume_result = self.resume_after_state_load();
         match (load_result, resume_result) {
             (Ok(()), Ok(())) => {
@@ -3024,7 +3092,21 @@ unsafe fn initialize_component(
             &requested.name,
             "select simple I/O mode",
         )?;
-        let initial_input_channels = audio_bus_channels(component, true, requested)?;
+        // A sidechain route exposes the main bus plus the key bus, so the
+        // single-bus reader cannot pre-read it; sum the multi-bus widths
+        // for the connectivity checks and let the Sidechain arm verify
+        // exact geometry.
+        let initial_input_channels = match audio_setup {
+            Some(NativePluginAudioSetup::Sidechain { .. }) => {
+                let (bus_count, bus_widths) = read_vst3_audio_bus_widths(
+                    component,
+                    BusDirections::kInput as i32,
+                    &requested.name,
+                )?;
+                bus_widths.iter().take(bus_count).sum()
+            }
+            _ => audio_bus_channels(component, true, requested)?,
+        };
         let (initial_output_bus_count, initial_output_bus_widths) = match audio_setup {
             Some(NativePluginAudioSetup::BandSplit { .. }) => {
                 audio_bus_channel_widths(component, requested)?
@@ -3051,7 +3133,8 @@ unsafe fn initialize_component(
                 requested.name,
             ));
         }
-        let mut input_arrangement;
+        let mut input_arrangement = 0;
+        let mut sidechain_input_arrangements = [0; 2];
         let mut output_arrangements = [0; 4];
         let (
             input_channels,
@@ -3187,6 +3270,34 @@ unsafe fn initialize_component(
             Some(NativePluginAudioSetup::Crossover { .. }) => {
                 return Err("VST3 Crossover requires its fixed-width bus layout".into());
             }
+            Some(NativePluginAudioSetup::Sidechain {
+                main_channels,
+                key_channels,
+            }) => {
+                let main = usize::from(*main_channels);
+                let key = usize::from(*key_channels);
+                let (bus_count, bus_widths) = read_vst3_audio_bus_widths(
+                    component,
+                    BusDirections::kInput as i32,
+                    &requested.name,
+                )?;
+                if bus_count != 2 || bus_widths[0] != main || bus_widths[1] != key {
+                    return Err(format!(
+                        "VST3 sidechain plugin '{}' exposes {bus_count} input buses {bus_widths:?}; expected the {main}-channel main bus plus the {key}-channel key bus",
+                        requested.name
+                    ));
+                }
+                if initial_output_channels != main {
+                    return Err(format!(
+                        "VST3 sidechain plugin '{}' exposes {initial_output_channels} output channels; expected the {main}-channel program bus",
+                        requested.name
+                    ));
+                }
+                sidechain_input_arrangements =
+                    [speaker_arrangement(main)?, speaker_arrangement(key)?];
+                output_arrangements[0] = speaker_arrangement(main)?;
+                (main + key, main, 1, [main, 0, 0, 0], 1, None, None)
+            }
             None => {
                 input_arrangement = speaker_arrangement(initial_input_channels)?;
                 output_arrangements[0] = speaker_arrangement(initial_output_channels)?;
@@ -3201,20 +3312,49 @@ unsafe fn initialize_component(
                 )
             }
         };
+        let sidechain_route =
+            matches!(audio_setup, Some(NativePluginAudioSetup::Sidechain { .. }));
+        let input_bus_count = if sidechain_route {
+            2
+        } else {
+            i32::from(input_channels != 0)
+        };
         ensure_ok(
             processor.set_bus_arrangements(
                 if input_channels == 0 {
                     ptr::null_mut()
+                } else if sidechain_route {
+                    sidechain_input_arrangements.as_mut_ptr()
                 } else {
                     &mut input_arrangement
                 },
-                i32::from(input_channels != 0),
+                input_bus_count,
                 output_arrangements.as_mut_ptr(),
                 output_bus_count as i32,
             ),
             &requested.name,
             "set bus arrangements",
         )?;
+        if let Some(NativePluginAudioSetup::Sidechain {
+            main_channels,
+            key_channels,
+        }) = audio_setup
+        {
+            let main = usize::from(*main_channels);
+            let key = usize::from(*key_channels);
+            let (actual_bus_count, actual_bus_widths) = read_vst3_audio_bus_widths(
+                component,
+                BusDirections::kInput as i32,
+                &requested.name,
+            )?;
+            if actual_bus_count != 2 || actual_bus_widths[0] != main || actual_bus_widths[1] != key
+            {
+                return Err(format!(
+                    "VST3 sidechain plugin '{}' negotiated {actual_bus_count} input buses {actual_bus_widths:?}; expected the {main}-channel main bus plus the {key}-channel key bus",
+                    requested.name
+                ));
+            }
+        }
         if let Some(layout) = crossover_layout {
             let input_bus_channels = audio_bus_channels(component, true, requested)?;
             let (actual_bus_count, actual_bus_widths) =
@@ -3239,6 +3379,18 @@ unsafe fn initialize_component(
                 ),
                 &requested.name,
                 "activate input bus",
+            )?;
+        }
+        if sidechain_route {
+            ensure_ok(
+                component.activate_bus(
+                    MediaTypes::kAudio as i32,
+                    BusDirections::kInput as i32,
+                    1,
+                    1,
+                ),
+                &requested.name,
+                "activate sidechain key bus",
             )?;
         }
         for bus_index in 0..output_bus_count {

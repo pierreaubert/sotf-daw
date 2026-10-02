@@ -164,13 +164,27 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .output()
     .doc("Auto gain transition time"),
+    // Head tracking (appended at index 17; indices 0..=16 are frozen for
+    // saved-state, native, and FFI address compatibility).
+    ParamSpec::float(
+        "Head Yaw",
+        "head_yaw_deg",
+        0.0,
+        -90.0,
+        90.0,
+        1.0,
+        "deg",
+        "Head Tracking",
+    )
+    .doc("Head yaw angle for differential ITD"),
 ];
 
 /// Crossfeed: idx 0=mode, 1=preset, 2=enabled, 3=mix,
 /// 4=bauer_fcut, 5=bauer_feed, 6=meier_level,
 /// 7=mb_low_freq, 8=mb_mid_high_freq, 9=mb_low_feed, 10=mb_mid_feed, 11=mb_high_feed,
 /// 12=itd_delay_ms,
-/// 13=autogain_enabled, 14=target_lufs, 15=max_gain, 16=smoothing
+/// 13=autogain_enabled, 14=target_lufs, 15=max_gain, 16=smoothing,
+/// 17=head_yaw_deg (appended; earlier indices are frozen)
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::selector(1), // crossfeed_preset
@@ -224,6 +238,14 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         )
         .visible_when(ParamCondition::choice(0, 3))
         .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        // Head yaw steers the differential ITD in every active mode, so it
+        // stays visible regardless of the selected mode.
+        ControlGroup::new(
+            "head-tracking",
+            "HEAD TRACKING",
+            &[ControlSpec::knob(17)], // head_yaw_deg
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[
         ControlSpec::knob(14).enabled_when(ParamCondition::bool(13, true)), // target_lufs

@@ -4,6 +4,7 @@ use nih_plug::prelude::*;
 use nih_plug::wrapper::state::{ParamValue as NativeParamValue, PluginState};
 use plugins_bridge::param_bridge::{BridgedParamInfo, BridgedParamKind};
 use sotf_host::external_plugin::NativeAmbisonicsCustomGeometry;
+use sotf_host::param_specs::ParamType;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData;
 use sotf_plugins::plugin_hiss_reducer::snapshot::ProfileSnapshot;
@@ -66,6 +67,10 @@ mod hiss_profile_tests;
 #[path = "params_ambisonics_custom_tests.rs"]
 mod ambisonics_custom_tests;
 
+#[cfg(test)]
+#[path = "params_speech_restore_tests.rs"]
+mod speech_restore_tests;
+
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
     float_params: Vec<FloatParam>,
@@ -104,6 +109,8 @@ pub struct DynamicParams {
     convolution_state: Option<Mutex<ConvolutionRestoreState>>,
     /// Hiss captured-profile schema flag.
     hiss_schema: bool,
+    /// True for the SpeechDenoiser schema; gates Speech restore preflight.
+    speech_schema: bool,
     /// Hiss generation-tagged profile carrier with staged restore.
     /// Pending values commit only after a candidate DSP initializes.
     hiss_profile_state: Option<Mutex<HissProfileRestoreState>>,
@@ -444,6 +451,21 @@ fn native_eq_choice_labels(id: &str) -> Option<&'static [&'static str]> {
     }
 }
 
+/// Canonical Speech model labels from the DSP choice spec.
+///
+/// Queries the facade `speech_denoiser` ParamSpec for the `model`
+/// choice labels so NIH display text tracks the single DSP source of
+/// truth without a second hardcoded table.
+fn speech_model_choice_labels() -> Option<&'static [&'static str]> {
+    sotf_plugins::param_specs::speech_denoiser::PARAMS
+        .iter()
+        .find(|spec| spec.engine_key == "model")
+        .and_then(|spec| match &spec.param_type {
+            ParamType::Choice { labels, .. } => Some(*labels),
+            _ => None,
+        })
+}
+
 fn native_eq_order_index(value: i32) -> Option<i32> {
     match value {
         2 => Some(0),
@@ -730,6 +752,20 @@ pub fn eq_state_restore_allows_audio_thread(state: &PluginState) -> bool {
     false
 }
 
+/// Speech restores must run off the audio callback.
+///
+/// Model selection prepares inference resources at initialization,
+/// so the vendor admission hook rejects every Speech audio-thread
+/// restore before `filter_state` runs and the host must retry on a
+/// control thread with accepted state untouched. Mirrors the EQ
+/// guard. The check itself performs no allocation, locking, or
+/// mutation.
+#[doc(hidden)]
+pub fn speech_state_restore_allows_audio_thread(state: &PluginState) -> bool {
+    let _ = state;
+    false
+}
+
 /// Resets Hiss momentaries in an incoming native state before restore.
 ///
 /// Forces saved or legacy `learn_noise` and `clear_profile` values to
@@ -774,7 +810,8 @@ impl DynamicParams {
                 || (plugin_type == "Crossover" && crate::native_crossover::is_structural(&info.id))
                 || (plugin_type == "EQ" && is_native_eq_restart_parameter(&info.id))
                 || (plugin_type == "EQ" && info.id == "stereo_pairs_apply")
-                || (plugin_type == "DeEsser" && is_de_esser_restart_parameter(&info.id));
+                || (plugin_type == "DeEsser" && is_de_esser_restart_parameter(&info.id))
+                || (plugin_type == "SpeechDenoiser" && info.id == "model");
             let realtime = (info.realtime || eq_pair_draft) && !requires_restart;
             if info.kind == BridgedParamKind::Bool {
                 // Bool parameter
@@ -921,6 +958,26 @@ impl DynamicParams {
                                     .position(|label| *label == value.trim())
                                     .and_then(|index| i32::try_from(index).ok())
                             }));
+                    } else if plugin_type == "SpeechDenoiser"
+                        && info.id == "model"
+                        && let Some(labels) = speech_model_choice_labels()
+                    {
+                        param = param
+                            .with_value_to_string(Arc::new(move |value| {
+                                usize::try_from(value)
+                                    .ok()
+                                    .and_then(|index| labels.get(index))
+                                    .map_or_else(
+                                        || "Unknown".to_string(),
+                                        |label| (*label).to_string(),
+                                    )
+                            }))
+                            .with_string_to_value(Arc::new(move |value| {
+                                labels
+                                    .iter()
+                                    .position(|label| *label == value.trim())
+                                    .and_then(|index| i32::try_from(index).ok())
+                            }));
                     }
                     param = param.non_automatable().requires_restart();
                 } else if eq_pair_draft {
@@ -1011,6 +1068,7 @@ impl DynamicParams {
             convolution_state: (plugin_type == "Convolution")
                 .then(|| Mutex::new(ConvolutionRestoreState::default())),
             hiss_schema: plugin_type == "HissReducer",
+            speech_schema: plugin_type == "SpeechDenoiser",
             hiss_profile_state: (plugin_type == "HissReducer")
                 .then(|| Mutex::new(HissProfileRestoreState::default())),
             hiss_learn_action,
@@ -1763,6 +1821,46 @@ impl DynamicParams {
         restore_state.pending_restore = Some(profile);
         restore_state.pending_generation = Some(generation);
         restore_state.invalid_restore = false;
+        true
+    }
+
+    /// Reject invalid Speech restores before live parameter mutation.
+    ///
+    /// The vendored state codec validates before writing host-visible
+    /// parameters, so a `false` return leaves accepted parameters, DSP
+    /// state, and waveform history untouched. Each present scalar must
+    /// match its control type and range: model is an I32 registry index
+    /// (unknown models are rejected, never clamped into an accepted
+    /// model), enabled is a Bool, strength is finite F32 in 0..=1.
+    /// Absent keys pass so v1 enabled-only states migrate via live
+    /// defaults; unknown keys are ignored for forward compatibility.
+    fn validate_speech_restore(
+        &self,
+        state: &PluginState,
+        _is_active: bool,
+        _is_audio_thread: bool,
+    ) -> bool {
+        if !self.speech_schema {
+            return true;
+        }
+        for (id, serialized) in &state.params {
+            let Some(entry) = self.param_map.get(id) else {
+                continue;
+            };
+            let valid = match (entry.kind, serialized) {
+                (ParamKind::Float, NativeParamValue::F32(value)) => {
+                    float_value_in_range(&self.float_params[entry.index], *value)
+                }
+                (ParamKind::Bool, NativeParamValue::Bool(_)) => true,
+                (ParamKind::Int, NativeParamValue::I32(value)) => {
+                    int_value_in_range(&self.int_params[entry.index], *value)
+                }
+                _ => false,
+            };
+            if !valid {
+                return false;
+            }
+        }
         true
     }
 
@@ -2531,6 +2629,7 @@ unsafe impl Params for DynamicParams {
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
             && self.validate_hiss_restore(state, is_active, is_audio_thread)
             && self.validate_ambisonics_custom_restore(state, is_active, is_audio_thread)
+            && self.validate_speech_restore(state, is_active, is_audio_thread)
     }
 
     fn defer_state_parameter_values(&self) -> bool {

@@ -269,12 +269,13 @@ impl SpeechDenoiserPlugin {
                 if model != self.model {
                     if self.drain_remaining.is_some() {
                         return Err(
-                            "Speech Denoiser must be reset after drain before changing model".into(),
+                            "Speech Denoiser must be reset after drain before changing model"
+                                .into(),
                         );
                     }
                     if self.initialized_sample_rate.is_some() {
                         return Err(
-                            "Speech Denoiser model changes require graph rebuild".to_string(),
+                            "Speech Denoiser model changes require graph rebuild".to_string()
                         );
                     }
                 }
@@ -334,9 +335,7 @@ impl SpeechDenoiserPlugin {
                 // rebuild from serialized configuration. The running model
                 // keeps processing until that rebuild succeeds.
                 if self.initialized_sample_rate.is_some() {
-                    return Err(
-                        "Speech Denoiser model changes require graph rebuild".to_string(),
-                    );
+                    return Err("Speech Denoiser model changes require graph rebuild".to_string());
                 }
                 self.model = model;
                 self.sync_cached_default(id, ParameterValue::Int(self.model.index() as i32));
@@ -472,19 +471,13 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         value: &ParameterValue,
     ) -> PluginResult<()> {
         // Choice models travel as an Int index or a String label; both name
-        // the same registry entry and reject unknown identities.
+        // the same registry entry and reject unknown identities. Value
+        // resolution is canonical in `resolve_model` so validation and the
+        // commit path can never disagree about valid identities.
         if id.as_str() == "model" {
-            return match value {
-                ParameterValue::Int(index) => usize::try_from(*index)
-                    .ok()
-                    .and_then(SpeechDenoiserModel::from_index)
-                    .map(|_| ())
-                    .ok_or_else(|| format!("model: unknown model index {index}")),
-                ParameterValue::String(label) => SpeechDenoiserModel::from_label(label)
-                    .map(|_| ())
-                    .ok_or_else(|| format!("model: unknown model {label:?}")),
-                _ => Err("model: type mismatch (expected Int index or String label)".to_string()),
-            };
+            return resolve_model(value)
+                .map(|_| ())
+                .map_err(|error| format!("model: {error}"));
         }
         let parameter = self
             .cached_parameters

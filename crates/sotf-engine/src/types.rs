@@ -18,7 +18,8 @@ pub use engine_features::{
     OutputAccessStatus,
 };
 pub use plugin_config::{
-    PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphNodeConfig,
+    PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphEdgeKind,
+    PluginGraphNodeConfig,
 };
 pub use sink::{SinkConfig, SinkOpenResult, SinkType};
 pub use state::{AudioEngineState, AudioFrame, PlaybackState, StreamMetadata};

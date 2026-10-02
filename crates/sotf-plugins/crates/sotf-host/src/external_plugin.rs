@@ -255,6 +255,15 @@ impl ExternalPlugin {
         if matches!(new_setup, NativePluginAudioSetup::BandSplit { .. }) {
             return self.reconfigure_band_split_audio_setup(new_setup);
         }
+        if matches!(new_setup, NativePluginAudioSetup::Sidechain { .. }) {
+            if self.audio_setup.as_ref() == Some(&new_setup) {
+                return Ok(());
+            }
+            return Err(format!(
+                "external plugin '{}' cannot change bus layout in place; recreate the instance with the sidechain setup",
+                self.discovery_descriptor.name
+            ));
+        }
         let current_setup = NativePluginAudioSetup::for_descriptor_or_legacy_default(
             &self.discovery_descriptor,
             self.audio_setup.as_ref(),
@@ -810,6 +819,16 @@ impl ExternalPlugin {
                     setup,
                 )?;
             }
+            if let Some(setup @ NativePluginAudioSetup::AmbisonicsCustom { .. }) =
+                backend_audio_setup.as_ref()
+            {
+                // The restored custom triple needs a DSP rebuild: the fresh
+                // candidate was constructed before the state arrived. Restart
+                // through the deliberate route so NIH initialization re-runs
+                // with staged target 8 plus geometry; named restores are
+                // already consistent and keep their fast path.
+                backend.reconfigure_ambisonics_audio_setup(setup)?;
+            }
             if let Some(NativePluginAudioSetup::AmbisonicsCustom { custom, .. }) =
                 backend_audio_setup.as_ref()
             {
@@ -932,6 +951,10 @@ impl ExternalPlugin {
                     ));
                 }
             }
+            NativePluginAudioSetup::Sidechain { .. } => {
+                // Bus geometry is verified at negotiation; the shared
+                // negotiated-width check below pins main+key totals.
+            }
         }
         let (expected_inputs, expected_outputs) = setup.channel_counts()?;
         let metadata = backend.metadata();
@@ -944,6 +967,32 @@ impl ExternalPlugin {
             ));
         }
         Ok(())
+    }
+
+    fn validate_sidechain_detector_source(
+        backend: &dyn NativeExternalPluginBackend,
+        descriptor: &PluginDescriptor,
+        plugin_name: &str,
+        setup: &NativePluginAudioSetup,
+    ) -> Result<(), String> {
+        let ids = audio_setup_structural_parameter_ids(descriptor.format, Some(setup))?;
+        let Some(id) = ids.first() else {
+            return Err(format!(
+                "external plugin '{plugin_name}' sidechain route has no structural detector parameter"
+            ));
+        };
+        match backend.get_parameter(id) {
+            Some(ParameterValue::Bool(true)) => Ok(()),
+            Some(ParameterValue::Bool(false)) => Err(format!(
+                "external plugin '{plugin_name}' sidechain state disables the detector key bus; recreate the instance without the sidechain setup"
+            )),
+            Some(other) => Err(format!(
+                "external plugin '{plugin_name}' sidechain detector parameter has unexpected value {other:?}; recreate the instance without the sidechain setup"
+            )),
+            None => Err(format!(
+                "external plugin '{plugin_name}' does not expose sidechain detector readback"
+            )),
+        }
     }
 
     fn validate_ambisonics_controls(
@@ -1192,6 +1241,21 @@ impl ExternalPlugin {
             // its result while keeping the installed backend detached from it.
             backend.load_state(opaque_state)?;
         }
+        if !opaque_state.is_empty()
+            && let Some(setup @ NativePluginAudioSetup::Sidechain { .. }) =
+                effective_setup.as_ref()
+        {
+            // Explicit state contradicting the keyed route (detector key
+            // bus off) is refused on the detached candidate so the live
+            // route keeps its configuration and history. Fresh loads
+            // carry no state and are unaffected.
+            Self::validate_sidechain_detector_source(
+                &*backend,
+                descriptor,
+                &descriptor.name,
+                setup,
+            )?;
+        }
         if let Some(setup) = effective_setup.as_ref() {
             Self::validate_backend_audio_setup_parameters(
                 &*backend,
@@ -1199,6 +1263,14 @@ impl ExternalPlugin {
                 &descriptor.name,
                 setup,
             )?;
+        }
+        if let Some(setup @ NativePluginAudioSetup::AmbisonicsCustom { .. }) =
+            effective_setup.as_ref()
+        {
+            // Rebuild the DSP from a restored custom triple; see
+            // `from_placeholder_state`. Seeding is idempotent when the
+            // state already carries the setup.
+            backend.reconfigure_ambisonics_audio_setup(setup)?;
         }
         if let Some(NativePluginAudioSetup::AmbisonicsCustom { custom, .. }) =
             effective_setup.as_ref()
@@ -1302,6 +1374,7 @@ fn audio_setup_structural_parameter_ids(
         Some(NativePluginAudioSetup::Crossover { .. }) => {
             return crossover_structural_parameter_ids(format);
         }
+        Some(NativePluginAudioSetup::Sidechain { .. }) => &["sidechain_external"],
         None => return Ok(Vec::new()),
     };
     let format_prefix = match format {
@@ -1772,11 +1845,21 @@ impl Plugin for ExternalPlugin {
                 return Ok(());
             }
 
-            self.native_backend
-                .as_mut()
-                .ok_or_else(|| "external plugin has no native backend".to_string())?
-                .load_state(state)?;
-            self.opaque_state = state.to_vec();
+            if state.is_empty() {
+                self.opaque_state.clear();
+                return Ok(());
+            }
+            // CLAP suspends/deactivates the installed instance before the
+            // plugin validates state; a refusal then fails reactivation
+            // (poisoned params) and wedges live processing. Stage on a
+            // detached instance like VST3 so rejection cannot mutate the
+            // installed processor or its tail/history state.
+            let replacement = self.replacement_backend_for_state(
+                &self.discovery_descriptor,
+                self.audio_setup.as_ref(),
+                state,
+            )?;
+            self.commit_native_backend(replacement, state.to_vec());
             return Ok(());
         }
 

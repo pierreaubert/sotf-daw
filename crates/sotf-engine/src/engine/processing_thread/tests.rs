@@ -127,6 +127,7 @@ mod eos;
 mod final_meter_cache;
 mod frame_format;
 mod misc;
+mod sidechain_graph;
 mod test;
 
 #[test]

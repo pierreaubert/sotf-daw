@@ -8,13 +8,11 @@ const BYPASS_CROSSFADE_SAMPLES: usize = RNNOISE_FRAME_SIZE;
 pub const RNNOISE_BAND_COUNT: usize = nnnoiseless::DENOISE_BAND_COUNT;
 
 /// Embedded legacy weights: leavened-quisling-2018-08-31 (`lq.rnnn`).
-const LEGACY_LQ_RNNN: &[u8] = include_bytes!(
-    "../models/legacy-rnnoise-nu/leavened-quisling-2018-08-31/lq.rnnn"
-);
+const LEGACY_LQ_RNNN: &[u8] =
+    include_bytes!("../models/legacy-rnnoise-nu/leavened-quisling-2018-08-31/lq.rnnn");
 /// Embedded legacy weights: somnolent-hogwash-2018-09-01 (`sh.rnnn`).
-const LEGACY_SH_RNNN: &[u8] = include_bytes!(
-    "../models/legacy-rnnoise-nu/somnolent-hogwash-2018-09-01/sh.rnnn"
-);
+const LEGACY_SH_RNNN: &[u8] =
+    include_bytes!("../models/legacy-rnnoise-nu/somnolent-hogwash-2018-09-01/sh.rnnn");
 
 /// Selects the inference weights a backend serves.
 ///
@@ -89,13 +87,13 @@ static AVAILABLE_MODELS: [RnnoiseModelInfo; 3] = [
         id: RnnoiseModelId::LegacyLq,
         label: "RNNoise Legacy LQ",
         origin: "GregorR/rnnoise-models@3eee541 leavened-quisling-2018-08-31/lq.rnnn",
-        sha256: Some("2782bbb3d1643464d370b2fafcf4e5ca7bfff4b7933bd6b6cd4d6b33484d6d7f"),
+        sha256: Some("1957528b752799fddf06270bc5469af7cf54c3badc358544ae2abed730943ff9"),
     },
     RnnoiseModelInfo {
         id: RnnoiseModelId::LegacySh,
         label: "RNNoise Legacy SH",
         origin: "GregorR/rnnoise-models@3eee541 somnolent-hogwash-2018-09-01/sh.rnnn",
-        sha256: Some("de1392ba4a7bf9ecb93fe4cc8ed130309925bd39e9953dcbce6d5afd4f5ce90"),
+        sha256: Some("70bb6685eb0c2a1d18e2918dca3fbfbd39317010b1802eb1b6ea73a92f3fdec0"),
     },
 ];
 
@@ -128,6 +126,21 @@ impl PreparedRnnoiseModel {
         self.channels
     }
 }
+
+impl std::fmt::Debug for PreparedRnnoiseModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PreparedRnnoiseModel")
+            .field("id", &self.id)
+            .field("channels", &self.channels)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Fresh per-channel states plus the stereo detector for one install.
+type BuiltStates = (
+    Vec<Box<nnnoiseless::DenoiseState>>,
+    Option<Box<nnnoiseless::DenoiseState>>,
+);
 
 /// Fixed-size, bounded monitoring snapshot for the most recently completed
 /// RNNoise model frame.
@@ -244,6 +257,10 @@ impl RnnoiseBackend {
     }
 
     /// Currently served model identity.
+    ///
+    /// Meaningful only after successful initialization; a fresh backend
+    /// reports [`BundledFull`](RnnoiseModelId::BundledFull) while serving
+    /// nothing (see [`prepare_model`](Self::prepare_model) for the guard).
     pub fn active_model(&self) -> RnnoiseModelId {
         self.active_model
     }
@@ -311,16 +328,7 @@ impl RnnoiseBackend {
     }
 
     /// Builds per-channel plus stereo-detector states for one model.
-    fn build_states(
-        channels: usize,
-        id: RnnoiseModelId,
-    ) -> Result<
-        (
-            Vec<Box<nnnoiseless::DenoiseState>>,
-            Option<Box<nnnoiseless::DenoiseState>>,
-        ),
-        String,
-    > {
+    fn build_states(channels: usize, id: RnnoiseModelId) -> Result<BuiltStates, String> {
         match id.embedded_bytes() {
             None => Ok((
                 (0..channels)
@@ -331,23 +339,30 @@ impl RnnoiseBackend {
             Some(bytes) => {
                 let model =
                     nnnoiseless::parse_rnnn_model(bytes).map_err(|error| error.to_string())?;
-                Ok((
-                    (0..channels)
-                        .map(|_| nnnoiseless::DenoiseState::from_model(model.clone()))
-                        .collect::<Vec<_>>(),
-                    (channels == 2)
-                        .then(|| nnnoiseless::DenoiseState::from_model(model.clone())),
-                ))
+                let denoisers = (0..channels)
+                    .map(|_| {
+                        nnnoiseless::DenoiseState::from_model(model.clone())
+                            .map_err(|error| error.to_string())
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let stereo_detector = (channels == 2)
+                    .then(|| {
+                        nnnoiseless::DenoiseState::from_model(model.clone())
+                            .map_err(|error| error.to_string())
+                    })
+                    .transpose()?;
+                Ok((denoisers, stereo_detector))
             }
         }
     }
 
     /// Validates the format and installs fresh state serving `id`.
     ///
-    /// On error the backend may be partially assigned, so fallible callers
-    /// install into a fresh backend and swap on success (see
-    /// [`initialize_with_model`](Self::initialize_with_model)). The bundled
-    /// path cannot fail past validation: `DenoiseState::new` is infallible.
+    /// Transactional except for allocation failure: validation and state
+    /// construction run before any assignment, so on `Err` nothing is
+    /// assigned. Fallible callers still prefer
+    /// [`initialize_with_model`](Self::initialize_with_model), which
+    /// installs into a fresh backend and swaps on success.
     fn install(
         &mut self,
         sample_rate: u32,

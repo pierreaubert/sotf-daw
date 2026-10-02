@@ -1,11 +1,14 @@
 use super::audio_engine_manager::AudioEngineManager;
+use super::select::select_output_sample_rate_with_verifier;
 use super::streaming_state::StreamingState;
 use super::types::StreamingEvent;
 use super::types::cache_verified_rate;
 use super::types::clear_verified_rate_cache;
 use super::types::get_cached_verified_rate;
 use super::types::verified_rate_cache_key;
+use serial_test::serial;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
 #[test]
@@ -115,18 +118,25 @@ fn clearing_latched_error_allows_same_error_to_be_reported_again() {
 #[test]
 fn verified_rate_cache_key_includes_output_channels() {
     assert_ne!(
-        verified_rate_cache_key(Some("Built-in Output"), 2),
-        verified_rate_cache_key(Some("Built-in Output"), 6)
+        verified_rate_cache_key(Some("Built-in Output"), 2, 48_000),
+        verified_rate_cache_key(Some("Built-in Output"), 6, 48_000)
     );
 }
 
+// Serialized with the fallback-reuse regression below under the shared
+// `verified_rate_cache` key: this is the only test that clears the
+// process-global cache, and the reuse test asserts an exact probe count
+// across two calls. Every other cache test uses unique device keys and runs
+// fully parallel. Any future test that clears the cache must join this
+// named serial pair.
 #[test]
+#[serial(verified_rate_cache)]
 fn verified_rate_cache_stores_multiple_device_channel_entries() {
     clear_verified_rate_cache();
 
-    let built_in = verified_rate_cache_key(Some("Built-in Output"), 2);
-    let surround = verified_rate_cache_key(Some("Built-in Output"), 6);
-    let default = verified_rate_cache_key(None, 2);
+    let built_in = verified_rate_cache_key(Some("Built-in Output"), 2, 48_000);
+    let surround = verified_rate_cache_key(Some("Built-in Output"), 6, 96_000);
+    let default = verified_rate_cache_key(None, 2, 44_100);
 
     cache_verified_rate(built_in.clone(), 48_000);
     cache_verified_rate(surround.clone(), 96_000);
@@ -138,6 +148,127 @@ fn verified_rate_cache_stores_multiple_device_channel_entries() {
 
     clear_verified_rate_cache();
     assert_eq!(get_cached_verified_rate(&built_in), None);
+}
+
+/// R13 regression: same device and channels, but 44100 and 48000 requests
+/// must not poison each other. The scripted verifier echoes the requested
+/// rate (as the PipeWire path does), so any cross-rate cache hit returns
+/// the wrong rate and fails loudly.
+#[test]
+fn mixed_requested_rates_do_not_poison_each_other() {
+    let device = Some("output-rate-cache-mixed-rates-device");
+    let probes = Arc::new(AtomicUsize::new(0));
+    let verify = {
+        let probes = Arc::clone(&probes);
+        move |_device: Option<&str>, requested: u32, _channels: usize| {
+            probes.fetch_add(1, Ordering::SeqCst);
+            Some(requested)
+        }
+    };
+
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device, 2, &verify),
+        44_100
+    );
+    assert_eq!(
+        select_output_sample_rate_with_verifier(48_000, device, 2, &verify),
+        48_000
+    );
+    // Fresh key per request, so each call probes exactly once; a global
+    // clear cannot add probes beyond one per call.
+    assert_eq!(probes.load(Ordering::SeqCst), 2);
+}
+
+/// A verified fallback must be reused for the same request without
+/// re-probing. In particular, a cached rate that differs from the request
+/// is a legitimate fallback, not a reason to probe again.
+#[test]
+#[serial(verified_rate_cache)]
+fn repeated_request_reuses_verified_fallback_without_reprobe() {
+    let device = Some("output-rate-cache-fallback-reuse-device");
+    let probes = Arc::new(AtomicUsize::new(0));
+    let verify = {
+        let probes = Arc::clone(&probes);
+        move |_device: Option<&str>, _requested: u32, _channels: usize| {
+            probes.fetch_add(1, Ordering::SeqCst);
+            Some(48_000)
+        }
+    };
+
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device, 2, &verify),
+        48_000
+    );
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device, 2, &verify),
+        48_000
+    );
+    assert_eq!(probes.load(Ordering::SeqCst), 1);
+}
+
+/// Device and channel separation survive the rate dimension: distinct
+/// (device, channels) pairs verify independently even for one request.
+#[test]
+fn device_and_channel_separation_survive_rate_dimension() {
+    let device_a = Some("output-rate-cache-separation-device-a");
+    let device_b = Some("output-rate-cache-separation-device-b");
+    let probes = Arc::new(AtomicUsize::new(0));
+    let verify = {
+        let probes = Arc::clone(&probes);
+        move |device: Option<&str>, _requested: u32, channels: usize| {
+            probes.fetch_add(1, Ordering::SeqCst);
+            match (device, channels) {
+                (Some("output-rate-cache-separation-device-a"), 2) => Some(48_000),
+                (Some("output-rate-cache-separation-device-a"), 6) => Some(96_000),
+                (Some("output-rate-cache-separation-device-b"), 2) => Some(44_100),
+                _ => None,
+            }
+        }
+    };
+
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device_a, 2, &verify),
+        48_000
+    );
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device_a, 6, &verify),
+        96_000
+    );
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device_b, 2, &verify),
+        44_100
+    );
+    // Fresh key per pair, so each call probes exactly once.
+    assert_eq!(probes.load(Ordering::SeqCst), 3);
+}
+
+/// Failed verification still falls back to the requested rate and still
+/// caches nothing: every call re-verifies.
+#[test]
+fn verification_failure_returns_candidate_without_caching() {
+    let device = Some("output-rate-cache-failure-device");
+    let probes = Arc::new(AtomicUsize::new(0));
+    let verify = {
+        let probes = Arc::clone(&probes);
+        move |_device: Option<&str>, _requested: u32, _channels: usize| {
+            probes.fetch_add(1, Ordering::SeqCst);
+            None
+        }
+    };
+
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device, 2, &verify),
+        44_100
+    );
+    assert_eq!(
+        select_output_sample_rate_with_verifier(44_100, device, 2, &verify),
+        44_100
+    );
+    assert_eq!(probes.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        get_cached_verified_rate(&verified_rate_cache_key(device, 2, 44_100)),
+        None
+    );
 }
 
 #[test]

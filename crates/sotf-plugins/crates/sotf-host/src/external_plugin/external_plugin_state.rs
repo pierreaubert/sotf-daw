@@ -15,6 +15,10 @@ const BAND_SPLIT_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.band-split";
 const BAND_SPLIT_VST3_CLASS_ID: &str = "536F746642616E6453706C7430303031";
 const CROSSOVER_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.crossover";
 const CROSSOVER_VST3_CLASS_ID: &str = "536F746643726F73736F766572303031";
+const DEESSER_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.de-esser";
+const DEESSER_VST3_CLASS_ID: &str = "536F7466446545737365723030303031";
+const GATE_CLAP_PLUGIN_ID: &str = "org.spinorama.sotf.gate";
+const GATE_VST3_CLASS_ID: &str = "536F7466476174653030303030303031";
 
 /// Stable placeholder schema for saving/restoring external plugin state.
 ///
@@ -82,6 +86,18 @@ pub enum NativePluginAudioSetup {
         topology: NativeCrossoverTopology,
         mode: NativeCrossoverMode,
         output_layout: NativeCrossoverOutputLayout,
+    },
+    /// Routes a main program bus plus an independent detector key bus.
+    ///
+    /// The packed instance input carries program channels first, then
+    /// key channels; outputs carry program only. CLAP selects the
+    /// two-input-port configuration and VST3 activates the auxiliary
+    /// input bus. Bus-count changes require recreating the instance.
+    Sidechain {
+        /// Program bus width, one or two.
+        main_channels: u8,
+        /// Key bus width, one or two.
+        key_channels: u8,
     },
 }
 
@@ -643,7 +659,7 @@ impl NativeAmbisonicsCustomGeometry {
     /// # Errors
     ///
     /// Returns a message for unsupported orders, invalid geometry,
-    /// misplaced LFE, unoffered widths, unmappable roles, or no exact
+    /// unoffered widths, misplaced LFE, unmappable roles, or no exact
     /// configuration match.
     pub fn matching_clap_configuration(
         &self,
@@ -655,6 +671,15 @@ impl NativeAmbisonicsCustomGeometry {
             ));
         }
         self.validate()?;
+        // Report an unoffered width before narrower role checks: no
+        // advertised configuration can claim a width it does not offer,
+        // so channel roles are only meaningful for supported widths.
+        let outputs = self.speakers.len();
+        if ![6, 8, 10, 12].contains(&outputs) {
+            return Err(format!(
+                "Custom geometry has {outputs} output channels; advertised CLAP surround configurations offer 6, 8, 10 or 12"
+            ));
+        }
         for (index, speaker) in self.speakers.iter().enumerate() {
             if speaker.is_lfe && index != 3 {
                 return Err(format!(
@@ -662,12 +687,6 @@ impl NativeAmbisonicsCustomGeometry {
                     speaker.label
                 ));
             }
-        }
-        let outputs = self.speakers.len();
-        if ![6, 8, 10, 12].contains(&outputs) {
-            return Err(format!(
-                "Custom geometry has {outputs} output channels; advertised CLAP surround configurations offer 6, 8, 10 or 12"
-            ));
         }
         let roles = self.clap_role_map()?;
         for target in [
@@ -753,6 +772,19 @@ impl NativePluginAudioSetup {
             Self::Crossover { num_bands, .. } => Err(format!(
                 "Crossover band count {num_bands} is unsupported; expected two through four"
             )),
+            Self::Sidechain {
+                main_channels,
+                key_channels,
+            } if (1..=2).contains(main_channels) && (1..=2).contains(key_channels) => Ok((
+                usize::from(*main_channels) + usize::from(*key_channels),
+                usize::from(*main_channels),
+            )),
+            Self::Sidechain {
+                main_channels,
+                key_channels,
+            } => Err(format!(
+                "Sidechain route {main_channels}+{key_channels} is unsupported; expected one or two program channels and one or two key channels"
+            )),
         }
     }
 
@@ -824,6 +856,14 @@ impl NativePluginAudioSetup {
                     ..
                 },
             ) if id.eq_ignore_ascii_case(CROSSOVER_VST3_CLASS_ID) => Ok(()),
+            (PluginFormat::Clap, DEESSER_CLAP_PLUGIN_ID, Self::Sidechain { .. }) => Ok(()),
+            (PluginFormat::Clap, GATE_CLAP_PLUGIN_ID, Self::Sidechain { .. }) => Ok(()),
+            (PluginFormat::Vst3, id, Self::Sidechain { .. })
+                if id.eq_ignore_ascii_case(DEESSER_VST3_CLASS_ID)
+                    || id.eq_ignore_ascii_case(GATE_VST3_CLASS_ID) =>
+            {
+                Ok(())
+            }
             _ => Err(format!(
                 "native Ambisonics setup is not supported for {} plugin identity '{}'",
                 match descriptor.format {
@@ -1667,5 +1707,71 @@ mod crossover_setup_tests {
             .channel_counts()
             .is_ok_and(|(_, outputs)| outputs == 64)
         );
+    }
+
+    #[test]
+    fn sidechain_setup_packs_program_then_key_and_round_trips() {
+        let stereo = NativePluginAudioSetup::Sidechain {
+            main_channels: 2,
+            key_channels: 2,
+        };
+        assert_eq!(stereo.channel_counts().unwrap(), (4, 2));
+        assert_eq!(
+            NativePluginAudioSetup::Sidechain {
+                main_channels: 1,
+                key_channels: 2,
+            }
+            .channel_counts()
+            .unwrap(),
+            (3, 1)
+        );
+        for (main_channels, key_channels) in [(0, 2), (2, 0), (3, 2), (2, 3)] {
+            assert!(
+                NativePluginAudioSetup::Sidechain {
+                    main_channels,
+                    key_channels,
+                }
+                .channel_counts()
+                .is_err(),
+                "route {main_channels}+{key_channels} must be refused"
+            );
+        }
+
+        let clap = descriptor(PluginFormat::Clap, "org.spinorama.sotf.de-esser");
+        let vst3 = descriptor(PluginFormat::Vst3, "536F7466446545737365723030303031");
+        assert!(stereo.validate_for_descriptor(&clap).is_ok());
+        assert!(stereo.validate_for_descriptor(&vst3).is_ok());
+        let gate_clap = descriptor(PluginFormat::Clap, "org.spinorama.sotf.gate");
+        let gate_vst3 = descriptor(PluginFormat::Vst3, "536F7466476174653030303030303031");
+        assert!(stereo.validate_for_descriptor(&gate_clap).is_ok());
+        assert!(stereo.validate_for_descriptor(&gate_vst3).is_ok());
+        assert!(
+            stereo
+                .validate_for_descriptor(&descriptor(
+                    PluginFormat::Clap,
+                    "org.spinorama.sotf.crossover"
+                ))
+                .is_err()
+        );
+        assert!(
+            stereo
+                .validate_for_descriptor(&descriptor(
+                    PluginFormat::AudioUnit,
+                    "org.spinorama.sotf.de-esser"
+                ))
+                .is_err()
+        );
+
+        let encoded = serde_json::to_value(&stereo).unwrap();
+        assert_eq!(
+            encoded,
+            serde_json::json!({
+                "type": "sidechain",
+                "main_channels": 2,
+                "key_channels": 2,
+            })
+        );
+        let decoded: NativePluginAudioSetup = serde_json::from_value(encoded).unwrap();
+        assert_eq!(decoded, stereo);
     }
 }

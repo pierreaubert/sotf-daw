@@ -30,7 +30,7 @@ thread_local! {
 
 struct Allocator;
 // SAFETY: The caller's allocation contracts are passed unchanged to System.
-// Constant thread-local counters do not allocate or retain resources.
+// Thread-local counters are plain cells that neither allocate nor retain.
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let _ = TRACK.try_with(|v| {
@@ -38,7 +38,10 @@ unsafe impl GlobalAlloc for Allocator {
                 ALLOCS.with(|n| n.set(n.get() + 1));
             }
         });
-        System.alloc(layout)
+        // SAFETY: forwards the caller's layout to System unchanged, keeping
+        // the `GlobalAlloc` contract; the counters above only touch
+        // thread-local cells.
+        unsafe { System.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -47,7 +50,10 @@ unsafe impl GlobalAlloc for Allocator {
                 FREES.with(|n| n.set(n.get() + 1));
             }
         });
-        System.dealloc(ptr, layout);
+        // SAFETY: forwards the caller's pointer and layout to System
+        // unchanged, keeping the `GlobalAlloc` contract; the counters
+        // above only touch thread-local cells.
+        unsafe { System.dealloc(ptr, layout) }
     }
 }
 
@@ -63,7 +69,7 @@ fn counted(action: impl FnOnce()) -> (usize, usize) {
     (ALLOCS.get(), FREES.get())
 }
 
-fn backend(channels: usize, id: RnnoiseModelId) -> RnnoiseBackend {
+fn make_backend(channels: usize, id: RnnoiseModelId) -> RnnoiseBackend {
     let mut backend = RnnoiseBackend::new();
     backend.initialize_with_model(RATE, channels, id).unwrap();
     backend
@@ -82,7 +88,10 @@ fn process(
     while offset < input.len() / channels {
         let frames = blocks[call % blocks.len()].min(input.len() / channels - offset);
         let mut block = input[offset * channels..(offset + frames) * channels].to_vec();
-        assert_eq!(backend.process(&mut block, frames, channels, bypass), frames);
+        assert_eq!(
+            backend.process(&mut block, frames, channels, bypass),
+            frames
+        );
         output.extend_from_slice(&block);
         offset += frames;
         call += 1;
@@ -96,9 +105,7 @@ fn signal(frames: usize, channels: usize, seed: u32) -> Vec<f32> {
     for frame in 0..frames {
         let voice = (frame as f32 * 0.061).sin() * 0.25 + (frame as f32 * 0.122).sin() * 0.12;
         for _ in 0..channels {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             let noise = (state as f32 / u32::MAX as f32 - 0.5) * 0.3;
             out.push((voice + noise).clamp(-0.9, 0.9));
         }
@@ -138,23 +145,23 @@ fn registry_identity_and_provenance_are_exact() {
     );
     assert_eq!(
         models[1].sha256,
-        Some("2782bbb3d1643464d370b2fafcf4e5ca7bfff4b7933bd6b6cd4d6b33484d6d7f")
+        Some("1957528b752799fddf06270bc5469af7cf54c3badc358544ae2abed730943ff9")
     );
     assert_eq!(models[2].id, RnnoiseModelId::LegacySh);
     assert_eq!(models[2].label, "RNNoise Legacy SH");
     assert_eq!(
         models[2].sha256,
-        Some("de1392ba4a7bf9ecb93fe4cc8ed130309925bd39e9953dcbce6d5afd4f5ce90")
+        Some("70bb6685eb0c2a1d18e2918dca3fbfbd39317010b1802eb1b6ea73a92f3fdec0")
     );
     // Embedded byte lengths match the staged files and distinguish them; a
-    // swapped include would fail here (297227 vs 297213).
+    // swapped include would fail here (297041 vs 297646).
     assert_eq!(
         RnnoiseModelId::LegacyLq.embedded_bytes().unwrap().len(),
-        297_227
+        297_041
     );
     assert_eq!(
         RnnoiseModelId::LegacySh.embedded_bytes().unwrap().len(),
-        297_213
+        297_646
     );
     for (index, id) in ALL_MODELS.iter().enumerate() {
         assert_eq!(id.index(), index);
@@ -171,7 +178,7 @@ fn bundled_initialize_matches_plain_initialize_bit_exactly() {
         let mut plain = RnnoiseBackend::new();
         plain.initialize(RATE, channels).unwrap();
         assert_eq!(plain.active_model(), RnnoiseModelId::BundledFull);
-        let mut explicit = backend(channels, RnnoiseModelId::BundledFull);
+        let mut explicit = make_backend(channels, RnnoiseModelId::BundledFull);
         assert_eq!(explicit.active_model(), RnnoiseModelId::BundledFull);
         assert_eq!(
             process(&mut plain, &input, channels, &[137, 1, 479], false),
@@ -186,13 +193,13 @@ fn prepare_commit_matches_initialize_with_model() {
     for channels in [1, 2] {
         for id in ALL_MODELS {
             let input = signal(5 * FRAME + 73, channels, 0x9E9A);
-            let mut adopted = backend(channels, RnnoiseModelId::BundledFull);
+            let mut adopted = make_backend(channels, RnnoiseModelId::BundledFull);
             let prepared = adopted.prepare_model(id).unwrap();
             assert_eq!(prepared.id(), id);
             assert_eq!(prepared.channels(), channels);
             adopted.commit_prepared(prepared).unwrap();
             assert_eq!(adopted.active_model(), id);
-            let mut installed = backend(channels, id);
+            let mut installed = make_backend(channels, id);
             assert_eq!(
                 process(&mut adopted, &input, channels, &[137, 1], false),
                 process(&mut installed, &input, channels, &[137, 1], false),
@@ -220,11 +227,11 @@ fn commit_rejects_channel_mismatch_and_preserves_history() {
         for id in ALL_MODELS {
             let prefix = signal(1024, channels, 0xC011);
             let suffix = signal(1024, channels, 0xC0DE);
-            let mut backend = backend(channels, RnnoiseModelId::BundledFull);
-            let mut twin = backend(channels, RnnoiseModelId::BundledFull);
+            let mut backend = make_backend(channels, RnnoiseModelId::BundledFull);
+            let mut twin = make_backend(channels, RnnoiseModelId::BundledFull);
             let mut actual = process(&mut backend, &prefix, channels, &[137], false);
             let mut expected = process(&mut twin, &prefix, channels, &[137], false);
-            let other = backend(3 - channels, id);
+            let other = make_backend(3 - channels, id);
             let mismatched = other.prepare_model(id).unwrap();
             assert!(backend.commit_prepared(mismatched).is_err());
             assert_eq!(backend.active_model(), RnnoiseModelId::BundledFull);
@@ -241,8 +248,8 @@ fn initialize_with_model_rejects_bad_format_and_preserves_history() {
         for id in ALL_MODELS {
             let prefix = signal(1024, channels, 0xF7CE);
             let suffix = signal(1024, channels, 0xE0F);
-            let mut backend = backend(channels, id);
-            let mut twin = backend(channels, id);
+            let mut backend = make_backend(channels, id);
+            let mut twin = make_backend(channels, id);
             let mut actual = process(&mut backend, &prefix, channels, &[137], false);
             let mut expected = process(&mut twin, &prefix, channels, &[137], false);
             assert!(backend.initialize_with_model(44100, channels, id).is_err());
@@ -259,11 +266,11 @@ fn initialize_with_model_rejects_bad_format_and_preserves_history() {
 fn alternate_models_change_nonzero_audio() {
     for channels in [1, 2] {
         let input = signal(5 * FRAME, channels, 0xA17E);
-        let mut bundled = backend(channels, RnnoiseModelId::BundledFull);
+        let mut bundled = make_backend(channels, RnnoiseModelId::BundledFull);
         let reference = process(&mut bundled, &input, channels, &[137, 1], false);
         let mut alternates = Vec::new();
         for id in [RnnoiseModelId::LegacyLq, RnnoiseModelId::LegacySh] {
-            let mut backend = backend(channels, id);
+            let mut backend = make_backend(channels, id);
             let output = process(&mut backend, &input, channels, &[137, 1], false);
             assert!(output.iter().all(|s| s.is_finite()), "{id:?}");
             let peak = output.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
@@ -296,7 +303,7 @@ fn bypass_is_exact_dry_per_model() {
             })
             .collect();
         for id in ALL_MODELS {
-            let mut backend = backend(channels, id);
+            let mut backend = make_backend(channels, id);
             assert_eq!(
                 process(&mut backend, &input, channels, &[137, 1], true),
                 expected,
@@ -311,11 +318,17 @@ fn reset_partitions_latency_analyzer_hold_per_model() {
     for channels in [1, 2] {
         for id in ALL_MODELS {
             let input = signal(5 * FRAME + 17, channels, 0x9E5);
-            let mut continuous = backend(channels, id);
-            let mut partitioned = backend(channels, id);
+            let mut continuous = make_backend(channels, id);
+            let mut partitioned = make_backend(channels, id);
             assert_eq!(continuous.latency_samples(), LATENCY);
             assert_eq!(
-                process(&mut partitioned, &input, channels, &[1, 137, 479, 481], false),
+                process(
+                    &mut partitioned,
+                    &input,
+                    channels,
+                    &[1, 137, 479, 481],
+                    false
+                ),
                 process(&mut continuous, &input, channels, &[8193], false),
                 "channels={channels} model={id:?}"
             );
@@ -328,7 +341,7 @@ fn reset_partitions_latency_analyzer_hold_per_model() {
                     .all(|gain| gain.is_finite() && (0.0..=1.0).contains(gain))
             );
             continuous.reset();
-            let mut fresh = backend(channels, id);
+            let mut fresh = make_backend(channels, id);
             assert_eq!(
                 process(&mut continuous, &input, channels, &[137], false),
                 process(&mut fresh, &input, channels, &[137], false),
@@ -352,12 +365,12 @@ fn stereo_swap_invariant_holds_per_model() {
         for frame in swapped_input.as_chunks_mut::<2>().0 {
             frame.swap(0, 1);
         }
-        let mut backend = backend(2, id);
+        let mut backend = make_backend(2, id);
         let mut first = input.clone();
         backend.process(&mut first, FRAME, 2, false);
         let mut output = vec![0.0; FRAME * 2];
         backend.process(&mut output, FRAME, 2, false);
-        let mut swapped_backend = backend(2, id);
+        let mut swapped_backend = make_backend(2, id);
         swapped_backend.process(&mut swapped_input, FRAME, 2, false);
         let mut swapped_output = vec![0.0; FRAME * 2];
         swapped_backend.process(&mut swapped_output, FRAME, 2, false);
@@ -377,7 +390,7 @@ fn stereo_swap_invariant_holds_per_model() {
 fn realtime_lifecycle_allocates_nothing_per_model() {
     for id in ALL_MODELS {
         for channels in [1, 2] {
-            let mut backend = backend(channels, id);
+            let mut backend = make_backend(channels, id);
             let mut buffer = vec![0.125; FRAME * channels];
             let (allocs, frees) = std::thread::spawn(move || {
                 counted(|| {
@@ -394,7 +407,7 @@ fn realtime_lifecycle_allocates_nothing_per_model() {
             assert_eq!((allocs, frees), (0, 0), "model={id:?} channels={channels}");
         }
         // Adoption itself allocates nothing; retired states free here.
-        let mut backend = backend(1, RnnoiseModelId::BundledFull);
+        let mut backend = make_backend(1, RnnoiseModelId::BundledFull);
         let prepared = backend.prepare_model(id).unwrap();
         let (allocs, frees) = std::thread::spawn(move || {
             counted(|| {
@@ -406,7 +419,7 @@ fn realtime_lifecycle_allocates_nothing_per_model() {
         assert_eq!(allocs, 0, "model={id:?} commit allocated");
         assert!(frees > 0, "model={id:?} commit freed nothing");
         // Dropping an uncommitted bundle retires its states without allocating.
-        let backend = backend(1, RnnoiseModelId::BundledFull);
+        let backend = make_backend(1, RnnoiseModelId::BundledFull);
         let prepared = backend.prepare_model(id).unwrap();
         let (allocs, frees) = counted(|| drop(prepared));
         assert_eq!(allocs, 0, "model={id:?} bundle drop allocated");

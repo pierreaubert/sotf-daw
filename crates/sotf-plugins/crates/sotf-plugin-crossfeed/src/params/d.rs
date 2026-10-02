@@ -13,6 +13,10 @@ pub(super) fn d_enabled() -> bool {
     pk(PARAMS, "enabled").default_bool()
 }
 
+pub(super) fn d_head_yaw_deg() -> f64 {
+    pk(PARAMS, "head_yaw_deg").default_f64()
+}
+
 pub(super) fn d_mix() -> f64 {
     pk(PARAMS, "mix").default_f64()
 }

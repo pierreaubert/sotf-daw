@@ -45,6 +45,37 @@ fn roundtrip_serde() {
         original.autogain_smoothing_ms,
         restored.autogain_smoothing_ms
     );
+    assert_eq!(original.head_yaw_deg, restored.head_yaw_deg);
+}
+
+#[test]
+fn param_indices_are_append_only() {
+    // Saved state, native, and FFI addresses depend on these positions.
+    // New parameters append at the end; existing indices never move.
+    let keys: Vec<&str> = PARAMS.iter().map(|spec| spec.engine_key).collect();
+    assert_eq!(
+        keys,
+        [
+            "mode",
+            "preset",
+            "enabled",
+            "mix",
+            "bauer_fcut_hz",
+            "bauer_feed_db",
+            "meier_level",
+            "mb_low_freq_hz",
+            "mb_mid_high_freq_hz",
+            "mb_low_feed_db",
+            "mb_mid_feed_db",
+            "mb_high_feed_db",
+            "itd_delay_ms",
+            "autogain_enabled",
+            "autogain_target_lufs",
+            "autogain_max_gain_db",
+            "autogain_smoothing_ms",
+            "head_yaw_deg",
+        ]
+    );
 }
 
 #[test]
@@ -92,4 +123,5 @@ fn deserialize_empty_json_uses_defaults() {
         p.autogain_smoothing_ms,
         pk(PARAMS, "autogain_smoothing_ms").default_f64()
     );
+    assert_eq!(p.head_yaw_deg, pk(PARAMS, "head_yaw_deg").default_f64());
 }

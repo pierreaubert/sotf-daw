@@ -354,6 +354,7 @@ fn convert_crossfeed(settings: &PluginSettings, _sample_rate: f64) -> Option<Plu
         autogain_target_lufs,
         autogain_max_gain_db,
         autogain_smoothing_ms,
+        head_yaw_deg,
     } = settings
     else {
         return None;
@@ -378,6 +379,7 @@ fn convert_crossfeed(settings: &PluginSettings, _sample_rate: f64) -> Option<Plu
             "autogain_target_lufs": autogain_target_lufs,
             "autogain_max_gain_db": autogain_max_gain_db,
             "autogain_smoothing_ms": autogain_smoothing_ms,
+            "head_yaw_deg": head_yaw_deg,
         }),
     ))
 }
@@ -651,12 +653,14 @@ mod tests {
             autogain_target_lufs: -14.0,
             autogain_max_gain_db: 6.0,
             autogain_smoothing_ms: 100.0,
+            head_yaw_deg: 45.0,
         };
         let config = PluginConfigConverterRegistry::global()
             .convert("crossfeed", &settings, 48_000.0)
             .expect("crossfeed converter registered");
         assert_eq!(config.plugin_type, "crossfeed");
         assert_eq!(config.parameters["bauer_fcut_hz"], 700.0);
+        assert_eq!(config.parameters["head_yaw_deg"], 45.0);
     }
 
     #[test]

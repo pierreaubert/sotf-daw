@@ -387,11 +387,7 @@ fn unsupported_legacy_default(
     if name != "Compressor"
         || !matches!(
             id,
-            "sidechain_hpf_hz"
-                | "sidechain_hpf_order"
-                | "detection_mode"
-                | "program_dependent_release"
-                | "sidechain_external"
+            "program_dependent_release" | "sidechain_external"
         )
     {
         return Ok(false);

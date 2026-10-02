@@ -23,10 +23,10 @@ use sotf_host::define_choice_string_deserializer;
 /// Indices 1-2 are real staged weights from
 /// GregorR/rnnoise-models@3eee541 (see
 /// `plugins-denoiser/models/legacy-rnnoise-nu/` and its source manifest):
-/// index 1 serves `leavened-quisling-2018-08-31/lq.rnnn` (voice in a noisy
-/// recording environment, sha256 `2782bbb3…`), index 2 serves
+/// index 1 serves `leavened-quisling-2018-08-31/lq.rnnn` (voice including
+/// other human sounds, sha256 `1957528b…`), index 2 serves
 /// `somnolent-hogwash-2018-09-01/sh.rnnn` (speech in recording noise,
-/// sha256 `de1392ba…`). Suite descriptions are provenance, not quality
+/// sha256 `70bb6685…`). Suite descriptions are provenance, not quality
 /// claims; both files use `.rnnn` v1 with 42 features, 22 gain bands, and
 /// Tanh VAD/denoise GRUs honored by the loader.
 pub const MODEL_LABELS: &[&str] = &["RNNoise Full", "RNNoise Legacy LQ", "RNNoise Legacy SH"];
@@ -87,7 +87,8 @@ impl SpeechDenoiserModel {
     /// Matching is exact first with an ASCII case-insensitive fallback, so
     /// benign UI/preset case drift does not fail adoption.
     pub fn from_label(label: &str) -> Option<Self> {
-        sotf_host::param_specs::choice_index_from_label(MODEL_LABELS, label).and_then(Self::from_index)
+        sotf_host::param_specs::choice_index_from_label(MODEL_LABELS, label)
+            .and_then(Self::from_index)
     }
 }
 
@@ -106,8 +107,9 @@ impl<'de> Deserialize<'de> for SpeechDenoiserModel {
     /// keep the previously accepted model whenever this fails.
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let label = deserialize_model_label(deserializer)?;
-        Self::from_label(&label)
-            .ok_or_else(|| serde::de::Error::custom(format!("unknown speech denoiser model: {label}")))
+        Self::from_label(&label).ok_or_else(|| {
+            serde::de::Error::custom(format!("unknown speech denoiser model: {label}"))
+        })
     }
 }
 
@@ -124,7 +126,10 @@ mod tests {
         assert_eq!(SpeechDenoiserModel::from_index(1), Some(RnnoiseLegacyLq));
         assert_eq!(SpeechDenoiserModel::from_index(2), Some(RnnoiseLegacySh));
         assert_eq!(SpeechDenoiserModel::from_index(3), None);
-        assert_eq!(SpeechDenoiserModel::from_label("RNNoise Full"), Some(RnnoiseFull));
+        assert_eq!(
+            SpeechDenoiserModel::from_label("RNNoise Full"),
+            Some(RnnoiseFull)
+        );
         assert_eq!(
             SpeechDenoiserModel::from_label("RNNoise Legacy LQ"),
             Some(RnnoiseLegacyLq)
@@ -153,7 +158,10 @@ mod tests {
             (RnnoiseLegacySh, "\"RNNoise Legacy SH\""),
         ] {
             assert_eq!(serde_json::to_string(&model).unwrap(), label);
-            assert_eq!(serde_json::from_str::<SpeechDenoiserModel>(label).unwrap(), model);
+            assert_eq!(
+                serde_json::from_str::<SpeechDenoiserModel>(label).unwrap(),
+                model
+            );
         }
         for (accepted, expected) in [
             ("\"rnnoise full\"", RnnoiseFull),

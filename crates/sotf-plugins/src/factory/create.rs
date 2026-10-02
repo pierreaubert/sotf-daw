@@ -66,11 +66,42 @@ use std::path::PathBuf;
 /// processing audio. Inserting the plugin into a host performs that step at the
 /// node's input sample rate. The factory's `sample_rate` argument supplies any
 /// rate-dependent constructor configuration.
+///
+/// External-key construction is refused here: single-width callers cannot
+/// route the 2N key bus. Graph contexts that route key buses through
+/// sidechain edges use [`create_plugin_with_external_key`] instead.
 pub fn create_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
     sample_rate: u32,
+) -> Result<Box<dyn Plugin>, String> {
+    create_plugin_inner(plugin_type, parameters, channels, sample_rate, false)
+}
+
+/// Create a plugin instance, permitting external-key construction.
+///
+/// Identical to [`create_plugin`] except that keyed plugins requesting an
+/// external key bus construct instead of refusing. Only callers that route
+/// the 2N input bus may use this entry: engine graph builds (which map
+/// sidechain edges onto the key bus) and the FFI two-bus path. Linear
+/// single-width chains must keep using [`create_plugin`] so external-key
+/// requests keep failing loudly there.
+pub fn create_plugin_with_external_key(
+    plugin_type: &str,
+    parameters: &serde_json::Value,
+    channels: usize,
+    sample_rate: u32,
+) -> Result<Box<dyn Plugin>, String> {
+    create_plugin_inner(plugin_type, parameters, channels, sample_rate, true)
+}
+
+fn create_plugin_inner(
+    plugin_type: &str,
+    parameters: &serde_json::Value,
+    channels: usize,
+    sample_rate: u32,
+    allow_external_key_bus: bool,
 ) -> Result<Box<dyn Plugin>, String> {
     let plugin_type = catalog_entry(plugin_type)
         .map(|entry| entry.canonical_type)
@@ -320,13 +351,14 @@ pub fn create_plugin(
             let params: DeEsserPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse de-esser params: {e}"))?;
             // External-key de-essers need a 2N input bus (program + key) for
-            // N program channels. This single-width facade cannot route that
-            // bus, and the engine chain is single-width as well, so external
-            // construction fails loudly here instead of returning a flag
-            // without an audio path. Use the FFI two-bus path (input 2N,
-            // output N), which constructs at program width and validates both
-            // buses.
-            if params.sidechain_external {
+            // N program channels. Single-width callers cannot route that
+            // bus, so external construction fails loudly here instead of
+            // returning a flag without an audio path. Callers that route
+            // the key bus (engine graphs via sidechain edges, or the FFI
+            // two-bus path with input 2N and output N) construct through
+            // `create_plugin_with_external_key`, which sets
+            // `allow_external_key_bus`.
+            if params.sidechain_external && !allow_external_key_bus {
                 return Err(format!(
                     "De-esser external sidechain requires a 2N input bus for {channels} program channels (got single-width {channels}); engine single-width chains cannot route the key bus — use the FFI input/output-channel path"
                 ));

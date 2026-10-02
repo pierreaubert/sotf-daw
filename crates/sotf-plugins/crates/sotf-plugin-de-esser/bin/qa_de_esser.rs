@@ -1,4 +1,4 @@
-use sotf_host::plugin::ProcessContext;
+use sotf_host::plugin::{Plugin, ProcessContext};
 use sotf_host::{
     CountingAlloc, ParametricInPlacePlugin, ParametricInPlacePluginAdapter, run_standard_tests,
 };
@@ -186,8 +186,13 @@ fn main() {
     assert_eq!(key_out, key, "key bus must be preserved");
     println!("  key bus preserved: OK");
 
-    // Run standard QA tests
+    // Run standard QA tests. The adapter owns its own bounded-subdivision
+    // lifecycle: initializing the inner plugin before wrapping does not
+    // prepare it, so the adapter must be initialized before the standard
+    // suite processes through it (same ordering as the limiter
+    // finite-stream harness and the transient-shaper adapter tests).
     let mut plugin = ParametricInPlacePluginAdapter::new(inner);
+    plugin.initialize(sample_rate).unwrap();
     run_standard_tests(&mut plugin, "DeEsserPlugin");
 
     println!("\n[ALL PASS] DeEsser QA Complete.");

@@ -733,6 +733,43 @@ fn custom_permutation_matches_host_for_7_1_4() {
 }
 
 #[test]
+fn custom_negotiation_matches_host_for_7_1_2() {
+    use nih_plug::context::PluginApi;
+    let params = ambisonics_params();
+    restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_2_json()));
+    // CLAP order-7 slot 4 is the 7.1.2 configuration (index 40). Same
+    // width as 5.1.4, other roles: the permutation must route rears
+    // before sides per the canonical VST3 bus order.
+    let permutation = crate::wrapper::negotiate_ambisonics_custom_layout(
+        &params,
+        7,
+        4,
+        40,
+        10,
+        PluginApi::Clap,
+    )
+    .expect("matched CLAP configuration negotiates");
+    assert_eq!(permutation, vec![0, 1, 2, 3, 6, 7, 4, 5, 8, 9]);
+    // The 5.1 slot reports a different map for the same API.
+    assert!(
+        crate::wrapper::negotiate_ambisonics_custom_layout(&params, 7, 0, 36, 10, PluginApi::Clap)
+            .is_none(),
+        "CLAP map mismatch must not negotiate"
+    );
+    // VST3 order-7 index 4 is the 7.1.2 arrangement (index 52).
+    assert!(
+        crate::wrapper::negotiate_ambisonics_custom_layout(&params, 7, 4, 52, 10, PluginApi::Vst3)
+            .is_some(),
+        "matched VST3 arrangement negotiates"
+    );
+    assert!(
+        crate::wrapper::negotiate_ambisonics_custom_layout(&params, 7, 0, 48, 10, PluginApi::Vst3)
+            .is_none(),
+        "VST3 mask mismatch must not negotiate"
+    );
+}
+
+#[test]
 fn stereo_constructs_but_reports_format_rejection_reasons() {
     let params = ambisonics_params();
     restore_custom(&params, 1, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&stereo_json()));

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A headphone crossfeed plugin that blends a portion of each stereo channel into the opposite ear, simulating the natural acoustic crosstalk of speaker listening. Reduces the exaggerated stereo separation of headphones for a more natural, less fatiguing experience. Supports three algorithms: Bauer (classic), Meier (frequency-dependent), and Multiband (per-band control).
+A headphone crossfeed plugin that blends a portion of each stereo channel into the opposite ear, simulating the natural acoustic crosstalk of speaker listening. Reduces the exaggerated stereo separation of headphones for a more natural, less fatiguing experience. Supports five modes: Disable, Bauer (classic), Meier (frequency-dependent), Multiband (per-band control), and compact parametric HRTF.
 
 ## Features
 
@@ -19,7 +19,9 @@ and makes no pinna/elevation claim.
 
 ### Crossfeed Modes
 
-Three algorithms for different listening preferences:
+Five modes for different listening preferences:
+
+**Disable Mode:** Transparent bypass. Delay, filter, and AutoGain history reset on entry so re-enabling cannot replay stale state.
 
 **Bauer Mode:** A low-shelf cut is applied to the stereo difference signal, reducing low-frequency width while preserving mono content.
 
@@ -27,12 +29,28 @@ Three algorithms for different listening preferences:
 
 **Multiband Mode:** Splits the signal into three frequency bands (low/mid/high) and applies independent crossfeed levels per band. Provides the most control over the crossfeed character.
 
+**HRTF Mode:** Compact parametric far-ear model; see the contract above.
+
 **Parameters:**
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Mode | Off/Bauer/Meier/Multiband | Multiband | — | Crossfeed algorithm selection |
+| Mode | Disable/Bauer/Meier/Multiband/HRTF | Multiband | — | Crossfeed algorithm selection |
 | Mix | 0 to 1.0 | 1.0 | — | Dry/wet blend |
+
+### ITD and Head Tracking
+
+The static ITD control and the head-yaw control steer a differential
+interaural delay on the crossfeed paths in every active mode. Each path delay
+is half the static ITD plus or minus a yaw-derived term
+(`head_radius * sin(yaw) / speed_of_sound`, 8.75 cm / 343 m/s), clamped to
+the 1 ms delay-line limit. Yaw automation is smoothed per sample and is
+independent of host callback partitioning.
+
+| Parameter | Range | Default | Unit | Description |
+|-----------|-------|---------|------|-------------|
+| ITD Delay | 0 to 1.0 | 0 | ms | Static interaural time difference, split across both crossfeed paths |
+| Head Yaw | -90 to 90 | 0 | deg | Head yaw angle; positive yaw lengthens the L-to-R crossfeed path |
 
 ### Bauer Parameters
 
@@ -62,9 +80,17 @@ Three algorithms for different listening preferences:
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
 | Auto Gain | On/Off | Off | — | Automatic loudness compensation |
-| Target LUFS | -40 to -12 | -18 | LUFS | Reserved compatibility control; currently has no DSP effect |
-| Max Gain | 0 to 24 | 12 | dB | Maximum compensation |
-| Smoothing | 10 to 5000 | 100 | ms | Compensation transition time |
+| Target LUFS | -40 to -12 | -18 | LUFS | Absolute loudness target; output converges toward it while Auto Gain is on |
+| Max Gain | 0 to 24 | 12 | dB | Maximum compensation in either direction |
+| Smoothing | 10 to 5000 | 100 | ms | Compensation transition time (dB time constant, plus fixed fast-attack/slow-release stage) |
+
+When Auto Gain is enabled, every completed tenth-of-a-second measurement
+interval publishes a new gain target equal to the Target LUFS minus the
+measured output loudness, clamped to plus or minus Max Gain; that target
+first affects the following audio. The target then eases in through the
+configured Smoothing time constant followed by a fixed ~20 ms attack / ~300 ms
+release stage. Silence on either meter decays the target back toward unity
+instead of latching a stale correction.
 
 ## Demos
 

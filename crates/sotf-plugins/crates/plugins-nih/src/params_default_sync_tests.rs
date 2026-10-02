@@ -366,11 +366,7 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
                     | ("BandMerge", "bands")
                     | (
                         "Compressor",
-                        "sidechain_hpf_hz"
-                            | "sidechain_hpf_order"
-                            | "detection_mode"
-                            | "program_dependent_release"
-                            | "sidechain_external"
+                        "program_dependent_release" | "sidechain_external"
                     )
             );
             match (result, must_reject) {
@@ -387,4 +383,98 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn compressor_detector_roundtrip_restores_and_processes() {
+    // Native Compressor/MultibandCompressor detector controls restore through
+    // construction: HPF 120 Hz enabled 4th order with RMS detection builds,
+    // survives initialization, and processes nonzero audio. The two still
+    // unsupported legacy controls keep their loud restore rejection.
+    for name in ["Compressor", "MultibandCompressor"] {
+        let mut infos = schema_infos(name);
+        for (id, kind, value) in [
+            ("sidechain_hpf_hz", BridgedParamKind::Float, 120.0),
+            ("sidechain_hpf_order", BridgedParamKind::Int, 1.0),
+            ("sidechain_hpf_enabled", BridgedParamKind::Bool, 1.0),
+            ("detection_mode", BridgedParamKind::Int, 1.0),
+        ] {
+            let info = infos
+                .iter_mut()
+                .find(|info| info.id == id)
+                .unwrap_or_else(|| panic!("missing {name}.{id}"));
+            assert_eq!(info.kind, kind, "{name}.{id}");
+            assert!(!info.realtime, "{name}.{id} restores at construction");
+            assert_ne!(info.default_value, value, "{name}.{id}");
+            info.default_value = value;
+        }
+        let params = DynamicParams::from_infos(&infos);
+        let mut plugin = super::configuration::create_plugin(name, 48_000, &params)
+            .unwrap_or_else(|error| panic!("{name} detector restore: {error}"));
+        for (id, expected) in [
+            (
+                "sidechain_hpf_hz",
+                ParameterValue::Float(120.0),
+            ),
+            ("sidechain_hpf_order", ParameterValue::Int(1)),
+            ("sidechain_hpf_enabled", ParameterValue::Bool(true)),
+            ("detection_mode", ParameterValue::Int(1)),
+        ] {
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from(id)),
+                Some(expected),
+                "{name}.{id}"
+            );
+        }
+        plugin.initialize(48_000).unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("detection_mode")),
+            Some(ParameterValue::Int(1)),
+            "{name}.detection_mode survives initialize"
+        );
+        // Process smoke: LF-heavy program through the restored detector.
+        let frames = 512usize;
+        let mut input = vec![0.0_f32; frames * 2];
+        for frame in 0..frames {
+            let t = frame as f32 / 48_000.0;
+            let sample = 0.5 * (2.0 * std::f32::consts::PI * 50.0 * t).sin()
+                + 0.25 * (2.0 * std::f32::consts::PI * 1000.0 * t).sin();
+            input[frame * 2] = sample;
+            input[frame * 2 + 1] = sample * 0.5;
+        }
+        let mut output = vec![0.0_f32; frames * 2];
+        let context = sotf_host::ProcessContext::new(48_000, frames);
+        let written = plugin
+            .process(&input, &mut output, &context)
+            .unwrap_or_else(|error| panic!("{name} detector process: {error}"));
+        assert_eq!(written, frames, "{name}");
+        assert!(
+            output.iter().all(|sample| sample.is_finite()),
+            "{name} non-finite output"
+        );
+        assert!(
+            output.iter().any(|sample| sample.abs() > 1.0e-3),
+            "{name} silent output"
+        );
+        assert_ne!(output, input, "{name} detector run is bit-transparent");
+    }
+    // Still-unsupported legacy controls reject non-default restoration loudly.
+    for id in ["program_dependent_release", "sidechain_external"] {
+        let mut infos = schema_infos("Compressor");
+        infos
+            .iter_mut()
+            .find(|info| info.id == id)
+            .unwrap_or_else(|| panic!("missing Compressor.{id}"))
+            .default_value = 1.0;
+        let params = DynamicParams::from_infos(&infos);
+        let error = match super::configuration::create_plugin("Compressor", 48_000, &params)
+        {
+            Ok(_) => panic!("unsupported control must reject"),
+            Err(error) => error,
+        };
+        assert!(
+            error.contains("not implemented"),
+            "unexpected rejection: {error}"
+        );
+    }
 }

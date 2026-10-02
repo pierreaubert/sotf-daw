@@ -520,7 +520,8 @@ fn native_state_custom_geometry(
     opaque_state: &[u8],
     format: PluginFormat,
 ) -> Option<serde_json::Value> {
-    let encoded = native_state_json(opaque_state, format)?
+    let state = native_state_json(opaque_state, format)?;
+    let encoded = state
         .get("fields")?
         .get(CUSTOM_STATE_FIELD)?
         .as_str()?;
@@ -1113,7 +1114,9 @@ fn verify_loaded_format_rejections_clap(
         order: 7,
         custom: custom_moved_lfe_9_1_6_geometry(),
     });
-    let error = ExternalPlugin::from_placeholder_state(&wide, SAMPLE_RATE).unwrap_err();
+    let Err(error) = ExternalPlugin::from_placeholder_state(&wide, SAMPLE_RATE) else {
+        panic!("16ch CLAP preflight must reject before backend load");
+    };
     assert!(
         error.contains("offer 6, 8, 10 or 12"),
         "16ch CLAP preflight must name offered widths: {error}"
