@@ -3,6 +3,8 @@
 // ============================================================================
 
 use crate::decoder::AudioSource;
+use sotf_plugins::plugin_linear_phase_eq::BandConfig;
+use sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqControlStatus;
 use sotf_plugins::PluginHost;
 use std::any::Any;
 use std::sync::Arc;
@@ -487,6 +489,25 @@ pub enum ManagerCommand {
         value: String, // Generic string value (JSON for complex types, or stringified primitives)
     },
     BypassProcessing(bool),
+    /// Snapshot, prepare and queue one linear-phase EQ band-shape edit.
+    ///
+    /// The manager thread snapshots the accepted base from the shared
+    /// wrapper handle, prepares FIR design off audio, and queues the bounded
+    /// payload; real audio commits the existing crossfade. `Ok` means
+    /// queued, not accepted: observe acceptance via `LinearPhaseEqStatus`.
+    LinearPhaseEqRequest {
+        plugin_index: usize,
+        band_index: usize,
+        new_band: BandConfig,
+    },
+    /// Request eviction of a wedged linear-phase EQ head payload.
+    LinearPhaseEqCancel {
+        plugin_index: usize,
+    },
+    /// Read detached linear-phase EQ accepted generation and queue status.
+    LinearPhaseEqStatus {
+        plugin_index: usize,
+    },
 
     /// Poll isolated external plugin worker status without starting or restarting workers.
     #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
@@ -513,6 +534,7 @@ pub enum ManagerResponse {
     State(AudioEngineState),
     Position(f64),
     PluginData(Arc<dyn Any + Send + Sync>),
+    LinearPhaseEqStatus(LinearPhaseEqControlStatus),
     Error(String),
     Shutdown,
 }

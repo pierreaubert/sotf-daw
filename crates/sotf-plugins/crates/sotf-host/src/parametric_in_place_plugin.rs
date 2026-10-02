@@ -221,6 +221,18 @@ pub trait ParametricInPlacePlugin: Send {
         false
     }
 
+    /// Reports immediate-only momentary controls.
+    ///
+    /// The blanket adapter forwards this to the object-safe plugin
+    /// contract. The host consults it between blocks on the engine
+    /// control path only, never from the audio callback. A `true`
+    /// return admits that structural id through the host immediate gate
+    /// only; automation keeps rejecting it. Defaults false.
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        let _ = id;
+        false
+    }
+
     /// Validate a value against the parameter schema.
     fn parametric_validate_parameter(
         &self,
@@ -664,6 +676,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
 
     fn supports_f64(&self) -> bool {
         self.plugin.supports_f64()
+    }
+
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        self.plugin.supports_immediate_momentary_control(id)
     }
 }
 

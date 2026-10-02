@@ -792,6 +792,13 @@ fn linear_phase_eq_structural_state_rebuilds_transactionally() {
     assert!((normalized_parameter(handle, "band_0_gain") - 0.625).abs() < 1e-6);
     assert_eq!(normalized_parameter(handle, "band_0_active"), 0.0);
     assert_eq!(plugin_get_parameter_info(handle, 0), parameter_info);
+    // The pre-restore pointer must still dereference to the same id: the
+    // LinearPhaseEQ map is never rebuilt, so old metadata stays valid.
+    // SAFETY: The info pointer borrows from this live handle.
+    let old_id = unsafe { CStr::from_ptr((*parameter_info).id) }
+        .to_str()
+        .unwrap();
+    assert_eq!(old_id, "num_filters");
 
     // Partial state updates have the same semantics as the generic loader:
     // omitted live values survive the required structural reconstruction.

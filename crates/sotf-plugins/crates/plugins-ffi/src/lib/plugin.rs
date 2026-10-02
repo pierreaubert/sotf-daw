@@ -46,6 +46,7 @@ use super::process::process_with_ffi_events_impl;
 use super::process::process_with_full_events_impl;
 use super::types::current_host_kind;
 use super::{LAST_ERROR, LAST_STATIC_ERROR};
+use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::ProcessContext;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int};
@@ -101,7 +102,7 @@ fn is_dynamic_eq_shelf_structural_id(plugin_type: &str, param_id: &str) -> bool 
     // Canonical indices only (`band_01_shape` is not a structural address;
     // it falls through to "unknown parameter", matching the merge's
     // fail-closed noncanonical rejection).
-    if band != index.to_string() || index >= 8 {
+    if !canonical_index(band) || index >= 8 {
         return false;
     }
     matches!(field, "shape" | "shelf_slope" | "placement")
@@ -126,7 +127,7 @@ fn is_eq_placement_structural_id(plugin_type: &str, param_id: &str) -> bool {
     };
     // Canonical form only; `filter_01_placement` is unknown, matching the
     // merge's fail-closed rule and `eq_placement_index`.
-    index_text == index.to_string() && index < 20
+    canonical_index(index_text) && index < 20
 }
 
 /// LinearPhaseEQ placement addresses are structural like EQ placement:
@@ -147,10 +148,17 @@ fn is_linear_phase_eq_placement_structural_id(plugin_type: &str, param_id: &str)
     let Ok(index) = band.parse::<usize>() else {
         return false;
     };
-    if band != index.to_string() || index >= 10 {
+    if !canonical_index(band) || index >= 10 {
         return false;
     }
     field == "placement"
+}
+
+/// Checks decimal address spelling without allocating on the render thread.
+fn canonical_index(text: &str) -> bool {
+    !text.is_empty()
+        && text.bytes().all(|byte| byte.is_ascii_digit())
+        && (text == "0" || !text.starts_with('0'))
 }
 
 /// De-esser structural IDs per `sotf-plugin-de-esser` PARAMS.
@@ -188,6 +196,149 @@ fn is_hiss_structural_id(plugin_type: &str, param_id: &str) -> bool {
         return false;
     }
     matches!(param_id, "spectral_mode" | "learn_noise" | "clear_profile")
+}
+
+/// Returns true for Hiss Reducer plugin type names.
+///
+/// Same alias set as [`is_hiss_structural_id`]; routes state restoration
+/// to the Hiss transactional path. Profile handling still identifies the
+/// live instance through the `get_data` snapshot downcast.
+fn is_hiss_plugin_type(plugin_type: &str) -> bool {
+    matches!(
+        plugin_type,
+        "HissReducer" | "hiss_reducer" | "Hiss" | "hiss"
+    )
+}
+
+/// Hiss capture action: cancel an active capture.
+pub const HISS_CAPTURE_CANCEL: c_int = 0;
+/// Hiss capture action: start a new 1 s capture.
+pub const HISS_CAPTURE_START: c_int = 1;
+/// Hiss capture action: discard the stored profile.
+pub const HISS_CLEAR_PROFILE: c_int = 2;
+
+/// Restores Hiss state transactionally with profile preservation.
+///
+/// Reconstructs a candidate constructor from the accepted config plus the
+/// current live scalars/profile, then applies the incoming partial state:
+/// omitted keys preserve live values, explicit null clears the profile,
+/// and valid v1/v2 blobs install exactly. Momentary `learn_noise` and
+/// `clear_profile` keys never replay. All fallible work (typed profile
+/// validation with explicit channel agreement, construction, preparation,
+/// initialization, layout checks) precedes the sole commit, so failures
+/// retain live audio, history, metadata, and configuration. The parameter
+/// map is intentionally preserved: Hiss keeps a fixed 13-parameter schema,
+/// so foreign `ParameterInfo` pointers stay stable across restore.
+fn replace_hiss_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    let incoming_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(state)
+            .map_err(|error| format!("Failed to parse HissReducer state: {error}"))?;
+    // Current live snapshot carries scalars plus the stored profile when
+    // present. Contention fails explicitly; never silently drop the blob.
+    let current_bytes = plugins_bridge::state::try_save_state(&*handle.plugin)
+        .map_err(|error| format!("Failed to capture current HissReducer state: {error}"))?;
+    let current_state: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&current_bytes)
+            .map_err(|error| format!("Failed to parse current HissReducer state: {error}"))?;
+
+    let mut candidate: serde_json::Value = match handle.config_json.trim() {
+        "" | "null" | "{}" => serde_json::json!({}),
+        config => serde_json::from_str(config)
+            .map_err(|error| format!("Failed to parse HissReducer config: {error}"))?,
+    };
+    let candidate_object = candidate
+        .as_object_mut()
+        .ok_or_else(|| "HissReducer config must be a JSON object".to_string())?;
+
+    for (key, value) in &current_state {
+        candidate_object.insert(key.clone(), value.clone());
+    }
+    if !current_state.contains_key(plugins_bridge::state::hiss_state::CAPTURED_PROFILE_KEY) {
+        candidate_object.remove(plugins_bridge::state::hiss_state::CAPTURED_PROFILE_KEY);
+    }
+    candidate_object.remove("learn_noise");
+    candidate_object.remove("clear_profile");
+
+    for (key, value) in &incoming_state {
+        if matches!(key.as_str(), "learn_noise" | "clear_profile") {
+            continue;
+        }
+        if key == plugins_bridge::state::hiss_state::CAPTURED_PROFILE_KEY {
+            if value.is_null() {
+                candidate_object.remove(key);
+            } else {
+                let profile: sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData =
+                    serde_json::from_value(value.clone()).map_err(|error| {
+                        format!("HissReducer captured_profile is malformed: {error}")
+                    })?;
+                profile
+                    .validate()
+                    .map_err(|error| format!("HissReducer captured_profile invalid: {error}"))?;
+                if profile.channels != handle.input_channels {
+                    return Err(format!(
+                        "HissReducer captured_profile has {} channels, handle has {}",
+                        profile.channels, handle.input_channels
+                    ));
+                }
+                candidate_object.insert(key.clone(), value.clone());
+            }
+            continue;
+        }
+        if matches!(
+            key.as_str(),
+            "enabled"
+                | "threshold_db"
+                | "frequency_hz"
+                | "strength"
+                | "spectral_mode"
+                | "use_captured_profile"
+                | "curve_low"
+                | "curve_mid"
+                | "curve_high"
+                | "link_mode"
+                | "transient_guard"
+        ) {
+            candidate_object.insert(key.clone(), value.clone());
+        }
+    }
+    if let Some(carried) =
+        candidate_object.get(plugins_bridge::state::hiss_state::CAPTURED_PROFILE_KEY)
+    {
+        let profile: sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData =
+            serde_json::from_value(carried.clone())
+                .map_err(|error| format!("HissReducer captured_profile is malformed: {error}"))?;
+        profile
+            .validate()
+            .map_err(|error| format!("HissReducer captured_profile invalid: {error}"))?;
+        if profile.channels != handle.input_channels {
+            return Err(format!(
+                "HissReducer captured_profile has {} channels, handle has {}",
+                profile.channels, handle.input_channels
+            ));
+        }
+    }
+
+    let replacement_config = serde_json::to_string(&candidate)
+        .map_err(|error| format!("Failed to serialize HissReducer config: {error}"))?;
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(handle.sample_rate)?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored HissReducer channel layout differs from the handle layout".into());
+    }
+
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
+    Ok(())
 }
 
 /// Every Ambisonics parameter is structural (order, target, weighting,
@@ -246,7 +397,7 @@ fn replace_plugin_from_state(
     ) {
         return replace_dynamic_eq_from_state(handle, state);
     }
-    if handle.plugin_type == "LinearPhaseEQ" {
+    if matches!(handle.plugin_type.as_str(), "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ") {
         return replace_linear_phase_eq_from_state(handle, state);
     }
     if matches!(handle.plugin_type.as_str(), "EQ" | "eq") {
@@ -269,6 +420,9 @@ fn replace_plugin_from_state(
         "BandSplit" | "band_split" | "bandsplit"
     ) {
         return replace_band_split_from_state(handle, state);
+    }
+    if is_hiss_plugin_type(handle.plugin_type.as_str()) {
+        return replace_hiss_from_state(handle, state);
     }
 
     let current = plugins_bridge::state::save_state(&*handle.plugin);
@@ -710,7 +864,7 @@ fn replace_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), 
             .map_err(|error| format!("Failed to capture current EQ state: {error}"))?;
     let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
         .map_err(|error| format!("Failed to parse EQ state: {error}"))?;
-    merged_state.extend(incoming_state);
+    merged_state.extend(incoming_state.clone());
     let merged_bytes = serde_json::to_vec(&merged_state)
         .map_err(|error| format!("Failed to merge EQ state: {error}"))?;
     // Constructor-owned keys (pairs, full filter vectors) fold into the
@@ -732,6 +886,16 @@ fn replace_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), 
         handle.output_channels,
         handle.sample_rate,
     )?;
+    // Placement metadata reserves twenty addresses, but a configured bank
+    // can contain fewer filters. The generic bridge ignores unknown keys;
+    // a requested structural placement must instead fail transactionally.
+    for key in incoming_state.keys() {
+        if is_eq_placement_structural_id(&handle.plugin_type, key)
+            && replacement.get_parameter(&ParameterId::from(key.as_str())).is_none()
+        {
+            return Err(format!("EQ placement '{key}' targets a filter outside the configured bank"));
+        }
+    }
     load_changed_state(&mut *replacement, &merged_bytes, &handle.plugin_type)?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
@@ -984,6 +1148,10 @@ mod state_tests;
 #[path = "ffi_integration_tests.rs"]
 mod ffi_integration_tests;
 
+#[cfg(test)]
+#[path = "hiss_state_tests.rs"]
+mod hiss_state_tests;
+
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
     state: &[u8],
@@ -1027,17 +1195,10 @@ fn replace_linear_phase_eq_from_state(
     )?;
     replacement.initialize(handle.sample_rate)?;
 
-    // Rebuild the map like Crossover so post-restore reads match the
-    // committed plugin. The specs are static, but rebuilding proves it and
-    // keeps old info pointers valid via the retired list.
-    //
-    // Commit only after parsing, construction, and initialization succeeded.
-    // Any earlier error leaves the live plugin and constructor config intact.
-    let next_parameter_map = ParameterMap::from_plugin(&*replacement, &handle.plugin_type);
-    handle.retired_parameter_maps.push(std::mem::replace(
-        &mut handle.parameter_map,
-        next_parameter_map,
-    ));
+    // LinearPhaseEQ always exposes the same ten-band schema, including
+    // dormant slots. Keep its map and borrowed metadata pointers stable;
+    // parameter reads use the replacement DSP instance below. All fallible
+    // preparation precedes the commit.
     handle.plugin = replacement;
     handle.config_json = rebuilt_config;
     Ok(())
@@ -1793,6 +1954,17 @@ pub extern "C" fn plugin_set_parameter(
             return PluginError::InvalidParameter;
         }
         if is_de_esser_structural_id(&handle_ref.plugin_type, param_id_str) {
+            // Repeating an already committed structural choice is a no-op,
+            // matching legacy C/AU callers that synchronize all defaults.
+            // The committed values were snapshotted on the control thread at
+            // construction/restore; this probe never queries the live DSP, so
+            // the `String` choices (mode, split_topology) stay
+            // allocation-free here while keeping their no-op contract.
+            if handle_ref.parameter_map.de_esser_structural_normalized(param_id_str)
+                == Some(normalized_value)
+            {
+                return PluginError::Success;
+            }
             set_last_error_static(
                 c"DeEsser structural parameters require state restoration",
             );
@@ -1930,10 +2102,14 @@ pub extern "C" fn plugin_free_string(s: *mut c_char) {
 
 /// Save plugin state to a JSON byte buffer.
 ///
+/// Hiss saves include the exact `captured_profile` blob when present and
+/// fail explicitly on snapshot contention: contention returns `NULL` with
+/// a busy diagnostic and `out_len` set to 0, never a truncated success.
+///
 /// # Returns
 /// * Pointer to an allocated buffer owned by the caller on success. It must be
 ///   released with [`plugin_free_state`] when no longer needed.
-/// * `NULL` on error.
+/// * `NULL` on error, with `out_len` set to 0 when it is writable.
 ///
 /// # Safety
 /// * `handle` must be a valid plugin handle that has not been destroyed.
@@ -1946,13 +2122,21 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
 
     let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
         let handle_ref = &*handle;
-        let state = save_state_with_eq_family_pairs(handle_ref);
+        let state = match save_state_with_eq_family_pairs(handle_ref) {
+            Ok(state) => state,
+            Err(error) => {
+                set_last_error(&error);
+                *out_len = 0;
+                return ptr::null_mut();
+            }
+        };
         let len = state.len();
         let ptr = state.as_ptr();
 
         // Allocate and copy to a buffer the caller can free
         let buf = libc_malloc(len);
         if buf.is_null() {
+            *out_len = 0;
             return ptr::null_mut();
         }
         std::ptr::copy_nonoverlapping(ptr, buf, len);
@@ -1960,7 +2144,16 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
         buf
     }));
 
-    result.unwrap_or(ptr::null_mut())
+    match result {
+        Ok(buf) => buf,
+        Err(_) => {
+            set_last_error("Panic in plugin_save_state");
+            unsafe {
+                *out_len = 0;
+            }
+            ptr::null_mut()
+        }
+    }
 }
 
 /// Save plugin state, injecting the constructor-held pair list for EQ-family
@@ -1974,13 +2167,18 @@ pub extern "C" fn plugin_save_state(handle: *const PluginHandle, out_len: *mut u
 /// save: an unparseable config or snapshot falls back to the plain snapshot
 /// and emits a `log::warn!` naming the plugin type, so a corrupt handle
 /// cannot silently shed pair routing across many saves.
-fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Vec<u8> {
-    let state = plugins_bridge::state::save_state(&*handle.plugin);
+///
+/// Hiss contention fails explicitly: a busy snapshot returns `Err` so the
+/// C callers return null with a busy diagnostic instead of persisting an
+/// apparently valid state that omits a captured profile.
+fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Result<Vec<u8>, String> {
+    let state = plugins_bridge::state::try_save_state(&*handle.plugin)?;
     if !matches!(
         handle.plugin_type.as_str(),
-        "EQ" | "eq" | "DynamicEQ" | "dynamic_eq" | "dynamic-eq" | "LinearPhaseEQ"
+        "EQ" | "eq" | "DynamicEQ" | "dynamic_eq" | "dynamic-eq"
+            | "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
     ) {
-        return state;
+        return Ok(state);
     }
     let parsed_config = serde_json::from_str::<serde_json::Value>(&handle.config_json);
     let pairs = parsed_config
@@ -1992,10 +2190,10 @@ fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Vec<u8> {
             "FFI save_state: {} handle has unparseable config_json; exporting plain snapshot without pair routing",
             handle.plugin_type
         );
-        return state;
+        return Ok(state);
     }
     let Some(pairs) = pairs else {
-        return state;
+        return Ok(state);
     };
     let Ok(mut map) = serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&state)
     else {
@@ -2003,16 +2201,18 @@ fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Vec<u8> {
             "FFI save_state: {} snapshot is not a JSON object; exporting without injected pair routing",
             handle.plugin_type
         );
-        return state;
+        return Ok(state);
     };
     map.insert("stereo_pairs".to_string(), pairs);
-    serde_json::to_vec(&serde_json::Value::Object(map)).unwrap_or_else(|_| {
-        log::warn!(
-            "FFI save_state: {} pair injection serialization failed; exporting plain snapshot",
-            handle.plugin_type
-        );
-        state
-    })
+    Ok(
+        serde_json::to_vec(&serde_json::Value::Object(map)).unwrap_or_else(|_| {
+            log::warn!(
+                "FFI save_state: {} pair injection serialization failed; exporting plain snapshot",
+                handle.plugin_type
+            );
+            state
+        }),
+    )
 }
 
 /// Load plugin state from a JSON byte buffer.
@@ -2066,6 +2266,68 @@ pub extern "C" fn plugin_load_state(
         .into()
 }
 
+/// Control Hiss capture from the control thread.
+///
+/// Starts, cancels, or clears a noise-profile capture on a Hiss handle.
+/// `action` must be [`HISS_CAPTURE_CANCEL`], [`HISS_CAPTURE_START`], or
+/// [`HISS_CLEAR_PROFILE`]. State restoration never triggers these commands;
+/// this explicit control distinguishes user intent from preset recall.
+/// The realtime [`plugin_set_parameter`] refusal for `learn_noise` and
+/// `clear_profile` is unchanged.
+///
+/// # Returns
+/// * 0 on success
+/// * Error code on failure
+///
+/// # Safety
+/// * `handle` must be a valid plugin handle that has not been destroyed.
+/// * Call on a control thread with no concurrent access to `handle`,
+///   including audio processing or parameter access.
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_hiss_capture_control(
+    handle: *mut PluginHandle,
+    action: c_int,
+) -> c_int {
+    if handle.is_null() {
+        set_last_error("NULL handle in plugin_hiss_capture_control");
+        return PluginError::NullPointer.into();
+    }
+
+    let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+        let handle_ref = &mut *handle;
+        if !is_hiss_plugin_type(&handle_ref.plugin_type) {
+            set_last_error("Hiss capture control requires a HissReducer handle");
+            return PluginError::UnsupportedFeature;
+        }
+        let (id, value) = match action {
+            HISS_CAPTURE_CANCEL => ("learn_noise", false),
+            HISS_CAPTURE_START => ("learn_noise", true),
+            HISS_CLEAR_PROFILE => ("clear_profile", true),
+            _ => {
+                set_last_error("Invalid Hiss capture action");
+                return PluginError::InvalidParameter;
+            }
+        };
+        match handle_ref.plugin.set_parameter(
+            ParameterId::from(id),
+            ParameterValue::Bool(value),
+        ) {
+            Ok(()) => PluginError::Success,
+            Err(error) => {
+                set_last_error(&format!("Hiss capture control failed: {error}"));
+                PluginError::InvalidParameter
+            }
+        }
+    }));
+
+    result
+        .unwrap_or_else(|_| {
+            set_last_error("Panic in plugin_hiss_capture_control");
+            PluginError::UnknownError
+        })
+        .into()
+}
+
 /// Free a state buffer returned by [`plugin_save_state`] or
 /// [`plugin_export_preset_json`].
 ///
@@ -2085,6 +2347,8 @@ pub extern "C" fn plugin_free_state(data: *mut u8, len: usize) {
 ///
 /// The returned buffer uses the preset document schema advertised by
 /// [`plugin_preset_document_info`] and must be freed with [`plugin_free_state`].
+/// Hiss contention fails explicitly like [`plugin_save_state`]: `NULL` with
+/// a busy diagnostic and `out_len` set to 0, never a truncated document.
 ///
 /// # Safety
 /// * `handle` must be a valid plugin handle that has not been destroyed.
@@ -2108,7 +2372,14 @@ pub extern "C" fn plugin_export_preset_json(
         } else {
             CStr::from_ptr(preset_name).to_str().unwrap_or("Untitled")
         };
-        let state = save_state_with_eq_family_pairs(handle_ref);
+        let state = match save_state_with_eq_family_pairs(handle_ref) {
+            Ok(state) => state,
+            Err(error) => {
+                set_last_error(&error);
+                *out_len = 0;
+                return ptr::null_mut();
+            }
+        };
         let info = handle_ref.plugin.info();
         let document = serde_json::json!({
             "schema_version": 1,
@@ -2124,16 +2395,23 @@ pub extern "C" fn plugin_export_preset_json(
             Ok(bytes) => bytes,
             Err(err) => {
                 set_last_error(&format!("Failed to serialize preset document: {err}"));
+                *out_len = 0;
                 return ptr::null_mut();
             }
         };
         copy_bytes_to_ffi_buffer(&bytes, out_len)
     }));
 
-    result.unwrap_or_else(|_| {
-        set_last_error("Panic in plugin_export_preset_json");
-        ptr::null_mut()
-    })
+    match result {
+        Ok(buf) => buf,
+        Err(_) => {
+            set_last_error("Panic in plugin_export_preset_json");
+            unsafe {
+                *out_len = 0;
+            }
+            ptr::null_mut()
+        }
+    }
 }
 
 /// Import a JSON preset document created by [`plugin_export_preset_json`].

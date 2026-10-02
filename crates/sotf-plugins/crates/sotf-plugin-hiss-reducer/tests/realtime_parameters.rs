@@ -171,6 +171,7 @@ fn cold_engaged_process_drain_and_reset_do_not_allocate() {
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-40.0, -42.0],
             frames_analyzed: 48_000,
+            spectral: None,
         };
         let use_id = ParameterId::from("use_captured_profile");
         let low_id = ParameterId::from("curve_low");

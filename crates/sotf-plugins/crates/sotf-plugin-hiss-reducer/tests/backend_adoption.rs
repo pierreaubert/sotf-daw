@@ -898,6 +898,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-40.0, f32::NAN],
             frames_analyzed: u64::from(RATE),
+            spectral: None,
         };
         let error = plugin.restore_profile(&corrupt).unwrap_err();
         assert!(error.contains("range"), "unexpected error: {error}");
@@ -945,6 +946,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         );
 
         // Boundary floors restore through the plugin and stay finite.
+        // v1 compatibility evidence: floors-only blob, white-spread path.
         let edge = NoiseProfileData {
             format_version: 1,
             sample_rate: RATE,
@@ -952,6 +954,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-120.0, 6.0],
             frames_analyzed: u64::from(RATE),
+            spectral: None,
         };
         plugin.restore_profile(&edge).unwrap();
         assert_eq!(plugin.overall_profile_floor_db(), Some(6.0));

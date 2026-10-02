@@ -577,6 +577,7 @@ pub fn convert_hiss_reducer(settings: &PluginSettings, _sample_rate: f64) -> Opt
         curve_high,
         link_mode,
         transient_guard,
+        captured_profile,
     } = settings
     else {
         return None;
@@ -587,22 +588,27 @@ pub fn convert_hiss_reducer(settings: &PluginSettings, _sample_rate: f64) -> Opt
     // JSON (unlike the lenient denoiser factory, which silently ignores them).
     // A preset with `learn_noise=true` reloads as a no-op for construction;
     // the restoration owner owns the capture-action path.
-    Some(PluginConfig::new(
-        "hiss_reducer",
-        json!({
-            "enabled": enabled,
-            "threshold_db": threshold_db,
-            "frequency_hz": frequency_hz,
-            "strength": strength,
-            "spectral_mode": spectral_mode,
-            "use_captured_profile": use_captured_profile,
-            "curve_low": curve_low,
-            "curve_mid": curve_mid,
-            "curve_high": curve_high,
-            "link_mode": link_mode,
-            "transient_guard": transient_guard,
-        }),
-    ))
+    // A carried `captured_profile` blob is forwarded verbatim into the
+    // existing factory params; `None` omits the key so legacy settings
+    // convert exactly as before. Malformed blobs fail factory construction
+    // transactionally via `NoiseProfileData::validate`.
+    let mut parameters = json!({
+        "enabled": enabled,
+        "threshold_db": threshold_db,
+        "frequency_hz": frequency_hz,
+        "strength": strength,
+        "spectral_mode": spectral_mode,
+        "use_captured_profile": use_captured_profile,
+        "curve_low": curve_low,
+        "curve_mid": curve_mid,
+        "curve_high": curve_high,
+        "link_mode": link_mode,
+        "transient_guard": transient_guard,
+    });
+    if let Some(profile) = captured_profile {
+        parameters["captured_profile"] = json!(profile);
+    }
+    Some(PluginConfig::new("hiss_reducer", parameters))
 }
 
 pub fn convert_speech_denoiser(

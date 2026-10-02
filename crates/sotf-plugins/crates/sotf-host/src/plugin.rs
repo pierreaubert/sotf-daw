@@ -752,4 +752,17 @@ pub trait Plugin: Send {
     fn supports_f64(&self) -> bool {
         false
     }
+
+    /// Reports immediate-only momentary controls.
+    ///
+    /// The host consults this between blocks on the engine control
+    /// path for parameters marked `Structural`: a `true` return admits
+    /// that id through `set_plugin_parameter_immediate` without
+    /// rebuilding. Never consulted from the audio callback; automation
+    /// and queued sample-accurate paths never consult it and keep
+    /// rejecting all structural ids. The default is `false` for every id.
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        let _ = id;
+        false
+    }
 }

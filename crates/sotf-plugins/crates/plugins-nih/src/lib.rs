@@ -1,3 +1,6 @@
+// The pinned external vtable generator emits expression-position semicolons.
+// This exception applies to generated code; all other warnings remain denied.
+#![allow(semicolon_in_expressions_from_non_local_macros, reason = "Pinned vst3_com vtable macro expansion")]
 #![cfg(not(all(
     feature = "eq",
     feature = "compressor",

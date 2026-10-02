@@ -2,20 +2,35 @@ use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 use sotf_host::{CountingAlloc, assert_no_allocs};
-use sotf_plugin_speech_denoiser::{RNNOISE_BAND_COUNT, SpeechDenoiserData, SpeechDenoiserPlugin};
+use sotf_plugin_speech_denoiser::{
+    RNNOISE_BAND_COUNT, SpeechDenoiserData, SpeechDenoiserModel, SpeechDenoiserPlugin,
+    SpeechDenoiserPluginParams,
+};
 use std::time::{Duration, Instant};
 
 #[global_allocator]
 static A: CountingAlloc = CountingAlloc;
 
 fn main() {
-    for channels in [1, 2] {
-        run_layout(channels);
+    for model in [
+        SpeechDenoiserModel::RnnoiseFull,
+        SpeechDenoiserModel::RnnoiseLegacyLq,
+        SpeechDenoiserModel::RnnoiseLegacySh,
+    ] {
+        for channels in [1, 2] {
+            run_layout(channels, model);
+        }
     }
 }
 
-fn run_layout(channels: usize) {
-    let mut plugin = SpeechDenoiserPlugin::new(channels);
+fn run_layout(channels: usize, model: SpeechDenoiserModel) {
+    let mut plugin = SpeechDenoiserPlugin::from_params(
+        channels,
+        SpeechDenoiserPluginParams {
+            model,
+            ..SpeechDenoiserPluginParams::default()
+        },
+    );
     plugin.initialize(48_000).unwrap();
     let max_frames = 4_093;
     let mut buffer = vec![0.0; max_frames * channels];
@@ -70,14 +85,14 @@ fn run_layout(channels: usize) {
             .unwrap();
         timings.push(start.elapsed());
     }
-    // The strength sweep above must leave automation functional and the model
-    // registry on its bundled identity.
+    // The strength sweep above must leave automation functional and the
+    // selected model identity intact.
     plugin
         .set_parameter(ParameterId::from("strength"), ParameterValue::Float(1.0))
         .unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("model")),
-        Some(ParameterValue::Int(0))
+        Some(ParameterValue::Int(model.index() as i32))
     );
     timings.sort_unstable();
     let percentile = |percent: usize| timings[(timings.len() - 1) * percent / 100];
@@ -103,7 +118,8 @@ fn run_layout(channels: usize) {
             .all(|gain| gain.is_finite() && (0.0..=1.0).contains(gain))
     );
     println!(
-        "Speech Denoiser {channels}ch: p50={:?}, p95={:?}, p99={:?}, max={max:?}, zero cold allocations",
+        "Speech Denoiser {channels}ch {}: p50={:?}, p95={:?}, p99={:?}, max={max:?}, zero cold allocations",
+        model.label(),
         percentile(50),
         percentile(95),
         percentile(99),

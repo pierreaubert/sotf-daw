@@ -17,6 +17,7 @@
 use sotf_audio::{PluginSettings, PluginType};
 use sotf_plugins::factory::{create_plugin, supported_plugin_types};
 use sotf_plugins::param_specs::ParamType;
+use sotf_plugins::parameters::{ParameterId, ParameterValue};
 
 const SAMPLE_RATE: u32 = 48_000;
 
@@ -72,6 +73,18 @@ fn layout_hidden_keys(settings: &PluginSettings) -> std::collections::HashSet<&'
         .filter_map(|control| specs.get(control.param_index))
         .map(|spec| spec.engine_key)
         .collect()
+}
+
+/// Canonical valid stereo custom geometry for the Ambisonics `custom`
+/// target-layout audit: name plus two ear-level non-LFE speakers.
+fn ambisonics_custom_stereo_geometry() -> serde_json::Value {
+    serde_json::json!({
+        "name": "stereo",
+        "speakers": [
+            {"label": "FL", "azimuth_deg": 30.0, "elevation_deg": 0.0, "is_lfe": false},
+            {"label": "FR", "azimuth_deg": -30.0, "elevation_deg": 0.0, "is_lfe": false},
+        ],
+    })
 }
 
 #[test]
@@ -234,6 +247,111 @@ fn toolbar_choice_forms_survive_factory_create_for_all_plugins() {
                     continue;
                 }
             };
+            // Ambisonics `custom` (index 8) legitimately requires user
+            // geometry: the missing-geometry refusal is correct production
+            // behavior, so probe the documented choice with a valid layout
+            // (auditing the wire form, not the validation), verify the
+            // accepted factory width/order/layout, and assert the
+            // missing-geometry refusal explicitly instead of failing on it.
+            if plugin_type == "ambisonics_decoder" && spec.engine_key == "target_layout" {
+                // Canonical valid stereo geometry (mirrors the decoder's
+                // documented `CustomDecoderConfig` example and the engine
+                // chain-test stereo fixture): name "stereo", FL +30 deg,
+                // FR -30 deg, ear level, no LFE.
+                let custom_geometry = ambisonics_custom_stereo_geometry();
+                // Short probe alias: this branch nests one level deeper
+                // than the generic loop, so the full factory call is
+                // factored out to keep probe lines within width.
+                let probe = |form: &serde_json::Value| {
+                    create_plugin(plugin_type, form, channels, SAMPLE_RATE)
+                };
+                let order_id = ParameterId::from("order");
+                let layout_id = ParameterId::from("target_layout");
+                for (index, label) in labels.iter().enumerate() {
+                    if *label != "custom" {
+                        let mut int_form = defaults.clone();
+                        int_form[spec.engine_key] = serde_json::json!(index);
+                        if let Err(error) = probe(&int_form) {
+                            failures.push(format!(
+                                "{plugin_type}.{} [{default_form}]: index {index} rejected: {error}",
+                                spec.engine_key
+                            ));
+                        }
+                        let mut label_form = defaults.clone();
+                        label_form[spec.engine_key] = serde_json::json!(label);
+                        if let Err(error) = probe(&label_form) {
+                            failures.push(format!(
+                                "{plugin_type}.{} [{default_form}]: label {label:?} rejected: {error}",
+                                spec.engine_key
+                            ));
+                        }
+                        continue;
+                    }
+                    for (form_name, form_value) in [
+                        (format!("index {index}"), serde_json::json!(index)),
+                        (format!("label {label:?}"), serde_json::json!(label)),
+                    ] {
+                        // The documented choice with valid geometry must be
+                        // accepted with the actual stereo width, first-order
+                        // input, and custom layout index.
+                        let mut with_geometry = defaults.clone();
+                        with_geometry[spec.engine_key] = form_value.clone();
+                        with_geometry["custom_layout"] = custom_geometry.clone();
+                        match probe(&with_geometry) {
+                            Ok(plugin) => {
+                                let width = plugin.output_channels();
+                                let inputs = plugin.input_channels();
+                                let order = plugin.get_parameter(&order_id);
+                                let layout = plugin.get_parameter(&layout_id);
+                                if width != 2 {
+                                    failures.push(format!(
+                                        "{plugin_type}.{} [{default_form}]: custom {form_name} produced {width} output channels; expected 2",
+                                        spec.engine_key
+                                    ));
+                                }
+                                if inputs != 4 {
+                                    failures.push(format!(
+                                        "{plugin_type}.{} [{default_form}]: custom {form_name} produced {inputs} input channels; expected 4",
+                                        spec.engine_key
+                                    ));
+                                }
+                                if order != Some(ParameterValue::Int(1)) {
+                                    failures.push(format!(
+                                        "{plugin_type}.{} [{default_form}]: custom {form_name} order is not first-order",
+                                        spec.engine_key
+                                    ));
+                                }
+                                if layout != Some(ParameterValue::Int(8)) {
+                                    failures.push(format!(
+                                        "{plugin_type}.{} [{default_form}]: custom {form_name} layout index is not 8",
+                                        spec.engine_key
+                                    ));
+                                }
+                            }
+                            Err(error) => failures.push(format!(
+                                "{plugin_type}.{} [{default_form}]: custom {form_name} with geometry rejected: {error}",
+                                spec.engine_key
+                            )),
+                        }
+                        // Missing geometry must keep being refused (never
+                        // silently defaulted); the refusal must name the layout.
+                        let mut missing_geometry = defaults.clone();
+                        missing_geometry[spec.engine_key] = form_value;
+                        match probe(&missing_geometry) {
+                            Ok(_) => failures.push(format!(
+                                "{plugin_type}.{} [{default_form}]: custom {form_name} without geometry must be refused",
+                                spec.engine_key
+                            )),
+                            Err(error) if error.contains("custom ambisonics layout") => {}
+                            Err(error) => failures.push(format!(
+                                "{plugin_type}.{} [{default_form}]: custom {form_name} refusal must name the custom layout, got: {error}",
+                                spec.engine_key
+                            )),
+                        }
+                    }
+                }
+                continue;
+            }
             for (index, label) in labels.iter().enumerate() {
                 // Loudness Auto mode legitimately requires measured SPL
                 // calibration; probe it in its valid configuration so the

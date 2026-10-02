@@ -96,8 +96,11 @@ fn run_active_case(channels: usize, block_size: usize, params: DeclickPluginPara
     let p99 = timings[timings.len() - 1];
     let max = timings.iter().copied().fold(0.0, f64::max);
     let deadline = block_size as f64 / 48_000.0 * 1000.0;
-    assert!(max < deadline, "callback exceeded its audio deadline");
     println!(
         "  {name} {channels}ch block={block_size}: p50/p99/max {p50:.3}/{p99:.3}/{max:.3} ms (deadline {deadline:.3} ms)"
+    );
+    assert!(
+        max < deadline,
+        "{name} {channels}ch block={block_size}: callback max {max:.3} ms exceeded audio deadline {deadline:.3} ms (p50 {p50:.3} ms)"
     );
 }

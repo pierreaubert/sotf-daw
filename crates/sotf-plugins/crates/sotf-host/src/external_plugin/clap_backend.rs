@@ -1,5 +1,6 @@
 use super::external_plugin_state::{
-    NativeAmbisonicsTargetLayout, NativeBandSplitOutputLayout, NativePluginAudioSetup,
+    NativeAmbisonicsCustomGeometry, NativeAmbisonicsTargetLayout, NativeBandSplitOutputLayout,
+    NativePluginAudioSetup,
 };
 use super::native_backend::{
     NativeAmbisonicsControls, NativeExternalPluginBackend, NativePluginMetadata,
@@ -641,12 +642,7 @@ impl NativeExternalPluginBackend for ClapBackend {
     fn ambisonics_layout_parameters(&self) -> Result<Option<(i32, i32)>, String> {
         let order_index =
             read_hidden_clap_integer_parameter(self.plugin, &self.metadata.name, "order", 6)?;
-        let target_layout = read_hidden_clap_integer_parameter(
-            self.plugin,
-            &self.metadata.name,
-            "target_layout",
-            7,
-        )?;
+        let target_layout = read_ambisonics_target_layout(self.plugin, &self.metadata.name)?;
 
         // NIH-plug exposes stepped CLAP values as zero-based step indices.
         Ok(Some((order_index + 1, target_layout)))
@@ -721,6 +717,9 @@ impl NativeExternalPluginBackend for ClapBackend {
     ) -> Result<(), String> {
         let recognized = match setup {
             NativePluginAudioSetup::Ambisonics { .. } => {
+                self.metadata.id == "org.spinorama.sotf.ambisonics"
+            }
+            NativePluginAudioSetup::AmbisonicsCustom { .. } => {
                 self.metadata.id == "org.spinorama.sotf.ambisonics"
             }
             NativePluginAudioSetup::BandSplit { .. } => {
@@ -1191,6 +1190,23 @@ mod tail_length_tests {
     }
 }
 
+/// Reads `target_layout` from legacy (0..=7) or custom-capable (0..=8)
+/// binaries. The shared reader pins `max_value` metadata exactly, so a
+/// metadata mismatch on the 8-step probe falls back to the 7-step read;
+/// any other failure is returned from the probe that observed it.
+fn read_ambisonics_target_layout(
+    plugin: *const clap_plugin,
+    plugin_name: &str,
+) -> Result<i32, String> {
+    match read_hidden_clap_integer_parameter(plugin, plugin_name, "target_layout", 8) {
+        Ok(value) => Ok(value),
+        Err(error) if error.contains("incompatible metadata") => {
+            read_hidden_clap_integer_parameter(plugin, plugin_name, "target_layout", 7)
+        }
+        Err(error) => Err(error),
+    }
+}
+
 fn read_hidden_clap_integer_parameter(
     plugin: *const clap_plugin,
     plugin_name: &str,
@@ -1510,6 +1526,24 @@ unsafe fn query_audio_channels(
             }
             validate_ambisonics_ports(plugin, ports, metadata, *order, *target_layout)?;
         }
+        if let Some(NativePluginAudioSetup::AmbisonicsCustom { order, custom }) = audio_setup
+        {
+            let (expected_input, expected_output) = NativePluginAudioSetup::AmbisonicsCustom {
+                order: *order,
+                custom: custom.clone(),
+            }
+            .channel_counts()?;
+            if input_count != 1
+                || output_count != 1
+                || input_channels != expected_input
+                || output_channels != expected_output
+            {
+                return Err(format!(
+                    "CLAP Ambisonics custom configuration negotiated {input_channels}→{output_channels} channels across {input_count}→{output_count} ports; expected {expected_input}→{expected_output} on one main port per direction",
+                ));
+            }
+            validate_ambisonics_custom_ports(plugin, ports, metadata, *order, custom)?;
+        }
         if let Some(NativePluginAudioSetup::BandSplit {
             num_bands,
             output_layout: NativeBandSplitOutputLayout::ClapPacked,
@@ -1564,6 +1598,25 @@ unsafe fn select_audio_setup(
                 config_id,
                 (usize::from(*order) + 1).pow(2),
                 target_layout.output_channels(),
+                Some((CLAP_PORT_AMBISONIC, CLAP_PORT_SURROUND)),
+            )
+        }
+        NativePluginAudioSetup::AmbisonicsCustom { order, custom } => {
+            // The custom geometry must exactly equal one advertised
+            // surround configuration; the returned target names that
+            // wire format. Anything else is rejected, never remapped.
+            let target_layout = custom.matching_clap_configuration(*order)?;
+            let target = target_layout.clap_configuration_target().ok_or_else(|| {
+                "CLAP standard surround does not represent the selected wide target".to_string()
+            })?;
+            let config_id = u32::from(order.saturating_sub(1))
+                .checked_mul(6)
+                .and_then(|base| base.checked_add(target))
+                .ok_or_else(|| "CLAP Ambisonics configuration id overflowed".to_string())?;
+            (
+                config_id,
+                (usize::from(*order) + 1).pow(2),
+                custom.total_channels(),
                 Some((CLAP_PORT_AMBISONIC, CLAP_PORT_SURROUND)),
             )
         }
@@ -1690,6 +1743,51 @@ unsafe fn validate_ambisonics_ports(
     order: u8,
     target_layout: NativeAmbisonicsTargetLayout,
 ) -> Result<(), String> {
+    let expected_map = target_layout.clap_channel_map().ok_or_else(|| {
+        "CLAP standard surround does not represent the selected wide target".to_string()
+    })?;
+    // SAFETY: Same lifecycle contract as the custom-geometry entry point below.
+    unsafe {
+        validate_ambisonics_ports_with_expected_map(
+            plugin,
+            ports,
+            metadata,
+            order,
+            expected_map,
+            &format!("requested target {target_layout:?}"),
+        )
+    }
+}
+
+unsafe fn validate_ambisonics_custom_ports(
+    plugin: *const clap_plugin,
+    ports: *const clap_plugin_audio_ports,
+    metadata: &NativePluginMetadata,
+    order: u8,
+    custom: &NativeAmbisonicsCustomGeometry,
+) -> Result<(), String> {
+    let expected_map = custom.clap_role_map()?;
+    // SAFETY: Same lifecycle contract as the named-target entry point above.
+    unsafe {
+        validate_ambisonics_ports_with_expected_map(
+            plugin,
+            ports,
+            metadata,
+            order,
+            &expected_map,
+            &format!("custom geometry '{}'", custom.name),
+        )
+    }
+}
+
+unsafe fn validate_ambisonics_ports_with_expected_map(
+    plugin: *const clap_plugin,
+    ports: *const clap_plugin_audio_ports,
+    metadata: &NativePluginMetadata,
+    order: u8,
+    expected_map: &[u8],
+    target_description: &str,
+) -> Result<(), String> {
     // SAFETY: The plugin has selected its configuration, is initialized, and
     // is not activated. Port/config extension tables remain plugin-owned.
     unsafe {
@@ -1783,9 +1881,6 @@ unsafe fn validate_ambisonics_ports(
                 metadata.name
             )
         })?;
-        let expected_map = target_layout.clap_channel_map().ok_or_else(|| {
-            "CLAP standard surround does not represent the selected wide target".to_string()
-        })?;
         let mut actual_map = vec![0u8; expected_map.len()];
         let map_len = get_channel_map(
             plugin,
@@ -1796,7 +1891,7 @@ unsafe fn validate_ambisonics_ports(
         );
         if map_len as usize != expected_map.len() || actual_map.as_slice() != expected_map {
             return Err(format!(
-                "CLAP Ambisonics plugin '{}' surround map {actual_map:?} does not match requested target {target_layout:?} map {expected_map:?}",
+                "CLAP Ambisonics plugin '{}' surround map {actual_map:?} does not match {target_description} map {expected_map:?}",
                 metadata.name
             ));
         }

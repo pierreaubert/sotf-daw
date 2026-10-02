@@ -397,6 +397,7 @@ use sotf_plugins::param_specs::transient_shaper as transient_shaper_specs;
 use sotf_plugins::param_specs::upmixer as upmixer_specs;
 use sotf_plugins::param_specs::xtc as xtc_specs;
 use sotf_plugins::plugin_crossover::CrossoverTopology;
+use sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData;
 
 fn default_true() -> bool {
     true
@@ -1334,6 +1335,13 @@ pub enum PluginSettings {
         link_mode: i32,
         #[serde(default = "default_hiss_reducer_transient_guard")]
         transient_guard: bool,
+        /// Measured noise-profile blob carried for save/reload restoration.
+        /// `None` (and a missing key) preserves the legacy profile-less
+        /// shape; the converter forwards `Some` into factory construction
+        /// JSON and omits `None`. Momentary `learn_noise`/`clear_profile`
+        /// actions are never stored here and never replay on load.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        captured_profile: Option<NoiseProfileData>,
     },
     SpeechDenoiser {
         #[serde(default = "default_speech_denoiser_enabled")]
@@ -2418,6 +2426,7 @@ impl PluginSettings {
                     curve_high: p(hr, "curve_high").default_f64(),
                     link_mode: p(hr, "link_mode").default_i32(),
                     transient_guard: p(hr, "transient_guard").default_bool(),
+                    captured_profile: None,
                 }
             }
             PluginType::SpeechDenoiser => {

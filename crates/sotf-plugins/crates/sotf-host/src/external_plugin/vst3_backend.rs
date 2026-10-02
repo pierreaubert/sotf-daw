@@ -1,3 +1,14 @@
+// The pinned vst3_com `VST3`/`vtable` expansion emits trailing
+// semicolons in expression position (rust#79813). The lint fires
+// inside the generated `impl` blocks, so per-item `allow` attributes
+// on the annotated structs do not reach it; allow that single
+// future-compat lint for this module only. The pinned dependency and
+// `-D warnings` are unchanged everywhere else.
+#![allow(
+    semicolon_in_expressions_from_non_local_macros,
+    reason = "pinned vst3_com vtable macro expansion"
+)]
+
 use super::external_plugin_state::{
     NativeBandSplitOutputLayout, NativeCrossoverInputLayout, NativeCrossoverMode,
     NativeCrossoverOutputLayout, NativeCrossoverTopology, NativePluginAudioSetup,
@@ -419,7 +430,7 @@ pub(super) struct Vst3Backend {
     input_events: VstPtr<dyn IEventList>,
     event_storage: Rc<RefCell<Vec<Event>>>,
     metadata: NativePluginMetadata,
-    output_bus_to_sotf: Option<&'static [usize]>,
+    output_bus_to_sotf: Option<Vec<usize>>,
     band_split_output_layout: Option<NativeBandSplitOutputLayout>,
     crossover_layout: Option<NativeCrossoverInputLayout>,
     output_bus_count: usize,
@@ -774,7 +785,11 @@ impl Vst3Backend {
             metadata,
             output_bus_to_sotf: match audio_setup {
                 Some(NativePluginAudioSetup::Ambisonics { target_layout, .. }) => {
-                    Some(target_layout.vst3_bus_to_sotf_permutation())
+                    Some(target_layout.vst3_bus_to_sotf_permutation().to_vec())
+                }
+                Some(NativePluginAudioSetup::AmbisonicsCustom { order, custom }) => {
+                    let (_, permutation) = custom.vst3_arrangement(*order)?;
+                    Some(permutation)
                 }
                 _ => None,
             },
@@ -1046,7 +1061,24 @@ impl NativeExternalPluginBackend for Vst3Backend {
                     if info.id == order_id {
                         (&mut order, 6, 1.0, 7.0, "order")
                     } else if info.id == target_layout_id {
-                        (&mut target_layout, 7, 0.0, 7.0, "target_layout")
+                        // Legacy binaries expose seven steps (named targets
+                        // 0..=7); custom-capable binaries expose eight
+                        // (0..=8). Values stay bounded by the advertised
+                        // maximum either way.
+                        if info.step_count != 7 && info.step_count != 8 {
+                            return Err(format!(
+                                "VST3 plugin '{}' structural parameter 'target_layout' has incompatible metadata",
+                                self.metadata.name
+                            ));
+                        }
+                        let maximum_value = if info.step_count == 8 { 8.0 } else { 7.0 };
+                        (
+                            &mut target_layout,
+                            info.step_count,
+                            0.0,
+                            maximum_value,
+                            "target_layout",
+                        )
                     } else {
                         continue;
                     };
@@ -1244,12 +1276,21 @@ impl NativeExternalPluginBackend for Vst3Backend {
                 self.metadata.name
             ));
         }
-        let NativePluginAudioSetup::Ambisonics {
-            order,
-            target_layout,
-        } = setup
-        else {
-            return Err("VST3 Ambisonics reconfiguration received a non-Ambisonics setup".into());
+        let (order, arrangement, output_permutation) = match setup {
+            NativePluginAudioSetup::Ambisonics { order, target_layout } => (
+                *order,
+                target_layout.vst3_speaker_arrangement(),
+                target_layout.vst3_bus_to_sotf_permutation().to_vec(),
+            ),
+            NativePluginAudioSetup::AmbisonicsCustom { order, custom } => {
+                let (mask, permutation) = custom.vst3_arrangement(*order)?;
+                (*order, mask, permutation)
+            }
+            _ => {
+                return Err(
+                    "VST3 Ambisonics reconfiguration received a non-Ambisonics setup".into(),
+                );
+            }
         };
         let (input_channels, output_channels) = setup.channel_counts()?;
         let output_bus_widths = [output_channels, 0, 0, 0];
@@ -1257,8 +1298,8 @@ impl NativeExternalPluginBackend for Vst3Backend {
             validate_vst3_output_bus_layout(None, 1, output_bus_widths, 1, output_channels)?;
 
         self.suspend_for_state_load()?;
-        let mut input_arrangement = ambisonics_speaker_arrangement(*order)?;
-        let mut output_arrangement = target_layout.vst3_speaker_arrangement();
+        let mut input_arrangement = ambisonics_speaker_arrangement(order)?;
+        let mut output_arrangement = arrangement;
         // SAFETY: The candidate component is initialized but deactivated. VST3
         // permits arrangement and process setup changes in this lifecycle state.
         unsafe {
@@ -1321,7 +1362,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
         self.resume_after_state_load()?;
         self.metadata.input_channels = input_channels;
         self.metadata.output_channels = output_channels;
-        self.output_bus_to_sotf = Some(target_layout.vst3_bus_to_sotf_permutation());
+        self.output_bus_to_sotf = Some(output_permutation);
         self.band_split_output_layout = None;
         self.crossover_layout = None;
         self.output_bus_count = 1;
@@ -1884,6 +1925,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
             for channel in 0..output_channels {
                 let sotf_channel = self
                     .output_bus_to_sotf
+                    .as_ref()
                     .map_or(channel, |permutation| permutation[channel]);
                 output[frame * output_channels + sotf_channel] =
                     self.output_storage[channel * self.max_block_frames + frame];
@@ -3037,6 +3079,32 @@ unsafe fn initialize_component(
                 .channel_counts()?;
                 input_arrangement = ambisonics_speaker_arrangement(*order)?;
                 output_arrangements[0] = target_layout.vst3_speaker_arrangement();
+                (
+                    input_channels,
+                    output_channels,
+                    1,
+                    [output_channels, 0, 0, 0],
+                    1,
+                    None,
+                    None,
+                )
+            }
+            Some(NativePluginAudioSetup::AmbisonicsCustom { order, custom }) => {
+                if initial_input_channels == 0 || initial_output_channels == 0 {
+                    return Err(format!(
+                        "VST3 Ambisonics plugin '{}' must expose one input and one output bus before layout negotiation",
+                        requested.name
+                    ));
+                }
+                let (input_channels, output_channels) =
+                    NativePluginAudioSetup::AmbisonicsCustom {
+                        order: *order,
+                        custom: custom.clone(),
+                    }
+                    .channel_counts()?;
+                input_arrangement = ambisonics_speaker_arrangement(*order)?;
+                output_arrangements[0] =
+                    custom.vst3_arrangement(*order).map(|(mask, _)| mask)?;
                 (
                     input_channels,
                     output_channels,

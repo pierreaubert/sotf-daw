@@ -539,9 +539,12 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     ///
     /// Returns `Err` if `sample_rate != 48000`; RNNoise is hard-coded for
     /// 48 kHz and will silently corrupt the frequency response at any other
-    /// rate.
+    /// rate. The selected model is parsed, transposed, and built here, off
+    /// the audio callback; a failed load retains the previous backend with
+    /// its accepted model and populated history.
     fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.inner.initialize(sample_rate, self.channels)?;
+        self.inner
+            .initialize_with_model(sample_rate, self.channels, self.model.backend_id())?;
         let latency = self.inner.latency_samples();
         debug_assert_eq!(latency, SPEECH_DENOISER_LATENCY_FRAMES);
         self.dry_delay = vec![vec![0.0; latency]; self.channels];

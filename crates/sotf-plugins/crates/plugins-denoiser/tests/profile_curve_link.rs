@@ -8,7 +8,7 @@ use plugins_denoiser::spectral_hiss::{
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::f64::consts::PI;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Barrier};
 
 const SR: u32 = 48_000;
 const RATE: f64 = 48_000.0;
@@ -24,24 +24,29 @@ const PARTITIONS: [usize; 5] = [1, 64, 511, 73, 997];
 
 thread_local! {
     static COUNTING: Cell<bool> = const { Cell::new(false) };
+    static THREAD_ALLOCS: Cell<usize> = const { Cell::new(0) };
+    static THREAD_FREES: Cell<usize> = const { Cell::new(0) };
 }
-
-static ALLOCS: AtomicUsize = AtomicUsize::new(0);
-static FREES: AtomicUsize = AtomicUsize::new(0);
 
 struct CountingAlloc;
 
 unsafe impl GlobalAlloc for CountingAlloc {
+    // Counting touches only the calling thread's own cells (`Cell` is
+    // `!Sync` by construction) and delegates every request to `System`
+    // unchanged, so overlapping windows on other threads cannot observe
+    // or disturb this thread's totals. The cells are const-initialized
+    // and warmed before arming, so the counting path allocates nothing
+    // and cannot re-enter the allocator.
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         if COUNTING.with(|flag| flag.get()) {
-            ALLOCS.fetch_add(1, Ordering::Relaxed);
+            THREAD_ALLOCS.with(|count| count.set(count.get() + 1));
         }
         unsafe { System.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         if COUNTING.with(|flag| flag.get()) {
-            FREES.fetch_add(1, Ordering::Relaxed);
+            THREAD_FREES.with(|count| count.set(count.get() + 1));
         }
         unsafe { System.dealloc(ptr, layout) }
     }
@@ -52,19 +57,21 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 
 /// Runs `op` with allocation counting armed, returning (allocs, frees).
 ///
-/// Counting is thread-local, so other test threads in this binary never
-/// pollute the measurement. Callers must allocate all buffers before.
+/// The arm flag and both totals live in this thread's own cells, so
+/// overlapping measurements on other test threads never pollute this
+/// window. Callers must allocate all buffers before.
 fn count_allocs(op: impl FnOnce()) -> (usize, usize) {
-    // Warm the thread-local flag outside the measurement.
+    // Warm and zero every thread-local cell outside the measurement so
+    // the armed window performs no counter initialization of its own.
     COUNTING.with(|flag| flag.set(false));
-    ALLOCS.store(0, Ordering::Relaxed);
-    FREES.store(0, Ordering::Relaxed);
+    THREAD_ALLOCS.with(|count| count.set(0));
+    THREAD_FREES.with(|count| count.set(0));
     COUNTING.with(|flag| flag.set(true));
     op();
     COUNTING.with(|flag| flag.set(false));
     (
-        ALLOCS.load(Ordering::Relaxed),
-        FREES.load(Ordering::Relaxed),
+        THREAD_ALLOCS.with(|count| count.get()),
+        THREAD_FREES.with(|count| count.get()),
     )
 }
 
@@ -1402,6 +1409,59 @@ fn rejected_setter_errors_are_balanced_and_bounded() {
     assert!(
         allocs <= 8,
         "rejected setters over-allocated: {allocs} allocs"
+    );
+}
+
+#[test]
+fn allocation_counting_is_isolated_across_threads() {
+    // Overlapping measurement windows on two threads: one performs a
+    // single known heap round-trip while the other performs none. The
+    // barriers inside both armed windows force the windows to overlap,
+    // so shared process-global totals would leak the allocation into
+    // the quiet thread's reading. The exact (1, 1) on the allocating
+    // thread pins that counting still observes real allocations (a
+    // silently dead counter would read (0, 0) on both threads and fail
+    // here instead of passing vacuously).
+    let barrier = Arc::new(Barrier::new(2));
+    let probe = |allocate: bool| {
+        let barrier = Arc::clone(&barrier);
+        std::thread::spawn(move || {
+            // Unarmed rendezvous first, so any first-use synchronization
+            // state initializes outside the measurement window.
+            barrier.wait();
+            count_allocs(|| {
+                barrier.wait();
+                if allocate {
+                    // Arbitrary payload; the bound pins the count (one
+                    // alloc plus its free), not the value.
+                    let owned = Box::new(0x51ab_0001u64);
+                    std::hint::black_box(&owned);
+                    drop(owned);
+                } else {
+                    // Stack-only work of comparable duration; must not
+                    // allocate or observe the sibling thread's counts.
+                    let mut checksum = 0u64;
+                    for step in 0..1024 {
+                        checksum = checksum.wrapping_add(step);
+                        std::hint::black_box(checksum);
+                    }
+                    std::hint::black_box(checksum);
+                }
+                barrier.wait();
+            })
+        })
+    };
+    let allocator = probe(true);
+    let quiet = probe(false);
+    assert_eq!(
+        allocator.join().expect("allocator thread panicked"),
+        (1, 1),
+        "allocating thread must count exactly its own Box round-trip"
+    );
+    assert_eq!(
+        quiet.join().expect("quiet thread panicked"),
+        (0, 0),
+        "quiet thread must not observe another thread's allocation"
     );
 }
 

@@ -77,13 +77,19 @@ Strength automation is realtime-safe and allocation-free; rejected values
 (NaN, infinite, out of range, wrong type) retain the accepted target and
 audio history.
 
-`model` names the bundled inference model (`RNNoise Full`, index 0). It is a
-structural parameter: unknown identities are rejected transactionally with
-the running model continuing unchanged, same-value writes are no-ops, and a
-changed identity on a live instance requires a host graph rebuild from
-serialized configuration so weight preparation never runs on the audio
-thread. The registry is append-only; future models add labels without
-renumbering index 0.
+`model` names the inference weights: `RNNoise Full` (index 0, bundled
+builtin), `RNNoise Legacy LQ` (index 1), and `RNNoise Legacy SH` (index 2).
+The alternates are real staged `.rnnn` v1 weights from
+GregorR/rnnoise-models@3eee541 (see
+`plugins-denoiser/models/legacy-rnnoise-nu/` and its source manifest for
+suites, dates, sizes, and SHA-256); their Tanh VAD/denoise GRUs are honored
+by the checked loader, and all three serve identical framing, 960-frame
+latency, and stereo linking. It is a structural parameter: unknown
+identities are rejected transactionally with the running model continuing
+unchanged, same-value writes are no-ops, and a changed identity on a live
+instance requires a host graph rebuild from serialized configuration so
+weight parsing and preparation never run on the audio thread. The registry
+is append-only; future models add labels without renumbering index 0.
 
 Saved state is schema v2. V1 state carrying only `enabled` loads with
 strength 1.0 and the bundled model, reproducing v1 audio bit-exactly.

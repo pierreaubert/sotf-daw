@@ -33,7 +33,7 @@ use crate::{
     DownmixPluginParams, DynamicEqPlugin, DynamicEqPluginParams, EqPlugin, EqPluginParams,
     ExpanderPlugin, ExpanderPluginParams, GainPlugin, GainPluginParams, GatePlugin,
     GatePluginParams, HissReducerPlugin, HissReducerPluginParams, LimiterPlugin,
-    LimiterPluginParams, LinearPhaseEqPlugin, LinearPhaseEqPluginParams,
+    LimiterPluginParams, LinearPhaseEqPluginParams,
     LoudnessCompensationPlugin, LoudnessCompensationPluginParams, LoudnessMonitorPlugin,
     MatrixPlugin, MonoToStereoPlugin, MonoToStereoPluginParams, MultibandCompressorPlugin,
     MultibandCompressorPluginParams, MultibandExpanderPlugin, MultibandExpanderPluginParams,
@@ -349,9 +349,14 @@ pub fn create_plugin(
         "linear_phase_eq" => {
             let params: LinearPhaseEqPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse linear-phase EQ params: {e}"))?;
-            let plugin = LinearPhaseEqPlugin::from_params(channels, sample_rate, params)
+            let plugin =
+                crate::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqDynamicPlugin::from_params(
+                    channels,
+                    sample_rate,
+                    params,
+                )
                 .map_err(|e| format!("Failed to create linear-phase EQ plugin: {e}"))?;
-            Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
+            Ok(Box::new(plugin))
         }
 
         "spectral_compressor" => {

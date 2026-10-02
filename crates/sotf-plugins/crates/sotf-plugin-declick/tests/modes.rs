@@ -27,6 +27,14 @@ const HOT_RESIDUAL: f32 = 0.5;
 /// flush zeros in its post window.
 const FULL_CONTEXT: usize = 8;
 
+/// Report a measured worst case for the coordinator record.
+///
+/// Visible with `cargo test -- --nocapture`; assertions below never depend
+/// on these lines.
+fn report(label: &str, worst: f32) {
+    eprintln!("[declick-accuracy] {label} worst={worst:.6}");
+}
+
 fn params() -> DeclickPluginParams {
     DeclickPluginParams {
         sensitivity: 2.0,
@@ -156,12 +164,18 @@ fn a1_precision_recall_repair_error_and_clean_damage() {
                 precision >= 0.95,
                 "mode={mode} bands={bands} precision={precision} false_hot={false_hot}"
             );
+            eprintln!(
+                "[declick-accuracy] mode={mode} bands={bands} recall={recall:.4} precision={precision:.4}"
+            );
 
             // Repair error at click frames: accepted 5%-of-amplitude bound.
             // Signal damage away from clicks: accepted 0.05 absolute bound.
+            let mut worst_repair = 0.0_f32;
+            let mut worst_damage = 0.0_f32;
             for frame in 32..1024 {
                 let error = (repaired[frame + latency] - clean[frame]).abs();
                 if is_click[frame] {
+                    worst_repair = worst_repair.max(error);
                     assert!(
                         error < CLICK_AMP * 0.05,
                         "mode={mode} bands={bands} frame={frame} error={error}"
@@ -169,12 +183,15 @@ fn a1_precision_recall_repair_error_and_clean_damage() {
                 } else if !(frame.saturating_sub(2)..=frame + 2)
                     .any(|near| plan.iter().any(|&(s, w, _)| near >= s && near < s + w))
                 {
+                    worst_damage = worst_damage.max(error);
                     assert!(
                         error < 0.05,
                         "mode={mode} bands={bands} frame={frame} damage={error}"
                     );
                 }
             }
+            report(&format!("mode={mode} bands={bands} repair-error"), worst_repair);
+            report(&format!("mode={mode} bands={bands} damage"), worst_damage);
         }
     }
 }
@@ -221,18 +238,22 @@ fn a1_periodic_mode_repairs_grids_and_protects_off_grid_transients() {
     // Locked grid clicks repair to the accepted bound; the guarded drum
     // transient survives within the accepted damage bound. Grid positions
     // overlapping the drum tail are skipped (mixed content).
+    let mut worst_grid = 0.0_f32;
     for &position in &grid {
         if position < 1300 || (drum_at..drum_at + 120).contains(&position) {
             continue;
         }
         let error = (output[position + latency] - clean[position]).abs();
+        worst_grid = worst_grid.max(error);
         assert!(error < 0.15, "grid click at {position}: error={error}");
     }
+    report("periodic grid repair-error", worst_grid);
     let mut drum_damage = 0.0_f32;
     for frame in drum_at..drum_at + 120 {
         drum_damage = drum_damage.max((output[frame + latency] - drum_clean[frame]).abs());
     }
     assert!(drum_damage < 0.05, "drum damage={drum_damage}");
+    report("periodic drum damage", drum_damage);
 
     // Without repetition the periodic tracker never locks, so periodic and
     // random outputs are exactly equal on the drum-only signal.
@@ -321,6 +342,7 @@ fn a1_clean_controls_are_preserved() {
                         worst < 1.0e-5,
                         "mode={mode} bands={bands} control={name} worst={worst}"
                     );
+                    report(&format!("mode={mode} bands={bands} control={name}"), worst);
                 }
             }
         }
@@ -354,6 +376,7 @@ fn a1_clean_controls_are_preserved() {
             .map(|(a, b)| (a - b).abs())
             .fold(0.0_f32, f32::max);
         assert!(worst < 0.05, "mode={mode} drum damage={worst}");
+        report(&format!("gradual drum mode={mode}"), worst);
     }
 }
 
@@ -501,6 +524,7 @@ fn a2_residual_and_repaired_sum_to_delayed_dry() {
             // residual = dry - repaired in f32, so the regrouped sum
             // matches dry within a few ulps on sub-4.0 signals.
             assert!(worst < 1.0e-5, "mode={mode} bands={bands} worst={worst}");
+            report(&format!("mode={mode} bands={bands} regroup"), worst);
         }
     }
 }
@@ -509,6 +533,7 @@ fn a2_residual_and_repaired_sum_to_delayed_dry() {
 fn a2_skew_and_crossover_keep_detection_alive() {
     let clean = sine(512, 440.0, SR as f32, 0.25);
     let (signal, _) = corrupt(&clean, &[(200, 1, 1.0)]);
+    let mut worst = 0.0_f32;
     for bands in [1, 2] {
         for skew in [-1.0, 1.0] {
             for crossover_hz in [80.0, 4000.0, 12_000.0] {
@@ -527,6 +552,7 @@ fn a2_skew_and_crossover_keep_detection_alive() {
                 let latency = plugin.latency_samples();
                 let output = run(&mut plugin, &signal, 1, SR);
                 let error = (output[200 + latency] - clean[200]).abs();
+                worst = worst.max(error);
                 assert!(
                     error < 0.15,
                     "bands={bands} skew={skew} crossover={crossover_hz} error={error}"
@@ -534,6 +560,7 @@ fn a2_skew_and_crossover_keep_detection_alive() {
             }
         }
     }
+    report("skew/crossover repair-error", worst);
 }
 
 #[test]
@@ -948,6 +975,7 @@ fn a1_two_phase_grid_repairs_both_phases() {
             "phase {name}: recall={recall} ({repaired}/{})",
             late.len()
         );
+        eprintln!("[declick-accuracy] two-phase {name} recall={recall:.4}");
     }
 }
 
@@ -997,10 +1025,14 @@ fn a1_slow_repetition_falls_back_to_random_style_repair() {
         .map(|(a, b)| (a - b).abs())
         .fold(0.0_f32, f32::max);
     assert!(worst < 1.0e-6, "fallback drift {worst}");
+    report("vinyl fallback drift", worst);
+    let mut worst_repair = 0.0_f32;
     for &position in &positions {
         let error = (periodic_out[position + latency] - clean[position]).abs();
+        worst_repair = worst_repair.max(error);
         assert!(error < 0.15, "position={position} error={error}");
     }
+    report("vinyl fallback repair-error", worst_repair);
 }
 
 #[test]
@@ -1051,6 +1083,7 @@ fn a1_independent_channels_with_different_periods_both_repair() {
             "channel {ch}: recall={recall} ({repaired}/{})",
             late.len()
         );
+        eprintln!("[declick-accuracy] per-channel {ch} recall={recall:.4}");
     }
 }
 
@@ -1092,4 +1125,225 @@ fn a3_initial_skew_applies_immediately_at_construction() {
     settled.reset();
     let out_b = run(&mut settled, &signal, 1, SR);
     assert_eq!(out_a, out_b);
+}
+
+#[test]
+fn a2_skew_changes_multiband_output_somewhere_in_sweep() {
+    // Skew shifts per-band thresholds 4x between -1 and +1 while the
+    // unskewed supervisor gate stays put, so across a 50x sensitivity
+    // sweep some band decision must flip on the smeared click residuals
+    // unless skew is a true no-op (identical splits, decisions, and
+    // baselines would render bit-identically at every setting). Each
+    // setting's delta is recorded; no magnitude is pinned.
+    let mut signal = sine(512, 440.0, SR as f32, 0.25);
+    signal[200] += 6.0;
+    for slot in &mut signal[300..303] {
+        *slot += 6.0;
+    }
+    let render = |sensitivity: f32, skew: f32| {
+        let mut plugin = DeclickPlugin::from_params(
+            1,
+            SR,
+            DeclickPluginParams {
+                bands: 1,
+                crossover_hz: 4000.0,
+                frequency_skew: skew,
+                sensitivity,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        run(&mut plugin, &signal, 1, SR)
+    };
+    let mut hits = 0;
+    for sensitivity in [1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 50.0] {
+        let negative = render(sensitivity, -1.0);
+        let positive = render(sensitivity, 1.0);
+        assert!(negative.iter().all(|sample| sample.is_finite()));
+        assert!(positive.iter().all(|sample| sample.is_finite()));
+        let delta = negative
+            .iter()
+            .zip(positive.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        eprintln!("[declick-accuracy] skew sweep sensitivity={sensitivity} delta={delta:.6}");
+        if delta > 1.0e-6 {
+            hits += 1;
+        }
+    }
+    assert!(
+        hits > 0,
+        "skew rendered bit-identically at every sweep setting"
+    );
+}
+
+#[test]
+fn a2_crossover_frequency_changes_multiband_output() {
+    // Different splits produce different band signals, so repaired values
+    // differ wherever any band repairs. A repaired click at sensitivity 3
+    // (residual far above threshold) therefore separates crossover extremes
+    // by interpolation-scale deltas, not rounding.
+    let clean = sine(512, 440.0, SR as f32, 0.25);
+    let (signal, _) = corrupt(&clean, &[(200, 1, 1.0), (300, 3, -1.0)]);
+    for bands in [1, 2] {
+        let render = |crossover_hz: f32| {
+            let mut plugin = DeclickPlugin::from_params(
+                1,
+                SR,
+                DeclickPluginParams {
+                    bands,
+                    crossover_hz,
+                    sensitivity: 3.0,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            run(&mut plugin, &signal, 1, SR)
+        };
+        let low = render(80.0);
+        let high = render(12_000.0);
+        assert!(low.iter().all(|sample| sample.is_finite()));
+        assert!(high.iter().all(|sample| sample.is_finite()));
+        let delta = low
+            .iter()
+            .zip(high.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        eprintln!("[declick-accuracy] crossover bands={bands} delta={delta:.6}");
+        assert!(
+            delta > 1.0e-6,
+            "bands={bands}: crossover extremes rendered bit-identically"
+        );
+    }
+}
+
+#[test]
+fn a1_multiband_periodic_grid_repairs_within_bound() {
+    // The hardest topology: per-band period trackers plus the supervisor
+    // (all recomputing past frame 1024) gating smeared band repairs. Loud
+    // grid clicks must repair within the uniform bound after the lock
+    // window; a mistracking band would guard grid frames and fail recall.
+    let frames = 1500;
+    let clean = sine(frames, 220.0, SR as f32, 0.2);
+    let mut signal = clean.clone();
+    let mut grid = Vec::new();
+    for start in (140..frames - 64).step_by(100) {
+        signal[start] += CLICK_AMP;
+        grid.push(start);
+    }
+    for bands in [1, 2] {
+        let mut plugin = DeclickPlugin::from_params(
+            1,
+            SR,
+            DeclickPluginParams {
+                mode: 1,
+                bands,
+                sensitivity: 2.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let latency = plugin.latency_samples();
+        let output = run(&mut plugin, &signal, 1, SR);
+        assert!(
+            output.iter().all(|sample| sample.is_finite()),
+            "bands={bands}"
+        );
+        let late: Vec<usize> = grid.iter().copied().filter(|&p| p >= 1024).collect();
+        assert!(!late.is_empty(), "bands={bands}: no post-lock grid clicks");
+        let mut worst = 0.0_f32;
+        let mut repaired = 0;
+        for &position in &late {
+            let error = (output[position + latency] - clean[position]).abs();
+            worst = worst.max(error);
+            if error < 0.15 {
+                repaired += 1;
+            }
+        }
+        let recall = repaired as f32 / late.len() as f32;
+        assert!(
+            recall >= 0.95,
+            "bands={bands}: recall={recall} ({repaired}/{})",
+            late.len()
+        );
+        eprintln!("[declick-accuracy] multiband-periodic bands={bands} recall={recall:.4}");
+        report(&format!("multiband-periodic bands={bands} repair-error"), worst);
+    }
+}
+
+#[test]
+fn a3_rejected_batch_preserves_populated_history_exactly() {
+    // Rejection validates into a local staging struct before touching DSP
+    // state, so processing after a rejected batch or label is bit-identical
+    // to an uninterrupted run over correlated, detector-populated history.
+    let clean = sine(1024, 440.0, SR as f32, 0.25);
+    let (mono, _) = corrupt(&clean, &click_plan());
+    let mut signal = vec![0.0; 1024 * 2];
+    for frame in 0..1024 {
+        signal[frame * 2] = mono[frame];
+        signal[frame * 2 + 1] = mono[frame] * 0.5;
+    }
+    let template = DeclickPluginParams {
+        mode: 1,
+        bands: 1,
+        repair_width: 2,
+        sensitivity: 2.0,
+        ..Default::default()
+    };
+    let drive = |plugin: &mut DeclickPlugin, reject_midway: bool| {
+        let mut out = Vec::new();
+        for (block, frames) in [(0, 256), (256, 256), (512, 512)] {
+            let mut chunk = signal[block * 2..(block + frames) * 2].to_vec();
+            plugin
+                .process_in_place(&mut chunk, &ProcessContext::new(SR, frames))
+                .unwrap();
+            out.extend_from_slice(&chunk);
+            if reject_midway && block == 0 {
+                let mut batch = ParameterSet::new();
+                batch.insert(
+                    ParameterId::from("sensitivity"),
+                    ParameterValue::Float(9.0),
+                );
+                batch.insert(ParameterId::from("bands"), ParameterValue::Int(0));
+                batch.insert(ParameterId::from("unknown"), ParameterValue::Float(1.0));
+                assert!(plugin.apply_values(batch).is_err());
+                assert!(
+                    plugin
+                        .set_parameter(
+                            ParameterId::from("mode"),
+                            ParameterValue::String("Bogus".into())
+                        )
+                        .is_err()
+                );
+                // Neither the valid entries nor the structural entry applied.
+                assert_eq!(
+                    plugin.get_parameter(&ParameterId::from("sensitivity")),
+                    Some(ParameterValue::Float(2.0))
+                );
+                assert_eq!(
+                    plugin.get_parameter(&ParameterId::from("bands")),
+                    Some(ParameterValue::Int(1))
+                );
+                assert_eq!(
+                    plugin.get_parameter(&ParameterId::from("mode")),
+                    Some(ParameterValue::Int(1))
+                );
+            }
+        }
+        let latency = plugin.latency_samples();
+        loop {
+            let mut tail = vec![0.0; latency * 2];
+            let status = plugin
+                .drain(&mut tail, &ProcessContext::new(SR, latency))
+                .unwrap();
+            out.extend_from_slice(&tail[..status.frames * 2]);
+            if status.complete {
+                return out;
+            }
+        }
+    };
+    let mut reference = DeclickPlugin::from_params(2, SR, template.clone()).unwrap();
+    let expected = drive(&mut reference, false);
+    let mut interrupted = DeclickPlugin::from_params(2, SR, template).unwrap();
+    assert_eq!(drive(&mut interrupted, true), expected);
 }

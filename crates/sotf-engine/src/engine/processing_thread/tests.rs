@@ -1079,3 +1079,270 @@ fn recycle_queue_prefill_is_generous() {
         "recycle buffers should be sized for high channel counts and resampler headroom"
     );
 }
+
+type HissSnapshot = sotf_plugins::plugin_hiss_reducer::snapshot::ProfileSnapshot;
+
+fn hiss_command_state(params: serde_json::Value) -> ProcessingState {
+    let config = PluginConfig::new("hiss_reducer", params);
+    let (mut host, warnings) = build_plugin_host(&[config], 48_000, 1)
+        .expect("hiss host must build");
+    assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+    host.build().expect("host must build");
+    let mut state = ProcessingState::new(
+        1,
+        48_000,
+        #[cfg(feature = "streaming")]
+        None,
+    );
+    *state.host = host;
+    state
+}
+
+fn hiss_send_set_parameter(
+    state: &mut ProcessingState,
+    param_id: &str,
+    value: &str,
+) -> super::super::ProcessingResponse {
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(32);
+    handle_processing_command(
+        request(ProcessingCommand::SetParameter {
+            plugin_index: 0,
+            param_id: param_id.to_string(),
+            value: value.to_string(),
+        }),
+        state,
+        &response_tx,
+        &event_tx,
+    );
+    response_rx.recv().expect("handler must reply").response
+}
+
+fn hiss_command_snapshot(host: &PluginHost) -> std::sync::Arc<HissSnapshot> {
+    sotf_plugins::Host::get_plugin_data(host, 0)
+        .expect("host must transport Hiss snapshot")
+        .downcast::<HissSnapshot>()
+        .expect("snapshot must downcast")
+}
+
+fn hiss_command_noise(frames: usize, amplitude: f32, seed: u32) -> Vec<f32> {
+    let mut state = seed;
+    (0..frames)
+        .map(|_| {
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            amplitude * ((state as f32 / u32::MAX as f32) * 2.0 - 1.0)
+        })
+        .collect()
+}
+
+fn hiss_command_hiss(frames: usize, amplitude: f32, seed: u32) -> Vec<f32> {
+    let white = hiss_command_noise(frames, 1.0, seed);
+    let mut previous = 0.0f32;
+    white
+        .iter()
+        .map(|&sample| {
+            let high_pass = amplitude * (sample - previous);
+            previous = sample;
+            high_pass
+        })
+        .collect()
+}
+
+fn hiss_command_render(
+    host: &mut PluginHost,
+    input: &[f32],
+    block: usize,
+) -> Vec<f32> {
+    let mut rendered = Vec::with_capacity(input.len());
+    for chunk in input.chunks(block) {
+        let mut output = vec![0.0f32; chunk.len()];
+        let frames = host.process(chunk, &mut output).expect("host must process");
+        assert_eq!(frames, chunk.len());
+        rendered.extend_from_slice(&output);
+    }
+    rendered
+}
+
+fn hiss_command_drain(host: &mut PluginHost) -> Vec<f32> {
+    let mut output = Vec::new();
+    let capacity = host.drain_output_frames_max().max(1);
+    for _ in 0..4096 {
+        let mut block = vec![0.0f32; capacity];
+        let status = host.drain(&mut block).expect("host must drain");
+        output.extend_from_slice(&block[..status.frames]);
+        if status.complete {
+            return output;
+        }
+    }
+    panic!("host drain did not complete");
+}
+
+#[test]
+fn engine_set_parameter_drives_hiss_capture_cancel_and_clear() {
+    let mut state = hiss_command_state(serde_json::json!({}));
+    let snapshot = hiss_command_snapshot(&state.host);
+    let gen_empty = snapshot.try_status().expect("status").generation;
+    assert!(snapshot.try_export().expect("export").is_none());
+
+    // Start through production submission, string parsing, and response.
+    let response = hiss_send_set_parameter(&mut state, "learn_noise", "true");
+    assert!(
+        matches!(
+            response,
+            super::super::ProcessingResponse::ParameterUpdated {
+                output_channels: 1,
+                ..
+            }
+        ),
+        "start must acknowledge with updated metadata"
+    );
+    assert_eq!(snapshot.capture_state(), (true, 0.0));
+
+    let colored = hiss_command_hiss(48_000, 0.035, 0xe940c);
+    hiss_command_render(&mut state.host, &colored[..12288], 4096);
+    let (active, progress) = snapshot.capture_state();
+    assert!(active);
+    assert_eq!(progress, 12288f32 / 48000f32);
+    assert!(snapshot.try_export().expect("export").is_none());
+    assert_eq!(snapshot.try_status().expect("status").generation, gen_empty);
+
+    hiss_command_render(&mut state.host, &colored[12288..], 4096);
+    assert_eq!(snapshot.capture_state(), (false, 0.0));
+    let done = snapshot
+        .try_export()
+        .expect("export")
+        .expect("capture must export");
+    assert_eq!(done.profile.format_version, 2);
+    assert!(done.generation > gen_empty);
+
+    // Restart then cancel: the prior accepted history survives intact.
+    let accepted = done.profile.clone();
+    let response = hiss_send_set_parameter(&mut state, "learn_noise", "true");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::ParameterUpdated { .. }
+    ));
+    hiss_command_render(&mut state.host, &colored[..8192], 4096);
+    assert!(snapshot.capture_state().0);
+    let during = snapshot
+        .try_export()
+        .expect("export")
+        .expect("prior stays readable");
+    assert_eq!(during.profile, accepted);
+    let response = hiss_send_set_parameter(&mut state, "learn_noise", "false");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::ParameterUpdated { .. }
+    ));
+    assert_eq!(snapshot.capture_state(), (false, 0.0));
+    let kept = snapshot
+        .try_export()
+        .expect("export")
+        .expect("cancel keeps prior");
+    assert_eq!(kept.profile, accepted);
+
+    // Deliberate clear drops the accepted profile through the same path.
+    let response = hiss_send_set_parameter(&mut state, "clear_profile", "true");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::ParameterUpdated { .. }
+    ));
+    assert!(snapshot.try_export().expect("export").is_none());
+
+    // Structural rebuild policy still refuses through production handling.
+    let response = hiss_send_set_parameter(&mut state, "spectral_mode", "true");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::Error(message)
+            if message.contains("requires rebuilding")
+    ));
+}
+
+#[test]
+fn engine_set_parameter_hiss_carrier_rebuild_matches_audio_and_eof() {
+    let mut state = hiss_command_state(serde_json::json!({
+        "spectral_mode": true,
+        "strength": 0.85,
+    }));
+    let response = hiss_send_set_parameter(&mut state, "learn_noise", "true");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::ParameterUpdated { .. }
+    ));
+    let colored = hiss_command_hiss(48_000, 0.035, 0xe940c);
+    hiss_command_render(&mut state.host, &colored, 4096);
+    let snapshot = hiss_command_snapshot(&state.host);
+    let live = snapshot
+        .try_export()
+        .expect("export")
+        .expect("live capture");
+    assert_eq!(live.profile.format_version, 2);
+    let response = hiss_send_set_parameter(&mut state, "use_captured_profile", "true");
+    assert!(matches!(
+        response,
+        super::super::ProcessingResponse::ParameterUpdated { .. }
+    ));
+    state.host.reset();
+
+    let hiss = hiss_command_noise(16384, 0.04, 0xe9f1);
+    let tone = hiss_command_noise(16384, 0.06, 0x51ab);
+    let mix: Vec<f32> = hiss
+        .iter()
+        .zip(tone.iter())
+        .map(|(first, second)| first + second)
+        .collect();
+    let mut original = hiss_command_render(&mut state.host, &mix, 4096);
+    original.extend(hiss_command_drain(&mut state.host));
+    assert!(original.iter().all(|sample| sample.is_finite()));
+    assert_ne!(
+        original[1024..16384],
+        mix[0..15360],
+        "engaged capture must process audio"
+    );
+
+    // Typed carrier round-trip from the live export; never handcrafted.
+    let mut settings =
+        PluginSettings::default_for(&PluginType::HissReducer).expect("hiss settings");
+    if let PluginSettings::HissReducer {
+        captured_profile,
+        use_captured_profile,
+        spectral_mode,
+        strength,
+        ..
+    } = &mut settings
+    {
+        *captured_profile = Some(live.profile.clone());
+        *use_captured_profile = true;
+        *spectral_mode = true;
+        *strength = 0.85;
+    } else {
+        panic!("expected HissReducer settings");
+    }
+    let json = serde_json::to_value(&settings).expect("encode");
+    assert!(json["HissReducer"].get("captured_profile").is_some());
+    let restored: PluginSettings = serde_json::from_value(json).expect("decode");
+    let config = restored.to_plugin_config(48_000.0);
+    assert!(config.parameters.get("captured_profile").is_some());
+    assert!(config.parameters.get("learn_noise").is_none());
+    assert!(config.parameters.get("clear_profile").is_none());
+
+    // Fresh rebuild from the converted carrier through the same builder.
+    let (mut rebuilt_host, warnings) =
+        build_plugin_host(std::slice::from_ref(&config), 48_000, 1).expect("rebuild");
+    assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+    rebuilt_host.build().expect("rebuilt host must build");
+    let rebuilt_snapshot = hiss_command_snapshot(&rebuilt_host);
+    let rebuilt_export = rebuilt_snapshot
+        .try_export()
+        .expect("export")
+        .expect("rebuilt carrier");
+    assert_eq!(rebuilt_export.profile, live.profile);
+
+    let mut rebuilt = hiss_command_render(&mut rebuilt_host, &mix, 4096);
+    rebuilt.extend(hiss_command_drain(&mut rebuilt_host));
+    assert!(rebuilt.iter().all(|sample| sample.is_finite()));
+    assert_eq!(
+        original, rebuilt,
+        "typed-carrier rebuild must match live audio and EOF bit-exactly"
+    );
+}

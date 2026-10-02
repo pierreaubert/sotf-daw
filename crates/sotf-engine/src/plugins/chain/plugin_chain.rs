@@ -2884,7 +2884,10 @@ mod tests {
         .unwrap();
         let mut loaded = PluginChain::new();
         let warnings = loaded.load_from_file(fixture.path(), "bad-custom").unwrap();
-        assert_eq!(loaded.plugins.len(), 0);
+        // Loading installs the four permanent rack plugins even when every
+        // user plugin is rejected. None of them may mask a rejected decoder.
+        assert_eq!(loaded.plugins.iter().filter(|p| !p.permanent).count(), 0);
+        assert_eq!(loaded.plugins.iter().filter(|p| p.permanent).count(), 4);
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].contains("custom layout failed validation"));
 
@@ -2927,7 +2930,8 @@ mod tests {
         let wide_warnings = wide_loaded
             .load_from_file(fixture.path(), "wide-custom")
             .unwrap();
-        assert_eq!(wide_loaded.plugins.len(), 0);
+        assert_eq!(wide_loaded.plugins.iter().filter(|p| !p.permanent).count(), 0);
+        assert_eq!(wide_loaded.plugins.iter().filter(|p| p.permanent).count(), 4);
         assert_eq!(wide_warnings.len(), 1);
         assert!(
             wide_warnings[0].contains("17 speakers")
@@ -3024,15 +3028,21 @@ mod tests {
         let warnings = loaded
             .load_from_file(fixture.path(), "mid-bad-custom")
             .unwrap();
-        assert_eq!(loaded.plugins.len(), 2);
+        let user_plugins: Vec<_> = loaded.plugins.iter().filter(|p| !p.permanent).collect();
+        assert_eq!(user_plugins.len(), 2);
+        assert!(user_plugins.iter().all(|p| p.plugin_type() == PluginType::Gain));
+        assert_eq!(loaded.plugins.iter().filter(|p| p.permanent).count(), 4);
         assert_eq!(warnings.len(), 1);
         assert!(
             warnings[0].contains("custom"),
             "mid-chain skip warning must name custom, got: {}",
             warnings[0]
         );
-        // Degraded chain (gain->gain) passes widths through; the skip warning
-        // is the loud signal, not a silent re-route.
+        // The permanent Matrix starts with the default stereo rack shape.
+        // Negotiating the source width expands its identity route to four
+        // channels, while both retained user gains pass that width through.
+        assert_eq!(loaded.output_channels_for_input(4), 2);
+        loaded.update_channel_dependent_plugins_for_input(4);
         assert_eq!(loaded.output_channels_for_input(4), 4);
     }
 

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 const MAX_NEURONS: usize = 128;
 
 const TANSIG_TABLE: [f32; 201] = [
@@ -61,31 +63,32 @@ pub enum Activation {
 
 const WEIGHTS_SCALE: f32 = 1.0 / 256.0;
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug)]
 pub struct DenseLayer {
     /// An array of length `nb_neurons`.
-    pub bias: &'static [i8],
+    pub bias: Cow<'static, [i8]>,
     /// An array of length `nb_inputs * nb_neurons`.
-    pub input_weights: &'static [i8],
+    pub input_weights: Cow<'static, [i8]>,
     pub nb_inputs: usize,
     pub nb_neurons: usize,
     pub activation: Activation,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug)]
 pub struct GruLayer {
     /// An array of length `3 * nb_neurons`.
-    pub bias: &'static [i8],
+    pub bias: Cow<'static, [i8]>,
     /// An array of length `3 * nb_inputs * nb_neurons`.
-    pub input_weights: &'static [i8],
+    pub input_weights: Cow<'static, [i8]>,
     /// An array of length `3 * nb_neurons^2`.
-    pub recurrent_weights: &'static [i8],
+    pub recurrent_weights: Cow<'static, [i8]>,
     pub nb_inputs: usize,
     pub nb_neurons: usize,
     pub activation: Activation,
 }
 
 #[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct RnnModel {
     pub input_dense_size: usize,
     pub input_dense: DenseLayer,
@@ -102,7 +105,7 @@ pub struct RnnModel {
 }
 
 pub struct RnnState {
-    model: &'static RnnModel,
+    model: RnnModel,
     vad_gru_state: Vec<f32>,
     noise_gru_state: Vec<f32>,
     denoise_gru_state: Vec<f32>,
@@ -116,7 +119,10 @@ pub struct RnnState {
 
 impl RnnState {
     pub fn new() -> RnnState {
-        let model = &crate::model::MODEL;
+        Self::from_model(crate::model::MODEL.clone())
+    }
+
+    pub fn from_model(model: RnnModel) -> RnnState {
         let vad_gru_state = vec![0.0f32; model.vad_gru_size];
         let noise_gru_state = vec![0.0f32; model.noise_gru_size];
         let denoise_gru_state = vec![0.0f32; model.denoise_gru_size];
@@ -266,7 +272,7 @@ pub fn compute_rnn(rnn: &mut RnnState, gains: &mut [f32], vad: &mut [f32], input
         gru_r,
         gru_h,
     } = rnn;
-    let model = *model;
+    let model = &*model;
 
     compute_dense(&model.input_dense, dense_out, input);
     compute_gru(

@@ -428,3 +428,60 @@ fn cold_process_drain_and_reset_allocate_and_free_nothing() {
         }
     }
 }
+
+#[test]
+fn long_periodic_multiband_process_drain_reset_allocate_nothing() {
+    // Period-tracker recompute fires past candidate 1024, outside the
+    // 33-frame window above. These 1400-frame inputs drive every periodic
+    // tracker (band cores plus the fullband supervisor) through at least
+    // two recompute windows inside the counted region. The 48 kHz rate
+    // matches the neighboring allocation tests; the tracker search grid
+    // (32..=512 samples) is validated against this rate.
+    const RATE: u32 = 48_000;
+    let frames = 1400;
+    for (channels, bands, enabled) in [(1, 0, true), (2, 1, true), (2, 2, true), (2, 2, false)] {
+        std::thread::spawn(move || {
+            let mut p = DeclickPlugin::from_params(
+                channels,
+                RATE,
+                DeclickPluginParams {
+                    enabled,
+                    mode: 1,
+                    bands,
+                    sensitivity: 2.0,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let mut input = vec![0.0; frames * channels];
+            for frame in 0..frames {
+                for ch in 0..channels {
+                    input[frame * channels + ch] =
+                        (frame as f32 * 0.07 + ch as f32).sin() * 0.25;
+                }
+            }
+            for click in (100..frames).step_by(100) {
+                input[click * channels] += 3.0;
+            }
+            let mut output = vec![0.0; 8 * channels];
+            let counts = counted(|| {
+                p.process_in_place(&mut input, &ProcessContext::new(RATE, frames))
+                    .unwrap();
+                while !p
+                    .drain(&mut output, &ProcessContext::new(RATE, 8))
+                    .unwrap()
+                    .complete
+                {}
+                assert!(
+                    p.drain(&mut output, &ProcessContext::new(RATE, 8))
+                        .unwrap()
+                        .complete
+                );
+                p.reset();
+            });
+            assert_eq!(counts, (0, 0), "channels={channels} bands={bands}");
+        })
+        .join()
+        .unwrap();
+    }
+}

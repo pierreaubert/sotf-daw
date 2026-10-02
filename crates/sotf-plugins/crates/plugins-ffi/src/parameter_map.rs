@@ -84,6 +84,15 @@ pub struct ParameterMap {
     cached_ids: Vec<ParameterId>,
     cached_kinds: Vec<FallbackKind>,
     plugin_type: String,
+    /// Committed normalized DeEsser structural values in
+    /// `DE_ESSER_STRUCTURAL_IDS` order.
+    ///
+    /// Snapshotted on the control thread by `from_specs` (construction and
+    /// every structural restore rebuilds the map before commit), so the
+    /// render-thread structural no-op probe never queries the live DSP.
+    /// `None` entries (and every entry for non-DeEsser maps) fail closed:
+    /// the refusal path treats them as changed values.
+    de_esser_structural_normals: [Option<f64>; DE_ESSER_STRUCTURAL_IDS.len()],
 }
 
 /// Prepared at construction, including inactive band slots from their schema.
@@ -392,13 +401,28 @@ impl ParameterMap {
                 }
             })
             .collect();
-        Self {
+        let mut map = Self {
             bridge,
             cached_infos,
             cached_ids,
             cached_kinds,
             plugin_type: plugin_type.to_string(),
+            de_esser_structural_normals: [None; DE_ESSER_STRUCTURAL_IDS.len()],
+        };
+        // Snapshot the committed structural values on the control thread.
+        // `from_specs` already allocates (vectors, C strings), so this live
+        // DSP read — including the owned `String` the DeEsser returns for
+        // `mode`/`split_topology` — never runs on the render thread. Every
+        // DeEsser commit path rebuilds the map before swapping it in, so the
+        // snapshot always tracks the committed plugin.
+        if is_de_esser_type(plugin_type) {
+            let mut normals = [None; DE_ESSER_STRUCTURAL_IDS.len()];
+            for (slot, id) in normals.iter_mut().zip(DE_ESSER_STRUCTURAL_IDS) {
+                *slot = map.get_normalized(plugin, id);
+            }
+            map.de_esser_structural_normals = normals;
         }
+        map
     }
 
     /// Get the number of parameters.
@@ -585,6 +609,29 @@ impl ParameterMap {
         };
         Some(info.normalize(raw))
     }
+
+    /// Cached normalized value for a DeEsser structural id.
+    ///
+    /// Returns the control-thread snapshot taken by `from_specs`, without
+    /// touching the live DSP. This keeps the render-thread structural no-op
+    /// probe allocation-free for every structural field, including the
+    /// `String` choices (`mode`, `split_topology`) whose live read allocates.
+    /// Unknown ids, non-DeEsser maps, and missing snapshot entries return
+    /// `None`, which the refusal path treats as a changed value.
+    pub(crate) fn de_esser_structural_normalized(&self, param_id: &str) -> Option<f64> {
+        // Plain match over the snapshot: no parsing, formatting, cloning,
+        // or map lookup, so the callback refusal path cannot allocate.
+        let index = match param_id {
+            "frequency" => 0,
+            "q" => 1,
+            "mode" => 2,
+            "lookahead_ms" => 3,
+            "split_topology" => 4,
+            "sidechain_external" => 5,
+            _ => return None,
+        };
+        self.de_esser_structural_normals[index]
+    }
 }
 
 impl Drop for ParameterMap {
@@ -619,8 +666,8 @@ fn get_band_template(
             Some((multiband_compressor::BAND_TEMPLATE, 5))
         }
         "MultibandExpander" | "multiband_expander" => Some((multiband_expander::BAND_TEMPLATE, 5)),
-        "DynamicEQ" | "dynamic_eq" => Some((dynamic_eq::BAND_PARAMS, 8)),
-        "LinearPhaseEQ" | "linear_phase_eq" => {
+        "DynamicEQ" | "dynamic_eq" | "dynamic-eq" => Some((dynamic_eq::BAND_PARAMS, 8)),
+        "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ" => {
             Some((linear_phase_eq::BAND_TEMPLATE, linear_phase_eq::MAX_FILTERS))
         }
         _ => None,
@@ -647,6 +694,24 @@ fn get_appended_routing_template(
 
 fn is_dynamic_eq_type(plugin_type: &str) -> bool {
     matches!(plugin_type, "DynamicEQ" | "dynamic_eq" | "dynamic-eq")
+}
+
+/// DeEsser structural ids in snapshot order.
+///
+/// Must match `is_de_esser_structural_id` in `lib/plugin.rs`: every id the
+/// guard probes needs a cache slot, or its unchanged no-op regresses to a
+/// refusal. Order is internal to this module.
+const DE_ESSER_STRUCTURAL_IDS: [&str; 6] = [
+    "frequency",
+    "q",
+    "mode",
+    "lookahead_ms",
+    "split_topology",
+    "sidechain_external",
+];
+
+fn is_de_esser_type(plugin_type: &str) -> bool {
+    matches!(plugin_type, "DeEsser" | "de_esser")
 }
 
 /// Parse an EQ placement address into its stored filter index.
@@ -827,8 +892,8 @@ fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::Param
         "StereoImager" | "stereo_imager" => stereo_imager::PARAMS,
         "TransientShaper" | "transient_shaper" => transient_shaper::PARAMS,
         "DeEsser" | "de_esser" => de_esser::PARAMS,
-        "DynamicEQ" | "dynamic_eq" => dynamic_eq::PARAMS,
-        "LinearPhaseEQ" | "linear_phase_eq" => linear_phase_eq::PARAMS,
+        "DynamicEQ" | "dynamic_eq" | "dynamic-eq" => dynamic_eq::PARAMS,
+        "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ" => linear_phase_eq::PARAMS,
         "Dither" | "dither" => dither::PARAMS,
         "BandSplit" | "band_split" => band_split::PARAMS,
         "BandMerge" | "band_merge" => band_merge::PARAMS,
@@ -1071,5 +1136,69 @@ mod tests {
                 Some(normalized)
             );
         }
+    }
+
+    #[test]
+    fn aliased_type_spellings_share_canonical_metadata_without_panicking() {
+        // `ParameterMap::from_plugin` is public over a type string: every
+        // spelling the FFI guards accept must resolve its spec/template
+        // lookup instead of panicking. This covers direct Rust map
+        // construction only — bridge/factory creation with "dynamic-eq"
+        // remains unsupported (see the preset-import identity test), and
+        // nothing here claims it works.
+        let dynamic = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let canonical = ParameterMap::from_plugin(&*dynamic, "DynamicEQ");
+        // 8 globals + 8x7 legacy band fields + 8x2 shelf fields + 8x1 routing.
+        assert_eq!(canonical.count(), 8 + 8 * 7 + 8 * 2 + 8);
+        for alias in ["dynamic_eq", "dynamic-eq"] {
+            let aliased = ParameterMap::from_plugin(&*dynamic, alias);
+            assert_eq!(aliased.count(), canonical.count(), "alias {alias}");
+            for index in 0..canonical.count() {
+                assert_eq!(
+                    aliased.param_id_at(index),
+                    canonical.param_id_at(index),
+                    "alias {alias} address {index}"
+                );
+            }
+            assert_eq!(
+                global_param_specs(alias).len(),
+                global_param_specs("DynamicEQ").len(),
+                "alias {alias} global specs"
+            );
+            assert_eq!(
+                band_template_info(alias),
+                band_template_info("DynamicEQ"),
+                "alias {alias} band template"
+            );
+        }
+        assert_eq!(band_template_info("dynamic-eq"), Some((7, 8)));
+
+        let linear =
+            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
+        let canonical = ParameterMap::from_plugin(&*linear, "LinearPhaseEQ");
+        // 5 globals + 10 bands x 6 fields; static schema includes dormant slots.
+        assert_eq!(canonical.count(), 5 + 10 * 6);
+        for alias in ["linear_phase_eq", "Linear-Phase-EQ"] {
+            let aliased = ParameterMap::from_plugin(&*linear, alias);
+            assert_eq!(aliased.count(), canonical.count(), "alias {alias}");
+            for index in 0..canonical.count() {
+                assert_eq!(
+                    aliased.param_id_at(index),
+                    canonical.param_id_at(index),
+                    "alias {alias} address {index}"
+                );
+            }
+            assert_eq!(
+                global_param_specs(alias).len(),
+                global_param_specs("LinearPhaseEQ").len(),
+                "alias {alias} global specs"
+            );
+            assert_eq!(
+                band_template_info(alias),
+                band_template_info("LinearPhaseEQ"),
+                "alias {alias} band template"
+            );
+        }
+        assert_eq!(band_template_info("Linear-Phase-EQ"), Some((6, 10)));
     }
 }

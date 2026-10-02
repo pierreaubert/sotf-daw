@@ -1,7 +1,10 @@
 pub use denoise::{DENOISE_BAND_COUNT, DenoiseFrameAnalysis, DenoiseState};
+pub use model_load::{ModelLoadError, parse_rnnn_model};
+pub use rnn::{Activation, DenseLayer, GruLayer, RnnModel};
 
 mod denoise;
 mod model;
+mod model_load;
 mod rnn;
 
 #[path = "lib/celt.rs"]

@@ -210,7 +210,12 @@ fn capture_profile(plugin: &mut HissReducerPlugin, rate: u32, noise: &[f32], cha
 
 /// Profiled spectral plugin: real 1 s capture, reset to clear DSP state
 /// (keeping the profile), guard set as requested via the named setter.
-fn profiled_spectral_plugin(channels: usize, strength: f32, guard: bool, seed: u32) -> HissReducerPlugin {
+fn profiled_spectral_plugin(
+    channels: usize,
+    strength: f32,
+    guard: bool,
+    seed: u32,
+) -> HissReducerPlugin {
     let mut plugin = spectral_plugin(channels, RATE, strength);
     let left = spectral_hiss_fixture(RATE as usize, seed);
     let capture = if channels == 1 {
@@ -441,8 +446,14 @@ fn stationary_program_never_fires_guard() {
             "guard={guard}: quiet tone changed by {tone_db:.2} dB"
         );
         let hiss_db = power_db(
-            band_power(out_win, f64::from(RATE), 4_000.0, 20_000.0, Some(TONE_HZ), 8)
-                / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(TONE_HZ), 8),
+            band_power(
+                out_win,
+                f64::from(RATE),
+                4_000.0,
+                20_000.0,
+                Some(TONE_HZ),
+                8,
+            ) / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(TONE_HZ), 8),
         );
         assert!(
             hiss_db < -2.0,
@@ -552,9 +563,8 @@ fn guard_preserves_settled_impulses_without_losing_suppression() {
         let hiss_only = spectral_hiss_fixture(frames, 0x51ab_0001);
         let hiss_out = render(&mut plugin, RATE, &hiss_only, 1, &PARTITIONS);
         let start = RATE as usize + LATENCY;
-        let suppression = power_db(
-            mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]),
-        );
+        let suppression =
+            power_db(mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]));
         assert!(
             suppression < -2.0,
             "guard={guard}: hiss-only suppression lost ({suppression:.2} dB)"
@@ -593,9 +603,8 @@ fn blind_window_leaves_early_transients_unguarded() {
     let hiss_only = spectral_hiss_fixture(frames, 0xb11d);
     let hiss_out = render(&mut engaged, RATE, &hiss_only, 1, &PARTITIONS);
     let start = RATE as usize + LATENCY;
-    let suppression = power_db(
-        mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]),
-    );
+    let suppression =
+        power_db(mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]));
     assert!(
         suppression < -2.0,
         "blind-window leg not engaged ({suppression:.2} dB)"
@@ -628,7 +637,15 @@ fn guard_toggle_is_bounded_and_partition_independent() {
         let mut output = signal.clone();
         render_range(&mut plugin, RATE, &mut output, 1, 0, boundary, partitions);
         set_bool(&mut plugin, "transient_guard", true);
-        render_range(&mut plugin, RATE, &mut output, 1, boundary, frames, partitions);
+        render_range(
+            &mut plugin,
+            RATE,
+            &mut output,
+            1,
+            boundary,
+            frames,
+            partitions,
+        );
         output
     };
     let out_a = render_toggle(&PARTITIONS);
@@ -681,12 +698,24 @@ fn guard_toggle_is_bounded_and_partition_independent() {
     let out_a_win = &out_a[frames - win..frames];
     let out_b_win = &out_b[frames - win..frames];
     let sup_a = power_db(
-        band_power(out_a_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4)
-            / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4),
+        band_power(
+            out_a_win,
+            f64::from(RATE),
+            4_000.0,
+            20_000.0,
+            Some(750.0),
+            4,
+        ) / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4),
     );
     let sup_b = power_db(
-        band_power(out_b_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4)
-            / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4),
+        band_power(
+            out_b_win,
+            f64::from(RATE),
+            4_000.0,
+            20_000.0,
+            Some(750.0),
+            4,
+        ) / band_power(in_win, f64::from(RATE), 4_000.0, 20_000.0, Some(750.0), 4),
     );
     assert!(
         (sup_a - sup_b).abs() < 1.0,
@@ -706,7 +735,10 @@ fn guard_save_reload_round_trips_bit_exactly() {
         .set_parameter(ParameterId::from("curve_mid"), ParameterValue::Float(0.5))
         .unwrap();
     plugin
-        .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(LINK_LINKED))
+        .set_parameter(
+            ParameterId::from("link_mode"),
+            ParameterValue::Int(LINK_LINKED),
+        )
         .unwrap();
 
     let frames = 8192;
@@ -792,7 +824,10 @@ fn guard_shares_onset_when_linked_and_covers_channels() {
     let render_linked = |guard: bool| {
         let mut plugin = profiled_spectral_plugin(2, 0.85, guard, 0x11c0);
         plugin
-            .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(LINK_LINKED))
+            .set_parameter(
+                ParameterId::from("link_mode"),
+                ParameterValue::Int(LINK_LINKED),
+            )
             .unwrap();
         render(&mut plugin, RATE, &input, 2, &PARTITIONS)
     };
@@ -835,18 +870,30 @@ fn guard_shares_onset_when_linked_and_covers_channels() {
         );
     }
 
-    // Dual-mono identity with the guard on, under active firing.
+    // Dual-mono identity requires identical input AND identical captured
+    // noise floors. Independent stereo capture seeds produce different
+    // floors and therefore intentionally different Wiener targets.
     let mono = spectral_hiss_fixture(frames, 0xd0a1);
     let mut sig_m = mono.clone();
     for base in (RATE as usize..frames).step_by(2400) {
         sig_m[base] += 1.0;
     }
     let dual = interleave(&sig_m, &sig_m);
-    let mut linked = profiled_spectral_plugin(2, 0.85, true, 0xd0a1);
+    let mut linked = spectral_plugin(2, RATE, 0.85);
+    let mut independent = spectral_plugin(2, RATE, 0.85);
+    let capture = interleave(&mono[..RATE as usize], &mono[..RATE as usize]);
+    for plugin in [&mut linked, &mut independent] {
+        capture_profile(plugin, RATE, &capture, 2);
+        plugin.reset();
+        set_bool(plugin, "use_captured_profile", true);
+        set_bool(plugin, "transient_guard", true);
+    }
     linked
-        .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(LINK_LINKED))
+        .set_parameter(
+            ParameterId::from("link_mode"),
+            ParameterValue::Int(LINK_LINKED),
+        )
         .unwrap();
-    let mut independent = profiled_spectral_plugin(2, 0.85, true, 0xd0a1);
     let out_linked = render(&mut linked, RATE, &dual, 2, &PARTITIONS);
     let out_independent = render(&mut independent, RATE, &dual, 2, &PARTITIONS);
     assert_eq!(
@@ -866,7 +913,10 @@ fn guard_engaged_drain_hits_derived_endpoint() {
             .set_parameter(ParameterId::from("curve_low"), ParameterValue::Float(0.0))
             .unwrap();
         plugin
-            .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(LINK_LINKED))
+            .set_parameter(
+                ParameterId::from("link_mode"),
+                ParameterValue::Int(LINK_LINKED),
+            )
             .unwrap();
         let t = 6000 + 73;
         let tone = sine_tone(t, 0.12, 750.0, RATE);
@@ -1149,9 +1199,8 @@ fn guard_ignores_stationary_lowpassed_hiss() {
         let output = render(&mut plugin, RATE, &colored, 1, &PARTITIONS);
         assert!(output.iter().all(|s| s.is_finite()));
         let start = RATE as usize + LATENCY;
-        let suppression = power_db(
-            mean_power(&output[start..]) / mean_power(&colored[start - LATENCY..]),
-        );
+        let suppression =
+            power_db(mean_power(&output[start..]) / mean_power(&colored[start - LATENCY..]));
         assert!(
             suppression < -2.0,
             "guard={guard}: colored-hiss leg not engaged ({suppression:.2} dB)"
@@ -1180,25 +1229,36 @@ fn guard_fires_on_silence_to_hiss_then_recovers() {
     let hiss = spectral_hiss_fixture(half, 0x511e);
     let mut signal = vec![0.0f32; half];
     signal.extend_from_slice(&hiss);
-    let mut off = spectral_plugin(1, RATE, 0.85);
-    let mut on = spectral_plugin(1, RATE, 0.85);
-    set_bool(&mut on, "transient_guard", true);
-    let out_off = render(&mut off, RATE, &signal, 1, &PARTITIONS);
-    let out_on = render(&mut on, RATE, &signal, 1, &PARTITIONS);
-    assert!(out_off.iter().all(|s| s.is_finite()));
-    assert!(out_on.iter().all(|s| s.is_finite()));
-    assert_ne!(
-        out_off, out_on,
-        "silence-to-hiss onset must fire the guard"
-    );
-    for (name, output) in [("off", &out_off), ("on", &out_on)] {
-        let start = half + half / 2 + LATENCY;
-        let suppression = power_db(
-            mean_power(&output[start..]) / mean_power(&signal[start - LATENCY..]),
-        );
-        assert!(
-            suppression < -2.0,
-            "guard {name}: settled suppression did not recover ({suppression:.2} dB)"
-        );
+    for profiled in [false, true] {
+        let mut off = if profiled {
+            profiled_spectral_plugin(1, 0.85, false, 0x511e)
+        } else {
+            spectral_plugin(1, RATE, 0.85)
+        };
+        let mut on = if profiled {
+            profiled_spectral_plugin(1, 0.85, true, 0x511e)
+        } else {
+            spectral_plugin(1, RATE, 0.85)
+        };
+        set_bool(&mut on, "transient_guard", true);
+        let out_off = render(&mut off, RATE, &signal, 1, &PARTITIONS);
+        let out_on = render(&mut on, RATE, &signal, 1, &PARTITIONS);
+        assert!(out_off.iter().all(|s| s.is_finite()));
+        assert!(out_on.iter().all(|s| s.is_finite()));
+        // Live minima retain silence initially, so both paths already have
+        // unity gain during the bounded onset. A captured profile engages
+        // reduction immediately and makes the guard's lift audible.
+        if profiled {
+            assert_ne!(out_off, out_on, "profiled onset must fire the guard");
+        }
+        for (name, output) in [("off", &out_off), ("on", &out_on)] {
+            let start = half + half / 2 + LATENCY;
+            let suppression =
+                power_db(mean_power(&output[start..]) / mean_power(&signal[start - LATENCY..]));
+            assert!(
+                suppression < -2.0,
+                "guard {name}, profiled={profiled}: settled suppression did not recover ({suppression:.2} dB)"
+            );
+        }
     }
 }

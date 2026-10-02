@@ -12,7 +12,7 @@ RNNoise-based voice denoiser plugin. Wraps the `RnnoiseBackend` block from `plug
 
 - `enabled` — bypass toggle (default: enabled).
 - `strength` — suppression blend 0..1 (default: 1.0 full wet), realtime, 480-frame slew.
-- `model` — bundled model identity (default: `RNNoise Full`), structural; unknown rejected, changed-after-init needs graph rebuild.
+- `model` — model identity (default: `RNNoise Full` index 0), structural; `RNNoise Legacy LQ`/`RNNoise Legacy SH` load staged `.rnnn` weights at init; unknown rejected, changed-after-init needs graph rebuild.
 
 ## Features
 

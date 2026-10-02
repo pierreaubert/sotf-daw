@@ -1,0 +1,39 @@
+{
+  "repository": "GregorR/rnnoise-models",
+  "commit": "3eee541a283fd3b8f81b85b1748e3b9ccbefa04d",
+  "scope": "Pinned original weight assets and model-info texts bundled for implementation; actual alternate audio/adoption acceptance remains open",
+  "files": [
+    {
+      "path": "somnolent-hogwash-2018-09-01/info.txt",
+      "url": "https://raw.githubusercontent.com/GregorR/rnnoise-models/3eee541a283fd3b8f81b85b1748e3b9ccbefa04d/somnolent-hogwash-2018-09-01/info.txt",
+      "size_bytes": 1511,
+      "sha256": "88ca7e26db4a707806a52e40f639c4e37ebc9798147643ebfdf2fe96c8f0ca0c"
+    },
+    {
+      "path": "somnolent-hogwash-2018-09-01/sh.rnnn",
+      "url": "https://raw.githubusercontent.com/GregorR/rnnoise-models/3eee541a283fd3b8f81b85b1748e3b9ccbefa04d/somnolent-hogwash-2018-09-01/sh.rnnn",
+      "size_bytes": 297646,
+      "sha256": "70bb6685eb0c2a1d18e2918dca3fbfbd39317010b1802eb1b6ea73a92f3fdec0"
+    },
+    {
+      "path": "leavened-quisling-2018-08-31/info.txt",
+      "url": "https://raw.githubusercontent.com/GregorR/rnnoise-models/3eee541a283fd3b8f81b85b1748e3b9ccbefa04d/leavened-quisling-2018-08-31/info.txt",
+      "size_bytes": 1711,
+      "sha256": "fe37dc7894248c7481cd7d090c282aea0bd2b01f02fafc490b2d59471370175b"
+    },
+    {
+      "path": "leavened-quisling-2018-08-31/lq.rnnn",
+      "url": "https://raw.githubusercontent.com/GregorR/rnnoise-models/3eee541a283fd3b8f81b85b1748e3b9ccbefa04d/leavened-quisling-2018-08-31/lq.rnnn",
+      "size_bytes": 297041,
+      "sha256": "1957528b752799fddf06270bc5469af7cf54c3badc358544ae2abed730943ff9"
+    }
+  ],
+  "upstream_provenance": [
+    {
+      "path": "README.md",
+      "url": "https://raw.githubusercontent.com/GregorR/rnnoise-models/3eee541a283fd3b8f81b85b1748e3b9ccbefa04d/README.md",
+      "size_bytes": 914,
+      "sha256": "9282943df417633649949e5c4bf0f49e914497c10c0fef16bc25ca0217765935"
+    }
+  ]
+}
