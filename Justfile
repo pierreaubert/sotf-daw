@@ -39,6 +39,30 @@ test:
 ntest:
 	{{cargo}} nextest run --workspace {{ffi_exclude}} --lib --bins --tests --examples
 
+# Deterministic DAW portion of ../sotf's PR tier.
+[group('test')]
+test-unit-core:
+	{{cargo}} test -p sotf-testkit
+	{{cargo}} test -p sotf-engine --no-default-features --lib
+	{{cargo}} test -p sotf-plugins --lib --features qa
+
+[group('test')]
+test-integration-engine:
+	{{cargo}} test -p sotf-engine --no-default-features --test decoder_integration_tests
+	{{cargo}} test -p sotf-engine --no-default-features --test engine_manager_tests
+	{{cargo}} test -p sotf-engine --no-default-features --test engine_types_tests
+
+[group('test')]
+test-device-fakes:
+	{{cargo}} test -p sotf-engine --lib devices::tests
+
+[group('test')]
+test-realtime-safety:
+	{{cargo}} test -p sotf-plugins --test realtime_allocation_tests
+	{{cargo}} test -p sotf-plugins --test rt_safety_tests
+	{{cargo}} test -p sotf-engine --test engine_allocation_tests
+	{{cargo}} test -p sotf-engine --features playback-runtime-harness --test playback_runtime_allocation_tests
+
 # Feature-gated sandbox end-to-end: real worker binary under the enforced
 # Linux sandbox (Landlock + seccomp child-process denial). Not covered by
 # `test` above, which uses default features.

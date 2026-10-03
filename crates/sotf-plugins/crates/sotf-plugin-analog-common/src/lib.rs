@@ -26,11 +26,12 @@ use math_audio_analog::{
 };
 use sotf_host::param_specs::ParamSpec;
 
-/// Model names in [`AnalogModel`] id order.
+/// Supported coloration models in [`AnalogModel`] id order.
 ///
 /// `MODEL_NAMES[id as usize]` is the display name for
 /// `AnalogModel::from_id(id)`. The order is append-only: new models go last so
 /// serialized selections stay stable.
+/// Component models without the shared drive/character controls are excluded.
 pub const MODEL_NAMES: &[&str] = &[
     "Harmonics",
     "Static",
@@ -172,6 +173,11 @@ impl AnalogColorStage {
     ///
     /// Unknown IDs or preparation errors leave the current stage untouched.
     pub fn set_model_id(&mut self, id: u32) -> Result<(), String> {
+        // Upstream component models do not all provide drive and character.
+        // Accept only the models advertised by this stage's parameter schema.
+        if id as usize >= MODEL_NAMES.len() {
+            return Err(AnalogError::UnknownModelId(id).to_string());
+        }
         if id == self.model_id() {
             return Ok(());
         }
@@ -231,6 +237,9 @@ impl AnalogColorStage {
             // The console preamp has no `drive_db`; its `input_gain_db`
             // shares the same −60..+36 dB range.
             AnalogModel::ConsolePreamp(m) => m.set_input_gain_db(value),
+            model @ (AnalogModel::DiodeClipper(_)
+            | AnalogModel::TriodeStage(_)
+            | AnalogModel::ToneStack(_)) => Err(AnalogError::UnknownModelId(model.model_id())),
         })?;
         self.drive_db = Some(value);
         Ok(())
@@ -245,6 +254,9 @@ impl AnalogColorStage {
             AnalogModel::Tape(m) => m.set_amount(value),
             AnalogModel::Transformer(m) => m.set_amount(value),
             AnalogModel::ConsolePreamp(m) => m.set_amount(value),
+            model @ (AnalogModel::DiodeClipper(_)
+            | AnalogModel::TriodeStage(_)
+            | AnalogModel::ToneStack(_)) => Err(AnalogError::UnknownModelId(model.model_id())),
         })?;
         self.color = Some(value);
         Ok(())
@@ -261,6 +273,9 @@ impl AnalogColorStage {
             // The console preamp has no `character`; its `asymmetry`
             // shares the same 0..1 range.
             AnalogModel::ConsolePreamp(m) => m.set_asymmetry(value),
+            model @ (AnalogModel::DiodeClipper(_)
+            | AnalogModel::TriodeStage(_)
+            | AnalogModel::ToneStack(_)) => Err(AnalogError::UnknownModelId(model.model_id())),
         })?;
         self.character = Some(value);
         Ok(())
@@ -276,6 +291,9 @@ impl AnalogColorStage {
             AnalogModel::Tape(m) => m.set_output_gain_db(value),
             AnalogModel::Transformer(m) => m.set_output_gain_db(value),
             AnalogModel::ConsolePreamp(m) => m.set_output_gain_db(value),
+            model @ (AnalogModel::DiodeClipper(_)
+            | AnalogModel::TriodeStage(_)
+            | AnalogModel::ToneStack(_)) => Err(AnalogError::UnknownModelId(model.model_id())),
         })?;
         self.output_trim_db = Some(value);
         Ok(())
@@ -358,6 +376,25 @@ mod tests {
         assert!(stage.set_model_id(999).is_err());
         // Failed selection leaves the current model untouched.
         assert_eq!(stage.model_id(), MODEL_NAMES.len() as u32 - 1);
+    }
+
+    #[test]
+    fn component_model_selection_preserves_the_running_coloration_stage() {
+        let mut stage = prepared_stage(AnalogModel::CONSOLE_PREAMP_ID, 2);
+        let mut reference = prepared_stage(AnalogModel::CONSOLE_PREAMP_ID, 2);
+        for id in [
+            AnalogModel::DIODE_CLIPPER_ID,
+            AnalogModel::TRIODE_STAGE_ID,
+            AnalogModel::TONE_STACK_ID,
+        ] {
+            assert!(stage.set_model_id(id).is_err());
+            assert_eq!(stage.model_id(), AnalogModel::CONSOLE_PREAMP_ID);
+            let mut actual = vec![0.1_f32; 128];
+            let mut expected = actual.clone();
+            stage.process_interleaved(&mut actual, 64).unwrap();
+            reference.process_interleaved(&mut expected, 64).unwrap();
+            assert_eq!(actual, expected, "unsupported model {id} changed the stage");
+        }
     }
 
     #[test]

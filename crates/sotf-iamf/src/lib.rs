@@ -6,11 +6,9 @@
 // No C/C++ dependencies — reuses SotF's Ambisonics decoder and speaker configs.
 
 pub mod codec;
-pub mod error;
 pub mod mixer;
-pub mod obu;
 pub mod renderer;
-pub mod types;
+pub use symphonia_iamf_core::{error, obu, types};
 
 use std::io::{Read, Seek};
 
