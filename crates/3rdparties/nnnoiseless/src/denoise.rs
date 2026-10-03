@@ -105,7 +105,6 @@ struct DenoiseScratch {
     pitch_filter_norm: [f32; NB_BANDS],
     pitch_filter_normf: [f32; FREQ_SIZE],
     fft_input: [Complex; WINDOW_SIZE],
-    fft_output: [Complex; WINDOW_SIZE],
 }
 
 impl DenoiseScratch {
@@ -133,6 +132,7 @@ pub struct DenoiseState {
     core: DenoiseCore,
     rnn: crate::rnn::RnnState,
     scratch: Box<DenoiseScratch>,
+    fft_scratch: Box<[Complex]>,
 }
 
 impl DenoiseState {
@@ -155,6 +155,8 @@ impl DenoiseState {
             },
             rnn: crate::rnn::RnnState::new(),
             scratch: DenoiseScratch::new_boxed(),
+            fft_scratch: vec![Complex::from(0.0); crate::consts::fft_scratch_len()]
+                .into_boxed_slice(),
         })
     }
 
@@ -187,6 +189,8 @@ impl DenoiseState {
             },
             rnn: crate::rnn::RnnState::from_model(model)?,
             scratch: DenoiseScratch::new_boxed(),
+            fft_scratch: vec![Complex::from(0.0); crate::consts::fft_scratch_len()]
+                .into_boxed_slice(),
         }))
     }
 
@@ -242,7 +246,7 @@ impl DenoiseState {
     }
 }
 
-fn frame_analysis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch) {
+fn frame_analysis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch, fft_scratch: &mut [Complex]) {
     let buf = &mut scratch.analysis_window;
     for i in 0..FRAME_SIZE {
         buf[i] = core.analysis_mem[i];
@@ -256,13 +260,17 @@ fn frame_analysis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch) {
         &mut scratch.x_freq,
         &buf[..],
         &mut scratch.fft_input,
-        &mut scratch.fft_output,
+        fft_scratch,
     );
     crate::compute_band_corr(&mut scratch.ex, &scratch.x_freq, &scratch.x_freq);
 }
 
-fn compute_frame_features(core: &mut DenoiseCore, scratch: &mut DenoiseScratch) -> usize {
-    frame_analysis(core, scratch);
+fn compute_frame_features(
+    core: &mut DenoiseCore,
+    scratch: &mut DenoiseScratch,
+    fft_scratch: &mut [Complex],
+) -> usize {
+    frame_analysis(core, scratch, fft_scratch);
     for i in 0..(PITCH_BUF_SIZE - FRAME_SIZE) {
         core.pitch_buf[i] = core.pitch_buf[i + FRAME_SIZE];
     }
@@ -312,7 +320,7 @@ fn compute_frame_features(core: &mut DenoiseCore, scratch: &mut DenoiseScratch) 
         &mut scratch.pitch_freq,
         &scratch.pitch_window,
         &mut scratch.fft_input,
-        &mut scratch.fft_output,
+        fft_scratch,
     );
     crate::compute_band_corr(&mut scratch.ep, &scratch.pitch_freq, &scratch.pitch_freq);
     crate::compute_band_corr(&mut scratch.exp, &scratch.x_freq, &scratch.pitch_freq);
@@ -399,12 +407,17 @@ fn compute_frame_features(core: &mut DenoiseCore, scratch: &mut DenoiseScratch) 
     0
 }
 
-fn frame_synthesis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch, out: &mut [f32]) {
+fn frame_synthesis(
+    core: &mut DenoiseCore,
+    scratch: &mut DenoiseScratch,
+    fft_scratch: &mut [Complex],
+    out: &mut [f32],
+) {
     crate::inverse_transform(
         &mut scratch.synthesis_window[..],
         &scratch.x_freq,
         &mut scratch.fft_input,
-        &mut scratch.fft_output,
+        fft_scratch,
     );
     crate::apply_window(&mut scratch.synthesis_window[..]);
     for i in 0..FRAME_SIZE {
@@ -462,7 +475,12 @@ fn process_frame(
 ) -> DenoiseFrameAnalysis {
     let a_hp = [-1.99599, 0.99600];
     let b_hp = [-2.0, 1.0];
-    let DenoiseState { core, rnn, scratch } = state;
+    let DenoiseState {
+        core,
+        rnn,
+        scratch,
+        fft_scratch,
+    } = state;
     let scratch = scratch.as_mut();
     scratch.gains.fill(1.0);
     scratch.interpolated_gains.fill(1.0);
@@ -475,7 +493,7 @@ fn process_frame(
         &b_hp[..],
         &a_hp[..],
     );
-    let silence = compute_frame_features(core, scratch);
+    let silence = compute_frame_features(core, scratch, fft_scratch);
     if silence == 0 {
         crate::rnn::compute_rnn(rnn, &mut scratch.gains, &mut scratch.vad, &scratch.features);
         pitch_filter(scratch);
@@ -489,7 +507,7 @@ fn process_frame(
         }
     }
 
-    frame_synthesis(core, scratch, output);
+    frame_synthesis(core, scratch, fft_scratch, output);
     DenoiseFrameAnalysis {
         band_gains: scratch.gains,
         vad_probability: scratch.vad[0].clamp(0.0, 1.0),
@@ -504,7 +522,12 @@ fn process_frame_with_band_gains(
 ) {
     let a_hp = [-1.99599, 0.99600];
     let b_hp = [-2.0, 1.0];
-    let DenoiseState { core, scratch, .. } = state;
+    let DenoiseState {
+        core,
+        scratch,
+        fft_scratch,
+        ..
+    } = state;
     let scratch = scratch.as_mut();
 
     biquad(
@@ -514,7 +537,7 @@ fn process_frame_with_band_gains(
         &b_hp[..],
         &a_hp[..],
     );
-    frame_analysis(core, scratch);
+    frame_analysis(core, scratch, fft_scratch);
     for (gain, supplied) in scratch.gains.iter_mut().zip(band_gains) {
         *gain = if supplied.is_finite() {
             supplied.clamp(0.0, 1.0)
@@ -526,5 +549,5 @@ fn process_frame_with_band_gains(
     for i in 0..FREQ_SIZE {
         scratch.x_freq[i] *= scratch.interpolated_gains[i];
     }
-    frame_synthesis(core, scratch, output);
+    frame_synthesis(core, scratch, fft_scratch, output);
 }

@@ -28,13 +28,13 @@ path = "src/munge.rs"
 name = "sin"
 harness = false
 [dependencies.num-complex]
-version = "0.2.4"
+version = "0.4"
 
 [dependencies.once_cell]
 version = "1.4.0"
 
 [dependencies.rustfft]
-version = "3.0.1"
+version = "6.4"
 [dev-dependencies.byteorder]
 version = "1.3.4"
 

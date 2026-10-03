@@ -201,8 +201,9 @@ fn common() -> &'static CommonState {
             }
         }
 
-        let fft = rustfft::FFTplanner::new(false).plan_fft(WINDOW_SIZE);
-        let inv_fft = rustfft::FFTplanner::new(true).plan_fft(WINDOW_SIZE);
+        let mut planner = rustfft::FftPlanner::<f32>::new();
+        let fft = planner.plan_fft_forward(WINDOW_SIZE);
+        let inv_fft = planner.plan_fft_inverse(WINDOW_SIZE);
         let _ = COMMON.set(CommonState {
             half_window,
             dct_table,
@@ -216,6 +217,13 @@ fn common() -> &'static CommonState {
 /// Build the immutable FFT/window tables off the realtime callback.
 pub fn prepare() {
     let _ = common();
+}
+
+pub(crate) fn fft_scratch_len() -> usize {
+    let c = common();
+    c.fft
+        .get_inplace_scratch_len()
+        .max(c.inv_fft.get_inplace_scratch_len())
 }
 
 /// A brute-force DCT (discrete cosine transform) of size NB_BANDS.
@@ -242,22 +250,21 @@ pub(crate) fn forward_transform(
     output: &mut [Complex],
     input: &[f32],
     complex_input: &mut [Complex],
-    scratch_output: &mut [Complex],
+    fft_scratch: &mut [Complex],
 ) {
     let c = common();
     complex_input.fill(Complex::from(0.0));
-    scratch_output.fill(Complex::from(0.0));
     for i in 0..WINDOW_SIZE {
         complex_input[i].re = input[i];
     }
     c.fft
-        .process(&mut complex_input[..], &mut scratch_output[..]);
+        .process_with_scratch(&mut complex_input[..], fft_scratch);
 
     // The kissfft convention, as far as I can tell, is the normalize the forward transform but not
     // the inverse transform.
     let norm = 1.0 / WINDOW_SIZE as f32;
     for i in 0..FREQ_SIZE {
-        output[i] = scratch_output[i] * norm;
+        output[i] = complex_input[i] * norm;
     }
 }
 
@@ -265,11 +272,10 @@ pub(crate) fn inverse_transform(
     output: &mut [f32],
     input: &[Complex],
     scratch_input: &mut [Complex],
-    complex_output: &mut [Complex],
+    fft_scratch: &mut [Complex],
 ) {
     let c = common();
     scratch_input.fill(Complex::from(0.0));
-    complex_output.fill(Complex::from(0.0));
     for i in 0..FREQ_SIZE {
         scratch_input[i] = input[i];
     }
@@ -278,9 +284,9 @@ pub(crate) fn inverse_transform(
     }
 
     c.inv_fft
-        .process(&mut scratch_input[..], &mut complex_output[..]);
+        .process_with_scratch(&mut scratch_input[..], fft_scratch);
     for i in 0..WINDOW_SIZE {
-        output[i] = complex_output[i].re;
+        output[i] = scratch_input[i].re;
     }
 }
 
@@ -288,6 +294,39 @@ pub(crate) fn inverse_transform(
 mod tests {
     use super::super::*;
     use super::*;
+
+    #[test]
+    fn fft_preserves_frequency_order_and_inverse_scale() {
+        // The cosine and sine occupy distinct positive-frequency bins. The
+        // sine's negative imaginary coefficient also fixes FFT direction.
+        const COSINE_BIN: usize = 7;
+        const SINE_BIN: usize = 11;
+        let input: [f32; WINDOW_SIZE] = std::array::from_fn(|sample| {
+            let phase = 2.0 * std::f32::consts::PI * sample as f32 / WINDOW_SIZE as f32;
+            0.25 + (COSINE_BIN as f32 * phase).cos() + 0.75 * (SINE_BIN as f32 * phase).sin()
+        });
+        let mut spectrum = [Complex::from(0.0); FREQ_SIZE];
+        let mut fft_input = [Complex::from(0.0); WINDOW_SIZE];
+        let mut fft_scratch = vec![Complex::from(0.0); fft_scratch_len()];
+        forward_transform(&mut spectrum, &input, &mut fft_input, &mut fft_scratch);
+
+        for (bin, value) in spectrum.iter().enumerate() {
+            let (expected_re, expected_im) = match bin {
+                0 => (0.25, 0.0),
+                COSINE_BIN => (0.5, 0.0),
+                SINE_BIN => (0.0, -0.375),
+                _ => (0.0, 0.0),
+            };
+            assert!((value.re - expected_re).abs() < 2e-5, "real bin {bin}");
+            assert!((value.im - expected_im).abs() < 2e-5, "imaginary bin {bin}");
+        }
+
+        let mut output = [0.0; WINDOW_SIZE];
+        inverse_transform(&mut output, &spectrum, &mut fft_input, &mut fft_scratch);
+        for (sample, (actual, expected)) in output.iter().zip(input).enumerate() {
+            assert!((actual - expected).abs() < 2e-5, "sample {sample}");
+        }
+    }
 
     fn to_f32(bytes: &[u8]) -> Vec<f32> {
         let mut ret = Vec::with_capacity(bytes.len() / 2);

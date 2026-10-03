@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/3rdparties/nnnoiseless",
     "crates/sotf-plugins/crates/sotf-host",
     "crates/sotf-plugins/crates/sotf-plugin-ambisonics",
     "crates/sotf-plugins/crates/sotf-plugin-ab-compare",
