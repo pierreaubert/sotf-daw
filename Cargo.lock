@@ -2706,7 +2706,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5363,7 +5363,7 @@ dependencies = [
  "hound",
  "log",
  "math-iir-fir",
- "nalgebra 0.35.0",
+ "nalgebra",
  "ndarray 0.17.2",
  "num-complex 0.4.6",
  "oxiblas-ndarray",
@@ -5397,7 +5397,7 @@ dependencies = [
  "clap",
  "directories",
  "math-test-functions",
- "nalgebra 0.35.0",
+ "nalgebra",
  "ndarray 0.17.2",
  "oxiblas-ndarray",
  "rand 0.10.3",
@@ -5652,46 +5652,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "naga"
-version = "29.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2bf919621e7975acb27d881bae2fb993e0d45c8e0446e85e6272971e00dc8df"
-dependencies = [
- "arrayvec",
- "bit-set 0.9.1",
- "bitflags 2.13.2",
- "cfg-if",
- "cfg_aliases",
- "codespan-reporting",
- "half",
- "hashbrown 0.16.1",
- "hexf-parse",
- "indexmap",
- "libm",
- "log",
- "num-traits",
- "once_cell",
- "rustc-hash 1.1.0",
- "thiserror 2.0.21",
- "unicode-ident",
-]
-
-[[package]]
-name = "nalgebra"
-version = "0.33.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d43ddcacf343185dfd6de2ee786d9e8b1c2301622afab66b6c73baf9882abfd"
-dependencies = [
- "approx",
- "matrixmultiply",
- "num-complex 0.4.6",
- "num-rational",
- "num-traits",
- "simba 0.9.1",
- "typenum",
-]
-
-[[package]]
 name = "nalgebra"
 version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5706,7 +5666,7 @@ dependencies = [
  "num-complex 0.4.6",
  "num-rational",
  "num-traits",
- "simba 0.10.2",
+ "simba",
  "typenum",
 ]
 
@@ -7558,7 +7518,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8121,7 +8081,7 @@ dependencies = [
  "math-iir-fir",
  "math-optimisation",
  "math-rir",
- "nalgebra 0.35.0",
+ "nalgebra",
  "ndarray 0.17.2",
  "num-complex 0.4.6",
  "num_cpus",
@@ -8398,7 +8358,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8455,7 +8415,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8499,15 +8459,6 @@ name = "ryu"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
-
-[[package]]
-name = "safe_arch"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96b02de82ddbe1b636e6170c21be622223aea188ef2e139be0a5b219ec215323"
-dependencies = [
- "bytemuck",
-]
 
 [[package]]
 name = "safe_arch"
@@ -8920,19 +8871,6 @@ dependencies = [
 
 [[package]]
 name = "simba"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c99284beb21666094ba2b75bbceda012e610f5479dfcc2d6e2426f53197ffd95"
-dependencies = [
- "approx",
- "num-complex 0.4.6",
- "num-traits",
- "paste",
- "wide 0.7.33",
-]
-
-[[package]]
-name = "simba"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1a7200d82ff1c7b4235efd12f11e2537a402c91cf83a5cb97ce80eef787fde7"
@@ -8940,7 +8878,7 @@ dependencies = [
  "approx",
  "num-complex 0.4.6",
  "num-traits",
- "wide 1.7.1",
+ "wide",
 ]
 
 [[package]]
@@ -9304,7 +9242,7 @@ dependencies = [
  "approx",
  "criterion",
  "log",
- "nalgebra 0.33.3",
+ "nalgebra",
  "plugins-spatial",
  "serde",
  "serde_json",
@@ -9380,7 +9318,7 @@ name = "sotf-plugin-beamformer"
 version = "0.5.4"
 dependencies = [
  "math-dsp",
- "nalgebra 0.33.3",
+ "nalgebra",
  "plugins-spatial",
  "realfft",
  "rustfft 6.4.1",
@@ -10525,7 +10463,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11512,7 +11450,7 @@ checksum = "abf943bd2920bfd22928a9c1bad39866f7ffcc1109b6ed924ab52773e3868a83"
 dependencies = [
  "bytemuck",
  "log",
- "naga 29.0.4",
+ "naga",
  "thiserror 2.0.21",
  "vello_encoding",
 ]
@@ -11941,7 +11879,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "js-sys",
  "log",
- "naga 29.0.3",
+ "naga",
  "parking_lot",
  "portable-atomic",
  "profiling",
@@ -11971,7 +11909,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "indexmap",
  "log",
- "naga 29.0.3",
+ "naga",
  "once_cell",
  "parking_lot",
  "portable-atomic",
@@ -12036,7 +11974,7 @@ dependencies = [
  "libc",
  "libloading",
  "log",
- "naga 29.0.3",
+ "naga",
  "ndk-sys",
  "objc2 0.6.4",
  "objc2-core-foundation",
@@ -12070,7 +12008,7 @@ name = "wgpu-naga-bridge"
 version = "29.0.3"
 source = "git+https://github.com/zed-industries/wgpu.git?rev=357a0c56e0070480ad9daea5d2eaa83150b79e88#357a0c56e0070480ad9daea5d2eaa83150b79e88"
 dependencies = [
- "naga 29.0.3",
+ "naga",
  "wgpu-types",
 ]
 
@@ -12110,22 +12048,12 @@ dependencies = [
 
 [[package]]
 name = "wide"
-version = "0.7.33"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ce5da8ecb62bcd8ec8b7ea19f69a51275e91299be594ea5cc6ef7819e16cd03"
-dependencies = [
- "bytemuck",
- "safe_arch 0.7.4",
-]
-
-[[package]]
-name = "wide"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d920ac99c3c8edce110cb8d07dbb324d6d026011dce85b1e9355b70f0adacc4f"
 dependencies = [
  "bytemuck",
- "safe_arch 1.2.0",
+ "safe_arch",
 ]
 
 [[package]]
@@ -12156,7 +12084,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
