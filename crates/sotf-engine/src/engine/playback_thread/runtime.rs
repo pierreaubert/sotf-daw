@@ -2,6 +2,7 @@ use super::super::{
     PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, PlaybackStopAck,
     ProcessingMessage, ThreadEvent, plan_output_access,
 };
+use super::apply::apply_volume_clamp;
 use super::build::build_output_stream;
 #[cfg(target_os = "macos")]
 use super::core_audio_exclusive_mode_guard::CoreAudioExclusiveModeGuard;
@@ -21,16 +22,16 @@ use super::pick::choose_output_format;
 use super::playback::playback_buffer_capacity;
 use super::playback::playback_recovery_reason;
 use super::playback_state::PlaybackState;
-use super::playback_state::copy_playback_controls;
 use super::playback_state::flush_completed;
 use super::playback_state::rebuild_playback_stream;
 use super::playback_state::request_flush;
+use super::playback_state::{copy_playback_controls, read_ring_buffer};
 use super::types::FlushMode;
 use super::types::{RebuildPlaybackParams, RebuiltPlaybackStream};
-use crate::{OutputAccessMode, OutputAccessStatus};
+use crate::{OutputAccessMode, OutputAccessStatus, SinkType};
 use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::{Device, SampleFormat, Stream, StreamConfig};
-use rtrb::{Producer, RingBuffer};
+use rtrb::{Consumer, Producer, RingBuffer};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};
@@ -53,6 +54,7 @@ pub(super) fn run_playback_thread(
     recycle_tx: SyncSender<Vec<f32>>,
     allow_virtual_output: bool,
     output_access: OutputAccessMode,
+    sink_type: SinkType,
     shared_output_peak_bits: Arc<AtomicU32>,
     shared_clipped_sample_count: Arc<AtomicU64>,
     startup_tx: SyncSender<Result<(), String>>,
@@ -69,6 +71,7 @@ pub(super) fn run_playback_thread(
         recycle_tx,
         allow_virtual_output,
         output_access,
+        sink_type,
         shared_output_peak_bits,
         shared_clipped_sample_count,
     }) {
@@ -96,6 +99,7 @@ struct PlaybackRuntimeParams {
     recycle_tx: SyncSender<Vec<f32>>,
     allow_virtual_output: bool,
     output_access: OutputAccessMode,
+    sink_type: SinkType,
     shared_output_peak_bits: Arc<AtomicU32>,
     shared_clipped_sample_count: Arc<AtomicU64>,
 }
@@ -105,7 +109,7 @@ struct PlaybackRuntime {
     command_rx: Receiver<PlaybackCommand>,
     event_tx: crossbeam::channel::Sender<ThreadEvent>,
     recycle_tx: SyncSender<Vec<f32>>,
-    host: cpal::Host,
+    host: Option<cpal::Host>,
     output_device: Option<String>,
     allow_virtual_output: bool,
     // Read only by the macOS exclusive-mode recovery path.
@@ -116,12 +120,13 @@ struct PlaybackRuntime {
     backend_exclusive_active: bool,
     #[cfg(target_os = "macos")]
     coreaudio_exclusive_mode: CoreAudioExclusiveModeGuard,
-    device: Device,
+    device: Option<Device>,
     device_name: String,
     coreaudio_device_id: Option<u32>,
-    stream: Stream,
+    stream: Option<Stream>,
     config: StreamConfig,
-    output_format: SampleFormat,
+    output_format: Option<SampleFormat>,
+    lab_output: Option<LabOutput>,
     channels: usize,
     logical_channels: usize,
     frame_size: usize,
@@ -376,6 +381,110 @@ struct DiagnosticState {
     meter_interval: Duration,
 }
 
+/// Callback clock and ring consumer for the explicitly selected lab backend.
+/// This shares the CPAL callback's ring, volume and meter kernels.
+struct LabOutput {
+    consumer: Consumer<f32>,
+    scratch: Vec<f32>,
+    next_tick: Instant,
+}
+
+const LAB_MAX_CHANNELS: usize = 16;
+const LAB_SAMPLE_RATES: [u32; 6] = [44_100, 48_000, 88_200, 96_000, 176_400, 192_000];
+
+#[cfg(test)]
+mod lab_tests {
+    use super::*;
+    use std::sync::mpsc::{channel, sync_channel};
+
+    fn runtime() -> PlaybackRuntime {
+        let (_message_tx, message_rx) = channel();
+        let (_command_tx, command_rx) = channel();
+        let (event_tx, _event_rx) = crossbeam::channel::bounded(64);
+        PlaybackRuntime::new(PlaybackRuntimeParams {
+            message_rx,
+            command_rx,
+            event_tx,
+            sample_rate: 48_000,
+            buffer_ms: 200,
+            initial_channels: 2,
+            frame_size: 64,
+            output_device: None,
+            recycle_tx: sync_channel(64).0,
+            allow_virtual_output: false,
+            output_access: OutputAccessMode::Shared,
+            sink_type: SinkType::LabNull,
+            shared_output_peak_bits: Arc::new(AtomicU32::new(0)),
+            shared_clipped_sample_count: Arc::new(AtomicU64::new(0)),
+        })
+        .expect("lab runtime")
+    }
+
+    #[test]
+    fn lab_uses_no_cpal_resources_and_consumes_processed_samples() {
+        let mut runtime = runtime();
+        assert!(runtime.host.is_none());
+        assert!(runtime.device.is_none());
+        assert!(runtime.stream.is_none());
+        let frame = super::super::super::AudioFrame::new(vec![0.5; 128], 64, 2, 48_000);
+        runtime.handle_frame(frame);
+        for _ in 0..100 {
+            runtime.lab_output.as_mut().unwrap().next_tick = Instant::now();
+            runtime.tick_lab_output();
+        }
+        assert!(runtime.state.callback_count.load(Ordering::Relaxed) >= 100);
+        assert!(runtime.state.total_callback_samples.load(Ordering::Relaxed) >= 128);
+        assert!(f32::from_bits(runtime.state.output_peak_bits.load(Ordering::Relaxed)) > 0.0);
+    }
+
+    #[test]
+    fn cancelled_lab_reconfigure_preserves_running_format() {
+        let mut runtime = runtime();
+        let ticket = super::super::super::HostUpdateTicket::new();
+        assert!(ticket.try_begin_execution());
+        assert!(ticket.cancel());
+        assert!(
+            runtime
+                .rebuild_lab_output(96_000, 6, Some(&ticket))
+                .is_err()
+        );
+        assert_eq!(runtime.config.sample_rate, 48_000);
+        assert_eq!(runtime.logical_channels, 2);
+        assert!(runtime.lab_output.is_some());
+    }
+
+    #[test]
+    fn lab_rejects_unsupported_capabilities() {
+        let mut runtime = runtime();
+        assert!(runtime.rebuild_lab_output(12_345, 2, None).is_err());
+        assert!(runtime.rebuild_lab_output(48_000, 17, None).is_err());
+    }
+
+    #[test]
+    fn lab_flush_and_stop_wait_for_consumption() {
+        let mut runtime = runtime();
+        let (request, receiver) = super::super::super::PlaybackStopRequest::new();
+        runtime.handle_command(PlaybackCommand::Stop(request));
+        for _ in 0..100 {
+            runtime.lab_output.as_mut().unwrap().next_tick = Instant::now();
+            runtime.tick_lab_output();
+            if flush_completed(&runtime.state, &runtime.producer, runtime.buffer_capacity) {
+                break;
+            }
+        }
+        assert!(flush_completed(
+            &runtime.state,
+            &runtime.producer,
+            runtime.buffer_capacity
+        ));
+        assert!(runtime.finalize_pending_stop_ack(true));
+        assert!(
+            receiver.try_recv().is_ok(),
+            "stop acknowledgment follows drain"
+        );
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RuntimeDecision {
     Proceed,
@@ -385,6 +494,9 @@ enum RuntimeDecision {
 
 impl PlaybackRuntime {
     fn new(params: PlaybackRuntimeParams) -> Result<Self, String> {
+        if params.sink_type == SinkType::LabNull {
+            return Self::new_lab(params);
+        }
         let PlaybackRuntimeParams {
             message_rx,
             command_rx,
@@ -397,6 +509,7 @@ impl PlaybackRuntime {
             recycle_tx,
             allow_virtual_output,
             output_access,
+            sink_type: _,
             shared_output_peak_bits,
             shared_clipped_sample_count,
         } = params;
@@ -527,7 +640,7 @@ impl PlaybackRuntime {
             command_rx,
             event_tx,
             recycle_tx,
-            host,
+            host: Some(host),
             output_device,
             allow_virtual_output,
             output_access,
@@ -536,12 +649,13 @@ impl PlaybackRuntime {
             backend_exclusive_active,
             #[cfg(target_os = "macos")]
             coreaudio_exclusive_mode,
-            device,
+            device: Some(device),
             device_name,
             coreaudio_device_id,
-            stream,
+            stream: Some(stream),
             config,
-            output_format,
+            output_format: Some(output_format),
+            lab_output: None,
             channels,
             logical_channels: initial_channels,
             frame_size,
@@ -586,8 +700,223 @@ impl PlaybackRuntime {
         })
     }
 
+    fn new_lab(params: PlaybackRuntimeParams) -> Result<Self, String> {
+        let PlaybackRuntimeParams {
+            message_rx,
+            command_rx,
+            event_tx,
+            sample_rate,
+            buffer_ms,
+            initial_channels,
+            frame_size,
+            output_device,
+            recycle_tx,
+            allow_virtual_output,
+            output_access,
+            sink_type: _,
+            shared_output_peak_bits,
+            shared_clipped_sample_count,
+        } = params;
+        if !LAB_SAMPLE_RATES.contains(&sample_rate)
+            || initial_channels == 0
+            || initial_channels > LAB_MAX_CHANNELS
+        {
+            return Err("Invalid lab playback format".to_string());
+        }
+        if output_device
+            .as_deref()
+            .is_some_and(|device| device != "Systemwide Lab Output")
+        {
+            return Err("Lab backend cannot open a physical output device".to_string());
+        }
+        if output_access.requires_exclusive() {
+            return Err("Lab output does not support exclusive device access".to_string());
+        }
+        let buffer_capacity = playback_buffer_capacity(sample_rate, initial_channels, buffer_ms);
+        let (mut producer, consumer) = RingBuffer::<f32>::new(buffer_capacity);
+        prefill_silence(&mut producer, buffer_capacity / 2);
+        let state = Arc::new(PlaybackState::new_sharing_meters(
+            buffer_capacity,
+            shared_output_peak_bits,
+            shared_clipped_sample_count,
+        ));
+        send_playback_event(
+            &event_tx,
+            ThreadEvent::PlaybackChannelsChanged(initial_channels),
+            "lab channels",
+        );
+        send_playback_event(
+            &event_tx,
+            ThreadEvent::PlaybackOutputDeviceChanged("Systemwide Lab Output".to_string()),
+            "lab output",
+        );
+        send_playback_event(
+            &event_tx,
+            ThreadEvent::PlaybackOutputAccessChanged(OutputAccessStatus::Shared),
+            "lab access",
+        );
+        let now = Instant::now();
+        Ok(Self {
+            message_rx,
+            command_rx,
+            event_tx,
+            recycle_tx,
+            host: None,
+            output_device,
+            allow_virtual_output,
+            output_access,
+            output_access_status: OutputAccessStatus::Shared,
+            #[cfg(target_os = "macos")]
+            backend_exclusive_active: false,
+            #[cfg(target_os = "macos")]
+            coreaudio_exclusive_mode: CoreAudioExclusiveModeGuard::inactive(),
+            device: None,
+            device_name: "Systemwide Lab Output".to_string(),
+            coreaudio_device_id: None,
+            stream: None,
+            config: StreamConfig {
+                channels: initial_channels as u16,
+                sample_rate,
+                buffer_size: initial_buffer_size(OutputAccessStatus::Shared, frame_size),
+            },
+            output_format: None,
+            lab_output: Some(LabOutput {
+                consumer,
+                scratch: vec![0.0; initial_channels * frame_size.max(1)],
+                next_tick: now,
+            }),
+            channels: initial_channels,
+            logical_channels: initial_channels,
+            frame_size,
+            buffer_ms,
+            producer,
+            state,
+            buffer_capacity,
+            conversion_buffer: conversion_buffer_for_ring(buffer_capacity),
+            accounting: PlaybackAccounting::default(),
+            drain: DrainState {
+                end_of_stream: false,
+                drain_start: None,
+                drain_timeout: Duration::from_secs(2),
+                flush_mode: FlushMode::Normal,
+                stream_flush_pending: false,
+                paused: false,
+                meter_epoch: 0,
+                epoch_peak_max: 0.0,
+                flushes_processed: 0,
+                pending_stop_ack: None,
+            },
+            recovery: RecoveryState {
+                last_callback_count: 0,
+                last_callback_check: now,
+                callback_stall_timeout: Duration::from_secs(3),
+                last_stream_error_count: 0,
+                last_recovery_attempt: now,
+                recovery_retry_interval: Duration::from_millis(500),
+                last_device_identity_check: now,
+                device_identity_check_interval: Duration::from_secs(2),
+                last_reported_underruns: 0,
+            },
+            diagnostics: DiagnosticState {
+                stream_start_time: now,
+                last_diagnostic_log: now,
+                diagnostic_interval: Duration::from_secs(5),
+                last_meter_report: now,
+                meter_interval: Duration::from_millis(100),
+            },
+        })
+    }
+
+    fn tick_lab_output(&mut self) {
+        let Some(lab) = self.lab_output.as_mut() else {
+            return;
+        };
+        let now = Instant::now();
+        if now < lab.next_tick {
+            return;
+        }
+        let frames = self.frame_size.max(1);
+        let period = Duration::from_secs_f64(frames as f64 / self.config.sample_rate as f64);
+        lab.next_tick = now + period;
+        self.state
+            .output_callback_active
+            .store(true, Ordering::Release);
+        self.state.callback_count.fetch_add(1, Ordering::Relaxed);
+        let count = lab.scratch.len();
+        read_ring_buffer(
+            &mut lab.consumer,
+            &mut lab.scratch,
+            count,
+            &self.state,
+            self.buffer_capacity,
+        );
+        apply_volume_clamp(
+            &mut lab.scratch,
+            &self.state,
+            self.channels,
+            self.config.sample_rate,
+        );
+        self.state
+            .output_callback_active
+            .store(false, Ordering::Release);
+    }
+
+    fn rebuild_lab_output(
+        &mut self,
+        sample_rate: u32,
+        channels: usize,
+        ticket: Option<&super::super::HostUpdateTicket>,
+    ) -> Result<PlaybackConfiguration, String> {
+        if !LAB_SAMPLE_RATES.contains(&sample_rate) || channels == 0 || channels > LAB_MAX_CHANNELS
+        {
+            return Err("Invalid lab playback format".to_string());
+        }
+        let buffer_capacity = playback_buffer_capacity(sample_rate, channels, self.buffer_ms);
+        let (mut producer, consumer) = RingBuffer::<f32>::new(buffer_capacity);
+        prefill_silence(&mut producer, buffer_capacity / 2);
+        let state = Arc::new(PlaybackState::new_sharing_meters(
+            buffer_capacity,
+            Arc::clone(&self.state.output_peak_bits),
+            Arc::clone(&self.state.clipped_sample_count),
+        ));
+        copy_playback_controls(&self.state, &state);
+        let scratch = vec![0.0; channels * self.frame_size.max(1)];
+        if ticket.is_some_and(|ticket| !ticket.try_complete_execution()) {
+            return Err("Playback reconfiguration was cancelled before installation".to_string());
+        }
+        self.drain_pending_messages();
+        self.producer = producer;
+        self.state = state;
+        self.lab_output = Some(LabOutput {
+            consumer,
+            scratch,
+            next_tick: Instant::now(),
+        });
+        self.config.channels = channels as u16;
+        self.config.sample_rate = sample_rate;
+        self.channels = channels;
+        self.logical_channels = channels;
+        self.buffer_capacity = buffer_capacity;
+        self.conversion_buffer = conversion_buffer_for_ring(buffer_capacity);
+        self.recovery.last_callback_count = 0;
+        self.recovery.last_callback_check = Instant::now();
+        self.drain.callback_flushed();
+        self.drain.end_of_stream = false;
+        self.drain.drain_start = None;
+        send_playback_event(
+            &self.event_tx,
+            ThreadEvent::PlaybackChannelsChanged(channels),
+            "lab reconfigure channels",
+        );
+        Ok(PlaybackConfiguration {
+            sample_rate,
+            channels,
+        })
+    }
+
     fn run(&mut self) -> Result<(), String> {
         loop {
+            self.tick_lab_output();
             if let Ok(command) = self.command_rx.try_recv()
                 && self.handle_command(command) == RuntimeDecision::Break
             {
@@ -793,14 +1122,19 @@ impl PlaybackRuntime {
             requested.channels,
             drained,
         );
-        if let Err(error) = self.stream.pause() {
+        if self.lab_output.is_some() {
+            let actual =
+                self.rebuild_lab_output(requested.sample_rate, requested.channels, Some(ticket));
+            return (RuntimeDecision::Continue, actual);
+        }
+        if let Err(error) = self.stream.as_ref().expect("CPAL stream").pause() {
             log::warn!("[Playback Thread] Failed to pause old stream: {error}");
         }
         std::thread::sleep(Duration::from_millis(10));
         self.drain_pending_messages();
 
         match rebuild_playback_stream(
-            &self.host,
+            self.host.as_ref().expect("CPAL host"),
             RebuildPlaybackParams {
                 output_device: self.output_device.as_deref(),
                 allow_virtual_output: self.allow_virtual_output,
@@ -848,6 +1182,19 @@ impl PlaybackRuntime {
     }
 
     fn handle_sample_rate_update(&mut self, new_sample_rate: u32) -> RuntimeDecision {
+        if self.lab_output.is_some() {
+            if let Err(error) =
+                self.rebuild_lab_output(new_sample_rate, self.logical_channels, None)
+            {
+                send_playback_event(
+                    &self.event_tx,
+                    ThreadEvent::ProcessingError(error),
+                    "lab sample-rate update",
+                );
+                return RuntimeDecision::Break;
+            }
+            return RuntimeDecision::Continue;
+        }
         log::debug!(
             "[Playback Thread] RECEIVED UpdateSampleRate({}) command, current sample_rate={}",
             new_sample_rate,
@@ -883,13 +1230,14 @@ impl PlaybackRuntime {
 
         drained_count += self.drain_pending_messages();
 
-        if let Err(e) = self.stream.pause() {
+        if let Err(e) = self.stream.as_ref().expect("CPAL stream").pause() {
             log::warn!("[Playback Thread] Failed to pause old stream: {}", e);
         }
         std::thread::sleep(Duration::from_millis(10));
         drained_count += self.drain_pending_messages();
 
-        let (new_format, new_hw_ch) = choose_output_format(&self.device, &new_config);
+        let (new_format, new_hw_ch) =
+            choose_output_format(self.device.as_ref().expect("CPAL device"), &new_config);
         let mut new_channels = self.channels;
         if new_hw_ch != new_config.channels {
             log::warn!(
@@ -920,7 +1268,7 @@ impl PlaybackRuntime {
         );
 
         match build_output_stream(
-            &self.device,
+            self.device.as_ref().expect("CPAL device"),
             &new_config,
             Arc::clone(&new_state),
             self.event_tx.clone(),
@@ -967,7 +1315,7 @@ impl PlaybackRuntime {
                     new_sample_rate,
                     e
                 );
-                if let Err(resume_err) = self.stream.play() {
+                if let Err(resume_err) = self.stream.as_ref().expect("CPAL stream").play() {
                     log::error!(
                         "[Playback Thread] Failed to resume old stream: {}",
                         resume_err
@@ -987,6 +1335,18 @@ impl PlaybackRuntime {
     }
 
     fn handle_channel_update(&mut self, mut new_channels: usize) -> RuntimeDecision {
+        if self.lab_output.is_some() {
+            if let Err(error) = self.rebuild_lab_output(self.config.sample_rate, new_channels, None)
+            {
+                send_playback_event(
+                    &self.event_tx,
+                    ThreadEvent::ProcessingError(error),
+                    "lab channel update",
+                );
+                return RuntimeDecision::Break;
+            }
+            return RuntimeDecision::Continue;
+        }
         let logical_channels = new_channels;
         log::debug!(
             "[Playback Thread] RECEIVED UpdateChannels({}) command, current channels={}",
@@ -1013,7 +1373,8 @@ impl PlaybackRuntime {
             sample_rate: self.config.sample_rate,
             buffer_size: self.config.buffer_size,
         };
-        let (new_format, new_hw_ch) = choose_output_format(&self.device, &probe_config);
+        let (new_format, new_hw_ch) =
+            choose_output_format(self.device.as_ref().expect("CPAL device"), &probe_config);
         if new_hw_ch as usize != new_channels {
             log::info!(
                 "[Playback Thread] Device adjusts requested {}ch to {}ch",
@@ -1062,7 +1423,7 @@ impl PlaybackRuntime {
 
         drained_count += self.drain_pending_messages();
 
-        if let Err(e) = self.stream.pause() {
+        if let Err(e) = self.stream.as_ref().expect("CPAL stream").pause() {
             log::warn!("[Playback Thread] Failed to pause old stream: {}", e);
         }
         std::thread::sleep(Duration::from_millis(10));
@@ -1077,7 +1438,7 @@ impl PlaybackRuntime {
         );
 
         match build_output_stream(
-            &self.device,
+            self.device.as_ref().expect("CPAL device"),
             &new_config,
             Arc::clone(&new_state),
             self.event_tx.clone(),
@@ -1134,7 +1495,7 @@ impl PlaybackRuntime {
                     new_channels,
                     e
                 );
-                let resume_result = self.stream.play();
+                let resume_result = self.stream.as_ref().expect("CPAL stream").play();
                 if let Err(resume_err) = resume_result {
                     log::error!(
                         "[Playback Thread] Failed to resume old stream after rebuild failure: {}. \
@@ -1188,6 +1549,9 @@ impl PlaybackRuntime {
     }
 
     fn handle_stream_recovery(&mut self) -> RuntimeDecision {
+        if self.lab_output.is_some() {
+            return RuntimeDecision::Proceed;
+        }
         let current_stream_errors = self.state.stream_error_count.load(Ordering::Relaxed);
         let current_callbacks = self.state.callback_count.load(Ordering::Relaxed);
         let coreaudio_identity_reason = self.coreaudio_identity_recovery_reason();
@@ -1229,7 +1593,7 @@ impl PlaybackRuntime {
             "stream recovery warning",
         );
 
-        if let Err(e) = self.stream.pause() {
+        if let Err(e) = self.stream.as_ref().expect("CPAL stream").pause() {
             log::warn!(
                 "[Playback Thread] Failed to pause stream before recovery: {}",
                 e
@@ -1263,7 +1627,7 @@ impl PlaybackRuntime {
         }
 
         match rebuild_playback_stream(
-            &self.host,
+            self.host.as_ref().expect("CPAL host"),
             RebuildPlaybackParams {
                 output_device: self.output_device.as_deref(),
                 allow_virtual_output: self.allow_virtual_output,
@@ -1290,7 +1654,7 @@ impl PlaybackRuntime {
                     ThreadEvent::ProcessingWarning(msg),
                     "stream recovery failure",
                 );
-                if let Err(resume_err) = self.stream.play() {
+                if let Err(resume_err) = self.stream.as_ref().expect("CPAL stream").play() {
                     log::warn!(
                         "[Playback Thread] Failed to resume previous stream after recovery failure: {}",
                         resume_err
@@ -1332,13 +1696,13 @@ impl PlaybackRuntime {
             rebuilt.output_format
         );
 
-        self.device = rebuilt.device;
+        self.device = Some(rebuilt.device);
         self.device_name = rebuilt.device_name;
-        self.stream = rebuilt.stream;
+        self.stream = Some(rebuilt.stream);
         self.producer = rebuilt.producer;
         self.state = rebuilt.state;
         self.config = rebuilt.config;
-        self.output_format = rebuilt.output_format;
+        self.output_format = Some(rebuilt.output_format);
         self.channels = rebuilt.channels;
         self.logical_channels = rebuilt.logical_channels;
         self.buffer_capacity = rebuilt.buffer_capacity;
@@ -1379,13 +1743,13 @@ impl PlaybackRuntime {
         buffer_capacity: usize,
         output_format: SampleFormat,
     ) {
-        self.stream = stream;
+        self.stream = Some(stream);
         self.config = config;
         self.state = state;
         self.channels = channels;
         self.producer = producer;
         self.buffer_capacity = buffer_capacity;
-        self.output_format = output_format;
+        self.output_format = Some(output_format);
         self.conversion_buffer = conversion_buffer_for_ring(buffer_capacity);
     }
 
@@ -1395,7 +1759,7 @@ impl PlaybackRuntime {
         unrecoverable_context: &str,
         fallback_context: &str,
     ) -> RuntimeDecision {
-        match self.stream.play() {
+        match self.stream.as_ref().expect("CPAL stream").play() {
             Ok(()) => {
                 log::warn!(
                     "[Playback Thread] {}, resumed previous stream configuration",
@@ -1576,6 +1940,7 @@ impl PlaybackRuntime {
         );
         let mut counted_block = false;
         while required <= self.buffer_capacity && self.producer.slots() < required {
+            self.tick_lab_output();
             if !counted_block {
                 self.accounting.frames_blocked += 1;
                 counted_block = true;
@@ -1720,6 +2085,7 @@ impl PlaybackRuntime {
         let drain_start = Instant::now();
         let drain_timeout = Duration::from_secs(2);
         loop {
+            self.tick_lab_output();
             if self.producer.slots() >= self.buffer_capacity {
                 log::info!(
                     "[Playback Thread] Ring buffer drained (post-disconnect), signaling completion"

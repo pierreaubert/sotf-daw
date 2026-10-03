@@ -27,4 +27,6 @@ pub enum SinkType {
     /// Local hardware output via cpal (default).
     #[default]
     Cpal,
+    /// Device-free output for the isolated systemwide lab.
+    LabNull,
 }

@@ -175,6 +175,27 @@ impl EngineConfig {
                 Self::MAX_OUTPUT_CHANNELS
             ));
         }
+        if self.sink_type == SinkType::LabNull {
+            if !self.driver_mode {
+                return Err("LabNull output requires driver mode".to_string());
+            }
+            if !matches!(
+                self.output_sample_rate,
+                44_100 | 48_000 | 88_200 | 96_000 | 176_400 | 192_000
+            ) || self.output_channels > Self::MAX_OUTPUT_CHANNELS
+            {
+                return Err(
+                    "LabNull output format is outside supported rates or channels".to_string(),
+                );
+            }
+            if self
+                .output_device
+                .as_deref()
+                .is_some_and(|device| device != "Systemwide Lab Output")
+            {
+                return Err("LabNull cannot open a physical output device".to_string());
+            }
+        }
         if !self.volume.is_finite() || !(0.0..=1.0).contains(&self.volume) {
             return Err(
                 "EngineConfig volume must be finite and in the range 0.0..=1.0".to_string(),

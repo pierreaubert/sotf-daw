@@ -377,7 +377,7 @@ pub(super) fn run_manager_thread(
     );
 
     // Now create playback thread with the correct channel count
-    let mut playback_thread = PlaybackThread::new(
+    let mut playback_thread = PlaybackThread::new_with_sink(
         processing_rx,
         event_tx.clone(),
         actual_output_sample_rate,
@@ -388,6 +388,7 @@ pub(super) fn run_manager_thread(
         recycle_tx,
         config.allow_virtual_output,
         config.output_access,
+        config.sink_type.clone(),
     )?;
 
     // Set initial volume and mute
