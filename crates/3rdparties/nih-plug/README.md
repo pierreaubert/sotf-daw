@@ -67,6 +67,19 @@ stale response for a later request. The existing request rendezvous, request
 timeout, inactive-state application, and plugin state reinitialization behavior
 remain unchanged; this is a guarantee for the reply path, not the entire restore.
 
+## CLAP state stream validation and host notification
+
+`src/wrapper/clap/util.rs` reads the length-prefixed state in 8192-byte chunks
+and grows its buffer only after each chunk arrives. A malformed length, short
+stream, or allocation failure returns `false` without allocating the declared
+length up front. Valid state bytes and the shared JSON format are unchanged.
+
+After a successful CLAP stream restore, `src/wrapper/clap/wrapper.rs` schedules
+the existing main-thread `RescanParamValues` task. This tells the host to refresh
+parameter values changed by the restore; the GUI notification remains separate.
+The native stream tests cover short reads, truncated input, and a forged huge
+length. The pinned CLAP validator checks the host rescan and parameter round trip.
+
 ## Auxiliary bus boundaries (AUD-072)
 
 CLAP and VST3 auxiliary input/output loops now stop at `index >= declared_count`,

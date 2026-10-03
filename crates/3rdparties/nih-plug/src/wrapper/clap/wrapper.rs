@@ -94,7 +94,7 @@ use crate::prelude::{
 };
 use crate::util::permit_alloc;
 use crate::wrapper::clap::context::RemoteControlPages;
-use crate::wrapper::clap::util::{read_stream, write_stream};
+use crate::wrapper::clap::util::{read_length_prefixed_state, read_stream, write_stream};
 use crate::wrapper::state::{self, PluginState};
 use crate::wrapper::util::buffer_management::{
     audio_layout_bus_channels, audio_layout_bus_count, BufferManager, ChannelPointers,
@@ -3594,31 +3594,20 @@ impl<P: ClapPlugin> Wrapper<P> {
         check_null_ptr!(false, plugin, (*plugin).plugin_data, stream);
         let wrapper = &*((*plugin).plugin_data as *const Self);
 
-        // CLAP does not have a way to tell how much data there is left in a stream, so we've
-        // prepended the size in front of our JSON state
-        let mut length_bytes = [0u8; 8];
-        if !read_stream(&*stream, length_bytes.as_mut_slice()) {
-            nih_debug_assert_failure!(
-                "Error or end of stream while reading the state length from the stream."
-            );
+        // CLAP streams do not expose their remaining length. The prefix is
+        // untrusted: read actual bytes in bounded chunks before allocating.
+        let Some(read_buffer) = read_length_prefixed_state(|chunk| read_stream(&*stream, chunk))
+        else {
             return false;
-        }
-        let length = u64::from_le_bytes(length_bytes);
-
-        let mut read_buffer: Vec<u8> = Vec::with_capacity(length as usize);
-        if !read_stream(&*stream, read_buffer.spare_capacity_mut()) {
-            nih_debug_assert_failure!(
-                "Error or end of stream while reading the state buffer from the stream."
-            );
-            return false;
-        }
-        read_buffer.set_len(length as usize);
+        };
 
         match state::deserialize_json(&read_buffer) {
             Some(mut state) => {
                 let success = wrapper.set_state_inner(&mut state, false);
                 if success {
                     nih_trace!("Loaded state ({} bytes)", read_buffer.len());
+                    let task_posted = wrapper.schedule_gui(Task::RescanParamValues);
+                    nih_debug_assert!(task_posted, "The task queue is full, dropping task...");
                 }
 
                 success

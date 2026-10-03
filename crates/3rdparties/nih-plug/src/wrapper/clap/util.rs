@@ -142,6 +142,28 @@ pub fn read_stream(stream: &clap_istream, mut slice: impl ByteReadBuffer) -> boo
     true
 }
 
+/// Read a length-prefixed CLAP state without trusting its declared size for allocation.
+/// A host may supply malformed or truncated state data, so memory grows only after
+/// each chunk has actually arrived.
+pub fn read_length_prefixed_state(mut read_exact: impl FnMut(&mut [u8]) -> bool) -> Option<Vec<u8>> {
+    let mut length_bytes = [0u8; 8];
+    if !read_exact(&mut length_bytes) {
+        return None;
+    }
+    let length = usize::try_from(u64::from_le_bytes(length_bytes)).ok()?;
+    let mut state = Vec::new();
+    let mut chunk = [0u8; 8192];
+    while state.len() < length {
+        let count = (length - state.len()).min(chunk.len());
+        if !read_exact(&mut chunk[..count]) {
+            return None;
+        }
+        state.try_reserve(count).ok()?;
+        state.extend_from_slice(&chunk[..count]);
+    }
+    Some(state)
+}
+
 /// Write the data from a slice to a stream until either all data has been written, or the stream
 /// returns an error. This correctly handles streams that only allow smaller, buffered writes. This
 /// returns `false` if the stream returns an error or doesn't allow any writes anymore.
@@ -163,4 +185,71 @@ pub fn write_stream(stream: &clap_ostream, slice: &[u8]) -> bool {
     }
 
     true
+}
+
+#[cfg(test)]
+mod state_stream_tests {
+    use super::{read_length_prefixed_state, read_stream};
+    use clap_sys::stream::clap_istream;
+    use std::ffi::c_void;
+
+    struct TestInput {
+        bytes: Vec<u8>,
+        position: usize,
+        max_read: usize,
+    }
+
+    unsafe extern "C" fn short_read(
+        stream: *const clap_istream,
+        buffer: *mut c_void,
+        size: u64,
+    ) -> i64 {
+        let input = unsafe { &mut *((*stream).ctx as *mut TestInput) };
+        let count = (size as usize)
+            .min(input.bytes.len().saturating_sub(input.position))
+            .min(input.max_read);
+        if count != 0 {
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    input.bytes.as_ptr().add(input.position),
+                    buffer.cast::<u8>(),
+                    count,
+                );
+            }
+            input.position += count;
+        }
+        count as i64
+    }
+
+    fn read_chunks(data: &[u8], max_read: usize) -> Option<Vec<u8>> {
+        let mut input = TestInput {
+            bytes: data.to_vec(),
+            position: 0,
+            max_read,
+        };
+        let stream = clap_istream {
+            ctx: (&mut input as *mut TestInput).cast(),
+            read: Some(short_read),
+        };
+        read_length_prefixed_state(|destination| read_stream(&stream, destination))
+    }
+
+    #[test]
+    fn length_prefixed_state_accepts_short_reads_across_chunks() {
+        let payload = vec![42u8; 9001];
+        let mut bytes = (payload.len() as u64).to_le_bytes().to_vec();
+        bytes.extend_from_slice(&payload);
+        assert_eq!(read_chunks(&bytes, 17), Some(payload));
+    }
+
+    #[test]
+    fn length_prefixed_state_rejects_huge_header_and_truncated_payload() {
+        let mut huge = u64::MAX.to_le_bytes().to_vec();
+        huge.extend_from_slice(&[42u8; 32]);
+        assert_eq!(read_chunks(&huge, 17), None);
+
+        let mut truncated = 8193u64.to_le_bytes().to_vec();
+        truncated.extend_from_slice(&[42u8; 8192]);
+        assert_eq!(read_chunks(&truncated, 17), None);
+    }
 }
