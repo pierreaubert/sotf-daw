@@ -11,7 +11,10 @@ use clap_sys::ext::gui::{
     CLAP_EXT_GUI, CLAP_WINDOW_API_X11, clap_plugin_gui, clap_window, clap_window_handle,
 };
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_plugin_latency};
-use clap_sys::ext::params::{CLAP_EXT_PARAMS, clap_param_info, clap_plugin_params};
+use clap_sys::ext::params::{
+    CLAP_EXT_PARAMS, CLAP_PARAM_RESCAN_VALUES, clap_host_params, clap_param_clear_flags,
+    clap_param_info, clap_param_rescan_flags, clap_plugin_params,
+};
 use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
 use clap_sys::ext::tail::{CLAP_EXT_TAIL, clap_plugin_tail};
 use clap_sys::host::clap_host;
@@ -79,13 +82,41 @@ crate::sotf_nih_plugin!(
 
 unsafe extern "C" fn no_host_extension(
     _host: *const clap_host,
-    _id: *const c_char,
+    id: *const c_char,
 ) -> *const c_void {
-    ptr::null()
+    // SAFETY: CLAP passes a NUL-terminated extension name for this synchronous query.
+    if unsafe { CStr::from_ptr(id) } == CLAP_EXT_PARAMS {
+        (&CLAP_HOST_PARAMS as *const clap_host_params).cast()
+    } else {
+        ptr::null()
+    }
 }
+
+static CLAP_HOST_PARAMS: clap_host_params = clap_host_params {
+    rescan: Some(rescan_clap_params),
+    clear: Some(clear_clap_params),
+    request_flush: Some(request_clap_param_flush),
+};
+
+unsafe extern "C" fn rescan_clap_params(host: *const clap_host, flags: clap_param_rescan_flags) {
+    let state = unsafe { clap_host_state(host) };
+    state.param_rescan_flags.store(flags as usize, Ordering::Release);
+    state.param_rescans.fetch_add(1, Ordering::AcqRel);
+}
+
+unsafe extern "C" fn clear_clap_params(
+    _host: *const clap_host,
+    _param_id: clap_id,
+    _flags: clap_param_clear_flags,
+) {
+}
+
+unsafe extern "C" fn request_clap_param_flush(_host: *const clap_host) {}
 
 struct NativeClapHostState {
     callback_requests: AtomicUsize,
+    param_rescans: AtomicUsize,
+    param_rescan_flags: AtomicUsize,
     restart_requests: AtomicUsize,
     restart_on_main_thread: AtomicBool,
     main_thread: ThreadId,
@@ -126,6 +157,8 @@ impl NativeClap {
     fn new() -> Self {
         let host_state = Box::new(NativeClapHostState {
             callback_requests: AtomicUsize::new(0),
+            param_rescans: AtomicUsize::new(0),
+            param_rescan_flags: AtomicUsize::new(0),
             restart_requests: AtomicUsize::new(0),
             restart_on_main_thread: AtomicBool::new(false),
             main_thread: thread::current().id(),
@@ -287,7 +320,15 @@ impl NativeClap {
     }
 
     fn load_stream(&self, bytes: &[u8]) -> bool {
-        let mut reader = StateReader { bytes, offset: 0 };
+        self.load_stream_with_max_read(bytes, usize::MAX)
+    }
+
+    fn load_stream_with_max_read(&self, bytes: &[u8], max_read: usize) -> bool {
+        let mut reader = StateReader {
+            bytes,
+            offset: 0,
+            max_read,
+        };
         let stream = clap_istream {
             ctx: (&mut reader as *mut StateReader<'_>).cast(),
             read: Some(read_state),
@@ -1470,6 +1511,7 @@ fn with_vst3_stream(
 struct StateReader<'a> {
     bytes: &'a [u8],
     offset: usize,
+    max_read: usize,
 }
 
 unsafe extern "C" fn read_state(
@@ -1485,7 +1527,9 @@ unsafe extern "C" fn read_state(
     };
     // SAFETY: ctx points to the StateReader borrowed for this synchronous callback.
     let reader = unsafe { &mut *(*stream).ctx.cast::<StateReader<'_>>() };
-    let count = size.min(reader.bytes.len().saturating_sub(reader.offset));
+    let count = size
+        .min(reader.bytes.len().saturating_sub(reader.offset))
+        .min(reader.max_read);
     // SAFETY: the stream supplied a writable buffer and the source range is bounded above.
     unsafe {
         ptr::copy_nonoverlapping(
@@ -2332,6 +2376,48 @@ fn assert_delayed_dry(output: &[[f32; 2]], input: &[[f32; 2]], latency: usize) {
         };
         assert_eq!(*output_frame, expected, "dry sample {frame}");
     }
+}
+
+#[test]
+fn clap_state_stream_handles_short_reads_and_rejects_untrusted_lengths() {
+    let subject = NativeClap::new();
+    let mut state = subject.new_state();
+    state.params.insert("mix".into(), ParamValue::F32(0.37));
+    let payload = serde_json::to_vec(&state).unwrap();
+    let mut valid = (payload.len() as u64).to_le_bytes().to_vec();
+    valid.extend_from_slice(&payload);
+
+    let rescans_before = subject._host_state.param_rescans.load(Ordering::Acquire);
+    assert!(subject.load_stream_with_max_read(&valid, 17));
+    assert_eq!(
+        subject._host_state.param_rescans.load(Ordering::Acquire),
+        rescans_before + 1,
+        "successful state load must notify the host of changed parameter values"
+    );
+    assert_eq!(
+        subject._host_state.param_rescan_flags.load(Ordering::Acquire) as u32,
+        CLAP_PARAM_RESCAN_VALUES
+    );
+    assert!(matches!(
+        decoded_state(&subject.save_state()).params.get("mix"),
+        Some(ParamValue::F32(value)) if (*value - 0.37).abs() < f32::EPSILON
+    ));
+
+    let preserved = subject.save_state();
+    let mut huge = u64::MAX.to_le_bytes().to_vec();
+    huge.extend_from_slice(&payload[..payload.len().min(32)]);
+    assert!(!subject.load_stream_with_max_read(&huge, 17));
+    assert!(!subject.load_stream_with_max_read(&valid[..valid.len() - 1], 17));
+    assert_eq!(
+        subject.save_state(),
+        preserved,
+        "failed loads must preserve state"
+    );
+    assert_eq!(
+        subject._host_state.param_rescans.load(Ordering::Acquire),
+        rescans_before + 1,
+        "failed loads must not send a parameter rescan"
+    );
 }
 
 #[test]
