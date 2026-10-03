@@ -584,6 +584,8 @@ fn audio_engine_state_deserializes_missing_fields_with_defaults() {
     });
     let state: AudioEngineState = serde_json::from_value(json).expect("deserialize should succeed");
     assert_eq!(state.playback_state, PlaybackState::Playing);
+    assert_eq!(state.playback_peak_max_linear, 0.0);
+    assert_eq!(state.playback_epoch, 0);
     assert_eq!(state.output_access_mode, OutputAccessMode::Shared);
     assert_eq!(state.dsd_output_mode, DsdOutputMode::Disabled);
     assert_eq!(

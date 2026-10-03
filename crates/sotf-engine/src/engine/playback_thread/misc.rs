@@ -1,8 +1,10 @@
 use super::super::ThreadEvent;
+use super::playback_state::PlaybackState;
 use crate::OutputAccessStatus;
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, SampleFormat};
 use rtrb::{CopyToUninit, Producer, chunks::WriteChunkUninit};
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::SyncSender;
 
 pub(super) const SPIN_MS_RINGBUFFER: u64 = 5;
@@ -38,6 +40,26 @@ pub(super) fn send_playback_event(
             context,
             e
         );
+    }
+}
+
+/// Build one tagged meter snapshot, swapping the callback residual.
+///
+/// The swap hands the residual to exactly one report and clears it, so
+/// callers needing report-then-clear (flush completion, terminal drain)
+/// share this path with the periodic meter. No channel interaction:
+/// callers send the returned event.
+pub(super) fn snapshot_output_meter(meter: &PlaybackState, epoch: u64) -> ThreadEvent {
+    let peak_linear = f32::from_bits(
+        meter
+            .output_peak_bits
+            .swap(0.0f32.to_bits(), Ordering::Relaxed),
+    );
+    let clipping_detected = meter.clipped_sample_count.swap(0, Ordering::Relaxed) > 0;
+    ThreadEvent::PlaybackOutputMeter {
+        peak_linear,
+        clipping_detected,
+        epoch,
     }
 }
 

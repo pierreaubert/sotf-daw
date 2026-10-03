@@ -596,6 +596,18 @@ impl Drop for AsyncTimelinePlugin {
 }
 
 impl Plugin for AsyncTimelinePlugin {
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // Per-call emission through the worker queues and timeline needs
+        // its own proof; unknown keeps the host's live sizing.
+        None
+    }
+
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        // Queue-mediated geometry across the worker boundary is unproven;
+        // unknown keeps the host's live sizing.
+        None
+    }
+
     fn as_any(&self) -> Option<&dyn Any> {
         Some(self)
     }

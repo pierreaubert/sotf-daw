@@ -892,10 +892,7 @@ impl ExternalPlugin {
                 }
             }
             NativePluginAudioSetup::AmbisonicsCustom { order, .. } => {
-                let expected = (
-                    i32::from(*order),
-                    AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX,
-                );
+                let expected = (i32::from(*order), AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX);
                 let actual = backend
                     .ambisonics_layout_parameters()?
                     .ok_or_else(|| {
@@ -969,8 +966,9 @@ impl ExternalPlugin {
         Ok(())
     }
 
-    fn validate_sidechain_detector_source(
-        backend: &dyn NativeExternalPluginBackend,
+    fn validate_sidechain_detector_continuity(
+        live: &dyn NativeExternalPluginBackend,
+        candidate: &dyn NativeExternalPluginBackend,
         descriptor: &PluginDescriptor,
         plugin_name: &str,
         setup: &NativePluginAudioSetup,
@@ -981,16 +979,22 @@ impl ExternalPlugin {
                 "external plugin '{plugin_name}' sidechain route has no structural detector parameter"
             ));
         };
-        match backend.get_parameter(id) {
-            Some(ParameterValue::Bool(true)) => Ok(()),
-            Some(ParameterValue::Bool(false)) => Err(format!(
-                "external plugin '{plugin_name}' sidechain state disables the detector key bus; recreate the instance without the sidechain setup"
-            )),
-            Some(other) => Err(format!(
-                "external plugin '{plugin_name}' sidechain detector parameter has unexpected value {other:?}; recreate the instance without the sidechain setup"
-            )),
-            None => Err(format!(
-                "external plugin '{plugin_name}' does not expose sidechain detector readback"
+        match (live.get_parameter(id), candidate.get_parameter(id)) {
+            (Some(ParameterValue::Bool(live_on)), Some(ParameterValue::Bool(candidate_on))) => {
+                if live_on == candidate_on {
+                    Ok(())
+                } else if live_on {
+                    Err(format!(
+                        "external plugin '{plugin_name}' restore disables the detector key bus on a keyed sidechain route; recreate the instance without the sidechain setup to change detector routing"
+                    ))
+                } else {
+                    Err(format!(
+                        "external plugin '{plugin_name}' restore enables the detector key bus on an unkeyed sidechain route; recreate the instance with keyed state to change detector routing"
+                    ))
+                }
+            }
+            _ => Err(format!(
+                "external plugin '{plugin_name}' sidechain detector readback unavailable; cannot verify detector continuity"
             )),
         }
     }
@@ -1241,15 +1245,21 @@ impl ExternalPlugin {
             // its result while keeping the installed backend detached from it.
             backend.load_state(opaque_state)?;
         }
-        if !opaque_state.is_empty()
-            && let Some(setup @ NativePluginAudioSetup::Sidechain { .. }) =
-                effective_setup.as_ref()
+        if let Some(setup @ NativePluginAudioSetup::Sidechain { .. }) = effective_setup.as_ref()
+            && let Some(live) = self.native_backend.as_ref()
         {
-            // Explicit state contradicting the keyed route (detector key
-            // bus off) is refused on the detached candidate so the live
-            // route keeps its configuration and history. Fresh loads
-            // carry no state and are unaffected.
-            Self::validate_sidechain_detector_source(
+            // Detector source is pinned for live-instance life: the
+            // candidate must match the installed route, refusing flips
+            // in either direction with history kept. Fresh construction
+            // has no live route (internal and external both valid), and
+            // same-state rebuilds such as sample-rate reinit trivially
+            // match, so both proceed. Empty candidates are fresh
+            // defaults with a readable source, so they stay gated too:
+            // an empty Sidechain preset deserialized onto a live
+            // external route refuses instead of silently resetting to
+            // internal, while an internal live route accepts.
+            Self::validate_sidechain_detector_continuity(
+                &**live,
                 &*backend,
                 descriptor,
                 &descriptor.name,
@@ -1550,8 +1560,9 @@ fn validate_ambisonics_custom_agreement(
     expected: &NativeAmbisonicsCustomGeometry,
 ) -> Result<(), String> {
     let actual = ambisonics_custom_geometry_from_opaque_state(opaque_state, format)?;
-    let expected_value = serde_json::to_value(expected)
-        .map_err(|error| format!("failed to encode selected custom Ambisonics geometry: {error}"))?;
+    let expected_value = serde_json::to_value(expected).map_err(|error| {
+        format!("failed to encode selected custom Ambisonics geometry: {error}")
+    })?;
     if actual != expected_value {
         return Err(format!(
             "external plugin '{plugin_name}' custom Ambisonics geometry in native state does not match the selected setup"
@@ -1574,16 +1585,16 @@ fn ambisonics_state_with_setup(
         NativePluginAudioSetup::Ambisonics {
             order,
             target_layout,
-        } => (
-            *order,
-            target_layout.plugin_parameter_choice_index(),
-            None,
-        ),
+        } => (*order, target_layout.plugin_parameter_choice_index(), None),
         NativePluginAudioSetup::AmbisonicsCustom { order, custom } => {
             let custom_json = serde_json::to_string(custom).map_err(|error| {
                 format!("failed to encode selected custom Ambisonics geometry: {error}")
             })?;
-            (*order, AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX, Some(custom_json))
+            (
+                *order,
+                AMBISONICS_CUSTOM_TARGET_CHOICE_INDEX,
+                Some(custom_json),
+            )
         }
         _ => return Err("Ambisonics state repair requires an Ambisonics audio setup".into()),
     };
@@ -1647,6 +1658,16 @@ fn ambisonics_state_with_setup(
 }
 
 impl Plugin for ExternalPlugin {
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // Native backend state is unproven; unknown keeps live sizing.
+        None
+    }
+
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        // Native backend production is unproven; unknown keeps live sizing.
+        None
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new(
             &self.descriptor.name,
@@ -1962,6 +1983,32 @@ impl SerializablePlugin for ExternalPlugin {
         state
             .validate()
             .map_err(PluginError::InvalidConfiguration)?;
+        let live_effective = NativePluginAudioSetup::for_descriptor_or_legacy_default(
+            &self.discovery_descriptor,
+            self.audio_setup.as_ref(),
+        )
+        .map_err(PluginError::InvalidConfiguration)?;
+        let preset_effective = NativePluginAudioSetup::for_descriptor_or_legacy_default(
+            &state.descriptor,
+            state.audio_setup.as_ref(),
+        )
+        .map_err(PluginError::InvalidConfiguration)?;
+        let live_is_sidechain = matches!(
+            live_effective,
+            Some(NativePluginAudioSetup::Sidechain { .. })
+        );
+        if live_is_sidechain && live_effective != preset_effective {
+            // A live Sidechain route pins its bus geometry: adopting a
+            // preset with any other setup would collapse or regrow the
+            // key bus outside the detector-continuity gate (which keys
+            // off the candidate setup), silently flipping the detector
+            // source and dropping populated history. Other setups keep
+            // their existing cross-setup preset contract.
+            return Err(PluginError::InvalidConfiguration(format!(
+                "external plugin '{}' cannot change sidechain bus layout in place; recreate the instance with the matching setup",
+                self.discovery_descriptor.name
+            )));
+        }
         let replacement = self
             .replacement_backend_for_state(
                 &state.descriptor,
@@ -2207,8 +2254,7 @@ mod ambisonics_custom_state_tests {
             let field = value["fields"][AMBISONICS_CUSTOM_STATE_FIELD]
                 .as_str()
                 .unwrap();
-            let decoded: NativeAmbisonicsCustomGeometry =
-                serde_json::from_str(field).unwrap();
+            let decoded: NativeAmbisonicsCustomGeometry = serde_json::from_str(field).unwrap();
             assert_eq!(decoded, custom_geometry());
             let rewritten =
                 ambisonics_state_with_setup(&rewritten, format, &named_setup()).unwrap();
@@ -2217,11 +2263,7 @@ mod ambisonics_custom_state_tests {
                 value["params"]["target_layout"],
                 serde_json::json!({"i32": 5})
             );
-            assert!(
-                value["fields"]
-                    .get(AMBISONICS_CUSTOM_STATE_FIELD)
-                    .is_none()
-            );
+            assert!(value["fields"].get(AMBISONICS_CUSTOM_STATE_FIELD).is_none());
             assert_eq!(value["params"]["sentinel"], serde_json::json!(1));
         }
     }
@@ -2231,8 +2273,7 @@ mod ambisonics_custom_state_tests {
         let custom = custom_setup();
         let named = named_setup();
         for format in [PluginFormat::Clap, PluginFormat::Vst3] {
-            let custom_ids =
-                audio_setup_structural_parameter_ids(format, Some(&custom)).unwrap();
+            let custom_ids = audio_setup_structural_parameter_ids(format, Some(&custom)).unwrap();
             let named_ids = audio_setup_structural_parameter_ids(format, Some(&named)).unwrap();
             assert_eq!(custom_ids, named_ids);
             assert_eq!(custom_ids.len(), 2);

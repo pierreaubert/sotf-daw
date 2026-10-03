@@ -3001,7 +3001,9 @@ pub fn eq_config_json_with_native_route(
             }
             let pair_mask = (1_u16 << first) | (1_u16 << second);
             if used & pair_mask != 0 {
-                return Err(format!("EQ stereo pair [{first}, {second}] overlaps another pair"));
+                return Err(format!(
+                    "EQ stereo pair [{first}, {second}] overlaps another pair"
+                ));
             }
             used |= pair_mask;
         }
@@ -3194,6 +3196,7 @@ pub fn get_param_specs(plugin_type: &str) -> &'static [sotf_host::param_specs::P
         // DeEsser choice controls (mode, split topology) are String-typed at
         // runtime; specs provide the stable integer Choice metadata.
         "DeEsser" => de_esser::PARAMS,
+        "AnalogLimiter" => analog_limiter::PARAMS,
         _ => &[],
     }
 }

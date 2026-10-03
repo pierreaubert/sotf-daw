@@ -108,3 +108,19 @@ pub(super) fn d_multi_resolution() -> bool {
 pub(super) fn d_spatial_strength() -> f64 {
     pk(PARAMS, "spatial_strength").default_f64()
 }
+
+pub(super) fn d_curve_low() -> f64 {
+    pk(PARAMS, "curve_low").default_f64()
+}
+
+pub(super) fn d_curve_mid() -> f64 {
+    pk(PARAMS, "curve_mid").default_f64()
+}
+
+pub(super) fn d_curve_high() -> f64 {
+    pk(PARAMS, "curve_high").default_f64()
+}
+
+pub(super) fn d_audition_residual() -> bool {
+    pk(PARAMS, "audition_residual").default_bool()
+}

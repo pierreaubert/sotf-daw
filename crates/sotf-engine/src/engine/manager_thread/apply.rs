@@ -262,7 +262,12 @@ fn apply_plugin_update_once(
                     new_state.num_channels = output_channels;
                     new_state.sample_rate = output_sample_rate;
                     new_state.plugin_latency_samples = latency_samples;
-                    new_state.last_error = Some(reason.clone());
+                    // Death-text preservation: the failure is still
+                    // returned and metrics-recorded; only the
+                    // shared-state text is preserved.
+                    if !new_state.worker_death_poisoned {
+                        new_state.last_error = Some(reason.clone());
+                    }
                     new_state.playback_state = crate::PlaybackState::Stopped;
                     state.store(Arc::new(new_state));
                     config_queue.metrics.record_failure();
@@ -407,7 +412,11 @@ pub(in crate::engine::manager_thread) fn apply_plugin_graph_update(
                 new_state.num_channels = output_channels;
                 new_state.sample_rate = output_sample_rate;
                 new_state.plugin_latency_samples = latency_samples;
-                new_state.last_error = Some(reason.clone());
+                // Death-text preservation: the failure is still
+                // returned; only the shared-state text is preserved.
+                if !new_state.worker_death_poisoned {
+                    new_state.last_error = Some(reason.clone());
+                }
                 new_state.playback_state = crate::PlaybackState::Stopped;
                 state.store(Arc::new(new_state));
                 return Err(ConfigError::ProcessingError { reason });
@@ -1865,10 +1874,8 @@ mod tests {
         fn probe_block(start_frame: usize) -> Vec<f32> {
             let mut block = vec![0.0; FRAMES * CHANNELS];
             for frame in 0..FRAMES {
-                let t = (start_frame + frame) as f32
-                    / NATIVE_ROUTE_SAMPLE_RATE as f32;
-                let sample =
-                    0.7079 * (2.0 * std::f32::consts::PI * 50.0 * t).sin();
+                let t = (start_frame + frame) as f32 / NATIVE_ROUTE_SAMPLE_RATE as f32;
+                let sample = 0.7079 * (2.0 * std::f32::consts::PI * 50.0 * t).sin();
                 block[frame * CHANNELS] = sample;
                 block[frame * CHANNELS + 1] = sample * 0.5;
             }
@@ -1895,8 +1902,7 @@ mod tests {
         let check = live.process(check_input.clone(), CHANNELS, FRAMES);
         let twin_check = synchronized_twin.process(check_input, CHANNELS, FRAMES);
         assert_eq!(check.data, twin_check.data);
-        let peak_out =
-            check.data.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        let peak_out = check.data.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
         assert!(peak_out > 1.0e-3, "populated chain is silent");
         assert!(
             peak_out < 0.7079 * 0.9,
@@ -1946,8 +1952,7 @@ mod tests {
 
         // Continuation agrees with the untouched twin and stays live.
         let continued_input = probe_block(25 * FRAMES);
-        let continued_live =
-            live.process(continued_input.clone(), CHANNELS, FRAMES);
+        let continued_live = live.process(continued_input.clone(), CHANNELS, FRAMES);
         let continued_twin = synchronized_twin.process(continued_input, CHANNELS, FRAMES);
         assert_eq!(continued_live.data, continued_twin.data);
         assert!(
@@ -1982,13 +1987,9 @@ mod tests {
         assert_eq!(adopted_state.plugin_latency_samples, 0);
         assert!(adopted_state.plugin_build_diagnostics.is_empty());
         let adopted_live = live.process(probe_block(26 * FRAMES), CHANNELS, FRAMES);
-        let stale_twin =
-            synchronized_twin.process(probe_block(26 * FRAMES), CHANNELS, FRAMES);
+        let stale_twin = synchronized_twin.process(probe_block(26 * FRAMES), CHANNELS, FRAMES);
         assert!(
-            adopted_live
-                .data
-                .iter()
-                .any(|sample| sample.abs() > 1.0e-3),
+            adopted_live.data.iter().any(|sample| sample.abs() > 1.0e-3),
             "adopted chain is silent"
         );
         let adoption_difference = adopted_live

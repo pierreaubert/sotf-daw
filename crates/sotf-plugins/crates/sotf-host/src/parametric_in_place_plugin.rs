@@ -107,6 +107,23 @@ pub trait ParametricInPlacePlugin: Send {
         0
     }
 
+    /// Stream-independent upper bound on one [`Self::drain`] call's
+    /// emission; see [`Plugin::drain_frames_envelope`]. `None` (the
+    /// default) keeps the host's live sizing for this plugin.
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        None
+    }
+
+    /// Stream-independent upper bound on [`Self::process_in_place`]
+    /// production; see [`Plugin::output_frames_envelope`]. `None` (the
+    /// default) keeps the host's live sizing for this plugin. In-place
+    /// processing still reports its own count, so only plugins whose every
+    /// success path returns exactly `context.num_frames` may return
+    /// `Some(input_frames)`.
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        None
+    }
+
     /// Finish already accepted asynchronous work before querying EOS metadata.
     /// See [`Plugin::prepare_drain_metadata`].
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
@@ -188,6 +205,11 @@ pub trait ParametricInPlacePlugin: Send {
     /// Allocation-free zero-input response bound; see [`crate::plugin::TailLength`].
     fn tail_length(&self) -> crate::plugin::TailLength {
         crate::plugin::TailLength::Unknown
+    }
+
+    /// State-independent zero-input response bound; see [`crate::plugin::Plugin::tail_support`].
+    fn tail_support(&self) -> Option<u64> {
+        None
     }
 
     /// Minimum input-rate scheduling budget for worst-case realtime work.
@@ -427,6 +449,14 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.drain_output_frames_max()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        self.plugin.drain_frames_envelope()
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        self.plugin.output_frames_envelope(input_frames)
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         self.plugin.prepare_drain_metadata()
     }
@@ -457,6 +487,10 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
 
     fn tail_length(&self) -> crate::plugin::TailLength {
         self.plugin.tail_length()
+    }
+
+    fn tail_support(&self) -> Option<u64> {
+        self.plugin.tail_support()
     }
 
     fn realtime_quantum_frames(&self) -> usize {
@@ -626,6 +660,14 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
         self.plugin.drain_output_frames_max()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        self.plugin.drain_frames_envelope()
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        self.plugin.output_frames_envelope(input_frames)
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         self.plugin.prepare_drain_metadata()
     }
@@ -656,6 +698,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
 
     fn tail_length(&self) -> crate::plugin::TailLength {
         self.plugin.tail_length()
+    }
+
+    fn tail_support(&self) -> Option<u64> {
+        self.plugin.tail_support()
     }
 
     fn realtime_quantum_frames(&self) -> usize {

@@ -454,19 +454,31 @@ fn graph_sidechain_refuses_overwide_key_routing() {
 }
 
 #[test]
-fn graph_sidechain_drain_keeps_linear_graph_contract() {
-    // Keyed graphs are branched, so end-of-stream drain keeps the existing
-    // linear-graph refusal instead of inventing branched tail draining.
+fn graph_sidechain_drain_delivers_branched_tail() {
+    // Keyed graphs are branched: end-of-stream drain delivers every
+    // branch tail instead of refusing. This zero-lookahead gate holds
+    // no tail, so the drain completes immediately with zero frames.
     let graph = sidechain_key_graph([0, 1], [2, 3]);
     let mut host = sidechain_build(&graph, 4);
     let input = sidechain_key_input(512, 0.5);
     sidechain_render(&mut host, &input, 512);
-    let mut tail = vec![0.0f32; 8_192 * 4];
-    let error = host.drain(&mut tail).unwrap_err();
-    assert!(
-        error.contains("linear plugin graph"),
-        "branched drain must keep the linear-graph refusal, got: {error}"
-    );
+    let mut frames = 0;
+    let mut completed = false;
+    for _ in 0..64 {
+        let mut tail = vec![0.0f32; 8_192 * 4];
+        let result = host.drain(&mut tail).unwrap();
+        assert!(tail.iter().all(|x| x.is_finite()));
+        frames += result.frames;
+        if result.complete {
+            completed = true;
+            break;
+        }
+    }
+    assert!(completed, "branched drain must complete");
+    assert_eq!(frames, 0);
+    let repeat = host.drain(&mut []).unwrap();
+    assert_eq!(repeat.frames, 0);
+    assert!(repeat.complete);
 }
 
 #[test]

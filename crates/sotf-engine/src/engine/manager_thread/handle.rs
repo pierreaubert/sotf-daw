@@ -8,6 +8,7 @@ use super::config_error::load_config_file;
 use super::config_update_queue::ConfigUpdateQueue;
 use super::types::ConfigUpdatePriority;
 use super::validate::validate_plugin_configs;
+use crate::engine::worker_death::{POISON_REFUSAL, poison_refuses_command};
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 
@@ -82,6 +83,7 @@ mod tests {
                 frames_written: 99,
                 frames_dropped: 1,
                 effective_sample_rate: 48_000,
+                epoch: 0,
             },
             &state,
         );
@@ -100,17 +102,56 @@ mod tests {
             ThreadEvent::PlaybackOutputMeter {
                 peak_linear: 0.75,
                 clipping_detected: true,
+                epoch: 0,
             },
             &state,
         );
         let s = state.load();
         assert_eq!(s.output_peak_linear, 0.75);
         assert!(s.output_clipping_detected);
+        assert_eq!(s.playback_peak_max_linear, 0.75);
         drop(s);
 
-        // PlaybackDrained
-        handle_thread_event(ThreadEvent::PlaybackDrained, &state);
+        // A quieter snapshot updates the live field but not the latched epoch max.
+        handle_thread_event(
+            ThreadEvent::PlaybackOutputMeter {
+                peak_linear: 0.30,
+                clipping_detected: false,
+                epoch: 0,
+            },
+            &state,
+        );
+        let s = state.load();
+        assert_eq!(s.output_peak_linear, 0.30);
+        assert_eq!(s.playback_peak_max_linear, 0.75);
+        drop(s);
+
+        // PlaybackDrained (lossless run: terminal record equals the latch).
+        handle_thread_event(
+            ThreadEvent::PlaybackDrained {
+                epoch: 0,
+                epoch_peak_max: 0.75,
+                flush_gen: 0,
+            },
+            &state,
+        );
         assert_eq!(state.load().playback_state, PlaybackState::Stopped);
+        assert_eq!(state.load().playback_peak_max_linear, 0.75);
+
+        // Meter events arriving after drain are dropped, never latched.
+        handle_thread_event(
+            ThreadEvent::PlaybackOutputMeter {
+                peak_linear: 0.90,
+                clipping_detected: true,
+                epoch: 0,
+            },
+            &state,
+        );
+        let s = state.load();
+        assert_eq!(s.output_peak_linear, 0.0);
+        assert!(!s.output_clipping_detected);
+        assert_eq!(s.playback_peak_max_linear, 0.75);
+        drop(s);
 
         // Reset to Playing for error events
         state.store(Arc::new(AudioEngineState {
@@ -240,6 +281,67 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn poisoned_death_text_survives_drained_accept_and_warning() {
+        // Poisoned fixture shaped as record_worker_death leaves it.
+        let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+            playback_state: PlaybackState::Stopped,
+            playback_epoch: 7,
+            flushes_sent: 3,
+            playback_peak_max_linear: 0.5,
+            last_error: Some("worker dead (decoder): panicked".to_string()),
+            worker_death_poisoned: true,
+            peak_record_complete: false,
+            ..AudioEngineState::default()
+        }));
+        // Drained accept on the matching epoch/gen: the peak still folds
+        // (monotonic), but the death text is preserved, not cleared.
+        handle_thread_event(
+            ThreadEvent::PlaybackDrained {
+                epoch: 7,
+                epoch_peak_max: 0.7,
+                flush_gen: 3,
+            },
+            &state,
+        );
+        let s = state.load();
+        assert_eq!(s.playback_peak_max_linear, 0.7);
+        assert_eq!(
+            s.last_error.as_deref(),
+            Some("worker dead (decoder): panicked")
+        );
+        assert!(s.worker_death_poisoned);
+        drop(s);
+        // Warning: logged, never applied over the death record.
+        handle_thread_event(ThreadEvent::ProcessingWarning("w".to_string()), &state);
+        assert_eq!(
+            state.load().last_error.as_deref(),
+            Some("worker dead (decoder): panicked")
+        );
+
+        // Unpoisoned controls: drained clears, warning records.
+        let live = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+            playback_state: PlaybackState::Playing,
+            playback_epoch: 7,
+            flushes_sent: 3,
+            playback_peak_max_linear: 0.5,
+            last_error: Some("stale".to_string()),
+            ..AudioEngineState::default()
+        }));
+        handle_thread_event(
+            ThreadEvent::PlaybackDrained {
+                epoch: 7,
+                epoch_peak_max: 0.7,
+                flush_gen: 3,
+            },
+            &live,
+        );
+        assert_eq!(live.load().last_error, None);
+        assert_eq!(live.load().playback_peak_max_linear, 0.7);
+        handle_thread_event(ThreadEvent::ProcessingWarning("w".to_string()), &live);
+        assert_eq!(live.load().last_error.as_deref(), Some("w"));
+    }
 }
 
 /// Handle a config watcher event
@@ -325,6 +427,12 @@ pub(super) fn handle_command(
     config: &EngineConfig,
     config_queue: &mut ConfigUpdateQueue,
 ) -> ManagerResponse {
+    // Poison gate: a dead worker leaves the transport terminal. Refuse every
+    // state-changing command; only inert reads, quiesce, and shutdown pass.
+    // Recovery is a fresh engine — there is no dead-handle rePlay promise.
+    if poison_refuses_command(state.load().worker_death_poisoned, &command) {
+        return ManagerResponse::Error(POISON_REFUSAL.to_string());
+    }
     let mut ctx = commands::ManagerContext {
         decoder,
         processing,

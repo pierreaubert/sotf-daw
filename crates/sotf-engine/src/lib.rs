@@ -26,7 +26,7 @@ pub use preflight::{PreflightError, run_preflight_checks};
 pub mod project;
 
 // Rate-limited logging (owned by sotf-capture).
-pub use sotf_capture::rate_limited_log;
+pub use sotf_capture::{rate_limit, rate_limited_log};
 
 pub mod replaygain;
 pub use sotf_capture::signal_recorder;

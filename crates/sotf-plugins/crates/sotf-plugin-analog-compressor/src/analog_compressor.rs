@@ -10,7 +10,7 @@
 
 use super::params::{AnalogCompressorPluginParams, PARAMS as ACOMP, model_id_for_name};
 use sotf_host::EnvelopeFollower;
-use sotf_host::param_specs::find_by_key as pk;
+use sotf_host::param_specs::{UpdateMode, find_by_key as pk};
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
@@ -229,7 +229,8 @@ impl AnalogCompressorPlugin {
             )
             .with_description("Analog coloration model applied after the compressor core")
             .with_group("Analog")
-            .with_importance(Critical),
+            .with_importance(Critical)
+            .with_update_mode(UpdateMode::Structural),
             f("analog_drive", "Analog Drive", self.drive_db, Useful),
             f("analog_color", "Analog Color", self.color, Critical),
             f(
@@ -357,8 +358,17 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
                 let Some(name) = value.as_string() else {
                     return Err("analog_model must be a string".to_string());
                 };
-                if model_id_for_name(name).is_none() {
+                let Some(new_id) = model_id_for_name(name) else {
                     return Err(format!("Unknown analog model: {name}"));
+                };
+                // Structural: replacement allocates and re-prepares the
+                // stage on the control thread, so a live change on an
+                // initialized instance is refused; adopt the model at
+                // construction or state restore instead. Repeating the
+                // committed model stays a no-op success for snapshot
+                // resends, mirroring the bridge/FFI no-op shields.
+                if self.initialized && new_id != self.model_id {
+                    return Err("analog_model change requires reconstruction".to_string());
                 }
             }
             if id.as_str() == "auto_makeup" && value.as_bool().is_none() {

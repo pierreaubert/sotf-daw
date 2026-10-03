@@ -10,6 +10,7 @@
 // floor gain. This avoids the binary pass/floor artifacts of a hard gate.
 
 use super::DenoiserPlugin;
+use super::reduction_curve::ReductionCurve;
 
 /// Small constant to prevent division by zero
 const EPSILON: f32 = 1e-10;
@@ -29,6 +30,7 @@ impl DenoiserPlugin {
     pub(super) fn calculate_polyphonic_gains(&mut self) {
         let floor_linear = self.coeffs.floor_linear;
         let bin_hz = self.config.sample_rate as f32 / self.config.fft_size as f32;
+        let curve_flat = self.curve.curve.is_flat();
 
         let mut total_reduction = 0.0_f32;
         let mut bin_count = 0;
@@ -65,6 +67,15 @@ impl DenoiserPlugin {
                     };
                     // Take the max in case of overlapping tapers from adjacent peaks
                     self.gains.gain[ch][k] = self.gains.gain[ch][k].max(taper_gain);
+                }
+            }
+
+            // Shape the gate with the per-bin curve scale before smoothing,
+            // matching the Wiener path. Skipped for flat curves.
+            if !curve_flat {
+                for k in 0..self.config.spectrum_size {
+                    let gain = self.gains.gain[ch][k];
+                    self.gains.gain[ch][k] = ReductionCurve::shape_gain(self.curve.scales[k], gain);
                 }
             }
 

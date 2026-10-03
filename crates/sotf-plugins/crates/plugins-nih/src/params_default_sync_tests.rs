@@ -204,6 +204,7 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
         "SpectrumAnalyzer",
         "AmbisonicsDecoder",
         "Dither",
+        "AnalogLimiter",
     ] {
         let specs = crate::wrapper::get_param_specs(name);
         let bridge = plugins_bridge::ParamBridge::new(specs);
@@ -288,6 +289,7 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
         "SpectralCompressor",
         "SpectrumAnalyzer",
         "AmbisonicsDecoder",
+        "AnalogLimiter",
     ] {
         let defaults = schema_infos(name);
         for index in 0..defaults.len() {
@@ -412,10 +414,7 @@ fn compressor_detector_roundtrip_restores_and_processes() {
         let mut plugin = super::configuration::create_plugin(name, 48_000, &params)
             .unwrap_or_else(|error| panic!("{name} detector restore: {error}"));
         for (id, expected) in [
-            (
-                "sidechain_hpf_hz",
-                ParameterValue::Float(120.0),
-            ),
+            ("sidechain_hpf_hz", ParameterValue::Float(120.0)),
             ("sidechain_hpf_order", ParameterValue::Int(1)),
             ("sidechain_hpf_enabled", ParameterValue::Bool(true)),
             ("detection_mode", ParameterValue::Int(1)),
@@ -467,8 +466,7 @@ fn compressor_detector_roundtrip_restores_and_processes() {
             .unwrap_or_else(|| panic!("missing Compressor.{id}"))
             .default_value = 1.0;
         let params = DynamicParams::from_infos(&infos);
-        let error = match super::configuration::create_plugin("Compressor", 48_000, &params)
-        {
+        let error = match super::configuration::create_plugin("Compressor", 48_000, &params) {
             Ok(_) => panic!("unsupported control must reject"),
             Err(error) => error,
         };

@@ -5,7 +5,7 @@
 //! individual commands unit-testable.
 
 use crate::engine::{
-    AudioEngineState, DecoderThread, EngineConfig, ManagerResponse, PlaybackThread,
+    AudioEngineState, DecoderCommand, DecoderThread, EngineConfig, ManagerResponse, PlaybackThread,
     ProcessingThread,
 };
 use arc_swap::ArcSwap;
@@ -69,6 +69,53 @@ pub struct ManagerContext<'a> {
     pub state: &'a Arc<ArcSwap<AudioEngineState>>,
     pub config: &'a EngineConfig,
     pub config_queue: &'a mut ConfigUpdateQueue,
+}
+
+impl ManagerContext<'_> {
+    /// Send a stream command, counting its Flush on success.
+    ///
+    /// Every [`emits_stream_flush`](crate::engine::emits_stream_flush)
+    /// command funnels through here: on SEND-OK exactly one Flush is
+    /// forthcoming from the decoder, so `flushes_sent` advances by
+    /// one. Failures queue nothing and count nothing.
+    ///
+    /// # Panics
+    ///
+    /// Debug builds panic when the command emits no Flush; counting
+    /// it would wedge the generation gate against receipts that can
+    /// never arrive.
+    pub fn send_counted_stream_command(&mut self, command: DecoderCommand) -> Result<u64, String> {
+        debug_assert!(
+            crate::engine::emits_stream_flush(&command),
+            "counted send requires a Flush-emitting command"
+        );
+        let request_id = self.decoder.send_command(command)?;
+        let mut new_state = (**self.state.load()).clone();
+        new_state.flushes_sent = new_state.flushes_sent.wrapping_add(1);
+        self.state.store(Arc::new(new_state));
+        Ok(request_id)
+    }
+
+    /// Compute the next decode attempt WITHOUT storing it.
+    ///
+    /// The tag must be chosen before the send it identifies (it
+    /// travels ON the Play/PlayAt command); persistence happens in
+    /// [`ManagerContext::store_decode_attempt`] after SEND-OK.
+    pub fn next_decode_attempt(&self) -> crate::engine::DecodeAttempt {
+        self.state.load().decoder_attempt.wrapping_add(1)
+    }
+
+    /// Persist a decode attempt after its Play/PlayAt SEND-OK.
+    ///
+    /// Stored immediately — even when the later ack times out or
+    /// fails: send-ok means queued means the decoder will adopt the
+    /// carried tag (adopt-first in every arm, NACK paths included),
+    /// so the manager must advance to match. Monotonic, never reset.
+    pub fn store_decode_attempt(&mut self, attempt: crate::engine::DecodeAttempt) {
+        let mut new_state = (**self.state.load()).clone();
+        new_state.decoder_attempt = attempt;
+        self.state.store(Arc::new(new_state));
+    }
 }
 
 /// Trait implemented by every manager command.

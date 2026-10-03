@@ -137,7 +137,7 @@ fn render_transition(
         let elapsed_seconds = frame as f64 / f64::from(output_rate);
         let phase = (elapsed_seconds / 0.050).min(1.0);
         let expected = if input_rate == output_rate {
-            (phase * std::f64::consts::FRAC_PI_2).sin()
+            phase
         } else {
             (2.0 * phase - 1.0).max(0.0)
         };

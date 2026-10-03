@@ -17,6 +17,71 @@ fn test_crossfeed_basic() {
     assert!(b[1].abs() > 0.0);
 }
 
+/// Empty creation matches the documented descriptor defaults exactly.
+///
+/// Deserializing `{}` must equal `Params::default()` field-for-field, so
+/// the serde path can never drift from the descriptor/engine/native
+/// default (Multiband mode) again.
+#[test]
+fn test_empty_create_matches_documented_defaults() {
+    let from_empty: CrossfeedPluginParams = serde_json::from_value(serde_json::json!({})).unwrap();
+    assert_eq!(from_empty, CrossfeedPluginParams::default());
+    assert_eq!(from_empty.mode, CrossfeedMode::Mb);
+    let plugin = CrossfeedPlugin::new(from_empty).unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("mode")),
+        Some(ParameterValue::Int(3))
+    );
+}
+
+/// Mode-less saved state defaults to Multiband and keeps explicit values.
+///
+/// Old or hand-written states without a `mode` key must not lose their
+/// saved yaw, mix, or other explicit values to the default fill.
+#[test]
+fn test_missing_mode_state_preserves_explicit_values() {
+    let params: CrossfeedPluginParams =
+        serde_json::from_value(serde_json::json!({"mix": 0.5, "head_yaw_deg": 45.0})).unwrap();
+    assert_eq!(params.mode, CrossfeedMode::Mb);
+    assert_eq!(params.mix, 0.5);
+    assert_eq!(params.head_yaw_deg, 45.0);
+}
+
+/// Explicit modes (index and label spellings) always win over defaults.
+#[test]
+fn test_explicit_mode_off_and_mb_preserved() {
+    for (json, expected) in [
+        (serde_json::json!({"mode": 0}), CrossfeedMode::Off),
+        (serde_json::json!({"mode": 3}), CrossfeedMode::Mb),
+        (serde_json::json!({"mode": "Off"}), CrossfeedMode::Off),
+        (serde_json::json!({"mode": "Mb"}), CrossfeedMode::Mb),
+        (
+            serde_json::json!({"crossfeed_mode": 1}),
+            CrossfeedMode::Bauer,
+        ),
+    ] {
+        let params: CrossfeedPluginParams = serde_json::from_value(json).unwrap();
+        assert_eq!(params.mode, expected);
+    }
+}
+
+/// Presets pin their documented modes and keep yaw at zero.
+#[test]
+fn test_presets_pin_modes_and_keep_yaw_zero() {
+    for (preset, mode) in [
+        (CrossfeedPreset::Off, CrossfeedMode::Off),
+        (CrossfeedPreset::Default, CrossfeedMode::Bauer),
+        (CrossfeedPreset::Cmoy, CrossfeedMode::Bauer),
+        (CrossfeedPreset::Meier, CrossfeedMode::Meier),
+        (CrossfeedPreset::Mb, CrossfeedMode::Mb),
+        (CrossfeedPreset::Hrtf, CrossfeedMode::Hrtf),
+    ] {
+        let params = CrossfeedPluginParams::from_preset(preset);
+        assert_eq!(params.mode, mode, "preset {preset:?}");
+        assert_eq!(params.head_yaw_deg, 0.0, "preset {preset:?} yaw");
+    }
+}
+
 #[test]
 fn test_yaw_only_itd_advances_delay_for_every_algorithm() {
     for mode in [

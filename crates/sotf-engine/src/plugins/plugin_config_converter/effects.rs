@@ -489,6 +489,10 @@ pub fn convert_denoiser(settings: &PluginSettings, _sample_rate: f64) -> Option<
         harmonic_percussive,
         spatial_denoise,
         spatial_strength,
+        curve_low,
+        curve_mid,
+        curve_high,
+        audition_residual,
     } = settings
     else {
         return None;
@@ -525,6 +529,10 @@ pub fn convert_denoiser(settings: &PluginSettings, _sample_rate: f64) -> Option<
             "harmonic_percussive": harmonic_percussive,
             "spatial_denoise": spatial_denoise,
             "spatial_strength": spatial_strength,
+            "curve_low": curve_low,
+            "curve_mid": curve_mid,
+            "curve_high": curve_high,
+            "audition_residual": audition_residual,
         }),
     ))
 }

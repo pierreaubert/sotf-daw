@@ -203,6 +203,14 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         self.plugin.drain_output_frames_max()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        self.plugin.drain_frames_envelope()
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        self.plugin.output_frames_envelope(input_frames)
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         self.plugin.prepare_drain_metadata()
     }
@@ -233,6 +241,10 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
 
     fn tail_length(&self) -> super::TailLength {
         self.plugin.tail_length()
+    }
+
+    fn tail_support(&self) -> Option<u64> {
+        self.plugin.tail_support()
     }
 
     fn realtime_quantum_frames(&self) -> usize {

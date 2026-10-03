@@ -3,11 +3,19 @@
 //! Signal flow per block: the wrapped [`LimiterPlugin`] runs first on the
 //! interleaved host buffer (composition, not a fork — the core crate owns all
 //! gain-computer behavior), then [`AnalogColorStage`] applies the selected
-//! `math-analog` model in place. Reported latency is the core's lookahead
-//! latency; the color stage adds none.
+//! `math-analog` model in place, and finally a zero-latency safety clamp
+//! enforces the threshold ceiling on the emitted samples. Reported latency is
+//! the core's lookahead latency; the color stage and the final clamp add none.
+//!
+//! Output ceiling contract: `threshold` is the final emitted sample-peak
+//! ceiling when `mix` is fully wet (1.0), enforced after color and trim. A dry
+//! blend (`mix` below 1.0) can exceed it, exactly like the clean core. The
+//! `true_peak` toggle enables rate-appropriate inter-sample peak detection in
+//! the core detector; it is detection only and carries no strict output
+//! true-peak guarantee, before or after color.
 
 use super::params::{AnalogLimiterPluginParams, CORE_KEYS, PARAMS as ALIM, model_id_for_name};
-use sotf_host::param_specs::find_by_key as lim_pk;
+use sotf_host::param_specs::{UpdateMode, find_by_key as lim_pk};
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
@@ -25,6 +33,34 @@ use std::sync::Arc;
 /// Prepared block ceiling for the analog stage; larger host blocks are
 /// chunked by the stage itself.
 pub const MAX_BLOCK_FRAMES: usize = 8192;
+
+/// Convert a threshold in dB to the linear final-output ceiling.
+///
+/// Uses the exact standard conversion so the emitted ceiling never stacks an
+/// approximation error on top of the core value.
+fn ceiling_linear(threshold_db: f32) -> f32 {
+    // Standard amplitude-decibel divisor: 20 dB per decade of amplitude.
+    10f32.powf(threshold_db / 20.0)
+}
+
+/// Clamp every sample to `±ceiling`, leaving in-range samples untouched.
+///
+/// Samples already within the ceiling are never written, so the guard is a
+/// bit-exact no-op below the ceiling. Non-finite samples compare false and
+/// pass through unchanged, matching the core wet-path clamp.
+fn clamp_to_ceiling(samples: &mut [f32], ceiling: f32) {
+    if !ceiling.is_finite() {
+        return;
+    }
+    let floor = -ceiling;
+    for sample in samples.iter_mut() {
+        if *sample > ceiling {
+            *sample = ceiling;
+        } else if *sample < floor {
+            *sample = floor;
+        }
+    }
+}
 
 pub struct AnalogLimiterPlugin {
     channels: usize,
@@ -45,6 +81,10 @@ pub struct AnalogLimiterPlugin {
     color: f32,
     character: f32,
     trim_db: f32,
+    // Mirrored core targets driving the final safety clamp. Written only after
+    // the core accepts the same validated value, so the mirrors never drift.
+    threshold_db: f32,
+    mix: f32,
 
     cached_parameters: Vec<Parameter>,
 }
@@ -85,6 +125,8 @@ impl AnalogLimiterPlugin {
             color: params.analog_color,
             character: params.analog_character,
             trim_db: params.analog_trim,
+            threshold_db: params.threshold,
+            mix: params.mix,
             cached_parameters: Vec::new(),
         };
         plugin
@@ -190,7 +232,8 @@ impl AnalogLimiterPlugin {
                 self.model_name().to_string(),
             )
             .with_description("Analog coloration model applied after the limiter core")
-            .with_group("Analog"),
+            .with_group("Analog")
+            .with_update_mode(UpdateMode::Structural),
         );
         for (key, label, value) in [
             ("analog_drive", "Analog Drive", self.drive_db),
@@ -211,6 +254,19 @@ impl AnalogLimiterPlugin {
             );
         }
         self.cached_parameters = cached;
+    }
+
+    /// Enforce the threshold ceiling on final samples when fully wet.
+    ///
+    /// The clean core bounds only fully wet output ("dry mix can exceed it");
+    /// this guard preserves that contract after color and trim. It adds no
+    /// latency, keeps no state, and allocates nothing.
+    fn apply_final_ceiling(&self, samples: &mut [f32]) {
+        // `mix` is validated to 0..=1, so `>= 1.0` means fully wet without a
+        // float-equality comparison.
+        if self.mix >= 1.0 {
+            clamp_to_ceiling(samples, ceiling_linear(self.threshold_db));
+        }
     }
 
     fn apply_analog_float(&mut self, key: &str, value: f32) -> PluginResult<()> {
@@ -338,8 +394,17 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
                 let Some(name) = value.as_string() else {
                     return Err("analog_model must be a string".to_string());
                 };
-                if model_id_for_name(name).is_none() {
+                let Some(new_id) = model_id_for_name(name) else {
                     return Err(format!("Unknown analog model: {name}"));
+                };
+                // Structural: replacement allocates and re-prepares the
+                // stage on the control thread, so a live change on an
+                // initialized instance is refused; adopt the model at
+                // construction or state restore instead. Repeating the
+                // committed model stays a no-op success for snapshot
+                // resends, mirroring the bridge/FFI no-op shields.
+                if self.initialized && new_id != self.model_id {
+                    return Err("analog_model change requires reconstruction".to_string());
                 }
             }
         }
@@ -367,6 +432,18 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
             // Limiter-core key: the core validates against its own schema,
             // whose ranges match this plugin's carried specs.
             self.core.set_parameter(id.clone(), value.clone())?;
+            // Mirror the accepted core targets for the final safety clamp.
+            // Validation above guarantees finite in-range floats, which the
+            // core stores as given (its mix clamp is a no-op in range).
+            if key == "threshold" {
+                if let Some(float) = value.as_float() {
+                    self.threshold_db = float;
+                }
+            } else if key == "mix"
+                && let Some(float) = value.as_float()
+            {
+                self.mix = float;
+            }
         }
         self.rebuild_cached_parameters();
         Ok(())
@@ -421,6 +498,8 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         self.stage
             .process_interleaved(&mut buffer[..total], frames)
             .map_err(|e| format!("Analog limiter color stage failed: {e}"))?;
+        // Final safety ceiling after color and trim; transparent below it.
+        self.apply_final_ceiling(&mut buffer[..total]);
         self.has_input |= frames > 0;
         Ok(frames)
     }
@@ -478,6 +557,8 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         // it only for returned frames, preserving the ordinary core->color path.
         self.stage
             .process_interleaved(&mut output[..result.frames * self.channels], result.frames)?;
+        // Same emitted-output contract as ordinary processing.
+        self.apply_final_ceiling(&mut output[..result.frames * self.channels]);
         self.drained |= self.has_input;
         Ok(result)
     }

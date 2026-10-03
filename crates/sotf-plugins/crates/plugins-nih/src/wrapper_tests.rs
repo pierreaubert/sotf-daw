@@ -223,6 +223,11 @@ routing_test!(limiter_routing, LimiterWrapper, "Limiter");
 routing_test!(crossfeed_routing, CrossfeedWrapper, "Crossfeed");
 routing_test!(saturation_routing, SaturationWrapper, "Saturation");
 routing_test!(de_esser_routing, DeEsserWrapper, "DeEsser");
+routing_test!(
+    analog_limiter_routing,
+    AnalogLimiterWrapper,
+    "AnalogLimiter"
+);
 
 #[path = "wrapper/de_esser_sidechain_tests.rs"]
 mod de_esser_sidechain_tests;
@@ -618,6 +623,72 @@ fn structural_restore_while_active_requires_reactivation_without_realtime_alloca
 }
 
 #[test]
+fn analog_limiter_model_restore_requires_reactivation_without_realtime_allocation() {
+    use sotf_host::parameters::{ParameterId, ParameterValue};
+    let mut wrapper = AnalogLimiterWrapper::default();
+    initialize(&mut wrapper);
+    assert_eq!(
+        wrapper
+            .inner
+            .as_ref()
+            .unwrap()
+            .get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".to_string()))
+    );
+    wrapper.params = restored_params("AnalogLimiter", &[("analog_model", 3.0)]);
+    let mut samples = [vec![0.25; 17], vec![0.5; 17]];
+    let mut buffer = Buffer::default();
+    // SAFETY: both disjoint channel slices have 17 samples and outlive processing.
+    unsafe {
+        buffer.set_slices(17, |slices| {
+            slices.extend(samples.iter_mut().map(Vec::as_mut_slice))
+        });
+    }
+    let mut auxiliary = AuxiliaryBuffers {
+        inputs: &mut [],
+        outputs: &mut [],
+    };
+    // The model change must fail the block (never construct on the audio
+    // thread) with silence out and the running instance untouched.
+    let status = assert_no_alloc::assert_no_alloc(|| {
+        wrapper.process_without_transport(&mut buffer, &mut auxiliary, &mut TestContext)
+    });
+    assert!(matches!(
+        status,
+        ProcessStatus::Error("Structural parameter state changed; reactivate plugin")
+    ));
+    assert!(
+        buffer
+            .as_slice_immutable()
+            .iter()
+            .flat_map(|channel| channel.iter())
+            .all(|sample| *sample == 0.0)
+    );
+    assert_eq!(
+        wrapper
+            .inner
+            .as_ref()
+            .unwrap()
+            .get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".to_string()))
+    );
+    // Reactivation reconstructs with the restored model; audio flows clean.
+    initialize(&mut wrapper);
+    assert_eq!(
+        wrapper
+            .inner
+            .as_ref()
+            .unwrap()
+            .get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Tape".to_string()))
+    );
+    let status = assert_no_alloc::assert_no_alloc(|| {
+        wrapper.process_without_transport(&mut buffer, &mut auxiliary, &mut TestContext)
+    });
+    assert!(!matches!(status, ProcessStatus::Error(_)));
+}
+
+#[test]
 fn eq_exposes_neutral_bands_and_automates_without_allocations() {
     use plugins_bridge::param_bridge::ParamBridge;
     use sotf_host::parameters::ParameterValue;
@@ -864,7 +935,8 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
                 layout.main_output_channels.unwrap().get(),
                 output_widths[target]
             );
-            let expected_name = format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
+            let expected_name =
+                format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
             assert_eq!(
                 layout.names.layout,
                 Some(expected_name.as_str()),
@@ -919,7 +991,8 @@ fn ambisonics_native_metadata_covers_truthful_layouts_and_role_maps() {
                 layout.main_output_channels.unwrap().get(),
                 output_widths[target]
             );
-            let expected_name = format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
+            let expected_name =
+                format!("Order {} - {}", order_index + 1, CANONICAL_TARGETS[target]);
             assert_eq!(
                 layout.names.layout,
                 Some(expected_name.as_str()),
@@ -1458,7 +1531,10 @@ fn ambisonics_custom_7_1_2_json() -> String {
 fn stage_custom_on_wrapper(wrapper: &mut AmbisonicsWrapper, order: usize, field: &str) {
     wrapper.params.set_ambisonics_layout(order, 8).unwrap();
     let mut fields = std::collections::BTreeMap::new();
-    fields.insert(ambisonics_custom_state_field().to_string(), field.to_string());
+    fields.insert(
+        ambisonics_custom_state_field().to_string(),
+        field.to_string(),
+    );
     wrapper.params.deserialize_fields(&fields);
 }
 
@@ -1478,12 +1554,9 @@ fn check_custom_wrapper_process(
             })
         })
         .collect();
-    let mut reference = crate::params::configuration::create_plugin(
-        "AmbisonicsDecoder",
-        48_000,
-        &wrapper.params,
-    )
-    .unwrap();
+    let mut reference =
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &wrapper.params)
+            .unwrap();
     reference = plugins_bridge::prepare_standalone_plugin(reference, FRAMES).unwrap();
     reference.initialize(48_000).unwrap();
     let mut expected = vec![0.0; FRAMES * outputs];
@@ -1520,7 +1593,10 @@ fn check_custom_wrapper_process(
     for frame in 0..FRAMES {
         for bus_channel in 0..outputs {
             let actual = buffer.as_slice_immutable()[bus_channel][frame];
-            assert!(actual.is_finite(), "frame {frame} bus {bus_channel}: {actual}");
+            assert!(
+                actual.is_finite(),
+                "frame {frame} bus {bus_channel}: {actual}"
+            );
             nonzero |= actual.abs() > 1.0e-6;
             let reference = expected[frame * outputs + bus_to_sotf[bus_channel]];
             assert!(

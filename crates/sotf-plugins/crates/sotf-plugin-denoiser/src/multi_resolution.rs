@@ -189,12 +189,16 @@ impl MultiResState {
     /// Feed `samples` (interleaved, all channels) into the small-FFT accumulator.
     /// Process small FFT blocks whenever the accumulator is full.
     /// After this call `flux_weight` reflects the detected transient intensity.
+    ///
+    /// `curve_small` carries the precomputed per-bin reduction scales for the
+    /// small spectrum, or `None` for a flat curve (legacy bit-identical path).
     pub fn feed_and_process(
         &mut self,
         samples: &[f32],
         num_channels: usize,
         reduction_linear: f32,
         floor_linear: f32,
+        curve_small: Option<&[f32]>,
     ) -> Result<(), &'static str> {
         let block_samples = SMALL_FFT_SIZE * num_channels;
         let mut pos = 0;
@@ -209,7 +213,12 @@ impl MultiResState {
             pos += to_copy;
 
             while self.input_buffer_fill >= block_samples {
-                self.process_small_block(num_channels, reduction_linear, floor_linear)?;
+                self.process_small_block(
+                    num_channels,
+                    reduction_linear,
+                    floor_linear,
+                    curve_small,
+                )?;
             }
         }
         Ok(())
@@ -220,6 +229,7 @@ impl MultiResState {
         num_channels: usize,
         reduction_linear: f32,
         floor_linear: f32,
+        curve_small: Option<&[f32]>,
     ) -> Result<(), &'static str> {
         let small_fft_size = SMALL_FFT_SIZE;
         let hop_size = small_fft_size / 2;
@@ -326,11 +336,22 @@ impl MultiResState {
             // The large-FFT path in calculate_wiener_gains() applies its own
             // temporal smoother after combine_gains(); applying it here too
             // would cause double-smoothing (~2 extra frames of attack/release lag).
+            if let Some(scales) = curve_small {
+                debug_assert!(scales.len() >= spectrum_size);
+            }
             for k in 0..spectrum_size {
                 let signal_power = state.freq_domain[k].norm_sqr();
                 let noise_power = state.noise_psd[k].max(EPSILON);
                 let snr = ((signal_power - noise_power).max(0.0)) / noise_power;
-                state.smoothed_gain[k] = (snr / (snr + reduction_linear)).max(floor_linear);
+                let gain = (snr / (snr + reduction_linear)).max(floor_linear);
+                // Shape with the curve scale so transient-dominated frames
+                // honor the same frequency weighting as the large path.
+                state.smoothed_gain[k] = match curve_small {
+                    Some(scales) => {
+                        super::reduction_curve::ReductionCurve::shape_gain(scales[k], gain)
+                    }
+                    None => gain,
+                };
             }
 
             // Spectral flux: mean |magnitude_change| across bins

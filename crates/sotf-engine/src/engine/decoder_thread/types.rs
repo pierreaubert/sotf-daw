@@ -1,4 +1,6 @@
-use super::super::{DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
+use super::super::{
+    DecoderAsyncError, DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent,
+};
 use super::consts::SPIN_MS_SLEEP_DECODER;
 use super::decoder_state::DecoderState;
 use crate::DsdOutputMode;
@@ -34,6 +36,7 @@ pub(super) fn run_decoder_thread(
     frame_size: usize,
     recycle_rx: Receiver<Vec<f32>>,
     dsd_output: DsdOutputMode,
+    async_error_tx: Sender<DecoderAsyncError>,
 ) -> Result<(), String> {
     // The HAL reader feeds every downstream audio stage. Leaving it at the
     // default QoS lets unrelated filesystem/UI work starve it even though the
@@ -82,7 +85,12 @@ pub(super) fn run_decoder_thread(
 
         if let Some(cmd) = command {
             match cmd {
-                DecoderCommand::Play(source) => {
+                DecoderCommand::Play(source, attempt) => {
+                    // Adopt-first: the tag identifies this phase even
+                    // when the open below NACKs (tried-and-died still
+                    // consumed the attempt — manager stays converged).
+                    state.current_attempt = attempt;
+                    // Flush-before-ack: see DecoderMessage::Flush invariant.
                     message_tx.send(DecoderMessage::Flush).ok();
                     state.stop();
                     #[cfg(feature = "streaming")]
@@ -99,7 +107,10 @@ pub(super) fn run_decoder_thread(
                         response_tx.send(DecoderResponse::Ok).ok();
                     }
                 }
-                DecoderCommand::PlayAt(source, position) => {
+                DecoderCommand::PlayAt(source, position, attempt) => {
+                    // Adopt-first: see the Play arm.
+                    state.current_attempt = attempt;
+                    // Flush-before-ack: see DecoderMessage::Flush invariant.
                     message_tx.send(DecoderMessage::Flush).ok();
                     state.stop();
                     #[cfg(feature = "streaming")]
@@ -114,6 +125,12 @@ pub(super) fn run_decoder_thread(
                             .ok();
                     } else if let Err(e) = state.seek(position) {
                         log::warn!("[Decoder Thread] PlayAt (seek) failed: {}", e);
+                        // Revert the wrong-position load: a freshly loaded
+                        // decoder is safe to abandon (nothing downstream
+                        // depends on it yet), so a failed seek unloads it
+                        // instead of emitting from the wrong position under
+                        // the old epoch. The failure stays explicit below.
+                        state.stop();
                         event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
                         response_tx
                             .send(DecoderResponse::Error(
@@ -229,7 +246,9 @@ pub(super) fn run_decoder_thread(
                                     response_tx.send(DecoderResponse::Ok).ok();
                                 }
                             }
-                            DecoderCommand::Play(path) => {
+                            DecoderCommand::Play(path, attempt) => {
+                                // Adopt-first: see the top-of-loop Play arm.
+                                state.current_attempt = attempt;
                                 message_tx.send(DecoderMessage::Flush).ok();
                                 state.stop();
                                 #[cfg(feature = "streaming")]
@@ -249,7 +268,9 @@ pub(super) fn run_decoder_thread(
                                     response_tx.send(DecoderResponse::Ok).ok();
                                 }
                             }
-                            DecoderCommand::PlayAt(path, position) => {
+                            DecoderCommand::PlayAt(path, position, attempt) => {
+                                // Adopt-first: see the top-of-loop Play arm.
+                                state.current_attempt = attempt;
                                 message_tx.send(DecoderMessage::Flush).ok();
                                 state.stop();
                                 #[cfg(feature = "streaming")]
@@ -270,6 +291,12 @@ pub(super) fn run_decoder_thread(
                                         "[Decoder Thread] PlayAt seek failed (from HAL interrupt): {}",
                                         e
                                     );
+                                    // Same revert as the top-of-loop PlayAt
+                                    // arm: a freshly loaded decoder is safe
+                                    // to abandon, so a failed seek unloads
+                                    // it instead of emitting from the wrong
+                                    // position under the old epoch.
+                                    state.stop();
                                     event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
                                     response_tx
                                         .send(DecoderResponse::Error(
@@ -309,6 +336,19 @@ pub(super) fn run_decoder_thread(
                     state.stop();
                     #[cfg(feature = "streaming")]
                     state.clear_stream_metadata(&event_tx);
+                    // Reliable async report (single path — no lossy
+                    // event twin): the manager tick applies it iff the
+                    // tag is still current. Unbounded send never
+                    // blocks; this is the worker loop, not an audio
+                    // callback, so the node allocation is allowed.
+                    // Bounded production: this error stopped the
+                    // phase — resumption needs a new attempt.
+                    async_error_tx
+                        .send(DecoderAsyncError {
+                            attempt: state.current_attempt,
+                            message: e,
+                        })
+                        .ok();
                 }
             }
 
@@ -348,7 +388,9 @@ pub(super) fn run_decoder_thread(
                 Ok(DecoderLoopAction::Interrupted(cmd)) => {
                     // Handle interruption command immediately
                     match cmd {
-                        DecoderCommand::Play(path) => {
+                        DecoderCommand::Play(path, attempt) => {
+                            // Adopt-first: see the top-of-loop Play arm.
+                            state.current_attempt = attempt;
                             message_tx.send(DecoderMessage::Flush).ok();
                             state.stop();
                             #[cfg(feature = "streaming")]
@@ -365,7 +407,9 @@ pub(super) fn run_decoder_thread(
                                 response_tx.send(DecoderResponse::Ok).ok();
                             }
                         }
-                        DecoderCommand::PlayAt(path, position) => {
+                        DecoderCommand::PlayAt(path, position, attempt) => {
+                            // Adopt-first: see the top-of-loop Play arm.
+                            state.current_attempt = attempt;
                             message_tx.send(DecoderMessage::Flush).ok();
                             state.stop();
                             #[cfg(feature = "streaming")]
@@ -380,6 +424,12 @@ pub(super) fn run_decoder_thread(
                                     .ok();
                             } else if let Err(e) = state.seek(position) {
                                 log::warn!("[Decoder Thread] PlayAt (seek) failed: {}", e);
+                                // Same revert as the top-of-loop PlayAt
+                                // arm: a freshly loaded decoder is safe to
+                                // abandon, so a failed seek unloads it
+                                // instead of emitting from the wrong
+                                // position under the old epoch.
+                                state.stop();
                                 event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
                                 response_tx
                                     .send(DecoderResponse::Error(
@@ -446,6 +496,14 @@ pub(super) fn run_decoder_thread(
                     state.stop();
                     #[cfg(feature = "streaming")]
                     state.clear_stream_metadata(&event_tx);
+                    // Reliable async report: see the HAL arm above
+                    // (mid-phase decode failure incl. queue-stuck).
+                    async_error_tx
+                        .send(DecoderAsyncError {
+                            attempt: state.current_attempt,
+                            message: e,
+                        })
+                        .ok();
                 }
             }
         } else {

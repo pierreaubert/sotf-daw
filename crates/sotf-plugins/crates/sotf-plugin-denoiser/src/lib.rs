@@ -1,4 +1,5 @@
 pub use config::DenoiserPluginParams;
+pub use reduction_curve::{DENOISER_CURVE_ANCHOR_HZ, ReductionCurve};
 
 mod config;
 mod fft;
@@ -8,6 +9,7 @@ mod multi_resolution;
 mod noise_profile;
 pub mod params;
 mod polyphonic;
+mod reduction_curve;
 mod spectral_sub;
 mod wiener;
 

@@ -95,6 +95,22 @@ pub trait InPlacePlugin: Send {
         0
     }
 
+    /// Stream-independent upper bound on one drain step's emission.
+    /// See [`super::Plugin::drain_frames_envelope`]. `None` (the default)
+    /// keeps the host's live sizing for this plugin.
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        None
+    }
+
+    /// Stream-independent upper bound on in-place process production.
+    /// See [`super::Plugin::output_frames_envelope`]. `None` (the default)
+    /// keeps the host's live sizing for this plugin. Only plugins whose
+    /// every success path returns exactly `context.num_frames` may return
+    /// `Some(input_frames)`.
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        None
+    }
+
     /// Finish already accepted asynchronous work before querying EOS metadata.
     /// See [`super::Plugin::prepare_drain_metadata`].
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
@@ -176,6 +192,11 @@ pub trait InPlacePlugin: Send {
     /// Allocation-free zero-input response bound, as defined by [`super::TailLength`].
     fn tail_length(&self) -> super::TailLength {
         super::TailLength::Unknown
+    }
+
+    /// State-independent zero-input response bound; see [`super::Plugin::tail_support`].
+    fn tail_support(&self) -> Option<u64> {
+        None
     }
 
     /// Minimum input-rate scheduling budget for worst-case realtime work.

@@ -17,6 +17,11 @@ fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
     println!("cargo:rerun-if-changed=src/lib.rs");
+    // Watch the whole nested module directory: public API items and their
+    // doc comments live in src/lib/*.rs (plugin.rs exports, parameter
+    // docs), and tracking files individually left generated headers stale
+    // after nested edits. Cargo rescans directory contents for changes.
+    println!("cargo:rerun-if-changed=src/lib");
     println!("cargo:rerun-if-changed=src/plugin_factory.rs");
     println!("cargo:rerun-if-changed=src/parameter_map.rs");
     println!("cargo:rerun-if-changed=src/param_cache.rs");

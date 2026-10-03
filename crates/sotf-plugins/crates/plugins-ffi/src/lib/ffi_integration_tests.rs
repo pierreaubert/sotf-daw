@@ -29,7 +29,11 @@ impl AbiHandle {
             kind = kind.to_str().unwrap(),
             err = abi_last_error()
         );
-        Self { pointer: handle, submitted_frames: 0, epoch: 0 }
+        Self {
+            pointer: handle,
+            submitted_frames: 0,
+            epoch: 0,
+        }
     }
 
     fn inner(&self) -> &PluginHandle {
@@ -50,9 +54,7 @@ impl AbiHandle {
         let id = unsafe { (*info).id };
         assert!(!id.is_null());
         // SAFETY: IDs are valid NUL-terminated strings while live.
-        unsafe { CStr::from_ptr(id) }
-            .to_string_lossy()
-            .into_owned()
+        unsafe { CStr::from_ptr(id) }.to_string_lossy().into_owned()
     }
 
     fn choice_label(&self, index: usize, choice: usize) -> Option<String> {
@@ -61,7 +63,11 @@ impl AbiHandle {
             return None;
         }
         // SAFETY: Choice labels are process-static NUL-terminated strings.
-        Some(unsafe { CStr::from_ptr(label) }.to_string_lossy().into_owned())
+        Some(
+            unsafe { CStr::from_ptr(label) }
+                .to_string_lossy()
+                .into_owned(),
+        )
     }
 
     /// Full `ParameterInfo` tuple for golden comparisons.
@@ -135,7 +141,11 @@ impl AbiHandle {
         let frames = input.len() / self.inner().input_channels;
         let inputs = self.inner().input_channels;
         let outputs = self.inner().output_channels;
-        assert_eq!(input.len() % inputs, 0, "complete interleaved frames required");
+        assert_eq!(
+            input.len() % inputs,
+            0,
+            "complete interleaved frames required"
+        );
         assert!((1..=self.inner().max_callback_frames).contains(&callback_frames));
         let mut output = vec![f32::NAN; frames * outputs];
         // Render the full signal through the negotiated callback bound,
@@ -143,7 +153,12 @@ impl AbiHandle {
         for start in (0..frames).step_by(callback_frames) {
             let count = callback_frames.min(frames - start);
             assert_eq!(
-                plugin_process(self.pointer, input[start * inputs..].as_ptr(), output[start * outputs..].as_mut_ptr(), count),
+                plugin_process(
+                    self.pointer,
+                    input[start * inputs..].as_ptr(),
+                    output[start * outputs..].as_mut_ptr(),
+                    count
+                ),
                 0,
                 "{}",
                 abi_last_error()
@@ -153,13 +168,24 @@ impl AbiHandle {
             // callback so its worker has completed each assembled quantum
             // before the next simulated callback advances the deadline.
             // Production callbacks remain nonblocking, including overload.
-            if let Some(adapter) = self.inner().plugin.as_any().and_then(|inner| inner.downcast_ref::<AsyncTimelinePlugin>()) {
+            if let Some(adapter) = self
+                .inner()
+                .plugin
+                .as_any()
+                .and_then(|inner| inner.downcast_ref::<AsyncTimelinePlugin>())
+            {
                 let quantum = adapter.quantum_frames() as u64;
                 let target = self.submitted_frames / quantum * quantum;
                 if target != 0 {
                     let deadline = Instant::now() + Duration::from_secs(2);
-                    while adapter.completed_epoch() != self.epoch || adapter.completed_frame() < target {
-                        assert!(Instant::now() < deadline, "async worker did not complete epoch {} frame {target}", self.epoch);
+                    while adapter.completed_epoch() != self.epoch
+                        || adapter.completed_frame() < target
+                    {
+                        assert!(
+                            Instant::now() < deadline,
+                            "async worker did not complete epoch {} frame {target}",
+                            self.epoch
+                        );
                         std::thread::sleep(Duration::from_micros(100));
                     }
                 }
@@ -195,8 +221,7 @@ fn abi_last_error() -> String {
 fn sine_interleaved(frames: usize, channels: usize, freq: f32, sample_rate: f32) -> Vec<f32> {
     let mut buffer = vec![0.0; frames * channels];
     for frame in 0..frames {
-        let sample =
-            0.5 * (2.0 * std::f32::consts::PI * freq * frame as f32 / sample_rate).sin();
+        let sample = 0.5 * (2.0 * std::f32::consts::PI * freq * frame as f32 / sample_rate).sin();
         for channel in 0..channels {
             buffer[frame * channels + channel] = sample;
         }
@@ -259,12 +284,159 @@ fn eq_legacy_105_addresses_stable_and_placement_appended() {
 
     let labels = ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"];
     for (choice, expected) in labels.iter().enumerate() {
-        assert_eq!(
-            handle.choice_label(105, choice).as_deref(),
-            Some(*expected)
-        );
+        assert_eq!(handle.choice_label(105, choice).as_deref(), Some(*expected));
     }
     assert_eq!(handle.choice_label(105, 6), None);
+}
+
+// ---------------------------------------------------------------------------
+// Denoiser mapping: 29 legacy addresses stable, curve + audition appended.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn denoiser_legacy_29_addresses_stable_and_curve_audition_appended() {
+    let handle = AbiHandle::create("Denoiser", "{}", 2, 2);
+    assert_eq!(handle.param_count(), 33);
+    for (index, expected) in [
+        (0, "reduction_db"),
+        (1, "floor_db"),
+        (2, "smoothing"),
+        (3, "attack_ms"),
+        (4, "release_ms"),
+        (5, "low_latency"),
+        (6, "polyphonic_detection"),
+        (7, "mcra_alpha_s"),
+        (8, "mcra_alpha_p"),
+        (9, "mcra_l"),
+        (10, "mcra_delta"),
+        (11, "transparency"),
+        (12, "dd_enabled"),
+        (13, "dd_alpha"),
+        (14, "psychoacoustic_masking"),
+        (15, "spectral_smoothing_enabled"),
+        (16, "temporal_smoothing_enabled"),
+        (17, "spectral_sub_enabled"),
+        (18, "spectral_sub_alpha"),
+        (19, "spectral_sub_beta"),
+        (20, "learn_noise"),
+        (21, "use_captured_profile"),
+        (22, "clear_profile"),
+        (23, "formant_preservation"),
+        (24, "formant_strength"),
+        (25, "multi_resolution"),
+        (26, "harmonic_percussive"),
+        (27, "spatial_denoise"),
+        (28, "spatial_strength"),
+        (29, "curve_low"),
+        (30, "curve_mid"),
+        (31, "curve_high"),
+        (32, "audition_residual"),
+    ] {
+        assert_eq!(handle.param_id(index), expected, "address {index} moved");
+    }
+    // Appended defaults in raw units.
+    for (index, default) in [(29, 1.0), (30, 1.0), (31, 1.0), (32, 0.0)] {
+        assert_eq!(
+            handle.param_info(index).5,
+            default,
+            "address {index} default moved"
+        );
+    }
+}
+
+/// Compact difference statistics over two equal-length renders.
+///
+/// Reports lengths, first/last difference, differing count, and maximum
+/// absolute difference instead of dumping full arrays on failure.
+fn audio_diff_stats(a: &[f32], b: &[f32]) -> (usize, usize, usize, usize, f32) {
+    assert_eq!(a.len(), b.len(), "render lengths must match");
+    let mut first = a.len();
+    let mut last = 0;
+    let mut count = 0;
+    let mut max = 0.0f32;
+    for (index, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
+        let diff = (x - y).abs();
+        if diff > 0.0 {
+            first = first.min(index);
+            last = last.max(index);
+            count += 1;
+            max = max.max(diff);
+        }
+    }
+    (a.len(), first, last, count, max)
+}
+
+fn assert_audio_eq_compact(a: &[f32], b: &[f32], context: &str) {
+    let (len, first, last, count, max) = audio_diff_stats(a, b);
+    assert_eq!(
+        count, 0,
+        "{context}: {count} diffs over {len} samples, first {first}, last {last}, max {max:e}"
+    );
+}
+
+#[test]
+fn denoiser_config_restore_is_bit_exact_with_aligned_start() {
+    // Both handles start from the identical construction config, so config
+    // restore is compared against a legitimately identical start condition
+    // (a live toggle mid-fade is a different start condition; see below).
+    let config = r#"{"curve_mid":0.25,"audition_residual":true}"#;
+    let mut handle = AbiHandle::create("Denoiser", config, 2, 2);
+    assert_eq!(handle.get_normalized("curve_mid"), 0.25);
+    assert_eq!(handle.get_normalized("audition_residual"), 1.0);
+    let saved = handle.save();
+    let mut restored = AbiHandle::create("Denoiser", config, 2, 2);
+    assert_eq!(restored.load(&saved), 0, "{}", abi_last_error());
+    assert_eq!(restored.get_normalized("curve_mid"), 0.25);
+    assert_eq!(restored.get_normalized("audition_residual"), 1.0);
+    let input = sine_interleaved(16384, 2, 440.0, 48_000.0);
+    let output = handle.process(&input);
+    assert!(
+        peak(&output) > 1e-6,
+        "shaped residual render must be nonzero"
+    );
+    let output2 = restored.process(&input);
+    assert_audio_eq_compact(&output, &output2, "config restore");
+}
+
+#[test]
+fn denoiser_live_audition_toggle_fades_then_parks_bit_exact() {
+    // Live trigger path, separate from config restore: a parked-cleaned
+    // handle toggles audition mid-stream and must traverse a real fade,
+    // then park bit-exactly on the construction-parked residual twin.
+    // Toggle at frame 8192; the predeclared snap bound from the mix law
+    // (3 x 16 half-lives of the 5 ms constant at 48 kHz = 7986 advances)
+    // guarantees the exact endpoint before frame 8192 + 8000 = 16192.
+    const TOGGLE_FRAME: usize = 8192;
+    const SETTLED_FRAME: usize = 16192;
+    const TOTAL_FRAMES: usize = 24576;
+    let input = sine_interleaved(TOTAL_FRAMES, 2, 440.0, 48_000.0);
+    let mut fading = AbiHandle::create("Denoiser", "{}", 2, 2);
+    let first = fading.process(&input[..TOGGLE_FRAME * 2]);
+    fading.set_normalized("audition_residual", 1.0);
+    assert_eq!(fading.get_normalized("audition_residual"), 1.0);
+    let second = fading.process(&input[TOGGLE_FRAME * 2..]);
+    let mut faded = first;
+    faded.extend_from_slice(&second);
+    let mut parked = AbiHandle::create("Denoiser", r#"{"audition_residual":true}"#, 2, 2);
+    let expected = parked.process(&input);
+    assert_eq!(faded.len(), expected.len());
+    // The fade span must actually traverse (differ from parked)...
+    let (len, first_diff, last_diff, count, max) =
+        audio_diff_stats(&faded[..SETTLED_FRAME * 2], &expected[..SETTLED_FRAME * 2]);
+    println!(
+        "ffi fade span {len}: first {first_diff}, last {last_diff}, count {count}, max {max:e}"
+    );
+    assert!(count > 0, "live toggle must traverse a real fade");
+    assert!(
+        last_diff < SETTLED_FRAME * 2,
+        "fade must settle inside the predeclared bound"
+    );
+    // ...then park bit-exactly for the whole remaining tail.
+    assert_audio_eq_compact(
+        &faded[SETTLED_FRAME * 2..],
+        &expected[SETTLED_FRAME * 2..],
+        "settled tail",
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -293,7 +465,16 @@ fn eq_legacy_105_full_metadata_matches_frozen_capture_with_oversampling_correcti
         ("max_filters", "Max Filters", "", 1.0, 20.0, 20.0, 19, false),
         ("tdf2", "TDF-II", "", 0.0, 1.0, 0.0, 1, false),
         ("topology", "Topology", "", 0.0, 1.0, 0.0, 2, false),
-        ("auto_gain_enabled", "Auto Gain", "", 0.0, 1.0, 0.0, 1, false),
+        (
+            "auto_gain_enabled",
+            "Auto Gain",
+            "",
+            0.0,
+            1.0,
+            0.0,
+            1,
+            false,
+        ),
         // Oversampling: 3 UI choices (Off/2x/4x) as indices 0..=2; steps is
         // the label count (3), matching the frozen capture.
         ("oversampling", "Oversampling", "", 0.0, 2.0, 0.0, 3, false),
@@ -452,7 +633,10 @@ fn eq_placement_and_pairs_round_trip_through_c_abi() {
     let saved = source.save();
     let saved_map: serde_json::Map<String, serde_json::Value> =
         serde_json::from_slice(&saved).unwrap();
-    assert_eq!(saved_map.get("filter_0_placement"), Some(&serde_json::json!(2)));
+    assert_eq!(
+        saved_map.get("filter_0_placement"),
+        Some(&serde_json::json!(2))
+    );
     assert_eq!(
         saved_map.get("stereo_pairs"),
         Some(&serde_json::json!([[0, 1]]))
@@ -466,7 +650,10 @@ fn eq_placement_and_pairs_round_trip_through_c_abi() {
     );
     let resaved: serde_json::Map<String, serde_json::Value> =
         serde_json::from_slice(&target.save()).unwrap();
-    assert_eq!(resaved.get("filter_0_placement"), Some(&serde_json::json!(2)));
+    assert_eq!(
+        resaved.get("filter_0_placement"),
+        Some(&serde_json::json!(2))
+    );
 
     // Left-only +12 dB peak: left RMS must clearly exceed right RMS.
     let input = sine_interleaved(4096, 2, 1000.0, 48_000.0);
@@ -500,7 +687,12 @@ fn eq_legacy_partial_state_merges_with_live_values() {
     let after: serde_json::Map<String, serde_json::Value> =
         serde_json::from_slice(&handle.save()).unwrap();
     assert_eq!(after.get("band_0_gain"), Some(&serde_json::json!(6.0)));
-    for key in ["band_0_freq", "band_0_q", "band_0_filter_type", "band_0_order"] {
+    for key in [
+        "band_0_freq",
+        "band_0_q",
+        "band_0_filter_type",
+        "band_0_order",
+    ] {
         assert_eq!(after.get(key), before.get(key), "{key} must be retained");
     }
     // Unknown foreign keys keep the legacy lenient behavior (ignored).
@@ -649,10 +841,7 @@ fn dynamic_eq_routing_appended_after_shelf_block_with_tilt_label() {
         );
     }
     let shape_index = 8 + 8 * 7;
-    assert_eq!(
-        handle.choice_label(shape_index, 3).as_deref(),
-        Some("Tilt")
-    );
+    assert_eq!(handle.choice_label(shape_index, 3).as_deref(), Some("Tilt"));
     assert_eq!(
         handle.choice_label(routing_start, 0).as_deref(),
         Some("Stereo")
@@ -855,7 +1044,12 @@ fn linear_phase_eq_placement_and_pairs_restore_and_render() {
     );
 
     // FIR latency delays the signal; assert on the settled tail.
-    let input = sine_interleaved(handle.inner().plugin.latency_samples() + 8192, 2, 1000.0, 48_000.0);
+    let input = sine_interleaved(
+        handle.inner().plugin.latency_samples() + 8192,
+        2,
+        1000.0,
+        48_000.0,
+    );
     let output = handle.process(&input);
     let tail = &output[output.len() - 2048..];
     assert!(
@@ -887,9 +1081,22 @@ fn linear_phase_eq_aliases_preserve_pairs_and_restore_placement() {
     for kind in ["LinearPhaseEQ", "linear_phase_eq", "Linear-Phase-EQ"] {
         let mut handle = AbiHandle::create(kind, config, 2, 2);
         let original: serde_json::Value = serde_json::from_slice(&handle.save()).unwrap();
-        assert_eq!(original["stereo_pairs"], serde_json::json!([[0, 1]]), "{kind}");
-        assert_eq!(handle.load(br#"{"band_0_placement":2}"#), 0, "{kind}: {}", abi_last_error());
-        assert_eq!(handle.config_json()["filters"][0]["placement"], "left", "{kind}");
+        assert_eq!(
+            original["stereo_pairs"],
+            serde_json::json!([[0, 1]]),
+            "{kind}"
+        );
+        assert_eq!(
+            handle.load(br#"{"band_0_placement":2}"#),
+            0,
+            "{kind}: {}",
+            abi_last_error()
+        );
+        assert_eq!(
+            handle.config_json()["filters"][0]["placement"],
+            "left",
+            "{kind}"
+        );
         let saved: serde_json::Value = serde_json::from_slice(&handle.save()).unwrap();
         assert_eq!(saved["stereo_pairs"], serde_json::json!([[0, 1]]), "{kind}");
         assert_eq!(saved["band_0_placement"], 2, "{kind}");
@@ -906,7 +1113,8 @@ fn linear_phase_eq_c_abi_impulse_matches_latency_and_callback_partitions() {
     let info_pointer = plugin_get_info_json(handle.pointer);
     assert!(!info_pointer.is_null());
     // SAFETY: The C API owns a valid NUL-terminated string until freed below.
-    let info: serde_json::Value = serde_json::from_slice(unsafe { CStr::from_ptr(info_pointer) }.to_bytes()).unwrap();
+    let info: serde_json::Value =
+        serde_json::from_slice(unsafe { CStr::from_ptr(info_pointer) }.to_bytes()).unwrap();
     plugin_free_string(info_pointer);
     let latency = info["latency_samples"].as_u64().unwrap() as usize;
     assert_eq!(latency, handle.inner().plugin.latency_samples());
@@ -918,19 +1126,35 @@ fn linear_phase_eq_c_abi_impulse_matches_latency_and_callback_partitions() {
     for callback in [4096, 257, 31] {
         handle.reset();
         let output = handle.process_partitioned(&impulse, callback);
-        let peak_frame = output.as_chunks::<2>().0.iter().enumerate()
+        let peak_frame = output
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .enumerate()
             .max_by(|(_, a), (_, b)| a[0].abs().total_cmp(&b[0].abs()))
-            .unwrap().0;
+            .unwrap()
+            .0;
         assert_eq!(peak_frame, latency, "callback {callback}");
         for (frame, pair) in output.as_chunks::<2>().0.iter().enumerate() {
-            let expected = if frame == latency { [1.0, -0.5] } else { [0.0, 0.0] };
+            let expected = if frame == latency {
+                [1.0, -0.5]
+            } else {
+                [0.0, 0.0]
+            };
             for channel in 0..2 {
-                assert!((pair[channel] - expected[channel]).abs() < 1e-6,
-                    "callback {callback}, frame {frame}, channel {channel}: {} vs {}", pair[channel], expected[channel]);
+                assert!(
+                    (pair[channel] - expected[channel]).abs() < 1e-6,
+                    "callback {callback}, frame {frame}, channel {channel}: {} vs {}",
+                    pair[channel],
+                    expected[channel]
+                );
             }
         }
         if let Some(reference) = &reference {
-            assert_eq!(&output, reference, "partitioned output must match after reset");
+            assert_eq!(
+                &output, reference,
+                "partitioned output must match after reset"
+            );
         } else {
             reference = Some(output);
         }
@@ -1006,10 +1230,7 @@ fn de_esser_structural_reload_rebuilds_and_sidechain_flip_rolls_back() {
     assert_eq!(handle.load(&topology_bytes), 0, "{}", abi_last_error());
     let rebuilt = handle.config_json();
     assert_eq!(rebuilt["lookahead_ms"], serde_json::json!(2.0));
-    assert_eq!(
-        rebuilt["split_topology"],
-        serde_json::json!("Linear-Phase")
-    );
+    assert_eq!(rebuilt["split_topology"], serde_json::json!("Linear-Phase"));
     let input = sine_interleaved(1024, 2, 6000.0, 48_000.0);
     assert!(peak(&handle.process(&input)) > 0.01);
 
@@ -1061,27 +1282,18 @@ fn de_esser_structural_noop_and_refusal_are_allocation_free() {
     let check_committed_values = |label: &str, expected: [f64; 6]| {
         for (index, id) in STRUCTURAL_IDS.iter().enumerate() {
             let mut result = 0;
-            assert_no_allocs_or_deallocs(
-                &format!("{label} unchanged {id} no-op"),
-                || {
-                    result = plugin_set_parameter(raw, ids[index].as_ptr(), expected[index]);
-                },
-            );
-            assert_eq!(
-                result, 0,
-                "{label}: unchanged {id} must no-op with Success"
-            );
+            assert_no_allocs_or_deallocs(&format!("{label} unchanged {id} no-op"), || {
+                result = plugin_set_parameter(raw, ids[index].as_ptr(), expected[index]);
+            });
+            assert_eq!(result, 0, "{label}: unchanged {id} must no-op with Success");
             let changed = if expected[index] >= 0.5 {
                 expected[index] - 0.5
             } else {
                 expected[index] + 0.5
             };
-            assert_no_allocs_or_deallocs(
-                &format!("{label} changed {id} refusal"),
-                || {
-                    result = plugin_set_parameter(raw, ids[index].as_ptr(), changed);
-                },
-            );
+            assert_no_allocs_or_deallocs(&format!("{label} changed {id} refusal"), || {
+                result = plugin_set_parameter(raw, ids[index].as_ptr(), changed);
+            });
             assert_eq!(
                 result, -2,
                 "{label}: changed {id} must refuse with InvalidParameter"
@@ -1107,18 +1319,35 @@ fn de_esser_structural_noop_and_refusal_are_allocation_free() {
     let input = sine_interleaved(1024, 2, 6000.0, 48_000.0);
     handle.reset();
     let before_audio = handle.process(&input);
-    assert!(peak(&before_audio) > 0.0, "refusal test needs nonzero audio");
+    assert!(
+        peak(&before_audio) > 0.0,
+        "refusal test needs nonzero audio"
+    );
     let before_state = handle.save();
     let before_config = handle.config_json();
 
     check_committed_values("default", defaults);
     let error = abi_last_error();
-    assert!(error.contains("restoration"), "refusal names restoration: {error}");
-    assert!(error.contains("structural"), "refusal names structure: {error}");
+    assert!(
+        error.contains("restoration"),
+        "refusal names restoration: {error}"
+    );
+    assert!(
+        error.contains("structural"),
+        "refusal names structure: {error}"
+    );
     assert_eq!(handle.save(), before_state, "no-op/refusal preserves state");
-    assert_eq!(handle.config_json(), before_config, "no-op/refusal preserves config");
+    assert_eq!(
+        handle.config_json(),
+        before_config,
+        "no-op/refusal preserves config"
+    );
     handle.reset();
-    assert_eq!(handle.process(&input), before_audio, "no-op/refusal preserves audio");
+    assert_eq!(
+        handle.process(&input),
+        before_audio,
+        "no-op/refusal preserves audio"
+    );
 
     // Structural restore commits new values (sidechain stays internal: a key
     // flip changes the bus layout and must fail, covered by the reload test).
@@ -1131,7 +1360,10 @@ fn de_esser_structural_noop_and_refusal_are_allocation_free() {
     });
     let restore_bytes = serde_json::to_vec(&restore).unwrap();
     assert_eq!(handle.load(&restore_bytes), 0, "{}", abi_last_error());
-    assert!(peak(&handle.process(&input)) > 0.01, "restored route renders");
+    assert!(
+        peak(&handle.process(&input)) > 0.01,
+        "restored route renders"
+    );
     let rebuilt = [
         handle.get_normalized("frequency"),
         handle.get_normalized("q"),
@@ -1145,13 +1377,19 @@ fn de_esser_structural_noop_and_refusal_are_allocation_free() {
     // q is linear: (2.0 - 0.5)/(5.0 - 0.5) = 1/3.
     assert!((rebuilt[1] - 1.0 / 3.0).abs() < 1e-12, "restored q");
     assert_eq!(rebuilt[2], 0.0, "restored mode is Wideband");
-    assert!((rebuilt[3] - 0.1).abs() < 1e-12, "restored lookahead is 2ms of 20ms");
+    assert!(
+        (rebuilt[3] - 0.1).abs() < 1e-12,
+        "restored lookahead is 2ms of 20ms"
+    );
     assert_eq!(rebuilt[4], 1.0, "restored topology is Linear-Phase");
     assert_eq!(rebuilt[5], 0.0, "sidechain still internal");
 
     check_committed_values("restored", rebuilt);
     handle.reset();
-    assert!(peak(&handle.process(&input)) > 0.0, "post-restore audio renders");
+    assert!(
+        peak(&handle.process(&input)) > 0.0,
+        "post-restore audio renders"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1220,10 +1458,7 @@ fn ambisonics_named_and_custom_routes_render_nonzero() {
     );
     let named_out = named.process(&w_only(512));
     assert_eq!(named_out.len(), 512 * 6);
-    assert!(
-        peak(&named_out) > 0.01,
-        "named decode must spread W energy"
-    );
+    assert!(peak(&named_out) > 0.01, "named decode must spread W energy");
 
     let mut custom = AbiHandle::create("AmbisonicsDecoder", &custom_ambisonics_config(), 4, 2);
     let custom_out = custom.process(&w_only(512));
@@ -1311,12 +1546,7 @@ fn restoration_and_speech_mapping_counts_and_new_controls() {
     let declick = AbiHandle::create("Declick", "{}", 2, 2);
     assert_eq!(declick.param_count(), 9);
     let declick_ids: Vec<String> = (0..9).map(|index| declick.param_id(index)).collect();
-    for id in [
-        "enabled",
-        "mode",
-        "bands",
-        "audition_residual",
-    ] {
+    for id in ["enabled", "mode", "bands", "audition_residual"] {
         assert!(declick_ids.contains(&id.to_string()), "declick lacks {id}");
     }
 
@@ -1331,8 +1561,15 @@ fn restoration_and_speech_mapping_counts_and_new_controls() {
     let denoiser_ids: Vec<String> = (0..denoiser.param_count())
         .map(|index| denoiser.param_id(index))
         .collect();
-    for id in ["reduction_db", "use_captured_profile", "formant_preservation"] {
-        assert!(denoiser_ids.contains(&id.to_string()), "denoiser lacks {id}");
+    for id in [
+        "reduction_db",
+        "use_captured_profile",
+        "formant_preservation",
+    ] {
+        assert!(
+            denoiser_ids.contains(&id.to_string()),
+            "denoiser lacks {id}"
+        );
     }
 }
 
@@ -1647,11 +1884,7 @@ fn speech_model_restore_refreshes_guard_and_preserves_populated_history() {
 // ---------------------------------------------------------------------------
 
 /// Asserts a structural live-edit refusal preserves audio/state/config.
-fn assert_structural_refusal_preserves(
-    handle: &mut AbiHandle,
-    param_id: &str,
-    input: &[f32],
-) {
+fn assert_structural_refusal_preserves(handle: &mut AbiHandle, param_id: &str, input: &[f32]) {
     handle.reset();
     let before_audio = handle.process(input);
     assert!(
@@ -1676,7 +1909,11 @@ fn assert_structural_refusal_preserves(
         "{param_id} rejection must name structural semantics, got: {error}"
     );
 
-    assert_eq!(handle.save(), before_state, "{param_id} state must roll back");
+    assert_eq!(
+        handle.save(),
+        before_state,
+        "{param_id} state must roll back"
+    );
     assert_eq!(
         handle.config_json(),
         before_config,
@@ -1694,7 +1931,12 @@ fn assert_structural_refusal_preserves(
 fn structural_live_edits_require_restoration_across_families() {
     // LinearPhaseEQ placement (structural FIR rebuild).
     let mut linear = AbiHandle::create("LinearPhaseEQ", "{}", 2, 2);
-    let linear_input = sine_interleaved(linear.inner().plugin.latency_samples() + 2048, 2, 440.0, 48_000.0);
+    let linear_input = sine_interleaved(
+        linear.inner().plugin.latency_samples() + 2048,
+        2,
+        440.0,
+        48_000.0,
+    );
     assert_structural_refusal_preserves(&mut linear, "band_3_placement", &linear_input);
 
     // De-esser structural IDs (detection band, mode, lookahead, topology,
@@ -2065,7 +2307,11 @@ fn de_esser_choice_merge_accepts_labels_and_indices() {
             serde_json::json!("linear-phase"),
             Some("Linear-Phase"),
         ),
-        ("split_topology", serde_json::json!(0), Some("Minimum-Phase")),
+        (
+            "split_topology",
+            serde_json::json!(0),
+            Some("Minimum-Phase"),
+        ),
         ("split_topology", serde_json::json!(1), Some("Linear-Phase")),
         ("split_topology", serde_json::json!("Bogus"), None),
         ("split_topology", serde_json::json!(2), None),
@@ -2076,11 +2322,10 @@ fn de_esser_choice_merge_accepts_labels_and_indices() {
         let merged = merge_de_esser_state_into_config("{}", &state_bytes);
         match expected {
             Some(label) => {
-                let config: serde_json::Map<String, serde_json::Value> =
-                    serde_json::from_str(&merged.unwrap_or_else(|error| {
-                        panic!("{key}={input} must merge: {error}")
-                    }))
-                    .unwrap();
+                let config: serde_json::Map<String, serde_json::Value> = serde_json::from_str(
+                    &merged.unwrap_or_else(|error| panic!("{key}={input} must merge: {error}")),
+                )
+                .unwrap();
                 assert_eq!(
                     config.get(*key),
                     Some(&serde_json::json!(label)),
@@ -2118,9 +2363,8 @@ fn ambisonics_triple_route_equivalence_ffi_bridge_facade() {
     assert_eq!(bridge.output_channels(), 2);
 
     // Facade route (shared-lane custom constructor).
-    let mut facade =
-        sotf_plugins::factory::create_plugin("ambisonics_decoder", &params, 4, 48_000)
-            .unwrap_or_else(|error| panic!("facade custom route failed: {error}"));
+    let mut facade = sotf_plugins::factory::create_plugin("ambisonics_decoder", &params, 4, 48_000)
+        .unwrap_or_else(|error| panic!("facade custom route failed: {error}"));
     assert_eq!(facade.input_channels(), 4);
     assert_eq!(facade.output_channels(), 2);
 

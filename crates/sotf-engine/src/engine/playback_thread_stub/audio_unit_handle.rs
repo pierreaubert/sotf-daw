@@ -176,6 +176,10 @@ impl Drop for AudioUnitHandle {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Keeps native worker dependencies explicit for the iOS playback thread"
+)]
 pub(super) fn run_playback_ios(
     message_rx: Receiver<ProcessingMessage>,
     command_rx: Receiver<PlaybackCommand>,
@@ -185,14 +189,19 @@ pub(super) fn run_playback_ios(
     channels: usize,
     frame_size: usize,
     recycle_tx: SyncSender<Vec<f32>>,
+    shared_output_peak_bits: Arc<std::sync::atomic::AtomicU32>,
 ) -> Result<(), String> {
     // Create ring buffer
     let buffer_capacity = playback_buffer_capacity(sample_rate, channels, buffer_ms)
         .max(frame_size.saturating_mul(channels));
     let (producer, consumer) = RingBuffer::<f32>::new(buffer_capacity);
 
-    // Create shared state
-    let state = Arc::new(PlaybackState::new(buffer_capacity));
+    // Create shared state (peak atomic shared with the wrapper, which
+    // retains it past thread exit for the worker-death residual fold).
+    let state = Arc::new(PlaybackState::new_sharing_peak(
+        buffer_capacity,
+        shared_output_peak_bits,
+    ));
 
     // Create CoreAudio AudioUnit
     let _audio_unit = AudioUnitHandle::new(sample_rate, channels, consumer, Arc::clone(&state))?;

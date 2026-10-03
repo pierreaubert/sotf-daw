@@ -1,6 +1,6 @@
 use super::super::{daw_host::DawHost, graph_edge::GraphEdge};
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
-use crate::plugin::{Plugin, PluginDrainResult, PluginInfo, ProcessContext};
+use crate::plugin::{Plugin, PluginDrainResult, PluginInfo, ProcessContext, TailLength};
 use std::collections::VecDeque;
 use std::sync::{
     Arc,
@@ -27,6 +27,7 @@ struct ClockPlugin {
     batch: usize,
     pending: Vec<f64>,
     position_origin: Arc<AtomicU64>,
+    has_input: bool,
 }
 impl ClockPlugin {
     fn new(numerator: usize, denominator: usize, delay: usize, valid: &Arc<AtomicBool>) -> Self {
@@ -43,6 +44,7 @@ impl ClockPlugin {
             batch: 1,
             pending: Vec::with_capacity(8),
             position_origin: Arc::new(AtomicU64::new(0)),
+            has_input: false,
         }
     }
     fn run(
@@ -58,6 +60,9 @@ impl ClockPlugin {
             self.context_valid.store(false, Ordering::Relaxed);
         }
         self.input_frames += context.num_frames as u64;
+        if context.num_frames > 0 {
+            self.has_input = true;
+        }
         let mut count = 0;
         for sample in input {
             for _ in 0..self.numerator {
@@ -109,10 +114,20 @@ impl Plugin for ClockPlugin {
         Ok(())
     }
     fn reset(&mut self) {
-        self.history.iter_mut().for_each(|value| *value = 0.0);
+        // Draining consumes the delay line; restore its length so the
+        // fixture is reusable after reset.
+        if self.history.len() != self.delay {
+            self.history = vec![0.0; self.delay].into();
+        } else {
+            self.history.iter_mut().for_each(|value| *value = 0.0);
+        }
         self.input_frames = 0;
         self.phase = 0;
         self.pending.clear();
+        self.has_input = false;
+    }
+    fn tail_length(&self) -> TailLength {
+        TailLength::Finite((self.batch - 1 + self.delay) as u64)
     }
     fn latency_samples(&self) -> usize {
         self.delay
@@ -139,7 +154,7 @@ impl Plugin for ClockPlugin {
         true
     }
     fn drain_output_frames_max(&self) -> usize {
-        self.batch - 1
+        self.batch - 1 + self.delay
     }
     fn drain(
         &mut self,
@@ -153,9 +168,19 @@ impl Plugin for ClockPlugin {
         {
             self.context_valid.store(false, Ordering::Relaxed);
         }
-        let frames = self.pending.len();
+        if !self.has_input {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        // Retained output-rate samples, oldest first: batched leftovers
+        // already passed the delay line, then the delay line itself.
+        let mut frames = 0;
         for (target, sample) in output.iter_mut().zip(self.pending.drain(..)) {
             *target = sample as f32;
+            frames += 1;
+        }
+        for (target, sample) in output[frames..].iter_mut().zip(self.history.drain(..)) {
+            *target = sample as f32;
+            frames += 1;
         }
         Ok(PluginDrainResult {
             frames,
@@ -470,10 +495,41 @@ fn fractional_round_trip_latency_rounds_only_in_the_destination_clock() {
 }
 
 #[test]
-fn nonlinear_graph_drain_reports_unsupported_instead_of_complete() {
-    let (mut host, _) = graph(true);
-    let error = host.drain(&mut [0.0; 128]).unwrap_err();
-    assert!(error.contains("requires a linear plugin graph"), "{error}");
+fn nonlinear_graph_drain_delivers_joined_mixed_rate_tail() {
+    // The joined mixed-rate graph used to refuse EOS; the branched
+    // scheduler now drains it. Process plus drain must equal the ideal
+    // delayed stream with exact length and valid clocks.
+    for join in [false, true] {
+        let (mut host, valid) = graph(join);
+        let delay = host.total_latency_samples();
+        let input: Vec<f32> = (0..256).map(|frame| frame as f32 + 1.0).collect();
+        let mut output = vec![0.0; 256];
+        assert_eq!(host.process(&input, &mut output).unwrap(), 256);
+        let mut tail = Vec::new();
+        for _ in 0..64 {
+            let mut chunk = vec![f32::NAN; host.drain_output_frames_max()];
+            let result = host.drain(&mut chunk).unwrap();
+            assert!(result.frames <= host.drain_output_frames_max());
+            tail.extend_from_slice(&chunk[..result.frames]);
+            if result.complete {
+                break;
+            }
+        }
+        assert_eq!(tail.len(), delay, "join={join}");
+        output.extend_from_slice(&tail);
+        for (index, &sample) in output.iter().enumerate() {
+            let expected = if index < delay {
+                0.0
+            } else {
+                2.0 * (index - delay) as f64 + 2.0
+            };
+            assert!(
+                (sample as f64 - expected).abs() <= 1e-9,
+                "join={join} sample {index}: {sample} vs {expected}"
+            );
+        }
+        assert!(valid.load(Ordering::Relaxed), "join={join}");
+    }
 }
 
 #[test]

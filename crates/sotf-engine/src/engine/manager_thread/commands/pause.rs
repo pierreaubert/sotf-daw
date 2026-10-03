@@ -18,7 +18,10 @@ impl ManagerCommandHandler for PauseCommand {
         let request_id = match ctx.decoder.send_command(DecoderCommand::Pause) {
             Ok(request_id) => request_id,
             Err(e) => {
-                ctx.playback.send_command(PlaybackCommand::Resume).ok();
+                let epoch = ctx.state.load().playback_epoch;
+                ctx.playback
+                    .send_command(PlaybackCommand::Resume { epoch })
+                    .ok();
                 return ManagerResponse::Error(e);
             }
         };
@@ -35,7 +38,10 @@ impl ManagerCommandHandler for PauseCommand {
                 ManagerResponse::Ok
             }
             Err(e) => {
-                ctx.playback.send_command(PlaybackCommand::Resume).ok();
+                let epoch = ctx.state.load().playback_epoch;
+                ctx.playback
+                    .send_command(PlaybackCommand::Resume { epoch })
+                    .ok();
                 ManagerResponse::Error(e)
             }
         }

@@ -1,5 +1,13 @@
+// The iOS device stub is owned by sotf-capture after the capture
+// extraction (`sotf_audio::devices` re-exports it only on iOS; on the
+// host gate that re-export resolves to the desktop cpal module, which
+// has neither `IOS_SYSTEM_OUTPUT_ID` nor the stub semantics asserted
+// below). Include the authoritative file so these tests exercise the
+// real stub on every platform without copying it. The relative path
+// mirrors the workspace's own `sotf-capture = { path =
+// "../sotf-capture" }` layout assumption.
 #[allow(dead_code)]
-#[path = "../src/devices_stub.rs"]
+#[path = "../../../../sotf-capture/src/devices_stub.rs"]
 mod devices_stub;
 
 use std::sync::{Arc, Mutex};

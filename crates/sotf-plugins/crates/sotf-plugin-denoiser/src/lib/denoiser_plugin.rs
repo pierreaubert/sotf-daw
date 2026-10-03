@@ -2,6 +2,8 @@ pub use super::config::DenoiserPluginParams;
 use super::denoiser_data::DenoiserData;
 use super::misc::MIN_IN_PLACE_BLOCK_FRAMES;
 use super::misc::NUM_DISPLAY_BANDS;
+use super::multi_resolution::SMALL_FFT_SIZE;
+use super::reduction_curve::ReductionCurve;
 use crate::params::PARAMS as DN;
 #[cfg(not(miri))]
 use math_audio_dsp::simd::ScopedFtz;
@@ -186,6 +188,88 @@ pub(super) struct DenoiserMultiRes {
     pub multi_res_state: Option<super::multi_resolution::MultiResState>,
 }
 
+/// Frequency-dependent reduction-curve state (R1).
+///
+/// Knots are user parameters; per-bin scales are precomputed on parameter
+/// or sample-rate changes so the realtime path does pure table lookups.
+pub(super) struct DenoiserCurve {
+    pub curve: ReductionCurve,
+    /// Interpolated reduction scales for the large FFT [spectrum_size].
+    pub scales: Vec<f32>,
+    /// Interpolated reduction scales for the multi-resolution small FFT.
+    pub scales_small: Vec<f32>,
+}
+
+/// Residual-audition monitoring state (R2).
+///
+/// The dry delay line holds past input frames so the residual
+/// (`dry - cleaned`) aligns with the latency-delayed cleaned output.
+/// A 5 ms one-pole crossfade (Declick family convention) switches between
+/// cleaned and residual output without clicks.
+pub(super) struct DenoiserAudition {
+    pub enabled: bool,
+    /// Crossfade position, f64 accumulator (F3: f32 stalls above 48 kHz).
+    pub mix_current: f64,
+    pub mix_target: f64,
+    pub mix_decay: f64,
+    /// Aligned dry history, per-channel frame rings [channels][capacity].
+    pub dry: Vec<Vec<f32>>,
+    pub dry_write: usize,
+    pub dry_read: usize,
+    pub dry_fill: usize,
+    /// Scratch for the popped dry frame [channels].
+    pub dry_frame: Vec<f32>,
+    /// Cumulative output frames served (alignment clock).
+    pub output_frames: usize,
+}
+
+/// Residual-audition crossfade endpoint snap threshold.
+///
+/// The one-pole mix accumulator is f64 (F3): an f32 accumulator stalls
+/// above 48 kHz because the per-step decrement near the snap window
+/// rounds to zero (at 2^-16 gap: 1.16/1.07/0.53/0.27 ulp(1.0) at
+/// 44.1/48/96/192 kHz, with two roundings needing ~1.5 ulp for a
+/// progress guarantee). In f64 the same decrement exceeds ulp(1.0) by
+/// more than 1e8 at every supported rate, so engagement is guaranteed
+/// with overwhelming margin and the mix strictly approaches the target
+/// (geometric rate: settled in ~2400/2700/5300/10600 frames nominal at
+/// 44.1/48/96/192 kHz). The 2^-16 threshold value itself is unchanged.
+///
+/// The snap fires only when the TOTAL step from the previous mix fits in
+/// 2^-16 (post-update gap and pre-update gap both in-bounds); otherwise
+/// the smooth step is taken and the snap defers by (at most) one frame.
+/// The snap is therefore a genuine but bounded mix discontinuity: at most
+/// 2^-16 of the full cleaned/residual jump, applied once per toggle. Its
+/// output artifact is quantified, not defined away: the analytic gate
+/// asserts the snap step bound and reports the dBFS artifact (F2(g)).
+///
+/// Targets are always exactly 0.0/1.0 (set from the audition flag), so the
+/// snapped mix takes the exact endpoint direct paths in `drain_output`.
+const AUDITION_SNAP_EPSILON: f64 = 1.0 / 65536.0;
+
+impl DenoiserAudition {
+    pub(super) fn new(
+        channels: usize,
+        enabled: bool,
+        mix_decay: f64,
+        dry_capacity_frames: usize,
+    ) -> Self {
+        let mix = if enabled { 1.0 } else { 0.0 };
+        Self {
+            enabled,
+            mix_current: mix,
+            mix_target: mix,
+            mix_decay,
+            dry: vec![vec![0.0_f32; dry_capacity_frames]; channels],
+            dry_write: 0,
+            dry_read: 0,
+            dry_fill: 0,
+            dry_frame: vec![0.0_f32; channels],
+            output_frames: 0,
+        }
+    }
+}
+
 /// Spectral denoiser using Wiener filter with MCRA noise estimation
 pub struct DenoiserPlugin {
     pub(super) config: DenoiserConfig,
@@ -204,6 +288,8 @@ pub struct DenoiserPlugin {
     pub(super) auxiliary: DenoiserAuxiliary,
     pub(super) ui: DenoiserUi,
     pub(super) multi_res: DenoiserMultiRes,
+    pub(super) curve: DenoiserCurve,
+    pub(super) audition: DenoiserAudition,
 }
 
 impl DenoiserPlugin {
@@ -441,6 +527,19 @@ impl DenoiserPlugin {
                 multi_resolution: pk(DN, "multi_resolution").default_bool(),
                 multi_res_state: None, // allocated on first enable
             },
+
+            curve: DenoiserCurve {
+                curve: ReductionCurve::default(),
+                scales: vec![1.0_f32; spectrum_size],
+                scales_small: vec![1.0_f32; SMALL_FFT_SIZE / 2 + 1],
+            },
+
+            audition: DenoiserAudition::new(
+                channels,
+                pk(DN, "audition_residual").default_bool(),
+                Self::audition_decay_for_rate(44100),
+                Self::dry_delay_capacity_for_fft(fft_size),
+            ),
         };
         p.rebuild_cached_parameters();
         p
@@ -527,6 +626,10 @@ impl DenoiserPlugin {
                 0.0
             }),
             28 => Some(self.params.spatial_strength as f64),
+            29 => Some(self.curve.curve.low as f64),
+            30 => Some(self.curve.curve.mid as f64),
+            31 => Some(self.curve.curve.high as f64),
+            32 => Some(if self.audition.enabled { 1.0 } else { 0.0 }),
             _ => None,
         }
     }
@@ -565,6 +668,34 @@ impl DenoiserPlugin {
             26 => self.params.harmonic_percussive = DN[26].clamp_f64(value) > 0.5,
             27 => self.params.spatial_denoise = DN[27].clamp_f64(value) > 0.5,
             28 => self.params.spatial_strength = DN[28].clamp_f64(value) as f32,
+            29 => {
+                let next = DN[29].clamp_f64(value) as f32;
+                if next != self.curve.curve.low {
+                    self.curve.curve.low = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            30 => {
+                let next = DN[30].clamp_f64(value) as f32;
+                if next != self.curve.curve.mid {
+                    self.curve.curve.mid = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            31 => {
+                let next = DN[31].clamp_f64(value) as f32;
+                if next != self.curve.curve.high {
+                    self.curve.curve.high = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            32 => {
+                // Live toggles move the target only; the 5 ms crossfade
+                // converges without clicks. Construction snaps immediately.
+                let next = DN[32].clamp_f64(value) > 0.5;
+                self.audition.enabled = next;
+                self.audition.mix_target = if next { 1.0 } else { 0.0 };
+            }
             _ => {}
         }
     }
@@ -694,6 +825,9 @@ impl DenoiserPlugin {
         validate_float!(spectral_sub_beta, "spectral_sub_beta");
         validate_float!(formant_strength, "formant_strength");
         validate_float!(spatial_strength, "spatial_strength");
+        validate_float!(curve_low, "curve_low");
+        validate_float!(curve_mid, "curve_mid");
+        validate_float!(curve_high, "curve_high");
         let mcra_l = pk(DN, "mcra_l");
         if params.mcra_l < mcra_l.min_f64() as usize || params.mcra_l > mcra_l.max_f64() as usize {
             return Err(format!("Invalid denoiser mcra_l: {}", params.mcra_l));
@@ -776,6 +910,19 @@ impl DenoiserPlugin {
         plugin.params.spatial_denoise = params.spatial_denoise;
         plugin.params.spatial_strength = params.spatial_strength;
 
+        plugin.curve.curve = ReductionCurve {
+            low: params.curve_low,
+            mid: params.curve_mid,
+            high: params.curve_high,
+        };
+        plugin.rebuild_curve_tables();
+
+        // Construction snaps the audition crossfade so restored presets and
+        // A/B comparisons start in the configured monitoring state.
+        plugin.audition.enabled = params.audition_residual;
+        plugin.audition.mix_target = if params.audition_residual { 1.0 } else { 0.0 };
+        plugin.audition.mix_current = plugin.audition.mix_target;
+
         plugin.rebuild_cached_parameters();
         Ok(plugin)
     }
@@ -790,6 +937,114 @@ impl DenoiserPlugin {
 
     pub(super) fn max_in_place_frames(&self) -> usize {
         Self::prepared_in_place_frames_for_fft(self.config.fft_size)
+    }
+
+    /// Dry delay-line capacity in frames for residual audition.
+    ///
+    /// Output lags input by one FFT, and a whole input block is pushed
+    /// before its output frames pop, so the line holds the latency plus one
+    /// maximal block.
+    pub(super) fn dry_delay_capacity_for_fft(fft_size: usize) -> usize {
+        fft_size + Self::prepared_in_place_frames_for_fft(fft_size)
+    }
+
+    /// One-pole crossfade coefficient for residual audition.
+    ///
+    /// A 5 ms time constant shared with the Declick audition convention:
+    /// fast enough to feel immediate, slow enough to avoid clicks.
+    pub(super) fn audition_decay_for_rate(sample_rate: u32) -> f64 {
+        let smoothing_samples = sample_rate as f64 * 5.0 * 0.001;
+        (-1.0 / smoothing_samples.max(1.0)).exp()
+    }
+
+    /// Rebuilds the precomputed per-bin reduction scales.
+    ///
+    /// Bin frequencies use physical Hz coordinates (`bin * rate / fft`),
+    /// so stored knots keep their meaning across FFT sizes and rates.
+    /// Allocation-free: both tables are filled in place.
+    pub(super) fn rebuild_curve_tables(&mut self) {
+        let curve = self.curve.curve;
+        let sample_rate = self.config.sample_rate as f32;
+        let fft_size = self.config.fft_size;
+        for (bin, slot) in self.curve.scales.iter_mut().enumerate() {
+            *slot = curve.gain_at(bin as f32 * sample_rate / fft_size as f32);
+        }
+        for (bin, slot) in self.curve.scales_small.iter_mut().enumerate() {
+            *slot = curve.gain_at(bin as f32 * sample_rate / SMALL_FFT_SIZE as f32);
+        }
+    }
+
+    /// Pushes interleaved input frames onto the dry delay line.
+    ///
+    /// `frames` must hold whole frames; a no-op for zero channels.
+    pub(super) fn push_dry_frames(&mut self, frames: &[f32]) {
+        let channels = self.config.channels;
+        let capacity = self.audition.dry.first().map_or(0, Vec::len);
+        if channels == 0 || capacity == 0 {
+            return;
+        }
+        debug_assert!(frames.len().is_multiple_of(channels));
+        let frame_count = frames.len() / channels;
+        for frame in 0..frame_count {
+            let write = self.audition.dry_write;
+            for ch in 0..channels {
+                self.audition.dry[ch][write] = frames[frame * channels + ch];
+            }
+            self.audition.dry_write = (write + 1) % capacity;
+            if self.audition.dry_fill < capacity {
+                self.audition.dry_fill += 1;
+            } else {
+                // Unreachable by construction: capacity covers the latency
+                // plus one maximal block. Overwrite oldest instead of growing.
+                self.audition.dry_read = (self.audition.dry_read + 1) % capacity;
+            }
+        }
+    }
+
+    /// Advances audition state for one emitted output frame.
+    ///
+    /// The crossfade always advances so its trajectory depends only on the
+    /// frame count, never on callback partitioning. A dry frame is popped
+    /// once the alignment clock reaches the FFT latency; earlier startup
+    /// frames have no dry counterpart yet and pop nothing. The f64 mix
+    /// accumulator snaps to the exact endpoint so settled fades converge
+    /// bit-exactly; the snap fires only when the TOTAL step from the
+    /// previous mix fits in `AUDITION_SNAP_EPSILON` (see below).
+    pub(super) fn advance_audition_frame(&mut self) {
+        let previous = self.audition.mix_current;
+        let next = previous * self.audition.mix_decay
+            + self.audition.mix_target * (1.0 - self.audition.mix_decay);
+        // Snap only when the total step obeys the bound: the smooth
+        // increment plus the snap jump must fit in 2^-16 together. At
+        // low rates the smooth step into the snap window can already
+        // exceed it (44.1 kHz measured 1.5288e-5), so a post-update-only
+        // check lets the total step overshoot. Deferring costs at most
+        // one frame per toggle (the gap shrinks geometrically, so the
+        // pre-update gap is in-bounds on the very next frame) and keeps
+        // the 5 ms tau and exact endpoints at every rate.
+        if (self.audition.mix_target - next).abs() <= AUDITION_SNAP_EPSILON
+            && (self.audition.mix_target - previous).abs() <= AUDITION_SNAP_EPSILON
+        {
+            self.audition.mix_current = self.audition.mix_target;
+        } else {
+            self.audition.mix_current = next;
+        }
+        if self.audition.output_frames >= self.config.fft_size {
+            let channels = self.config.channels;
+            if self.audition.dry_fill > 0 {
+                let capacity = self.audition.dry.first().map_or(1, Vec::len).max(1);
+                let read = self.audition.dry_read;
+                for ch in 0..channels {
+                    self.audition.dry_frame[ch] = self.audition.dry[ch][read];
+                }
+                self.audition.dry_read = (read + 1) % capacity;
+                self.audition.dry_fill -= 1;
+            } else {
+                // Unreachable: pops lag pushes by exactly the latency.
+                self.audition.dry_frame.fill(0.0);
+            }
+        }
+        self.audition.output_frames += 1;
     }
 
     /// Process one FFT block
@@ -928,6 +1183,12 @@ impl DenoiserPlugin {
 
     /// Drain available frames from ring-buffer accumulator to output buffer.
     /// Returns the number of frames actually drained.
+    ///
+    /// Each drained frame advances the audition crossfade and pops its
+    /// aligned dry frame. Exact endpoints take direct paths: zero mix
+    /// writes the cleaned sample (legacy bit-identical output, no
+    /// `NaN * 0.0` poisoning if a dry tap ever goes non-finite) and unit
+    /// mix writes the residual `dry - cleaned` exactly.
     pub(super) fn drain_output(
         &mut self,
         output: &mut [f32],
@@ -936,14 +1197,27 @@ impl DenoiserPlugin {
     ) -> usize {
         let frames_to_drain = self.io.output_accumulator_fill.min(frames_wanted);
         let mask = self.io.output_ring_mask;
+        let channels = self.config.channels;
 
         for frame in 0..frames_to_drain {
+            self.advance_audition_frame();
+            let mix = self.audition.mix_current;
             let ring_idx = (self.io.output_read_pos + frame) & mask;
-            let out_base = (output_pos + frame) * self.config.channels;
-            for ch in 0..self.config.channels {
-                output[out_base + ch] = self.io.output_accumulator[ch][ring_idx];
+            let out_base = (output_pos + frame) * channels;
+            for ch in 0..channels {
+                let cleaned = self.io.output_accumulator[ch][ring_idx];
                 // Clear after reading for next overlap-add cycle
                 self.io.output_accumulator[ch][ring_idx] = 0.0;
+                output[out_base + ch] = if mix == 0.0 {
+                    cleaned
+                } else if mix == 1.0 {
+                    self.audition.dry_frame[ch] - cleaned
+                } else {
+                    let dry = self.audition.dry_frame[ch];
+                    let residual = dry - cleaned;
+                    // f64 accumulator, f32 blend: one round-to-nearest cast.
+                    cleaned + (residual - cleaned) * (mix as f32)
+                };
             }
         }
 
@@ -1029,12 +1303,20 @@ impl DenoiserPlugin {
                 }
             }
 
+            // A flat curve passes no table so the small-FFT path keeps its
+            // legacy bit-identical gains.
+            let curve_small = if self.curve.curve.is_flat() {
+                None
+            } else {
+                Some(self.curve.scales_small.as_slice())
+            };
             if let Some(ref mut mrs) = self.multi_res.multi_res_state {
                 mrs.feed_and_process(
                     &buffer[input_pos..input_pos + samples_to_copy],
                     self.config.channels,
                     self.coeffs.reduction_linear,
                     self.coeffs.floor_linear,
+                    curve_small,
                 )
                 .map_err(str::to_string)?;
             }
@@ -1043,6 +1325,7 @@ impl DenoiserPlugin {
                 [self.io.input_buffer_fill..self.io.input_buffer_fill + samples_to_copy]
                 .copy_from_slice(&buffer[input_pos..input_pos + samples_to_copy]);
             self.io.input_buffer_fill += samples_to_copy;
+            self.push_dry_frames(&buffer[input_pos..input_pos + samples_to_copy]);
             input_pos += samples_to_copy;
 
             // Process FFT blocks to free input buffer space
@@ -1060,6 +1343,9 @@ impl DenoiserPlugin {
         let mut output_pos = self.io.startup_padding_remaining.min(num_frames);
         self.io.startup_padding_remaining -= output_pos;
         buffer[..output_pos * self.config.channels].fill(0.0);
+        for _ in 0..output_pos {
+            self.advance_audition_frame();
+        }
         if output_pos < num_frames && self.io.output_accumulator_fill > 0 {
             output_pos += self.drain_output(buffer, output_pos, num_frames - output_pos);
         }
@@ -1068,6 +1354,10 @@ impl DenoiserPlugin {
         if output_pos < num_frames {
             let zero_start = output_pos * self.config.channels;
             buffer[zero_start..total_samples].fill(0.0);
+            let silent = num_frames - output_pos;
+            for _ in 0..silent {
+                self.advance_audition_frame();
+            }
         }
 
         // STFT convention: always return num_frames. Buffer is zero-padded for
@@ -1151,6 +1441,8 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
             (sample_rate as usize).div_ceil(self.config.hop_size).max(1);
         self.update_envelope_coefficients();
         self.precompute_bark_mapping();
+        self.audition.mix_decay = Self::audition_decay_for_rate(sample_rate);
+        self.rebuild_curve_tables();
 
         // Update PND analyzers with correct sample rate
         for analyzer in &mut self.auxiliary.pnd_analyzers {
@@ -1223,6 +1515,19 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
         if let Some(ref mut mrs) = self.multi_res.multi_res_state {
             mrs.reset();
         }
+
+        // Reset residual-audition delay line and snap the crossfade to its
+        // target. Curve knots are retained settings, not stream state.
+        for channel in &mut self.audition.dry {
+            channel.fill(0.0);
+        }
+        self.audition.dry_write = 0;
+        self.audition.dry_read = 0;
+        self.audition.dry_fill = 0;
+        self.audition.dry_frame.fill(0.0);
+        self.audition.output_frames = 0;
+        self.audition.mix_current = self.audition.mix_target;
+
         self.ui.avg_reduction_db = 0.0;
         self.ui.learning_active = true;
     }

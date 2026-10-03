@@ -582,6 +582,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_create_decoder_from_source_service_stream() {
         use crate::decoder::service_resolver::{
             ResolvedServiceStream, clear_service_stream_resolver, set_service_stream_resolver,
@@ -589,9 +590,11 @@ mod tests {
         use std::io::Cursor;
         use std::sync::Arc;
 
-        // Single test function for everything that touches the process-global
-        // resolver, so tests cannot race on it. Any future resolver-touching
-        // test must be folded in here for the same reason.
+        // Process-global resolver: same-module tests touching it must fold
+        // into this function. The cross-module decoder-thread revert test
+        // cannot fold here (run_decoder_thread is invisible from decoder/),
+        // so it serializes via #[serial] instead; both hold the serial
+        // lock, so no two resolver tests ever run concurrently.
         struct ResolverGuard;
         impl Drop for ResolverGuard {
             fn drop(&mut self) {

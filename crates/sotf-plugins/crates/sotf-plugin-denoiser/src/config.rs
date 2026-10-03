@@ -119,6 +119,26 @@ pub fn default_spatial_strength() -> f32 {
     pk(DN, "spatial_strength").default_f32()
 }
 
+/// Return the default low-anchor reduction-curve scale.
+pub fn default_curve_low() -> f32 {
+    pk(DN, "curve_low").default_f32()
+}
+
+/// Return the default mid-anchor reduction-curve scale.
+pub fn default_curve_mid() -> f32 {
+    pk(DN, "curve_mid").default_f32()
+}
+
+/// Return the default high-anchor reduction-curve scale.
+pub fn default_curve_high() -> f32 {
+    pk(DN, "curve_high").default_f32()
+}
+
+/// Return the default residual-audition monitoring state.
+pub fn default_audition_residual() -> bool {
+    pk(DN, "audition_residual").default_bool()
+}
+
 /// Configuration parameters for DenoiserPlugin
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DenoiserPluginParams {
@@ -232,6 +252,22 @@ pub struct DenoiserPluginParams {
     /// Spatial denoising strength, from zero to one.
     #[serde(default = "default_spatial_strength")]
     pub spatial_strength: f32,
+
+    /// Reduction-curve scale at or below 125 Hz, from zero to one.
+    #[serde(default = "default_curve_low")]
+    pub curve_low: f32,
+
+    /// Reduction-curve scale at 1000 Hz, from zero to one.
+    #[serde(default = "default_curve_mid")]
+    pub curve_mid: f32,
+
+    /// Reduction-curve scale at or above 8000 Hz, from zero to one.
+    #[serde(default = "default_curve_high")]
+    pub curve_high: f32,
+
+    /// Output the aligned residual instead of cleaned audio.
+    #[serde(default = "default_audition_residual")]
+    pub audition_residual: bool,
 }
 
 impl Default for DenoiserPluginParams {
@@ -264,6 +300,10 @@ impl Default for DenoiserPluginParams {
             harmonic_percussive: default_harmonic_percussive(),
             spatial_denoise: default_spatial_denoise(),
             spatial_strength: default_spatial_strength(),
+            curve_low: default_curve_low(),
+            curve_mid: default_curve_mid(),
+            curve_high: default_curve_high(),
+            audition_residual: default_audition_residual(),
         }
     }
 }

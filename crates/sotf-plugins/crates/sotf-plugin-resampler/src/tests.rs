@@ -6,6 +6,7 @@ use rubato::Resampler;
 use sotf_host::PluginHost;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
+use sotf_host::test_utils::assert_no_allocs_or_deallocs;
 
 #[test]
 fn test_resampler_creation() {
@@ -1307,7 +1308,10 @@ fn cutoff_smoothing_parameter_defaults_off_and_round_trips() {
     );
     assert!(
         resampler
-            .set_parameter(ParameterId::from("cutoff_smoothing"), ParameterValue::Int(1))
+            .set_parameter(
+                ParameterId::from("cutoff_smoothing"),
+                ParameterValue::Int(1)
+            )
             .is_err(),
         "cutoff_smoothing must reject non-bool values"
     );
@@ -1348,10 +1352,7 @@ fn signal_delay_matches_documented_equation() {
             let wide = ResamplerPlugin::with_quality(1, input_rate, output_rate, 1024, quality)
                 .unwrap()
                 .signal_delay_samples();
-            assert_eq!(
-                narrow, wide,
-                "physical delay must not depend on chunk size"
-            );
+            assert_eq!(narrow, wide, "physical delay must not depend on chunk size");
             let reference = expected(quality, input_rate, output_rate);
             assert!(
                 (narrow - reference).abs() < 1e-9,
@@ -1460,4 +1461,362 @@ fn cutoff_bank_upsampling_nominal_is_single_table() {
     }
     bank.reset();
     assert_eq!(bank.current_slot(), 0);
+}
+
+// ---------------------------------------------------------------------------
+// R11 capacity envelopes: stream-independent upper bounds.
+// ---------------------------------------------------------------------------
+
+/// Fresh initialized plugin with backend residual exactly `residual_frames`.
+///
+/// Feeds three full chunks plus the residual so backend state is genuinely
+/// mid-stream; asserts the residual (a miscounted prime would make the
+/// grid below vacuous).
+fn envelope_primed_plugin(
+    channels: usize,
+    input_rate: u32,
+    output_rate: u32,
+    chunk: usize,
+    residual_frames: usize,
+) -> ResamplerPlugin {
+    assert!(residual_frames < chunk, "prime residual must be sub-chunk");
+    let mut plugin = ResamplerPlugin::new(channels, input_rate, output_rate, chunk).unwrap();
+    plugin.initialize(input_rate).unwrap();
+    let total = 3 * chunk + residual_frames;
+    let input = vec![0.25f32; total * channels];
+    let capacity = plugin.output_frames_for_input(total);
+    let mut output = vec![0.0f32; capacity * channels];
+    let produced = plugin
+        .process(&input, &mut output, &ProcessContext::new(input_rate, total))
+        .unwrap();
+    assert!(
+        produced <= capacity,
+        "prime produced {produced} past its {capacity}-frame live bound"
+    );
+    assert_eq!(
+        plugin.residual_frames, residual_frames,
+        "prime must leave exactly the requested residual"
+    );
+    plugin
+}
+
+#[test]
+fn envelope_covers_process_production_over_residual_grid() {
+    for (input_rate, output_rate) in [(48_000u32, 24_000u32), (24_000, 48_000)] {
+        // Full residual sweep on a small chunk, sampled phases plus
+        // near-max-block sizes on the production chunk.
+        for (chunk, residuals, sizes) in [
+            (
+                64usize,
+                (0..64usize).collect::<Vec<_>>(),
+                vec![1usize, 63, 64, 65, 256],
+            ),
+            (
+                1024usize,
+                vec![0usize, 1, 511, 512, 1022, 1023],
+                vec![1usize, 1023, 1024, 1025, 7813, 8191, 8192],
+            ),
+        ] {
+            for residual in &residuals {
+                for &size in &sizes {
+                    let mut plugin =
+                        envelope_primed_plugin(2, input_rate, output_rate, chunk, *residual);
+                    let live = plugin.output_frames_for_input(size);
+                    let envelope = plugin
+                        .output_frames_envelope(size)
+                        .expect("initialized backend publishes a process envelope");
+                    assert!(
+                        live <= envelope,
+                        "{input_rate}->{output_rate} chunk {chunk} residual {residual} size {size}: \
+                         live {live} exceeds envelope {envelope}"
+                    );
+                    // Callers size from the live declaration.
+                    let input = vec![0.125f32; size * 2];
+                    let mut output = vec![0.0f32; live * 2];
+                    let produced = plugin
+                        .process(&input, &mut output, &ProcessContext::new(input_rate, size))
+                        .unwrap();
+                    assert!(
+                        produced <= live,
+                        "{input_rate}->{output_rate} chunk {chunk} residual {residual} size {size}: \
+                         produced {produced} past live {live}"
+                    );
+                    assert!(
+                        produced <= envelope,
+                        "{input_rate}->{output_rate} chunk {chunk} residual {residual} size {size}: \
+                         produced {produced} past envelope {envelope}"
+                    );
+                }
+            }
+        }
+    }
+
+    // Unity is exact identity, both envelopes.
+    let unity = ResamplerPlugin::new(2, 48_000, 48_000, 1024).unwrap();
+    for size in [0, 1, 64, 1024, 8192] {
+        assert_eq!(unity.output_frames_envelope(size), Some(size));
+    }
+    assert_eq!(unity.drain_frames_envelope(), Some(0));
+
+    // The envelope contract requires monotonicity (host propagation
+    // queries larger derived quanta and relies on dominance).
+    let up = ResamplerPlugin::new(2, 24_000, 48_000, 1024).unwrap();
+    let mut previous = 0;
+    for size in 0..4096 {
+        let envelope = up.output_frames_envelope(size).unwrap();
+        assert!(
+            envelope >= previous,
+            "process envelope must be non-decreasing (fell at {size})"
+        );
+        previous = envelope;
+    }
+}
+
+#[test]
+fn drain_envelope_covers_every_drain_emission() {
+    for (input_rate, output_rate) in [(48_000u32, 24_000u32), (24_000, 48_000)] {
+        for (chunk, residuals) in [
+            (64usize, (0..64usize).collect::<Vec<_>>()),
+            (1024usize, vec![0usize, 1, 511, 512, 1022, 1023]),
+        ] {
+            for residual in &residuals {
+                let mut plugin =
+                    envelope_primed_plugin(2, input_rate, output_rate, chunk, *residual);
+                let live_max = plugin.drain_output_frames_max();
+                let bound = plugin
+                    .drain_frames_envelope()
+                    .expect("initialized backend publishes a drain envelope");
+                assert!(
+                    live_max <= bound,
+                    "{input_rate}->{output_rate} chunk {chunk} residual {residual}: \
+                     live drain bound {live_max} exceeds envelope {bound}"
+                );
+                let context = ProcessContext::new(input_rate, 0);
+                plugin.begin_drain(&context).unwrap();
+                // Size the destination from the envelope itself: an
+                // understated envelope fails loudly here, not silently.
+                let mut output = vec![0.0f32; bound * 2];
+                let mut calls = 0u32;
+                loop {
+                    let step = plugin.drain(&mut output, &context).unwrap();
+                    assert!(
+                        step.frames <= bound,
+                        "{input_rate}->{output_rate} chunk {chunk} residual {residual}: \
+                         drain emitted {} past envelope {bound}",
+                        step.frames
+                    );
+                    calls += 1;
+                    assert!(calls < 1024, "drain must converge");
+                    if step.complete {
+                        break;
+                    }
+                }
+                // EOF: further drains stay complete with zero frames.
+                let step = plugin.drain(&mut output, &context).unwrap();
+                assert!(
+                    step.complete && step.frames == 0,
+                    "drain after EOF must stay complete and empty"
+                );
+            }
+        }
+    }
+
+    // Cold: a fresh stream drains complete immediately with zero frames.
+    let mut cold = ResamplerPlugin::new(2, 48_000, 24_000, 1024).unwrap();
+    cold.initialize(48_000).unwrap();
+    let bound = cold.drain_frames_envelope().unwrap();
+    let context = ProcessContext::new(48_000, 0);
+    cold.begin_drain(&context).unwrap();
+    let mut output = vec![0.0f32; bound * 2];
+    let step = cold.drain(&mut output, &context).unwrap();
+    assert!(
+        step.complete && step.frames == 0,
+        "cold drain must be empty"
+    );
+}
+
+#[test]
+fn drain_envelope_holds_across_dynamic_ratio_and_reset() {
+    let chunk = 256;
+    let mut plugin = envelope_primed_plugin(2, 48_000, 24_000, chunk, 100);
+    plugin
+        .set_parameter(
+            ParameterId::from("dynamic_ratio"),
+            ParameterValue::Bool(true),
+        )
+        .unwrap();
+    let nominal = plugin.ratio();
+    let bound = plugin.drain_frames_envelope().unwrap();
+    // Ratios across the covered range, ramped and jumped, each followed
+    // by real input and a drain probe that must stay within the envelope.
+    for ratio in [nominal / 2.0, nominal * 0.75, nominal * 1.5, nominal * 2.0] {
+        for ramp in [false, true] {
+            plugin.set_ratio(ratio, ramp).unwrap();
+            let envelope_after = plugin.output_frames_envelope(chunk).unwrap();
+            let input = vec![0.125f32; chunk * 2];
+            let live = plugin.output_frames_for_input(chunk);
+            let mut output = vec![0.0f32; live * 2];
+            let produced = plugin
+                .process(&input, &mut output, &ProcessContext::new(48_000, chunk))
+                .unwrap();
+            assert!(
+                produced <= envelope_after,
+                "ratio {ratio} ramp {ramp}: produced {produced} past envelope {envelope_after}"
+            );
+        }
+    }
+    assert_eq!(
+        plugin.drain_frames_envelope().unwrap(),
+        bound,
+        "drain envelope must not move under ratio changes"
+    );
+    let context = ProcessContext::new(48_000, 0);
+    plugin.begin_drain(&context).unwrap();
+    let mut output = vec![0.0f32; bound * 2];
+    let mut calls = 0u32;
+    loop {
+        let step = plugin.drain(&mut output, &context).unwrap();
+        assert!(
+            step.frames <= bound,
+            "post-ratio drain emitted {} past envelope {bound}",
+            step.frames
+        );
+        calls += 1;
+        assert!(calls < 1024, "drain must converge");
+        if step.complete {
+            break;
+        }
+    }
+
+    // Warm: reset starts a second stream whose drain stays covered.
+    plugin.reset();
+    let input = vec![0.125f32; 3 * chunk * 2];
+    let live = plugin.output_frames_for_input(3 * chunk);
+    let mut output = vec![0.0f32; live * 2];
+    plugin
+        .process(&input, &mut output, &ProcessContext::new(48_000, 3 * chunk))
+        .unwrap();
+    plugin.begin_drain(&context).unwrap();
+    let mut output = vec![0.0f32; bound * 2];
+    let step = plugin.drain(&mut output, &context).unwrap();
+    assert!(
+        step.frames <= bound,
+        "warm drain emitted {} past envelope {bound}",
+        step.frames
+    );
+}
+
+#[test]
+fn envelope_queries_are_allocation_free_and_quality_stable() {
+    // Quality rebuilds the backend with identical chunk/ratio bounds, so
+    // both envelopes keep unchanged values (not just still Some).
+    // Quality locks at activation, so this runs pre-initialization.
+    let mut plugin = ResamplerPlugin::new(2, 24_000, 48_000, 256).unwrap();
+    let process_before = plugin.output_frames_envelope(1024).unwrap();
+    let drain_before = plugin.drain_frames_envelope().unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("quality"),
+            ParameterValue::String("high".to_string()),
+        )
+        .unwrap();
+    assert_eq!(
+        plugin.output_frames_envelope(1024),
+        Some(process_before),
+        "process envelope must survive quality rebuild unchanged"
+    );
+    assert_eq!(
+        plugin.drain_frames_envelope(),
+        Some(drain_before),
+        "drain envelope must survive quality rebuild unchanged"
+    );
+
+    // Mid-stream state queries stay allocation-free.
+    let mut plugin = envelope_primed_plugin(2, 24_000, 48_000, 256, 100);
+    assert_no_allocs_or_deallocs("resampler envelope queries mid-stream", || {
+        for size in [0, 1, 256, 1024, 8192] {
+            let envelope = plugin.output_frames_envelope(size);
+            assert!(envelope.is_some());
+            assert!(plugin.output_frames_for_input(size) <= envelope.unwrap());
+        }
+        assert!(plugin.drain_frames_envelope().is_some());
+    });
+
+    // Draining state queries stay allocation-free too.
+    let context = ProcessContext::new(24_000, 0);
+    plugin.begin_drain(&context).unwrap();
+    assert_no_allocs_or_deallocs("resampler envelope queries draining", || {
+        assert!(plugin.output_frames_envelope(1024).is_some());
+        assert!(plugin.drain_frames_envelope().is_some());
+    });
+}
+
+#[test]
+fn uninitialized_backend_answers_unknown_envelope() {
+    let mut plugin = ResamplerPlugin::new(2, 48_000, 24_000, 1024).unwrap();
+    plugin.resampler = None;
+    assert_eq!(plugin.output_frames_envelope(1024), None);
+    assert_eq!(plugin.drain_frames_envelope(), None);
+}
+
+#[test]
+fn backend_next_never_exceeds_max_across_min_max_jump_with_debt() {
+    // F3: both envelopes reduce to the fork invariant
+    // output_frames_next() <= output_frames_max(). Exhausting
+    // last_index x ramp corners is trust in the fork (which sizes its
+    // own buffers by this max); this test samples the named uncovered
+    // corner instead of claiming exhaustion: a min->max ratio jump (and
+    // back) against deferred-step debt from a settled low-ratio stream
+    // plus a partial-chunk residual. Any violation would surface
+    // downstream as a loud capacity error, never silent corruption.
+    for (input_rate, output_rate) in [(48_000u32, 24_000u32), (24_000, 48_000)] {
+        let chunk = 256;
+        // Genuinely mid-stream with a partial residual (deferred debt).
+        let mut plugin = envelope_primed_plugin(2, input_rate, output_rate, chunk, 100);
+        plugin
+            .set_parameter(
+                ParameterId::from("dynamic_ratio"),
+                ParameterValue::Bool(true),
+            )
+            .unwrap();
+        let nominal = plugin.ratio();
+        let check_next = |plugin: &ResamplerPlugin, leg: &str| {
+            let backend = plugin.resampler.as_ref().expect("backend must exist");
+            let next = backend.output_frames_next();
+            let max = backend.output_frames_max();
+            assert!(
+                next <= max,
+                "{input_rate}->{output_rate} {leg}: next {next} exceeds max {max}"
+            );
+        };
+        let run_chunk = |plugin: &mut ResamplerPlugin, leg: &str| {
+            let live = plugin.output_frames_for_input(chunk);
+            let input = vec![0.125f32; chunk * 2];
+            let mut output = vec![0.0f32; live * 2];
+            let context = ProcessContext::new(input_rate, chunk);
+            let produced = plugin.process(&input, &mut output, &context).unwrap();
+            assert!(
+                produced <= live,
+                "{input_rate}->{output_rate} {leg}: produced {produced} past live {live}"
+            );
+        };
+        // Settle at the floor with real input, building deferred-step
+        // debt at minimum output density.
+        plugin.set_ratio(nominal / 2.0, false).unwrap();
+        run_chunk(&mut plugin, "floor settle");
+        check_next(&plugin, "settled at min ratio");
+        // Jump straight across the covered range (no ramp), checking
+        // immediately and after each subsequent backend block.
+        for (target, leg) in [
+            (nominal * 2.0, "min-to-max jump"),
+            (nominal / 2.0, "max-to-min jump"),
+        ] {
+            plugin.set_ratio(target, false).unwrap();
+            check_next(&plugin, leg);
+            for _ in 0..3 {
+                run_chunk(&mut plugin, leg);
+                check_next(&plugin, leg);
+            }
+        }
+    }
 }

@@ -570,6 +570,112 @@ fn shutdown_interrupts_pending_flush_with_live_channels() {
 }
 
 #[test]
+fn stop_interrupts_pending_flush_without_dropping_the_barrier() {
+    let worker = Worker::new(0, None, DrainMode::Tail);
+    let resets = worker.reset_calls.load(Ordering::SeqCst);
+    worker
+        .decoder_tx
+        .as_ref()
+        .unwrap()
+        .send(DecoderMessage::Flush)
+        .unwrap();
+    // Arm-entry proof (precedent pattern): the Flush arm ran reset, so the
+    // Stop below cannot be consumed early — it must interrupt the forward.
+    let deadline = std::time::Instant::now() + WAIT;
+    while worker.reset_calls.load(Ordering::SeqCst) == resets {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    worker
+        .command_tx
+        .send(request(ProcessingCommand::Stop))
+        .unwrap();
+    // The barrier survives Stop (pre-fix: dropped, and this recv times out).
+    assert!(matches!(
+        worker.output().recv_timeout(WAIT).unwrap(),
+        ProcessingMessage::Flush
+    ));
+    // The worker continues normally: a second barrier flows afterwards.
+    worker
+        .decoder_tx
+        .as_ref()
+        .unwrap()
+        .send(DecoderMessage::Flush)
+        .unwrap();
+    assert!(matches!(
+        worker.output().recv_timeout(WAIT).unwrap(),
+        ProcessingMessage::Flush
+    ));
+    assert!(worker.event_rx.try_recv().is_err());
+    worker
+        .command_tx
+        .send(request(ProcessingCommand::Shutdown))
+        .unwrap();
+    worker.finished();
+}
+
+#[test]
+fn channel_change_interrupts_pending_flush_without_dropping_the_barrier() {
+    let mut replacement = PluginHost::new(2, 48_000);
+    replacement.build().unwrap();
+    // Arg 3 guards the CURRENT host (1ch): the commit rejects on mismatch.
+    let update = PreparedHostUpdate::prepare(replacement, 48_000, 1, 0).unwrap();
+    let worker = Worker::new(0, None, DrainMode::Tail);
+    let resets = worker.reset_calls.load(Ordering::SeqCst);
+    worker
+        .decoder_tx
+        .as_ref()
+        .unwrap()
+        .send(DecoderMessage::Flush)
+        .unwrap();
+    let deadline = std::time::Instant::now() + WAIT;
+    while worker.reset_calls.load(Ordering::SeqCst) == resets {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::yield_now();
+    }
+    worker
+        .command_tx
+        .send(request(ProcessingCommand::CommitHostUpdate(update)))
+        .unwrap();
+    // The barrier survives the mid-forward host swap (pre-fix: dropped).
+    assert!(matches!(
+        worker.output().recv_timeout(WAIT).unwrap(),
+        ProcessingMessage::Flush
+    ));
+    // The injected update applied: output is now stereo.
+    let update_response = worker.response_rx.recv_timeout(WAIT).unwrap().response;
+    assert!(
+        matches!(
+            update_response,
+            ProcessingResponse::PluginChainUpdated {
+                output_channels: 2,
+                ..
+            }
+        ),
+        "expected stereo PluginChainUpdated, got {update_response:?}"
+    );
+    // Normal operation continues on the new host.
+    worker
+        .decoder_tx
+        .as_ref()
+        .unwrap()
+        .send(DecoderMessage::Frame(
+            AudioFrame::try_new(vec![0.5, 0.5], 1, 2, 48_000).unwrap(),
+        ))
+        .unwrap();
+    let ProcessingMessage::Frame(frame) = worker.output().recv_timeout(WAIT).unwrap() else {
+        panic!("expected post-update frame");
+    };
+    assert_eq!(frame.data, vec![0.5, 0.5]);
+    assert!(worker.event_rx.try_recv().is_err());
+    worker
+        .command_tx
+        .send(request(ProcessingCommand::Shutdown))
+        .unwrap();
+    worker.finished();
+}
+
+#[test]
 fn nonconvergent_drain_reports_failure_and_disconnects() {
     let worker = Worker::new(3, None, DrainMode::Pending);
     worker.eos();
@@ -840,10 +946,10 @@ fn terminal_replacement_restarted_drain_observes_stop() {
     };
     assert_eq!(frame.data.len(), 2);
     assert_eq!(frame.data[0], 0.75);
-    // Stop resets the existing 50 ms equal-power transition. Both reset
-    // hosts receive this fresh sample, so their gains add at output frame 1.
-    let angle = std::f64::consts::FRAC_PI_2 / (96_000.0 * 0.050);
-    let expected = 0.75 * (angle.cos() + angle.sin());
+    // Stop resets the existing 50 ms convex transition. Both reset hosts
+    // receive this fresh sample, so the convex gains sum to one at frame 1.
+    let alpha = 1.0 / (96_000.0 * 0.050);
+    let expected = 0.75 * ((1.0 - alpha) + alpha);
     assert!((f64::from(frame.data[1]) - expected).abs() <= f64::from(f32::EPSILON));
     assert_eq!(new_calls.load(Ordering::SeqCst), 1);
 }

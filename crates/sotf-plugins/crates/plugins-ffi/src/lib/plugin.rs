@@ -262,9 +262,8 @@ pub const HISS_CLEAR_PROFILE: c_int = 2;
 /// map is intentionally preserved: Hiss keeps a fixed 13-parameter schema,
 /// so foreign `ParameterInfo` pointers stay stable across restore.
 fn replace_hiss_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
-    let incoming_state: serde_json::Map<String, serde_json::Value> =
-        serde_json::from_slice(state)
-            .map_err(|error| format!("Failed to parse HissReducer state: {error}"))?;
+    let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse HissReducer state: {error}"))?;
     // Current live snapshot carries scalars plus the stored profile when
     // present. Contention fails explicitly; never silently drop the blob.
     let current_bytes = plugins_bridge::state::try_save_state(&*handle.plugin)
@@ -377,10 +376,7 @@ fn replace_hiss_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<()
 /// dual-band, algorithm). Live DSP setters reject changes; the FFI guard
 /// gives the uniform restoration error.
 fn is_ambisonics_structural_id(plugin_type: &str, param_id: &str) -> bool {
-    if !matches!(
-        plugin_type,
-        "AmbisonicsDecoder" | "ambisonics_decoder"
-    ) {
+    if !matches!(plugin_type, "AmbisonicsDecoder" | "ambisonics_decoder") {
         return false;
     }
     matches!(
@@ -429,7 +425,10 @@ fn replace_plugin_from_state(
     ) {
         return replace_dynamic_eq_from_state(handle, state);
     }
-    if matches!(handle.plugin_type.as_str(), "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ") {
+    if matches!(
+        handle.plugin_type.as_str(),
+        "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+    ) {
         return replace_linear_phase_eq_from_state(handle, state);
     }
     if matches!(handle.plugin_type.as_str(), "EQ" | "eq") {
@@ -929,9 +928,13 @@ fn replace_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), 
     // a requested structural placement must instead fail transactionally.
     for key in incoming_state.keys() {
         if is_eq_placement_structural_id(&handle.plugin_type, key)
-            && replacement.get_parameter(&ParameterId::from(key.as_str())).is_none()
+            && replacement
+                .get_parameter(&ParameterId::from(key.as_str()))
+                .is_none()
         {
-            return Err(format!("EQ placement '{key}' targets a filter outside the configured bank"));
+            return Err(format!(
+                "EQ placement '{key}' targets a filter outside the configured bank"
+            ));
         }
     }
     load_changed_state(&mut *replacement, &merged_bytes, &handle.plugin_type)?;
@@ -1197,6 +1200,18 @@ mod crossfeed_yaw_ffi_tests;
 #[cfg(test)]
 #[path = "compressor_detector_ffi_tests.rs"]
 mod compressor_detector_ffi_tests;
+
+#[cfg(test)]
+#[path = "declick_consumer_tests.rs"]
+mod declick_consumer_tests;
+
+#[cfg(test)]
+#[path = "drain_contract_tests.rs"]
+mod drain_contract_tests;
+
+#[cfg(test)]
+#[path = "analog_limiter_consumer_tests.rs"]
+mod analog_limiter_consumer_tests;
 
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
@@ -1596,6 +1611,250 @@ pub extern "C" fn plugin_process(
         .into()
 }
 
+/// Deliver finalized tail frames after the final process call.
+///
+/// The caller supplies an explicit frame capacity; this call reports how
+/// many frames were produced and whether the stream is complete. Size the
+/// capacity with [`plugin_get_drain_capacity_frames`]: smaller capacities
+/// fail with [`PluginError::BufferTooSmall`] without consuming any drain
+/// state, so the caller can retry with a larger buffer. Repeat
+/// full-capacity calls until `complete` is set; no universal call count is
+/// promised (the trait call bound is optional and post-begin only), so the
+/// completion flag is the contract. Only the first `*produced_frames`
+/// frames are valid audio; on success the FFI layer never writes past the
+/// produced prefix itself. Failure paths instead silence the full
+/// validated destination (with `*produced_frames` left at zero), as
+/// documented under Returns below. After completion, further calls report
+/// zero produced frames with `complete` set, and [`plugin_reset`] returns
+/// the handle to normal processing.
+///
+/// The FFI layer allocates nothing on any path (static diagnostics only);
+/// plugin work follows the trait contracts (`begin_drain`/`drain` are
+/// allocation-free, and the capacity bound is a shared-reference query).
+/// Preparation runs the fused `begin_drain`-then-`drain` sequence with a
+/// zero-frame context on both calls, matching the host drain convention;
+/// it does not call `prepare_drain_metadata`, which only feeds host-graph
+/// tail metadata this single-plugin call never queries.
+///
+/// # Returns
+/// * 0 on success (check `*produced_frames` and `*complete`)
+/// * [`PluginError::NullPointer`] for null handles or out-pointers
+/// * [`PluginError::BufferTooSmall`] when `capacity_frames` is below the
+///   declared drain bound or the destination size overflows
+/// * [`PluginError::ProcessingFailed`] when drain preparation or the drain
+///   step itself fails (output is silenced)
+/// * [`PluginError::UnknownError`] when a plugin panic is caught (output
+///   is silenced)
+///
+/// # Safety
+/// * `handle` must be a live plugin handle from [`plugin_create`] that has
+///   not been destroyed, and this call must hold exclusive access to it:
+///   no other thread may use the handle for the duration of this call. A
+///   null handle is checked and reports [`PluginError::NullPointer`].
+/// * `produced_frames` must be valid for writing one `usize` (correctly
+///   aligned) and `complete` valid for writing one `c_int`; both stay
+///   valid for the call and may point at uninitialized memory (both are
+///   written via raw pointer writes before any other work). Null
+///   out-pointers are checked and report [`PluginError::NullPointer`].
+///   Neither out-pointer may overlap the handle, the other out-pointer,
+///   or the `output` range below.
+/// * `output` must be valid for writing `capacity_frames * output_channels`
+///   contiguous, correctly aligned `f32` samples that stay valid and
+///   unaliased for the call, except that it may be `NULL` only when
+///   `capacity_frames` is `0` (a null `output` with positive capacity
+///   reports [`PluginError::NullPointer`]). Every sample in the range
+///   must hold a properly initialized `f32` value: this implementation
+///   builds a slice over the range, which requires initialized memory,
+///   so a C caller must not pass freshly allocated-but-unwritten
+///   storage. The range must not overlap the handle or either
+///   out-pointer.
+///
+/// # Panics
+/// Never panics across the FFI boundary; every plugin call on this path
+/// (capacity bound, preparation, drain step) runs inside the panic
+/// boundary and panics are reported as [`PluginError::UnknownError`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn plugin_drain(
+    handle: *mut PluginHandle,
+    output: *mut f32,
+    capacity_frames: usize,
+    produced_frames: *mut usize,
+    complete: *mut c_int,
+) -> c_int {
+    if handle.is_null() || produced_frames.is_null() || complete.is_null() {
+        return PluginError::NullPointer.into();
+    }
+    // SAFETY: All three pointers were just verified non-null; the caller
+    // upholds the validity, alignment, and non-overlap contract above.
+    unsafe {
+        *produced_frames = 0;
+        *complete = 0;
+    }
+    // Plain field reads: no plugin call, so no panic is possible here.
+    // SAFETY: `handle` is non-null (checked above) with exclusive access.
+    let (channels, sample_rate) = unsafe {
+        let handle_ref = &*handle;
+        (handle_ref.output_channels, handle_ref.sample_rate)
+    };
+    if output.is_null() && capacity_frames > 0 {
+        return PluginError::NullPointer.into();
+    }
+    let Some(output_samples) = capacity_frames.checked_mul(channels) else {
+        set_last_error_static(c"Drain sample count overflows usize");
+        return PluginError::BufferTooSmall.into();
+    };
+    // `from_raw_parts_mut` additionally requires the byte length to fit in
+    // `isize`; reject oversized destinations before building any slice.
+    if output_samples > isize::MAX as usize / std::mem::size_of::<f32>() {
+        set_last_error_static(c"Drain destination exceeds the maximum slice byte length");
+        return PluginError::BufferTooSmall.into();
+    }
+    // Drain preparation and the drain step both take a zero-frame context,
+    // matching the host convention (context-checking plugins such as A/B
+    // Compare reject anything else). Sizing travels in the destination
+    // slice, never in the context.
+    let context = ProcessContext::new(sample_rate, 0);
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: `handle` is non-null (checked above); the FFI contract
+        // gives this call exclusive access for its duration.
+        let handle_ref = unsafe { &mut *handle };
+        // The bound query is a shared-reference trait call: it runs inside
+        // the panic boundary and mutates no plugin or drain state.
+        let bound = handle_ref.plugin.drain_output_frames_max();
+        // Capacity must cover the declared per-call drain bound. Failing
+        // here consumes no drain state and leaves the output buffer
+        // untouched, so the caller can retry with a larger buffer.
+        if capacity_frames < bound {
+            set_last_error_static(c"Drain capacity below the declared drain bound");
+            return PluginError::BufferTooSmall;
+        }
+        let mut empty: [f32; 0] = [];
+        // SAFETY: `output` is non-null whenever samples are requested and
+        // the byte length fits in `isize` (both checked above); the caller
+        // guarantees room for `output_samples` samples that stay valid and
+        // unaliased for this call.
+        let output_slice: &mut [f32] = unsafe {
+            if output_samples == 0 {
+                &mut empty[..]
+            } else {
+                slice::from_raw_parts_mut(output, output_samples)
+            }
+        };
+        if handle_ref.plugin.begin_drain(&context).is_err() {
+            output_slice.fill(0.0);
+            set_last_error_static(c"Plugin drain preparation failed");
+            return PluginError::ProcessingFailed;
+        }
+        match handle_ref.plugin.drain(output_slice, &context) {
+            Ok(drained) if drained.frames <= capacity_frames => {
+                // SAFETY: Both out-pointers were verified non-null above
+                // and stay valid for this call.
+                unsafe {
+                    *produced_frames = drained.frames;
+                    *complete = c_int::from(drained.complete);
+                }
+                PluginError::Success
+            }
+            Ok(_) => {
+                output_slice.fill(0.0);
+                set_last_error_static(c"Plugin reported more drain frames than capacity");
+                PluginError::ProcessingFailed
+            }
+            Err(_) => {
+                output_slice.fill(0.0);
+                set_last_error_static(c"Plugin drain failed");
+                PluginError::ProcessingFailed
+            }
+        }
+    }));
+    match result {
+        Ok(error) => error.into(),
+        Err(_) => {
+            // A panicking plugin must not leak partial tail audio either.
+            // SAFETY: Same validated range as above (`output` is non-null
+            // whenever `output_samples` is positive; the byte length fits).
+            unsafe {
+                if output_samples > 0 {
+                    slice::from_raw_parts_mut(output, output_samples).fill(0.0);
+                }
+            }
+            set_last_error_static(c"Panic in plugin_drain");
+            PluginError::UnknownError.into()
+        }
+    }
+}
+
+/// Report the per-call drain capacity a [`plugin_drain`] call needs.
+///
+/// This exposes the initialized handle's declared
+/// [`sotf_host::plugin::Plugin::drain_output_frames_max`] bound: the
+/// minimum `capacity_frames` the fused drain call accepts. Latency-bounded
+/// tails (such as Declick) report their `latency_samples` here, but the
+/// bound is independent of latency in general, so size drain buffers from
+/// this query rather than the info document. The query is a
+/// shared-reference trait call: it mutates no plugin or drain state, is
+/// safe to repeat at any lifecycle point (before, during, or after a
+/// drain), and stays valid until the next successful process, drain,
+/// parameter, state, or reset call. It reports no call count: the trait
+/// call bound is optional and only queryable after a successful
+/// `begin_drain`, which the fused C drain performs internally, so callers
+/// repeat full-capacity [`plugin_drain`] calls until `complete` is set.
+///
+/// # Returns
+/// * 0 on success (`*capacity_frames` holds the bound)
+/// * [`PluginError::NullPointer`] for a null handle or out-pointer
+/// * [`PluginError::UnknownError`] when a plugin panic is caught
+///
+/// # Safety
+/// * `handle` must be a live plugin handle from [`plugin_create`] that has
+///   not been destroyed, and this call must hold exclusive access to it:
+///   no other thread may use the handle for the duration of this call. A
+///   null handle is checked and reports [`PluginError::NullPointer`].
+/// * `capacity_frames` must be valid for writing one `usize` (correctly
+///   aligned) that stays valid for the call; it may point at
+///   uninitialized memory and must not overlap the handle. A null
+///   out-pointer is checked and reports [`PluginError::NullPointer`].
+///   Trust `*capacity_frames` only when the return code signals success.
+///
+/// # Panics
+/// Never panics across the FFI boundary; the plugin bound query runs
+/// inside the panic boundary and panics are reported as
+/// [`PluginError::UnknownError`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn plugin_get_drain_capacity_frames(
+    handle: *mut PluginHandle,
+    capacity_frames: *mut usize,
+) -> c_int {
+    if handle.is_null() || capacity_frames.is_null() {
+        return PluginError::NullPointer.into();
+    }
+    // SAFETY: The out-pointer was just verified non-null; the caller
+    // upholds the validity and alignment contract above.
+    unsafe {
+        *capacity_frames = 0;
+    }
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        // SAFETY: `handle` is non-null (checked above); the FFI contract
+        // gives this call exclusive access for its duration.
+        let handle_ref = unsafe { &*handle };
+        handle_ref.plugin.drain_output_frames_max()
+    }));
+    match result {
+        Ok(bound) => {
+            // SAFETY: The out-pointer was verified non-null above and stays
+            // valid for this call.
+            unsafe {
+                *capacity_frames = bound;
+            }
+            PluginError::Success.into()
+        }
+        Err(_) => {
+            set_last_error_static(c"Panic in plugin_get_drain_capacity_frames");
+            PluginError::UnknownError.into()
+        }
+    }
+}
+
 /// Process audio samples with incoming MIDI events.
 ///
 /// MIDI events are copied into a fixed stack buffer, then borrowed by
@@ -1929,6 +2188,12 @@ pub extern "C" fn plugin_get_parameter_info(
 /// `MODEL_LABELS` and the 0..=2 parameter range. Any other `choice_index`
 /// returns `NULL`, as do the non-choice `enabled`/`strength` parameters.
 ///
+/// Declick `mode` exposes 2 labels in registry order (0=`Random`,
+/// 1=`Periodic`) matching the DSP `MODE_OPTIONS`, and Declick `bands`
+/// exposes 3 labels (0=`Fullband`, 1=`2-band`, 2=`3-band`) matching the DSP
+/// `BANDS_OPTIONS`. Any other `choice_index` returns `NULL`, as do the
+/// non-choice Declick controls.
+///
 /// # Safety
 /// * `handle` must be `NULL` or a live plugin handle.
 #[unsafe(no_mangle)]
@@ -2011,14 +2276,14 @@ pub extern "C" fn plugin_set_parameter(
             // construction/restore; this probe never queries the live DSP, so
             // the `String` choices (mode, split_topology) stay
             // allocation-free here while keeping their no-op contract.
-            if handle_ref.parameter_map.de_esser_structural_normalized(param_id_str)
+            if handle_ref
+                .parameter_map
+                .de_esser_structural_normalized(param_id_str)
                 == Some(normalized_value)
             {
                 return PluginError::Success;
             }
-            set_last_error_static(
-                c"DeEsser structural parameters require state restoration",
-            );
+            set_last_error_static(c"DeEsser structural parameters require state restoration");
             return PluginError::InvalidParameter;
         }
         if is_speech_structural_id(&handle_ref.plugin_type, param_id_str) {
@@ -2037,15 +2302,11 @@ pub extern "C" fn plugin_set_parameter(
             return PluginError::InvalidParameter;
         }
         if is_hiss_structural_id(&handle_ref.plugin_type, param_id_str) {
-            set_last_error_static(
-                c"HissReducer structural parameters require state restoration",
-            );
+            set_last_error_static(c"HissReducer structural parameters require state restoration");
             return PluginError::InvalidParameter;
         }
         if is_ambisonics_structural_id(&handle_ref.plugin_type, param_id_str) {
-            set_last_error_static(
-                c"Ambisonics structural parameters require state restoration",
-            );
+            set_last_error_static(c"Ambisonics structural parameters require state restoration");
             return PluginError::InvalidParameter;
         }
         if is_eq_family_constructor_structural_id(&handle_ref.plugin_type, param_id_str) {
@@ -2241,8 +2502,13 @@ fn save_state_with_eq_family_pairs(handle: &PluginHandle) -> Result<Vec<u8>, Str
     let state = plugins_bridge::state::try_save_state(&*handle.plugin)?;
     if !matches!(
         handle.plugin_type.as_str(),
-        "EQ" | "eq" | "DynamicEQ" | "dynamic_eq" | "dynamic-eq"
-            | "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+        "EQ" | "eq"
+            | "DynamicEQ"
+            | "dynamic_eq"
+            | "dynamic-eq"
+            | "LinearPhaseEQ"
+            | "linear_phase_eq"
+            | "Linear-Phase-EQ"
     ) {
         return Ok(state);
     }
@@ -2350,10 +2616,7 @@ pub extern "C" fn plugin_load_state(
 /// * Call on a control thread with no concurrent access to `handle`,
 ///   including audio processing or parameter access.
 #[unsafe(no_mangle)]
-pub extern "C" fn plugin_hiss_capture_control(
-    handle: *mut PluginHandle,
-    action: c_int,
-) -> c_int {
+pub extern "C" fn plugin_hiss_capture_control(handle: *mut PluginHandle, action: c_int) -> c_int {
     if handle.is_null() {
         set_last_error("NULL handle in plugin_hiss_capture_control");
         return PluginError::NullPointer.into();
@@ -2374,10 +2637,10 @@ pub extern "C" fn plugin_hiss_capture_control(
                 return PluginError::InvalidParameter;
             }
         };
-        match handle_ref.plugin.set_parameter(
-            ParameterId::from(id),
-            ParameterValue::Bool(value),
-        ) {
+        match handle_ref
+            .plugin
+            .set_parameter(ParameterId::from(id), ParameterValue::Bool(value))
+        {
             Ok(()) => PluginError::Success,
             Err(error) => {
                 set_last_error(&format!("Hiss capture control failed: {error}"));

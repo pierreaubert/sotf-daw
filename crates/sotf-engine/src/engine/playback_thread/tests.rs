@@ -1,3 +1,5 @@
+use super::super::AudioEngineState;
+use super::super::PlaybackStopAck;
 use super::super::plan_output_access;
 use super::apply::apply_volume;
 use super::apply::apply_volume_clamp;
@@ -8,14 +10,17 @@ use super::pick::pick_preferred_output_format;
 use super::playback::playback_buffer_capacity;
 use super::playback::playback_recovery_reason;
 use super::playback_state::PlaybackState;
+use super::playback_state::copy_playback_controls;
 use super::playback_state::flush_completed;
 use super::playback_state::read_ring_buffer;
 use super::playback_state::request_flush;
 use super::runtime::required_frame_ring_space;
 use super::runtime::should_emit_underrun_milestone;
 use crate::{OutputAccessMode, OutputAccessStatus};
+use arc_swap::ArcSwap;
 use cpal::SampleFormat;
 use rtrb::RingBuffer;
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 #[cfg(test)]
@@ -513,4 +518,140 @@ fn acknowledged_reconfigure_returns_actual_playback_configuration() {
     assert_eq!(actual.channels, 2);
     responder.join().unwrap();
     playback.thread_handle = None;
+}
+
+#[test]
+fn stop_latch_discards_hot_ring_and_late_frames_without_metering() {
+    let (mut producer, mut consumer) = RingBuffer::<f32>::new(8);
+    producer
+        .write_chunk_uninit(4)
+        .unwrap()
+        .fill_from_iter([0.9, 0.8, 0.7, 0.6]);
+    let state = PlaybackState::new(8);
+    state.stop_latched.store(true, Ordering::Relaxed);
+    let mut scratch = [1.0; 4];
+
+    // Callback order (build.rs): read, then meter the emitted scratch.
+    let underrun = read_ring_buffer(&mut consumer, &mut scratch, 4, &state, 8);
+    apply_volume_clamp(&mut scratch, &state, 1, 48_000);
+
+    assert!(!underrun);
+    assert_eq!(scratch, [0.0; 4]);
+    assert_eq!(consumer.slots(), 0);
+    assert_eq!(
+        state.output_peak_bits.load(Ordering::Relaxed),
+        0.0f32.to_bits()
+    );
+    assert_eq!(state.clipped_sample_count.load(Ordering::Relaxed), 0);
+    // The latch persists past empty: only Resume clears it.
+    assert!(state.stop_latched.load(Ordering::Relaxed));
+
+    // Late hot frames post-arm (in-flight stand-ins): unheard (zeros)
+    // and uncounted (meter and callback-sample totals untouched).
+    producer
+        .write_chunk_uninit(4)
+        .unwrap()
+        .fill_from_iter([0.9, 0.9, 0.9, 0.9]);
+    let mut late = [1.0; 4];
+    read_ring_buffer(&mut consumer, &mut late, 4, &state, 8);
+    apply_volume_clamp(&mut late, &state, 1, 48_000);
+    assert_eq!(late, [0.0; 4]);
+    assert_eq!(consumer.slots(), 0);
+    assert_eq!(
+        state.output_peak_bits.load(Ordering::Relaxed),
+        0.0f32.to_bits()
+    );
+    assert_eq!(state.total_callback_samples.load(Ordering::Relaxed), 0);
+}
+
+#[test]
+fn stashed_stop_acks_fold_late_into_shared_state() {
+    let (mut playback, _command_rx) = super::PlaybackThread::command_probe();
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_epoch: 5,
+        playback_peak_max_linear: 0.30,
+        ..AudioEngineState::default()
+    }));
+
+    let (late_tx, late_rx) = std::sync::mpsc::sync_channel(1);
+    let (dead_tx, dead_rx) = std::sync::mpsc::sync_channel(1);
+    playback.stash_pending_stop_ack(late_rx);
+    playback.stash_pending_stop_ack(dead_rx);
+    // Nothing arrived: the latch is untouched.
+    playback.collect_ready_stop_acks(&state);
+    assert_eq!(state.load().playback_peak_max_linear, 0.30);
+
+    late_tx
+        .send(PlaybackStopAck {
+            epoch: 5,
+            epoch_peak_max: 0.90,
+        })
+        .unwrap();
+    drop(dead_tx);
+    playback.collect_ready_stop_acks(&state);
+    assert_eq!(state.load().playback_peak_max_linear, 0.90);
+
+    // Stale epochs never contaminate a newer latch.
+    let (stale_tx, stale_rx) = std::sync::mpsc::sync_channel(1);
+    playback.stash_pending_stop_ack(stale_rx);
+    stale_tx
+        .send(PlaybackStopAck {
+            epoch: 4,
+            epoch_peak_max: 1.00,
+        })
+        .unwrap();
+    playback.collect_ready_stop_acks(&state);
+    assert_eq!(state.load().playback_peak_max_linear, 0.90);
+    playback.thread_handle = None;
+}
+
+#[test]
+fn rebuild_shares_meter_arcs_with_continuous_accumulation() {
+    // A1: controls are configuration (copied), meter is telemetry
+    // (shared). The rebuild constructor threads the SAME meter
+    // atomics into the new state, so accumulation continues
+    // uninterrupted on every path and rebuild order is irrelevant.
+    // Control flags must NOT transfer: an inherited latch with no
+    // upcoming boundary would wedge the new stream silent.
+    let from = PlaybackState::new(16);
+    from.volume.store(0.5f32.to_bits(), Ordering::Relaxed);
+    from.output_peak_bits
+        .fetch_max(0.62f32.to_bits(), Ordering::Relaxed);
+    from.clipped_sample_count.store(4, Ordering::Relaxed);
+    from.flush_requested.store(true, Ordering::Relaxed);
+    from.stop_latched.store(true, Ordering::Relaxed);
+    from.output_callback_active.store(true, Ordering::Relaxed);
+
+    let to = PlaybackState::new_sharing_meters(
+        16,
+        Arc::clone(&from.output_peak_bits),
+        Arc::clone(&from.clipped_sample_count),
+    );
+    copy_playback_controls(&from, &to);
+
+    // Structural sharing: identical atomics, not copies.
+    assert!(Arc::ptr_eq(&from.output_peak_bits, &to.output_peak_bits));
+    assert!(Arc::ptr_eq(
+        &from.clipped_sample_count,
+        &to.clipped_sample_count
+    ));
+    // Continuity both directions: pre-rebuild accumulation is
+    // visible post-rebuild, and post-rebuild writes land in the
+    // same record (no transfer race, no window lost).
+    assert_eq!(
+        to.output_peak_bits.load(Ordering::Relaxed),
+        0.62f32.to_bits()
+    );
+    assert_eq!(to.clipped_sample_count.load(Ordering::Relaxed), 4);
+    to.output_peak_bits
+        .fetch_max(0.71f32.to_bits(), Ordering::Relaxed);
+    assert_eq!(
+        from.output_peak_bits.load(Ordering::Relaxed),
+        0.71f32.to_bits()
+    );
+    // Controls copy; control flags stay fresh.
+    assert_eq!(to.volume.load(Ordering::Relaxed), 0.5f32.to_bits());
+    assert!(!to.flush_requested.load(Ordering::Relaxed));
+    assert!(!to.stop_latched.load(Ordering::Relaxed));
+    assert!(!to.output_callback_active.load(Ordering::Relaxed));
 }

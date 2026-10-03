@@ -341,6 +341,7 @@ impl_param_accessors! {
             learn_noise: bool, use_captured_profile: bool, clear_profile: bool,
             formant_preservation: bool, formant_strength: f64, multi_resolution: bool,
             harmonic_percussive: bool, spatial_denoise: bool, spatial_strength: f64,
+            curve_low: f64, curve_mid: f64, curve_high: f64, audition_residual: bool,
         ]
     },
     Declick {
@@ -982,8 +983,8 @@ use index::index_to_de_esser_split_topology;
 use index::index_to_detection_mode;
 use index::index_to_hpf_order;
 use index::index_to_speaker_config;
-use index::index_to_speech_denoiser_model;
 use index::index_to_spectral_tilt;
+use index::index_to_speech_denoiser_model;
 use index::index_to_tilt_reference;
 use index::{gate_mode_to_index, index_to_gate_mode};
 use index::{index_to_ambisonics_algorithm, index_to_ambisonics_layout};

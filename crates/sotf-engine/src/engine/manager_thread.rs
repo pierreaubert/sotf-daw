@@ -33,7 +33,7 @@ mod misc;
 mod state_helpers;
 #[cfg(test)]
 mod tests;
-mod thread_event_visitor;
+pub(crate) mod thread_event_visitor;
 mod types;
 pub(crate) mod validate;
 mod wait;

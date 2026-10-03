@@ -43,8 +43,13 @@ pub(super) unsafe extern "C" fn render_callback(
     // byte count describes the writable storage supplied for this callback.
     let out = unsafe { std::slice::from_raw_parts_mut(buf.data as *mut f32, output_samples) };
 
-    // Handle flush: discard ring buffer contents, output silence
-    if ctx.state.flush_requested.load(Ordering::Acquire) {
+    // Handle flush: discard ring buffer contents, output silence. A
+    // latched Stop discards identically; the latch persists here
+    // (only a Resume or a stream Flush clears it) so arrivals with
+    // no subsequent boundary keep discarding instead of emitting.
+    if ctx.state.flush_requested.load(Ordering::Acquire)
+        || ctx.state.stop_latched.load(Ordering::Acquire)
+    {
         let available = ctx.consumer.slots().min(output_samples);
         if available > 0
             && let Ok(chunk) = ctx.consumer.read_chunk(available)
@@ -85,9 +90,50 @@ pub(super) unsafe extern "C" fn render_callback(
     ctx.state
         .volume_ramp
         .apply(out, ctx.channels, ctx.sample_rate, target);
-    for s in out.iter_mut() {
-        *s = s.clamp(-1.0, 1.0);
-    }
+    accumulate_output_meter_and_clamp(out, &ctx.state);
 
     ca::noErr
+}
+
+/// Meter post-volume, pre-clamp samples, then clamp in place.
+///
+/// Desktop mirror (`playback_thread/apply.rs`
+/// `accumulate_output_meter_and_clamp`): per-sample observe rule, one
+/// window `fetch_max`, one conditional clip `fetch_add`, clamp after
+/// observe. Called by the render callback on the emit path only — the
+/// discard branch meters nothing, exactly as on desktop. RT-clean:
+/// atomics only, no allocation, no locking.
+#[inline(always)]
+pub(super) fn accumulate_output_meter_and_clamp(samples: &mut [f32], state: &PlaybackState) {
+    let mut peak = 0.0f32;
+    let mut clipped = 0u64;
+    for sample in samples.iter_mut() {
+        let (sample_peak, sample_clipped) = observe_sample(*sample);
+        peak = peak.max(sample_peak);
+        clipped += sample_clipped;
+        *sample = sample.clamp(-1.0, 1.0);
+    }
+    state
+        .output_peak_bits
+        .fetch_max(peak.to_bits(), Ordering::Relaxed);
+    if clipped > 0 {
+        state
+            .clipped_sample_count
+            .fetch_add(clipped, Ordering::Relaxed);
+    }
+}
+
+/// Fold one post-volume sample into (peak, clipped) telemetry.
+///
+/// Desktop mirror: finite magnitudes observe `(abs, clipped-if->1.0)`;
+/// a non-finite sample observes `(0.0, 1)` — it must not poison the
+/// peak latch, but it still counts as clipped.
+#[inline(always)]
+fn observe_sample(sample: f32) -> (f32, u64) {
+    let magnitude = sample.abs();
+    if magnitude.is_finite() {
+        (magnitude, u64::from(magnitude > 1.0))
+    } else {
+        (0.0, 1)
+    }
 }

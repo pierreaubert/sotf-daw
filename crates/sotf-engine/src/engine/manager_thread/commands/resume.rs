@@ -20,10 +20,12 @@ impl ManagerCommandHandler for ResumeCommand {
             std::time::Duration::from_millis(super::super::consts::DECODER_COMMAND_TIMEOUT_MS),
         ) {
             Ok(()) => {
-                if let Err(e) = ctx.playback.send_command(PlaybackCommand::Resume) {
+                let mut new_state = (**ctx.state.load()).clone();
+                // Same epoch: resume continues the current playback session.
+                let epoch = new_state.playback_epoch;
+                if let Err(e) = ctx.playback.send_command(PlaybackCommand::Resume { epoch }) {
                     return ManagerResponse::Error(e);
                 }
-                let mut new_state = (**ctx.state.load()).clone();
                 new_state.playback_state = PlaybackState::Playing;
                 ctx.state.store(Arc::new(new_state));
                 ManagerResponse::Ok

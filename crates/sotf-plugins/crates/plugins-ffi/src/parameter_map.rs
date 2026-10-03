@@ -136,8 +136,7 @@ const CROSSOVER_MODE_LABELS: [&CStr; 3] = [c"Lowpass", c"Highpass", c"Both"];
 const CROSSOVER_CHANNEL_MODE_LABELS: [&CStr; 4] =
     [c"Lowpass", c"Highpass", c"Mute", c"Passthrough"];
 
-const DYNAMIC_EQ_SHAPE_LABELS: [&CStr; 4] =
-    [c"Peak", c"Low Shelf", c"High Shelf", c"Tilt"];
+const DYNAMIC_EQ_SHAPE_LABELS: [&CStr; 4] = [c"Peak", c"Low Shelf", c"High Shelf", c"Tilt"];
 /// DynamicEQ placement: 0=Stereo..4=Side (5 choices, no Legacy).
 ///
 /// Differs from EQ/Linear, where 0=Legacy/inherit and 1=Stereo..5=Side.
@@ -145,29 +144,15 @@ const DYNAMIC_EQ_SHAPE_LABELS: [&CStr; 4] =
 /// explicit Stereo request, while EQ/Linear 0 removes the placement key.
 /// See `merge_dynamic_eq_state_into_config` (0 maps to `"stereo"`) versus
 /// the EQ/Linear merges (0 removes the key).
-const DYNAMIC_EQ_PLACEMENT_LABELS: [&CStr; 5] =
-    [c"Stereo", c"Left", c"Right", c"Mid", c"Side"];
+const DYNAMIC_EQ_PLACEMENT_LABELS: [&CStr; 5] = [c"Stereo", c"Left", c"Right", c"Mid", c"Side"];
 /// EQ placement: 0=Legacy/inherit..5=Side (6 choices).
 ///
 /// Choice 0 removes explicit placement from that stored filter (saved field
 /// stays absent); 1=Stereo is an explicit All request, distinct from absence.
-const EQ_PLACEMENT_LABELS: [&CStr; 6] = [
-    c"Legacy",
-    c"Stereo",
-    c"Left",
-    c"Right",
-    c"Mid",
-    c"Side",
-];
+const EQ_PLACEMENT_LABELS: [&CStr; 6] = [c"Legacy", c"Stereo", c"Left", c"Right", c"Mid", c"Side"];
 /// LinearPhaseEQ placement: 0=Legacy/inherit..5=Side (6 choices, same as EQ).
-const LINEAR_PHASE_EQ_PLACEMENT_LABELS: [&CStr; 6] = [
-    c"Legacy",
-    c"Stereo",
-    c"Left",
-    c"Right",
-    c"Mid",
-    c"Side",
-];
+const LINEAR_PHASE_EQ_PLACEMENT_LABELS: [&CStr; 6] =
+    [c"Legacy", c"Stereo", c"Left", c"Right", c"Mid", c"Side"];
 
 /// Speech Denoiser model identities in stable choice order.
 ///
@@ -194,6 +179,34 @@ fn is_speech_denoiser_type(plugin_type: &str) -> bool {
     matches!(
         plugin_type,
         "SpeechDenoiser" | "speech_denoiser" | "RNNoise" | "rnnoise"
+    )
+}
+
+/// Declick click-family choices in stable choice order.
+///
+/// Must match `sotf_plugin_declick::params::MODE_OPTIONS` entry for
+/// entry: 0 repairs isolated random clicks, 1 adds periodic phase
+/// prediction. Stored as process-static `CStr` literals (rather than
+/// referencing the plugin registry) so the C ABI getter returns pointers
+/// that need no handle and never allocate; `declick_consumer_tests`
+/// asserts the two stay identical for every Declick alias.
+const DECCLICK_MODE_LABELS: [&CStr; 2] = [c"Random", c"Periodic"];
+
+/// Declick detection-banding choices in stable choice order.
+///
+/// Must match `sotf_plugin_declick::params::BANDS_OPTIONS` entry for
+/// entry: 0 is legacy fullband, 1 and 2 the complementary splits.
+/// Same static-storage contract as [`DECCLICK_MODE_LABELS`].
+const DECCLICK_BANDS_LABELS: [&CStr; 3] = [c"Fullband", c"2-band", c"3-band"];
+
+fn is_declick_type(plugin_type: &str) -> bool {
+    // Factory construction, the ParamSpec table, and the facade registry
+    // all accept these four spellings, and the handle stores the spelling
+    // the caller passed, so the guard must match every one to avoid an
+    // alias bypass.
+    matches!(
+        plugin_type,
+        "Declick" | "declick" | "TransientRepair" | "transient_repair"
     )
 }
 
@@ -398,22 +411,21 @@ impl ParameterMap {
         let cached_kinds = cached_ids
             .iter()
             .map(|id| {
-                let template_type = id
-                    .0
-                    .strip_prefix("band_")
-                    .and_then(|suffix| suffix.split_once('_'))
-                    .and_then(|(_, field)| band_spec_for_field(plugin_type, field))
-                    .map(|spec| spec.param_type)
-                    .or_else(|| {
-                        // EQ placement slots exist statically even when the
-                        // live filter bank is shorter; they are Int 0..=5.
-                        eq_placement_index(plugin_type, &id.0).map(|_| ParamType::Int {
-                            default: 0,
-                            min: 0,
-                            max: 5,
-                            step: 1,
-                        })
-                    });
+                let template_type =
+                    id.0.strip_prefix("band_")
+                        .and_then(|suffix| suffix.split_once('_'))
+                        .and_then(|(_, field)| band_spec_for_field(plugin_type, field))
+                        .map(|spec| spec.param_type)
+                        .or_else(|| {
+                            // EQ placement slots exist statically even when the
+                            // live filter bank is shorter; they are Int 0..=5.
+                            eq_placement_index(plugin_type, &id.0).map(|_| ParamType::Int {
+                                default: 0,
+                                min: 0,
+                                max: 5,
+                                step: 1,
+                            })
+                        });
                 let runtime = runtime_parameters
                     .iter()
                     .find(|parameter| parameter.id == *id);
@@ -495,16 +507,25 @@ impl ParameterMap {
     }
 
     /// Return a static, NUL-terminated choice label for an enumerated
-    /// parameter. DynamicEQ shelf-shape labels and Speech Denoiser model
-    /// labels are part of the public C ABI; their storage does not depend
-    /// on a handle or allocate on lookup. Out-of-range `choice_index`
-    /// values return `None` (a `NULL` C ABI response).
+    /// parameter. DynamicEQ shelf-shape labels, Speech Denoiser model
+    /// labels, and Declick mode/band labels are part of the public C ABI;
+    /// their storage does not depend on a handle or allocate on lookup.
+    /// Out-of-range `choice_index` values return `None` (a `NULL` C ABI
+    /// response).
     pub fn choice_label_at(&self, index: usize, choice_index: usize) -> Option<*const c_char> {
         let param_id = self.param_id_at(index)?;
         if is_speech_denoiser_type(&self.plugin_type) && param_id == "model" {
             return SPEECH_DENOISER_MODEL_LABELS
                 .get(choice_index)
                 .map(|label| label.as_ptr());
+        }
+        if is_declick_type(&self.plugin_type) {
+            let table: &[&CStr] = match param_id {
+                "mode" => &DECCLICK_MODE_LABELS,
+                "bands" => &DECCLICK_BANDS_LABELS,
+                _ => return None,
+            };
+            return table.get(choice_index).map(|label| label.as_ptr());
         }
         if is_crossover_type(&self.plugin_type) {
             return crossover_choice_label(param_id, choice_index);
@@ -532,7 +553,9 @@ impl ParameterMap {
                 .map(|label| label.as_ptr());
         }
         if is_linear_phase_eq_type(&self.plugin_type)
-            && param_id.rsplit_once('_').is_some_and(|(_, field)| field == "placement")
+            && param_id
+                .rsplit_once('_')
+                .is_some_and(|(_, field)| field == "placement")
         {
             return LINEAR_PHASE_EQ_PLACEMENT_LABELS
                 .get(choice_index)
@@ -1155,22 +1178,32 @@ mod tests {
             Some("band_0_placement"),
             "routing block must follow the shelf block"
         );
-        assert_eq!(param_map.param_id_at(routing_start + 7), Some("band_7_placement"));
+        assert_eq!(
+            param_map.param_id_at(routing_start + 7),
+            Some("band_7_placement")
+        );
     }
 
     #[test]
     fn placement_choice_labels_cover_eq_dynamic_and_linear_phase_eq() {
         for (plugin_type, address, labels) in [
-            ("EQ", "filter_3_placement", ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"]),
-            ("DynamicEQ", "band_1_placement", ["Stereo", "Left", "Right", "Mid", "Side", ""]),
+            (
+                "EQ",
+                "filter_3_placement",
+                ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"],
+            ),
+            (
+                "DynamicEQ",
+                "band_1_placement",
+                ["Stereo", "Left", "Right", "Mid", "Side", ""],
+            ),
             (
                 "LinearPhaseEQ",
                 "band_2_placement",
                 ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"],
             ),
         ] {
-            let plugin =
-                plugins_bridge::create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
+            let plugin = plugins_bridge::create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
             let param_map = ParameterMap::from_plugin(&*plugin, plugin_type);
             let index = (0..param_map.count())
                 .find(|index| param_map.param_id_at(*index) == Some(address))
@@ -1196,7 +1229,10 @@ mod tests {
             .find(|index| param_map.param_id_at(*index) == Some("band_0_shape"))
             .expect("band_0_shape must be exported");
         let tilt = param_map.choice_label_at(index, 3).expect("tilt label");
-        assert_eq!(unsafe { std::ffi::CStr::from_ptr(tilt).to_str().unwrap() }, "Tilt");
+        assert_eq!(
+            unsafe { std::ffi::CStr::from_ptr(tilt).to_str().unwrap() },
+            "Tilt"
+        );
     }
 
     #[test]
@@ -1258,8 +1294,7 @@ mod tests {
         }
         assert_eq!(band_template_info("dynamic-eq"), Some((7, 8)));
 
-        let linear =
-            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
+        let linear = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
         let canonical = ParameterMap::from_plugin(&*linear, "LinearPhaseEQ");
         // 5 globals + 10 bands x 6 fields; static schema includes dormant slots.
         assert_eq!(canonical.count(), 5 + 10 * 6);

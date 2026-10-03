@@ -14,6 +14,12 @@
 //! 5=mid2_freq, 6=mid2_gain, 7=mid2_q, 8=high_freq, 9=high_gain,
 //! 10=analog_model, 11=analog_drive, 12=analog_color, 13=analog_character,
 //! 14=analog_trim.
+//!
+//! The analog model selector is structural: replacement allocates and
+//! re-prepares the color stage, which belongs on the control thread, so
+//! live changes on an initialized instance are refused and the model is
+//! adopted at construction or state restore instead. The remaining analog
+//! controls (drive, color, character, trim) are plain realtime updates.
 
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -106,7 +112,7 @@ pub const PARAMS: &[ParamSpec] = &[
         "High",
     )
     .doc("High-shelf gain"),
-    model_param_spec(0, "Analog"),
+    model_param_spec(0, "Analog").structural(),
     drive_param_spec("Analog"),
     color_param_spec("Analog"),
     character_param_spec("Analog"),

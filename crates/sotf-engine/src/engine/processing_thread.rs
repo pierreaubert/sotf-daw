@@ -1,3 +1,4 @@
+use super::worker_death::{WorkerExit, WorkerExitStatus, record_worker_exit};
 use super::{
     DecoderMessage, ProcessingCommand, ProcessingMessage, ProcessingResponse, ThreadEvent,
 };
@@ -81,6 +82,7 @@ pub struct ProcessingThread {
     next_request_id: AtomicU64,
     thread_handle: Option<std::thread::JoinHandle<()>>,
     host_generation: Arc<AtomicU64>,
+    exit_status: WorkerExitStatus,
 }
 
 impl ProcessingThread {
@@ -100,6 +102,7 @@ impl ProcessingThread {
                 next_request_id: AtomicU64::new(1),
                 thread_handle: None,
                 host_generation: Arc::new(AtomicU64::new(0)),
+                exit_status: WorkerExitStatus::new(),
             },
             command_rx,
         )
@@ -123,6 +126,8 @@ impl ProcessingThread {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
         let host_generation = Arc::new(AtomicU64::new(0));
         let processing_host_generation = Arc::clone(&host_generation);
+        let exit_status = WorkerExitStatus::new();
+        let worker_exit_status = exit_status.clone();
 
         let thread_handle = std::thread::Builder::new()
             .name("processing".to_string())
@@ -146,7 +151,7 @@ impl ProcessingThread {
                         network_stream_tap,
                     )
                 }));
-                match result {
+                match &result {
                     Ok(Ok(())) => {}
                     Ok(Err(e)) => {
                         log::error!("[Processing Thread] Error: {}", e);
@@ -160,6 +165,7 @@ impl ProcessingThread {
                             error_tx.try_send(ThreadEvent::ThreadPanic("processing".to_string()));
                     }
                 }
+                record_worker_exit(&worker_exit_status, &result);
             })
             .map_err(|e| format!("Failed to spawn processing thread: {}", e))?;
 
@@ -174,6 +180,7 @@ impl ProcessingThread {
             next_request_id: AtomicU64::new(1),
             thread_handle: Some(thread_handle),
             host_generation,
+            exit_status,
         })
     }
 
@@ -278,6 +285,11 @@ impl ProcessingThread {
         self.thread_handle
             .as_ref()
             .is_some_and(std::thread::JoinHandle::is_finished)
+    }
+
+    /// Load the recorded exit disposition (`None` means slot corruption).
+    pub(crate) fn exit_status(&self) -> Option<WorkerExit> {
+        self.exit_status.load()
     }
 
     /// Shutdown the processing thread

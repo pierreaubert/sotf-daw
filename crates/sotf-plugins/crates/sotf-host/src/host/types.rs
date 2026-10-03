@@ -9,6 +9,7 @@ use crate::external_plugin_ipc::{PluginSandboxBackendCode, PluginSandboxStatusCo
 use crate::external_plugin_process::ExternalPluginProcessEvent;
 use crate::parameters::ParameterId;
 use crate::plugin::Plugin;
+use std::collections::VecDeque;
 
 pub(super) struct ProcessBuffers<T: AudioSample> {
     pub(super) node_buffers: Vec<Option<NodeBuffer<T>>>,
@@ -21,6 +22,18 @@ pub(super) struct ProcessBuffers<T: AudioSample> {
     pub(super) compensation_delays: CompensationDelays<T>,
     /// Scratch buffer for frame-by-frame delay processing (avoids per-frame allocation).
     pub(super) delay_scratch: Vec<T>,
+    /// Per-edge process-phase retention FIFOs, indexed by `GraphEdge::id`.
+    /// Only edges into merge points (destinations with at least two
+    /// predecessors) ever hold frames; every other edge bypasses its queue.
+    /// Queues hold post-routing, post-compensation destination-clock samples,
+    /// so each block's join consumes the minimum queued depth instead of
+    /// dropping the unmatched suffix.
+    pub(super) merge_queues: Vec<VecDeque<T>>,
+    /// Per-edge retention cap in frames, indexed by `GraphEdge::id`. Zero
+    /// means the edge never queues. Derived at build time from the edge
+    /// compensation plus the merge branches' declared single-wave emissions
+    /// (checked arithmetic; the build refuses on overflow).
+    pub(super) merge_queue_caps: Vec<usize>,
     /// Per-node scratch buffers for parallel stage processing.
     /// Each entry: (scratch_input, scratch_output, merge_buffer).
     /// Only allocated for nodes in stages with 2+ nodes.

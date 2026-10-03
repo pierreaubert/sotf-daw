@@ -497,6 +497,24 @@ pub trait Plugin: Send {
         0
     }
 
+    /// Stream-independent upper bound on one [`Plugin::drain`] call's emission.
+    ///
+    /// Every `drain` call in every stream state (fresh, mid-stream,
+    /// draining, post-reset) emits at most the returned frames; in
+    /// particular it covers the maximum over stream states of
+    /// [`Plugin::drain_output_frames_max`]. `None` means unknown: the host
+    /// keeps live per-call sizing with freeze-plus-refresh. A `Some` value
+    /// must be pure, allocation-free, realtime-safe, and computed with
+    /// checked arithmetic (overflow answers `None`: unknown is safe, a
+    /// saturated guess is not). It may only depend on construction-time
+    /// constants, never on stream state, so it survives reset and rebuild
+    /// unchanged. This bounds capacity, not progress: pair it with
+    /// [`Plugin::drain_call_bound`] for work and [`Plugin::tail_length`]
+    /// for content.
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        None
+    }
+
     /// Prepare current tail metadata for an EOS preflight without starting the
     /// drain itself. The host calls this only after validating the destination
     /// capacity. Wrappers forward it to their inner plugin; asynchronous
@@ -536,12 +554,23 @@ pub trait Plugin: Send {
     /// Query after successful `begin_drain`. The bound includes zero-output
     /// progress and a terminal call, with no new input, reset, or accepted
     /// parameter change. The destination must hold `drain_output_frames_max()`
-    /// frames. This is a work bound, independent of `tail_length`; a maximum
-    /// output capacity alone does not prove minimum progress. Queries must not
-    /// allocate, block, or adopt asynchronously prepared state.
+    /// frames. This is a work bound, coupled to `tail_length` only through
+    /// the single-refresh rule below; a maximum output capacity alone does
+    /// not prove minimum progress. Queries must not allocate, block, or
+    /// adopt asynchronously prepared state.
     ///
-    /// `None` leaves the work bound unknown; hosts may enforce a finite fallback
-    /// allowance. Empty/completed state may return a bound of one.
+    /// A `Some` bound normally covers the drain through its first complete
+    /// result — except with deferred arming: when the live tail at grant
+    /// time is not `Finite` (a mask or flush the drain derives late, once
+    /// driving content exhausts), the bound may instead cover only the
+    /// work through the arming transition, and the host grants ONE
+    /// re-queried budget once the tail turns `Finite`. The re-queried
+    /// budget must dominate true remaining calls (a fresh derivation from
+    /// armed state, not a shrunk remainder); hosts never refresh twice,
+    /// and any other exhaustion trips loudly as a defect. `None` leaves
+    /// the work bound unknown;
+    /// hosts enforce a finite fallback allowance under the same
+    /// single-refresh rule. Empty/completed state may return a bound of one.
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
         None
     }
@@ -649,6 +678,29 @@ pub trait Plugin: Send {
         TailLength::Unknown
     }
 
+    /// State-independent zero-input response bound, if established.
+    ///
+    /// Upper bound, in output-rate frames, on the total future emission
+    /// with no further input, taken over ALL reachable states (not just
+    /// the current one like [`tail_length`](Self::tail_length)). Hosts
+    /// compose it for in-flight content: a wave of `c` frames feeding
+    /// this plugin emits at most `output_frames_for_input(c)` during
+    /// arrival plus `tail_support` after, so unknown support forces an
+    /// `Unknown` host tail wherever content is in flight downstream.
+    /// Host support folds dominate TRUE future emission (every support
+    /// term bounds truth in the current state too, since support covers
+    /// all states) — never by comparison against live tail values, which
+    /// support need not dominate. Memoryless plugins (zero in, zero out,
+    /// in every state) return `Some(0)`; stream- or state-dependent tails
+    /// whose maximum over states is unproven keep the `None` default. A
+    /// plugin reporting [`TailLength::Infinite`] must report `None` here:
+    /// a finite all-states emission bound contradicts unproven
+    /// termination, and hosts treat Infinite nodes as unsupported. This
+    /// scalar query must not allocate, block, or reset processing state.
+    fn tail_support(&self) -> Option<u64> {
+        None
+    }
+
     /// Physical signal delay in concatenated emitted audio, measured in output-rate frames.
     ///
     /// Offline renderers trim this delay after concatenating the frames actually
@@ -709,11 +761,64 @@ pub trait Plugin: Send {
         (0, 0)
     }
 
-    /// Returns the number of output frames for given input frames.
+    /// Upper bound on the output frames produced for the given input frames.
     /// Default: returns input unchanged (no frame count change).
     /// Plugins that change frame count (like resamplers) should override this.
+    /// Hosts size process destinations and fold in-flight waves through this,
+    /// so it must dominate actual production in the queried state (a ceiling
+    /// such as chunk-granular maxima, never a floor or an estimate). The
+    /// declaration must also be non-decreasing in `input_frames` at fixed
+    /// stream state: tail folds query it at over-approximate quanta, and
+    /// only monotonicity lets that query dominate production at the
+    /// smaller true wave. A non-monotone live declaration undercounts
+    /// host tails silently (the fold cannot detect it), so audit every
+    /// override — identities, chunk floors/ceilings, and linear maps
+    /// qualify; state-shaped curves must be proven or left default.
+    ///
+    /// Arrival promise (R7-F2): hosts query this at fold time but arrivals
+    /// occur later at evolved stream state. A publisher WITHOUT an envelope
+    /// promises its live declaration dominates production at every reachable
+    /// arrival state, not just the queried state: fixed-state monotonicity
+    /// governs quanta, not states, so it never proves varying-state arrival
+    /// (a query at carry 0 undercounts an arrival at carry 1). Stateful
+    /// publishers whose live varies with stream state must publish
+    /// [`Plugin::output_frames_envelope`] (residual/carry-maximized, as the
+    /// production resampler envelope does) or keep live arrival-maximized;
+    /// hosts size uncovered arrivals from live and cannot detect violation
+    /// (silent undercount direction, as with non-monotone declarations).
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         input_frames
+    }
+
+    /// Stream-independent upper bound on `process` production and on the
+    /// live per-call declaration.
+    ///
+    /// For every valid `input_frames` and every reachable stream state,
+    /// `process`/`process_f64` writes at most the returned frames (both
+    /// precisions share frame geometry), and the live
+    /// [`Plugin::output_frames_for_input`] declaration at `input_frames`
+    /// is at most the returned value too: graph drains size destinations
+    /// from live declarations against envelope-sized holdovers, so a
+    /// loose live declaration over a tight envelope breaks healthy drains
+    /// loudly at the holdover check. The bound must be non-decreasing
+    /// in `input_frames`: hosts propagate envelopes through larger derived
+    /// quanta, and monotonicity is what lets an envelope queried at a
+    /// larger quantum dominate live production at a smaller one. The live
+    /// declaration must itself be non-decreasing too (see
+    /// [`Plugin::output_frames_for_input`]): tail folds query it at
+    /// over-approximate quanta, which is sound only under monotonicity.
+    /// `None` means unknown: the host keeps live per-call sizing under the
+    /// arrival promise above (envelope-or-Unknown fallback: reservations
+    /// prefer the envelope where known, live otherwise).
+    /// A `Some` value must be
+    /// pure, allocation-free, realtime-safe, and computed with checked
+    /// arithmetic (overflow answers `None`). It may only depend on
+    /// construction-time constants, never on stream state. Return
+    /// `Some(input_frames)` only with proof that every success path writes
+    /// at most `input_frames` (frame-preserving plugins qualify exactly;
+    /// variable plugins should prefer their tighter proven bound).
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        None
     }
 
     /// Guarantees identity frame geometry for every supported process block.

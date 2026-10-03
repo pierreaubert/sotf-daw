@@ -16,7 +16,10 @@ fn test_decoder_preserves_non_resampled_final_partial_frame() {
     let temp_file = create_test_wav_frames(total_input_frames, 48000, 2);
 
     decoder
-        .send_command(DecoderCommand::Play(temp_file.path().to_path_buf().into()))
+        .send_command(DecoderCommand::Play(
+            temp_file.path().to_path_buf().into(),
+            1,
+        ))
         .unwrap();
 
     let (decoded_frames, frame_sizes, got_eos) =
@@ -47,7 +50,10 @@ fn test_decoder_gapless_preserves_tail_frames_from_both_sources() {
     let temp_file2 = create_test_wav_frames(second_frames, 48000, 2);
 
     decoder
-        .send_command(DecoderCommand::Play(temp_file1.path().to_path_buf().into()))
+        .send_command(DecoderCommand::Play(
+            temp_file1.path().to_path_buf().into(),
+            1,
+        ))
         .unwrap();
     decoder
         .send_command(DecoderCommand::QueueNext(

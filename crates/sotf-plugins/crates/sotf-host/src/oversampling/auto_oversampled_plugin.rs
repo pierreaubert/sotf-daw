@@ -221,6 +221,12 @@ impl Plugin for AutoOversampledPlugin {
         super::misc::OS_CHUNK_SIZE
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // The live drain bound is already a state-independent constant,
+        // so the envelope lifts it unchanged.
+        Some(super::misc::OS_CHUNK_SIZE)
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         self.inner.prepare_drain_metadata()
     }
@@ -384,6 +390,12 @@ impl Plugin for AutoOversampledPlugin {
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         input_frames
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        // Every success path returns exactly `context.num_frames` (the
+        // inner call is enforced frame-exact), so identity is proven.
+        Some(input_frames)
     }
 
     fn output_sample_rate(&self, input_rate: u32) -> u32 {

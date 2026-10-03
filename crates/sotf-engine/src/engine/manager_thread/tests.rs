@@ -8,6 +8,11 @@ use super::handle::handle_thread_event;
 use super::misc::initial_engine_state_from_config;
 #[cfg(feature = "streaming")]
 use super::misc::start_network_stream_server;
+use super::thread_event_visitor::apply_decoder_async_errors;
+use super::thread_event_visitor::chain_decoder_causes;
+use super::thread_event_visitor::expire_seeking_display;
+use super::thread_event_visitor::record_decoder_error;
+use super::thread_event_visitor::select_current_decoder_errors;
 use super::validate::validate_gapless_source_compatible;
 use super::validate::validate_plugin_configs;
 use arc_swap::ArcSwap;
@@ -351,6 +356,7 @@ fn test_handle_thread_event_updates_playback_stats() {
             frames_written: 39,
             frames_dropped: 1,
             effective_sample_rate: 48_000,
+            epoch: 0,
         },
         &state,
     );
@@ -820,28 +826,317 @@ fn test_handle_thread_event_playback_drained() {
         last_error: Some("previous error".to_string()),
         output_peak_linear: 1.25,
         output_clipping_detected: true,
+        playback_peak_max_linear: 1.25,
         ..AudioEngineState::default()
     }));
 
-    handle_thread_event(ThreadEvent::PlaybackDrained, &state);
+    // Lossless run shape: the terminal record equals the latched max.
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 0,
+            epoch_peak_max: 1.25,
+            flush_gen: 0,
+        },
+        &state,
+    );
 
     let s = state.load();
     assert_eq!(s.playback_state, PlaybackState::Stopped);
     assert!(s.last_error.is_none());
     assert_eq!(s.output_peak_linear, 0.0);
     assert!(!s.output_clipping_detected);
+    assert_eq!(s.playback_peak_max_linear, 1.25);
     drop(s);
 
     handle_thread_event(
         ThreadEvent::PlaybackOutputMeter {
             peak_linear: 1.5,
             clipping_detected: true,
+            epoch: 0,
         },
         &state,
     );
     let s = state.load();
     assert_eq!(s.output_peak_linear, 0.0);
     assert!(!s.output_clipping_detected);
+    assert_eq!(s.playback_peak_max_linear, 1.25);
+}
+
+#[test]
+fn test_handle_thread_event_stale_meter_rejected_by_epoch() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        output_peak_linear: 0.40,
+        playback_peak_max_linear: 0.40,
+        ..AudioEngineState::default()
+    }));
+
+    // Stale snapshot from the previous epoch: must not move live or latch.
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputMeter {
+            peak_linear: 0.90,
+            clipping_detected: true,
+            epoch: 4,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.output_peak_linear, 0.40);
+    assert!(!s.output_clipping_detected);
+    assert_eq!(s.playback_peak_max_linear, 0.40);
+    drop(s);
+
+    // Mis-tagged future epoch: the gate is equality, direction-agnostic.
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputMeter {
+            peak_linear: 0.90,
+            clipping_detected: true,
+            epoch: 6,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.output_peak_linear, 0.40);
+    assert_eq!(s.playback_peak_max_linear, 0.40);
+    drop(s);
+
+    // Current epoch: accepted into live and latch.
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputMeter {
+            peak_linear: 0.60,
+            clipping_detected: false,
+            epoch: 5,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.output_peak_linear, 0.60);
+    assert_eq!(s.playback_peak_max_linear, 0.60);
+}
+
+#[test]
+fn test_handle_thread_event_stale_drained_rejected_by_epoch() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        output_peak_linear: 0.30,
+        playback_peak_max_linear: 0.40,
+        ..AudioEngineState::default()
+    }));
+
+    // Late receipt for the previous epoch: transport and meters untouched.
+    // The stale peak (above the latch) must not leak into the latch.
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 4,
+            epoch_peak_max: 0.99,
+            flush_gen: 0,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Playing);
+    assert_eq!(s.output_peak_linear, 0.30);
+    assert_eq!(s.playback_peak_max_linear, 0.40);
+}
+
+#[test]
+fn test_handle_thread_event_terminal_snapshot_before_drain_preserved() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        ..AudioEngineState::default()
+    }));
+
+    // Ordinary terminal order: snapshot applied, then the drained receipt.
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputMeter {
+            peak_linear: 0.62,
+            clipping_detected: false,
+            epoch: 5,
+        },
+        &state,
+    );
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.62,
+            flush_gen: 0,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.output_peak_linear, 0.0);
+    assert_eq!(s.playback_peak_max_linear, 0.62);
+}
+
+#[test]
+fn test_handle_thread_event_drained_folds_terminal_peak_above_latch() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        ..AudioEngineState::default()
+    }));
+
+    // Only the quiet window's report arrived; the loud window's report
+    // dropped in transport but survives in the terminal record.
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputMeter {
+            peak_linear: 0.30,
+            clipping_detected: false,
+            epoch: 5,
+        },
+        &state,
+    );
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.90,
+            flush_gen: 0,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.output_peak_linear, 0.0);
+    assert_eq!(s.playback_peak_max_linear, 0.90);
+}
+
+#[test]
+fn test_handle_thread_event_silent_epoch_latch_stays_exact_zero() {
+    // Post-Play shape: the epoch bump clears the latch (play.rs), so a
+    // silent epoch must read exactly 0.0 with no leak from prior epochs.
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 6,
+        playback_peak_max_linear: 0.0,
+        ..AudioEngineState::default()
+    }));
+
+    for _ in 0..2 {
+        handle_thread_event(
+            ThreadEvent::PlaybackOutputMeter {
+                peak_linear: 0.0,
+                clipping_detected: false,
+                epoch: 6,
+            },
+            &state,
+        );
+    }
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 6,
+            epoch_peak_max: 0.0,
+            flush_gen: 0,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.output_peak_linear, 0.0);
+    assert_eq!(s.playback_peak_max_linear, 0.0);
+}
+
+#[test]
+fn test_handle_thread_event_meters_alone_never_complete_epoch() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        ..AudioEngineState::default()
+    }));
+
+    // Completion requires the drained receipt: a dropped terminal leaves
+    // the epoch Playing (the harness deadline fails loud, never a pass).
+    for _ in 0..3 {
+        handle_thread_event(
+            ThreadEvent::PlaybackOutputMeter {
+                peak_linear: 0.50,
+                clipping_detected: false,
+                epoch: 5,
+            },
+            &state,
+        );
+    }
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Playing);
+    assert_eq!(s.playback_peak_max_linear, 0.50);
+}
+
+#[test]
+fn test_handle_thread_event_stale_stats_rejected_by_epoch() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        playback_callback_count: 50,
+        playback_frames_received: 100,
+        playback_frames_written: 100,
+        ..AudioEngineState::default()
+    }));
+
+    // Stale snapshot from the previous epoch: counters untouched.
+    handle_thread_event(
+        ThreadEvent::PlaybackStats {
+            callback_count: 9999,
+            buffer_fill_percent: 99,
+            stream_error_count: 9,
+            frames_received: 9999,
+            frames_written: 9999,
+            frames_dropped: 9,
+            effective_sample_rate: 99_000,
+            epoch: 4,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_callback_count, 50);
+    assert_eq!(s.playback_frames_received, 100);
+    assert_eq!(s.playback_frames_written, 100);
+    drop(s);
+
+    // Mis-tagged future epoch: the gate is equality, direction-agnostic.
+    handle_thread_event(
+        ThreadEvent::PlaybackStats {
+            callback_count: 8888,
+            buffer_fill_percent: 88,
+            stream_error_count: 8,
+            frames_received: 8888,
+            frames_written: 8888,
+            frames_dropped: 8,
+            effective_sample_rate: 88_000,
+            epoch: 6,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_callback_count, 50);
+    assert_eq!(s.playback_frames_received, 100);
+    assert_eq!(s.playback_frames_written, 100);
+    drop(s);
+
+    // Current epoch: applied.
+    handle_thread_event(
+        ThreadEvent::PlaybackStats {
+            callback_count: 60,
+            buffer_fill_percent: 10,
+            stream_error_count: 0,
+            frames_received: 150,
+            frames_written: 150,
+            frames_dropped: 0,
+            effective_sample_rate: 48_000,
+            epoch: 5,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_callback_count, 60);
+    assert_eq!(s.playback_buffer_fill_percent, 10);
+    assert_eq!(s.playback_stream_error_count, 0);
+    assert_eq!(s.playback_frames_received, 150);
+    assert_eq!(s.playback_frames_written, 150);
+    assert_eq!(s.playback_frames_dropped, 0);
+    assert_eq!(s.playback_effective_sample_rate, 48_000);
 }
 
 #[test]
@@ -850,6 +1145,7 @@ fn test_handle_thread_event_decoder_error() {
         playback_state: PlaybackState::Playing,
         output_peak_linear: 1.25,
         output_clipping_detected: true,
+        playback_peak_max_linear: 1.25,
         ..AudioEngineState::default()
     }));
 
@@ -863,6 +1159,7 @@ fn test_handle_thread_event_decoder_error() {
     assert_eq!(s.last_error.as_deref(), Some("decode failed"));
     assert_eq!(s.output_peak_linear, 0.0);
     assert!(!s.output_clipping_detected);
+    assert_eq!(s.playback_peak_max_linear, 1.25);
 }
 
 #[test]
@@ -1067,4 +1364,298 @@ fn correlated_manager_wait_discards_an_abandoned_late_response() {
         Ok(super::ManagerResponse::Ok)
     ));
     assert!(manager.response_inbox.lock().unwrap().buffered.is_empty());
+}
+
+#[test]
+fn drained_born_after_seek_complete_rejects_transport_but_folds_peak() {
+    // Adversarial MPSC order: the fast SeekComplete lands first and
+    // clears the indicator; the stale drain (born on the slow path
+    // before the seek Flush) arrives after. A flag gate would accept
+    // it here; the generation gate holds transport. Sequential
+    // delivery in this order proves the gate, not the topology: any
+    // MPSC interleaving is permissible input.
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        flushes_sent: 1,
+        seeking: true,
+        output_peak_linear: 0.30,
+        playback_peak_max_linear: 0.30,
+        ..AudioEngineState::default()
+    }));
+
+    handle_thread_event(ThreadEvent::SeekComplete, &state);
+    assert!(!state.load().seeking);
+
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.90,
+            flush_gen: 0,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Playing);
+    assert_eq!(s.output_peak_linear, 0.30);
+    assert_eq!(s.playback_peak_max_linear, 0.90);
+    drop(s);
+
+    // The legitimate post-Flush drain completes the epoch.
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.90,
+            flush_gen: 1,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.playback_peak_max_linear, 0.90);
+}
+
+#[test]
+fn double_seek_gates_each_drain_by_generation() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        flushes_sent: 2,
+        last_error: Some("previous error".to_string()),
+        playback_peak_max_linear: 0.20,
+        ..AudioEngineState::default()
+    }));
+
+    // Inter-Flush drain (born between the two seeks): held, folded,
+    // and the pending error untouched.
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.60,
+            flush_gen: 1,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Playing);
+    assert_eq!(s.playback_peak_max_linear, 0.60);
+    assert_eq!(s.last_error.as_deref(), Some("previous error"));
+    drop(s);
+
+    // Post-second-Flush drain: completes and clears the error.
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.70,
+            flush_gen: 2,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.playback_peak_max_linear, 0.70);
+    assert!(s.last_error.is_none());
+}
+
+#[test]
+fn future_generation_drain_degrades_to_epoch_gate() {
+    // flush_gen above sent is impossible by construction; the gate
+    // degrades to the epoch-only behavior rather than wedging.
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 5,
+        flushes_sent: 5,
+        ..AudioEngineState::default()
+    }));
+
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.40,
+            flush_gen: 7,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.playback_peak_max_linear, 0.40);
+    // D3: the degradation is state-visible, not log-only.
+    assert_eq!(s.gen_ahead_events, 1);
+}
+
+#[test]
+fn async_decoder_error_selects_current_tag_and_drops_others() {
+    // A5 identity rule, pure over a hand-fed drain: tag-equal yields
+    // text in drain order; older (superseded session) and ahead
+    // (impossible — adoption follows assignment) drop with a warn.
+    use super::super::DecoderAsyncError;
+    let errors = vec![
+        DecoderAsyncError {
+            attempt: 1,
+            message: "old phase died".to_string(),
+        },
+        DecoderAsyncError {
+            attempt: 2,
+            message: "queue stuck".to_string(),
+        },
+        DecoderAsyncError {
+            attempt: 9,
+            message: "impossible future".to_string(),
+        },
+    ];
+    assert_eq!(
+        select_current_decoder_errors(errors, 2),
+        vec!["queue stuck".to_string()]
+    );
+    // Empty drain selects nothing (the tick skips its store).
+    assert!(select_current_decoder_errors(Vec::new(), 2).is_empty());
+}
+
+#[test]
+fn async_decoder_error_applies_into_playing_and_stopped() {
+    // Current-tag failure stops a Playing transport with the root
+    // cause visible; into an already-Stopped transport the record is
+    // informative (Stop-after-unapplied surfaces as cause).
+    let mut playing = AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        decoder_attempt: 2,
+        ..AudioEngineState::default()
+    };
+    assert!(apply_decoder_async_errors(
+        &mut playing,
+        &["queue stuck".to_string()]
+    ));
+    assert_eq!(playing.playback_state, PlaybackState::Stopped);
+    assert_eq!(playing.last_error.as_deref(), Some("queue stuck"));
+
+    let mut stopped = AudioEngineState {
+        playback_state: PlaybackState::Stopped,
+        decoder_attempt: 2,
+        ..AudioEngineState::default()
+    };
+    assert!(apply_decoder_async_errors(
+        &mut stopped,
+        &["late HAL failure".to_string()]
+    ));
+    assert_eq!(stopped.playback_state, PlaybackState::Stopped);
+    assert_eq!(stopped.last_error.as_deref(), Some("late HAL failure"));
+
+    // Nothing selected: no application, no store.
+    let mut idle = AudioEngineState::default();
+    assert!(!apply_decoder_async_errors(&mut idle, &[]));
+    assert_eq!(idle.last_error, None);
+}
+
+#[test]
+fn async_decoder_error_skips_apply_on_poisoned_transport() {
+    // The tag stays current forever (no new Play while poisoned), so
+    // without the guard every queued pre-death symptom would clobber
+    // the death record. Poisoned: warn-logged, skipped, no store.
+    let mut poisoned = AudioEngineState {
+        playback_state: PlaybackState::Stopped,
+        decoder_attempt: 2,
+        last_error: Some("worker dead (decoder): panicked".to_string()),
+        worker_death_poisoned: true,
+        peak_record_complete: false,
+        ..AudioEngineState::default()
+    };
+    assert!(!apply_decoder_async_errors(
+        &mut poisoned,
+        &["queue stuck".to_string()]
+    ));
+    assert_eq!(
+        poisoned.last_error.as_deref(),
+        Some("worker dead (decoder): panicked")
+    );
+    assert_eq!(poisoned.playback_state, PlaybackState::Stopped);
+}
+
+#[test]
+fn sync_decoder_failure_chains_async_root_cause() {
+    // Failed-seek-after-error composition: the sync symptom and the
+    // drained async root cause stay visible together. Identity on
+    // empty causes (sync-only failure keeps today's exact text).
+    assert_eq!(
+        chain_decoder_causes("No decoder".to_string(), &[]),
+        "No decoder".to_string()
+    );
+    let chained = chain_decoder_causes("No decoder".to_string(), &["queue stuck".to_string()]);
+    assert_eq!(
+        chained,
+        "No decoder (decoder stopped: queue stuck)".to_string()
+    );
+    let mut state = AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        ..AudioEngineState::default()
+    };
+    record_decoder_error(&mut state, chained);
+    assert_eq!(state.playback_state, PlaybackState::Stopped);
+    assert_eq!(
+        state.last_error.as_deref(),
+        Some("No decoder (decoder stopped: queue stuck)")
+    );
+}
+
+#[test]
+fn queued_drained_after_stopped_stop_folds_peak_without_first_terminal_wins() {
+    // Stop-after-EOF shape: the worker answered Stop with a partial
+    // record, then the queued complete receipt arrives at Stopped.
+    // First-terminal-wins would keep 0.30; max-folding recovers 0.90.
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Stopped,
+        playback_epoch: 5,
+        flushes_sent: 3,
+        output_peak_linear: 0.0,
+        playback_peak_max_linear: 0.30,
+        ..AudioEngineState::default()
+    }));
+
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 5,
+            epoch_peak_max: 0.90,
+            flush_gen: 3,
+        },
+        &state,
+    );
+    let s = state.load();
+    assert_eq!(s.playback_state, PlaybackState::Stopped);
+    assert_eq!(s.playback_peak_max_linear, 0.90);
+    assert!(s.last_error.is_none());
+}
+
+#[test]
+fn seeking_display_expires_only_past_timeout() {
+    let fresh = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        seeking: true,
+        seeking_since: Some(std::time::Instant::now()),
+        ..AudioEngineState::default()
+    }));
+    expire_seeking_display(&fresh);
+    assert!(fresh.load().seeking);
+
+    let stale = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        seeking: true,
+        seeking_since: Some(
+            std::time::Instant::now()
+                .checked_sub(std::time::Duration::from_secs(3))
+                .unwrap(),
+        ),
+        ..AudioEngineState::default()
+    }));
+    expire_seeking_display(&stale);
+    let s = stale.load();
+    assert!(!s.seeking);
+    assert!(s.seeking_since.is_none());
+    drop(s);
+
+    // A flag without a timestamp (deserialized legacy state) clears:
+    // it cannot be a live seek interval.
+    let dateless = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        seeking: true,
+        seeking_since: None,
+        ..AudioEngineState::default()
+    }));
+    expire_seeking_display(&dateless);
+    assert!(!dateless.load().seeking);
 }

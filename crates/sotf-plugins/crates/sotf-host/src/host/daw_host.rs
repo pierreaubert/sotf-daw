@@ -51,6 +51,7 @@ use arc_swap::ArcSwap;
 use rayon::prelude::*;
 use rtrb::{Consumer, Producer, RingBuffer};
 use std::any::Any;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
@@ -128,6 +129,284 @@ struct DrainState {
     active_node: Option<NodeId>,
     prepared: bool,
     remaining_calls: Option<u64>,
+    /// Live tail observed when the current quota was granted (`None`
+    /// exactly when no quota is granted). The progress-gated single
+    /// refresh compares the exhaustion-time tail against this value.
+    quota_grant_tail: Option<TailLength>,
+}
+
+/// Lifecycle of one node inside the branched graph EOS scheduler.
+///
+/// `Running` nodes still expect input waves and consume aligned frames
+/// from their incoming edge queues. `Draining` nodes saw every incoming
+/// edge reach EOF with empty queues, so no further `process()` call can
+/// arrive; they emit their own tail exactly like a linear stage. The
+/// Running-to-Draining transition is the graph form of the linear
+/// `completed_prefix` rule.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum GraphNodeDrainPhase {
+    #[default]
+    Running,
+    Draining {
+        prepared: bool,
+        remaining_calls: Option<u64>,
+        /// Live tail at quota grant (`None` exactly when ungranted);
+        /// the single refresh compares exhaustion-time tails to it.
+        grant_tail: Option<TailLength>,
+    },
+    Complete,
+}
+
+/// Progress-gated single quota refresh for deferred arming.
+///
+/// On quota exhaustion, a plugin whose live tail transitioned from
+/// non-`Finite` at grant time to `Finite` now (the A/B mask derives its
+/// flush once driving content exhausts) earns ONE re-queried budget for
+/// the proven remainder. Anything else — a still-unprovable tail, no
+/// re-queried bound, or a grant-time `Finite` promise broken (true
+/// defects trip at exactly the granted budget) — answers `None` and the
+/// caller trips loudly. Single-refresh: the caller records the returned
+/// `Finite` tail as the new grant tail, so a second exhaustion always
+/// trips. Scalar queries only, no allocation, and only on the
+/// exhaustion path — never per call.
+fn drain_quota_refresh(plugin: &dyn Plugin, grant_tail: TailLength) -> Option<(u64, TailLength)> {
+    if matches!(grant_tail, TailLength::Finite(_)) {
+        return None;
+    }
+    let current = plugin.tail_length();
+    if !matches!(current, TailLength::Finite(_)) {
+        return None;
+    }
+    let budget = plugin.drain_call_bound()?.get();
+    Some((budget, current))
+}
+
+/// Static per-edge plan for graph EOS, computed at `build()`.
+#[derive(Debug, Clone, Copy, Default)]
+struct GraphEdgeDrainPlan {
+    /// Routed channel width (post channel-map selection).
+    routed_channels: usize,
+    /// Bounded FIFO capacity in frames.
+    queue_cap_frames: usize,
+    /// Compensation-delay flush length in frames.
+    comp_frames: usize,
+}
+
+/// Dynamic per-edge EOS state. Queues hold post-compensation frames, so
+/// equal queue indices are equal sample times in the destination clock.
+#[derive(Debug, Clone, Default)]
+struct GraphEdgeDrainState {
+    queue: VecDeque<f32>,
+    /// Compensation frames still to push after the source completes.
+    flush_remaining: usize,
+    eof: bool,
+}
+
+/// Stream-independent envelope snapshot for one graph EOS node.
+///
+/// Recorded when every node publishes envelopes. The guard check compares
+/// live bypass flags and envelope answers against this; any mismatch
+/// falls back to a live re-derivation, so envelope-sized reservations
+/// never cover waves they were not derived for.
+#[derive(Debug, Clone, Copy, Default)]
+struct GraphNodeEnvelope {
+    /// Envelope quantum this entry was derived at.
+    quantum: usize,
+    /// `output_frames_envelope(quantum)` when this entry was derived.
+    offi: usize,
+    /// `drain_frames_envelope()` when this entry was derived.
+    drain: usize,
+}
+
+/// Static per-node plan for graph EOS, computed at `build()`.
+///
+/// The plan holds wave-scale bounds only (quantum, single emission).
+/// No lifetime total exists anywhere: queues are wave-bounded and
+/// paced by backpressure, so declared tails of any finite length
+/// drain without lifetime-sized reservations.
+#[derive(Debug, Clone, Copy, Default)]
+struct GraphNodeDrainPlan {
+    /// Maximum frames consumed from each input edge per round.
+    process_quantum: usize,
+    /// Maximum frames produced by one round action.
+    single_emission: usize,
+    /// Bypass flag when this entry was derived. Bypass toggles change
+    /// scheduling even on envelope-sized plans, so the guard check
+    /// compares it live.
+    bypassed: bool,
+    /// Envelope snapshot when every node published envelopes (`None`
+    /// otherwise, including for bypassed nodes, which derive no query).
+    envelope: Option<GraphNodeEnvelope>,
+    /// Live `drain_output_frames_max` when this entry was derived (0 for
+    /// bypassed nodes). Stateful plugins change this across the stream (a
+    /// fresh resampler reports 0, mid-stream its block maximum); the drain
+    /// entry and bound query compare it allocation-free and re-derive the
+    /// plan only when it changed.
+    drain_max_snapshot: usize,
+    /// Live `output_frames_for_input(process_quantum)` when this entry was
+    /// derived (0 for bypassed nodes, which derive no query). Residual
+    /// carry drifts this mid-drain even while the drain bound holds still;
+    /// the drift check fires only on growth past this peak, since the
+    /// grow-only holdover already covers anything at or below it.
+    offi_snapshot: usize,
+}
+
+/// Static graph EOS plan. All values derive from declared plugin
+/// metadata plus topology; see `design.md` in the graph-final-stream-r1
+/// lane for the scheduling proof.
+#[derive(Debug, Clone, Default)]
+struct GraphDrainPlan {
+    topo_order: Vec<NodeId>,
+    node_plan: Vec<GraphNodeDrainPlan>,
+    edge_plan: Vec<GraphEdgeDrainPlan>,
+    /// Output-delay flush length per output node, in output order.
+    output_comp_frames: Vec<usize>,
+    /// Output-queue capacity per output node, in output order.
+    output_queue_cap_frames: Vec<usize>,
+    /// Conservative per-call output bound in frames.
+    bound_frames: usize,
+    /// Stream-independent per-call output bound when every node published
+    /// envelopes (`None` otherwise). The bound query answers this without
+    /// re-deriving while the guard snapshots hold; the quanta, emissions,
+    /// and caps above are the envelope derivation then, so no mid-drain
+    /// growth is possible and the refresh path stays quiet.
+    envelope_bound: Option<usize>,
+    /// Topology signature this plan was built for.
+    signature: GraphDrainSignature,
+}
+
+/// Topology covered by a graph EOS plan and its dynamic state.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct GraphDrainSignature {
+    nodes: Vec<NodeId>,
+    edges: Vec<(NodeId, NodeId, usize, EdgeType)>,
+    channel_routes: Vec<(Option<Vec<usize>>, usize)>,
+}
+
+/// Structural inputs shared by the live and envelope EOS derivations.
+///
+/// Topology, routing, and compensation delays are identical for both;
+/// only the per-node emission queries differ (live declarations versus
+/// stream-independent envelopes). Built on the control thread only.
+struct GraphDrainTopology {
+    signature: GraphDrainSignature,
+    topo_order: Vec<NodeId>,
+    routed: Vec<usize>,
+    comp_frames: Vec<usize>,
+    output_comp_frames: Vec<usize>,
+}
+
+/// Dynamic graph EOS state. Reset exactly where the linear `DrainState`
+/// resets; preserved across a no-change rebuild keyed by edge id.
+#[derive(Debug, Clone, Default)]
+struct GraphDrainState {
+    phases: Vec<GraphNodeDrainPhase>,
+    edges: Vec<GraphEdgeDrainState>,
+    /// One retained output wave per node; committed per edge.
+    holdover_data: Vec<Vec<f32>>,
+    holdover_frames: Vec<usize>,
+    /// Per-edge commit flags for the source's current holdover wave.
+    edge_committed: Vec<bool>,
+    output_flush_remaining: Vec<usize>,
+    /// Post-output-delay frames per output node, consumed aligned.
+    output_queues: Vec<VecDeque<f32>>,
+    /// Per-call output bound frozen at the first drain entry of the
+    /// session (`None` outside one). Live declarations can legitimately
+    /// rise mid-drain (chunk-quantized converters straddling a block
+    /// boundary as residuals walk); internal reservations keep growing
+    /// to cover them, but once-sized callers must never see the enforced
+    /// bound move under a buffer they sized from the begin query, so
+    /// preflight, pacing, and the bound query all use this value for the
+    /// whole session. Cleared with all dynamic state on new accepted
+    /// input, mutation, or reset.
+    session_output_bound: Option<usize>,
+    /// Test-only count of full output-FIFO commit retries (waves
+    /// retained by backpressure). Proves the retry path executes;
+    /// compiled out of production builds.
+    #[cfg(test)]
+    output_commit_retries: u64,
+    /// Test-only count of drain-entry plan refreshes (declaration drift
+    /// detected after the session started). Proves the refresh path
+    /// executes; compiled out of production builds.
+    #[cfg(test)]
+    drain_refresh_count: u64,
+}
+
+impl GraphDrainState {
+    fn reset_dynamic(&mut self) {
+        self.phases.fill(GraphNodeDrainPhase::Running);
+        for edge in &mut self.edges {
+            edge.queue.clear();
+            edge.flush_remaining = 0;
+            edge.eof = false;
+        }
+        self.holdover_frames.fill(0);
+        self.edge_committed.fill(false);
+        self.output_flush_remaining.fill(0);
+        for queue in &mut self.output_queues {
+            queue.clear();
+        }
+        self.session_output_bound = None;
+        #[cfg(test)]
+        {
+            self.output_commit_retries = 0;
+            self.drain_refresh_count = 0;
+        }
+    }
+
+    fn rearm_node(&mut self, node_id: NodeId) {
+        if let Some(GraphNodeDrainPhase::Draining {
+            remaining_calls,
+            grant_tail,
+            ..
+        }) = self.phases.get_mut(node_id)
+        {
+            *remaining_calls = None;
+            *grant_tail = None;
+        }
+    }
+}
+
+/// Per-round scheduler accumulator, kept on the stack.
+#[derive(Debug, Clone, Copy, Default)]
+struct GraphDrainRound {
+    acted: bool,
+    frames: usize,
+}
+
+/// Snapshot of compensation-delay history carried across a no-change
+/// rebuild so drain waves keep their process-time alignment.
+/// Each entry is `(ring buffer, cursor, channels)`; `None` means the
+/// slot held no delay. Allocated on the build path only.
+#[derive(Debug, Clone, Default)]
+struct CompDelaySnapshot<T> {
+    edges: Vec<Option<(Vec<T>, usize, usize)>>,
+    outputs: Vec<Option<(Vec<T>, usize, usize)>>,
+}
+
+/// Disjoint host borrows for one graph EOS round.
+///
+/// The round runs while `BufferGuard` holds `process_buffers`, so it
+/// cannot take `&mut self`; every field below borrows a disjoint piece
+/// of the host instead. References only: constructing and passing this
+/// context allocates nothing on the realtime path.
+struct GraphDrainRoundCtx<'a> {
+    state: &'a mut GraphDrainState,
+    plan: &'a GraphDrainPlan,
+    plugins: &'a mut [Option<Box<dyn Plugin>>],
+    nodes: &'a HashMap<NodeId, GraphNode>,
+    edges: &'a [GraphEdge],
+    predecessors: &'a [Vec<GraphEdge>],
+    successors: &'a [Vec<usize>],
+    predecessor_edge_indices: &'a [Vec<usize>],
+    output_nodes: &'a [NodeId],
+    is_output_node: &'a [bool],
+    node_input_sample_rates: &'a [u32],
+    node_input_positions: &'a mut [u64],
+    output_channels: usize,
+    /// Session-frozen per-call output bound. Internal waves may exceed it
+    /// mid-session (reservations grow); emission never does.
+    session_output_bound: usize,
 }
 
 struct PreparedTerminalSinkBuffers {
@@ -386,6 +665,12 @@ pub struct DawHost {
     pub(super) output_nodes: Vec<NodeId>,
     pub(super) next_node_id: NodeId,
     pub(super) chain_nodes: Vec<NodeId>,
+    /// True once the chain API (`add_plugin`) has placed a node. Pure-graph
+    /// hosts (never chain-built) refresh the derived `chain_nodes` order from
+    /// stages whenever node membership changes, so appended nodes join the
+    /// chain-indexed contracts after rebuild; chain-built and mixed hosts keep
+    /// chain-API order untouched.
+    pub(super) chain_built: bool,
     pub(super) built: bool,
     pub(super) process_buffers: Option<ProcessBuffers<f32>>,
     pub(super) process_buffers_f64: Option<ProcessBuffers<f64>>,
@@ -425,6 +710,25 @@ pub struct DawHost {
     /// the current host callback position.
     node_input_positions: Vec<u64>,
     drain_state: DrainState,
+    graph_drain_state: GraphDrainState,
+    graph_drain_plan: GraphDrainPlan,
+    /// Reusable per-node scratch for the remaining-tail fold
+    /// ([`DawHost::tail_length`]/[`DawHost::tail_support`]), indexed by node
+    /// slot. `RefCell` keeps the `&self` query signature; the fold borrows
+    /// it once per call and never re-enters (nested hosts own their own
+    /// scratch), so the borrow cannot fail. Sized at plan derivation
+    /// (off-RT build work); the fold grows it only when the topology grew
+    /// without a fresh derivation, so steady-state queries allocate nothing.
+    tail_fold_scratch: RefCell<Vec<Option<u64>>>,
+    /// Sticky merge-retention overflow poison: set when a process-phase merge
+    /// queue would exceed its declared cap. `process`, `process_f64`,
+    /// `drain`, and `build` refuse while set; only `reset` recovers, because
+    /// positions, delays, and queues all hold a partial block.
+    merge_overflow_poisoned: bool,
+    /// Outgoing edge indices per node slot, rebuilt in `build()`.
+    pub(super) successors: Vec<Vec<usize>>,
+    /// Incoming edge indices per node slot, parallel to `predecessors`.
+    pub(super) predecessor_edge_indices: Vec<Vec<usize>>,
     terminal_sink_lifecycle: Option<TerminalSinkLifecycle>,
     terminal_sink_source_complete: bool,
     terminal_sink_producer_started: bool,
@@ -435,6 +739,20 @@ pub struct DawHost {
     pub(super) queue_state: DawQueueState,
     pub(super) automation_state: DawAutomationState,
     pub(super) config: DawConfig,
+}
+
+/// Outcome of an isolated plugin process call.
+///
+/// `frames` is the usable count: the plugin's return, or the
+/// passthrough-substituted input count after a failure. `over_reported`
+/// carries the plugin's raw return when it over-reported past staging —
+/// the measured evidence for the truthful contract refusal at the call
+/// site. Failures and panics substitute (rate-limited log) and report
+/// `None`, preserving host resilience.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct IsolatedProcessOutcome {
+    pub(super) frames: usize,
+    pub(super) over_reported: Option<usize>,
 }
 
 impl DawHost {
@@ -545,6 +863,7 @@ impl DawHost {
             output_nodes: Vec::new(),
             next_node_id: 0,
             chain_nodes: Vec::new(),
+            chain_built: false,
             built: false,
             process_buffers: None,
             process_buffers_f64: None,
@@ -565,6 +884,12 @@ impl DawHost {
             node_output_sample_rates: Vec::new(),
             node_input_positions: Vec::new(),
             drain_state: DrainState::default(),
+            graph_drain_state: GraphDrainState::default(),
+            graph_drain_plan: GraphDrainPlan::default(),
+            tail_fold_scratch: RefCell::new(Vec::new()),
+            merge_overflow_poisoned: false,
+            successors: Vec::new(),
+            predecessor_edge_indices: Vec::new(),
             terminal_sink_lifecycle: None,
             terminal_sink_source_complete: false,
             terminal_sink_producer_started: false,
@@ -797,6 +1122,35 @@ impl DawHost {
         Ok(id)
     }
 
+    /// Add a graph node initialized at an explicit input rate.
+    ///
+    /// Unlike [`Self::add_node`], which initializes at the host rate, the
+    /// plugin is initialized at `input_sample_rate`, recorded as the node's
+    /// input rate. Needed for mid-graph rate-changing nodes whose
+    /// initialization depends on the input rate (plain `add_node` fails for
+    /// them before `build` can negotiate). `build()` still derives each
+    /// node's negotiated rate from its predecessors and re-initializes on
+    /// mismatch, failing loudly for inconsistent graphs. Follows the
+    /// `add_node` mutation guard/reservation path; no behavior change to
+    /// existing callers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when sink mutation guards forbid the insertion, the
+    /// reserved id collides, or the plugin rejects initialization at the
+    /// given rate.
+    pub fn add_node_at_rate(
+        &mut self,
+        name: String,
+        plugin: Box<dyn Plugin>,
+        input_sample_rate: u32,
+    ) -> Result<NodeId, String> {
+        self.ensure_sink_graph_mutation_allowed()?;
+        let id = self.reserve_node_id();
+        self.add_node_with_id_at_rate(id, name, plugin, input_sample_rate)?;
+        Ok(id)
+    }
+
     pub(super) fn add_node_with_id(
         &mut self,
         id: NodeId,
@@ -842,6 +1196,7 @@ impl DawHost {
         self.built = false;
         self.cached_latency = None;
         self.drain_state = DrainState::default();
+        self.graph_drain_state.reset_dynamic();
         Ok(())
     }
 
@@ -858,6 +1213,7 @@ impl DawHost {
         self.built = false;
         self.cached_latency = None;
         self.drain_state = DrainState::default();
+        self.graph_drain_state.reset_dynamic();
         Ok(())
     }
 
@@ -912,6 +1268,9 @@ impl DawHost {
 
     pub fn build(&mut self) -> Result<(), String> {
         self.ensure_sink_commands_allowed()?;
+        if self.merge_overflow_poisoned {
+            return Err("host merge retention overflowed; reset the host before rebuilding".into());
+        }
         if self.has_cycle() {
             return Err("Cycle".into());
         }
@@ -925,7 +1284,19 @@ impl DawHost {
         // graphs behave exactly like their chain equivalent. Hosts with
         // chain-built nodes (including mixed chain/graph usage, where side
         // nodes must stay out of `chain_nodes`) are deliberately untouched.
-        if self.chain_nodes.is_empty() {
+        // Pure-graph hosts (never chain-built) additionally refresh the
+        // derived order whenever node membership changed since the last
+        // derivation, so nodes appended after a build (e.g. an explicitly
+        // rated converter) join the chain-indexed contracts instead of
+        // leaving them stale. Non-membership rebuilds keep the existing
+        // order, so branch positions stay stable across bypass/edge-only
+        // rebuilds despite nondeterministic stage order within a layer.
+        let membership_changed = self.chain_nodes.len() != self.nodes.len()
+            || self
+                .chain_nodes
+                .iter()
+                .any(|id| !self.nodes.contains_key(id));
+        if self.chain_nodes.is_empty() || (!self.chain_built && membership_changed) {
             self.chain_nodes = self
                 .stages
                 .iter()
@@ -935,10 +1306,14 @@ impl DawHost {
         let max_id = self.nodes.keys().copied().max().unwrap_or(0);
         let num_slots = if self.nodes.is_empty() { 0 } else { max_id + 1 };
         self.predecessors = vec![Vec::new(); num_slots];
+        self.successors = vec![Vec::new(); num_slots];
+        self.predecessor_edge_indices = vec![Vec::new(); num_slots];
         self.is_input_node = vec![false; num_slots];
         self.is_output_node = vec![false; num_slots];
-        for edge in &self.edges {
+        for (index, edge) in self.edges.iter().enumerate() {
             self.predecessors[edge.to_node].push(edge.clone());
+            self.successors[edge.from_node].push(index);
+            self.predecessor_edge_indices[edge.to_node].push(index);
         }
         for &id in &self.input_nodes {
             self.is_input_node[id] = true;
@@ -1011,27 +1386,45 @@ impl DawHost {
                     .capacity_frames
                     .max(Self::MAX_BLOCK_FRAMES)
             });
+        // Envelope-or-live shared scratch (F1): the live declaration
+        // walks with stream state (chunk residuals), but preparation
+        // runs once at build; size by the envelope where published so
+        // straddle peaks never grow scratch mid-stream. Envelopes
+        // dominate live values, so this only grows.
         let max_graph_frames = self
             .nodes
             .keys()
-            .map(|&id| self.path_output_frames(id, prepared_sink_frames))
+            .map(|&id| {
+                self.path_output_envelope(id, prepared_sink_frames)
+                    .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames))
+            })
             .max()
             .unwrap_or(Self::MAX_BLOCK_FRAMES)
             .max(Self::MAX_BLOCK_FRAMES);
         let graph_scratch_samples = max_graph_frames
             .checked_mul(32)
             .ok_or("Graph frame expansion exceeds addressable storage")?;
+        // Cold-process preparation: size every node buffer for the
+        // largest per-call need at MAX_BLOCK_FRAMES (see
+        // `max_block_process_need`). Larger blocks keep today's one-time
+        // first-touch growth, exactly as MAX_BLOCK_FRAMES documents.
+        let max_block_need = self.max_block_process_need();
         let mut node_buffers = (0..num_slots).map(|_| None).collect::<Vec<_>>();
         let mut node_buffers_f64 = (0..num_slots).map(|_| None).collect::<Vec<_>>();
         for (&id, node) in &self.nodes {
-            node_buffers[id] = Some(NodeBuffer::<f32>::new(
-                self.path_output_frames(id, prepared_sink_frames),
-                node.output_channels(),
-            ));
-            node_buffers_f64[id] = Some(NodeBuffer::<f64>::new(
-                self.path_output_frames(id, prepared_sink_frames),
-                node.output_channels(),
-            ));
+            // Envelope preparation covers every stream state (residual
+            // straddle included); unknown envelopes keep live sizing.
+            // Envelopes dominate live values, so this only grows.
+            let path_prepared = self
+                .path_output_envelope(id, prepared_sink_frames)
+                .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames));
+            // Saturate only against addressable overflow (absurd
+            // topologies): under-preparation degrades to today's
+            // first-touch growth, never a new failure mode.
+            let addressable = (isize::MAX as usize) / node.output_channels().max(1);
+            let prepared = max_block_need.max(path_prepared).min(addressable);
+            node_buffers[id] = Some(NodeBuffer::<f32>::new(prepared, node.output_channels()));
+            node_buffers_f64[id] = Some(NodeBuffer::<f64>::new(prepared, node.output_channels()));
         }
         // Cache per-node bypass flags before computing compensation delays
         // (compensation needs to know which nodes are bypassed for latency calculation)
@@ -1075,24 +1468,119 @@ impl DawHost {
             })
             .fold(0usize, usize::saturating_add)
             .max(1);
+        // A no-change rebuild preserves drain waves queued downstream of
+        // the compensation delays, so it must also preserve the delay
+        // history those waves were pushed through. Snapshot first; any
+        // topology mutation changes the signature and takes fresh
+        // delays instead.
+        let preserve_delays = self.graph_drain_signature() == self.graph_drain_plan.signature;
+        let old_delays = self
+            .process_buffers
+            .as_ref()
+            .map(|buffers| Self::snapshot_compensation(&buffers.compensation_delays));
+        let old_delays_f64 = self
+            .process_buffers_f64
+            .as_ref()
+            .map(|buffers| Self::snapshot_compensation(&buffers.compensation_delays));
         // Compute per-node cumulative latency from inputs and compensation delays
-        let compensation_delays = self.compute_compensation_delays::<f32>(num_slots)?;
-        let compensation_delays_f64 = self.compute_compensation_delays::<f64>(num_slots)?;
+        let mut compensation_delays = self.compute_compensation_delays::<f32>(num_slots)?;
+        let mut compensation_delays_f64 = self.compute_compensation_delays::<f64>(num_slots)?;
+        if preserve_delays {
+            if let Some(old) = old_delays {
+                Self::restore_compensation(&mut compensation_delays, old);
+            }
+            if let Some(old) = old_delays_f64 {
+                Self::restore_compensation(&mut compensation_delays_f64, old);
+            }
+        }
+
+        // Process-phase merge retention: derive per-edge caps from the fresh
+        // compensation lengths plus declared single-wave emissions, then size
+        // the join scratch for the largest retained join. Queues move over
+        // from the old buffers on a no-change rebuild only.
+        let merge_comp_frames: Vec<usize> = compensation_delays
+            .delays
+            .iter()
+            .map(|delay| delay.as_ref().map_or(0, |entry| entry.delay))
+            .collect();
+        let merge_queue_caps =
+            self.merge_retention_caps(&merge_comp_frames, prepared_sink_frames)?;
+        let merge_routed = Self::edge_routed_channels(&self.nodes, &self.edges, &self.predecessors);
+        let mut merge_scratch_samples = graph_scratch_samples;
+        for node_id in self.nodes.keys() {
+            let incoming = &self.predecessors[*node_id];
+            if incoming.len() < 2 {
+                continue;
+            }
+            let max_cap = incoming
+                .iter()
+                .map(|edge| merge_queue_caps.get(edge.id).copied().unwrap_or(0))
+                .max()
+                .unwrap_or(0);
+            let need = max_cap
+                .checked_mul(self.nodes[node_id].input_channels())
+                .ok_or("graph merge retention join exceeds addressable samples")?;
+            merge_scratch_samples = merge_scratch_samples.max(need);
+        }
+        // Chain EOS preparation: when every stage publishes envelopes,
+        // cover the largest intermediate wave so chain drain scratch
+        // never grows mid-drain. Same chain predicate the drain path
+        // uses, so preparation applies exactly when chain drain runs.
+        if self.is_chain_topology_for_drain()
+            && let Some(prep_frames) = self.chain_envelope_prep_frames()
+        {
+            let max_channels = self
+                .chain_nodes
+                .iter()
+                .filter_map(|id| self.nodes.get(id))
+                .map(|node| node.input_channels().max(node.output_channels()))
+                .max()
+                .unwrap_or(1);
+            if let Some(prep_samples) = prep_frames.checked_mul(max_channels) {
+                merge_scratch_samples = merge_scratch_samples.max(prep_samples);
+            }
+        }
+        let old_merge_queues = self
+            .process_buffers
+            .as_mut()
+            .map(|buffers| std::mem::take(&mut buffers.merge_queues));
+        let old_merge_queues_f64 = self
+            .process_buffers_f64
+            .as_mut()
+            .map(|buffers| std::mem::take(&mut buffers.merge_queues));
+        let merge_queues = Self::restore_merge_queues(
+            old_merge_queues.as_ref(),
+            &merge_queue_caps,
+            &merge_routed,
+            preserve_delays,
+        )?;
+        let merge_queues_f64 = Self::restore_merge_queues(
+            old_merge_queues_f64.as_ref(),
+            &merge_queue_caps,
+            &merge_routed,
+            preserve_delays,
+        )?;
 
         self.process_buffers = Some(ProcessBuffers {
             node_buffers,
-            scratch_input: vec![0.0f32; graph_scratch_samples],
-            scratch_output: vec![0.0f32; graph_scratch_samples],
-            merge_buffer: vec![0.0f32; graph_scratch_samples],
-            channel_map_buffer: vec![0.0f32; graph_scratch_samples],
+            scratch_input: vec![0.0f32; merge_scratch_samples],
+            scratch_output: vec![0.0f32; merge_scratch_samples],
+            merge_buffer: vec![0.0f32; merge_scratch_samples],
+            channel_map_buffer: vec![0.0f32; merge_scratch_samples],
             compensation_delays,
             delay_scratch: vec![0.0f32; graph_scratch_samples + 32],
+            merge_queues,
+            merge_queue_caps: merge_queue_caps.clone(),
             parallel_scratch: (0..num_slots)
                 .map(|id| {
                     if let Some(node) = self.nodes.get(&id) {
+                        // Output slot covers the MAX_BLOCK bound (upsampler
+                        // nodes exceed MAX_BLOCK frames); saturating multiply
+                        // degrades absurd topologies to first-touch growth.
+                        let out_frames = self.parallel_output_prep_frames(id, node);
                         (
                             vec![0.0f32; Self::MAX_BLOCK_FRAMES * node.input_channels()],
-                            vec![0.0f32; Self::MAX_BLOCK_FRAMES * node.output_channels()],
+                            vec![0.0f32; out_frames.saturating_mul(node.output_channels())],
                             vec![0.0f32; Self::MAX_BLOCK_FRAMES * node.input_channels()],
                         )
                     } else {
@@ -1110,18 +1598,24 @@ impl DawHost {
         });
         self.process_buffers_f64 = Some(ProcessBuffers {
             node_buffers: node_buffers_f64,
-            scratch_input: vec![0.0f64; graph_scratch_samples],
-            scratch_output: vec![0.0f64; graph_scratch_samples],
-            merge_buffer: vec![0.0f64; graph_scratch_samples],
-            channel_map_buffer: vec![0.0f64; graph_scratch_samples],
+            scratch_input: vec![0.0f64; merge_scratch_samples],
+            scratch_output: vec![0.0f64; merge_scratch_samples],
+            merge_buffer: vec![0.0f64; merge_scratch_samples],
+            channel_map_buffer: vec![0.0f64; merge_scratch_samples],
             compensation_delays: compensation_delays_f64,
             delay_scratch: vec![0.0f64; graph_scratch_samples + 32],
+            merge_queues: merge_queues_f64,
+            merge_queue_caps,
             parallel_scratch: (0..num_slots)
                 .map(|id| {
                     if let Some(node) = self.nodes.get(&id) {
+                        // Output slot covers the MAX_BLOCK bound (upsampler
+                        // nodes exceed MAX_BLOCK frames); saturating multiply
+                        // degrades absurd topologies to first-touch growth.
+                        let out_frames = self.parallel_output_prep_frames(id, node);
                         (
                             vec![0.0f64; Self::MAX_BLOCK_FRAMES * node.input_channels()],
-                            vec![0.0f64; Self::MAX_BLOCK_FRAMES * node.output_channels()],
+                            vec![0.0f64; out_frames.saturating_mul(node.output_channels())],
                             vec![0.0f64; Self::MAX_BLOCK_FRAMES * node.input_channels()],
                         )
                     } else {
@@ -1139,10 +1633,13 @@ impl DawHost {
         });
         // Native f64 chains and f32 fallback use these buffers on their first
         // callback too; reserve them alongside the graph processing buffers.
-        ensure_len(&mut self.config.f64_chain_scratch, graph_scratch_samples);
+        // Chain scratch follows merge scratch (a superset of graph scratch
+        // that includes the chain envelope preparation), so intermediate
+        // chain waves never grow it mid-stream.
+        ensure_len(&mut self.config.f64_chain_scratch, merge_scratch_samples);
         ensure_len(
             &mut self.config.f64_chain_scratch_alt,
-            graph_scratch_samples,
+            merge_scratch_samples,
         );
         ensure_len(&mut self.config.f64_input_scratch, graph_scratch_samples);
         ensure_len(&mut self.config.f64_output_scratch, graph_scratch_samples);
@@ -1191,6 +1688,7 @@ impl DawHost {
                 .ok_or("terminal sink staging size overflow")?;
             ensure_len(&mut self.terminal_sink_staging, staging_samples);
         }
+        self.rebuild_graph_drain_plan()?;
         self.built = true;
         self.publish_topology_snapshot();
         Ok(())
@@ -1213,6 +1711,8 @@ impl DawHost {
             .map_err(|error| format!("node-buffer slot reservation failed: {error}"))?;
         node_buffers.resize_with(num_slots, || None);
 
+        // Same cold-process preparation as the regular builder.
+        let max_block_need = self.max_block_process_need();
         for (&id, node) in &self.nodes {
             let channels = node.output_channels();
             let old = old_buffers
@@ -1235,7 +1735,10 @@ impl DawHost {
                 });
                 continue;
             }
-            let frames = self.path_output_frames(id, prepared_sink_frames);
+            let path_prepared = self
+                .path_output_envelope(id, prepared_sink_frames)
+                .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames));
+            let frames = max_block_need.max(path_prepared);
             let required_samples = frames
                 .checked_mul(channels)
                 .ok_or_else(|| format!("node {id} prepared sample extent overflow"))?;
@@ -1270,7 +1773,8 @@ impl DawHost {
                 let input_samples = Self::MAX_BLOCK_FRAMES
                     .checked_mul(node.input_channels())
                     .ok_or_else(|| format!("node {id} parallel input extent overflow"))?;
-                let output_samples = Self::MAX_BLOCK_FRAMES
+                let output_samples = self
+                    .parallel_output_prep_frames(id, node)
                     .checked_mul(node.output_channels())
                     .ok_or_else(|| format!("node {id} parallel output extent overflow"))?;
                 let old = old_buffers.and_then(|buffers| buffers.parallel_scratch.get(id));
@@ -1321,6 +1825,28 @@ impl DawHost {
             .unwrap_or(0);
         let parallel_results = try_vec_with_capacity(result_capacity, "parallel results")?;
 
+        // Process-phase retention for the sink reprepare path. Terminal sink
+        // graphs are serial chains (validated), so no merge caps arise; old
+        // queues move over when the edge set matches, anything else fails
+        // loudly, and fresh merges without compensation state refuse rather
+        // than undersize.
+        let sink_merge_caps = self.merge_retention_caps(&[], prepared_sink_frames)?;
+        if old_buffers.is_none() && sink_merge_caps.iter().any(|&cap| cap > 0) {
+            return Err(
+                "terminal sink reprepare cannot size merge retention without compensation state"
+                    .into(),
+            );
+        }
+        let sink_routed = Self::edge_routed_channels(&self.nodes, &self.edges, &self.predecessors);
+        let sink_preserve =
+            old_buffers.is_some_and(|old| old.merge_queues.len() == self.edges.len());
+        let sink_merge_queues = Self::restore_merge_queues(
+            old_buffers.map(|buffers| &buffers.merge_queues),
+            &sink_merge_caps,
+            &sink_routed,
+            sink_preserve,
+        )?;
+
         Ok(ProcessBuffers {
             node_buffers,
             scratch_input: try_copy_vec_with_min_len(
@@ -1351,6 +1877,8 @@ impl DawHost {
                 delay_scratch_samples.max(max_channels),
                 "graph delay scratch",
             )?,
+            merge_queues: sink_merge_queues,
+            merge_queue_caps: sink_merge_caps,
             parallel_scratch,
             parallel_results,
         })
@@ -1368,8 +1896,13 @@ impl DawHost {
                 return Err(format!("node {id} has zero channel geometry"));
             }
             maximum_channels = maximum_channels.max(channels);
+            // Envelope-or-live shared scratch, matching the build path:
+            // reprepare runs at one stream state but later blocks walk
+            // residuals, so size by the envelope where published.
+            // Envelopes dominate live values, so this only grows.
             let frames = self
-                .path_output_frames(id, prepared_sink_frames)
+                .path_output_envelope(id, prepared_sink_frames)
+                .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames))
                 .max(Self::MAX_BLOCK_FRAMES);
             let samples = frames
                 .checked_mul(channels)
@@ -1853,6 +2386,7 @@ impl DawHost {
             self.add_edge(GraphEdge::new(prev, id))?;
         }
         self.chain_nodes.push(id);
+        self.chain_built = true;
         self.built = false;
         Ok(id)
     }
@@ -1875,6 +2409,7 @@ impl DawHost {
         self.built = false;
         self.cached_latency = None;
         self.drain_state = DrainState::default();
+        self.graph_drain_state.reset_dynamic();
         Ok(self.plugins[id].take().unwrap())
     }
 
@@ -2022,6 +2557,13 @@ impl DawHost {
         } else {
             self.nodes[self.chain_nodes.last().unwrap()].output_channels()
         }
+    }
+
+    /// Test-only count of full output-FIFO commit retries retained
+    /// by backpressure during the current graph drain stream.
+    #[cfg(test)]
+    pub(crate) fn graph_drain_output_commit_retries(&self) -> u64 {
+        self.graph_drain_state.output_commit_retries
     }
     pub fn output_frames_for_input(&self, f: usize) -> usize {
         if self.cached_frames_identity {
@@ -2208,6 +2750,99 @@ impl DawHost {
         )
     }
 
+    /// Stream-independent upper bound on whole-host production for `f`
+    /// input frames, mirroring [`Self::output_frames_for_input`]. Any
+    /// unknown plugin envelope, missing node, or structural anomaly
+    /// answers `None` so callers keep live sizing. Allocation-free apart
+    /// from the plugin queries themselves (which are realtime-safe by
+    /// contract); the recursion depth follows the topology. Like the live
+    /// query, this trusts the build-time sampled identity fast path: a
+    /// variable geometry coinciding with identity at the probe size would
+    /// mislead both identically (mid-call growth, never silent
+    /// corruption); no in-tree geometry does.
+    pub fn output_frames_envelope(&self, f: usize) -> Option<usize> {
+        if self.cached_frames_identity {
+            return Some(f);
+        }
+        let mut maximum: Option<usize> = None;
+        for &id in &self.output_nodes {
+            let path = self.path_output_envelope(id, f)?;
+            maximum = Some(maximum.map_or(path, |current| current.max(path)));
+        }
+        Some(maximum.unwrap_or(f))
+    }
+
+    /// Envelope propagation along one path, mirroring
+    /// [`Self::path_output_frames`]. Bypassed nodes pass the count
+    /// through; any unknown envelope answers `None`.
+    fn path_output_envelope(&self, id: NodeId, frames: usize) -> Option<usize> {
+        let mut input_frames: Option<usize> = None;
+        if let Some(predecessors) = self.predecessors.get(id) {
+            for edge in predecessors {
+                let path = self.path_output_envelope(edge.from_node, frames)?;
+                input_frames = Some(input_frames.map_or(path, |current| current.max(path)));
+            }
+        }
+        let input_frames = input_frames.unwrap_or(frames);
+        let node = self.nodes.get(&id)?;
+        if node.bypassed {
+            return Some(input_frames);
+        }
+        let plugin = self.plugins.get(id)?.as_ref()?;
+        Self::plugin_output_frames_envelope_isolated(plugin.as_ref(), id, &node.name, input_frames)
+    }
+
+    /// Largest per-call node-buffer need at MAX_BLOCK_FRAMES: the block
+    /// size itself maxed with the host output propagation (envelope where
+    /// known, live otherwise). Sizes cold-process preparation, so the
+    /// first callback (and every block within the documented ceiling)
+    /// allocates nothing. The per-call need `nf.max(host(nf))` is
+    /// non-decreasing in `nf` for envelopes (contract) and assumed so
+    /// for live declarations (the same assumption live sizing already
+    /// makes). Propagated directly (no cached fast path: build refreshes
+    /// the cache after preparing buffers). Control-thread only.
+    fn max_block_process_need(&self) -> usize {
+        let mut need = Self::MAX_BLOCK_FRAMES;
+        for &id in &self.output_nodes {
+            let path = self
+                .path_output_envelope(id, Self::MAX_BLOCK_FRAMES)
+                .unwrap_or_else(|| self.path_output_frames(id, Self::MAX_BLOCK_FRAMES));
+            need = need.max(path);
+        }
+        need
+    }
+
+    /// Parallel-scratch output need for one node at MAX_BLOCK_FRAMES: the
+    /// isolated envelope-or-live bound, never below MAX_BLOCK (today's
+    /// size). The parallel fast path sizes per-call output from the live
+    /// declaration at the block size, so the MAX_BLOCK value covers every
+    /// smaller block (envelope monotonicity; same live assumption as
+    /// everywhere else). Control-thread only.
+    fn parallel_output_prep_frames(&self, id: NodeId, node: &GraphNode) -> usize {
+        if node.bypassed {
+            return Self::MAX_BLOCK_FRAMES;
+        }
+        let Some(plugin) = self.plugins.get(id).and_then(Option::as_ref) else {
+            return Self::MAX_BLOCK_FRAMES;
+        };
+        Self::MAX_BLOCK_FRAMES.max(
+            Self::plugin_output_frames_envelope_isolated(
+                plugin.as_ref(),
+                id,
+                &node.name,
+                Self::MAX_BLOCK_FRAMES,
+            )
+            .unwrap_or_else(|| {
+                Self::plugin_output_frames_for_input_isolated(
+                    plugin.as_ref(),
+                    id,
+                    &node.name,
+                    Self::MAX_BLOCK_FRAMES,
+                )
+            }),
+        )
+    }
+
     pub fn output_sample_rate(&self, r: u32) -> u32 {
         if self.cached_rate_identity {
             return r;
@@ -2215,6 +2850,21 @@ impl DawHost {
         self.output_nodes
             .first()
             .map_or(r, |&id| self.path_output_rate(id, r))
+    }
+
+    /// Whether every host output negotiates to `expected` from `input_rate`.
+    ///
+    /// Same isolated rate walk as [`Self::output_sample_rate`] over all
+    /// output nodes instead of the first only, so multi-output gates cannot
+    /// miss a misclocked sibling. Allocates nothing; audio-thread safe. An
+    /// empty host passes through, so it checks the input rate itself.
+    pub fn all_output_sample_rates_equal(&self, input_rate: u32, expected: u32) -> bool {
+        if self.cached_rate_identity || self.output_nodes.is_empty() {
+            return input_rate == expected;
+        }
+        self.output_nodes
+            .iter()
+            .all(|&id| self.path_output_rate(id, input_rate) == expected)
     }
 
     fn path_output_rate(&self, id: NodeId, rate: u32) -> u32 {
@@ -2455,12 +3105,11 @@ impl DawHost {
                 .get(nid)
                 .and_then(Option::as_ref)
                 .ok_or("plugin not found")?;
-            let parameters = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                plugin.parameters()
-            }))
-            .map_err(|_| {
-                format!("Plugin at index {index} panicked while listing parameters")
-            })?;
+            let parameters =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| plugin.parameters()))
+                    .map_err(|_| {
+                        format!("Plugin at index {index} panicked while listing parameters")
+                    })?;
             let is_structural = parameters
                 .iter()
                 .find(|parameter| parameter.id.as_str() == id)
@@ -2548,6 +3197,35 @@ impl DawHost {
         }
     }
 
+    /// Isolated `output_frames_envelope` query: a panicking plugin
+    /// answers unknown (`None`) instead of unwinding into the host, so the
+    /// graph keeps live sizing. Allocation-free on the query itself; the
+    /// rate-limited panic log may allocate, exactly like the live query.
+    pub(super) fn plugin_output_frames_envelope_isolated(
+        plugin: &dyn Plugin,
+        node_id: NodeId,
+        node_name: &str,
+        input_frames: usize,
+    ) -> Option<usize> {
+        match catch_unwind(AssertUnwindSafe(|| {
+            plugin.output_frames_envelope(input_frames)
+        })) {
+            Ok(envelope) => envelope,
+            Err(payload) => {
+                let reason = panic_payload_description(payload.as_ref());
+                crate::rate_limited_log!(
+                    error,
+                    5,
+                    "host: plugin '{}' (node {}) panicked in output_frames_envelope: {}; assuming unknown envelope",
+                    node_name,
+                    node_id,
+                    reason
+                );
+                None
+            }
+        }
+    }
+
     pub(super) fn plugin_output_sample_rate_isolated(
         plugin: &dyn Plugin,
         node_id: NodeId,
@@ -2577,7 +3255,7 @@ impl DawHost {
         input: &[f32],
         output: &mut [f32],
         context: &ProcessContext<'_>,
-    ) -> usize {
+    ) -> IsolatedProcessOutcome {
         let fallback = |output: &mut [f32]| {
             write_plugin_failure_passthrough(
                 input,
@@ -2591,7 +3269,10 @@ impl DawHost {
         match catch_unwind(AssertUnwindSafe(|| plugin.process(input, output, context))) {
             Ok(Ok(frames)) => {
                 if frames.saturating_mul(node.output_channels()) <= output.len() {
-                    frames
+                    IsolatedProcessOutcome {
+                        frames,
+                        over_reported: None,
+                    }
                 } else {
                     crate::rate_limited_log!(
                         error,
@@ -2602,7 +3283,10 @@ impl DawHost {
                         frames,
                         output.len()
                     );
-                    fallback(output)
+                    IsolatedProcessOutcome {
+                        frames: fallback(output),
+                        over_reported: Some(frames),
+                    }
                 }
             }
             Ok(Err(err)) => {
@@ -2613,7 +3297,10 @@ impl DawHost {
                     node.name,
                     node.id
                 );
-                fallback(output)
+                IsolatedProcessOutcome {
+                    frames: fallback(output),
+                    over_reported: None,
+                }
             }
             Err(payload) => {
                 let reason = panic_payload_description(payload.as_ref());
@@ -2625,7 +3312,10 @@ impl DawHost {
                     node.id,
                     reason
                 );
-                fallback(output)
+                IsolatedProcessOutcome {
+                    frames: fallback(output),
+                    over_reported: None,
+                }
             }
         }
     }
@@ -2746,7 +3436,7 @@ impl DawHost {
         input: &[f64],
         output: &mut [f64],
         context: &ProcessContext<'_>,
-    ) -> usize {
+    ) -> IsolatedProcessOutcome {
         let fallback = |output: &mut [f64]| {
             write_plugin_failure_passthrough(
                 input,
@@ -2762,7 +3452,10 @@ impl DawHost {
         })) {
             Ok(Ok(frames)) => {
                 if frames.saturating_mul(node.output_channels()) <= output.len() {
-                    frames
+                    IsolatedProcessOutcome {
+                        frames,
+                        over_reported: None,
+                    }
                 } else {
                     crate::rate_limited_log!(
                         error,
@@ -2773,7 +3466,10 @@ impl DawHost {
                         frames,
                         output.len()
                     );
-                    fallback(output)
+                    IsolatedProcessOutcome {
+                        frames: fallback(output),
+                        over_reported: Some(frames),
+                    }
                 }
             }
             Ok(Err(err)) => {
@@ -2784,7 +3480,10 @@ impl DawHost {
                     node.name,
                     node.id
                 );
-                fallback(output)
+                IsolatedProcessOutcome {
+                    frames: fallback(output),
+                    over_reported: None,
+                }
             }
             Err(payload) => {
                 let reason = panic_payload_description(payload.as_ref());
@@ -2796,7 +3495,10 @@ impl DawHost {
                     node.id,
                     reason
                 );
-                fallback(output)
+                IsolatedProcessOutcome {
+                    frames: fallback(output),
+                    over_reported: None,
+                }
             }
         }
     }
@@ -2849,6 +3551,10 @@ impl DawHost {
             // Accepted actions can restart work even when getter values are
             // unchanged. Unrelated controls and rejected writes do not rearm.
             self.drain_state.remaining_calls = None;
+            self.drain_state.quota_grant_tail = None;
+        }
+        if result.is_ok() {
+            self.graph_drain_state.rearm_node(node_id);
         }
         result
     }
@@ -2970,6 +3676,7 @@ impl DawHost {
         if let Some(node) = self.nodes.get_mut(&id) {
             if node.bypassed != bypassed {
                 self.drain_state = DrainState::default();
+                self.graph_drain_state.reset_dynamic();
             }
             node.bypassed = bypassed;
         }
@@ -3011,6 +3718,11 @@ impl DawHost {
     }
 
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<usize, String> {
+        if self.merge_overflow_poisoned {
+            return Err(
+                "host merge retention overflowed; reset the host before further processing".into(),
+            );
+        }
         if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
             return Err("terminal sink graphs require explicit process_to_sink processing".into());
         }
@@ -3031,10 +3743,60 @@ impl DawHost {
         }
         let mut events = std::mem::take(&mut self.queues.parameter_event_scratch);
         self.drain_parameter_events_into(&mut events);
-        let result = self.process_with_parameter_events(input, output, &mut events);
+        let result = self.process_with_parameter_events(input, output, &mut events, true);
         self.queues.parameter_event_scratch = events;
         if result.is_ok() && !input.is_empty() {
             self.drain_state = DrainState::default();
+            self.graph_drain_state.reset_dynamic();
+        }
+        result
+    }
+
+    /// Process an input block and report actual produced frames, never padded.
+    ///
+    /// Same render core as [`process`](Self::process) (guards, parameter
+    /// events, automation, drain-state reset), except short blocks are NOT
+    /// padded up to the input length: the return value is the actual
+    /// collected frame count `cf`, and output beyond `cf` frames is left
+    /// untouched, so the caller must use the returned count. Identity and
+    /// rate-converting chains report identically on both entries (padding
+    /// only ever triggers for same-clock variable chains); only the masked
+    /// short-production case differs, and there this entry is the truthful
+    /// one. Additive API: `process` keeps its padded contract for existing
+    /// callers. This is the structural closer for the AB observability
+    /// residual (R2 §5): consumers that pair frames by stream position no
+    /// longer infer production from declarations plus probes.
+    pub fn process_unpadded(&mut self, input: &[f32], output: &mut [f32]) -> Result<usize, String> {
+        if self.merge_overflow_poisoned {
+            return Err(
+                "host merge retention overflowed; reset the host before further processing".into(),
+            );
+        }
+        if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
+            return Err("terminal sink graphs require explicit process_to_sink processing".into());
+        }
+        self.drain_graph_mutations()?;
+        if !self.built {
+            self.build()?;
+        }
+        if let Some((index, sample)) = input
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, sample)| !sample.is_finite())
+        {
+            output.fill(0.0);
+            return Err(format!(
+                "host input contains non-finite sample at index {index}: {sample}"
+            ));
+        }
+        let mut events = std::mem::take(&mut self.queues.parameter_event_scratch);
+        self.drain_parameter_events_into(&mut events);
+        let result = self.process_with_parameter_events(input, output, &mut events, false);
+        self.queues.parameter_event_scratch = events;
+        if result.is_ok() && !input.is_empty() {
+            self.drain_state = DrainState::default();
+            self.graph_drain_state.reset_dynamic();
         }
         result
     }
@@ -3227,6 +3989,7 @@ impl DawHost {
             });
         }
         self.drain_state = DrainState::default();
+        self.graph_drain_state.reset_dynamic();
 
         let pending_sink_frames = match self.service_terminal_sink_pending(sink_id) {
             Ok(state) => state.pending_frames,
@@ -3645,7 +4408,79 @@ impl DawHost {
     ///
     /// Multiply by [`Self::output_channels`] to size the interleaved destination.
     /// Queued graph mutations applied by [`Self::drain`] can change this bound.
+    /// Chains use the propagated per-stage maximum; built branched graphs use
+    /// the cached scheduler bound refreshed from live stream-state declarations
+    /// (a fresh resampler reports 0, mid-stream its block maximum), so callers
+    /// must query after the final process block, exactly like chains. Once a
+    /// drain session starts, the enforced per-call bound freezes for the whole
+    /// session: later live declaration growth only enlarges internal
+    /// reservations while emission stays paced to the frozen value, so a
+    /// buffer sized from the begin query stays valid to completion.
+    /// Unbuilt branched graphs report a heuristic estimate until [`Self::build`]
+    /// runs (`drain` refreshes before enforcing capacity, so the enforced
+    /// bound is exact).
     pub fn drain_output_frames_max(&self) -> usize {
+        if self.is_chain_topology_for_drain() {
+            return self.chain_drain_output_frames_max();
+        }
+        if self.built {
+            if let Some(bound) = self.graph_drain_state.session_output_bound {
+                return bound;
+            }
+            let cached = self.graph_drain_plan.bound_frames;
+            if !self.graph_node_declarations_changed() {
+                return cached;
+            }
+            return cached.max(
+                self.derive_graph_drain_plan()
+                    .map_or(0, |plan| plan.bound_frames),
+            );
+        }
+        self.unbuilt_graph_drain_estimate()
+    }
+
+    /// Test-only live (unfrozen) graph drain bound: what the bound query
+    /// would answer from current declarations without the session freeze.
+    /// `None` for chains and unbuilt graphs. Lets the session-freeze test
+    /// prove it actually exercises mid-drain growth instead of passing
+    /// vacuously on a constant derivation.
+    #[cfg(test)]
+    pub(super) fn graph_drain_live_bound_for_test(&self) -> Option<usize> {
+        if self.is_chain_topology_for_drain() || !self.built {
+            return None;
+        }
+        Some(
+            self.graph_drain_plan.bound_frames.max(
+                self.derive_graph_drain_plan()
+                    .map_or(0, |plan| plan.bound_frames),
+            ),
+        )
+    }
+
+    /// Test-only rebuild-cached envelope bound: `Some` when the stored
+    /// graph plan was derived from envelopes (chains answer their live
+    /// propagation instead). Lets envelope tests prove they exercise the
+    /// prepared path instead of passing vacuously on legacy sizing.
+    #[cfg(test)]
+    pub(super) fn graph_drain_envelope_bound_for_test(&self) -> Option<usize> {
+        if self.is_chain_topology_for_drain() {
+            return self.chain_drain_envelope_bound();
+        }
+        if !self.built {
+            return None;
+        }
+        self.graph_drain_plan.envelope_bound
+    }
+
+    /// Test-only count of drain-entry plan refreshes since the last
+    /// dynamic reset. Lets the session-freeze test prove drift refreshes
+    /// actually ran instead of passing on a quiet derivation.
+    #[cfg(test)]
+    pub(super) fn graph_drain_refresh_count_for_test(&self) -> u64 {
+        self.graph_drain_state.drain_refresh_count
+    }
+
+    fn chain_drain_output_frames_max(&self) -> usize {
         let mut maximum = 0usize;
         for (index, &node_id) in self.chain_nodes.iter().enumerate() {
             if self.nodes[&node_id].bypassed {
@@ -3667,12 +4502,167 @@ impl DawHost {
         maximum
     }
 
-    /// Drain a linear plugin chain in causal order without allocating.
+    /// Stream-independent chain EOS bound, mirroring
+    /// [`Self::chain_drain_output_frames_max`] with envelope queries. Any
+    /// unknown envelope or structural anomaly answers `None` so callers
+    /// keep live sizing. Allocation-free.
+    fn chain_drain_envelope_bound(&self) -> Option<usize> {
+        let mut maximum = 0usize;
+        for (index, &node_id) in self.chain_nodes.iter().enumerate() {
+            let Some(node) = self.nodes.get(&node_id) else {
+                continue;
+            };
+            if node.bypassed {
+                continue;
+            }
+            let Some(plugin) = self.plugins.get(node_id).and_then(Option::as_ref) else {
+                continue;
+            };
+            let mut frames = plugin.drain_frames_envelope()?;
+            for &downstream_id in &self.chain_nodes[index + 1..] {
+                let downstream_node = self.nodes.get(&downstream_id)?;
+                if downstream_node.bypassed {
+                    continue;
+                }
+                let downstream = self.plugins.get(downstream_id).and_then(Option::as_ref)?;
+                frames = Self::plugin_output_frames_envelope_isolated(
+                    downstream.as_ref(),
+                    downstream_id,
+                    &downstream_node.name,
+                    frames,
+                )?;
+            }
+            maximum = maximum.max(frames);
+        }
+        Some(maximum)
+    }
+
+    /// Largest intermediate chain wave over every envelope stage pair, for
+    /// build-time scratch preparation. The final bound alone does not
+    /// dominate intermediate extents (an upsampler's emission can exceed
+    /// the downsampled sink bound), so preparation tracks every prefix of
+    /// every propagation. `None` keeps today's sizing. Allocation-free.
+    fn chain_envelope_prep_frames(&self) -> Option<usize> {
+        let mut maximum = 0usize;
+        for (index, &node_id) in self.chain_nodes.iter().enumerate() {
+            let Some(node) = self.nodes.get(&node_id) else {
+                continue;
+            };
+            if node.bypassed {
+                continue;
+            }
+            let Some(plugin) = self.plugins.get(node_id).and_then(Option::as_ref) else {
+                continue;
+            };
+            let mut wave = plugin.drain_frames_envelope()?;
+            maximum = maximum.max(wave);
+            for &downstream_id in &self.chain_nodes[index + 1..] {
+                let downstream_node = self.nodes.get(&downstream_id)?;
+                if downstream_node.bypassed {
+                    continue;
+                }
+                let downstream = self.plugins.get(downstream_id).and_then(Option::as_ref)?;
+                wave = Self::plugin_output_frames_envelope_isolated(
+                    downstream.as_ref(),
+                    downstream_id,
+                    &downstream_node.name,
+                    wave,
+                )?;
+                maximum = maximum.max(wave);
+            }
+        }
+        Some(maximum)
+    }
+
+    /// Stream-independent per-call EOS bound for nesting hosts. Chains
+    /// propagate envelopes live (allocation-free, bypass-aware); built
+    /// graphs answer the rebuild-cached envelope bound; anything else
+    /// (unbuilt graphs, legacy plans) answers `None` so the outer host
+    /// keeps live sizing. Never allocates.
+    pub fn drain_frames_envelope(&self) -> Option<usize> {
+        if self.is_chain_topology_for_drain() {
+            return self.chain_drain_envelope_bound();
+        }
+        if self.built {
+            return self.graph_drain_plan.envelope_bound;
+        }
+        None
+    }
+
+    /// Conservative EOS bound for a graph that has not been built yet.
+    ///
+    /// Every path expansion is applied to the summed per-node allowances, so
+    /// under the same monotonic `output_frames_for_input` assumption the
+    /// chain bound already makes, this dominates the exact built bound.
+    /// [`Self::drain`] always builds before enforcing capacity.
+    fn unbuilt_graph_drain_estimate(&self) -> usize {
+        let mut total = 0usize;
+        for (&id, node) in &self.nodes {
+            if node.bypassed {
+                continue;
+            }
+            let Some(plugin) = self.plugins[id].as_ref() else {
+                continue;
+            };
+            total = total
+                .saturating_add(plugin.drain_output_frames_max())
+                .saturating_add(plugin.latency_samples());
+        }
+        for (&id, node) in &self.nodes {
+            if node.bypassed {
+                continue;
+            }
+            let Some(plugin) = self.plugins[id].as_ref() else {
+                continue;
+            };
+            total = total.max(Self::plugin_output_frames_for_input_isolated(
+                plugin.as_ref(),
+                id,
+                &node.name,
+                total,
+            ));
+        }
+        total
+    }
+
+    /// Structural chain check for EOS routing, mirroring what the chain
+    /// drain validators admit: serial links must be plain audio edges
+    /// (no sidechain, map, or offset). Admitted chains keep the existing
+    /// linear and channel-changing drain paths; anything else uses the
+    /// branched graph scheduler, which routes key edges, maps, and
+    /// offsets. This deliberately ignores build state so the capacity
+    /// query matches before and after [`Self::build`].
+    fn is_chain_topology_for_drain(&self) -> bool {
+        if self.chain_nodes.is_empty()
+            || self.chain_nodes.len() != self.nodes.len()
+            || self.edges.len() != self.chain_nodes.len().saturating_sub(1)
+        {
+            return false;
+        }
+        for pair in self.chain_nodes.windows(2) {
+            let linked = self.edges.iter().any(|edge| {
+                edge.from_node == pair[0]
+                    && edge.to_node == pair[1]
+                    && edge.edge_type == EdgeType::Audio
+                    && edge.channel_map.is_none()
+                    && edge.destination_offset == 0
+            });
+            if !linked {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Drain plugin tails in causal order without allocating.
     ///
     /// Output from an upstream tail is processed through all downstream nodes
     /// before the downstream node's own tail is drained. This ordering is what
     /// prevents a resampler followed by a limiter/convolver from losing either
-    /// plugin's final state.
+    /// plugin's final state. Linear chains keep their historical single-cursor
+    /// walk; branched graphs run one bounded scheduler round per call, with
+    /// per-edge EOF, timestamp-aligned joins, and latency-compensation
+    /// flushing, until every node is complete.
     ///
     /// For a nonempty graph, `output` must contain whole output-channel frames
     /// and hold at least [`Self::drain_output_frames_max`] frames, even when the
@@ -3686,6 +4676,9 @@ impl DawHost {
     /// when unknown. Successful zero-output calls count too. Completed stages
     /// are never revisited until reset, new accepted input, or graph mutation.
     /// An accepted active-stage control refreshes only that stage's quota.
+    /// Quota exhaustion trips loudly — except once per stage for deferred
+    /// arming: a plugin whose tail turned `Finite` since the grant earns one
+    /// re-queried budget (see `Plugin::drain_call_bound`).
     ///
     /// # Errors
     ///
@@ -3694,6 +4687,11 @@ impl DawHost {
     /// processing failure. Capacity errors leave audio state unconsumed; queued
     /// graph and parameter changes may already have been applied. Plugin errors need not leave audio state unchanged.
     pub fn drain(&mut self, output: &mut [f32]) -> Result<PluginDrainResult, String> {
+        if self.merge_overflow_poisoned {
+            return Err(
+                "host merge retention overflowed; reset the host before further processing or drain".into(),
+            );
+        }
         if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
             return Err("terminal sink graphs require explicit drain_to_sink handling".into());
         }
@@ -3708,6 +4706,9 @@ impl DawHost {
         }
         if self.nodes.is_empty() {
             return Ok(PluginDrainResult::COMPLETE);
+        }
+        if !self.is_topologically_linear_chain() && !self.is_chain_topology_for_drain() {
+            return self.drain_graph(output);
         }
         let channel_changing_drain = !self.is_topologically_linear_chain();
         if self.drain_state.completed_prefix == self.chain_nodes.len() {
@@ -3774,6 +4775,7 @@ impl DawHost {
                 self.drain_state.active_node = Some(node_id);
                 self.drain_state.prepared = false;
                 self.drain_state.remaining_calls = None;
+                self.drain_state.quota_grant_tail = None;
             }
             if !self.drain_state.prepared {
                 self.plugins[node_id]
@@ -3782,18 +4784,31 @@ impl DawHost {
                     .begin_drain(&drain_context)?;
                 self.drain_state.prepared = true;
             }
-            let remaining = *self.drain_state.remaining_calls.get_or_insert_with(|| {
-                self.plugins[node_id]
-                    .as_ref()
-                    .unwrap()
+            if self.drain_state.remaining_calls.is_none() {
+                let plugin = self.plugins[node_id].as_ref().unwrap();
+                let bound = plugin
                     .drain_call_bound()
-                    .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get)
-            });
+                    .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get);
+                self.drain_state.quota_grant_tail = Some(plugin.tail_length());
+                self.drain_state.remaining_calls = Some(bound);
+            }
+            let mut remaining = self.drain_state.remaining_calls.unwrap_or(0);
             if remaining == 0 {
-                return Err(format!(
-                    "plugin '{}' drain did not converge within its call bound",
-                    node.name
-                ));
+                let plugin = self.plugins[node_id].as_ref().unwrap();
+                let grant_tail = self
+                    .drain_state
+                    .quota_grant_tail
+                    .unwrap_or(TailLength::Unknown);
+                if let Some((budget, current)) = drain_quota_refresh(plugin.as_ref(), grant_tail) {
+                    self.drain_state.quota_grant_tail = Some(current);
+                    self.drain_state.remaining_calls = Some(budget);
+                    remaining = budget;
+                } else {
+                    return Err(format!(
+                        "plugin '{}' drain did not converge within its call bound",
+                        node.name
+                    ));
+                }
             }
             let result = self.plugins[node_id]
                 .as_mut()
@@ -3877,6 +4892,1709 @@ impl DawHost {
         }
 
         Ok(PluginDrainResult::COMPLETE)
+    }
+
+    /// Copy delay-ring history out of built compensation delays.
+    ///
+    /// Build path only: the clone allocates.
+    fn snapshot_compensation<T: AudioSample>(
+        delays: &CompensationDelays<T>,
+    ) -> CompDelaySnapshot<T> {
+        fn snap<T: AudioSample>(slot: &Option<DelayBuffer<T>>) -> Option<(Vec<T>, usize, usize)> {
+            slot.as_ref()
+                .map(|delay| (delay.buffer.clone(), delay.pos, delay.channels))
+        }
+        CompDelaySnapshot {
+            edges: delays.delays.iter().map(snap).collect(),
+            outputs: delays.output_delays.iter().map(snap).collect(),
+        }
+    }
+
+    /// Restore snapshotted history into matching fresh delays.
+    ///
+    /// A slot is restored only when delay length and channel count
+    /// still match exactly (same ring size); anything else keeps its
+    /// fresh zeroed history. Copies within equal lengths: no growth.
+    fn restore_compensation<T: AudioSample>(
+        delays: &mut CompensationDelays<T>,
+        snapshot: CompDelaySnapshot<T>,
+    ) {
+        fn restore<T: AudioSample>(
+            slots: &mut [Option<DelayBuffer<T>>],
+            olds: Vec<Option<(Vec<T>, usize, usize)>>,
+        ) {
+            for (slot, old) in slots.iter_mut().zip(olds) {
+                let (Some(delay), Some((buffer, pos, channels))) = (slot.as_mut(), old) else {
+                    continue;
+                };
+                if delay.channels == channels
+                    && delay.channels > 0
+                    && delay.buffer.len() == buffer.len()
+                    && pos < delay.delay
+                {
+                    delay.buffer.copy_from_slice(&buffer);
+                    delay.pos = pos;
+                }
+            }
+        }
+        restore(&mut delays.delays, snapshot.edges);
+        restore(&mut delays.output_delays, snapshot.outputs);
+    }
+
+    fn graph_drain_signature(&self) -> GraphDrainSignature {
+        let mut nodes: Vec<NodeId> = self.nodes.keys().copied().collect();
+        nodes.sort_unstable();
+        GraphDrainSignature {
+            nodes,
+            edges: self
+                .edges
+                .iter()
+                .map(|edge| (edge.from_node, edge.to_node, edge.id, edge.edge_type))
+                .collect(),
+            channel_routes: self
+                .edges
+                .iter()
+                .map(|edge| (edge.channel_map.clone(), edge.destination_offset))
+                .collect(),
+        }
+    }
+
+    /// Derive the graph EOS plan values from live plugin declarations.
+    ///
+    /// Read-only: topology order, routed widths, compensation lengths, and
+    /// the per-node quantum/emission recurrence are recomputed from current
+    /// `drain_output_frames_max` / `output_frames_for_input` answers without
+    /// touching dynamic drain state. [`Self::rebuild_graph_drain_plan`]
+    /// merges the result with the stored plan; the bound query reads only
+    /// `bound_frames` from it. Quota queries stay out: the plugin trait
+    /// orders `drain_call_bound` after a successful `begin_drain`, itself
+    /// after output-capacity validation.
+    /// Structural inputs for one EOS derivation, shared by the live and
+    /// envelope derivations. Control-thread only: this allocates.
+    fn graph_drain_topology(&self) -> Result<GraphDrainTopology, String> {
+        for (index, edge) in self.edges.iter().enumerate() {
+            if edge.id != index {
+                return Err(format!(
+                    "graph drain plan requires edge ids to match edge order (edge {index} has id {})",
+                    edge.id
+                ));
+            }
+        }
+        let signature = self.graph_drain_signature();
+        let topo_order: Vec<NodeId> = self
+            .stages
+            .iter()
+            .flat_map(|stage| stage.nodes.iter().copied())
+            .collect();
+
+        // Routed widths in compensation order: stages, nodes, predecessors.
+        // Routed widths must match `compute_compensation_delays` exactly,
+        // including the sidechain running-offset sequence, so queues hold
+        // exactly the frames their delay line was built for. The shared
+        // helper also sizes process-phase retention, keeping both identical.
+        let routed = Self::edge_routed_channels(&self.nodes, &self.edges, &self.predecessors);
+
+        let buffers = self
+            .process_buffers
+            .as_ref()
+            .ok_or("graph drain plan requires prepared process buffers")?;
+        let mut comp_frames = vec![0usize; self.edges.len()];
+        for (index, delay) in buffers.compensation_delays.delays.iter().enumerate() {
+            let Some(delay) = delay else { continue };
+            if index >= routed.len() || delay.channels != routed[index] {
+                return Err(format!(
+                    "graph drain plan found a compensation delay that does not match edge {index}"
+                ));
+            }
+            comp_frames[index] = delay.delay;
+        }
+        let output_comp_frames: Vec<usize> = buffers
+            .compensation_delays
+            .output_delays
+            .iter()
+            .map(|delay| delay.as_ref().map_or(0, |delay| delay.delay))
+            .collect();
+        if output_comp_frames.len() != self.output_nodes.len() {
+            return Err(
+                "graph drain plan found output delays that do not match output nodes".into(),
+            );
+        }
+        Ok(GraphDrainTopology {
+            signature,
+            topo_order,
+            routed,
+            comp_frames,
+            output_comp_frames,
+        })
+    }
+
+    fn derive_graph_drain_plan(&self) -> Result<GraphDrainPlan, String> {
+        let topo = self.graph_drain_topology()?;
+        let num_slots = self.predecessors.len();
+        // Size the tail-fold scratch off the audio path: derivation runs at
+        // build (and on rare declaration-refresh derivations, which already
+        // allocate), so steady-state tail queries never grow the scratch.
+        // `resize` only allocates when the topology grew.
+        self.tail_fold_scratch.borrow_mut().resize(num_slots, None);
+
+        // Per-node quanta and single-emission bounds in topological order.
+        let mut node_plan = vec![GraphNodeDrainPlan::default(); num_slots];
+        for &node_id in &topo.topo_order {
+            let node = &self.nodes[&node_id];
+            let plugin = self.plugins[node_id]
+                .as_ref()
+                .ok_or_else(|| format!("graph drain plan is missing plugin {node_id}"))?;
+            let drain_max = if node.bypassed {
+                0
+            } else {
+                plugin.drain_output_frames_max()
+            };
+            let mut quantum = drain_max.max(1);
+            for (pred_pos, edge) in self.predecessors[node_id].iter().enumerate() {
+                let edge_index = self.predecessor_edge_indices[node_id][pred_pos];
+                if topo.routed[edge_index] == 0 {
+                    continue;
+                }
+                quantum = quantum.max(
+                    node_plan[edge.from_node]
+                        .single_emission
+                        .saturating_add(topo.comp_frames[edge_index]),
+                );
+            }
+            // Single query bound once: emission and the drift snapshot
+            // must observe the same plugin state.
+            let offi = if node.bypassed {
+                0
+            } else {
+                Self::plugin_output_frames_for_input_isolated(
+                    plugin.as_ref(),
+                    node_id,
+                    &node.name,
+                    quantum,
+                )
+            };
+            let emission = if node.bypassed {
+                quantum
+            } else {
+                offi.max(drain_max)
+            };
+            // No lifetime total is computed here. The plugin trait
+            // orders quota queries after a successful begin_drain,
+            // itself after output-capacity validation, so build-time
+            // planning must not query drain_call_bound (and must not
+            // begin a drain either). All queues are wave-bounded from
+            // pre-begin-legal metadata (frame geometry, drain chunk
+            // size, latency); backpressure paces producers, so tails
+            // of any finite declared length drain without
+            // lifetime-sized reservations.
+            node_plan[node_id] = GraphNodeDrainPlan {
+                process_quantum: quantum,
+                single_emission: emission,
+                bypassed: node.bypassed,
+                envelope: None,
+                drain_max_snapshot: drain_max,
+                offi_snapshot: offi,
+            };
+        }
+
+        self.finish_graph_drain_plan(topo, node_plan)
+    }
+
+    /// Assemble one EOS plan from per-node emissions, shared by the live
+    /// and envelope derivations. The bound, edge, and output formulas are
+    /// identical; only the node emissions differ. The envelope derivation
+    /// records its bound after assembly. Control-thread only: allocates.
+    fn finish_graph_drain_plan(
+        &self,
+        topo: GraphDrainTopology,
+        node_plan: Vec<GraphNodeDrainPlan>,
+    ) -> Result<GraphDrainPlan, String> {
+        let GraphDrainTopology {
+            signature,
+            topo_order,
+            routed,
+            comp_frames,
+            output_comp_frames,
+        } = topo;
+        let mut bound_frames = 0usize;
+        for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+            bound_frames = bound_frames.max(
+                node_plan[node_id]
+                    .single_emission
+                    .saturating_add(output_comp_frames[pos]),
+            );
+        }
+        // Every output owns a pending FIFO sized for one wave plus
+        // its output-delay flush. A fast concurrent output that fills
+        // its FIFO applies backpressure (it retains its wave and
+        // produces nothing new) until the round-end emission drains
+        // room; pacing never depends on total tail duration.
+        let output_queue_cap_frames: Vec<usize> = self
+            .output_nodes
+            .iter()
+            .enumerate()
+            .map(|(pos, &node_id)| {
+                node_plan[node_id]
+                    .single_emission
+                    .saturating_add(output_comp_frames[pos])
+            })
+            .collect();
+
+        let process_caps: &[usize] = self
+            .process_buffers
+            .as_ref()
+            .map(|buffers| buffers.merge_queue_caps.as_slice())
+            .unwrap_or(&[]);
+        let mut edge_plan = vec![GraphEdgeDrainPlan::default(); self.edges.len()];
+        for (index, edge) in self.edges.iter().enumerate() {
+            // The EOS queue also receives process-phase retention ahead of
+            // native tails, so its cap covers the drain wave plus retention.
+            let retention = process_caps.get(index).copied().unwrap_or(0);
+            let queue_cap_frames = node_plan[edge.from_node]
+                .single_emission
+                .saturating_add(comp_frames[index])
+                .checked_add(retention)
+                .ok_or_else(|| format!("graph drain queue cap overflows on edge {index}"))?;
+            edge_plan[index] = GraphEdgeDrainPlan {
+                routed_channels: routed[index],
+                queue_cap_frames,
+                comp_frames: comp_frames[index],
+            };
+        }
+
+        Ok(GraphDrainPlan {
+            topo_order,
+            node_plan,
+            edge_plan,
+            output_comp_frames,
+            output_queue_cap_frames,
+            bound_frames,
+            envelope_bound: None,
+            signature,
+        })
+    }
+
+    /// Stream-independent EOS plan when every node publishes envelopes.
+    ///
+    /// Mirrors [`Self::derive_graph_drain_plan`] with envelope queries:
+    /// quanta propagate envelope emissions plus compensation, and each
+    /// emission is the envelope pair's maximum. Dominance over every live
+    /// derivation follows by induction over topological order: drain
+    /// envelopes cover every stream state by contract, and process
+    /// envelopes are non-decreasing, so an envelope queried at the
+    /// (larger) envelope quantum dominates live production at the (smaller
+    /// or equal) live quantum without assuming live monotonicity.
+    /// Per-call destinations additionally size from live declarations
+    /// against these envelope holdovers, which is sound because the
+    /// envelope contract requires the envelope to dominate the live
+    /// declaration pointwise in every state (a loose-live publisher fails
+    /// loudly at the holdover check instead of corrupting silently).
+    /// Bypassed nodes record no query, exactly like the live derivation.
+    /// Any unknown envelope, missing node, or structural anomaly answers
+    /// `None` (the live derivation runs first and keeps its loud errors),
+    /// so the host keeps freeze-plus-refresh sizing for that graph.
+    /// Control-thread only: this allocates.
+    fn derive_graph_envelope_plan(&self) -> Option<GraphDrainPlan> {
+        let topo = self.graph_drain_topology().ok()?;
+        let num_slots = self.predecessors.len();
+        let mut node_plan = vec![GraphNodeDrainPlan::default(); num_slots];
+        for &node_id in &topo.topo_order {
+            let node = self.nodes.get(&node_id)?;
+            let plugin = self.plugins.get(node_id)?.as_ref()?;
+            let drain_env = if node.bypassed {
+                0
+            } else {
+                plugin.drain_frames_envelope()?
+            };
+            let mut quantum = drain_env.max(1);
+            let preds = self.predecessors.get(node_id)?;
+            let pred_edges = self.predecessor_edge_indices.get(node_id)?;
+            for (pred_pos, edge) in preds.iter().enumerate() {
+                let edge_index = *pred_edges.get(pred_pos)?;
+                if topo.routed.get(edge_index).copied().unwrap_or(0) == 0 {
+                    continue;
+                }
+                let pred_emission = node_plan.get(edge.from_node)?.single_emission;
+                quantum = quantum
+                    .max(pred_emission.saturating_add(topo.comp_frames.get(edge_index).copied()?));
+            }
+            let (emission, envelope) = if node.bypassed {
+                (quantum, None)
+            } else {
+                let offi = Self::plugin_output_frames_envelope_isolated(
+                    plugin.as_ref(),
+                    node_id,
+                    &node.name,
+                    quantum,
+                )?;
+                let snapshot = GraphNodeEnvelope {
+                    quantum,
+                    offi,
+                    drain: drain_env,
+                };
+                (offi.max(drain_env), Some(snapshot))
+            };
+            // Live snapshots stay honest ("when this entry was derived")
+            // even though the guards ignore them on envelope plans.
+            let drain_max = if node.bypassed {
+                0
+            } else {
+                plugin.drain_output_frames_max()
+            };
+            let offi_snapshot = if node.bypassed {
+                0
+            } else {
+                Self::plugin_output_frames_for_input_isolated(
+                    plugin.as_ref(),
+                    node_id,
+                    &node.name,
+                    quantum,
+                )
+            };
+            *node_plan.get_mut(node_id)? = GraphNodeDrainPlan {
+                process_quantum: quantum,
+                single_emission: emission,
+                bypassed: node.bypassed,
+                envelope,
+                drain_max_snapshot: drain_max,
+                offi_snapshot,
+            };
+        }
+        let mut plan = self.finish_graph_drain_plan(topo, node_plan).ok()?;
+        plan.envelope_bound = Some(plan.bound_frames);
+        Some(plan)
+    }
+
+    /// True when live node declarations outgrow the plan snapshot.
+    ///
+    /// Compares the drain bound (any change) and `output_frames_for_input`
+    /// at the recorded quantum (growth only): residual carry drifts the
+    /// latter mid-drain even while the drain bound holds still, and a new
+    /// peak means a materialized wave could exceed its holdover, so the
+    /// plan must re-derive and grow. Shrinkage never fires: reservations
+    /// only grow, so the recorded peak still covers current waves, and
+    /// oscillating carry (any chunked fixture) must not churn refreshes
+    /// on every round — the no-alloc drain paths depend on that quiet.
+    /// Allocation-free (declaration queries plus integer compares only),
+    /// so the drain entry and the bound query gate the allocating
+    /// re-derivation on this: graphs of state-independent plugins never
+    /// pay for the resampler case. Mirrors the derivation's bypass rule
+    /// exactly (a bypassed node records zeros and derives no query).
+    /// Structural anomalies (a missing plugin or node, a short plan)
+    /// report false so the existing validators keep their exact loud
+    /// errors instead of a re-derivation error.
+    ///
+    /// On envelope plans (every node published envelopes) this degrades
+    /// to guard checks only: live declarations legitimately drift under
+    /// envelope-sized reservations, so only a bypass toggle or a changed
+    /// envelope answer (a plugin contract violation) re-derives. Both
+    /// guards are allocation-free.
+    fn graph_node_declarations_changed(&self) -> bool {
+        if self.graph_drain_plan.envelope_bound.is_some() {
+            return self.graph_envelope_guards_tripped();
+        }
+        for &node_id in &self.graph_drain_plan.topo_order {
+            let Some(node) = self.nodes.get(&node_id) else {
+                return false;
+            };
+            let Some(recorded) = self.graph_drain_plan.node_plan.get(node_id) else {
+                return false;
+            };
+            let Some(plugin) = self.plugins.get(node_id).and_then(Option::as_ref) else {
+                return false;
+            };
+            let live_drain = if node.bypassed {
+                0
+            } else {
+                plugin.drain_output_frames_max()
+            };
+            if live_drain != recorded.drain_max_snapshot {
+                return true;
+            }
+            if !node.bypassed {
+                let live_offi = Self::plugin_output_frames_for_input_isolated(
+                    plugin.as_ref(),
+                    node_id,
+                    &node.name,
+                    recorded.process_quantum,
+                );
+                if live_offi > recorded.offi_snapshot {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Guard checks for envelope plans: bypass toggles and envelope
+    /// mutation only. Live declaration drift is expected and covered, so
+    /// it never fires here. Missing nodes, plugins, or snapshots report
+    /// false so downstream validators keep their exact loud errors.
+    /// Allocation-free: flag compares plus envelope queries only.
+    fn graph_envelope_guards_tripped(&self) -> bool {
+        for &node_id in &self.graph_drain_plan.topo_order {
+            let Some(node) = self.nodes.get(&node_id) else {
+                return false;
+            };
+            let Some(recorded) = self.graph_drain_plan.node_plan.get(node_id) else {
+                return false;
+            };
+            if node.bypassed != recorded.bypassed {
+                return true;
+            }
+            if node.bypassed {
+                continue;
+            }
+            let Some(snapshot) = recorded.envelope else {
+                // A non-bypassed node without a snapshot never belonged
+                // to an envelope derivation: re-derive to be safe.
+                return true;
+            };
+            let Some(plugin) = self.plugins.get(node_id).and_then(Option::as_ref) else {
+                return false;
+            };
+            if plugin.drain_frames_envelope() != Some(snapshot.drain) {
+                return true;
+            }
+            let live_offi = Self::plugin_output_frames_envelope_isolated(
+                plugin.as_ref(),
+                node_id,
+                &node.name,
+                snapshot.quantum,
+            );
+            if live_offi != Some(snapshot.offi) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Build the static graph EOS plan and its preallocated state.
+    ///
+    /// Control-thread only: this may allocate. Dynamic progress (phases,
+    /// quotas, queued waves, holdovers) is preserved when the topology
+    /// signature matches the previous build, because the linear path
+    /// preserves its cursor across no-change rebuilds too. Reservations
+    /// never shrink below retained samples.
+    ///
+    /// Drain-time refresh re-derives from live stream-state declarations and
+    /// merges monotonically: node scheduling follows the fresh derivation
+    /// exactly, while edge, output, and per-call capacities only grow, so
+    /// retained waves, queued audio, and already-sized caller buffers stay
+    /// covered when declarations rise mid-stream.
+    fn rebuild_graph_drain_plan(&mut self) -> Result<(), String> {
+        let derived = self.derive_graph_drain_plan()?;
+        // Prefer the envelope derivation when every node publishes
+        // envelopes: scheduling and reservations size from
+        // stream-independent bounds, so no mid-drain growth is possible.
+        // The live derivation above already reported any structural
+        // anomaly loudly, so `None` here safely keeps legacy sizing.
+        let derived = self.derive_graph_envelope_plan().unwrap_or(derived);
+        let preserve = derived.signature == self.graph_drain_plan.signature;
+        let topo_order = derived.topo_order;
+        let node_plan = derived.node_plan;
+        let mut edge_plan = derived.edge_plan;
+        let output_comp_frames = derived.output_comp_frames;
+        let mut output_queue_cap_frames = derived.output_queue_cap_frames;
+        let mut bound_frames = derived.bound_frames;
+        let signature = derived.signature;
+        // The envelope flag follows the fresh derivation, never the merge:
+        // capacities max with retained content, but scheduling, snapshots,
+        // and the bound query all follow the new derivation exactly.
+        let envelope_bound = derived.envelope_bound;
+        if preserve {
+            let old = &self.graph_drain_plan;
+            for (edge, old_edge) in edge_plan.iter_mut().zip(old.edge_plan.iter()) {
+                edge.queue_cap_frames = edge.queue_cap_frames.max(old_edge.queue_cap_frames);
+            }
+            for (cap, old_cap) in output_queue_cap_frames
+                .iter_mut()
+                .zip(old.output_queue_cap_frames.iter())
+            {
+                *cap = (*cap).max(*old_cap);
+            }
+            bound_frames = bound_frames.max(old.bound_frames);
+        }
+        let num_slots = self.predecessors.len();
+
+        // Drain scratch extents: assembled input, retained waves,
+        // output-delay flush pushes, and compensation frame rows.
+        // Existing graph scratch already covers these; growth stays on
+        // the build path. The flush extent is load-bearing: output
+        // flush shares the wave scratch, and its push can exceed any
+        // single emission when output compensation is large.
+        let mut need_input = 0usize;
+        let mut need_wave = 0usize;
+        let mut need_row = 0usize;
+        for &node_id in &topo_order {
+            let node = &self.nodes[&node_id];
+            need_input = need_input.max(
+                node_plan[node_id]
+                    .process_quantum
+                    .saturating_mul(node.input_channels()),
+            );
+            need_wave = need_wave.max(
+                node_plan[node_id]
+                    .single_emission
+                    .saturating_mul(node.output_channels()),
+            );
+        }
+        for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+            let node = &self.nodes[&node_id];
+            need_wave =
+                need_wave.max(output_comp_frames[pos].saturating_mul(node.output_channels()));
+        }
+        for plan in &edge_plan {
+            need_row = need_row.max(plan.routed_channels.saturating_mul(2));
+        }
+        let buffers = self
+            .process_buffers
+            .as_mut()
+            .ok_or("graph drain plan requires prepared process buffers")?;
+        for (label, buffer, need) in [
+            (
+                "graph drain input scratch",
+                &mut buffers.scratch_input,
+                need_input,
+            ),
+            (
+                "graph drain emission scratch",
+                &mut buffers.scratch_output,
+                need_wave,
+            ),
+            (
+                "graph drain delay rows",
+                &mut buffers.delay_scratch,
+                need_row,
+            ),
+        ] {
+            if buffer.len() < need {
+                buffer
+                    .try_reserve_exact(need - buffer.len())
+                    .map_err(|error| format!("{label} reservation failed: {error}"))?;
+                buffer.resize(need, 0.0);
+            }
+        }
+
+        if preserve {
+            let state = &self.graph_drain_state;
+            let plan = &self.graph_drain_plan;
+            let sizes_match = state.phases.len() == num_slots
+                && state.holdover_data.len() == num_slots
+                && state.holdover_frames.len() == num_slots
+                && state.edges.len() == self.edges.len()
+                && state.edge_committed.len() == self.edges.len()
+                && state.output_flush_remaining.len() == self.output_nodes.len()
+                && state.output_queues.len() == self.output_nodes.len()
+                && plan.node_plan.len() == num_slots
+                && plan.edge_plan.len() == self.edges.len()
+                && plan.output_comp_frames.len() == self.output_nodes.len()
+                && plan.output_queue_cap_frames.len() == self.output_nodes.len();
+            if !sizes_match {
+                return Err("graph drain state does not match the rebuilt topology".into());
+            }
+            // Never shrink below retained samples when metadata changed
+            // without a topology edit.
+            for (index, plan) in edge_plan.iter().enumerate() {
+                let retained = self.graph_drain_state.edges[index].queue.len();
+                let need = plan
+                    .queue_cap_frames
+                    .saturating_mul(plan.routed_channels)
+                    .max(retained);
+                let queue = &mut self.graph_drain_state.edges[index].queue;
+                if queue.capacity() < need {
+                    queue
+                        .try_reserve_exact(need - queue.len())
+                        .map_err(|error| {
+                            format!("graph drain queue reservation failed: {error}")
+                        })?;
+                }
+            }
+            for &node_id in &topo_order {
+                let need = node_plan[node_id]
+                    .single_emission
+                    .saturating_mul(self.nodes[&node_id].output_channels())
+                    .max(self.graph_drain_state.holdover_data[node_id].len());
+                let holdover = &mut self.graph_drain_state.holdover_data[node_id];
+                if holdover.len() < need {
+                    holdover
+                        .try_reserve_exact(need - holdover.len())
+                        .map_err(|error| {
+                            format!("graph drain holdover reservation failed: {error}")
+                        })?;
+                    holdover.resize(need, 0.0);
+                }
+            }
+            for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+                let retained = self.graph_drain_state.output_queues[pos].len();
+                let need = output_queue_cap_frames[pos]
+                    .saturating_mul(self.nodes[&node_id].output_channels())
+                    .max(retained);
+                let queue = &mut self.graph_drain_state.output_queues[pos];
+                if queue.capacity() < need {
+                    queue
+                        .try_reserve_exact(need - queue.len())
+                        .map_err(|error| {
+                            format!("graph drain output queue reservation failed: {error}")
+                        })?;
+                }
+            }
+        } else {
+            let mut edges = Vec::new();
+            edges
+                .try_reserve_exact(self.edges.len())
+                .map_err(|error| format!("graph drain edge state reservation failed: {error}"))?;
+            for plan in &edge_plan {
+                let mut queue = VecDeque::new();
+                let cap = plan.queue_cap_frames.saturating_mul(plan.routed_channels);
+                if cap > 0 {
+                    queue.try_reserve_exact(cap).map_err(|error| {
+                        format!("graph drain queue reservation failed: {error}")
+                    })?;
+                }
+                edges.push(GraphEdgeDrainState {
+                    queue,
+                    flush_remaining: 0,
+                    eof: false,
+                });
+            }
+            let mut holdover_data: Vec<Vec<f32>> = Vec::new();
+            holdover_data
+                .try_reserve_exact(num_slots)
+                .map_err(|error| format!("graph drain holdover reservation failed: {error}"))?;
+            for (node_id, plan) in node_plan.iter().enumerate() {
+                let out_ch = self
+                    .nodes
+                    .get(&node_id)
+                    .map_or(0, |node| node.output_channels());
+                let samples = plan.single_emission.saturating_mul(out_ch);
+                let mut wave = Vec::new();
+                if samples > 0 {
+                    wave.try_reserve_exact(samples).map_err(|error| {
+                        format!("graph drain holdover reservation failed: {error}")
+                    })?;
+                    wave.resize(samples, 0.0);
+                }
+                holdover_data.push(wave);
+            }
+            let mut output_queues = Vec::new();
+            output_queues
+                .try_reserve_exact(self.output_nodes.len())
+                .map_err(|error| format!("graph drain output queue reservation failed: {error}"))?;
+            for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+                let mut queue = VecDeque::new();
+                let cap = output_queue_cap_frames[pos]
+                    .saturating_mul(self.nodes[&node_id].output_channels());
+                if cap > 0 {
+                    queue.try_reserve_exact(cap).map_err(|error| {
+                        format!("graph drain output queue reservation failed: {error}")
+                    })?;
+                }
+                output_queues.push(queue);
+            }
+            self.graph_drain_state = GraphDrainState {
+                phases: vec![GraphNodeDrainPhase::Running; num_slots],
+                edges,
+                holdover_data,
+                holdover_frames: vec![0; num_slots],
+                edge_committed: vec![false; self.edges.len()],
+                output_flush_remaining: vec![0; self.output_nodes.len()],
+                output_queues,
+                session_output_bound: None,
+                #[cfg(test)]
+                output_commit_retries: 0,
+                #[cfg(test)]
+                drain_refresh_count: 0,
+            };
+        }
+
+        self.graph_drain_plan = GraphDrainPlan {
+            topo_order,
+            node_plan,
+            edge_plan,
+            output_comp_frames,
+            output_queue_cap_frames,
+            bound_frames,
+            envelope_bound,
+            signature,
+        };
+        Ok(())
+    }
+
+    /// Run one bounded EOS round over a branched graph.
+    ///
+    /// Precondition: built, nonempty, non-chain topology with mutations and
+    /// parameter events already applied. Terminal state, then output
+    /// geometry, then capacity are checked before any plugin call,
+    /// mirroring the chain path. Each round visits nodes once in
+    /// topological order; every node performs at most one native drain
+    /// or process call per round.
+    fn drain_graph(&mut self, output: &mut [f32]) -> Result<PluginDrainResult, String> {
+        if Self::graph_drain_complete(&self.graph_drain_state, &self.nodes) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let output_channels = self.graph_drain_common_output_geometry()?;
+        if output_channels == 0 || !output.len().is_multiple_of(output_channels) {
+            return Err(format!(
+                "Host drain output must contain whole frames of {output_channels} channels"
+            ));
+        }
+        // Stream-state declarations outdate the build-time plan (a fresh
+        // resampler reports a zero drain bound, mid-stream its block
+        // maximum), so refresh from live metadata before enforcing
+        // capacity. Detection is allocation-free; the merge only grows
+        // capacities and reservations, never below retained content.
+        if self.graph_node_declarations_changed() {
+            self.rebuild_graph_drain_plan()?;
+            #[cfg(test)]
+            {
+                self.graph_drain_state.drain_refresh_count += 1;
+            }
+        }
+        // Freeze the enforced per-call output bound for the drain session.
+        // No plugin call lands between the caller's begin query and this
+        // first entry, so the merged peak equals what the caller sized
+        // from; later live growth only enlarges internal reservations
+        // while emission stays paced to this value.
+        let session_output_bound = if let Some(bound) = self.graph_drain_state.session_output_bound
+        {
+            bound
+        } else {
+            let bound = self.graph_drain_plan.bound_frames;
+            self.graph_drain_state.session_output_bound = Some(bound);
+            bound
+        };
+        let required_samples = session_output_bound
+            .checked_mul(output_channels)
+            .ok_or("Host drain output capacity overflow")?;
+        if output.len() < required_samples {
+            return Err(format!(
+                "Host drain output too small: need {required_samples} samples, got {}",
+                output.len()
+            ));
+        }
+        self.validate_graph_drain_geometry()?;
+        self.transfer_process_retention_to_drain()?;
+        let mut guard = BufferGuard::take(&mut self.process_buffers);
+        let bufs = guard.get_mut();
+        // The round cannot take `&mut self` while the guard holds
+        // `process_buffers`; it runs on disjoint field borrows instead.
+        // The guard still owns buffer restoration on every return path.
+        let mut ctx = GraphDrainRoundCtx {
+            state: &mut self.graph_drain_state,
+            plan: &self.graph_drain_plan,
+            plugins: &mut self.plugins,
+            nodes: &self.nodes,
+            edges: &self.edges,
+            predecessors: &self.predecessors,
+            successors: &self.successors,
+            predecessor_edge_indices: &self.predecessor_edge_indices,
+            output_nodes: &self.output_nodes,
+            is_output_node: &self.is_output_node,
+            node_input_sample_rates: &self.node_input_sample_rates,
+            node_input_positions: &mut self.node_input_positions,
+            output_channels,
+            session_output_bound,
+        };
+        Self::drain_graph_round(&mut ctx, output, bufs)
+    }
+
+    /// True when every node completed and no wave, queue, or flush remains.
+    fn graph_drain_complete(state: &GraphDrainState, nodes: &HashMap<NodeId, GraphNode>) -> bool {
+        let nodes_done = nodes
+            .keys()
+            .all(|&id| state.phases.get(id) == Some(&GraphNodeDrainPhase::Complete));
+        let waves_done = state.holdover_frames.iter().all(|&frames| frames == 0);
+        let edges_done = state.edges.iter().all(|edge| edge.queue.is_empty());
+        let flush_done = state.edges.iter().all(|edge| edge.flush_remaining == 0);
+        let eof_done = state.edges.iter().all(|edge| edge.eof);
+        let output_done = state
+            .output_flush_remaining
+            .iter()
+            .all(|&frames| frames == 0)
+            && state.output_queues.iter().all(|queue| queue.is_empty());
+        nodes_done && waves_done && edges_done && flush_done && eof_done && output_done
+    }
+
+    /// Common host-output width for graph EOS, checked before capacity.
+    ///
+    /// Width-mismatched multiple outputs and mixed output rates are
+    /// refused loudly here so the capacity preflight multiplies frames
+    /// by a defined width. Single-output width is that output node's
+    /// width, identical to `output_channels()` today.
+    fn graph_drain_common_output_geometry(&self) -> Result<usize, String> {
+        let Some(&first) = self.output_nodes.first() else {
+            return Err("graph drain has no output node".into());
+        };
+        let width = self.nodes[&first].output_channels();
+        for &node_id in &self.output_nodes {
+            let node_width = self.nodes[&node_id].output_channels();
+            if node_width != width {
+                return Err(format!(
+                    "graph drain requires every output width to match \
+                     the host output width {width}, \
+                     node {node_id} has {node_width}"
+                ));
+            }
+        }
+        let rate = self.node_output_sample_rates[first];
+        for &node_id in &self.output_nodes {
+            if self.node_output_sample_rates[node_id] != rate {
+                return Err(format!(
+                    "graph drain requires equal output sample rates, node {node_id} has {}",
+                    self.node_output_sample_rates[node_id]
+                ));
+            }
+        }
+        Ok(width)
+    }
+
+    /// Retry-safe geometry gate: every check precedes any plugin call.
+    fn validate_graph_drain_geometry(&self) -> Result<(), String> {
+        for (&node_id, node) in &self.nodes {
+            if node.input_channels() == 0 || node.output_channels() == 0 {
+                return Err(format!(
+                    "graph drain requires nonzero channels at '{}'",
+                    node.name
+                ));
+            }
+            if node.bypassed && node.input_channels() != node.output_channels() {
+                return Err(format!(
+                    "graph drain cannot bypass width-changing node '{}'",
+                    node.name
+                ));
+            }
+            let input_rate = self
+                .node_input_sample_rates
+                .get(node_id)
+                .copied()
+                .unwrap_or(0);
+            if input_rate == 0 {
+                return Err(format!(
+                    "graph drain requires a nonzero sample rate at '{}'",
+                    node.name
+                ));
+            }
+            if self.plugins.get(node_id).and_then(Option::as_ref).is_none() {
+                return Err(format!("graph drain is missing plugin {node_id}"));
+            }
+        }
+        let state = &self.graph_drain_state;
+        let plan = &self.graph_drain_plan;
+        if state.phases.len() != self.predecessors.len()
+            || state.edges.len() != self.edges.len()
+            || state.output_flush_remaining.len() != self.output_nodes.len()
+            || state.output_queues.len() != self.output_nodes.len()
+            || plan.node_plan.len() != self.predecessors.len()
+            || plan.edge_plan.len() != self.edges.len()
+            || plan.output_comp_frames.len() != self.output_nodes.len()
+            || plan.output_queue_cap_frames.len() != self.output_nodes.len()
+            || plan.topo_order.len() != self.nodes.len()
+        {
+            return Err("graph drain plan is missing; rebuild the host".into());
+        }
+        Ok(())
+    }
+
+    #[allow(
+        clippy::needless_range_loop,
+        reason = "index loop required: the per-node call reborrows the whole round context"
+    )]
+    fn drain_graph_round(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        output: &mut [f32],
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<PluginDrainResult, String> {
+        let mut round = GraphDrainRound::default();
+        let order_len = ctx.plan.topo_order.len();
+        for pos in 0..order_len {
+            let node_id = ctx.plan.topo_order[pos];
+            Self::graph_drain_node(ctx, node_id, &mut round, bufs)?;
+        }
+        Self::graph_drain_discard_key_surplus(ctx, &mut round);
+        Self::graph_drain_output_flush(ctx, &mut round, bufs)?;
+        Self::graph_drain_consume_outputs(ctx, output, &mut round);
+        if !round.acted && !Self::graph_drain_complete(&*ctx.state, ctx.nodes) {
+            return Err("graph drain scheduler stalled before completion".into());
+        }
+        Ok(PluginDrainResult {
+            frames: round.frames,
+            complete: Self::graph_drain_complete(&*ctx.state, ctx.nodes),
+        })
+    }
+
+    /// Drop key frames queued for nodes past their audio input.
+    ///
+    /// Once a node leaves `Running`, its audio input is finished and key
+    /// frames arriving later have no program to control, so they are
+    /// popped without producing output. Discarding keeps room for the
+    /// key source to finish its own drain instead of blocking forever
+    /// on a full queue, and it touches only this edge: other consumers
+    /// of the same key source are unaffected.
+    fn graph_drain_discard_key_surplus(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        round: &mut GraphDrainRound,
+    ) {
+        for (edge_index, edge) in ctx.edges.iter().enumerate() {
+            if edge.edge_type != EdgeType::Sidechain {
+                continue;
+            }
+            if ctx.state.phases[edge.to_node] == GraphNodeDrainPhase::Running {
+                continue;
+            }
+            let queue = &mut ctx.state.edges[edge_index].queue;
+            if !queue.is_empty() {
+                queue.clear();
+                round.acted = true;
+            }
+        }
+    }
+
+    fn graph_drain_node(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        node_id: NodeId,
+        round: &mut GraphDrainRound,
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<(), String> {
+        if ctx.state.phases[node_id] == GraphNodeDrainPhase::Complete {
+            // The final wave precedes compensation flushing in time.
+            Self::graph_drain_commit_holdover(ctx, node_id, round, bufs)?;
+            if ctx.state.holdover_frames[node_id] == 0 {
+                Self::graph_drain_flush_edges(ctx, node_id, bufs, &mut round.acted)?;
+            }
+            return Ok(());
+        }
+        Self::graph_drain_commit_holdover(ctx, node_id, round, bufs)?;
+        if ctx.state.holdover_frames[node_id] > 0 {
+            return Ok(());
+        }
+        match ctx.state.phases[node_id] {
+            GraphNodeDrainPhase::Complete => Ok(()),
+            GraphNodeDrainPhase::Draining { .. } => {
+                Self::graph_drain_native(ctx, node_id, round, bufs)
+            }
+            GraphNodeDrainPhase::Running => Self::graph_drain_consume(ctx, node_id, round, bufs),
+        }
+    }
+
+    /// Feed compensation-flush zeros for a completed source node.
+    #[allow(
+        clippy::needless_range_loop,
+        reason = "index loop required: the per-edge call reborrows the whole round context"
+    )]
+    fn graph_drain_flush_edges(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        source: NodeId,
+        bufs: &mut ProcessBuffers<f32>,
+        acted: &mut bool,
+    ) -> Result<(), String> {
+        let out_len = ctx.successors[source].len();
+        for pos in 0..out_len {
+            let edge_index = ctx.successors[source][pos];
+            Self::graph_drain_flush_edge(ctx, edge_index, bufs, acted)?;
+        }
+        Ok(())
+    }
+
+    fn graph_drain_flush_edge(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        edge_index: usize,
+        bufs: &mut ProcessBuffers<f32>,
+        acted: &mut bool,
+    ) -> Result<(), String> {
+        if ctx.state.edges[edge_index].eof {
+            return Ok(());
+        }
+        let plan = ctx.plan.edge_plan[edge_index];
+        if plan.routed_channels == 0 {
+            ctx.state.edges[edge_index].eof = true;
+            *acted = true;
+            return Ok(());
+        }
+        let width = plan.routed_channels;
+        let cap_samples = plan.queue_cap_frames.saturating_mul(width);
+        let queued = ctx.state.edges[edge_index].queue.len();
+        let room_frames = cap_samples.saturating_sub(queued) / width;
+        let push = ctx.state.edges[edge_index].flush_remaining.min(room_frames);
+        if push > 0 {
+            ensure_len(&mut bufs.delay_scratch, width * 2);
+            let (frame_out, frame_zero) = bufs.delay_scratch.split_at_mut(width);
+            frame_zero[..width].fill(0.0);
+            let mut delay = bufs.compensation_delays.delays[edge_index].as_mut();
+            let queue = &mut ctx.state.edges[edge_index].queue;
+            for _ in 0..push {
+                // Reborrow per iteration: the `&mut` must stay live for
+                // the whole flush, not move into the first frame.
+                if let Some(delay) = delay.as_mut() {
+                    delay.process_frame(&frame_zero[..width], &mut frame_out[..width]);
+                    queue.extend(frame_out[..width].iter().copied());
+                } else {
+                    queue.extend(frame_zero[..width].iter().copied());
+                }
+            }
+            ctx.state.edges[edge_index].flush_remaining -= push;
+            *acted = true;
+        }
+        if ctx.state.edges[edge_index].flush_remaining == 0
+            && ctx.state.edges[edge_index].queue.is_empty()
+        {
+            ctx.state.edges[edge_index].eof = true;
+            *acted = true;
+        }
+        Ok(())
+    }
+
+    /// Commit a retained holdover wave to out-edges or the pending FIFO.
+    ///
+    /// Commit is per-edge: edges with room accept the wave while full
+    /// edges wait, and the holdover clears only after every destination
+    /// accepted it. Output nodes commit to their pending FIFO the same
+    /// way: a full FIFO retains the wave (backpressure), and an empty
+    /// one always fits it because every cap covers a full single
+    /// emission plus compensation.
+    fn graph_drain_commit_holdover(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        node_id: NodeId,
+        round: &mut GraphDrainRound,
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<(), String> {
+        let held = ctx.state.holdover_frames[node_id];
+        if held == 0 {
+            return Ok(());
+        }
+        if ctx.is_output_node[node_id] {
+            let output_channels = ctx.output_channels;
+            let out_pos = ctx
+                .output_nodes
+                .iter()
+                .position(|&id| id == node_id)
+                .ok_or("graph drain lost its output node")?;
+            let samples = held.saturating_mul(output_channels);
+            // Every output appends post-delay frames to its own pending
+            // FIFO in emission order; the round end emits the aligned
+            // prefix. Scheduling rounds never define sample positions.
+            // A full FIFO retains the wave (backpressure) exactly like
+            // a full edge queue; the wave fits once emission drains
+            // room, independent of total tail duration. Room is checked
+            // before the scratch copy and the stateful delay feed: the
+            // delay swap advances history, so feeding a wave that never
+            // queues would make its retry release wrong frames and lose
+            // real ones.
+            let cap = ctx.plan.output_queue_cap_frames[out_pos].saturating_mul(output_channels);
+            if ctx.state.output_queues[out_pos].len() + samples > cap {
+                #[cfg(test)]
+                {
+                    ctx.state.output_commit_retries += 1;
+                }
+                return Ok(());
+            }
+            ensure_len(&mut bufs.scratch_output, samples);
+            let wave = &ctx.state.holdover_data[node_id][..samples];
+            let delayed = &mut bufs.scratch_output[..samples];
+            delayed.copy_from_slice(wave);
+            if let Some(delay) = bufs.compensation_delays.output_delays[out_pos].as_mut() {
+                for frame in delayed.chunks_exact_mut(output_channels) {
+                    delay.process_frame_in_place(frame);
+                }
+            }
+            let queue = &mut ctx.state.output_queues[out_pos];
+            queue.extend(bufs.scratch_output[..samples].iter().copied());
+            ctx.state.holdover_frames[node_id] = 0;
+            round.acted = true;
+            return Ok(());
+        }
+        for &edge_index in &ctx.successors[node_id] {
+            if ctx.state.edge_committed[edge_index] {
+                continue;
+            }
+            let plan = ctx.plan.edge_plan[edge_index];
+            if plan.routed_channels == 0 {
+                ctx.state.edge_committed[edge_index] = true;
+                continue;
+            }
+            let width = plan.routed_channels;
+            let need = held.saturating_mul(width);
+            let cap = plan.queue_cap_frames.saturating_mul(width);
+            if ctx.state.edges[edge_index].queue.len() + need > cap {
+                continue;
+            }
+            let edge = &ctx.edges[edge_index];
+            let source_channels = ctx.nodes[&edge.from_node].output_channels();
+            ensure_len(&mut bufs.delay_scratch, width.saturating_mul(2).max(1));
+            let has_delay = bufs.compensation_delays.delays[edge_index].is_some();
+            for frame in 0..held {
+                // Map the source wave into the first scratch row. Out-of-range
+                // selections read as silence, exactly like the process merge.
+                {
+                    let wave = &ctx.state.holdover_data[node_id];
+                    let row = &mut bufs.delay_scratch[..width];
+                    for (lane, slot) in row.iter_mut().enumerate() {
+                        let source_lane = match &edge.channel_map {
+                            Some(map) => map.get(lane).copied().unwrap_or(usize::MAX),
+                            None => lane,
+                        };
+                        *slot = wave
+                            .get(
+                                frame
+                                    .saturating_mul(source_channels)
+                                    .saturating_add(source_lane),
+                            )
+                            .copied()
+                            .unwrap_or_default();
+                    }
+                }
+                if has_delay {
+                    let (row_in, row_out) = bufs.delay_scratch.split_at_mut(width);
+                    let delay = bufs.compensation_delays.delays[edge_index]
+                        .as_mut()
+                        .ok_or("graph drain lost its compensation delay")?;
+                    delay.process_frame(&row_in[..width], &mut row_out[..width]);
+                    ctx.state.edges[edge_index]
+                        .queue
+                        .extend(row_out[..width].iter().copied());
+                } else {
+                    ctx.state.edges[edge_index]
+                        .queue
+                        .extend(bufs.delay_scratch[..width].iter().copied());
+                }
+            }
+            ctx.state.edge_committed[edge_index] = true;
+            round.acted = true;
+        }
+        let done = ctx.successors[node_id]
+            .iter()
+            .all(|&edge_index| ctx.state.edge_committed[edge_index]);
+        if done {
+            ctx.state.holdover_frames[node_id] = 0;
+            for &edge_index in &ctx.successors[node_id] {
+                ctx.state.edge_committed[edge_index] = false;
+            }
+        }
+        Ok(())
+    }
+
+    /// Drain one node whose input is complete, at most once per round.
+    ///
+    /// Preparation, bound snapshot, and quota charging mirror the chain
+    /// path exactly: `begin_drain` runs once, the bound is queried once,
+    /// quota is charged only for `Ok` calls, and unknown bounds fall back
+    /// to 4096 successful calls.
+    fn graph_drain_native(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        node_id: NodeId,
+        round: &mut GraphDrainRound,
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<(), String> {
+        let node = &ctx.nodes[&node_id];
+        if node.bypassed {
+            ctx.state.phases[node_id] = GraphNodeDrainPhase::Complete;
+            Self::graph_drain_arm_edge_flush(ctx, node_id);
+            return Ok(());
+        }
+        let input_rate = ctx.node_input_sample_rates[node_id];
+        let drain_capacity = ctx.plugins[node_id]
+            .as_ref()
+            .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?
+            .drain_output_frames_max();
+        let drain_samples = drain_capacity
+            .checked_mul(node.output_channels())
+            .ok_or("Host native drain capacity overflow")?;
+        if input_rate == 0 || node.input_channels() == 0 || node.output_channels() == 0 {
+            return Err("Host native drain requires nonzero rate and channels".into());
+        }
+        let GraphNodeDrainPhase::Draining {
+            prepared,
+            remaining_calls,
+            grant_tail,
+        } = &mut ctx.state.phases[node_id]
+        else {
+            return Err(format!(
+                "graph drain lost the draining phase of node {node_id}"
+            ));
+        };
+        let context = ProcessContext::new(input_rate, 0)
+            .with_sample_position(ctx.node_input_positions[node_id]);
+        if !*prepared {
+            ctx.plugins[node_id]
+                .as_mut()
+                .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?
+                .begin_drain(&context)?;
+            *prepared = true;
+            round.acted = true;
+        }
+        if remaining_calls.is_none() {
+            let plugin = ctx.plugins[node_id]
+                .as_ref()
+                .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?;
+            let bound = plugin
+                .drain_call_bound()
+                .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get);
+            *grant_tail = Some(plugin.tail_length());
+            *remaining_calls = Some(bound);
+        }
+        let mut remaining = remaining_calls.unwrap_or(0);
+        if remaining == 0 {
+            let plugin = ctx.plugins[node_id]
+                .as_ref()
+                .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?;
+            let grant = grant_tail.unwrap_or(TailLength::Unknown);
+            if let Some((budget, current)) = drain_quota_refresh(plugin.as_ref(), grant) {
+                *grant_tail = Some(current);
+                *remaining_calls = Some(budget);
+                remaining = budget;
+            } else {
+                return Err(format!(
+                    "plugin '{}' drain did not converge within its call bound",
+                    node.name
+                ));
+            }
+        }
+        let holdover = &mut ctx.state.holdover_data[node_id];
+        if holdover.len() < drain_samples {
+            return Err(format!(
+                "graph drain holdover for node {node_id} is smaller than its declared drain capacity"
+            ));
+        }
+        let result = ctx.plugins[node_id]
+            .as_mut()
+            .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?
+            .drain(&mut holdover[..drain_samples], &context)?;
+        if let GraphNodeDrainPhase::Draining {
+            remaining_calls, ..
+        } = &mut ctx.state.phases[node_id]
+        {
+            *remaining_calls = Some(remaining - 1);
+        }
+        round.acted = true;
+        if result.frames > drain_capacity {
+            return Err("Plugin drain exceeded its declared output capacity".into());
+        }
+        ctx.state.holdover_frames[node_id] = result.frames;
+        if result.complete {
+            ctx.state.phases[node_id] = GraphNodeDrainPhase::Complete;
+            Self::graph_drain_arm_edge_flush(ctx, node_id);
+        }
+        Self::graph_drain_commit_holdover(ctx, node_id, round, bufs)
+    }
+
+    /// Arm compensation flushing on every out-edge of a completed node,
+    /// plus the output-delay flush when the node itself is an output.
+    fn graph_drain_arm_edge_flush(ctx: &mut GraphDrainRoundCtx<'_>, source: NodeId) {
+        for &edge_index in &ctx.successors[source] {
+            if !ctx.state.edges[edge_index].eof {
+                ctx.state.edges[edge_index].flush_remaining =
+                    ctx.plan.edge_plan[edge_index].comp_frames;
+            }
+        }
+        if ctx.is_output_node[source]
+            && let Some(out_pos) = ctx.output_nodes.iter().position(|&id| id == source)
+        {
+            ctx.state.output_flush_remaining[out_pos] = ctx.plan.output_comp_frames[out_pos];
+        }
+    }
+
+    /// Consume one aligned input slice, or transition to draining.
+    ///
+    /// A node consumes only when every data-carrying non-EOF incoming edge
+    /// holds at least one frame; EOF edges pad with silence. Frame index is
+    /// the timestamp: queues hold post-compensation frames and all join
+    /// inputs share one rate, so equal indices align key and program data
+    /// after node latency. Bypassed nodes pass the slice through unchanged.
+    fn graph_drain_consume(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        node_id: NodeId,
+        round: &mut GraphDrainRound,
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<(), String> {
+        if Self::graph_drain_input_complete(ctx, node_id) {
+            // Audio input is finished; flag it so later rounds treat it
+            // as EOF without recomputing. Key edges stay unflagged:
+            // their sources may still produce surplus to discard.
+            for (edge, &edge_index) in ctx.predecessors[node_id]
+                .iter()
+                .zip(ctx.predecessor_edge_indices[node_id].iter())
+            {
+                if edge.edge_type == EdgeType::Audio {
+                    ctx.state.edges[edge_index].eof = true;
+                }
+            }
+            if ctx.nodes[&node_id].bypassed {
+                // Bypassed nodes complete here, so their flush arms
+                // here. Live nodes arm at completion instead (native):
+                // arming at transition would let the every-round
+                // output flush push before the tail finishes, and the
+                // completion re-arm would then flush twice.
+                ctx.state.phases[node_id] = GraphNodeDrainPhase::Complete;
+                round.acted = true;
+                Self::graph_drain_arm_edge_flush(ctx, node_id);
+                return Ok(());
+            }
+            ctx.state.phases[node_id] = GraphNodeDrainPhase::Draining {
+                prepared: false,
+                remaining_calls: None,
+                grant_tail: None,
+            };
+            round.acted = true;
+            return Self::graph_drain_native(ctx, node_id, round, bufs);
+        }
+        let Some(frames) = Self::graph_drain_aligned_frames(ctx, node_id) else {
+            return Ok(());
+        };
+        let node = &ctx.nodes[&node_id];
+        let input_channels = node.input_channels();
+        let output_channels = node.output_channels();
+        let bypassed = node.bypassed;
+        let input_samples = frames
+            .checked_mul(input_channels)
+            .ok_or("graph drain input size overflow")?;
+        ensure_len(&mut bufs.scratch_input, input_samples);
+        bufs.scratch_input[..input_samples].fill(0.0);
+        Self::graph_drain_assemble_input(
+            ctx,
+            node_id,
+            frames,
+            &mut bufs.scratch_input[..input_samples],
+            &mut round.acted,
+        );
+        round.acted = true;
+        if bypassed {
+            let holdover = &mut ctx.state.holdover_data[node_id];
+            if holdover.len() < input_samples {
+                return Err(format!(
+                    "graph drain holdover for node {node_id} is smaller than its bypass wave"
+                ));
+            }
+            holdover[..input_samples].copy_from_slice(&bufs.scratch_input[..input_samples]);
+            ctx.state.holdover_frames[node_id] = frames;
+            ctx.node_input_positions[node_id] =
+                ctx.node_input_positions[node_id].saturating_add(frames as u64);
+            return Self::graph_drain_commit_holdover(ctx, node_id, round, bufs);
+        }
+        let plugin = ctx.plugins[node_id]
+            .as_mut()
+            .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?;
+        let capacity = plugin.output_frames_for_input(frames);
+        let output_samples = capacity
+            .checked_mul(output_channels)
+            .ok_or("graph drain output size overflow")?;
+        let holdover = &mut ctx.state.holdover_data[node_id];
+        if holdover.len() < output_samples {
+            return Err(format!(
+                "graph drain holdover for node {node_id} is smaller than its declared process capacity"
+            ));
+        }
+        let input_rate = ctx.node_input_sample_rates[node_id];
+        let context = ProcessContext::new(input_rate, frames)
+            .with_sample_position(ctx.node_input_positions[node_id]);
+        // The holdover and scratch borrows below are disjoint by construction:
+        // rebuild the slices after the plugin borrow to satisfy the checker.
+        let produced = {
+            let holdover = &mut ctx.state.holdover_data[node_id];
+            let plugin = ctx.plugins[node_id]
+                .as_mut()
+                .ok_or_else(|| format!("graph drain is missing plugin {node_id}"))?;
+            plugin.process(
+                &bufs.scratch_input[..input_samples],
+                &mut holdover[..output_samples],
+                &context,
+            )?
+        };
+        if produced > capacity {
+            return Err(format!(
+                "plugin '{}' process exceeded its declared output capacity",
+                ctx.nodes[&node_id].name
+            ));
+        }
+        ctx.state.holdover_frames[node_id] = produced;
+        ctx.node_input_positions[node_id] =
+            ctx.node_input_positions[node_id].saturating_add(frames as u64);
+        Self::graph_drain_commit_holdover(ctx, node_id, round, bufs)
+    }
+
+    /// True when an edge can never carry another frame.
+    ///
+    /// Flagged EOF and zero-width (inert) edges qualify immediately. An
+    /// unflagged edge qualifies when its source is complete, its queue is
+    /// empty, its compensation flush is exhausted, and no wave is still
+    /// retained for it: either the source holds nothing, or this edge
+    /// already accepted the retained wave (other edges may lag). The
+    /// holdover clause is load-bearing: without it the flag can be set
+    /// while a wave is still owed, stranding that wave in an EOF queue
+    /// no join will ever consume again.
+    fn graph_drain_edge_finished(ctx: &GraphDrainRoundCtx<'_>, edge_index: usize) -> bool {
+        if ctx.plan.edge_plan[edge_index].routed_channels == 0 {
+            return true;
+        }
+        let edge = &ctx.state.edges[edge_index];
+        if edge.eof {
+            return true;
+        }
+        if !edge.queue.is_empty() || edge.flush_remaining != 0 {
+            return false;
+        }
+        let from = ctx.edges[edge_index].from_node;
+        if ctx.state.phases[from] != GraphNodeDrainPhase::Complete {
+            return false;
+        }
+        ctx.state.holdover_frames[from] == 0 || ctx.state.edge_committed[edge_index]
+    }
+
+    /// True when no more audio input can ever arrive at `node_id`.
+    ///
+    /// Audio edges alone determine join length: a node becomes
+    /// input-complete when every audio in-edge is finished. Key
+    /// (sidechain) edges neither gate this transition nor extend the
+    /// join; their surplus past audio end is discarded, never padded
+    /// into program frames.
+    fn graph_drain_input_complete(ctx: &GraphDrainRoundCtx<'_>, node_id: NodeId) -> bool {
+        ctx.predecessors[node_id]
+            .iter()
+            .zip(ctx.predecessor_edge_indices[node_id].iter())
+            .all(|(edge, &edge_index)| {
+                edge.edge_type == EdgeType::Sidechain
+                    || Self::graph_drain_edge_finished(ctx, edge_index)
+            })
+    }
+
+    /// Aligned consumable frames, or `None` when a branch must catch up.
+    ///
+    /// Finished edges (audio or key) pad with silence. Live edges of
+    /// either kind gate consumption: a non-EOF key branch that has not
+    /// delivered its frames at these timestamps is awaited, never
+    /// zero-filled early. Only confirmed key EOF permits zero padding
+    /// while program remains.
+    fn graph_drain_aligned_frames(ctx: &GraphDrainRoundCtx<'_>, node_id: NodeId) -> Option<usize> {
+        let mut frames = ctx.plan.node_plan[node_id].process_quantum;
+        let mut live = false;
+        for &edge_index in &ctx.predecessor_edge_indices[node_id] {
+            let width = ctx.plan.edge_plan[edge_index].routed_channels;
+            if width == 0 {
+                continue;
+            }
+            if Self::graph_drain_edge_finished(ctx, edge_index) {
+                continue;
+            }
+            live = true;
+            let queued = ctx.state.edges[edge_index].queue.len() / width;
+            if queued == 0 {
+                return None;
+            }
+            frames = frames.min(queued);
+        }
+        if live { Some(frames.max(1)) } else { None }
+    }
+
+    /// Assemble one aligned input slice from edge queues, popping consumed
+    /// frames. Channel maps were applied at production; offsets and the
+    /// sidechain packing order mirror the process-time merge exactly,
+    /// including the running key-bus offset sequence. Finished edges pad
+    /// with silence; live edges always hold the consumed frames because
+    /// alignment gated on them.
+    fn graph_drain_assemble_input(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        node_id: NodeId,
+        frames: usize,
+        assembled: &mut [f32],
+        acted: &mut bool,
+    ) {
+        let node = &ctx.nodes[&node_id];
+        let input_channels = node.input_channels();
+        let has_sidechain = ctx.predecessors[node_id]
+            .iter()
+            .any(|edge| edge.edge_type == EdgeType::Sidechain);
+        let primary = if has_sidechain && input_channels > node.output_channels() {
+            node.output_channels()
+        } else {
+            input_channels
+        };
+        let mut sidechain_offset = primary;
+        for (edge, &edge_index) in ctx.predecessors[node_id]
+            .iter()
+            .zip(ctx.predecessor_edge_indices[node_id].iter())
+        {
+            let width = ctx.plan.edge_plan[edge_index].routed_channels;
+            let source_channels = ctx.nodes[&edge.from_node].output_channels();
+            let dest_offset = match edge.edge_type {
+                EdgeType::Audio => edge.destination_offset,
+                EdgeType::Sidechain => {
+                    if sidechain_offset >= input_channels {
+                        continue;
+                    }
+                    let offset = sidechain_offset;
+                    let requested = edge
+                        .channel_map
+                        .as_ref()
+                        .map_or(source_channels, |map| map.len());
+                    sidechain_offset = (sidechain_offset + requested).min(input_channels);
+                    offset
+                }
+            };
+            let available = match edge.edge_type {
+                EdgeType::Audio => primary.saturating_sub(dest_offset),
+                EdgeType::Sidechain => input_channels.saturating_sub(dest_offset),
+            };
+            if available == 0 || width == 0 {
+                continue;
+            }
+            let lanes = width.min(available);
+            let flagged = ctx.state.edges[edge_index].eof;
+            let finished = flagged || Self::graph_drain_edge_finished(ctx, edge_index);
+            let queue = &mut ctx.state.edges[edge_index].queue;
+            for frame in 0..frames {
+                for lane in 0..lanes {
+                    let sample = if finished {
+                        0.0
+                    } else {
+                        queue.pop_front().unwrap_or_default()
+                    };
+                    let dst = frame * input_channels + dest_offset + lane;
+                    if let Some(slot) = assembled.get_mut(dst) {
+                        *slot += sample;
+                    }
+                }
+                // Discard routed lanes past the destination window so queue
+                // and frame counts stay aligned.
+                if !finished {
+                    for _ in lanes..width {
+                        queue.pop_front();
+                    }
+                }
+            }
+            // A finished edge with an emptied queue never carries another
+            // frame; flagging it now saves a round. The holdover clause
+            // below is what keeps a retained wave from stranding in a
+            // flagged queue: the flag waits until the source holds
+            // nothing more for this edge.
+            if !flagged
+                && queue.is_empty()
+                && ctx.state.edges[edge_index].flush_remaining == 0
+                && ctx.state.phases[edge.from_node] == GraphNodeDrainPhase::Complete
+                && (ctx.state.holdover_frames[edge.from_node] == 0
+                    || ctx.state.edge_committed[edge_index])
+            {
+                ctx.state.edges[edge_index].eof = true;
+                *acted = true;
+            }
+        }
+    }
+
+    /// Feed armed output-delay zeros after the last emission.
+    ///
+    /// Output delays hold process-time and drain-wave history that must
+    /// release after the final real frame; the flush arms when its
+    /// output node completes and runs once the retained wave cleared.
+    /// Single outputs sum straight into the caller buffer, which stays
+    /// ordered because a single sink completes only after every node.
+    /// Concurrent outputs queue their flush behind their waves so the
+    /// round-end consume aligns every output by timestamp.
+    fn graph_drain_output_flush(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        round: &mut GraphDrainRound,
+        bufs: &mut ProcessBuffers<f32>,
+    ) -> Result<(), String> {
+        let output_channels = ctx.output_channels;
+        if output_channels == 0 {
+            return Ok(());
+        }
+        for (out_pos, &node_id) in ctx.output_nodes.iter().enumerate() {
+            let remaining = ctx.state.output_flush_remaining[out_pos];
+            if remaining == 0 {
+                continue;
+            }
+            if ctx.state.holdover_frames[node_id] > 0 {
+                continue;
+            }
+            if bufs.compensation_delays.output_delays[out_pos].is_none() {
+                ctx.state.output_flush_remaining[out_pos] = 0;
+                continue;
+            }
+            // Flush appends behind already-queued waves in the same
+            // pending FIFO, preserving absolute emission order. Only
+            // the room available is pushed; the remainder stays armed
+            // for later rounds, exactly like edge compensation flush.
+            let cap = ctx.plan.output_queue_cap_frames[out_pos].saturating_mul(output_channels);
+            let queued = ctx.state.output_queues[out_pos].len();
+            let room_frames = cap.saturating_sub(queued) / output_channels;
+            let push = remaining.min(room_frames);
+            if push == 0 {
+                continue;
+            }
+            let samples = push.saturating_mul(output_channels);
+            ensure_len(&mut bufs.scratch_output, samples);
+            bufs.scratch_output[..samples].fill(0.0);
+            if let Some(delay) = bufs.compensation_delays.output_delays[out_pos].as_mut() {
+                for frame in bufs.scratch_output[..samples].chunks_exact_mut(output_channels) {
+                    delay.process_frame_in_place(frame);
+                }
+            }
+            let queue = &mut ctx.state.output_queues[out_pos];
+            queue.extend(bufs.scratch_output[..samples].iter().copied());
+            ctx.state.output_flush_remaining[out_pos] -= push;
+            round.acted = true;
+        }
+        Ok(())
+    }
+
+    /// Consume one aligned slice from concurrent output queues.
+    ///
+    /// Frame index is the timestamp across outputs. Outputs that can
+    /// still emit gate consumption: a slice covers only frames every
+    /// live output already holds. Exhausted outputs pad with silence
+    /// past their final frame, exactly like EOF edges at a join.
+    fn graph_drain_consume_outputs(
+        ctx: &mut GraphDrainRoundCtx<'_>,
+        output: &mut [f32],
+        round: &mut GraphDrainRound,
+    ) {
+        let output_channels = ctx.output_channels;
+        if output_channels == 0 || ctx.output_nodes.is_empty() {
+            return;
+        }
+        // Frame index is the timestamp across outputs. A single output
+        // emits everything pending (bounded by the session per-call
+        // bound); concurrent outputs emit the common prefix every live
+        // output already holds, with exhausted outputs padding silence
+        // past their final frame, exactly like EOF edges at a join.
+        let mut frames = ctx.session_output_bound;
+        if ctx.output_nodes.len() == 1 {
+            let queued = ctx.state.output_queues[0].len() / output_channels;
+            frames = frames.min(queued);
+        } else {
+            let mut live = false;
+            let mut longest = 0usize;
+            for (out_pos, &node_id) in ctx.output_nodes.iter().enumerate() {
+                let exhausted = ctx.state.phases[node_id] == GraphNodeDrainPhase::Complete
+                    && ctx.state.holdover_frames[node_id] == 0
+                    && ctx.state.output_flush_remaining[out_pos] == 0;
+                let queued = ctx.state.output_queues[out_pos].len() / output_channels;
+                longest = longest.max(queued);
+                if exhausted {
+                    continue;
+                }
+                live = true;
+                if queued == 0 {
+                    return;
+                }
+                frames = frames.min(queued);
+            }
+            if !live {
+                frames = frames.min(longest);
+            }
+        }
+        if frames == 0 {
+            return;
+        }
+        // Drain rounds write the caller buffer only here, so the slice
+        // starts silent and each output adds its aligned share.
+        output[..frames * output_channels].fill(0.0);
+        round.frames = frames;
+        round.acted = true;
+        for queue in &mut ctx.state.output_queues {
+            let take = (queue.len() / output_channels).min(frames) * output_channels;
+            for slot in output[..take].iter_mut() {
+                *slot += queue.pop_front().unwrap_or_default();
+            }
+        }
     }
 
     /// Advance one bounded EOF step for a prepared terminal sink route.
@@ -4009,6 +6727,7 @@ impl DawHost {
             self.drain_state.active_node = Some(source_id);
             self.drain_state.prepared = false;
             self.drain_state.remaining_calls = None;
+            self.drain_state.quota_grant_tail = None;
         }
         let source_context =
             ProcessContext::new(source_rate, 0).with_sample_position(source_position);
@@ -4025,18 +6744,31 @@ impl DawHost {
             }
             self.drain_state.prepared = true;
         }
-        let remaining = *self.drain_state.remaining_calls.get_or_insert_with(|| {
-            self.plugins[source_id]
-                .as_ref()
-                .unwrap()
+        if self.drain_state.remaining_calls.is_none() {
+            let plugin = self.plugins[source_id].as_ref().unwrap();
+            let bound = plugin
                 .drain_call_bound()
-                .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get)
-        });
+                .map_or(UNKNOWN_DRAIN_CALL_LIMIT, std::num::NonZeroU64::get);
+            self.drain_state.quota_grant_tail = Some(plugin.tail_length());
+            self.drain_state.remaining_calls = Some(bound);
+        }
+        let mut remaining = self.drain_state.remaining_calls.unwrap_or(0);
         if remaining == 0 {
-            self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
-            return Err(SinkDrainError::ResetRequired(
-                "terminal tail source exhausted its drain call bound".into(),
-            ));
+            let plugin = self.plugins[source_id].as_ref().unwrap();
+            let grant_tail = self
+                .drain_state
+                .quota_grant_tail
+                .unwrap_or(TailLength::Unknown);
+            if let Some((budget, current)) = drain_quota_refresh(plugin.as_ref(), grant_tail) {
+                self.drain_state.quota_grant_tail = Some(current);
+                self.drain_state.remaining_calls = Some(budget);
+                remaining = budget;
+            } else {
+                self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
+                return Err(SinkDrainError::ResetRequired(
+                    "terminal tail source exhausted its drain call bound".into(),
+                ));
+            }
         }
 
         let result = self.plugins[source_id].as_mut().unwrap().drain(
@@ -4115,12 +6847,14 @@ impl DawHost {
         input: &[f32],
         output: &mut [f32],
         events: &mut Vec<ParameterEvent>,
+        pad_short_blocks: bool,
     ) -> Result<usize, String> {
         if events.is_empty() {
             return self.process_block_without_parameter_events(
                 input,
                 output,
                 self.automation_state.playback_position as u64,
+                pad_short_blocks,
             );
         }
 
@@ -4132,6 +6866,7 @@ impl DawHost {
                 output,
                 events,
                 self.automation_state.playback_position as u64,
+                pad_short_blocks,
             );
         }
 
@@ -4142,6 +6877,7 @@ impl DawHost {
             input,
             output,
             self.automation_state.playback_position as u64,
+            pad_short_blocks,
         )
     }
 
@@ -4153,7 +6889,14 @@ impl DawHost {
         block_start_sample: u64,
     ) -> Result<usize, String> {
         if events.is_empty() {
-            return self.process_block_without_parameter_events(input, output, block_start_sample);
+            // Unpadded: the sink route demands exact identity frame counts,
+            // so short production must fail loudly downstream, never pad.
+            return self.process_block_without_parameter_events(
+                input,
+                output,
+                block_start_sample,
+                false,
+            );
         }
         let input_channels = self.input_channels();
         if input_channels == 0 || !input.len().is_multiple_of(input_channels) {
@@ -4186,6 +6929,7 @@ impl DawHost {
                     &input[in_start..in_end],
                     &mut output[in_start..in_end],
                     block_start_sample + frame_cursor as u64,
+                    false,
                 )?;
                 processed_frames += segment_frames;
                 frame_cursor = next_event_frame;
@@ -4229,6 +6973,7 @@ impl DawHost {
         output: &mut [f32],
         events: &mut Vec<ParameterEvent>,
         block_start_sample: u64,
+        pad_short_blocks: bool,
     ) -> Result<usize, String> {
         let input_channels = self.input_channels();
         let output_channels = self.output_channels();
@@ -4258,6 +7003,7 @@ impl DawHost {
                     &input[in_start..in_end],
                     &mut output[out_start..out_end],
                     block_start_sample + frame_cursor as u64,
+                    pad_short_blocks,
                 )?;
                 processed_frames += segment_frames;
                 frame_cursor = next_event_frame;
@@ -4284,13 +7030,19 @@ impl DawHost {
         input: &[f32],
         output: &mut [f32],
         block_start_sample: u64,
+        pad_short_blocks: bool,
     ) -> Result<usize, String> {
         if self.nodes.is_empty() {
             output.copy_from_slice(input);
             return Ok(input.len() / self.input_channels());
         }
         let nf = input.len() / self.input_channels();
-        let max_of = self.output_frames_for_input(nf);
+        // Envelope sizing covers every residual state, so same-size
+        // blocks never re-grow node buffers on straddle; unknown
+        // envelopes keep live sizing exactly.
+        let max_of = self
+            .output_frames_envelope(nf)
+            .unwrap_or_else(|| self.output_frames_for_input(nf));
         let out_ch = self.output_channels();
         self.apply_automation_for_block(nf);
         if self.terminal_sink_lifecycle.is_some() {
@@ -4366,8 +7118,11 @@ impl DawHost {
                         &mut bufs.channel_map_buffer,
                         &mut bufs.delay_scratch,
                         &mut bufs.compensation_delays,
+                        &mut bufs.merge_queues,
+                        &bufs.merge_queue_caps,
                     )
                     .map_err(|e| {
+                        self.merge_overflow_poisoned = true;
                         crate::rate_limited_log!(
                             error,
                             5,
@@ -4380,6 +7135,14 @@ impl DawHost {
                     ensure_len(&mut bufs.scratch_input, il);
                     bufs.scratch_input[..il].copy_from_slice(&bufs.merge_buffer[..il]);
                     il
+                };
+                // Merge destinations consume the retention join, not the
+                // buffer min-prefix: re-derive the frame count from the exact
+                // merged samples.
+                let cf = if !self.is_input_node[nid] && self.predecessors[nid].len() >= 2 {
+                    in_len / node.input_channels().max(1)
+                } else {
+                    cf
                 };
                 let terminal_sink_id = self.chain_nodes.last().copied();
                 if self.terminal_sink_lifecycle.is_some() && terminal_sink_id == Some(nid) {
@@ -4455,13 +7218,20 @@ impl DawHost {
                             }
                         }
                     } else {
-                        Self::process_plugin_f32_isolated(
+                        let outcome = Self::process_plugin_f32_isolated(
                             p.as_mut(),
                             node,
                             &bufs.scratch_input[..in_len],
                             &mut bufs.scratch_output[..process_output_len],
                             &context,
-                        )
+                        );
+                        if let Some(returned) = outcome.over_reported {
+                            return Err(format!(
+                                "plugin '{}' process returned {} frames, exceeding its {}-frame declared output capacity",
+                                node.name, returned, mof
+                            ));
+                        }
+                        outcome.frames
                     };
                     bufs.node_buffers[nid]
                         .as_mut()
@@ -4486,7 +7256,11 @@ impl DawHost {
                 crate::rate_limited_log!(error, 5, "host: collect_output_from_buffers failed: {e}");
                 e
             })?;
-            if cf < nf && self.has_variable_frame_plugin && self.cached_rate_identity {
+            if pad_short_blocks
+                && cf < nf
+                && self.has_variable_frame_plugin
+                && self.cached_rate_identity
+            {
                 output[cf * out_ch..].fill(0.0);
                 cf = nf;
             }
@@ -4593,60 +7367,139 @@ impl DawHost {
             let frames = match (is_last, current_source) {
                 (true, CompiledLinearSource::ExternalInput) => {
                     if output.len() < output_len {
-                        return Err(format!(
-                            "f32 output too small: need {output_len} samples, got {}",
-                            output.len()
-                        ));
+                        // Loose live declaration (or probe coincidence): the
+                        // caller staged from the host query, which understates
+                        // this final op's need. Run into grown scratch and
+                        // commit production exactly — staged-commit parity.
+                        // The over-report guard inside process_f32_node fires
+                        // first on genuine lies; production genuinely
+                        // exceeding caller capacity stays a loud error below,
+                        // never silently discarded.
+                        ensure_len(&mut bufs.scratch_output, output_len);
+                        let frames = Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &input[..current_len],
+                            &mut bufs.scratch_output[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?;
+                        let produced = frames.saturating_mul(node.output_channels());
+                        if produced > output.len() {
+                            return Err(format!(
+                                "f32 output too small: need {produced} samples, got {}",
+                                output.len()
+                            ));
+                        }
+                        output[..produced].copy_from_slice(&bufs.scratch_output[..produced]);
+                        frames
+                    } else {
+                        Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &input[..current_len],
+                            &mut output[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?
                     }
-                    Self::process_f32_node(
-                        self.plugins[nid].as_mut().unwrap().as_mut(),
-                        node,
-                        op.kind,
-                        self.bypassed.get(nid).copied().unwrap_or(false),
-                        &input[..current_len],
-                        &mut output[..output_len],
-                        self.config.sample_rate,
-                        block_start_sample,
-                        current_frames,
-                    )?
                 }
                 (true, CompiledLinearSource::ScratchInput) => {
                     if output.len() < output_len {
-                        return Err(format!(
-                            "f32 output too small: need {output_len} samples, got {}",
-                            output.len()
-                        ));
+                        // Loose live declaration (or probe coincidence): the
+                        // caller staged from the host query, which understates
+                        // this final op's need. Run into grown scratch and
+                        // commit production exactly — staged-commit parity.
+                        // The over-report guard inside process_f32_node fires
+                        // first on genuine lies; production genuinely
+                        // exceeding caller capacity stays a loud error below,
+                        // never silently discarded.
+                        ensure_len(&mut bufs.scratch_output, output_len);
+                        let frames = Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &bufs.scratch_input[..current_len],
+                            &mut bufs.scratch_output[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?;
+                        let produced = frames.saturating_mul(node.output_channels());
+                        if produced > output.len() {
+                            return Err(format!(
+                                "f32 output too small: need {produced} samples, got {}",
+                                output.len()
+                            ));
+                        }
+                        output[..produced].copy_from_slice(&bufs.scratch_output[..produced]);
+                        frames
+                    } else {
+                        Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &bufs.scratch_input[..current_len],
+                            &mut output[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?
                     }
-                    Self::process_f32_node(
-                        self.plugins[nid].as_mut().unwrap().as_mut(),
-                        node,
-                        op.kind,
-                        self.bypassed.get(nid).copied().unwrap_or(false),
-                        &bufs.scratch_input[..current_len],
-                        &mut output[..output_len],
-                        self.config.sample_rate,
-                        block_start_sample,
-                        current_frames,
-                    )?
                 }
                 (true, CompiledLinearSource::ScratchOutput) => {
                     if output.len() < output_len {
-                        return Err(format!(
-                            "f32 output too small: need {output_len} samples, got {}",
-                            output.len()
-                        ));
+                        // Loose live declaration (or probe coincidence): the
+                        // caller staged from the host query, which understates
+                        // this final op's need. Run into the grown sibling
+                        // scratch (input lives in scratch_output) and commit
+                        // production exactly — staged-commit parity. The
+                        // over-report guard inside process_f32_node fires
+                        // first on genuine lies; production genuinely
+                        // exceeding caller capacity stays a loud error below,
+                        // never silently discarded.
+                        ensure_len(&mut bufs.scratch_input, output_len);
+                        let frames = Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &bufs.scratch_output[..current_len],
+                            &mut bufs.scratch_input[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?;
+                        let produced = frames.saturating_mul(node.output_channels());
+                        if produced > output.len() {
+                            return Err(format!(
+                                "f32 output too small: need {produced} samples, got {}",
+                                output.len()
+                            ));
+                        }
+                        output[..produced].copy_from_slice(&bufs.scratch_input[..produced]);
+                        frames
+                    } else {
+                        Self::process_f32_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            op.kind,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &bufs.scratch_output[..current_len],
+                            &mut output[..output_len],
+                            self.config.sample_rate,
+                            block_start_sample,
+                            current_frames,
+                        )?
                     }
-                    Self::process_f32_node(
-                        self.plugins[nid].as_mut().unwrap().as_mut(),
-                        node,
-                        op.kind,
-                        self.bypassed.get(nid).copied().unwrap_or(false),
-                        &bufs.scratch_output[..current_len],
-                        &mut output[..output_len],
-                        self.config.sample_rate,
-                        block_start_sample,
-                        current_frames,
-                    )?
                 }
                 (false, CompiledLinearSource::ExternalInput) => {
                     ensure_len(&mut bufs.scratch_output, output_len);
@@ -4897,9 +7750,16 @@ impl DawHost {
         }) {
             return Ok(frames);
         }
-        Ok(Self::process_plugin_f32_isolated(
-            plugin, node, input, output, &context,
-        ))
+        let outcome =
+            Self::process_plugin_f32_isolated(plugin, node, input, &mut *output, &context);
+        if let Some(returned) = outcome.over_reported {
+            let staged = output.len() / node.output_channels().max(1);
+            return Err(format!(
+                "plugin '{}' process returned {} frames, exceeding its {}-frame declared output capacity",
+                node.name, returned, staged
+            ));
+        }
+        Ok(outcome.frames)
     }
 
     pub(super) fn apply_automation_for_block(&mut self, nf: usize) {
@@ -4980,6 +7840,11 @@ impl DawHost {
     /// declares `supports_f64()`. Graphs containing f32-only plugins use a
     /// scratch-backed f32 compatibility bridge.
     pub fn process_f64(&mut self, input: &[f64], output: &mut [f64]) -> Result<usize, String> {
+        if self.merge_overflow_poisoned {
+            return Err(
+                "host merge retention overflowed; reset the host before further processing".into(),
+            );
+        }
         if self.terminal_sink_lifecycle.is_some() || self.has_advertised_terminal_sink() {
             return Err(
                 "terminal sink graphs do not support process_f64; use process_to_sink".into(),
@@ -5006,6 +7871,7 @@ impl DawHost {
         self.queues.parameter_event_scratch = events;
         if result.is_ok() && !input.is_empty() {
             self.drain_state = DrainState::default();
+            self.graph_drain_state.reset_dynamic();
         }
         result
     }
@@ -5151,6 +8017,7 @@ impl DawHost {
             &input_scratch[..in_len],
             &mut output_scratch[..out_len],
             block_start_sample,
+            true,
         );
         let frames = match result {
             Ok(frames) => frames,
@@ -5220,7 +8087,12 @@ impl DawHost {
         block_start_sample: u64,
     ) -> Result<usize, String> {
         let nf = input.len() / self.input_channels();
-        let max_of = self.output_frames_for_input(nf);
+        // Envelope sizing covers every residual state, so same-size
+        // blocks never re-grow node buffers on straddle; unknown
+        // envelopes keep live sizing exactly.
+        let max_of = self
+            .output_frames_envelope(nf)
+            .unwrap_or_else(|| self.output_frames_for_input(nf));
         let out_ch = self.output_channels();
         self.apply_automation_for_block(nf);
 
@@ -5254,8 +8126,11 @@ impl DawHost {
                         &mut bufs.channel_map_buffer,
                         &mut bufs.delay_scratch,
                         &mut bufs.compensation_delays,
+                        &mut bufs.merge_queues,
+                        &bufs.merge_queue_caps,
                     )
                     .map_err(|e| {
+                        self.merge_overflow_poisoned = true;
                         crate::rate_limited_log!(
                             error,
                             5,
@@ -5268,6 +8143,14 @@ impl DawHost {
                     ensure_len(&mut bufs.scratch_input, il);
                     bufs.scratch_input[..il].copy_from_slice(&bufs.merge_buffer[..il]);
                     il
+                };
+                // Merge destinations consume the retention join, not the
+                // buffer min-prefix: re-derive the frame count from the exact
+                // merged samples.
+                let cf = if !self.is_input_node[nid] && self.predecessors[nid].len() >= 2 {
+                    in_len / node.input_channels().max(1)
+                } else {
+                    cf
                 };
                 if self.bypassed[nid] {
                     bufs.node_buffers[nid]
@@ -5290,13 +8173,20 @@ impl DawHost {
                     // always uses the declared output channel count.
                     let process_output_len = output_len;
                     ensure_len(&mut bufs.scratch_output, process_output_len);
-                    let frames = Self::process_plugin_f64_isolated(
+                    let outcome = Self::process_plugin_f64_isolated(
                         plugin.as_mut(),
                         node,
                         &bufs.scratch_input[..in_len],
                         &mut bufs.scratch_output[..process_output_len],
                         &context,
                     );
+                    if let Some(returned) = outcome.over_reported {
+                        return Err(format!(
+                            "plugin '{}' process returned {} frames, exceeding its {}-frame declared output capacity",
+                            node.name, returned, max_output_frames
+                        ));
+                    }
+                    let frames = outcome.frames;
                     bufs.node_buffers[nid]
                         .as_mut()
                         .unwrap()
@@ -5375,14 +8265,54 @@ impl DawHost {
 
             let frames = if is_last {
                 if output.len() < output_len {
-                    self.config.f64_chain_scratch = scratch_a;
-                    self.config.f64_chain_scratch_alt = scratch_b;
-                    return Err(format!(
-                        "f64 output too small: need {output_len} samples, got {}",
-                        output.len()
-                    ));
-                }
-                if current_in_a {
+                    // Loose live declaration (or probe coincidence): the
+                    // caller staged from the host query, which understates
+                    // this final op's need. Run into the grown sibling
+                    // scratch and commit production exactly. The over-report
+                    // guard inside process_f64_node fires first on genuine
+                    // lies; production genuinely exceeding caller capacity
+                    // stays a loud error below, never silently discarded.
+                    let frames = if current_in_a {
+                        ensure_len(&mut scratch_b, output_len);
+                        Self::process_f64_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &scratch_a[..current_len],
+                            &mut scratch_b[..output_len],
+                            current_rate,
+                            self.node_input_positions[nid],
+                            current_frames,
+                        )?
+                    } else {
+                        ensure_len(&mut scratch_a, output_len);
+                        Self::process_f64_node(
+                            self.plugins[nid].as_mut().unwrap().as_mut(),
+                            node,
+                            self.bypassed.get(nid).copied().unwrap_or(false),
+                            &scratch_b[..current_len],
+                            &mut scratch_a[..output_len],
+                            current_rate,
+                            self.node_input_positions[nid],
+                            current_frames,
+                        )?
+                    };
+                    let produced = frames.saturating_mul(node.output_channels());
+                    if produced > output.len() {
+                        self.config.f64_chain_scratch = scratch_a;
+                        self.config.f64_chain_scratch_alt = scratch_b;
+                        return Err(format!(
+                            "f64 output too small: need {produced} samples, got {}",
+                            output.len()
+                        ));
+                    }
+                    if current_in_a {
+                        output[..produced].copy_from_slice(&scratch_b[..produced]);
+                    } else {
+                        output[..produced].copy_from_slice(&scratch_a[..produced]);
+                    }
+                    frames
+                } else if current_in_a {
                     Self::process_f64_node(
                         self.plugins[nid].as_mut().unwrap().as_mut(),
                         node,
@@ -5468,9 +8398,16 @@ impl DawHost {
         }
         let context =
             ProcessContext::new(sample_rate, num_frames).with_sample_position(sample_position);
-        Ok(Self::process_plugin_f64_isolated(
-            plugin, node, input, output, &context,
-        ))
+        let outcome =
+            Self::process_plugin_f64_isolated(plugin, node, input, &mut *output, &context);
+        if let Some(returned) = outcome.over_reported {
+            let staged = output.len() / node.output_channels().max(1);
+            return Err(format!(
+                "plugin '{}' process returned {} frames, exceeding its {}-frame declared output capacity",
+                node.name, returned, staged
+            ));
+        }
+        Ok(outcome.frames)
     }
 
     #[allow(
@@ -5596,13 +8533,20 @@ impl DawHost {
                         );
                         let output_len = max_output_frames * node.output_channels();
                         ensure_len(scratch_output, output_len);
-                        let frames = Self::process_plugin_f32_isolated(
+                        let outcome = Self::process_plugin_f32_isolated(
                             plugin.as_mut(),
                             node,
                             &scratch_input[..in_len],
                             &mut scratch_output[..output_len],
                             &context,
                         );
+                        if let Some(returned) = outcome.over_reported {
+                            return Err(format!(
+                                "plugin '{}' process returned {} frames, exceeding its {}-frame declared output capacity",
+                                node.name, returned, max_output_frames
+                            ));
+                        }
+                        let frames = outcome.frames;
                         node_buffer_slot
                             .as_mut()
                             .unwrap()
@@ -5659,6 +8603,431 @@ impl DawHost {
         })
     }
 
+    /// Routed channel width of every edge, indexed by `GraphEdge::id`.
+    ///
+    /// This must match `compute_compensation_delays` exactly, including the
+    /// sidechain running-offset sequence, so queues hold exactly the frames
+    /// their delay line was built for. Shared by the drain plan and the
+    /// process-phase retention sizing so the two can never diverge.
+    fn edge_routed_channels(
+        nodes: &HashMap<NodeId, GraphNode>,
+        edges: &[GraphEdge],
+        predecessors: &[Vec<GraphEdge>],
+    ) -> Vec<usize> {
+        let mut routed = vec![0usize; edges.len()];
+        for (node_id, dest) in nodes {
+            let has_sidechain = predecessors[*node_id]
+                .iter()
+                .any(|edge| edge.edge_type == EdgeType::Sidechain);
+            let primary = if has_sidechain && dest.input_channels() > dest.output_channels() {
+                dest.output_channels()
+            } else {
+                dest.input_channels()
+            };
+            let mut sidechain_offset = primary;
+            for edge in &predecessors[*node_id] {
+                let source_channels = nodes
+                    .get(&edge.from_node)
+                    .map(|node| node.output_channels())
+                    .unwrap_or(0);
+                routed[edge.id] = Self::routed_channel_count(
+                    dest,
+                    edge,
+                    source_channels,
+                    primary,
+                    &mut sidechain_offset,
+                );
+            }
+        }
+        routed
+    }
+
+    /// Per-edge process retention caps in frames, indexed by edge id.
+    ///
+    /// Only merge-point edges (destinations with at least two predecessors)
+    /// receive nonzero caps. Each cap covers the edge's own compensation
+    /// history plus one prepared-scale emission wave from its source and one
+    /// from the merge's heaviest branch, so any skew up to a full wave plus
+    /// alignment is admitted and sustained divergence fails loudly instead of
+    /// dropping. Emissions are fresh-state declared bounds queried with the
+    /// panic-isolated build-time helper (the same contract the drain plan
+    /// uses); bypassed sources count as full passthrough waves. Every sum is
+    /// checked: the build refuses on overflow rather than saturating.
+    fn merge_retention_caps(
+        &self,
+        comp_frames: &[usize],
+        prepared_sink_frames: usize,
+    ) -> Result<Vec<usize>, String> {
+        let mut caps = vec![0usize; self.edges.len()];
+        for node_id in self.nodes.keys() {
+            let incoming = &self.predecessors[*node_id];
+            if incoming.len() < 2 {
+                continue;
+            }
+            let mut waves = Vec::with_capacity(incoming.len());
+            let mut emit_max = 0usize;
+            for edge in incoming {
+                // Envelope preparation per edge: envelopes dominate live
+                // values, so each substitution only grows the cap and
+                // mixed graphs keep live sizing exactly where unknown.
+                let scale = self
+                    .path_output_envelope(edge.from_node, prepared_sink_frames)
+                    .unwrap_or_else(|| {
+                        self.path_output_frames(edge.from_node, prepared_sink_frames)
+                    });
+                let bypassed = self.bypassed.get(edge.from_node).copied().unwrap_or(false);
+                let cached = self.plugins.get(edge.from_node).and_then(Option::as_ref);
+                let wave = if bypassed {
+                    scale
+                } else if let Some(plugin) = cached {
+                    Self::plugin_output_frames_envelope_isolated(
+                        plugin.as_ref(),
+                        edge.from_node,
+                        &self.nodes[&edge.from_node].name,
+                        scale,
+                    )
+                    .unwrap_or_else(|| {
+                        Self::plugin_output_frames_for_input_isolated(
+                            plugin.as_ref(),
+                            edge.from_node,
+                            &self.nodes[&edge.from_node].name,
+                            self.path_output_frames(edge.from_node, prepared_sink_frames),
+                        )
+                    })
+                } else {
+                    scale
+                };
+                waves.push((edge.id, wave));
+                emit_max = emit_max.max(wave);
+            }
+            for (id, wave) in waves {
+                let comp = comp_frames.get(id).copied().unwrap_or(0);
+                let cap = comp
+                    .checked_add(wave)
+                    .and_then(|partial| partial.checked_add(emit_max))
+                    .ok_or_else(|| {
+                        format!(
+                            "graph merge retention cap overflows addressable frames on edge {id}"
+                        )
+                    })?;
+                if let Some(slot) = caps.get_mut(id) {
+                    *slot = cap;
+                } else {
+                    return Err(format!(
+                        "graph merge retention cap indexes unknown edge {id}"
+                    ));
+                }
+            }
+        }
+        Ok(caps)
+    }
+
+    /// Build (or preserve) the per-edge retention FIFOs for one buffer set.
+    ///
+    /// Queues are pre-sized to `cap * routed width` samples with checked
+    /// arithmetic, so process-phase pushes never allocate. On a no-change
+    /// rebuild (`preserve`), old queues move over when the edge set matches
+    /// and every depth fits the rebuilt cap; anything else fails loudly
+    /// instead of dropping retained audio.
+    fn restore_merge_queues<T: AudioSample>(
+        old: Option<&Vec<VecDeque<T>>>,
+        caps: &[usize],
+        routed: &[usize],
+        preserve: bool,
+    ) -> Result<Vec<VecDeque<T>>, String> {
+        let mut queues = Vec::with_capacity(caps.len());
+        for (id, &cap) in caps.iter().enumerate() {
+            let width = routed.get(id).copied().unwrap_or(0);
+            let samples = cap.checked_mul(width).ok_or_else(|| {
+                format!("graph merge retention of edge {id} exceeds addressable samples")
+            })?;
+            if samples > isize::MAX as usize {
+                return Err(format!(
+                    "graph merge retention of edge {id} needs {samples} samples, beyond addressable storage"
+                ));
+            }
+            let mut queue = VecDeque::with_capacity(samples);
+            if preserve {
+                if let Some(old_queue) = old.as_ref().and_then(|queues| queues.get(id)) {
+                    let old_frames = old_queue.len() / width.max(1);
+                    if old_frames > cap {
+                        return Err(format!(
+                            "graph merge retention of edge {id} holds {old_frames} frames past the rebuilt {cap}-frame cap; reset the host"
+                        ));
+                    }
+                    queue.extend(old_queue.iter().copied());
+                } else if old.is_some() {
+                    return Err(format!(
+                        "graph merge retention lost edge {id} across a rebuild; reset the host"
+                    ));
+                }
+            }
+            queues.push(queue);
+        }
+        Ok(queues)
+    }
+
+    /// Per-edge merge routing: (skip, routed width, destination offset).
+    ///
+    /// Mirrors the single-predecessor merge loop's channel-map/offset
+    /// semantics exactly, including the sidechain running-offset fold over the
+    /// same edge order, so the retained path routes identically and only the
+    /// frame accounting differs. `position` is the edge's index in `edges`.
+    fn merge_edge_routing<T: AudioSample>(
+        n: &GraphNode,
+        edges: &[GraphEdge],
+        nbs: &[Option<NodeBuffer<T>>],
+        position: usize,
+    ) -> (bool, usize, usize) {
+        let has_sidechain = edges.iter().any(|e| e.edge_type == EdgeType::Sidechain);
+        let primary_channels = if has_sidechain && n.input_channels() > n.output_channels() {
+            n.output_channels()
+        } else {
+            n.input_channels()
+        };
+        let mut sidechain_offset = primary_channels;
+        for prior in &edges[..position] {
+            if prior.edge_type != EdgeType::Sidechain {
+                continue;
+            }
+            if sidechain_offset >= n.input_channels() {
+                continue;
+            }
+            let prior_source_channels = nbs[prior.from_node].as_ref().unwrap().num_channels;
+            let requested = prior
+                .channel_map
+                .as_ref()
+                .map_or(prior_source_channels, |cm| cm.len());
+            sidechain_offset = (sidechain_offset + requested).min(n.input_channels());
+        }
+        let edge = &edges[position];
+        let dest_offset = match edge.edge_type {
+            EdgeType::Audio => edge.destination_offset,
+            EdgeType::Sidechain => {
+                if sidechain_offset >= n.input_channels() {
+                    return (true, 0, 0);
+                }
+                sidechain_offset
+            }
+        };
+        let available_dest_channels = match edge.edge_type {
+            EdgeType::Audio => primary_channels.saturating_sub(dest_offset),
+            EdgeType::Sidechain => n.input_channels().saturating_sub(dest_offset),
+        };
+        if available_dest_channels == 0 {
+            return (true, 0, 0);
+        }
+        let source_channels = nbs[edge.from_node].as_ref().unwrap().num_channels;
+        let width = match edge.channel_map.as_ref() {
+            Some(cm) => cm.len().min(available_dest_channels),
+            None => source_channels.min(available_dest_channels),
+        };
+        (false, width, dest_offset)
+    }
+
+    /// Route one edge's full actual emission through compensation into its queue.
+    ///
+    /// The channel routing mirrors the single-predecessor merge loop
+    /// frame-for-frame (including pad-on-short reads); the delay half mirrors
+    /// `apply_compensation_and_sum_at`, except the delayed output lands in the
+    /// retention FIFO instead of the mix. Admission (pass 1 of the retained
+    /// merge) guarantees the push fits the pre-sized capacity, so this never
+    /// allocates.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "retained edge push: routing plus delay halves share the merge scratch set"
+    )]
+    fn push_compensated_edge_frames<T: AudioSample>(
+        edge: &GraphEdge,
+        width: usize,
+        num_frames: usize,
+        src: &[T],
+        src_channels: usize,
+        queue: &mut VecDeque<T>,
+        routed: &mut Vec<T>,
+        delay_scratch: &mut Vec<T>,
+        delays: &mut CompensationDelays<T>,
+    ) -> Result<(), String> {
+        if width == 0 || num_frames == 0 {
+            return Ok(());
+        }
+        let total = num_frames.checked_mul(width).ok_or_else(|| {
+            format!(
+                "graph merge retention frame expansion overflows on edge {}",
+                edge.id
+            )
+        })?;
+        ensure_len(routed, total);
+        if let Some(cm) = edge.channel_map.as_ref() {
+            for f in 0..num_frames {
+                for (di, &si) in cm.iter().take(width).enumerate() {
+                    let dst = f * width + di;
+                    let s = f * src_channels + si;
+                    routed[dst] = src.get(s).copied().unwrap_or_default();
+                }
+            }
+        } else if width == src_channels && src.len() >= total {
+            routed[..total].copy_from_slice(&src[..total]);
+        } else {
+            for f in 0..num_frames {
+                let s = f * src_channels;
+                let dst = f * width;
+                let src_end = (s + width).min(src.len());
+                let copied = src_end.saturating_sub(s);
+                if copied > 0 {
+                    routed[dst..dst + copied].copy_from_slice(&src[s..src_end]);
+                }
+                if copied < width {
+                    routed[dst + copied..dst + width].fill(T::default());
+                }
+            }
+        }
+        if let Some(delay_buf) = delays.get_mut_edge(edge.id) {
+            let needed = total + width;
+            if delay_scratch.len() < needed {
+                delay_scratch.resize(needed, T::default());
+            }
+            let (frame_part, silence) = delay_scratch.split_at_mut(total);
+            silence[..width].fill(T::default());
+            for f in 0..num_frames {
+                let start = f * width;
+                delay_buf.process_frame(
+                    &routed[start..start + width],
+                    &mut frame_part[start..start + width],
+                );
+            }
+            queue.extend(frame_part[..total].iter().copied());
+        } else {
+            queue.extend(routed[..total].iter().copied());
+        }
+        Ok(())
+    }
+
+    /// Merge-point join with lossless per-edge retention.
+    ///
+    /// Every participating edge pushes its full actual emission through
+    /// routing and compensation into its FIFO; the join then consumes the
+    /// minimum queued depth and sums it into the merge buffer. Admission is
+    /// atomic: every edge is cap-checked before any queue or delay mutates, so
+    /// an overflow error leaves no partial block behind (the caller poisons
+    /// the host, and only `reset` recovers). Edges routed nowhere keep the
+    /// pre-existing skip: they neither queue nor gate the join.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "retained merge path: same scratch buffers as the single-predecessor merge"
+    )]
+    fn merge_inputs_retained<T: AudioSample>(
+        n: &GraphNode,
+        preds: &[Vec<GraphEdge>],
+        nbs: &[Option<NodeBuffer<T>>],
+        mb: &mut Vec<T>,
+        cmb: &mut Vec<T>,
+        delay_scratch: &mut Vec<T>,
+        compensation_delays: &mut CompensationDelays<T>,
+        merge_queues: &mut [VecDeque<T>],
+        merge_caps: &[usize],
+    ) -> Result<usize, String> {
+        let edges = &preds[n.id];
+        // Pass 1 (pure): admit every edge before any queue or delay mutates.
+        for (position, edge) in edges.iter().enumerate() {
+            let (skip, width, _) = Self::merge_edge_routing(n, edges, nbs, position);
+            if skip || width == 0 {
+                continue;
+            }
+            let source = nbs[edge.from_node].as_ref().unwrap();
+            let incoming = source.actual_len / source.num_channels.max(1);
+            let queue = merge_queues
+                .get(edge.id)
+                .ok_or_else(|| format!("graph merge retention indexes unknown edge {}", edge.id))?;
+            let queued = queue.len() / width.max(1);
+            let cap = merge_caps.get(edge.id).copied().unwrap_or(0);
+            let admitted = queued
+                .checked_add(incoming)
+                .is_some_and(|total| total <= cap);
+            if !admitted {
+                return Err(format!(
+                    "graph merge retention overflow: edge {} into node {} holds {queued}/{cap} frames with {incoming} incoming; sustained branch divergence (reset the host)",
+                    edge.id, n.id
+                ));
+            }
+        }
+        // Pass 2: route full actual emissions through compensation into queues.
+        for (position, edge) in edges.iter().enumerate() {
+            let (skip, width, _) = Self::merge_edge_routing(n, edges, nbs, position);
+            if skip {
+                continue;
+            }
+            let source = nbs[edge.from_node].as_ref().unwrap();
+            let data = source.read();
+            let incoming = source.actual_len / source.num_channels.max(1);
+            let queue = merge_queues
+                .get_mut(edge.id)
+                .ok_or_else(|| format!("graph merge retention indexes unknown edge {}", edge.id))?;
+            Self::push_compensated_edge_frames(
+                edge,
+                width,
+                incoming,
+                data,
+                source.num_channels,
+                queue,
+                cmb,
+                delay_scratch,
+                compensation_delays,
+            )?;
+        }
+        // Pass 3: consume the minimum queued depth and sum it.
+        let mut consume = usize::MAX;
+        for (position, edge) in edges.iter().enumerate() {
+            let (skip, width, _) = Self::merge_edge_routing(n, edges, nbs, position);
+            if skip {
+                continue;
+            }
+            let queue = merge_queues
+                .get(edge.id)
+                .ok_or_else(|| format!("graph merge retention indexes unknown edge {}", edge.id))?;
+            consume = consume.min(queue.len() / width.max(1));
+        }
+        let consume = if consume == usize::MAX { 0 } else { consume };
+        let out_samples = consume.checked_mul(n.input_channels()).ok_or_else(|| {
+            format!(
+                "graph merge retention join overflows on node {} ({} frames)",
+                n.id, consume
+            )
+        })?;
+        ensure_len(mb, out_samples);
+        mb[..out_samples].fill(T::default());
+        for (position, edge) in edges.iter().enumerate() {
+            let (skip, width, dest_offset) = Self::merge_edge_routing(n, edges, nbs, position);
+            if skip || width == 0 || consume == 0 {
+                continue;
+            }
+            let queue = merge_queues
+                .get_mut(edge.id)
+                .ok_or_else(|| format!("graph merge retention indexes unknown edge {}", edge.id))?;
+            let take = consume.checked_mul(width).ok_or_else(|| {
+                format!(
+                    "graph merge retention join overflows on edge {} ({} frames)",
+                    edge.id, consume
+                )
+            })?;
+            ensure_len(cmb, take);
+            let (front, back) = queue.as_slices();
+            let from_front = front.len().min(take);
+            cmb[..from_front].copy_from_slice(&front[..from_front]);
+            cmb[from_front..take].copy_from_slice(&back[..take - from_front]);
+            drop(queue.drain(..take));
+            Self::sum_interleaved_at(
+                &cmb[..take],
+                mb,
+                width,
+                n.input_channels(),
+                dest_offset,
+                consume,
+            );
+        }
+        Ok(out_samples)
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "internal graph wiring helper: all arguments are distinct scratch buffers"
@@ -5672,7 +9041,26 @@ impl DawHost {
         cmb: &mut Vec<T>,
         delay_scratch: &mut Vec<T>,
         compensation_delays: &mut CompensationDelays<T>,
+        merge_queues: &mut [VecDeque<T>],
+        merge_caps: &[usize],
     ) -> Result<usize, String> {
+        let any_participating = preds[n.id].iter().enumerate().any(|(position, _)| {
+            let (skip, width, _) = Self::merge_edge_routing(n, &preds[n.id], nbs, position);
+            !skip && width > 0
+        });
+        if preds[n.id].len() >= 2 && any_participating {
+            return Self::merge_inputs_retained(
+                n,
+                preds,
+                nbs,
+                mb,
+                cmb,
+                delay_scratch,
+                compensation_delays,
+                merge_queues,
+                merge_caps,
+            );
+        }
         let is = nf * n.input_channels();
         ensure_len(mb, is);
         mb[..is].fill(T::default());
@@ -5788,8 +9176,10 @@ impl DawHost {
         for edge in &predecessors[id] {
             let buffer = buffers[edge.from_node].as_ref().unwrap();
             let count = buffer.actual_len / buffer.num_channels;
-            // Preserve the existing common-prefix behavior. Retaining the
-            // unmatched suffix requires per-edge queues (separate follow-up).
+            // Common-prefix behavior for input and single-predecessor nodes.
+            // Merge points (>= 2 predecessors) retain per-edge queues instead
+            // (`merge_inputs_retained`); the caller re-derives their frame
+            // count from the exact merged samples.
             frames = Some(frames.map_or(count, |previous: usize| previous.min(count)));
         }
         Ok(frames.unwrap_or(source_frames))
@@ -5927,8 +9317,135 @@ impl DawHost {
         Ok(())
     }
 
+    /// Verify one edge's EOS queue can absorb a retention handoff.
+    ///
+    /// The build pre-sizes every EOS queue for its drain wave plus retention,
+    /// so any shortfall is a loud internal error, never a silent reallocation.
+    fn check_retention_handoff_capacity(
+        plan: &GraphDrainPlan,
+        state: &GraphDrainState,
+        id: usize,
+        add: usize,
+    ) -> Result<(), String> {
+        let edge_plan = plan
+            .edge_plan
+            .get(id)
+            .ok_or_else(|| format!("graph drain retention handoff indexes unknown edge {id}"))?;
+        let room = edge_plan
+            .queue_cap_frames
+            .checked_mul(edge_plan.routed_channels)
+            .ok_or_else(|| format!("graph drain retention capacity overflows on edge {id}"))?;
+        let held = state
+            .edges
+            .get(id)
+            .map(|edge| edge.queue.len())
+            .unwrap_or(0);
+        let total = held
+            .checked_add(add)
+            .ok_or_else(|| format!("graph drain retention size overflows on edge {id}"))?;
+        if total > room {
+            return Err(format!(
+                "graph drain retention handoff of {add} samples exceeds prepared {room} on edge {id}"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Move process-phase merge retention into the graph EOS edge queues.
+    ///
+    /// Runs at the top of every graph drain call; it is a no-op unless a
+    /// process-phase queue holds frames. Only `process` fills those queues
+    /// and the first drain moves them out, so mid-drain calls find them
+    /// empty. Retention lands ahead of native tails in EOS queues the build
+    /// pre-sized for the sum, so the unchanged scheduler drains it first
+    /// without reallocating. f64 retention crosses the documented f32-only
+    /// drain bridge with the same `as f32` cast as the f64 fallback input
+    /// path. Both precisions holding frames means a mixed-precision stream
+    /// without an intervening reset, which fails loudly.
+    fn transfer_process_retention_to_drain(&mut self) -> Result<(), String> {
+        let f32_held: usize = self
+            .process_buffers
+            .as_ref()
+            .map(|buffers| buffers.merge_queues.iter().map(VecDeque::len).sum())
+            .unwrap_or(0);
+        let f64_held: usize = self
+            .process_buffers_f64
+            .as_ref()
+            .map(|buffers| buffers.merge_queues.iter().map(VecDeque::len).sum())
+            .unwrap_or(0);
+        if f32_held > 0 && f64_held > 0 {
+            return Err(
+                "graph drain refused mixed-precision process retention without an intervening reset"
+                    .into(),
+            );
+        }
+        if f32_held == 0 && f64_held == 0 {
+            return Ok(());
+        }
+        if f32_held > 0 {
+            let buffers = self.process_buffers.as_mut().ok_or_else(|| {
+                "graph drain lost process buffers with retention held".to_string()
+            })?;
+            for (id, queue) in buffers.merge_queues.iter().enumerate() {
+                if !queue.is_empty() {
+                    Self::check_retention_handoff_capacity(
+                        &self.graph_drain_plan,
+                        &self.graph_drain_state,
+                        id,
+                        queue.len(),
+                    )?;
+                }
+            }
+            for (id, queue) in buffers.merge_queues.iter_mut().enumerate() {
+                if queue.is_empty() {
+                    continue;
+                }
+                let dst = self
+                    .graph_drain_state
+                    .edges
+                    .get_mut(id)
+                    .map(|edge| &mut edge.queue)
+                    .ok_or_else(|| {
+                        format!("graph drain retention handoff indexes unknown edge {id}")
+                    })?;
+                dst.extend(queue.drain(..));
+            }
+        }
+        if f64_held > 0 {
+            let buffers = self.process_buffers_f64.as_mut().ok_or_else(|| {
+                "graph drain lost process buffers with retention held".to_string()
+            })?;
+            for (id, queue) in buffers.merge_queues.iter().enumerate() {
+                if !queue.is_empty() {
+                    Self::check_retention_handoff_capacity(
+                        &self.graph_drain_plan,
+                        &self.graph_drain_state,
+                        id,
+                        queue.len(),
+                    )?;
+                }
+            }
+            for (id, queue) in buffers.merge_queues.iter_mut().enumerate() {
+                if queue.is_empty() {
+                    continue;
+                }
+                let dst = self
+                    .graph_drain_state
+                    .edges
+                    .get_mut(id)
+                    .map(|edge| &mut edge.queue)
+                    .ok_or_else(|| {
+                        format!("graph drain retention handoff indexes unknown edge {id}")
+                    })?;
+                dst.extend(queue.drain(..).map(|sample| sample as f32));
+            }
+        }
+        Ok(())
+    }
+
     pub fn reset(&mut self) {
         self.drain_state = DrainState::default();
+        self.graph_drain_state.reset_dynamic();
         self.terminal_sink_source_complete = false;
         self.terminal_sink_producer_started = false;
         if self.terminal_sink_lifecycle.is_some() {
@@ -5942,10 +9459,17 @@ impl DawHost {
         }
         if let Some(buffers) = self.process_buffers.as_mut() {
             buffers.compensation_delays.reset();
+            for queue in &mut buffers.merge_queues {
+                queue.clear();
+            }
         }
         if let Some(buffers) = self.process_buffers_f64.as_mut() {
             buffers.compensation_delays.reset();
+            for queue in &mut buffers.merge_queues {
+                queue.clear();
+            }
         }
+        self.merge_overflow_poisoned = false;
     }
     pub fn total_latency_samples(&self) -> usize {
         if let Some(cached) = self.cached_latency {
@@ -6355,6 +9879,545 @@ impl DawHost {
                 .map(|n| n.name.clone())
                 .collect()
         })
+    }
+}
+
+impl DawHost {
+    /// Live remaining tail in host-output frames.
+    ///
+    /// Total future emission with no further input, folded from current
+    /// stream state: retained waves (process merge queues, drain edge
+    /// queues, node holdover, output queues), pending compensation flushes,
+    /// and per-node tails, composed through each plugin's live
+    /// [`Plugin::output_frames_for_input`] transfer declaration. A
+    /// `Finite` answer is a conservative bound: it is exact only when
+    /// every transfer declaration is exact at the folded quanta and every
+    /// tail exact (quiescent transfer-exact topologies: delays, gains,
+    /// identity, residual-exact bursts — fresh or fully-armed drain
+    /// state). Resampler transfers over-approximate through chunk
+    /// ceilings and call padding, so converting folds are bounds, never
+    /// counts. It over-approximates mid-drain partial progress (a
+    /// draining node contributes its full live tail) and un-armed
+    /// compensation (full plan length until the arming transition fires,
+    /// then the exact remainder). It never undercounts: every in-flight
+    /// frame is counted
+    /// in exactly one store (retention transfer and holdover commit are
+    /// moves, and the query cannot interleave them), joins pace by the
+    /// minimum over non-EOF data inputs plus EOF-side content, sidechain
+    /// edges carry control rather than audio frames, and bypassed nodes
+    /// pass input through with no tail, mirroring drain dispatch, which
+    /// this mirrors with the same chain predicate.
+    ///
+    /// `Unknown` is honest, never a guess: refused drains (merge-overflow
+    /// poison, mixed-precision retention), terminal-sink routing (a side
+    /// channel this fold does not model), unbuilt graphs (no plan), an
+    /// unprovable node tail without a support bound, any structural
+    /// mismatch, or any arithmetic overflow (checked throughout, never
+    /// saturated). A node reporting `Infinite` propagates `Infinite`
+    /// (termination semantics: its drain never completes). The answer is
+    /// instantaneous: later `process`/`drain` calls change stream state,
+    /// so callers re-query after advancing the stream.
+    ///
+    /// Realtime: the chain fold keeps one accumulator and allocates
+    /// nothing; the graph fold reuses pre-sized per-node scratch and
+    /// allocates only when the topology grew without a fresh derivation.
+    /// Both call each node's `tail_length`/`tail_support`
+    /// (assumed cheap and side-effect free) and never mutate stream state.
+    pub fn tail_length(&self) -> TailLength {
+        if self.merge_overflow_poisoned || self.terminal_sink_lifecycle.is_some() {
+            return TailLength::Unknown;
+        }
+        if self.nodes.is_empty() {
+            // No nodes, no edges, no outputs: drain completes immediately
+            // with zero frames, so the tail is exactly zero (covers both
+            // fresh and `PathConfig::None` empty hosts).
+            return TailLength::Finite(0);
+        }
+        if self.is_topologically_linear_chain() || self.is_chain_topology_for_drain() {
+            return self.chain_remaining_tail();
+        }
+        if !self.built {
+            return TailLength::Unknown;
+        }
+        self.graph_remaining_tail()
+    }
+
+    /// State-independent tail support in host-output frames, if provable.
+    ///
+    /// Upper bound over ALL reachable stream states (not just the current
+    /// one): drain queues at capacity, merge retention at cap, holdover at
+    /// each node's drain envelope, compensation at full plan length, node
+    /// tails at [`Plugin::tail_support`], composed through each plugin's
+    /// [`Plugin::output_frames_envelope`] transfer bound. This dominates
+    /// TRUE future emission in every state — term by term (caps over live
+    /// queues, holdover envelopes over retained waves, full plan
+    /// compensation over armed/unarmed flushes, per-node support over
+    /// per-node emission, envelope transfers over production, with
+    /// envelope monotonicity lifting larger-quantum envelopes over
+    /// smaller-quantum production) — never by comparison against live
+    /// tail values, which it need not dominate. Hosts compose it for
+    /// in-flight content. `None` is honest:
+    /// any node without the needed envelopes/support, an unbuilt graph,
+    /// terminal-sink routing, structural mismatch, or arithmetic overflow.
+    /// Phases are deliberately unread (support covers every phase: joins
+    /// take twice the maximum over data inputs, which dominates every
+    /// armed/unarmed minimum-plus-maximum partition).
+    pub fn tail_support(&self) -> Option<u64> {
+        if self.terminal_sink_lifecycle.is_some() {
+            return None;
+        }
+        if self.nodes.is_empty() {
+            return Some(0);
+        }
+        if self.is_topologically_linear_chain() || self.is_chain_topology_for_drain() {
+            return self.chain_tail_support();
+        }
+        if !self.built {
+            return None;
+        }
+        self.graph_tail_support()
+    }
+
+    /// Chain fold: completed stages emit nothing more; each live stage maps
+    /// the running wave through its transfer declaration, then adds its own
+    /// live tail (which later stages fold as input). Bypassed stages are
+    /// identity with no tail, exactly as chain drain skips them.
+    fn chain_remaining_tail(&self) -> TailLength {
+        let mut acc: u64 = 0;
+        for &node_id in self
+            .chain_nodes
+            .iter()
+            .skip(self.drain_state.completed_prefix)
+        {
+            let Some(node) = self.nodes.get(&node_id) else {
+                return TailLength::Unknown;
+            };
+            if node.bypassed {
+                continue;
+            }
+            let Ok(input_frames) = usize::try_from(acc) else {
+                return TailLength::Unknown;
+            };
+            let Some(plugin) = self.plugins.get(node_id).and_then(|slot| slot.as_ref()) else {
+                return TailLength::Unknown;
+            };
+            let produced = plugin.output_frames_for_input(input_frames);
+            let Ok(produced) = u64::try_from(produced) else {
+                return TailLength::Unknown;
+            };
+            let tail = match plugin.tail_length() {
+                TailLength::Finite(frames) => frames,
+                TailLength::Infinite => return TailLength::Infinite,
+                TailLength::Unknown => match plugin.tail_support() {
+                    Some(bound) => bound,
+                    None => return TailLength::Unknown,
+                },
+            };
+            let Some(next) = produced.checked_add(tail) else {
+                return TailLength::Unknown;
+            };
+            acc = next;
+        }
+        TailLength::Finite(acc)
+    }
+
+    /// Chain support: the full chain (prefix ignored: support covers every
+    /// drain phase) through transfer envelopes plus support tails.
+    fn chain_tail_support(&self) -> Option<u64> {
+        let mut acc: u64 = 0;
+        for &node_id in &self.chain_nodes {
+            let node = self.nodes.get(&node_id)?;
+            if node.bypassed {
+                continue;
+            }
+            let plugin = self.plugins.get(node_id)?.as_ref()?;
+            if plugin.tail_length() == TailLength::Infinite {
+                // Infinite live with finite support is incoherent (a
+                // proven emission bound contradicts unproven
+                // termination): an Infinite node keeps whole-chain
+                // support honestly `None`.
+                return None;
+            }
+            let input_frames = usize::try_from(acc).ok()?;
+            let produced = plugin.output_frames_envelope(input_frames)?;
+            let support = plugin.tail_support()?;
+            acc = u64::try_from(produced).ok()?.checked_add(support)?;
+        }
+        Some(acc)
+    }
+
+    /// Live tail of one node in its own output-rate frames. Bypassed nodes
+    /// contribute nothing (drain never calls them); otherwise the live
+    /// `tail_length`, falling back to the state-independent `tail_support`
+    /// bound (which bounds true emission in the current state too, since
+    /// support covers every state) when live is `Unknown`.
+    fn node_live_tail_frames(&self, node_id: NodeId) -> TailLength {
+        let Some(node) = self.nodes.get(&node_id) else {
+            return TailLength::Unknown;
+        };
+        if node.bypassed {
+            return TailLength::Finite(0);
+        }
+        let Some(plugin) = self.plugins.get(node_id).and_then(|slot| slot.as_ref()) else {
+            return TailLength::Unknown;
+        };
+        match plugin.tail_length() {
+            TailLength::Finite(frames) => TailLength::Finite(frames),
+            TailLength::Infinite => TailLength::Infinite,
+            TailLength::Unknown => match plugin.tail_support() {
+                Some(bound) => TailLength::Finite(bound),
+                None => TailLength::Unknown,
+            },
+        }
+    }
+
+    /// Live content pending on one data edge in destination-clock frames:
+    /// drain queue plus process merge retention (both precisions; mixed
+    /// retention refuses drain, so at most one holds content), the
+    /// source's uncommitted holdover wave (committed edges already hold
+    /// their copy in the queue), and pending compensation (exact armed
+    /// remainder once the source completed, else the deterministic future
+    /// arm length from the plan). Both queue stores divide by the plan's
+    /// routed width: `edge_routed_channels` sizes process retention and
+    /// the drain plan alike so the two can never diverge, and the
+    /// retention transfer moves samples unchanged.
+    fn graph_edge_tail_content(&self, edge_index: usize) -> Option<u64> {
+        let edge_plan = self.graph_drain_plan.edge_plan.get(edge_index)?;
+        let edge = self.edges.get(edge_index)?;
+        let drain_len = self
+            .graph_drain_state
+            .edges
+            .get(edge_index)
+            .map(|state| state.queue.len())
+            .unwrap_or(0);
+        let merge_len = self
+            .process_buffers
+            .as_ref()
+            .and_then(|buffers| buffers.merge_queues.get(edge.id))
+            .map(VecDeque::len)
+            .unwrap_or(0)
+            .checked_add(
+                self.process_buffers_f64
+                    .as_ref()
+                    .and_then(|buffers| buffers.merge_queues.get(edge.id))
+                    .map(VecDeque::len)
+                    .unwrap_or(0),
+            )?;
+        let total_len = drain_len.checked_add(merge_len)?;
+        let width = edge_plan.routed_channels;
+        // `checked_div` answers `None` exactly at zero width: the empty
+        // store still folds to 0 frames, while a nonempty store at zero
+        // width is unprovable content.
+        let content = match total_len.checked_div(width) {
+            Some(frames) => frames,
+            None if total_len == 0 => 0,
+            None => return None,
+        };
+        let committed = self
+            .graph_drain_state
+            .edge_committed
+            .get(edge_index)
+            .copied()?;
+        let holdover = if committed {
+            0
+        } else {
+            self.graph_drain_state
+                .holdover_frames
+                .get(edge.from_node)
+                .copied()
+                .unwrap_or(0)
+        };
+        let from_complete = self.graph_drain_state.phases.get(edge.from_node)
+            == Some(&GraphNodeDrainPhase::Complete);
+        let comp = if from_complete {
+            self.graph_drain_state
+                .edges
+                .get(edge_index)
+                .map(|state| state.flush_remaining)
+                .unwrap_or(0)
+        } else {
+            edge_plan.comp_frames
+        };
+        u64::try_from(content)
+            .ok()?
+            .checked_add(u64::try_from(holdover).ok()?)?
+            .checked_add(u64::try_from(comp).ok()?)
+    }
+
+    /// Graph live fold in forward topological order. Each edge carries
+    /// its stored content (queues, uncommitted holdover share, pending
+    /// compensation) plus its source's future output; each node maps its
+    /// input (minimum over non-EOF data inputs, which gate consumption,
+    /// plus the maximum over EOF-side content, which rides past gating)
+    /// through its transfer declaration, then adds its live tail.
+    /// Completed nodes emit nothing more (their past lives in the stores).
+    /// Sidechain inputs add no audio frames but an unprovable key source
+    /// poisons control-dependent audio. Output nodes additionally emit
+    /// their holdover wave, output queue, and output compensation. The
+    /// host tail is the maximum over outputs (each in its own clock;
+    /// exact for single-output and same-rate graphs). `None` scratches
+    /// poison only dependent outputs (per-output isolation limits
+    /// propagation), but the host answer is all-or-nothing: any
+    /// unresolvable output collapses the maximum to `Unknown`.
+    fn graph_remaining_tail(&self) -> TailLength {
+        let num_slots = self.predecessors.len();
+        let f32_held: usize = self
+            .process_buffers
+            .as_ref()
+            .map(|buffers| buffers.merge_queues.iter().map(VecDeque::len).sum())
+            .unwrap_or(0);
+        let f64_held: usize = self
+            .process_buffers_f64
+            .as_ref()
+            .map(|buffers| buffers.merge_queues.iter().map(VecDeque::len).sum())
+            .unwrap_or(0);
+        if f32_held > 0 && f64_held > 0 {
+            return TailLength::Unknown;
+        }
+        let mut scratch = self.tail_fold_scratch.borrow_mut();
+        if scratch.len() < num_slots {
+            scratch.resize(num_slots, None);
+        }
+        scratch[..num_slots].fill(None);
+        for &node_id in self.graph_drain_plan.topo_order.iter() {
+            if node_id >= num_slots {
+                continue;
+            }
+            let completed =
+                self.graph_drain_state.phases.get(node_id) == Some(&GraphNodeDrainPhase::Complete);
+            if completed {
+                // Past emissions live in the edge/output stores now; no
+                // future flows out regardless of stale input readings.
+                scratch[node_id] = Some(0);
+                continue;
+            }
+            let tail_frames = match self.node_live_tail_frames(node_id) {
+                TailLength::Finite(frames) => Some(frames),
+                TailLength::Infinite => return TailLength::Infinite,
+                TailLength::Unknown => None,
+            };
+            let mut gated_min: Option<u64> = None;
+            let mut eof_max: u64 = 0;
+            let mut poisoned = tail_frames.is_none();
+            if let Some(preds) = self.predecessors.get(node_id) {
+                for (position, edge) in preds.iter().enumerate() {
+                    let Some(edge_index) = self
+                        .predecessor_edge_indices
+                        .get(node_id)
+                        .and_then(|indices| indices.get(position))
+                        .copied()
+                    else {
+                        poisoned = true;
+                        continue;
+                    };
+                    if edge.edge_type == EdgeType::Sidechain {
+                        let key_known = scratch
+                            .get(edge.from_node)
+                            .and_then(|slot| slot.as_ref())
+                            .is_some();
+                        if !key_known {
+                            poisoned = true;
+                        }
+                        continue;
+                    }
+                    let eof = self
+                        .graph_drain_state
+                        .edges
+                        .get(edge_index)
+                        .map(|state| state.eof)
+                        .unwrap_or(false);
+                    let stored = self.graph_edge_tail_content(edge_index);
+                    let from_out = scratch.get(edge.from_node).copied().flatten();
+                    let (Some(stored), Some(from_out)) = (stored, from_out) else {
+                        poisoned = true;
+                        continue;
+                    };
+                    let Some(content) = stored.checked_add(from_out) else {
+                        poisoned = true;
+                        continue;
+                    };
+                    if eof {
+                        eof_max = eof_max.max(content);
+                    } else {
+                        gated_min = Some(gated_min.map_or(content, |min| min.min(content)));
+                    }
+                }
+            }
+            let node_out = (!poisoned).then(|| {
+                let input = gated_min.unwrap_or(0).checked_add(eof_max)?;
+                let bypassed = self.nodes.get(&node_id).is_some_and(|node| node.bypassed);
+                let produced = if bypassed {
+                    input
+                } else {
+                    let input_frames = usize::try_from(input).ok()?;
+                    let plugin = self.plugins.get(node_id)?.as_ref()?;
+                    u64::try_from(plugin.output_frames_for_input(input_frames)).ok()?
+                };
+                produced.checked_add(tail_frames?)
+            });
+            scratch[node_id] = node_out.flatten();
+        }
+        if self.output_nodes.is_empty() {
+            return TailLength::Finite(0);
+        }
+        let mut longest: Option<u64> = Some(0);
+        for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+            let total = (|| -> Option<u64> {
+                let out = scratch.get(node_id).copied().flatten()?;
+                let holdover = self
+                    .graph_drain_state
+                    .holdover_frames
+                    .get(node_id)
+                    .copied()
+                    .unwrap_or(0);
+                let node = self.nodes.get(&node_id)?;
+                let channels = node.output_channels();
+                let queued = self
+                    .graph_drain_state
+                    .output_queues
+                    .get(pos)
+                    .map(VecDeque::len)
+                    .unwrap_or(0);
+                // `checked_div` answers `None` exactly at zero width: the
+                // empty queue still folds to 0 frames, while a queued
+                // backlog at zero width is unprovable content.
+                let queue_frames = match queued.checked_div(channels) {
+                    Some(frames) => frames,
+                    None if queued == 0 => 0,
+                    None => return None,
+                };
+                let completed = self.graph_drain_state.phases.get(node_id)
+                    == Some(&GraphNodeDrainPhase::Complete);
+                let comp = if completed {
+                    self.graph_drain_state
+                        .output_flush_remaining
+                        .get(pos)
+                        .copied()
+                        .unwrap_or(0)
+                } else {
+                    self.graph_drain_plan.output_comp_frames.get(pos).copied()?
+                };
+                out.checked_add(u64::try_from(holdover).ok()?)?
+                    .checked_add(u64::try_from(queue_frames).ok()?)?
+                    .checked_add(u64::try_from(comp).ok()?)
+            })();
+            match total {
+                Some(frames) => longest = longest.map(|max| max.max(frames)),
+                None => longest = None,
+            }
+        }
+        match longest {
+            Some(frames) => TailLength::Finite(frames),
+            None => TailLength::Unknown,
+        }
+    }
+
+    /// Support content of one data edge: drain queue cap plus merge
+    /// retention cap, holdover at the source's drain envelope (one
+    /// retained wave), and full plan compensation (covers armed and
+    /// unarmed alike).
+    fn graph_edge_support_content(&self, edge_index: usize) -> Option<u64> {
+        let edge_plan = self.graph_drain_plan.edge_plan.get(edge_index)?;
+        let edge = self.edges.get(edge_index)?;
+        let merge_cap = self
+            .process_buffers
+            .as_ref()
+            .and_then(|buffers| buffers.merge_queue_caps.get(edge.id))
+            .copied()
+            .or_else(|| {
+                self.process_buffers_f64
+                    .as_ref()
+                    .and_then(|buffers| buffers.merge_queue_caps.get(edge.id))
+                    .copied()
+            })?;
+        let plugin = self.plugins.get(edge.from_node)?.as_ref()?;
+        let holdover = plugin.drain_frames_envelope()?;
+        u64::try_from(edge_plan.queue_cap_frames)
+            .ok()?
+            .checked_add(u64::try_from(merge_cap).ok()?)?
+            .checked_add(u64::try_from(holdover).ok()?)?
+            .checked_add(u64::try_from(edge_plan.comp_frames).ok()?)
+    }
+
+    /// Graph support fold: same shape as the live fold but phase-agnostic
+    /// (caps, envelopes, full compensation, support tails throughout).
+    /// Joins take twice the maximum over data inputs, which dominates the
+    /// live minimum-plus-maximum under every armed/unarmed partition.
+    /// Edges carry stored caps plus the source's support output, folded
+    /// forward like the live flow.
+    fn graph_tail_support(&self) -> Option<u64> {
+        let num_slots = self.predecessors.len();
+        let mut scratch = self.tail_fold_scratch.borrow_mut();
+        if scratch.len() < num_slots {
+            scratch.resize(num_slots, None);
+        }
+        scratch[..num_slots].fill(None);
+        for &node_id in self.graph_drain_plan.topo_order.iter() {
+            if node_id >= num_slots {
+                continue;
+            }
+            let node_out = (|| -> Option<u64> {
+                let node = self.nodes.get(&node_id)?;
+                let tail = if node.bypassed {
+                    0
+                } else {
+                    let plugin = self.plugins.get(node_id)?.as_ref()?;
+                    if plugin.tail_length() == TailLength::Infinite {
+                        // See `chain_tail_support`: Infinite nodes stay
+                        // unsupported, keeping whole-graph support honest.
+                        return None;
+                    }
+                    plugin.tail_support()?
+                };
+                let mut widest: u64 = 0;
+                if let Some(preds) = self.predecessors.get(node_id) {
+                    for (position, edge) in preds.iter().enumerate() {
+                        let edge_index = self
+                            .predecessor_edge_indices
+                            .get(node_id)
+                            .and_then(|indices| indices.get(position))
+                            .copied()?;
+                        let from_out = scratch.get(edge.from_node).copied().flatten()?;
+                        if edge.edge_type == EdgeType::Sidechain {
+                            continue;
+                        }
+                        let stored = self.graph_edge_support_content(edge_index)?;
+                        widest = widest.max(stored.checked_add(from_out)?);
+                    }
+                }
+                let input = widest.checked_add(widest)?;
+                let produced = if node.bypassed {
+                    input
+                } else {
+                    let input_frames = usize::try_from(input).ok()?;
+                    let plugin = self.plugins.get(node_id)?.as_ref()?;
+                    u64::try_from(plugin.output_frames_envelope(input_frames)?).ok()?
+                };
+                produced.checked_add(tail)
+            })();
+            scratch[node_id] = node_out;
+        }
+        if self.output_nodes.is_empty() {
+            return Some(0);
+        }
+        let mut longest: u64 = 0;
+        for (pos, &node_id) in self.output_nodes.iter().enumerate() {
+            let out = scratch.get(node_id).copied().flatten()?;
+            let plugin = self.plugins.get(node_id)?.as_ref()?;
+            let holdover = plugin.drain_frames_envelope()?;
+            let queue_cap = self
+                .graph_drain_plan
+                .output_queue_cap_frames
+                .get(pos)
+                .copied()?;
+            let comp = self.graph_drain_plan.output_comp_frames.get(pos).copied()?;
+            longest = longest.max(
+                out.checked_add(u64::try_from(holdover).ok()?)?
+                    .checked_add(u64::try_from(queue_cap).ok()?)?
+                    .checked_add(u64::try_from(comp).ok()?)?,
+            );
+        }
+        Some(longest)
     }
 }
 

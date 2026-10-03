@@ -1,6 +1,9 @@
 // The pinned external vtable generator emits expression-position semicolons.
 // This exception applies to generated code; all other warnings remain denied.
-#![allow(semicolon_in_expressions_from_non_local_macros, reason = "Pinned vst3_com vtable macro expansion")]
+#![allow(
+    semicolon_in_expressions_from_non_local_macros,
+    reason = "Pinned vst3_com vtable macro expansion"
+)]
 #![cfg(not(all(
     feature = "eq",
     feature = "compressor",
@@ -60,6 +63,8 @@ pub mod params;
 #[macro_use]
 pub mod wrapper;
 
+#[cfg(test)]
+mod declick_consumer_tests;
 #[cfg(test)]
 mod gui_state_return_tests;
 #[cfg(test)]
@@ -422,4 +427,11 @@ mod plugin {
     sotf_nih_plugin!(SotfDither, plugin_type: "Dither", name: "SOTF: Dither", clap_id: "org.spinorama.sotf.dither", vst3_class_id: *b"SotfDither000001", channels: 2);
     nih_plug::nih_export_clap!(SotfDither);
     nih_plug::nih_export_vst3!(SotfDither);
+}
+
+#[cfg(feature = "analog-limiter")]
+mod plugin {
+    sotf_nih_plugin!(SotfAnalogLimiter, plugin_type: "AnalogLimiter", name: "SOTF: Analog Limiter", clap_id: "org.spinorama.sotf.analog-limiter", vst3_class_id: *b"SotfAnalogLim001", channels: 2);
+    nih_plug::nih_export_clap!(SotfAnalogLimiter);
+    nih_plug::nih_export_vst3!(SotfAnalogLimiter);
 }

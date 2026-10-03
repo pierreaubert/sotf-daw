@@ -13,7 +13,7 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
         "Denoiser",
         2,
         48_000,
-        r#"{"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9}"#,
+        r#"{"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9,"curve_low":0.0,"curve_mid":0.5,"curve_high":1.0,"audition_residual":true}"#,
     )
     .unwrap();
     plugin.initialize(48_000).unwrap();
@@ -21,6 +21,10 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
         ("harmonic_percussive", ParameterValue::Bool(true)),
         ("spatial_denoise", ParameterValue::Bool(true)),
         ("spatial_strength", ParameterValue::Float(0.9)),
+        ("curve_low", ParameterValue::Float(0.0)),
+        ("curve_mid", ParameterValue::Float(0.5)),
+        ("curve_high", ParameterValue::Float(1.0)),
+        ("audition_residual", ParameterValue::Bool(true)),
     ] {
         assert_eq!(plugin.get_parameter(&ParameterId::from(id)), Some(expected));
     }
@@ -38,6 +42,10 @@ fn bridge_rejects_invalid_denoiser_constructor_controls() {
         r#"{"spatial_strength":1.01}"#,
         r#"{"harmonic_percussive":1}"#,
         r#"{"spatial_denoise":"true"}"#,
+        r#"{"curve_low":-0.01}"#,
+        r#"{"curve_mid":1.01}"#,
+        r#"{"curve_high":"0.5"}"#,
+        r#"{"audition_residual":1}"#,
     ] {
         assert!(create_plugin("Denoiser", 2, 48_000, config).is_err());
     }

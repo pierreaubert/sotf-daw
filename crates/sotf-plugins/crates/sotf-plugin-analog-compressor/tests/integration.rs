@@ -192,6 +192,29 @@ fn color_stage_adds_character_when_driven() {
 fn parameter_roundtrip_and_rejection() {
     let mut plugin = AnalogCompressorPlugin::new(2);
     plugin.initialize(SR).unwrap();
+    // The analog model is structural (replacement allocates and
+    // re-prepares on the control thread): live changes are refused, while
+    // repeating the committed model stays a no-op success.
+    let refusal = plugin
+        .set_parameter(
+            ParameterId::from("analog_model"),
+            ParameterValue::String("Console Preamp".to_string()),
+        )
+        .expect_err("structural analog_model change must be rejected on an initialized instance");
+    assert!(
+        refusal.contains("reconstruction"),
+        "refusal must name reconstruction: {refusal}"
+    );
+    plugin
+        .set_parameter(
+            ParameterId::from("analog_model"),
+            ParameterValue::String("Harmonics".to_string()),
+        )
+        .unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".to_string()))
+    );
     let cases: &[(&str, ParameterValue)] = &[
         ("threshold", ParameterValue::Float(-24.0)),
         ("ratio", ParameterValue::Float(8.0)),
@@ -201,10 +224,6 @@ fn parameter_roundtrip_and_rejection() {
         ("makeup", ParameterValue::Float(6.0)),
         ("mix", ParameterValue::Float(0.5)),
         ("auto_makeup", ParameterValue::Bool(true)),
-        (
-            "analog_model",
-            ParameterValue::String("Console Preamp".to_string()),
-        ),
     ];
     for (id, value) in cases {
         plugin
@@ -233,6 +252,10 @@ fn parameter_roundtrip_and_rejection() {
                 ParameterValue::String("1176".to_string())
             )
             .is_err()
+    );
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".to_string()))
     );
     assert!(
         plugin
@@ -274,4 +297,119 @@ fn factory_roundtrip_through_json() {
     assert_eq!(params.ratio, 3.0);
     let plugin = AnalogCompressorPlugin::try_from_params(2, params).unwrap();
     assert_eq!(plugin.channels(), 2);
+}
+
+#[test]
+fn analog_model_is_structural_in_spec_and_runtime_schema() {
+    use sotf_host::param_specs::{UpdateMode, find_by_key};
+    use sotf_plugin_analog_compressor::params::PARAMS;
+    // Spec metadata (drives bridge/FFI/NIH restart flags).
+    assert_eq!(
+        find_by_key(PARAMS, "analog_model").update_mode,
+        UpdateMode::Structural
+    );
+    assert_eq!(
+        find_by_key(PARAMS, "analog_drive").update_mode,
+        UpdateMode::Realtime
+    );
+    // Runtime schema (drives the host live-edit gate).
+    let plugin = AnalogCompressorPlugin::new(2);
+    let parameters = plugin.parameter_schema();
+    let model = parameters
+        .iter()
+        .find(|parameter| parameter.id.as_str() == "analog_model")
+        .expect("runtime model parameter");
+    assert_eq!(model.update_mode, UpdateMode::Structural);
+    assert_eq!(
+        model.importance,
+        sotf_host::parameters::ParameterImportance::Critical
+    );
+    let drive = parameters
+        .iter()
+        .find(|parameter| parameter.id.as_str() == "analog_drive")
+        .expect("runtime drive parameter");
+    assert_eq!(drive.update_mode, UpdateMode::Realtime);
+}
+
+#[test]
+fn analog_model_reconstruction_and_refused_bulk_preserves_history() {
+    // Structural model: adoption happens at construction (pre-init sets,
+    // bulk apply, or params struct), never via live switch. A live bulk
+    // carrying a model change is refused atomically — nothing is written,
+    // including the other values it carried — and the stream continues
+    // byte-identical to an uninterrupted twin.
+    use sotf_host::parametric_plugin::ParameterSet;
+    for name in ["Harmonics", "Tape", "Console Preamp"] {
+        let model = ParameterValue::String(name.to_string());
+        let setup_committed = || {
+            let mut plugin = AnalogCompressorPlugin::new(2);
+            plugin
+                .set_parameter(ParameterId::from("analog_model"), model.clone())
+                .unwrap();
+            plugin.initialize(SR).unwrap();
+            plugin
+                .set_parameter(
+                    ParameterId::from("analog_drive"),
+                    ParameterValue::Float(6.0),
+                )
+                .unwrap();
+            plugin
+        };
+        let input = make_interleaved_sine(440.0, SR, FRAMES, 2, 0.5);
+        let mut twin = setup_committed();
+        let mut twin_first = input.clone();
+        twin.process_in_place(&mut twin_first, &ProcessContext::new(SR, FRAMES))
+            .unwrap();
+        let mut twin_second = input.clone();
+        twin.process_in_place(&mut twin_second, &ProcessContext::new(SR, FRAMES))
+            .unwrap();
+
+        let mut refused = setup_committed();
+        let mut refused_first = input.clone();
+        refused
+            .process_in_place(&mut refused_first, &ProcessContext::new(SR, FRAMES))
+            .unwrap();
+        assert_eq!(refused_first, twin_first, "model={name}, pre-refusal");
+        let snapshot = refused.current_values();
+        let other = if name == "Tape" { "Static" } else { "Tape" }.to_string();
+        let mut hostile = ParameterSet::new();
+        hostile.insert(
+            ParameterId::from("analog_model"),
+            ParameterValue::String(other),
+        );
+        hostile.insert(
+            ParameterId::from("analog_drive"),
+            ParameterValue::Float(1.0),
+        );
+        hostile.insert(ParameterId::from("threshold"), ParameterValue::Float(-6.0));
+        let refusal = refused.apply_values(hostile).expect_err("model={name}");
+        assert!(
+            refusal.contains("reconstruction"),
+            "model={name}, refusal must name reconstruction: {refusal}"
+        );
+        assert_eq!(
+            refused.current_values(),
+            snapshot,
+            "model={name}, refused bulk must write nothing"
+        );
+        let mut refused_second = input.clone();
+        refused
+            .process_in_place(&mut refused_second, &ProcessContext::new(SR, FRAMES))
+            .unwrap();
+        assert_eq!(refused_second, twin_second, "model={name}, history intact");
+
+        // Fresh reconstruction adoption: the params-struct path (what the
+        // factory deserializes) reads back the requested model.
+        let params = AnalogCompressorPluginParams {
+            analog_model: name.to_string(),
+            analog_drive: 6.0,
+            ..Default::default()
+        };
+        let reconstructed = AnalogCompressorPlugin::try_from_params(2, params).unwrap();
+        assert_eq!(
+            reconstructed.get_parameter(&ParameterId::from("analog_model")),
+            Some(model.clone()),
+            "model={name}, reconstructed"
+        );
+    }
 }

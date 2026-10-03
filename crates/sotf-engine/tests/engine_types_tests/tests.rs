@@ -167,10 +167,11 @@ fn test_processing_message_flush() {
 fn test_decoder_command_play() {
     let path = PathBuf::from("/path/to/file.flac");
     let source = sotf_audio::decoder::AudioSource::File(path.clone());
-    let cmd = DecoderCommand::Play(source);
+    let cmd = DecoderCommand::Play(source, 7);
 
-    if let DecoderCommand::Play(s) = cmd {
+    if let DecoderCommand::Play(s, attempt) = cmd {
         assert_eq!(s.as_path().unwrap(), path.as_path());
+        assert_eq!(attempt, 7);
     } else {
         panic!("Expected Play command");
     }
@@ -340,8 +341,33 @@ fn test_audio_engine_state_deserializes_without_worker_statuses_field() {
         .as_object_mut()
         .expect("state json object")
         .remove("isolated_external_plugin_worker_statuses");
+    // Older serialized states predate the flush-generation counter.
+    value
+        .as_object_mut()
+        .expect("state json object")
+        .remove("flushes_sent");
+    // ...and the generation-ahead backstop counter.
+    value
+        .as_object_mut()
+        .expect("state json object")
+        .remove("gen_ahead_events");
+    // ...and the decode-attempt identity.
+    value
+        .as_object_mut()
+        .expect("state json object")
+        .remove("decoder_attempt");
+    // ...and the peak-completeness flag (defaults TRUE: no death
+    // recorded in a state that predates the flag).
+    value
+        .as_object_mut()
+        .expect("state json object")
+        .remove("peak_record_complete");
 
     let deserialized: AudioEngineState = serde_json::from_value(value).unwrap();
+    assert_eq!(deserialized.flushes_sent, 0);
+    assert_eq!(deserialized.gen_ahead_events, 0);
+    assert_eq!(deserialized.decoder_attempt, 0);
+    assert!(deserialized.peak_record_complete);
 
     assert_eq!(deserialized.playback_state, PlaybackState::Playing);
     assert_eq!(
@@ -409,6 +435,7 @@ fn test_thread_event_playback_stats() {
         frames_written: 39,
         frames_dropped: 1,
         effective_sample_rate: 48_000,
+        epoch: 7,
     };
 
     if let ThreadEvent::PlaybackStats {
@@ -419,6 +446,7 @@ fn test_thread_event_playback_stats() {
         frames_written,
         frames_dropped,
         effective_sample_rate,
+        epoch,
     } = event
     {
         assert_eq!(callback_count, 12);
@@ -428,6 +456,7 @@ fn test_thread_event_playback_stats() {
         assert_eq!(frames_written, 39);
         assert_eq!(frames_dropped, 1);
         assert_eq!(effective_sample_rate, 48_000);
+        assert_eq!(epoch, 7);
     } else {
         panic!("Expected PlaybackStats event");
     }

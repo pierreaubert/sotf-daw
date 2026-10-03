@@ -73,7 +73,7 @@ fn changed_scalar_controls_and_profile_triggers_are_allocation_free() {
                     (parameter.id, value)
                 })
                 .collect();
-            assert_eq!(changes.len(), 27);
+            assert_eq!(changes.len(), 31);
             std::thread::spawn(move || {
                 let mut audio = [0.0; 514];
                 OPERATIONS.set(0);
@@ -99,6 +99,58 @@ fn changed_scalar_controls_and_profile_triggers_are_allocation_free() {
                 }
                 TRACKING.set(false);
                 assert_eq!(OPERATIONS.get(), 0, "callback heap operations");
+            })
+            .join()
+            .unwrap();
+        }
+    }
+}
+
+#[test]
+fn cold_shaped_curve_and_audition_callbacks_are_allocation_free() {
+    for low_latency in [false, true] {
+        for multi_resolution in [false, true] {
+            let mut plugin = DenoiserPlugin::from_params(
+                2,
+                DenoiserPluginParams {
+                    low_latency,
+                    multi_resolution,
+                    curve_low: 0.2,
+                    curve_mid: 0.7,
+                    curve_high: 0.4,
+                    audition_residual: true,
+                    ..Default::default()
+                },
+            );
+            plugin.initialize(48_000).unwrap();
+            std::thread::spawn(move || {
+                let mut audio = vec![0.0; 4096 * 2];
+                for (i, sample) in audio.iter_mut().enumerate() {
+                    *sample = (i as f32 * 0.131).sin() * 0.1;
+                }
+                let mut tail = vec![0.0; 512 * 2];
+                OPERATIONS.set(0);
+                TRACKING.set(true);
+                // Cold first process, irregular follow-ups, first drain,
+                // reset, and reuse: no heap operations on the callback thread.
+                for frames in [1, 257, 4096, 63] {
+                    plugin
+                        .process_in_place(
+                            &mut audio[..frames * 2],
+                            &ProcessContext::new(48_000, frames),
+                        )
+                        .unwrap();
+                }
+                let status = plugin
+                    .drain(&mut tail, &ProcessContext::new(48_000, 512))
+                    .unwrap();
+                assert!(status.frames > 0);
+                plugin.reset();
+                plugin
+                    .process_in_place(&mut audio[..1024 * 2], &ProcessContext::new(48_000, 1024))
+                    .unwrap();
+                TRACKING.set(false);
+                assert_eq!(OPERATIONS.get(), 0, "cold callback heap operations");
             })
             .join()
             .unwrap();

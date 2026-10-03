@@ -1,4 +1,6 @@
-use super::super::{AudioFrame, DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
+use super::super::{
+    AudioFrame, DecodeAttempt, DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent,
+};
 #[cfg(all(target_os = "macos", feature = "hal"))]
 use super::consts::HAL_RECONNECT_INTERVAL;
 use super::consts::send_or_interrupt;
@@ -57,6 +59,15 @@ pub(super) struct DecoderState {
     /// Queued next source for gapless playback. When set and the current source ends,
     /// the decoder seamlessly transitions to this source without sending EndOfStream/Flush.
     pub(super) queued_next: Option<AudioSource>,
+    /// Adopted decode-attempt tag, identifying async failures.
+    ///
+    /// Adopted from the carried tag at every Play/PlayAt arm start
+    /// (all six sites), before the fallible open, so NACK paths stay
+    /// converged with the manager too. Gapless transitions, silent
+    /// source, pause/resume, seeks-within-source, and stops keep it
+    /// (same session). NEVER reset — not even by `stop()`: only a
+    /// newer Play/PlayAt replaces it.
+    pub(super) current_attempt: DecodeAttempt,
     /// Throttles unbounded manager events and their per-send node allocations.
     pub(super) last_position_update: Instant,
     pub(super) dsd_output: DsdOutputMode,
@@ -109,6 +120,7 @@ impl DecoderState {
             frame_buffer_pool,
             recycle_rx,
             queued_next: None,
+            current_attempt: 0,
             last_position_update: Instant::now()
                 .checked_sub(POSITION_UPDATE_INTERVAL)
                 .unwrap_or_else(Instant::now),

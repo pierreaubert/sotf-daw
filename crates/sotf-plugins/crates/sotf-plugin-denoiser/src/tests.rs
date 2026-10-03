@@ -141,12 +141,12 @@ fn multires_fft_failure_is_returned_and_state_is_resettable() {
     state.force_fft_error_for_test(true);
     let samples = vec![0.0; super::multi_resolution::SMALL_FFT_SIZE];
     assert_eq!(
-        state.feed_and_process(&samples, 1, 10.0, 0.1),
+        state.feed_and_process(&samples, 1, 10.0, 0.1, None),
         Err("small FFT forward failed")
     );
     state.reset();
     state.force_fft_error_for_test(false);
-    assert!(state.feed_and_process(&samples, 1, 10.0, 0.1).is_ok());
+    assert!(state.feed_and_process(&samples, 1, 10.0, 0.1, None).is_ok());
 }
 
 #[test]
@@ -1361,6 +1361,342 @@ fn test_non_finite_input_is_sanitized_and_state_recovers() {
             plugin.mcra.noise_psd[ch].iter().all(|v| v.is_finite()),
             "noise_psd must stay finite after recovery blocks"
         );
+    }
+}
+
+#[test]
+fn test_curve_and_audition_indices_rebuild_tables_and_fade_target() {
+    let mut plugin = DenoiserPlugin::new(1, false);
+    plugin.initialize(SAMPLE_RATE).unwrap();
+    assert_eq!(plugin.param_value(29), Some(1.0));
+    assert_eq!(plugin.param_value(32), Some(0.0));
+    assert!(plugin.curve.scales.iter().all(|&s| s == 1.0));
+
+    // Direct indexed sets rebuild the precomputed tables in place.
+    plugin.set_param_value(29, 0.0);
+    plugin.set_param_value(31, 0.5);
+    assert_eq!(plugin.param_value(29), Some(0.0));
+    assert_eq!(plugin.curve.curve.low, 0.0);
+    assert_eq!(plugin.curve.scales[0], 0.0);
+    let top = plugin.config.spectrum_size - 1;
+    assert_eq!(plugin.curve.scales[top], 0.5);
+    assert_eq!(plugin.curve.scales_small[0], 0.0);
+    assert!(!plugin.curve.curve.is_flat());
+
+    // Live audition sets move the fade target only; reset snaps the mix.
+    plugin.set_param_value(32, 1.0);
+    assert_eq!(plugin.param_value(32), Some(1.0));
+    assert_eq!(plugin.audition.mix_target, 1.0);
+    assert_eq!(plugin.audition.mix_current, 0.0);
+    plugin.reset();
+    assert_eq!(plugin.audition.mix_current, 1.0);
+    assert!(plugin.audition.enabled);
+    // Curve knots survive reset; the delay line does not retain audio.
+    assert_eq!(plugin.curve.curve.low, 0.0);
+    assert_eq!(plugin.audition.dry_fill, 0);
+    assert_eq!(plugin.audition.output_frames, 0);
+}
+
+#[test]
+fn test_audition_fade_snaps_to_exact_endpoints() {
+    // The endpoint snap parks the f64 mix accumulator at exactly 0.0/1.0 in
+    // bounded time: near the 2^-16 window each step's decrement exceeds
+    // ulp(1.0) by more than 1e8 at every supported rate (F3; the old f32
+    // "1 ulp" argument was invalid with two roundings needing ~1.5 ulp),
+    // so rounding cannot stall progress; then the snap fires. The single
+    // snap step is at most 2^-16 of the full jump (quantified in dBFS by
+    // the analytic gate, F2(g)). Closed-form settling reaches 2^-16 in
+    // ~2700 frames at 48 kHz; the frozen 6000-frame bound below carries
+    // ~2.2x margin.
+    for target in [1.0f64, 0.0f64] {
+        let mut plugin = DenoiserPlugin::new(1, false);
+        plugin.initialize(SAMPLE_RATE).unwrap();
+        if target == 0.0 {
+            // Start the downward fade from the exact opposite endpoint.
+            plugin.set_param_value(32, 1.0);
+            for _ in 0..48_000 {
+                plugin.advance_audition_frame();
+            }
+            assert_eq!(plugin.audition.mix_current, 1.0);
+        }
+        plugin.set_param_value(32, target);
+        let mut settled_at = None;
+        for frame in 0..48_000 {
+            plugin.advance_audition_frame();
+            if plugin.audition.mix_current == target && settled_at.is_none() {
+                settled_at = Some(frame);
+            }
+        }
+        let settled = settled_at.expect("fade must settle exactly");
+        assert!(
+            settled < 6000,
+            "target {target}: settled at frame {settled}, want < 6000"
+        );
+        assert_eq!(plugin.audition.mix_current, target);
+    }
+}
+
+#[test]
+fn estimator_impulse_floor_capture_characterization() {
+    // DD-off ML transient mechanism, driven per-bin with the integration
+    // diagnostic's exact power sequence: quiet bed plus Hann COLA impulse
+    // pairs at the diagnostic's STFT frame indices (impulses at samples
+    // 24000/36000/48000/60000 hit frames {23,24}/{35,36}/{46,47}/{58,59};
+    // the minima-reset frame 50 falls between impulses 3 and 4, exactly as
+    // in the full path). Prints the per-frame floor/presence/minima/gain
+    // trajectory; asserts only update-equation micro-facts:
+    // (a) the recursive floor moves toward the instantaneous power every
+    //     MCRA frame (EWA weight alpha_d < 1 strictly, since the speech
+    //     presence p is a convex combination below 1);
+    // (b) the instantaneous Wiener gain equals the ML law
+    //     G = (xi/(xi+10)).max(0.1) from the recorded S and N within 1e-3
+    //     (flat spectrum keeps median/narrow smoothing inert up to f32
+    //     rounding; a masking fire or law deviation fails loudly).
+    // The ratchet thesis (floor before impulse 4 exceeds impulse 1, gains
+    // decay across repetitions as the 0.56 -> 0.10 integration peaks show)
+    // is printed as verdict values for root's audit, not asserted: the
+    // trajectory decides whether the isolated estimator reproduces it.
+    let mut plugin = DenoiserPlugin::from_params(
+        1,
+        DenoiserPluginParams {
+            attack_ms: 0.1,
+            dd_enabled: false,
+            ..Default::default()
+        },
+    );
+    plugin.initialize(48_000).unwrap();
+    let spectrum = plugin.config.spectrum_size;
+    let probe = 100;
+    // Diagnostic bed per-bin power: 4 unit impulses over 96000 frames set
+    // signal_power, noise_gain^2/3 is the bed sample variance, and the
+    // sqrt-Hann window spreads variance/2 per bin (sum w^2 = N/2).
+    let bed = (4.0f32 / 96_000.0) / 2.0;
+    // Hann COLA pair per impulse from its sample position on the frame
+    // grid (frame f covers [f*1024-1024, f*1024+1024)).
+    let mut impulse_power = [bed; 80];
+    for t in [24_000i64, 36_000, 48_000, 60_000] {
+        let flo = ((t - 1024) / 1024 + 1) as usize;
+        for f in [flo, flo + 1] {
+            let pos = (t - (f as i64 * 1024 - 1024)) as f32 / 2048.0;
+            impulse_power[f] = 0.5 - 0.5 * (2.0 * std::f32::consts::PI * pos).cos();
+        }
+    }
+    let impulse_frames = [23, 24, 35, 36, 46, 47, 58, 59];
+    for f in impulse_frames {
+        assert!(
+            impulse_power[f] > 0.01,
+            "frame {f} must carry impulse power"
+        );
+    }
+    let mut floor_before = [0.0f32; 4];
+    let mut gain_at = [0.0f32; 4];
+    for (frame, &power) in impulse_power.iter().enumerate() {
+        for k in 0..spectrum {
+            plugin.fft.freq_domain[0][k].re = power.sqrt();
+            plugin.fft.freq_domain[0][k].im = 0.0;
+        }
+        let floor_old = plugin.mcra.noise_psd[0][probe];
+        let bootstrapping = plugin.update_noise_estimation();
+        let floor = plugin.mcra.noise_psd[0][probe];
+        if frame >= 5 {
+            // Recursive EWA step: moves toward instantaneous power.
+            let moved = floor - floor_old;
+            let toward = power - floor_old;
+            assert!(
+                moved == 0.0 || moved.signum() == toward.signum(),
+                "frame {frame}: floor must move toward power"
+            );
+        }
+        if !bootstrapping {
+            plugin.calculate_wiener_gains();
+        }
+        let gain = plugin.gains.gain[0][probe];
+        if impulse_frames.contains(&frame) {
+            // ML law from the recorded S and post-update N.
+            let noise = floor.max(1e-10);
+            let ml = ((power - floor).max(0.0)) / noise;
+            let expected = (ml / (ml + 10.0)).max(0.1);
+            assert!(
+                (gain - expected).abs() <= 1e-3,
+                "frame {frame}: gain {gain:.4} vs ML law {expected:.4} (S={power:.4} N={floor:.4})"
+            );
+        }
+        if frame == 23 || frame == 35 || frame == 46 || frame == 58 {
+            let slot = [23, 35, 46, 58].iter().position(|&f| f == frame).unwrap();
+            floor_before[slot] = floor_old;
+            gain_at[slot] = gain;
+        }
+        if (20..70).contains(&frame) {
+            let p = plugin.mcra.speech_presence[0][probe];
+            let smin = plugin.mcra.min_psd[0][probe].min(plugin.mcra.min_psd_b[0][probe]);
+            let stmp = plugin.mcra.smoothed_psd[0][probe];
+            let sg = plugin.gains.smoothed_gain[0][probe];
+            println!(
+                "est f={frame:2} P={power:.4} floor={floor:.4} p={p:.3} \
+                 smin={smin:.4} stmp={stmp:.4} G={gain:.4} sG={sg:.4}"
+            );
+        }
+    }
+    println!(
+        "est verdict floor_before=[{:.4} {:.4} {:.4} {:.4}] ratchet={}",
+        floor_before[0],
+        floor_before[1],
+        floor_before[2],
+        floor_before[3],
+        floor_before[3] > floor_before[0]
+    );
+    println!(
+        "est verdict gain=[{:.4} {:.4} {:.4} {:.4}] decay={}",
+        gain_at[0],
+        gain_at[1],
+        gain_at[2],
+        gain_at[3],
+        gain_at[3] < gain_at[0]
+    );
+}
+
+#[test]
+fn test_audition_fade_multirate_bidirectional_properties() {
+    // F2(a)(b)(g)(h) + F3 at the trajectory level (advance loop, no audio):
+    // for 44.1/48/96/192 kHz and both fade directions the mix stays in
+    // [0,1] exactly (convex hull, no overshoot), moves strictly toward the
+    // target while unsettled (monotone), takes nonincreasing step
+    // magnitudes pre-snap (convex approach), snaps with a step <= 2^-16,
+    // and settles exactly within the predeclared bound (frozen 6000 at
+    // 48 kHz; ceil(3*16*ln2*RATE*0.005) elsewhere, ~3x the nominal
+    // 16-half-life settle). Tau is pinned behaviorally: the 63.2%
+    // crossing lands within 2 frames of 0.005*RATE. A mid-fade retoggle
+    // reconverges to the final target within the same bound from the flip.
+    use std::f64::consts::{E, LN_2};
+    for rate in [44_100u32, 48_000, 96_000, 192_000] {
+        let decay = DenoiserPlugin::audition_decay_for_rate(rate);
+        assert!(
+            decay > 0.0 && decay < 1.0,
+            "rate {rate}: decay {decay} must be a one-pole coefficient"
+        );
+        let bound = if rate == 48_000 {
+            6000
+        } else {
+            (3.0 * 16.0 * LN_2 * f64::from(rate) * 0.005).ceil() as usize
+        };
+        let tau_frames = (0.005 * f64::from(rate)).round() as i64;
+        for target in [1.0f64, 0.0f64] {
+            let mut plugin = DenoiserPlugin::new(1, false);
+            plugin.initialize(rate).unwrap();
+            if target == 0.0 {
+                // Prepare the exact opposite endpoint (generous cap; the
+                // bound itself is measured on the fade below, not here).
+                plugin.set_param_value(32, 1.0);
+                for _ in 0..200_000 {
+                    plugin.advance_audition_frame();
+                    if plugin.audition.mix_current == 1.0 {
+                        break;
+                    }
+                }
+                assert_eq!(plugin.audition.mix_current, 1.0);
+            }
+            plugin.set_param_value(32, target);
+            let start = plugin.audition.mix_current;
+            let mut prev = start;
+            let mut prev_step = f64::INFINITY;
+            let mut settled_at = None;
+            let mut snap_step = 0.0;
+            let mut tau_at = None;
+            for frame in 0..200_000 {
+                plugin.advance_audition_frame();
+                let mix = plugin.audition.mix_current;
+                assert!(
+                    (0.0..=1.0).contains(&mix),
+                    "rate {rate} target {target}: mix {mix} left [0,1]"
+                );
+                let step = mix - prev;
+                if let Some(settled) = settled_at {
+                    assert_eq!(mix, target, "rate {rate}: settled mix moved");
+                    if frame > settled + 1000 {
+                        break;
+                    }
+                } else {
+                    // Strictly toward the target while unsettled: the f64
+                    // increment exceeds rounding error by 1e8 even at the
+                    // snap window, so no stall plateau can appear.
+                    if target == 1.0 {
+                        assert!(step > 0.0, "rate {rate}: up-fade stalled");
+                    } else {
+                        assert!(step < 0.0, "rate {rate}: down-fade stalled");
+                    }
+                    if mix == target {
+                        // The snap step (remaining gap, <= 2^-16) exceeds
+                        // the last smooth one-pole step by design; it is
+                        // bounded separately below, not by convexity.
+                        settled_at = Some(frame);
+                        snap_step = step.abs();
+                    } else {
+                        assert!(
+                            step.abs() <= prev_step * (1.0 + 1e-12),
+                            "rate {rate}: step magnitude grew (convexity)"
+                        );
+                        prev_step = step.abs();
+                    }
+                    let progress = if target == 1.0 { mix } else { 1.0 - mix };
+                    if tau_at.is_none() && progress >= 1.0 - 1.0 / E {
+                        tau_at = Some(frame as i64);
+                    }
+                }
+                prev = mix;
+            }
+            let settled = settled_at.expect("fade must settle exactly");
+            assert!(
+                settled < bound,
+                "rate {rate} target {target}: settled at {settled}, want < {bound}"
+            );
+            assert!(
+                snap_step <= 1.0 / 65536.0,
+                "rate {rate}: snap step {snap_step:e} exceeds 2^-16"
+            );
+            let tau = tau_at.expect("tau crossing must occur");
+            assert!(
+                (tau - tau_frames).abs() <= 2,
+                "rate {rate}: tau crossing at {tau}, want {tau_frames} +- 2"
+            );
+            println!("rate {rate} target {target}: settled {settled} (bound {bound}), tau {tau}");
+            // Mid-fade retoggle: flip to the other endpoint after 1000
+            // advances (before nominal settle at every rate) and require
+            // reconvergence within the bound counted from the flip.
+            let mut plugin = DenoiserPlugin::new(1, false);
+            plugin.initialize(rate).unwrap();
+            if target == 0.0 {
+                plugin.set_param_value(32, 1.0);
+                for _ in 0..200_000 {
+                    plugin.advance_audition_frame();
+                    if plugin.audition.mix_current == 1.0 {
+                        break;
+                    }
+                }
+            }
+            plugin.set_param_value(32, target);
+            for _ in 0..1000 {
+                plugin.advance_audition_frame();
+            }
+            assert!(
+                plugin.audition.mix_current != target,
+                "rate {rate}: 1000 advances must still be mid-fade"
+            );
+            let flipped = 1.0 - target;
+            plugin.set_param_value(32, flipped);
+            let mut resettled = None;
+            for frame in 0..200_000 {
+                plugin.advance_audition_frame();
+                if plugin.audition.mix_current == flipped {
+                    resettled = Some(frame);
+                    break;
+                }
+            }
+            let resettled = resettled.expect("retoggle must reconverge");
+            assert!(
+                resettled < bound,
+                "rate {rate}: retoggle resettled at {resettled}, want < {bound}"
+            );
+        }
     }
 }
 

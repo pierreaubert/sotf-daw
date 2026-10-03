@@ -20,6 +20,9 @@ pub use sotf_testkit::engine::{
 pub use sotf_testkit::find_device;
 pub use sotf_testkit::skip_without_device;
 
+/// Hardware-free running-engine harness (audit null backend).
+pub mod null_backend;
+
 use hound::{WavSpec, WavWriter};
 use sotf_audio::engine::EngineConfig;
 use tempfile::NamedTempFile;

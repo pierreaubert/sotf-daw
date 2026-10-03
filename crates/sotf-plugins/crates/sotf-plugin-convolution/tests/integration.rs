@@ -212,25 +212,23 @@ fn convolution_ir_file_not_found_error() {
 
 #[test]
 fn convolution_reset_clears_processing_state() {
-    let tmp_dir = std::env::temp_dir().join("sotf_convolution_integration_test");
-    std::fs::create_dir_all(&tmp_dir).unwrap();
-    let ir_path = tmp_dir.join("delta_ir.wav");
-    write_delta_ir(&ir_path, 44100).unwrap();
-
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
     plugin.initialize(44100).unwrap();
-    plugin
-        .set_parameter(
-            ParameterId::from("ir_file"),
-            ParameterValue::String(ir_path.to_string_lossy().to_string()),
-        )
-        .unwrap();
 
-    // Let the IR load complete.
-    let dummy = vec![0.0_f32; 128 * 2];
-    let mut dummy_out = vec![0.0_f32; 128 * 2];
+    // Fill stream-boundary state (the inactive dry delay line) with nonzero
+    // audio so the post-reset assertions below have discriminating power.
+    // This fixture intentionally loads no IR: `ir_file` is setup state that
+    // `reset` preserves by contract, and an asynchronous load would race the
+    // assertions. Reset with a loaded IR is covered by the synchronous
+    // `from_params` fixtures in direct_convolution/finite_stream.
+    let prefill = vec![0.9_f32; 1500 * 2];
+    let mut prefill_out = vec![0.0_f32; 1500 * 2];
     plugin
-        .process(&dummy, &mut dummy_out, &ProcessContext::new(44100, 128))
+        .process(
+            &prefill,
+            &mut prefill_out,
+            &ProcessContext::new(44100, 1500),
+        )
         .unwrap();
 
     plugin.reset();

@@ -127,11 +127,33 @@ fn color_stage_adds_harmonics_when_enabled() {
 fn parameter_roundtrip_and_rejection() {
     let mut plugin = AnalogEqPlugin::new(2);
     plugin.initialize(SR).unwrap();
+    // The analog model is structural (replacement allocates and
+    // re-prepares on the control thread): live changes are refused, while
+    // repeating the committed model stays a no-op success.
+    let refusal = plugin
+        .set_parameter(
+            ParameterId::from("analog_model"),
+            ParameterValue::String("Tape".to_string()),
+        )
+        .expect_err("structural analog_model change must be rejected on an initialized instance");
+    assert!(
+        refusal.contains("reconstruction"),
+        "refusal must name reconstruction: {refusal}"
+    );
+    plugin
+        .set_parameter(
+            ParameterId::from("analog_model"),
+            ParameterValue::String("Harmonics".to_string()),
+        )
+        .unwrap();
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".to_string()))
+    );
     let cases: &[(&str, ParameterValue)] = &[
         ("low_freq", ParameterValue::Float(200.0)),
         ("mid1_q", ParameterValue::Float(2.5)),
         ("high_gain", ParameterValue::Float(-6.0)),
-        ("analog_model", ParameterValue::String("Tape".to_string())),
         ("analog_drive", ParameterValue::Float(6.0)),
         ("analog_color", ParameterValue::Float(0.5)),
     ];
@@ -161,7 +183,7 @@ fn parameter_roundtrip_and_rejection() {
     );
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("analog_model")),
-        Some(ParameterValue::String("Tape".to_string()))
+        Some(ParameterValue::String("Harmonics".to_string()))
     );
     // Unknown parameter id is rejected.
     assert!(
@@ -222,7 +244,10 @@ fn reset_clears_state() {
 }
 
 #[test]
-fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
+fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
+    // Structural model: adoption happens at construction (pre-init sets,
+    // bulk apply, or params struct), never via live switch. Live bulks
+    // carrying a model change are refused atomically with history intact.
     use sotf_host::parametric_plugin::ParameterSet;
     for name in [
         "Harmonics",
@@ -240,7 +265,6 @@ fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
         ];
         let model = ParameterValue::String(name.to_string());
         let mut expected_plugin = AnalogEqPlugin::new(2);
-        expected_plugin.initialize(SR).unwrap();
         expected_plugin
             .set_parameter(ParameterId::from("analog_model"), model.clone())
             .unwrap();
@@ -249,6 +273,7 @@ fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
                 .set_parameter(ParameterId::from(*id), value.clone())
                 .unwrap();
         }
+        expected_plugin.initialize(SR).unwrap();
         let input = make_interleaved_sine(997.0, SR, 4096, 2, 0.3);
         let mut expected_live = input.clone();
         expected_plugin
@@ -264,7 +289,6 @@ fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
         // each new HashMap also has an independent iteration seed.
         for model_position in 0..=controls.len() {
             let mut plugin = AnalogEqPlugin::new(2);
-            plugin.initialize(SR).unwrap();
             let mut values = ParameterSet::new();
             for position in 0..=controls.len() {
                 if position == model_position {
@@ -275,6 +299,7 @@ fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
                 }
             }
             plugin.apply_values(values).unwrap();
+            plugin.initialize(SR).unwrap();
             for (id, value) in &controls {
                 assert_eq!(
                     plugin.get_parameter(&ParameterId::from(*id)),
@@ -301,29 +326,131 @@ fn analog_model_switch_and_bulk_update_preserve_shared_controls() {
                 .unwrap();
             assert_eq!(actual, expected, "model={name}, insertion={model_position}");
         }
-        // Deterministic reproduction: set all controls first, select another
-        // model last. Getters must agree with the actual rendered DSP state.
-        let mut switched = AnalogEqPlugin::new(2);
-        switched.initialize(SR).unwrap();
-        switched
-            .set_parameter(
-                ParameterId::from("analog_model"),
-                ParameterValue::String(if name == "Tape" { "Static" } else { "Tape" }.to_string()),
-            )
+        // Rejected bulk atomicity: a live bulk carrying a model change
+        // writes nothing (refusal precedes all mutation) and the stream
+        // continues byte-identical to an uninterrupted twin.
+        let other = if name == "Tape" { "Static" } else { "Tape" }.to_string();
+        let setup_committed = || {
+            let mut plugin = AnalogEqPlugin::new(2);
+            plugin
+                .set_parameter(ParameterId::from("analog_model"), model.clone())
+                .unwrap();
+            plugin.initialize(SR).unwrap();
+            for (id, value) in &controls {
+                plugin
+                    .set_parameter(ParameterId::from(*id), value.clone())
+                    .unwrap();
+            }
+            plugin
+        };
+        let mut twin = setup_committed();
+        let mut twin_first = input.clone();
+        twin.process_in_place(&mut twin_first, &ProcessContext::new(SR, 4096))
             .unwrap();
+        let mut twin_second = input.clone();
+        twin.process_in_place(&mut twin_second, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        let mut refused = setup_committed();
+        let mut refused_first = input.clone();
+        refused
+            .process_in_place(&mut refused_first, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        assert_eq!(refused_first, twin_first, "model={name}, pre-refusal");
+        let snapshot = refused.current_values();
+        let mut hostile = ParameterSet::new();
+        hostile.insert(
+            ParameterId::from("analog_model"),
+            ParameterValue::String(other),
+        );
+        hostile.insert(
+            ParameterId::from("analog_drive"),
+            ParameterValue::Float(1.0),
+        );
+        let refusal = refused.apply_values(hostile).expect_err("model={name}");
+        assert!(
+            refusal.contains("reconstruction"),
+            "model={name}, refusal must name reconstruction: {refusal}"
+        );
+        assert_eq!(
+            refused.current_values(),
+            snapshot,
+            "model={name}, refused bulk must write nothing"
+        );
+        let mut refused_second = input.clone();
+        refused
+            .process_in_place(&mut refused_second, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        assert_eq!(refused_second, twin_second, "model={name}, history intact");
+
+        // Deterministic reproduction: set all controls first, select the
+        // model last — pre-init, through the supported adoption path.
+        // Getters must agree with the actual rendered DSP state.
+        let mut ordered = AnalogEqPlugin::new(2);
         for (id, value) in &controls {
-            switched
+            ordered
                 .set_parameter(ParameterId::from(*id), value.clone())
                 .unwrap();
         }
-        switched
-            .set_parameter(ParameterId::from("analog_model"), model)
+        ordered
+            .set_parameter(ParameterId::from("analog_model"), model.clone())
             .unwrap();
-        switched.reset();
+        ordered.initialize(SR).unwrap();
+        ordered.reset();
         let mut actual = input.clone();
-        switched
+        ordered
             .process_in_place(&mut actual, &ProcessContext::new(SR, 4096))
             .unwrap();
-        assert_eq!(actual, expected, "model={name}, switched last");
+        assert_eq!(actual, expected, "model={name}, model last pre-init");
+
+        // Fresh reconstruction adoption: the params-struct path (what the
+        // factory deserializes) reproduces the reference for every model.
+        let params = AnalogEqPluginParams {
+            analog_model: name.to_string(),
+            analog_drive: 12.0,
+            analog_color: 0.73,
+            analog_character: 0.21,
+            analog_trim: -6.0,
+            ..Default::default()
+        };
+        let mut reconstructed = AnalogEqPlugin::try_from_params(2, params).unwrap();
+        reconstructed.initialize(SR).unwrap();
+        reconstructed.reset();
+        let mut actual = input.clone();
+        reconstructed
+            .process_in_place(&mut actual, &ProcessContext::new(SR, 4096))
+            .unwrap();
+        assert_eq!(actual, expected, "model={name}, reconstructed");
     }
+}
+
+#[test]
+fn analog_model_is_structural_in_spec_and_runtime_schema() {
+    use sotf_host::param_specs::{UpdateMode, find_by_key};
+    use sotf_plugin_analog_eq::params::PARAMS;
+    // Spec metadata (drives bridge/FFI/NIH restart flags).
+    assert_eq!(
+        find_by_key(PARAMS, "analog_model").update_mode,
+        UpdateMode::Structural
+    );
+    assert_eq!(
+        find_by_key(PARAMS, "analog_drive").update_mode,
+        UpdateMode::Realtime
+    );
+    // Runtime schema (drives the host live-edit gate).
+    let plugin = AnalogEqPlugin::new(2);
+    let parameters = plugin.parameter_schema();
+    let model = parameters
+        .iter()
+        .find(|parameter| parameter.id.as_str() == "analog_model")
+        .expect("runtime model parameter");
+    assert_eq!(model.update_mode, UpdateMode::Structural);
+    assert_eq!(
+        model.importance,
+        sotf_host::parameters::ParameterImportance::Critical
+    );
+    let drive = parameters
+        .iter()
+        .find(|parameter| parameter.id.as_str() == "analog_drive")
+        .expect("runtime drive parameter");
+    assert_eq!(drive.update_mode, UpdateMode::Realtime);
 }
