@@ -338,6 +338,54 @@ fn reset_forces_sub_threshold_lr24_and_lr48_cutoff_targets() {
 }
 
 #[test]
+fn phase_compensated_multiband_reset_matches_fresh_target_state() {
+    for (slope_index, cutoff_delta) in [(0, 0.000_5), (1, 0.05)] {
+        let initial = [500.0, 2_000.0, 8_000.0];
+        let target = initial.map(|frequency| frequency + cutoff_delta);
+        let mut reset = CrossoverMode::new(
+            &initial,
+            48_000,
+            1,
+            slope_index,
+            BandSplitRecombinationMode::PhaseCompensated,
+        );
+        for frame in 0..512 {
+            let sample = (frame as f32 * 0.037).sin();
+            let mut bands = [[0.0]; 4];
+            let [a, b, c, d] = &mut bands;
+            reset.process_frame(&[sample], &mut [a, b, c, d]);
+            let mut flat = bands.map(|band| band[0]);
+            reset.compensate_intermediate_bands(&mut flat, 4, 1);
+        }
+        for (index, &frequency) in target.iter().enumerate() {
+            reset.set_frequency(index, frequency);
+        }
+        reset.reset(&target);
+        let mut fresh = CrossoverMode::new(
+            &target,
+            48_000,
+            1,
+            slope_index,
+            BandSplitRecombinationMode::PhaseCompensated,
+        );
+        for frame in 0..256 {
+            let sample = (frame as f32 * 0.071).cos() * 0.23;
+            let mut reset_bands = [[0.0]; 4];
+            let mut fresh_bands = [[0.0]; 4];
+            let [a, b, c, d] = &mut reset_bands;
+            reset.process_frame(&[sample], &mut [a, b, c, d]);
+            let [a, b, c, d] = &mut fresh_bands;
+            fresh.process_frame(&[sample], &mut [a, b, c, d]);
+            let mut reset_flat = reset_bands.map(|band| band[0]);
+            let mut fresh_flat = fresh_bands.map(|band| band[0]);
+            reset.compensate_intermediate_bands(&mut reset_flat, 4, 1);
+            fresh.compensate_intermediate_bands(&mut fresh_flat, 4, 1);
+            assert_eq!(reset_flat, fresh_flat, "slope index {slope_index}, frame {frame}");
+        }
+    }
+}
+
+#[test]
 fn plugin_info_and_compile_metadata_match_runtime_contract() {
     let plugin = BandSplitPlugin::new_multiband(2, &[500.0, 2_000.0], "LR48").unwrap();
     assert_eq!(plugin.info().version, env!("CARGO_PKG_VERSION"));
