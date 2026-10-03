@@ -176,10 +176,7 @@ pub(super) fn build_physical_room_eq_graph(
         }
         let node = add(plugin.plugin_type.clone(), plugin.parameters.clone());
         if let Some(prev) = global_tail {
-            edges.push(PluginGraphEdgeConfig {
-                from_node: prev,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(prev, node));
         }
         global_tail = Some(node);
     }
@@ -207,17 +204,11 @@ pub(super) fn build_physical_room_eq_graph(
             ),
         );
         if let Some(prev) = global_tail {
-            edges.push(PluginGraphEdgeConfig {
-                from_node: prev,
-                to_node: tail,
-            });
+            edges.push(PluginGraphEdgeConfig::new(prev, tail));
         }
         for plugin in native_plugins(&input.plugins, width)? {
             let node = add(plugin.plugin_type.clone(), plugin.parameters.clone());
-            edges.push(PluginGraphEdgeConfig {
-                from_node: tail,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(tail, node));
             tail = node;
         }
         input_tails[index] = Some(tail);
@@ -258,25 +249,22 @@ pub(super) fn build_physical_room_eq_graph(
                 })),
             ),
         );
-        edges.push(PluginGraphEdgeConfig {
-            from_node: input_tails[route.input_index].expect("routed input has processing"),
-            to_node: tail,
-        });
+        edges.push(PluginGraphEdgeConfig::new(
+            input_tails[route.input_index].expect("routed input has processing"),
+            tail,
+        ));
         for plugin in native_plugins(
             &autoeq::roomeq_engine::physical_routing::physical_route_plugins(route),
             width,
         )? {
             let node = add(plugin.plugin_type, plugin.parameters);
-            edges.push(PluginGraphEdgeConfig {
-                from_node: tail,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(tail, node));
             tail = node;
         }
-        edges.push(PluginGraphEdgeConfig {
-            from_node: tail,
-            to_node: output_sums[route.output_index].expect("routed output has a sum"),
-        });
+        edges.push(PluginGraphEdgeConfig::new(
+            tail,
+            output_sums[route.output_index].expect("routed output has a sum"),
+        ));
     }
 
     let mut egress = vec![0.0_f32; output_count * width];
@@ -294,16 +282,10 @@ pub(super) fn build_physical_room_eq_graph(
         let Some(mut tail) = sum else { continue };
         for plugin in native_plugins(&output.plugins, width)? {
             let node = add(plugin.plugin_type.clone(), plugin.parameters.clone());
-            edges.push(PluginGraphEdgeConfig {
-                from_node: tail,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(tail, node));
             tail = node;
         }
-        edges.push(PluginGraphEdgeConfig {
-            from_node: tail,
-            to_node: merge,
-        });
+        edges.push(PluginGraphEdgeConfig::new(tail, merge));
     }
     Ok(PluginGraphConfig { nodes, edges })
 }
@@ -361,6 +343,9 @@ mod tests {
                     routes: vec![route(0, 0), route(0, 1), route(1, 1)],
                 };
                 let graph = build_physical_room_eq_graph(&physical, &[]).unwrap();
+                assert!(graph.edges.iter().all(|edge| {
+                    edge.kind == sotf_audio::engine::PluginGraphEdgeKind::Audio
+                }));
                 let mut host = DawHost::new(2, sample_rate);
                 let mut ids = std::collections::HashMap::new();
                 for node in &graph.nodes {

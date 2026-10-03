@@ -84,10 +84,7 @@ fn build_linear_room_eq_graph(
             current_channels,
         );
         if let Some(prev) = global_tail {
-            edges.push(PluginGraphEdgeConfig {
-                from_node: prev,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(prev, node));
         }
         global_tail = Some(node);
         current_channels = infer_plugin_output_channels(plugin, current_channels);
@@ -148,10 +145,7 @@ fn build_linear_room_eq_graph(
                         current_channels,
                     );
                     if let Some(prev) = global_tail {
-                        edges.push(PluginGraphEdgeConfig {
-                            from_node: prev,
-                            to_node: node,
-                        });
+                        edges.push(PluginGraphEdgeConfig::new(prev, node));
                     }
                     global_tail = Some(node);
                 }
@@ -169,10 +163,7 @@ fn build_linear_room_eq_graph(
         current_channels,
     );
     if let Some(prev) = global_tail {
-        edges.push(PluginGraphEdgeConfig {
-            from_node: prev,
-            to_node: gain_pre_id,
-        });
+        edges.push(PluginGraphEdgeConfig::new(prev, gain_pre_id));
     }
     let eq_pre_id = add_node(
         "eq".to_string(),
@@ -182,10 +173,7 @@ fn build_linear_room_eq_graph(
         }),
         current_channels,
     );
-    edges.push(PluginGraphEdgeConfig {
-        from_node: gain_pre_id,
-        to_node: eq_pre_id,
-    });
+    edges.push(PluginGraphEdgeConfig::new(gain_pre_id, eq_pre_id));
     let eq_post_id = add_node(
         "eq".to_string(),
         serde_json::json!({
@@ -194,10 +182,7 @@ fn build_linear_room_eq_graph(
         }),
         current_channels,
     );
-    edges.push(PluginGraphEdgeConfig {
-        from_node: eq_pre_id,
-        to_node: eq_post_id,
-    });
+    edges.push(PluginGraphEdgeConfig::new(eq_pre_id, eq_post_id));
     let _gain_post_id = add_node(
         "gain".to_string(),
         serde_json::json!({
@@ -207,10 +192,7 @@ fn build_linear_room_eq_graph(
         }),
         current_channels,
     );
-    edges.push(PluginGraphEdgeConfig {
-        from_node: eq_post_id,
-        to_node: _gain_post_id,
-    });
+    edges.push(PluginGraphEdgeConfig::new(eq_post_id, _gain_post_id));
 
     if nodes.is_empty() {
         anyhow::bail!("No plugins in DSP output");
@@ -255,10 +237,7 @@ fn build_linear_room_eq_graph_legacy(
             current_channels,
         );
         if let Some(prev) = global_tail {
-            edges.push(PluginGraphEdgeConfig {
-                from_node: prev,
-                to_node: node,
-            });
+            edges.push(PluginGraphEdgeConfig::new(prev, node));
         }
         global_tail = Some(node);
         current_channels = infer_plugin_output_channels(plugin, current_channels);
@@ -278,10 +257,7 @@ fn build_linear_room_eq_graph_legacy(
             current_channels,
         );
         if let Some(global_tail) = global_tail {
-            edges.push(PluginGraphEdgeConfig {
-                from_node: global_tail,
-                to_node: isolate,
-            });
+            edges.push(PluginGraphEdgeConfig::new(global_tail, isolate));
         }
         if let Some(chain) = output.channels.get(channel_name) {
             append_channel_dsp_graph_branch(
