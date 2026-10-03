@@ -170,7 +170,8 @@ _package-vst3-linux:
 		display=$(echo "$base" | sed 's/sotf_/SOTF /; s/_/ /g' | sed 's/\b\(.\)/\u\1/g')
 		bundle="$VST3_DIR/${display}.vst3"
 		mkdir -p "$bundle/Contents/x86_64-linux"
-		cp "$lib" "$bundle/Contents/x86_64-linux/${base}.so"
+		# VST3 Linux hosts require the shared library and bundle to have the same basename.
+		cp "$lib" "$bundle/Contents/x86_64-linux/${display}.so"
 	done
 	echo "Bundled $(ls -d "$VST3_DIR"/*.vst3 | wc -l | tr -d ' ') VST3 plugins"
 
