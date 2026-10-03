@@ -187,7 +187,7 @@ math-dsp = { version = "0.5", path = "../math-audio/crates/math-dsp" }
 math-iir-fir = { version = "0.5", path = "../math-audio/crates/math-iir-fir" }
 math-rir = { version = "0.5", path = "../math-audio/crates/math-rir" }
 memmap2 = "0.9.11"
-midir = "0.10"
+midir = "0.11"
 nalgebra = { version = "0.35", default-features = false, features = ["std"] }
 ndarray = { version = "0.17", default-features = false, features = ["rayon", "serde"] }
 nnnoiseless = "0.1"

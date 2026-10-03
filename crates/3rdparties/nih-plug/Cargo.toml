@@ -76,7 +76,7 @@ baseview = { git = "https://github.com/RustAudio/baseview.git", rev = "579130ecb
 clap = { version = "4.1.8", features = ["derive", "wrap_help"], optional = true }
 cpal = { version = "0.15", optional = true }
 jack = { version = "0.11.4", optional = true }
-midir = { version = "0.9.1", optional = true }
+midir = { version = "0.11", optional = true }
 rtrb = { version = "0.2.2", optional = true }
 
 # Used for the `vst3` feature
