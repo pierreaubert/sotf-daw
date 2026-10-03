@@ -20,6 +20,7 @@ log = { workspace = true }
 thiserror = { workspace = true }
 sotf-host = { workspace = true }
 sotf-plugin-ambisonics = { workspace = true }
+symphonia-iamf-core = { workspace = true }
 symphonia-bundle-flac = "0.6"
 symphonia-codec-aac = "0.6"
 symphonia-core = "0.6"
