@@ -4,12 +4,13 @@ Source: <https://github.com/robbert-vdh/nih-plug>
 
 Original commit: `de421011f41a6d10fc8c7a6084e4f4dee0143683`.
 
-This directory contains the original `nih_plug` library source and its
-`nih_plug_derive` package. The original ISC license is preserved in `LICENSE`;
-the upstream README is preserved as `UPSTREAM_README.md`. Upstream GUI packages,
-tools, examples, and product plugins are not copied. The local workspace member
-list contains only `nih_plug_derive`. All dependency versions and features are
-unchanged. The SOTF workspace patches the original Git dependency to this copy.
+This directory contains the patched `nih_plug` library source. Its unmodified
+`nih_plug_derive` package resolves from the exact original Git commit above;
+its integration tests live in the DAW workspace's `plugins-nih/tests/` and
+exercise the macro against the shipped fork. The original ISC license is
+preserved in `LICENSE`; the upstream README is preserved as `UPSTREAM_README.md`.
+Upstream GUI packages, tools, examples, and product plugins are not copied.
+The SOTF workspace patches the original Git dependency to this copy.
 
 ## Automation timing changes (AUD-044)
 
