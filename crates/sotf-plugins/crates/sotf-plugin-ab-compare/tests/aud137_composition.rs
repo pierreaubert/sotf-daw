@@ -1,6 +1,7 @@
 //! AUD137 independent finite-response, lifecycle, and host composition checks.
 
 // Rust guideline compliant 2026-02-21
+use math_audio_iir_fir::{Biquad, BiquadFilterType};
 use serde_json::{Value, json};
 use sotf_host::host::DawHost;
 use sotf_host::parameters::{ParameterId, ParameterValue};
@@ -225,7 +226,9 @@ impl Plugin for FirFixture {
             .num_frames
             .checked_mul(self.channels)
             .ok_or_else(|| "AUD137 FIR fixture block size overflow".to_string())?;
-        if input.len() != expected || output.len() != expected {
+        // Staging is capacity, not exact size: live bounds are upper bounds,
+        // so the unprobed-83 block stages 84 frames for 83 produced.
+        if input.len() != expected || output.len() < expected {
             return Err("AUD137 FIR fixture received invalid process geometry".into());
         }
         if self.draining {
@@ -305,7 +308,10 @@ impl Plugin for FirFixture {
             FAILING_DRAIN_CALLS.with(|count| count.set(count.get() + 1));
             return Err("AUD137 fixture drain failure".into());
         }
-        if !self.draining || context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if !self.draining
+            || context.num_frames != 0
+            || context.sample_rate != self.expected_input_rate()
+        {
             return Err("AUD137 FIR fixture was not prepared for drain".into());
         }
         let required = self.drain_capacity * self.channels;
@@ -544,6 +550,34 @@ fn render_chunks(plugin: &mut ABComparePlugin, input: &[f32], chunks: &[usize]) 
     output
 }
 
+fn render_chunks_captured(
+    plugin: &mut ABComparePlugin,
+    input: &[f32],
+    chunks: &[usize],
+) -> (Vec<f32>, Vec<usize>) {
+    assert_eq!(chunks.iter().sum::<usize>() * CHANNELS, input.len());
+    let mut output = Vec::new();
+    let mut returns = Vec::with_capacity(chunks.len());
+    let mut frame_offset = 0;
+    for &frames in chunks {
+        let start = frame_offset * CHANNELS;
+        let end = start + frames * CHANNELS;
+        let mut block = vec![f32::NAN; frames * CHANNELS];
+        let context = ProcessContext::new(SAMPLE_RATE, frames);
+        let produced = plugin
+            .process(&input[start..end], &mut block, &context)
+            .unwrap();
+        assert!(
+            produced <= frames,
+            "plugin emitted {produced} frames for a {frames}-frame block",
+        );
+        returns.push(produced);
+        output.extend_from_slice(&block[..produced * CHANNELS]);
+        frame_offset += frames;
+    }
+    (output, returns)
+}
+
 fn drain_all(plugin: &mut ABComparePlugin) -> (Vec<f32>, Vec<usize>) {
     let context = ProcessContext::new(SAMPLE_RATE, 0);
     plugin.begin_drain(&context).unwrap();
@@ -692,7 +726,15 @@ fn plugin_rack_and_graph_paths_match_an_independent_f64_fir_oracle() {
         };
         let mut plugin = make_fir_plugin(route, false);
         assert_eq!(plugin.latency_samples(), REPORTED_LATENCY_A);
-        assert_eq!(plugin.tail_length(), TailLength::Unknown);
+        // Structural tail, exact in every state: path A contributes its
+        // FIR ring-out (5 taps - 1 = 4) with no alignment delay, path B
+        // its ring-out (3 taps - 1 = 2) after the 3-frame alignment
+        // delay (4 vs 5), and the dry lane its 3-frame latency delay;
+        // the mixer maximum is 5. Both FIRs arm taps-1 drain frames
+        // regardless of history and the delays flush structurally, so
+        // the fresh-state query below is exact, not merely a bound —
+        // the fresh-drain proof after this loop confirms the emission.
+        assert_eq!(plugin.tail_length(), TailLength::Finite(5));
         assert_eq!(plugin.drain_output_frames_max(), 3);
         let process_output = render_chunks(&mut plugin, &input, &[1, 7, 19, 3, 53]);
         let (drain_output, drain_partition) = drain_all(&mut plugin);
@@ -700,6 +742,31 @@ fn plugin_rack_and_graph_paths_match_an_independent_f64_fir_oracle() {
         let mut actual = process_output;
         actual.extend_from_slice(&drain_output);
         assert_vectors_close(&actual, &expected, route_name);
+    }
+
+    // Fresh-state exactness proof for the Finite(5) above: an unprocessed
+    // plugin drains exactly 5 frames of exact zero (either sign; structural
+    // arms fire from zero histories), so the pre-process query is the true
+    // count.
+    for route in [Route::Plugin, Route::Rack, Route::Graph] {
+        let route_name = match route {
+            Route::Plugin => "fresh Plugin",
+            Route::Rack => "fresh Rack",
+            Route::Graph => "fresh Graph",
+        };
+        let mut plugin = make_fir_plugin(route, false);
+        assert_eq!(plugin.tail_length(), TailLength::Finite(5));
+        let (drain_output, _) = drain_all(&mut plugin);
+        assert_eq!(
+            drain_output.len() / CHANNELS,
+            5,
+            "{route_name} fresh drain emits exactly the queried tail"
+        );
+        assert!(
+            drain_output.iter().all(|&sample| sample == 0.0),
+            "{route_name} fresh drain content is exactly zero"
+        );
+        assert_eq!(plugin.tail_length(), TailLength::Finite(0));
     }
 }
 
@@ -913,49 +980,124 @@ fn zero_output_child_progress_can_resume_and_preserve_the_tail() {
     panic!("AUD137 zero-output child did not resume within the drain bound");
 }
 
+/// Fresh-`Biquad` HP->LP cascade over a known wet sequence, mirroring the
+/// production mixer's per-sample operations exactly.
+fn mask_cascade_reference(wet: &[f32], low_hz: f64, high_hz: f64) -> Vec<f32> {
+    assert!(wet.len().is_multiple_of(CHANNELS));
+    let q = 1.0 / std::f64::consts::SQRT_2;
+    let rate = f64::from(SAMPLE_RATE);
+    let mut highpass: Vec<Biquad> = (0..CHANNELS)
+        .map(|_| Biquad::new(BiquadFilterType::Highpass, low_hz, rate, q, 0.0))
+        .collect();
+    let mut lowpass: Vec<Biquad> = (0..CHANNELS)
+        .map(|_| Biquad::new(BiquadFilterType::Lowpass, high_hz, rate, q, 0.0))
+        .collect();
+    let mut output = Vec::with_capacity(wet.len());
+    for frame in wet.as_chunks::<CHANNELS>().0 {
+        for (channel, &sample) in frame.iter().enumerate() {
+            let hp_out = highpass[channel].process(f64::from(sample));
+            output.push(lowpass[channel].process(hp_out) as f32);
+        }
+    }
+    output
+}
+
 #[test]
-fn active_or_prior_band_mask_history_rejects_drain_until_reset() {
+fn active_band_mask_drains_proven_residual_and_completes() {
+    // R2 supersession (root disposition 2026-10-01: mask refusal is not
+    // completion): latency-bearing FIR paths plus an active mask drain the
+    // child tails, the (empty here) latency rings, and the proven residual
+    // flush. The whole stream matches the masked f64 FIR oracle at 1e-6 and
+    // leaves a remainder below wet peak x 2^-24.
     COUNTED_DRAIN_CALLS.set(0);
+    let taps_a = [1.0, 0.5];
+    let taps_b = [1.0, 0.25];
     let params = ABComparePluginParams {
-        path_a: path_config(Route::Plugin, "counted-fir", &[1.0, 0.5], 0, 1),
-        path_b: path_config(Route::Plugin, "counted-fir", &[1.0], 0, 1),
+        path_a: path_config(Route::Plugin, "counted-fir", &taps_a, 0, 1),
+        path_b: path_config(Route::Plugin, "counted-fir", &taps_b, 0, 1),
+        mix: 0.0,
         band_mask_low_hz: 500.0,
         band_mask_high_hz: 8_000.0,
         auto_gain_enabled: false,
         ..ABComparePluginParams::default()
     };
-    let mut plugin =
+    let mut plugin = ABComparePlugin::from_params_with_factory(
+        CHANNELS,
+        SAMPLE_RATE,
+        params.clone(),
+        fir_factory,
+    )
+    .unwrap();
+    plugin.initialize(SAMPLE_RATE).unwrap();
+    let input = dense_input(ACCEPTED_FRAMES);
+    let nomask = direct_reference(
+        &input,
+        &taps_a,
+        &taps_b,
+        ReferenceOptions {
+            path_b_alignment: 0,
+            mix: 0.0,
+            difference_mode: false,
+            phase_invert_b: false,
+            bypass: false,
+        },
+    );
+    assert_eq!(nomask.len() / CHANNELS, ACCEPTED_FRAMES + 1);
+
+    let process_output = render_chunks(&mut plugin, &input, &[1, 7, 19, 3, 53]);
+    let (drain_output, _) = drain_all(&mut plugin);
+    assert!(
+        COUNTED_DRAIN_CALLS.get() > 0,
+        "both FIR children must drain independently"
+    );
+    let mut actual = process_output;
+    actual.extend_from_slice(&drain_output);
+    let flush_frames = actual.len() / CHANNELS - nomask.len() / CHANNELS;
+    assert!(
+        flush_frames >= 64,
+        "the residual flush must engage nontrivially, got {flush_frames}"
+    );
+    let mut wet = nomask.clone();
+    wet.extend(std::iter::repeat_n(0.0, flush_frames * CHANNELS));
+    let expected = mask_cascade_reference(&wet, 500.0, 8_000.0);
+    assert_vectors_close(&actual, &expected, "masked FIR drain");
+    let wet_peak = nomask
+        .iter()
+        .fold(0.0_f64, |max, sample| max.max(f64::from(sample.abs())));
+    assert!(wet_peak > 0.0);
+    let threshold = wet_peak / 16_777_216.0;
+    let mut extended = wet.clone();
+    extended.extend(std::iter::repeat_n(0.0, 20_000 * CHANNELS));
+    let sounded = mask_cascade_reference(&extended, 500.0, 8_000.0);
+    let tail_max = sounded[wet.len()..]
+        .iter()
+        .fold(0.0_f64, |max, sample| max.max(f64::from(sample.abs())));
+    assert!(
+        tail_max < threshold,
+        "remainder {tail_max} must stay below {threshold}"
+    );
+
+    // Immediate drain with no program: zero excitation means zero flush; only
+    // the one zero-valued FIR tail frame flows (masked zeros stay zeros).
+    let mut fresh =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
-    let drain_context = ProcessContext::new(SAMPLE_RATE, 0);
-    assert!(plugin.begin_drain(&drain_context).is_err());
-
-    let input = [0.25, -0.5];
-    let mut output = [f32::NAN; CHANNELS];
-    assert_eq!(
-        plugin
-            .process(&input, &mut output, &ProcessContext::new(SAMPLE_RATE, 1))
-            .unwrap(),
-        1,
-        "failed drain preflight must leave the parent accepting input"
-    );
-    assert!(
-        plugin.begin_drain(&drain_context).is_err(),
-        "accepted samples processed with a recursive mask cannot be drained"
-    );
-    assert_eq!(COUNTED_DRAIN_CALLS.get(), 0);
-
-    plugin.reset();
-    assert!(
-        plugin.begin_drain(&drain_context).is_err(),
-        "reset clears history but leaves the configured mask active"
-    );
+    fresh.initialize(SAMPLE_RATE).unwrap();
+    let (tail, _) = drain_all(&mut fresh);
+    assert_eq!(tail.len(), CHANNELS, "one zero tail frame, no flush");
+    assert!(tail.iter().all(|sample| *sample == 0.0));
 }
 
 #[test]
-fn nonlinear_graph_drain_is_rejected_before_child_drain_starts() {
+fn nonlinear_graph_joins_and_drains_exactly() {
+    // The R20 disposition supersedes the nonlinear-graph drain refusal:
+    // heterogeneous branches (different FIR taps) feed the transparent
+    // output join; the merge sums them losslessly in process and at EOF.
+    // The oracle feeds two raw fixtures and sums — bitwise.
+    COUNTED_BEGIN_DRAIN_CALLS.set(0);
     COUNTED_DRAIN_CALLS.set(0);
+    let taps_a = [1.0, 0.5];
+    let taps_b = [0.75, -0.25];
     let params = ABComparePluginParams {
         path_a: PathConfig::Graph {
             nodes: vec![
@@ -981,36 +1123,88 @@ fn nonlinear_graph_drain_is_rejected_before_child_drain_starts() {
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
     plugin.initialize(SAMPLE_RATE).unwrap();
+    assert_eq!(plugin.latency_samples(), 0);
 
-    let error = plugin
-        .begin_drain(&ProcessContext::new(SAMPLE_RATE, 0))
-        .unwrap_err();
-    assert!(
-        error.contains("linear Graph"),
-        "unexpected preflight error: {error}"
-    );
-    assert_eq!(COUNTED_DRAIN_CALLS.get(), 0);
-    let mut output = [f32::NAN; CHANNELS];
+    let chunks = [83_usize, 64, 7, 129, 1];
+    assert_eq!(chunks.iter().sum::<usize>(), 284);
+    let input = dense_input(284);
+    let (mut whole, returns) = render_chunks_captured(&mut plugin, &input, &chunks);
     assert_eq!(
-        plugin
+        returns, chunks,
+        "identity branches emit full counts through the join",
+    );
+    let (tail, partition) = drain_all(&mut plugin);
+    whole.extend_from_slice(&tail);
+    assert_eq!(
+        returns.iter().sum::<usize>() + partition.iter().sum::<usize>(),
+        whole.len() / CHANNELS,
+        "count conservation",
+    );
+
+    // Raw per-branch references, summed elementwise in config edge order.
+    let mut expected = vec![0.0; whole.len()];
+    for taps in [taps_a.as_slice(), taps_b.as_slice()] {
+        let mut raw = FirFixture::new(CHANNELS, taps.to_vec(), 0, 1, false, false, false).unwrap();
+        raw.initialize(SAMPLE_RATE).unwrap();
+        let mut reference = vec![0.0; input.len()];
+        let produced = raw
             .process(
-                &[0.25, -0.5],
-                &mut output,
-                &ProcessContext::new(SAMPLE_RATE, 1),
+                &input,
+                &mut reference,
+                &ProcessContext::new(SAMPLE_RATE, 284),
             )
-            .unwrap(),
-        1,
-        "failed Graph drain preflight must leave the parent accepting input"
+            .unwrap();
+        assert_eq!(produced, 284);
+        raw.begin_drain(&ProcessContext::new(SAMPLE_RATE, 0))
+            .unwrap();
+        let mut slice = vec![0.0; CHANNELS];
+        let mut branch_complete = false;
+        for _ in 0..4 {
+            let result = raw
+                .drain(&mut slice, &ProcessContext::new(SAMPLE_RATE, 0))
+                .unwrap();
+            reference.extend_from_slice(&slice[..result.frames * CHANNELS]);
+            if result.complete {
+                branch_complete = true;
+                break;
+            }
+        }
+        assert!(branch_complete, "raw branch must drain within its bound");
+        assert_eq!(reference.len(), expected.len());
+        for (slot, sample) in expected.iter_mut().zip(reference.iter()) {
+            *slot += sample;
+        }
+    }
+    assert_eq!(
+        whole, expected,
+        "joined hetero content must match the raw sum bitwise",
+    );
+    println!("nonlinear join: drain partition {partition:?}");
+    assert!(
+        COUNTED_DRAIN_CALLS.get() > 0,
+        "both branches must actually drain",
+    );
+    let context = ProcessContext::new(SAMPLE_RATE, 0);
+    let terminal = plugin.drain(&mut [], &context).unwrap();
+    assert!(
+        terminal.complete && terminal.frames == 0,
+        "post-complete drain must stay complete with zero frames",
     );
 }
 
 #[test]
-fn unprobed_per_node_geometry_is_rejected_before_child_advance() {
+fn unprobed_geometry_composes_with_truthful_counts() {
+    // The R20 disposition supersedes the unprobed-geometry refusal: a child
+    // whose declaration changes at input length 83 (where no fixed probe
+    // looks) still pairs frames by stream position, because unpadded
+    // process returns and actual drain returns report truth, not bounds.
+    // The 83-frame block leads, so the anomaly is the proof, not the gap.
     COUNTED_BEGIN_DRAIN_CALLS.set(0);
     COUNTED_DRAIN_CALLS.set(0);
     let params = ABComparePluginParams {
         path_a: path_config(Route::Plugin, "unprobed-counted-fir", &[1.0, 0.5], 0, 2),
         path_b: PathConfig::None,
+        mix: -1.0,
         auto_gain_enabled: false,
         ..ABComparePluginParams::default()
     };
@@ -1018,29 +1212,45 @@ fn unprobed_per_node_geometry_is_rejected_before_child_advance() {
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
     plugin.initialize(SAMPLE_RATE).unwrap();
+    assert_eq!(plugin.latency_samples(), 0);
 
+    let chunks = [ACCEPTED_FRAMES, 64, 7, 129, 1];
+    assert_eq!(chunks.iter().sum::<usize>(), 284);
+    let input = dense_input(284);
+    let (mut whole, returns) = render_chunks_captured(&mut plugin, &input, &chunks);
+    assert_eq!(
+        returns, chunks,
+        "every per-call count must be truthful, 83 included",
+    );
+    let (tail, partition) = drain_all(&mut plugin);
+    whole.extend_from_slice(&tail);
+    assert_eq!(
+        returns.iter().sum::<usize>() + partition.iter().sum::<usize>(),
+        whole.len() / CHANNELS,
+        "count conservation",
+    );
+    let expected = convolve_f64(&input, &[1.0, 0.5]);
+    assert_vectors_close(&whole, &expected, "unprobed geometry");
+    println!("unprobed geometry: drain partition {partition:?}");
+    assert!(
+        COUNTED_DRAIN_CALLS.get() > 0,
+        "the child must actually drain",
+    );
     let context = ProcessContext::new(SAMPLE_RATE, 0);
-    let preflight = plugin.begin_drain(&context);
-    let mut output = vec![f32::NAN; plugin.drain_output_frames_max() * CHANNELS];
-    let drain = plugin.drain(&mut output, &context);
-
+    let terminal = plugin.drain(&mut [], &context).unwrap();
     assert!(
-        preflight
-            .as_ref()
-            .is_err_and(|error| error.contains("identity frame geometry")),
-        "a child that changes frame count at unprobed input length 83 must be rejected"
+        terminal.complete && terminal.frames == 0,
+        "post-complete drain must stay complete with zero frames",
     );
-    assert!(
-        drain.is_err(),
-        "drain after failed preflight must be rejected"
-    );
-    assert_eq!(COUNTED_BEGIN_DRAIN_CALLS.get(), 0);
-    assert_eq!(COUNTED_DRAIN_CALLS.get(), 0);
-    assert!(output.iter().all(|sample| sample.is_nan()));
 }
 
 #[test]
-fn compensating_node_rates_are_rejected_before_child_advance() {
+fn compensating_node_rates_compose_silently() {
+    // The R20 disposition supersedes the compensating-rates refusal: silent
+    // rate-changing stages that fold back to the outer clock (48→96→48)
+    // compose with truthful per-call counts and bit-exact passthrough
+    // content, draining coherently to EOF. Nothing is hidden: every count
+    // is asserted against its block.
     COUNTED_BEGIN_DRAIN_CALLS.set(0);
     COUNTED_DRAIN_CALLS.set(0);
     let stage_parameters = json!({
@@ -1062,6 +1272,7 @@ fn compensating_node_rates_are_rejected_before_child_advance() {
             ],
         },
         path_b: PathConfig::None,
+        mix: -1.0,
         auto_gain_enabled: false,
         ..ABComparePluginParams::default()
     };
@@ -1069,25 +1280,38 @@ fn compensating_node_rates_are_rejected_before_child_advance() {
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
     plugin.initialize(SAMPLE_RATE).unwrap();
+    assert_eq!(plugin.latency_samples(), 0);
 
+    let chunks = [83_usize, 64, 7, 129, 1];
+    assert_eq!(chunks.iter().sum::<usize>(), 284);
+    let input = dense_input(284);
+    let (mut whole, returns) = render_chunks_captured(&mut plugin, &input, &chunks);
+    assert_eq!(
+        returns, chunks,
+        "silent compensating counts must match every block",
+    );
+    let (tail, partition) = drain_all(&mut plugin);
+    whole.extend_from_slice(&tail);
+    assert!(
+        tail.is_empty(),
+        "passthrough stages drain empty, got {} frames",
+        tail.len() / CHANNELS,
+    );
+    assert_eq!(
+        whole, input,
+        "silent compensating content must pass through bit-exactly",
+    );
+    println!("compensating rates: drain partition {partition:?}");
+    assert!(
+        COUNTED_DRAIN_CALLS.get() > 0,
+        "the children must actually drain",
+    );
     let context = ProcessContext::new(SAMPLE_RATE, 0);
-    let preflight = plugin.begin_drain(&context);
-    let mut output = vec![f32::NAN; plugin.drain_output_frames_max() * CHANNELS];
-    let drain = plugin.drain(&mut output, &context);
-
+    let terminal = plugin.drain(&mut [], &context).unwrap();
     assert!(
-        preflight
-            .as_ref()
-            .is_err_and(|error| error.contains("identity frame geometry")),
-        "a 48→96→48 kHz route must not hide non-identity per-node rates"
+        terminal.complete && terminal.frames == 0,
+        "post-complete drain must stay complete with zero frames",
     );
-    assert!(
-        drain.is_err(),
-        "drain after failed preflight must be rejected"
-    );
-    assert_eq!(COUNTED_BEGIN_DRAIN_CALLS.get(), 0);
-    assert_eq!(COUNTED_DRAIN_CALLS.get(), 0);
-    assert!(output.iter().all(|sample| sample.is_nan()));
 }
 
 #[test]

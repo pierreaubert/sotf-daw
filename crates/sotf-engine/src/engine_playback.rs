@@ -137,11 +137,7 @@ impl SweepPlayback for EnginePlayback {
         }
 
         manager
-            .start_playback(
-                device.map(str::to_string),
-                plugins,
-                hardware_channels,
-            )
+            .start_playback(device.map(str::to_string), plugins, hardware_channels)
             .map_err(|e| e.to_string())?;
         self.manager = Some(manager);
         Ok(())
@@ -157,7 +153,7 @@ impl SweepPlayback for EnginePlayback {
     }
 
     fn stop(&mut self) -> Result<(), String> {
-        if let Some(manager) = self.manager.take() {
+        if let Some(mut manager) = self.manager.take() {
             manager.stop().map_err(|e| e.to_string())
         } else {
             Ok(())

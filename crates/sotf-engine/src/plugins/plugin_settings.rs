@@ -131,6 +131,10 @@ use super::default_delay_feedback;
 use super::default_delay_mix;
 use super::default_delay_ms;
 use super::default_denoiser_attack_ms;
+use super::default_denoiser_audition_residual;
+use super::default_denoiser_curve_high;
+use super::default_denoiser_curve_low;
+use super::default_denoiser_curve_mid;
 use super::default_denoiser_dd_alpha;
 use super::default_denoiser_dd_enabled;
 use super::default_denoiser_floor_db;
@@ -651,6 +655,16 @@ impl PluginSettings {
         }
         Ok(())
     }
+}
+
+/// Missing-key engine mode is Multiband.
+///
+/// Matches the PARAMS descriptor default (index 3), the DSP serde/struct
+/// defaults, and `PluginSettings::default_for`. Co-located here per lane
+/// ownership; the engine owner may relocate it next to the hand-written
+/// helpers in `plugins/default.rs`.
+fn default_crossfeed_mode() -> CrossfeedMode {
+    CrossfeedMode::Mb
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1280,6 +1294,14 @@ pub enum PluginSettings {
         spatial_denoise: bool,
         #[serde(default = "default_spatial_strength")]
         spatial_strength: f64,
+        #[serde(default = "default_denoiser_curve_low")]
+        curve_low: f64,
+        #[serde(default = "default_denoiser_curve_mid")]
+        curve_mid: f64,
+        #[serde(default = "default_denoiser_curve_high")]
+        curve_high: f64,
+        #[serde(default = "default_denoiser_audition_residual")]
+        audition_residual: bool,
     },
     Declick {
         #[serde(default = "default_declick_enabled")]
@@ -1523,7 +1545,7 @@ pub enum PluginSettings {
         freq_dependent: bool,
     },
     Crossfeed {
-        #[serde(default)]
+        #[serde(default = "default_crossfeed_mode")]
         mode: CrossfeedMode,
         #[serde(default)]
         preset: CrossfeedPreset,
@@ -2398,6 +2420,10 @@ impl PluginSettings {
                     harmonic_percussive: false,
                     spatial_denoise: false,
                     spatial_strength: p(d, "spatial_strength").default_f64(),
+                    curve_low: p(d, "curve_low").default_f64(),
+                    curve_mid: p(d, "curve_mid").default_f64(),
+                    curve_high: p(d, "curve_high").default_f64(),
+                    audition_residual: p(d, "audition_residual").default_bool(),
                 }
             }
             PluginType::Declick => {
@@ -2881,6 +2907,78 @@ mod tests {
         };
         assert_eq!(filters[0].placement, Some(EqBandPlacement::Left));
         assert_eq!(stereo_pairs, Some(vec![[0, 1], [3, 2]]));
+    }
+
+    #[test]
+    fn crossfeed_minimal_settings_default_to_multiband() {
+        // Externally-tagged shape: bare `{}` is not valid for the enum.
+        let minimal: PluginSettings = serde_json::from_value(serde_json::json!({
+            "Crossfeed": {}
+        }))
+        .unwrap();
+        assert!(matches!(
+            minimal,
+            PluginSettings::Crossfeed {
+                mode: CrossfeedMode::Mb,
+                ..
+            }
+        ));
+        // Every missing key must equal the documented engine default.
+        let documented = PluginSettings::default_for(&PluginType::Crossfeed).unwrap();
+        assert_eq!(
+            serde_json::to_value(&minimal).unwrap(),
+            serde_json::to_value(&documented).unwrap()
+        );
+    }
+
+    #[test]
+    fn crossfeed_explicit_modes_preserved_with_supplied_values() {
+        for (mode, expected) in [
+            ("Off", CrossfeedMode::Off),
+            ("Bauer", CrossfeedMode::Bauer),
+            ("Mb", CrossfeedMode::Mb),
+        ] {
+            let settings: PluginSettings = serde_json::from_value(serde_json::json!({
+                "Crossfeed": {"mode": mode, "head_yaw_deg": 45.0, "mix": 0.5}
+            }))
+            .unwrap();
+            let PluginSettings::Crossfeed {
+                mode: actual,
+                head_yaw_deg,
+                mix,
+                ..
+            } = settings
+            else {
+                panic!("expected Crossfeed settings");
+            };
+            assert_eq!(actual, expected);
+            assert_eq!(head_yaw_deg, 45.0);
+            assert_eq!(mix, 0.5);
+        }
+    }
+
+    #[test]
+    fn crossfeed_minimal_settings_convert_to_multiband_config() {
+        use crate::plugins::plugin_config_converter::PluginConfigConverterRegistry;
+
+        let minimal: PluginSettings = serde_json::from_value(serde_json::json!({
+            "Crossfeed": {}
+        }))
+        .unwrap();
+        let config = PluginConfigConverterRegistry::global()
+            .convert("crossfeed", &minimal, 48_000.0)
+            .expect("crossfeed converter registered");
+        assert_eq!(config.plugin_type, "crossfeed");
+        assert_eq!(config.parameters["mode"], "Mb");
+
+        let off: PluginSettings = serde_json::from_value(serde_json::json!({
+            "Crossfeed": {"mode": "Off"}
+        }))
+        .unwrap();
+        let config = PluginConfigConverterRegistry::global()
+            .convert("crossfeed", &off, 48_000.0)
+            .expect("crossfeed converter registered");
+        assert_eq!(config.parameters["mode"], "Off");
     }
 
     #[test]

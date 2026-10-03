@@ -11,6 +11,7 @@ use super::default::default_mb_mid_feed;
 use super::default::default_mb_mid_high_freq;
 use super::default::default_meier_level;
 use super::default::default_mix;
+use super::default::default_mode;
 use super::types::CrossfeedMode;
 use super::types::CrossfeedPreset;
 use crate::params::PARAMS as CF;
@@ -150,7 +151,7 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CrossfeedPluginParams {
     /// Maximum callback size reserved during construction. This is a setup-time
@@ -158,7 +159,7 @@ pub struct CrossfeedPluginParams {
     #[serde(default = "default_max_block_frames")]
     pub max_block_frames: usize,
     #[serde(
-        default,
+        default = "default_mode",
         alias = "crossfeed_mode",
         deserialize_with = "deserialize_crossfeed_mode"
     )]

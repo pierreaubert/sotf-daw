@@ -272,19 +272,30 @@ fn color_transitions_require_a_zero_color_reset_epoch() {
 }
 
 #[test]
-fn zero_color_model_replacement_preserves_core_history() {
+fn zero_color_refused_model_switch_preserves_core_history() {
+    // Structural model: the live switch is refused with no side effects —
+    // the committed model, drive, tail contract, and delay-line history
+    // are untouched, so the stream drains exactly as if uninterrupted.
+    // Cross-model equivalence at zero color is proven by construction in
+    // `zero_color_recovers_exact_delayed_program_for_every_model`.
     use sotf_host::{ParameterId, ParameterValue};
     let rate = 48_000;
     let mut plugin = make(2, rate, "Harmonics", 1.0, 0.0);
     let input = [0.25, -0.125, 0.5, -0.25];
     let mut actual = process(plugin.as_mut(), rate, &input);
-    plugin
-        .set_parameter(
-            ParameterId::from("analog_model"),
-            ParameterValue::String("Tape".into()),
-        )
-        .unwrap();
+    assert!(
+        plugin
+            .set_parameter(
+                ParameterId::from("analog_model"),
+                ParameterValue::String("Tape".into()),
+            )
+            .is_err()
+    );
     assert_eq!(plugin.tail_length(), TailLength::Finite(48));
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("analog_model")),
+        Some(ParameterValue::String("Harmonics".into()))
+    );
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("analog_drive")),
         Some(ParameterValue::Float(7.0))
@@ -293,12 +304,6 @@ fn zero_color_model_replacement_preserves_core_history() {
     let mut expected = vec![0.0; 96];
     expected.extend_from_slice(&input);
     assert_eq!(actual, expected);
-    plugin
-        .set_parameter(
-            ParameterId::from("analog_model"),
-            ParameterValue::String("Tape".into()),
-        )
-        .unwrap();
 }
 
 #[test]

@@ -15,8 +15,10 @@ const SAMPLE_RATE: u32 = 48_000;
 const ORDER7_INPUT_CHANNELS: usize = 64;
 const ORDER7_OUTPUT_CHANNELS: usize = 16;
 const FIR_TAIL_FRAMES: usize = 2;
-// `DawHost::build` currently prepares graph scratch for 8192 frames by 32
-// channels. The oversized fixtures below must exceed that prepared storage.
+// Build-time scratch follows the declared drain bound, so the stale-capacity
+// fixtures below start fitting and then advertise an extent larger than the
+// prepared storage. This stays a monotone oversized extent for both the
+// expansion and contraction routes.
 const PREPARED_GRAPH_SCRATCH_SAMPLES: usize = 8192 * 32;
 
 fn ambisonics_config(order: usize, target_layout: &str) -> AmbisonicsDecoderConfig {
@@ -93,6 +95,7 @@ struct FiniteFirProducer {
     two_back: Vec<f64>,
     drain_remaining: usize,
     drain_capacity_frames: usize,
+    drain_capacity_control: Option<Arc<AtomicUsize>>,
     identity_frame_geometry: bool,
     output_sample_rate: Option<u32>,
     draining: bool,
@@ -116,11 +119,18 @@ impl FiniteFirProducer {
             two_back: vec![0.0; channels],
             drain_remaining: 0,
             drain_capacity_frames,
+            drain_capacity_control: None,
             identity_frame_geometry: true,
             output_sample_rate: None,
             draining: false,
             calls,
         }
+    }
+
+    fn with_drain_capacity_control(mut self, control: Arc<AtomicUsize>) -> Self {
+        control.store(self.drain_capacity_frames, Ordering::SeqCst);
+        self.drain_capacity_control = Some(control);
+        self
     }
 
     fn with_identity_frame_geometry(mut self, identity: bool) -> Self {
@@ -240,7 +250,11 @@ impl Plugin for FiniteFirProducer {
     }
 
     fn drain_output_frames_max(&self) -> usize {
-        self.drain_capacity_frames
+        if let Some(control) = &self.drain_capacity_control {
+            control.load(Ordering::SeqCst)
+        } else {
+            self.drain_capacity_frames
+        }
     }
 
     fn drain_call_bound(&self) -> Option<NonZeroU64> {
@@ -437,23 +451,42 @@ fn assert_oversized_channel_changing_drain_is_rejected_before_begin(
     output_channels: usize,
     capacity_frames: usize,
 ) {
+    // Prepared scratch is sized at build time from the declared drain bound,
+    // so the producer starts fitting and grows stale afterwards.
+    const FITTING_DRAIN_CAPACITY_FRAMES: usize = 1;
+    assert!(
+        capacity_frames > FITTING_DRAIN_CAPACITY_FRAMES,
+        "stale capacity {capacity_frames} must exceed prepared bound"
+    );
     let calls = Arc::new(DrainCalls::default());
+    let drain_capacity = Arc::new(AtomicUsize::new(FITTING_DRAIN_CAPACITY_FRAMES));
     let input = patterned_input(1, input_channels);
     let config = ambisonics_config(order, layout);
     let mut host = DawHost::new(input_channels, SAMPLE_RATE);
-    host.add_plugin(Box::new(FiniteFirProducer::with_drain_capacity(
-        input_channels,
-        Arc::clone(&calls),
-        capacity_frames,
-    )))
+    host.add_plugin(Box::new(
+        FiniteFirProducer::with_drain_capacity(
+            input_channels,
+            Arc::clone(&calls),
+            FITTING_DRAIN_CAPACITY_FRAMES,
+        )
+        .with_drain_capacity_control(Arc::clone(&drain_capacity)),
+    ))
     .unwrap();
     host.add_plugin(Box::new(AmbisonicsDecoderPlugin::new(&config).unwrap()))
         .unwrap();
     host.build().unwrap();
-    assert_eq!(host.drain_output_frames_max(), capacity_frames);
+    assert_eq!(
+        host.drain_output_frames_max(),
+        FITTING_DRAIN_CAPACITY_FRAMES
+    );
 
     let mut process_output = vec![f32::NAN; output_channels];
     assert_eq!(host.process(&input, &mut process_output).unwrap(), 1);
+
+    // Advertise a stale extent larger than the buffers prepared at build.
+    drain_capacity.store(capacity_frames, Ordering::SeqCst);
+    assert_eq!(host.drain_output_frames_max(), capacity_frames);
+
     let mut drain_output = vec![0.25; capacity_frames * output_channels];
     let error = host
         .drain(&mut drain_output)

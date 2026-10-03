@@ -122,10 +122,13 @@ fn processing_scratch_prepares_order_seven_input_extent() {
 }
 use std::sync::Arc;
 
+mod crossfade_bounded;
 mod crossfade_clock;
 mod eos;
 mod final_meter_cache;
 mod frame_format;
+mod graph_eos;
+mod limiter_live_mutation;
 mod misc;
 mod sidechain_graph;
 mod test;
@@ -339,14 +342,17 @@ fn test_matrix_mono_routing_signal_integrity() {
 }
 
 #[test]
-fn same_rate_crossfade_uses_constant_power_gains() {
-    let (old_start, new_start) = ProcessingState::equal_power_crossfade_gains(0.0);
-    let (old_mid, new_mid) = ProcessingState::equal_power_crossfade_gains(0.5);
-    let (old_end, new_end) = ProcessingState::equal_power_crossfade_gains(1.0);
+fn same_rate_crossfade_uses_convex_bounded_gains() {
+    let (old_start, new_start) = ProcessingState::convex_crossfade_gains(0.0);
+    let (old_mid, new_mid) = ProcessingState::convex_crossfade_gains(0.5);
+    let (old_end, new_end) = ProcessingState::convex_crossfade_gains(1.0);
 
     assert!((old_start - 1.0).abs() < 1.0e-6);
     assert!(new_start.abs() < 1.0e-6);
-    assert!((old_mid * old_mid + new_mid * new_mid - 1.0).abs() < 1.0e-6);
+    assert!((old_mid - 0.5).abs() < 1.0e-6);
+    assert!((new_mid - 0.5).abs() < 1.0e-6);
+    // Convexity: gains sum to one, so the mix never exceeds either source.
+    assert!((old_mid + new_mid - 1.0).abs() < 1.0e-6);
     assert!(old_end.abs() < 1.0e-6);
     assert!((new_end - 1.0).abs() < 1.0e-6);
 }
@@ -433,6 +439,14 @@ fn output_rate_changing_host_update_fades_through_silence_without_a_jump() {
         assert!(
             max_jump < 0.05,
             "rate-change direction reverse={reverse_rate_change} introduced an adjacent-sample jump of {max_jump}"
+        );
+        let peak = rendered
+            .iter()
+            .map(|sample| sample.abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            peak <= 1.0 + 1e-3,
+            "rate-change direction reverse={reverse_rate_change} exceeded the input bound: {peak}"
         );
     }
 }
@@ -751,6 +765,7 @@ fn correlated_processing_wait_buffers_unmatched_response() {
         next_request_id: std::sync::atomic::AtomicU64::new(3),
         thread_handle: None,
         host_generation: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
+        exit_status: crate::engine::worker_death::WorkerExitStatus::new(),
     };
     response_tx
         .send(super::ProcessingReply {
@@ -1085,8 +1100,8 @@ type HissSnapshot = sotf_plugins::plugin_hiss_reducer::snapshot::ProfileSnapshot
 
 fn hiss_command_state(params: serde_json::Value) -> ProcessingState {
     let config = PluginConfig::new("hiss_reducer", params);
-    let (mut host, warnings) = build_plugin_host(&[config], 48_000, 1)
-        .expect("hiss host must build");
+    let (mut host, warnings) =
+        build_plugin_host(&[config], 48_000, 1).expect("hiss host must build");
     assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
     host.build().expect("host must build");
     let mut state = ProcessingState::new(
@@ -1149,11 +1164,7 @@ fn hiss_command_hiss(frames: usize, amplitude: f32, seed: u32) -> Vec<f32> {
         .collect()
 }
 
-fn hiss_command_render(
-    host: &mut PluginHost,
-    input: &[f32],
-    block: usize,
-) -> Vec<f32> {
+fn hiss_command_render(host: &mut PluginHost, input: &[f32], block: usize) -> Vec<f32> {
     let mut rendered = Vec::with_capacity(input.len());
     for chunk in input.chunks(block) {
         let mut output = vec![0.0f32; chunk.len()];

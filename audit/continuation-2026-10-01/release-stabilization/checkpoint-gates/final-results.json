@@ -1,0 +1,72 @@
+[
+  {
+    "name": "engine-denoiser-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-engine",
+      "--test",
+      "denoiser_configuration"
+    ]
+  },
+  {
+    "name": "convolution-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-plugin-convolution",
+      "--test",
+      "integration",
+      "--test",
+      "direct_convolution",
+      "--test",
+      "finite_stream"
+    ]
+  },
+  {
+    "name": "denoiser-ffi-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "plugins-ffi",
+      "--lib",
+      "denoiser"
+    ]
+  },
+  {
+    "name": "denoiser-qa",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "run",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-denoiser"
+    ]
+  }
+]

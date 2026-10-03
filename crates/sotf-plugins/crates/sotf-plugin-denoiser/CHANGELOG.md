@@ -1,5 +1,8 @@
 ## Unreleased audit corrections (2026-09-28)
 
+- Add a three-band reduction curve and latency-aligned residual audition, with a 5 ms fade that converges to exact endpoints through 192 kHz. Keep legacy flat-curve processing unchanged.
+- Integrate the four controls through engine, FFI, native adapters and layouts. Captured-profile persistence and blind-mode quality improvements remain deferred; see `audit/RELEASE-DEFERRED.md`.
+
 - Reset harmonic/percussive classification history and scratch on reset and
   reinitialization, preserving the enabled setting and stored noise profile.
   Warm-to-fresh waveform and cold reset allocation/deallocation tests cover

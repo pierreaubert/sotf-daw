@@ -1,0 +1,126 @@
+[
+  {
+    "name": "focused",
+    "exit": 101,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-host",
+      "-p",
+      "sotf-plugin-ab-compare",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--lib",
+      "--tests",
+      "--no-fail-fast"
+    ]
+  },
+  {
+    "name": "engine-denoiser",
+    "exit": 101,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-engine",
+      "--test",
+      "denoiser_configuration"
+    ]
+  },
+  {
+    "name": "ffi-denoiser",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "plugins-ffi",
+      "--lib",
+      "denoiser"
+    ]
+  },
+  {
+    "name": "ffi-declick",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "plugins-ffi",
+      "--lib",
+      "declick_ffi"
+    ]
+  },
+  {
+    "name": "nih",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "plugins-nih",
+      "--features",
+      "declick",
+      "--lib"
+    ]
+  },
+  {
+    "name": "check",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "check",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--exclude",
+      "plugins-ffi",
+      "--lib",
+      "--bins",
+      "--tests",
+      "--examples"
+    ]
+  },
+  {
+    "name": "lint",
+    "exit": 101,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--exclude",
+      "plugins-ffi",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ]
+  }
+]

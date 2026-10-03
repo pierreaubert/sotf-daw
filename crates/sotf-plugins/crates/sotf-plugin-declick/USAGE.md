@@ -49,12 +49,37 @@ are linked by default; set `link_channels=false` for independent decisions.
   ratio above 4×), the band repairs from the cleaner half-window level on
   level evidence alone, so multi-sample clicks still meet the fullband
   repair bound instead of failing band shape tests on smeared energy.
+  The supervisor (and any ungated fullband core, which runs the same
+  supervisor-side detection) additionally withholds confirmation when
+  the post-window median deviates from the pre-window median — after
+  removing the pre-side tone trend — by more than 25% of the residual
+  in either direction: sustained programme tails are not click returns.
+  True clicks return within the window, so their confirmation is
+  unaffected (R29 form; R26 described a positive-only periodic-only
+  variant — negative tails escaped it and quiet clicks on rising
+  slopes tripped it). Legacy standing is per-claim (R31 correction):
+  default settings route to the untouched shared suppressor, so they
+  stay bit-identical by construction; the neutral owned core agrees
+  with legacy to 1e-6 on its comparison fixture only; random
+  multiband intentionally vetoes programme tails since R29.
   Per-band sensitivity is
   `sensitivity × 2^(−skew × position)` with band position in [−1, 1] from
   the lowest to the highest band; a single band is always neutral. Skew only
   redistributes sensitivity between bands under the fullband supervisor gate:
   it can desensitize bands but never adds a repair the unskewed fullband
-  detector did not see.
+  detector did not see. Guard-state value behavior (periodic lock, guarded
+  position, supervisor-confirmed loud click): detection stays fully
+  multiband (per-band thresholds, shape tests, and the supervisor
+  agreement gate all still decide membership), but each emitting band's
+  repair value is recomputed in wet units from the supervisor's fullband
+  median estimate rather than its own band median; skew and crossover
+  therefore affect only whether a band joins there, never the emitted
+  value. At full mix the emitted sum equals the supervisor estimate; at
+  partial mixes each band interpolates between its dry tap and its
+  corrected wet value, so automation fades stay continuous; widened
+  emission applies the same rule at the actually-emitted frame. Quiet
+  guarded transients without supervisor confirmation are unaffected and
+  stay dry.
 - `repair_width` (0–8) extends repair symmetrically to excursion-consistent
   neighbors within that many samples of a detection (hysteresis widening:
   sub-threshold skirts join the repair, step edges and clean frames stay

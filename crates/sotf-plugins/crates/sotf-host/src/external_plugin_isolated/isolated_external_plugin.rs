@@ -834,6 +834,18 @@ impl Plugin for IsolatedExternalPlugin {
         self.proxy.pipeline_latency_samples()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // Native state across the isolation boundary is unproven;
+        // unknown keeps the host's live sizing.
+        None
+    }
+
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        // Native production across the isolation boundary is unproven;
+        // unknown keeps the host's live sizing.
+        None
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         if self.drain_started {
             return Ok(());

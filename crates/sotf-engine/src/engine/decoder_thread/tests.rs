@@ -1,4 +1,4 @@
-use super::super::{DecoderCommand, DecoderMessage};
+use super::super::{DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
 use super::consts::send_or_interrupt;
 use super::decoder_state::DecoderState;
 use super::hal_input_guard_trip::guard_hal_input_block;
@@ -16,8 +16,7 @@ use std::time::Duration;
 fn decoder_scratch_and_frame_pool_prepare_sixty_four_channels() {
     let (_recycle_tx, recycle_rx) = std::sync::mpsc::sync_channel(1);
     let mut state = DecoderState::new(recycle_rx, DsdOutputMode::Disabled);
-    let samples =
-        crate::EngineConfig::MAX_FRAME_SIZE * crate::EngineConfig::MAX_INPUT_CHANNELS;
+    let samples = crate::EngineConfig::MAX_FRAME_SIZE * crate::EngineConfig::MAX_INPUT_CHANNELS;
 
     assert!(state.resampler_buffer.data.capacity() >= samples * 2);
     assert!(state.resample_output_buffer.capacity() >= samples * 2);
@@ -25,10 +24,12 @@ fn decoder_scratch_and_frame_pool_prepare_sixty_four_channels() {
     assert!(state.chunk_buffer.capacity() >= samples);
     assert!(state.frame_send_buffer.capacity() >= samples);
     assert_eq!(state.frame_buffer_pool.len(), 8);
-    assert!(state
-        .frame_buffer_pool
-        .iter()
-        .all(|buffer| buffer.capacity() >= samples));
+    assert!(
+        state
+            .frame_buffer_pool
+            .iter()
+            .all(|buffer| buffer.capacity() >= samples)
+    );
 
     let mut scratch = [
         &mut state.resampler_buffer.data,
@@ -63,6 +64,7 @@ fn decoder_shutdown_does_not_block_on_a_stuck_worker() {
     let (command_tx, _command_rx) = std::sync::mpsc::channel();
     let (_response_tx, response_rx) = std::sync::mpsc::channel();
     let handle = std::thread::spawn(|| std::thread::sleep(Duration::from_secs(1)));
+    let (_async_error_tx, async_error_rx) = std::sync::mpsc::channel();
     let mut decoder = super::DecoderThread {
         command_tx,
         response_inbox: std::sync::Mutex::new(super::DecoderResponseInbox {
@@ -73,6 +75,8 @@ fn decoder_shutdown_does_not_block_on_a_stuck_worker() {
         }),
         next_request_id: std::sync::atomic::AtomicU64::new(1),
         thread_handle: Some(handle),
+        async_error_rx,
+        exit_status: crate::engine::worker_death::WorkerExitStatus::new(),
     };
 
     let started = std::time::Instant::now();
@@ -86,6 +90,7 @@ fn decoder_shutdown_does_not_block_on_a_stuck_worker() {
 fn decoder_late_reply_cannot_acknowledge_a_newer_request() {
     let (command_tx, command_rx) = std::sync::mpsc::channel();
     let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (_async_error_tx, async_error_rx) = std::sync::mpsc::channel();
     let mut decoder = super::DecoderThread {
         command_tx,
         response_inbox: std::sync::Mutex::new(super::DecoderResponseInbox {
@@ -96,6 +101,8 @@ fn decoder_late_reply_cannot_acknowledge_a_newer_request() {
         }),
         next_request_id: std::sync::atomic::AtomicU64::new(1),
         thread_handle: None,
+        async_error_rx,
+        exit_status: crate::engine::worker_death::WorkerExitStatus::new(),
     };
 
     let stale_id = decoder.send_command(DecoderCommand::Pause).unwrap();
@@ -351,6 +358,7 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
     let _recycle_guard = recycle_tx;
 
     let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, _async_error_rx) = std::sync::mpsc::channel();
 
     let handle = std::thread::Builder::new()
         .name("decoder-disconnect-test".into())
@@ -364,6 +372,7 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
                 1024,
                 recycle_rx,
                 DsdOutputMode::Disabled,
+                async_error_tx,
             )
         })
         .expect("spawn decoder thread");
@@ -388,6 +397,207 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
     done_rx
         .recv_timeout(Duration::from_millis(250))
         .expect("paused decoder thread should exit after command sender is dropped");
+}
+
+#[test]
+fn play_sends_flush_before_ack() {
+    let (temp, _mono) = sotf_testkit::audio::temp_sine_wav(0.5, 48_000, 2, 440.0).unwrap();
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(4);
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(32);
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let _recycle_guard = recycle_tx;
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, _async_error_rx) = std::sync::mpsc::channel();
+
+    let handle = std::thread::Builder::new()
+        .name("decoder-flush-order-test".into())
+        .spawn(move || {
+            run_decoder_thread(
+                message_tx,
+                command_rx,
+                response_tx,
+                event_tx,
+                48_000,
+                1024,
+                recycle_rx,
+                DsdOutputMode::Disabled,
+                async_error_tx,
+            )
+        })
+        .expect("spawn decoder thread");
+
+    command_tx
+        .send(DecoderCommand::Play(
+            crate::AudioSource::File(temp.path().to_path_buf()),
+            1,
+        ))
+        .unwrap();
+    // Order pin: the FIRST message is Flush; the ack follows it.
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Flush
+    ));
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+
+    // Settle: stop the now-active decoder, draining async frames until the
+    // barrier Flush (FIFO ⇒ everything before it predates the Stop).
+    command_tx.send(DecoderCommand::Stop).unwrap();
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    loop {
+        match message_rx.recv_timeout(Duration::from_secs(1)).unwrap() {
+            DecoderMessage::Flush => break,
+            DecoderMessage::Frame(_) => continue,
+            other => panic!("unexpected message before barrier Flush: {other:?}"),
+        }
+    }
+
+    command_tx.send(DecoderCommand::Shutdown).unwrap();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = handle.join();
+        done_tx.send(()).ok();
+    });
+    done_rx
+        .recv_timeout(Duration::from_millis(250))
+        .expect("decoder thread should exit after Shutdown");
+}
+
+#[test]
+#[serial_test::serial]
+fn playat_seek_failure_reverts_to_silence() {
+    use crate::decoder::service_resolver::{
+        ResolvedServiceStream, clear_service_stream_resolver, set_service_stream_resolver,
+    };
+    use std::io::Cursor;
+    use std::sync::Arc;
+
+    // Process-global resolver: the guard restores None even on panic.
+    // #[serial] (not folding: this thread-harness test lives cross-module
+    // from the folding test, where run_decoder_thread is invisible)
+    // excludes the other resolver test in decoder/core.rs.
+    struct ResolverGuard;
+    impl Drop for ResolverGuard {
+        fn drop(&mut self) {
+            clear_service_stream_resolver();
+        }
+    }
+    let _resolver_guard = ResolverGuard;
+
+    // Service PCM seeks always fail (production behavior): load succeeds,
+    // seek fails deterministically with no files, network, or timing.
+    let pcm_samples: Vec<f32> = vec![0.5, -0.5, 0.25, -0.25];
+    let pcm_bytes: Vec<u8> = pcm_samples.iter().flat_map(|s| s.to_le_bytes()).collect();
+    set_service_stream_resolver(Arc::new(move |service, track_id| {
+        assert_eq!(service, crate::ServiceId::Spotify);
+        assert_eq!(track_id, "b5-track");
+        Ok(ResolvedServiceStream::Pcm {
+            sample_rate: 48_000,
+            channels: 2,
+            bits_per_sample: 32,
+            total_frames: Some(2),
+            reader: Box::new(Cursor::new(pcm_bytes.clone())),
+        })
+    }));
+
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(4);
+    let (event_tx, event_rx) = crossbeam::channel::bounded(32);
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let _recycle_guard = recycle_tx;
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, _async_error_rx) = std::sync::mpsc::channel();
+
+    let handle = std::thread::Builder::new()
+        .name("decoder-b5-revert-test".into())
+        .spawn(move || {
+            run_decoder_thread(
+                message_tx,
+                command_rx,
+                response_tx,
+                event_tx,
+                48_000,
+                1024,
+                recycle_rx,
+                DsdOutputMode::Disabled,
+                async_error_tx,
+            )
+        })
+        .expect("spawn decoder thread");
+
+    let source = crate::AudioSource::ServiceStream {
+        service: crate::ServiceId::Spotify,
+        track_id: "b5-track".to_string(),
+    };
+    command_tx
+        .send(DecoderCommand::PlayAt(source, 1.0, 1))
+        .unwrap();
+
+    // Explicit failure, ordered: Flush precedes the Error ack (same arm),
+    // and the DecoderError event carries the seek cause.
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Flush
+    ));
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Error(message) if message == "Failed to seek during play_at"
+    ));
+    assert!(matches!(
+        event_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        ThreadEvent::DecoderError(message) if message.contains("Seeking not supported")
+    ));
+
+    // Silence proof, FIFO-causal (no timing): nothing may appear between
+    // this arm's Flush and the barrier Stop's Flush.
+    assert!(message_rx.try_recv().is_err());
+    command_tx.send(DecoderCommand::Stop).unwrap();
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Flush
+    ));
+    assert!(message_rx.try_recv().is_err());
+
+    // Recovery: the thread is not wedged; a real file plays afterwards.
+    let (temp, _mono) = sotf_testkit::audio::temp_sine_wav(0.5, 48_000, 2, 440.0).unwrap();
+    command_tx
+        .send(DecoderCommand::Play(
+            crate::AudioSource::File(temp.path().to_path_buf()),
+            2,
+        ))
+        .unwrap();
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Flush
+    ));
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Frame(_)
+    ));
+
+    command_tx.send(DecoderCommand::Shutdown).unwrap();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = handle.join();
+        done_tx.send(()).ok();
+    });
+    done_rx
+        .recv_timeout(Duration::from_millis(250))
+        .expect("decoder thread should exit after Shutdown");
 }
 
 /// Regression test for the upmixer silence bug with cross-rate resampling.
@@ -462,4 +672,194 @@ fn test_resample_staging_emits_full_frame_size_blocks() {
         emitted_blocks, 4,
         "Expected a fourth full block after the fifth chunk"
     );
+}
+
+#[test]
+fn mixed_stream_commands_emit_exactly_one_flush_each() {
+    let (temp, _mono) = sotf_testkit::audio::temp_sine_wav(0.5, 48_000, 2, 440.0).unwrap();
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(4);
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(32);
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let _recycle_guard = recycle_tx;
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, _async_error_rx) = std::sync::mpsc::channel();
+
+    let handle = std::thread::Builder::new()
+        .name("decoder-flush-count-test".into())
+        .spawn(move || {
+            run_decoder_thread(
+                message_tx,
+                command_rx,
+                response_tx,
+                event_tx,
+                48_000,
+                1024,
+                recycle_rx,
+                DsdOutputMode::Disabled,
+                async_error_tx,
+            )
+        })
+        .expect("spawn decoder thread");
+
+    // Drain concurrently so no arm ever blocks; the count is exact
+    // because Shutdown ends the stream (disconnect totality).
+    let flush_count = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let drainer_count = std::sync::Arc::clone(&flush_count);
+    let drainer = std::thread::spawn(move || {
+        loop {
+            match message_rx.recv() {
+                Ok(DecoderMessage::Flush) => {
+                    drainer_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+                Ok(_) => {}
+                Err(_) => break,
+            }
+        }
+    });
+
+    let file = || crate::AudioSource::File(temp.path().to_path_buf());
+    let expect_ok = |what: &str| {
+        assert!(
+            matches!(
+                response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+                DecoderResponse::Ok
+            ),
+            "{what} must ack Ok"
+        );
+    };
+
+    command_tx.send(DecoderCommand::Play(file(), 1)).unwrap();
+    expect_ok("Play");
+    command_tx.send(DecoderCommand::Pause).unwrap();
+    expect_ok("Pause");
+    command_tx.send(DecoderCommand::QueueNext(file())).unwrap();
+    expect_ok("QueueNext");
+    command_tx.send(DecoderCommand::CancelNext).unwrap();
+    expect_ok("CancelNext");
+    command_tx.send(DecoderCommand::Seek(0.1)).unwrap();
+    // Either outcome Flushes first (the arm sends before attempting),
+    // so the count holds whichever path executes: Ok when the Pause
+    // won the race against EOF, "No decoder" when EOF auto-stopped.
+    match response_rx.recv_timeout(Duration::from_secs(1)).unwrap() {
+        DecoderResponse::Ok => {}
+        DecoderResponse::Error(e) if e == "No decoder" => {}
+        other => panic!("Seek must ack Ok or No-decoder, got {other:?}"),
+    }
+    command_tx.send(DecoderCommand::Stop).unwrap();
+    expect_ok("Stop");
+    // No acknowledgment by design; FIFO order still applies.
+    command_tx
+        .send(DecoderCommand::StartSilentSource(2))
+        .unwrap();
+    command_tx.send(DecoderCommand::Play(file(), 2)).unwrap();
+    expect_ok("Play");
+    command_tx.send(DecoderCommand::Stop).unwrap();
+    expect_ok("Stop");
+
+    command_tx.send(DecoderCommand::Shutdown).unwrap();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = handle.join();
+        done_tx.send(()).ok();
+    });
+    done_rx
+        .recv_timeout(Duration::from_millis(250))
+        .expect("decoder thread should exit after Shutdown");
+    drainer.join().unwrap();
+
+    // Five stream commands, five Flushes; Pause, QueueNext,
+    // CancelNext, and StartSilentSource contribute zero.
+    assert_eq!(flush_count.load(std::sync::atomic::Ordering::SeqCst), 5);
+}
+
+#[test]
+fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
+    // A5: backpressure the decoder's output queue totally (never
+    // drain it): the frame send trips queue-stuck, the loop reports
+    // ONE tagged async error — the ADOPTED tag, proving the arm
+    // adopted the carried identity — and stops the phase. Draining
+    // + re-Play then recovers on the live thread under a new tag:
+    // error-stop is not death. Barriers, not sleeps: channel
+    // receipts order every step (the stuck trip itself takes
+    // production time; the deadline fails loud, it never sleeps).
+    let (temp, _mono) = sotf_testkit::audio::temp_sine_wav(2.0, 48_000, 2, 440.0).unwrap();
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(4);
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(32);
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let _recycle_guard = recycle_tx;
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, async_error_rx) = std::sync::mpsc::channel();
+
+    let handle = std::thread::Builder::new()
+        .name("decoder-async-error-test".into())
+        .spawn(move || {
+            run_decoder_thread(
+                message_tx,
+                command_rx,
+                response_tx,
+                event_tx,
+                48_000,
+                1024,
+                recycle_rx,
+                DsdOutputMode::Disabled,
+                async_error_tx,
+            )
+        })
+        .expect("spawn decoder thread");
+
+    let file = || crate::AudioSource::File(temp.path().to_path_buf());
+    command_tx.send(DecoderCommand::Play(file(), 7)).unwrap();
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    // Barrier 1: the tagged async error (queue-stuck under total
+    // backpressure — nobody drains message_rx).
+    let error = async_error_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("queue-stuck must report exactly once");
+    assert_eq!(error.attempt, 7);
+    assert!(
+        error.message.contains("queue stuck"),
+        "unexpected error text: {}",
+        error.message
+    );
+    // Exactly one report: the phase stopped with its error.
+    assert!(async_error_rx.try_recv().is_err());
+    // Recovery on the live thread: drain, re-Play under a new tag,
+    // frames flow again — then Stop (acked barrier: no frame send
+    // can follow it, so the no-error assert below is deterministic,
+    // not a race with a second stuck trip).
+    while message_rx.try_recv().is_ok() {}
+    command_tx.send(DecoderCommand::Play(file(), 8)).unwrap();
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Flush
+    ));
+    assert!(matches!(
+        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderMessage::Frame(_)
+    ));
+    command_tx.send(DecoderCommand::Stop).unwrap();
+    assert!(matches!(
+        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        DecoderResponse::Ok
+    ));
+    assert!(async_error_rx.try_recv().is_err());
+
+    command_tx.send(DecoderCommand::Shutdown).unwrap();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = handle.join();
+        done_tx.send(()).ok();
+    });
+    done_rx
+        .recv_timeout(Duration::from_millis(250))
+        .expect("decoder thread should exit after Shutdown");
 }

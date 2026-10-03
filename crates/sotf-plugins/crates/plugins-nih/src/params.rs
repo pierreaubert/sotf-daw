@@ -52,6 +52,14 @@ mod dynamic_eq_restart_tests;
 mod de_esser_restart_tests;
 
 #[cfg(test)]
+#[path = "params_analog_limiter_restart_tests.rs"]
+mod analog_limiter_restart_tests;
+
+#[cfg(test)]
+#[path = "params_declick_restart_tests.rs"]
+mod declick_restart_tests;
+
+#[cfg(test)]
 #[path = "params_native_eq_route_tests.rs"]
 mod native_eq_route_tests;
 
@@ -408,10 +416,11 @@ fn is_dynamic_eq_restart_parameter(id: &str) -> bool {
 }
 
 fn is_de_esser_restart_parameter(id: &str) -> bool {
-    matches!(
-        id,
-        "lookahead_ms" | "split_topology" | "sidechain_external"
-    )
+    matches!(id, "lookahead_ms" | "split_topology" | "sidechain_external")
+}
+
+fn is_declick_restart_parameter(id: &str) -> bool {
+    matches!(id, "mode" | "bands" | "crossover_hz" | "repair_width")
 }
 
 fn indexed_id(id: &str, prefix: &str, suffix: &str, limit: usize) -> Option<usize> {
@@ -433,8 +442,7 @@ fn is_native_eq_pair_draft_parameter(id: &str) -> bool {
     matches!(
         id,
         "stereo_pairs_enabled" | "stereo_pairs_count" | "stereo_pairs_apply"
-    )
-        || indexed_id(id, "stereo_pair_", "first", EQ_PAIR_SLOT_COUNT).is_some()
+    ) || indexed_id(id, "stereo_pair_", "first", EQ_PAIR_SLOT_COUNT).is_some()
         || indexed_id(id, "stereo_pair_", "second", EQ_PAIR_SLOT_COUNT).is_some()
 }
 
@@ -460,6 +468,16 @@ fn speech_model_choice_labels() -> Option<&'static [&'static str]> {
     sotf_plugins::param_specs::speech_denoiser::PARAMS
         .iter()
         .find(|spec| spec.engine_key == "model")
+        .and_then(|spec| match &spec.param_type {
+            ParamType::Choice { labels, .. } => Some(*labels),
+            _ => None,
+        })
+}
+
+fn analog_limiter_model_choice_labels() -> Option<&'static [&'static str]> {
+    sotf_plugins::param_specs::analog_limiter::PARAMS
+        .iter()
+        .find(|spec| spec.engine_key == "analog_model")
         .and_then(|spec| match &spec.param_type {
             ParamType::Choice { labels, .. } => Some(*labels),
             _ => None,
@@ -811,7 +829,9 @@ impl DynamicParams {
                 || (plugin_type == "EQ" && is_native_eq_restart_parameter(&info.id))
                 || (plugin_type == "EQ" && info.id == "stereo_pairs_apply")
                 || (plugin_type == "DeEsser" && is_de_esser_restart_parameter(&info.id))
-                || (plugin_type == "SpeechDenoiser" && info.id == "model");
+                || (plugin_type == "SpeechDenoiser" && info.id == "model")
+                || (plugin_type == "AnalogLimiter" && info.id == "analog_model")
+                || (plugin_type == "Declick" && is_declick_restart_parameter(&info.id));
             let realtime = (info.realtime || eq_pair_draft) && !requires_restart;
             if info.kind == BridgedParamKind::Bool {
                 // Bool parameter
@@ -961,6 +981,26 @@ impl DynamicParams {
                     } else if plugin_type == "SpeechDenoiser"
                         && info.id == "model"
                         && let Some(labels) = speech_model_choice_labels()
+                    {
+                        param = param
+                            .with_value_to_string(Arc::new(move |value| {
+                                usize::try_from(value)
+                                    .ok()
+                                    .and_then(|index| labels.get(index))
+                                    .map_or_else(
+                                        || "Unknown".to_string(),
+                                        |label| (*label).to_string(),
+                                    )
+                            }))
+                            .with_string_to_value(Arc::new(move |value| {
+                                labels
+                                    .iter()
+                                    .position(|label| *label == value.trim())
+                                    .and_then(|index| i32::try_from(index).ok())
+                            }));
+                    } else if plugin_type == "AnalogLimiter"
+                        && info.id == "analog_model"
+                        && let Some(labels) = analog_limiter_model_choice_labels()
                     {
                         param = param
                             .with_value_to_string(Arc::new(move |value| {
@@ -1796,12 +1836,9 @@ impl DynamicParams {
         if !self.validate_hiss_scalar_params(state) {
             return false;
         }
-        let carries_live_momentary = hiss_profile::HISS_MOMENTARY_IDS.iter().any(|id| {
-            matches!(
-                state.params.get(*id),
-                Some(NativeParamValue::Bool(true))
-            )
-        });
+        let carries_live_momentary = hiss_profile::HISS_MOMENTARY_IDS
+            .iter()
+            .any(|id| matches!(state.params.get(*id), Some(NativeParamValue::Bool(true))));
         if carries_live_momentary && (is_active || is_audio_thread) {
             return false;
         }
@@ -1811,7 +1848,8 @@ impl DynamicParams {
         if is_active || is_audio_thread {
             return false;
         }
-        let candidate = hiss_profile::decode_hiss_field(encoded, hiss_profile::HISS_NATIVE_CHANNELS);
+        let candidate =
+            hiss_profile::decode_hiss_field(encoded, hiss_profile::HISS_NATIVE_CHANNELS);
         let Ok((generation, profile)) = candidate else {
             return false;
         };
@@ -2236,9 +2274,10 @@ impl DynamicParams {
         // instances: named instances never emit stale carrier bytes,
         // and a fieldless restore saves fieldless again so a rejected
         // state can never heal into a different geometry on reload.
-        let target = self.param_map.get("target_layout").filter(|entry| {
-            !entry.realtime && matches!(entry.kind, ParamKind::Int)
-        })?;
+        let target = self
+            .param_map
+            .get("target_layout")
+            .filter(|entry| !entry.realtime && matches!(entry.kind, ParamKind::Int))?;
         if self.int_params[target.index].value()
             != ambisonics_custom::AMBISONICS_CUSTOM_TARGET_INDEX as i32
         {
@@ -2391,7 +2430,8 @@ impl DynamicParams {
     /// # Errors
     ///
     /// Returns the DSP setter error when a forward is rejected.
-    pub(crate) fn forward_hiss_momentary_edges(
+    #[doc(hidden)]
+    pub fn forward_hiss_momentary_edges(
         &self,
         plugin: &mut dyn sotf_host::plugin::Plugin,
         latch: &mut hiss_profile::HissMomentaryLatch,

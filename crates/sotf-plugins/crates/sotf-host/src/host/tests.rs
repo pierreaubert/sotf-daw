@@ -26,16 +26,24 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 mod channel_changing_plugin;
 mod drain;
 mod drain_work;
+mod explicit_rate_node_append;
 mod f64_scale_plugin;
 mod frame_recorder_plugin;
 mod gain_plugin;
+mod graph_drain;
+mod hetero_envelope_plan;
 mod latency_compensation;
 mod mixed_rate_timing;
 mod panicking_process_plugin;
 mod playback_context_recorder_plugin;
 mod prefers_oversampling_plugin;
+mod process_over_report;
+mod process_unpadded_counts;
 mod scaler_plugin;
 mod sidechain_in_place_plugin;
+mod state_dependent_drain_bounds;
+mod tail_fold;
+mod terminal_sink_reprepare_straddle;
 mod variable_frame_plugin;
 
 use frame_recorder_plugin::FrameRecorderPlugin;
@@ -1226,6 +1234,8 @@ fn test_buffer_guard_returns_buffers_on_drop() {
         channel_map_buffer: vec![],
         compensation_delays: CompensationDelays::empty(),
         delay_scratch: vec![],
+        merge_queues: Vec::new(),
+        merge_queue_caps: Vec::new(),
         parallel_scratch: Vec::new(),
         parallel_results: Vec::new(),
     });
@@ -1251,6 +1261,8 @@ fn test_buffer_guard_survives_simulated_early_return() {
         channel_map_buffer: vec![],
         compensation_delays: CompensationDelays::empty(),
         delay_scratch: vec![],
+        merge_queues: Vec::new(),
+        merge_queue_caps: Vec::new(),
         parallel_scratch: Vec::new(),
         parallel_results: Vec::new(),
     });

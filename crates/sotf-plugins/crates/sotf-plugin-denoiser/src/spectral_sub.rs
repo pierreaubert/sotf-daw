@@ -16,6 +16,7 @@
 //            by Acoustic Noise", 1979
 
 use super::DenoiserPlugin;
+use super::reduction_curve::ReductionCurve;
 
 /// Small constant to prevent division by zero
 const EPSILON: f32 = 1e-10;
@@ -29,6 +30,7 @@ impl DenoiserPlugin {
         let alpha = self.spectral_sub.spectral_sub_alpha;
         let beta = self.spectral_sub.spectral_sub_beta;
         let transparency = self.params.transparency;
+        let curve_flat = self.curve.curve.is_flat();
 
         for k in 0..self.config.spectrum_size {
             let signal_power = self.get_power_at_bin(channel, k).max(EPSILON);
@@ -38,6 +40,15 @@ impl DenoiserPlugin {
             let subtracted = 1.0 - alpha * noise_power / signal_power;
             let gain_sq = subtracted.max(beta);
             let gain = gain_sq.sqrt();
+
+            // Shape the reduction with the per-bin curve scale, matching the
+            // Wiener path so the curve stays effective under min-combining.
+            // Skipped for flat curves (legacy bit-identity).
+            let gain = if curve_flat {
+                gain
+            } else {
+                ReductionCurve::shape_gain(self.curve.scales[k], gain)
+            };
 
             // Blend toward dry signal based on transparency
             let gain = gain + transparency * (1.0 - gain);

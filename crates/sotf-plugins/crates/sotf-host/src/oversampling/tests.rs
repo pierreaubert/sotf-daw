@@ -770,3 +770,101 @@ fn fractional_inner_latency_is_reported_conservatively() {
         }
     }
 }
+
+#[test]
+fn auto_oversampled_envelopes_dominate_live_declarations_in_every_state() {
+    use super::AutoOversampledPlugin;
+    use crate::parameters::{Parameter, ParameterId, ParameterValue};
+    use crate::plugin::{Plugin, PluginInfo, ProcessContext};
+
+    /// Frame-exact passthrough inner: copies input to output, returns
+    /// the context frame count.
+    struct PassthroughInner;
+    impl Plugin for PassthroughInner {
+        fn info(&self) -> PluginInfo {
+            PluginInfo::new("PassthroughInner", "1.0", "test")
+        }
+        fn input_channels(&self) -> usize {
+            2
+        }
+        fn output_channels(&self) -> usize {
+            2
+        }
+        fn parameters(&self) -> Vec<Parameter> {
+            Vec::new()
+        }
+        fn set_parameter(&mut self, id: ParameterId, _value: ParameterValue) -> Result<(), String> {
+            Err(format!("unknown parameter: {id}"))
+        }
+        fn get_parameter(&self, _id: &ParameterId) -> Option<ParameterValue> {
+            None
+        }
+        fn process(
+            &mut self,
+            input: &[f32],
+            output: &mut [f32],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            let samples = context.num_frames * 2;
+            output[..samples].copy_from_slice(&input[..samples]);
+            Ok(context.num_frames)
+        }
+    }
+
+    // F2: the envelope contract requires envelope(n) >= live(n) in every
+    // stream state. The wrapper publishes process Some(n) over live n and
+    // drain Some(OS_CHUNK_SIZE) over live OS_CHUNK_SIZE; pin both across
+    // fresh, fed, draining, and reset states, and prove the frame-exact
+    // production the process envelope's proof relies on. (Content passes
+    // through rate converters, so only the count is pinned.)
+    let check = |wrapper: &AutoOversampledPlugin, state: &str| {
+        for &frames in &[0usize, 1, 64, 8192] {
+            assert_eq!(
+                wrapper.output_frames_for_input(frames),
+                frames,
+                "{state}: live process declaration must stay identity"
+            );
+            assert_eq!(
+                wrapper.output_frames_envelope(frames),
+                Some(frames),
+                "{state}: process envelope must stay identity"
+            );
+        }
+        assert_eq!(
+            wrapper.drain_output_frames_max(),
+            OS_CHUNK_SIZE,
+            "{state}: live drain bound must stay one chunk"
+        );
+        assert_eq!(
+            wrapper.drain_frames_envelope(),
+            Some(OS_CHUNK_SIZE),
+            "{state}: drain envelope must stay one chunk"
+        );
+    };
+    let mut wrapper = AutoOversampledPlugin::new(Box::new(PassthroughInner), 2).unwrap();
+    wrapper.initialize(48_000).unwrap();
+    check(&wrapper, "fresh");
+    let input = vec![0.25f32; 256 * 2];
+    let mut output = vec![0.0f32; 256 * 2];
+    let produced = wrapper
+        .process(&input, &mut output, &ProcessContext::new(48_000, 256))
+        .unwrap();
+    assert_eq!(produced, 256, "oversampled wrapper must stay frame-exact");
+    check(&wrapper, "fed");
+    wrapper
+        .begin_drain(&ProcessContext::new(48_000, 0))
+        .unwrap();
+    check(&wrapper, "draining");
+    let mut drain_out = vec![0.0f32; OS_CHUNK_SIZE * 2];
+    let step = wrapper
+        .drain(&mut drain_out, &ProcessContext::new(48_000, 0))
+        .unwrap();
+    assert!(
+        step.frames <= OS_CHUNK_SIZE,
+        "drain emitted {} past its {OS_CHUNK_SIZE}-frame bound",
+        step.frames
+    );
+    check(&wrapper, "draining");
+    wrapper.reset();
+    check(&wrapper, "reset");
+}

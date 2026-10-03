@@ -10,6 +10,12 @@
 //! Param indices: 0=threshold, 1=ratio, 2=attack, 3=release, 4=knee,
 //! 5=makeup, 6=mix, 7=auto_makeup, 8=analog_model, 9=analog_drive,
 //! 10=analog_color, 11=analog_character, 12=analog_trim, 13=range_db, 14=hold_ms.
+//!
+//! The analog model selector is structural: replacement allocates and
+//! re-prepares the color stage, which belongs on the control thread, so
+//! live changes on an initialized instance are refused and the model is
+//! adopted at construction or state restore instead. The remaining analog
+//! controls (drive, color, character, trim) are plain realtime updates.
 
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -53,7 +59,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("Dry/wet parallel blend"),
     ParamSpec::bool_labeled("Auto Makeup", "auto_makeup", false, "On", "Off", "Dynamics")
         .doc("Add smoothed measured gain reduction back as makeup (capped at +24 dB)"),
-    model_param_spec(0, "Analog"),
+    model_param_spec(0, "Analog").structural(),
     drive_param_spec("Analog"),
     color_param_spec("Analog"),
     character_param_spec("Analog"),

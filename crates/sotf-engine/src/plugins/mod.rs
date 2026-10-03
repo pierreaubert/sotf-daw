@@ -274,6 +274,10 @@ sotf_plugins::serde_param_default! {
     fn default_denoiser_spectral_sub_beta() -> f64 = "spectral_sub_beta";
     fn default_denoiser_formant_strength() -> f64 = "formant_strength";
     fn default_spatial_strength() -> f64 = "spatial_strength";
+    fn default_denoiser_curve_low() -> f64 = "curve_low";
+    fn default_denoiser_curve_mid() -> f64 = "curve_mid";
+    fn default_denoiser_curve_high() -> f64 = "curve_high";
+    fn default_denoiser_audition_residual() -> bool = "audition_residual";
 }
 sotf_plugins::serde_param_default! {
     declick_specs::PARAMS;

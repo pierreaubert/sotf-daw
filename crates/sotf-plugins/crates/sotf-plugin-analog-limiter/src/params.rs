@@ -11,6 +11,22 @@
 //! Param indices: 0=threshold, 1=release, 2=lookahead, 3=soft, 4=true_peak,
 //! 5=mix, 6=analog_model, 7=analog_drive, 8=analog_color, 9=analog_character,
 //! 10=analog_trim.
+//!
+//! The threshold ceiling is a final emitted-output promise at fully wet mix:
+//! the plugin clamps emitted samples to the threshold after color and trim.
+//! A dry blend can exceed it, like the clean core. `true_peak` enables
+//! inter-sample peak detection in the core detector only; with no output ISP
+//! correction stage, no strict output true-peak guarantee is claimed.
+//!
+//! Automation: the guard tracks the threshold/mix targets immediately, while
+//! the core detector threshold and blend smooth one-pole over 5 ms, so a
+//! downward threshold step flat-tops at the new target from the first sample.
+//!
+//! The analog model selector is structural: replacement allocates and
+//! re-prepares the color stage, which belongs on the control thread, so
+//! live changes on an initialized instance are refused and the model is
+//! adopted at construction or state restore instead. The remaining analog
+//! controls (drive, color, character, trim) are plain realtime updates.
 
 use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
@@ -35,7 +51,7 @@ pub const PARAMS: &[ParamSpec] = &[
         "dB",
         "Dynamics",
     )
-    .doc("Ceiling level (max output)"),
+    .doc("Final output ceiling when fully wet; enforced after color/trim, tracks the target immediately (core detection smooths over 5 ms)"),
     ParamSpec::float(
         "Release", "release", 50.0, 10.0, 1000.0, 5.0, "ms", "Timing",
     )
@@ -58,12 +74,12 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("One-dB gain-computer knee vs hard limiting onset"),
     ParamSpec::bool_labeled("True Peak", "true_peak", false, "On", "Off", "Detection")
         .setup()
-        .doc("Rate-appropriate ITU-R BS.1770-compatible inter-sample peak detection"),
+        .doc("Rate-appropriate ITU-R BS.1770-compatible inter-sample peak detection; input detection only, no strict output true-peak guarantee"),
     ParamSpec::float("Mix", "mix", 1.0, 0.0, 1.0, 0.05, "%", "Output")
         .scaled(100.0)
         .output()
-        .doc("Dry/wet blend"),
-    model_param_spec(0, "Analog"),
+        .doc("Dry/wet blend; the final ceiling tracks the mix target immediately (core blend smooths over 5 ms)"),
+    model_param_spec(0, "Analog").structural(),
     drive_param_spec("Analog"),
     color_param_spec("Analog"),
     character_param_spec("Analog"),

@@ -215,6 +215,18 @@ cold_sync_case!(
     ParameterValue::Float(8.0)
 );
 cold_sync_case!(
+    denoiser_curve,
+    "Denoiser",
+    "curve_mid",
+    ParameterValue::Float(0.25)
+);
+cold_sync_case!(
+    denoiser_audition,
+    "Denoiser",
+    "audition_residual",
+    ParameterValue::Bool(true)
+);
+cold_sync_case!(
     hiss_reducer,
     "HissReducer",
     "strength",
@@ -255,4 +267,10 @@ cold_sync_case!(
     "DynamicEQ",
     "threshold",
     ParameterValue::Float(-27.0)
+);
+cold_sync_case!(
+    analog_limiter,
+    "AnalogLimiter",
+    "threshold",
+    ParameterValue::Float(-12.0)
 );

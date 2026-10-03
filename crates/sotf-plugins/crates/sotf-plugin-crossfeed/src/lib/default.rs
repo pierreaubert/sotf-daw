@@ -1,8 +1,22 @@
+use super::types::CrossfeedMode;
 use crate::params::PARAMS as CF;
 use sotf_host::param_specs::find_by_key as pk;
 
 pub(super) fn default_enabled() -> bool {
     true
+}
+
+/// Missing-key mode: the PARAMS descriptor default (index 3 = Multiband).
+/// This intentionally differs from `CrossfeedMode::default()` (Off), which
+/// is the inert-construction fallback; deserialization without an explicit
+/// mode must match the documented descriptor default instead.
+pub(super) fn default_mode() -> CrossfeedMode {
+    debug_assert_eq!(
+        pk(CF, "mode").default_usize(),
+        3,
+        "PARAMS mode default moved"
+    );
+    CrossfeedMode::Mb
 }
 
 pub(super) fn default_mix() -> f32 {

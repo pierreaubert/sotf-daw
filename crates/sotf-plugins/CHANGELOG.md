@@ -2,6 +2,8 @@
 
 ## Changes
 
+- Stabilize host drain bounds, Declick consumer controls, Analog Limiter output ceilings, and Denoiser curve/residual-audition integration for the merge checkpoint. Remaining accuracy research, profile persistence and platform validation are tracked in `audit/RELEASE-DEFERRED.md`.
+
 - Add loaded VST3 coverage for inactive bus descriptors and isolated-worker recovery. Verify native Crossover CLAP/VST3 routing across 11 named layouts with 132 independent waveform comparisons, plus populated reconfiguration and recovery after refused structural changes. Consuming-application integration remains under validation.
 - Expose higher-order Ambisonics, true-stereo convolution, DynamicEQ shelves, additional Crossover families and opt-in BandSplit phase compensation through the canonical plugin factory.
 - Expand full-chain, native CLAP/VST3, state-restoration and numerical accuracy coverage.

@@ -13,7 +13,11 @@ mod tests;
 pub use consts::*;
 
 use d::d_attack_ms;
+use d::d_audition_residual;
 use d::d_clear_profile;
+use d::d_curve_high;
+use d::d_curve_low;
+use d::d_curve_mid;
 use d::d_dd_alpha;
 use d::d_dd_enabled;
 use d::d_floor_db;
@@ -100,6 +104,14 @@ pub struct Params {
     pub spatial_denoise: bool,
     #[serde(default = "d_spatial_strength")]
     pub spatial_strength: f64,
+    #[serde(default = "d_curve_low")]
+    pub curve_low: f64,
+    #[serde(default = "d_curve_mid")]
+    pub curve_mid: f64,
+    #[serde(default = "d_curve_high")]
+    pub curve_high: f64,
+    #[serde(default = "d_audition_residual")]
+    pub audition_residual: bool,
 }
 
 impl Default for Params {
@@ -134,6 +146,10 @@ impl Default for Params {
             harmonic_percussive: false,
             spatial_denoise: false,
             spatial_strength: d_spatial_strength(),
+            curve_low: d_curve_low(),
+            curve_mid: d_curve_mid(),
+            curve_high: d_curve_high(),
+            audition_residual: d_audition_residual(),
         }
     }
 }
@@ -187,6 +203,10 @@ impl PluginParamDef for Params {
             26 => Some(if self.harmonic_percussive { 1.0 } else { 0.0 }),
             27 => Some(if self.spatial_denoise { 1.0 } else { 0.0 }),
             28 => Some(self.spatial_strength),
+            29 => Some(self.curve_low),
+            30 => Some(self.curve_mid),
+            31 => Some(self.curve_high),
+            32 => Some(if self.audition_residual { 1.0 } else { 0.0 }),
             _ => None,
         }
     }
@@ -222,6 +242,10 @@ impl PluginParamDef for Params {
             26 => self.harmonic_percussive = PARAMS[26].clamp_f64(value) > 0.5,
             27 => self.spatial_denoise = PARAMS[27].clamp_f64(value) > 0.5,
             28 => self.spatial_strength = PARAMS[28].clamp_f64(value),
+            29 => self.curve_low = PARAMS[29].clamp_f64(value),
+            30 => self.curve_mid = PARAMS[30].clamp_f64(value),
+            31 => self.curve_high = PARAMS[31].clamp_f64(value),
+            32 => self.audition_residual = PARAMS[32].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

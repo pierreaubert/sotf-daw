@@ -92,6 +92,21 @@ pub trait ParametricPlugin: Send {
         0
     }
 
+    /// Stream-independent upper bound on one [`Self::drain`] call's
+    /// emission; see [`Plugin::drain_frames_envelope`]. `None` (the
+    /// default) keeps the host's live sizing for this plugin.
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        None
+    }
+
+    /// Stream-independent upper bound on [`Self::process`] production;
+    /// see [`Plugin::output_frames_envelope`]. `None` (the default) keeps
+    /// the host's live sizing for this plugin. Only plugins whose every
+    /// success path preserves frame counts may return `Some(input_frames)`.
+    fn output_frames_envelope(&self, _input_frames: usize) -> Option<usize> {
+        None
+    }
+
     /// Finish already accepted asynchronous work before querying EOS metadata.
     /// See [`Plugin::prepare_drain_metadata`].
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
@@ -175,6 +190,24 @@ pub trait ParametricPlugin: Send {
     /// Allocation-free zero-input response bound; see [`crate::plugin::TailLength`].
     fn tail_length(&self) -> crate::plugin::TailLength {
         crate::plugin::TailLength::Unknown
+    }
+
+    /// State-independent zero-input response bound; see [`crate::plugin::Plugin::tail_support`].
+    fn tail_support(&self) -> Option<u64> {
+        None
+    }
+
+    /// Declare identity frame geometry for every supported process block.
+    ///
+    /// Return `true` only when processing preserves every valid input
+    /// frame count. The adapter forwards this to
+    /// [`Plugin::guarantees_identity_frame_geometry`](crate::plugin::Plugin::guarantees_identity_frame_geometry),
+    /// which hosts such as A/B Compare drain preparation rely on. The
+    /// default stays conservative `false`: sampling a few block sizes
+    /// cannot prove the property, so each plugin opts in explicitly and
+    /// no blanket identity is ever claimed.
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        false
     }
 
     /// Coarse cost category for host scheduling.
@@ -341,6 +374,10 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         self.plugin.drain_output_frames_max()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        self.plugin.drain_frames_envelope()
+    }
+
     fn prepare_drain_metadata(&mut self) -> PluginResult<()> {
         self.plugin.prepare_drain_metadata()
     }
@@ -410,6 +447,10 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         self.plugin.tail_length()
     }
 
+    fn tail_support(&self) -> Option<u64> {
+        self.plugin.tail_support()
+    }
+
     fn cost_class(&self) -> PluginCostClass {
         self.plugin.cost_class()
     }
@@ -422,8 +463,16 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         input_frames
     }
 
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        self.plugin.output_frames_envelope(input_frames)
+    }
+
     fn output_sample_rate(&self, input_rate: u32) -> u32 {
         input_rate
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        self.plugin.guarantees_identity_frame_geometry()
     }
 
     fn last_output_frames(&self) -> Option<usize> {
@@ -436,5 +485,58 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
 
     fn supports_f64(&self) -> bool {
         self.plugin.supports_f64()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal parametric plugin with no geometry opt-in, standing in for
+    /// a generic unknown plugin.
+    struct UndeclaredGeometryPlugin;
+
+    impl ParametricPlugin for UndeclaredGeometryPlugin {
+        fn plugin_info(&self) -> PluginInfo {
+            PluginInfo::new("undeclared-geometry", "0.0.0", "test")
+        }
+
+        fn input_channels(&self) -> usize {
+            2
+        }
+
+        fn output_channels(&self) -> usize {
+            2
+        }
+
+        fn parameter_schema(&self) -> ParameterSchema {
+            Vec::new()
+        }
+
+        fn current_values(&self) -> ParameterSet {
+            ParameterSet::new()
+        }
+
+        fn apply_values(&mut self, _values: ParameterSet) -> PluginResult<()> {
+            Ok(())
+        }
+
+        fn process(
+            &mut self,
+            _input: &[f32],
+            _output: &mut [f32],
+            context: &ProcessContext,
+        ) -> Result<usize, String> {
+            Ok(context.num_frames)
+        }
+    }
+
+    #[test]
+    fn adapter_preserves_conservative_default_for_unknown_plugins() {
+        // No blanket identity claim: a plugin that does not opt in stays
+        // undeclared through the adapter, even when its process happens
+        // to preserve frame counts.
+        let adapted = ParametricPluginAdapter::new(UndeclaredGeometryPlugin);
+        assert!(!adapted.guarantees_identity_frame_geometry());
     }
 }

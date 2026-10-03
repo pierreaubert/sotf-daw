@@ -6,7 +6,7 @@ use sotf_plugins::{ParameterId, ParameterValue, create_plugin};
 
 #[test]
 fn facade_retains_denoiser_persistent_controls() {
-    let config = json!({"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9});
+    let config = json!({"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9,"curve_low":0.0,"curve_mid":0.5,"curve_high":1.0,"audition_residual":true});
     let typed: sotf_plugins::DenoiserPluginParams = serde_json::from_value(config).unwrap();
     let config = serde_json::to_value(typed).unwrap();
     let mut plugin = create_plugin("denoiser", &config, 2, 48_000).unwrap();
@@ -15,6 +15,10 @@ fn facade_retains_denoiser_persistent_controls() {
         ("harmonic_percussive", ParameterValue::Bool(true)),
         ("spatial_denoise", ParameterValue::Bool(true)),
         ("spatial_strength", ParameterValue::Float(0.9)),
+        ("curve_low", ParameterValue::Float(0.0)),
+        ("curve_mid", ParameterValue::Float(0.5)),
+        ("curve_high", ParameterValue::Float(1.0)),
+        ("audition_residual", ParameterValue::Bool(true)),
     ] {
         assert_eq!(plugin.get_parameter(&ParameterId::from(id)), Some(expected));
     }
@@ -27,6 +31,10 @@ fn facade_rejects_invalid_denoiser_constructor_controls() {
         json!({"spatial_strength":1.01}),
         json!({"harmonic_percussive":"true"}),
         json!({"spatial_denoise":1}),
+        json!({"curve_low":-0.01}),
+        json!({"curve_mid":1.01}),
+        json!({"curve_high":"0.5"}),
+        json!({"audition_residual":1}),
     ] {
         assert!(create_plugin("denoiser", &config, 2, 48_000).is_err());
     }

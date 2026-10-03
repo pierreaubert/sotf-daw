@@ -298,19 +298,23 @@ fn validate_accepts_order_seven_input_with_sixteen_channel_output() {
         input_channels: 65,
         ..config.clone()
     };
-    assert!(input_too_wide
-        .validate()
-        .unwrap_err()
-        .contains("input_channels"));
+    assert!(
+        input_too_wide
+            .validate()
+            .unwrap_err()
+            .contains("input_channels")
+    );
 
     let output_too_wide = EngineConfig {
         output_channels: 17,
         ..config
     };
-    assert!(output_too_wide
-        .validate()
-        .unwrap_err()
-        .contains("output_channels"));
+    assert!(
+        output_too_wide
+            .validate()
+            .unwrap_err()
+            .contains("output_channels")
+    );
 }
 
 #[test]
@@ -526,6 +530,8 @@ fn audio_engine_state_missing_optional_fields_use_defaults() {
     assert_eq!(state.playback_buffer_fill_percent, 0);
     assert_eq!(state.output_peak_linear, 0.0);
     assert!(!state.output_clipping_detected);
+    assert_eq!(state.playback_peak_max_linear, 0.0);
+    assert_eq!(state.playback_epoch, 0);
     assert!(state.latency_compensation_enabled);
     assert_eq!(state.output_access_mode, OutputAccessMode::Shared);
     assert!(state.plugin_build_diagnostics.is_empty());
@@ -557,6 +563,17 @@ fn audio_engine_state_serde_roundtrip() {
         playback_effective_sample_rate: 96000,
         output_peak_linear: 0.75,
         output_clipping_detected: true,
+        playback_peak_max_linear: 0.5,
+        playback_epoch: 3,
+        flushes_sent: 9,
+        gen_ahead_events: 1,
+        decoder_attempt: 2,
+        // Non-default on purpose: a dropped field would default to
+        // true and fail the assert below.
+        peak_record_complete: false,
+        // Non-default on purpose: a dropped field would default to
+        // false and fail the assert below.
+        worker_death_poisoned: true,
         plugin_latency_samples: 512,
         latency_compensation_enabled: false,
         output_access_mode: OutputAccessMode::ExclusivePreferred,
@@ -580,11 +597,18 @@ fn audio_engine_state_serde_roundtrip() {
             "worker could not load plugin",
         )],
         seeking: false,
+        seeking_since: None,
         isolated_external_plugin_worker_statuses: Vec::new(),
     };
 
     let json = serde_json::to_string(&state).unwrap();
     let decoded: AudioEngineState = serde_json::from_str(&json).unwrap();
+    assert_eq!(decoded.flushes_sent, state.flushes_sent);
+    assert_eq!(decoded.gen_ahead_events, state.gen_ahead_events);
+    assert_eq!(decoded.decoder_attempt, state.decoder_attempt);
+    assert_eq!(decoded.peak_record_complete, state.peak_record_complete);
+    assert_eq!(decoded.worker_death_poisoned, state.worker_death_poisoned);
+    assert!(decoded.seeking_since.is_none());
     assert_eq!(decoded.playback_state, state.playback_state);
     assert_eq!(decoded.position, state.position);
     assert_eq!(
@@ -594,6 +618,11 @@ fn audio_engine_state_serde_roundtrip() {
     assert_eq!(decoded.volume, state.volume);
     assert_eq!(decoded.muted, state.muted);
     assert_eq!(decoded.playback_output_device, state.playback_output_device);
+    assert_eq!(
+        decoded.playback_peak_max_linear,
+        state.playback_peak_max_linear
+    );
+    assert_eq!(decoded.playback_epoch, state.playback_epoch);
 }
 
 #[test]

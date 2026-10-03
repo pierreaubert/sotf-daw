@@ -1,10 +1,17 @@
+#[cfg(target_os = "ios")]
+use super::super::worker_death::record_worker_exit;
+use super::super::worker_death::{WorkerExit, WorkerExitStatus};
 use super::super::{
-    HostUpdateTicket, PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest,
+    AudioEngineState, HostUpdateTicket, PendingStopAcks, PlaybackCommand, PlaybackConfiguration,
+    PlaybackReconfigureRequest, PlaybackStopAck,
 };
 #[cfg(target_os = "ios")]
 use super::super::{ProcessingMessage, ThreadEvent};
 #[cfg(target_os = "ios")]
 use super::audio_unit_handle::run_playback_ios;
+use arc_swap::ArcSwap;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU32;
 #[cfg(target_os = "ios")]
 use std::sync::mpsc::SyncSender;
 use std::sync::mpsc::{Receiver, Sender};
@@ -12,6 +19,15 @@ use std::sync::mpsc::{Receiver, Sender};
 pub struct PlaybackThread {
     pub(super) command_tx: Sender<PlaybackCommand>,
     pub(super) thread_handle: Option<std::thread::JoinHandle<()>>,
+    pub(super) pending_stop_acks: PendingStopAcks,
+    pub(super) exit_status: WorkerExitStatus,
+    /// Wrapper-held clone of the feeder's shared output-peak atomic.
+    ///
+    /// Created here and shared into the feeder state (which has no
+    /// rebuild paths, so one share lasts forever), so the manager can
+    /// fold the residual peak after a worker death even though the
+    /// feeder is gone. Desktop `PlaybackThread` mirror.
+    pub(super) retained_output_peak_bits: Arc<AtomicU32>,
 }
 
 impl PlaybackThread {
@@ -29,6 +45,13 @@ impl PlaybackThread {
         _output_access: crate::OutputAccessMode,
     ) -> Result<Self, String> {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
+        let exit_status = WorkerExitStatus::new();
+        let worker_exit_status = exit_status.clone();
+        // Wrapper-created peak atomic, shared with the feeder state so
+        // the wrapper retains the peak past thread exit for the death
+        // fold (desktop mirror; no stub rebuild paths exist).
+        let shared_output_peak_bits = Arc::new(AtomicU32::new(0.0f32.to_bits()));
+        let retained_output_peak_bits = Arc::clone(&shared_output_peak_bits);
 
         let thread_handle = std::thread::Builder::new()
             .name("playback-ios".to_string())
@@ -44,9 +67,10 @@ impl PlaybackThread {
                         channels,
                         frame_size,
                         recycle_tx,
+                        shared_output_peak_bits,
                     )
                 }));
-                match result {
+                match &result {
                     Ok(Ok(())) => {}
                     Ok(Err(error)) => {
                         log::error!("[Playback Thread iOS] Error: {error}");
@@ -63,12 +87,16 @@ impl PlaybackThread {
                             .ok();
                     }
                 }
+                record_worker_exit(&worker_exit_status, &result);
             })
             .map_err(|e| format!("Failed to spawn playback thread: {}", e))?;
 
         Ok(Self {
             command_tx,
             thread_handle: Some(thread_handle),
+            pending_stop_acks: PendingStopAcks::default(),
+            exit_status,
+            retained_output_peak_bits,
         })
     }
 
@@ -76,6 +104,28 @@ impl PlaybackThread {
         self.command_tx
             .send(command)
             .map_err(|e| format!("Failed to send command: {}", e))
+    }
+
+    /// Stash a Stop acknowledgment receiver for late collection.
+    pub(in crate::engine) fn stash_pending_stop_ack(
+        &mut self,
+        receiver: Receiver<PlaybackStopAck>,
+    ) {
+        self.pending_stop_acks.push(receiver);
+    }
+
+    /// Fold arrived late Stop acknowledgments into shared state.
+    ///
+    /// Called on Stop and on every manager tick; non-blocking.
+    /// Stores only when a record actually folded.
+    pub(in crate::engine) fn collect_ready_stop_acks(
+        &mut self,
+        state: &Arc<ArcSwap<AudioEngineState>>,
+    ) {
+        let mut new_state = (**state.load()).clone();
+        if self.pending_stop_acks.collect_ready(&mut new_state) > 0 {
+            state.store(Arc::new(new_state));
+        }
     }
 
     pub(in crate::engine) fn reconfigure(
@@ -130,6 +180,20 @@ impl PlaybackThread {
         self.thread_handle
             .as_ref()
             .is_some_and(std::thread::JoinHandle::is_finished)
+    }
+
+    /// Load the recorded exit disposition (`None` means slot corruption).
+    pub(crate) fn exit_status(&self) -> Option<WorkerExit> {
+        self.exit_status.load()
+    }
+
+    /// Clone the wrapper-retained shared output-peak atomic.
+    ///
+    /// The feeder accumulates into this same atomic for its whole
+    /// life (no rebuild paths), so the clone stays valid past thread
+    /// exit for the worker-death residual fold. Desktop mirror.
+    pub(crate) fn retained_output_peak_bits(&self) -> Arc<AtomicU32> {
+        Arc::clone(&self.retained_output_peak_bits)
     }
 
     pub fn shutdown(&mut self) {

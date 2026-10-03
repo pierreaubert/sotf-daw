@@ -10,7 +10,7 @@ use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{
     Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
-    ProcessContext,
+    ProcessContext, TailLength,
 };
 
 /// Typed refusal for realtime dynamic updates.
@@ -40,9 +40,8 @@ impl std::fmt::Display for ResamplerControlError {
                 formatter,
                 "stream has been finalized; reset before changing {control}"
             ),
-            Self::DynamicDisabled => formatter.write_str(
-                "Dynamic ratio is not enabled. Set dynamic_ratio to true first.",
-            ),
+            Self::DynamicDisabled => formatter
+                .write_str("Dynamic ratio is not enabled. Set dynamic_ratio to true first."),
             Self::NotInitialized => formatter.write_str("Resampler not initialized"),
             Self::Backend(error) => write!(formatter, "Failed to set ratio: {error:?}"),
         }
@@ -485,10 +484,7 @@ impl ResamplerPlugin {
     ///
     /// Returns [`ResamplerControlError::Finalized`] when changing the flag
     /// after draining has begun. The flag is unchanged on error.
-    pub fn try_set_cutoff_smoothing(
-        &mut self,
-        enabled: bool,
-    ) -> Result<(), ResamplerControlError> {
+    pub fn try_set_cutoff_smoothing(&mut self, enabled: bool) -> Result<(), ResamplerControlError> {
         if enabled == self.cutoffs.smoothing() {
             return Ok(());
         }
@@ -918,6 +914,33 @@ impl Plugin for ResamplerPlugin {
         self.flush_output_frames_max()
     }
 
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        if self.is_unity_passthrough() {
+            // Unity drain always completes with zero frames.
+            return Some(0);
+        }
+        let resampler = self.resampler.as_ref()?;
+        // Proven per-call drain bound, not a guess at the block maximum:
+        // `drain_plan` returns at most `positions.len()` frames in every
+        // branch (variable: first crossing index + 1; fixed: remaining
+        // clamped to the block; unclassified: zero), `positions` is
+        // `input_positions_next()` with exactly `output_frames_next()`
+        // items, and `output_frames_next()` never exceeds
+        // `output_frames_max()` — the fork's load-bearing contract (every
+        // backend adapter is sized by the maximum, and the maximum
+        // formula covers deferred-step debt across the full adjustable
+        // range). The maximum itself depends only on construction
+        // constants (chunk size, nominal ratio, relative range 2.0, fixed
+        // input), so it is stream-independent; dynamic ratio sets outside
+        // the covered range fail loudly at the backend. Cold, complete,
+        // and unity drains emit zero frames. The next<=max reduction is
+        // sampled over primed residuals and ratio trajectories (see
+        // tests), not exhausted over last_index x ramp corners; that
+        // remainder is trust in the fork, and any violation surfaces as
+        // a loud capacity error downstream.
+        Some(resampler.output_frames_max())
+    }
+
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
         if self.endpoint.complete() || self.is_unity_passthrough() || self.stream_input_frames == 0
         {
@@ -942,6 +965,25 @@ impl Plugin for ResamplerPlugin {
             self.current_ratio,
             backend.last_input_index(),
         )
+    }
+
+    fn tail_length(&self) -> TailLength {
+        // Total drain bound by contract composition: at most
+        // `drain_call_bound` successful full-capacity calls, each emitting
+        // at most `drain_output_frames_max`. A conservative upper bound
+        // (call padding and per-call maxima over-approximate), never an
+        // exact count; unprovable geometry and arithmetic overflow stay
+        // `Unknown`, never a saturated guess.
+        let Some(calls) = self.drain_call_bound() else {
+            return TailLength::Unknown;
+        };
+        let Some(total) = calls
+            .get()
+            .checked_mul(self.drain_output_frames_max() as u64)
+        else {
+            return TailLength::Unknown;
+        };
+        TailLength::Finite(total)
     }
 
     fn drain(
@@ -1070,6 +1112,25 @@ impl Plugin for ResamplerPlugin {
                 - 1.0)
                 .max(0.0)
         }
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        if self.is_unity_passthrough() {
+            return Some(input_frames);
+        }
+        let resampler = self.resampler.as_ref()?;
+        // Pending input is residual + n with residual in [0, chunk), so
+        // completed chunks are at most (chunk - 1 + n) / chunk, and each
+        // backend call emits at most the block maximum (adapters sized by
+        // it; the maximum covers the full adjustable ratio range including
+        // ramp debt). The formula is non-decreasing in n as the envelope
+        // contract requires. Uninitialized backends answer unknown: the
+        // ratio-estimate fallback is an estimate, not a proven bound.
+        // The next<=max reduction is sampled, not exhausted (see the
+        // drain envelope note); violations fail loudly downstream.
+        let max_residual = self.chunk_size.checked_sub(1)?;
+        let chunks = max_residual.checked_add(input_frames)? / self.chunk_size;
+        chunks.checked_mul(resampler.output_frames_max())
     }
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {

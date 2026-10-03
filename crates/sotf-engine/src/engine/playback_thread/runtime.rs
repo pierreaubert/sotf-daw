@@ -1,6 +1,6 @@
 use super::super::{
-    PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, ProcessingMessage,
-    ThreadEvent, plan_output_access,
+    PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, PlaybackStopAck,
+    ProcessingMessage, ThreadEvent, plan_output_access,
 };
 use super::build::build_output_stream;
 #[cfg(target_os = "macos")]
@@ -16,6 +16,7 @@ use super::misc::select_playback_device;
 use super::misc::send_playback_event;
 #[cfg(target_os = "macos")]
 use super::misc::set_output_access_status;
+use super::misc::snapshot_output_meter;
 use super::pick::choose_output_format;
 use super::playback::playback_buffer_capacity;
 use super::playback::playback_recovery_reason;
@@ -31,7 +32,7 @@ use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::{Device, SampleFormat, Stream, StreamConfig};
 use rtrb::{Producer, RingBuffer};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};
 use std::time::{Duration, Instant};
 
@@ -52,6 +53,8 @@ pub(super) fn run_playback_thread(
     recycle_tx: SyncSender<Vec<f32>>,
     allow_virtual_output: bool,
     output_access: OutputAccessMode,
+    shared_output_peak_bits: Arc<AtomicU32>,
+    shared_clipped_sample_count: Arc<AtomicU64>,
     startup_tx: SyncSender<Result<(), String>>,
 ) -> Result<(), String> {
     let mut runtime = match PlaybackRuntime::new(PlaybackRuntimeParams {
@@ -66,6 +69,8 @@ pub(super) fn run_playback_thread(
         recycle_tx,
         allow_virtual_output,
         output_access,
+        shared_output_peak_bits,
+        shared_clipped_sample_count,
     }) {
         Ok(runtime) => runtime,
         Err(err) => {
@@ -91,6 +96,8 @@ struct PlaybackRuntimeParams {
     recycle_tx: SyncSender<Vec<f32>>,
     allow_virtual_output: bool,
     output_access: OutputAccessMode,
+    shared_output_peak_bits: Arc<AtomicU32>,
+    shared_clipped_sample_count: Arc<AtomicU64>,
 }
 
 struct PlaybackRuntime {
@@ -147,6 +154,29 @@ struct DrainState {
     // queues. Pause/Resume must not erase an outstanding stream boundary.
     stream_flush_pending: bool,
     paused: bool,
+    /// Playback-side playback generation; tags meter/drained events.
+    meter_epoch: u64,
+    /// Lossless per-epoch peak over every swapped meter window.
+    ///
+    /// Folded before each snapshot send (periodic, flush, terminal), so a
+    /// dropped send still leaves its window in the record the drained
+    /// receipt carries. Reset by the epoch fence; same-epoch pause, seek,
+    /// and gapless playback accumulate into it.
+    epoch_peak_max: f32,
+    /// Stream Flushes consumed, tagging drained receipts.
+    ///
+    /// Global monotonic generation (never reset): advanced once per
+    /// consumed [`ProcessingMessage::Flush`] (normal path and
+    /// rebuild-swallowed alike), so it trails the manager's
+    /// `flushes_sent` by exactly the in-flight count while both
+    /// workers live.
+    flushes_processed: u64,
+    /// Stop completion awaiting callback quiesce, if any.
+    ///
+    /// At most one: a superseding Stop or new-epoch Resume finalizes
+    /// the pending acknowledgment before proceeding, and shutdown
+    /// finalizes best-effort, so every Stop is answered exactly once.
+    pending_stop_ack: Option<SyncSender<PlaybackStopAck>>,
 }
 
 impl DrainState {
@@ -167,10 +197,134 @@ impl DrainState {
         self.update_flush_mode(callback_flush_completed);
     }
 
+    /// Adopt a playback epoch from a Resume command, fencing the old stream.
+    ///
+    /// On change only: stores the epoch, clears EOS/drain flags so no
+    /// stale drained receipt is emitted into the new epoch, and resets
+    /// the epoch cumulative peak (a superseded record, if any, already
+    /// carries it in its acknowledgment — the R14 finalize-first).
+    ///
+    /// The callback residual resets too, UNLESS `finalized` reports a
+    /// terminal swap just ran: a callback window racing between that
+    /// swap and this fence would otherwise be wiped (in neither
+    /// record), so it is kept and attributed to the new epoch instead.
+    /// That misattribution is conservative — a ceiling-safe superset
+    /// of whatever lands between swap and fence — and explicit; the
+    /// old record stays complete-through-finalize. When no swap ran,
+    /// the discarded tail (up to a full inter-snapshot window)
+    /// belongs to an ABANDONED epoch: no receipt exists for it, by
+    /// design — that, not smallness, is the justification.
+    ///
+    /// Metering-boundary definition (exactness condition): the
+    /// metering cutoff for a superseded epoch IS the finalize swap —
+    /// legitimate because nothing observable occurs between swap and
+    /// fence (adjacent statements, single thread: no snapshot, tag,
+    /// or event), so boundary placement inside that interval is
+    /// free. R11's rule refines to "metered-before-finalize-swap"
+    /// for superseded epochs, "metered-before-fence" otherwise. The
+    /// manager latch stays consistent: no old-tagged snapshot exists
+    /// post-swap, and post-supersede old receipts are epoch-dropped.
+    /// Same-epoch resumes (pause/resume, rollback) are a no-op by
+    /// comparison.
+    fn adopt_playback_epoch(&mut self, meter: &PlaybackState, epoch: u64, finalized: bool) {
+        if epoch == self.meter_epoch {
+            return;
+        }
+        self.meter_epoch = epoch;
+        if !finalized {
+            meter.reset_output_meter();
+        }
+        self.epoch_peak_max = 0.0;
+        self.end_of_stream = false;
+        self.drain_start = None;
+    }
+
+    /// Fold one swapped meter window into the epoch cumulative peak.
+    ///
+    /// Called for every swapped snapshot (periodic, flush, terminal) before
+    /// its event is sent, so a dropped send still leaves its window's peak
+    /// in the record the drained receipt carries.
+    fn note_meter_snapshot(&mut self, peak: f32) {
+        self.epoch_peak_max = self.epoch_peak_max.max(peak);
+    }
+
+    /// Build the drained receipt carrying the epoch cumulative peak.
+    ///
+    /// Every drained send goes through here so the terminal record always
+    /// carries the complete per-epoch max. Each drained site emits the
+    /// terminal snapshot first, so the terminal window is already folded.
+    /// The receipt is born with the current consumed-Flush count, so the
+    /// manager can tell pre-boundary drains from legitimate ones.
+    fn drained_event(&self) -> ThreadEvent {
+        ThreadEvent::PlaybackDrained {
+            epoch: self.meter_epoch,
+            epoch_peak_max: self.epoch_peak_max,
+            flush_gen: self.flushes_processed,
+        }
+    }
+
+    /// Count one rebuild-swallowed Flush and invalidate armed drains.
+    ///
+    /// Stream rebuilds drain the message queue outright; each swallowed
+    /// Flush still advanced the manager's count, so playback must count
+    /// it too or trail forever. The swallowed boundary ALSO invalidates
+    /// any armed drain — like a processed Flush (`stream_flushed`), a
+    /// boundary means whatever follows re-drives its own terminal, so a
+    /// stale armed EOS must not fire with a balanced generation (D7).
+    /// Stop carve-out: a Stop boundary re-drives NOTHING — the StopAck
+    /// IS its terminal — and needs none; invalidation stays correct
+    /// (the armed drain belongs to a stream whose terminal is the ack,
+    /// not a drain). Drop-until-Flush semantics are kept: only the
+    /// next real Flush clears the pending boundary.
+    fn note_swallowed_flush(&mut self) {
+        self.flushes_processed = self.flushes_processed.wrapping_add(1);
+        self.end_of_stream = false;
+        self.drain_start = None;
+    }
+
+    /// Arm the drain for a rebuild-swallowed end-of-stream marker.
+    ///
+    /// A terminal marker must not vanish: the decoder generates EOS
+    /// only at source exhaustion — every arm that abandons a stream
+    /// emits Flush, never EOS (decoder Flush-before-attempt, all arms
+    /// incl. mirrors) — so a swallowed EOS is a legitimate terminal
+    /// the rebuild would otherwise wedge into stuck-Playing (A3).
+    /// Safety when its stream was abandoned anyway: a Flush follows
+    /// the marker (same guarantee) and invalidates the arm — in this
+    /// batch, a later batch, or normal order — and N1 forward
+    /// preservation means the boundary is never dropped. If no Flush
+    /// ever follows, the resulting drain carries a stale generation
+    /// and the manager holds transport instead of completing it.
+    /// Sequential batch order keeps this sound: EOS-then-Flush nets
+    /// cleared (matching normal order); Flush-then-EOS nets armed
+    /// (the marker belongs to the post-boundary stream).
+    fn note_swallowed_eos(&mut self) {
+        self.end_of_stream = true;
+        self.drain_start = Some(Instant::now());
+    }
+
+    /// Swap the callback residual and build the Stop terminal record.
+    ///
+    /// Report-then-clear: the swapped window folds into the epoch
+    /// cumulative before the record is built, so the acknowledgment
+    /// covers every callback-observed sample. Shared by the quiesce,
+    /// supersede, and shutdown paths.
+    fn take_stop_terminal(&mut self, meter: &PlaybackState) -> PlaybackStopAck {
+        let event = snapshot_output_meter(meter, self.meter_epoch);
+        if let ThreadEvent::PlaybackOutputMeter { peak_linear, .. } = &event {
+            self.note_meter_snapshot(*peak_linear);
+        }
+        PlaybackStopAck {
+            epoch: self.meter_epoch,
+            epoch_peak_max: self.epoch_peak_max,
+        }
+    }
+
     fn stream_flushed(&mut self, callback_flush_completed: bool) {
         self.stream_flush_pending = false;
         self.end_of_stream = false;
         self.drain_start = None;
+        self.flushes_processed = self.flushes_processed.wrapping_add(1);
         self.update_flush_mode(callback_flush_completed);
     }
 
@@ -243,6 +397,8 @@ impl PlaybackRuntime {
             recycle_tx,
             allow_virtual_output,
             output_access,
+            shared_output_peak_bits,
+            shared_clipped_sample_count,
         } = params;
         set_realtime_priority(sample_rate, frame_size);
 
@@ -302,7 +458,11 @@ impl PlaybackRuntime {
 
         let buffer_capacity = playback_buffer_capacity(sample_rate, channels, buffer_ms);
         let (mut producer, consumer) = RingBuffer::<f32>::new(buffer_capacity);
-        let state = Arc::new(PlaybackState::new(buffer_capacity));
+        let state = Arc::new(PlaybackState::new_sharing_meters(
+            buffer_capacity,
+            shared_output_peak_bits,
+            shared_clipped_sample_count,
+        ));
         prefill_silence(&mut producer, buffer_capacity / 2);
         let conversion_buffer = conversion_buffer_for_ring(buffer_capacity);
 
@@ -398,6 +558,10 @@ impl PlaybackRuntime {
                 flush_mode: FlushMode::Normal,
                 stream_flush_pending: false,
                 paused: false,
+                meter_epoch: 0,
+                epoch_peak_max: 0.0,
+                flushes_processed: 0,
+                pending_stop_ack: None,
             },
             recovery: RecoveryState {
                 last_callback_count: 0,
@@ -428,6 +592,15 @@ impl PlaybackRuntime {
                 && self.handle_command(command) == RuntimeDecision::Break
             {
                 break;
+            }
+
+            // Stop completion never stalls the loop: once quiesce (ring
+            // empty plus callback inactive) is observed after the arm,
+            // the terminal record answers exactly once.
+            if self.drain.pending_stop_ack.is_some()
+                && flush_completed(&self.state, &self.producer, self.buffer_capacity)
+            {
+                self.finalize_pending_stop_ack(true);
             }
 
             if self.wait_for_flush_drain() == RuntimeDecision::Continue {
@@ -470,7 +643,29 @@ impl PlaybackRuntime {
                 self.drain.begin_drop(FlushMode::DroppingUntilResume);
                 RuntimeDecision::Proceed
             }
-            PlaybackCommand::Resume => {
+            PlaybackCommand::Resume { epoch } => {
+                // Any Resume re-arms callback emission, including the
+                // same-epoch pause/resume and Stop-then-Resume paths:
+                // the cutoff only needs to hold until the operator
+                // resumes flow (post-quiesce the ring is empty and
+                // frames stay dropped until the next Flush).
+                self.state.stop_latched.store(false, Ordering::Relaxed);
+                let finalized = if epoch != self.drain.meter_epoch {
+                    // A new-epoch fence supersedes a pending Stop:
+                    // finalize its record before adoption discards it.
+                    // The fence skips its meter reset exactly when this
+                    // swap ran (D1: no wipe window, no stale flag — the
+                    // decision is local to these adjacent statements).
+                    // Pending-at-Resume occurs only via timeout
+                    // recovery (healthy stop() sync-acks first), so
+                    // the unit-interleaving test above IS the live
+                    // coverage for the skip; healthy paths never take it.
+                    self.finalize_pending_stop_ack(false)
+                } else {
+                    false
+                };
+                self.drain
+                    .adopt_playback_epoch(&self.state, epoch, finalized);
                 self.drain.resume(flush_completed(
                     &self.state,
                     &self.producer,
@@ -485,18 +680,50 @@ impl PlaybackRuntime {
                 self.handle_channel_update(new_channels)
             }
             PlaybackCommand::Reconfigure(request) => self.handle_reconfigure_request(request),
-            PlaybackCommand::Stop => {
-                self.state.reset_output_meter();
+            PlaybackCommand::Stop(request) => {
+                // Supersede: finalize any still-pending acknowledgment
+                // before arming the new one (report-then-clear: the old
+                // record answers instead of being lost).
+                self.finalize_pending_stop_ack(true);
+                // Latch the callback emission cutoff before anything can
+                // quiesce: from here the callback discards instead of
+                // emitting, including late pre-Stop arrivals. The
+                // inter-tick residual is preserved for the terminal.
+                self.state.stop_latched.store(true, Ordering::Relaxed);
                 self.diagnostics.last_meter_report = Instant::now();
                 request_flush(&self.state);
                 self.drain.begin_drop(FlushMode::DroppingUntilFlush);
+                self.drain.pending_stop_ack = Some(request.reply_tx);
                 RuntimeDecision::Proceed
             }
             PlaybackCommand::Shutdown => {
                 log::debug!("[Playback Thread] Shutting down");
+                self.finalize_pending_stop_ack(false);
                 RuntimeDecision::Break
             }
         }
+    }
+
+    /// Answer a pending Stop with its terminal record, if any.
+    ///
+    /// Quiesce, supersede, and shutdown paths share this: the terminal
+    /// snapshot goes out first when the worker stays alive (R12
+    /// order), then the swapped residual folds into the cumulative
+    /// and the record replies. Best-effort send — a timed-out manager
+    /// collects late; a gone manager needs nothing. Returns whether a
+    /// terminal swap ran, so the epoch fence can skip its meter reset
+    /// exactly then (a racing callback window lands in the new record
+    /// instead of being wiped).
+    fn finalize_pending_stop_ack(&mut self, emit_snapshot: bool) -> bool {
+        let Some(reply_tx) = self.drain.pending_stop_ack.take() else {
+            return false;
+        };
+        if emit_snapshot {
+            self.emit_terminal_drain_snapshot();
+        }
+        let ack = self.drain.take_stop_terminal(&self.state);
+        reply_tx.send(ack).ok();
+        true
     }
 
     fn handle_reconfigure_request(
@@ -677,7 +904,11 @@ impl PlaybackRuntime {
         let new_buffer_capacity =
             playback_buffer_capacity(new_sample_rate, new_channels, self.buffer_ms);
         let (new_producer, new_consumer) = RingBuffer::<f32>::new(new_buffer_capacity);
-        let new_state = Arc::new(PlaybackState::new(new_buffer_capacity));
+        let new_state = Arc::new(PlaybackState::new_sharing_meters(
+            new_buffer_capacity,
+            Arc::clone(&self.state.output_peak_bits),
+            Arc::clone(&self.state.clipped_sample_count),
+        ));
         copy_playback_controls(&self.state, &new_state);
 
         log::info!(
@@ -822,7 +1053,11 @@ impl PlaybackRuntime {
         let new_buffer_capacity =
             playback_buffer_capacity(self.config.sample_rate, new_channels, self.buffer_ms);
         let (new_producer, new_consumer) = RingBuffer::<f32>::new(new_buffer_capacity);
-        let new_state = Arc::new(PlaybackState::new(new_buffer_capacity));
+        let new_state = Arc::new(PlaybackState::new_sharing_meters(
+            new_buffer_capacity,
+            Arc::clone(&self.state.output_peak_bits),
+            Arc::clone(&self.state.clipped_sample_count),
+        ));
         copy_playback_controls(&self.state, &new_state);
 
         drained_count += self.drain_pending_messages();
@@ -941,7 +1176,8 @@ impl PlaybackRuntime {
         }
 
         if flush_completed(&self.state, &self.producer, self.buffer_capacity) {
-            self.state.reset_output_meter();
+            // Report the pre-flush residual before the swap clears it.
+            self.send_output_meter_snapshot();
             self.diagnostics.last_meter_report = Instant::now();
             self.drain.callback_flushed();
             RuntimeDecision::Proceed
@@ -1226,6 +1462,7 @@ impl PlaybackRuntime {
     /// both report identical fields from identical loads. Runs on the
     /// playback worker thread (never the CPAL callback); the channel send is
     /// best-effort on the bounded event queue like every other emission.
+    /// Tagged with the adopted playback epoch.
     fn send_playback_stats_snapshot(&self, report_kind: &str) {
         let elapsed = self.diagnostics.stream_start_time.elapsed().as_secs_f64();
         let total_cb = self.state.callback_count.load(Ordering::Relaxed);
@@ -1264,6 +1501,7 @@ impl PlaybackRuntime {
                 frames_written: self.accounting.frames_written,
                 frames_dropped: self.accounting.frames_dropped,
                 effective_sample_rate: effective_hz,
+                epoch: self.drain.meter_epoch,
             },
             "playback stats",
         );
@@ -1280,24 +1518,18 @@ impl PlaybackRuntime {
 
     /// Send one output meter snapshot, swapping the residual peak.
     ///
-    /// Shared by the periodic meter and the terminal drain snapshot. The
-    /// swap hands the callback-observed residual to the event flow exactly
-    /// once; the manager-side stopped-meter reset is unchanged.
-    fn send_output_meter_snapshot(&self) {
-        let peak_linear = f32::from_bits(
-            self.state
-                .output_peak_bits
-                .swap(0.0f32.to_bits(), Ordering::Relaxed),
-        );
-        let clipping_detected = self.state.clipped_sample_count.swap(0, Ordering::Relaxed) > 0;
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::PlaybackOutputMeter {
-                peak_linear,
-                clipping_detected,
-            },
-            "playback output meter",
-        );
+    /// Shared by the periodic meter, the terminal drain snapshot, and
+    /// flush completion. The swap hands the callback-observed residual to
+    /// the event flow exactly once; the manager-side stopped-meter reset
+    /// is unchanged. Tagged with the adopted playback epoch. The window
+    /// folds into the epoch cumulative before the send, so a dropped
+    /// send cannot lose it from the terminal record.
+    fn send_output_meter_snapshot(&mut self) {
+        let event = snapshot_output_meter(&self.state, self.drain.meter_epoch);
+        if let ThreadEvent::PlaybackOutputMeter { peak_linear, .. } = &event {
+            self.drain.note_meter_snapshot(*peak_linear);
+        }
+        send_playback_event(&self.event_tx, event, "playback output meter");
     }
 
     /// Publish final counters plus residual meter before a drained receipt.
@@ -1412,10 +1644,25 @@ impl PlaybackRuntime {
     }
 
     fn handle_flush(&mut self) -> RuntimeDecision {
+        // A boundary re-arms the callback unconditionally: no
+        // pre-cutoff frame can be queued behind it (decoder FIFO,
+        // processing retries-or-recycles in order and resets DSP
+        // state at the Flush), so anything arriving later postdates
+        // the cutoff — correct to emit even when a superseded
+        // completion is still outstanding. New-epoch supersedes are
+        // stale-dropped by the epoch gate; a same-epoch supersede
+        // (Stop-then-seek) folds the post-cutoff windows into the
+        // same-epoch terminal instead (ceiling-safe superset,
+        // unreachable in current manager flows, which serialize Stop
+        // before later commands). The latch is defense-in-depth —
+        // worker drop-mode does the cutting off. Mirrors the stub
+        // feeder arm.
+        self.state.stop_latched.store(false, Ordering::Relaxed);
         request_flush(&self.state);
         let completed = flush_completed(&self.state, &self.producer, self.buffer_capacity);
         if completed {
-            self.state.reset_output_meter();
+            // Report the pre-flush residual before the swap clears it.
+            self.send_output_meter_snapshot();
             self.diagnostics.last_meter_report = Instant::now();
         }
         self.drain.stream_flushed(completed);
@@ -1433,7 +1680,7 @@ impl PlaybackRuntime {
             self.emit_terminal_drain_snapshot();
             send_playback_event(
                 &self.event_tx,
-                ThreadEvent::PlaybackDrained,
+                self.drain.drained_event(),
                 "ring buffer drained",
             );
             // Keep the output worker alive for the next source. A normal EOF
@@ -1480,7 +1727,7 @@ impl PlaybackRuntime {
                 self.emit_terminal_drain_snapshot();
                 send_playback_event(
                     &self.event_tx,
-                    ThreadEvent::PlaybackDrained,
+                    self.drain.drained_event(),
                     "post-disconnect drained",
                 );
                 break;
@@ -1526,7 +1773,7 @@ impl PlaybackRuntime {
             );
             send_playback_event(
                 &self.event_tx,
-                ThreadEvent::PlaybackDrained,
+                self.drain.drained_event(),
                 "drain timeout completion",
             );
         }
@@ -1559,7 +1806,7 @@ impl PlaybackRuntime {
             );
             send_playback_event(
                 &self.event_tx,
-                ThreadEvent::PlaybackDrained,
+                self.drain.drained_event(),
                 "post-disconnect drain timeout completion",
             );
         }
@@ -1567,11 +1814,33 @@ impl PlaybackRuntime {
 
     fn drain_pending_messages(&mut self) -> usize {
         let mut drained = 0;
+        let mut swallowed_flushes = 0u64;
         while let Ok(message) = self.message_rx.try_recv() {
-            if let ProcessingMessage::Frame(frame) = message {
-                recycle_frame_data(&self.recycle_tx, frame.data, "rebuild stale frame");
+            match message {
+                ProcessingMessage::Frame(frame) => {
+                    recycle_frame_data(&self.recycle_tx, frame.data, "rebuild stale frame");
+                }
+                ProcessingMessage::Flush => {
+                    // Swallowed by the rebuild: counted (the manager
+                    // counted it at send) and armed drains invalidated
+                    // (a boundary re-drives the terminal). Drop-mode is
+                    // NOT released: only the next real Flush clears it.
+                    swallowed_flushes += 1;
+                    self.drain.note_swallowed_flush();
+                }
+                ProcessingMessage::EndOfStream => {
+                    // Swallowed by the rebuild, but a terminal marker
+                    // must not vanish: arm the drain so the finished
+                    // stream completes instead of wedging Playing.
+                    self.drain.note_swallowed_eos();
+                }
             }
             drained += 1;
+        }
+        if swallowed_flushes > 0 {
+            log::debug!(
+                "[Playback Thread] Rebuild swallowed {swallowed_flushes} stream Flush(es); counted, armed drains invalidated"
+            );
         }
         drained
     }

@@ -51,6 +51,33 @@ RNNoise speech cleanup, focused high-frequency hiss reduction, and click/transie
 | Spatial Denoise | On/Off | Off | Apply pairwise coherence denoising; centre/LFE are excluded in 5.1/7.1 |
 | Spatial Strength | 0 to 100 | 50 | Spatial denoising intensity |
 
+### Reduction Curve
+
+| Parameter | Range | Default | Description |
+|-----------|-------|---------|-------------|
+| Curve Low | 0 to 100 | 100 | Reduction scale at or below 125 Hz |
+| Curve Mid | 0 to 100 | 100 | Reduction scale at 1000 Hz |
+| Curve High | 0 to 100 | 100 | Reduction scale at or above 8000 Hz |
+
+Each knot keeps a fraction of the computed reduction at its anchor: 100 keeps
+full reduction, 0 disables reduction (unity gain) there. Interpolation is
+linear in log frequency between the fixed Hz anchors and clamps outside them,
+so stored knots keep their meaning across FFT sizes and sample rates. The
+curve shapes the Wiener, spectral-subtraction, polyphonic-gate, and
+multi-resolution gains before smoothing; the spatial coherence trim sits
+outside its scope. An all-default (flat) curve leaves legacy audio
+bit-identical.
+
+### Monitor
+
+| Parameter | Description |
+|-----------|-------------|
+| Audition Residual | Output the aligned residual (removed noise) instead of cleaned audio |
+
+The residual is the latency-aligned dry input minus the cleaned output, so
+cleaned plus residual reconstructs the input. Switching fades over 5 ms to
+avoid clicks; construction and reset snap to the configured state.
+
 ### Spectral Subtraction
 
 | Parameter | Range | Default | Unit | Description |
@@ -166,10 +193,12 @@ actually available. Captured spectra are runtime state and are not stored in pre
 ```
 Input -> STFT (Hann window, overlap-add)
   -> MCRA noise estimation (or captured profile)
-  -> Wiener or spectral-subtraction gain calculation
+  -> Wiener, spectral-subtraction, or polyphonic gain calculation
+  -> Reduction-curve shaping per bin (skipped when flat)
   -> Optional: psychoacoustic masking
   -> Optional: spectral/temporal smoothing
   -> Optional: formant, multi-resolution, harmonic/percussive, spatial modes
   -> Apply gains in frequency domain
-  -> ISTFT + overlap-add -> Output
+  -> ISTFT + overlap-add -> cleaned
+  -> Optional residual audition: aligned dry minus cleaned, 5 ms crossfade
 ```

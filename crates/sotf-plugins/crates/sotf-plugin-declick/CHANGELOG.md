@@ -1,5 +1,7 @@
 # Unreleased
 
+- Integrate the expanded detector controls through native adapters and retain validated multiband boundary handling. Restore the validated detector baseline for release; stronger corpus accuracy and experimental estimators remain deferred in `audit/RELEASE-DEFERRED.md`.
+
 - Preserve retained audio at finite-stream end through the host drain contract,
   with a derived finite bound, prepared scratch, stable completion, and reset
   required before accepting new audio or control changes.

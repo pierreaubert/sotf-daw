@@ -18,5 +18,20 @@ pub(super) const PROCESSING_COMMAND_TIMEOUT_MS: u64 = 1000;
 
 pub(super) const DECODER_COMMAND_TIMEOUT_MS: u64 = 1000;
 
+// Stop waits for callback quiesce (ring discard plus callback idle),
+// the same observation class as the playback ring-drain budgets
+// (2 s in both the desktop runtime and the stub feeder). A healthy
+// callback discards a full ring within one buffer period; only a
+// stalled device reaches this timeout, and the receiver is stashed
+// for late collection so the timeout degrades timeliness, never
+// correctness.
+pub(super) const PLAYBACK_STOP_ACK_TIMEOUT_MS: u64 = 2000;
+
+// Display-only bound for the seeking indicator: drain safety never
+// reads it, so a dropped SeekComplete must not freeze position
+// display. Same order as the ring-drain budgets; expiry only clears
+// the indicator.
+pub(super) const SEEKING_DISPLAY_TIMEOUT_MS: u64 = 2000;
+
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub(super) const EXTERNAL_PLUGIN_MAINTENANCE_INTERVAL_MS: u64 = 1000;

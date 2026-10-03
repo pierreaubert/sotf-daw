@@ -10,6 +10,12 @@
 
 ## Fixes
 
+- Deserialize a missing `mode` key as Multiband, matching the descriptor
+  default (index 3), `Params::default()`, and the engine default. Empty
+  creation previously yielded Off via the derived enum default while every
+  other default surface promised Multiband. Explicit modes (index, label,
+  or legacy `crossfeed_mode` alias) are unchanged, saved states always
+  carry explicit mode, and presets keep their documented modes and yaw 0.
 - Publish AutoGain measurements on a causal 10 Hz accepted-sample clock. A
   completed measurement interval affects only subsequent audio, so fixed-mode
   output no longer depends on callback partitions or a later callback suffix.

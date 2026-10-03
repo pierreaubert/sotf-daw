@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 60
 expression: plan
 ---
 {
@@ -23,10 +24,13 @@ expression: plan
   "visible_group_ids": [
     "REDUCTION",
     "TIMING",
-    "SPECTRAL SUB",
-    "NOISE PROFILE"
+    "NOISE PROFILE",
+    "CURVE",
+    "MONITOR"
   ],
-  "overflow_group_ids": [],
+  "overflow_group_ids": [
+    "SPECTRAL SUB"
+  ],
   "config_controls": [
     {
       "param_index": 5,
@@ -199,6 +203,66 @@ expression: plan
         {
           "param_index": 22,
           "param_name": "Clear Profile",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "CURVE",
+      "title": "CURVE",
+      "controls": [
+        {
+          "param_index": 29,
+          "param_name": "Curve Low",
+          "control_type": "knob",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 30,
+          "param_name": "Curve Mid",
+          "control_type": "knob",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 31,
+          "param_name": "Curve High",
+          "control_type": "knob",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "MONITOR",
+      "title": "MONITOR",
+      "controls": [
+        {
+          "param_index": 32,
+          "param_name": "Audition Residual",
           "control_type": "toggle",
           "unit": "",
           "range": [

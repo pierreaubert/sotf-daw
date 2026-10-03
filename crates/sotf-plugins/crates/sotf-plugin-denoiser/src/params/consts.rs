@@ -230,6 +230,44 @@ pub const PARAMS: &[ParamSpec] = &[
         "Advanced",
     )
     .doc("Weight of inter-channel coherence in noise estimation"),
+    ParamSpec::float(
+        "Curve Low",
+        "curve_low",
+        1.0,
+        0.0,
+        1.0,
+        0.01,
+        "",
+        "Curve",
+    )
+    .scaled(100.0)
+    .doc("Reduction scale at or below 125 Hz"),
+    ParamSpec::float(
+        "Curve Mid",
+        "curve_mid",
+        1.0,
+        0.0,
+        1.0,
+        0.01,
+        "",
+        "Curve",
+    )
+    .scaled(100.0)
+    .doc("Reduction scale at 1000 Hz"),
+    ParamSpec::float(
+        "Curve High",
+        "curve_high",
+        1.0,
+        0.0,
+        1.0,
+        0.01,
+        "",
+        "Curve",
+    )
+    .scaled(100.0)
+    .doc("Reduction scale at or above 8000 Hz"),
+    ParamSpec::bool_param("Audition Residual", "audition_residual", false, "Monitor")
+        .doc("Output the aligned residual (removed noise) instead of cleaned audio"),
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
@@ -272,6 +310,18 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "CURVE",
+            "CURVE",
+            &[
+                ControlSpec::knob(29),
+                ControlSpec::knob(30),
+                ControlSpec::knob(31),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.6)),
+        ControlGroup::new("MONITOR", "MONITOR", &[ControlSpec::toggle(32)])
+            .with_layout(GroupLayoutHints::inferred().priority(0.5)),
     ],
     output: &[],
     tabs: &[

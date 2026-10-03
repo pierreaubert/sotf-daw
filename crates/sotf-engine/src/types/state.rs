@@ -6,6 +6,7 @@ use super::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::time::Instant;
 
 /// A chunk of interleaved audio samples
 #[derive(Clone, Debug)]
@@ -294,6 +295,10 @@ fn default_latency_compensation_enabled() -> bool {
     true
 }
 
+fn default_peak_record_complete() -> bool {
+    true
+}
+
 fn default_playback_channels() -> usize {
     2
 }
@@ -360,6 +365,84 @@ pub struct AudioEngineState {
     /// Whether the latest meter window contained clipping or non-finite samples.
     #[serde(default)]
     pub output_clipping_detected: bool,
+    /// Maximum post-volume, pre-clamp output magnitude latched since playback began.
+    ///
+    /// Holds the maximum over every applied meter snapshot in the current
+    /// epoch plus the drained receipt's lossless terminal record, so the
+    /// epoch peak stays observable after fast drains. Cleared only by
+    /// Play/PlayAt; drain, stop, pause, resume, and seek preserve it.
+    ///
+    /// Completeness: a natural-EOF latch is the complete per-epoch max
+    /// (the terminal record recovers dropped periodic reports). An
+    /// acked Stop (`last_error` none) is likewise complete: the Stop
+    /// acknowledgment carries the terminal record of every
+    /// callback-observed sample before the emission cutoff. Only a
+    /// Stop-ack timeout leaves a partial latch (with `last_error`
+    /// set); a late acknowledgment still folds in afterwards.
+    #[serde(default)]
+    pub playback_peak_max_linear: f32,
+    /// Transport playback generation, incremented on every acked Play/PlayAt.
+    ///
+    /// Receipt for fresh-epoch observation: persists until the next Play,
+    /// so awaiting an epoch cannot miss it. Pause, resume, seek, stop,
+    /// gapless, and decoder recovery never change it.
+    #[serde(default)]
+    pub playback_epoch: u64,
+    /// Stream Flushes sent, counted at every decoder SEND-OK.
+    ///
+    /// Global monotonic generation (never reset): bumped once per
+    /// successfully queued Play/PlayAt/Seek/Stop, the exact commands
+    /// whose decoder arms each emit one Flush. Playback counts one
+    /// per consumed Flush and tags each drained receipt, so the
+    /// manager accepts only receipts born after the latest send.
+    /// Sub-epoch disambiguation: the epoch rule is unchanged.
+    #[serde(default)]
+    pub flushes_sent: u64,
+    /// Drained receipts observed with a generation ahead of sends.
+    ///
+    /// Monotonic integrity backstop (never reset): the `>` branch of
+    /// the drain gate is impossible by construction, so any count here
+    /// means the gate degraded to epoch-only on a counting bug. The
+    /// suite pins zero; production keeps working (availability over
+    /// integrity — wedging transport would brick every EOF), but the
+    /// degradation is state-visible instead of log-only. Peak data is
+    /// unaffected: recovery folds unconditionally on epoch match
+    /// before the generation gate runs.
+    #[serde(default)]
+    pub gen_ahead_events: u64,
+    /// Current decode-session identity for async error attribution.
+    ///
+    /// Tagging, not lockstep inference: at every Play/PlayAt SEND-OK
+    /// (seek-reopens included) the manager assigns the next tag and
+    /// persists it immediately — even when the later ack times out or
+    /// fails, because send-ok means queued means the decoder will
+    /// adopt the carried tag. The decoder adopts at every arm start
+    /// and tags its async failures; the manager applies a failure iff
+    /// the tag equals this value. Monotonic, never reset: fresh
+    /// engine = fresh threads = 0 both sides, and restore never
+    /// resurrects a live session, so no restore default can disagree.
+    #[serde(default)]
+    pub decoder_attempt: crate::engine::DecodeAttempt,
+    /// The epoch peak record covers every window SO FAR this epoch.
+    ///
+    /// Set false on worker-death detection (P3 — the dead worker's
+    /// unswapped residual and worker-local cumulative are lost, so
+    /// the record is honestly partial); reset ONLY on
+    /// Play-epoch-advance (a new epoch starts a new record).
+    /// Seeks, pauses, and gapless transitions never touch it (same
+    /// epoch, same record). Serde-defaults TRUE: a fresh or restored
+    /// state has no death recorded — restore never resurrects a live
+    /// session, so no restore default can disagree.
+    #[serde(default = "default_peak_record_complete")]
+    pub peak_record_complete: bool,
+    /// Terminal transport poison set when a worker thread dies.
+    ///
+    /// While set, the manager refuses every state-changing command with
+    /// "worker dead, recreate engine": the only recovery is a fresh
+    /// engine. Never cleared in place. Serde-defaults FALSE like Default,
+    /// so restore cannot disagree with a live unpoisoned engine.
+    #[serde(default)]
+    pub worker_death_poisoned: bool,
     /// Total plugin chain latency in samples (for position compensation)
     pub plugin_latency_samples: usize,
     /// Whether transport position should compensate for plugin latency.
@@ -394,8 +477,20 @@ pub struct AudioEngineState {
     /// Diagnostics from the latest plugin-host build attempt.
     #[serde(default)]
     pub plugin_build_diagnostics: Vec<PluginBuildDiagnostic>,
-    /// Seek in progress flag
+    /// Seek in progress flag (display only).
+    ///
+    /// Transport safety never depends on this flag: drain completion
+    /// is gated by epoch plus flush generation. Cleared on
+    /// SeekComplete, on the next stream command, or by the manager
+    /// tick after the display timeout, so a dropped SeekComplete
+    /// cannot wedge anything but a stale indicator.
     pub seeking: bool,
+    /// When the current seek display interval started.
+    ///
+    /// Manager-local deadline, excluded from the wire format: a
+    /// deserialized state never inherits a live seek interval.
+    #[serde(skip)]
+    pub seeking_since: Option<Instant>,
     /// Snapshot of isolated external plugin worker status.
     #[serde(default)]
     pub isolated_external_plugin_worker_statuses: Vec<IsolatedExternalPluginWorkerStatus>,
@@ -426,6 +521,13 @@ impl Default for AudioEngineState {
             playback_effective_sample_rate: 0,
             output_peak_linear: 0.0,
             output_clipping_detected: false,
+            playback_peak_max_linear: 0.0,
+            playback_epoch: 0,
+            flushes_sent: 0,
+            gen_ahead_events: 0,
+            decoder_attempt: 0,
+            peak_record_complete: true,
+            worker_death_poisoned: false,
             plugin_latency_samples: 0,
             latency_compensation_enabled: true,
             output_access_mode: OutputAccessMode::Shared,
@@ -439,6 +541,7 @@ impl Default for AudioEngineState {
             last_error: None,
             plugin_build_diagnostics: Vec::new(),
             seeking: false,
+            seeking_since: None,
             isolated_external_plugin_worker_statuses: Vec::new(),
         }
     }

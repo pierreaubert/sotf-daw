@@ -1,0 +1,56 @@
+[
+  {
+    "name": "drain-facade-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "-p",
+      "sotf-plugins",
+      "--test",
+      "aud140_channel_changing_eof"
+    ]
+  },
+  {
+    "name": "workspace-check-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "check",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--exclude",
+      "plugins-ffi",
+      "--lib",
+      "--bins",
+      "--tests",
+      "--examples"
+    ]
+  },
+  {
+    "name": "workspace-lint-final",
+    "exit": 0,
+    "command": [
+      "flock",
+      "/tmp/sotf-daw-audit-cargo.lock",
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--exclude",
+      "plugins-ffi",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ]
+  }
+]

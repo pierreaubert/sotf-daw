@@ -4,6 +4,10 @@
 
 - Drain finite same-rate, identity-frame child chains together with path-alignment and dry-delay buffers.
 - Validate drain admission and destination capacity before mutation; require reset after drain failures and reject unsupported recursive band-mask drain.
+- Refuse mixed-clock nested paths in `process` before either child advances (loud, history-preserving); true mixed-clock composition stays an R3 shared handoff.
+- Compose same-clock variable-frame children (bursts) through preallocated staging queues paired by stream position; identity hosts keep the accepted direct path bit-identically.
+- Drain retained process-phase queues ahead of child tails, and accept connected single-source/single-sink DAG paths in drain; other branching stays refused.
+- Report actual emitted frames via `last_output_frames`.
 
 # 0.5.6
 

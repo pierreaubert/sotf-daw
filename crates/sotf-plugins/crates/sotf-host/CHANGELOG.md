@@ -2,6 +2,8 @@
 
 ## Changes
 
+- Bound variable-rate drain work with quota refresh and validate output-frame contracts before consuming state. Keep unproven AB mask tail support conservative; remaining variable-producer probe limitations are tracked in `audit/RELEASE-DEFERRED.md`.
+
 - Reprepare retained native plugins transactionally when their input sample rate changes, preserving queued scalar controls and retaining the existing backend if preparation fails.
 - Restore VST3 state without typed audio setup on a detached candidate, including empty state; rejected restoration preserves populated audio history, resources and tail metadata.
 - Recover native Crossover controls after refused structural changes, including width-changing and invalid FIR PerChannel configurations.

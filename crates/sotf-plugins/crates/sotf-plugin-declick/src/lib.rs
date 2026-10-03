@@ -368,6 +368,15 @@ impl DeclickPlugin {
         self.cached_parameters[7].default_value = ParameterValue::Int(self.repair_width as i32);
         self.cached_parameters[8].default_value = ParameterValue::Bool(self.audition_residual);
     }
+
+    /// Read back owned-engine period locks (white-box test hook).
+    ///
+    /// Returns `(bands, supervisor)` from the owned engine; the legacy path
+    /// has no period tracker. Test-only; compiled out of production.
+    #[cfg(test)]
+    pub fn test_period_locks(&self) -> (Vec<Option<usize>>, Option<usize>) {
+        self.owned.test_period_locks()
+    }
 }
 
 fn audition_decay(sample_rate: u32) -> f32 {
@@ -602,7 +611,9 @@ impl ParametricInPlacePlugin for DeclickPlugin {
             self.legacy
                 .process_frames(&mut self.drain_silence[..samples])?;
         } else {
-            self.owned.process(&mut self.drain_silence[..samples])?;
+            // Declared drain (R35): identical DSP, explicit EOF context.
+            self.owned
+                .process_drain(&mut self.drain_silence[..samples])?;
         }
         output[..samples].copy_from_slice(&self.drain_silence[..samples]);
         self.drain_remaining = Some(remaining - frames);

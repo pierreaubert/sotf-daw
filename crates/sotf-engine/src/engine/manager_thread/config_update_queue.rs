@@ -18,14 +18,17 @@ use super::handle::handle_thread_event;
 use super::misc::initial_engine_state_from_config;
 #[cfg(feature = "streaming")]
 use super::misc::start_network_stream_server;
+use super::thread_event_visitor::expire_seeking_display;
 use super::types::ConfigUpdatePriority;
 use super::types::PendingConfigUpdate;
 use super::{ManagerReply, ManagerRequest};
 use crate::engine::processing_thread::build_plugin_host_with_policy;
+use crate::engine::worker_death::{record_worker_death, worker_death_disposition};
 use crate::{DsdOutputStatus, OutputAccessStatus};
 use arc_swap::ArcSwap;
 use std::collections::VecDeque;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, Sender, sync_channel};
 
 fn drain_thread_events(
@@ -429,30 +432,52 @@ pub(super) fn run_manager_thread(
 
     // Main loop
     loop {
-        for (finished, reported, name) in [
+        // Worker-death poll: merge each wrapper's exit slot with the
+        // is_finished fallback and record at most one death per worker.
+        // Runs before the event drain each tick, so the generic death
+        // record lands first and a drained exit event refines it with
+        // its specific text.
+        for (worker, slot, finished, reported) in [
             (
+                "decoder",
+                decoder_thread.exit_status(),
                 decoder_thread.is_finished(),
                 &mut decoder_exit_reported,
-                "decoder",
             ),
             (
+                "processing",
+                processing_thread.exit_status(),
                 processing_thread.is_finished(),
                 &mut processing_exit_reported,
-                "processing",
             ),
             (
+                "playback",
+                playback_thread.exit_status(),
                 playback_thread.is_finished(),
                 &mut playback_exit_reported,
-                "playback",
             ),
         ] {
-            if finished && !*reported {
+            if !*reported && let Some(death) = worker_death_disposition(slot, finished) {
                 *reported = true;
-                log::error!("[Manager Thread] {name} worker exited unexpectedly");
-                handle_thread_event(
-                    ThreadEvent::ProcessingError(format!("{name} worker exited unexpectedly")),
-                    &state,
-                );
+                // Fold the retained peak on ANY death: both wrappers
+                // retain their shared peak atomic past thread exit
+                // (desktop runtime, iOS feeder). On playback death it
+                // is the post-exit residual; on decoder/processing
+                // death it is the live unreported window (real
+                // per-epoch audio, otherwise recovered only via a
+                // later Stop or lost into partial). Max-composition
+                // with later Stop acks and reports is idempotent — no
+                // double count by construction — and the atomic load
+                // is lock-free safe against a live callback.
+                let retained_peak = Some(f32::from_bits(
+                    playback_thread
+                        .retained_output_peak_bits()
+                        .load(Ordering::Acquire),
+                ));
+                log::error!("[Manager Thread] worker dead ({worker}): {}", death.label());
+                let mut new_state = (**state.load()).clone();
+                record_worker_death(&mut new_state, worker, death, retained_peak);
+                state.store(Arc::new(new_state));
             }
         }
         #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
@@ -476,6 +501,29 @@ pub(super) fn run_manager_thread(
         // than the manager's 50 ms command wait, so handling only one event
         // per loop can indefinitely delay lifecycle events such as SeekComplete.
         drain_thread_events(&event_rx, &state);
+        // Fold late Stop acknowledgments and bound the seek indicator.
+        // Both are non-blocking and transport-safe by construction.
+        playback_thread.collect_ready_stop_acks(&state);
+        expire_seeking_display(&state);
+        // Drain reliable async decoder failures (non-blocking).
+        // Applied iff the tag is still current; stale tags drop
+        // loudly. Lives on the periodic tick (same pass as events) —
+        // no sub-tick consumer exists for errors, so tick latency is
+        // immaterial. Store only when something applied.
+        {
+            let errors = decoder_thread.drain_async_errors();
+            if !errors.is_empty() {
+                let mut new_state = (**state.load()).clone();
+                let causes = super::thread_event_visitor::select_current_decoder_errors(
+                    errors,
+                    new_state.decoder_attempt,
+                );
+                if super::thread_event_visitor::apply_decoder_async_errors(&mut new_state, &causes)
+                {
+                    state.store(Arc::new(new_state));
+                }
+            }
+        }
 
         // Check for config watcher events (non-blocking)
         if let Some(ref watcher) = config_watcher
@@ -517,7 +565,12 @@ pub(super) fn run_manager_thread(
                     // actually changes.
                     let error_string = e.to_string();
                     let current = state.load();
-                    if current.last_error.as_deref() != Some(error_string.as_str()) {
+                    // Death-text preservation: a queued config failure
+                    // applied post-death must not clobber the death
+                    // record (still error-logged above).
+                    if current.last_error.as_deref() != Some(error_string.as_str())
+                        && !current.worker_death_poisoned
+                    {
                         drop(current);
                         super::state_helpers::update_engine_state(&state, |new_state| {
                             new_state.last_error = Some(error_string);

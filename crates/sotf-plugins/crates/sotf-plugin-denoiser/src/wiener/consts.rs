@@ -1,4 +1,5 @@
 use super::super::DenoiserPlugin;
+use super::super::reduction_curve::ReductionCurve;
 use math_audio_dsp::fast_math::fast_log10;
 use rustfft::num_complex::Complex;
 
@@ -25,6 +26,7 @@ impl DenoiserPlugin {
         let reduction_factor = self.coeffs.reduction_linear;
         let floor_linear = self.coeffs.floor_linear;
         let transparency = self.params.transparency;
+        let curve_flat = self.curve.curve.is_flat();
 
         let mut total_reduction = 0.0_f32;
         let mut bin_count = 0;
@@ -58,6 +60,14 @@ impl DenoiserPlugin {
                 // This preserves gain in high-SNR (clean) regions while reducing
                 // gain in low-SNR (noisy) regions proportional to reduction_factor
                 let gain = (snr_priori / (snr_priori + reduction_factor)).max(floor_linear);
+
+                // Shape the reduction with the per-bin curve scale. Skipped
+                // for flat curves so legacy output stays bit-identical.
+                let gain = if curve_flat {
+                    gain
+                } else {
+                    ReductionCurve::shape_gain(self.curve.scales[k], gain)
+                };
 
                 // Blend toward dry signal based on transparency (0 = full denoise, 1 = pass-through)
                 let gain = gain + transparency * (1.0 - gain);

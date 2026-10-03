@@ -138,13 +138,15 @@ pub(crate) fn decode_hiss_field(
     encoded: &str,
     expected_channels: usize,
 ) -> Result<(u64, Option<NoiseProfileData>), String> {
-    let value: serde_json::Value =
-        serde_json::from_str(encoded).map_err(|error| format!("Hiss profile field malformed: {error}"))?;
+    let value: serde_json::Value = serde_json::from_str(encoded)
+        .map_err(|error| format!("Hiss profile field malformed: {error}"))?;
     let object = value
         .as_object()
         .ok_or_else(|| "Hiss profile field must be an object".to_string())?;
     if object.len() != 3 {
-        return Err("Hiss profile field must carry version, generation, and captured_profile".to_string());
+        return Err(
+            "Hiss profile field must carry version, generation, and captured_profile".to_string(),
+        );
     }
     if object.get("version").and_then(serde_json::Value::as_u64) != Some(HISS_STATE_VERSION) {
         return Err(format!(
@@ -193,7 +195,8 @@ pub(crate) fn decode_hiss_field(
 ///     let _ = snapshot.try_status();
 /// }
 /// ```
-pub(crate) fn hiss_snapshot(plugin: &dyn Plugin) -> Option<Arc<ProfileSnapshot>> {
+#[doc(hidden)]
+pub fn hiss_snapshot(plugin: &dyn Plugin) -> Option<Arc<ProfileSnapshot>> {
     plugin.get_data()?.downcast::<ProfileSnapshot>().ok()
 }
 
@@ -213,10 +216,7 @@ pub(crate) fn hiss_snapshot(plugin: &dyn Plugin) -> Option<Arc<ProfileSnapshot>>
 ///
 /// Returns the plugin error when capture cannot arm.
 pub fn hiss_start_capture(plugin: &mut dyn Plugin) -> Result<(), String> {
-    plugin.set_parameter(
-        ParameterId::from("learn_noise"),
-        ParameterValue::Bool(true),
-    )
+    plugin.set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
 }
 
 /// Cancels a live Hiss capture on the control thread.
@@ -276,13 +276,14 @@ pub fn hiss_capture_control(
 /// wrapper: mutated on the audio thread, written on the control thread
 /// only while no audio thread runs. Default is all false.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(crate) struct HissMomentaryLatch {
+#[doc(hidden)]
+pub struct HissMomentaryLatch {
     /// Last consumed `learn_noise` host value.
-    pub(crate) learn: bool,
+    pub learn: bool,
     /// Last consumed `clear_profile` host value.
-    pub(crate) clear: bool,
+    pub clear: bool,
     /// Live DSP admits immediate `learn_noise` control.
-    pub(crate) learn_immediate: bool,
+    pub learn_immediate: bool,
     /// Live DSP admits immediate `clear_profile` control.
-    pub(crate) clear_immediate: bool,
+    pub clear_immediate: bool,
 }

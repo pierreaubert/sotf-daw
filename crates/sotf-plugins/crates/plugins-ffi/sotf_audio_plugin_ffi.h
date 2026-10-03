@@ -15,6 +15,21 @@
 #include <stdlib.h>
 
 /**
+ * Hiss capture action: cancel an active capture.
+ */
+#define HISS_CAPTURE_CANCEL 0
+
+/**
+ * Hiss capture action: start a new 1 s capture.
+ */
+#define HISS_CAPTURE_START 1
+
+/**
+ * Hiss capture action: discard the stored profile.
+ */
+#define HISS_CLEAR_PROFILE 2
+
+/**
  * Error codes returned by FFI functions
  */
 typedef enum PluginError {
@@ -412,6 +427,116 @@ int plugin_process(struct PluginHandle *handle,
                    size_t num_frames);
 
 /**
+ * Deliver finalized tail frames after the final process call.
+ *
+ * The caller supplies an explicit frame capacity; this call reports how
+ * many frames were produced and whether the stream is complete. Size the
+ * capacity with [`plugin_get_drain_capacity_frames`]: smaller capacities
+ * fail with [`PluginError::BufferTooSmall`] without consuming any drain
+ * state, so the caller can retry with a larger buffer. Repeat
+ * full-capacity calls until `complete` is set; no universal call count is
+ * promised (the trait call bound is optional and post-begin only), so the
+ * completion flag is the contract. Only the first `*produced_frames`
+ * frames are valid audio; on success the FFI layer never writes past the
+ * produced prefix itself. Failure paths instead silence the full
+ * validated destination (with `*produced_frames` left at zero), as
+ * documented under Returns below. After completion, further calls report
+ * zero produced frames with `complete` set, and [`plugin_reset`] returns
+ * the handle to normal processing.
+ *
+ * The FFI layer allocates nothing on any path (static diagnostics only);
+ * plugin work follows the trait contracts (`begin_drain`/`drain` are
+ * allocation-free, and the capacity bound is a shared-reference query).
+ * Preparation runs the fused `begin_drain`-then-`drain` sequence with a
+ * zero-frame context on both calls, matching the host drain convention;
+ * it does not call `prepare_drain_metadata`, which only feeds host-graph
+ * tail metadata this single-plugin call never queries.
+ *
+ * # Returns
+ * * 0 on success (check `*produced_frames` and `*complete`)
+ * * [`PluginError::NullPointer`] for null handles or out-pointers
+ * * [`PluginError::BufferTooSmall`] when `capacity_frames` is below the
+ *   declared drain bound or the destination size overflows
+ * * [`PluginError::ProcessingFailed`] when drain preparation or the drain
+ *   step itself fails (output is silenced)
+ * * [`PluginError::UnknownError`] when a plugin panic is caught (output
+ *   is silenced)
+ *
+ * # Safety
+ * * `handle` must be a live plugin handle from [`plugin_create`] that has
+ *   not been destroyed, and this call must hold exclusive access to it:
+ *   no other thread may use the handle for the duration of this call. A
+ *   null handle is checked and reports [`PluginError::NullPointer`].
+ * * `produced_frames` must be valid for writing one `usize` (correctly
+ *   aligned) and `complete` valid for writing one `c_int`; both stay
+ *   valid for the call and may point at uninitialized memory (both are
+ *   written via raw pointer writes before any other work). Null
+ *   out-pointers are checked and report [`PluginError::NullPointer`].
+ *   Neither out-pointer may overlap the handle, the other out-pointer,
+ *   or the `output` range below.
+ * * `output` must be valid for writing `capacity_frames * output_channels`
+ *   contiguous, correctly aligned `f32` samples that stay valid and
+ *   unaliased for the call, except that it may be `NULL` only when
+ *   `capacity_frames` is `0` (a null `output` with positive capacity
+ *   reports [`PluginError::NullPointer`]). Every sample in the range
+ *   must hold a properly initialized `f32` value: this implementation
+ *   builds a slice over the range, which requires initialized memory,
+ *   so a C caller must not pass freshly allocated-but-unwritten
+ *   storage. The range must not overlap the handle or either
+ *   out-pointer.
+ *
+ * # Panics
+ * Never panics across the FFI boundary; every plugin call on this path
+ * (capacity bound, preparation, drain step) runs inside the panic
+ * boundary and panics are reported as [`PluginError::UnknownError`].
+ */
+int plugin_drain(struct PluginHandle *handle,
+                 float *output,
+                 size_t capacity_frames,
+                 size_t *produced_frames,
+                 int *complete);
+
+/**
+ * Report the per-call drain capacity a [`plugin_drain`] call needs.
+ *
+ * This exposes the initialized handle's declared
+ * [`sotf_host::plugin::Plugin::drain_output_frames_max`] bound: the
+ * minimum `capacity_frames` the fused drain call accepts. Latency-bounded
+ * tails (such as Declick) report their `latency_samples` here, but the
+ * bound is independent of latency in general, so size drain buffers from
+ * this query rather than the info document. The query is a
+ * shared-reference trait call: it mutates no plugin or drain state, is
+ * safe to repeat at any lifecycle point (before, during, or after a
+ * drain), and stays valid until the next successful process, drain,
+ * parameter, state, or reset call. It reports no call count: the trait
+ * call bound is optional and only queryable after a successful
+ * `begin_drain`, which the fused C drain performs internally, so callers
+ * repeat full-capacity [`plugin_drain`] calls until `complete` is set.
+ *
+ * # Returns
+ * * 0 on success (`*capacity_frames` holds the bound)
+ * * [`PluginError::NullPointer`] for a null handle or out-pointer
+ * * [`PluginError::UnknownError`] when a plugin panic is caught
+ *
+ * # Safety
+ * * `handle` must be a live plugin handle from [`plugin_create`] that has
+ *   not been destroyed, and this call must hold exclusive access to it:
+ *   no other thread may use the handle for the duration of this call. A
+ *   null handle is checked and reports [`PluginError::NullPointer`].
+ * * `capacity_frames` must be valid for writing one `usize` (correctly
+ *   aligned) that stays valid for the call; it may point at
+ *   uninitialized memory and must not overlap the handle. A null
+ *   out-pointer is checked and reports [`PluginError::NullPointer`].
+ *   Trust `*capacity_frames` only when the return code signals success.
+ *
+ * # Panics
+ * Never panics across the FFI boundary; the plugin bound query runs
+ * inside the panic boundary and panics are reported as
+ * [`PluginError::UnknownError`].
+ */
+int plugin_get_drain_capacity_frames(struct PluginHandle *handle, size_t *capacity_frames);
+
+/**
  * Process audio samples with incoming MIDI events.
  *
  * MIDI events are copied into a fixed stack buffer, then borrowed by
@@ -533,6 +658,17 @@ const struct ParameterInfo *plugin_get_parameter_info(const struct PluginHandle 
  * before interpreting index 0. DynamicEQ shape index 3 is Tilt, matching
  * the DSP `DynEqShape` order.
  *
+ * Speech Denoiser `model` exposes 3 labels in registry order: 0=`RNNoise
+ * Full`, 1=`RNNoise Legacy LQ`, 2=`RNNoise Legacy SH`, matching the DSP
+ * `MODEL_LABELS` and the 0..=2 parameter range. Any other `choice_index`
+ * returns `NULL`, as do the non-choice `enabled`/`strength` parameters.
+ *
+ * Declick `mode` exposes 2 labels in registry order (0=`Random`,
+ * 1=`Periodic`) matching the DSP `MODE_OPTIONS`, and Declick `bands`
+ * exposes 3 labels (0=`Fullband`, 1=`2-band`, 2=`3-band`) matching the DSP
+ * `BANDS_OPTIONS`. Any other `choice_index` returns `NULL`, as do the
+ * non-choice Declick controls.
+ *
  * # Safety
  * * `handle` must be `NULL` or a live plugin handle.
  */
@@ -602,10 +738,14 @@ void plugin_free_string(char *s);
 /**
  * Save plugin state to a JSON byte buffer.
  *
+ * Hiss saves include the exact `captured_profile` blob when present and
+ * fail explicitly on snapshot contention: contention returns `NULL` with
+ * a busy diagnostic and `out_len` set to 0, never a truncated success.
+ *
  * # Returns
  * * Pointer to an allocated buffer owned by the caller on success. It must be
  *   released with [`plugin_free_state`] when no longer needed.
- * * `NULL` on error.
+ * * `NULL` on error, with `out_len` set to 0 when it is writable.
  *
  * # Safety
  * * `handle` must be a valid plugin handle that has not been destroyed.
@@ -635,6 +775,27 @@ uint8_t *plugin_save_state(const struct PluginHandle *handle, size_t *out_len);
 int plugin_load_state(struct PluginHandle *handle, const uint8_t *data, size_t len);
 
 /**
+ * Control Hiss capture from the control thread.
+ *
+ * Starts, cancels, or clears a noise-profile capture on a Hiss handle.
+ * `action` must be [`HISS_CAPTURE_CANCEL`], [`HISS_CAPTURE_START`], or
+ * [`HISS_CLEAR_PROFILE`]. State restoration never triggers these commands;
+ * this explicit control distinguishes user intent from preset recall.
+ * The realtime [`plugin_set_parameter`] refusal for `learn_noise` and
+ * `clear_profile` is unchanged.
+ *
+ * # Returns
+ * * 0 on success
+ * * Error code on failure
+ *
+ * # Safety
+ * * `handle` must be a valid plugin handle that has not been destroyed.
+ * * Call on a control thread with no concurrent access to `handle`,
+ *   including audio processing or parameter access.
+ */
+int plugin_hiss_capture_control(struct PluginHandle *handle, int action);
+
+/**
  * Free a state buffer returned by [`plugin_save_state`] or
  * [`plugin_export_preset_json`].
  *
@@ -651,6 +812,8 @@ void plugin_free_state(uint8_t *data, size_t len);
  *
  * The returned buffer uses the preset document schema advertised by
  * [`plugin_preset_document_info`] and must be freed with [`plugin_free_state`].
+ * Hiss contention fails explicitly like [`plugin_save_state`]: `NULL` with
+ * a busy diagnostic and `out_len` set to 0, never a truncated document.
  *
  * # Safety
  * * `handle` must be a valid plugin handle that has not been destroyed.

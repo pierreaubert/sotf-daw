@@ -19,6 +19,20 @@ pub(in crate::engine) struct PlaybackState {
     pub(super) muted: Arc<AtomicBool>,
     pub(super) volume_ramp: VolumeRampState,
     pub(super) flush_requested: Arc<AtomicBool>,
+    /// Stop-armed emission latch (defense-in-depth).
+    ///
+    /// While set, the callback discards ring content instead of
+    /// emitting it — but the latch never operatively discards: the
+    /// Stop arm sets worker drop-mode in the same straight line,
+    /// drop-mode clears only via a Flush (which clears the latch
+    /// first) or a Resume (same), and every ring write is
+    /// drop-checked, so a set latch always coincides with an empty
+    /// or flag-covered ring. The operative cutoff is worker-drop
+    /// plus the transient flag plus end-to-end FIFO plus the
+    /// quiesce-gated terminal swap; the latch only backstops a
+    /// future bypass of drop-mode. Cleared by any Resume or any
+    /// Flush; its job is the no-boundary case.
+    pub(super) stop_latched: AtomicBool,
     pub(super) underrun_count: Arc<AtomicU64>,
     pub(super) last_buffer_level: Arc<AtomicU64>, // For tracking buffer fill percentage
     pub(super) total_callback_samples: Arc<AtomicU64>,
@@ -40,6 +54,7 @@ impl PlaybackState {
             muted: Arc::new(AtomicBool::new(false)),
             volume_ramp: VolumeRampState::new(1.0),
             flush_requested: Arc::new(AtomicBool::new(false)),
+            stop_latched: AtomicBool::new(false),
             underrun_count: Arc::new(AtomicU64::new(0)),
             last_buffer_level: Arc::new(AtomicU64::new(100)),
             total_callback_samples: Arc::new(AtomicU64::new(0)),
@@ -48,6 +63,27 @@ impl PlaybackState {
             stream_error_count: Arc::new(AtomicU64::new(0)),
             output_peak_bits: Arc::new(AtomicU32::new(0.0f32.to_bits())),
             clipped_sample_count: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    /// Rebuild constructor sharing the meter atomics with a predecessor.
+    ///
+    /// Controls are configuration (copied by the caller via
+    /// `copy_playback_controls`); meter is telemetry (shared, never
+    /// copied). Sharing makes rebuild order irrelevant: accumulation
+    /// continues into the same atomics on every path (reconfigure,
+    /// sample-rate, channels, recovery), failure-path resume is
+    /// symmetric (nothing moved, single atomics, no double count),
+    /// and no transfer race can exist.
+    pub(super) fn new_sharing_meters(
+        capacity: usize,
+        output_peak_bits: Arc<AtomicU32>,
+        clipped_sample_count: Arc<AtomicU64>,
+    ) -> Self {
+        Self {
+            output_peak_bits,
+            clipped_sample_count,
+            ..Self::new(capacity)
         }
     }
 
@@ -69,6 +105,12 @@ pub(super) fn copy_playback_controls(from: &PlaybackState, to: &PlaybackState) {
         f32::from_bits(to.volume.load(Ordering::Relaxed))
     };
     to.volume_ramp.snap_to(target);
+    // Meter atomics are SHARED via `new_sharing_meters`, never copied
+    // here: accumulation continues uninterrupted on every rebuild
+    // path, and rebuild order is irrelevant. Control flags
+    // (flush/latch/active) deliberately do NOT transfer: the new
+    // stream starts undisrupted, and an inherited latch with no
+    // upcoming boundary would wedge it silent.
 }
 
 pub(super) fn rebuild_playback_stream(
@@ -101,7 +143,11 @@ pub(super) fn rebuild_playback_stream(
     let channels = hw_channels as usize;
     let buffer_capacity = playback_buffer_capacity(params.sample_rate, channels, params.buffer_ms);
     let (mut producer, consumer) = RingBuffer::<f32>::new(buffer_capacity);
-    let state = Arc::new(PlaybackState::new(buffer_capacity));
+    let state = Arc::new(PlaybackState::new_sharing_meters(
+        buffer_capacity,
+        Arc::clone(&params.old_state.output_peak_bits),
+        Arc::clone(&params.old_state.clipped_sample_count),
+    ));
     copy_playback_controls(params.old_state, &state);
     prefill_silence(&mut producer, buffer_capacity / 2);
 
@@ -158,7 +204,11 @@ pub(in crate::engine) fn read_ring_buffer(
     state: &PlaybackState,
     capacity: usize,
 ) -> bool {
-    if state.flush_requested.load(Ordering::Relaxed) {
+    // Fused discard: a latched Stop discards exactly like a flush
+    // request. Relaxed staleness is benign — both paths discard and
+    // emit zeros; any sample emitted before the latch is observed is
+    // still metered and captured by the terminal swap before the ack.
+    if state.flush_requested.load(Ordering::Relaxed) || state.stop_latched.load(Ordering::Relaxed) {
         let available = consumer.slots().min(requested);
         if available > 0
             && let Ok(chunk) = consumer.read_chunk(available)
@@ -170,6 +220,9 @@ pub(in crate::engine) fn read_ring_buffer(
         if consumer.slots() == 0 {
             state.flush_requested.store(false, Ordering::Relaxed);
         }
+        // stop_latched persists here by design: only a Resume or a
+        // stream Flush clears it, so arrivals with no subsequent
+        // boundary keep discarding instead of emitting.
 
         let fill_percent = (consumer.slots() * 100).checked_div(capacity).unwrap_or(0);
         state

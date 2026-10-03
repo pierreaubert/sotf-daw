@@ -1,4 +1,5 @@
-use super::{DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
+use super::worker_death::{WorkerExit, WorkerExitStatus, record_worker_exit};
+use super::{DecoderAsyncError, DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
 use crate::DsdOutputMode;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Mutex;
@@ -24,6 +25,8 @@ pub struct DecoderThread {
     response_inbox: Mutex<DecoderResponseInbox>,
     next_request_id: AtomicU64,
     thread_handle: Option<std::thread::JoinHandle<()>>,
+    async_error_rx: Receiver<DecoderAsyncError>,
+    exit_status: WorkerExitStatus,
 }
 
 struct DecoderResponseInbox {
@@ -45,6 +48,14 @@ impl DecoderThread {
     ) -> Result<Self, String> {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
         let (response_tx, response_rx) = std::sync::mpsc::channel();
+        // Reliable async-error channel (unbounded: send never blocks;
+        // production is bounded — one error stops its phase, and
+        // resumption needs a new attempt). The worker loop owns the
+        // sender; the manager tick drains the receiver. Worker
+        // thread only — never an audio callback.
+        let (async_error_tx, async_error_rx) = std::sync::mpsc::channel();
+        let exit_status = WorkerExitStatus::new();
+        let worker_exit_status = exit_status.clone();
 
         let thread_handle = std::thread::Builder::new()
             .name("decoder".to_string())
@@ -60,9 +71,10 @@ impl DecoderThread {
                         frame_size,
                         recycle_rx,
                         dsd_output,
+                        async_error_tx,
                     )
                 }));
-                match result {
+                match &result {
                     Ok(Ok(())) => {}
                     Ok(Err(e)) => {
                         log::error!("[Decoder Thread] Error: {}", e);
@@ -75,6 +87,7 @@ impl DecoderThread {
                         let _ = error_tx.try_send(ThreadEvent::ThreadPanic("decoder".to_string()));
                     }
                 }
+                record_worker_exit(&worker_exit_status, &result);
             })
             .map_err(|e| format!("Failed to spawn decoder thread: {}", e))?;
 
@@ -88,7 +101,19 @@ impl DecoderThread {
             }),
             next_request_id: AtomicU64::new(1),
             thread_handle: Some(thread_handle),
+            async_error_rx,
+            exit_status,
         })
+    }
+
+    /// Drain pending async decoder failures without blocking.
+    ///
+    /// Thin transport: staleness selection and application live in
+    /// the manager helpers (pure over the drained vec — see
+    /// `select_current_decoder_errors`), so this stays untestable
+    /// wiring by design (no ManagerContext double exists).
+    pub(in crate::engine) fn drain_async_errors(&self) -> Vec<DecoderAsyncError> {
+        self.async_error_rx.try_iter().collect()
     }
 
     /// Send a command to the decoder thread
@@ -147,6 +172,11 @@ impl DecoderThread {
         self.thread_handle
             .as_ref()
             .is_some_and(std::thread::JoinHandle::is_finished)
+    }
+
+    /// Load the recorded exit disposition (`None` means slot corruption).
+    pub(crate) fn exit_status(&self) -> Option<WorkerExit> {
+        self.exit_status.load()
     }
 
     /// Shutdown the decoder thread

@@ -49,6 +49,9 @@ fn main() {
                         polyphonic_detection: all_modes,
                         formant_preservation: all_modes,
                         spectral_sub_enabled: all_modes,
+                        curve_low: if all_modes { 0.2 } else { 1.0 },
+                        curve_mid: if all_modes { 0.7 } else { 1.0 },
+                        curve_high: 1.0,
                         ..Default::default()
                     };
                     let mut candidate = DenoiserPlugin::try_from_params(channels, params).unwrap();
@@ -63,6 +66,20 @@ fn main() {
                         candidate
                             .parametric_set_parameter(
                                 ParameterId::from("spatial_denoise"),
+                                ParameterValue::Bool(true),
+                            )
+                            .unwrap();
+                        // Exercise the audition crossfade and a live curve
+                        // rebuild on the measured allocation path.
+                        candidate
+                            .parametric_set_parameter(
+                                ParameterId::from("curve_mid"),
+                                ParameterValue::Float(0.4),
+                            )
+                            .unwrap();
+                        candidate
+                            .parametric_set_parameter(
+                                ParameterId::from("audition_residual"),
                                 ParameterValue::Bool(true),
                             )
                             .unwrap();

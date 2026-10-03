@@ -2,6 +2,9 @@
 
 ## Changes
 
+- Preserve finite-stream and crossfade state across playback/decoder transitions, propagate worker failures, and validate graph drain behavior.
+- Forward Denoiser reduction-curve and residual-audition controls with legacy preset defaults; retain exact legacy-audio and rejected-candidate state checks.
+
 - Materialize ordered Crossover cutoffs when expanding Bands, reject unrepresentable expansions without changing settings, and preserve legacy PerChannel presets while editing dormant band counts.
 
 - Reject invalid EQ replacements before publishing a reduced plugin chain, preserving the running configuration.

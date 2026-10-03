@@ -1,6 +1,7 @@
 use serial_test::serial;
 use sotf_audio::engine::{
-    AudioFrame, OutputAccessMode, PlaybackCommand, PlaybackThread, ProcessingMessage, ThreadEvent,
+    AudioFrame, OutputAccessMode, PlaybackCommand, PlaybackStopRequest, PlaybackThread,
+    ProcessingMessage, ThreadEvent,
 };
 use std::sync::mpsc::{channel, sync_channel};
 use std::time::Duration;
@@ -75,7 +76,11 @@ fn test_playback_send_commands() {
     assert!(playback.send_command(PlaybackCommand::Mute(false)).is_ok());
 
     // Test sending stop command
-    assert!(playback.send_command(PlaybackCommand::Stop).is_ok());
+    assert!(
+        playback
+            .send_command(PlaybackCommand::Stop(PlaybackStopRequest::default()))
+            .is_ok()
+    );
 }
 
 #[test]
@@ -261,15 +266,13 @@ fn receives_frames_transport_proof() {
     let drained_at = loop {
         match event_rx.recv_timeout(Duration::from_secs(10)) {
             Ok(event) => {
-                let drained = matches!(event, ThreadEvent::PlaybackDrained);
+                let drained = matches!(event, ThreadEvent::PlaybackDrained { .. });
                 events.push(event);
                 if drained {
                     break std::time::Instant::now();
                 }
             }
-            Err(_) => panic!(
-                "drained receipt never arrived; events so far: {events:?}"
-            ),
+            Err(_) => panic!("drained receipt never arrived; events so far: {events:?}"),
         }
     };
     assert!(
@@ -279,7 +282,7 @@ fn receives_frames_transport_proof() {
     );
     let drained_index = events
         .iter()
-        .position(|event| matches!(event, ThreadEvent::PlaybackDrained))
+        .position(|event| matches!(event, ThreadEvent::PlaybackDrained { .. }))
         .expect("drained receipt must be present");
     let stats_before: Vec<_> = events[..drained_index]
         .iter()
@@ -762,15 +765,13 @@ fn test_playback_terminal_stats_precede_drained_for_short_stream() {
     let drained_at = loop {
         match event_rx.recv_timeout(Duration::from_secs(10)) {
             Ok(event) => {
-                let drained = matches!(event, ThreadEvent::PlaybackDrained);
+                let drained = matches!(event, ThreadEvent::PlaybackDrained { .. });
                 events.push(event);
                 if drained {
                     break std::time::Instant::now();
                 }
             }
-            Err(_) => panic!(
-                "drained receipt never arrived; events so far: {events:?}"
-            ),
+            Err(_) => panic!("drained receipt never arrived; events so far: {events:?}"),
         }
     };
     // Premise guard: with construction-to-drained under five seconds, every
@@ -783,7 +784,7 @@ fn test_playback_terminal_stats_precede_drained_for_short_stream() {
     );
     let drained_index = events
         .iter()
-        .position(|event| matches!(event, ThreadEvent::PlaybackDrained))
+        .position(|event| matches!(event, ThreadEvent::PlaybackDrained { .. }))
         .expect("drained receipt must be present");
     let stats_before: Vec<_> = events[..drained_index]
         .iter()

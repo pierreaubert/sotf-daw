@@ -82,6 +82,7 @@ pub(crate) use gc_thread::GcItem;
 pub use gc_thread::{GcSender, GcThread};
 
 mod thread_join;
+mod worker_death;
 pub(crate) use thread_join::join_timeout;
 
 pub mod rt_priority;

@@ -422,6 +422,29 @@ impl ParametricPlugin for GainPlugin {
         sotf_host::plugin::TailLength::Finite(0)
     }
 
+    fn tail_support(&self) -> Option<u64> {
+        // Zero in, zero out, in every smoother state: smoother history
+        // scales input but never emits without it, so no state rings.
+        Some(0)
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Every process path copies the input block to the output and
+        // scales it in place, returning exactly `context.num_frames`.
+        true
+    }
+
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // Gain holds no tail: drain always completes with zero frames.
+        Some(0)
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        // Every success path returns exactly `context.num_frames`
+        // (identity geometry above), in every smoother state.
+        Some(input_frames)
+    }
+
     fn plugin_info(&self) -> PluginInfo {
         PluginInfo::new("Gain", env!("CARGO_PKG_VERSION"), "Sotf")
     }
@@ -1471,5 +1494,153 @@ mod tests {
                 Some(ParameterValue::Float(-3.0))
             );
         }
+    }
+
+    #[test]
+    fn identity_frame_geometry_opt_in_holds_across_block_sizes() {
+        use sotf_host::parametric_plugin::ParametricPluginAdapter;
+        use sotf_host::plugin::Plugin;
+
+        // The explicit opt-in and its adapter forwarding (relied on by
+        // A/B Compare drain preparation).
+        assert!(GainPlugin::new(2, 0.0).guarantees_identity_frame_geometry());
+        let mut adapted = ParametricPluginAdapter::new(GainPlugin::new(2, -6.0));
+        assert!(adapted.guarantees_identity_frame_geometry());
+        // Truthfulness: every block size round-trips its frame count,
+        // settled and mid-ramp alike.
+        adapted
+            .set_parameter(ParameterId::from("gain_db"), ParameterValue::Float(6.0))
+            .unwrap();
+        for frames in [1, 7, 64, 512] {
+            let input = vec![0.5; frames * 2];
+            let mut output = vec![0.0; frames * 2];
+            let context = ProcessContext::new(48_000, frames);
+            assert_eq!(
+                adapted.process(&input, &mut output, &context).unwrap(),
+                frames
+            );
+            assert!(output.iter().all(|sample| sample.is_finite()));
+        }
+    }
+
+    #[test]
+    fn envelopes_dominate_live_declarations_in_every_smoother_state() {
+        use sotf_host::parametric_plugin::ParametricPluginAdapter;
+        use sotf_host::plugin::Plugin;
+
+        // F2: the envelope contract requires envelope(n) >= live(n) in
+        // every stream state. GainPlugin is a ParametricPlugin, so the
+        // real published contracts live on the ADAPTED Plugin surface
+        // the host consumes (live(n) == n, envelope Some(n), drain 0 /
+        // Some(0)); pin them across genuinely different smoother
+        // states. States are proven behaviorally by output shape, since
+        // the adapter owns the inner plugin: settled blocks hold every
+        // lane constant across frames (frames identical for constant
+        // input, lanes may differ) while smoothing blocks ramp (first
+        // and last frames differ). Flat output implies the settled
+        // path: a smoothing 1024-frame block moves far above float
+        // epsilon for any millisecond-scale smoother, and anything
+        // slower would already sit below the 1e-5 settled threshold.
+        let check = |plugin: &dyn Plugin, state: &str| {
+            for &frames in &[0usize, 1, 64, 8192] {
+                assert_eq!(
+                    plugin.output_frames_for_input(frames),
+                    frames,
+                    "{state}: live process declaration must stay identity"
+                );
+                assert_eq!(
+                    plugin.output_frames_envelope(frames),
+                    Some(frames),
+                    "{state}: process envelope must stay identity"
+                );
+            }
+            assert_eq!(
+                plugin.drain_output_frames_max(),
+                0,
+                "{state}: live drain bound must stay zero"
+            );
+            assert_eq!(
+                plugin.drain_frames_envelope(),
+                Some(0),
+                "{state}: drain envelope must stay zero"
+            );
+        };
+        let run = |plugin: &mut dyn Plugin, frames: usize| {
+            let input = vec![0.5f32; frames * 2];
+            let mut output = vec![0.0f32; frames * 2];
+            let context = ProcessContext::new(48_000, frames);
+            let produced = plugin.process(&input, &mut output, &context).unwrap();
+            assert_eq!(produced, frames, "gain must stay frame-exact");
+            output
+        };
+        // Flatness is per lane across frames: interleaved channels may
+        // hold different settled gains, so every frame must equal the
+        // first. Empty input panics loudly at the index, and a stray
+        // trailing sample (which chunk iteration would silently drop)
+        // fails loudly too; callers always render whole blocks.
+        let is_flat = |output: &[f32]| {
+            let (frames, remainder) = output.as_chunks::<2>();
+            assert!(
+                remainder.is_empty(),
+                "flatness probe needs whole stereo frames, got {} stray samples",
+                remainder.len()
+            );
+            let first = &frames[0];
+            frames.iter().all(|frame| frame == first)
+        };
+        // Self-proving convergence: iterate until a full block renders
+        // flat, with a loud cap (102400 frames) far above any
+        // millisecond-scale smoother.
+        let converge = |plugin: &mut dyn Plugin, state: &str| {
+            for _ in 0..100 {
+                if is_flat(&run(plugin, 1024)) {
+                    return;
+                }
+            }
+            panic!("{state}: gain did not converge within 102400 frames");
+        };
+
+        // Global path: settled fresh, smoothing after a retarget,
+        // settled again after convergence.
+        let mut global: Box<dyn Plugin> =
+            Box::new(ParametricPluginAdapter::new(GainPlugin::new(2, 0.0)));
+        global.initialize(48_000).unwrap();
+        check(&*global, "global fresh");
+        let settled = run(&mut *global, 64);
+        assert!(is_flat(&settled), "fresh unity gain must render flat");
+        check(&*global, "global settled");
+        global
+            .set_parameter(ParameterId::from("gain_db"), ParameterValue::Float(-6.0))
+            .unwrap();
+        let ramp = run(&mut *global, 64);
+        assert_ne!(
+            ramp.first(),
+            ramp.last(),
+            "retargeted gain must ramp (smoothing state)"
+        );
+        check(&*global, "global smoothing");
+        converge(&mut *global, "global");
+        check(&*global, "global converged");
+
+        // Per-channel path: same three states through one lane retarget
+        // (the untouched lane stays flat, so the ramp proves lane 1).
+        let inner = GainPlugin::new_per_channel(vec![0.0, 0.0]).unwrap();
+        let mut lanes: Box<dyn Plugin> = Box::new(ParametricPluginAdapter::new(inner));
+        lanes.initialize(48_000).unwrap();
+        check(&*lanes, "lanes fresh");
+        let settled = run(&mut *lanes, 64);
+        assert!(is_flat(&settled), "fresh per-channel gain must render flat");
+        lanes
+            .set_parameter(ParameterId::from("gain_db_1"), ParameterValue::Float(-6.0))
+            .unwrap();
+        let ramp = run(&mut *lanes, 64);
+        assert_ne!(
+            ramp.first(),
+            ramp.last(),
+            "retargeted lane must ramp (smoothing state)"
+        );
+        check(&*lanes, "lanes smoothing");
+        converge(&mut *lanes, "lanes");
+        check(&*lanes, "lanes converged");
     }
 }

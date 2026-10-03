@@ -720,6 +720,134 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "autoeq"
+version = "0.5.74"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "anyhow",
+ "autoeq-artifacts",
+ "autoeq-core",
+ "autoeq-fir",
+ "autoeq-measurements",
+ "autoeq-optim",
+ "autoeq-workflow",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "math-optimisation",
+ "roomeq-analysis",
+ "roomeq-engine",
+ "roomeq-export",
+ "roomeq-model",
+ "roomeq-quality",
+ "roomeq-synthetic",
+ "roomeq-workflow",
+ "serde_json",
+]
+
+[[package]]
+name = "autoeq-artifacts"
+version = "0.5.1"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+]
+
+[[package]]
+name = "autoeq-core"
+version = "0.5.12"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "clap",
+ "log",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "rustfft 6.4.1",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "autoeq-fir"
+version = "0.5.3"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "hound",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "rustfft 6.4.1",
+]
+
+[[package]]
+name = "autoeq-measurements"
+version = "0.5.4"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "async-trait",
+ "autoeq-core",
+ "base64 0.23.1",
+ "directories",
+ "log",
+ "ndarray 0.17.2",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "strsim",
+ "thiserror 2.0.21",
+ "tokio",
+ "urlencoding",
+]
+
+[[package]]
+name = "autoeq-optim"
+version = "0.5.62"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "autoeq-measurements",
+ "clap",
+ "log",
+ "math-dsp 0.5.30",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "math-optimisation",
+ "metaheuristics-nature",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "num_cpus",
+ "rand 0.10.3",
+ "rand_chacha 0.10.0",
+ "roomeq-model",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "autoeq-workflow"
+version = "0.5.6"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "autoeq-measurements",
+ "autoeq-optim",
+ "chrono",
+ "clap",
+ "hound",
+ "log",
+ "ndarray 0.17.2",
+ "num_cpus",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "aws-lc-rs"
 version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5224,8 +5352,8 @@ name = "math-analog"
 version = "0.5.3"
 source = "git+https://github.com/pierreaubert/math-audio#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "rustfft 6.4.1",
  "thiserror 2.0.21",
 ]
@@ -5241,12 +5369,32 @@ dependencies = [
 
 [[package]]
 name = "math-dsp"
+version = "0.5.30"
+source = "git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+dependencies = [
+ "clap",
+ "hound",
+ "log",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "nalgebra 0.35.0",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "oxiblas-ndarray",
+ "rand 0.10.3",
+ "rayon",
+ "realfft",
+ "rustfft 6.4.1",
+ "serde",
+]
+
+[[package]]
+name = "math-dsp"
 version = "0.5.31"
 dependencies = [
  "clap",
  "hound",
  "log",
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "nalgebra 0.35.0",
  "ndarray 0.17.2",
  "num-complex 0.4.6",
@@ -5275,12 +5423,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "math-iir-fir"
+version = "0.5.24"
+source = "git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+dependencies = [
+ "base64 0.22.1",
+ "byteorder",
+ "hound",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "num-traits",
+ "rustfft 6.4.1",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "math-optimisation"
+version = "0.5.14"
+source = "git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+dependencies = [
+ "clap",
+ "directories",
+ "math-test-functions",
+ "nalgebra 0.35.0",
+ "ndarray 0.17.2",
+ "oxiblas-ndarray",
+ "rand 0.10.3",
+ "rayon",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "math-rir"
+version = "0.5.11"
+source = "git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+dependencies = [
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "rayon",
+]
+
+[[package]]
 name = "math-rir"
 version = "0.5.11"
 source = "git+https://github.com/pierreaubert/math-audio#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
 dependencies = [
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "rayon",
+]
+
+[[package]]
+name = "math-test-functions"
+version = "0.5.3"
+source = "git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89#cabbc6dc1c3d0c8aad275ac33ec015d174859c89"
+dependencies = [
+ "clap",
+ "directories",
+ "ndarray 0.17.2",
 ]
 
 [[package]]
@@ -5340,6 +5540,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "metaheuristics-nature"
+version = "10.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b20a337e8d6714dc38263c8844de8ee773e832b9dfe22a8d984817f92332b18"
+dependencies = [
+ "getrandom 0.2.17",
+ "num-traits",
+ "rand 0.8.8",
+ "rand_chacha 0.3.1",
+ "rand_distr",
+ "serde",
 ]
 
 [[package]]
@@ -7005,7 +7219,7 @@ dependencies = [
 name = "plugins-denoiser"
 version = "0.5.14"
 dependencies = [
- "math-dsp",
+ "math-dsp 0.5.31",
  "nnnoiseless",
 ]
 
@@ -7019,7 +7233,7 @@ dependencies = [
  "gpui-toolkit-gpui",
  "gpui-ui-kit",
  "log",
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "plugins-bridge",
  "plugins-gpui",
  "serde",
@@ -7039,7 +7253,7 @@ dependencies = [
  "gpui-px",
  "gpui-toolkit-gpui",
  "gpui-ui-kit",
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "sotf-host",
  "sotf-midi",
 ]
@@ -7479,6 +7693,16 @@ checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
 dependencies = [
  "ppv-lite86",
  "rand_core 0.9.5",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e6af7f3e25ded52c41df4e0b1af2d047e45896c2f3281792ed68a1c243daedb"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -7923,6 +8147,150 @@ name = "robust"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e27ee8bb91ca0adcf0ecb116293afa12d393f9c2b9b9cd54d33e8078fe19839"
+
+[[package]]
+name = "roomeq-analysis"
+version = "0.5.10"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "hound",
+ "log",
+ "math-dsp 0.5.30",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "math-rir 0.5.11 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "rand 0.10.3",
+ "rand_chacha 0.10.0",
+ "roomeq-model",
+ "rustfft 6.4.1",
+ "schemars",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "roomeq-engine"
+version = "0.5.82"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "autoeq-fir",
+ "autoeq-measurements",
+ "autoeq-optim",
+ "log",
+ "math-dsp 0.5.30",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "math-optimisation",
+ "math-rir 0.5.11 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "nalgebra 0.35.0",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "num_cpus",
+ "oxiblas-ndarray",
+ "rand 0.10.3",
+ "rand_chacha 0.10.0",
+ "roomeq-analysis",
+ "roomeq-model",
+ "roomeq-quality",
+ "rustfft 6.4.1",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "roomeq-export"
+version = "0.5.8"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "anyhow",
+ "clap",
+ "hound",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "roomeq-engine",
+ "roomeq-model",
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
+name = "roomeq-model"
+version = "0.5.13"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "clap",
+ "log",
+ "ndarray 0.17.2",
+ "num_cpus",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "roomeq-quality"
+version = "0.5.61"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "hound",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "roomeq-model",
+ "rustfft 6.4.1",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "roomeq-synthetic"
+version = "0.5.25"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "autoeq-core",
+ "log",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+]
+
+[[package]]
+name = "roomeq-workflow"
+version = "0.5.33"
+source = "git+https://github.com/pierreaubert/autoeq#869c3b84a293ec2f0ee15004bf9053d6e295e30e"
+dependencies = [
+ "anyhow",
+ "autoeq-artifacts",
+ "autoeq-core",
+ "autoeq-measurements",
+ "chrono",
+ "hound",
+ "log",
+ "math-dsp 0.5.30",
+ "math-iir-fir 0.5.24 (git+http://192.168.1.32:3001/pierre/math-audio.git?rev=cabbc6dc1c3d0c8aad275ac33ec015d174859c89)",
+ "ndarray 0.17.2",
+ "num-complex 0.4.6",
+ "rayon",
+ "roomeq-analysis",
+ "roomeq-engine",
+ "roomeq-export",
+ "roomeq-model",
+ "roomeq-quality",
+ "rustfft 6.4.1",
+ "schemars",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "sofa-reader 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+]
 
 [[package]]
 name = "roxmltree"
@@ -8421,6 +8789,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_ignored"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "115dffd5f3853e06e746965a20dcbae6ee747ae30b543d91b0e089668bb07798"
+dependencies = [
+ "serde",
+ "serde_core",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8765,6 +9143,20 @@ dependencies = [
 [[package]]
 name = "sofa-reader"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19a8b8cfa8b0017575adc7989abbc7299f2228cbd734a75242390e1505a7619d"
+dependencies = [
+ "bincode",
+ "flate2",
+ "log",
+ "rusqlite",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "sofa-reader"
+version = "0.2.0"
 source = "git+https://github.com/pierreaubert/sofa-reader#6e6e9d9ce2b02525ae6f6f04b4639bc264a1fc2f"
 dependencies = [
  "bincode",
@@ -8772,6 +9164,31 @@ dependencies = [
  "log",
  "rusqlite",
  "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "sotf-capture"
+version = "0.1.0"
+dependencies = [
+ "audioadapter-buffers",
+ "autoeq",
+ "chrono",
+ "clap",
+ "cpal",
+ "ctrlc",
+ "env_logger",
+ "hound",
+ "log",
+ "math-dsp 0.5.31",
+ "math-rir 0.5.11 (git+https://github.com/pierreaubert/math-audio)",
+ "rtrb",
+ "rubato",
+ "rustfft 6.4.1",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 
@@ -8798,8 +9215,8 @@ dependencies = [
  "insta",
  "libc",
  "log",
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "ndarray 0.17.2",
  "notify",
  "num-complex 0.4.6",
@@ -8816,6 +9233,7 @@ dependencies = [
  "serde_yaml",
  "serial_test",
  "signal-hook 0.4.4",
+ "sotf-capture",
  "sotf-iamf",
  "sotf-midi",
  "sotf-plugin-ambisonics",
@@ -8858,8 +9276,8 @@ dependencies = [
  "libc",
  "libloading",
  "log",
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "memmap2",
  "objc2-audio-toolbox",
  "objc2-core-audio-types",
@@ -8874,7 +9292,7 @@ dependencies = [
  "rustfft 6.4.1",
  "serde",
  "serde_json",
- "sofa-reader",
+ "sofa-reader 0.2.0 (git+https://github.com/pierreaubert/sofa-reader)",
  "tempfile",
  "thiserror 2.0.21",
  "vst3-com",
@@ -8936,7 +9354,7 @@ dependencies = [
 name = "sotf-plugin-ab-compare"
 version = "0.6.0"
 dependencies = [
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -8946,6 +9364,7 @@ dependencies = [
  "sotf-plugin-gate",
  "sotf-plugin-limiter",
  "sotf-plugin-multiband-compressor",
+ "sotf-plugin-resampler",
 ]
 
 [[package]]
@@ -8995,7 +9414,7 @@ dependencies = [
 name = "sotf-plugin-analog-eq"
 version = "0.5.0"
 dependencies = [
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9041,7 +9460,7 @@ dependencies = [
 name = "sotf-plugin-beamformer"
 version = "0.5.4"
 dependencies = [
- "math-dsp",
+ "math-dsp 0.5.31",
  "nalgebra 0.33.3",
  "plugins-spatial",
  "realfft",
@@ -9059,15 +9478,15 @@ dependencies = [
  "criterion",
  "hound",
  "log",
- "math-dsp",
- "math-rir",
+ "math-dsp 0.5.31",
+ "math-rir 0.5.11 (git+https://github.com/pierreaubert/math-audio)",
  "plugins-spatial",
  "realfft",
  "rubato",
  "rustfft 6.4.1",
  "serde",
  "serde_json",
- "sofa-reader",
+ "sofa-reader 0.2.0 (git+https://github.com/pierreaubert/sofa-reader)",
  "sotf-host",
 ]
 
@@ -9105,8 +9524,8 @@ dependencies = [
 name = "sotf-plugin-crossfeed"
 version = "0.5.14"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9126,8 +9545,8 @@ dependencies = [
 name = "sotf-plugin-de-esser"
 version = "0.5.11"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9159,7 +9578,7 @@ name = "sotf-plugin-denoiser"
 version = "0.5.8"
 dependencies = [
  "hound",
- "math-dsp",
+ "math-dsp 0.5.31",
  "realfft",
  "rustfft 6.4.1",
  "serde",
@@ -9182,8 +9601,8 @@ dependencies = [
 name = "sotf-plugin-downmix"
 version = "0.5.28"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "realfft",
  "rustfft 6.4.1",
  "serde",
@@ -9195,8 +9614,8 @@ dependencies = [
 name = "sotf-plugin-dynamic-eq"
 version = "0.6.0"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9210,7 +9629,7 @@ dependencies = [
  "gpui-px",
  "gpui-toolkit-gpui",
  "gpui-ui-kit",
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "plugins-gpui",
  "proptest",
  "serde",
@@ -9233,8 +9652,8 @@ dependencies = [
 name = "sotf-plugin-gate"
 version = "0.5.12"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "proptest",
  "serde",
  "serde_json",
@@ -9277,7 +9696,7 @@ dependencies = [
 name = "sotf-plugin-limiter"
 version = "0.5.14"
 dependencies = [
- "math-dsp",
+ "math-dsp 0.5.31",
  "proptest",
  "serde",
  "serde_json",
@@ -9288,7 +9707,7 @@ dependencies = [
 name = "sotf-plugin-linear-phase-eq"
 version = "0.5.6"
 dependencies = [
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "num-complex 0.4.6",
  "plugins-spatial",
  "proptest",
@@ -9303,7 +9722,7 @@ name = "sotf-plugin-loudness-compensation"
 version = "0.5.5"
 dependencies = [
  "criterion",
- "math-iir-fir",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9336,8 +9755,8 @@ name = "sotf-plugin-multiband-compressor"
 version = "0.5.16"
 dependencies = [
  "log",
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9347,8 +9766,8 @@ dependencies = [
 name = "sotf-plugin-multiband-expander"
 version = "0.5.26"
 dependencies = [
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "rustfft 6.4.1",
  "serde",
  "serde_json",
@@ -9380,7 +9799,7 @@ dependencies = [
 name = "sotf-plugin-saturation"
 version = "0.5.12"
 dependencies = [
- "math-dsp",
+ "math-dsp 0.5.31",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9390,7 +9809,7 @@ dependencies = [
 name = "sotf-plugin-spectral-compressor"
 version = "0.5.25"
 dependencies = [
- "math-dsp",
+ "math-dsp 0.5.31",
  "serde",
  "serde_json",
  "sotf-host",
@@ -9433,8 +9852,8 @@ dependencies = [
  "criterion",
  "hound",
  "log",
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "ndarray 0.17.2",
  "plugins-inference",
  "realfft",
@@ -9451,12 +9870,12 @@ name = "sotf-plugin-xtc"
 version = "0.5.42"
 dependencies = [
  "criterion",
- "math-dsp",
+ "math-dsp 0.5.31",
  "realfft",
  "rustfft 6.4.1",
  "serde",
  "serde_json",
- "sofa-reader",
+ "sofa-reader 0.2.0 (git+https://github.com/pierreaubert/sofa-reader)",
  "sotf-host",
  "symphonia",
  "symphonia-codec-pcm",
@@ -9487,8 +9906,8 @@ dependencies = [
  "insta",
  "libc",
  "log",
- "math-dsp",
- "math-iir-fir",
+ "math-dsp 0.5.31",
+ "math-iir-fir 0.5.24",
  "ndarray 0.17.2",
  "notify",
  "proptest",
@@ -9504,7 +9923,7 @@ dependencies = [
  "serde_yaml",
  "serial_test",
  "signal-hook 0.4.4",
- "sofa-reader",
+ "sofa-reader 0.2.0 (git+https://github.com/pierreaubert/sofa-reader)",
  "sotf-engine",
  "sotf-host",
  "sotf-plugin-aae",
@@ -10813,6 +11232,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "typed-path"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
+
+[[package]]
 name = "typeid"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10960,6 +11385,12 @@ dependencies = [
  "percent-encoding",
  "serde",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "usvg"
@@ -12911,6 +13342,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "zip"
+version = "8.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
+dependencies = [
+ "crc32fast",
+ "indexmap",
+ "memchr",
+ "typed-path",
 ]
 
 [[package]]

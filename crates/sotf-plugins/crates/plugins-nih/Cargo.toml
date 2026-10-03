@@ -58,6 +58,7 @@ loudness-monitor = []
 spectrum-analyzer = []
 ambisonics = []
 dither = []
+analog-limiter = []
 
 [dependencies]
 plugins-bridge = { path = "../plugins-bridge" }

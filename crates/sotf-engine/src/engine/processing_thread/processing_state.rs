@@ -163,11 +163,20 @@ impl ProcessingState {
         }
     }
 
+    /// Bounded hot-reload crossfade gains: convex (equal-gain) mixing.
+    ///
+    /// Invariant: out = (1-a).old + a.new with a in [0,1], so
+    /// |out| <= (1-a).|old| + a.|new| <= max(|old|, |new|) for every frame.
+    /// When both chains are ceiling-bounded, every transition sample
+    /// respects the end-to-end ceiling — including correlated program,
+    /// where equal-power mixing would reach sqrt(2) times the ceiling.
+    /// The fade clock, duration, delay compensation, and retirement logic
+    /// are unchanged; only the gain law is bounded. No output clamp is
+    /// applied: non-mastering audio keeps its transient shape, mixed.
     #[inline]
-    pub(super) fn equal_power_crossfade_gains(alpha: f32) -> (f32, f32) {
-        let angle = alpha.clamp(0.0, 1.0) * std::f32::consts::FRAC_PI_2;
-        let (new_gain, old_gain) = angle.sin_cos();
-        (old_gain, new_gain)
+    pub(super) fn convex_crossfade_gains(alpha: f32) -> (f32, f32) {
+        let alpha = alpha.clamp(0.0, 1.0);
+        (1.0 - alpha, alpha)
     }
 
     fn reset(&mut self) {
@@ -487,6 +496,8 @@ impl ProcessingState {
                             self.prev_process_buffer[next_old_frame * self.channels + channel];
                         old + (next - old) * fraction
                     };
+                    // Fade through silence: each half scales a single source by a
+                    // gain in [0,1], so |out| <= max(|previous|, |output|).
                     if self.crossfade_through_silence {
                         output[index] = if alpha < 0.5 {
                             previous * (1.0 - 2.0 * alpha)
@@ -494,7 +505,7 @@ impl ProcessingState {
                             output[index] * (2.0 * alpha - 1.0)
                         };
                     } else {
-                        let (old_gain, new_gain) = Self::equal_power_crossfade_gains(alpha);
+                        let (old_gain, new_gain) = Self::convex_crossfade_gains(alpha);
                         output[index] = previous * old_gain + output[index] * new_gain;
                     }
                 }
@@ -1198,7 +1209,6 @@ pub(super) fn run_processing_thread(
                 while let Some(msg) = pending_msg.take() {
                     match send_or_interrupt(&message_tx, &command_rx, msg) {
                         Ok(Some((cmd, unsent))) => {
-                            let old_channels = state.channels;
                             pending_msg = unsent;
                             match handle_processing_command(
                                 cmd,
@@ -1207,14 +1217,17 @@ pub(super) fn run_processing_thread(
                                 &event_tx,
                             ) {
                                 CommandOutcome::Shutdown => break 'processing,
+                                // The barrier survives Stop: the abandoned
+                                // stream's DSP state is already reset, but
+                                // downstream must still observe the discard
+                                // boundary. Unlike EOS (a stream marker),
+                                // Flush carries no stream content, so it is
+                                // never stale — not even across channel
+                                // changes — and the pending send retries.
                                 CommandOutcome::Stopped => {
                                     decoder_stream_active = false;
-                                    pending_msg = None;
                                 }
                                 CommandOutcome::Continue => {}
-                            }
-                            if state.channels != old_channels {
-                                pending_msg = None;
                             }
                         }
                         Ok(None) => {}
