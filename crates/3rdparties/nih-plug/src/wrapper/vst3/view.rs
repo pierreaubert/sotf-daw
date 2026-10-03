@@ -104,9 +104,11 @@ pub(super) struct RunLoopEventHandler<P: Vst3Plugin> {
 // Drop unregisters it. Its cross-thread state is limited to the lock-free task queue, immutable
 // file descriptors, the thread-safe VstPtr/Weak handles, and the registration flag, which is set
 // before the handler is published to the host. The host invokes the callback on its UI thread.
+#[cfg(target_os = "linux")]
 unsafe impl<P: Vst3Plugin> Send for RunLoopEventHandler<P> {}
 // SAFETY: All mutable state used by callbacks is synchronized by ArrayQueue and WrapperInner's
 // synchronization. The registered flag is only changed before publication and read during Drop.
+#[cfg(target_os = "linux")]
 unsafe impl<P: Vst3Plugin> Sync for RunLoopEventHandler<P> {}
 
 impl<P: Vst3Plugin> WrapperView<P> {
