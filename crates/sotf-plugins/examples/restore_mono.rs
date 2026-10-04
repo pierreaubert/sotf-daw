@@ -100,7 +100,7 @@ fn main() {
         .expect("Failed to construct declick");
     let mut declick_plugin = ParametricInPlacePluginAdapter::new(declick);
     declick_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize declick");
     let declick_latency = declick_plugin.latency_samples();
     let declicked = process_plugin_mono(
@@ -131,7 +131,7 @@ fn main() {
     let hiss = HissReducerPlugin::from_params(1, hiss_params);
     let mut hiss_plugin = ParametricInPlacePluginAdapter::new(hiss);
     hiss_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize hiss reducer");
     let hiss_latency = hiss_plugin.latency_samples();
     let hiss_frames = declicked.len();
@@ -158,7 +158,7 @@ fn main() {
     let denoiser = DenoiserPlugin::from_params(1, denoiser_params);
     let mut denoiser_plugin = ParametricInPlacePluginAdapter::new(denoiser);
     denoiser_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize denoiser");
     let denoiser_latency = denoiser_plugin.latency_samples();
     println!(
@@ -196,7 +196,7 @@ fn main() {
     let mut pnd_plugin =
         PndPlugin::from_params(1, pnd_params).expect("PND parameters must be valid");
     pnd_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize PND");
     let pnd_latency = pnd_plugin.latency_samples();
     println!(
@@ -229,7 +229,7 @@ fn main() {
 
     let mut m2s_plugin = MonoToStereoPlugin::from_params(1, m2s_params);
     m2s_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize Mono→Stereo");
     let m2s_latency = m2s_plugin.latency_samples();
     let out_channels = m2s_plugin.output_channels();

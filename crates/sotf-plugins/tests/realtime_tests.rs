@@ -28,7 +28,7 @@ fn percentile(times: &[Duration], p: f64) -> Duration {
 #[test]
 fn test_gain_plugin_timing() {
     let mut gain = GainPlugin::new(2, 3.0);
-    gain.plugin_initialize(TEST_SAMPLE_RATE).unwrap();
+    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let input = vec![0.5f32; TEST_BUFFER_SIZE * 2];
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
@@ -81,7 +81,7 @@ fn test_gain_plugin_chain_timing() {
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
 
     let mut gain = GainPlugin::new(2, 1.0);
-    gain.plugin_initialize(TEST_SAMPLE_RATE).unwrap();
+    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     for _ in 0..2 {
         let mut output = input.clone();
@@ -113,7 +113,7 @@ fn test_gain_plugin_chain_timing() {
 #[test]
 fn test_limiter_plugin_timing() {
     let mut plugin = LimiterPlugin::new(2, -3.0, 50.0, 5.0, false);
-    plugin.initialize(TEST_SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let input = vec![0.8f32; TEST_BUFFER_SIZE * 2];
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
@@ -150,7 +150,7 @@ fn test_upmixer_plugin_timing() {
     let mut plugin = UpmixerPlugin::new(
         4096, "9.1.6", 1.0, 0.5, 0.3, 80.0, 0.5, 250.0, 1.0, 1.0, false, 1.0,
     );
-    plugin.initialize(TEST_SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let input = vec![0.5f32; TEST_BUFFER_SIZE * 2];
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
@@ -186,7 +186,7 @@ fn test_upmixer_plugin_timing() {
 #[test]
 fn test_no_allocations_in_processing_loop() {
     let mut gain = GainPlugin::new(2, 0.0);
-    gain.plugin_initialize(TEST_SAMPLE_RATE).unwrap();
+    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
 
@@ -201,7 +201,7 @@ fn test_no_allocations_in_processing_loop() {
 #[test]
 fn test_memory_usage_stability() {
     let mut gain = GainPlugin::new(2, 0.0);
-    gain.plugin_initialize(TEST_SAMPLE_RATE).unwrap();
+    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
 
@@ -218,7 +218,7 @@ fn test_processing_under_load() {
     let mut times = Vec::with_capacity(ITERATIONS);
 
     let mut gain = GainPlugin::new(2, 0.0);
-    gain.plugin_initialize(TEST_SAMPLE_RATE).unwrap();
+    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
 

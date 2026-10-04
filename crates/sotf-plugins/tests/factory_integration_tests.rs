@@ -31,7 +31,7 @@ fn saturation_factory_accepts_appended_asymmetric_mode() {
         SAMPLE_RATE,
     )
     .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = [0.25, -0.25, -0.5, 0.5];
     let mut output = [0.0; 4];
     plugin
@@ -50,7 +50,7 @@ fn loudness_factory_accepts_explicit_speaker_config_and_layout_json() {
         SAMPLE_RATE,
     )
     .unwrap();
-    from_config.initialize(SAMPLE_RATE).unwrap();
+    from_config.initialize(f64::from(SAMPLE_RATE)).unwrap();
     from_config
         .process(
             &[0.0; 12],
@@ -83,7 +83,7 @@ fn loudness_factory_selects_exact_whole_program_mode() {
         SAMPLE_RATE,
     )
     .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = vec![0.1; SAMPLE_RATE as usize * 4 * 2];
     let mut output = vec![0.0; input.len()];
     plugin
@@ -390,7 +390,7 @@ fn create_plugin_rejects_channel_mismatch() {
 fn create_gain_plugin_and_process() {
     let params = serde_json::json!({"gain_db": -6.0, "smoothing_ms": 0.0});
     let mut plugin = create_plugin("gain", &params, 2, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 2);
@@ -417,7 +417,7 @@ fn create_gain_plugin_and_process() {
 fn create_eq_plugin_with_empty_filters_is_passthrough() {
     let params = serde_json::json!({"filters": []});
     let mut plugin = create_plugin("eq", &params, 2, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let frames = 64;
     let input = vec![0.5_f32; frames * 2];
@@ -437,7 +437,7 @@ fn create_eq_plugin_with_empty_filters_is_passthrough() {
 fn create_limiter_plugin_and_process() {
     let params = serde_json::json!({"threshold_db": -1.0, "lookahead_ms": 1.0});
     let mut plugin = create_plugin("limiter", &params, 2, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let frames = 256;
     let input = vec![0.25_f32; frames * 2];

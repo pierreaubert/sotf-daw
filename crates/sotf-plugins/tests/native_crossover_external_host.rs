@@ -283,7 +283,7 @@ fn render_public_crossover(
     let mut reference = sotf_plugins::create_plugin("Crossover", &config, 2, SAMPLE_RATE)
         .unwrap_or_else(|error| panic!("construct public {output} Crossover: {error}"));
     reference
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .unwrap_or_else(|error| panic!("initialize public {output} Crossover: {error}"));
     render_partitioned(reference.as_mut(), input, channels)
 }

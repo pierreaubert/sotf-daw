@@ -34,7 +34,7 @@ mod tests {
         println!("{:-<20}-|-{:-<15}-|-{:-<10}", "", "", "");
 
         for (name, mut plugin) in plugins {
-            plugin.initialize(sample_rate as u32).unwrap();
+            plugin.initialize(sample_rate).unwrap();
             let profiler = PerformanceProfiler::new(&name, sample_rate, 2, 512);
             let cpu = profiler.profile(plugin.as_mut(), 0.5);
             let latency = sotf_plugins::detect_latency(plugin.as_mut(), sample_rate);

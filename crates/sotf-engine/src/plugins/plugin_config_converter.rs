@@ -866,8 +866,8 @@ mod tests {
             .expect("factory constructs configured shelf bands");
         let mut peak = create_plugin("dynamic_eq", &peak_config.parameters, 2, 48_000)
             .expect("factory constructs the Peak control");
-        shelf.initialize(48_000).expect("shelf plugin initializes");
-        peak.initialize(48_000).expect("Peak plugin initializes");
+        shelf.initialize(48_000.0).expect("shelf plugin initializes");
+        peak.initialize(48_000.0).expect("Peak plugin initializes");
 
         let frames = 8_192;
         let input: Vec<f32> = (0..frames)
@@ -981,7 +981,7 @@ mod tests {
 
         let mut placed =
             create_plugin("dynamic_eq", &config.parameters, 2, 48_000).expect("factory builds");
-        placed.initialize(48_000).expect("placed plugin initializes");
+        placed.initialize(48_000.0).expect("placed plugin initializes");
         assert_eq!(
             placed.get_parameter(&ParameterId::from("band_0_placement")),
             Some(ParameterValue::Int(1))
@@ -1011,7 +1011,7 @@ mod tests {
             .expect("stereo control converts");
         let mut stereo = create_plugin("dynamic_eq", &stereo_config.parameters, 2, 48_000)
             .expect("stereo control builds");
-        stereo.initialize(48_000).expect("stereo control initializes");
+        stereo.initialize(48_000.0).expect("stereo control initializes");
 
         // Default settings carry no pairs; the converter emits explicit
         // null, which the factory reads as the legacy default.
@@ -1148,7 +1148,7 @@ mod tests {
             create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
                 .expect("placed filters build");
         placed_plugin
-            .initialize(48_000)
+            .initialize(48_000.0)
             .expect("placed filters initialize");
         assert_eq!(
             placed_plugin.get_parameter(&ParameterId::from("band_0_placement")),
@@ -1172,7 +1172,7 @@ mod tests {
             create_plugin("linear_phase_eq", &stereo_config.parameters, 2, 48_000)
                 .expect("stereo control builds");
         stereo_plugin
-            .initialize(48_000)
+            .initialize(48_000.0)
             .expect("stereo control initializes");
 
         let frames = 8_192;
@@ -1270,13 +1270,13 @@ mod tests {
             create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
                 .expect("legacy null placement builds");
         legacy_plugin
-            .initialize(48_000)
+            .initialize(48_000.0)
             .expect("legacy plugin initializes");
         let mut stereo_plugin =
             create_plugin("linear_phase_eq", &stereo_config.parameters, 2, 48_000)
                 .expect("stereo control builds");
         stereo_plugin
-            .initialize(48_000)
+            .initialize(48_000.0)
             .expect("stereo plugin initializes");
         let mut legacy_output = vec![f32::NAN; input.len()];
         let mut stereo_output = vec![f32::NAN; input.len()];

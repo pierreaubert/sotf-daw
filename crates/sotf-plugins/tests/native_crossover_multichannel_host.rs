@@ -939,7 +939,7 @@ fn render_public_crossover(input: &[f32], channels: usize, case: RouteCase) -> V
     let mut reference = sotf_plugins::create_plugin("Crossover", &config, channels, SAMPLE_RATE)
         .unwrap_or_else(|error| panic!("construct public Crossover reference: {error}"));
     reference
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .unwrap_or_else(|error| panic!("initialize public Crossover reference: {error}"));
     render_plugin(
         reference.as_mut(),

@@ -331,7 +331,7 @@ fn verify_loaded_deesser_sidechain_route(format: PluginFormat, library_env: &str
         "{instance} reinit route must pass within 1 dB, got {reinit_db:.2} dB"
     );
     default
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .unwrap_or_else(|error| panic!("{instance} reinit to 48000: {error:?}"));
 
     // Hot key: live + twin populate engaged detectors and agree

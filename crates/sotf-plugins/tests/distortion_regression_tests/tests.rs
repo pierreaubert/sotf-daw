@@ -19,7 +19,7 @@ fn test_upmixer_bypass_fidelity() {
     params.bypass.bypass_all_processing = false;
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 16384;
     // Use uncorrelated stereo to exercise full VBAP panning across channels.
@@ -89,7 +89,7 @@ fn test_xtc_limiter_reactivity() {
     params.auto_gain_enabled = false;
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Use a very high amplitude sine wave that should be limited
     let num_frames = 4096;
@@ -133,7 +133,7 @@ fn test_xtc_envelope_stability() {
     params.bypass_xtc_filters = true;
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 16384;
     // Use DC signal (Step) to test OLA flatness perfectly
@@ -197,7 +197,7 @@ fn test_upmixer_envelope_stability() {
     params.core.speaker_config = "7.1".to_string();
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 16384;
     let mut gen_l = SignalGen::new_sine(sample_rate as f64, 440.0, 0.3);
@@ -257,7 +257,7 @@ fn test_upmixer_envelope_stability() {
 fn test_downmix_phase_coherence_stability() {
     let sample_rate = 48000;
     let mut plugin = sotf_plugins::DownmixPlugin::new(2);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Enable phase coherence and set unity gains
     plugin
@@ -344,7 +344,7 @@ fn test_upmixer_prime_block_size_fidelity() {
     params.bypass.bypass_all_processing = false;
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let total_frames = 32768;
     let prime_block = 127; // Stress OLA alignment

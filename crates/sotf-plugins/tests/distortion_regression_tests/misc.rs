@@ -21,7 +21,7 @@ fn test_xtc_bypass_fidelity() {
     params.auto_gain_enabled = false;
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 16384;
     let mut signal_gen = SignalGen::new_sine(sample_rate as f64, 1000.0, 0.5);
@@ -96,7 +96,7 @@ fn test_downmix_bypass_fidelity() {
             sotf_plugins::ParameterValue::Bool(false),
         )
         .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 16384;
     let mut signal_gen = SignalGen::new_sine(sample_rate as f64, 1000.0, 0.5);

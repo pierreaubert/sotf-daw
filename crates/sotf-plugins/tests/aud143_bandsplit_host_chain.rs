@@ -286,7 +286,7 @@ fn dawhost_band_split_merge_chain_matches_legacy_complex_capture() {
 
 fn populated_split(slope: &str) -> BandSplitPlugin {
     let mut plugin = BandSplitPlugin::new_multiband(2, &[500.0, 1_200.0, 4_000.0], slope).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let frames = 4_096;
     let input: Vec<f32> = (0..frames)

@@ -16,7 +16,7 @@ proptest! {
     #[test]
     fn test_gain_plugin_unity_gain(input in (0.0f32..1.0f32).prop_map(|v| vec![v; 1024])) {
         let mut gain = GainPlugin::new(2, 0.0);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 512);
 
@@ -36,7 +36,7 @@ proptest! {
     #[test]
     fn test_gain_plugin_6db(input in (0.0f32..1.0f32).prop_map(|v| vec![v; 512])) {
         let mut gain = GainPlugin::new(2, 6.0);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 256);
 
@@ -58,7 +58,7 @@ proptest! {
     #[test]
     fn test_gain_plugin_mute(input in (0.0f32..1.0f32).prop_map(|v| vec![v; 256])) {
         let mut gain = GainPlugin::new(2, -60.0);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 128);
 
@@ -73,7 +73,7 @@ proptest! {
     #[test]
     fn test_gain_plugin_no_nan(input in (0.0f32..1.0f32).prop_map(|v| vec![v; 128]), gain_db in -100.0f32..100.0f32) {
         let mut gain = GainPlugin::new(2, gain_db);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 64);
 
@@ -137,7 +137,7 @@ proptest! {
         let input_energy: f32 = input.iter().map(|x| x * x).sum();
 
         let mut gain = GainPlugin::new(2, 0.0);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 128);
 
@@ -154,7 +154,7 @@ proptest! {
     #[test]
     fn test_gain_linearity(input in (0.0f32..1.0f32).prop_map(|v| vec![v; 128]), gain_db in -60.0f32..60.0f32) {
         let mut gain = GainPlugin::new(2, gain_db);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, 64);
 
@@ -199,7 +199,7 @@ fn test_gain_at_boundary_values() {
 
     for gain_db in test_cases {
         let mut gain = GainPlugin::new(2, gain_db);
-        let result = gain.plugin_initialize(48000);
+        let result = gain.plugin_initialize(48000.0);
         assert!(
             result.is_ok(),
             "Initialization should succeed for {} dB",
@@ -231,7 +231,7 @@ fn test_processing_at_different_sample_rates() {
 
     for sample_rate in sample_rates {
         let mut gain = GainPlugin::new(2, 0.0);
-        let result = gain.plugin_initialize(sample_rate);
+        let result = gain.plugin_initialize(f64::from(sample_rate));
         assert!(
             result.is_ok(),
             "Initialization should succeed for {} Hz",
@@ -258,7 +258,7 @@ fn test_processing_at_different_buffer_sizes() {
 
     for buffer_size in buffer_sizes {
         let mut gain = GainPlugin::new(2, 0.0);
-        gain.plugin_initialize(48000).unwrap();
+        gain.plugin_initialize(48000.0).unwrap();
 
         let context = sotf_plugins::ProcessContext::new(48000, buffer_size);
 

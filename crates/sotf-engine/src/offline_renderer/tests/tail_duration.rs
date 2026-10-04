@@ -72,7 +72,7 @@ fn explicit_tail_uses_export_clock_through_source_and_chain_resampling() {
         parameters: serde_json::json!({"input_sample_rate":48000,"output_sample_rate":96000,"chunk_size":64}),
     });
     let (host, _) = crate::engine::build_plugin_host(&config.plugins, 48000, 2).unwrap();
-    assert_eq!(host.output_sample_rate(48000).unwrap(), 96000);
+    assert_eq!(host.output_sample_rate(48000.0).unwrap(), 96000.0);
     for block in [127, 1024] {
         config.frame_size = block;
         let mut final_progress = None;

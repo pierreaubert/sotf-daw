@@ -177,7 +177,7 @@ fn multi_channel_capable_plugins_stay_finite_at_5_1_and_7_1_4() {
                     channels,
                     SAMPLE_RATE,
                 )?;
-                plugin.initialize(SAMPLE_RATE)?;
+                plugin.initialize(f64::from(SAMPLE_RATE))?;
 
                 let input = interleaved_sine(channels, FRAMES);
                 let output_channels = plugin.output_channels();
@@ -230,7 +230,7 @@ fn downmix_from_5_1_and_7_1_4_to_stereo_is_finite() {
             SAMPLE_RATE,
         )
         .expect("downmix should instantiate for high-channel input");
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = interleaved_sine(channels, frames);
         let mut output = vec![0.0f32; frames * 2];
@@ -274,7 +274,7 @@ fn matrix_identity_7_1_4_is_finite_and_passthrough() {
         SAMPLE_RATE,
     )
     .expect("matrix identity should instantiate for 12 channels");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = interleaved_sine(channels, FRAMES);
     let mut output = vec![0.0f32; FRAMES * channels];
@@ -305,7 +305,7 @@ fn band_split_merge_roundtrip_at_5_1_and_7_1_4_is_finite() {
                 SAMPLE_RATE,
             )
             .map_err(|e| format!("band_split create: {e}"))?;
-            split.initialize(SAMPLE_RATE).map_err(|e| e.to_string())?;
+            split.initialize(f64::from(SAMPLE_RATE)).map_err(|e| e.to_string())?;
 
             let input = interleaved_sine(channels, FRAMES);
             let split_output_channels = split.output_channels();
@@ -329,7 +329,7 @@ fn band_split_merge_roundtrip_at_5_1_and_7_1_4_is_finite() {
                 SAMPLE_RATE,
             )
             .map_err(|e| format!("band_merge create: {e}"))?;
-            merge.initialize(SAMPLE_RATE).map_err(|e| e.to_string())?;
+            merge.initialize(f64::from(SAMPLE_RATE)).map_err(|e| e.to_string())?;
 
             let merge_output_channels = merge.output_channels();
             let mut merge_output = vec![0.0f32; merge_output_channels * FRAMES];
@@ -387,7 +387,7 @@ fn mono_to_stereo_from_1ch_is_finite() {
         SAMPLE_RATE,
     )
     .expect("mono_to_stereo should instantiate for 1ch input");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     assert_eq!(plugin.input_channels(), 1);
     assert_eq!(plugin.output_channels(), 2);
@@ -537,7 +537,7 @@ fn ab_compare_switching_preserves_channel_layout_at_stereo() {
         SAMPLE_RATE,
     )
     .expect("ab_compare should instantiate for 2ch input");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     assert_eq!(plugin.input_channels(), channels);
     assert_eq!(plugin.output_channels(), channels);
@@ -601,7 +601,7 @@ fn extreme_float_parameters_do_not_produce_nonfinite_output() {
         let base_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let mut plugin =
                 create_plugin(plugin_type, &default_params(plugin_type, 2), 2, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
             Ok::<Box<dyn Plugin>, String>(plugin)
         }));
 
@@ -716,7 +716,7 @@ fn block_size_variation_stays_finite() {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 let mut plugin =
                     create_plugin(plugin_type, &default_params(plugin_type, 2), 2, SAMPLE_RATE)?;
-                plugin.initialize(SAMPLE_RATE)?;
+                plugin.initialize(f64::from(SAMPLE_RATE))?;
 
                 let input = interleaved_sine(2, frames);
                 let output_channels = plugin.output_channels();
@@ -778,7 +778,7 @@ fn silence_and_denormals_stay_finite() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let mut plugin =
                 create_plugin(plugin_type, &default_params(plugin_type, 2), 2, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
 
             // Silence input.
             let silence = vec![0.0f32; 2 * FRAMES];
@@ -844,7 +844,7 @@ fn high_level_input_stays_finite() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let mut plugin =
                 create_plugin(plugin_type, &default_params(plugin_type, 2), 2, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
 
             // Near-0 dBFS sine.
             let input: Vec<f32> = {
@@ -900,7 +900,7 @@ fn missing_file_paths_are_handled_gracefully() {
                 channels,
                 SAMPLE_RATE,
             )?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
 
             let input = interleaved_sine(channels, FRAMES);
             let output_channels = plugin.output_channels();
@@ -963,7 +963,7 @@ fn stft_plugins_return_context_num_frames() {
                 channels,
                 SAMPLE_RATE,
             )?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
 
             let frames = FRAMES;
             let input = interleaved_sine(channels, frames);
@@ -1042,7 +1042,7 @@ fn latency_reporting_plugins_expose_nonzero_latency() {
         let channels = required_input_channels(plugin_type).unwrap_or(2);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let mut plugin = create_plugin(plugin_type, params, channels, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
 
             let latency = plugin.latency_samples();
             if latency == 0 {
@@ -1187,7 +1187,7 @@ fn reported_latency_matches_streamed_impulse_peak() {
         let channels = required_input_channels(plugin_type).unwrap_or(2);
         let result = (|| {
             let mut plugin = create_plugin(plugin_type, &params, channels, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
             let block_sizes: &[usize] = if plugin_type == "speech_denoiser" {
                 &[480]
             } else {
@@ -1232,7 +1232,7 @@ fn zero_latency_configurations_are_causal_within_one_block() {
         });
         let result = (|| {
             let mut plugin = create_plugin(plugin_type, &params, channels, SAMPLE_RATE)?;
-            plugin.initialize(SAMPLE_RATE)?;
+            plugin.initialize(f64::from(SAMPLE_RATE))?;
             if plugin.latency_samples() != 0 {
                 return Err(format!(
                     "{plugin_type}: expected zero-latency configuration, reported {}",

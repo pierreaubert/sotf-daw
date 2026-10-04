@@ -142,7 +142,7 @@ fn main() {
     println!("\n--- Upmixing ---");
     let mut plugin = UpmixerPlugin::from_params(params);
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize upmixer");
     let latency = plugin.latency_samples();
     println!(

@@ -505,7 +505,7 @@ fn compressor_catalog_and_factory_expose_true_broadband_mode() {
     params.num_bands = 1;
     let mut reference =
         crate::MultibandCompressorPlugin::try_from_params(2, params, 48_000).unwrap();
-    sotf_host::ParametricInPlacePlugin::initialize(&mut reference, 48_000).unwrap();
+    sotf_host::ParametricInPlacePlugin::initialize(&mut reference, 48_000.0).unwrap();
     let frames = 4096;
     let input: Vec<f32> = (0..frames)
         .flat_map(|frame| {
@@ -1201,7 +1201,7 @@ fn ab_compare_factory_accepts_exact_fractional_nested_clock() {
         .expect("nested factory must accept the host's exact fractional rate");
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 2);
-    let rate = 12_345.678;
+    let rate: f64 = 12_345.678;
     let params = serde_json::from_value(parameters.clone()).unwrap();
     crate::ABComparePlugin::from_params_with_factory(2, rate, params, recording_factory)
         .expect("nested path must construct at the exact host rate");

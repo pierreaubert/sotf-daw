@@ -43,7 +43,7 @@ fn benchmark_gain_plugin(c: &mut Criterion) {
     // Different sample rates
     for &sample_rate in &[44100, 48000, 96000, 192000] {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(2, 0.0));
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
 
         let buffer_size = 512;
         let input = vec![0.5f32; buffer_size * 2];

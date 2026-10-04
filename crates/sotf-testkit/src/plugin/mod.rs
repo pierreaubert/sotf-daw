@@ -13,7 +13,7 @@ pub struct SinglePluginFixture<P> {
 
 impl<P: InPlacePlugin> SinglePluginFixture<P> {
     pub fn new(mut plugin: P, sample_rate: u32) -> Self {
-        plugin.initialize(sample_rate).expect("initialize failed");
+        plugin.initialize(f64::from(sample_rate)).expect("initialize failed");
         Self {
             plugin,
             sample_rate,
@@ -42,7 +42,7 @@ impl<P: InPlacePlugin> SinglePluginFixture<P> {
 pub fn roundtrip_all_parameters<P: InPlacePlugin>(plugin: &mut P, sample_rate: u32) {
     use sotf_host::parameters::ParameterId;
 
-    plugin.initialize(sample_rate).expect("initialize failed");
+    plugin.initialize(f64::from(sample_rate)).expect("initialize failed");
     let param_ids: Vec<String> = plugin
         .parameters()
         .iter()

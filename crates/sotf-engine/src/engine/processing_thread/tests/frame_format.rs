@@ -95,7 +95,7 @@ impl Plugin for DoubleRate {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         for (frame, &sample) in input.iter().enumerate() {
             output[frame * 2..frame * 2 + 2].fill(sample);
         }

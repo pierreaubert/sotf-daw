@@ -118,7 +118,7 @@ fn interleaved_sine(channels: usize, frames: usize, freq: f32) -> Vec<f32> {
 }
 
 fn process_plugin(plugin: &mut Box<dyn Plugin>, channels: usize) {
-    plugin.initialize(SAMPLE_RATE).expect("initialize failed");
+    plugin.initialize(f64::from(SAMPLE_RATE)).expect("initialize failed");
     process_initialized_plugin(plugin, channels).expect("process failed");
 }
 
@@ -430,7 +430,7 @@ fn all_realtime_numeric_and_boolean_parameters_tolerate_rapid_updates() {
                 continue;
             }
         };
-        if let Err(error) = plugin.initialize(SAMPLE_RATE) {
+        if let Err(error) = plugin.initialize(f64::from(SAMPLE_RATE)) {
             failures.push(format!("{plugin_type}: initialize failed: {error}"));
             continue;
         }

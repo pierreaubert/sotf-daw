@@ -28,7 +28,7 @@ pub(super) fn test_eq_zero_alloc() {
         ),
     ];
     let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(2, filters));
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -44,7 +44,7 @@ pub(super) fn test_eq_zero_alloc() {
 
 pub(super) fn test_gain_zero_alloc() {
     let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(2, -3.0));
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0; input.len()];
@@ -59,7 +59,7 @@ pub(super) fn test_gain_zero_alloc() {
 
 pub(super) fn test_compressor_zero_alloc() {
     let mut plugin = CompressorPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -73,7 +73,7 @@ pub(super) fn test_compressor_zero_alloc() {
 
 pub(super) fn test_expander_zero_alloc() {
     let mut plugin = ExpanderPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -87,7 +87,7 @@ pub(super) fn test_expander_zero_alloc() {
 
 pub(super) fn test_gate_zero_alloc() {
     let mut plugin = GatePlugin::new(2, -40.0, 10.0, 1.0, 10.0, 100.0);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -101,7 +101,7 @@ pub(super) fn test_gate_zero_alloc() {
 
 pub(super) fn test_limiter_zero_alloc() {
     let mut plugin = LimiterPlugin::new(2, -1.0, 50.0, 5.0, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -115,7 +115,7 @@ pub(super) fn test_limiter_zero_alloc() {
 
 pub(super) fn test_delay_zero_alloc() {
     let mut plugin = DelayPlugin::new(2, 100.0, 0.3, 0.5);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -129,7 +129,7 @@ pub(super) fn test_delay_zero_alloc() {
 
 pub(super) fn test_crossover_zero_alloc() {
     let mut plugin = CrossoverPlugin::new(2, "LR24", 1000.0, "low").unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
@@ -144,7 +144,7 @@ pub(super) fn test_crossover_zero_alloc() {
 
 pub(super) fn test_matrix_zero_alloc() {
     let mut plugin = MatrixPlugin::new(2, 2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -159,7 +159,7 @@ pub(super) fn test_matrix_zero_alloc() {
 
 pub(super) fn test_channel_mute_solo_zero_alloc() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -175,7 +175,7 @@ pub(super) fn test_loudness_compensation_zero_alloc() {
     let mut plugin = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 200.0, 3.0, 6000.0, 2.0,
     ));
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -199,7 +199,7 @@ pub(super) fn test_fletcher_munson_zero_alloc() {
     let mut plugin = ParametricInPlacePluginAdapter::new(
         LoudnessCompensationPlugin::from_params(2, params).unwrap(),
     );
-    Plugin::initialize(&mut plugin, SAMPLE_RATE).unwrap();
+    Plugin::initialize(&mut plugin, f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -214,7 +214,7 @@ pub(super) fn test_fletcher_munson_zero_alloc() {
 
 pub(super) fn test_multiband_compressor_zero_alloc() {
     let mut plugin = MultibandCompressorPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -228,7 +228,7 @@ pub(super) fn test_multiband_compressor_zero_alloc() {
 
 pub(super) fn test_multiband_expander_zero_alloc() {
     let mut plugin = MultibandExpanderPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -242,7 +242,7 @@ pub(super) fn test_multiband_expander_zero_alloc() {
 
 pub(super) fn test_ab_compare_zero_alloc() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -257,7 +257,7 @@ pub(super) fn test_ab_compare_zero_alloc() {
 
 pub(super) fn test_band_split_zero_alloc() {
     let mut plugin = BandSplitPlugin::new(2, 1000.0, "LR24").unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 4]; // 2 bands * 2 channels
@@ -272,7 +272,7 @@ pub(super) fn test_band_split_zero_alloc() {
 
 pub(super) fn test_band_merge_zero_alloc() {
     let mut plugin = BandMergePlugin::new(2, 2).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 4); // 2 bands * 2 channels
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -288,7 +288,7 @@ pub(super) fn test_band_merge_zero_alloc() {
 pub(super) fn test_upmixer_zero_alloc() {
     let params: UpmixerPluginParams = serde_json::from_str("{}").unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let out_ch = plugin.output_channels();
@@ -305,7 +305,7 @@ pub(super) fn test_upmixer_zero_alloc() {
 pub(super) fn test_xtc_zero_alloc() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -323,7 +323,7 @@ pub(super) fn test_xtc_zero_alloc() {
 
 pub(super) fn test_denoiser_zero_alloc() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -340,7 +340,7 @@ pub(super) fn test_denoiser_zero_alloc() {
 
 pub(super) fn test_speech_denoiser_zero_alloc() {
     let mut plugin = SpeechDenoiserPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(SPEECH_DENOISER_FRAME_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, SPEECH_DENOISER_FRAME_SIZE);
@@ -356,7 +356,7 @@ pub(super) fn test_speech_denoiser_zero_alloc() {
 
 pub(super) fn test_hiss_reducer_zero_alloc() {
     let mut plugin = HissReducerPlugin::new(2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -372,7 +372,7 @@ pub(super) fn test_hiss_reducer_zero_alloc() {
 
 pub(super) fn test_declick_zero_alloc() {
     let mut plugin = DeclickPlugin::new(2, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, 2);
     let ctx = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -390,7 +390,7 @@ pub(super) fn test_spectrum_analyzer_zero_alloc() {
         smoothing: 0.7,
     };
     let mut plugin = SpectrumAnalyzerPlugin::with_config(2, config).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -408,7 +408,7 @@ pub(super) fn test_spectrum_analyzer_zero_alloc() {
 
 pub(super) fn test_loudness_monitor_zero_alloc() {
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -446,7 +446,7 @@ pub(super) fn test_auto_gain_zero_alloc() {
 pub(super) fn test_aec_zero_alloc() {
     let params = AecPluginParams::default();
     let mut plugin = AecPlugin::from_params(SAMPLE_RATE, params).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2); // 2-channel: mic + ref
     let mut output = vec![0.0f32; BUFFER_SIZE]; // 1-channel output
@@ -463,7 +463,7 @@ pub(super) fn test_aec_zero_alloc() {
 
 pub(super) fn test_aae_zero_alloc() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = generate_test_buffer(BUFFER_SIZE, 2);
     let out_ch = plugin.output_channels();
@@ -482,7 +482,7 @@ pub(super) fn test_aae_zero_alloc() {
 
 pub(super) fn test_beamformer_zero_alloc() {
     let mut plugin = BeamformerPlugin::new(2, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Use GSC mode (sample-by-sample, simplest hot path)
     use sotf_plugins::parameters::{ParameterId, ParameterValue};

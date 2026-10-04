@@ -999,7 +999,7 @@ fn compressor_detector_engine_chain_processes_audio() {
                 48_000,
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mut output = vec![0.0f32; program.len()];
             for (input_block, output_block) in
                 program.chunks(2048).zip(output.chunks_mut(2048))
@@ -1625,7 +1625,7 @@ fn de_esser_lookahead_latency_and_wideband_audio_reach_factory() {
     let config = settings.to_plugin_config(48_000.0);
     let mut plugin =
         sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let mut plain_settings = PluginSettings::default_for(&PluginType::DeEsser).unwrap();
     plain_settings.set_param_value(6, 0.0);
@@ -1633,7 +1633,7 @@ fn de_esser_lookahead_latency_and_wideband_audio_reach_factory() {
     let mut plain =
         sotf_plugins::create_plugin(&plain_config.plugin_type, &plain_config.parameters, 2, 48_000)
             .unwrap();
-    plain.initialize(48_000).unwrap();
+    plain.initialize(48_000.0).unwrap();
     assert_eq!(plugin.latency_samples() - plain.latency_samples(), 240);
 
     let frames = 1024;
@@ -1666,7 +1666,7 @@ fn declick_legacy_audio_and_repair_latency_reach_factory() {
         48_000,
     )
     .unwrap();
-    legacy_plugin.initialize(48_000).unwrap();
+    legacy_plugin.initialize(48_000.0).unwrap();
 
     let frames = 1024;
     let input: Vec<f32> = (0..frames * 2)
@@ -1717,7 +1717,7 @@ fn hiss_default_audio_reaches_factory() {
     let config = settings.to_plugin_config(48_000.0);
     let mut plugin =
         sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 1, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let frames = 2048;
     let input: Vec<f32> = (0..frames)
@@ -1763,7 +1763,7 @@ fn hiss_transient_guard_reaches_factory_audio_and_survives_reload() {
     let render = |parameters: &serde_json::Value| {
         let mut plugin =
             sotf_plugins::create_plugin(&config.plugin_type, parameters, 1, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = vec![f32::NAN; input.len()];
         assert_eq!(
             plugin
@@ -1828,7 +1828,7 @@ fn speech_strength_zero_emits_delayed_dry_through_factory() {
         48_000,
     )
     .unwrap();
-    dry.initialize(48_000).unwrap();
+    dry.initialize(48_000.0).unwrap();
 
     let wet_settings = PluginSettings::default_for(&PluginType::SpeechDenoiser).unwrap();
     let wet_config = wet_settings.to_plugin_config(48_000.0);
@@ -1839,7 +1839,7 @@ fn speech_strength_zero_emits_delayed_dry_through_factory() {
         48_000,
     )
     .unwrap();
-    wet.initialize(48_000).unwrap();
+    wet.initialize(48_000.0).unwrap();
 
     // Three 480-frame model windows; the first 960 frames are delay fill.
     let frames = 1440;
@@ -1890,7 +1890,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
         configured.get_parameter(&ParameterId::from("bit_depth")),
         Some(ParameterValue::Int(2))
     );
-    configured.initialize(48_000).unwrap();
+    configured.initialize(48_000.0).unwrap();
 
     let default_settings = PluginSettings::default_for(&PluginType::Dither).unwrap();
     let default_config = default_settings.to_plugin_config(48_000.0);
@@ -1901,7 +1901,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
         48_000,
     )
     .unwrap();
-    defaulted.initialize(48_000).unwrap();
+    defaulted.initialize(48_000.0).unwrap();
 
     let frames = 1024;
     let input: Vec<f32> = (0..frames * 2)
@@ -1934,7 +1934,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
         48_000,
     )
     .unwrap();
-    reloaded.initialize(48_000).unwrap();
+    reloaded.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut reloaded), configured_out);
 
     // Out-of-range indices are rejected; unknown keys are ignored (lenient).
@@ -1952,7 +1952,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
     // Rejection leaves the accepted config rebuildable with identical audio.
     let mut rebuilt =
         sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-    rebuilt.initialize(48_000).unwrap();
+    rebuilt.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut rebuilt), configured_out);
 }
 
@@ -1993,7 +1993,7 @@ fn crossfeed_old_save_without_yaw_defaults_to_zero_and_renders_legacy_audio() {
         48_000,
     )
     .unwrap();
-    legacy_plugin.initialize(48_000).unwrap();
+    legacy_plugin.initialize(48_000.0).unwrap();
     let mut default_plugin = sotf_plugins::create_plugin(
         &default_config.plugin_type,
         &default_config.parameters,
@@ -2001,7 +2001,7 @@ fn crossfeed_old_save_without_yaw_defaults_to_zero_and_renders_legacy_audio() {
         48_000,
     )
     .unwrap();
-    default_plugin.initialize(48_000).unwrap();
+    default_plugin.initialize(48_000.0).unwrap();
 
     let frames = 4096;
     let mut input = vec![0.0f32; frames * 2];
@@ -2049,7 +2049,7 @@ fn crossfeed_old_save_without_yaw_defaults_to_zero_and_renders_legacy_audio() {
         48_000,
     )
     .unwrap();
-    step_plugin.initialize(48_000).unwrap();
+    step_plugin.initialize(48_000.0).unwrap();
     let step_frames = 8192;
     let mut step_input = vec![0.0f32; step_frames * 2];
     for sample in step_input.iter_mut().step_by(2) {
@@ -2132,7 +2132,7 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
         48_000,
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("head_yaw_deg")),
         Some(ParameterValue::Float(45.0))
@@ -2154,7 +2154,7 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
         48_000,
     )
     .unwrap();
-    reference.initialize(48_000).unwrap();
+    reference.initialize(48_000.0).unwrap();
     let mut zero_plugin = sotf_plugins::create_plugin(
         &zero_config.plugin_type,
         &zero_config.parameters,
@@ -2162,7 +2162,7 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
         48_000,
     )
     .unwrap();
-    zero_plugin.initialize(48_000).unwrap();
+    zero_plugin.initialize(48_000.0).unwrap();
 
     let frames = 4096;
     let mut input = vec![0.0f32; frames * 2];
@@ -2225,7 +2225,7 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
             48_000,
         )
         .unwrap();
-        step_plugin.initialize(48_000).unwrap();
+        step_plugin.initialize(48_000.0).unwrap();
         let step_frames = 8192;
         let mut step_input = vec![0.0f32; step_frames * 2];
         for sample in step_input.iter_mut().step_by(2) {
@@ -2300,7 +2300,7 @@ fn crossfeed_yaw_save_reload_preserves_audio() {
         48_000,
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let frames = 4096;
     let mut input = vec![0.0f32; frames * 2];
@@ -2326,7 +2326,7 @@ fn crossfeed_yaw_save_reload_preserves_audio() {
         48_000,
     )
     .unwrap();
-    rebuilt.initialize(48_000).unwrap();
+    rebuilt.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut rebuilt), before);
 }
 
@@ -2344,7 +2344,7 @@ fn crossfeed_nonfinite_yaw_rejected_without_poisoning_accepted_audio() {
         48_000,
     )
     .unwrap();
-    accepted.initialize(48_000).unwrap();
+    accepted.initialize(48_000.0).unwrap();
 
     let frames = 4096;
     let mut input = vec![0.0f32; frames * 2];
@@ -2383,6 +2383,6 @@ fn crossfeed_nonfinite_yaw_rejected_without_poisoning_accepted_audio() {
         48_000,
     )
     .unwrap();
-    rebuilt.initialize(48_000).unwrap();
+    rebuilt.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut rebuilt), accepted_out);
 }

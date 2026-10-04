@@ -112,7 +112,7 @@ fn test_eq_zero_gain_filters_passthrough_near_exact() {
     );
 
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     // Generate test audio
@@ -184,7 +184,7 @@ fn test_eq_empty_filters_passthrough_bit_exact() {
     );
 
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     let num_frames = 1024;

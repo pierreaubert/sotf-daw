@@ -217,7 +217,7 @@ fn all_params_spec_keys_are_registered_in_dsp_plugin() {
 
     for mut pw in all_plugins_with_specs() {
         // Initialize with a sample rate so internal state is valid
-        let _ = pw.plugin.initialize(SAMPLE_RATE);
+        let _ = pw.plugin.initialize(f64::from(SAMPLE_RATE));
 
         let cached = pw.plugin.parameters();
         let cached_keys: Vec<&str> = cached.iter().map(|p| p.id.as_str()).collect();

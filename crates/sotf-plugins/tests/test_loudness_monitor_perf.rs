@@ -8,7 +8,7 @@ fn test_loudness_monitor_performance_96khz() {
     let sample_rate = 96000;
     let frame_size = 1024;
     let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let input = vec![0.1; frame_size * channels];
     let mut output = vec![0.0; frame_size * channels];
@@ -64,7 +64,7 @@ fn loudness_monitor_performance_matrix_scales_with_explicit_spatial_mode() {
                     } else {
                         LoudnessMonitorPlugin::new(channels).unwrap()
                     };
-                    plugin.initialize(sample_rate).unwrap();
+                    plugin.initialize(f64::from(sample_rate)).unwrap();
                     let input = vec![0.1; frame_size * channels];
                     let mut output = vec![0.0; input.len()];
                     let context = ProcessContext::new(sample_rate, frame_size);

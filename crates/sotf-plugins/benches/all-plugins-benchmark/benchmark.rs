@@ -27,7 +27,7 @@ pub(super) fn benchmark_eq(c: &mut Criterion) {
             3.0,
         )];
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(CHANNELS, filters));
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -81,7 +81,7 @@ pub(super) fn benchmark_eq(c: &mut Criterion) {
             ),
         ];
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(CHANNELS, filters));
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -114,7 +114,7 @@ pub(super) fn benchmark_eq(c: &mut Criterion) {
         ];
         let channels = 6;
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(channels, filters));
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, channels);
         let mut output = vec![0.0f32; BUFFER_SIZE * channels];
@@ -143,7 +143,7 @@ pub(super) fn benchmark_eq(c: &mut Criterion) {
             3.0,
         )];
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(CHANNELS, filters));
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(buf_size, CHANNELS);
         let mut output = vec![0.0f32; buf_size * CHANNELS];
@@ -170,7 +170,7 @@ pub(super) fn benchmark_delay(c: &mut Criterion) {
 
     for &buf_size in &[256, 512, 1024] {
         let mut plugin = DelayPlugin::new(CHANNELS, 100.0, 0.3, 0.5);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(buf_size, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, buf_size);
@@ -187,7 +187,7 @@ pub(super) fn benchmark_delay(c: &mut Criterion) {
     // Different feedback values
     for &feedback in &[0.0, 0.5, 0.9] {
         let mut plugin = DelayPlugin::new(CHANNELS, 100.0, feedback, 0.5);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -208,7 +208,7 @@ pub(super) fn benchmark_gate(c: &mut Criterion) {
     let mut group = c.benchmark_group("GatePlugin");
 
     let mut plugin = GatePlugin::new(CHANNELS, -40.0, 10.0, 1.0, 10.0, 100.0);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     for &buf_size in &[256, 512, 1024] {
         let mut buffer = generate_test_buffer(buf_size, CHANNELS);
@@ -232,7 +232,7 @@ pub(super) fn benchmark_limiter(c: &mut Criterion) {
     // Hard limiter
     {
         let mut plugin = LimiterPlugin::new(CHANNELS, -1.0, 50.0, 5.0, false);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -249,7 +249,7 @@ pub(super) fn benchmark_limiter(c: &mut Criterion) {
     // Soft limiter
     {
         let mut plugin = LimiterPlugin::new(CHANNELS, -1.0, 50.0, 5.0, true);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -266,7 +266,7 @@ pub(super) fn benchmark_limiter(c: &mut Criterion) {
     // Different lookahead values
     for &lookahead in &[0.0, 5.0, 10.0] {
         let mut plugin = LimiterPlugin::new(CHANNELS, -1.0, 50.0, lookahead, false);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -287,7 +287,7 @@ pub(super) fn benchmark_expander(c: &mut Criterion) {
     let mut group = c.benchmark_group("ExpanderPlugin");
 
     let mut plugin = ExpanderPlugin::new(CHANNELS);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     for &buf_size in &[256, 512, 1024] {
         let mut buffer = generate_test_buffer(buf_size, CHANNELS);
@@ -311,7 +311,7 @@ pub(super) fn benchmark_crossover(c: &mut Criterion) {
     // LR24 lowpass
     {
         let mut plugin = CrossoverPlugin::new(CHANNELS, "LR24", 1000.0, "low").unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
@@ -333,7 +333,7 @@ pub(super) fn benchmark_crossover(c: &mut Criterion) {
     // Linear-phase crossover (heavier FIR path)
     {
         let mut plugin = CrossoverPlugin::new(CHANNELS, "LinearPhase", 1000.0, "low").unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
@@ -355,7 +355,7 @@ pub(super) fn benchmark_crossover(c: &mut Criterion) {
     // Multichannel
     for &channels in &[2, 4, 8] {
         let mut plugin = CrossoverPlugin::new(channels, "LR24", 1000.0, "low").unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, channels);
         let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
@@ -383,7 +383,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
     // Identity 2x2
     {
         let mut plugin = MatrixPlugin::new(2, 2);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, 2);
         let mut output = vec![0.0f32; BUFFER_SIZE * 2];
@@ -405,7 +405,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
     // Upmix 2 -> 6
     {
         let mut plugin = MatrixPlugin::new(2, 6);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, 2);
         let mut output = vec![0.0f32; BUFFER_SIZE * 6];
@@ -427,7 +427,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
     // Large matrix 8x8
     {
         let mut plugin = MatrixPlugin::new(8, 8);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, 8);
         let mut output = vec![0.0f32; BUFFER_SIZE * 8];
@@ -453,7 +453,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
             matrix[output * 8 + (7 - output)] = 1.0;
         }
         let mut plugin = MatrixPlugin::with_matrix(8, 8, matrix).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let input = generate_test_buffer(BUFFER_SIZE, 8);
         let mut output = vec![0.0f32; BUFFER_SIZE * 8];
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -473,7 +473,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
     // 8-channel mono sum
     {
         let mut plugin = MatrixPlugin::with_matrix(8, 1, vec![0.125; 8]).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let input = generate_test_buffer(BUFFER_SIZE, 8);
         let mut output = vec![0.0f32; BUFFER_SIZE];
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -496,7 +496,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
             .map(|index| (index * 17 % 31 + 1) as f32 / 64.0)
             .collect();
         let mut plugin = MatrixPlugin::with_matrix(8, 8, matrix).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let input = generate_test_buffer(BUFFER_SIZE, 8);
         let mut output = vec![0.0f32; BUFFER_SIZE * 8];
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -520,7 +520,7 @@ pub(super) fn benchmark_matrix(c: &mut Criterion) {
             matrix[channel * 16 + channel] = 0.75;
         }
         let mut plugin = MatrixPlugin::with_matrix(16, 16, matrix).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let input = generate_test_buffer(BUFFER_SIZE, 16);
         let mut output = vec![0.0f32; BUFFER_SIZE * 16];
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -552,7 +552,7 @@ pub(super) fn benchmark_analyzers(c: &mut Criterion) {
             smoothing: 0.7,
         };
         let mut plugin = SpectrumAnalyzerPlugin::with_config(CHANNELS, config).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -574,7 +574,7 @@ pub(super) fn benchmark_analyzers(c: &mut Criterion) {
     // Loudness Monitor
     {
         let mut plugin = LoudnessMonitorPlugin::new(CHANNELS).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -610,7 +610,7 @@ pub(super) fn benchmark_loudness(c: &mut Criterion) {
         let mut plugin = ParametricInPlacePluginAdapter::new(
             LoudnessCompensationPlugin::from_params(CHANNELS, params).unwrap(),
         );
-        Plugin::initialize(&mut plugin, SAMPLE_RATE).unwrap();
+        Plugin::initialize(&mut plugin, f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -634,7 +634,7 @@ pub(super) fn benchmark_loudness(c: &mut Criterion) {
         let mut plugin = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
             CHANNELS, 200.0, 3.0, 6000.0, 2.0,
         ));
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let mut output = vec![0.0f32; BUFFER_SIZE * CHANNELS];
@@ -660,7 +660,7 @@ pub(super) fn benchmark_channel_mute_solo(c: &mut Criterion) {
     let mut group = c.benchmark_group("ChannelMuteSolo");
 
     let mut plugin = ChannelMuteSoloPlugin::new(CHANNELS, true);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
     let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -677,7 +677,7 @@ pub(super) fn benchmark_channel_mute_solo(c: &mut Criterion) {
     {
         let channels = 8;
         let mut plugin8 = ChannelMuteSoloPlugin::new(channels, true);
-        plugin8.initialize(SAMPLE_RATE).unwrap();
+        plugin8.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer8 = generate_test_buffer(BUFFER_SIZE, channels);
         let context8 = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -700,7 +700,7 @@ pub(super) fn benchmark_multiband_compressor(c: &mut Criterion) {
     // Default 3-band compressor
     {
         let mut plugin = MultibandCompressorPlugin::new(CHANNELS);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -722,7 +722,7 @@ pub(super) fn benchmark_multiband_compressor(c: &mut Criterion) {
             ..Default::default()
         };
         let mut plugin = MultibandCompressorPlugin::with_params(CHANNELS, params);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -745,7 +745,7 @@ pub(super) fn benchmark_multiband_expander(c: &mut Criterion) {
     // Default 3-band expander
     {
         let mut plugin = MultibandExpanderPlugin::new(CHANNELS);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -767,7 +767,7 @@ pub(super) fn benchmark_multiband_expander(c: &mut Criterion) {
             ..Default::default()
         };
         let mut plugin = MultibandExpanderPlugin::with_params(CHANNELS, params);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
@@ -790,7 +790,7 @@ pub(super) fn benchmark_aae(c: &mut Criterion) {
     // Different buffer sizes (5.1 default)
     for &buf_size in &[256, 512, 1024, 2048] {
         let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(buf_size, 2);
         let out_ch = plugin.output_channels();
@@ -819,7 +819,7 @@ pub(super) fn benchmark_aae(c: &mut Criterion) {
             ..AaePluginParams::default()
         };
         let mut plugin = AaePlugin::from_params(params).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, 2);
         let out_ch = plugin.output_channels();
@@ -849,7 +849,7 @@ pub(super) fn benchmark_aae(c: &mut Criterion) {
             ..AaePluginParams::default()
         };
         let mut plugin = AaePlugin::from_params(params).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let input = generate_test_buffer(BUFFER_SIZE, 2);
         let out_ch = plugin.output_channels();
@@ -880,7 +880,7 @@ pub(super) fn benchmark_denoiser_splits(c: &mut Criterion) {
 
     {
         let mut plugin = SpeechDenoiserPlugin::new(CHANNELS);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         group.bench_function("speech_denoiser", |b| {
             b.iter(|| {
@@ -893,7 +893,7 @@ pub(super) fn benchmark_denoiser_splits(c: &mut Criterion) {
 
     {
         let mut plugin = HissReducerPlugin::new(CHANNELS);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         group.bench_function("hiss_reducer", |b| {
             b.iter(|| {
@@ -906,7 +906,7 @@ pub(super) fn benchmark_denoiser_splits(c: &mut Criterion) {
 
     {
         let mut plugin = DeclickPlugin::new(CHANNELS, SAMPLE_RATE).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut buffer = generate_test_buffer(BUFFER_SIZE, CHANNELS);
         group.bench_function("declick", |b| {
             b.iter(|| {

@@ -547,7 +547,7 @@ fn forced_oversampling_preserves_momentary_admission_and_refusals() {
             .unwrap()
             .expect("wrapped capture must export");
         assert_eq!(done.profile.format_version, 2);
-        assert_eq!(done.profile.sample_rate, RATE * factor);
+        assert_eq!(done.profile.sample_rate, f64::from(RATE * factor));
         assert_eq!(
             done.profile.frames_analyzed,
             (required_host_frames * factor as usize) as u64,

@@ -474,7 +474,7 @@ fn render_public_band_split_reference(
     let mut plugin = sotf_plugins::create_plugin("band_split", &parameters, 2, SAMPLE_RATE)
         .unwrap_or_else(|error| panic!("construct public BandSplit reference: {error}"));
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .unwrap_or_else(|error| panic!("initialize public BandSplit reference: {error}"));
 
     let output_channels = num_bands * 2;

@@ -307,7 +307,7 @@ fn create_and_init_plugin(
     let mut plugin = create_plugin(plugin_type, params, channels, SAMPLE_RATE)
         .map_err(|e| format!("instantiate failed: {e}"))?;
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .map_err(|e| format!("initialize failed: {e}"))?;
     Ok(plugin)
 }

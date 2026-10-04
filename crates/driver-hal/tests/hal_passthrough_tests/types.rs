@@ -235,7 +235,7 @@ fn test_volume_with_hal_pipeline() {
     let mut gain_plugin =
         ParametricPluginAdapter::new(GainPlugin::new(channel_count as usize, -6.0));
     gain_plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     let context = ProcessContext::new(sample_rate, buffer_frames as usize);

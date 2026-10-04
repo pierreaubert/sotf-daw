@@ -63,7 +63,7 @@ fn settled_peak(output: &[f32], channels: usize) -> f32 {
 
 fn make(plugin_type: &str, config: &serde_json::Value) -> Box<dyn Plugin> {
     let mut plugin = create_plugin(plugin_type, config, CHANNELS, RATE).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 

@@ -72,7 +72,7 @@ impl Plugin for TailPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         for (frame, &sample) in input.iter().enumerate() {
             output[frame * 2..frame * 2 + 2].fill(sample);
         }
@@ -93,7 +93,7 @@ impl Plugin for TailPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         assert_eq!(context.num_frames, 0);
         if self.drain_calls.load(Ordering::SeqCst) == self.inject_after
             && let Some((sender, command)) = self.command_on_drain.take()

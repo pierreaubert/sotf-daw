@@ -1114,7 +1114,7 @@ fn offline_dynamic_eq_shelf_settings_match_separately_configured_core() {
 
         let mut reference = create_plugin("dynamic_eq", &reference_parameters, 2, sample_rate)
             .expect("independent explicit shelf config constructs the accepted core");
-        reference.initialize(sample_rate).unwrap();
+        reference.initialize(f64::from(sample_rate)).unwrap();
         let mut expected = vec![f32::NAN; input.len()];
         let mut start_frame = 0;
         while start_frame < source_frames {

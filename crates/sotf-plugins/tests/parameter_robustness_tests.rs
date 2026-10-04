@@ -220,7 +220,7 @@ fn test_parameter_bounds_and_types() {
         let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
         let context = ProcessContext::new(SAMPLE_RATE, BUFFER_SIZE);
 
-        let _ = plugin.initialize(SAMPLE_RATE);
+        let _ = plugin.initialize(f64::from(SAMPLE_RATE));
         let result = plugin.process(&input, &mut output, &context);
 
         assert!(
@@ -247,7 +247,7 @@ fn test_parameter_change_during_processing() {
         let input = vec![0.1f32; BUFFER_SIZE * plugin.input_channels()];
         let mut output = vec![0.0f32; BUFFER_SIZE * plugin.output_channels()];
 
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         // Start processing
         for i in 0..10 {

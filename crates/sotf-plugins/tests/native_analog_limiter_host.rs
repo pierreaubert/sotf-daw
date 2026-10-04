@@ -187,7 +187,7 @@ fn direct_reference() -> Box<dyn Plugin> {
     // binaries initialize through their wrapper lifecycle, so the direct
     // reference must be initialized explicitly before any process call.
     reference
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .expect("direct factory reference initializes");
     reference
 }

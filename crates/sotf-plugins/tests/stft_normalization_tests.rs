@@ -14,7 +14,7 @@ fn test_xtc_stft_roundtrip_gain() {
     params.auto_gain_enabled = false; // Disable auto-gain for pure OLA test
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 8192;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -56,7 +56,7 @@ fn test_upmixer_stft_roundtrip_gain() {
     params.bypass.bypass_all_processing = true; // Test OLA framework only
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 8192;
     let mut input = vec![0.0_f32; num_frames * 2];

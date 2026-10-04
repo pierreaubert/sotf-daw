@@ -148,7 +148,7 @@ fn render(plugin: &mut dyn Plugin, channels: usize, selected: usize) -> Vec<f32>
 }
 
 fn render_at(plugin: &mut dyn Plugin, channels: usize, selected: usize, rate: u32) -> Vec<f32> {
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     render_current_pattern(plugin, channels, selected, rate, &[1, 17, 127])
 }
 
@@ -698,7 +698,7 @@ fn spatial_consumers_report_source_time_rebase_and_keep_active_value_on_failed_r
             ..Default::default()
         },
     );
-    xtc_plugin.initialize(RATE).unwrap();
+    xtc_plugin.initialize(f64::from(RATE)).unwrap();
     let expected_xtc_replacement_seconds = 2.0 / f64::from(RATE);
     assert_eq!(
         xtc_plugin.sofa_delay_rebase_seconds(),
@@ -711,7 +711,7 @@ fn spatial_consumers_report_source_time_rebase_and_keep_active_value_on_failed_r
             ..Default::default()
         },
     );
-    assert!(xtc_plugin.initialize(RATE).is_err());
+    assert!(xtc_plugin.initialize(f64::from(RATE)).is_err());
     assert_eq!(
         xtc_plugin.sofa_delay_rebase_seconds(),
         Some(expected_xtc_replacement_seconds)
@@ -747,7 +747,7 @@ fn fractional_support_is_counted_at_binaural_and_xtc_fft_boundaries() {
             },
         );
         let mut plugin = binaural_plugin(&path, 2);
-        let result = plugin.initialize(RATE);
+        let result = plugin.initialize(f64::from(RATE));
         assert_eq!(
             result.is_ok(),
             should_fit,
@@ -1056,8 +1056,8 @@ fn failed_binaural_delay_replacement_or_reinitialize_preserves_live_and_partial_
         write_valid_fractional_fixture(&reference_path, RATE);
         let mut actual = binaural_plugin_with_fft(&actual_path, 2, 256);
         let mut reference = binaural_plugin_with_fft(&reference_path, 2, 256);
-        actual.initialize(RATE).unwrap();
-        reference.initialize(RATE).unwrap();
+        actual.initialize(f64::from(RATE)).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
         let active_offset = Some(32.0 / f64::from(RATE));
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
         assert_eq!(
@@ -1123,8 +1123,8 @@ fn failed_xtc_delay_reinitialize_preserves_live_and_partial_tail_history() {
         }
         let mut actual = xtc_plugin(&actual_path).unwrap();
         let mut reference = xtc_plugin(&reference_path).unwrap();
-        actual.initialize(RATE).unwrap();
-        reference.initialize(RATE).unwrap();
+        actual.initialize(f64::from(RATE)).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
         let active_offset = Some(32.0 / f64::from(RATE));
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
         assert_eq!(
@@ -1150,7 +1150,7 @@ fn failed_xtc_delay_reinitialize_preserves_live_and_partial_tail_history() {
         );
         assert!(
             actual
-                .initialize(RATE)
+                .initialize(f64::from(RATE))
                 .unwrap_err()
                 .contains("Data.Delay must contain finite sample counts")
         );
@@ -1322,8 +1322,8 @@ fn binaural_fractional_delay_resampling_reset_and_full_eos_match_independent_ir(
 
         let mut actual = binaural_plugin_with_fft(&metadata_path, 1, 256);
         let mut manual = binaural_plugin_with_fft(&manual_path, 1, 256);
-        actual.initialize(target_rate).unwrap();
-        manual.initialize(target_rate).unwrap();
+        actual.initialize(f64::from(target_rate)).unwrap();
+        manual.initialize(f64::from(target_rate)).unwrap();
         assert_eq!(
             actual.sofa_delay_rebase_seconds(),
             Some(32.0 / f64::from(source_rate))

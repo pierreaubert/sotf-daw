@@ -148,7 +148,7 @@ fn test_hal_with_eq_zero_gain_passthrough() {
             .expect("Failed to create EQ plugin"),
     );
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     // Generate original audio
@@ -244,7 +244,7 @@ fn test_eq_zero_gain_with_silence() {
             .expect("Failed to create EQ plugin"),
     );
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     let num_frames = 1024;
@@ -282,7 +282,7 @@ fn test_volume_control_global_gain() {
     // Create GainPlugin with -6dB (approximately 0.5x)
     let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(num_channels, -6.0));
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     // Generate test audio
@@ -332,7 +332,7 @@ fn test_volume_control_per_channel() {
         GainPlugin::from_params(num_channels, params).expect("Failed to create plugin"),
     );
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     // Generate identical audio on both channels
@@ -390,7 +390,7 @@ fn test_volume_control_multichannel() {
         GainPlugin::from_params(num_channels, params).expect("Failed to create plugin"),
     );
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     // Generate audio with same amplitude on all channels
@@ -462,7 +462,7 @@ fn test_eq_zero_gain_preserves_full_scale() {
             .expect("Failed to create EQ plugin"),
     );
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     let num_frames = 256;

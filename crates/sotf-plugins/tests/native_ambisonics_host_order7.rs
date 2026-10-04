@@ -728,7 +728,7 @@ fn direct_decoder_with_controls(
     config.algorithm = algorithm.to_string();
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).expect("build direct reference");
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .expect("initialize reference");
     plugin
 }

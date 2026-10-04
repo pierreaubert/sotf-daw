@@ -84,7 +84,7 @@ fn finish_with_bound(plugin: &mut dyn Plugin) -> Vec<f32> {
 fn check_case(plugin_type: &str, params: Value, channels: usize, has_tail: bool) {
     let mut plugin = create_plugin(plugin_type, &params, channels, RATE)
         .unwrap_or_else(|error| panic!("{plugin_type} {params}: {error}"));
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin.begin_drain(&context(0)).unwrap();
     assert_eq!(bound(plugin.as_ref()), 1, "empty {plugin_type} {params}");
     let capacity = plugin.drain_output_frames_max();
@@ -231,7 +231,7 @@ fn eq_identity_oversampling_and_recursive_modes() {
 fn eq_final_cached_block_still_requires_one_call() {
     for factor in [2, 4] {
         let mut plugin = create_plugin("eq", &json!({"oversampling": factor}), 2, RATE).unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         prepare(plugin.as_mut());
         plugin.begin_drain(&context(0)).unwrap();
         let capacity = plugin.drain_output_frames_max();

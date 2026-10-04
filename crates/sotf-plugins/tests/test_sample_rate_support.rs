@@ -63,7 +63,7 @@ fn assert_all_finite(buffer: &[f32], label: &str) {
 fn test_gain_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(2, -6.0));
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let mut output = vec![0.0f32; input.len()];
@@ -96,7 +96,7 @@ fn test_eq_multi_sample_rate() {
         ];
 
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(2, filters));
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, 1000.0, 0.3, NUM_FRAMES);
         let mut output = vec![0.0_f32; NUM_FRAMES * 2];
@@ -122,7 +122,7 @@ fn test_eq_multi_sample_rate() {
 fn test_compressor_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = CompressorPlugin::new(2);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = generate_sine_stereo(sr, 440.0, 0.8, NUM_FRAMES);
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -140,7 +140,7 @@ fn test_compressor_multi_sample_rate() {
 fn test_gate_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = GatePlugin::new(2, -30.0, 10.0, 1.0, 10.0, 100.0);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -158,7 +158,7 @@ fn test_gate_multi_sample_rate() {
 fn test_limiter_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = LimiterPlugin::new(2, -1.0, 50.0, 5.0, false);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = generate_sine_stereo(sr, 440.0, 2.0, NUM_FRAMES); // Hot signal
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -176,7 +176,7 @@ fn test_limiter_multi_sample_rate() {
 fn test_expander_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = ExpanderPlugin::new(2);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = generate_sine_stereo(sr, 440.0, 0.01, NUM_FRAMES); // Quiet signal
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -194,7 +194,7 @@ fn test_expander_multi_sample_rate() {
 fn test_delay_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = DelayPlugin::new(2, 100.0, 0.3, 0.5);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -213,7 +213,7 @@ fn test_crossover_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         // Lowpass crossover
         let mut lp = CrossoverPlugin::new(2, "LR24", 1000.0, "low").unwrap();
-        lp.initialize(sr).unwrap();
+        lp.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -224,7 +224,7 @@ fn test_crossover_multi_sample_rate() {
 
         // Highpass crossover
         let mut hp = CrossoverPlugin::new(2, "LR24", 1000.0, "high").unwrap();
-        hp.initialize(sr).unwrap();
+        hp.initialize(f64::from(sr)).unwrap();
 
         let input2 = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let mut output2 = vec![0.0f32; input2.len()];
@@ -241,7 +241,7 @@ fn test_crossover_multi_sample_rate() {
 fn test_matrix_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         let mut plugin = MatrixPlugin::new(2, 2);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let mut output = vec![0.0_f32; NUM_FRAMES * 2];
@@ -342,10 +342,10 @@ fn test_crossover_delay_chain_multi_sample_rate() {
     for &sr in &SAMPLE_RATES {
         // Test crossover followed by delay at each rate
         let mut crossover = CrossoverPlugin::new(2, "LR24", 1000.0, "low").unwrap();
-        crossover.initialize(sr).unwrap();
+        crossover.initialize(f64::from(sr)).unwrap();
 
         let mut delay = DelayPlugin::new(2, 50.0, 0.2, 0.5);
-        delay.initialize(sr).unwrap();
+        delay.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, 440.0, 0.5, NUM_FRAMES);
         let context = ProcessContext::new(sr, NUM_FRAMES);
@@ -381,7 +381,7 @@ fn test_eq_near_nyquist() {
         )];
 
         let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(2, filters));
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let input = generate_sine_stereo(sr, freq as f32, 0.3, NUM_FRAMES);
         let mut output = vec![0.0_f32; NUM_FRAMES * 2];

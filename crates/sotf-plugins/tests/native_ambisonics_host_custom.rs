@@ -441,7 +441,7 @@ fn direct_custom_decoder(
     };
     let mut plugin =
         AmbisonicsDecoderPlugin::new_custom(&config).expect("build direct custom reference");
-    plugin.initialize(SAMPLE_RATE).expect("initialize reference");
+    plugin.initialize(f64::from(SAMPLE_RATE)).expect("initialize reference");
     plugin
 }
 
@@ -740,7 +740,7 @@ fn direct_named_decoder_with_rate(
     config.algorithm = "mode_matching".to_string();
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).expect("build direct named reference");
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("initialize named reference");
     plugin
 }

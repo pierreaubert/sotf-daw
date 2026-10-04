@@ -11,7 +11,7 @@ mod tests {
     fn test_gain_automation_ramp() {
         let sample_rate = 48000.0;
         let mut inner = GainPlugin::new(2, 0.0);
-        inner.plugin_initialize(sample_rate as u32).unwrap();
+        inner.plugin_initialize(sample_rate).unwrap();
         let mut plugin = ParametricPluginAdapter::new(inner);
 
         // Ramp gain from 0dB to -24dB over 0.5 seconds
@@ -29,7 +29,7 @@ mod tests {
     fn test_compressor_threshold_automation_ramp() {
         let sample_rate = 48000.0;
         let mut inner = CompressorPlugin::new(2);
-        inner.initialize(sample_rate as u32).unwrap();
+        inner.initialize(sample_rate).unwrap();
         let mut plugin = ParametricInPlacePluginAdapter::new(inner);
 
         // Ramp threshold from 0dB down to -40dB
@@ -55,7 +55,7 @@ mod tests {
             0.0,
         )];
         let mut inner = sotf_plugins::EqPlugin::new(2, f);
-        inner.plugin_initialize(sample_rate as u32).unwrap();
+        inner.plugin_initialize(sample_rate).unwrap();
         let mut plugin = ParametricPluginAdapter::new(inner);
 
         // Ramp band 0 gain from 0dB to 12dB

@@ -147,7 +147,7 @@ fn try_instantiate_and_process(plugin_type: &str, channels: usize) -> Result<usi
     )?;
 
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .map_err(|e| format!("initialize: {e}"))?;
 
     let input = interleaved_sine(channels, FRAMES);

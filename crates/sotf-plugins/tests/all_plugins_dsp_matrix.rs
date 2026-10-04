@@ -102,7 +102,7 @@ fn process_input_fixture(
         channels,
         sample_rate,
     )?;
-    plugin.initialize(sample_rate)?;
+    plugin.initialize(f64::from(sample_rate))?;
 
     if input.len() != channels * frames {
         return Err(format!(

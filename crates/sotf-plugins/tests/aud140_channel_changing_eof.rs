@@ -50,7 +50,7 @@ fn finite_tail_input() -> Vec<f32> {
 
 fn process_ambisonics(input: &[f32], config: &AmbisonicsDecoderConfig) -> Vec<f32> {
     let mut plugin = AmbisonicsDecoderPlugin::new(config).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let frames = input.len() / plugin.input_channels();
     assert_eq!(input.len(), frames * plugin.input_channels());
     let mut output = vec![f32::NAN; frames * plugin.output_channels()];
@@ -839,9 +839,9 @@ fn ambisonics_identity_geometry_covers_successful_single_and_dual_band_paths() {
             let mut config = ambisonics_config(7, "9.1.6");
             config.dual_band = dual_band;
             let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             assert!(plugin.guarantees_identity_frame_geometry());
-            assert_eq!(plugin.output_sample_rate(sample_rate), sample_rate);
+            assert_eq!(plugin.output_sample_rate(f64::from(sample_rate)), f64::from(sample_rate));
             assert_eq!(plugin.tail_length(), expected_tail);
 
             for frames in [0, 1, 19, 257] {
