@@ -881,12 +881,12 @@ pub(super) fn run_processing_thread(
 
     let mut terminal_rate_error = None;
     macro_rules! checked_processing_rate {
-        ($result:expr) => {
+        ($label:lifetime, $result:expr) => {
             match $result {
                 Ok(rate) => rate,
                 Err(error) => {
                     terminal_rate_error = Some(error);
-                    break 'processing;
+                    break $label;
                 }
             }
         };
@@ -926,6 +926,7 @@ pub(super) fn run_processing_thread(
 
                 // Query plugin chain for actual output sample rate
                 let output_sample_rate = checked_processing_rate!(
+                    'processing,
                     state.output_sample_rate(frame.sample_rate)
                 );
 
@@ -1047,9 +1048,10 @@ pub(super) fn run_processing_thread(
                                     // A successful update may change only the clock.
                                     // Compare the rendered frame's complete format.
                                     if state.output_channels() != output_channels
-                                        || checked_processing_rate!(state.output_sample_rate(
-                                            state.sample_rate
-                                        ))
+                                        || checked_processing_rate!(
+                                            'processing,
+                                            state.output_sample_rate(state.sample_rate)
+                                        )
                                             != output_sample_rate
                                     {
                                         if let Some(ProcessingMessage::Frame(frame)) =
@@ -1117,6 +1119,7 @@ pub(super) fn run_processing_thread(
                     let draining_host_epoch = state.committed_host_epoch;
                     let output_channels = state.output_channels();
                     let output_sample_rate = checked_processing_rate!(
+                        'processing,
                         state.output_sample_rate(state.sample_rate)
                     );
                     let capacity = state.host.drain_output_frames_max();
@@ -1173,9 +1176,10 @@ pub(super) fn run_processing_thread(
                                         &event_tx,
                                     );
                                     let format_changed = state.output_channels() != output_channels
-                                        || checked_processing_rate!(state.output_sample_rate(
-                                            state.sample_rate
-                                        ))
+                                        || checked_processing_rate!(
+                                            'processing,
+                                            state.output_sample_rate(state.sample_rate)
+                                        )
                                             != output_sample_rate;
                                     if (outcome != CommandOutcome::Continue
                                         || state.bypassed
@@ -1226,6 +1230,7 @@ pub(super) fn run_processing_thread(
                             let old_format = (
                                 state.output_channels(),
                                 checked_processing_rate!(
+                                    'processing,
                                     state.output_sample_rate(state.sample_rate)
                                 ),
                             );
@@ -1247,6 +1252,7 @@ pub(super) fn run_processing_thread(
                                 != (
                                     state.output_channels(),
                                     checked_processing_rate!(
+                                        'processing,
                                         state.output_sample_rate(state.sample_rate)
                                     ),
                                 )
