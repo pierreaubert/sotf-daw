@@ -3299,24 +3299,6 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.30.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9"
-
-[[package]]
-name = "glam"
-version = "0.31.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "556f6b2ea90b8d15a74e0e7bb41671c9bdf38cd9f78c284d750b9ce58a2b5be7"
-
-[[package]]
-name = "glam"
-version = "0.32.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f70749695b063ecbf6b62949ccccde2e733ec3ecbbd71d467dca4e5c6c97cca0"
-
-[[package]]
-name = "glam"
 version = "0.33.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37bfe73dc8ec21f54d181e5a60554327ec3f1c600c455a75ccbfc65d2106a6c4"
@@ -3498,7 +3480,7 @@ dependencies = [
  "delaunator",
  "fontdue",
  "fontique",
- "glam 0.33.12",
+ "glam",
  "gpui-design",
  "gpui-profiler",
  "gpui-toolkit-gpui",
@@ -3595,7 +3577,7 @@ version = "0.9.3"
 name = "gpui-px"
 version = "0.9.14"
 dependencies = [
- "glam 0.33.12",
+ "glam",
  "gpui-builder",
  "gpui-d3rs",
  "gpui-design",
@@ -5333,11 +5315,12 @@ dependencies = [
  "realfft",
  "rustfft",
  "serde",
+ "sha2 0.11.0",
 ]
 
 [[package]]
 name = "math-iir-fir"
-version = "0.5.24"
+version = "0.5.25"
 dependencies = [
  "base64 0.23.1",
  "byteorder",
@@ -5463,13 +5446,12 @@ dependencies = [
 [[package]]
 name = "metaheuristics-nature"
 version = "10.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b20a337e8d6714dc38263c8844de8ee773e832b9dfe22a8d984817f92332b18"
+source = "git+https://github.com/pierreaubert/metaheuristics-nature-rs.git?rev=4f0b603c521e0b4e20239c827f1a0975442bb740#4f0b603c521e0b4e20239c827f1a0975442bb740"
 dependencies = [
- "getrandom 0.2.17",
+ "getrandom 0.4.3",
  "num-traits",
- "rand 0.8.8",
- "rand_chacha 0.3.1",
+ "rand 0.10.3",
+ "rand_chacha 0.10.0",
  "rand_distr",
  "serde",
 ]
@@ -5637,14 +5619,10 @@ dependencies = [
 [[package]]
 name = "nalgebra"
 version = "0.35.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adc43a60c217b0c6ff46e47f26911015ad8d2e5a8be1af668c67e370d99a4346"
+source = "git+https://github.com/pierreaubert/nalgebra.git?rev=a42573dbc9649af62fb07b469c98c852e62720fd#a42573dbc9649af62fb07b469c98c852e62720fd"
 dependencies = [
  "approx",
- "glam 0.30.10",
- "glam 0.31.1",
- "glam 0.32.1",
- "glam 0.33.12",
+ "glam",
  "matrixmultiply",
  "num-complex",
  "num-rational",
@@ -7597,12 +7575,12 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rand_distr"
-version = "0.4.3"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
+checksum = "4d431c2703ccf129de4d45253c03f49ebb22b97d6ad79ee3ecfc7e3f4862c1d8"
 dependencies = [
  "num-traits",
- "rand 0.8.8",
+ "rand 0.10.3",
 ]
 
 [[package]]
@@ -8152,6 +8130,7 @@ dependencies = [
  "roomeq-model",
  "roomeq-quality",
  "rustfft",
+ "same-file",
  "schemars",
  "serde",
  "serde_ignored",
@@ -9645,6 +9624,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sotf-host",
+ "sotf-plugin-resampler",
 ]
 
 [[package]]
@@ -10877,8 +10857,7 @@ dependencies = [
 [[package]]
 name = "tract-core"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0509530e580e4b6695d8b1e254197640ebd15b51d30ed098e11a021f901eac28"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "anyhow",
  "anymap3",
@@ -10903,8 +10882,7 @@ dependencies = [
 [[package]]
 name = "tract-data"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29c9dbbf8dc971710999e8d4085dd7824886924f76dde88a1299cef64d8285c0"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "anyhow",
  "downcast-rs",
@@ -10929,8 +10907,7 @@ dependencies = [
 [[package]]
 name = "tract-hir"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad86ddf6796f0022e61491f90c1fbd16713d6daa11fd8036e1a4322c9a56ba97"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "derive-new",
  "log",
@@ -10940,8 +10917,7 @@ dependencies = [
 [[package]]
 name = "tract-linalg"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "336792e9f5f3afe1b4ac9048103302ed250dd2e91e41ef06e243c863a1b5070a"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "byteorder",
  "cc",
@@ -10968,8 +10944,7 @@ dependencies = [
 [[package]]
 name = "tract-nnef"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c263022f047e8ba663d383038b19a8335421e7eb01335abf69e774638652f9e6"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "byteorder",
  "flate2",
@@ -10988,8 +10963,7 @@ dependencies = [
 [[package]]
 name = "tract-onnx"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aee880962c55bb52c5b71ce28c0e83d6b3439a220efe93184690add9e759bfa0"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "bytes",
  "derive-new",
@@ -11006,12 +10980,11 @@ dependencies = [
 [[package]]
 name = "tract-onnx-opl"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ac7471be8a51308fc891999428103cf158e3b1834ebe634b2b656ea11fea0e"
+source = "git+https://github.com/pierreaubert/tract.git?rev=706cccb56b2de6bfcbd0016b9c260aef183e41d7#706cccb56b2de6bfcbd0016b9c260aef183e41d7"
 dependencies = [
  "getrandom 0.2.17",
  "log",
- "rand 0.8.8",
+ "rand 0.10.3",
  "rand_distr",
  "rustfft",
  "tract-nnef",
