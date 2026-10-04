@@ -45,7 +45,7 @@ impl HissReducer {
     pub fn new(channels: usize) -> Self {
         let mut reducer = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cutoff_hz: 4000.0,
             threshold_db: -30.0,
             strength: 0.5,

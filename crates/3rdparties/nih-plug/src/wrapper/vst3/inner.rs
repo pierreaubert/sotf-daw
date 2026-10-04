@@ -650,7 +650,7 @@ impl<P: Vst3Plugin> WrapperInner<P> {
         &self,
         hash: u32,
         normalized_value: f32,
-        sample_rate: Option<f32>,
+        sample_rate: Option<f64>,
     ) -> tresult {
         match self.param_by_hash.get(&hash) {
             Some(param_ptr) => {

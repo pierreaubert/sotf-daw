@@ -235,7 +235,7 @@ impl ParamMut for IntParam {
         self.set_plain_value(self.unmodulated_plain_value())
     }
 
-    fn update_smoother(&self, sample_rate: f32, reset: bool) {
+    fn update_smoother(&self, sample_rate: f64, reset: bool) {
         if reset {
             self.smoothed.reset(self.modulated_plain_value());
         } else {
@@ -295,7 +295,7 @@ impl IntParam {
     pub fn set_plain_value_and_reset_smoother_for_initialization(
         &self,
         value: i32,
-        sample_rate: f32,
+        sample_rate: f64,
     ) -> bool {
         let changed = <Self as ParamMut>::set_plain_value(self, value);
         <Self as ParamMut>::update_smoother(self, sample_rate, true);

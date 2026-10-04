@@ -161,7 +161,7 @@ impl SpectralHissReducer {
         let output_frames = (SPECTRAL_HISS_FFT_SIZE * 4).next_power_of_two();
         Self {
             channels,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             cutoff_hz: 4_000.0,
             threshold_linear: 10.0_f32.powf(-30.0 / 20.0),
             strength: 0.5,

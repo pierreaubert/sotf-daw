@@ -76,7 +76,7 @@ impl ParamPtr {
 
     param_ptr_forward!(pub(crate) unsafe fn set_normalized_value(&self, normalized: f32) -> bool);
     param_ptr_forward!(pub(crate) unsafe fn modulate_value(&self, modulation_offset: f32) -> bool);
-    param_ptr_forward!(pub(crate) unsafe fn update_smoother(&self, sample_rate: f32, reset: bool));
+    param_ptr_forward!(pub(crate) unsafe fn update_smoother(&self, sample_rate: f64, reset: bool));
 
     // These functions involve casts since the plugin formats only do floating point types, so we
     // can't generate them with the macro:

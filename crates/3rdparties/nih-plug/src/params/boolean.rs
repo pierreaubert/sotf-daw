@@ -217,7 +217,7 @@ impl ParamMut for BoolParam {
         self.set_plain_value(self.unmodulated_plain_value())
     }
 
-    fn update_smoother(&self, _sample_rate: f32, _init: bool) {
+    fn update_smoother(&self, _sample_rate: f64, _init: bool) {
         // Can't really smooth a binary parameter now can you
     }
 }
@@ -263,7 +263,7 @@ impl BoolParam {
     pub fn set_plain_value_and_reset_smoother_for_initialization(
         &self,
         value: bool,
-        sample_rate: f32,
+        sample_rate: f64,
     ) -> bool {
         let changed = <Self as ParamMut>::set_plain_value(self, value);
         <Self as ParamMut>::update_smoother(self, sample_rate, true);

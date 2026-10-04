@@ -423,7 +423,7 @@ mod admission_tests {
             _state: &PluginState,
             _is_active: bool,
             _is_audio_thread: bool,
-            _sample_rate: Option<f32>,
+            _sample_rate: Option<f64>,
         ) -> bool {
             self.validate_calls.fetch_add(1, Ordering::SeqCst);
             // Allocating probe: must not run on audio refusal.

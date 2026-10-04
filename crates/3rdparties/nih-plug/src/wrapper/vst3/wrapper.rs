@@ -558,7 +558,7 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
             (true, Some(buffer_config)) => {
                 // Before initializing the plugin, make sure all smoothers are set the the default values
                 for param in self.inner.param_by_hash.values() {
-                    param.update_smoother(buffer_config.sample_rate as f32, true);
+                    param.update_smoother(buffer_config.sample_rate, true);
                 }
 
                 // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks
@@ -868,7 +868,7 @@ impl<P: Vst3Plugin> IEditController for Wrapper<P> {
             .inner
             .current_buffer_config
             .load()
-            .map(|c| c.sample_rate as f32);
+            .map(|c| c.sample_rate);
         self.inner
             .set_normalized_value_by_hash(id, value as f32, sample_rate)
     }
@@ -1335,7 +1335,7 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
                                     self.inner.set_normalized_value_by_hash(
                                         param_hash,
                                         value,
-                                        Some(sample_rate as f32),
+                                        Some(sample_rate),
                                     );
                                 }
                             }
@@ -1485,7 +1485,7 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
                                 self.inner.set_normalized_value_by_hash(
                                     *hash,
                                     *normalized_value,
-                                    Some(sample_rate as f32),
+                                    Some(sample_rate),
                                 );
                             }
                             ProcessEvent::NoteEvent(event) => {

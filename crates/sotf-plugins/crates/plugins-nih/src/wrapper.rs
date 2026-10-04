@@ -2150,7 +2150,7 @@ macro_rules! sotf_nih_plugin {
                         }
                         if convolution_editor_generation.is_some() {
                             self.params
-                                .complete_convolution_state_restore(candidate_sample_rate as f32);
+                                .complete_convolution_state_restore(candidate_sample_rate);
                             #[cfg(feature = "convolution")]
                             if let Some(generation) = convolution_editor_generation {
                                 self.convolution_editor_service.mark_applied(generation);

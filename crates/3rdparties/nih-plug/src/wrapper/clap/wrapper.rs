@@ -1056,7 +1056,7 @@ impl<P: ClapPlugin> Wrapper<P> {
         &self,
         hash: u32,
         update_type: ClapParamUpdate,
-        sample_rate: Option<f32>,
+        sample_rate: Option<f64>,
     ) -> bool {
         match self.param_by_hash.get(&hash) {
             Some(param_ptr) => {
@@ -1296,7 +1296,7 @@ impl<P: ClapPlugin> Wrapper<P> {
         let sample_rate = self
             .current_buffer_config
             .load()
-            .map(|c| c.sample_rate as f32);
+            .map(|c| c.sample_rate);
         while let Some(change) = self.output_parameter_events.pop() {
             let push_successful = match change {
                 OutputParamEvent::BeginGesture { param_hash } => {
@@ -1725,7 +1725,7 @@ impl<P: ClapPlugin> Wrapper<P> {
                     ClapParamUpdate::PlainValueSet(event.value),
                     self.current_buffer_config
                         .load()
-                        .map(|c| c.sample_rate as f32),
+                        .map(|c| c.sample_rate),
                 );
 
                 // If the parameter supports polyphonic modulation, then the plugin needs to be
@@ -1782,7 +1782,7 @@ impl<P: ClapPlugin> Wrapper<P> {
                     ClapParamUpdate::PlainValueMod(event.amount),
                     self.current_buffer_config
                         .load()
-                        .map(|c| c.sample_rate as f32),
+                        .map(|c| c.sample_rate),
                 );
             }
             (CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_TRANSPORT) => {
@@ -2227,7 +2227,7 @@ impl<P: ClapPlugin> Wrapper<P> {
 
         // Before initializing the plugin, make sure all smoothers are set the the default values
         for param in wrapper.param_by_hash.values() {
-            param.update_smoother(buffer_config.sample_rate as f32, true);
+            param.update_smoother(buffer_config.sample_rate, true);
         }
 
         // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks

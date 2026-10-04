@@ -310,7 +310,7 @@ impl<T: Enum + PartialEq> ParamMut for EnumParam<T> {
         self.inner.modulate_value(modulation_offset)
     }
 
-    fn update_smoother(&self, sample_rate: f32, reset: bool) {
+    fn update_smoother(&self, sample_rate: f64, reset: bool) {
         self.inner.update_smoother(sample_rate, reset)
     }
 }
@@ -328,7 +328,7 @@ impl ParamMut for EnumParamInner {
         self.inner.modulate_value(modulation_offset)
     }
 
-    fn update_smoother(&self, sample_rate: f32, reset: bool) {
+    fn update_smoother(&self, sample_rate: f64, reset: bool) {
         self.inner.update_smoother(sample_rate, reset)
     }
 }

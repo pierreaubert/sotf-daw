@@ -144,7 +144,7 @@ impl SpectralCapture {
         Self {
             active: false,
             channels,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             target_frames: 0,
             frames_seen: 0,
             hops: 0,

@@ -77,18 +77,19 @@ impl SmoothingStyle {
     /// Compute the number of steps to reach the target value based on the sample rate and this
     /// smoothing style's duration.
     #[inline]
-    pub fn num_steps(&self, sample_rate: f32) -> u32 {
+    pub fn num_steps(&self, sample_rate: impl Into<f64>) -> u32 {
+        let sample_rate = sample_rate.into();
         nih_debug_assert!(sample_rate > 0.0);
 
         match self {
             Self::OversamplingAware(oversampling_times, style) => {
-                style.num_steps(sample_rate * oversampling_times.load(Ordering::Relaxed))
+                style.num_steps(sample_rate * f64::from(oversampling_times.load(Ordering::Relaxed)))
             }
 
             Self::None => 1,
             Self::Linear(time) | Self::Logarithmic(time) | Self::Exponential(time) => {
                 nih_debug_assert!(*time >= 0.0);
-                (sample_rate * time / 1000.0).round() as u32
+                (sample_rate * f64::from(*time) / 1000.0).round() as u32
             }
         }
     }
@@ -257,7 +258,7 @@ impl<T: Smoothable> Smoother<T> {
     }
 
     /// Set the target value.
-    pub fn set_target(&self, sample_rate: f32, target: T) {
+    pub fn set_target(&self, sample_rate: impl Into<f64>, target: T) {
         T::atomic_store(&self.target, target);
 
         let steps_left = self.style.num_steps(sample_rate) as i32;
@@ -546,6 +547,19 @@ impl Smoothable for i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fractional_rate_controls_smoothing_frame_count_without_f32_rounding() {
+        let rate = 1_234.499_999_99_f64;
+        let style = SmoothingStyle::Linear(1_000.0);
+        assert_eq!(style.num_steps(rate), 1_234);
+        assert_eq!(style.num_steps(rate as f32), 1_235);
+
+        let smoother = Smoother::<f32>::new(style);
+        smoother.reset(0.0);
+        smoother.set_target(rate, 1.0);
+        assert_eq!(smoother.steps_left(), 1_234);
+    }
 
     /// Applying `next()` `n` times should be the same as `next_step()` for `n` steps.
     #[test]

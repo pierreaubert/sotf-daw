@@ -289,7 +289,7 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
 
         // Before initializing the plugin, make sure all smoothers are set the the default values
         for param in wrapper.param_id_to_ptr.values() {
-            unsafe { param.update_smoother(wrapper.buffer_config.sample_rate as f32, true) };
+            unsafe { param.update_smoother(wrapper.buffer_config.sample_rate, true) };
         }
 
         {
@@ -568,7 +568,7 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
                         self.unprocessed_param_changes.pop()
                     {
                         if unsafe { param_ptr.set_normalized_value(normalized_value) } {
-                            unsafe { param_ptr.update_smoother(sample_rate as f32, false) };
+                            unsafe { param_ptr.update_smoother(sample_rate, false) };
                             let task_posted = self.schedule_gui(Task::ParameterValueChanged(
                                 param_ptr,
                                 normalized_value,
