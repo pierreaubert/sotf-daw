@@ -2516,6 +2516,7 @@ fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
             } else {
                 "aud132_pre_edit_hr_off"
             };
+            capture_samples(fft_size, route, "input", &input);
             capture_samples(fft_size, route, "full", &output);
             let digest = sample_digest(&output);
             let expected_digest = match (fft_size, hr_enabled) {
