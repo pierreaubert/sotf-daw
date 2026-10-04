@@ -712,7 +712,12 @@ fn fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin() {
         .max_by(|(_, left), (_, right)| left.abs().total_cmp(&right.abs()))
         .map(|(index, sample)| (index, sample.abs()))
         .unwrap();
-    assert!(first_peak.0 < 16 && first_peak.1 > 0.1);
+    assert!(
+        first_peak.0 < 16 && first_peak.1 > 0.1,
+        "front IR peak={first_peak:?}, first 24 samples={:?}, output_len={}",
+        &output[0][..24.min(output[0].len())],
+        output[0].len()
+    );
     let last_expected = ((source_len - 1) as f64 * target_rate / f64::from(source_rate)).round() as usize;
     let tail = &output[1][last_expected.saturating_sub(8)..(last_expected + 9).min(expected_len)];
     assert!(tail.iter().any(|sample| sample.abs() > 0.05));
