@@ -71,7 +71,7 @@ fn parameters_include_routing_params() {
 #[test]
 fn identity_passthrough() {
     let mut plugin = MatrixPlugin::new(2, 2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let last = last_output_frame(&mut plugin, CONVERGE_FRAMES);
     assert_eq!(last.len(), 2);
@@ -82,7 +82,7 @@ fn identity_passthrough() {
 #[test]
 fn stereo_swap_routes_correctly() {
     let mut plugin = MatrixPlugin::with_matrix(2, 2, vec![0.0, 1.0, 1.0, 0.0]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4;
     let input = vec![0.1f32, 0.9, 0.2, 0.8, 0.3, 0.7, 0.4, 0.6];
@@ -103,7 +103,7 @@ fn stereo_swap_routes_correctly() {
 #[test]
 fn mono_downmix_sums_inputs() {
     let mut plugin = MatrixPlugin::with_matrix(2, 1, vec![0.5, 0.5]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 2;
     let input = vec![1.0f32, 0.0, 0.0, 1.0];
@@ -179,12 +179,12 @@ fn selected_kernels_match_scalar_reference_and_are_partition_invariant() {
 
         let mut whole =
             MatrixPlugin::with_matrix(input_channels, output_channels, matrix.clone()).unwrap();
-        whole.initialize(SAMPLE_RATE).unwrap();
+        whole.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let whole_output = process_partitioned(&mut whole, &input, &[frames]);
 
         let mut partitioned =
             MatrixPlugin::with_matrix(input_channels, output_channels, matrix).unwrap();
-        partitioned.initialize(SAMPLE_RATE).unwrap();
+        partitioned.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let partitioned_output = process_partitioned(&mut partitioned, &input, &[1, 3, 7, 6]);
 
         assert_eq!(whole_output, reference);
@@ -201,7 +201,7 @@ fn coefficient_automation_is_partition_invariant_through_settling() {
     let mut whole = MatrixPlugin::with_matrix(2, 2, vec![0.5, 0.0, 0.0, 0.5]).unwrap();
     let mut partitioned = MatrixPlugin::with_matrix(2, 2, vec![0.5, 0.0, 0.0, 0.5]).unwrap();
     for plugin in [&mut whole, &mut partitioned] {
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         plugin.set_gain(0, 0, 1.0).unwrap();
         plugin.set_gain(1, 1, 1.0).unwrap();
     }
@@ -241,7 +241,7 @@ fn weighted_sparse_mapping_matches_physical_scalar_oracle() {
         vec![0.5, -0.25, 0.125, -0.75, 0.375, 0.0],
     )
     .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let frames = 7;
     let mut input = vec![0.0; frames * 128];
     for frame in 0..frames {
@@ -322,7 +322,7 @@ fn parameter_roundtrip_channel_states() {
 #[test]
 fn stereo_downmix_is_identity_for_stereo_and_preserves_correlated_headroom() {
     let mut plugin = MatrixPlugin::new(2, 2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Apply the stereo_downmix preset via its parameter index.
     // PRESET_CHOICES = ["custom", "stereo_downmix", "ms_encode", "ms_decode", "5.1_remap"]
@@ -475,7 +475,7 @@ fn dim_via_channel_states_attenuates_output() {
 #[test]
 fn reset_then_process_continues() {
     let mut plugin = MatrixPlugin::new(2, 2);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Run briefly, reset, and make sure processing still converges to identity.
     let _ = last_output_frame(&mut plugin, 256);

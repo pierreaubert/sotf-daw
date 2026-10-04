@@ -696,7 +696,7 @@ fn color_off_matches_clean_limiter() {
                     oversampling: 0,
                 },
             );
-            core.initialize(rate).unwrap();
+            core.initialize(f64::from(rate)).unwrap();
             let input = interleave(&vec![sine(2048, rate, 440.0, 2.0); 2]);
             let out_analog = process_all(&mut analog, rate, &input, 2);
             let mut out_core = input.clone();
@@ -794,7 +794,7 @@ fn downward_threshold_step_flat_tops_at_new_target_immediately() {
             oversampling: 0,
         },
     );
-    core.initialize(rate).unwrap();
+    core.initialize(f64::from(rate)).unwrap();
     let mut core_prefix = settled.clone();
     core.process_in_place(&mut core_prefix, &ProcessContext::new(rate, 2048))
         .unwrap();

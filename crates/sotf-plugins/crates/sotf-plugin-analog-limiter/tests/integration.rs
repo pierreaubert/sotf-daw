@@ -56,14 +56,14 @@ fn info_channels_and_core_latency() {
         },
     );
     let mut core = core;
-    core.initialize(SR).unwrap();
+    core.initialize(f64::from(SR)).unwrap();
     assert_eq!(plugin.latency_samples(), core.latency_samples());
 }
 
 #[test]
 fn hot_signal_is_limited_to_ceiling() {
     let mut plugin = AnalogLimiterPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // +6 dBFS sine into a −0.1 dB ceiling, fully wet, color off.
     let input = make_interleaved_sine(440.0, SR, 4096, 1, 2.0);
     let mut buffer = input.clone();
@@ -82,7 +82,7 @@ fn hot_signal_is_limited_to_ceiling() {
 #[test]
 fn quiet_signal_passes_transparent_with_color_off() {
     let mut plugin = AnalogLimiterPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = make_interleaved_sine(440.0, SR, 4096, 1, 0.3);
     let mut buffer = input.clone();
     let context = ProcessContext::new(SR, 4096);
@@ -99,7 +99,7 @@ fn quiet_signal_passes_transparent_with_color_off() {
 #[test]
 fn color_stage_adds_character_when_driven() {
     let mut plugin = AnalogLimiterPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("analog_drive"),
@@ -137,7 +137,7 @@ fn parameter_roundtrip_and_rejection() {
         ..Default::default()
     };
     let mut plugin = AnalogLimiterPlugin::try_from_params(2, params).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("lookahead")),
         Some(ParameterValue::Float(10.0))
@@ -222,7 +222,7 @@ fn from_params_rejects_bad_model_and_zero_channels() {
 #[test]
 fn oversized_blocks_are_chunked() {
     let mut plugin = AnalogLimiterPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let frames = 16384;
     let mut buffer = make_interleaved_sine(440.0, SR, frames, 2, 0.3);
     let context = ProcessContext::new(SR, frames);
@@ -275,7 +275,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
                 .set_parameter(ParameterId::from(*id), value.clone())
                 .unwrap();
         }
-        expected_plugin.initialize(SR).unwrap();
+        expected_plugin.initialize(f64::from(SR)).unwrap();
         let input = make_interleaved_sine(997.0, SR, 4096, 2, 0.3);
         let mut expected_live = input.clone();
         expected_plugin
@@ -301,7 +301,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
                 }
             }
             plugin.apply_values(values).unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             for (id, value) in &controls {
                 assert_eq!(
                     plugin.get_parameter(&ParameterId::from(*id)),
@@ -337,7 +337,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
             plugin
                 .set_parameter(ParameterId::from("analog_model"), model.clone())
                 .unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             for (id, value) in &controls {
                 plugin
                     .set_parameter(ParameterId::from(*id), value.clone())
@@ -392,7 +392,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
         ordered
             .set_parameter(ParameterId::from("analog_model"), model.clone())
             .unwrap();
-        ordered.initialize(SR).unwrap();
+        ordered.initialize(f64::from(SR)).unwrap();
         ordered.reset();
         let mut actual = input.clone();
         ordered
@@ -411,7 +411,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
             ..Default::default()
         };
         let mut reconstructed = AnalogLimiterPlugin::try_from_params(2, params).unwrap();
-        reconstructed.initialize(SR).unwrap();
+        reconstructed.initialize(f64::from(SR)).unwrap();
         reconstructed.reset();
         let mut actual = input.clone();
         reconstructed

@@ -422,7 +422,7 @@ fn nonlinear_core_tail_preserves_the_ordinary_zero_continuation() {
                     let mut plugin = ParametricInPlacePluginAdapter::new(
                         AnalogLimiterPlugin::from_params(channels, params).unwrap(),
                     );
-                    Plugin::initialize(&mut plugin, rate).unwrap();
+                    Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
                     Box::new(plugin) as Box<dyn Plugin>
                 };
                 let mut actual = create();
