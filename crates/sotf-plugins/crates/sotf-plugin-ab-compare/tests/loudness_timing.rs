@@ -23,7 +23,7 @@ fn make_plugin(sample_rate: u32, gain_db: f32, loudness_type: LoudnessType) -> A
         },
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

@@ -158,7 +158,7 @@ fn render_control_case(name: &str) -> (ABComparePluginParams, Vec<f32>, Vec<f32>
     let frames = control_frames(name);
     let input = dense_programme(frames);
     let mut plugin = ABComparePlugin::from_params(CHANNELS, control_params(name)).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let output = render_programme_chunks(&mut plugin, &input, &control_chunks(name));
     (control_params(name), input, output)
 }
@@ -186,7 +186,7 @@ fn analytical_expected_stream(input: &[f32]) -> Vec<f32> {
 
 fn create_public_plugin() -> ABComparePlugin {
     let mut plugin = ABComparePlugin::from_params(CHANNELS, finite_delay_params()).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 

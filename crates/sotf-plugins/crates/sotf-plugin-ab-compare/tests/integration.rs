@@ -64,7 +64,7 @@ fn parameters_include_core_controls() {
 #[test]
 fn mix_roundtrip() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.75))
         .unwrap();
@@ -77,7 +77,7 @@ fn mix_roundtrip() {
 #[test]
 fn bypass_roundtrip() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("bypass"), ParameterValue::Bool(true))
         .unwrap();
@@ -90,7 +90,7 @@ fn bypass_roundtrip() {
 #[test]
 fn selected_path_roundtrips() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("selected_path"), ParameterValue::Int(1))
         .unwrap();
@@ -103,7 +103,7 @@ fn selected_path_roundtrips() {
 #[test]
 fn selected_path_out_of_range_is_rejected() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("selected_path"), ParameterValue::Int(7))
         .unwrap_err();
@@ -113,7 +113,7 @@ fn selected_path_out_of_range_is_rejected() {
 #[test]
 fn mix_mode_switch_to_binary() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix_mode"), ParameterValue::Int(1))
         .unwrap();
@@ -126,7 +126,7 @@ fn mix_mode_switch_to_binary() {
 #[test]
 fn phase_invert_roundtrip() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("phase_invert_a"),
@@ -152,7 +152,7 @@ fn phase_invert_roundtrip() {
 #[test]
 fn difference_mode_roundtrip() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("difference_mode"),
@@ -173,7 +173,7 @@ fn band_mask_frequencies_roundtrip() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("band_mask_low_hz")),
         Some(ParameterValue::Float(250.0))
@@ -187,7 +187,7 @@ fn band_mask_frequencies_roundtrip() {
 #[test]
 fn band_mask_frequencies_out_of_range_are_rejected() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("band_mask_low_hz"),
@@ -214,7 +214,7 @@ fn band_mask_frequencies_rejected_on_construction() {
 #[test]
 fn bypass_passes_input_through_unchanged() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("bypass"), ParameterValue::Bool(true))
         .unwrap();
@@ -231,7 +231,7 @@ fn bypass_passes_input_through_unchanged() {
 #[test]
 fn empty_paths_center_mix_preserves_identical_signal_unity() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // Both paths are the same signal, so every mix position must stay at unity.
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -257,7 +257,7 @@ fn empty_paths_a_only_outputs_scaled_dc() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -278,7 +278,7 @@ fn empty_paths_b_only_outputs_scaled_dc() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -299,7 +299,7 @@ fn empty_paths_b_only_outputs_scaled_dc() {
 #[test]
 fn reset_clears_peak_values() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.8f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES];
@@ -339,7 +339,7 @@ fn initialize_changes_sample_rate_and_resets_smoothing() {
 #[test]
 fn path_a_gain_config_requires_structural_rebuild() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let json = r#"{"type":"Plugin","plugin_type":"gain","parameters":{"gain_db":6.0}}"#;
     let error = plugin
@@ -354,7 +354,7 @@ fn path_a_gain_config_requires_structural_rebuild() {
 #[test]
 fn path_config_none_requires_structural_rebuild() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let error = plugin
         .set_parameter(
             ParameterId::from("path_a_config"),
@@ -383,7 +383,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_parameter_with_wrong_type_fails() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Int(1))
         .unwrap_err();
@@ -393,7 +393,7 @@ fn set_parameter_with_wrong_type_fails() {
 #[test]
 fn invalid_path_config_json_fails() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("path_a_config"),
@@ -406,7 +406,7 @@ fn invalid_path_config_json_fails() {
 #[test]
 fn failed_path_rebuild_preserves_previous_configuration() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let before = plugin
         .get_parameter(&ParameterId::from("path_a_config"))
         .unwrap();
@@ -433,7 +433,7 @@ fn failed_path_rebuild_preserves_previous_configuration() {
 #[test]
 fn process_with_wrong_buffer_size_fails() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = vec![0.0f32; FRAMES * 2 - 1];
     let mut output = vec![0.0f32; FRAMES * 2];
     let err = plugin

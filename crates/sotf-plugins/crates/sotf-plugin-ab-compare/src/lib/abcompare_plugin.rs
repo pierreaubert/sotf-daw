@@ -489,7 +489,7 @@ impl ABComparePlugin {
 
     /// Create from parameters
     pub fn from_params(num_channels: usize, params: ABComparePluginParams) -> Result<Self, String> {
-        Self::from_params_internal(num_channels, 48_000, params, None)
+        Self::from_params_internal(num_channels, 48_000.0, params, None)
     }
 
     /// Construct initial paths with the authoritative factory already installed.
@@ -3252,7 +3252,7 @@ mod mask_proof_tests {
         let mut plugin = ABComparePlugin::new(CHANNELS).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         assert!(plugin.band_mask_active());
 
         let input = wb_dense(128, CHANNELS);
@@ -3328,7 +3328,7 @@ mod mask_proof_tests {
         let mut plugin = ABComparePlugin::new(CHANNELS).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
 
         let input = wb_dense(128, CHANNELS);
         let mut oracle = CascadeOracle::new(CHANNELS, 500.0, 8_000.0, RATE_F64);
@@ -3403,11 +3403,11 @@ mod mask_proof_tests {
         let mut active = ABComparePlugin::new(CHANNELS).unwrap();
         active.band_mask_low_hz = 500.0;
         active.band_mask_high_hz = 8_000.0;
-        active.initialize(RATE).unwrap();
+        active.initialize(f64::from(RATE)).unwrap();
         let mut deactivated = ABComparePlugin::new(CHANNELS).unwrap();
         deactivated.band_mask_low_hz = 500.0;
         deactivated.band_mask_high_hz = 8_000.0;
-        deactivated.initialize(RATE).unwrap();
+        deactivated.initialize(f64::from(RATE)).unwrap();
 
         let process_active = wb_process(&mut active, &input, RATE);
         let process_deactivated = wb_process(&mut deactivated, &input, RATE);

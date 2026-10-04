@@ -491,7 +491,7 @@ fn make_fir_plugin(route: Route, auto_gain: bool) -> ABComparePlugin {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 
@@ -521,7 +521,7 @@ fn make_fir_control_plugin(
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 
@@ -841,7 +841,7 @@ fn two_stage_rack_and_graph_routes_preserve_nested_causality() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(plugin.latency_samples(), 2);
         let process_output = render_chunks(&mut plugin, &input, &[1, 17, 2, 31, 32]);
         let (drain_output, _) = drain_all(&mut plugin);
@@ -955,7 +955,7 @@ fn zero_output_child_progress_can_resume_and_preserve_the_tail() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let process_output = render_chunks(&mut plugin, &input, &[83]);
     let context = ProcessContext::new(SAMPLE_RATE, 0);
     plugin.begin_drain(&context).unwrap();
@@ -1030,7 +1030,7 @@ fn active_band_mask_drains_proven_residual_and_completes() {
         fir_factory,
     )
     .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = dense_input(ACCEPTED_FRAMES);
     let nomask = direct_reference(
         &input,
@@ -1084,7 +1084,7 @@ fn active_band_mask_drains_proven_residual_and_completes() {
     let mut fresh =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    fresh.initialize(SAMPLE_RATE).unwrap();
+    fresh.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let (tail, _) = drain_all(&mut fresh);
     assert_eq!(tail.len(), CHANNELS, "one zero tail frame, no flush");
     assert!(tail.iter().all(|sample| *sample == 0.0));
@@ -1124,7 +1124,7 @@ fn nonlinear_graph_joins_and_drains_exactly() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
 
     let chunks = [83_usize, 64, 7, 129, 1];
@@ -1147,7 +1147,7 @@ fn nonlinear_graph_joins_and_drains_exactly() {
     let mut expected = vec![0.0; whole.len()];
     for taps in [taps_a.as_slice(), taps_b.as_slice()] {
         let mut raw = FirFixture::new(CHANNELS, taps.to_vec(), 0, 1, false, false, false).unwrap();
-        raw.initialize(SAMPLE_RATE).unwrap();
+        raw.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut reference = vec![0.0; input.len()];
         let produced = raw
             .process(
@@ -1213,7 +1213,7 @@ fn unprobed_geometry_composes_with_truthful_counts() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
 
     let chunks = [ACCEPTED_FRAMES, 64, 7, 129, 1];
@@ -1281,7 +1281,7 @@ fn compensating_node_rates_compose_silently() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
 
     let chunks = [83_usize, 64, 7, 129, 1];
@@ -1319,7 +1319,7 @@ fn compensating_node_rates_compose_silently() {
 #[test]
 fn empty_no_tail_stream_completes_with_zero_frames() {
     let mut plugin = make_no_tail_child_plugin();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.drain_output_frames_max(), 17);
 
     let context = ProcessContext::new(SAMPLE_RATE, 0);
@@ -1392,7 +1392,7 @@ fn short_dry_only_tail_emits_exact_remaining_frames() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         plugin
     };
     let mut plugin = make_plugin();
@@ -1536,8 +1536,8 @@ fn enabled_autogain_drain_matches_ordinary_zero_continuation() {
     let mut continuation =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    draining.initialize(SAMPLE_RATE).unwrap();
-    continuation.initialize(SAMPLE_RATE).unwrap();
+    draining.initialize(f64::from(SAMPLE_RATE)).unwrap();
+    continuation.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = dense_input(9_600);
     let transition_frame = 19 * 480;
@@ -1610,7 +1610,7 @@ fn a_child_failure_after_the_other_child_advances_requires_reset() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, fir_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut output = [0.0; CHANNELS];
     plugin
         .process(

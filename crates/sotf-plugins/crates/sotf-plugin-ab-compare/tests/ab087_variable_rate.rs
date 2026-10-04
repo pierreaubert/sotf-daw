@@ -1644,7 +1644,7 @@ fn make_silent_burst_plugin() -> ABComparePlugin {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 
@@ -1665,7 +1665,7 @@ fn make_burst_plugin(mix: f32) -> ABComparePlugin {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 
@@ -1687,7 +1687,7 @@ fn make_reporting_burst_plugin() -> ABComparePlugin {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 
@@ -1728,7 +1728,7 @@ fn mixed_rate_chain_composes_back_to_outer_clock() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: converter latency must be observed"
@@ -1814,7 +1814,7 @@ fn graph_48_to_24_composes_back_to_outer_clock() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: nested plus converter latency must be observed"
@@ -1874,7 +1874,7 @@ fn graph_48_to_96_composes_back_to_outer_clock() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: nested plus converter latency must be observed"
@@ -1943,7 +1943,7 @@ fn graph_48_to_24_to_48_composes_mid_graph() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: mid-graph pair latency must be observed"
@@ -2009,7 +2009,7 @@ fn graph_48_to_96_to_48_composes_mid_graph() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: mid-graph pair latency must be observed"
@@ -2176,7 +2176,7 @@ fn graph_twin_multi_sink_converts_back_to_outer_clock() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         // Exact latency pin: twin branches share one path latency, derived
         // from the raw stage latencies on the exact 48 kHz lattice (nested
         // latency at 24 kHz doubles, converter latency adds directly).
@@ -2299,7 +2299,7 @@ fn graph_mixed_clock_hetero_sinks_compose_through_join() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(
             plugin.latency_samples(),
             max_latency,
@@ -2400,7 +2400,7 @@ fn graph_mixed_clock_hetero_sinks_compose_through_join() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = dense_input(4096);
     let (mut whole, _) = render_collected_captured(&mut plugin, &input, &chunks);
     let (tail, _) = drain_all_collected(&mut plugin);
@@ -2485,7 +2485,7 @@ fn cold_converting_drain_allocates_nothing_and_completes_exactly() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let (mut whole, returns) = render_collected_captured(&mut plugin, &input, &chunks);
     let drain_context = ProcessContext::new(SAMPLE_RATE, 0);
     assert_no_allocs_or_deallocs("cold hetero begin drain", || {
@@ -2560,7 +2560,7 @@ fn graph_same_clock_hetero_sinks_compose_through_join() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
     let (mut whole, returns) = render_collected_captured(&mut plugin, &input, &chunks);
     // Two-layer oracle. Host layer: the merge consumes the full minimum
@@ -2767,9 +2767,9 @@ fn graph_builtin_construction_uses_resolved_input_rate() {
         let mut raw_conv =
             ResamplerPlugin::new(CHANNELS, HALF_RATE, SAMPLE_RATE, CONVERTER_CHUNK_PIN).unwrap();
         let mut raw_eq = raw_eq.into_boxed_plugin();
-        raw_down.initialize(SAMPLE_RATE).unwrap();
-        raw_eq.initialize(HALF_RATE).unwrap();
-        raw_conv.initialize(HALF_RATE).unwrap();
+        raw_down.initialize(f64::from(SAMPLE_RATE)).unwrap();
+        raw_eq.initialize(f64::from(HALF_RATE)).unwrap();
+        raw_conv.initialize(f64::from(HALF_RATE)).unwrap();
         let mut expected = Vec::new();
         let mut eq_input_full = Vec::new();
         let mut eq_output_full = Vec::new();
@@ -3056,7 +3056,7 @@ fn burst_against_steady_identity_pairs_without_loss() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut process_output = render_collected(&mut plugin, &input, &chunks);
         let (tail, _) = drain_all_collected(&mut plugin);
         process_output.extend_from_slice(&tail);
@@ -3130,7 +3130,7 @@ fn connected_dag_process_and_drain_match_branch_oracle() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = dense_input(83);
     let expected = diamond_reference(&input, 0.5, 2.0, 0.25, 1.0);
@@ -3222,9 +3222,9 @@ impl RetainedDiamondOracle {
         let mut up =
             ResamplerPlugin::new(CHANNELS, HALF_RATE, SAMPLE_RATE, NESTED_SRC_CHUNK).unwrap();
         let mut burst = BurstFixture::new(CHANNELS, BURST_CHUNK, true).unwrap();
-        down.initialize(SAMPLE_RATE).unwrap();
-        up.initialize(HALF_RATE).unwrap();
-        burst.initialize(SAMPLE_RATE).unwrap();
+        down.initialize(f64::from(SAMPLE_RATE)).unwrap();
+        up.initialize(f64::from(HALF_RATE)).unwrap();
+        burst.initialize(f64::from(SAMPLE_RATE)).unwrap();
         // Merge compensation on the short-latency (burst) edge: the A-branch
         // cumulative latency in the 48 kHz join clock. Exact for the 2:1 step
         // (no tick rounding); the bitwise whole-stream match below verifies it.
@@ -3463,7 +3463,7 @@ fn variable_diamond_lossless_join_matches_retention_oracle() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: diamond latency must be observed"
@@ -3543,7 +3543,7 @@ fn twin_branching_composes_process_and_drain() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = dense_input(64);
     let process_output = render_collected(&mut plugin, &input, &[64]);
@@ -3578,7 +3578,7 @@ fn twin_branching_composes_process_and_drain() {
     let mut twin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    twin.initialize(SAMPLE_RATE).unwrap();
+    twin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let solo_params = ABComparePluginParams {
         path_a: PathConfig::Plugin {
             plugin_type: "burst".to_owned(),
@@ -3596,7 +3596,7 @@ fn twin_branching_composes_process_and_drain() {
         ab087_factory,
     )
     .unwrap();
-    solo.initialize(SAMPLE_RATE).unwrap();
+    solo.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let chunks = [10_usize, 64, 7, 129, 64];
     assert_eq!(chunks.iter().sum::<usize>(), 274);
     let input = dense_input(274);
@@ -3645,7 +3645,7 @@ fn twin_branching_composes_process_and_drain() {
     let mut admitted =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    admitted.initialize(SAMPLE_RATE).unwrap();
+    admitted.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = dense_input(64);
     let output = render_collected(&mut admitted, &input, &[64]);
     let summed: Vec<f32> = input
@@ -3711,7 +3711,7 @@ fn band_mask_drain_emits_proven_residual_and_completes() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut process_output = render_collected(&mut plugin, &input, &chunks);
         let (tail, _) = drain_all_collected(&mut plugin);
         process_output.extend_from_slice(&tail);
@@ -3769,7 +3769,7 @@ fn band_mask_drain_emits_proven_residual_and_completes() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let (tail, partition) = drain_all_collected(&mut plugin);
     assert!(tail.is_empty(), "unexcited mask emits no flush");
     assert_eq!(partition, vec![0]);
@@ -3876,7 +3876,7 @@ fn band_mask_activation_boundary_pins_epsilon() {
         ("boundary", 20.5_f32, 19_999.5_f32),
     ] {
         let mut plugin = unity_mask_plugin(low, high);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let process_output = render_collected(&mut plugin, &input, &chunks);
         assert_eq!(process_output, input, "{name} inactive passthrough");
         let (tail, _) = drain_all_collected(&mut plugin);
@@ -3888,7 +3888,7 @@ fn band_mask_activation_boundary_pins_epsilon() {
         ("both-edges", 20.6_f32, 19_999.4_f32),
     ] {
         let mut plugin = unity_mask_plugin(low, high);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut process_output = render_collected(&mut plugin, &input, &chunks);
         assert_ne!(process_output, input, "{name} just-active must filter");
         let (tail, _) =
@@ -3940,7 +3940,7 @@ fn band_mask_worst_tail_21hz_hp_bit_exact() {
     const HIGH_HZ: f32 = 20_000.0;
     let input = impulse_input(128);
     let mut plugin = unity_mask_plugin(LOW_HZ, HIGH_HZ);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut process_output = render_collected(&mut plugin, &input, &[1, 7, 64, 56]);
     assert_ne!(process_output, input, "worst-tail mask must filter");
     let (tail, _) = drain_all_collected_rate_bounded(&mut plugin, input.len() / CHANNELS, 200_000);
@@ -4012,7 +4012,7 @@ fn band_mask_converter_path_matches_masked_conversion_oracle() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let latency = plugin.latency_samples();
         assert!(latency > 0, "{name}: converter latency must be observed");
         let mut whole = render_collected(&mut plugin, &input, &chunks);
@@ -4253,7 +4253,7 @@ fn drain_staging_overflow_refuses_before_child_advance() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let error = plugin
         .begin_drain(&ProcessContext::new(SAMPLE_RATE, 0))
         .unwrap_err();
@@ -4287,7 +4287,7 @@ fn lying_process_declaration_fails_loud_with_measured_evidence() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = dense_input(64);
     let mut block = vec![f32::NAN; 64 * CHANNELS];
     let error = plugin
@@ -4329,7 +4329,7 @@ fn lying_drain_declaration_fails_loud_with_measured_evidence() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = dense_input(64);
     let output = render_collected(&mut plugin, &input, &[64]);
     assert_eq!(output, input, "the drain liar must be honest in process",);
@@ -4499,7 +4499,7 @@ fn nested_48_to_24_roundtrip_matches_production_reference() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: nested plus converter latency must be observed"
@@ -4543,7 +4543,7 @@ fn nested_48_to_24_roundtrip_matches_production_reference() {
     let mut nested_plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    nested_plugin.initialize(SAMPLE_RATE).unwrap();
+    nested_plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let nested_latency = nested_plugin.latency_samples();
     let mut outer = DawHost::new(CHANNELS, SAMPLE_RATE);
     outer.add_plugin(Box::new(nested_plugin)).unwrap();
@@ -4598,7 +4598,7 @@ fn nested_48_to_96_roundtrip_matches_production_reference() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert!(
             plugin.latency_samples() > 0,
             "{name}: nested plus converter latency must be observed"
@@ -4665,7 +4665,7 @@ fn compensating_resampler_pair_composes_without_converter() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut whole = render_collected(&mut plugin, &input, &chunks);
         let (tail, _) = drain_all_collected(&mut plugin);
         whole.extend_from_slice(&tail);
@@ -4722,7 +4722,7 @@ fn converted_paths_pin_latency_counts_and_exact_eof() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(
             plugin.latency_samples(),
             down_latency,
@@ -4769,7 +4769,7 @@ fn converted_paths_pin_latency_counts_and_exact_eof() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(
             plugin.latency_samples(),
             up_latency,
@@ -4855,7 +4855,7 @@ fn asymmetric_converted_paths_pair_by_stream_position() {
         let mut plugin =
             ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
                 .unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(
             plugin.latency_samples(),
             max_latency,
@@ -5002,7 +5002,7 @@ fn variable_diamond_envelope_covers_cold_and_warm_real_drain() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Process envelope: AB emits at most one frame per input frame on
     // every path, fresh and mid-stream alike.
@@ -5206,7 +5206,7 @@ fn variable_diamond_cold_process_allocates_nothing() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Capacity queries under the counter, before any process call.
     assert_no_allocs_or_deallocs("cold diamond capacity queries", || {
@@ -5444,7 +5444,7 @@ fn fork_odd_chunk_straddle_prepares_full_straddle_need() {
     // 1.0, settled from construction), so each branch sees this input.
     let mut reference =
         ResamplerPlugin::new(FORK_CHANNELS, SAMPLE_RATE, DOUBLE_RATE, CHUNK).unwrap();
-    reference.initialize(SAMPLE_RATE).unwrap();
+    reference.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input1 = vec![0.25f32; 1999 * FORK_CHANNELS];
     let input2 = vec![0.25f32; 8192 * FORK_CHANNELS];
     // Reference-side chunk arithmetic first: one chunk completes on block
@@ -5668,7 +5668,7 @@ fn envelopes_dominate_live_declarations_across_ab_states() {
         ab087_factory,
     )
     .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let (_, diamond_envelope) = check(&plugin, "diamond", "fresh");
     // Acceptance stream, not a short probe: the diamond's 1024-frame
     // converter chunks plus the 3262-frame compensation prefill retain
@@ -5716,7 +5716,7 @@ fn envelopes_dominate_live_declarations_across_ab_states() {
         ab087_factory,
     )
     .unwrap();
-    masked.initialize(SAMPLE_RATE).unwrap();
+    masked.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let (_, mask_envelope) = check(&masked, "mask", "fresh");
     feed(&mut masked, "mask", &dense_input(128), &[1, 7, 64, 56]);
     let (mask_fed_live, mask_fed_envelope) = check(&masked, "mask", "fed");
@@ -5827,7 +5827,7 @@ fn outer_nested_ab(inner_a: &str, low_hz: f32, high_hz: f32) -> ABComparePlugin 
     let mut outer =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab_nested_factory)
             .unwrap();
-    outer.initialize(SAMPLE_RATE).unwrap();
+    outer.initialize(f64::from(SAMPLE_RATE)).unwrap();
     outer
 }
 
@@ -5840,7 +5840,7 @@ fn twin_inner_ab(inner_a: &str, low_hz: f32, high_hz: f32) -> ABComparePlugin {
         ab087_factory,
     )
     .unwrap();
-    twin.initialize(SAMPLE_RATE).unwrap();
+    twin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     twin
 }
 
@@ -6143,7 +6143,7 @@ fn active_21hz_mask_without_content_tails_zero() {
     // immediate-drain shape at 500 Hz, now with tail queries at 21 Hz).
     reset_ab087_counters();
     let mut plugin = unity_mask_plugin(21.0, 20_000.0);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_tail_finite_eq(plugin.tail_length(), 0);
     let (drained, _) = drain_all_collected(&mut plugin);
     assert!(drained.is_empty(), "unexcited mask drain emits nothing");
@@ -6177,7 +6177,7 @@ fn converting_path_tail_bound_dominates_actual() {
     let mut plugin =
         ABComparePlugin::from_params_with_factory(CHANNELS, SAMPLE_RATE, params, ab087_factory)
             .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let _ = render_collected(&mut plugin, &input, &chunks);
     let TailLength::Finite(bound) = plugin.tail_length() else {
         panic!("converting-path tail must be a Finite bound");
