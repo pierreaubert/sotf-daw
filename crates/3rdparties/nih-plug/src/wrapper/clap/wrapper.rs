@@ -2798,18 +2798,20 @@ impl<P: ClapPlugin> Wrapper<P> {
                 let main_input_channels = audio_io_layout.main_input_channels.map(NonZeroU32::get);
                 let main_output_channels =
                     audio_io_layout.main_output_channels.map(NonZeroU32::get);
-                let input_port_type = match main_input_channels {
-                    Some(1) => CLAP_PORT_MONO.as_ptr(),
-                    Some(2) => CLAP_PORT_STEREO.as_ptr(),
-                    _ => P::clap_audio_port_type(index as usize, true, 0)
-                        .map_or(std::ptr::null(), CStr::as_ptr),
-                };
-                let output_port_type = match main_output_channels {
-                    Some(1) => CLAP_PORT_MONO.as_ptr(),
-                    Some(2) => CLAP_PORT_STEREO.as_ptr(),
-                    _ => P::clap_audio_port_type(index as usize, false, 0)
-                        .map_or(std::ptr::null(), CStr::as_ptr),
-                };
+                let input_port_type = P::clap_audio_port_type(index as usize, true, 0)
+                    .map(CStr::as_ptr)
+                    .unwrap_or_else(|| match main_input_channels {
+                        Some(1) => CLAP_PORT_MONO.as_ptr(),
+                        Some(2) => CLAP_PORT_STEREO.as_ptr(),
+                        _ => std::ptr::null(),
+                    });
+                let output_port_type = P::clap_audio_port_type(index as usize, false, 0)
+                    .map(CStr::as_ptr)
+                    .unwrap_or_else(|| match main_output_channels {
+                        Some(1) => CLAP_PORT_MONO.as_ptr(),
+                        Some(2) => CLAP_PORT_STEREO.as_ptr(),
+                        _ => std::ptr::null(),
+                    });
 
                 *config = std::mem::zeroed();
 
