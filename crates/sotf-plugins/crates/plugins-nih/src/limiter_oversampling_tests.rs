@@ -50,7 +50,7 @@ fn initialize(wrapper: &mut LimiterOversamplingWrapper, rate: u32) -> usize {
     assert!(wrapper.initialize(
         &LimiterOversamplingWrapper::AUDIO_IO_LAYOUTS[0],
         &BufferConfig {
-            sample_rate: rate as f32,
+            sample_rate: f64::from(rate),
             min_buffer_size: Some(1),
             max_buffer_size: 257,
             process_mode: ProcessMode::Realtime

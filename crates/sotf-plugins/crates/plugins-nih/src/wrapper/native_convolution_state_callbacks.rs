@@ -1952,7 +1952,7 @@ fn initialize_generated_with_max_frames(
         .next()
         .expect("generated Convolution CLAP layout");
     let config = BufferConfig {
-        sample_rate: SAMPLE_RATE as f32,
+        sample_rate: SAMPLE_RATE,
         min_buffer_size: Some(1),
         max_buffer_size: u32::try_from(max_frames).expect("test maximum fits in u32"),
         process_mode: ProcessMode::Realtime,

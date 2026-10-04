@@ -191,7 +191,7 @@ mod tests {
                 mode,
                 capacity_windows: capacity,
             },
-            48_000,
+            48_000.0,
         )
         .unwrap()
     }
@@ -294,7 +294,7 @@ mod tests {
                         capacity_windows: capacity,
                         ..Default::default()
                     },
-                    48_000,
+                    48_000.0,
                 )
                 .is_err()
             );

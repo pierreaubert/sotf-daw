@@ -1200,7 +1200,7 @@ mod tests {
         let state = Arc::new(OracleState::default());
         let inner = OraclePlugin::new(Arc::clone(&state), quantum, latency);
         (
-            AsyncTimelinePlugin::new(Box::new(inner), 48_000, max_callback).unwrap(),
+            AsyncTimelinePlugin::new(Box::new(inner), 48_000.0, max_callback).unwrap(),
             state,
         )
     }
@@ -1246,7 +1246,7 @@ mod tests {
         assert_eq!(adapter.quantum_frames(), 32);
         assert_eq!(adapter.adapter_latency_frames(), 64);
         assert_eq!(adapter.latency_samples(), 71);
-        adapter.initialize(48_000).unwrap();
+        adapter.initialize(48_000.0).unwrap();
         assert_eq!(state.initialize_calls.load(Ordering::SeqCst), 1);
     }
 
@@ -1627,7 +1627,7 @@ mod tests {
 
         assert!(process_worker_span(
             &mut inner,
-            48_000,
+            48_000.0,
             0,
             0,
             Q,
@@ -1648,7 +1648,7 @@ mod tests {
         let mut new_epoch_output = [f32::NAN; Q];
         assert!(process_worker_span(
             &mut inner,
-            48_000,
+            48_000.0,
             1,
             0,
             Q,

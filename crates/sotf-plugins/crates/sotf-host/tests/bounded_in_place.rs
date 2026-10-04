@@ -106,7 +106,7 @@ impl ParametricInPlacePlugin for Probe {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         assert_eq!(buffer.len(), context.num_frames * 4);
         assert_eq!(context.transport.sample_position, 987);
         if self.return_delta != 0 {
@@ -128,7 +128,7 @@ impl ParametricInPlacePlugin for Probe {
         context: &ProcessContext,
     ) -> PluginResult<usize> {
         assert!(self.native, "fallback must call f32 directly");
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         assert_eq!(buffer.len(), context.num_frames * 4);
         assert_eq!(context.transport.sample_position, 987);
         if self.return_delta != 0 {

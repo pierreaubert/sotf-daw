@@ -1230,9 +1230,9 @@ fn test_set_parameter_playback_level_db_manual_mode_no_rebuild() {
 #[test]
 fn test_initialize_different_sample_rate() {
     let mut p = LoudnessCompensationPlugin::new(1, 100.0, 6.0, 10000.0, 6.0);
-    assert_eq!(p.sample_rate, 48000);
+    assert_eq!(p.sample_rate, 48000.0);
     ParametricInPlacePlugin::initialize(&mut p, 96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    assert_eq!(p.sample_rate, 96000.0);
 }
 
 #[test]

@@ -113,7 +113,7 @@ impl Plugin for WorkPlugin {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         if let Some(expected) = self.expected_rate {
-            assert_eq!(context.sample_rate, expected);
+            assert_eq!(context.sample_rate, f64::from(expected));
         }
         if std::mem::take(&mut self.error_once) {
             return Err("retryable fixture failure".into());

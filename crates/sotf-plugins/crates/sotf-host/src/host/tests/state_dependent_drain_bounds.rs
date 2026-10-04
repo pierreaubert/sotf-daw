@@ -899,11 +899,11 @@ impl TwinDiamondOracle {
         } else {
             ChunkedRateFixture::up_24_to_48(channels)
         };
-        down_a.initialize(48_000).unwrap();
-        gain_a.initialize(24_000).unwrap();
-        up_a.initialize(24_000).unwrap();
-        down_b.initialize(48_000).unwrap();
-        up_b.initialize(24_000).unwrap();
+        down_a.initialize(48_000.0).unwrap();
+        gain_a.initialize(24_000.0).unwrap();
+        up_a.initialize(24_000.0).unwrap();
+        down_b.initialize(48_000.0).unwrap();
+        up_b.initialize(24_000.0).unwrap();
         Self {
             down_a,
             gain_a,

@@ -98,7 +98,7 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
                 .unwrap_err()
                 .contains("Data.Delay must contain finite sample counts")
         );
-        assert_eq!(plugin.config.sample_rate, 48_000);
+        assert_eq!(plugin.config.sample_rate, 48_000.0);
         assert!(Arc::ptr_eq(&plugin.state.load_full(), &pending));
         assert!(Arc::ptr_eq(
             &plugin.crossfade.current_state_snapshot,

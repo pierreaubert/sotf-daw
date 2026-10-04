@@ -475,7 +475,7 @@ fn test_non_stereo_passthrough() {
 fn test_process_does_not_reinitialize_on_sample_rate_mismatch() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
     plugin.initialize(48000).unwrap();
-    assert_eq!(plugin.sample_rate, 48000);
+    assert_eq!(plugin.sample_rate, 48000.0);
 
     let mut buffer = vec![0.5_f32; 256 * 2];
     let ctx = ProcessContext::new(44100, 256);

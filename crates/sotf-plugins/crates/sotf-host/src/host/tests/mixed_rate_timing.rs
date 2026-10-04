@@ -19,7 +19,7 @@ struct ClockPlugin {
     denominator: usize,
     delay: usize,
     history: VecDeque<f64>,
-    initialized_rate: u32,
+    initialized_rate: f64,
     input_frames: u64,
     phase: usize,
     gain: f64,
@@ -36,7 +36,7 @@ impl ClockPlugin {
             denominator,
             delay,
             history: vec![0.0; delay].into(),
-            initialized_rate: 0,
+            initialized_rate: 0.0,
             input_frames: 0,
             phase: 0,
             gain: 1.0,
@@ -109,7 +109,7 @@ impl Plugin for ClockPlugin {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         Some(ParameterValue::Float(self.gain as f32))
     }
-    fn initialize(&mut self, rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, rate: f64) -> Result<(), String> {
         self.initialized_rate = rate;
         Ok(())
     }

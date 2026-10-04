@@ -596,7 +596,7 @@ fn test_reset_clears_state() {
 fn test_initialize_different_sample_rate() {
     let mut p = DownmixPlugin::new(6);
     p.initialize(96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    assert_eq!(p.sample_rate, 96000.0);
 }
 
 #[test]

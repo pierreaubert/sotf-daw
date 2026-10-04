@@ -84,7 +84,7 @@ fn native_streaming_tail_bound_covers_every_residual_phase_and_remains_resumable
                             .unwrap(),
                     ))
                 };
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
                 let TailLength::Finite(bound) = plugin.tail_length() else {
                     panic!("finite inner must remain finite");
                 };
@@ -157,7 +157,7 @@ fn tail_queries_preserve_unknown_and_infinite_without_allocating() {
         inner.declared = tail;
         let mut plugin =
             AutoOversampledPlugin::new(Box::new(InPlacePluginAdapter::new(inner)), 4).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let expected = match tail {
             TailLength::Finite(_) => TailLength::Finite(1280),
             other => other,

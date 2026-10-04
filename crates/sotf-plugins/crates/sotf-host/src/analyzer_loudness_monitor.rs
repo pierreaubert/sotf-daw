@@ -460,7 +460,7 @@ fn true_peak_oversampling_factor<S: Into<f64>>(sample_rate: S) -> Option<usize> 
     // Two-times interpolation remains useful for high-rate input so the
     // detector still checks inter-sample values instead of sample maxima.
     let mut factor = 2;
-    while sample_rate * factor as f64 < TRUE_PEAK_TARGET_RATE_HZ
+    while sample_rate * (factor as f64) < TRUE_PEAK_TARGET_RATE_HZ
         && factor < TRUE_PEAK_MAX_OVERSAMPLING
     {
         factor *= 2;

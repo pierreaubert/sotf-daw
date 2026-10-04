@@ -873,7 +873,7 @@ mod tests {
 
     #[test]
     fn worker_process_context_receives_exact_fractional_ipc_rate() {
-        for rate in [1_234.5678, 12_345.678] {
+        for rate in [1_234.5678_f64, 12_345.678] {
             let layout = PluginIpcLayout::new(rate, 64, 1, 1).unwrap();
             let mut host = SecurePluginSharedMemory::create(layout).unwrap();
             let worker_shared = SecurePluginSharedMemory::open_existing(host.path()).unwrap();

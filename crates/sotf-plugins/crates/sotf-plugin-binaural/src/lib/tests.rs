@@ -2291,7 +2291,7 @@ fn test_initialize_sets_sample_rate_and_lfe_filter() {
         RoomModel::default(),
     );
     plugin.initialize(96000).unwrap();
-    assert_eq!(plugin.config.sample_rate, 96000);
+    assert_eq!(plugin.config.sample_rate, 96000.0);
     assert!(!plugin.coefficients.lfe_lowpass_filter.is_empty());
     assert!(plugin.coefficients.lfe_gain > 0.0);
 }

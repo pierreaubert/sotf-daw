@@ -669,9 +669,9 @@ mod tests {
     #[test]
     fn initialize_rejects_zero_rate_and_minimum_above_nyquist() {
         let mut plugin = SpectrumAnalyzerPlugin::new(2).unwrap();
-        assert!(plugin.initialize(0).is_err());
-        assert!(plugin.initialize(40).is_err());
-        plugin.initialize(32_000).unwrap();
+        assert!(plugin.initialize(0.0).is_err());
+        assert!(plugin.initialize(40.0).is_err());
+        plugin.initialize(32_000.0).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("max_freq")),
             Some(ParameterValue::Float(20_000.0))
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn requested_maximum_survives_low_rate_and_frequency_labels_follow_reinitialization() {
         let mut plugin = SpectrumAnalyzerPlugin::new(1).unwrap();
-        plugin.initialize(8_000).unwrap();
+        plugin.initialize(8_000.0).unwrap();
         let low = plugin.cache.load();
         assert!(low.frequencies.iter().all(|f| *f <= 4_000.0));
         assert_eq!(
@@ -691,13 +691,13 @@ mod tests {
         );
         drop(low);
 
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let high = plugin.cache.load();
         assert!(high.frequencies.iter().any(|f| *f > 4_000.0));
         assert!(high.frequencies.iter().all(|f| *f <= 20_000.0));
         drop(high);
 
-        plugin.initialize(8_000).unwrap();
+        plugin.initialize(8_000.0).unwrap();
         assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
     }
 
@@ -705,7 +705,7 @@ mod tests {
     fn max_frequency_automation_keeps_requested_value_when_host_nyquist_is_lower() {
         let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
             1,
-            8_000,
+            8_000.0,
             SpectrumConfig {
                 max_freq: 2_000.0,
                 ..Default::default()
@@ -720,7 +720,7 @@ mod tests {
             Some(ParameterValue::Float(20_000.0))
         );
         assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
-        plugin.initialize(8_000).unwrap();
+        plugin.initialize(8_000.0).unwrap();
         assert!(plugin
             .set_parameter(ParameterId::from("max_freq"), ParameterValue::Float(19_000.0))
             .is_err());
@@ -738,7 +738,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let old_half = tone(128, FFT_SIZE / 2, 1.0);
         let mut output = vec![0.0; FFT_SIZE];
         plugin
@@ -749,7 +749,7 @@ mod tests {
             )
             .unwrap();
 
-        plugin.initialize(8_000).unwrap();
+        plugin.initialize(8_000.0).unwrap();
         let silence = vec![0.0; FFT_SIZE / 2];
         plugin
             .process(
@@ -798,7 +798,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mono = tone(128, FFT_SIZE, 1.0);
         let mut input = Vec::with_capacity(FFT_SIZE * 2);
         for sample in mono {
@@ -822,7 +822,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let low = tone(64, FFT_SIZE, 1.0);
         let high = tone(512, FFT_SIZE, 1.0);
         let mut input = Vec::with_capacity(FFT_SIZE * 2);
@@ -869,7 +869,7 @@ mod tests {
                 },
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mono = tone(128, FFT_SIZE, 1.0);
             let mut input = vec![0.0; FFT_SIZE * channels];
             for (frame, sample) in mono.into_iter().enumerate() {
@@ -894,7 +894,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let first_generation = plugin.cache.load();
         let input = tone(128, FFT_SIZE, 1.0);
         let mut output = vec![0.0; input.len()];
@@ -933,7 +933,7 @@ mod tests {
                 .process(&input, &mut output, &ProcessContext::new(48_000, FFT_SIZE))
                 .is_err()
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         input[0] = f32::NAN;
         input[1] = f32::INFINITY;
         plugin
@@ -946,11 +946,11 @@ mod tests {
 
     #[test]
     fn supported_sample_rates_publish_no_nan_and_empty_bands_are_explicit() {
-        for sample_rate in [8_000, 32_000, 44_100, 48_000, 96_000, 192_000] {
+        for sample_rate in [8_000.0, 32_000.0, 44_100.0, 48_000.0, 96_000.0, 192_000.0] {
             let max_freq = (sample_rate as f32 * 0.5).min(20_000.0);
             let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
                 1,
-                sample_rate,
+                f64::from(sample_rate),
                 SpectrumConfig {
                     num_bins: 120,
                     min_freq: 10.0,
@@ -959,7 +959,7 @@ mod tests {
                 },
             )
             .unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let input = vec![0.0; FFT_SIZE];
             let mut output = input.clone();
             plugin
@@ -990,7 +990,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = tone(128, FFT_SIZE, 1.0);
         let mut output = vec![0.0; input.len()];
         plugin
@@ -1010,7 +1010,7 @@ mod tests {
             let max_freq = (sample_rate as f32 * 0.5).min(20_000.0);
             let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
                 1,
-                sample_rate,
+                f64::from(sample_rate),
                 SpectrumConfig {
                     smoothing: 0.5,
                     max_freq,
@@ -1018,7 +1018,7 @@ mod tests {
                 },
             )
             .unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let input = tone(64, FFT_SIZE, 1.0);
             let mut output = vec![0.0; FFT_SIZE];
             plugin
@@ -1070,7 +1070,7 @@ mod tests {
                 },
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mut input = vec![0.0; frames - FFT_SIZE];
             input.extend(tone(512, FFT_SIZE, 1.0));
             let mut output = vec![0.0; input.len()];
@@ -1094,7 +1094,7 @@ mod tests {
         }
 
         let mut partial = SpectrumAnalyzerPlugin::new(1).unwrap();
-        partial.initialize(48_000).unwrap();
+        partial.initialize(48_000.0).unwrap();
         let input = vec![0.0; FFT_SIZE - 1];
         let mut output = input.clone();
         partial
@@ -1117,7 +1117,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = tone(128, FFT_SIZE - 1, 1.0);
         let mut output = vec![0.0; input.len()];
         plugin
@@ -1143,7 +1143,7 @@ mod tests {
     #[test]
     fn process_rejects_malformed_buffers() {
         let mut plugin = SpectrumAnalyzerPlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let ctx = ProcessContext::new(48_000, 16);
         assert!(plugin.process(&[0.0; 31], &mut [0.0; 31], &ctx).is_err());
         assert!(plugin.process(&[0.0; 32], &mut [0.0; 31], &ctx).is_err());
@@ -1173,7 +1173,7 @@ mod tests {
                 .update_mode,
             UpdateMode::Realtime
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(
             plugin
                 .set_parameter(ParameterId::from("num_bins"), ParameterValue::Int(30))
@@ -1203,7 +1203,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let bin = 128usize;
         let input: Vec<f32> = (0..FFT_SIZE)
@@ -1230,7 +1230,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let input = vec![0.0; FFT_SIZE];
         let mut output = vec![0.0; FFT_SIZE];
@@ -1243,7 +1243,7 @@ mod tests {
 
     #[test]
     fn full_scale_nyquist_tone_reads_zero_dbfs() {
-        let sample_rate = 40_000;
+        let sample_rate = 40_000.0;
         let mut plugin = SpectrumAnalyzerPlugin::with_config(
             1,
             SpectrumConfig {
@@ -1254,7 +1254,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
 
         let input: Vec<f32> = (0..FFT_SIZE)
             .map(|i| if i % 2 == 0 { 1.0 } else { -1.0 })

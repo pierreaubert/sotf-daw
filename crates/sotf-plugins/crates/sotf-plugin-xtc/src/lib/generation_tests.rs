@@ -184,7 +184,7 @@ fn rejected_meter_rates_preserve_audio_epoch_and_ready_publication() {
         let input = plugin.input.input_buffer_l.clone();
         let fill = plugin.input.input_fill;
         assert!(plugin.initialize(invalid).is_err());
-        assert_eq!(plugin.fft.sample_rate, 48_000);
+        assert_eq!(plugin.fft.sample_rate, 48_000.0);
         assert_eq!(
             plugin
                 .filter_state
@@ -279,7 +279,7 @@ fn failed_source_load_keeps_ready_or_paused_worker_results_eligible() {
         let fill = plugin.input.input_fill;
         std::fs::remove_file(&file.0).unwrap();
         assert!(plugin.initialize(96_000).is_err());
-        assert_eq!(plugin.fft.sample_rate, 48_000);
+        assert_eq!(plugin.fft.sample_rate, 48_000.0);
         assert_eq!(
             plugin
                 .filter_state

@@ -1557,7 +1557,7 @@ fn test_rebuild_cached_parameters() {
 fn test_initialize_different_sample_rate() {
     let mut p = MultibandExpanderPlugin::new(2);
     p.initialize(96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    assert_eq!(p.sample_rate, 96000.0);
 }
 
 #[test]

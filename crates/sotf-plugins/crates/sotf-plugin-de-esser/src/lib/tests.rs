@@ -742,10 +742,10 @@ fn test_set_parameter_release_updates_cores() {
 fn test_initialize_different_sample_rate() {
     let mut plugin = DeEsserPlugin::new(1);
     plugin.initialize(44100).unwrap();
-    assert_eq!(plugin.sample_rate, 44100);
+    assert_eq!(plugin.sample_rate, 44100.0);
 
     plugin.initialize(96000).unwrap();
-    assert_eq!(plugin.sample_rate, 96000);
+    assert_eq!(plugin.sample_rate, 96000.0);
     // Filters and crossovers should have been rebuilt for the new rate without panic
 }
 

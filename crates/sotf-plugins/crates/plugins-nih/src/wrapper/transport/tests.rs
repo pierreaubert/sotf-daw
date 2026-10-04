@@ -438,7 +438,7 @@ fn actual_native_context_preserves_independent_origins_flags_and_seeks() {
         assert_eq!(context.transport.sample_position, sample);
         assert!((context.transport.ppq_position - ppq).abs() < 1e-8);
         assert_eq!(context.num_frames, frames);
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         assert_eq!(context.transport.bpm, 90.0);
         assert_eq!(
             context.transport.time_signature,
@@ -597,7 +597,7 @@ fn actual_native_origins_survive_oversampling_and_partial_callbacks() {
         let log = host.log.lock().unwrap();
         assert_eq!(log.len(), position / 256);
         for (chunk, context) in log.iter().enumerate() {
-            assert_eq!(context.sample_rate, 48_000 * factor);
+            assert_eq!(context.sample_rate, f64::from(48_000 * factor));
             assert_eq!(context.num_frames, 256 * factor as usize);
             assert_eq!(
                 context.transport.sample_position,

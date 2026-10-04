@@ -964,7 +964,7 @@ fn detached_rate_reinit_republishes_without_touching_bands() {
     assert_eq!(handle.accepted_generation(), 1);
     let accepted = handle.try_accepted_snapshot().expect("snapshot must read");
     assert_eq!(accepted.generation, 1);
-    assert_eq!(accepted.snapshot.sample_rate, 44_100);
+    assert_eq!(accepted.snapshot.sample_rate, 44_100.0);
     assert_eq!(accepted.snapshot.bands[0].gain_db, 3.0);
     assert_eq!(accepted.snapshot.bands[1].gain_db, -3.0);
     // The new rate renders allocation-free and accepts detached commits.
@@ -1027,7 +1027,7 @@ fn detached_old_rate_payload_refuses_then_cancel_reprepare_recovers() {
     Plugin::initialize(&mut plugin, 44_100).expect("rate change must succeed");
     assert_eq!(handle.accepted_generation(), 1);
     let republished = handle.try_accepted_snapshot().expect("snapshot must read");
-    assert_eq!(republished.snapshot.sample_rate, 44_100);
+    assert_eq!(republished.snapshot.sample_rate, 44_100.0);
     assert_eq!(republished.snapshot.bands[0].gain_db, 0.0);
     // The old-rate head refuses stale at the new rate; nothing commits.
     let probe_in = pattern(2048);
@@ -1057,7 +1057,7 @@ fn detached_old_rate_payload_refuses_then_cancel_reprepare_recovers() {
     // Fresh reprepare at the new rate recovers and commits.
     let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
-    assert_eq!(fresh.snapshot.sample_rate, 44_100);
+    assert_eq!(fresh.snapshot.sample_rate, 44_100.0);
     let recovered = prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, 6.0));
     handle.try_submit(recovered).expect("recovery submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {

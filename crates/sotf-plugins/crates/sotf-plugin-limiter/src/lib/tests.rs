@@ -1295,14 +1295,14 @@ fn test_feed_forward_disabled_when_lookahead_zero() {
 fn test_initialize_different_sample_rates() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p.initialize(96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    assert_eq!(p.sample_rate, 96000.0);
 
     // 5ms @ 96kHz = 480 samples
     assert_eq!(p.kernel.lookahead_len, 480);
 
     let mut p2 = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p2.initialize(192000).unwrap();
-    assert_eq!(p2.sample_rate, 192000);
+    assert_eq!(p2.sample_rate, 192000.0);
     assert_eq!(p2.kernel.lookahead_len, 960);
 }
 
