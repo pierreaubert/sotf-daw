@@ -297,13 +297,13 @@ strip = "symbols"
 # Vendored forks owned by this workspace.
 [patch.crates-io]
 nalgebra = { git = "https://github.com/pierreaubert/nalgebra.git", rev = "a42573dbc9649af62fb07b469c98c852e62720fd" }
-tract-core = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-data = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-hir = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-linalg = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-nnef = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-onnx = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
-tract-onnx-opl = { git = "https://github.com/pierreaubert/tract.git", rev = "3ab6874b52c4b0ff83a7114f9c30c5fe62f257cd" }
+tract-core = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-data = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-hir = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-linalg = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-nnef = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-onnx = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
+tract-onnx-opl = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }
 block = { path = "../gpui-toolkit/crates/3rdparties/block" }
 objc = { path = "../gpui-toolkit/crates/3rdparties/objc" }
 async-task = { git = "https://github.com/smol-rs/async-task.git", rev = "b4486cd71e4e94fbda54ce6302444de14f4d190e" }
