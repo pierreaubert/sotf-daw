@@ -931,7 +931,7 @@ fn ambisonics_ffi_process_matches_bridge_for_all_56_ordered_tuples() {
             );
 
             let mut reference =
-                plugins_bridge::create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config)
+                plugins_bridge::create_plugin("AmbisonicsDecoder", input_channels, 48_000.0, &config)
                     .unwrap_or_else(|error| panic!("bridge order {order} {layout}: {error}"));
             assert_eq!(reference.input_channels(), input_channels);
             assert_eq!(reference.output_channels(), output_channels);

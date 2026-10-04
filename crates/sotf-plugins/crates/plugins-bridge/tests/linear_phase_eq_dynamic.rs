@@ -120,9 +120,9 @@ fn pattern(frames: usize) -> Vec<f32> {
 }
 
 fn create(bands: &[BandConfig], mix: f32) -> Box<dyn Plugin> {
-    let mut plugin = create_plugin("LinearPhaseEQ", CHANNELS, RATE, &config_json(bands, mix))
+    let mut plugin = create_plugin("LinearPhaseEQ", CHANNELS, f64::from(RATE), &config_json(bands, mix))
         .expect("bridge factory must create LinearPhaseEQ");
-    plugin.initialize(RATE).expect("initialize must succeed");
+    plugin.initialize(f64::from(RATE)).expect("initialize must succeed");
     plugin
 }
 

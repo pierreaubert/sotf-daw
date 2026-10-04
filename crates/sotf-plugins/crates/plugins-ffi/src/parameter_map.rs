@@ -1044,7 +1044,7 @@ mod tests {
 
     #[test]
     fn test_parameter_map_eq() {
-        let plugin = plugins_bridge::create_plugin("EQ", 2, 48000, "{}").unwrap();
+        let plugin = plugins_bridge::create_plugin("EQ", 2, 48000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "EQ");
         // Five global controls plus 20 bands x five params plus 20 appended
         // placement addresses. Legacy numeric addresses never move.
@@ -1057,7 +1057,7 @@ mod tests {
 
     #[test]
     fn eq_oversampling_ffi_roundtrips_choice_indices_and_plugin_factors() {
-        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, "{}").unwrap();
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000.0, "{}").unwrap();
         assert_eq!(plugin.info().name, "Parametric EQ");
         let param_map = ParameterMap::from_plugin(&*plugin, "EQ");
         let index = (0..param_map.count())
@@ -1094,7 +1094,7 @@ mod tests {
     #[test]
     fn runtime_metadata_fallback_preserves_bool_and_integer_types() {
         let config = r#"{"filters":[{"filter_type":"peak","freq":1000.0,"q":1.5,"db_gain":3.0}]}"#;
-        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, config).unwrap();
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000.0, config).unwrap();
         let map = ParameterMap::from_specs(&*plugin, "RuntimeMetadataOnly", &[]);
         for enabled in [true, false] {
             map.set_normalized(&mut *plugin, "tdf2", f64::from(enabled))
@@ -1117,7 +1117,7 @@ mod tests {
     #[test]
     fn expanded_frequency_raw_interface_matches_normalized_interface() {
         let config = r#"{"filters":[{"filter_type":"peak","freq":1000.0,"q":1.5,"db_gain":3.0}]}"#;
-        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000, config).unwrap();
+        let mut plugin = plugins_bridge::create_plugin("EQ", 2, 48_000.0, config).unwrap();
         let map = ParameterMap::from_plugin(&*plugin, "EQ");
         let index = (0..map.count())
             .find(|index| map.param_id_at(*index) == Some("band_0_freq"))
@@ -1140,7 +1140,7 @@ mod tests {
 
     #[test]
     fn test_parameter_map_compressor() {
-        let plugin = plugins_bridge::create_plugin("Compressor", 2, 48000, "{}").unwrap();
+        let plugin = plugins_bridge::create_plugin("Compressor", 2, 48000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "Compressor");
         assert!(param_map.count() > 0);
 
@@ -1153,7 +1153,7 @@ mod tests {
     #[test]
     fn test_parameter_map_linear_phase_eq_matches_dsp_band_ids_and_limit() {
         assert_eq!(band_template_info("LinearPhaseEQ"), Some((6, 10)));
-        let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
+        let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "LinearPhaseEQ");
         assert_eq!(param_map.count(), 5 + 10 * 6);
         assert_eq!(param_map.param_id_at(5), Some("band_0_type"));
@@ -1162,7 +1162,7 @@ mod tests {
 
     #[test]
     fn test_parameter_map_dynamic_eq_appends_routing_after_shelf_block() {
-        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "DynamicEQ");
         // 8 globals + 8x7 legacy band fields + 8x2 shelf fields + 8x1 routing.
         assert_eq!(param_map.count(), 8 + 8 * 7 + 8 * 2 + 8);
@@ -1203,7 +1203,7 @@ mod tests {
                 ["Legacy", "Stereo", "Left", "Right", "Mid", "Side"],
             ),
         ] {
-            let plugin = plugins_bridge::create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
+            let plugin = plugins_bridge::create_plugin(plugin_type, 2, 48_000.0, "{}").unwrap();
             let param_map = ParameterMap::from_plugin(&*plugin, plugin_type);
             let index = (0..param_map.count())
                 .find(|index| param_map.param_id_at(*index) == Some(address))
@@ -1223,7 +1223,7 @@ mod tests {
             assert_eq!(param_map.choice_label_at(index, expected.len()), None);
         }
 
-        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "DynamicEQ");
         let index = (0..param_map.count())
             .find(|index| param_map.param_id_at(*index) == Some("band_0_shape"))
@@ -1238,7 +1238,7 @@ mod tests {
     #[test]
     fn spectral_compressor_target_choice_roundtrips_raw_and_normalized() {
         let mut plugin =
-            plugins_bridge::create_plugin("SpectralCompressor", 2, 48_000, "{}").unwrap();
+            plugins_bridge::create_plugin("SpectralCompressor", 2, 48_000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "SpectralCompressor");
         let index = (0..param_map.count())
             .find(|index| param_map.param_id_at(*index) == Some("target_mode"))
@@ -1267,7 +1267,7 @@ mod tests {
         // construction only — bridge/factory creation with "dynamic-eq"
         // remains unsupported (see the preset-import identity test), and
         // nothing here claims it works.
-        let dynamic = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, "{}").unwrap();
+        let dynamic = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000.0, "{}").unwrap();
         let canonical = ParameterMap::from_plugin(&*dynamic, "DynamicEQ");
         // 8 globals + 8x7 legacy band fields + 8x2 shelf fields + 8x1 routing.
         assert_eq!(canonical.count(), 8 + 8 * 7 + 8 * 2 + 8);
@@ -1294,7 +1294,7 @@ mod tests {
         }
         assert_eq!(band_template_info("dynamic-eq"), Some((7, 8)));
 
-        let linear = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, "{}").unwrap();
+        let linear = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
         let canonical = ParameterMap::from_plugin(&*linear, "LinearPhaseEQ");
         // 5 globals + 10 bands x 6 fields; static schema includes dormant slots.
         assert_eq!(canonical.count(), 5 + 10 * 6);

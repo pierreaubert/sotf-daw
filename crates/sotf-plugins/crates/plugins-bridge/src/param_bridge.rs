@@ -533,7 +533,7 @@ mod tests {
         ] {
             for (index, label) in labels.iter().enumerate() {
                 let config = serde_json::json!({key: label}).to_string();
-                let mut plugin = crate::create_plugin(family, 2, 48_000, &config).unwrap();
+                let mut plugin = crate::create_plugin(family, 2, 48_000.0, &config).unwrap();
                 let bridge = ParamBridge::new(specs);
                 let parameter = bridge.find_index(key).unwrap();
                 let normalized = index as f64 / (labels.len() - 1) as f64;
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn parametric_eq_oversampling_choices_map_to_plugin_factors() {
-        let mut plugin = crate::create_plugin("EQ", 2, 48_000, "{}").unwrap();
+        let mut plugin = crate::create_plugin("EQ", 2, 48_000.0, "{}").unwrap();
         assert_eq!(plugin.info().name, EQ_PLUGIN_INFO_NAME);
 
         let bridge = ParamBridge::new(sotf_plugin_eq::params::GLOBAL_PARAMS);

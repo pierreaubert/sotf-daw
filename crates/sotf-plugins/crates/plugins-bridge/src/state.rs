@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_save_load_roundtrip() {
-        let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
+        let mut plugin = create_plugin("Gain", 2, 48000.0, "{}").unwrap();
         plugin.initialize(48000.0).unwrap();
 
         // Set a parameter
@@ -199,7 +199,7 @@ mod tests {
         assert!(!state.is_empty());
 
         // Create a fresh plugin and load state
-        let mut plugin2 = create_plugin("Gain", 2, 48000, "{}").unwrap();
+        let mut plugin2 = create_plugin("Gain", 2, 48000.0, "{}").unwrap();
         plugin2.initialize(48000.0).unwrap();
         load_state(&mut *plugin2, &state).unwrap();
 
@@ -215,14 +215,14 @@ mod tests {
 
     #[test]
     fn test_load_invalid_json() {
-        let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
+        let mut plugin = create_plugin("Gain", 2, 48000.0, "{}").unwrap();
         let result = load_state(&mut *plugin, b"not json");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_load_unknown_params_ignored() {
-        let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
+        let mut plugin = create_plugin("Gain", 2, 48000.0, "{}").unwrap();
         let data = br#"{"unknown_param": 42.0, "gain_db": 5.0}"#;
         let result = load_state(&mut *plugin, data);
         assert!(result.is_ok());

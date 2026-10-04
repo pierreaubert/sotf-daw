@@ -67,7 +67,7 @@ mod tests {
     use sotf_host::plugin::ProcessContext;
 
     fn hiss_params(channels: usize) -> Box<dyn Plugin> {
-        let mut plugin = create_plugin("HissReducer", channels, 48_000, "{}").unwrap();
+        let mut plugin = create_plugin("HissReducer", channels, 48_000.0, "{}").unwrap();
         plugin.initialize(48_000.0).unwrap();
         plugin
     }
@@ -78,7 +78,7 @@ mod tests {
         assert!(is_hiss(&*hiss));
         assert!(hiss_snapshot(&*hiss).is_some());
 
-        let gain = create_plugin("Gain", 2, 48_000, "{}").unwrap();
+        let gain = create_plugin("Gain", 2, 48_000.0, "{}").unwrap();
         assert!(!is_hiss(&*gain));
         assert!(hiss_snapshot(&*gain).is_none());
     }
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn non_hiss_save_has_no_carrier_and_matches_wrapper() {
-        let plugin = create_plugin("Gain", 2, 48_000, "{}").unwrap();
+        let plugin = create_plugin("Gain", 2, 48_000.0, "{}").unwrap();
         let bytes = try_save_state(&*plugin).unwrap();
         let map: serde_json::Map<String, serde_json::Value> =
             serde_json::from_slice(&bytes).unwrap();
@@ -170,7 +170,7 @@ mod tests {
     #[test]
     fn profiled_hiss_state_rejected_before_any_mutation() {
         // Capture a real v2 profile through the object-safe Plugin surface.
-        let mut profiler = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
+        let mut profiler = create_plugin("HissReducer", 1, 48_000.0, "{}").unwrap();
         profiler.initialize(48_000.0).unwrap();
         profiler
             .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
@@ -203,9 +203,9 @@ mod tests {
 
         // A profiled blob is rejected before any setter runs: the target
         // keeps its accepted configuration and renders like a control.
-        let mut target = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
+        let mut target = create_plugin("HissReducer", 1, 48_000.0, "{}").unwrap();
         target.initialize(48_000.0).unwrap();
-        let mut control = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
+        let mut control = create_plugin("HissReducer", 1, 48_000.0, "{}").unwrap();
         control.initialize(48_000.0).unwrap();
         let error = load_state(&mut *target, &saved).unwrap_err();
         assert!(

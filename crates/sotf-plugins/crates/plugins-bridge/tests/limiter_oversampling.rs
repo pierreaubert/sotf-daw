@@ -13,12 +13,12 @@ fn config(choice: Option<i32>) -> String {
 }
 
 fn make(rate: u32, channels: usize, choice: Option<i32>, standalone: bool) -> Box<dyn Plugin> {
-    let mut plugin = create_plugin("Limiter", channels, rate, &config(choice)).unwrap();
+    let mut plugin = create_plugin("Limiter", channels, f64::from(rate), &config(choice)).unwrap();
     assert_eq!(plugin.preferred_oversampling(), None);
     if standalone {
         plugin = prepare_standalone_plugin(plugin, 257).unwrap();
     }
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -83,7 +83,7 @@ fn limiter_factor_keeps_legacy_indices_and_integer_normalization() {
         (0.0, 2.0, 0.0)
     );
     for choice in 0..=2 {
-        let mut plugin = create_plugin("Limiter", 2, 48_000, &config(None)).unwrap();
+        let mut plugin = create_plugin("Limiter", 2, 48_000.0, &config(None)).unwrap();
         bridge
             .set_normalized(plugin.as_mut(), 10, f64::from(choice) / 2.0)
             .unwrap();
@@ -128,10 +128,10 @@ fn limiter_factory_state_roundtrip_and_standalone_have_one_oversampling_stage() 
                     serde_json::from_slice::<serde_json::Value>(&state).unwrap()["oversampling"],
                     choice
                 );
-                let mut restored = create_plugin("Limiter", channels, rate, "{}").unwrap();
+                let mut restored = create_plugin("Limiter", channels, f64::from(rate), "{}").unwrap();
                 plugins_bridge::state::load_state(restored.as_mut(), &state).unwrap();
                 restored = prepare_standalone_plugin(restored, 257).unwrap();
-                restored.initialize(rate).unwrap();
+                restored.initialize(f64::from(rate)).unwrap();
                 assert_eq!(restored.latency_samples(), delay);
                 let output = render(standalone.as_mut(), rate, &input);
                 assert!(output == render(direct.as_mut(), rate, &input));

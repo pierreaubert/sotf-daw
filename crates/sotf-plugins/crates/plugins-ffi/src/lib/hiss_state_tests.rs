@@ -233,7 +233,7 @@ fn seeded_v1(channels: usize, rate: u32) -> NoiseProfileData {
     let floors = (0..channels).map(|ch| -40.0 - ch as f32).collect();
     NoiseProfileData {
         format_version: 1,
-        sample_rate: rate,
+        sample_rate: f64::from(rate),
         channels,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: floors,
@@ -246,7 +246,7 @@ fn seeded_v2(channels: usize, rate: u32) -> NoiseProfileData {
     let powers = vec![1.0f32; channels * 513];
     NoiseProfileData {
         format_version: 2,
-        sample_rate: rate,
+        sample_rate: f64::from(rate),
         channels,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: (0..channels).map(|ch| -40.0 - ch as f32).collect(),
@@ -256,7 +256,7 @@ fn seeded_v2(channels: usize, rate: u32) -> NoiseProfileData {
                 fft_size: 1024,
                 hop_size: 256,
                 window: "hann-periodic".to_string(),
-                sample_rate: rate,
+                sample_rate: f64::from(rate),
                 channels,
                 num_bins: 513,
                 power_per_channel_bin: powers,
@@ -514,7 +514,7 @@ fn hiss_ffi_crossrate_v2_matches_explicit_v1_fallback() {
     );
     let kept: NoiseProfileData =
         serde_json::from_value(with_v2.save_map()["captured_profile"].clone()).unwrap();
-    assert_eq!(kept.sample_rate, RATE_48K);
+    assert_eq!(kept.sample_rate, f64::from(RATE_48K));
     assert!(!with_v2.snapshot().try_export().unwrap().unwrap().engaged);
 
     let mut with_v1 =
@@ -646,7 +646,7 @@ fn hiss_ffi_busy_never_drops_blob() {
         let mut flag = false;
         while !churn_stop.load(std::sync::atomic::Ordering::Relaxed) {
             flag = !flag;
-            snapshot.publish_live_flags(flag, RATE_48K);
+            snapshot.publish_live_flags(flag, f64::from(RATE_48K));
         }
     });
 

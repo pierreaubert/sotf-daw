@@ -12,7 +12,7 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
     let mut plugin = create_plugin(
         "Denoiser",
         2,
-        48_000,
+        48_000.0,
         r#"{"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9,"curve_low":0.0,"curve_mid":0.5,"curve_high":1.0,"audition_residual":true}"#,
     )
     .unwrap();
@@ -29,7 +29,7 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
         assert_eq!(plugin.get_parameter(&ParameterId::from(id)), Some(expected));
     }
     let saved = save_state(plugin.as_ref());
-    let mut restored = create_plugin("Denoiser", 2, 48_000, "{}").unwrap();
+    let mut restored = create_plugin("Denoiser", 2, 48_000.0, "{}").unwrap();
     restored.initialize(48_000.0).unwrap();
     load_state(restored.as_mut(), &saved).unwrap();
     assert_eq!(save_state(restored.as_ref()), saved);
@@ -47,6 +47,6 @@ fn bridge_rejects_invalid_denoiser_constructor_controls() {
         r#"{"curve_high":"0.5"}"#,
         r#"{"audition_residual":1}"#,
     ] {
-        assert!(create_plugin("Denoiser", 2, 48_000, config).is_err());
+        assert!(create_plugin("Denoiser", 2, 48_000.0, config).is_err());
     }
 }

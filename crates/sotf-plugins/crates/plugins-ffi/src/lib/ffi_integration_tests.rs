@@ -2357,7 +2357,7 @@ fn ambisonics_triple_route_equivalence_ffi_bridge_facade() {
     assert_eq!(ffi.inner().output_channels, 2);
 
     // Bridge route (shared-lane custom constructor).
-    let mut bridge = plugins_bridge::create_plugin("AmbisonicsDecoder", 4, 48_000, &config)
+    let mut bridge = plugins_bridge::create_plugin("AmbisonicsDecoder", 4, 48_000.0, &config)
         .unwrap_or_else(|error| panic!("bridge custom route failed: {error}"));
     assert_eq!(bridge.input_channels(), 4);
     assert_eq!(bridge.output_channels(), 2);

@@ -164,10 +164,10 @@ fn nondefault_setting(plugin_type: &str) -> (&'static str, ParameterValue) {
 }
 
 fn prepared_plugin(plugin_type: &str) -> Box<dyn Plugin> {
-    let mut plugin = create_plugin(plugin_type, CHANNELS, SAMPLE_RATE, "{}")
+    let mut plugin = create_plugin(plugin_type, CHANNELS, f64::from(SAMPLE_RATE), "{}")
         .unwrap_or_else(|error| panic!("{plugin_type} construction: {error}"));
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .unwrap_or_else(|error| panic!("{plugin_type} initialization: {error}"));
     assert_eq!(plugin.input_channels(), CHANNELS);
     assert_eq!(plugin.output_channels(), CHANNELS);
@@ -273,9 +273,9 @@ fn supported_default_factory_configurations_create_successfully() {
             "MonoToStereo" => 1,
             _ => 2,
         };
-        match create_plugin(plugin_type, input_channels, SAMPLE_RATE, "{}") {
+        match create_plugin(plugin_type, input_channels, f64::from(SAMPLE_RATE), "{}") {
             Ok(mut plugin) => {
-                if let Err(e) = plugin.initialize(SAMPLE_RATE) {
+                if let Err(e) = plugin.initialize(f64::from(SAMPLE_RATE)) {
                     failures.push(format!("{plugin_type}: initialize failed: {e}"));
                 }
             }
@@ -299,7 +299,7 @@ fn spectral_compressor_bridge_factory_is_fallible_and_preserves_advanced_state()
     let plugin = create_plugin(
         "SpectralCompressor",
         2,
-        48_000,
+        48_000.0,
         r#"{"target_mode":2,"adaptive_threshold":true,"adaptive_offset_db":3.0,"channel_link":1.0}"#,
     )
     .expect("valid complete spectral compressor state");
@@ -315,7 +315,7 @@ fn spectral_compressor_bridge_factory_is_fallible_and_preserves_advanced_state()
         create_plugin(
             "SpectralCompressor",
             2,
-            48_000,
+            48_000.0,
             r#"{"spectral_smoothing":2.0}"#,
         )
         .is_err()

@@ -727,7 +727,7 @@ mod tests {
             "loudness_monitor",
         ] {
             for config in ["", "null", "{}", " { } "] {
-                let mut plugin = create_plugin(plugin_type, 2, 44_100, config)
+                let mut plugin = create_plugin(plugin_type, 2, 44_100.0, config)
                     .unwrap_or_else(|error| panic!("{plugin_type} {config:?}: {error}"));
                 assert_eq!(plugin.input_channels(), 2, "{plugin_type}");
                 assert_eq!(plugin.output_channels(), 2, "{plugin_type}");
@@ -752,7 +752,7 @@ mod tests {
     #[test]
     fn constructor_defaults_preserve_explicit_settings() {
         let convolution =
-            create_plugin("Convolution", 3, 96_000, r#"{"mix":0.25,"gain_db":-6.0}"#).unwrap();
+            create_plugin("Convolution", 3, 96_000.0, r#"{"mix":0.25,"gain_db":-6.0}"#).unwrap();
         assert_eq!(convolution.input_channels(), 3);
         assert_eq!(
             convolution.get_parameter(&ParameterId::from("mix")),
@@ -766,7 +766,7 @@ mod tests {
         let crossover = create_plugin(
             "Crossover",
             3,
-            48_000,
+            48_000.0,
             r#"{"frequency":750.0,"output":"both"}"#,
         )
         .unwrap();
@@ -778,14 +778,14 @@ mod tests {
         );
 
         for config in ["{}", r#"{"input_channels":6}"#] {
-            let binaural = create_plugin("Binaural", 6, 48_000, config).unwrap();
+            let binaural = create_plugin("Binaural", 6, 48_000.0, config).unwrap();
             assert_eq!(binaural.input_channels(), 6);
             assert_eq!(binaural.output_channels(), 2);
         }
         let mut loudness = create_plugin(
             "LoudnessMonitor",
             6,
-            48_000,
+            48_000.0,
             r#"{"speaker_config":"5.1","integrated_mode":"whole_program","enabled":false}"#,
         )
         .unwrap();
@@ -826,14 +826,14 @@ mod tests {
             ("LoudnessMonitor", r#"{"speaker_config":"invalid"}"#),
         ] {
             assert!(
-                create_plugin(plugin_type, 2, 48_000, config).is_err(),
+                create_plugin(plugin_type, 2, 48_000.0, config).is_err(),
                 "{plugin_type}: {config}"
             );
         }
         for plugin_type in ["Convolution", "Binaural", "Crossover", "LoudnessMonitor"] {
             for config in ["[]", "true", "1", "{"] {
                 assert!(
-                    create_plugin(plugin_type, 2, 48_000, config).is_err(),
+                    create_plugin(plugin_type, 2, 48_000.0, config).is_err(),
                     "{plugin_type}: {config}"
                 );
             }
@@ -850,7 +850,7 @@ mod tests {
             "true_stereo": true,
         })
         .to_string();
-        let mut plugin = create_plugin("Convolution", 2, 48_000, &true_config).unwrap();
+        let mut plugin = create_plugin("Convolution", 2, 48_000.0, &true_config).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("true_stereo")),
             Some(ParameterValue::Bool(true))
@@ -872,7 +872,7 @@ mod tests {
         let default_plugin = create_plugin(
             "Convolution",
             2,
-            48_000,
+            48_000.0,
             &serde_json::json!({ "ir_file": ir_path.to_string_lossy() }).to_string(),
         )
         .unwrap();
@@ -891,13 +891,13 @@ mod tests {
                 "true_stereo": value,
             })
             .to_string();
-            let error = match create_plugin("Convolution", 2, 48_000, &config) {
+            let error = match create_plugin("Convolution", 2, 48_000.0, &config) {
                 Ok(_) => panic!("nonboolean true_stereo must fail: {value}"),
                 Err(error) => error,
             };
             assert!(error.contains("true_stereo must be a boolean"), "{error}");
         }
-        let wrong_width = match create_plugin("Convolution", 3, 48_000, &true_config) {
+        let wrong_width = match create_plugin("Convolution", 3, 48_000.0, &true_config) {
             Ok(_) => panic!("true-stereo convolution must reject three plugin channels"),
             Err(error) => error,
         };
@@ -912,7 +912,7 @@ mod tests {
     fn test_create_wave1_plugins() {
         let wave1 = ["EQ", "Compressor", "Limiter", "Gate", "Gain", "Delay"];
         for plugin_type in &wave1 {
-            let result = create_plugin(plugin_type, 2, 48000, "{}");
+            let result = create_plugin(plugin_type, 2, 48000.0, "{}");
             assert!(
                 result.is_ok(),
                 "Failed to create {plugin_type}: {:?}",
@@ -927,7 +927,7 @@ mod tests {
     fn test_create_wave1_lowercase() {
         let wave1 = ["eq", "compressor", "limiter", "gate", "gain", "delay"];
         for plugin_type in &wave1 {
-            let result = create_plugin(plugin_type, 2, 48000, "{}");
+            let result = create_plugin(plugin_type, 2, 48000.0, "{}");
             assert!(
                 result.is_ok(),
                 "Failed to create {plugin_type}: {:?}",
@@ -938,7 +938,7 @@ mod tests {
 
     #[test]
     fn test_unknown_plugin() {
-        let result = create_plugin("NonExistent", 2, 48000, "{}");
+        let result = create_plugin("NonExistent", 2, 48000.0, "{}");
         assert!(result.is_err());
     }
 
@@ -948,7 +948,7 @@ mod tests {
             let mut configured = create_plugin(
                 alias,
                 2,
-                48_000,
+                48_000.0,
                 r#"{"bit_depth": 2, "noise_shaping": false, "dither_type": 1}"#,
             )
             .unwrap_or_else(|error| panic!("{alias} explicit config: {error}"));
@@ -968,7 +968,7 @@ mod tests {
                 "{alias}"
             );
 
-            let defaults = create_plugin(alias, 2, 48_000, "{}")
+            let defaults = create_plugin(alias, 2, 48_000.0, "{}")
                 .unwrap_or_else(|error| panic!("{alias} empty config: {error}"));
             assert_eq!(
                 defaults.get_parameter(&ParameterId::from("bit_depth")),
@@ -991,7 +991,7 @@ mod tests {
             // are honored. Out-of-range choice indices are rejected by the
             // serde choice deserializer at parse time; direct `from_params`
             // construction clamps instead, so parse owns range truthfulness.
-            let lenient = create_plugin(alias, 2, 48_000, r#"{"bit_depth": 2, "unknown": 1}"#)
+            let lenient = create_plugin(alias, 2, 48_000.0, r#"{"bit_depth": 2, "unknown": 1}"#)
                 .unwrap_or_else(|error| panic!("{alias} unknown keys ignored: {error}"));
             assert_eq!(
                 lenient.get_parameter(&ParameterId::from("bit_depth")),
@@ -999,7 +999,7 @@ mod tests {
                 "{alias}"
             );
             assert!(
-                create_plugin(alias, 2, 48_000, r#"{"bit_depth": 99}"#).is_err(),
+                create_plugin(alias, 2, 48_000.0, r#"{"bit_depth": 99}"#).is_err(),
                 "{alias}"
             );
 
@@ -1010,12 +1010,12 @@ mod tests {
             let mut reference = create_plugin(
                 alias,
                 2,
-                48_000,
+                48_000.0,
                 r#"{"bit_depth": 2, "noise_shaping": false, "dither_type": 1}"#,
             )
             .unwrap();
             reference.initialize(48_000.0).unwrap();
-            let mut defaulted = create_plugin(alias, 2, 48_000, "{}").unwrap();
+            let mut defaulted = create_plugin(alias, 2, 48_000.0, "{}").unwrap();
             defaulted.initialize(48_000.0).unwrap();
 
             let frames = 1024;
@@ -1089,7 +1089,7 @@ mod tests {
             let mut configured = create_plugin(
                 alias,
                 2,
-                48_000,
+                48_000.0,
                 r#"{"spectral_mode": true, "transient_guard": true, "strength": 0.7}"#,
             )
             .unwrap_or_else(|error| panic!("{alias} guard config: {error}"));
@@ -1099,7 +1099,7 @@ mod tests {
                 "{alias}"
             );
             // Empty config defaults the guard off (legacy sound preserved).
-            let defaulted = create_plugin(alias, 2, 48_000, "{}")
+            let defaulted = create_plugin(alias, 2, 48_000.0, "{}")
                 .unwrap_or_else(|error| panic!("{alias} empty config: {error}"));
             assert_eq!(
                 defaulted.get_parameter(&ParameterId::from("transient_guard")),
@@ -1133,7 +1133,7 @@ mod tests {
             let saved = crate::state::save_state(&*configured);
             let saved_json: serde_json::Value = serde_json::from_slice(&saved).unwrap();
             assert_eq!(saved_json["transient_guard"], true, "{alias}");
-            let mut reloaded = create_plugin(alias, 2, 48_000, "{}").unwrap();
+            let mut reloaded = create_plugin(alias, 2, 48_000.0, "{}").unwrap();
             crate::state::load_state(&mut *reloaded, &saved).unwrap();
             assert_eq!(
                 reloaded.get_parameter(&ParameterId::from("transient_guard")),
@@ -1150,7 +1150,7 @@ mod tests {
                 create_plugin(
                     alias,
                     2,
-                    48_000,
+                    48_000.0,
                     r#"{"transient_guard": true, "obsolete": 1}"#
                 )
                 .is_err(),
@@ -1159,7 +1159,7 @@ mod tests {
             let mut rebuilt = create_plugin(
                 alias,
                 2,
-                48_000,
+                48_000.0,
                 r#"{"spectral_mode": true, "transient_guard": true, "strength": 0.7}"#,
             )
             .unwrap();
@@ -1183,7 +1183,7 @@ mod tests {
             "auto_gain_enabled": false
         })
         .to_string();
-        let mut plugin = create_plugin("ABCompare", 2, 48_000, &config)
+        let mut plugin = create_plugin("ABCompare", 2, 48_000.0, &config)
             .expect("bridge factory must be available during initial nested path construction");
         plugin.initialize(48_000.0).unwrap();
         let input = vec![0.0_f32; 256 * 2];
@@ -1200,7 +1200,7 @@ mod tests {
     #[test]
     fn matrix_factory_preserves_configured_nonsquare_routing() {
         let config = r#"{"input_channels":2,"output_channels":1,"matrix":[0.5,0.5]}"#;
-        let plugin = create_plugin("Matrix", 2, 48_000, config).unwrap();
+        let plugin = create_plugin("Matrix", 2, 48_000.0, config).unwrap();
         assert_eq!(plugin.input_channels(), 2);
         assert_eq!(plugin.output_channels(), 1);
     }
@@ -1208,7 +1208,7 @@ mod tests {
     #[test]
     fn test_create_newly_wired_plugins() {
         for plugin_type in ["BandSplit", "BandMerge", "AEC", "Beamformer"] {
-            let result = create_plugin(plugin_type, 2, 48000, "{}");
+            let result = create_plugin(plugin_type, 2, 48000.0, "{}");
             assert!(
                 result.is_ok(),
                 "Failed to create {plugin_type}: {:?}",
@@ -1228,16 +1228,16 @@ mod tests {
             r#"{"num_mics":2,"beamformer_type":"unknown"}"#,
         ] {
             assert!(
-                create_plugin("Beamformer", 2, 48_000, config).is_err(),
+                create_plugin("Beamformer", 2, 48_000.0, config).is_err(),
                 "{config}"
             );
         }
-        assert!(create_plugin("Beamformer", 4, 48_000, r#"{"num_mics":2}"#).is_err());
+        assert!(create_plugin("Beamformer", 4, 48_000.0, r#"{"num_mics":2}"#).is_err());
         assert!(
             create_plugin(
                 "Beamformer",
                 2,
-                48_000,
+                48_000.0,
                 r#"{"num_mics":2,"beamformer_type":"GSC"}"#,
             )
             .is_ok()
@@ -1246,13 +1246,13 @@ mod tests {
 
     #[test]
     fn aec_bridge_enforces_canonical_bus_layout_and_ranges() {
-        assert!(create_plugin("AEC", 1, 48_000, "{}").is_err());
-        assert!(create_plugin("AEC", 3, 48_000, "{}").is_err());
-        assert!(create_plugin("AEC", 2, 48_000, r#"{"step_size":1.2}"#).is_err());
+        assert!(create_plugin("AEC", 1, 48_000.0, "{}").is_err());
+        assert!(create_plugin("AEC", 3, 48_000.0, "{}").is_err());
+        assert!(create_plugin("AEC", 2, 48_000.0, r#"{"step_size":1.2}"#).is_err());
         let plugin = create_plugin(
             "AEC",
             2,
-            48_000,
+            48_000.0,
             r#"{"echo_tail_ms":100.0,"step_size":0.4,"post_filter_enabled":false}"#,
         )
         .expect("valid canonical AEC state");
@@ -1264,9 +1264,9 @@ mod tests {
     fn ambisonics_bridge_enforces_every_order_width() {
         for (order, channels, layout) in [(1, 4, "5.1"), (2, 9, "7.1.4"), (3, 16, "9.1.6")] {
             let config = serde_json::json!({"order": order, "target_layout": layout}).to_string();
-            let plugin = create_plugin("AmbisonicsDecoder", channels, 48_000, &config).unwrap();
+            let plugin = create_plugin("AmbisonicsDecoder", channels, 48_000.0, &config).unwrap();
             assert_eq!(plugin.input_channels(), channels);
-            assert!(create_plugin("AmbisonicsDecoder", channels - 1, 48_000, &config).is_err());
+            assert!(create_plugin("AmbisonicsDecoder", channels - 1, 48_000.0, &config).is_err());
         }
     }
 
@@ -1305,7 +1305,7 @@ mod tests {
                 })
                 .to_string();
                 let mut plugin =
-                    create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config)
+                    create_plugin("AmbisonicsDecoder", input_channels, 48_000.0, &config)
                         .unwrap_or_else(|error| panic!("order {order} {layout}: {error}"));
                 assert_eq!(
                     plugin.input_channels(),
@@ -1330,7 +1330,7 @@ mod tests {
                 assert!(whole.iter().any(|sample| sample.abs() > 1e-7));
 
                 let mut partitioned_plugin =
-                    create_plugin("AmbisonicsDecoder", input_channels, 48_000, &config).unwrap();
+                    create_plugin("AmbisonicsDecoder", input_channels, 48_000.0, &config).unwrap();
                 let mut partitioned = vec![0.0; whole.len()];
                 let mut offset = 0;
                 for frames in [1, 31, 64, 3, 79, 79] {
@@ -1375,7 +1375,7 @@ mod tests {
                 }
             })
             .to_string();
-            let mut plugin = create_plugin(alias, 4, 48_000, &config)
+            let mut plugin = create_plugin(alias, 4, 48_000.0, &config)
                 .unwrap_or_else(|error| panic!("{alias} custom route failed: {error}"));
             assert_eq!(plugin.input_channels(), 4, "{alias}");
             assert_eq!(plugin.output_channels(), 2, "{alias}");
@@ -1431,7 +1431,7 @@ mod tests {
                 }),
             ] {
                 assert!(
-                    create_plugin(alias, 4, 48_000, &bad.to_string()).is_err(),
+                    create_plugin(alias, 4, 48_000.0, &bad.to_string()).is_err(),
                     "{alias} must reject {bad}"
                 );
             }
@@ -1453,17 +1453,17 @@ mod tests {
 
     #[test]
     fn aae_bridge_rejects_invalid_restored_state_without_panicking() {
-        assert!(create_plugin("AAE", 2, 48_000, r#"{"speaker_config":"2.0"}"#).is_err());
-        assert!(create_plugin("AAE", 2, 48_000, r#"{"input_diffusion":2.0}"#).is_err());
+        assert!(create_plugin("AAE", 2, 48_000.0, r#"{"speaker_config":"2.0"}"#).is_err());
+        assert!(create_plugin("AAE", 2, 48_000.0, r#"{"input_diffusion":2.0}"#).is_err());
         assert!(
-            create_plugin("AAE", 2, 48_000, r#"{"solo_early":true,"solo_late":true}"#,).is_err()
+            create_plugin("AAE", 2, 48_000.0, r#"{"solo_early":true,"solo_late":true}"#,).is_err()
         );
     }
 
     #[test]
     fn spectrum_analyzer_aliases_initialize_process_and_publish_data() {
         for plugin_type in ["SpectrumAnalyzer", "spectrum_analyzer"] {
-            let mut plugin = create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
+            let mut plugin = create_plugin(plugin_type, 2, 48_000.0, "{}").unwrap();
             plugin.initialize(48_000.0).unwrap();
             let input = vec![0.0; 4096 * 2];
             let mut output = vec![1.0; input.len()];
@@ -1485,13 +1485,13 @@ mod tests {
                 {"filter_type": "peak", "freq": 1000.0, "q": 1.5, "db_gain": 3.0}
             ]
         }"#;
-        let result = create_plugin("EQ", 2, 48000, config);
+        let result = create_plugin("EQ", 2, 48000.0, config);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_process_silence() {
-        let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
+        let mut plugin = create_plugin("Gain", 2, 48000.0, "{}").unwrap();
         plugin.initialize(48000.0).unwrap();
 
         let input = vec![0.0f32; 256];

@@ -149,8 +149,8 @@ fn bridge_factory_accepts_both_spellings_with_identical_audio() {
     let input = hot_sine(4096, 2, RATE, 0.9);
     let mut outputs = Vec::new();
     for spelling in ["AnalogLimiter", "analog_limiter"] {
-        let mut plugin = create_plugin(spelling, 2, RATE, config).unwrap();
-        plugin.initialize(RATE).unwrap();
+        let mut plugin = create_plugin(spelling, 2, f64::from(RATE), config).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("analog_model")),
             Some(ParameterValue::String("Tape".to_string())),
@@ -170,11 +170,11 @@ fn bridge_factory_honors_legacy_db_ms_aliases() {
     let mut plugin = create_plugin(
         "analog_limiter",
         2,
-        RATE,
+        f64::from(RATE),
         r#"{"threshold_db": -12.0, "release_ms": 50.0, "lookahead_ms": 2.0}"#,
     )
     .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("threshold")),
         Some(ParameterValue::Float(-12.0))
@@ -188,7 +188,7 @@ fn bridge_factory_honors_legacy_db_ms_aliases() {
 #[test]
 fn bridge_normalized_roundtrips_cover_float_bool_and_model_choice() {
     let bridge = bridge();
-    let mut plugin = create_plugin("AnalogLimiter", 2, RATE, "{}").unwrap();
+    let mut plugin = create_plugin("AnalogLimiter", 2, f64::from(RATE), "{}").unwrap();
     // Threshold: normalized 0.4 over [-20, 0] is exactly -12 dB.
     bridge.set_normalized(plugin.as_mut(), 0, 0.4).unwrap();
     assert_eq!(
@@ -225,8 +225,8 @@ fn bridge_normalized_roundtrips_cover_float_bool_and_model_choice() {
 #[test]
 fn bridge_structural_live_edit_fails_without_touching_saved_state() {
     let bridge = bridge();
-    let mut plugin = create_plugin("AnalogLimiter", 2, RATE, r#"{"lookahead": 2.0}"#).unwrap();
-    plugin.initialize(RATE).unwrap();
+    let mut plugin = create_plugin("AnalogLimiter", 2, f64::from(RATE), r#"{"lookahead": 2.0}"#).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let saved = plugins_bridge::state::save_state(plugin.as_ref());
     // Lookahead is structural: post-init changes must fail ...
     assert!(bridge.set_normalized(plugin.as_mut(), 2, 0.5).is_err());
@@ -269,19 +269,19 @@ fn bridge_cross_model_state_restore_requires_reconstruction() {
     let mut harmonics = create_plugin(
         "AnalogLimiter",
         2,
-        RATE,
+        f64::from(RATE),
         r#"{"threshold": -12.0, "analog_color": 0.5}"#,
     )
     .unwrap();
-    harmonics.initialize(RATE).unwrap();
+    harmonics.initialize(f64::from(RATE)).unwrap();
     let mut tape = create_plugin(
         "AnalogLimiter",
         2,
-        RATE,
+        f64::from(RATE),
         r#"{"threshold": -12.0, "analog_model": "Tape", "analog_color": 0.5}"#,
     )
     .unwrap();
-    tape.initialize(RATE).unwrap();
+    tape.initialize(f64::from(RATE)).unwrap();
     let input = hot_sine(4096, 2, RATE, 0.9);
     let before = render(harmonics.as_mut(), RATE, &input);
     harmonics.reset();
@@ -293,9 +293,9 @@ fn bridge_cross_model_state_restore_requires_reconstruction() {
     );
     assert_eq!(render(harmonics.as_mut(), RATE, &input), before);
     // The supported adoption path: fresh construction from the saved state.
-    let mut adopted = create_plugin("AnalogLimiter", 2, RATE, "{}").unwrap();
+    let mut adopted = create_plugin("AnalogLimiter", 2, f64::from(RATE), "{}").unwrap();
     plugins_bridge::state::load_state(adopted.as_mut(), &saved).unwrap();
-    adopted.initialize(RATE).unwrap();
+    adopted.initialize(f64::from(RATE)).unwrap();
     assert_eq!(
         adopted.get_parameter(&ParameterId::from("analog_model")),
         Some(ParameterValue::String("Tape".to_string()))
@@ -320,11 +320,11 @@ fn bridge_realtime_detector_controls_automate_live() {
     let mut plugin = create_plugin(
         "AnalogLimiter",
         2,
-        RATE,
+        f64::from(RATE),
         r#"{"threshold": -12.0, "analog_color": 0.5}"#,
     )
     .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     bridge.set_normalized(plugin.as_mut(), 3, 1.0).unwrap();
     bridge.set_normalized(plugin.as_mut(), 4, 1.0).unwrap();
     assert_eq!(
@@ -353,14 +353,14 @@ fn bridge_state_roundtrip_and_standalone_render_bit_identical() {
                 input[2047 * channels + channel] = -0.001 * (channel + 1) as f32;
             }
             let config = r#"{"threshold": -12.0, "lookahead": 2.0, "analog_model": "Tape", "analog_color": 0.0}"#;
-            let mut direct = create_plugin("AnalogLimiter", channels, rate, config).unwrap();
-            direct.initialize(rate).unwrap();
+            let mut direct = create_plugin("AnalogLimiter", channels, f64::from(rate), config).unwrap();
+            direct.initialize(f64::from(rate)).unwrap();
             let mut standalone = prepare_standalone_plugin(
-                create_plugin("analog_limiter", channels, rate, config).unwrap(),
+                create_plugin("analog_limiter", channels, f64::from(rate), config).unwrap(),
                 257,
             )
             .unwrap();
-            standalone.initialize(rate).unwrap();
+            standalone.initialize(f64::from(rate)).unwrap();
             let delay = (u64::from(rate) * 2 / 1000) as usize;
             assert_eq!(direct.latency_samples(), delay);
             assert_eq!(standalone.latency_samples(), delay);
@@ -368,10 +368,10 @@ fn bridge_state_roundtrip_and_standalone_render_bit_identical() {
             let saved: serde_json::Value = serde_json::from_slice(&state).unwrap();
             assert_eq!(saved["threshold"], -12.0);
             assert_eq!(saved["analog_model"], "Tape");
-            let mut restored = create_plugin("AnalogLimiter", channels, rate, "{}").unwrap();
+            let mut restored = create_plugin("AnalogLimiter", channels, f64::from(rate), "{}").unwrap();
             plugins_bridge::state::load_state(restored.as_mut(), &state).unwrap();
             restored = prepare_standalone_plugin(restored, 257).unwrap();
-            restored.initialize(rate).unwrap();
+            restored.initialize(f64::from(rate)).unwrap();
             assert_eq!(restored.latency_samples(), delay);
             let output = render(standalone.as_mut(), rate, &input);
             assert_eq!(output, render(direct.as_mut(), rate, &input));
@@ -403,8 +403,8 @@ fn bridge_state_roundtrip_and_standalone_render_bit_identical() {
 fn bridge_rejected_state_preserves_audio_and_config() {
     let config = r#"{"threshold": -12.0, "analog_model": "Tape", "analog_color": 0.5}"#;
     let input = hot_sine(4096, 2, RATE, 0.9);
-    let mut plugin = create_plugin("AnalogLimiter", 2, RATE, config).unwrap();
-    plugin.initialize(RATE).unwrap();
+    let mut plugin = create_plugin("AnalogLimiter", 2, f64::from(RATE), config).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let before = render(plugin.as_mut(), RATE, &input);
     plugin.reset();
     assert!(plugins_bridge::state::load_state(plugin.as_mut(), b"\x00\x01not-json").is_err());

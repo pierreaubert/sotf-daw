@@ -360,7 +360,7 @@ fn replace_hiss_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<()
     )?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -551,7 +551,7 @@ fn replace_plugin_from_state(
 
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
 
     // A setup setter may change its bus widths. The host's buffers and stored
     // layout remain fixed for the lifetime of the handle.
@@ -826,7 +826,7 @@ fn replace_crossover_from_state(
     )?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -874,7 +874,7 @@ fn replace_dynamic_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
     )?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -940,7 +940,7 @@ fn replace_eq_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), 
     load_changed_state(&mut *replacement, &merged_bytes, &handle.plugin_type)?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -989,7 +989,7 @@ fn replace_de_esser_from_state(handle: &mut PluginHandle, state: &[u8]) -> Resul
     )?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -1034,7 +1034,7 @@ fn replace_ambisonics_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
     )?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
     {
@@ -1168,7 +1168,7 @@ fn replace_band_split_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
     load_changed_state(&mut *replacement, &merged_state, &handle.plugin_type)?;
     replacement =
         plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
 
     if replacement.input_channels() != handle.input_channels
         || replacement.output_channels() != handle.output_channels
@@ -1254,7 +1254,7 @@ fn replace_linear_phase_eq_from_state(
         handle.sample_rate,
         handle.max_callback_frames,
     )?;
-    replacement.initialize(handle.sample_rate)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
 
     // LinearPhaseEQ always exposes the same ten-band schema, including
     // dormant slots. Keep its map and borrowed metadata pointers stable;
@@ -1486,7 +1486,7 @@ pub extern "C" fn plugin_create(
         };
 
         // Initialize plugin
-        if let Err(e) = plugin.initialize(sample_rate) {
+        if let Err(e) = plugin.initialize(f64::from(sample_rate)) {
             set_last_error(&format!("Failed to initialize plugin: {}", e));
             return ptr::null_mut();
         }

@@ -1081,7 +1081,7 @@ pub(crate) fn create_plugin_with_max_callback(
     if canonical_direct_plugin_type(plugin_type) == "LinearPhaseEQ" {
         Ok(Box::new(AsyncTimelinePlugin::new(
             plugin,
-            sample_rate,
+            f64::from(sample_rate),
             max_callback_frames,
         )?))
     } else {
@@ -1159,7 +1159,7 @@ fn create_custom_ambisonics_plugin(
         ));
     }
     // Mirror the bridge named route, which initializes eagerly.
-    plugin.initialize(sample_rate)?;
+    plugin.initialize(f64::from(sample_rate))?;
     Ok(Box::new(plugin))
 }
 
@@ -1214,7 +1214,7 @@ pub(crate) fn create_unprepared_plugin(
     let plugin = plugins_bridge::create_plugin(
         plugin_type,
         constructor_channels,
-        sample_rate,
+        f64::from(sample_rate),
         &plugin_config,
     )?;
     if plugin.input_channels() != input_channels {
@@ -1386,7 +1386,7 @@ mod tests {
     #[test]
     fn linear_phase_eq_adapter_latency_uses_negotiated_callback_quantum() {
         let config = r#"{"num_filters":1,"fir_length_index":0,"filters":[]}"#;
-        let mut inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, config).unwrap();
+        let mut inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, config).unwrap();
         inner.initialize(48_000.0).unwrap();
         let inner_latency = inner.latency_samples();
 
