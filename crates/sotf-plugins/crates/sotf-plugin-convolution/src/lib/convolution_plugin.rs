@@ -1748,7 +1748,7 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
 
 impl ConvolutionPlugin {
     fn validate_stream_rate(&self, context: &ProcessContext) -> PluginResult<()> {
-        if self.channels == 0 || self.sample_rate == 0 || context.sample_rate != self.sample_rate {
+        if self.channels == 0 || self.sample_rate == 0.0 || context.sample_rate != self.sample_rate {
             return Err(
                 "Convolution requires the prepared sample rate and nonzero channels".into(),
             );

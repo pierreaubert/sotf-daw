@@ -37,7 +37,7 @@ fn write_test_wav(path: &Path, samples: &[i16], sample_rate: u32) {
 fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> ConvolutionPlugin {
     let mut plugin = ConvolutionPlugin::new(channels, sample_rate);
     plugin.max_ir_frames = ir.iter().map(Vec::len).max().unwrap_or(0);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Build partitions from the IR data
     let ir_channels = ir.len();

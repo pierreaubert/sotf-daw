@@ -405,7 +405,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir,
             48_000,
-            options(48_000, 2),
+            options(48_000.0, 2),
         )
         .is_ok()
     );
@@ -413,7 +413,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir,
             48_000,
-            options(48_000, 1),
+            options(48_000.0, 1),
         )
         .is_err()
     );
@@ -421,7 +421,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir[..2],
             48_000,
-            options(48_000, 2),
+            options(48_000.0, 2),
         )
         .is_err()
     );
@@ -469,7 +469,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
     }
     let ir = vec![vec![0.0; low]; 4];
     assert!(
-        ConvolutionPlugin::validate_ir_limits_for_routing(&ir, 48_000, options(384_000, 2),)
+        ConvolutionPlugin::validate_ir_limits_for_routing(&ir, 48_000, options(384_000.0, 2),)
             .is_ok()
     );
     let mut over_budget = ir;
@@ -478,7 +478,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &over_budget,
             48_000,
-            options(384_000, 2),
+            options(384_000.0, 2),
         )
         .is_err()
     );
@@ -989,7 +989,7 @@ fn host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_ca
     let mut plugin = make_delta_ir_plugin(true, false);
     plugin.nupc_engines = vec![nupc::NupcEngine::new(&ir, PARTITION_SIZE)];
     plugin.max_ir_frames = IR_FRAMES;
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let latency = plugin.latency_samples();
     let mut first = [1.0];
     plugin
