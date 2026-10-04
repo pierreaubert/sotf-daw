@@ -110,7 +110,7 @@ fn render_hosted_through_settings(
     let config = settings.to_plugin_config(f64::from(RATE));
     let mut plugin =
         create_plugin(&config.plugin_type, &config.parameters, channels, RATE).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let latency = plugin.latency_samples();
     let frames = input.len() / channels;
     assert_eq!(
@@ -244,7 +244,7 @@ fn engine_denoiser_settings_roundtrip_reaches_dsp() {
             continue;
         }
         let mut plugin = result.unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         for (id, expected) in [
             ("harmonic_percussive", ParameterValue::Bool(true)),
             ("spatial_denoise", ParameterValue::Bool(true)),
@@ -377,7 +377,7 @@ fn engine_denoiser_curve_and_audition_shape_audio_end_to_end() {
         RATE,
     )
     .unwrap();
-    live.initialize(RATE).unwrap();
+    live.initialize(f64::from(RATE)).unwrap();
     live.set_parameter(ParameterId::from("curve_mid"), ParameterValue::Float(0.0))
         .unwrap();
     live.set_parameter(
@@ -539,10 +539,10 @@ fn engine_denoiser_rejected_candidate_retains_live_chain_history() {
     let accepted_json = serde_json::to_vec(&accepted).unwrap();
     let config = accepted.to_plugin_config(f64::from(RATE));
     let mut live = create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
-    live.initialize(RATE).unwrap();
+    live.initialize(f64::from(RATE)).unwrap();
     let mut reference =
         create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
-    reference.initialize(RATE).unwrap();
+    reference.initialize(f64::from(RATE)).unwrap();
     let (input, _) = tone_plus_noise(8 * BLOCK_FRAMES, CHANNELS, 0xace97);
     let mut live_out = vec![0.0; input.len()];
     let mut ref_out = vec![0.0; input.len()];
@@ -658,7 +658,7 @@ fn engine_denoiser_profile_learn_and_use_end_to_end() {
     let config = settings.to_plugin_config(f64::from(RATE));
     let mut profiled =
         create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
-    profiled.initialize(RATE).unwrap();
+    profiled.initialize(f64::from(RATE)).unwrap();
     profiled
         .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
         .unwrap();
@@ -704,7 +704,7 @@ fn engine_denoiser_profile_learn_and_use_end_to_end() {
     }
     let mut unprofiled =
         create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
-    unprofiled.initialize(RATE).unwrap();
+    unprofiled.initialize(f64::from(RATE)).unwrap();
     let mut unprofiled_out = vec![f32::NAN; input.len()];
     for start in (0..16_384).step_by(BLOCK_FRAMES) {
         let range = start * CHANNELS..(start + BLOCK_FRAMES) * CHANNELS;

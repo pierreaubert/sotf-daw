@@ -87,7 +87,7 @@ fn capture_colored_v2() -> NoiseProfileData {
         10.0f64.powf(-36.0 / 20.0),
     );
     let mut profiler = HissReducerPlugin::new(1);
-    profiler.initialize(RATE_48K).unwrap();
+    profiler.initialize(f64::from(RATE_48K)).unwrap();
     profiler
         .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
         .unwrap();
@@ -179,7 +179,7 @@ fn render_hosted_through_settings(
     let config = settings.to_plugin_config(f64::from(rate));
     let mut plugin =
         create_plugin(&config.plugin_type, &config.parameters, channels, rate).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let latency = plugin.latency_samples();
     let frames = input.len() / channels;
     let mut output = vec![f32::NAN; input.len()];
@@ -437,7 +437,7 @@ fn hiss_malformed_profile_rejected_by_factory_and_accepted_state_retained() {
     let mut config = settings.to_plugin_config(f64::from(RATE_48K));
     // Accepted construction renders the reference before any rejection.
     let mut accepted = create_plugin(&config.plugin_type, &config.parameters, 1, RATE_48K).unwrap();
-    accepted.initialize(RATE_48K).unwrap();
+    accepted.initialize(f64::from(RATE_48K)).unwrap();
     let input = lcg_noise(8192, 0.04, 0x77aa);
     let reference = render_process_only(&mut accepted, &input, RATE_48K);
 

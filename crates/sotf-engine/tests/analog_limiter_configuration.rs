@@ -180,7 +180,7 @@ fn engine_analog_limiter_model_index_maps_to_canonical_label() {
         assert_eq!(config.plugin_type, "analog_limiter");
         assert_eq!(config.parameters["analog_model"], label);
         let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("analog_model")),
             Some(ParameterValue::String(label.to_string()))
@@ -219,7 +219,7 @@ fn engine_analog_limiter_legacy_settings_without_analog_fields_still_construct()
     assert_eq!(config.parameters["analog_character"], 0.0);
     assert_eq!(config.parameters["analog_trim"], 0.0);
     let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = hot_sine(4096, 2, 48_000, 0.9);
     let output = render(plugin.as_mut(), 48_000, &input, 2);
     let peak = settled_peak(&output, 2);
@@ -245,7 +245,7 @@ fn engine_analog_limiter_persisted_controls_reach_dsp_exactly() {
     .to_plugin_config(48_000.0);
     assert_eq!(config.plugin_type, "analog_limiter");
     let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, expected) in [
         ("threshold", ParameterValue::Float(-12.0)),
         ("release", ParameterValue::Float(50.0)),
@@ -279,7 +279,7 @@ fn engine_analog_limiter_ceiling_holds_across_rates_and_widths() {
             .to_plugin_config(f64::from(rate));
             let mut plugin =
                 create_plugin(&config.plugin_type, &config.parameters, channels, rate).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let input = hot_sine(4096, channels, rate, 0.9);
             let output = render(plugin.as_mut(), rate, &input, channels);
             let peak = settled_peak(&output, channels);
@@ -304,7 +304,7 @@ fn engine_analog_limiter_ceiling_holds_across_rates_and_widths() {
             .to_plugin_config(f64::from(rate));
             let mut plugin =
                 create_plugin(&config.plugin_type, &config.parameters, channels, rate).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let output = render(plugin.as_mut(), rate, &input, channels);
             let peak = settled_peak(&output, channels);
             assert!(
@@ -329,7 +329,7 @@ fn engine_analog_limiter_dry_setting_passes_hot_signal_unclamped() {
     })
     .to_plugin_config(48_000.0);
     let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = hot_sine(4096, 2, 48_000, 2.0);
     let output = render(plugin.as_mut(), 48_000, &input, 2);
     let peak = settled_peak(&output, 2);

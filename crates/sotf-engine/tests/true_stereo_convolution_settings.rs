@@ -83,7 +83,7 @@ fn structural_true_stereo_setting_survives_preset_and_reaches_audible_factory_pa
     let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
         .expect("factory rebuilds the opted-in route from the saved engine preset");
     plugin
-        .initialize(48_000)
+        .initialize(48_000.0)
         .expect("initialize matrix convolution");
     plugin.reset();
     assert_eq!(

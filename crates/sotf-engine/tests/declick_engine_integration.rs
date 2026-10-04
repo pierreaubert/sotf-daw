@@ -339,7 +339,7 @@ fn render_factory_plugin(
     latency: usize,
 ) -> Vec<f32> {
     let mut plugin = create_plugin(plugin_type, parameters, CHANNELS, RATE).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert_eq!(plugin.latency_samples(), latency);
     let mut output = Vec::new();
     for chunk in input.chunks(256 * CHANNELS) {

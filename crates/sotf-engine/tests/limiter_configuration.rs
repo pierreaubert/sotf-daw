@@ -36,7 +36,7 @@ fn engine_limiter_link_and_compatibility_controls_reach_dsp() {
                     let mut plugin =
                         create_plugin(&config.plugin_type, &config.parameters, channels, rate)
                             .unwrap();
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     assert_eq!(
                         plugin.get_parameter(&ParameterId::from("link_amount")),
                         Some(ParameterValue::Float(link as f32))
@@ -57,7 +57,7 @@ fn engine_unlinked_limiter_preserves_quiet_neighbor_channel() {
     for link in [0.0, 1.0] {
         let config = settings(link, false).to_plugin_config(48_000.0);
         let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = vec![f32::NAN; input.len()];
         plugin
             .process(&input, &mut output, &ProcessContext::new(48_000, 2048))
@@ -108,7 +108,7 @@ fn limiter_legacy_settings_keep_native_default_and_stable_parameter_indices() {
     let config = restored.to_plugin_config(48000.0);
     assert_eq!(config.parameters["oversampling"], 0);
     let mut plugin = create_plugin(&config.plugin_type, &config.parameters, 2, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 240);
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("oversampling")),
@@ -132,7 +132,7 @@ fn limiter_oversampling_persists_through_engine_accessors_and_real_dry_audio() {
                 assert_eq!(config.parameters["oversampling"], choice);
                 let mut plugin =
                     create_plugin(&config.plugin_type, &config.parameters, channels, rate).unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 assert_eq!(
                     plugin.get_parameter(&ParameterId::from("oversampling")),
                     Some(ParameterValue::Int(choice))

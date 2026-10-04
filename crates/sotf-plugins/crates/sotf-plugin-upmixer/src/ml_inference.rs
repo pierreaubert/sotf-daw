@@ -327,14 +327,34 @@ mod tests {
             handle.send_features(&[0.0; FEATURE_SIZE]);
             handle.reset();
         }
-        handle.send_features(&[0.0; FEATURE_SIZE]);
+        assert!(handle.read_v_prob().is_none(), "reset must hide stale results");
+
+        // A full ring may still contain pre-reset frames. Confirm that one
+        // post-reset frame is accepted before testing worker recovery.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+        let mut pending = MfccFrame {
+            features: [0.0; FEATURE_SIZE],
+        };
+        loop {
+            match handle.inner.try_send(pending) {
+                Ok(()) => break,
+                Err(rejected) => {
+                    assert!(
+                        std::time::Instant::now() < deadline,
+                        "fresh input was never accepted after resets"
+                    );
+                    pending = rejected;
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+            }
+        }
         let mut v_prob = None;
-        for _ in 0..100 {
+        while std::time::Instant::now() < deadline {
             v_prob = handle.read_v_prob();
             if v_prob.is_some() {
                 break;
             }
-            std::thread::sleep(std::time::Duration::from_millis(10));
+            std::thread::sleep(std::time::Duration::from_millis(1));
         }
         let prob = v_prob.expect("fresh input after resets must publish");
         assert!(
