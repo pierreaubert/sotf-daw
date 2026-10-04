@@ -350,7 +350,11 @@ pub fn evaluate(
 pub fn manifest_digest(manifest: &ValidationManifest) -> String {
     let bytes = serde_json::to_vec(manifest).expect("validation manifest is serializable");
     let digest = Sha256::digest(bytes);
-    format!("{digest:x}")
+    digest
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 pub fn sha256_file(path: &Path) -> Result<String, String> {
@@ -367,7 +371,12 @@ pub fn sha256_file(path: &Path) -> Result<String, String> {
         }
         hasher.update(&buffer[..read]);
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join(""))
 }
 
 fn is_sha256(value: &str) -> bool {

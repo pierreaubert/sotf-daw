@@ -2719,7 +2719,7 @@ macro_rules! sotf_nih_plugin {
             }
 
             fn clap_audio_port_type(
-                _layout_index: usize,
+                layout_index: usize,
                 is_input: bool,
                 port_index: usize,
             ) -> Option<&'static std::ffi::CStr> {
@@ -2732,9 +2732,26 @@ macro_rules! sotf_nih_plugin {
                     } else {
                         clap_sys::ext::surround::CLAP_PORT_SURROUND
                     })
-                } else if matches!($plugin_type, "EQ") {
+                } else if matches!($plugin_type, "EQ")
+                    && Self::clap_audio_io_layouts()
+                        .get(layout_index)
+                        .and_then(|layout| {
+                            if is_input {
+                                layout.main_input_channels
+                            } else {
+                                layout.main_output_channels
+                            }
+                        })
+                        .is_some_and(|channels| channels.get() > 2)
+                {
                     Some(clap_sys::ext::surround::CLAP_PORT_SURROUND)
-                } else if matches!($plugin_type, "Crossover") && is_input {
+                } else if matches!($plugin_type, "Crossover")
+                    && is_input
+                    && Self::clap_audio_io_layouts()
+                        .get(layout_index)
+                        .and_then(|layout| layout.main_input_channels)
+                        .is_some_and(|channels| channels.get() > 2)
+                {
                     Some(clap_sys::ext::surround::CLAP_PORT_SURROUND)
                 } else {
                     None

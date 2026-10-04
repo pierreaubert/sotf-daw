@@ -131,16 +131,23 @@ impl SpectrumAnalyzerPlugin {
             return Err("frequency bounds must be finite, positive, and increasing".into());
         }
         let nyquist = sample_rate as f32 * 0.5;
-        if config.max_freq > nyquist {
+        if config.min_freq >= nyquist {
             return Err(format!(
-                "max_freq {} exceeds Nyquist {nyquist} at {sample_rate} Hz",
-                config.max_freq
+                "min_freq {} must be below Nyquist {nyquist} at {sample_rate} Hz",
+                config.min_freq
             ));
         }
         if !config.smoothing.is_finite() || !(0.0..=1.0).contains(&config.smoothing) {
             return Err("smoothing must be finite and in 0..=1".into());
         }
         Ok(())
+    }
+
+    fn effective_config(config: &SpectrumConfig, sample_rate: u32) -> SpectrumConfig {
+        SpectrumConfig {
+            max_freq: config.max_freq.min(sample_rate as f32 * 0.5),
+            ..config.clone()
+        }
     }
 
     fn build_bin_to_display(
@@ -193,7 +200,8 @@ impl SpectrumAnalyzerPlugin {
         config: SpectrumConfig,
     ) -> Result<Self, String> {
         Self::validate_config(num_channels, sample_rate, &config)?;
-        let freqs = Self::build_frequencies(&config);
+        let effective = Self::effective_config(&config, sample_rate);
+        let freqs = Self::build_frequencies(&effective);
         let make_data = || SpectrumData {
             frequencies: Arc::new(freqs.clone()),
             magnitudes: vec![-100.0; config.num_bins].into(),
@@ -207,7 +215,7 @@ impl SpectrumAnalyzerPlugin {
         let fft_output = fft_r2c.make_output_vec();
         let num_bins = config.num_bins;
         let (bin_to_display, display_bin_has_fft_line) =
-            Self::build_bin_to_display(&config, sample_rate);
+            Self::build_bin_to_display(&effective, sample_rate);
         let fft_bin_hz = sample_rate as f32 / FFT_SIZE as f32;
         let mut p = Self {
             num_channels,
@@ -269,8 +277,8 @@ impl SpectrumAnalyzerPlugin {
         Self::build_common(num_channels, 48_000, config)
     }
 
-    /// Construct with the host's actual sample rate so invalid Nyquist bounds
-    /// are rejected before any configuration-sized allocation occurs.
+    /// Construct with the host's actual sample rate so the display range can
+    /// be limited to Nyquist without changing the requested maximum frequency.
     pub fn with_config_at_sample_rate(
         num_channels: usize,
         sample_rate: u32,
@@ -280,12 +288,13 @@ impl SpectrumAnalyzerPlugin {
     }
 
     fn rebuild_config_dependent(&mut self) {
-        let freqs = Self::build_frequencies(&self.config);
+        let effective = Self::effective_config(&self.config, self.sample_rate);
+        let freqs = Self::build_frequencies(&effective);
 
         self.new_mags.resize(self.config.num_bins, -100.0);
         self.current_magnitudes.resize(self.config.num_bins, -100.0);
         (self.bin_to_display, self.display_bin_has_fft_line) =
-            Self::build_bin_to_display(&self.config, self.sample_rate);
+            Self::build_bin_to_display(&effective, self.sample_rate);
 
         // Structural changes are setup-only. Replace both cache generations
         // before activation so the audio callback never has to resize arrays.
@@ -374,14 +383,12 @@ impl Plugin for SpectrumAnalyzerPlugin {
                 let v = value
                     .as_float()
                     .ok_or_else(|| "max_freq must be a float".to_string())?;
-                let nyquist = self.sample_rate as f32 * 0.5;
                 if !v.is_finite()
                     || v < 1000.0
                     || v > 22050.0
-                    || v > nyquist
                     || v <= self.config.min_freq
                 {
-                    return Err("max_freq must be finite, within the declared range/Nyquist, and above min_freq".into());
+                    return Err("max_freq must be finite, within the declared range, and above min_freq".into());
                 }
                 if v == self.config.max_freq {
                     return Ok(());
@@ -408,10 +415,15 @@ impl Plugin for SpectrumAnalyzerPlugin {
     }
     fn initialize(&mut self, sr: u32) -> PluginResult<()> {
         Self::validate_config(self.num_channels, sr, &self.config)?;
+        let rate_changed = sr != self.sample_rate;
         self.sample_rate = sr;
         self.fft_bin_hz = sr as f32 / FFT_SIZE as f32;
-        (self.bin_to_display, self.display_bin_has_fft_line) =
-            Self::build_bin_to_display(&self.config, sr);
+        self.rebuild_config_dependent();
+        if rate_changed {
+            // Samples and smoothing history from the old rate cannot be
+            // interpreted against the new FFT-frequency mapping.
+            self.reset();
+        }
         self.initialized = true;
         Ok(())
     }
@@ -654,10 +666,125 @@ mod tests {
     }
 
     #[test]
-    fn initialize_rejects_zero_rate_and_range_above_nyquist() {
+    fn initialize_rejects_zero_rate_and_minimum_above_nyquist() {
         let mut plugin = SpectrumAnalyzerPlugin::new(2).unwrap();
         assert!(plugin.initialize(0).is_err());
-        assert!(plugin.initialize(32_000).is_err());
+        assert!(plugin.initialize(40).is_err());
+        plugin.initialize(32_000).unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("max_freq")),
+            Some(ParameterValue::Float(20_000.0))
+        );
+        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 16_000.0));
+    }
+
+    #[test]
+    fn requested_maximum_survives_low_rate_and_frequency_labels_follow_reinitialization() {
+        let mut plugin = SpectrumAnalyzerPlugin::new(1).unwrap();
+        plugin.initialize(8_000).unwrap();
+        let low = plugin.cache.load();
+        assert!(low.frequencies.iter().all(|f| *f <= 4_000.0));
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("max_freq")),
+            Some(ParameterValue::Float(20_000.0))
+        );
+        drop(low);
+
+        plugin.initialize(48_000).unwrap();
+        let high = plugin.cache.load();
+        assert!(high.frequencies.iter().any(|f| *f > 4_000.0));
+        assert!(high.frequencies.iter().all(|f| *f <= 20_000.0));
+        drop(high);
+
+        plugin.initialize(8_000).unwrap();
+        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
+    }
+
+    #[test]
+    fn max_frequency_automation_keeps_requested_value_when_host_nyquist_is_lower() {
+        let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
+            1,
+            8_000,
+            SpectrumConfig {
+                max_freq: 2_000.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        plugin
+            .set_parameter(ParameterId::from("max_freq"), ParameterValue::Float(20_000.0))
+            .unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("max_freq")),
+            Some(ParameterValue::Float(20_000.0))
+        );
+        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
+        plugin.initialize(8_000).unwrap();
+        assert!(plugin
+            .set_parameter(ParameterId::from("max_freq"), ParameterValue::Float(19_000.0))
+            .is_err());
+    }
+
+    #[test]
+    fn low_rate_tone_uses_effective_bins_without_old_rate_history() {
+        // This test isolates FFT bin mapping and rate-history reset from the
+        // independent temporal smoothing contract.
+        let mut plugin = SpectrumAnalyzerPlugin::with_config(
+            1,
+            SpectrumConfig {
+                smoothing: 0.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        plugin.initialize(48_000).unwrap();
+        let old_half = tone(128, FFT_SIZE / 2, 1.0);
+        let mut output = vec![0.0; FFT_SIZE];
+        plugin
+            .process(
+                &old_half,
+                &mut output[..FFT_SIZE / 2],
+                &ProcessContext::new(48_000, FFT_SIZE / 2),
+            )
+            .unwrap();
+
+        plugin.initialize(8_000).unwrap();
+        let silence = vec![0.0; FFT_SIZE / 2];
+        plugin
+            .process(
+                &silence,
+                &mut output[..FFT_SIZE / 2],
+                &ProcessContext::new(8_000, FFT_SIZE / 2),
+            )
+            .unwrap();
+        // Without a history reset this half-window completes the previous
+        // 48 kHz tone window and publishes its stale spectral peak.
+        assert_eq!(plugin.cache.load().peak_magnitude, -100.0);
+        plugin
+            .process(
+                &silence,
+                &mut output[..FFT_SIZE / 2],
+                &ProcessContext::new(8_000, FFT_SIZE / 2),
+            )
+            .unwrap();
+        assert_eq!(plugin.cache.load().peak_magnitude, -100.0);
+
+        let input = tone(128, FFT_SIZE, 1.0);
+        plugin
+            .process(&input, &mut output, &ProcessContext::new(8_000, FFT_SIZE))
+            .unwrap();
+        let data = plugin.cache.load();
+        assert!(data.peak_magnitude > -1.0);
+        let strongest_band = data
+            .magnitudes
+            .iter()
+            .enumerate()
+            .filter(|(_, magnitude)| magnitude.is_finite())
+            .max_by(|(_, left), (_, right)| left.total_cmp(right))
+            .map(|(index, _)| index)
+            .unwrap();
+        assert!((100.0..400.0).contains(&data.frequencies[strongest_band]));
+        assert!(data.frequencies.iter().all(|f| *f <= 4_000.0));
     }
 
     #[test]

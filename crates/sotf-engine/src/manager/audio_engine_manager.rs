@@ -7,7 +7,7 @@ use super::types::StreamingEvent;
 use crate::StreamMetadata;
 use crate::decoder::AudioSource;
 use crate::engine::{AudioEngine, AudioEngineState, EngineConfig, PlaybackState, PluginConfig};
-use crate::{AudioDecoderError, AudioDecoderResult, AudioFormat, AudioSpec, probe_file};
+use crate::{AudioDecoderError, AudioDecoderResult, AudioFormat, AudioSpec, SinkType, probe_file};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -462,6 +462,29 @@ impl AudioEngineManager {
         buffer_frames: u32,
         input_channels: usize,
     ) -> AudioDecoderResult<()> {
+        self.start_driver_playback_with_driver_config_and_sink(
+            output_device,
+            plugins,
+            output_channels,
+            sample_rate,
+            buffer_frames,
+            input_channels,
+            SinkType::Cpal,
+        )
+    }
+
+    /// Start driver playback with an explicitly selected output backend.
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_driver_playback_with_driver_config_and_sink(
+        &mut self,
+        output_device: Option<String>,
+        plugins: Vec<PluginConfig>,
+        output_channels: usize,
+        sample_rate: u32,
+        buffer_frames: u32,
+        input_channels: usize,
+        sink_type: SinkType,
+    ) -> AudioDecoderResult<()> {
         let _guard = lock_recover(&self.cmd_mutex, "cmd_mutex");
         let input_channels = input_channels.max(1);
         let frame_size = buffer_frames.max(1) as usize;
@@ -498,7 +521,7 @@ impl AudioEngineManager {
             watch_signals,
             driver_mode: true,
             allow_virtual_output: false,
-            sink_type: Default::default(),
+            sink_type,
             ..EngineConfig::default()
         };
 
@@ -562,6 +585,29 @@ impl AudioEngineManager {
             sample_rate,
             buffer_frames,
             input_channels,
+        )
+    }
+
+    /// Start HAL playback with an explicit backend; ordinary callers use CPAL.
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_hal_playback_with_driver_config_and_sink(
+        &mut self,
+        output_device: Option<String>,
+        plugins: Vec<PluginConfig>,
+        output_channels: usize,
+        sample_rate: u32,
+        buffer_frames: u32,
+        input_channels: usize,
+        sink_type: SinkType,
+    ) -> AudioDecoderResult<()> {
+        self.start_driver_playback_with_driver_config_and_sink(
+            output_device,
+            plugins,
+            output_channels,
+            sample_rate,
+            buffer_frames,
+            input_channels,
+            sink_type,
         )
     }
 

@@ -1442,6 +1442,10 @@ fn bandsplit_state_migration_preserves_legacy_mode_and_rejects_layout_conflict()
 #[path = "wrapper/native_ambisonics_callbacks.rs"]
 mod native_ambisonics_callbacks;
 
+#[cfg(any(feature = "eq", feature = "crossover"))]
+#[path = "wrapper/native_clap_port_types.rs"]
+mod native_clap_port_types;
+
 #[path = "wrapper/native_bandsplit_vst3_callbacks.rs"]
 mod native_bandsplit_vst3_callbacks;
 

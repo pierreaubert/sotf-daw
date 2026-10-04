@@ -3,7 +3,7 @@ use super::{
     AudioEngineState, HostUpdateTicket, PendingStopAcks, PlaybackCommand, PlaybackConfiguration,
     PlaybackReconfigureRequest, PlaybackStopAck, ProcessingMessage, ThreadEvent,
 };
-use crate::OutputAccessMode;
+use crate::{OutputAccessMode, SinkType};
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -86,6 +86,36 @@ impl PlaybackThread {
         allow_virtual_output: bool,
         output_access: OutputAccessMode,
     ) -> Result<Self, String> {
+        Self::new_with_sink(
+            message_rx,
+            event_tx,
+            sample_rate,
+            buffer_ms,
+            channels,
+            frame_size,
+            output_device,
+            recycle_tx,
+            allow_virtual_output,
+            output_access,
+            SinkType::Cpal,
+        )
+    }
+
+    /// Start the same processing consumer with an explicitly selected output backend.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_sink(
+        message_rx: Receiver<ProcessingMessage>,
+        event_tx: crossbeam::channel::Sender<ThreadEvent>,
+        sample_rate: u32,
+        buffer_ms: u32,
+        channels: usize,
+        frame_size: usize,
+        output_device: Option<String>,
+        recycle_tx: SyncSender<Vec<f32>>,
+        allow_virtual_output: bool,
+        output_access: OutputAccessMode,
+        sink_type: SinkType,
+    ) -> Result<Self, String> {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
         let (startup_tx, startup_rx) = std::sync::mpsc::sync_channel(1);
         let exit_status = WorkerExitStatus::new();
@@ -113,6 +143,7 @@ impl PlaybackThread {
                         recycle_tx,
                         allow_virtual_output,
                         output_access,
+                        sink_type,
                         shared_output_peak_bits,
                         shared_clipped_sample_count,
                         startup_tx,

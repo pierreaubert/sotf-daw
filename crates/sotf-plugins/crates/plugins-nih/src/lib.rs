@@ -70,6 +70,32 @@ mod gui_state_return_tests;
 #[cfg(test)]
 mod limiter_oversampling_tests;
 
+#[cfg(all(test, any(feature = "aec", feature = "crossfeed", feature = "upmixer")))]
+mod clap_param_text_roundtrip_tests;
+
+#[cfg(all(
+    test,
+    any(
+        feature = "band-split",
+        feature = "crossfeed",
+        feature = "crossover",
+        feature = "de-esser",
+        feature = "downmix",
+        feature = "dynamic-eq",
+        feature = "eq",
+        feature = "hiss-reducer",
+        feature = "linear-phase-eq",
+        feature = "mono-to-stereo",
+        feature = "multiband-compressor",
+        feature = "saturation",
+        feature = "spectrum-analyzer",
+        feature = "speech-denoiser",
+        feature = "stereo-imager",
+        feature = "upmixer",
+    )
+))]
+mod clap_activation_matrix_tests;
+
 #[cfg(all(test, feature = "crossover"))]
 #[path = "aud142_native_schema_tests.rs"]
 mod aud142_native_schema_tests;

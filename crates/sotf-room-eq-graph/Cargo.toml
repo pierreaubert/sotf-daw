@@ -10,3 +10,6 @@ anyhow = { workspace = true }
 autoeq = { workspace = true }
 serde_json = { workspace = true }
 sotf-engine = { workspace = true }
+
+[dev-dependencies]
+sotf-plugins = { workspace = true }

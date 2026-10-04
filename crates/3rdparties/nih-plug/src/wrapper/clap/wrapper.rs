@@ -94,7 +94,7 @@ use crate::prelude::{
 };
 use crate::util::permit_alloc;
 use crate::wrapper::clap::context::RemoteControlPages;
-use crate::wrapper::clap::util::{read_stream, write_stream};
+use crate::wrapper::clap::util::{read_length_prefixed_state, read_stream, write_stream};
 use crate::wrapper::state::{self, PluginState};
 use crate::wrapper::util::buffer_management::{
     audio_layout_bus_channels, audio_layout_bus_count, BufferManager, ChannelPointers,
@@ -591,6 +591,45 @@ impl<P: ClapPlugin> MainThreadExecutor<Task<P>> for Wrapper<P> {
             },
         };
     }
+}
+
+// The CLAP ABI passes normalized values as f64, but NIH parameters and their
+// display converters use f32. A plain-value roundtrip can move one normalized
+// f32 ULP and change the last displayed digit. Prefer the nearest normalized
+// value that produces the exact text the host supplied. This only affects
+// canonical text close to the parser's existing result; arbitrary input keeps
+// the original parsed value.
+fn normalized_value_matching_text(param_ptr: &ParamPtr, parsed: f32, display: &str) -> f32 {
+    if !parsed.is_finite() || !(0.0..=1.0).contains(&parsed) {
+        return parsed;
+    }
+
+    // SAFETY: callers retain the Params object that owns this parameter pointer.
+    let matches = |candidate| unsafe {
+        param_ptr.normalized_value_to_string(candidate, true) == display
+    };
+    if matches(parsed) {
+        return parsed;
+    }
+
+    let bits = if parsed == 0.0 { 0 } else { parsed.to_bits() };
+    let one_bits = 1.0_f32.to_bits();
+    // All observed release-validator discrepancies were one ULP. Search a
+    // small symmetric neighborhood, then preserve the old parser result.
+    for distance in 1..=8_u32 {
+        if let Some(lower) = bits.checked_sub(distance) {
+            if matches(f32::from_bits(lower)) {
+                return f32::from_bits(lower);
+            }
+        }
+        if let Some(upper) = bits.checked_add(distance) {
+            if upper <= one_bits && matches(f32::from_bits(upper)) {
+                return f32::from_bits(upper);
+            }
+        }
+    }
+
+    parsed
 }
 
 impl<P: ClapPlugin> Wrapper<P> {
@@ -2798,18 +2837,20 @@ impl<P: ClapPlugin> Wrapper<P> {
                 let main_input_channels = audio_io_layout.main_input_channels.map(NonZeroU32::get);
                 let main_output_channels =
                     audio_io_layout.main_output_channels.map(NonZeroU32::get);
-                let input_port_type = match main_input_channels {
-                    Some(1) => CLAP_PORT_MONO.as_ptr(),
-                    Some(2) => CLAP_PORT_STEREO.as_ptr(),
-                    _ => P::clap_audio_port_type(index as usize, true, 0)
-                        .map_or(std::ptr::null(), CStr::as_ptr),
-                };
-                let output_port_type = match main_output_channels {
-                    Some(1) => CLAP_PORT_MONO.as_ptr(),
-                    Some(2) => CLAP_PORT_STEREO.as_ptr(),
-                    _ => P::clap_audio_port_type(index as usize, false, 0)
-                        .map_or(std::ptr::null(), CStr::as_ptr),
-                };
+                let input_port_type = P::clap_audio_port_type(index as usize, true, 0)
+                    .map(CStr::as_ptr)
+                    .unwrap_or_else(|| match main_input_channels {
+                        Some(1) => CLAP_PORT_MONO.as_ptr(),
+                        Some(2) => CLAP_PORT_STEREO.as_ptr(),
+                        _ => std::ptr::null(),
+                    });
+                let output_port_type = P::clap_audio_port_type(index as usize, false, 0)
+                    .map(CStr::as_ptr)
+                    .unwrap_or_else(|| match main_output_channels {
+                        Some(1) => CLAP_PORT_MONO.as_ptr(),
+                        Some(2) => CLAP_PORT_STEREO.as_ptr(),
+                        _ => std::ptr::null(),
+                    });
 
                 *config = std::mem::zeroed();
 
@@ -3467,7 +3508,7 @@ impl<P: ClapPlugin> Wrapper<P> {
         match wrapper.param_by_hash.get(&param_id) {
             Some(param_ptr) => {
                 let normalized_value = match param_ptr.string_to_normalized_value(display) {
-                    Some(v) => v as f64,
+                    Some(v) => normalized_value_matching_text(param_ptr, v, display) as f64,
                     None => return false,
                 };
                 *value = normalized_value * param_ptr.step_count().unwrap_or(1) as f64;
@@ -3594,31 +3635,20 @@ impl<P: ClapPlugin> Wrapper<P> {
         check_null_ptr!(false, plugin, (*plugin).plugin_data, stream);
         let wrapper = &*((*plugin).plugin_data as *const Self);
 
-        // CLAP does not have a way to tell how much data there is left in a stream, so we've
-        // prepended the size in front of our JSON state
-        let mut length_bytes = [0u8; 8];
-        if !read_stream(&*stream, length_bytes.as_mut_slice()) {
-            nih_debug_assert_failure!(
-                "Error or end of stream while reading the state length from the stream."
-            );
+        // CLAP streams do not expose their remaining length. The prefix is
+        // untrusted: read actual bytes in bounded chunks before allocating.
+        let Some(read_buffer) = read_length_prefixed_state(|chunk| read_stream(&*stream, chunk))
+        else {
             return false;
-        }
-        let length = u64::from_le_bytes(length_bytes);
-
-        let mut read_buffer: Vec<u8> = Vec::with_capacity(length as usize);
-        if !read_stream(&*stream, read_buffer.spare_capacity_mut()) {
-            nih_debug_assert_failure!(
-                "Error or end of stream while reading the state buffer from the stream."
-            );
-            return false;
-        }
-        read_buffer.set_len(length as usize);
+        };
 
         match state::deserialize_json(&read_buffer) {
             Some(mut state) => {
                 let success = wrapper.set_state_inner(&mut state, false);
                 if success {
                     nih_trace!("Loaded state ({} bytes)", read_buffer.len());
+                    let task_posted = wrapper.schedule_gui(Task::RescanParamValues);
+                    nih_debug_assert!(task_posted, "The task queue is full, dropping task...");
                 }
 
                 success

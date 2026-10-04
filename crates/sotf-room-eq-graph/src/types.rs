@@ -32,16 +32,16 @@ where
                     plugin.parameters.clone(),
                     channel_count,
                 );
-                edges.push(sotf_audio::engine::PluginGraphEdgeConfig {
-                    from_node: driver_prev,
-                    to_node: node,
-                });
+                edges.push(sotf_audio::engine::PluginGraphEdgeConfig::new(
+                    driver_prev,
+                    node,
+                ));
                 driver_prev = node;
             }
-            edges.push(sotf_audio::engine::PluginGraphEdgeConfig {
-                from_node: driver_prev,
-                to_node: driver_sum,
-            });
+            edges.push(sotf_audio::engine::PluginGraphEdgeConfig::new(
+                driver_prev,
+                driver_sum,
+            ));
         }
         prev = driver_sum;
     }
@@ -52,10 +52,7 @@ where
             plugin.parameters.clone(),
             channel_count,
         );
-        edges.push(sotf_audio::engine::PluginGraphEdgeConfig {
-            from_node: prev,
-            to_node: node,
-        });
+        edges.push(sotf_audio::engine::PluginGraphEdgeConfig::new(prev, node));
         prev = node;
     }
     prev

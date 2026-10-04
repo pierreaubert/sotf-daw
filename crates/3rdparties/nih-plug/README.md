@@ -4,12 +4,13 @@ Source: <https://github.com/robbert-vdh/nih-plug>
 
 Original commit: `de421011f41a6d10fc8c7a6084e4f4dee0143683`.
 
-This directory contains the original `nih_plug` library source and its
-`nih_plug_derive` package. The original ISC license is preserved in `LICENSE`;
-the upstream README is preserved as `UPSTREAM_README.md`. Upstream GUI packages,
-tools, examples, and product plugins are not copied. The local workspace member
-list contains only `nih_plug_derive`. All dependency versions and features are
-unchanged. The SOTF workspace patches the original Git dependency to this copy.
+This directory contains the patched `nih_plug` library source. Its unmodified
+`nih_plug_derive` package resolves from the exact original Git commit above;
+its integration tests live in the DAW workspace's `plugins-nih/tests/` and
+exercise the macro against the shipped fork. The original ISC license is
+preserved in `LICENSE`; the upstream README is preserved as `UPSTREAM_README.md`.
+Upstream GUI packages, tools, examples, and product plugins are not copied.
+The SOTF workspace patches the original Git dependency to this copy.
 
 ## Automation timing changes (AUD-044)
 
@@ -65,6 +66,19 @@ wrapper and exchange lock until receipt, so an accepted request cannot leave a
 stale response for a later request. The existing request rendezvous, request
 timeout, inactive-state application, and plugin state reinitialization behavior
 remain unchanged; this is a guarantee for the reply path, not the entire restore.
+
+## CLAP state stream validation and host notification
+
+`src/wrapper/clap/util.rs` reads the length-prefixed state in 8192-byte chunks
+and grows its buffer only after each chunk arrives. A malformed length, short
+stream, or allocation failure returns `false` without allocating the declared
+length up front. Valid state bytes and the shared JSON format are unchanged.
+
+After a successful CLAP stream restore, `src/wrapper/clap/wrapper.rs` schedules
+the existing main-thread `RescanParamValues` task. This tells the host to refresh
+parameter values changed by the restore; the GUI notification remains separate.
+The native stream tests cover short reads, truncated input, and a forged huge
+length. The pinned CLAP validator checks the host rescan and parameter round trip.
 
 ## Auxiliary bus boundaries (AUD-072)
 
