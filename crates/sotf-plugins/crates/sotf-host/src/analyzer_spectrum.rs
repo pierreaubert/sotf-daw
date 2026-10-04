@@ -727,7 +727,16 @@ mod tests {
 
     #[test]
     fn low_rate_tone_uses_effective_bins_without_old_rate_history() {
-        let mut plugin = SpectrumAnalyzerPlugin::new(1).unwrap();
+        // This test isolates FFT bin mapping and rate-history reset from the
+        // independent temporal smoothing contract.
+        let mut plugin = SpectrumAnalyzerPlugin::with_config(
+            1,
+            SpectrumConfig {
+                smoothing: 0.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
         plugin.initialize(48_000).unwrap();
         let old_half = tone(128, FFT_SIZE / 2, 1.0);
         let mut output = vec![0.0; FFT_SIZE];
