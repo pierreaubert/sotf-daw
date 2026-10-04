@@ -2472,7 +2472,7 @@ fn capture_samples(fft_size: usize, route: &str, signal: &str, samples: &[f32]) 
 fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
     const INPUT_FRAMES: usize = 4_096;
 
-    let input: Vec<f32> = (0..INPUT_FRAMES)
+    let mut input: Vec<f32> = (0..INPUT_FRAMES)
         .flat_map(|frame| {
             let level = match frame / 512 % 4 {
                 0 => 0.02,
@@ -2492,6 +2492,21 @@ fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
             ]
         })
         .collect();
+
+    if let Some(path) = std::env::var_os("SOTF_AUD132_CANONICAL_INPUT_F32LE") {
+        capture_samples(2, "aud132_native_generated", "input", &input);
+        let bytes = std::fs::read(std::path::PathBuf::from(path))
+            .expect("read canonical AUD132 diagnostic input");
+        assert_eq!(bytes.len(), INPUT_FRAMES * 2 * std::mem::size_of::<f32>());
+        input = bytes
+            .chunks_exact(std::mem::size_of::<f32>())
+            .map(|sample| {
+                let value = f32::from_le_bytes(sample.try_into().expect("complete f32 sample"));
+                assert!(value.is_finite(), "canonical AUD132 input must be finite");
+                value
+            })
+            .collect();
+    }
 
     for fft_size in [2_usize, 256, 512] {
         for hr_enabled in [false, true] {
