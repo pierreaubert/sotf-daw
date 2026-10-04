@@ -1488,7 +1488,7 @@ impl LoudnessMonitorPlugin {
         if let Some(layout) = &channel_layout {
             layout.validate_for_width(num_channels)?;
         }
-        let sr = 48000;
+        let sr = 48000.0;
         let integrated_control_instance_id =
             allocate_loudness_control_instance_id(&NEXT_LOUDNESS_CONTROL_INSTANCE_ID)?;
         let monitor = if let Some(layout) = &channel_layout {

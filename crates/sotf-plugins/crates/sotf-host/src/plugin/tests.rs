@@ -110,7 +110,7 @@ fn test_adapter_forwards_defaults() {
 fn process_context_defaults_to_musical_transport_without_midi() {
     let ctx = ProcessContext::new(48_000, 512);
 
-    assert_eq!(ctx.sample_rate, 48_000);
+    assert_eq!(ctx.sample_rate, 48_000.0);
     assert_eq!(ctx.num_frames, 512);
     assert!(ctx.transport.playing);
     assert_eq!(ctx.transport.bpm, 120.0);

@@ -29,7 +29,7 @@ pub(super) fn oversampled_context(
         range.start_sample = range.start_sample.saturating_mul(u64::from(factor));
         range.end_sample = range.end_sample.saturating_mul(u64::from(factor));
     }
-    crate::plugin::ProcessContext::new(context.sample_rate * factor, os_frames)
+    crate::plugin::ProcessContext::new(context.sample_rate * f64::from(factor), os_frames)
         .with_transport(transport)
 }
 

@@ -71,7 +71,7 @@ impl<P: InPlacePlugin> OversampledPlugin<P> {
             oversampler,
             factor,
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             os_interleaved: vec![0.0; os_buf_size],
             next_os_context: ProcessContext::new(f64::from(48_000 * factor), 0),
             initialized: false,

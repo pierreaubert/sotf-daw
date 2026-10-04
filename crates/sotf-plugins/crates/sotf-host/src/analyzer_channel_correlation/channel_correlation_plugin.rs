@@ -41,7 +41,7 @@ impl ChannelCorrelationPlugin {
         {
             return Err("Channel correlation matrix capacity overflow".into());
         }
-        let sr = 48000;
+        let sr = 48000.0;
         let monitor = ChannelCorrelationMonitor::new(num_channels, sr);
         let cache = RealTimeCache::new_triplet(
             CorrelationData::new(num_channels),

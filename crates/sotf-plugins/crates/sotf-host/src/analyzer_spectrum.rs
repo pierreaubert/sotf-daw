@@ -270,11 +270,11 @@ impl SpectrumAnalyzerPlugin {
     }
 
     pub fn new(num_channels: usize) -> Result<Self, String> {
-        Self::build_common(num_channels, 48_000, SpectrumConfig::default())
+        Self::build_common(num_channels, 48_000.0, SpectrumConfig::default())
     }
 
     pub fn with_config(num_channels: usize, config: SpectrumConfig) -> Result<Self, String> {
-        Self::build_common(num_channels, 48_000, config)
+        Self::build_common(num_channels, 48_000.0, config)
     }
 
     /// Construct with the host's actual sample rate so the display range can
