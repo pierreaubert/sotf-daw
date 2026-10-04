@@ -4154,7 +4154,7 @@ fn band_mask_cutoff_rate_corners_refuse_loudly() {
         ab087_factory,
     )
     .unwrap();
-    plugin.initialize(8_000).unwrap();
+    plugin.initialize(8_000.0).unwrap();
     let input = dense_input(64);
     let output = render_collected_at_rate(&mut plugin, &input, &[64], 8_000);
     assert_eq!(output, input, "exempt inactive mask passes through");
@@ -6312,7 +6312,7 @@ fn resampling_diamond_host() -> DawHost {
     let source = host
         .add_node(
             "source".to_string(),
-            ab087_factory("zgain", &unity, CHANNELS, SAMPLE_RATE).unwrap(),
+            ab087_factory("zgain", &unity, CHANNELS, f64::from(SAMPLE_RATE)).unwrap(),
         )
         .unwrap();
     let down = host
@@ -6322,7 +6322,7 @@ fn resampling_diamond_host() -> DawHost {
                 "resampler",
                 &resampler_params(SAMPLE_RATE, HALF_RATE, NESTED_SRC_CHUNK),
                 CHANNELS,
-                SAMPLE_RATE,
+                f64::from(SAMPLE_RATE),
             )
             .unwrap(),
         )
@@ -6337,7 +6337,7 @@ fn resampling_diamond_host() -> DawHost {
                 "resampler",
                 &resampler_params(HALF_RATE, SAMPLE_RATE, NESTED_SRC_CHUNK),
                 CHANNELS,
-                HALF_RATE,
+                f64::from(HALF_RATE),
             )
             .unwrap(),
             HALF_RATE,
@@ -6346,13 +6346,13 @@ fn resampling_diamond_host() -> DawHost {
     let direct = host
         .add_node(
             "direct".to_string(),
-            ab087_factory("zgain", &unity, CHANNELS, SAMPLE_RATE).unwrap(),
+            ab087_factory("zgain", &unity, CHANNELS, f64::from(SAMPLE_RATE)).unwrap(),
         )
         .unwrap();
     let join = host
         .add_node(
             "join".to_string(),
-            ab087_factory("zgain", &unity, CHANNELS, SAMPLE_RATE).unwrap(),
+            ab087_factory("zgain", &unity, CHANNELS, f64::from(SAMPLE_RATE)).unwrap(),
         )
         .unwrap();
     host.add_edge(GraphEdge::new(source, down)).unwrap();
@@ -6525,7 +6525,7 @@ fn converting_pair_tail_is_strict_bound_over_actual_drain() {
                 "resampler",
                 &resampler_params(SAMPLE_RATE, HALF_RATE, NESTED_SRC_CHUNK),
                 CHANNELS,
-                SAMPLE_RATE,
+                f64::from(SAMPLE_RATE),
             )
             .unwrap(),
         )
@@ -6539,7 +6539,7 @@ fn converting_pair_tail_is_strict_bound_over_actual_drain() {
                 "resampler",
                 &resampler_params(HALF_RATE, SAMPLE_RATE, NESTED_SRC_CHUNK),
                 CHANNELS,
-                HALF_RATE,
+                f64::from(HALF_RATE),
             )
             .unwrap(),
             HALF_RATE,
