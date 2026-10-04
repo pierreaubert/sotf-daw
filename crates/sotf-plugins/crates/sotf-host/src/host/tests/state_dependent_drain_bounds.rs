@@ -164,8 +164,8 @@ impl ChunkedRateFixture {
         self.out_per_block
     }
 
-    fn check_rate(&self, rate: u32, entry: &str) -> Result<(), String> {
-        if rate == self.input_rate {
+    fn check_rate(&self, rate: f64, entry: &str) -> Result<(), String> {
+        if rate == f64::from(self.input_rate) {
             Ok(())
         } else {
             Err(format!(
@@ -222,7 +222,7 @@ impl Plugin for ChunkedRateFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
         self.check_rate(sample_rate, "initialize")?;
         self.residual.clear();
         self.residual_f64.clear();
@@ -238,8 +238,8 @@ impl Plugin for ChunkedRateFixture {
         self.last_output_frames = 0;
     }
 
-    fn output_sample_rate(&self, _input_rate: u32) -> u32 {
-        self.output_rate
+    fn output_sample_rate(&self, _input_rate: f64) -> f64 {
+        f64::from(self.output_rate)
     }
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
@@ -678,7 +678,7 @@ impl Plugin for ExactGainFixture {
         None
     }
 
-    fn initialize(&mut self, _sample_rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, _sample_rate: f64) -> Result<(), String> {
         self.last_output_frames = 0;
         Ok(())
     }
@@ -687,7 +687,7 @@ impl Plugin for ExactGainFixture {
         self.last_output_frames = 0;
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 
@@ -899,11 +899,11 @@ impl TwinDiamondOracle {
         } else {
             ChunkedRateFixture::up_24_to_48(channels)
         };
-        down_a.initialize(48_000).unwrap();
-        gain_a.initialize(24_000).unwrap();
-        up_a.initialize(24_000).unwrap();
-        down_b.initialize(48_000).unwrap();
-        up_b.initialize(24_000).unwrap();
+        down_a.initialize(48_000.0).unwrap();
+        gain_a.initialize(24_000.0).unwrap();
+        up_a.initialize(24_000.0).unwrap();
+        down_b.initialize(48_000.0).unwrap();
+        up_b.initialize(24_000.0).unwrap();
         Self {
             down_a,
             gain_a,
@@ -1133,7 +1133,7 @@ fn build_twin_host_inner(wide_up_block: bool, publish_envelopes: bool) -> (DawHo
         host.add_edge(GraphEdge::new(from, to)).unwrap();
     }
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
     (host, down_a)
 }
 

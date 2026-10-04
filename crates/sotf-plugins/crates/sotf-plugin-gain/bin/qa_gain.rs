@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut inner = GainPlugin::from_params(channels, params).unwrap();
-    inner.plugin_initialize(sample_rate).unwrap();
+    inner.plugin_initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Gain Plugin ===");
 

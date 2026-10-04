@@ -10,7 +10,7 @@ mod misc;
 #[test]
 fn test_downmix_basic() {
     let mut p = DownmixPlugin::new(2);
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
     p.phase_coherence = false;
     let mut i = vec![0.0; 2048];
     let mut o = vec![0.0; 2048];
@@ -27,7 +27,7 @@ fn test_downmix_basic() {
 fn test_downmix_51() {
     let mut p = DownmixPlugin::new(6);
     p.phase_coherence = false;
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
     let mut i = vec![0.0; 600];
     let mut o = vec![0.0; 200];
     for k in 0..100 {
@@ -41,7 +41,7 @@ fn test_downmix_51() {
 #[test]
 fn test_lfe_lookup_uses_channel_indexed_flags() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert_eq!(p.lfe_is_channel.len(), 6);
     assert_eq!(p.lfe_lpf.len(), 6);
@@ -58,7 +58,7 @@ fn test_lfe_lookup_uses_channel_indexed_flags() {
 #[test]
 fn test_stft_path_advances_coeff_smoothers_per_fft_block() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.phase_coherence = true;
 
     let smoother_index = 2 * 2; // center channel left coefficient
@@ -154,7 +154,7 @@ fn test_surround_panning_energy_preservation() {
 fn test_downmix_center_channel_coherence() {
     let mut p = DownmixPlugin::new(6);
     p.phase_coherence = false; // simple mode first
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let num_frames = 2048;
     let mut input = vec![0.0f32; num_frames * 6];
@@ -322,7 +322,7 @@ fn test_wola_perfect_reconstruction() {
     // Center downmixes to both L and R equally (gain = 0.707 each in standard mode).
     let input_ch = 6;
     let mut p = DownmixPlugin::new(input_ch);
-    p.initialize(sample_rate).unwrap();
+    p.initialize(f64::from(sample_rate)).unwrap();
     p.phase_coherence = true;
     // Full blend: all frequencies go through the phase-coherent STFT path.
     p.phase_blend_low_hz = 0.0;
@@ -430,7 +430,7 @@ fn test_process_phase_coherence_small_buffer_zeros_output() {
         itu_mode: false,
         matrix_ltrt: false,
     });
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let num_frames = 64; // smaller than FFT_SIZE
     let input = vec![0.0f32; num_frames * 2];
@@ -480,7 +480,7 @@ fn test_param_value_roundtrip() {
 #[test]
 fn test_set_parameter_get_parameter_roundtrip() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(
         ParameterId::from("center_gain_db"),
         ParameterValue::Float(-6.0),
@@ -507,7 +507,7 @@ fn test_process_matrix_ltrt() {
         itu_mode: false,
         matrix_ltrt: true,
     });
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let frames = FFT_SIZE * 3;
     let mut input = vec![0.0_f32; frames * 6];
     for k in 0..frames {
@@ -534,7 +534,7 @@ fn test_process_itu_mode() {
         itu_mode: true,
         matrix_ltrt: false,
     });
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut input = vec![0.0_f32; 100 * 6];
     for k in 0..100 {
         input[k * 6 + 2] = 1.0;
@@ -548,7 +548,7 @@ fn test_process_itu_mode() {
 #[test]
 fn test_process_zero_input() {
     let mut p = DownmixPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 0];
     let mut output = vec![0.0_f32; 0];
     p.process(&input, &mut output, &ProcessContext::new(48000, 0))
@@ -559,7 +559,7 @@ fn test_process_zero_input() {
 fn test_process_single_channel() {
     let mut p = DownmixPlugin::new(1);
     p.phase_coherence = false;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![0.5_f32; 100];
     let mut output = vec![0.0_f32; 200];
     p.process(&input, &mut output, &ProcessContext::new(48000, 100))
@@ -571,7 +571,7 @@ fn test_process_single_channel() {
 fn test_process_eight_channels() {
     let mut p = DownmixPlugin::new(8);
     p.phase_coherence = false;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![0.1_f32; 100 * 8];
     let mut output = vec![0.0_f32; 100 * 2];
     p.process(&input, &mut output, &ProcessContext::new(48000, 100))
@@ -582,7 +582,7 @@ fn test_process_eight_channels() {
 #[test]
 fn test_reset_clears_state() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![0.1_f32; 100 * 6];
     let mut output = vec![0.0_f32; 100 * 2];
     p.process(&input, &mut output, &ProcessContext::new(48000, 100))
@@ -595,8 +595,8 @@ fn test_reset_clears_state() {
 #[test]
 fn test_initialize_different_sample_rate() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    p.initialize(96000.0).unwrap();
+    assert_eq!(p.sample_rate, 96000.0);
 }
 
 #[test]
@@ -706,7 +706,7 @@ fn test_lt_rt_allpass_update_sample_rate_and_reset() {
 #[test]
 fn test_advance_coeff_smoothers_by() {
     let mut p = DownmixPlugin::new(6);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let idx = 2; // center channel left gain smoother
     let before = p.coeff_smoothers[idx].current();
@@ -805,7 +805,7 @@ fn explicit_layout_distinguishes_7_1_from_5_1_2() {
 #[test]
 fn reinitialize_discards_old_rate_stream_and_filter_state() {
     let mut reused = DownmixPlugin::new(6);
-    reused.initialize(44_100).unwrap();
+    reused.initialize(44_100.0).unwrap();
     let input = vec![0.25; (FFT_SIZE + 137) * 6];
     let mut discarded = vec![0.0; (FFT_SIZE + 137) * 2];
     reused
@@ -815,10 +815,10 @@ fn reinitialize_discards_old_rate_stream_and_filter_state() {
             &ProcessContext::new(44_100, FFT_SIZE + 137),
         )
         .unwrap();
-    reused.initialize(96_000).unwrap();
+    reused.initialize(96_000.0).unwrap();
 
     let mut fresh = DownmixPlugin::new(6);
-    fresh.initialize(96_000).unwrap();
+    fresh.initialize(96_000.0).unwrap();
     let silence = vec![0.0; (FFT_SIZE * 2) * 6];
     let mut reused_output = vec![0.0; FFT_SIZE * 4];
     let mut fresh_output = vec![0.0; FFT_SIZE * 4];
@@ -835,7 +835,7 @@ fn reinitialize_discards_old_rate_stream_and_filter_state() {
 #[test]
 fn phase_alignment_preserves_ordinary_mix_bin_magnitude() {
     let mut plugin = DownmixPlugin::new(6);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for frame in 0..FFT_SIZE {
         let phase = 2.0 * std::f32::consts::PI * 1200.0 * frame as f32 / 48_000.0;
         plugin.input_buffer[2 * FFT_SIZE + frame] = phase.sin();

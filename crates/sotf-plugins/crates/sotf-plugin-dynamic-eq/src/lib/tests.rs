@@ -20,7 +20,7 @@ mod routing;
 #[test]
 fn test_parameter_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set threshold
     plugin
@@ -78,7 +78,7 @@ fn fallible_factory_constructor_rejects_invalid_serialized_state() {
 #[test]
 fn test_band_threshold_ratio_overrides_can_return_to_global() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(
@@ -154,7 +154,7 @@ fn test_bandpass_edges_use_exact_q_to_octave_bandwidth() {
 fn test_rejects_mismatched_buffer_size() {
     let sr = 48000u32;
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let ctx = ProcessContext::new(sr, 16);
     let mut short = vec![0.0; 31];
@@ -223,7 +223,7 @@ fn test_dynamic_eq_data_update() {
 #[test]
 fn test_reset_clears_monitoring_gr() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin.monitoring_gr[0] = -10.0;
     plugin.monitoring_gr[1] = -5.0;
     plugin.reset();
@@ -233,7 +233,7 @@ fn test_reset_clears_monitoring_gr() {
 #[test]
 fn test_process_zero_frames() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = [0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
     assert_eq!(plugin.process_in_place(&mut buffer, &ctx).unwrap(), 0);
@@ -258,7 +258,7 @@ fn test_get_parameter_unknown_returns_none() {
 fn test_initialize_resizes_dry_buf() {
     let mut plugin = DynamicEqPlugin::new(1);
     let initial = plugin.dry_buf.len();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(96000.0).unwrap();
     assert!(plugin.dry_buf.len() >= 96000 * 2);
     assert!(plugin.dry_buf.len() >= initial);
 }
@@ -328,7 +328,7 @@ fn test_solo_mutes_other_bands() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.0f32; num_frames];
     for (i, s) in buf.iter_mut().enumerate() {
@@ -370,7 +370,7 @@ fn test_link_channels_uses_shared_gr() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Left channel loud, right channel silent
     let mut buf = vec![0.0f32; num_frames * 2];
@@ -394,7 +394,7 @@ fn test_link_channels_can_be_disabled_before_processing_stereo() {
         ..Default::default()
     };
     let mut plugin = DynamicEqPlugin::from_params(2, params);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.25f32; num_frames * 2];
     let ctx = ProcessContext::new(sr, num_frames);
@@ -430,7 +430,7 @@ fn test_inactive_band_passthrough() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let input: Vec<f32> = (0..num_frames)
         .map(|i| (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sr as f32).sin() * 0.5)
@@ -463,7 +463,7 @@ fn test_info_and_channels() {
 #[test]
 fn test_validate_parameter_rejects_bad_values() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     // threshold out of range
     let res = plugin.set_parameter(
         ParameterId::from("threshold"),
@@ -476,7 +476,7 @@ fn test_validate_parameter_rejects_bad_values() {
 #[test]
 fn test_set_parameter_attack_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("attack"), ParameterValue::Float(50.0))
         .unwrap();
@@ -488,7 +488,7 @@ fn test_set_parameter_attack_roundtrip() {
 #[test]
 fn test_set_parameter_release_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("release"), ParameterValue::Float(500.0))
         .unwrap();
@@ -500,7 +500,7 @@ fn test_set_parameter_release_roundtrip() {
 #[test]
 fn test_set_parameter_knee_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("knee"), ParameterValue::Float(6.0))
         .unwrap();
@@ -529,7 +529,7 @@ fn test_get_parameter_attack_release_knee() {
 #[test]
 fn test_get_parameter_band_solo() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin.bands[0].solo = true;
     let val = plugin.get_parameter(&ParameterId::from("band_0_solo"));
     assert_eq!(val, Some(ParameterValue::Bool(true)));
@@ -538,7 +538,7 @@ fn test_get_parameter_band_solo() {
 #[test]
 fn test_set_parameter_band_solo() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(
         plugin
             .set_parameter(ParameterId::from("band_0_solo"), ParameterValue::Bool(true))
@@ -549,7 +549,7 @@ fn test_set_parameter_band_solo() {
 #[test]
 fn test_set_parameter_band_active() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(
         plugin
             .set_parameter(
@@ -563,7 +563,7 @@ fn test_set_parameter_band_active() {
 #[test]
 fn test_set_parameter_band_frequency_alias() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let original = plugin.bands[0].frequency;
     assert!(
         plugin
@@ -579,7 +579,7 @@ fn test_set_parameter_band_frequency_alias() {
 #[test]
 fn test_set_parameter_non_finite_rejected() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let result = plugin.set_parameter(
         ParameterId::from("threshold"),
         ParameterValue::Float(f32::NAN),
@@ -601,7 +601,7 @@ fn test_set_parameter_non_finite_rejected() {
 #[test]
 fn zero_gain_and_settled_dry_fast_paths_preserve_dsp_state() {
     let mut zero_gain = DynamicEqPlugin::new(2);
-    zero_gain.initialize(48_000).unwrap();
+    zero_gain.initialize(48_000.0).unwrap();
     let mut input = vec![0.0; 2_048];
     for (frame, pair) in input.as_chunks_mut::<2>().0.iter_mut().enumerate() {
         pair[0] = (std::f32::consts::TAU * 1_000.0 * frame as f32 / 48_000.0).sin();
@@ -633,7 +633,7 @@ fn zero_gain_and_settled_dry_fast_paths_preserve_dsp_state() {
             ..Default::default()
         },
     );
-    dry.initialize(48_000).unwrap();
+    dry.initialize(48_000.0).unwrap();
     let mut audio = vec![0.5; 1_024];
     let original = audio.clone();
     dry.process_in_place(&mut audio, &ProcessContext::new(48_000, 1_024))
@@ -658,7 +658,7 @@ fn reset_publishes_zero_monitoring_immediately() {
 #[test]
 fn test_process_block_too_large_rejected() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     // dry_buf is 96000 * 2 = 192000 after initialize(48000) for 1 channel
     let num_frames = 200_000;
     let mut big = vec![0.0f32; num_frames];
@@ -670,7 +670,7 @@ fn test_process_block_too_large_rejected() {
 #[test]
 fn test_get_data_returns_cache() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let data = plugin.get_data();
     assert!(data.is_some());
     assert!((*data.unwrap()).is::<DynamicEqData>());
@@ -679,7 +679,7 @@ fn test_get_data_returns_cache() {
 #[test]
 fn test_set_parameter_rejects_invalid_band_values() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     for (id, value) in [
         ("band_0_unknown", ParameterValue::Float(1.0)),
         ("band_99_gain", ParameterValue::Float(1.0)),
@@ -697,7 +697,7 @@ fn test_set_parameter_rejects_invalid_band_values() {
 #[test]
 fn reset_snaps_parameter_smoothers_to_targets() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.25))
         .unwrap();
@@ -721,14 +721,14 @@ fn initialize_clamps_filter_centres_below_nyquist() {
         )
         .unwrap_err();
     plugin.bands[0].frequency = 20_000.0;
-    plugin.initialize(32_000).unwrap();
+    plugin.initialize(32_000.0).unwrap();
     assert!(plugin.bands[0].frequency < 16_000.0);
 }
 
 #[test]
 fn test_set_parameter_band_threshold_and_ratio_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("band_0_threshold"),

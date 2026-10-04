@@ -57,7 +57,7 @@ fn bench_streaming_process(c: &mut Criterion) {
             ..Default::default()
         };
         let mut plugin = XtcPlugin::new(params, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 512;
         let input = vec![0.125_f32; frames * 2];
         let mut output = vec![0.0_f32; frames * output_channels];
@@ -78,7 +78,7 @@ fn bench_streaming_process(c: &mut Criterion) {
 
     for frames in [128, 512, 2048] {
         let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = vec![0.125_f32; frames * 2];
         let mut output = vec![0.0_f32; frames * 2];
         let context = ProcessContext::new(48_000, frames);

@@ -27,7 +27,7 @@ fn make(channels: usize, bands: usize, unity: bool) -> MultibandExpanderPlugin {
         band.hysteresis_db = Some(0.0);
     }
     let mut plugin = MultibandExpanderPlugin::with_params(channels, params);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -183,7 +183,7 @@ fn dense_unity_ring_wrap_and_reset_match_independent_source_delay() {
                         plugin.reset();
                     }
                     if epoch == 2 {
-                        plugin.initialize(RATE).unwrap();
+                        plugin.initialize(f64::from(RATE)).unwrap();
                     }
                     let mut output = process(&mut plugin, &source, channels, pattern);
                     output.extend(tail(&mut plugin, channels, &[17, 256, 1]));

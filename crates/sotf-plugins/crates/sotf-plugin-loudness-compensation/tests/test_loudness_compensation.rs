@@ -18,7 +18,7 @@ fn test_loudness_comp_typical_usage() {
         6.0,     // +6dB treble boost
     ));
 
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process some audio
     let num_frames = 1024;
@@ -65,7 +65,7 @@ fn test_loudness_comp_dynamic_adjustment() {
     let mut plugin = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input = vec![0.1_f32; num_frames * 2];
@@ -106,13 +106,13 @@ fn test_loudness_comp_with_music() {
     let mut plugin_high_vol = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    plugin_high_vol.initialize(48000).unwrap();
+    plugin_high_vol.initialize(48000.0).unwrap();
 
     // Low volume: significant compensation (Fletcher-Munson curves)
     let mut plugin_low_vol = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 10.0, 10000.0, 8.0,
     ));
-    plugin_low_vol.initialize(48000).unwrap();
+    plugin_low_vol.initialize(48000.0).unwrap();
 
     // Create a test signal (simulated music)
     let num_frames = 2048;
@@ -164,7 +164,7 @@ fn test_loudness_comp_12db_per_octave() {
     let mut plugin = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 1000.0, 12.0, 10000.0, 0.0,
     ));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let context = ProcessContext::new(48000, num_frames);
@@ -205,7 +205,7 @@ fn test_loudness_comp_stereo_to_5ch() {
     let mut plugin = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         5, 100.0, 8.0, 10000.0, 6.0,
     ));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let mut input = vec![0.0_f32; num_frames * 5];

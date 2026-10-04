@@ -12,6 +12,106 @@ use std::sync::{
 #[global_allocator]
 static ALLOCATOR: crate::CountingAlloc = crate::CountingAlloc;
 
+#[test]
+fn fractional_graph_refuses_timeline_overflow_before_processing() {
+    let rate = 1234.5678_f64;
+    let valid = Arc::new(AtomicBool::new(true));
+    let mut host = DawHost::new(1, rate);
+    host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
+        .unwrap();
+    host.build().unwrap();
+    host.set_playback_position(u64::MAX - 1).unwrap();
+    let before = host.node_input_positions[0];
+    let mut output = [0.0_f32; 2];
+    let error = host.process(&[0.25, -0.25], &mut output).unwrap_err();
+    assert!(error.contains("horizon"), "{error}");
+    assert_eq!(host.node_input_positions[0], before);
+    assert_eq!(host.automation_state.playback_position as u64, u64::MAX - 1);
+}
+
+#[test]
+fn fractional_host_rate_reaches_both_clocks_without_integer_rounding() {
+    let rate = 1_234.567_8_f64;
+    let valid = Arc::new(AtomicBool::new(true));
+    let mut host = DawHost::new(1, rate);
+    host.add_plugin(Box::new(ClockPlugin::new(2, 1, 0, &valid)))
+        .unwrap();
+    host.add_plugin(Box::new(ClockPlugin::new(1, 2, 0, &valid)))
+        .unwrap();
+    host.build().unwrap();
+    assert_eq!(host.node_input_sample_rates[0], rate);
+    assert_eq!(host.node_input_sample_rates[1], rate * 2.0);
+    assert_eq!(host.output_sample_rate(rate).unwrap(), rate);
+
+    for offset in [0.0_f32, 17.0] {
+        let input: Vec<f32> = (0..17).map(|index| index as f32 + offset).collect();
+        let mut output = [f32::NAN; 17];
+        assert_eq!(host.process(&input, &mut output).unwrap(), input.len());
+        assert_eq!(output.as_slice(), input.as_slice());
+    }
+    assert!(valid.load(Ordering::Relaxed));
+}
+
+#[test]
+fn removed_node_clock_does_not_constrain_the_rebuilt_graph() {
+    let valid = Arc::new(AtomicBool::new(true));
+    let mut host = DawHost::new(1, 48_000);
+    host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
+        .unwrap();
+    let removed = 0;
+    host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
+        .unwrap();
+    host.build().unwrap();
+    drop(host.remove_plugin(0).unwrap());
+    // Sparse IDs retain their previous metadata slots until the next build.
+    // Even an unrepresentable stale value must not enter the active clock.
+    host.node_input_sample_rates[removed] = f64::MAX;
+    host.node_output_sample_rates[removed] = f64::MAX;
+    host.build().unwrap();
+    host.node_input_sample_rates[removed] = f64::MAX;
+    host.node_output_sample_rates[removed] = f64::MAX;
+    let active = host.chain_nodes[0];
+    // The rebuilt latency and processing paths must ignore the removed slot.
+    assert_eq!(host.path_latency(active), 0);
+    let mut output = [0.0_f32; 1];
+    assert_eq!(host.process(&[0.25], &mut output).unwrap(), 1);
+    assert_eq!(output, [0.25]);
+    assert!(valid.load(Ordering::Relaxed));
+}
+
+#[test]
+fn contracted_output_does_not_hide_upstream_input_position_overflow() {
+    let valid = Arc::new(AtomicBool::new(true));
+    let mut host = DawHost::new(1, 48_000);
+    host.add_plugin(Box::new(ClockPlugin::new(2, 1, 0, &valid)))
+        .unwrap();
+    host.add_plugin(Box::new(ClockPlugin::new(1, 4, 0, &valid)))
+        .unwrap();
+    host.build().unwrap();
+    // The downsampler emits fewer frames than the upstream node accepts.
+    // Its input position, in the 96 kHz clock, is already near u64::MAX.
+    host.set_playback_position((u64::MAX - 1) / 2).unwrap();
+    let before = host.node_input_positions.clone();
+    let mut output = [f32::NAN; 2];
+    let error = host.process(&[0.25, 0.5], &mut output).unwrap_err();
+    assert!(error.contains("horizon"), "{error}");
+    assert_eq!(host.node_input_positions, before);
+    assert!(output.iter().all(|sample| sample.is_nan()));
+}
+
+#[test]
+fn invalid_host_clock_is_refused_before_plugin_initialization() {
+    let valid = Arc::new(AtomicBool::new(true));
+    for rate in [0.0, f64::NAN, f64::INFINITY] {
+        let mut host = DawHost::new(1, rate);
+        let plugin = ClockPlugin::new(1, 1, 0, &valid);
+        let initialize_calls = plugin.initialize_calls.clone();
+        assert!(host.add_plugin(Box::new(plugin)).is_err());
+        assert_eq!(initialize_calls.load(Ordering::Relaxed), 0);
+        assert!(host.build().is_err());
+    }
+}
+
 /// Independent integer-rate oracle: repeat or decimate, then delay in the
 /// output clock. No production resampler or host delay code is used.
 struct ClockPlugin {
@@ -19,7 +119,8 @@ struct ClockPlugin {
     denominator: usize,
     delay: usize,
     history: VecDeque<f64>,
-    initialized_rate: u32,
+    initialized_rate: f64,
+    initialize_calls: Arc<AtomicU64>,
     input_frames: u64,
     phase: usize,
     gain: f64,
@@ -36,7 +137,8 @@ impl ClockPlugin {
             denominator,
             delay,
             history: vec![0.0; delay].into(),
-            initialized_rate: 0,
+            initialized_rate: 0.0,
+            initialize_calls: Arc::new(AtomicU64::new(0)),
             input_frames: 0,
             phase: 0,
             gain: 1.0,
@@ -109,7 +211,8 @@ impl Plugin for ClockPlugin {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         Some(ParameterValue::Float(self.gain as f32))
     }
-    fn initialize(&mut self, rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, rate: f64) -> Result<(), String> {
+        self.initialize_calls.fetch_add(1, Ordering::Relaxed);
         self.initialized_rate = rate;
         Ok(())
     }
@@ -132,8 +235,8 @@ impl Plugin for ClockPlugin {
     fn latency_samples(&self) -> usize {
         self.delay
     }
-    fn output_sample_rate(&self, rate: u32) -> u32 {
-        rate * self.numerator as u32 / self.denominator as u32
+    fn output_sample_rate(&self, rate: f64) -> f64 {
+        rate * self.numerator as f64 / self.denominator as f64
     }
     fn output_frames_for_input(&self, frames: usize) -> usize {
         (frames * self.numerator).div_ceil(self.denominator) + self.batch - 1
@@ -228,12 +331,12 @@ fn graph(join: bool) -> (DawHost, Arc<AtomicBool>) {
         host.add_edge(GraphEdge::new(terminal, merge)).unwrap();
     }
     host.build().unwrap();
-    assert_eq!(host.node_input_sample_rates[down], 96000);
-    assert_eq!(host.node_input_sample_rates[terminal], 48000);
+    assert_eq!(host.node_input_sample_rates[down], 96000.0);
+    assert_eq!(host.node_input_sample_rates[terminal], 48000.0);
     assert_eq!(host.node_latency_from_input[up], 8);
     assert_eq!(host.node_latency_from_input[down], 5);
     assert_eq!(host.total_latency_samples(), if join { 7 } else { 5 });
-    assert_eq!(host.output_sample_rate(48000), 48000);
+    assert_eq!(host.output_sample_rate(48000).unwrap(), 48000.0);
     assert_eq!(host.output_frames_for_input(37), 37);
     (host, valid)
 }
@@ -388,7 +491,7 @@ fn bypassed_rate_converter_keeps_downstream_clock_and_frame_count() {
             .unwrap();
         host.bypass_plugin(0).unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(48000), 48000);
+        assert_eq!(host.output_sample_rate(48000).unwrap(), 48000.0);
         assert_eq!(host.total_latency_samples(), 0);
         if native {
             let mut output = [0.0_f64; 17];

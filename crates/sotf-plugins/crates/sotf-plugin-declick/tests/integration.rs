@@ -210,13 +210,13 @@ fn rate_and_buffer_contracts_are_rejected_before_mutation() {
 #[test]
 fn initialize_changes_the_accepted_context_rate_and_resets_latency() {
     let mut plugin = plugin(1);
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     let mut input = vec![0.5; 32];
     plugin
         .process_in_place(&mut input, &ProcessContext::new(44_100, 32))
         .unwrap();
     assert!(input[..LOOKAHEAD_SAMPLES].iter().all(|&x| x == 0.0));
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
 }
 
 #[test]

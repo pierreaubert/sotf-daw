@@ -10,7 +10,7 @@ use sotf_host::plugin::ProcessContext;
 #[test]
 fn test_delay_basic() {
     let mut p = DelayPlugin::new(1, 10.0, 0.5, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut b = vec![1.0; 1000];
     p.process_in_place(&mut b, &ProcessContext::new(48000, 1000))
         .unwrap();
@@ -55,7 +55,7 @@ fn test_lagrange4_quadratic_signal() {
 #[test]
 fn test_lfo_modulation() {
     let mut p = DelayPlugin::new(1, 10.0, 0.0, 1.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Enable LFO
     p.set_parameter(ParameterId::from("lfo_rate_hz"), ParameterValue::Float(5.0))
@@ -101,7 +101,7 @@ fn render_clean_delay_change(
             ParameterValue::Bool(true),
         )
         .unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let sample = |index: usize| {
         (std::f32::consts::TAU * frequency * index as f32 / SAMPLE_RATE as f32).sin()
@@ -205,7 +205,7 @@ fn pitch_preserving_mode_is_graph_rebuild_only_after_initialization() {
         .unwrap();
     assert_eq!(dynamic.update_mode, UpdateMode::Structural);
     assert_eq!(crate::params::PARAMS[7].update_mode, UpdateMode::Structural);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let error = plugin
         .set_parameter(
             ParameterId::from("pitch_preserving"),
@@ -340,7 +340,7 @@ fn pitch_preserving_batch_mode_switch_is_transactional() {
 #[test]
 fn test_effective_delay_samples_scales_depth_to_preserve_symmetry() {
     let mut p = DelayPlugin::new(1, 100.0, 0.0, 1.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.modulation.depth_ms = 10.0;
     p.delay_smoother.set_target(100.0 * 48.0);
 
@@ -359,7 +359,7 @@ fn test_effective_delay_samples_scales_depth_to_preserve_symmetry() {
 #[test]
 fn test_effective_delay_samples_preserves_feasible_half_cycle_near_min_delay() {
     let mut p = DelayPlugin::new(1, 0.0, 0.0, 1.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.modulation.depth_ms = 10.0;
 
     let base_delay = 0.0;
@@ -378,7 +378,7 @@ fn test_effective_delay_samples_preserves_feasible_half_cycle_near_min_delay() {
 #[test]
 fn effective_delay_is_continuous_at_both_boundaries() {
     let mut p = DelayPlugin::new(1, 0.0, 0.0, 1.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     p.modulation.depth_ms = 10.0;
     let max_delay = p.max_delay_ms * p.sample_rate as f32 / 1000.0;
 
@@ -397,7 +397,7 @@ fn effective_delay_is_continuous_at_both_boundaries() {
 #[test]
 fn short_per_channel_delay_uses_bounded_memory_at_192khz() {
     let mut p = DelayPlugin::new_per_channel(vec![10.0; 12]).unwrap();
-    p.initialize(192_000).unwrap();
+    p.initialize(192_000.0).unwrap();
     assert!(
         p.max_samples <= 2_048,
         "unexpected ring size: {}",
@@ -409,7 +409,7 @@ fn short_per_channel_delay_uses_bounded_memory_at_192khz() {
 #[test]
 fn integer_delay_read_ignores_fractional_guard_samples() {
     let mut p = DelayPlugin::new(1, 1.0, 0.0, 1.0);
-    p.initialize(1_000).unwrap();
+    p.initialize(1_000.0).unwrap();
     p.reset();
     p.buffer[1] = f32::NAN;
     p.buffer[p.max_samples - 1] = f32::NAN;
@@ -428,7 +428,7 @@ fn integer_delay_read_ignores_fractional_guard_samples() {
 #[test]
 fn allpass_live_changes_are_smoothed() {
     let mut p = DelayPlugin::new(1, 10.0, 0.8, 1.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     p.set_parameter(
         ParameterId::from("allpass_feedback"),
         ParameterValue::Bool(true),
@@ -455,9 +455,9 @@ fn allpass_transition_during_feedback_tail_is_finite_and_bounded() {
     let mut p = DelayPlugin::new(1, 1.0, 0.9, 1.0);
     let mut reference = DelayPlugin::new(1, 1.0, 0.9, 1.0);
     let mut abrupt = DelayPlugin::new(1, 1.0, 0.9, 1.0);
-    p.initialize(48_000).unwrap();
-    reference.initialize(48_000).unwrap();
-    abrupt.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
+    reference.initialize(48_000.0).unwrap();
+    abrupt.initialize(48_000.0).unwrap();
     let mut warmup = vec![0.0; 256];
     warmup[0] = 1.0;
     let mut reference_warmup = warmup.clone();
@@ -567,7 +567,7 @@ fn per_channel_factory_rejects_effect_controls() {
 #[test]
 fn zero_delay_is_sample_exact_wet_passthrough() {
     let mut p = DelayPlugin::new(1, 0.0, 0.0, 1.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let expected = vec![0.25, -0.5, 0.75, -1.0, 0.125];
     let mut buffer = expected.clone();
     p.process_in_place(&mut buffer, &ProcessContext::new(48_000, expected.len()))
@@ -579,7 +579,7 @@ fn zero_delay_is_sample_exact_wet_passthrough() {
 fn per_channel_zero_and_one_sample_delays_are_exact() {
     let one_sample_ms = 1000.0 / 48_000.0;
     let mut p = DelayPlugin::new_per_channel(vec![0.0, one_sample_ms]).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let mut buffer = vec![1.0, 1.0, 0.0, 0.0, 0.0, 0.0];
     p.process_in_place(&mut buffer, &ProcessContext::new(48_000, 3))
         .unwrap();
@@ -589,7 +589,7 @@ fn per_channel_zero_and_one_sample_delays_are_exact() {
 #[test]
 fn process_rejects_wrong_buffer_length_without_advancing_state() {
     let mut p = DelayPlugin::new(2, 10.0, 0.0, 1.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     for len in [7, 9] {
         let mut buffer = vec![0.0; len];
         assert!(
@@ -656,12 +656,12 @@ fn initialize_rejects_invalid_capacity_inputs_without_mutating_state() {
     let mut plugin = DelayPlugin::new(1, 10.0, 0.0, 1.0);
     let original_rate = plugin.sample_rate;
     let original_samples = plugin.max_samples;
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
     assert_eq!(plugin.sample_rate, original_rate);
     assert_eq!(plugin.max_samples, original_samples);
 
     plugin.channels = usize::MAX;
-    assert!(plugin.initialize(48_000).is_err());
+    assert!(plugin.initialize(48_000.0).is_err());
     assert_eq!(plugin.sample_rate, original_rate);
     assert_eq!(plugin.max_samples, original_samples);
 }
@@ -675,7 +675,7 @@ fn reinitialize_clears_delay_tail_cursor_and_transition_state() {
             ParameterValue::Bool(true),
         )
         .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut impulse = vec![0.0; 2_048];
     impulse[0] = 1.0;
     plugin
@@ -690,7 +690,7 @@ fn reinitialize_clears_delay_tail_cursor_and_transition_state() {
         .unwrap();
     assert!(plugin.clean_transition_active());
 
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.write_pos, 0);
     assert!(!plugin.clean_transition_active());
     let mut silence = vec![0.0; 4_096];
@@ -719,7 +719,7 @@ fn lfo_modulation_has_documented_tape_pitch_excursion_without_clicks() {
         },
     )
     .unwrap();
-    p.initialize(sample_rate).unwrap();
+    p.initialize(f64::from(sample_rate)).unwrap();
     let mut audio: Vec<f32> = (0..frames)
         .map(|i| (std::f32::consts::TAU * 1_000.0 * i as f32 / sample_rate as f32).sin())
         .collect();
@@ -759,7 +759,7 @@ fn lfo_modulation_has_documented_tape_pitch_excursion_without_clicks() {
 #[test]
 fn test_allpass_feedback() {
     let mut p = DelayPlugin::new(1, 10.0, 0.5, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Enable allpass feedback
     p.set_parameter(
@@ -802,7 +802,7 @@ fn test_allpass_state() {
 #[test]
 fn test_delay_buffer_is_deinterleaved() {
     let mut p = DelayPlugin::new(2, 5.0, 0.0, 0.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     p.reset();
 
     let mut buffer = vec![0.0f32; 2];
@@ -891,7 +891,7 @@ fn test_per_channel_delays_independent() {
     let delays_ms = vec![5.0, 10.0]; // 240 and 480 samples at 48kHz
     let mut p = DelayPlugin::new_per_channel(delays_ms.clone()).unwrap();
     // Per-channel mode constructor defaults to mix=1.0, feedback=0.
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
     // Snap smoothers to target so the impulse is delayed by the exact
     // configured amount instead of seeing the 50 ms smoother ramp.
     p.reset();
@@ -941,7 +941,7 @@ fn test_per_channel_delays_independent() {
 #[test]
 fn test_parameter_getset() {
     let mut p = DelayPlugin::new(1, 100.0, 0.3, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Set and get lfo_rate_hz
     p.set_parameter(ParameterId::from("lfo_rate_hz"), ParameterValue::Float(7.5))
@@ -978,7 +978,7 @@ fn test_parameter_getset() {
 fn test_mix_zero_equals_dry() {
     // mix=0.0 -> output equals input (dry only, no delayed signal)
     let mut p = DelayPlugin::new(1, 10.0, 0.0, 0.0); // mix=0
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let num_frames = 1000;
     let original: Vec<f32> = (0..num_frames).map(|i| (i as f32 * 0.1).sin()).collect();
@@ -1005,7 +1005,7 @@ fn test_mix_one_equals_delayed() {
     let delay_ms = 10.0;
     let delay_samples = (delay_ms / 1000.0 * sr as f32).round() as usize;
     let mut p = DelayPlugin::new(1, delay_ms, 0.0, 1.0); // mix=1, feedback=0
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Create an impulse
     let num_frames = delay_samples + 200;
@@ -1066,7 +1066,7 @@ fn test_mix_smoother_per_sample_ramp() {
     // Block-constant: ratio[n] == constant for all n (flat).
     let sr = 48000u32;
     let mut p = DelayPlugin::new(1, 200.0, 0.0, 0.0); // mix=0, delay=200ms, feedback=0
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Jump mix target to 1.0
     p.set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
@@ -1113,7 +1113,7 @@ fn test_mix_smoother_per_sample_ramp() {
 fn test_delay_smoother_advances_once_per_frame() {
     let sr = 48000u32;
     let mut p = DelayPlugin::new(1, 100.0, 0.0, 1.0); // mix=1 to hear delay
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let mut expected = sotf_host::smoothing::Smoother::new(100.0 * 48.0, 50.0, sr);
     expected.set_target(200.0 * 48.0);
@@ -1141,7 +1141,7 @@ fn test_delay_smoother_advances_once_per_frame() {
 fn test_allpass_coeff_parameter_exists_and_affects_response() {
     // Regression: allpass coefficient was hardcoded to 0.5 with no user parameter.
     let mut p = DelayPlugin::new(1, 10.0, 0.5, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // The parameter must exist
     assert!(
@@ -1192,7 +1192,7 @@ fn test_allpass_coeff_parameter_exists_and_affects_response() {
 #[test]
 fn test_parameter_validation() {
     let mut p = DelayPlugin::new(1, 100.0, 0.3, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // LFO rate out of range should fail
     assert!(
@@ -1229,7 +1229,7 @@ fn test_process_in_place_impulse_known_delay() {
     let delay_ms = 5.0;
     let delay_samples = (delay_ms / 1000.0 * sr as f32).round() as usize;
     let mut p = DelayPlugin::new(1, delay_ms, 0.0, 1.0); // mix=1, feedback=0
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let num_frames = delay_samples + 100;
     let mut buffer = vec![0.0f32; num_frames];
@@ -1266,7 +1266,7 @@ fn test_process_in_place_impulse_known_delay() {
 #[test]
 fn test_set_parameter_smoke_known_values() {
     let mut p = DelayPlugin::new(1, 20.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("delay_ms"), ParameterValue::Float(123.0))
         .unwrap();
@@ -1310,7 +1310,7 @@ fn test_set_parameter_smoke_known_values() {
 #[test]
 fn test_set_parameter_rejects_non_finite() {
     let mut p = DelayPlugin::new(1, 20.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(
@@ -1332,7 +1332,7 @@ fn test_set_parameter_rejects_non_finite() {
 #[test]
 fn test_process_in_place_zero_frames() {
     let mut p = DelayPlugin::new(1, 10.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut buffer = Vec::new();
     let processed = p
         .process_in_place(&mut buffer, &ProcessContext::new(48000, 0))
@@ -1345,7 +1345,7 @@ fn test_process_in_place_zero_frames() {
 #[test]
 fn test_get_parameter_round_trip() {
     let mut p = DelayPlugin::new(1, 20.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("delay_ms"), ParameterValue::Float(99.0))
         .unwrap();
@@ -1376,7 +1376,7 @@ fn test_process_in_place_step_known_output() {
     let delay_ms = 1.0;
     let delay_samples = (delay_ms / 1000.0 * sr as f32).round() as usize;
     let mut p = DelayPlugin::new(1, delay_ms, 0.0, 0.5); // mix=0.5, feedback=0
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Step input of 1.0; output at frame n should be 0.5*1 + 0.5*delayed[n].
     // Before the delayed step arrives, delayed[n] = 0, so output = 0.5.
@@ -1401,7 +1401,7 @@ fn test_process_in_place_step_known_output() {
 #[test]
 fn test_set_parameter_per_channel_delay_roundtrip() {
     let mut p = DelayPlugin::new_per_channel_with_max_delay(vec![5.0, 10.0], 30.0).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("delay_ms_0"), ParameterValue::Float(20.0))
         .unwrap();
@@ -1421,7 +1421,7 @@ fn test_set_parameter_per_channel_delay_roundtrip() {
 #[test]
 fn test_set_parameter_per_channel_invalid_id_errors() {
     let mut p = DelayPlugin::new(2, 10.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     // Not in per-channel mode: delay_ms_0 is not a valid parameter
     assert!(
         p.set_parameter(ParameterId::from("delay_ms_0"), ParameterValue::Float(5.0))
@@ -1432,7 +1432,7 @@ fn test_set_parameter_per_channel_invalid_id_errors() {
 #[test]
 fn test_set_parameter_allpass_feedback_false_resets_state() {
     let mut p = DelayPlugin::new(1, 10.0, 0.5, 0.5);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Enable allpass feedback and warm up state
     p.set_parameter(
@@ -1468,7 +1468,7 @@ fn test_set_parameter_allpass_feedback_false_resets_state() {
 #[test]
 fn test_set_parameter_allpass_coeff_boundaries() {
     let mut p = DelayPlugin::new(1, 10.0, 0.0, 0.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Maximum valid value
     p.set_parameter(
@@ -1515,7 +1515,7 @@ fn test_set_parameter_allpass_coeff_boundaries() {
 fn test_set_parameter_per_channel_delay_affects_processing() {
     let sr = 48000u32;
     let mut p = DelayPlugin::new_per_channel_with_max_delay(vec![5.0, 10.0], 15.0).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
     p.reset();
 
     let num_frames = 1024;
@@ -1559,7 +1559,7 @@ fn test_set_parameter_per_channel_delay_affects_processing() {
 #[test]
 fn test_set_parameter_per_channel_rejects_non_finite() {
     let mut p = DelayPlugin::new_per_channel(vec![5.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(

@@ -104,7 +104,7 @@ fn plugin(rate: u32, algorithm: usize) -> BeamformerPlugin {
         },
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -423,7 +423,7 @@ fn cold_extreme_gsc_and_quiet_mvdr_callbacks_do_not_allocate_or_free() {
                 },
             )
             .unwrap();
-            candidate.initialize(48_000).unwrap();
+            candidate.initialize(48_000.0).unwrap();
             let mut hot = vec![0.0; 256 * mics];
             if algorithm == 2 {
                 for frame in hot.chunks_exact_mut(mics) {

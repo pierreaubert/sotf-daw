@@ -70,7 +70,7 @@ fn convolution_instantiate_from_params() {
 #[test]
 fn convolution_parameter_roundtrip() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let params_before = plugin.parameters();
     assert!(params_before.iter().any(|p| p.id.as_str() == "mix"));
@@ -131,7 +131,7 @@ fn convolution_unknown_parameter_error() {
 #[test]
 fn convolution_process_without_ir_preserves_reported_latency() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 2048;
     let input = vec![0.3_f32; num_frames * 2];
@@ -153,7 +153,7 @@ fn convolution_process_with_ir() {
     write_delta_ir(&ir_path, 44100).unwrap();
 
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     plugin
         .set_parameter(
@@ -193,7 +193,7 @@ fn convolution_process_with_ir() {
 #[test]
 fn convolution_ir_file_not_found_error() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let err = plugin
         .set_parameter(
@@ -213,7 +213,7 @@ fn convolution_ir_file_not_found_error() {
 #[test]
 fn convolution_reset_clears_processing_state() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Fill stream-boundary state (the inactive dry delay line) with nonzero
     // audio so the post-reset assertions below have discriminating power.
@@ -247,7 +247,7 @@ fn convolution_reset_clears_processing_state() {
 #[test]
 fn convolution_mix_zero_without_ir_is_latency_matched_dry() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
         .unwrap();
@@ -265,7 +265,7 @@ fn convolution_mix_zero_without_ir_is_latency_matched_dry() {
 #[test]
 fn convolution_gain_db_state_change() {
     let mut plugin = ParametricInPlacePluginAdapter::new(ConvolutionPlugin::new(2, 44100));
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("gain_db"), ParameterValue::Float(-12.0))

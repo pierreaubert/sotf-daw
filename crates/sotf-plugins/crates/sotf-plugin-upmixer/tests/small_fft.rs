@@ -30,7 +30,7 @@ fn prepared_with_auto_gain(
     }))
     .unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

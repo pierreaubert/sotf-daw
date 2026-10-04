@@ -296,7 +296,7 @@ fn render_superdirective(block_sizes: &[usize], input_frames: usize) -> Vec<f32>
         },
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let total = input_frames + FFT_SIZE * 2;
     let mut stream = vec![0.0; total * 2];
     for frame in 0..input_frames {
@@ -389,9 +389,9 @@ fn sample_rate_reinitialization_discards_old_grid_and_pending_audio() {
         .unwrap();
 
     for sample_rate in [96_000, 44_100] {
-        reused.initialize(sample_rate).unwrap();
+        reused.initialize(f64::from(sample_rate)).unwrap();
         let mut fresh = BeamformerPlugin::new(2, sample_rate).unwrap();
-        fresh.initialize(sample_rate).unwrap();
+        fresh.initialize(f64::from(sample_rate)).unwrap();
         let silence = vec![0.0; FFT_SIZE * 2];
         let mut reused_output = vec![f32::NAN; FFT_SIZE];
         let mut fresh_output = vec![f32::NAN; FFT_SIZE];

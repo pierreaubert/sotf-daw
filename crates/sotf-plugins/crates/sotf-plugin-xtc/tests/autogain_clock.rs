@@ -44,7 +44,7 @@ fn render(
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let mut output = vec![0.0; input.len()];
     let mut cursor = 0;
     for &size in pattern.iter().cycle() {

@@ -17,7 +17,7 @@ fn test_7_1_4_config() {
         ..AaePluginParams::default()
     };
     let mut p = AaePlugin::from_params(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.output_channels(), 12);
 }
 
@@ -80,7 +80,7 @@ fn test_level_smoothing_is_block_partition_invariant() {
             ..Default::default()
         };
         let mut plugin = AaePlugin::try_from_params(params).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .set_parameter(ParameterId::from("dry_level"), ParameterValue::Float(1.0))
             .unwrap();
@@ -257,7 +257,7 @@ fn test_lfe_tracks_late_reverb_tail() {
         ..AaePluginParams::default()
     };
     let mut p = AaePlugin::from_params(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let lfe_idx = p
         .speaker_config
@@ -320,7 +320,7 @@ fn test_output_safety_limit_bounds_final_mix() {
         ..AaePluginParams::default()
     };
     let mut p = AaePlugin::from_params(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 4096;
     let input = vec![2.0_f32; n * 2];
@@ -370,7 +370,7 @@ fn test_lfe_lr4_rejects_midrange() {
 #[test]
 fn test_delay_changes_start_click_safe_transitions() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("pre_delay_ms"),

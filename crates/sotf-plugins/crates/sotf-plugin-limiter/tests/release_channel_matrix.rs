@@ -43,7 +43,7 @@ fn make(
     }))
     .unwrap();
     let mut plugin = LimiterPlugin::from_params(channels, params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -585,9 +585,9 @@ fn old_preset_defaults_and_save_reload_preserve_audio() {
         })
         .collect();
     let mut a = LimiterPlugin::from_params(channels, old);
-    a.initialize(rate).unwrap();
+    a.initialize(f64::from(rate)).unwrap();
     let mut b = LimiterPlugin::from_params(channels, explicit.clone());
-    b.initialize(rate).unwrap();
+    b.initialize(f64::from(rate)).unwrap();
     let out_a = render_full(&mut a, rate, &input, &[257, 63]);
     let out_b = render_full(&mut b, rate, &input, &[257, 63]);
     assert_eq!(out_a, out_b);
@@ -595,7 +595,7 @@ fn old_preset_defaults_and_save_reload_preserve_audio() {
     let saved = serde_json::to_value(&explicit).unwrap();
     let reloaded: LimiterPluginParams = serde_json::from_value(saved).unwrap();
     let mut c = LimiterPlugin::from_params(channels, reloaded);
-    c.initialize(rate).unwrap();
+    c.initialize(f64::from(rate)).unwrap();
     let out_c = render_full(&mut c, rate, &input, &[257, 63]);
     assert_eq!(out_b, out_c);
     // Malformed state is rejected before construction (transactional).

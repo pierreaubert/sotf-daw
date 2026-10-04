@@ -27,7 +27,7 @@ fn two_way_block_kernel_is_bit_exact_with_scalar_lr24_reference() {
             let frames = 2_113;
             let input = signal(frames, channels);
             let mut plugin = CrossoverPlugin::new(channels, "LR24", 1_000.0, mode).unwrap();
-            plugin.initialize(SAMPLE_RATE).unwrap();
+            plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
             let mut actual = vec![0.0; frames * plugin.output_channels()];
             plugin
                 .process(
@@ -78,7 +78,7 @@ fn per_channel_block_kernel_is_bit_exact_with_scalar_cells() {
     let input = signal(frames, modes.len());
     let mut plugin =
         CrossoverPlugin::new_per_channel("LR24", frequencies.to_vec(), modes.to_vec()).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut actual = vec![0.0; input.len()];
     plugin
         .process(
@@ -110,7 +110,7 @@ fn per_channel_block_kernel_is_bit_exact_with_scalar_cells() {
 }
 
 fn render_partitioned(mut plugin: CrossoverPlugin, input: &[f32], parts: &[usize]) -> Vec<f32> {
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input_channels = plugin.input_channels();
     let output_channels = plugin.output_channels();
     let frames = input.len() / input_channels;
@@ -202,7 +202,7 @@ fn steady_block_kernels_allocate_nothing() {
         .unwrap(),
     ];
     for plugin in &mut cases {
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let frames = 512;
         let input = signal(frames, plugin.input_channels());
         let mut output = vec![0.0; frames * plugin.output_channels()];

@@ -22,7 +22,7 @@ fn limiter(channels: usize, sample_rate: u32, lookahead_ms: f32, link: f32) -> L
             feed_forward: false,
         },
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -189,7 +189,7 @@ fn isp_stage_preserves_linking_and_independent_streaming_across_blocks() {
                 }))
                 .unwrap();
                 let mut plugin = LimiterPlugin::from_params(channels, params);
-                plugin.initialize(sample_rate).unwrap();
+                plugin.initialize(f64::from(sample_rate)).unwrap();
                 plugin
             };
             let inputs: [Vec<f32>; 2] = std::array::from_fn(|channel| {

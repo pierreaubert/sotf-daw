@@ -67,10 +67,10 @@ const _ASSERT_HOP: () = assert!(
 );
 
 /// Summary of a completed spectral capture.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SpectralSummary {
     /// Sample rate the capture was measured at.
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     /// Channel count the capture was measured with.
     pub channels: usize,
     /// Input frames accumulated toward the target.
@@ -122,7 +122,7 @@ pub fn validate_spectrum_slice(spectrum: &[f32], channels: usize) -> Result<(), 
 pub struct SpectralCapture {
     active: bool,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     target_frames: u64,
     frames_seen: u64,
     hops: u64,
@@ -144,7 +144,7 @@ impl SpectralCapture {
         Self {
             active: false,
             channels,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             target_frames: 0,
             frames_seen: 0,
             hops: 0,
@@ -168,11 +168,12 @@ impl SpectralCapture {
     /// # Errors
     ///
     /// Returns an error for a zero channel count, sample rate, or target.
-    pub fn start(&mut self, sample_rate: u32, target_frames: u64) -> Result<(), String> {
+    pub fn start<S: Into<f64>>(&mut self, sample_rate: S, target_frames: u64) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
         if self.channels == 0 {
             return Err("spectral capture requires at least one channel".to_string());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("spectral capture requires a nonzero sample rate".to_string());
         }
         if target_frames == 0 {

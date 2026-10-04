@@ -88,9 +88,10 @@ impl ResidualEchoSuppressor {
         beta: f32,
         g_min: f32,
         block_size: usize,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> Self {
-        let block_seconds = block_size as f32 / sample_rate.max(1) as f32;
+        let sample_rate = sample_rate.into();
+        let block_seconds = (block_size as f64 / sample_rate.max(1.0)) as f32;
         let coefficient = |seconds: f32| (-block_seconds / seconds).exp();
         Self {
             beta,

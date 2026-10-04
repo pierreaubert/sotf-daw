@@ -28,7 +28,7 @@ proptest! {
     fn process_finite_output_mono(buffer in mono_buffer_strategy()) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         let mut buf = vec![0.0f32; buffer.len()];
         adapter.process(&buffer, &mut buf, &ProcessContext::new(48000, 32)).unwrap();
@@ -41,7 +41,7 @@ proptest! {
     fn process_finite_output_stereo(buffer in stereo_buffer_strategy()) {
         let plugin = DelayPlugin::new(2, 100.0, 0.5, 0.5);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         let mut buf = vec![0.0f32; buffer.len()];
         adapter.process(&buffer, &mut buf, &ProcessContext::new(48000, 64)).unwrap();
@@ -57,7 +57,7 @@ proptest! {
     fn roundtrip_delay_ms(delay_ms in 0.1f32..5_000.0f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(ParameterId::from("delay_ms"), ParameterValue::Float(delay_ms)).unwrap();
         let got = adapter.get_parameter(&ParameterId::from("delay_ms"));
@@ -70,7 +70,7 @@ proptest! {
     fn roundtrip_feedback(feedback in 0.0f32..0.95f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(ParameterId::from("feedback"), ParameterValue::Float(feedback)).unwrap();
         let got = adapter.get_parameter(&ParameterId::from("feedback"));
@@ -83,7 +83,7 @@ proptest! {
     fn roundtrip_mix(mix in 0.0f32..1.0f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(ParameterId::from("mix"), ParameterValue::Float(mix)).unwrap();
         let got = adapter.get_parameter(&ParameterId::from("mix"));
@@ -96,7 +96,7 @@ proptest! {
     fn roundtrip_lfo_rate_hz(lfo_rate_hz in 0.0f32..10.0f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(
             ParameterId::from("lfo_rate_hz"),
@@ -112,7 +112,7 @@ proptest! {
     fn roundtrip_lfo_depth_ms(lfo_depth_ms in 0.0f32..5.0f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(
             ParameterId::from("lfo_depth_ms"),
@@ -128,7 +128,7 @@ proptest! {
     fn roundtrip_allpass_feedback(allpass_feedback in any::<bool>()) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(
             ParameterId::from("allpass_feedback"),
@@ -144,7 +144,7 @@ proptest! {
     fn roundtrip_allpass_coeff(allpass_coeff in 0.0f32..0.99f32) {
         let plugin = DelayPlugin::new(2, 0.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48000).unwrap();
+        adapter.initialize(48000.0).unwrap();
 
         adapter.set_parameter(
             ParameterId::from("allpass_coeff"),
@@ -160,7 +160,7 @@ proptest! {
     fn dry_passthrough(input in (-1.0f32..1.0f32).prop_map(|v| vec![v; 32])) {
         let plugin = DelayPlugin::new(2, 100.0, 0.0, 0.0);
         let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-        adapter.initialize(48_000).unwrap();
+        adapter.initialize(48_000.0).unwrap();
 
         let mut buffer = input.clone();
         let context = ProcessContext::new(48_000, 16);

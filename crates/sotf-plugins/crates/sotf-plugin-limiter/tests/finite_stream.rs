@@ -78,7 +78,7 @@ fn make(rate: u32, channels: usize, params: LimiterPluginParams) -> Box<dyn Plug
     let mut plugin: Box<dyn Plugin> = Box::new(ParametricInPlacePluginAdapter::new(
         LimiterPlugin::from_params(channels, params),
     ));
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 fn input_markers(frames: usize, channels: usize) -> Vec<f32> {
@@ -313,7 +313,7 @@ fn eos_freezes_real_changes_but_idempotent_controls_and_reset_work() {
         );
         let mut direct = [0.125; 2];
         let mut inner = LimiterPlugin::from_params(2, settings(lookahead, isp, 1.0));
-        inner.initialize(rate).unwrap();
+        inner.initialize(f64::from(rate)).unwrap();
         inner
             .process_in_place(&mut [0.001, 0.002], &ProcessContext::new(rate, 1))
             .unwrap();
@@ -348,7 +348,7 @@ fn eos_freezes_real_changes_but_idempotent_controls_and_reset_work() {
             finish(plugin.as_mut(), rate, &[3]),
             finish(fresh.as_mut(), rate, &[127])
         );
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
         plugin
             .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-8.0))
             .unwrap();
@@ -456,7 +456,7 @@ fn rejected_input_neither_changes_audio_nor_enters_eos() {
             .process_in_place(&mut block, &ProcessContext::new(48_000, 2))
             .is_err()
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for context in [
         ProcessContext::new(44_100, 2),
         ProcessContext::new(48_000, 3),
@@ -475,7 +475,7 @@ fn rejected_input_neither_changes_audio_nor_enters_eos() {
         .parametric_set_parameter(ParameterId::from("release"), ParameterValue::Float(50.0))
         .unwrap();
     let mut reference = LimiterPlugin::from_params(2, settings(5.0, true, 1.0));
-    reference.initialize(48_000).unwrap();
+    reference.initialize(48_000.0).unwrap();
     reference
         .parametric_set_parameter(ParameterId::from("release"), ParameterValue::Float(50.0))
         .unwrap();

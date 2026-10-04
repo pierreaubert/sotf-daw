@@ -54,7 +54,7 @@ fn construction_preserves_types_indices_and_values_before_and_after_initialize()
             .unwrap();
             for initialize in [false, true] {
                 if initialize {
-                    plugin.initialize(48_000).unwrap();
+                    plugin.initialize(48_000.0).unwrap();
                 }
                 for ((id, expected), index) in values(true, true, strength).into_iter().zip(26..=28)
                 {
@@ -149,8 +149,8 @@ fn configured_modes_match_named_setters_through_irregular_audio_and_reset() {
                     },
                 )
                 .unwrap();
-                configured.initialize(48_000).unwrap();
-                reference.initialize(48_000).unwrap();
+                configured.initialize(48_000.0).unwrap();
+                reference.initialize(48_000.0).unwrap();
                 for (id, value) in values(harmonic, spatial, 0.9) {
                     reference
                         .parametric_set_parameter(ParameterId::from(id), value)

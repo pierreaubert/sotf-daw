@@ -18,7 +18,7 @@ fn render(
 ) -> (Vec<f32>, usize) {
     let mut plugin =
         ResamplerPlugin::with_quality(channels, input_rate, output_rate, 256, quality).unwrap();
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     if !relative_changes.is_empty() {
         plugin
             .set_parameter(
@@ -275,7 +275,7 @@ fn cumulative_relative_ratio_matches_the_actual_audio_clock() {
 fn rejected_relative_ratio_updates_preserve_processing_state() {
     let create = || {
         let mut plugin = ResamplerPlugin::new(1, 48_000, 48_000, 256).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("dynamic_ratio"),

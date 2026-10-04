@@ -126,7 +126,7 @@ fn parameter_metadata(parameters: &[Parameter], plugin: &dyn Plugin) -> String {
 
 fn render_case(name: &str) -> RenderedCase {
     let (mut plugin, settings, expected_output_channels, has_fir_tail) = make_case(name);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.output_channels(), expected_output_channels);
 
     let input = input_signal();

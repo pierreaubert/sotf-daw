@@ -1056,7 +1056,7 @@ impl<P: ClapPlugin> Wrapper<P> {
         &self,
         hash: u32,
         update_type: ClapParamUpdate,
-        sample_rate: Option<f32>,
+        sample_rate: Option<f64>,
     ) -> bool {
         match self.param_by_hash.get(&hash) {
             Some(param_ptr) => {
@@ -1065,12 +1065,12 @@ impl<P: ClapPlugin> Wrapper<P> {
                         let normalized_value = clap_plain_value as f32
                             / unsafe { param_ptr.step_count() }.unwrap_or(1) as f32;
 
-                        let changed = unsafe { param_ptr.set_normalized_value(normalized_value) };
+                        let Some(changed) = (unsafe {
+                            param_ptr.set_normalized_value_prepared(normalized_value, sample_rate)
+                        }) else {
+                            return false;
+                        };
                         if changed {
-                            if let Some(sample_rate) = sample_rate {
-                                unsafe { param_ptr.update_smoother(sample_rate, false) };
-                            }
-
                             // The GUI needs to be informed about the changed parameter value. This
                             // triggers an `Editor::param_value_changed()` call on the GUI thread.
                             let task_posted = self
@@ -1093,10 +1093,12 @@ impl<P: ClapPlugin> Wrapper<P> {
                         let normalized_delta = clap_plain_delta as f32
                             / unsafe { param_ptr.step_count() }.unwrap_or(1) as f32;
 
-                        if unsafe { param_ptr.modulate_value(normalized_delta) } {
-                            if let Some(sample_rate) = sample_rate {
-                                unsafe { param_ptr.update_smoother(sample_rate, false) };
-                            }
+                        let Some(changed) = (unsafe {
+                            param_ptr.modulate_value_prepared(normalized_delta, sample_rate)
+                        }) else {
+                            return false;
+                        };
+                        if changed {
 
                             let task_posted = self.schedule_gui(Task::ParameterModulationChanged(
                                 hash,
@@ -1293,7 +1295,10 @@ impl<P: ClapPlugin> Wrapper<P> {
     ) {
         // We'll always write these events to the first sample, so even when we add note output we
         // shouldn't have to think about interleaving events here
-        let sample_rate = self.current_buffer_config.load().map(|c| c.sample_rate);
+        let sample_rate = self
+            .current_buffer_config
+            .load()
+            .map(|c| c.sample_rate);
         while let Some(change) = self.output_parameter_events.pop() {
             let push_successful = match change {
                 OutputParamEvent::BeginGesture { param_hash } => {
@@ -1720,7 +1725,9 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueSet(event.value),
-                    self.current_buffer_config.load().map(|c| c.sample_rate),
+                    self.current_buffer_config
+                        .load()
+                        .map(|c| c.sample_rate),
                 );
 
                 // If the parameter supports polyphonic modulation, then the plugin needs to be
@@ -1775,7 +1782,9 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueMod(event.amount),
-                    self.current_buffer_config.load().map(|c| c.sample_rate),
+                    self.current_buffer_config
+                        .load()
+                        .map(|c| c.sample_rate),
                 );
             }
             (CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_TRANSPORT) => {
@@ -2205,19 +2214,30 @@ impl<P: ClapPlugin> Wrapper<P> {
         max_frames_count: u32,
     ) -> bool {
         check_null_ptr!(false, plugin, (*plugin).plugin_data);
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return false;
+        }
         let wrapper = &*((*plugin).plugin_data as *const Self);
 
         let audio_io_layout = wrapper.current_audio_io_layout.load();
         let buffer_config = BufferConfig {
-            sample_rate: sample_rate as f32,
+            sample_rate,
             min_buffer_size: Some(min_frames_count),
             max_buffer_size: max_frames_count,
             process_mode: wrapper.current_process_mode.load(),
         };
 
+        // Reject an unrepresentable automation horizon before resetting any parameter.
+        let prepared: Option<Vec<_>> = wrapper.param_by_hash.values().map(|param| {
+            unsafe { param.prepare_smoother(sample_rate) }.map(|steps| (*param, steps))
+        }).collect();
+        let Some(prepared) = prepared else {
+            return false;
+        };
+
         // Before initializing the plugin, make sure all smoothers are set the the default values
-        for param in wrapper.param_by_hash.values() {
-            param.update_smoother(buffer_config.sample_rate, true);
+        for (param, steps) in prepared {
+            param.update_smoother_prepared(steps, true);
         }
 
         // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks

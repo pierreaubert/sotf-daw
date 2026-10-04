@@ -79,7 +79,7 @@ fn wet_params(case: MatrixCase) -> AaePluginParams {
 
 fn render(params: AaePluginParams, sample_rate: u32, partition: usize, input: &[f32]) -> Vec<f32> {
     let mut plugin = AaePlugin::try_from_params(params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let channels = plugin.output_channels();
     let frames = input.len() / 2;
     let mut output = vec![0.0; frames * channels];
@@ -323,7 +323,7 @@ fn measure_modulation_and_distortion() {
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let mut output = vec![0.0; sample_rate as usize * plugin.output_channels()];
     plugin
         .process(
@@ -392,7 +392,7 @@ fn measure_detector() {
             ..Default::default()
         })
         .unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let block = sample_rate as usize / 20;
         let mut any_active = false;
         let mut fixture_gains = Vec::new();

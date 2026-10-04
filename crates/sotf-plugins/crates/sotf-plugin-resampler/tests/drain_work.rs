@@ -22,7 +22,7 @@ fn prepared_work_bound_covers_extreme_rates_small_chunks_and_partially_drained_s
                 let mut plugin =
                     ResamplerPlugin::with_quality(1, input_rate, output_rate, chunk, quality)
                         .unwrap();
-                plugin.initialize(input_rate).unwrap();
+                plugin.initialize(f64::from(input_rate)).unwrap();
                 plugin
                     .set_parameter(
                         ParameterId::from("dynamic_ratio"),

@@ -16,7 +16,7 @@ fn make_plugin(threshold: f32, ratio: f32) -> SpectralCompressorPlugin {
         mix: 1.0,
     };
     let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
 }
 
@@ -213,7 +213,7 @@ fn test_fft_roundtrip_no_compression_below_threshold() {
         mix: 1.0,
     };
     let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let channels = 2;
     let num_frames = 96000usize; // 2 seconds
@@ -278,7 +278,7 @@ fn test_magnitude_calibration_6db_hann_fix() {
         mix: 1.0,
     };
     let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let channels = 2;
     let num_frames = 96000usize;

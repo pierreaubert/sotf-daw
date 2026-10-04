@@ -32,7 +32,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         assert_eq!(plugin.output_channels(), 12);
 
         plugin
@@ -65,7 +65,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         assert_eq!(plugin.params.frequency_resolution, "erb");
         let erb_band_count = plugin.steering.erb_bands.len();
 
@@ -201,7 +201,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Process enough frames to overcome latency (2048 + 2048)
         let num_frames = 4096;
@@ -241,7 +241,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -271,7 +271,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -342,7 +342,7 @@ mod upmixer_tests {
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
         plugin.decorrelation.decorrelation_mode = 1; // Enable LFO mode for time-varying decorrelation
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -374,7 +374,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin.params.enable_hr_direct = true;
 
         let fft_size = plugin.core.fft_size;
@@ -416,7 +416,7 @@ mod upmixer_tests {
             let mut plugin = UpmixerPlugin::new(
                 2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
             );
-            plugin.initialize(44100).unwrap();
+            plugin.initialize(44100.0).unwrap();
             plugin
                 .gains
                 .center_spread
@@ -468,7 +468,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin.params.enable_hr_direct = true;
         plugin.hr_state.hr_direct_envelope = 1.0;
         plugin.gains.hr_sharpen.set_target(1.0);
@@ -543,7 +543,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.0, 0.0, 120.0, 0.5, 250.0, 0.0, 0.0, false, 0.0,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Force the HR path to be fully active
         plugin.params.enable_hr_direct = true;
@@ -616,7 +616,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 0.0, 0.0, 0.0, 120.0, 0.0, 250.0, 0.0, 0.0, false, 0.0,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with signal
         let num_blocks = 8;
@@ -680,7 +680,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             plugin.steering.smoothed_diffuseness.len(),
             plugin.steering.erb_bands.len()
@@ -736,7 +736,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.main_buffers.input_buffer_fill = 42;
         plugin
             .set_parameter(
@@ -792,7 +792,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.0, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with some common content and some distinct content
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -862,7 +862,7 @@ mod upmixer_tests {
             let mut plugin = UpmixerPlugin::new(
                 2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
             );
-            plugin.initialize(44100).unwrap();
+            plugin.initialize(44100.0).unwrap();
 
             // Generate continuous 440Hz sine wave, process in chunks
             let total_samples = 8192;
@@ -916,7 +916,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let buffer_size = 1024;
         let mut total_input_energy = 0.0;
@@ -978,7 +978,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let buffer_size = 512;
         let mut gap_count = 0;
@@ -1077,7 +1077,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with different L/R content to generate both direct and ambient
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1149,7 +1149,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let nbins = plugin.spectral.lfe_low_gains.len();
         assert_eq!(nbins, plugin.spectral.mains_high_gains.len());
@@ -1197,7 +1197,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let spectrum_size = plugin.core.fft_size / 2 + 1;
         assert_eq!(
@@ -1250,7 +1250,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -1293,7 +1293,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -1332,7 +1332,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             fft_size, "5.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let mut input = vec![0.0f32; fft_size * 2];
         for i in 0..fft_size {
@@ -1368,7 +1368,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with very high level (but still within -1.0 to 1.0)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1402,7 +1402,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input simulating voice (1-2 kHz, highly correlated stereo)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1438,7 +1438,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with strong side difference (ambient content)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1472,7 +1472,7 @@ mod upmixer_tests {
             2048, "5.1", 1.0, 1.0, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false,
             0.5, // stereo_width = 1.0 (max divergence)
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with high stereo width content
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1502,7 +1502,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create test input with high frequency content (ideal for height channels)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1537,7 +1537,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Test with ambient signal (triggers decorrelation)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1568,7 +1568,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Test with rapidly changing high frequency content
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1600,7 +1600,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Test with full scale signal
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1630,7 +1630,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Test with low frequency content (triggers subharmonic synthesis)
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1664,7 +1664,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "7.1.4", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Test with various gain settings
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1695,7 +1695,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin.safety.safety_cap_db = -1.0;
 
         for ch_buf in plugin.main_buffers.time_out_channels.iter_mut() {
@@ -1726,7 +1726,7 @@ mod upmixer_tests {
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
         plugin.decorrelation.decorrelation_mode = 0; // Velvet noise mode
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let mut input = vec![0.0_f32; 2048 * 2];
         for i in 0..2048 {
@@ -1756,7 +1756,7 @@ mod upmixer_tests {
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
         plugin.decorrelation.decorrelation_mode = 1; // LFO mode
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let mut input = vec![0.0_f32; 2048 * 2];
         for i in 0..2048 {
@@ -1792,7 +1792,7 @@ mod upmixer_tests {
             true, // Enable HR direct
             1.0,  // Max LFE level
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Create complex signal with multiple characteristics
         let mut input = vec![0.0_f32; 2048 * 2];
@@ -1854,7 +1854,7 @@ mod upmixer_tests {
             1.0, // lfe_gain
             false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin.gains.center_spread.set_target(0.0); // Focus direct sound to center speaker
 
         // Create a mono sine wave input
@@ -1936,7 +1936,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin.params.enable_hr_direct = true;
         plugin.gains.hr_sharpen.set_target(1.0);
 
@@ -2002,7 +2002,7 @@ mod upmixer_tests {
             2048, "5.1", // Test with a 5.1 configuration
             1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         // Explicitly enable bypass for this test
         plugin
             .set_parameter(
@@ -2073,7 +2073,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("bypass_all_processing"),
@@ -2109,7 +2109,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let fft_size = plugin.core.fft_size;
         let mut input = vec![0.0f32; fft_size * 2];
@@ -2155,7 +2155,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Set safety_cap_db to 0.0 (strictest cap: 0 dBFS = unity)
         plugin.safety.safety_cap_db = 0.0;
@@ -2243,7 +2243,7 @@ mod upmixer_tests {
             let mut plugin = UpmixerPlugin::new(
                 2048, config, 1.6, 1.2, 1.2, 120.0, 0.5, 250.0, 0.0, 1.0, false, 0.5,
             );
-            plugin.initialize(44100).unwrap();
+            plugin.initialize(44100.0).unwrap();
             plugin.safety.safety_cap_db = 0.0;
             plugin
                 .param_smoothers
@@ -2282,7 +2282,7 @@ mod upmixer_tests {
             let mut plugin = UpmixerPlugin::new(
                 fft_size, config, 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
             );
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
 
             let mut input = vec![0.0_f32; prime_block * 2];
             let mut output = vec![0.0_f32; prime_block * plugin.core.num_output_channels];
@@ -2322,7 +2322,7 @@ mod upmixer_tests {
             true, // enable sub-harmonic
             0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         // Set sub-harmonic gain high enough to be detectable
         plugin
             .set_parameter(
@@ -2381,7 +2381,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let buffer_size = 1024;
         let mut total_input_energy = 0.0_f32;
@@ -2443,7 +2443,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Enable multi-source extraction with a low threshold so it activates easily
         plugin.spectral.multi_source_extraction = true;
@@ -2504,7 +2504,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         // Enable multi-source extraction with default threshold
         plugin.spectral.multi_source_extraction = true;
@@ -2639,7 +2639,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let freq_per_bin = srate / plugin.core.fft_size as f64;
         let num_bins = plugin.spectral.lfe_low_gains.len();
@@ -2743,7 +2743,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         let spectrum_size = plugin.core.fft_size / 2 + 1;
         let nyquist_bin = spectrum_size - 1;
@@ -2789,7 +2789,7 @@ mod upmixer_tests {
             true, // enable sub-harmonic
             0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("subharmonic_gain"),
@@ -2877,7 +2877,7 @@ mod upmixer_tests {
         let mut plugin = UpmixerPlugin::new(
             fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
         );
-        plugin.initialize(44100).unwrap();
+        plugin.initialize(44100.0).unwrap();
 
         plugin.spectral.multi_source_extraction = true;
         // Use a very low threshold so extraction activates easily

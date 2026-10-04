@@ -639,7 +639,7 @@ fn spatial_consumers_report_source_time_rebase_and_keep_active_value_on_failed_r
 
     let mut binaural_plugin = binaural_plugin(&binaural_path, 2);
     assert_eq!(binaural_plugin.sofa_delay_rebase_seconds(), None);
-    binaural_plugin.initialize(48_000).unwrap();
+    binaural_plugin.initialize(48_000.0).unwrap();
     let expected_binaural_seconds = 32.0 / 44_100.0;
     assert!(
         (binaural_plugin.sofa_delay_rebase_seconds().unwrap() - expected_binaural_seconds).abs()
@@ -671,7 +671,7 @@ fn spatial_consumers_report_source_time_rebase_and_keep_active_value_on_failed_r
             ..Default::default()
         },
     );
-    assert!(binaural_plugin.initialize(48_000).is_err());
+    assert!(binaural_plugin.initialize(48_000.0).is_err());
     assert_eq!(
         binaural_plugin.sofa_delay_rebase_seconds(),
         Some(expected_replacement_seconds)
@@ -1092,7 +1092,7 @@ fn failed_binaural_delay_replacement_or_reinitialize_preserves_live_and_partial_
         write_fixture(&actual_path, &invalid);
         assert!(
             actual
-                .initialize(96_000)
+                .initialize(96_000.0)
                 .unwrap_err()
                 .contains("Data.Delay must contain finite sample counts")
         );

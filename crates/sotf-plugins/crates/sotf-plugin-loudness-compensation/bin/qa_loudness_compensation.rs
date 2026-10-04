@@ -38,7 +38,7 @@ fn main() {
     };
 
     let mut inner = LoudnessCompensationPlugin::from_params(channels, params).unwrap();
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Loudness Compensation Plugin ===");
 
@@ -65,7 +65,7 @@ fn main() {
 
     println!("\n[Test 3] ISO/Auto high-channel finite output and tail latency");
     let mut auto = LoudnessCompensationPlugin::new(32, 100.0, 6.0, 8000.0, 6.0);
-    auto.initialize(sample_rate).unwrap();
+    auto.initialize(f64::from(sample_rate)).unwrap();
     auto.set_parameter(
         ParameterId::from("auto_calibrated"),
         ParameterValue::Bool(true),

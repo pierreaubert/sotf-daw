@@ -78,7 +78,7 @@ fn compile_metadata_is_conservative_for_every_delay_state() {
     assert_conservative_delay_metadata(&static_plugin, "static");
 
     let mut automated_plugin = DelayPlugin::new(2, 100.0, 0.0, 1.0);
-    automated_plugin.initialize(SR).unwrap();
+    automated_plugin.initialize(f64::from(SR)).unwrap();
     automated_plugin
         .set_parameter(ParameterId::from("delay_ms"), ParameterValue::Float(200.0))
         .unwrap();
@@ -171,7 +171,7 @@ fn from_params_channels_mismatch_rejected() {
 #[test]
 fn initialize_and_reset() {
     let mut plugin = DelayPlugin::new(2, 50.0, 0.0, 1.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin.reset();
     let mut buf = vec![0.0f32; 128];
     plugin.process_in_place(&mut buf, &ctx(64)).unwrap();
@@ -181,7 +181,7 @@ fn initialize_and_reset() {
 #[test]
 fn parameter_roundtrip_scalar() {
     let mut plugin = DelayPlugin::new(1, 100.0, 0.3, 0.5);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let cases: Vec<(ParameterId, ParameterValue)> = vec![
         (ParameterId::from("delay_ms"), ParameterValue::Float(250.0)),
@@ -212,7 +212,7 @@ fn parameter_roundtrip_scalar() {
 #[test]
 fn parameter_roundtrip_per_channel() {
     let mut plugin = DelayPlugin::new_per_channel_with_max_delay(vec![10.0, 20.0], 25.0).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("delay_ms_0"), ParameterValue::Float(15.0))
@@ -260,7 +260,7 @@ fn delay_impulse_roundtrip() {
     let delay_ms = 10.0;
     let delay_frames = (delay_ms * SR as f32 / 1000.0) as usize;
     let mut plugin = DelayPlugin::new(2, delay_ms, 0.0, 1.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buf = impulse(2, 0);
     plugin.process_in_place(&mut buf, &ctx(1024)).unwrap();
@@ -281,7 +281,7 @@ fn delay_impulse_roundtrip() {
 #[test]
 fn bypass_mix_zero_passthrough() {
     let mut plugin = DelayPlugin::new(2, 100.0, 0.0, 0.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let frames = 128;
     let mut buf = vec![0.0f32; frames * 2];
@@ -304,7 +304,7 @@ fn bypass_mix_zero_passthrough() {
 #[test]
 fn reset_clears_delay_line() {
     let mut plugin = DelayPlugin::new(1, 50.0, 0.0, 1.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Feed an impulse.
     let mut buf = vec![0.0f32; 1024];
@@ -324,7 +324,7 @@ fn reset_clears_delay_line() {
 #[test]
 fn feedback_decays_impulse() {
     let mut plugin = DelayPlugin::new(1, 10.0, 0.5, 1.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buf = vec![0.0f32; 4096];
     buf[0] = 1.0;
@@ -356,7 +356,7 @@ fn delay_with_lfo_produces_finite_output() {
         },
     )
     .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buf: Vec<f32> = (0..2048)
         .map(|i| (2.0 * std::f32::consts::PI * 440.0 * i as f32 / SR as f32).sin() * 0.3)

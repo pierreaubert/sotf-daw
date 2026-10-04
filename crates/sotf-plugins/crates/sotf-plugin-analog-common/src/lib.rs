@@ -151,9 +151,17 @@ impl AnalogColorStage {
     }
 
     /// Prepare (or re-prepare) the stage for a fixed stream layout.
-    pub fn prepare(&mut self, sample_rate: u32, max_block_frames: usize) -> Result<(), String> {
-        if sample_rate == 0 {
-            return Err("analog stage sample rate must be non-zero".to_string());
+    pub fn prepare(
+        &mut self,
+        sample_rate: impl Into<f64>,
+        max_block_frames: usize,
+    ) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || sample_rate > f64::from(f32::MAX) {
+            return Err(
+                "analog stage sample rate must be finite and positive within f32 range"
+                    .to_string(),
+            );
         }
         if max_block_frames == 0 {
             return Err("analog stage max block size must be non-zero".to_string());

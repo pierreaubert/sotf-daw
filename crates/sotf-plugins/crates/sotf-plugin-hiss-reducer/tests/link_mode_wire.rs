@@ -76,7 +76,7 @@ fn link_mode_wire_forms_accept_int_label_float_and_default() {
 
     // Current i32 named controls are unchanged by the wire-form fix.
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(1))
         .unwrap();
@@ -111,7 +111,7 @@ fn link_mode_wire_forms_reject_unknown_noncanonical() {
     // Transactional rejection: no partial plugin or state exists after a
     // failed construction, and a previously built plugin is untouched.
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.link_mode(), 0);
     let mut object = base_wire();
     object.insert("link_mode".to_string(), json!("Mono"));

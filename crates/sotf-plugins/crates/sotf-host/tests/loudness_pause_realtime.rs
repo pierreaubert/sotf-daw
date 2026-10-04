@@ -125,7 +125,7 @@ fn running_and_paused_i_lra_process_paths_allocate_nothing() {
         .unwrap()
         .with_integrated_mode(IntegratedLoudnessMode::WholeProgram)
         .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
 
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|index| {
@@ -167,7 +167,7 @@ fn public_string_command_applies_borrowed_control_without_allocating_with_retain
     const RATE: u32 = 48_000;
     const FRAMES: usize = 64;
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
 
     let input = vec![0.125_f32; FRAMES * 2];
     let mut output = vec![0.0_f32; input.len()];
@@ -233,7 +233,7 @@ fn wide_explicit_programme_lane_is_allocation_free_when_running_and_paused() {
         .unwrap()
         .with_integrated_mode(IntegratedLoudnessMode::WholeProgram)
         .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
 
     let input = vec![0.125_f32; FRAMES * channels];
     let mut output = vec![0.0; input.len()];

@@ -24,7 +24,7 @@ fn benchmark_loudness_plugin(c: &mut Criterion) {
             |b, &channels| {
                 let mut plugin =
                     LoudnessCompensationPlugin::new(channels, 100.0, 6.0, 10000.0, 6.0);
-                plugin.initialize(sample_rate).unwrap();
+                plugin.initialize(f64::from(sample_rate)).unwrap();
 
                 let mut buffer = vec![0.5f32; block_size * channels];
                 let context = ProcessContext::new(sample_rate, block_size);
@@ -41,7 +41,7 @@ fn benchmark_loudness_plugin(c: &mut Criterion) {
                 |b, &channels| {
                     let mut plugin =
                         LoudnessCompensationPlugin::new(channels, 100.0, 6.0, 10_000.0, 6.0);
-                    plugin.initialize(sample_rate).unwrap();
+                    plugin.initialize(f64::from(sample_rate)).unwrap();
                     if mode == 2 {
                         plugin
                             .set_parameter(
@@ -67,7 +67,7 @@ fn benchmark_loudness_plugin(c: &mut Criterion) {
 
     group.bench_function("auto_control_update_32ch", |b| {
         let mut plugin = LoudnessCompensationPlugin::new(32, 100.0, 6.0, 10_000.0, 6.0);
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("auto_calibrated"),

@@ -20,7 +20,7 @@ fn plugin(channels: usize, enabled: bool) -> SpeechDenoiserPlugin {
             ..SpeechDenoiserPluginParams::default()
         },
     );
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     p
 }
 
@@ -212,7 +212,7 @@ fn errors_reset_and_reinitialize_preserve_current_settings_and_history_contract(
                 process(&mut p, &input, channels, &[137]),
                 process(&mut twin, &input, channels, &[137])
             );
-            assert!(p.initialize(44100).is_err());
+            assert!(p.initialize(44100.0).is_err());
             let mut sentinel = vec![1234.; channels];
             assert!(
                 p.process_in_place(&mut sentinel, &ProcessContext::new(96000, 1))
@@ -232,7 +232,7 @@ fn errors_reset_and_reinitialize_preserve_current_settings_and_history_contract(
                     .unwrap();
                 process(&mut p, &input[..137 * channels], channels, &[137]);
                 if reinitialize {
-                    p.initialize(RATE).unwrap();
+                    p.initialize(f64::from(RATE)).unwrap();
                 } else {
                     p.reset();
                 }

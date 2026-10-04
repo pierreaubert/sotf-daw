@@ -189,7 +189,7 @@ fn goertzel_mag2(samples: &[f32], freq_hz: f64) -> f64 {
 
 fn run_denoised(input: &[f32], channels: usize, params: DenoiserPluginParams) -> (Vec<f32>, usize) {
     let mut plugin = DenoiserPlugin::from_params(channels, params);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let latency = plugin.latency_samples();
     let output = process_all(&mut plugin, input, channels, &[1024, 63]);
     (output, latency)
@@ -463,7 +463,7 @@ fn stationary_tone_with_captured_noise_profile() {
     let noise: Vec<f32> = (0..frames).map(|_| rng.next() * noise_gain).collect();
     // Phase 1: noise-only profile capture (first 2 s of the same noise).
     let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
         .parametric_set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
         .unwrap();

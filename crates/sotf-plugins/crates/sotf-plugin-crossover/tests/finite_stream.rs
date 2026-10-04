@@ -57,7 +57,7 @@ fn make(channels: usize, rate: u32, taps: usize, splits: usize, mode: &str) -> C
         band_count: None,
     };
     let mut plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -275,7 +275,7 @@ fn errors_do_not_consume_tail_and_reset_replays_it() {
     plugin.reset();
     assert_eq!(first, process_partitioned(&mut plugin, &input, rate));
     assert_eq!(tail, drain_all(&mut plugin, rate, 13));
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     assert_eq!(first, process_partitioned(&mut plugin, &input, rate));
     assert_eq!(tail, drain_all(&mut plugin, rate, 257));
 }
@@ -292,7 +292,7 @@ fn empty_drain_is_noop_and_iir_does_not_claim_finite_support() {
     assert_eq!(process_partitioned(&mut plugin, &[1.0], 48000).len(), 1);
     assert_eq!(drain_all(&mut plugin, 48000, 3).len(), 30);
     let mut iir = CrossoverPlugin::new(1, "LR24", 1000.0, "lowpass").unwrap();
-    iir.initialize(48000).unwrap();
+    iir.initialize(48000.0).unwrap();
     assert_eq!(iir.tail_length(), TailLength::Unknown);
     assert_eq!(iir.drain_output_frames_max(), 0);
 }

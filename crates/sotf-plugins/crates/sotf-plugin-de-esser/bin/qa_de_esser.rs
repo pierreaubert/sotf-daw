@@ -25,7 +25,7 @@ fn main() {
 
     let mut inner =
         DeEsserPlugin::from_params(channels, params).expect("valid De-Esser parameters");
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: DeEsser Plugin ===");
 
@@ -65,7 +65,7 @@ fn main() {
         },
     )
     .expect("valid De-Esser parameters");
-    ahead.initialize(sample_rate).unwrap();
+    ahead.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(ahead.latency_samples(), 96);
     let mut impulse = vec![0.0f32; 160];
     impulse[0] = 1.0;
@@ -95,7 +95,7 @@ fn main() {
         },
     )
     .expect("valid De-Esser parameters");
-    fir.initialize(sample_rate).unwrap();
+    fir.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(fir.latency_samples(), 512);
     let mut impulse = vec![0.0f32; 576];
     impulse[0] = 1.0;
@@ -126,7 +126,7 @@ fn main() {
         },
     )
     .expect("valid De-Esser parameters");
-    ms.initialize(sample_rate).unwrap();
+    ms.initialize(f64::from(sample_rate)).unwrap();
     let stereo = generate_sine(sample_rate, 8000.0, -10.0, num_frames);
     let mut buf = vec![0.0f32; num_frames * 2];
     for i in 0..num_frames {
@@ -162,7 +162,7 @@ fn main() {
         },
     )
     .expect("valid De-Esser parameters");
-    ext.initialize(sample_rate).unwrap();
+    ext.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(ext.input_channels(), 2);
     let program = generate_sine(sample_rate, 8000.0, -30.0, num_frames);
     let key = generate_sine(sample_rate, 8000.0, -6.0, num_frames);
@@ -192,7 +192,7 @@ fn main() {
     // suite processes through it (same ordering as the limiter
     // finite-stream harness and the transient-shaper adapter tests).
     let mut plugin = ParametricInPlacePluginAdapter::new(inner);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     run_standard_tests(&mut plugin, "DeEsserPlugin");
 
     println!("\n[ALL PASS] DeEsser QA Complete.");

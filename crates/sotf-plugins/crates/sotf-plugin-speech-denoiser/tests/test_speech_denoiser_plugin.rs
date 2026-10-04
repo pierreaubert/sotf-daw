@@ -11,7 +11,7 @@ fn disabled_is_transparent() {
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(false))
         .expect("set enabled");
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     // Dry audio has the same 960-frame total delay as the wet path.
     let mut buffer: Vec<f32> = (0..2880)
@@ -28,7 +28,7 @@ fn disabled_is_transparent() {
 #[test]
 fn latency_is_constant_when_disabled() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
     assert_eq!(plugin.latency_samples(), 960);
 
     plugin
@@ -40,7 +40,7 @@ fn latency_is_constant_when_disabled() {
 #[test]
 fn accepts_non_multiple_of_480_and_preserves_latency() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     let mut buffer = vec![0.0f32; 512];
     let context = ProcessContext::new(48000, 512);
@@ -49,27 +49,27 @@ fn accepts_non_multiple_of_480_and_preserves_latency() {
 }
 
 #[test]
-fn rejects_non_48khz() {
+fn accepts_prepared_non_48khz() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    let result = plugin.initialize(44100);
-    assert!(result.is_err());
-    assert!(result.unwrap_err().contains("48 kHz"));
+    let result = plugin.initialize(44100.0);
+    assert!(result.is_ok());
+    assert!(plugin.latency_samples() > 0);
 }
 
-/// 1.3 CRITICAL: reject sample rates other than 48 kHz.
+/// Both common alternate host rates have a prepared model-rate adapter.
 #[test]
-fn initialize_rejects_non_48khz() {
+fn initialize_accepts_non_48khz() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
     assert!(
-        plugin.initialize(44100).is_err(),
-        "44100 Hz should be rejected"
+        plugin.initialize(44100.0).is_ok(),
+        "44100 Hz should be accepted"
     );
     assert!(
-        plugin.initialize(96000).is_err(),
-        "96000 Hz should be rejected"
+        plugin.initialize(96000.0).is_ok(),
+        "96000 Hz should be accepted"
     );
     assert!(
-        plugin.initialize(48000).is_ok(),
+        plugin.initialize(48000.0).is_ok(),
         "48000 Hz must be accepted"
     );
 }
@@ -78,7 +78,7 @@ fn initialize_rejects_non_48khz() {
 #[test]
 fn latency_is_constant_regardless_of_enabled() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     // Enabled
     plugin
@@ -102,7 +102,7 @@ fn arbitrary_partitions_match_one_continuous_stream() {
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     let source: Vec<f32> = (0..1440)
         .map(|i| ((i * 17 % 101) as f32 - 50.0) / 100.0)
@@ -154,7 +154,7 @@ fn non_finite_input_is_sanitized_and_does_not_poison_following_audio() {
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     let mut buffer = vec![0.1f32; SPEECH_DENOISER_FRAME_SIZE];
     buffer[10] = f32::NAN;
@@ -172,7 +172,7 @@ fn non_finite_input_is_sanitized_and_does_not_poison_following_audio() {
 #[test]
 fn published_frame_size_can_drive_allocation_benchmark() {
     let mut plugin = SpeechDenoiserPlugin::new(2);
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     let mut buffer = vec![0.0f32; SPEECH_DENOISER_FRAME_SIZE * 2];
     let ctx = ProcessContext::new(48000, SPEECH_DENOISER_FRAME_SIZE);
@@ -189,7 +189,7 @@ fn process_rejects_undersized_buffer() {
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     // buffer has 480 samples but context claims 960 frames (needs 960 samples for 1 ch)
     let mut buffer = vec![0.0f32; 480];

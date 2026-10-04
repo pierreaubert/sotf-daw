@@ -9,7 +9,7 @@ fn disabled_is_transparent() {
     plugin
         .set_parameter("enabled".into(), ParameterValue::Bool(false))
         .expect("set enabled");
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     let mut buffer = vec![0.25, -0.25, 0.5, -0.5];
     let input = buffer.clone();
@@ -58,7 +58,7 @@ fn low_latency_param_does_not_exist() {
 #[test]
 fn param_change_preserves_state() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(48000).expect("initialize");
+    plugin.initialize(48000.0).expect("initialize");
 
     // Warm up the reducer so it accumulates state.
     let context = ProcessContext::new(48000, 64);
@@ -75,7 +75,7 @@ fn param_change_preserves_state() {
 
     // Re-warm fresh plugin to the same state (no param change).
     let mut plugin2 = HissReducerPlugin::new(1);
-    plugin2.initialize(48000).expect("initialize");
+    plugin2.initialize(48000.0).expect("initialize");
     let mut warm_buf2 = vec![0.8f32; 64];
     plugin2
         .process_in_place(&mut warm_buf2, &context)
@@ -130,7 +130,7 @@ fn initial_sample_rate_is_consistent() {
     assert!(err.contains("initialized"));
 
     let mut plugin_init = HissReducerPlugin::new(1);
-    plugin_init.initialize(48000).expect("init");
+    plugin_init.initialize(48000.0).expect("init");
     let mut buf_init = vec![0.5f32; 8];
     plugin_init
         .process_in_place(&mut buf_init, &context)

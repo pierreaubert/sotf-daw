@@ -17,7 +17,7 @@ proptest! {
         soft in prop::bool::ANY,
     ) {
         let mut p = LimiterPlugin::new(1, threshold, release, lookahead, soft);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         let frames = 256usize;
         let mut buf = vec![sample; frames];
         let ctx = ProcessContext::new(48000, frames);
@@ -40,7 +40,7 @@ proptest! {
         feed_forward in prop::bool::ANY,
     ) {
         let mut p = LimiterPlugin::new(1, threshold, release, lookahead, soft);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.set_parameter(ParameterId::from("true_peak"), ParameterValue::Bool(true_peak))
             .unwrap();
         p.set_parameter(ParameterId::from("feed_forward"), ParameterValue::Bool(feed_forward))
@@ -66,7 +66,7 @@ proptest! {
         mix in 0.0f32..1.0f32,
     ) {
         let mut p = LimiterPlugin::new(1, -6.0, 50.0, lookahead, false);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
 
         p.set_parameter(ParameterId::from("threshold"), ParameterValue::Float(threshold))
             .unwrap();
@@ -102,7 +102,7 @@ proptest! {
     #[test]
     fn unity_mix_passthrough(sample in -1.0f32..1.0f32) {
         let mut p = LimiterPlugin::new(1, 0.0, 50.0, 0.0, false);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
             .unwrap();
 
@@ -136,9 +136,9 @@ proptest! {
     ) {
         // Lower threshold -> lower ceiling -> more attenuation for a loud signal.
         let mut p_low = LimiterPlugin::new(1, th_low, 50.0, 0.0, false);
-        p_low.initialize(48000).unwrap();
+        p_low.initialize(48000.0).unwrap();
         let mut p_high = LimiterPlugin::new(1, th_high, 50.0, 0.0, false);
-        p_high.initialize(48000).unwrap();
+        p_high.initialize(48000.0).unwrap();
 
         let frames = 512usize;
         let mut buf_low = vec![sample; frames];

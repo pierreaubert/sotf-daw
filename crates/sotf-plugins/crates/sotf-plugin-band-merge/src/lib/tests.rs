@@ -15,7 +15,7 @@ fn processing_requires_initialize_and_matching_sample_rate() {
             .unwrap_err()
             .contains("initialized")
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!(
         plugin
             .process(&input, &mut output, &ProcessContext::new(44_100, 1))
@@ -66,7 +66,7 @@ fn metadata_and_reset_diagnostics_match_runtime_contract() {
     assert!(metadata.channel_mixing);
     assert_eq!(metadata.latency_samples, 0);
 
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let _ = plugin.get_parameter(&ParameterId::from("reconstruction_error_db"));
     plugin.reset();
     assert!(!plugin.reconstruction_error_requested.get());
@@ -76,7 +76,7 @@ fn metadata_and_reset_diagnostics_match_runtime_contract() {
 #[test]
 fn test_band_merge_basic() {
     let mut p = BandMergePlugin::new(2, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let i = vec![1.0, 2.0, 3.0, 4.0];
     let mut o = vec![0.0, 0.0];
     p.process(&i, &mut o, &ProcessContext::new(48000, 1))
@@ -87,7 +87,7 @@ fn test_band_merge_basic() {
 #[test]
 fn test_band_merge_with_gain() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     // Set band 0 gain to +6 dB (~2x), band 1 gain stays at 0 dB (1x)
     p.set_parameter(
         ParameterId::from("band_0_gain_db"),
@@ -114,7 +114,7 @@ fn test_band_merge_with_gain() {
 #[test]
 fn test_band_merge_with_mute() {
     let mut p = BandMergePlugin::new(2, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     // Mute band 1
     p.set_parameter(ParameterId::from("band_1_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -134,7 +134,7 @@ fn test_band_merge_with_mute() {
 
 fn render_mute_cycle(signal: &[f32], partition_pattern: &[usize]) -> Vec<f32> {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut rendered = Vec::with_capacity(signal.len() * 2);
 
     for muted in [true, false] {
@@ -220,7 +220,7 @@ fn mute_unmute_matches_one_pole_oracle_for_dc_and_sine_across_partitions() {
 #[test]
 fn test_band_merge_mute_and_gain_combined() {
     let mut p = BandMergePlugin::new(1, 3).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     // Mute band 0
     p.set_parameter(ParameterId::from("band_0_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -289,7 +289,7 @@ fn test_band_merge_from_params() {
         band_mutes: vec![false, true, false],
     };
     let mut p = BandMergePlugin::from_params(1, &params).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
 
     // band0=1.0 * ~2.0, band1=1.0 muted, band2=1.0 * ~0.001
     let i = vec![1.0, 1.0, 1.0];
@@ -305,7 +305,7 @@ fn test_band_merge_from_params() {
 #[test]
 fn test_reconstruction_error_db_unity() {
     let mut p = BandMergePlugin::new(2, 3).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
 
     // Process with non-trivial signal
     let nf = 100;
@@ -344,7 +344,7 @@ fn reconstruction_error_detects_equal_rms_wrong_waveform() {
         band_mutes: vec![true, false],
     };
     let mut plugin = BandMergePlugin::from_params(1, &params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = [1.0_f32, 0.0, 0.0, 1.0];
     let mut output = [0.0_f32; 2];
 
@@ -374,7 +374,7 @@ fn reconstruction_error_detects_output_when_reference_cancels() {
         band_mutes: vec![false, true],
     };
     let mut plugin = BandMergePlugin::from_params(1, &params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let _ = plugin.get_parameter(&ParameterId::from("reconstruction_error_db"));
     let mut output = [0.0];
     plugin
@@ -427,7 +427,7 @@ fn all_public_band_counts_select_an_unrolled_performance_path() {
 #[test]
 fn test_reconstruction_error_db_is_computed_on_demand() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
 
     // Set a non-unity gain to make the diagnostic value clearly non-zero.
     p.set_parameter(
@@ -489,7 +489,7 @@ fn test_band_merge_parameters_list() {
 fn test_gain_change_is_smoothed() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
     // initialize() sets the smoother coefficient for 48 kHz.
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Band gains start at 0 dB (linear 1.0).  Process one frame to lock
     // the smoother at 1.0 (unity).
@@ -528,7 +528,7 @@ fn test_reset_snaps_smoother() {
     // Minimum 2 bands required by the plugin.
     // Both bands will have input 1.0; band 0 gets +6 dB (~2.0 linear), band 1 stays at 0 dB.
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Apply a gain that the smoother has not yet reached.
     p.set_parameter(
@@ -650,7 +650,7 @@ fn test_from_params_defaults_missing_gains_and_mutes() {
 #[test]
 fn test_process_zero_frames_is_noop() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let mut output = vec![];
     p.process(&[], &mut output, &ProcessContext::new(48000, 0))
         .unwrap();
@@ -660,7 +660,7 @@ fn test_process_zero_frames_is_noop() {
 #[test]
 fn test_process_nan_input_does_not_panic() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let input = vec![f32::NAN, f32::NAN];
     let mut output = vec![0.0f32];
     p.process(&input, &mut output, &ProcessContext::new(48000, 1))
@@ -671,7 +671,7 @@ fn test_process_nan_input_does_not_panic() {
 #[test]
 fn test_reconstruction_error_with_gain_and_mute() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     p.set_parameter(ParameterId::from("band_1_mute"), ParameterValue::Bool(true))
         .unwrap();
 
@@ -753,7 +753,7 @@ fn test_set_parameter_gain_non_finite_rejected() {
 fn gain_ramp_is_partition_invariant() {
     fn render(blocks: &[usize]) -> Vec<f32> {
         let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("band_0_gain_db"),
@@ -785,7 +785,7 @@ fn gain_ramp_is_partition_invariant() {
 #[test]
 fn mute_transition_uses_gain_smoother() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("band_0_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -799,7 +799,7 @@ fn mute_transition_uses_gain_smoother() {
 #[test]
 fn reset_preserves_muted_band_target() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("band_0_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -830,7 +830,7 @@ fn construction_and_buffers_are_validated() {
     assert!(BandMergePlugin::from_params(1, &params).is_err());
 
     let mut plugin = BandMergePlugin::new(2, 2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let context = ProcessContext::new(48000, 8);
     assert!(
         plugin
@@ -905,7 +905,7 @@ fn test_get_parameter_all_band_params() {
 #[test]
 fn test_process_reconstruction_error_silence() {
     let mut p = BandMergePlugin::new(1, 2).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     // Request the diagnostic
     let _ = p.get_parameter(&ParameterId::from("reconstruction_error_db"));
 

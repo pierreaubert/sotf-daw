@@ -12,13 +12,13 @@ fn test_pnd_instantiation() {
     assert_eq!(plugin.output_channels(), 2);
     assert_eq!(plugin.info().name, "Pitch Drift Corrector");
 
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 }
 
 #[test]
 fn test_pnd_processing_silence() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let input = vec![0.0; num_frames * 2];
@@ -36,7 +36,7 @@ fn test_pnd_processing_silence() {
 #[test]
 fn test_pnd_processing_signal() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let mut input = vec![0.0; num_frames * 2];
@@ -99,7 +99,7 @@ fn test_pnd_known_drift_correction() {
         },
     )
     .unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Enable correction
     plugin
@@ -124,7 +124,7 @@ fn test_pnd_known_drift_correction() {
     for pos in (0..total_frames).step_by(block_size) {
         let end = (pos + block_size).min(total_frames);
         let nf = end - pos;
-        let ctx = ProcessContext::new(sr, nf);
+        let ctx = ProcessContext::new(f64::from(u32::try_from(sr).unwrap()), nf);
         plugin
             .process(&input[pos..end], &mut output[pos..end], &ctx)
             .unwrap();
@@ -191,7 +191,7 @@ fn test_pnd_phase_vocoder_corrects_referenced_sharp_tone() {
         },
     )
     .unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let total_frames = sr as usize * 2;
     let input_frequency = 444.4_f32;

@@ -17,7 +17,7 @@ proptest! {
         mix in 0.0f32..1.0f32,
     ) {
         let mut p = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::new(1));
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.set_parameter(ParameterId::from("attack"), ParameterValue::Float(attack))
             .unwrap();
         p.set_parameter(ParameterId::from("sustain"), ParameterValue::Float(sustain))
@@ -48,7 +48,7 @@ proptest! {
         mix in 0.0f32..1.0f32,
     ) {
         let mut p = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::new(1));
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
 
         p.set_parameter(ParameterId::from("attack"), ParameterValue::Float(attack))
             .unwrap();
@@ -96,7 +96,7 @@ proptest! {
                 mix: 0.0,
             },
         ));
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
 
         // Warm up the mix smoother to converge to 0
         let mut warmup = vec![0.0f32; 4800];
@@ -128,7 +128,7 @@ proptest! {
                 mix: 0.0,
             },
         ));
-        p_low.initialize(48000).unwrap();
+        p_low.initialize(48000.0).unwrap();
 
         let mut p_high = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::from_validated_params(
             1,
@@ -140,7 +140,7 @@ proptest! {
                 mix: 0.0,
             },
         ));
-        p_high.initialize(48000).unwrap();
+        p_high.initialize(48000.0).unwrap();
 
         let frames = 128usize;
         let mut buf_low = vec![sample; frames];

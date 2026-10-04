@@ -20,7 +20,7 @@ fn configured(channels: usize, enabled: bool) -> SpeechDenoiserPlugin {
             ..SpeechDenoiserPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -323,7 +323,7 @@ fn rejected_calls_preserve_waveform_and_finite_eof_freezes_controls_until_reset(
         same.insert(ParameterId::from("enabled"), ParameterValue::Bool(true));
         assert!(plugin.apply_values_realtime(&same).is_err());
         assert!(plugin.apply_values(same).is_err());
-        assert!(plugin.initialize(44100).is_err());
+        assert!(plugin.initialize(f64::NAN).is_err());
         assert!(
             plugin
                 .process_in_place(&mut [], &ProcessContext::new(RATE, 0))
@@ -355,7 +355,7 @@ fn rejected_calls_preserve_waveform_and_finite_eof_freezes_controls_until_reset(
             process(&mut fresh, &input, &[137])
         );
         assert_eq!(drain(&mut plugin, &[17]), drain(&mut fresh, &[480]));
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         enabled(&mut plugin, true);
     }
 }

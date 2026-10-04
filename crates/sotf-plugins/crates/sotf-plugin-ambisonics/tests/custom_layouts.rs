@@ -176,7 +176,7 @@ fn custom_cube_decodes_and_processes() {
         ))
         .unwrap();
         assert_eq!(plugin.output_channels(), 8);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = [1.0_f32, 0.0, 0.0, 0.0];
         let mut output = [0.0_f32; 8];
         plugin
@@ -256,7 +256,7 @@ fn lfe_channel_is_silent_and_ignored() {
                 algorithm,
             ))
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mut output = [0.0_f32; 6];
             plugin
                 .process(
@@ -310,7 +310,7 @@ fn speaker_permutation_permutes_custom_outputs() {
 fn failed_custom_preparation_preserves_running_decoder() {
     let config = custom_config(1, replica_5_1(), true, false, "mode_matching");
     let mut plugin = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = [0.5_f32, -0.25, 0.125, 0.75];
     let mut before = [0.0_f32; 6];
     plugin
@@ -349,14 +349,14 @@ fn custom_config_persists_through_json_roundtrip() {
         .map(|index| (index as f32 * 0.03125).sin() * 0.25)
         .collect();
     let mut first = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
-    first.initialize(48_000).unwrap();
+    first.initialize(48_000.0).unwrap();
     let mut first_out = vec![0.0_f32; 37 * 16];
     first
         .process(&input, &mut first_out, &ProcessContext::new(48_000, 37))
         .unwrap();
 
     let mut second = AmbisonicsDecoderPlugin::new_custom(&restored).unwrap();
-    second.initialize(48_000).unwrap();
+    second.initialize(48_000.0).unwrap();
     let mut second_out = vec![0.0_f32; 37 * 16];
     second
         .process(&input, &mut second_out, &ProcessContext::new(48_000, 37))
@@ -386,7 +386,7 @@ fn order7_custom_sixteen_channel_processes_all_basis() {
         assert_eq!(plugin.input_channels(), 64);
         assert_eq!(plugin.output_channels(), 16);
         assert_eq!(plugin.tail_length(), TailLength::Finite(0));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let expected = if algorithm == "allrad" {
             DecodeMatrix::build_allrad_for_custom(7, &replica_9_1_6(), false).unwrap()
@@ -448,7 +448,7 @@ fn custom_dual_band_matches_linearity_within_f32_accumulation() {
             "mode_matching",
         ))
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         // Dual-band state must settle before the linearity comparison.
         let settle = vec![0.0_f32; 2048 * 4];
         let mut settle_out = vec![0.0_f32; 2048 * 6];
@@ -559,7 +559,7 @@ fn ill_conditioned_custom_new_custom_rejection_preserves_running_decoder() {
 
     let running_config = custom_config(1, replica_5_1(), true, false, "mode_matching");
     let mut plugin = AmbisonicsDecoderPlugin::new_custom(&running_config).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = [0.5_f32, -0.25, 0.125, 0.75];
     let mut before = [0.0_f32; 6];
     plugin
@@ -638,14 +638,14 @@ fn custom_dual_band_tail_drain_reset_and_partition() {
         assert_eq!(plugin.tail_length(), TailLength::Unknown);
         assert_eq!(plugin.drain_call_bound().map(|bound| bound.get()), Some(1));
         assert_eq!(plugin.latency_samples(), 0);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let frames = 512;
         let input: Vec<f32> = (0..frames * 4)
             .map(|index| ((index * 37 % 251) as f32 - 125.0) / 1024.0)
             .collect();
         let mut fresh = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
-        fresh.initialize(48_000).unwrap();
+        fresh.initialize(48_000.0).unwrap();
         let mut fresh_out = vec![0.0_f32; frames * 6];
         fresh
             .process(&input, &mut fresh_out, &ProcessContext::new(48_000, frames))
@@ -667,7 +667,7 @@ fn custom_dual_band_tail_drain_reset_and_partition() {
         // Partition equivalence: eight sequential 64-frame calls equal one
         // 512-frame call from identical state.
         let mut chunked = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
-        chunked.initialize(48_000).unwrap();
+        chunked.initialize(48_000.0).unwrap();
         let mut chunked_out = vec![0.0_f32; frames * 6];
         for (piece, out) in input
             .chunks(64 * 4)
@@ -687,8 +687,8 @@ fn custom_non_finite_input_is_rejected_without_poisoning() {
         let config = custom_config(1, replica_5_1(), true, dual_band, "mode_matching");
         let mut tested = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
         let mut clean = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
-        tested.initialize(48_000).unwrap();
-        clean.initialize(48_000).unwrap();
+        tested.initialize(48_000.0).unwrap();
+        clean.initialize(48_000.0).unwrap();
 
         let mut bad_input = vec![0.0_f32; 64 * 4];
         bad_input[3] = f32::NAN;
@@ -728,7 +728,7 @@ fn custom_retained_construction_json_rebuilds_bit_identical_audio() {
     let mut running: Box<dyn Plugin> =
         Box::new(AmbisonicsDecoderPlugin::new_custom(&config).unwrap());
     assert!(running.get_data().is_none());
-    running.initialize(48_000).unwrap();
+    running.initialize(48_000.0).unwrap();
     let frames = 128;
     let input: Vec<f32> = (0..frames * 9)
         .map(|index| (index as f32 * 0.03125).sin() * 0.25)
@@ -742,7 +742,7 @@ fn custom_retained_construction_json_rebuilds_bit_identical_audio() {
     assert_eq!(restored, config);
     let mut reloaded: Box<dyn Plugin> =
         Box::new(AmbisonicsDecoderPlugin::new_custom(&restored).unwrap());
-    reloaded.initialize(48_000).unwrap();
+    reloaded.initialize(48_000.0).unwrap();
     let mut second = vec![0.0_f32; frames * 16];
     reloaded
         .process(&input, &mut second, &ProcessContext::new(48_000, frames))

@@ -107,7 +107,7 @@ fn create_plugin(workload: &Workload, phase_compensated: bool) -> Box<dyn Plugin
     }
 
     plugin
-        .initialize(SAMPLE_RATE)
+        .initialize(f64::from(SAMPLE_RATE))
         .expect("benchmark plugin initialization");
     Box::new(plugin)
 }

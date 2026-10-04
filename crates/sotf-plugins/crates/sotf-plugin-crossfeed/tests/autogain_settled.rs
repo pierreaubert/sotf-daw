@@ -203,7 +203,7 @@ fn settled_output_reaches_absolute_target_both_directions() {
             );
             let params = autogain_params(target as f32, 12.0);
             let mut plugin = CrossfeedPlugin::new(params).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let input = programme(rate, settle + MEASURE_WINDOW_S);
             let output = render(&mut plugin, &input, rate, PARTITION_FRAMES);
             // The settle budget differs per direction; the measurement
@@ -233,14 +233,14 @@ fn clamped_correction_pins_maximum_gain() {
             "{rate}Hz: design margin too small to force the clamp"
         );
         let mut pinned = CrossfeedPlugin::new(autogain_params(target as f32, 3.0)).unwrap();
-        pinned.initialize(rate).unwrap();
+        pinned.initialize(f64::from(rate)).unwrap();
         let mut open = CrossfeedPlugin::new(CrossfeedPluginParams {
             mode: CrossfeedMode::Bauer,
             autogain_enabled: false,
             ..CrossfeedPluginParams::default()
         })
         .unwrap();
-        open.initialize(rate).unwrap();
+        open.initialize(f64::from(rate)).unwrap();
         let pinned_out = render(&mut pinned, &input, rate, PARTITION_FRAMES);
         let open_out = render(&mut open, &input, rate, PARTITION_FRAMES);
         let pinned_lufs = independent_momentary_lufs(&pinned_out, rate);
@@ -273,7 +273,7 @@ fn settled_output_reaches_target_under_hrtf() {
             ..autogain_params(target as f32, 12.0)
         };
         let mut plugin = CrossfeedPlugin::new(params).unwrap();
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
         let input = programme(rate, SETTLE_UP_S + MEASURE_WINDOW_S);
         let output = render(&mut plugin, &input, rate, PARTITION_FRAMES);
         let output_lufs = independent_momentary_lufs(&output, rate);

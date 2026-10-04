@@ -389,7 +389,7 @@ fn run_case(case: &Case) {
         BandSplitRecombinationMode::PhaseCompensated,
     )
     .unwrap();
-    plugin.initialize(case.sample_rate).unwrap();
+    plugin.initialize(f64::from(case.sample_rate)).unwrap();
     assert_eq!(plugin.output_channels(), num_bands * case.channels);
 
     let mut output = vec![0.0; TOTAL_FRAMES * num_bands * case.channels];
@@ -618,8 +618,8 @@ fn phase_compensated_automation_is_finite_bounded_and_partition_invariant() {
             BandSplitRecombinationMode::PhaseCompensated,
         )
         .unwrap();
-        contiguous.initialize(SAMPLE_RATE).unwrap();
-        partitioned.initialize(SAMPLE_RATE).unwrap();
+        contiguous.initialize(f64::from(SAMPLE_RATE)).unwrap();
+        partitioned.initialize(f64::from(SAMPLE_RATE)).unwrap();
         for (index, frequency) in target_frequencies.into_iter().enumerate() {
             let parameter = if index == 0 {
                 "frequency".to_string()
@@ -734,8 +734,8 @@ fn absolute_timed_cutoff_events_are_partition_invariant_in_both_recombination_mo
                 mode,
             )
             .unwrap();
-            contiguous.initialize(SAMPLE_RATE).unwrap();
-            partitioned.initialize(SAMPLE_RATE).unwrap();
+            contiguous.initialize(f64::from(SAMPLE_RATE)).unwrap();
+            partitioned.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
             let mut expected = vec![0.0; frames * 8];
             let mut actual = vec![0.0; frames * 8];

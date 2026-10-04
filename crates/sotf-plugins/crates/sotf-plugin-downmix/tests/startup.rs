@@ -113,7 +113,7 @@ fn dense_front_programme_preserves_startup_and_ring_wrap_for_every_layout() {
         for mode in [Mode::Phase, Mode::LtRt] {
             for rate in [44_100, 48_000, 96_000, 192_000] {
                 let mut plugin = make(layout, channels, mode);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 assert_eq!(plugin.latency_samples(), N);
                 let (mut input, expected) = programme(channels, N * 5 + 17, mode);
                 input.resize(input.len() + N * channels, 0.0);
@@ -136,7 +136,7 @@ fn dense_front_programme_preserves_startup_and_ring_wrap_for_every_layout() {
 fn each_initial_hop_phase_and_final_marker_survives() {
     for mode in [Mode::Phase, Mode::LtRt] {
         let mut plugin = make("2.0", 2, mode);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         for marker in 0..H {
             plugin.reset();
             // This marker is also the final programme sample, with only zero
@@ -160,7 +160,7 @@ fn constructors_mode_setup_and_reset_establish_the_same_clock() {
     for mode in [Mode::Simple, Mode::Phase, Mode::LtRt] {
         let mut constructed = make("2.0", 2, mode);
         let mut initialized = make("2.0", 2, mode);
-        initialized.initialize(44_100).unwrap();
+        initialized.initialize(44_100.0).unwrap();
         let delay = if matches!(mode, Mode::Simple) { 0 } else { N };
         let (mut input, expected) = programme(2, N + 17, mode);
         input.resize(input.len() + delay * 2, 0.0);
@@ -170,9 +170,9 @@ fn constructors_mode_setup_and_reset_establish_the_same_clock() {
         assert_eq!(output, render(&mut initialized, 44_100, &input, &[137]));
         initialized.reset();
         assert_eq!(output, render(&mut initialized, 44_100, &input, &[8193]));
-        initialized.initialize(96_000).unwrap();
+        initialized.initialize(96_000.0).unwrap();
         let mut fresh = make("2.0", 2, mode);
-        fresh.initialize(96_000).unwrap();
+        fresh.initialize(96_000.0).unwrap();
         assert_eq!(
             render(&mut initialized, 96_000, &input, &[1]),
             render(&mut fresh, 96_000, &input, &[8193])
@@ -228,7 +228,7 @@ fn setup_mode_changes_clear_the_correct_spectral_prefix() {
 fn simple_named_layouts_keep_immediate_front_routing() {
     for (layout, channels) in LAYOUTS {
         let mut plugin = make(layout, channels, Mode::Simple);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let (input, expected) = programme(channels, N + 17, Mode::Simple);
         assert_eq!(plugin.latency_samples(), 0);
         assert_eq!(
@@ -284,7 +284,7 @@ fn cold_spectral_and_simple_process_reset_do_not_allocate_or_free() {
         for mode in [Mode::Simple, Mode::Phase, Mode::LtRt] {
             for rate in [44_100, 192_000] {
                 let mut plugin = make(layout, channels, mode);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let frames = N * 5 + 731;
                 let input = vec![0.125; frames * channels];
                 let mut output = vec![0.0; frames * 2];

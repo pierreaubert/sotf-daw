@@ -16,7 +16,7 @@ fn ordinary_zero_continuation_keeps_learning_without_extending_audio_support() {
             },
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..1043)
             .flat_map(|n| {
                 [

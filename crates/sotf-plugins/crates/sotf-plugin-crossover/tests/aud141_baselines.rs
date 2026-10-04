@@ -49,7 +49,7 @@ fn render_case(name: &str) -> (String, Vec<f32>, Vec<f32>) {
         ),
         other => panic!("unknown AUD141 baseline case {other}"),
     };
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = input_signal();
     let output_channels = plugin.output_channels();
     let mut output = vec![f32::NAN; FRAMES * output_channels];

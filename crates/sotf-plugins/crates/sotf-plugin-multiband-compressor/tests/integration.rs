@@ -61,7 +61,7 @@ fn plugin_info_and_channels() {
 fn plugin_processes_stereo_sine() {
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(2048, 2, 1000.0, 48000);
     let mut output = vec![0.0_f32; input.len()];
@@ -135,7 +135,7 @@ fn compression_reduces_level() {
     };
     let mut plugin =
         ParametricInPlacePluginAdapter::new(MultibandCompressorPlugin::with_params(2, params));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 8192;
     let input = sine_buffer(num_frames, 2, 200.0, 48000);
@@ -165,7 +165,7 @@ fn dry_mix_passthrough() {
     };
     let plugin = MultibandCompressorPlugin::with_params(2, params);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 2048;
     let input = sine_buffer(num_frames, 2, 440.0, 48000);
@@ -189,7 +189,7 @@ fn dry_mix_passthrough() {
 fn changing_num_bands_requires_rebuild() {
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     assert!(
         adapter
@@ -210,7 +210,7 @@ fn changing_num_bands_requires_rebuild() {
 fn reset_then_process_is_stable() {
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(1024, 2, 800.0, 48000);
     let mut output = vec![0.0_f32; input.len()];

@@ -75,7 +75,7 @@ fn parameters_include_registered_params() {
 #[test]
 fn enabled_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
@@ -89,7 +89,7 @@ fn enabled_roundtrip() {
 #[test]
 fn dim_gain_db_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dim_gain_db"),
@@ -106,7 +106,7 @@ fn dim_gain_db_roundtrip() {
 #[test]
 fn fade_ms_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("fade_ms"), ParameterValue::Float(10.0))
         .unwrap();
@@ -120,7 +120,7 @@ fn fade_ms_roundtrip() {
 #[test]
 fn per_channel_mute_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mute_0"), ParameterValue::Bool(true))
         .unwrap();
@@ -134,7 +134,7 @@ fn per_channel_mute_roundtrip() {
 #[test]
 fn per_channel_solo_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("solo_1"), ParameterValue::Bool(true))
         .unwrap();
@@ -148,7 +148,7 @@ fn per_channel_solo_roundtrip() {
 #[test]
 fn per_channel_dim_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("dim_0"), ParameterValue::Bool(true))
         .unwrap();
@@ -162,7 +162,7 @@ fn per_channel_dim_roundtrip() {
 #[test]
 fn channel_states_json_roundtrip() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let states = serde_json::to_string(&[
         ChannelState {
             muted: true,
@@ -201,7 +201,7 @@ fn channel_states_json_roundtrip() {
 #[test]
 fn disabled_plugin_passthrough() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, false);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc_l = 0.5f32;
     let dc_r = 1.0f32;
@@ -220,7 +220,7 @@ fn disabled_plugin_passthrough() {
 #[test]
 fn muted_channel_is_silenced() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mute_0"), ParameterValue::Bool(true))
         .unwrap();
@@ -249,7 +249,7 @@ fn muted_channel_is_silenced() {
 #[test]
 fn soloed_channel_mutes_others() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("solo_1"), ParameterValue::Bool(true))
         .unwrap();
@@ -280,7 +280,7 @@ fn soloed_channel_mutes_others() {
 #[test]
 fn dimmed_channel_is_attenuated() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("dim_0"), ParameterValue::Bool(true))
         .unwrap();
@@ -317,7 +317,7 @@ fn dimmed_channel_is_attenuated() {
 #[test]
 fn reset_then_process_continues() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.5f32; FRAMES * 2];
     plugin
@@ -336,8 +336,8 @@ fn reset_then_process_continues() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 
     let mut buffer = vec![0.5f32; FRAMES * 2];
     let frames = plugin
@@ -350,7 +350,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn set_enabled_toggles_processing() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin.set_channel_state(0, true, false, false).unwrap();
 
     let frames = 4096;
@@ -383,7 +383,7 @@ fn set_enabled_toggles_processing() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Bool(true))
         .unwrap_err();
@@ -393,7 +393,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_per_channel_param_with_out_of_range_index_fails() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("mute_5"), ParameterValue::Bool(true))
         .unwrap_err();
@@ -403,7 +403,7 @@ fn set_per_channel_param_with_out_of_range_index_fails() {
 #[test]
 fn set_channel_states_with_invalid_json_fails() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("channel_states"),
@@ -416,7 +416,7 @@ fn set_channel_states_with_invalid_json_fails() {
 #[test]
 fn set_dim_gain_db_with_non_float_fails() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("dim_gain_db"), ParameterValue::Int(-12))
         .unwrap_err();

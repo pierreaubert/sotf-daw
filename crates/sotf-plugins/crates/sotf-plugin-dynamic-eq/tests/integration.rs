@@ -29,14 +29,14 @@ fn info_and_channels_match_construction() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(48000.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 }
 
 #[test]
 fn global_parameter_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, ParameterValue)] = &[
         ("threshold", ParameterValue::Float(-30.0)),
@@ -64,7 +64,7 @@ fn global_parameter_roundtrip() {
 #[test]
 fn per_band_parameter_roundtrip() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, ParameterValue)] = &[
         ("band_0_threshold", ParameterValue::Float(-40.0)),
@@ -88,7 +88,7 @@ fn per_band_parameter_roundtrip() {
 #[test]
 fn filter_and_topology_parameters_require_rebuild() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, value) in [
         ("num_bands", ParameterValue::Int(1)),
         ("link_channels", ParameterValue::Bool(false)),
@@ -108,7 +108,7 @@ fn filter_and_topology_parameters_require_rebuild() {
 #[test]
 fn invalid_parameter_rejected() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Out of range.
     assert!(
@@ -142,7 +142,7 @@ fn invalid_parameter_rejected() {
 #[test]
 fn process_zero_frames_returns_zero() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = [0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
     assert_eq!(plugin.process_in_place(&mut buffer, &ctx).unwrap(), 0);
@@ -151,7 +151,7 @@ fn process_zero_frames_returns_zero() {
 #[test]
 fn buffer_size_mismatch_returns_error() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let ctx = ProcessContext::new(48000, 16);
     let mut short = vec![0.0; 31];
     let err = plugin.process_in_place(&mut short, &ctx).unwrap_err();
@@ -161,7 +161,7 @@ fn buffer_size_mismatch_returns_error() {
 #[test]
 fn block_too_large_rejected() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let num_frames = 200_000;
     let mut big = vec![0.0f32; num_frames];
     let ctx = ProcessContext::new(48000, num_frames);
@@ -173,7 +173,7 @@ fn block_too_large_rejected() {
 fn reset_clears_state() {
     let sr = 48000u32;
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(1000.0, sr, 4800, 0.5);
     let ctx = ProcessContext::new(sr, 4800);
@@ -223,7 +223,7 @@ fn dynamic_eq_attenuates_triggered_band() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(1000.0, sr, num_frames, 0.5);
     let input_rms = rms(&buf);
@@ -274,7 +274,7 @@ fn inactive_band_is_passthrough() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let input = make_sine(1000.0, sr, num_frames, 0.5);
     let mut buf = input.clone();
@@ -321,7 +321,7 @@ fn mix_zero_passthrough() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let input = make_sine(1000.0, sr, num_frames, 0.5);
     let mut buf = input.clone();
@@ -342,7 +342,7 @@ fn mix_zero_passthrough() {
 #[test]
 fn get_data_returns_typed_cache() {
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let data = plugin.get_data();
     assert!(data.is_some());

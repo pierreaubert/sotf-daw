@@ -32,7 +32,7 @@ static ALLOCATOR: TrackingAllocator = TrackingAllocator;
 #[test]
 fn new_controls_processing_and_reset_allocate_nothing_on_cold_thread() {
     let mut plugin = AnalogCompressorPlugin::from_params(2, params()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let ids = ["range_db", "hold_ms"].map(ParameterId::from);
     std::thread::spawn(move || {
         let mut buffer = [0.2; 514];
@@ -68,7 +68,7 @@ fn new_controls_processing_and_reset_allocate_nothing_on_cold_thread() {
 #[test]
 fn range_zero_preserves_linked_signal_and_automation_caps_existing_reduction() {
     let mut plugin = AnalogCompressorPlugin::from_params(2, params()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut hot = [1.0; 4096];
     plugin
         .process_in_place(&mut hot, &ProcessContext::new(48_000, 2048))
@@ -111,7 +111,7 @@ fn params() -> AnalogCompressorPluginParams {
 
 fn render(p: AnalogCompressorPluginParams, sr: u32, input: &[f32], blocks: &[usize]) -> Vec<f32> {
     let mut plugin = AnalogCompressorPlugin::from_params(1, p).unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     let mut output = input.to_vec();
     let mut pos = 0;
     let mut block = 0;
@@ -227,7 +227,7 @@ fn later_peak_retriggers_hold_and_reset_removes_it() {
         assert!((reduction(output[index], input[index]) - 9.0).abs() < 0.002);
     }
     let mut plugin = AnalogCompressorPlugin::from_params(1, p).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut hot = [1.0; 960];
     plugin
         .process_in_place(&mut hot, &ProcessContext::new(48_000, 960))

@@ -29,14 +29,14 @@ fn info_and_channels_match_construction() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 }
 
 #[test]
 fn parameter_roundtrip() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, ParameterValue)] = &[
         ("threshold", ParameterValue::Float(-30.0)),
@@ -63,7 +63,7 @@ fn parameter_roundtrip() {
 #[test]
 fn mode_variants_roundtrip() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let error = plugin
         .parametric_set_parameter(
@@ -92,7 +92,7 @@ fn mode_variants_roundtrip() {
 #[test]
 fn invalid_parameter_rejected() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Out of range.
     assert!(
@@ -131,7 +131,7 @@ fn invalid_parameter_rejected() {
 #[test]
 fn process_zero_frames_returns_zero() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = [0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
     assert_eq!(plugin.process_in_place(&mut buffer, &ctx).unwrap(), 0);
@@ -140,7 +140,7 @@ fn process_zero_frames_returns_zero() {
 #[test]
 fn process_zero_channels_returns_num_frames() {
     let mut plugin = DeEsserPlugin::new(0);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = [0.0f32; 0];
     let ctx = ProcessContext::new(48000, 64);
     assert_eq!(plugin.process_in_place(&mut buffer, &ctx).unwrap(), 64);
@@ -164,7 +164,7 @@ fn reset_clears_state() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(8000.0, sr, 4800, 0.5);
     let ctx = ProcessContext::new(sr, 4800);
@@ -205,7 +205,7 @@ fn wideband_reduces_sibilance() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(8000.0, sr, num_frames, amplitude);
     let input_rms = rms(&buf);
@@ -243,7 +243,7 @@ fn low_frequency_passthrough() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(200.0, sr, num_frames, amplitude);
     let input_rms = rms(&buf);
@@ -281,7 +281,7 @@ fn split_band_attenuates_hf_passthrough_lf() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut hf = make_sine(8000.0, sr, num_frames, amplitude);
     let input_hf_rms = rms(&hf);
@@ -328,7 +328,7 @@ fn mix_zero_is_dry() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Warm up the 5 ms mix smoother so it converges to dry.
     let mut warmup = vec![0.0f32; 4800];
@@ -372,7 +372,7 @@ fn stereo_channels_processed_independently() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = Vec::with_capacity(num_frames * 2);
     let mut low_input = Vec::with_capacity(num_frames);

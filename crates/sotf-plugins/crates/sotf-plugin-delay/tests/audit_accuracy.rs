@@ -221,7 +221,7 @@ fn lagrange_transfer_matches_rendered_output_at_high_frequencies() {
         let input = sine_tone(total, case.freq, case.rate, AMPLITUDE);
         let mut plugin =
             DelayPlugin::try_new_with_max_delay(1, case.delay_ms, 0.0, 1.0, 5000.0).unwrap();
-        plugin.initialize(case.rate).unwrap();
+        plugin.initialize(f64::from(case.rate)).unwrap();
         let output = render_blocks(&mut plugin, case.rate, &input, BLOCKS);
         let weights = lagrange_weights(case.frac);
         for (i, actual) in output[SETTLE..].iter().enumerate() {
@@ -299,7 +299,7 @@ fn closed_loop_echoes_decay_geometrically_at_integer_delays() {
     let mut worst: f64 = 0.0;
     for feedback in [0.5f32, 0.9, -0.5, -0.9] {
         let mut plugin = DelayPlugin::try_new(1, 10.0, feedback, 1.0).unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let total = DELAY_SAMPLES * ECHOES + 64;
         let mut input = vec![0.0f32; total];
         input[0] = 1.0;
@@ -342,7 +342,7 @@ fn closed_loop_dc_gain_matches_one_over_one_minus_feedback() {
     let mut worst: f64 = 0.0;
     for feedback in [0.5f32, 0.9, 0.95, -0.5, -0.95] {
         let mut plugin = DelayPlugin::try_new(1, 1.0, feedback, 1.0).unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let total = 96_000;
         let input = vec![1.0f32; total];
         let output = render_blocks(&mut plugin, RATE, &input, &[4096, 1000, 63]);
@@ -377,7 +377,7 @@ fn closed_loop_comb_peak_and_null_follow_feedback_sign() {
             (500.0, 1.0 / (1.0 + f64::from(feedback))),
         ] {
             let mut plugin = DelayPlugin::try_new(1, 1.0, feedback, 1.0).unwrap();
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             let input = sine_tone(TOTAL, freq, RATE, AMPLITUDE);
             let output = render_blocks(&mut plugin, RATE, &input, &[2048, 777]);
             let omega = 2.0 * PI * freq / f64::from(RATE);
@@ -413,7 +413,7 @@ fn allpass_feedback_preserves_dc_gain_and_loop_energy_bound() {
         channel_delays_ms: Vec::new(),
     };
     let mut plugin = DelayPlugin::from_params(1, dc_params).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let total = 48_000;
     let output = render_blocks(&mut plugin, RATE, &vec![1.0f32; total], &[2048, 500]);
     let tail = &output[total - 8192..];
@@ -438,7 +438,7 @@ fn allpass_feedback_preserves_dc_gain_and_loop_energy_bound() {
         channel_delays_ms: Vec::new(),
     };
     let mut plugin = DelayPlugin::from_params(1, echo_params.clone()).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let mut input = vec![0.0f32; 480 * 5 + 240];
     input[0] = 1.0;
     let output = render_blocks(&mut plugin, RATE, &input, &[1024, 65]);
@@ -526,7 +526,7 @@ fn allpass_feedback_preserves_dc_gain_and_loop_energy_bound() {
         ..echo_params
     };
     let mut direct = DelayPlugin::from_params(1, direct_params).unwrap();
-    direct.initialize(RATE).unwrap();
+    direct.initialize(f64::from(RATE)).unwrap();
     let mut direct_input = vec![0.0f32; 480 * 5 + 240];
     direct_input[0] = 1.0;
     let direct_output = render_blocks(&mut direct, RATE, &direct_input, &[1024, 65]);
@@ -559,7 +559,7 @@ fn dry_wet_mix_produces_comb_construction_and_cancellation() {
     // 1000 Hz through a 48-sample integer delay returns in phase, so mix 0.5
     // reconstructs the input sample-by-sample past the line fill.
     let mut plugin = DelayPlugin::try_new(1, 1.0, 0.0, 0.5).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let input = sine_tone(TOTAL, 1000.0, RATE, 0.4);
     let output = render_blocks(&mut plugin, RATE, &input, &[1024, 513]);
     let mut worst_constructive: f64 = 0.0;
@@ -570,7 +570,7 @@ fn dry_wet_mix_produces_comb_construction_and_cancellation() {
     }
     // 500 Hz returns inverted and cancels the dry leg.
     let mut plugin = DelayPlugin::try_new(1, 1.0, 0.0, 0.5).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let input = sine_tone(TOTAL, 500.0, RATE, 0.4);
     let output = render_blocks(&mut plugin, RATE, &input, &[513, 1024]);
     let null_rms = (output[SETTLE..]
@@ -582,7 +582,7 @@ fn dry_wet_mix_produces_comb_construction_and_cancellation() {
     assert!(null_rms < 1e-5, "cancellation residual RMS {null_rms:.3e}");
     // Zero delay: wet equals dry from the first sample, so mix 0.5 is unity.
     let mut plugin = DelayPlugin::try_new(1, 0.0, 0.0, 0.5).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let input = pseudo_random(TOTAL, 0x5EED, 0.8);
     let output = render_blocks(&mut plugin, RATE, &input, &[777, 31]);
     for (i, actual) in output.iter().enumerate() {
@@ -597,7 +597,7 @@ fn dry_wet_mix_produces_comb_construction_and_cancellation() {
     // Stereo: identical inputs stay bit-identical across channels (shared
     // smoothers advance once per frame; per-channel allpass states match).
     let mut plugin = DelayPlugin::try_new(2, 1.0, 0.0, 0.5).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let mono = sine_tone(TOTAL, 1000.0, RATE, 0.4);
     let mut stereo = Vec::with_capacity(TOTAL * 2);
     for sample in &mono {
@@ -631,7 +631,7 @@ fn dry_wet_mix_produces_comb_construction_and_cancellation() {
 #[test]
 fn bounded_instances_reject_automation_beyond_declared_range() {
     let mut plugin = DelayPlugin::try_new_with_max_delay(1, 5.0, 0.0, 0.5, 10.0).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("delay_ms"), ParameterValue::Float(10.0))
         .unwrap();
@@ -647,7 +647,7 @@ fn bounded_instances_reject_automation_beyond_declared_range() {
 
     let mut routing =
         DelayPlugin::new_per_channel_with_max_delay(vec![5.0, 8.0], 10.0).unwrap();
-    routing.initialize(48_000).unwrap();
+    routing.initialize(48_000.0).unwrap();
     let error = routing
         .set_parameter(
             ParameterId::from("delay_ms_1"),
@@ -713,7 +713,7 @@ fn feedback_and_mix_automation_is_callback_partition_invariant() {
     const IRREGULAR: &[usize] = &[1, 64, 511, 73, 997];
     for blocks in [CONTIGUOUS, IRREGULAR] {
         let mut plugin = DelayPlugin::try_new(1, 10.0, 0.0, 1.0).unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let mut output = Vec::with_capacity(6000);
         output.extend(render_blocks(&mut plugin, RATE, &input[0..2000], blocks));
         plugin
@@ -748,7 +748,7 @@ fn reset_after_mid_ramp_automation_matches_fresh_instance() {
         channel_delays_ms: Vec::new(),
     };
     let mut cycled = DelayPlugin::try_new(1, 10.0, 0.0, 1.0).unwrap();
-    cycled.initialize(RATE).unwrap();
+    cycled.initialize(f64::from(RATE)).unwrap();
     render_blocks(&mut cycled, RATE, &vec![0.1f32; 1000], &[1000]);
     for (id, value) in [
         ("delay_ms", ParameterValue::Float(25.0)),
@@ -766,7 +766,7 @@ fn reset_after_mid_ramp_automation_matches_fresh_instance() {
     cycled.reset();
 
     let mut fresh = DelayPlugin::from_params(1, target).unwrap();
-    fresh.initialize(RATE).unwrap();
+    fresh.initialize(f64::from(RATE)).unwrap();
     let input = pseudo_random(4000, 0xBE5E, 0.6);
     let a = render_blocks(&mut cycled, RATE, &input, &[512, 100]);
     let b = render_blocks(&mut fresh, RATE, &input, &[512, 100]);
@@ -806,9 +806,9 @@ fn randomized_block_partitioning_matches_continuous_processing() {
     };
     let input = pseudo_random(TOTAL, 0x1F3D, 0.6);
     let mut scattered = DelayPlugin::from_params(1, params()).unwrap();
-    scattered.initialize(RATE).unwrap();
+    scattered.initialize(f64::from(RATE)).unwrap();
     let mut continuous = DelayPlugin::from_params(1, params()).unwrap();
-    continuous.initialize(RATE).unwrap();
+    continuous.initialize(f64::from(RATE)).unwrap();
     let a = render_blocks(&mut scattered, RATE, &input, &blocks);
     let b = render_blocks(&mut continuous, RATE, &input, &[TOTAL]);
     assert_eq!(a, b);
@@ -891,7 +891,7 @@ fn sub_two_sample_fractional_delays_match_causal_stencil_oracle() {
                 }
                 let mut plugin =
                     DelayPlugin::try_new_with_max_delay(1, delay, feedback, 1.0, 64.0).unwrap();
-                plugin.initialize(RATE).unwrap();
+                plugin.initialize(f64::from(RATE)).unwrap();
                 let output = render_blocks(&mut plugin, RATE, input, BLOCKS);
                 let expected =
                     causal_stencil_reference(weights, int_delay, input, f64::from(feedback));
@@ -930,7 +930,7 @@ fn sub_two_sample_fractional_delay_preserves_dc_gain_with_feedback() {
         for feedback in [0.5f32, 0.9, 0.95, -0.5, -0.95] {
             let mut plugin =
                 DelayPlugin::try_new_with_max_delay(1, delay, feedback, 1.0, 64.0).unwrap();
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             let output = render_blocks(&mut plugin, RATE, &vec![1.0f32; TOTAL], &[4096, 63]);
             assert!(output.iter().all(|s| s.is_finite()));
             let tail = &output[TOTAL - MEASURE..];
@@ -958,8 +958,8 @@ fn per_channel_mode_rejects_runtime_effect_writes() {
     const RATE: u32 = 48_000;
     let mut dut = DelayPlugin::new_per_channel_with_max_delay(vec![5.0], 10.0).unwrap();
     let mut twin = DelayPlugin::new_per_channel_with_max_delay(vec![5.0], 10.0).unwrap();
-    dut.initialize(RATE).unwrap();
-    twin.initialize(RATE).unwrap();
+    dut.initialize(f64::from(RATE)).unwrap();
+    twin.initialize(f64::from(RATE)).unwrap();
     // Populate identical history on both instances.
     let warmup = pseudo_random(2000, 0xD1E7, 0.6);
     render_blocks(&mut dut, RATE, &warmup, &[511, 73]);

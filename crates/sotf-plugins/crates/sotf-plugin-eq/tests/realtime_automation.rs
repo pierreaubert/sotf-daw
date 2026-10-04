@@ -61,7 +61,7 @@ fn band_automation_reuses_storage_through_completion_and_reset() {
                 .set_parameter(ParameterId::from(id), ParameterValue::Int(value))
                 .unwrap();
         }
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
         let updates = [
             (
                 ParameterId::from("band_0_freq"),
@@ -125,7 +125,7 @@ fn svf_automation_preserves_integrator_history() {
     plugin
         .set_parameter(ParameterId::from("topology"), ParameterValue::Int(1))
         .unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let context = ProcessContext::new(48000, 1);
     let mut output = [0.0];
     plugin.process(&[1.0], &mut output, &context).unwrap();

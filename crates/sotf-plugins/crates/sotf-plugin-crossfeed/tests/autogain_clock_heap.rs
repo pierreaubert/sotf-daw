@@ -73,7 +73,7 @@ fn cold_meter_intervals_controls_and_reset_have_no_heap_activity() {
                 ..Default::default()
             })
             .unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let mut buffer: Vec<_> = (0..8193)
                 .flat_map(|frame| {
                     let sample = (std::f64::consts::TAU * 997.0 * frame as f64 / f64::from(rate))

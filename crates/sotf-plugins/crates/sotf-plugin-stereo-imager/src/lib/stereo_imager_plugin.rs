@@ -24,10 +24,10 @@ pub(super) struct ComplementaryLowpass {
 }
 
 impl ComplementaryLowpass {
-    fn new(frequency: f32, sample_rate: u32) -> Self {
+    fn new(frequency: f32, sample_rate: impl Into<f64>) -> Self {
         let mut filter = Self {
             frequency,
-            sample_rate: f64::from(sample_rate),
+            sample_rate: sample_rate.into(),
             coefficient: 0.0,
             state: 0.0,
         };
@@ -55,7 +55,7 @@ impl ComplementaryLowpass {
 
 pub struct StereoImagerPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Parameters
     pub(super) width: f32,
@@ -126,7 +126,7 @@ impl StereoImagerPlugin {
         let sr = 48000;
         let mut plugin = Self {
             channels,
-            sample_rate: sr,
+            sample_rate: f64::from(sr),
 
             width: params.width,
             low_mid_freq: params.low_mid_freq,
@@ -407,9 +407,9 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         self.apply_value_refs(values.iter())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and positive".into());
         }
         if self.mid_high_freq >= sample_rate as f32 * 0.5 {
             return Err(format!(

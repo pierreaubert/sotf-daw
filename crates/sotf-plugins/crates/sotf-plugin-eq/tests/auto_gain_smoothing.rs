@@ -11,7 +11,7 @@ fn plugin(rate: u32, gain_db: f64, smoothing_ms: f32, enabled: bool) -> EqPlugin
     }))
     .unwrap();
     let mut plugin = EqPlugin::from_params(2, rate, params).unwrap();
-    plugin.plugin_initialize(rate).unwrap();
+    plugin.plugin_initialize(f64::from(rate)).unwrap();
     plugin
 }
 

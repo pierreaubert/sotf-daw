@@ -43,7 +43,7 @@ static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 #[test]
 fn first_callback_and_reset_have_no_heap_activity() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; 4096 * 2];
     let mut output = vec![0.0; 4096 * plugin.output_channels()];
     let (plugin, counts) = std::thread::spawn(move || {
@@ -74,7 +74,7 @@ fn small_fft_callbacks_and_reset_have_no_heap_activity() {
         }))
         .unwrap();
         let mut plugin = UpmixerPlugin::from_params(params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 512;
         let input = vec![0.1; frames * 2];
         let mut output = vec![0.0; frames * plugin.output_channels()];
@@ -113,7 +113,7 @@ fn first_drain_on_fresh_callback_thread_has_no_heap_activity() {
     }))
     .unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process(&[0.2, -0.1], &mut [0.0; 6], &ProcessContext::new(48_000, 1))
         .unwrap();

@@ -43,7 +43,7 @@ pub struct AmbisonicsDecoderPlugin {
     pub(super) lf_frame: Vec<f32>,
     /// Per-frame HF decode output scratch (length = output_channels)
     pub(super) hf_frame: Vec<f32>,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) cached_parameters: Vec<Parameter>,
 }
 
@@ -105,7 +105,7 @@ impl AmbisonicsDecoderPlugin {
             hf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
             lf_frame: vec![0.0; output_ch],
             hf_frame: vec![0.0; output_ch],
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cached_parameters: Vec::new(),
         };
         plugin.rebuild_cached_parameters();
@@ -175,7 +175,7 @@ impl AmbisonicsDecoderPlugin {
             hf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
             lf_frame: vec![0.0; output_ch],
             hf_frame: vec![0.0; output_ch],
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cached_parameters: Vec::new(),
         };
         plugin.rebuild_cached_parameters();
@@ -377,11 +377,11 @@ impl Plugin for AmbisonicsDecoderPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and greater than zero".into());
         }
-        if self.dual_band && sample_rate as f32 <= 2.0 * DUAL_BAND_CROSSOVER_HZ {
+        if self.dual_band && sample_rate <= f64::from(2.0 * DUAL_BAND_CROSSOVER_HZ) {
             return Err(format!(
                 "dual-band sample rate must exceed {} Hz",
                 2.0 * DUAL_BAND_CROSSOVER_HZ
@@ -533,7 +533,7 @@ impl Plugin for AmbisonicsDecoderPlugin {
         true
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 
@@ -659,7 +659,7 @@ mod tests {
     #[test]
     fn test_process_silence() {
         let mut plugin = AmbisonicsDecoderPlugin::new(&default_config()).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let num_frames = 256;
         let input = vec![0.0_f32; num_frames * 4]; // 4 FOA channels
@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn test_process_rejects_short_buffers() {
         let mut plugin = AmbisonicsDecoderPlugin::new(&default_config()).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let ctx = ProcessContext::new(48000, 16);
         let short_input = vec![0.0_f32; 16 * 4 - 1];
@@ -701,7 +701,7 @@ mod tests {
             algorithm: "mode_matching".to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let num_frames = 1;
         // Pure W (omnidirectional) signal
@@ -841,8 +841,8 @@ mod tests {
 
         let mut single = AmbisonicsDecoderPlugin::new(&single_config).unwrap();
         let mut dual = AmbisonicsDecoderPlugin::new(&dual_config).unwrap();
-        single.initialize(48000).unwrap();
-        dual.initialize(48000).unwrap();
+        single.initialize(48000.0).unwrap();
+        dual.initialize(48000.0).unwrap();
 
         // Feed a non-trivial signal: front-panned FOA with W and X components.
         // Use enough frames so the crossover is well past its initial transient.
@@ -898,7 +898,7 @@ mod tests {
             algorithm: "mode_matching".to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let num_frames = 256;
         let input = vec![0.0_f32; num_frames * 4];
@@ -926,7 +926,7 @@ mod tests {
             .unwrap_err();
         assert!(error.contains("initialize"), "{error}");
 
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 8193;
         let input = vec![0.0; frames * 4];
         let mut output = vec![0.0; frames * 6];
@@ -946,8 +946,8 @@ mod tests {
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
         for sample_rate in [0, 1_400] {
-            assert!(plugin.initialize(sample_rate).is_err());
-            assert_eq!(plugin.sample_rate, 48_000);
+            assert!(plugin.initialize(f64::from(sample_rate)).is_err());
+            assert_eq!(plugin.sample_rate, 48_000.0);
             assert!(plugin.crossover.is_none());
         }
     }
@@ -960,7 +960,7 @@ mod tests {
                 ..default_config()
             };
             let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let frames = 1024;
             let mut input = vec![0.0; frames * plugin.input_channels()];
             input[0] = 1.0;
@@ -987,8 +987,8 @@ mod tests {
         };
         let mut tested = AmbisonicsDecoderPlugin::new(&config).unwrap();
         let mut clean = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        tested.initialize(48_000).unwrap();
-        clean.initialize(48_000).unwrap();
+        tested.initialize(48_000.0).unwrap();
+        clean.initialize(48_000.0).unwrap();
 
         let mut bad_input = vec![0.0; 64 * 4];
         bad_input[3] = f32::NAN;
@@ -1032,7 +1032,7 @@ mod tests {
             algorithm: "mode_matching".to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         // Use a block larger than the old 4096-frame limit.
         // initialize() now pre-allocates for MAX_BLOCK_FRAMES=8192, so this
@@ -1059,7 +1059,7 @@ mod tests {
             ..default_config()
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(plugin.dual_band_scratch_samples() <= 2 * MAX_AMBI_CHANNELS);
         let frames = 8193;
         let input = vec![0.1; frames * plugin.input_channels()];
@@ -1080,7 +1080,7 @@ mod tests {
             ..default_config()
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 64;
         let input = vec![f32::from_bits(1); frames * plugin.input_channels()];
         let mut output = vec![1.0; frames * plugin.output_channels()];
@@ -1101,7 +1101,7 @@ mod tests {
             algorithm: "mode_matching".to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("dual_band")),
@@ -1197,7 +1197,7 @@ mod tests {
         let named = AmbisonicsDecoderPlugin::new(&default_config()).unwrap();
         assert_eq!(named.custom_config(), None);
 
-        first.initialize(48_000).unwrap();
+        first.initialize(48_000.0).unwrap();
         let input = [0.5_f32, -0.25, 0.125, 0.75];
         let mut first_out = [0.0_f32; 2];
         first
@@ -1209,7 +1209,7 @@ mod tests {
         let restored: CustomDecoderConfig = serde_json::from_str(&saved).unwrap();
         assert_eq!(restored, config);
         let mut second = AmbisonicsDecoderPlugin::new_custom(&restored).unwrap();
-        second.initialize(48_000).unwrap();
+        second.initialize(48_000.0).unwrap();
         let mut second_out = [0.0_f32; 2];
         second
             .process(&input, &mut second_out, &ProcessContext::new(48_000, 1))

@@ -51,7 +51,7 @@ fn upmixer_streamed_impulse_matches_reported_latency() {
         let params = UpmixerPluginParams::default();
         let fft_size = params.core.fft_size;
         let mut plugin = UpmixerPlugin::from_params(params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let impulse_index = fft_size / 2;
         let total_frames = fft_size * 4;
@@ -102,7 +102,7 @@ fn upmixer_instantiate_from_params_custom_config() {
 #[test]
 fn upmixer_parameter_roundtrip() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let params = plugin.parameters();
     assert!(params.iter().any(|p| p.id.as_str() == "gain_front_direct"));
@@ -147,7 +147,7 @@ fn upmixer_unknown_parameter_error() {
 #[test]
 fn upmixer_process_silence() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let input = vec![0.0_f32; num_frames * 2];
@@ -163,7 +163,7 @@ fn upmixer_process_silence() {
 #[test]
 fn upmixer_process_stereo_to_surround() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -196,7 +196,7 @@ fn upmixer_bypass_all_processing_passes_stereo() {
     let mut params = UpmixerPluginParams::default();
     params.bypass.bypass_all_processing = true;
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 512;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -222,7 +222,7 @@ fn upmixer_bypass_all_processing_passes_stereo() {
 #[test]
 fn upmixer_bypass_round_trip_discards_queued_audio_and_restores_latency() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     let fft_size = UpmixerPluginParams::default().core.fft_size;
     let out_ch = plugin.output_channels();
 
@@ -298,7 +298,7 @@ fn upmixer_bypass_round_trip_discards_queued_audio_and_restores_latency() {
 #[test]
 fn upmixer_state_change_low_latency_fft() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let latency_before = plugin.latency_samples();
     plugin
@@ -315,7 +315,7 @@ fn upmixer_state_change_low_latency_fft() {
 #[test]
 fn upmixer_reset_clears_state() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let latency = plugin.latency_samples();
     let num_frames = latency + 4096;
@@ -353,14 +353,14 @@ fn upmixer_reset_clears_state() {
 #[test]
 fn upmixer_invalid_sample_rate_error() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    let err = plugin.initialize(0).unwrap_err();
+    let err = plugin.initialize(0.0).unwrap_err();
     assert!(err.contains("Invalid sample rate"));
 }
 
 #[test]
 fn upmixer_rejects_non_finite_input_without_poisoning_following_audio() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let frames = 64;
     let channels = plugin.output_channels();
     let mut invalid = vec![0.0_f32; frames * 2];
@@ -384,7 +384,7 @@ fn multi_source_reconstruction_has_a_bounded_energy_budget_for_stereo_extremes()
             params.core.speaker_config = layout.to_string();
             params.spectral.multi_source_extraction = true;
             let mut plugin = UpmixerPlugin::from_params(params);
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let channels = plugin.output_channels();
             let latency = plugin.latency_samples();
             let total_frames = WARMUP_FRAMES + MEASURE_FRAMES + latency;
@@ -471,7 +471,7 @@ fn multi_source_render_is_equivalent_across_host_block_partitions() {
         let mut params = UpmixerPluginParams::default();
         params.spectral.multi_source_extraction = true;
         let mut plugin = UpmixerPlugin::from_params(params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
     };
 

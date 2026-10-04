@@ -29,17 +29,17 @@ fn info_and_channels_match_construction() {
 #[test]
 fn initialize_changes_sample_rate_and_latency() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 240);
 
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(96000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 480);
 }
 
 #[test]
 fn parameter_roundtrip() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, ParameterValue)] = &[
         ("threshold", ParameterValue::Float(-12.0)),
@@ -69,7 +69,7 @@ fn parameter_roundtrip() {
 #[test]
 fn invalid_parameter_rejected() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Out of range.
     assert!(
@@ -121,7 +121,7 @@ fn invalid_parameter_rejected() {
 #[test]
 fn process_zero_frames_returns_zero() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = [0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
     assert_eq!(plugin.process_in_place(&mut buffer, &ctx).unwrap(), 0);
@@ -131,7 +131,7 @@ fn process_zero_frames_returns_zero() {
 fn reset_clears_state() {
     let sr = 48000u32;
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.9f32; 1024];
     let ctx = ProcessContext::new(sr, 1024);
@@ -151,7 +151,7 @@ fn reset_clears_state() {
 fn limiter_clamps_loud_signal() {
     let sr = 48000u32;
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let num_frames = 4096;
     let mut buf = vec![1.0f32; num_frames];
@@ -171,7 +171,7 @@ fn limiter_clamps_loud_signal() {
 fn soft_knee_respects_ceiling() {
     let sr = 48000u32;
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, true);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let num_frames = 4096;
     let mut buf = vec![0.0f32; num_frames];
@@ -197,7 +197,7 @@ fn mix_zero_is_dry_passthrough() {
     let num_frames = 4096;
 
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
         .unwrap();
@@ -228,7 +228,7 @@ fn true_peak_detection_limits_inter_sample_peaks() {
     plugin
         .set_parameter(ParameterId::from("true_peak"), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let frames = 2048;
     let mut buf = vec![0.0f32; frames];
@@ -255,7 +255,7 @@ fn isp_mode_limits_output_true_peaks() {
     plugin
         .set_parameter(ParameterId::from("isp_mode"), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let frames = 8192;
     let mut buf = vec![0.0f32; frames];
@@ -285,7 +285,7 @@ fn dual_release_limits_normally() {
             ParameterValue::Bool(true),
         )
         .unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let frames = 4096;
     let mut buf = vec![0.0f32; frames];
@@ -309,7 +309,7 @@ fn dual_release_limits_normally() {
 fn feed_forward_pre_empts_transient() {
     let sr = 48000u32;
     let mut plugin = LimiterPlugin::new(2, -1.0, 50.0, 5.0, false);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("feed_forward"),
@@ -339,7 +339,7 @@ fn feed_forward_pre_empts_transient() {
 fn link_amount_zero_preserves_independence() {
     let sr = 48000u32;
     let mut plugin = LimiterPlugin::new(2, -6.0, 50.0, 0.0, false);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     plugin
         .set_parameter(ParameterId::from("link_amount"), ParameterValue::Float(0.0))
         .unwrap();
@@ -382,7 +382,7 @@ fn link_amount_zero_preserves_independence() {
 #[test]
 fn get_data_returns_typed_cache() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let data = plugin.get_data();
     assert!(data.is_some());
@@ -451,7 +451,7 @@ fn parameters_list_contains_expected_ids() {
 #[test]
 fn lookahead_parameter_change_requires_graph_rebuild() {
     let mut plugin = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let initial_latency = plugin.latency_samples();
     assert_eq!(initial_latency, 240);
@@ -484,7 +484,7 @@ fn isp_guarantee_rejects_uncontrollable_configurations() {
     plugin
         .set_parameter(ParameterId::from("isp_mode"), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!(
         plugin
             .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))
@@ -500,7 +500,7 @@ fn isp_guarantee_rejects_uncontrollable_configurations() {
 #[test]
 fn non_finite_audio_is_sanitized_without_poisoning_state() {
     let mut plugin = LimiterPlugin::new(1, -3.0, 50.0, 0.0, false);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.5];
     let frames = buffer.len();
     plugin

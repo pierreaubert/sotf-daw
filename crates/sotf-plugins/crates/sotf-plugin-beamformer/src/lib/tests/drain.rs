@@ -9,7 +9,7 @@ const H: usize = N / 2;
 #[test]
 fn learned_mvdr_covariance_and_weights_are_unchanged_by_drain() {
     let mut plugin = BeamformerPlugin::new(2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let initial = plugin.mvdr.noise_cov_snapshot().to_vec();
     let input: Vec<f32> = (0..601)
         .flat_map(|n| {
@@ -102,7 +102,7 @@ fn spectral_drain_matches_independent_windowed_circular_convolution_and_freezes_
                         },
                     )
                     .unwrap();
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     plugin.mvdr.compute_weights(&plugin.steering_vectors);
                     plugin.mvdr.weights_buf.clone_from(&weights);
                     if let Some(sd) = plugin.superdirective.as_mut() {
@@ -176,7 +176,7 @@ fn gsc_drain_matches_fractional_delay_and_nonzero_last_learned_tap() {
                         },
                     )
                     .unwrap();
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     plugin.gsc = GscBeamformer::new(2, &[delay, 0.0], 32, 0.1);
                     let source: Vec<f32> = (0..length)
                         .map(|n| 0.125 + (n % 13) as f32 / 64.0)

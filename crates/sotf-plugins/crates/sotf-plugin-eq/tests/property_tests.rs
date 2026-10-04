@@ -24,7 +24,7 @@ proptest! {
     #[test]
     fn process_finite_output_mono(buffer in mono_buffer_strategy()) {
         let mut plugin = EqPlugin::new(1, vec![]);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         let mut buf = vec![0.0f32; buffer.len()];
         plugin.process(&buffer, &mut buf, &ProcessContext::new(48000, 64)).unwrap();
@@ -42,7 +42,7 @@ proptest! {
             Biquad::new(BiquadFilterType::Highshelf, 8000.0, 48000.0, 0.707, 3.0),
         ];
         let mut plugin = EqPlugin::new(2, f);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         let mut buf = vec![0.0f32; buffer.len()];
         plugin.process(&buffer, &mut buf, &ProcessContext::new(48000, 64)).unwrap();
@@ -57,7 +57,7 @@ proptest! {
     #[test]
     fn roundtrip_oversampling_factor(factor in prop::sample::select(vec![1i32, 2, 4])) {
         let mut plugin = EqPlugin::new(2, vec![]);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         plugin.parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(factor)).unwrap();
         let got = plugin.parametric_get_parameter(&ParameterId::from("oversampling"));
@@ -69,7 +69,7 @@ proptest! {
     #[test]
     fn roundtrip_tdf2(enabled in prop::bool::ANY) {
         let mut plugin = EqPlugin::new(2, vec![]);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         plugin.parametric_set_parameter(ParameterId::from("tdf2"), ParameterValue::Bool(enabled)).unwrap();
         let got = plugin.parametric_get_parameter(&ParameterId::from("tdf2"));
@@ -81,7 +81,7 @@ proptest! {
     #[test]
     fn roundtrip_topology(topo in 0usize..2) {
         let mut plugin = EqPlugin::new(2, vec![]);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         plugin.parametric_set_parameter(ParameterId::from("topology"), ParameterValue::Int(topo as i32)).unwrap();
         let got = plugin.parametric_get_parameter(&ParameterId::from("topology"));
@@ -96,7 +96,7 @@ proptest! {
 
         let f = vec![Biquad::new(BiquadFilterType::Peak, 1000.0, 48000.0, 1.0, 0.0)];
         let mut plugin = EqPlugin::new(1, f);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         plugin.parametric_set_parameter(ParameterId::from("band_0_gain"), ParameterValue::Float(gain_db)).unwrap();
         let got = plugin.parametric_get_parameter(&ParameterId::from("band_0_gain"));
@@ -116,7 +116,7 @@ proptest! {
     #[test]
     fn empty_chain_passthrough(buffer in mono_buffer_strategy()) {
         let mut plugin = EqPlugin::new(1, vec![]);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
 
         let input = buffer.clone();
         let mut output = vec![0.0f32; input.len()];
@@ -133,7 +133,7 @@ proptest! {
 
         let f = vec![Biquad::new(BiquadFilterType::Peak, 1000.0, 48000.0, 1.0, 0.0)];
         let mut plugin = EqPlugin::new(1, f);
-        plugin.plugin_initialize(48000).unwrap();
+        plugin.plugin_initialize(48000.0).unwrap();
         plugin.parametric_set_parameter(ParameterId::from("auto_gain_enabled"), ParameterValue::Bool(false)).unwrap();
 
         let input = buffer.clone();

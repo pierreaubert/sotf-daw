@@ -77,7 +77,7 @@ fn head_yaw_descriptor_preserves_legacy_shape() {
 #[test]
 fn head_yaw_roundtrip_clamp_and_reject_contract() {
     let mut plugin = default_plugin();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let id = ParameterId::from("head_yaw_deg");
 
     plugin
@@ -128,9 +128,9 @@ fn batch_path_rejects_integer_yaw_and_preserves_state_and_audio() {
     use sotf_host::plugin::ProcessContext;
 
     let mut plugin = default_plugin();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut twin = default_plugin();
-    twin.initialize(48_000).unwrap();
+    twin.initialize(48_000.0).unwrap();
     // Other float controls keep bridge Int coercion; the typed guard is
     // yaw-specific and must not extend to them.
     for target in [&mut plugin, &mut twin] {
@@ -203,7 +203,7 @@ fn preset_action_resets_yaw_to_preset_default() {
     // preset, including yaw 0.0. Pin this: engine/sibling preset selection
     // preserves yaw instead, and the two layers must not drift silently.
     let mut plugin = default_plugin();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("head_yaw_deg"),

@@ -144,7 +144,7 @@ fn settled_global_gain_matches_f64_reference_sweep() {
     let mut worst_diff = 0.0f64;
     for &db in &dbs {
         let mut plugin = GainPlugin::with_smoothing(CHANNELS, db, 0.0);
-        plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+        plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
         let input: Vec<f32> = (0..FRAMES * CHANNELS)
             .map(|i| SWEEP_INPUTS[i % SWEEP_INPUTS.len()])
             .collect();
@@ -188,7 +188,7 @@ fn settled_per_channel_gain_matches_f64_reference() {
     const SAMPLE_RATE: u32 = 48_000;
     let mut plugin =
         GainPlugin::new_per_channel_with_smoothing(CHANNEL_GAINS.to_vec(), 0.0).unwrap();
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..FRAMES * CHANNEL_GAINS.len())
         .map(|i| SWEEP_INPUTS[(i * 7 + 3) % SWEEP_INPUTS.len()])
         .collect();
@@ -233,7 +233,7 @@ fn settled_stereo_per_channel_gain_matches_f64_reference() {
     const SAMPLE_RATE: u32 = 48_000;
     let mut plugin =
         GainPlugin::new_per_channel_with_smoothing(CHANNEL_GAINS.to_vec(), 0.0).unwrap();
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..FRAMES * CHANNEL_GAINS.len())
         .map(|i| SWEEP_INPUTS[(i * 5 + 1) % SWEEP_INPUTS.len()])
         .collect();
@@ -277,7 +277,7 @@ fn large_block_matches_f64_reference() {
     const DB: f32 = 20.0;
     const SAMPLE_RATE: u32 = 48_000;
     let mut plugin = GainPlugin::with_smoothing(CHANNELS, DB, 0.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..FRAMES * CHANNELS)
         .map(|i| if i % 2 == 0 { 0.5 } else { -0.5 })
         .collect();
@@ -324,7 +324,7 @@ fn gain_ramp_matches_closed_form_exponential() {
     const START_LINEAR: f64 = 1.0;
     for &rate in &RATES {
         let mut plugin = GainPlugin::with_smoothing(1, 0.0, SMOOTHING_MS);
-        plugin.plugin_initialize(rate).unwrap();
+        plugin.plugin_initialize(f64::from(rate)).unwrap();
         plugin.set_gain_db(TARGET_DB);
         // Four time constants: deep into the ramp yet far above snap.
         let frames = (4 * (rate as usize)) / 100;
@@ -385,7 +385,7 @@ fn per_channel_event_applies_at_exact_sample_offset() {
     const POST_FRAMES: usize = 500;
     const EVENT_DB: f32 = -12.0;
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, SMOOTHING_MS);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let pre = render_one_block(&mut plugin, SAMPLE_RATE, &vec![1.0f32; PRE_FRAMES * 2]);
     assert!(
         pre.iter().all(|&sample| sample == 1.0),
@@ -434,8 +434,8 @@ fn compiled_path_matches_scalar_during_active_ramp() {
     let context = ProcessContext::new(SAMPLE_RATE, FRAMES);
     let mut scalar = GainPlugin::with_smoothing(2, 0.0, 10.0);
     let mut compiled = GainPlugin::with_smoothing(2, 0.0, 10.0);
-    scalar.plugin_initialize(SAMPLE_RATE).unwrap();
-    compiled.plugin_initialize(SAMPLE_RATE).unwrap();
+    scalar.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+    compiled.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     scalar.set_gain_db(-6.0);
     compiled.set_gain_db(-6.0);
     let mut scalar_out = vec![0.0f32; input.len()];
@@ -486,7 +486,7 @@ fn render_with_event_at(
     const SAMPLE_RATE: u32 = 48_000;
     const CHANNELS: usize = 2;
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, 10.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut rendered = Vec::with_capacity(input.len());
     let mut frame = 0;
     let mut event_fired = false;
@@ -544,7 +544,7 @@ fn settled_static_gain_is_bit_exact_multiplier() {
     const SAMPLE_RATE: u32 = 48_000;
     const FRAMES: usize = 1025;
     let mut plugin = GainPlugin::with_smoothing(2, -6.0, 10.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let static_gain = plugin
         .compiled_static_gain()
         .expect("settled global gain fuses to a static scalar");
@@ -583,14 +583,14 @@ fn unity_gain_is_bit_exact_passthrough() {
         .map(|i| UNITY_INPUTS[i % UNITY_INPUTS.len()])
         .collect();
     let mut global = GainPlugin::with_smoothing(2, 0.0, 0.0);
-    global.plugin_initialize(SAMPLE_RATE).unwrap();
+    global.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(
         render_one_block(&mut global, SAMPLE_RATE, &input),
         input,
         "global unity must pass samples through bit-exactly"
     );
     let mut per_channel = GainPlugin::new_per_channel_with_smoothing(vec![0.0, 0.0], 0.0).unwrap();
-    per_channel.plugin_initialize(SAMPLE_RATE).unwrap();
+    per_channel.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(
         render_one_block(&mut per_channel, SAMPLE_RATE, &input),
         input,
@@ -605,7 +605,7 @@ fn minimum_gain_attenuates_without_hidden_gate() {
     const DB: f32 = -60.0;
     const INPUTS: [f32; 4] = [1.0, 0.5, -0.25, 1.0e-30];
     let mut plugin = GainPlugin::with_smoothing(1, DB, 0.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let output = render_one_block(&mut plugin, SAMPLE_RATE, &INPUTS);
     let gain = db_to_linear_f64(DB);
     for (index, (&actual, &sample)) in output.iter().zip(INPUTS.iter()).enumerate() {
@@ -633,7 +633,7 @@ fn maximum_gain_applies_without_hidden_clamp() {
     const DB: f32 = 20.0;
     const INPUTS: [f32; 3] = [0.5, -0.25, 1.0];
     let mut plugin = GainPlugin::with_smoothing(1, DB, 0.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let output = render_one_block(&mut plugin, SAMPLE_RATE, &INPUTS);
     let gain = db_to_linear_f64(DB);
     for (index, (&actual, &sample)) in output.iter().zip(INPUTS.iter()).enumerate() {
@@ -667,7 +667,7 @@ fn rejected_parameter_updates_keep_accepted_state_and_audio() {
     const SAMPLE_RATE: u32 = 48_000;
     const FRAMES: usize = 100;
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, 10.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = deterministic_pattern(FRAMES * 2);
     let accepted_values = plugin.current_values();
     let accepted_audio = render_one_block(&mut plugin, SAMPLE_RATE, &input);
@@ -731,8 +731,8 @@ fn preset_round_trip_preserves_rendered_audio() {
         let restored: GainPluginParams = serde_json::from_str(&json).unwrap();
         let mut direct = GainPlugin::from_params(2, params).unwrap();
         let mut reloaded = GainPlugin::from_params(2, restored).unwrap();
-        direct.plugin_initialize(SAMPLE_RATE).unwrap();
-        reloaded.plugin_initialize(SAMPLE_RATE).unwrap();
+        direct.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+        reloaded.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
         direct.plugin_reset();
         reloaded.plugin_reset();
         assert_eq!(
@@ -764,15 +764,15 @@ fn parameter_snapshot_round_trip_preserves_values_and_audio() {
     let input = deterministic_pattern(FRAMES * 2);
 
     let mut global = GainPlugin::with_smoothing(2, -6.0, 25.0);
-    global.plugin_initialize(SAMPLE_RATE).unwrap();
+    global.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut per_channel =
         GainPlugin::new_per_channel_with_smoothing(vec![-6.0, 3.0], 5.0).unwrap();
-    per_channel.plugin_initialize(SAMPLE_RATE).unwrap();
+    per_channel.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     for original in [&mut global, &mut per_channel] {
         let snapshot = original.current_values();
         let mut restored = GainPlugin::with_smoothing(2, 0.0, 10.0);
-        restored.plugin_initialize(SAMPLE_RATE).unwrap();
+        restored.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
         restored.apply_values(snapshot.clone()).unwrap();
         assert_eq!(
             restored.is_per_channel(),
@@ -809,7 +809,7 @@ fn apply_values_restores_global_mode_for_global_snapshots() {
     const SAMPLE_RATE: u32 = 48_000;
     const FRAMES: usize = 513;
     let mut original = GainPlugin::with_smoothing(2, -6.0, 25.0);
-    original.plugin_initialize(SAMPLE_RATE).unwrap();
+    original.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let snapshot = original.current_values();
     // Restore into both a global and a per-channel instance: the snapshot
     // mode wins either way.
@@ -818,7 +818,7 @@ fn apply_values_restores_global_mode_for_global_snapshots() {
         GainPlugin::new_per_channel_with_smoothing(vec![3.0, 3.0], 5.0).unwrap(),
     ] {
         let mut restored = fresh;
-        restored.plugin_initialize(SAMPLE_RATE).unwrap();
+        restored.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
         restored.apply_values(snapshot.clone()).unwrap();
         assert!(
             !restored.is_per_channel(),
@@ -862,8 +862,8 @@ fn apply_values_rejects_mixed_validity_transactionally() {
     for (case, entries) in invalid_sets.iter().enumerate() {
         let mut plugin = GainPlugin::with_smoothing(2, -3.0, 100.0);
         let mut reference = GainPlugin::with_smoothing(2, -3.0, 100.0);
-        plugin.plugin_initialize(SAMPLE_RATE).unwrap();
-        reference.plugin_initialize(SAMPLE_RATE).unwrap();
+        plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+        reference.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
         // Keep a ramp in flight so rejection must preserve live history.
         plugin.set_gain_db(-18.0);
         reference.set_gain_db(-18.0);
@@ -889,7 +889,7 @@ fn apply_values_rejects_mixed_validity_transactionally() {
     }
     // A fully valid set still applies.
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, 10.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut valid = ParameterSet::new();
     valid.insert(ParameterId::from("gain_db"), float(-12.0));
     valid.insert(ParameterId::from("smoothing_ms"), float(5.0));
@@ -909,7 +909,7 @@ fn set_channel_gains_snaps_smoothers_to_targets() {
     let input = deterministic_pattern(FRAMES * 2);
     // Start mid-ramp so a ramping implementation would visibly differ.
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, 100.0);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin.set_gain_db(-20.0);
     plugin.set_channel_gains(NEW_GAINS.to_vec()).unwrap();
     assert!(plugin.is_per_channel());
@@ -917,7 +917,7 @@ fn set_channel_gains_snaps_smoothers_to_targets() {
     assert_eq!(plugin.channel_gain_db(1), Some(NEW_GAINS[1]));
     let mut settled =
         GainPlugin::new_per_channel_with_smoothing(NEW_GAINS.to_vec(), 100.0).unwrap();
-    settled.plugin_initialize(SAMPLE_RATE).unwrap();
+    settled.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(
         render_one_block(&mut plugin, SAMPLE_RATE, &input),
         render_one_block(&mut settled, SAMPLE_RATE, &input),

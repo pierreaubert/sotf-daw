@@ -53,7 +53,7 @@ fn public_warped_plugin(sample_rate: u32, lambda: Option<f64>) -> EqPlugin {
         )
         .expect("disable whole-plugin AutoGain for filter response");
     plugin
-        .plugin_initialize(sample_rate)
+        .plugin_initialize(f64::from(sample_rate))
         .expect("initialize public Warped EQ");
     plugin
 }

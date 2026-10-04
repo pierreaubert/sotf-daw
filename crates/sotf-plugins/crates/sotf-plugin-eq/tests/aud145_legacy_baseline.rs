@@ -279,7 +279,7 @@ fn capture_case(case: &LegacyCase, directory: &Path) {
         "requested oversampling setting was not active"
     );
     plugin
-        .plugin_initialize(SAMPLE_RATE)
+        .plugin_initialize(f64::from(SAMPLE_RATE))
         .expect("initialize EQ");
 
     let disabled_autogain_output = if case.name == "legacy_autogain_enabled_whole_plugin" {
@@ -288,7 +288,7 @@ fn capture_case(case: &LegacyCase, directory: &Path) {
         let mut disabled = EqPlugin::from_params(case.channels, SAMPLE_RATE, disabled_params)
             .expect("construct AutoGain-disabled comparison EQ");
         disabled
-            .plugin_initialize(SAMPLE_RATE)
+            .plugin_initialize(f64::from(SAMPLE_RATE))
             .expect("initialize disabled AutoGain comparison EQ");
         Some(render_blocks(
             &mut disabled,
@@ -392,7 +392,7 @@ fn render_public_params(params: EqPluginParams) -> Vec<f32> {
     let channels = 2;
     let input = input_signal(FRAMES, channels);
     let mut plugin = EqPlugin::from_params(channels, SAMPLE_RATE, params).unwrap();
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let block_size = 256;
     render_blocks(&mut plugin, &input, channels, block_size)
 }

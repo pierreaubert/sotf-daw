@@ -12,12 +12,12 @@ pub(super) struct GainMeter {
 }
 
 impl GainMeter {
-    pub(super) fn new(channels: u32, sample_rate: u32) -> Result<Self, String> {
+    pub(super) fn new(channels: u32, sample_rate: f64) -> Result<Self, String> {
         if channels == 0 {
             return Err("loudness monitor requires at least one channel".to_string());
         }
-        if sample_rate < 10 {
-            return Err("loudness monitor sample rate must be at least 10 Hz".to_string());
+        if !sample_rate.is_finite() || !(16.0..=2_822_400.0).contains(&sample_rate) {
+            return Err("loudness monitor sample rate must be finite and in 16..=2822400 Hz".to_string());
         }
         Ok(Self {
             channels,

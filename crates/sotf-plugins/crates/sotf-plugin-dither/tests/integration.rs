@@ -68,7 +68,7 @@ fn parameters_include_all_public_params() {
 #[test]
 fn bit_depth_roundtrip() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(2))
         .unwrap();
@@ -81,7 +81,7 @@ fn bit_depth_roundtrip() {
 #[test]
 fn noise_shaping_roundtrip() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("noise_shaping"),
@@ -97,7 +97,7 @@ fn noise_shaping_roundtrip() {
 #[test]
 fn dither_type_roundtrip() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("dither_type"), ParameterValue::Int(1))
         .unwrap();
@@ -110,7 +110,7 @@ fn dither_type_roundtrip() {
 #[test]
 fn out_of_range_ints_are_clamped_not_rejected() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // bit_depth max is 2
     plugin
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(100))
@@ -149,7 +149,7 @@ fn out_of_range_ints_are_clamped_not_rejected() {
 #[test]
 fn process_zero_input_stays_zero() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("noise_shaping"),
@@ -171,7 +171,7 @@ fn process_zero_input_stays_zero() {
 #[test]
 fn process_round_only_is_deterministic() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("dither_type"), ParameterValue::Int(1))
         .unwrap();
@@ -197,7 +197,7 @@ fn process_round_only_is_deterministic() {
 #[test]
 fn changing_bit_depth_changes_output_scale() {
     let mut plugin_16 = DitherPlugin::new(2);
-    plugin_16.initialize(SR).unwrap();
+    plugin_16.initialize(f64::from(SR)).unwrap();
     plugin_16
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(0))
         .unwrap();
@@ -212,7 +212,7 @@ fn changing_bit_depth_changes_output_scale() {
         .unwrap();
 
     let mut plugin_24 = DitherPlugin::new(2);
-    plugin_24.initialize(SR).unwrap();
+    plugin_24.initialize(f64::from(SR)).unwrap();
     plugin_24
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(2))
         .unwrap();
@@ -255,7 +255,7 @@ fn changing_bit_depth_changes_output_scale() {
 #[test]
 fn reset_clears_error_history() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("noise_shaping"),
@@ -284,8 +284,8 @@ fn reset_clears_error_history() {
 #[test]
 fn initialize_changes_sample_rate_without_error() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 
     let mut buffer = vec![0.1f32; FRAMES * 2];
     let frames = plugin
@@ -302,7 +302,7 @@ fn initialize_changes_sample_rate_without_error() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Int(1))
         .unwrap_err();
@@ -312,7 +312,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_parameter_with_wrong_type_is_rejected() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("bit_depth"),
@@ -337,8 +337,8 @@ fn adapter_rejects_bad_blocks_without_advancing_dither_state() {
     let context = ProcessContext::new(SR, 8);
     let mut tested = ParametricInPlacePluginAdapter::new(DitherPlugin::new(2));
     let mut reference = ParametricInPlacePluginAdapter::new(DitherPlugin::new(2));
-    tested.initialize(SR).unwrap();
-    reference.initialize(SR).unwrap();
+    tested.initialize(f64::from(SR)).unwrap();
+    reference.initialize(f64::from(SR)).unwrap();
 
     let mut untouched = vec![0.75; 16];
     let before = untouched.clone();

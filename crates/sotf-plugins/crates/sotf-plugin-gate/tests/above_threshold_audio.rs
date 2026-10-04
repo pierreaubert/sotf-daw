@@ -46,7 +46,7 @@ fn configuration(mode: GateMode, linked: bool) -> GatePluginParams {
 
 fn make(channels: usize, rate: u32, params: GatePluginParams) -> GatePlugin {
     let mut plugin = GatePlugin::try_from_params(channels, params).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

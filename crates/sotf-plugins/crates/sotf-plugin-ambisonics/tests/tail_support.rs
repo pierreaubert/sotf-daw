@@ -30,7 +30,7 @@ fn single_band_outputs_exact_zero_immediately_after_program_for_every_matrix_fam
                 for weighting in [false, true] {
                     let mut p = plugin(order, layout, algorithm, weighting, false);
                     assert_eq!(p.tail_length(), TailLength::Finite(0));
-                    p.initialize(48000).unwrap();
+                    p.initialize(48000.0).unwrap();
                     let input: Vec<_> = (0..137 * p.input_channels())
                         .map(|i| ((i * 37 % 257) as f32 - 128.) / 1024.)
                         .collect();
@@ -81,7 +81,7 @@ fn dual_band_retains_actual_filter_response_and_unknown_audio_support() {
         for order in 1..=7 {
             let mut p = plugin(order, "7.1.4", algorithm, true, true);
             assert_eq!(p.tail_length(), TailLength::Unknown);
-            p.initialize(48000).unwrap();
+            p.initialize(48000.0).unwrap();
             let mut impulse = vec![0.; p.input_channels()];
             impulse[0] = 0.25;
             let mut output = vec![0.; p.output_channels()];

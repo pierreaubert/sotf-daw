@@ -13,12 +13,13 @@ pub struct PreparedHrtfSpectra {
     right_itds: Vec<f32>,
 }
 
-pub fn prepare_hrtf_spectra(
+pub fn prepare_hrtf_spectra<S: Into<f64>>(
     sofa: &SofaFile,
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: S,
     fft_r2c: &Arc<dyn RealToComplex<f32>>,
 ) -> PreparedHrtfSpectra {
+    let sample_rate = sample_rate.into();
     let mut prepared = PreparedHrtfSpectra {
         left: Vec::with_capacity(sofa.num_measurements),
         right: Vec::with_capacity(sofa.num_measurements),
@@ -40,16 +41,17 @@ pub fn prepare_hrtf_spectra(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn interpolate_hrtf_prepared(
+pub fn interpolate_hrtf_prepared<S: Into<f64>>(
     nearest: &[(usize, f32); 3],
     gains: &[f32; 3],
     prepared: &PreparedHrtfSpectra,
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: S,
     near_field_strength: f32,
     target_azimuth: f32,
     target_elevation: f32,
 ) -> (Vec<Complex<f32>>, Vec<Complex<f32>>) {
+    let sample_rate = sample_rate.into();
     let left = [
         prepared.left[nearest[0].0].as_slice(),
         prepared.left[nearest[1].0].as_slice(),
@@ -113,7 +115,7 @@ fn interpolate_hrtf_complex(
     gains: &[f32; 3],
     target_itd: f32,
     source_itds: &[f32],
-    sample_rate: u32,
+    sample_rate: f64,
     fft_size: usize,
 ) -> Vec<Complex<f32>> {
     let freq_size = fft_size / 2 + 1;
@@ -187,7 +189,7 @@ pub fn interpolate_hrtf_frequency_domain(
     gains: &[f32; 3],
     sofa: &SofaFile,
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     fft_r2c: &Arc<dyn RealToComplex<f32>>,
     near_field_strength: f32,
     target_azimuth: f32,

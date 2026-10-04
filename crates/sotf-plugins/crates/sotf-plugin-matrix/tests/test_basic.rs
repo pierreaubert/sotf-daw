@@ -11,7 +11,7 @@ fn test_matrix_plugin() {
 
     // Let's create an identity matrix first
     let mut matrix = MatrixPlugin::new(2, 2);
-    matrix.initialize(44100).unwrap();
+    matrix.initialize(44100.0).unwrap();
 
     // By default it might be identity or zero?
     // Let's set it to swap

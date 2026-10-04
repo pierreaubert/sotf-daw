@@ -12,7 +12,7 @@ fn test_upmixer_voice_leakage() {
     params.core.speaker_config = "5.1".to_string();
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Mono signal (simulating a centered voice)
     let num_blocks = 64;
@@ -68,7 +68,7 @@ fn test_upmixer_phase_alignment_extraction() {
     params.dialogue.dialogue_weight = 0.0; // Disable dialogue-based steering
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // L and R are 90 degrees out of phase: highly correlated but not identical
     let num_blocks = 64;

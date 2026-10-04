@@ -11,7 +11,7 @@ fn channel_fades_emit_no_audio_from_prior_input() {
     for channels in [1, 2, 8] {
         let mut plugin = ChannelMuteSoloPlugin::new(channels, true);
         assert_eq!(plugin.tail_length(), TailLength::Finite(0));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut buffer = vec![0.75; 257 * channels];
         plugin
             .process_in_place(&mut buffer, &ProcessContext::new(48_000, 257))

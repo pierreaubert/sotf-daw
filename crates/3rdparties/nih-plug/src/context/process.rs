@@ -112,7 +112,7 @@ pub struct Transport {
     /// The sample rate in Hertz. Also passed in
     /// [`Plugin::initialize()`][crate::prelude::Plugin::initialize()], so if you need this then you
     /// can also store that value.
-    pub sample_rate: f32,
+    pub sample_rate: f64,
     /// The project's tempo in beats per minute.
     pub tempo: Option<f64>,
     /// The time signature's numerator.
@@ -154,7 +154,7 @@ pub struct Transport {
 
 impl Transport {
     /// Initialize the transport struct without any information.
-    pub(crate) fn new(sample_rate: f32) -> Self {
+    pub(crate) fn new(sample_rate: f64) -> Self {
         Self {
             playing: false,
             recording: false,

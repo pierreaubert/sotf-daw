@@ -17,7 +17,7 @@ fn plugin(channels: usize, index: usize, mix: f32) -> SpectralCompressorPlugin {
             ..Default::default()
         },
     );
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     p
 }
 
@@ -192,9 +192,9 @@ fn nonlinear_adaptive_and_delta_tails_match_separate_zero_continuation() {
                 };
                 let mut actual_plugin =
                     SpectralCompressorPlugin::from_params(channels, params.clone());
-                actual_plugin.initialize(RATE).unwrap();
+                actual_plugin.initialize(f64::from(RATE)).unwrap();
                 let mut expected_plugin = SpectralCompressorPlugin::from_params(channels, params);
-                expected_plugin.initialize(RATE).unwrap();
+                expected_plugin.initialize(f64::from(RATE)).unwrap();
                 let mut padded = input.clone();
                 // Continue past a full accumulator revolution: discarded
                 // negative-time synthesis must never reappear after wrapping.
@@ -294,7 +294,7 @@ fn destination_errors_preserve_history_and_controls_until_reset() {
                 .is_err()
         );
         assert_eq!(sentinel, [1234.0; 3]);
-        assert!(p.initialize(0).is_err());
+        assert!(p.initialize(0.0).is_err());
         let mut first = [0.0; 2];
         assert!(
             !p.drain(&mut first, &ProcessContext::new(RATE, 1))
@@ -339,9 +339,9 @@ fn destination_errors_preserve_history_and_controls_until_reset() {
                 &[1, 113]
             )
         );
-        p.initialize(96_000).unwrap();
+        p.initialize(96_000.0).unwrap();
         let mut fresh = plugin(channels, index, 0.5);
-        fresh.initialize(96_000).unwrap();
+        fresh.initialize(96_000.0).unwrap();
         let mut a = input.clone();
         let mut b = input.clone();
         p.process_in_place(&mut a, &ProcessContext::new(96_000, n + 13))

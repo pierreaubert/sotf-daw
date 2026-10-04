@@ -14,7 +14,7 @@ use sotf_host::{ParameterId, ParameterValue, ParametricPlugin, ParametricPluginA
 #[doc(hidden)]
 pub fn validate_convolution_ir_resource(
     path: &str,
-    target_sample_rate: Option<u32>,
+    target_sample_rate: Option<f64>,
     output_channels: usize,
     use_nupc: bool,
     true_stereo: bool,
@@ -36,7 +36,7 @@ fn create_nested_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     create_plugin(plugin_type, channels, sample_rate, &parameters.to_string())
 }
@@ -51,7 +51,7 @@ fn create_nested_plugin(
 pub fn create_plugin(
     plugin_type: &str,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     config_json: &str,
 ) -> Result<Box<dyn Plugin>, String> {
     match plugin_type {
@@ -731,7 +731,7 @@ mod tests {
                     .unwrap_or_else(|error| panic!("{plugin_type} {config:?}: {error}"));
                 assert_eq!(plugin.input_channels(), 2, "{plugin_type}");
                 assert_eq!(plugin.output_channels(), 2, "{plugin_type}");
-                plugin.initialize(44_100).unwrap();
+                plugin.initialize(44_100.0).unwrap();
                 let input = vec![0.125; 128 * 2];
                 let mut output = vec![f32::NAN; input.len()];
                 assert_eq!(
@@ -789,7 +789,7 @@ mod tests {
             r#"{"speaker_config":"5.1","integrated_mode":"whole_program","enabled":false}"#,
         )
         .unwrap();
-        loudness.initialize(48_000).unwrap();
+        loudness.initialize(48_000.0).unwrap();
         assert_eq!(
             loudness.get_parameter(&ParameterId::from("enabled")),
             Some(ParameterValue::Bool(false))
@@ -855,7 +855,7 @@ mod tests {
             plugin.get_parameter(&ParameterId::from("true_stereo")),
             Some(ParameterValue::Bool(true))
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(plugin.latency_samples(), 1_024);
         let mut input = vec![0.0_f32; 1_050 * 2];
         input[0] = 0.5;
@@ -919,7 +919,7 @@ mod tests {
                 result.err()
             );
             let mut plugin = result.unwrap();
-            assert!(plugin.initialize(48000).is_ok());
+            assert!(plugin.initialize(48000.0).is_ok());
         }
     }
 
@@ -1006,7 +1006,7 @@ mod tests {
             // Audio proof: the explicit config (24-bit, shaping off, round)
             // renders differently from defaults (16-bit, shaping on, TPDF),
             // and rejections leave accepted state and audio untouched.
-            configured.initialize(48_000).unwrap();
+            configured.initialize(48_000.0).unwrap();
             let mut reference = create_plugin(
                 alias,
                 2,
@@ -1014,9 +1014,9 @@ mod tests {
                 r#"{"bit_depth": 2, "noise_shaping": false, "dither_type": 1}"#,
             )
             .unwrap();
-            reference.initialize(48_000).unwrap();
+            reference.initialize(48_000.0).unwrap();
             let mut defaulted = create_plugin(alias, 2, 48_000, "{}").unwrap();
-            defaulted.initialize(48_000).unwrap();
+            defaulted.initialize(48_000.0).unwrap();
 
             let frames = 1024;
             let input: Vec<f32> = (0..frames * 2)
@@ -1109,7 +1109,7 @@ mod tests {
 
             // Audio proof: guard-on renders finite nonzero stereo; a rebuild
             // from the saved state re-renders bit-exactly.
-            configured.initialize(48_000).unwrap();
+            configured.initialize(48_000.0).unwrap();
             let frames = 8192;
             let input: Vec<f32> = (0..frames * 2)
                 .map(|n| {
@@ -1140,7 +1140,7 @@ mod tests {
                 Some(ParameterValue::Bool(true)),
                 "{alias}"
             );
-            reloaded.initialize(48_000).unwrap();
+            reloaded.initialize(48_000.0).unwrap();
             assert_eq!(render(&mut reloaded), first, "{alias}");
 
             // Unknown construction keys still fail closed for the
@@ -1163,7 +1163,7 @@ mod tests {
                 r#"{"spectral_mode": true, "transient_guard": true, "strength": 0.7}"#,
             )
             .unwrap();
-            rebuilt.initialize(48_000).unwrap();
+            rebuilt.initialize(48_000.0).unwrap();
             assert_eq!(render(&mut rebuilt), first, "{alias}");
         }
     }
@@ -1185,7 +1185,7 @@ mod tests {
         .to_string();
         let mut plugin = create_plugin("ABCompare", 2, 48_000, &config)
             .expect("bridge factory must be available during initial nested path construction");
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = vec![0.0_f32; 256 * 2];
         let mut output = vec![1.0_f32; input.len()];
         assert_eq!(
@@ -1215,7 +1215,7 @@ mod tests {
                 result.err()
             );
             let mut plugin = result.unwrap();
-            assert!(plugin.initialize(48000).is_ok());
+            assert!(plugin.initialize(48000.0).is_ok());
         }
     }
 
@@ -1404,7 +1404,7 @@ mod tests {
                 serde_json::from_str(&config).unwrap();
             let mut reference =
                 sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom).unwrap();
-            reference.initialize(48_000).unwrap();
+            reference.initialize(48_000.0).unwrap();
             let mut expected = vec![0.0; frames * 2];
             assert_eq!(
                 reference
@@ -1464,7 +1464,7 @@ mod tests {
     fn spectrum_analyzer_aliases_initialize_process_and_publish_data() {
         for plugin_type in ["SpectrumAnalyzer", "spectrum_analyzer"] {
             let mut plugin = create_plugin(plugin_type, 2, 48_000, "{}").unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let input = vec![0.0; 4096 * 2];
             let mut output = vec![1.0; input.len()];
             let frames = plugin
@@ -1492,7 +1492,7 @@ mod tests {
     #[test]
     fn test_process_silence() {
         let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![0.0f32; 256];
         let mut output = vec![0.0f32; 256];

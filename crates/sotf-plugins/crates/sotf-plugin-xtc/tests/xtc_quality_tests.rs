@@ -14,7 +14,7 @@ fn test_xtc_saturation_fix() {
     params.auto_gain_max_db = 24.0; // Allow significant reduction
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // High-amplitude mono signal (should trigger saturation if not compensated)
     let num_blocks = 100; // Give auto-gain time to settle

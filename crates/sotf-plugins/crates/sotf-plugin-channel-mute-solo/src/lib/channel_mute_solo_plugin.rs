@@ -40,7 +40,7 @@ pub struct ChannelMuteSoloPlugin {
     /// Per-channel gain smoothers for click-free mute/solo/dim transitions
     pub(super) channel_smoothers: Vec<Smoother>,
     /// Sample rate for smoother initialization
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     /// Dim gain in dB (e.g. -20.0 means dimmed channels are attenuated by 20dB)
     pub(super) dim_gain_db: f32,
     /// Dim gain as linear multiplier (cached from dim_gain_db)
@@ -136,7 +136,7 @@ impl ChannelMuteSoloPlugin {
     /// Create a new channel mute/solo plugin
     pub fn new(channels: usize, enabled: bool) -> Self {
         let channel_states = vec![ChannelState::default(); channels];
-        let sample_rate = 48000;
+        let sample_rate = 48_000.0;
         let dim_gain_db = default_dim_gain_db();
         let fade_ms = default_fade_ms();
         let channel_smoothers = vec![Smoother::new(1.0, fade_ms, sample_rate); channels];
@@ -642,9 +642,9 @@ impl ParametricInPlacePlugin for ChannelMuteSoloPlugin {
         self.apply_value_refs(&values)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Channel Mute/Solo sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Channel Mute/Solo sample rate must be finite and positive".to_string());
         }
         self.sample_rate = sample_rate;
         for smoother in &mut self.channel_smoothers {

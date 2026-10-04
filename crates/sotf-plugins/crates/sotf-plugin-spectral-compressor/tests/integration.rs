@@ -96,7 +96,7 @@ fn parameter_roundtrip() {
 fn initialize_changes_sample_rate() {
     let mut plugin =
         SpectralCompressorPlugin::from_params(2, SpectralCompressorPluginParams::default());
-    plugin.initialize(44_100).expect("initialize succeeds");
+    plugin.initialize(44_100.0).expect("initialize succeeds");
 
     let num_frames = 4_096;
     let mut buffer = vec![0.0f32; num_frames * plugin.channels()];
@@ -302,7 +302,7 @@ fn wrong_buffer_size_returns_error() {
 fn non_finite_input_is_sanitized_without_poisoning_following_audio() {
     let mut plugin =
         SpectralCompressorPlugin::from_params(1, SpectralCompressorPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut poisoned = vec![0.0; 4096];
     poisoned[0] = f32::NAN;
     poisoned[1] = f32::INFINITY;

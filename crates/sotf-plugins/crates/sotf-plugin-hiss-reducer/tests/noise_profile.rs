@@ -9,7 +9,7 @@ use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 use sotf_host::{CountingAlloc, assert_no_allocs};
-use sotf_plugin_hiss_reducer::profile::NoiseProfileData;
+use sotf_plugin_hiss_reducer::profile::{NoiseProfileData, SpectralProfileData};
 use sotf_plugin_hiss_reducer::{HissReducerPlugin, HissReducerPluginParams};
 
 #[global_allocator]
@@ -21,9 +21,73 @@ fn ctx(frames: usize) -> ProcessContext<'static> {
     ProcessContext::new(RATE, frames)
 }
 
+#[test]
+fn profile_versions_preserve_integer_json_and_accept_exact_fractional_capture_rate() {
+    let legacy = NoiseProfileData {
+        format_version: 1,
+        sample_rate: f64::from(RATE),
+        channels: 1,
+        measurement_cutoff_hz: 4_000.0,
+        floor_db_per_channel: vec![-45.0],
+        frames_analyzed: u64::from(RATE),
+        spectral: None,
+    };
+    legacy.validate().unwrap();
+    let legacy_json = serde_json::to_value(&legacy).unwrap();
+    assert_eq!(legacy_json["sample_rate"].as_u64(), Some(u64::from(RATE)));
+    let decoded: NoiseProfileData = serde_json::from_value(legacy_json).unwrap();
+    assert_eq!(decoded, legacy);
+
+    let mut measured = legacy.clone();
+    measured.format_version = 2;
+    measured.spectral = Some(SpectralProfileData {
+        fft_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_FFT_SIZE,
+        hop_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_HOP_SIZE,
+        window: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_WINDOW.to_string(),
+        sample_rate: f64::from(RATE),
+        channels: 1,
+        num_bins: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS,
+        power_per_channel_bin: vec![0.0; plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS],
+        hops_analyzed: 1,
+    });
+    measured.validate().unwrap();
+    let measured_json = serde_json::to_value(&measured).unwrap();
+    assert_eq!(measured_json["sample_rate"].as_u64(), Some(u64::from(RATE)));
+    assert_eq!(measured_json["spectral"]["sample_rate"].as_u64(), Some(u64::from(RATE)));
+    assert_eq!(serde_json::from_value::<NoiseProfileData>(measured_json).unwrap(), measured);
+
+    let fractional_rate = 12_345.678_f64;
+    let mut fractional = measured;
+    fractional.format_version = 3;
+    fractional.sample_rate = fractional_rate;
+    fractional.spectral.as_mut().unwrap().sample_rate = fractional_rate;
+    fractional.validate().unwrap();
+    let fractional_json = serde_json::to_value(&fractional).unwrap();
+    assert_eq!(fractional_json["sample_rate"].as_f64(), Some(fractional_rate));
+    assert_eq!(fractional_json["spectral"]["sample_rate"].as_f64(), Some(fractional_rate));
+    assert_eq!(serde_json::from_value::<NoiseProfileData>(fractional_json).unwrap(), fractional);
+
+    let mut fractional_floors = fractional.clone();
+    fractional_floors.spectral = None;
+    fractional_floors.validate().unwrap();
+    assert_eq!(
+        serde_json::to_value(&fractional_floors).unwrap()["sample_rate"].as_f64(),
+        Some(fractional_rate)
+    );
+
+    let mut invalid = fractional.clone();
+    invalid.sample_rate = f64::NAN;
+    assert!(invalid.validate().is_err());
+    invalid.sample_rate = 0.0;
+    assert!(invalid.validate().is_err());
+    invalid.sample_rate = fractional_rate;
+    invalid.format_version = 2;
+    assert!(invalid.validate().is_err());
+}
+
 fn time_domain_plugin(channels: usize) -> HissReducerPlugin {
     let mut plugin = HissReducerPlugin::new(channels);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -135,7 +199,7 @@ fn spectral_plugin(channels: usize) -> HissReducerPlugin {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -156,7 +220,7 @@ fn capture_measures_high_band_floor_accurately() {
     );
     assert_eq!(
         plugin.profile_metadata(),
-        Some((RATE, 4000.0, u64::from(RATE)))
+        Some((f64::from(RATE), 4000.0, u64::from(RATE)))
     );
 
     // Stereo floors stay per-channel.
@@ -268,7 +332,7 @@ fn profile_persists_through_json_round_trip() {
         serde_json::to_value(plugin.persisted_params()).unwrap()
     );
     let mut reloaded = HissReducerPlugin::from_params(1, restored);
-    reloaded.initialize(RATE).unwrap();
+    reloaded.initialize(f64::from(RATE)).unwrap();
     assert!(reloaded.has_captured_profile());
     assert_eq!(
         reloaded.persisted_params().captured_profile,
@@ -340,7 +404,7 @@ fn malformed_profile_rejected_transactionally() {
     let before = plugin.persisted_params().captured_profile.unwrap();
     let corrupt = NoiseProfileData {
         format_version: 1,
-        sample_rate: RATE,
+        sample_rate: f64::from(RATE),
         channels: 1,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![f32::NAN],
@@ -354,13 +418,20 @@ fn malformed_profile_rejected_transactionally() {
         before,
         "failed restore must keep the accepted profile"
     );
+
+    for invalid_rate in [0.0, f64::NAN, f64::INFINITY] {
+        let mut corrupt_rate = before.clone();
+        corrupt_rate.sample_rate = invalid_rate;
+        assert!(plugin.restore_profile(&corrupt_rate).is_err());
+        assert_eq!(plugin.persisted_params().captured_profile.unwrap(), before);
+    }
 }
 
 #[test]
 fn channel_mismatched_profile_handling() {
     let data = NoiseProfileData {
         format_version: 1,
-        sample_rate: RATE,
+        sample_rate: f64::from(RATE),
         channels: 1,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![-40.0],
@@ -474,7 +545,7 @@ fn profile_threshold_modulation_suppresses_loud_hiss() {
         ..HissReducerPluginParams::default()
     };
     let mut profiler = HissReducerPlugin::from_params(1, strong_params());
-    profiler.initialize(RATE).unwrap();
+    profiler.initialize(f64::from(RATE)).unwrap();
     start_capture(&mut profiler);
     process_all(&mut profiler, &hiss_only[..RATE as usize], 1, &[4096]);
     let floor = profiler.overall_profile_floor_db().unwrap();
@@ -492,7 +563,7 @@ fn profile_threshold_modulation_suppresses_loud_hiss() {
     }
 
     let mut plain = HissReducerPlugin::from_params(1, strong_params());
-    plain.initialize(RATE).unwrap();
+    plain.initialize(f64::from(RATE)).unwrap();
     let plain_output = process_all(&mut plain, &mixed, 1, &[4096]);
     profiler
         .set_parameter(
@@ -555,7 +626,7 @@ fn stereo_threshold_following_uses_loudest_channel_floor() {
         capture.push(right_sample);
     }
     let mut profiler = HissReducerPlugin::from_params(2, stereo_params());
-    profiler.initialize(RATE).unwrap();
+    profiler.initialize(f64::from(RATE)).unwrap();
     start_capture(&mut profiler);
     process_all(&mut profiler, &capture, 2, &[4096]);
     assert!(profiler.has_captured_profile());
@@ -603,7 +674,7 @@ fn stereo_threshold_following_uses_loudest_channel_floor() {
     // the right program untouched, proving the reduction above comes from
     // the inherited floor rather than the user setting.
     let mut plain = HissReducerPlugin::from_params(2, stereo_params());
-    plain.initialize(RATE).unwrap();
+    plain.initialize(f64::from(RATE)).unwrap();
     let plain_out = process_all(&mut plain, &mixed, 2, &[4096]);
     let plain_right: Vec<f32> = plain_out.iter().skip(1).step_by(2).copied().collect();
     let plain_ratio = oracle_high_band_power(&plain_right[skip..], 4000.0, f64::from(RATE))
@@ -632,7 +703,7 @@ fn use_profile_without_capture_is_armed_but_inert() {
                 ..HissReducerPluginParams::default()
             },
         );
-        armed.initialize(RATE).unwrap();
+        armed.initialize(f64::from(RATE)).unwrap();
         let mut plain = HissReducerPlugin::from_params(
             1,
             HissReducerPluginParams {
@@ -640,7 +711,7 @@ fn use_profile_without_capture_is_armed_but_inert() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plain.initialize(RATE).unwrap();
+        plain.initialize(f64::from(RATE)).unwrap();
         let armed_output = process_all(&mut armed, &input, 1, &[1, 64, 511, 997]);
         let plain_output = process_all(&mut plain, &input, 1, &[1, 64, 511, 997]);
         assert_eq!(
@@ -809,7 +880,7 @@ fn spectral_eof_with_profile_matches_derived_endpoint() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             let noise = lcg_noise(RATE as usize, 0.05, 0xe0f);
             start_capture(&mut plugin);
             process_all(&mut plugin, &noise, 1, &[4096]);

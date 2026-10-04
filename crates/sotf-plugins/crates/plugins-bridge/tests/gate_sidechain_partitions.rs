@@ -90,7 +90,7 @@ fn all_gate_modes_match_unsplit_kernel_across_structure_and_live_controls() {
                         ..GatePluginParams::default()
                     };
                     let mut raw = GatePlugin::try_from_params(2, settings.clone()).unwrap();
-                    raw.initialize(48_000).unwrap();
+                    raw.initialize(48_000.0).unwrap();
                     let mut adapter = plugins_bridge::create_plugin(
                         "Gate",
                         2,
@@ -98,14 +98,14 @@ fn all_gate_modes_match_unsplit_kernel_across_structure_and_live_controls() {
                         &serde_json::to_string(&settings).unwrap(),
                     )
                     .unwrap();
-                    adapter.initialize(48_000).unwrap();
+                    adapter.initialize(48_000.0).unwrap();
                     for lifecycle in 0..3 {
                         if lifecycle == 1 {
                             raw.reset();
                             adapter.reset();
                         } else if lifecycle == 2 {
-                            raw.initialize(48_000).unwrap();
-                            adapter.initialize(48_000).unwrap();
+                            raw.initialize(48_000.0).unwrap();
+                            adapter.initialize(48_000.0).unwrap();
                         }
                         for (phase, frames) in
                             [1, 17, 255, 256, 257, 8192, 17003].into_iter().enumerate()
@@ -158,7 +158,7 @@ fn real_gate_cold_f32_fallback_f64_and_reset_have_no_heap_traffic() {
             "detection_mode":"RMS","sidechain_hpf_hz":85.0})
                 .to_string();
             let mut plugin = plugins_bridge::create_plugin("Gate", 2, 48_000, &config).unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let input32 = input(17003, 0);
             let input64: Vec<_> = input32.iter().map(|x| f64::from(*x)).collect();
             let mut output32 = vec![0.0; 34006];
@@ -192,8 +192,8 @@ fn rejected_late_gate_key_and_wrong_rate_preserve_the_next_waveform() {
         let config = r#"{"mode":"Upward","sidechain_external":true,"lookahead_ms":2.0}"#;
         let mut tested = plugins_bridge::create_plugin("Gate", 2, 48_000, config).unwrap();
         let mut reference = plugins_bridge::create_plugin("Gate", 2, 48_000, config).unwrap();
-        tested.initialize(48_000).unwrap();
-        reference.initialize(48_000).unwrap();
+        tested.initialize(48_000.0).unwrap();
+        reference.initialize(48_000.0).unwrap();
         let input = input(9001, 0);
         let mut invalid = input.clone();
         *invalid.last_mut().unwrap() = f32::NAN;

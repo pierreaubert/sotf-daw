@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn test_save_load_roundtrip() {
         let mut plugin = create_plugin("Gain", 2, 48000, "{}").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         // Set a parameter
         let id = ParameterId::from("gain_db");
@@ -200,7 +200,7 @@ mod tests {
 
         // Create a fresh plugin and load state
         let mut plugin2 = create_plugin("Gain", 2, 48000, "{}").unwrap();
-        plugin2.initialize(48000).unwrap();
+        plugin2.initialize(48000.0).unwrap();
         load_state(&mut *plugin2, &state).unwrap();
 
         // Verify parameter was restored

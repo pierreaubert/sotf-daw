@@ -104,7 +104,7 @@ fn parameters_include_per_channel_gains() {
 #[test]
 fn gain_db_roundtrip() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     plugin
         .parametric_set_parameter(ParameterId::from("gain_db"), ParameterValue::Float(-6.0))
         .unwrap();
@@ -117,7 +117,7 @@ fn gain_db_roundtrip() {
 #[test]
 fn smoothing_ms_roundtrip() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     plugin
         .parametric_set_parameter(
             ParameterId::from("smoothing_ms"),
@@ -133,7 +133,7 @@ fn smoothing_ms_roundtrip() {
 #[test]
 fn per_channel_gain_roundtrip() {
     let mut plugin = GainPlugin::new_per_channel(vec![0.0, 0.0]).unwrap();
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     plugin
         .parametric_set_parameter(ParameterId::from("gain_db_0"), ParameterValue::Float(3.0))
         .unwrap();
@@ -157,7 +157,7 @@ fn per_channel_gain_roundtrip() {
 #[test]
 fn initialize_then_process_works() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![0.5f32; FRAMES * 2];
     let mut buffer = vec![0.0f32; input.len()];
     let frames = plugin
@@ -169,7 +169,7 @@ fn initialize_then_process_works() {
 #[test]
 fn reset_does_not_break_processing() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     plugin.plugin_reset();
     let input = vec![0.5f32; FRAMES * 2];
     let mut buffer = vec![0.0f32; input.len()];
@@ -182,11 +182,11 @@ fn reset_does_not_break_processing() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = GainPlugin::with_smoothing(1, 0.0, default_smoothing_ms());
-    plugin.plugin_initialize(44100).unwrap();
+    plugin.plugin_initialize(44100.0).unwrap();
     plugin.set_gain_db(-6.0);
 
     // Process enough samples at 96k to let the smoother settle.
-    plugin.plugin_initialize(96000).unwrap();
+    plugin.plugin_initialize(96000.0).unwrap();
     let num_frames = 19200;
     let input = vec![1.0f32; num_frames];
     let mut buf = vec![0.0f32; input.len()];
@@ -204,7 +204,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn unity_gain_passthrough() {
     let mut plugin = GainPlugin::with_smoothing(2, 0.0, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![0.1f32, 0.2, 0.3, 0.4];
     let mut buffer = vec![0.0f32; input.len()];
     plugin
@@ -223,7 +223,7 @@ fn unity_gain_passthrough() {
 #[test]
 fn positive_gain_scales_signal() {
     let mut plugin = GainPlugin::with_smoothing(2, 6.0, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![0.1f32, 0.2, 0.3, 0.4];
     let mut buffer = vec![0.0f32; input.len()];
     plugin
@@ -243,7 +243,7 @@ fn positive_gain_scales_signal() {
 #[test]
 fn negative_gain_attenuates_signal() {
     let mut plugin = GainPlugin::with_smoothing(2, -6.0, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![1.0f32, 1.0, 1.0, 1.0];
     let mut buffer = vec![0.0f32; input.len()];
     plugin
@@ -287,7 +287,7 @@ fn compiled_host_reloads_static_gain_after_automation() {
 #[test]
 fn per_channel_gains_apply_correctly() {
     let mut plugin = GainPlugin::new_per_channel(vec![0.0f32, -6.0]).unwrap();
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![1.0f32, 1.0, 1.0, 1.0];
     let mut buffer = vec![0.0f32; input.len()];
     plugin
@@ -304,7 +304,7 @@ fn per_channel_gains_apply_correctly() {
 #[test]
 fn zero_frames_returns_zero_and_leaves_buffer() {
     let mut plugin = GainPlugin::new(2, 6.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input = vec![0.5f32, 0.6, 0.7, 0.8];
     let mut buffer = vec![0.0f32; input.len()];
     let processed = plugin
@@ -321,7 +321,7 @@ fn zero_frames_returns_zero_and_leaves_buffer() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let result = plugin
         .parametric_set_parameter(ParameterId::from("nonexistent"), ParameterValue::Float(1.0));
     match result {
@@ -337,7 +337,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_gain_out_of_range_fails() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     assert!(
         plugin
             .parametric_set_parameter(ParameterId::from("gain_db"), ParameterValue::Float(21.0))
@@ -353,7 +353,7 @@ fn set_gain_out_of_range_fails() {
 #[test]
 fn set_smoothing_out_of_range_fails() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     assert!(
         plugin
             .parametric_set_parameter(
@@ -375,7 +375,7 @@ fn set_smoothing_out_of_range_fails() {
 #[test]
 fn set_non_finite_gain_fails() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     assert!(
         plugin
             .parametric_set_parameter(
@@ -397,7 +397,7 @@ fn set_non_finite_gain_fails() {
 #[test]
 fn set_channel_gain_out_of_bounds_fails() {
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let result =
         plugin.parametric_set_parameter(ParameterId::from("gain_db_5"), ParameterValue::Float(0.0));
     match result {
@@ -411,7 +411,7 @@ fn set_channel_gain_out_of_bounds_fails() {
 #[test]
 fn output_is_finite_for_finite_input() {
     let mut plugin = GainPlugin::new(2, 12.0);
-    plugin.plugin_initialize(SR).unwrap();
+    plugin.plugin_initialize(f64::from(SR)).unwrap();
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|i| (i as f32 * 0.1).sin() * 0.5)
         .collect();

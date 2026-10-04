@@ -8,7 +8,7 @@ use sotf_plugin_multiband_compressor::MultibandCompressorPlugin;
 fn test_multiband_compressor_instantiation() {
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(44100).unwrap();
+    adapter.initialize(44100.0).unwrap();
 
     assert_eq!(adapter.channels(), 2);
     assert!(adapter.info().name.contains("Multiband"));
@@ -18,7 +18,7 @@ fn test_multiband_compressor_instantiation() {
 fn test_multiband_compressor_processing() {
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 2048;
     let mut input = vec![0.0; num_frames * 2];
@@ -51,7 +51,7 @@ fn test_multiband_compressor_ms_mode_roundtrip() {
 
     let plugin = MultibandCompressorPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     adapter
         .set_parameter(ParameterId::from("ms_mode"), ParameterValue::Bool(true))

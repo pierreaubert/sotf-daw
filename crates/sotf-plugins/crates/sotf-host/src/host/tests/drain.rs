@@ -82,8 +82,8 @@ impl Plugin for TailPlugin {
         frames * self.frame_ratio
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        input_rate * self.frame_ratio as u32
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        input_rate * self.frame_ratio as f64
     }
 
     fn drain_output_frames_max(&self) -> usize {

@@ -62,8 +62,8 @@ impl StrictRateFixture {
         }
     }
 
-    fn check_rate(&self, rate: u32, entry: &str) -> Result<(), String> {
-        if rate == self.input_rate {
+    fn check_rate(&self, rate: f64, entry: &str) -> Result<(), String> {
+        if rate == f64::from(self.input_rate) {
             Ok(())
         } else {
             Err(format!(
@@ -103,7 +103,7 @@ impl Plugin for StrictRateFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
         self.check_rate(sample_rate, "initialize")?;
         self.carry.clear();
         self.carry_f64.clear();
@@ -117,8 +117,8 @@ impl Plugin for StrictRateFixture {
         self.last_output_frames = 0;
     }
 
-    fn output_sample_rate(&self, _input_rate: u32) -> u32 {
-        self.output_rate
+    fn output_sample_rate(&self, _input_rate: f64) -> f64 {
+        f64::from(self.output_rate)
     }
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
@@ -381,7 +381,7 @@ impl Plugin for PassthroughFixture {
         None
     }
 
-    fn initialize(&mut self, _sample_rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, _sample_rate: f64) -> Result<(), String> {
         self.last_output_frames = 0;
         Ok(())
     }
@@ -510,8 +510,8 @@ impl Plugin for BurstHoldFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != 48_000 {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != 48_000.0 {
             return Err(format!(
                 "burst hold fixture requires init at 48000 Hz, got {sample_rate} Hz"
             ));
@@ -528,8 +528,8 @@ impl Plugin for BurstHoldFixture {
         self.last_output_frames = 0;
     }
 
-    fn output_sample_rate(&self, _input_rate: u32) -> u32 {
-        48_000
+    fn output_sample_rate(&self, _input_rate: f64) -> f64 {
+        48_000.0
     }
 
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
@@ -561,7 +561,7 @@ impl Plugin for BurstHoldFixture {
         output: &mut [f32],
         ctx: &ProcessContext,
     ) -> Result<usize, String> {
-        if ctx.sample_rate != 48_000 {
+        if ctx.sample_rate != 48_000.0 {
             return Err(format!(
                 "burst hold fixture process requires 48000 Hz, got {} Hz",
                 ctx.sample_rate
@@ -600,7 +600,7 @@ impl Plugin for BurstHoldFixture {
         output: &mut [f64],
         ctx: &ProcessContext,
     ) -> Result<usize, String> {
-        if ctx.sample_rate != 48_000 {
+        if ctx.sample_rate != 48_000.0 {
             return Err(format!(
                 "burst hold fixture process_f64 requires a 48000 Hz context, got {} Hz",
                 ctx.sample_rate
@@ -631,7 +631,7 @@ impl Plugin for BurstHoldFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.sample_rate != 48_000 {
+        if context.sample_rate != 48_000.0 {
             return Err(format!(
                 "burst hold fixture begin_drain requires 48000 Hz, got {} Hz",
                 context.sample_rate
@@ -645,7 +645,7 @@ impl Plugin for BurstHoldFixture {
         output: &mut [f32],
         ctx: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if ctx.sample_rate != 48_000 {
+        if ctx.sample_rate != 48_000.0 {
             return Err(format!(
                 "burst hold fixture drain requires 48000 Hz, got {} Hz",
                 ctx.sample_rate
@@ -759,7 +759,7 @@ fn plain_add_node_rejects_mid_graph_rate_mismatch() {
     )
     .unwrap();
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 
     let err = host
         .add_node(
@@ -774,7 +774,7 @@ fn plain_add_node_rejects_mid_graph_rate_mismatch() {
 
     // The failed admission leaves no partial node behind.
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 }
 
 #[test]
@@ -792,7 +792,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
         )
         .unwrap();
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 
     // Mid-graph insertion at the stage's own input rate.
     let up = host
@@ -808,7 +808,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
     // Pure-graph order refresh: the appended stage joins the derived order,
     // so the composed output clock, tail readback, and latency follow it.
     assert_eq!(host.chain_nodes, vec![down, up]);
-    assert_eq!(host.output_sample_rate(48_000), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
     assert_eq!(host.total_latency_samples(), 0);
 
     let total_frames: usize = BLOCKS.iter().sum();
@@ -823,7 +823,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
             // derived order and negotiated rates must be untouched.
             host.build().unwrap();
             assert_eq!(host.chain_nodes, vec![down, up]);
-            assert_eq!(host.output_sample_rate(48_000), 48_000);
+            assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
         }
         let block = &input[cursor * CHANNELS..(cursor + block_frames) * CHANNELS];
         cursor += block_frames;
@@ -1090,9 +1090,9 @@ impl LosslessDiamondOracle {
         let mut down = StrictRateFixture::down_48_to_24(channels);
         let mut up = StrictRateFixture::up_24_to_48(channels);
         let mut burst = BurstHoldFixture::new(channels, chunk);
-        down.initialize(48_000).unwrap();
-        up.initialize(24_000).unwrap();
-        burst.initialize(48_000).unwrap();
+        down.initialize(48_000.0).unwrap();
+        up.initialize(24_000.0).unwrap();
+        burst.initialize(48_000.0).unwrap();
         Self {
             down,
             up,
@@ -1211,7 +1211,7 @@ fn variable_diamond_lossless_join_requires_edge_retention() {
         host.add_edge(GraphEdge::new(from, to)).unwrap();
     }
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
 
     let total_frames: usize = BLOCKS.iter().sum();
     let input = exact_stereo_input(total_frames, CHANNELS);
@@ -1344,7 +1344,7 @@ impl Plugin for IdleFixture {
         None
     }
 
-    fn initialize(&mut self, _sample_rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, _sample_rate: f64) -> Result<(), String> {
         Ok(())
     }
 
@@ -1765,8 +1765,8 @@ fn unequal_burst_diamond_stays_lossless() {
     // Independent oracle: raw fixtures, retained queues, aligned join.
     let mut stage_a = BurstHoldFixture::new(CHANNELS, CHUNK_A);
     let mut stage_b = BurstHoldFixture::new(CHANNELS, CHUNK_B);
-    stage_a.initialize(48_000).unwrap();
-    stage_b.initialize(48_000).unwrap();
+    stage_a.initialize(48_000.0).unwrap();
+    stage_b.initialize(48_000.0).unwrap();
     let mut queue_a = VecDeque::new();
     let mut queue_b = VecDeque::new();
     let mut a_counts = Vec::new();
@@ -1859,9 +1859,9 @@ fn variable_diamond_f64_path_matches_f64_oracle_natively() {
     let mut down = StrictRateFixture::down_48_to_24(CHANNELS);
     let mut up = StrictRateFixture::up_24_to_48(CHANNELS);
     let mut burst = BurstHoldFixture::new(CHANNELS, CHUNK);
-    down.initialize(48_000).unwrap();
-    up.initialize(24_000).unwrap();
-    burst.initialize(48_000).unwrap();
+    down.initialize(48_000.0).unwrap();
+    up.initialize(24_000.0).unwrap();
+    burst.initialize(48_000.0).unwrap();
     let mut queue_a: VecDeque<f64> = VecDeque::new();
     let mut queue_b: VecDeque<f64> = VecDeque::new();
     let mut expected = Vec::new();
@@ -1927,8 +1927,8 @@ fn variable_diamond_f64_path_matches_f64_oracle_natively() {
     // drain identically to its f32 twin (widen/narrow roundtrip identity).
     let mut twin32 = StrictRateFixture::down_48_to_24(CHANNELS);
     let mut twin64 = StrictRateFixture::down_48_to_24(CHANNELS);
-    twin32.initialize(48_000).unwrap();
-    twin64.initialize(48_000).unwrap();
+    twin32.initialize(48_000.0).unwrap();
+    twin64.initialize(48_000.0).unwrap();
     let probe32 = exact_stereo_input(7, CHANNELS);
     let probe64: Vec<f64> = probe32.iter().map(|&v| f64::from(v)).collect();
     let out32 = node_process(&mut twin32, 48_000, &probe32);

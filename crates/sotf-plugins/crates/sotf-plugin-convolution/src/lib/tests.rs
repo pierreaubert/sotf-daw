@@ -405,7 +405,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir,
             48_000,
-            options(48_000, 2),
+            options(48_000.0, 2),
         )
         .is_ok()
     );
@@ -413,7 +413,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir,
             48_000,
-            options(48_000, 1),
+            options(48_000.0, 1),
         )
         .is_err()
     );
@@ -421,7 +421,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &short_four_path_ir[..2],
             48_000,
-            options(48_000, 2),
+            options(48_000.0, 2),
         )
         .is_err()
     );
@@ -469,7 +469,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
     }
     let ir = vec![vec![0.0; low]; 4];
     assert!(
-        ConvolutionPlugin::validate_ir_limits_for_routing(&ir, 48_000, options(384_000, 2),)
+        ConvolutionPlugin::validate_ir_limits_for_routing(&ir, 48_000, options(384_000.0, 2),)
             .is_ok()
     );
     let mut over_budget = ir;
@@ -478,7 +478,7 @@ fn true_stereo_validation_checks_matrix_shape_and_four_engine_budget() {
         ConvolutionPlugin::validate_ir_limits_for_routing(
             &over_budget,
             48_000,
-            options(384_000, 2),
+            options(384_000.0, 2),
         )
         .is_err()
     );
@@ -690,6 +690,39 @@ fn resampled_ir_delta_at_tail_preserves_the_last_response() {
             "tail response should remain centered near its nominal target position: rate {source_rate}->{target_rate}, expected={expected_index}, peak={local_peak:?}"
         );
     }
+}
+
+#[test]
+fn fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin() {
+    let source_rate = 48_000;
+    let target_rate = 12_345.678;
+    let source_len = 4_097;
+    let mut left = vec![0.0_f32; source_len];
+    let mut right = vec![0.0_f32; source_len];
+    left[0] = 1.0;
+    right[source_len - 1] = 1.0;
+    let output = ConvolutionPlugin::resample_ir(&[left, right], source_rate, target_rate).unwrap();
+    let expected_len = (source_len as f64 * target_rate / f64::from(source_rate)).ceil() as usize;
+    assert_eq!(output.len(), 2);
+    assert_eq!(output[0].len(), expected_len);
+    assert_eq!(output[1].len(), expected_len);
+    let first_peak = output[0]
+        .iter()
+        .enumerate()
+        .max_by(|(_, left), (_, right)| left.abs().total_cmp(&right.abs()))
+        .map(|(index, sample)| (index, sample.abs()))
+        .unwrap();
+    assert!(first_peak.0 < 16 && first_peak.1 > 0.1);
+    let last_expected = ((source_len - 1) as f64 * target_rate / f64::from(source_rate)).round() as usize;
+    let tail = &output[1][last_expected.saturating_sub(8)..(last_expected + 9).min(expected_len)];
+    assert!(tail.iter().any(|sample| sample.abs() > 0.05));
+}
+
+#[test]
+fn fractional_ir_resampling_rejects_unbounded_temporary_output_before_allocation() {
+    let error = ConvolutionPlugin::resample_ir(&[vec![1.0]], 1, 1_000_000_000_000.5)
+        .unwrap_err();
+    assert!(error.contains("temporary output memory limit"), "{error}");
 }
 
 #[test]
@@ -956,7 +989,7 @@ fn host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_ca
     let mut plugin = make_delta_ir_plugin(true, false);
     plugin.nupc_engines = vec![nupc::NupcEngine::new(&ir, PARTITION_SIZE)];
     plugin.max_ir_frames = IR_FRAMES;
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let latency = plugin.latency_samples();
     let mut first = [1.0];
     plugin

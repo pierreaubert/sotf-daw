@@ -12,7 +12,7 @@ fn plugin(mics: usize, algorithm: usize) -> BeamformerPlugin {
         },
     )
     .unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     p
 }
 
@@ -151,7 +151,7 @@ fn spectral_overflow_emits_finite_audio_then_recovers_ordinary_waveform() {
                         .iter()
                         .all(|&x| x == 0.0)
                 );
-                p.initialize(96_000).unwrap();
+                p.initialize(96_000.0).unwrap();
                 let mut output = [987.0; 513];
                 p.process(
                     &vec![0.0; 513 * mics],

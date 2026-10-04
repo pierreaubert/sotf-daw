@@ -1378,8 +1378,8 @@ mod tests {
             merge_linear_phase_eq_state_into_config(short_config, long_state).unwrap();
         let mut short = create_plugin("LinearPhaseEQ", short_config, 2, 2, 48_000).unwrap();
         let mut long = create_plugin("LinearPhaseEQ", &long_config, 2, 2, 48_000).unwrap();
-        short.initialize(48_000).unwrap();
-        long.initialize(48_000).unwrap();
+        short.initialize(48_000.0).unwrap();
+        long.initialize(48_000.0).unwrap();
         assert!(long.latency_samples() > short.latency_samples());
     }
 
@@ -1387,13 +1387,13 @@ mod tests {
     fn linear_phase_eq_adapter_latency_uses_negotiated_callback_quantum() {
         let config = r#"{"num_filters":1,"fir_length_index":0,"filters":[]}"#;
         let mut inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, config).unwrap();
-        inner.initialize(48_000).unwrap();
+        inner.initialize(48_000.0).unwrap();
         let inner_latency = inner.latency_samples();
 
         let mut direct =
             create_plugin_with_max_callback("LinearPhaseEQ", config, 2, 2, 48_000, 257).unwrap();
         // The facade's normal post-factory initialize call is adapter-idempotent.
-        direct.initialize(48_000).unwrap();
+        direct.initialize(48_000.0).unwrap();
         assert_eq!(direct.realtime_quantum_frames(), 1);
         assert_eq!(direct.latency_samples(), inner_latency + 2 * 257);
     }

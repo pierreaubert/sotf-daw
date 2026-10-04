@@ -8,7 +8,7 @@ pub(super) const SAMPLE_RATE: u32 = 48000;
 #[test]
 fn test_parameter_set_get() {
     let mut denoiser = DenoiserPlugin::new(2, false);
-    denoiser.initialize(SAMPLE_RATE).unwrap();
+    denoiser.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     denoiser
         .set_parameter(
@@ -30,7 +30,7 @@ fn test_parameter_set_get() {
 #[test]
 fn test_rejects_mismatched_buffer_size() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buffer = vec![0.0_f32; 1023];
     let context = ProcessContext::new(SAMPLE_RATE, 512);
@@ -46,7 +46,7 @@ fn test_rejects_mismatched_buffer_size() {
 #[test]
 fn test_parameter_updates() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .set_parameter(
@@ -65,7 +65,7 @@ fn test_attack_release_parameters() {
     params.attack_ms = 1.0;
     params.release_ms = 100.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("attack_ms"), ParameterValue::Float(10.0))
@@ -88,7 +88,7 @@ fn test_attack_release_parameters() {
 fn test_silence_input() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -154,7 +154,7 @@ fn test_formant_preservation_floors_gains_at_peaks() {
     params_on.formant_preservation = true;
     params_on.formant_strength = 1.0;
     let mut plugin_on = DenoiserPlugin::from_params(channels, params_on);
-    plugin_on.initialize(SAMPLE_RATE).unwrap();
+    plugin_on.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buf_on = buffer_with_preservation.clone();
     let ctx = ProcessContext::new(SAMPLE_RATE, num_frames);
@@ -172,7 +172,7 @@ fn test_formant_preservation_floors_gains_at_peaks() {
     params_off.floor_db = -40.0;
     params_off.formant_preservation = false;
     let mut plugin_off = DenoiserPlugin::from_params(channels, params_off);
-    plugin_off.initialize(SAMPLE_RATE).unwrap();
+    plugin_off.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut buf_off = buffer_with_preservation.clone();
     plugin_off.process_in_place(&mut buf_off, &ctx).unwrap();
@@ -213,7 +213,7 @@ fn test_formant_preservation_floors_gains_at_peaks() {
 #[test]
 fn test_spatial_coherence_uses_complex_cross_term() {
     let mut plugin = DenoiserPlugin::new(2, true);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let k = 10;
     let mut coherent_sum = 0.0;
@@ -263,7 +263,7 @@ fn test_spatial_coherence_uses_complex_cross_term() {
 #[test]
 fn spatial_coherence_uses_matched_power_smoothing() {
     let mut plugin = DenoiserPlugin::new(2, true);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let k = 12;
     for frame in 0..32 {
         let amplitude = [0.1_f32, 1.0, 0.25, 2.0][frame % 4];
@@ -332,7 +332,7 @@ fn spatial_topology_covers_surround_pairs_and_excludes_center_lfe() {
 #[test]
 fn test_power_at_bin_reads_no_alloc_vector_per_call() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin.fft.freq_domain[0][3] = rustfft::num_complex::Complex::new(3.0, 4.0);
     let p = plugin.get_power_at_bin(0, 3);
@@ -344,7 +344,7 @@ fn test_trigger_params_indexed_api_contract() {
     // learn_noise (20) and clear_profile (22) are trigger-only: the indexed
     // API must never observe or fire them; only named set_parameter does.
     let mut denoiser = DenoiserPlugin::new(2, false);
-    denoiser.initialize(SAMPLE_RATE).unwrap();
+    denoiser.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     assert_eq!(denoiser.param_value(22), Some(0.0));
     denoiser.set_param_value(22, 1.0);

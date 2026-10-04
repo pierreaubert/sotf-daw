@@ -274,7 +274,7 @@ impl Drop for ClapLifecycleGuard {
 impl ClapBackend {
     pub(super) fn load(
         descriptor: &PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: f64,
         max_block_frames: usize,
         audio_setup: Option<&NativePluginAudioSetup>,
     ) -> Result<Self, String> {
@@ -380,7 +380,7 @@ impl ClapBackend {
             pending_parameter_events: Vec::with_capacity(pending_event_capacity),
             automation_events: Vec::with_capacity(1024),
             midi_events: Vec::with_capacity(1024),
-            sample_rate: f64::from(sample_rate),
+            sample_rate,
             is_instrument: descriptor.is_instrument,
             max_block_frames,
             steady_time: 0,
@@ -538,7 +538,7 @@ impl ClapBackend {
         plugin: *const clap_plugin,
         metadata: &NativePluginMetadata,
         requested: &PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: f64,
         max_block_frames: usize,
         audio_setup: Option<&NativePluginAudioSetup>,
         lifecycle: &mut ClapLifecycleGuard,
@@ -569,7 +569,7 @@ impl ClapBackend {
             let activate = (*plugin).activate.ok_or_else(|| {
                 format!("CLAP plugin '{}' has no activate callback", metadata.name)
             })?;
-            if !activate(plugin, f64::from(sample_rate), 1, max_block_frames as u32) {
+            if !activate(plugin, sample_rate, 1, max_block_frames as u32) {
                 return Err(format!(
                     "CLAP plugin '{}' rejected {} Hz activation with block range 1..={max_block_frames}",
                     metadata.name, sample_rate,
@@ -2558,10 +2558,10 @@ fn clap_transport(context: &crate::plugin::ProcessContext) -> clap_event_transpo
         flags |= CLAP_TRANSPORT_IS_LOOP_ACTIVE;
     }
     let samples_to_seconds = |sample: u64| {
-        (sample as f64 / f64::from(context.sample_rate) * CLAP_SECTIME_FACTOR as f64) as i64
+        (sample as f64 / context.sample_rate * CLAP_SECTIME_FACTOR as f64) as i64
     };
     let samples_to_beats = |sample: u64| {
-        (sample as f64 / f64::from(context.sample_rate) * transport.bpm / 60.0
+        (sample as f64 / context.sample_rate * transport.bpm / 60.0
             * CLAP_BEATTIME_FACTOR as f64) as i64
     };
     let (loop_start_beats, loop_end_beats, loop_start_seconds, loop_end_seconds) =

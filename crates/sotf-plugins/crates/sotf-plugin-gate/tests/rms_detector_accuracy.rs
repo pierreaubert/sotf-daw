@@ -26,7 +26,7 @@ fn verify_gain(rate: u32, mode: GateMode, background: f32, threshold: f32, ratio
         ..GatePluginParams::default()
     };
     let mut plugin = GatePlugin::try_from_params(1, params).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let mut rendered = Vec::with_capacity(frames);
     let mut start = 0;
     for &capacity in [1, 7, 113, 256].iter().cycle() {

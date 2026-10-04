@@ -234,7 +234,7 @@ fn cold_iir_cutoff_sync_and_process_do_not_allocate() {
     ]);
     let mut plugin =
         crate::params::configuration::create_plugin("Crossover", 48_000, &old_params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     // Build changed native values without touching the prepared instance.
     // This exercises the first sync after activation, before any warm callback.
@@ -293,10 +293,10 @@ fn dormant_global_cutoffs_do_not_reject_prepared_per_channel_audio() {
     let old_params = params_with(&old_overrides);
     let mut plugin =
         crate::params::configuration::create_plugin("Crossover", 48_000, &old_params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut twin =
         crate::params::configuration::create_plugin("Crossover", 48_000, &old_params).unwrap();
-    twin.initialize(48_000).unwrap();
+    twin.initialize(48_000.0).unwrap();
 
     let mut new_overrides = structural.to_vec();
     new_overrides.push(("frequency", 1500.0));

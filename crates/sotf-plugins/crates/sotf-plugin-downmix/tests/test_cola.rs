@@ -7,7 +7,7 @@ use sotf_plugin_downmix::DownmixPlugin;
 #[test]
 fn test_pure_tone_no_ola_flutter() {
     let mut plugin = DownmixPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Enable phase coherence (activates STFT path)
     plugin

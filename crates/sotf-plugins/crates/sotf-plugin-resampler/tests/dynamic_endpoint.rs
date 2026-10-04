@@ -54,7 +54,7 @@ fn callback_counts(f: impl FnOnce()) -> (usize, usize) {
 
 fn make(rate: u32, output_rate: u32, chunk: usize, quality: ResamplerQuality) -> ResamplerPlugin {
     let mut plugin = ResamplerPlugin::with_quality(1, rate, output_rate, chunk, quality).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dynamic_ratio"),
@@ -511,7 +511,7 @@ fn dynamic_process_drain_and_reset_allocate_and_deallocate_nothing_on_a_cold_thr
                 ResamplerQuality::High,
             )
             .unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             plugin
                 .set_parameter(
                     ParameterId::from("dynamic_ratio"),

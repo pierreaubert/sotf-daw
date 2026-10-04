@@ -113,7 +113,7 @@ fn convolution_factory_reconstructs_opt_in_true_stereo_and_keeps_neutral_prehydr
 
     // A matrix-configured plugin with no IR is a defined neutral pre-load route:
     // it retains the normal NUPC dry latency and then reproduces both channels.
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let latency = plugin.latency_samples();
     let frames = latency + 64;
     let mut input = vec![0.0_f32; frames * 2];
@@ -337,7 +337,7 @@ fn hiss_reducer_factory_carries_transient_guard_through_render_and_reload() {
         .collect();
     let render = |parameters: &serde_json::Value| {
         let mut plugin = create_plugin("hiss_reducer", parameters, 1, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = vec![f32::NAN; input.len()];
         assert_eq!(
             plugin
@@ -490,7 +490,7 @@ fn compressor_catalog_and_factory_expose_true_broadband_mode() {
         "knee_db": 3.0
     });
     let mut plugin = create_plugin("compressor", &config, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.info().name, "Compressor");
     assert!(
         plugin
@@ -563,7 +563,7 @@ fn ambisonics_catalog_matches_factory_order_contract() {
         )
         .unwrap_or_else(|error| panic!("order-{order} factory contract failed: {error}"));
         assert_eq!(plugin.input_channels(), channels);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 3;
         let mut input = vec![0.0; frames * channels];
         for frame in 0..frames {
@@ -620,7 +620,7 @@ fn ambisonics_factory_custom_geometry_decodes_and_matches_direct_construction() 
         serde_json::from_value(parameters).unwrap();
     let mut reference =
         sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom).unwrap();
-    reference.initialize(48_000).unwrap();
+    reference.initialize(48_000.0).unwrap();
 
     let frames = 8;
     let mut input = vec![0.0; frames * 4];
@@ -852,7 +852,7 @@ fn resampler_facade_factory_honors_cutoff_smoothing_and_renders() {
                 ParameterValue::Bool(true),
             )
             .expect("dynamic_ratio must enable on facade instance");
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
     }
     let frames = 512;
     let input: Vec<f32> = (0..frames * 2)
@@ -1962,7 +1962,7 @@ fn external_plugin_state_stays_consistent_after_invalid_parameter_changes() {
     });
 
     let mut plugin = create_plugin("external", &params, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     // Unknown parameter id should be ignored, not corrupt state.
     let _ = plugin.set_parameter(

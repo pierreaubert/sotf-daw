@@ -9,7 +9,7 @@ fn benchmark_plugin(
     mut plugin: AmbisonicsDecoderPlugin,
     frame_size: usize,
 ) {
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let in_ch = plugin.input_channels();
     let out_ch = plugin.output_channels();
 

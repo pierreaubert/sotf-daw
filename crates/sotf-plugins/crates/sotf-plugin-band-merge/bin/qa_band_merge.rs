@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut plugin = BandMergePlugin::from_params(output_channels, &params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: BandMerge Plugin ===");
 

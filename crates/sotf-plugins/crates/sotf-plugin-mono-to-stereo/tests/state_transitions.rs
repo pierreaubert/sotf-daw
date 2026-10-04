@@ -17,7 +17,7 @@ fn duplicate_plugin() -> MonoToStereoPlugin {
         },
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 

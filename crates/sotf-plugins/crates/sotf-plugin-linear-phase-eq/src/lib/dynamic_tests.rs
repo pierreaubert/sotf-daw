@@ -618,10 +618,10 @@ fn rate_change_discards_inflight_update() {
         )
         .unwrap();
     assert!(plugin.update_in_progress());
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     assert!(!plugin.update_in_progress());
     assert!(plugin.take_retired_route().is_none());
-    assert_eq!(plugin.sample_rate, 44_100);
+    assert_eq!(plugin.sample_rate, 44_100.0);
     let output = stream_partitioned(&mut plugin, &pattern(500), 44_100, 64);
     assert!(output.iter().all(|sample| sample.is_finite()));
     assert!(!drain_all(&mut plugin, 44_100, 257).is_empty());

@@ -69,7 +69,7 @@ fn cold_process_control_begin_partial_drain_bounds_and_reset_do_not_allocate_or_
             }))
             .unwrap();
             let mut plugin = LimiterPlugin::from_params(channels, params);
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let input = vec![0.7; (256 + phase) * channels];
             let output = vec![0.0; 256 * channels];
             cases.push((plugin, input, output, rate, channels, choice, isp));
@@ -90,7 +90,10 @@ fn cold_process_control_begin_partial_drain_bounds_and_reset_do_not_allocate_or_
         .map(ParameterId::from);
         for (mut plugin, mut input, mut output, rate, channels, choice, isp) in cases {
             counted(|| {
-                let ctx = ProcessContext::new(rate, input.len() / channels);
+                let ctx = ProcessContext::new(
+                    f64::from(u32::try_from(rate).unwrap()),
+                    input.len() / channels,
+                );
                 assert_eq!(
                     plugin.process_in_place(&mut input, &ctx).unwrap(),
                     ctx.num_frames

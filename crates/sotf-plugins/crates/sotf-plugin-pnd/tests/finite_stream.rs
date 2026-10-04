@@ -18,7 +18,7 @@ fn neutral(channels: usize, rate: u32) -> PndPlugin {
         },
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -176,7 +176,7 @@ fn fft_boundaries_rates_channels_and_capacities_match_neutral_oracle() {
 
 #[test]
 fn rejected_calls_are_transactional_and_reset_rearms_eof() {
-    assert!(PndPlugin::new(0).initialize(RATE).is_err());
+    assert!(PndPlugin::new(0).initialize(f64::from(RATE)).is_err());
     let mut raw = PndPlugin::new(2);
     assert_eq!(raw.tail_length(), TailLength::Unknown);
     assert!(
@@ -224,7 +224,7 @@ fn rejected_calls_are_transactional_and_reset_rearms_eof() {
                 .is_err()
         );
         assert_eq!(canary, [123.0; 15]);
-        assert!(plugin.initialize(0).is_err());
+        assert!(plugin.initialize(0.0).is_err());
         assert_eq!(
             plugin
                 .process(&[], &mut [], &ProcessContext::new(RATE, 0))
@@ -268,7 +268,7 @@ fn rejected_calls_are_transactional_and_reset_rearms_eof() {
     );
     for reinitialize in [false, true] {
         if reinitialize {
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
         } else {
             plugin.reset();
         }

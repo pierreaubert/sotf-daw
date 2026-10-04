@@ -30,7 +30,7 @@ fn make_rate(
 ) -> ResamplerPlugin {
     let mut plugin =
         ResamplerPlugin::with_quality(channels, input_rate, output_rate, chunk, quality).unwrap();
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dynamic_ratio"),

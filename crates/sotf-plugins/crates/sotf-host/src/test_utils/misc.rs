@@ -143,7 +143,7 @@ pub fn detect_latency(plugin: &mut dyn Plugin, sample_rate: f64) -> usize {
     let mut frames_processed = 0;
     while frames_processed < total_frames {
         let num_frames = (block_size).min(total_frames - frames_processed);
-        let ctx = ProcessContext::new(sample_rate as u32, num_frames);
+        let ctx = ProcessContext::new(sample_rate, num_frames);
 
         let in_slice =
             &input[frames_processed * channels..(frames_processed + num_frames) * channels];

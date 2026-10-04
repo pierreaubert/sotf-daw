@@ -103,7 +103,7 @@ fn unknown_parameter_rejected() {
 #[test]
 fn process_mvdr() {
     let mut plugin = BeamformerPlugin::new(2, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input: Vec<f32> = (0..num_frames * 2)
@@ -129,7 +129,7 @@ fn process_superdirective() {
         },
     )
     .unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input = vec![0.1_f32; num_frames * 4];
@@ -153,7 +153,7 @@ fn process_gsc() {
         },
     )
     .unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = vec![0.1_f32; num_frames * 2];
@@ -168,7 +168,7 @@ fn process_gsc() {
 #[test]
 fn beamformer_type_is_structural() {
     let mut plugin = BeamformerPlugin::new(2, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = vec![0.1_f32; num_frames * 2];
@@ -189,7 +189,7 @@ fn beamformer_type_is_structural() {
 #[test]
 fn reset_then_process_again() {
     let mut plugin = BeamformerPlugin::new(2, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input = vec![0.1_f32; num_frames * 2];
@@ -225,7 +225,7 @@ fn latency_depends_on_type() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = BeamformerPlugin::new(2, 48000).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(96000.0).unwrap();
     // Public API does not expose sample_rate, but process should still succeed
     let num_frames = 256;
     let input = vec![0.1_f32; num_frames * 2];
@@ -238,7 +238,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn process_silence_is_finite() {
     let mut plugin = BeamformerPlugin::new(2, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = vec![0.0_f32; num_frames * 2];

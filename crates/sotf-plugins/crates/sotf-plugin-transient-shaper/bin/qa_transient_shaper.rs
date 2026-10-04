@@ -19,7 +19,7 @@ fn main() {
     };
 
     let mut inner = TransientShaperPlugin::from_validated_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: TransientShaper Plugin ===");
 

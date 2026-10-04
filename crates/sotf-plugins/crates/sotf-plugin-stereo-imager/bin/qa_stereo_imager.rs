@@ -21,7 +21,7 @@ fn main() {
     };
 
     let mut inner = StereoImagerPlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: StereoImager Plugin ===");
 

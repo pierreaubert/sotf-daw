@@ -44,7 +44,7 @@ fn info_and_channels_match_construction() {
 #[test]
 fn default_state_is_neutral_eq_with_color_off() {
     let mut plugin = AnalogEqPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = make_interleaved_sine(440.0, SR, FRAMES, 2, 0.5);
     let mut buffer = input.clone();
     let context = ProcessContext::new(SR, FRAMES);
@@ -61,7 +61,7 @@ fn default_state_is_neutral_eq_with_color_off() {
 #[test]
 fn peak_band_boosts_and_cuts() {
     let mut plugin = AnalogEqPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mid1_gain"), ParameterValue::Float(12.0))
         .unwrap();
@@ -93,7 +93,7 @@ fn peak_band_boosts_and_cuts() {
 #[test]
 fn color_stage_adds_harmonics_when_enabled() {
     let mut plugin = AnalogEqPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("analog_drive"),
@@ -126,7 +126,7 @@ fn color_stage_adds_harmonics_when_enabled() {
 #[test]
 fn parameter_roundtrip_and_rejection() {
     let mut plugin = AnalogEqPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // The analog model is structural (replacement allocates and
     // re-prepares on the control thread): live changes are refused, while
     // repeating the committed model stays a no-op success.
@@ -206,7 +206,7 @@ fn from_params_rejects_bad_model_and_zero_channels() {
 #[test]
 fn oversized_blocks_are_chunked() {
     let mut plugin = AnalogEqPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // 16384 frames exceeds the 8192 prepared ceiling; the stage chunks it.
     let frames = 16384;
     let mut buffer = make_interleaved_sine(440.0, SR, frames, 2, 0.3);
@@ -219,7 +219,7 @@ fn oversized_blocks_are_chunked() {
 #[test]
 fn reset_clears_state() {
     let mut plugin = AnalogEqPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mid1_gain"), ParameterValue::Float(12.0))
         .unwrap();
@@ -230,7 +230,7 @@ fn reset_clears_state() {
     plugin.reset();
     // After reset with identical params, output matches a fresh plugin.
     let mut fresh = AnalogEqPlugin::new(1);
-    fresh.initialize(SR).unwrap();
+    fresh.initialize(f64::from(SR)).unwrap();
     fresh
         .set_parameter(ParameterId::from("mid1_gain"), ParameterValue::Float(12.0))
         .unwrap();
@@ -273,7 +273,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
                 .set_parameter(ParameterId::from(*id), value.clone())
                 .unwrap();
         }
-        expected_plugin.initialize(SR).unwrap();
+        expected_plugin.initialize(f64::from(SR)).unwrap();
         let input = make_interleaved_sine(997.0, SR, 4096, 2, 0.3);
         let mut expected_live = input.clone();
         expected_plugin
@@ -299,7 +299,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
                 }
             }
             plugin.apply_values(values).unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             for (id, value) in &controls {
                 assert_eq!(
                     plugin.get_parameter(&ParameterId::from(*id)),
@@ -335,7 +335,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
             plugin
                 .set_parameter(ParameterId::from("analog_model"), model.clone())
                 .unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             for (id, value) in &controls {
                 plugin
                     .set_parameter(ParameterId::from(*id), value.clone())
@@ -394,7 +394,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
         ordered
             .set_parameter(ParameterId::from("analog_model"), model.clone())
             .unwrap();
-        ordered.initialize(SR).unwrap();
+        ordered.initialize(f64::from(SR)).unwrap();
         ordered.reset();
         let mut actual = input.clone();
         ordered
@@ -413,7 +413,7 @@ fn analog_model_reconstruction_and_bulk_update_preserve_shared_controls() {
             ..Default::default()
         };
         let mut reconstructed = AnalogEqPlugin::try_from_params(2, params).unwrap();
-        reconstructed.initialize(SR).unwrap();
+        reconstructed.initialize(f64::from(SR)).unwrap();
         reconstructed.reset();
         let mut actual = input.clone();
         reconstructed

@@ -2,14 +2,18 @@
 //!
 //! Wraps the shared [`RnnoiseBackend`](plugins_denoiser::rnnoise::RnnoiseBackend)
 //! with SOTF host traits, a suppression-strength blend, and a validated model
-//! registry. Only 48 kHz mono/stereo streams are accepted; other rates and
-//! wider layouts are rejected rather than converted.
+//! registry. RNNoise runs at 48 kHz; mono/stereo host streams at other finite
+//! positive rates use a prepared streaming converter. Wider layouts are rejected.
+//! The dry path stays at the full host bandwidth. At host rates above 48 kHz,
+//! the 100%-wet path is limited by RNNoise's 24 kHz Nyquist frequency.
 
 pub mod model;
 pub mod params;
+mod rate_adapter;
 
 pub use crate::model::SpeechDenoiserModel;
 use crate::params::PARAMS as SP;
+use crate::rate_adapter::RateAdapter;
 use plugins_denoiser::rnnoise::RnnoiseBackend;
 pub use plugins_denoiser::rnnoise::{
     RNNOISE_BAND_COUNT, RnnoiseAnalyzerData as SpeechDenoiserData,
@@ -127,8 +131,10 @@ pub struct SpeechDenoiserPlugin {
     inner: RnnoiseBackend,
     dry_delay: Vec<Vec<f32>>,
     dry_pos: usize,
+    rate_adapter: Option<RateAdapter>,
+    strength_smoothing_frames: f32,
     cached_parameters: Vec<Parameter>,
-    initialized_sample_rate: Option<u32>,
+    initialized_sample_rate: Option<f64>,
     analyzer_cache: RealTimeCache<SpeechDenoiserData>,
     published_model_frames: u64,
     has_input: bool,
@@ -158,6 +164,8 @@ impl SpeechDenoiserPlugin {
             inner: RnnoiseBackend::new(),
             dry_delay: Vec::new(),
             dry_pos: 0,
+            rate_adapter: None,
+            strength_smoothing_frames: STRENGTH_SMOOTHING_FRAMES,
             cached_parameters: Vec::new(),
             initialized_sample_rate: None,
             analyzer_cache: RealTimeCache::new_triplet(
@@ -346,7 +354,7 @@ impl SpeechDenoiserPlugin {
     }
 
     fn advance_strength(&mut self) {
-        let step = 1.0 / STRENGTH_SMOOTHING_FRAMES;
+        let step = 1.0 / self.strength_smoothing_frames;
         if self.strength_current < self.strength_target {
             self.strength_current = (self.strength_current + step).min(self.strength_target);
         } else if self.strength_current > self.strength_target {
@@ -432,6 +440,40 @@ impl SpeechDenoiserPlugin {
             let start = processed * channels;
             let end = start + chunk_frames * channels;
             self.process_chunk(&mut buffer[start..end], chunk_frames)?;
+            processed += chunk_frames;
+        }
+        let analyzer_data = self.inner.analyzer_data();
+        if analyzer_data.model_frames != self.published_model_frames {
+            self.analyzer_cache.update(|data| *data = analyzer_data);
+            self.published_model_frames = analyzer_data.model_frames;
+        }
+        Ok(frames)
+    }
+
+    fn process_at_host_rate(&mut self, buffer: &mut [f32], frames: usize) -> PluginResult<usize> {
+        let mut processed = 0;
+        while processed < frames {
+            let chunk_frames = (frames - processed).min(64);
+            let start = processed * self.channels;
+            let end = start + chunk_frames * self.channels;
+            let mut dry = [0.0_f32; 128];
+            {
+                let adapter = self.rate_adapter.as_mut().ok_or("speech adapter is missing")?;
+                adapter.process_chunk(
+                    &mut buffer[start..end],
+                    &mut dry[..chunk_frames * self.channels],
+                    &mut self.inner,
+                    !self.enabled,
+                )?;
+            }
+            if self.enabled {
+                self.blend_chunk(&mut buffer[start..end], &dry, chunk_frames);
+            } else {
+                buffer[start..end].copy_from_slice(&dry[..chunk_frames * self.channels]);
+                for _ in 0..chunk_frames {
+                    self.advance_strength();
+                }
+            }
             processed += chunk_frames;
         }
         let analyzer_data = self.inner.analyzer_data();
@@ -530,18 +572,38 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     /// Initialize the plugin at the given sample rate.
     ///
-    /// Returns `Err` if `sample_rate != 48000`; RNNoise is hard-coded for
-    /// 48 kHz and will silently corrupt the frequency response at any other
-    /// rate. The selected model is parsed, transposed, and built here, off
+    /// RNNoise itself stays at 48 kHz. Other finite positive host rates use a
+    /// prepared streaming adapter with a fixed host-frame delay. The selected
+    /// model is parsed, transposed, and built here, off
     /// the audio callback; a failed load retains the previous backend with
     /// its accepted model and populated history.
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Speech denoiser sample rate must be finite and positive".into());
+        }
+        let adapter = if sample_rate == 48_000.0 {
+            None
+        } else {
+            Some(RateAdapter::new(sample_rate, self.channels)?)
+        };
+        let strength_frames = (sample_rate * 0.01).round();
+        if !strength_frames.is_finite() || strength_frames < 1.0
+            || strength_frames >= f32::MAX as f64
+        {
+            return Err("Speech denoiser strength horizon is unsupported".into());
+        }
         self.inner
-            .initialize_with_model(sample_rate, self.channels, self.model.backend_id())?;
+            .initialize_with_model(48_000, self.channels, self.model.backend_id())?;
         let latency = self.inner.latency_samples();
         debug_assert_eq!(latency, SPEECH_DENOISER_LATENCY_FRAMES);
-        self.dry_delay = vec![vec![0.0; latency]; self.channels];
+        self.dry_delay = if adapter.is_none() {
+            vec![vec![0.0; latency]; self.channels]
+        } else {
+            Vec::new()
+        };
         self.dry_pos = 0;
+        self.rate_adapter = adapter;
+        self.strength_smoothing_frames = strength_frames as f32;
         self.strength_current = self.strength_target;
         self.initialized_sample_rate = Some(sample_rate);
         self.has_input = false;
@@ -554,6 +616,9 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn reset(&mut self) {
         self.inner.reset();
+        if let Some(adapter) = self.rate_adapter.as_mut() {
+            adapter.reset();
+        }
         for ring in &mut self.dry_delay {
             ring.fill(0.0);
         }
@@ -610,7 +675,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         if context.num_frames == 0 {
             return Ok(0);
         }
-        let written = self.process_backend(buffer, context.num_frames)?;
+        let written = if self.rate_adapter.is_some() {
+            self.process_at_host_rate(buffer, context.num_frames)?
+        } else {
+            self.process_backend(buffer, context.num_frames)?
+        };
         self.has_input |= written > 0;
         Ok(written)
     }
@@ -625,7 +694,7 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn drain_output_frames_max(&self) -> usize {
         // Structural capacity must be available before wrapper preparation feeds input.
-        SPEECH_DENOISER_FRAME_SIZE
+        if self.rate_adapter.is_some() { 64 } else { SPEECH_DENOISER_FRAME_SIZE }
     }
 
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
@@ -633,9 +702,14 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         let remaining = if !self.has_input {
             0
         } else {
-            self.drain_remaining.unwrap_or(self.latency_samples())
+            self.drain_remaining.unwrap_or_else(|| {
+                self.rate_adapter.as_ref().map_or_else(
+                    || self.latency_samples(),
+                    |adapter| if self.enabled { adapter.drain_frames() } else { adapter.latency() },
+                )
+            })
         };
-        std::num::NonZeroU64::new(remaining.div_ceil(SPEECH_DENOISER_FRAME_SIZE).max(1) as u64)
+        std::num::NonZeroU64::new(remaining.div_ceil(self.drain_output_frames_max()).max(1) as u64)
     }
 
     fn drain(
@@ -655,6 +729,31 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         // Empty streams do not freeze, regardless of enabled state.
         if !self.has_input {
             return Ok(PluginDrainResult::COMPLETE);
+        }
+        if self.rate_adapter.is_some() {
+            let total = self.rate_adapter.as_ref().unwrap();
+            let total = if self.enabled { total.drain_frames() } else { total.latency() };
+            let remaining = self.drain_remaining.unwrap_or(total);
+            if remaining == 0 {
+                return Ok(PluginDrainResult::COMPLETE);
+            }
+            let frames = (output.len() / self.channels).min(64).min(remaining);
+            if frames == 0 {
+                return Err("Speech Denoiser drain requires positive output capacity".into());
+            }
+            self.drain_remaining = Some(remaining);
+            output[..frames * self.channels].fill(0.0);
+            self.process_at_host_rate(&mut output[..frames * self.channels], frames)?;
+            let next = remaining - frames;
+            self.drain_remaining = Some(next);
+            if next == 0 && self.enabled {
+                self.inner.reset();
+                if let Some(adapter) = self.rate_adapter.as_mut() {
+                    adapter.reset();
+                }
+                self.strength_current = self.strength_target;
+            }
+            return Ok(PluginDrainResult { frames, complete: next == 0 });
         }
         let remaining = self.drain_remaining.unwrap_or(self.latency_samples());
         if remaining == 0 {
@@ -695,15 +794,18 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         Some(self.analyzer_cache.load() as Arc<dyn Any + Send + Sync>)
     }
 
-    /// Returns a fixed latency of 960 samples regardless of the `enabled`
-    /// flag.
+    /// Returns the prepared host-frame latency regardless of the `enabled` flag.
     ///
     /// Plugin hosts require latency to remain constant after initialisation.
-    /// RNNoise contributes 480 frames and arbitrary callback framing adds 480.
+    /// At 48 kHz this is the original 960 frames. At other rates it includes
+    /// the prepared conversion, model, chunking, and wet-alignment delays.
     /// Returning 0 when disabled would cause phase cancellation in parallel
     /// processing chains and misalignment with other latency-compensated
     /// tracks.
     fn latency_samples(&self) -> usize {
-        self.inner.latency_samples()
+        self.rate_adapter.as_ref().map_or_else(
+            || self.inner.latency_samples(),
+            RateAdapter::latency,
+        )
     }
 }

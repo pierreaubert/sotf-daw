@@ -17,7 +17,7 @@ fn eos_freezes_capture_storage_and_profile_while_adaptive_audio_continues() {
                             ..Default::default()
                         },
                     );
-                    p.initialize(48000).unwrap();
+                    p.initialize(48000.0).unwrap();
                     p.noise_profile.has_noise_profile = true;
                     p.noise_profile.use_captured_profile = true;
                     for ch in &mut p.noise_profile.noise_profile_storage {

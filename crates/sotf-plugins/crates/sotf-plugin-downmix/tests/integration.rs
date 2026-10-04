@@ -28,7 +28,7 @@ fn render_partitioned_at_rate(
     blocks: &[usize],
     sample_rate: u32,
 ) -> Vec<f32> {
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = input.len() / channels;
     let mut output = vec![0.0; frames * 2];
     let mut position = 0;
@@ -85,7 +85,7 @@ fn five_one_center_fold_down() {
             ParameterValue::Float(-60.0),
         )
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // 5.1 channel order: L, R, C, LFE, SL, SR
     let mut input = vec![0.0f32; 64 * 6];
@@ -116,7 +116,7 @@ fn stereo_left_passes_to_left() {
             ParameterValue::Bool(false),
         )
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut input = vec![0.0f32; 64 * 2];
     for frame in 0..64 {
@@ -146,7 +146,7 @@ fn mono_input_goes_to_both_channels() {
             ParameterValue::Float(0.0),
         )
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.6f32; 64];
     let mut output = vec![0.0f32; 64 * 2];
@@ -170,7 +170,7 @@ fn itu_mode_center_fold_down() {
     plugin
         .set_parameter(ParameterId::from("itu_mode"), ParameterValue::Bool(true))
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut input = vec![0.0f32; 64 * 6];
     for frame in 0..64 {
@@ -204,7 +204,7 @@ fn center_gain_roundtrip() {
 #[test]
 fn structural_phase_change_requires_reconstruction_after_initialize() {
     let mut plugin = DownmixPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert!(
         plugin.latency_samples() > 0,
         "phase coherence on by default -> latency"
@@ -422,7 +422,7 @@ fn phase_aligner_stress_matrix_has_bounded_level_image_and_phase_jumps() {
 #[test]
 fn process_rejects_inexact_buffer_lengths() {
     let mut plugin = DownmixPlugin::new(6);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let context = ctx(16);
     let mut output = vec![0.0; 32];
     assert!(
@@ -746,7 +746,7 @@ fn from_params_happy_path() {
     let mut plugin = DownmixPlugin::from_params(params);
     assert_eq!(plugin.input_channels(), 6);
     assert_eq!(plugin.output_channels(), 2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.1f32; 64 * 6];
     let mut output = vec![0.0f32; 64 * 2];
@@ -757,7 +757,7 @@ fn from_params_happy_path() {
 #[test]
 fn reset_clears_buffers() {
     let mut plugin = DownmixPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("phase_coherence"),

@@ -15,7 +15,7 @@ fn make(rate: u32, n: usize) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -61,7 +61,7 @@ fn diagonal(rate: u32, n: usize) -> XtcPlugin {
     params.auto_gain_enabled = true;
     params.auto_gain_max_db = 12.0;
     let mut plugin = XtcPlugin::new(params, rate).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

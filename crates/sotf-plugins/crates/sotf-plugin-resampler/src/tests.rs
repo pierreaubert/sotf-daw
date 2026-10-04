@@ -19,7 +19,7 @@ fn test_resampler_creation() {
 #[test]
 fn test_resampler_44100_to_48000() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Create test signal: 1kHz sine wave at 44.1kHz
     let num_frames = 1024;
@@ -59,7 +59,7 @@ fn test_resampler_44100_to_48000() {
 fn test_output_frame_estimate_covers_multi_chunk_input() {
     let chunk_size = 1024;
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, chunk_size).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let num_frames = chunk_size * 3;
     let input = vec![0.25_f32; num_frames * 2];
@@ -79,7 +79,7 @@ fn test_output_frame_estimate_covers_multi_chunk_input() {
 #[test]
 fn test_resampler_48000_to_44100() {
     let mut resampler = ResamplerPlugin::new(2, 48000, 44100, 1024).unwrap();
-    resampler.initialize(48000).unwrap();
+    resampler.initialize(48000.0).unwrap();
 
     // Create test signal at 48kHz
     let num_frames = 1024;
@@ -116,7 +116,7 @@ fn test_resampler_48000_to_44100() {
 fn test_resampler_multichannel() {
     // Test with 5 channels (5.0 surround)
     let mut resampler = ResamplerPlugin::new(5, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let mut input = vec![0.0_f32; num_frames * 5];
@@ -160,7 +160,7 @@ fn test_resampler_multichannel() {
 #[test]
 fn test_resampler_reset() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let input = vec![0.5_f32; num_frames * 2];
@@ -188,7 +188,7 @@ fn test_resampler_reset() {
 #[test]
 fn test_reset_clears_residual() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let ctx = ProcessContext::new(44100, num_frames);
@@ -309,7 +309,7 @@ fn test_quality_parameter_change() {
             )
             .is_err()
     );
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     assert!(
         resampler
             .set_parameter(ParameterId::from("quality"), ParameterValue::Int(1))
@@ -338,7 +338,7 @@ fn test_quality_affects_processing() {
         ResamplerQuality::High,
     ] {
         let mut resampler = ResamplerPlugin::with_quality(2, 44100, 48000, 1024, quality).unwrap();
-        resampler.initialize(44100).unwrap();
+        resampler.initialize(44100.0).unwrap();
 
         let max_output = resampler.output_frames_for_input(num_frames);
         let mut output = vec![0.0_f32; max_output * 2];
@@ -369,7 +369,7 @@ fn test_quality_affects_processing() {
 #[test]
 fn test_dynamic_ratio() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Dynamic ratio should be disabled by default
     assert!(!resampler.is_dynamic_ratio());
@@ -404,7 +404,7 @@ fn test_dynamic_ratio() {
 #[test]
 fn test_dynamic_ratio_relative() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Enable dynamic ratio
     resampler
@@ -428,7 +428,7 @@ fn test_dynamic_ratio_relative() {
 #[test]
 fn test_dynamic_ratio_via_parameter() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Trying to set ratio parameter when dynamic is off should fail
     assert!(
@@ -497,7 +497,7 @@ fn test_parameter_getset() {
 #[test]
 fn test_flush_empty_residual() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let max_out = resampler.flush_output_frames_max();
     let mut flush_out = vec![0.0_f32; (max_out + 64) * 2];
@@ -512,7 +512,7 @@ fn test_flush_recovers_trailing_frames() {
     let chunk_size = 1024;
     let block_size = 300; // 300 < 1024 — will never complete a chunk in one call
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, chunk_size).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Process exactly one small block — it will be buffered, producing 0 output frames.
     let input: Vec<f32> = (0..block_size * 2)
@@ -549,7 +549,7 @@ fn test_variable_block_size_small() {
     let chunk_size = 1024;
     let block_size = 256; // 4 blocks fill one chunk
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, chunk_size).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let input = vec![0.5_f32; block_size * 2];
     let max_out = resampler.output_frames_for_input(chunk_size);
@@ -579,7 +579,7 @@ fn test_variable_block_size_non_multiple() {
     let chunk_size = 1024;
     let block_size = 1500; // spans one full chunk + 476 leftover
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, chunk_size).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let input = vec![0.5_f32; block_size * 2];
     let max_out = resampler.output_frames_for_input(block_size);
@@ -605,7 +605,7 @@ fn test_variable_block_size_non_multiple() {
 #[test]
 fn test_zero_frame_block() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let input: Vec<f32> = vec![];
     let mut output = vec![0.0_f32; 256 * 2];
@@ -624,7 +624,7 @@ fn test_cumulative_frame_count() {
     let chunk_size = 1024;
     let total_input_frames = 44100 * 10; // 10 seconds
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, chunk_size).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let input = vec![0.5_f32; chunk_size * 2];
     let max_out = resampler.output_frames_for_input(chunk_size);
@@ -651,7 +651,7 @@ fn test_cumulative_frame_count() {
 #[test]
 fn test_disable_dynamic_ratio_resets() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let nominal = resampler.ratio();
 
@@ -742,7 +742,7 @@ fn test_downsampling_anti_aliasing_fast() {
     let mut resampler =
         ResamplerPlugin::with_quality(1, input_sr, output_sr, chunk_size, ResamplerQuality::Fast)
             .unwrap();
-    resampler.initialize(input_sr).unwrap();
+    resampler.initialize(f64::from(input_sr)).unwrap();
 
     // 22.5 kHz — just above output Nyquist (22.05 kHz).
     // With a short filter and a too-high cutoff, this frequency leaks through;
@@ -826,7 +826,7 @@ fn test_latency_includes_chunking_buffer() {
 #[test]
 fn test_flush_after_full_chunk_preserves_filter_tail() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input = vec![0.5_f32; 1024 * 2];
     let max_out = resampler.output_frames_for_input(1024);
     let mut output = vec![0.0_f32; max_out * 2];
@@ -847,7 +847,7 @@ fn test_flush_after_full_chunk_preserves_filter_tail() {
 #[test]
 fn test_flush_output_buffer_too_small_returns_err() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input = vec![0.5_f32; 512 * 2];
     let max_out = resampler.flush_output_frames_max().max(1);
     let mut output = vec![0.0_f32; max_out * 2];
@@ -862,7 +862,7 @@ fn test_flush_output_buffer_too_small_returns_err() {
 #[test]
 fn test_flush_after_reset_returns_zero() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input = vec![0.5_f32; 512 * 2];
     let max_out = resampler.flush_output_frames_max().max(1);
     let mut output = vec![0.0_f32; max_out * 2];
@@ -878,7 +878,7 @@ fn test_flush_after_reset_returns_zero() {
 #[test]
 fn test_process_input_length_mismatch_returns_err() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input = vec![0.5_f32; 99];
     let mut output = vec![0.0_f32; 256 * 2];
     let result = resampler.process(&input, &mut output, &ProcessContext::new(44100, 10));
@@ -888,7 +888,7 @@ fn test_process_input_length_mismatch_returns_err() {
 #[test]
 fn test_process_output_buffer_too_small_returns_err() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input = vec![0.5_f32; 1024 * 2];
     let mut output = vec![0.0_f32; 1];
     let result = resampler.process(&input, &mut output, &ProcessContext::new(44100, 1024));
@@ -901,8 +901,8 @@ fn test_process_output_error_is_transactional() {
     let context = ProcessContext::new(44100, 1024);
     let mut retried = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
     let mut fresh = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    retried.initialize(44100).unwrap();
-    fresh.initialize(44100).unwrap();
+    retried.initialize(44100.0).unwrap();
+    fresh.initialize(44100.0).unwrap();
 
     assert!(retried.process(&input, &mut [0.0], &context).is_err());
     let frames = retried.output_frames_for_input(1024);
@@ -943,14 +943,14 @@ fn test_flush_output_error_preserves_residual_for_retry() {
 #[test]
 fn test_initialize_rejects_mismatched_host_rate() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    assert!(resampler.initialize(48000).is_err());
-    assert!(resampler.initialize(44100).is_ok());
+    assert!(resampler.initialize(48000.0).is_err());
+    assert!(resampler.initialize(44100.0).is_ok());
 }
 
 #[test]
 fn test_unity_rate_is_bit_exact_for_irregular_blocks() {
     let mut resampler = ResamplerPlugin::new(2, 48000, 48000, 1024).unwrap();
-    resampler.initialize(48000).unwrap();
+    resampler.initialize(48000.0).unwrap();
     assert_eq!(resampler.latency_samples(), 0);
     for frames in [1, 127, 256, 300, 1024, 1500] {
         let input: Vec<f32> = (0..frames * 2).map(|i| f32::from_bits(i as u32)).collect();
@@ -1139,7 +1139,7 @@ fn signal_delay_matches_concatenated_impulse_without_callback_waiting() {
 #[test]
 fn test_flush_produces_signal_not_silence() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let num_frames = 512;
     let input: Vec<f32> = (0..num_frames * 2)
         .map(|i| 0.5 * (2.0 * std::f32::consts::PI * 1000.0 * (i / 2) as f32 / 44100.0).sin())
@@ -1374,7 +1374,7 @@ fn signal_delay_matches_documented_equation() {
 #[test]
 fn test_zero_frame_process_then_flush_returns_zero() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let input: Vec<f32> = vec![];
     let mut output = vec![0.0_f32; 64 * 2];
     let produced = resampler
@@ -1481,7 +1481,7 @@ fn envelope_primed_plugin(
 ) -> ResamplerPlugin {
     assert!(residual_frames < chunk, "prime residual must be sub-chunk");
     let mut plugin = ResamplerPlugin::new(channels, input_rate, output_rate, chunk).unwrap();
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     let total = 3 * chunk + residual_frames;
     let input = vec![0.25f32; total * channels];
     let capacity = plugin.output_frames_for_input(total);
@@ -1623,7 +1623,7 @@ fn drain_envelope_covers_every_drain_emission() {
 
     // Cold: a fresh stream drains complete immediately with zero frames.
     let mut cold = ResamplerPlugin::new(2, 48_000, 24_000, 1024).unwrap();
-    cold.initialize(48_000).unwrap();
+    cold.initialize(48_000.0).unwrap();
     let bound = cold.drain_frames_envelope().unwrap();
     let context = ProcessContext::new(48_000, 0);
     cold.begin_drain(&context).unwrap();

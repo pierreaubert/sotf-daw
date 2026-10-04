@@ -15,7 +15,7 @@ fn test_ab_compare_creation() {
 #[test]
 fn test_bypass_mode() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("bypass"), ParameterValue::Bool(true))
         .unwrap();
@@ -83,7 +83,7 @@ fn test_mix_pure_a() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process multiple times to let smoothers settle
     let input = vec![1.0; 4800 * 2]; // 100ms at 48kHz
@@ -121,7 +121,7 @@ fn test_mix_pure_b() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process multiple times to let smoothers settle
     let input = vec![1.0; 4800 * 2];
@@ -150,7 +150,7 @@ fn test_binary_mode() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Switch to B
     plugin
@@ -165,7 +165,7 @@ fn test_binary_mode() {
 fn test_multichannel_support() {
     // Test with 5 channels
     let mut plugin = ABComparePlugin::new(5).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let input = vec![0.5; 5 * 1024]; // 1024 frames, 5 channels
     let mut output = vec![0.0; 5 * 1024];
@@ -180,7 +180,7 @@ fn test_multichannel_support() {
 #[test]
 fn test_empty_path_fast_path_preserves_unity() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let input = vec![0.25; 512 * 2];
     let mut output = vec![0.0; 512 * 2];
@@ -200,7 +200,7 @@ fn test_empty_path_fast_path_preserves_unity() {
 #[test]
 fn test_empty_path_fast_gain_is_reused_after_mix_changes() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let input = vec![0.5f32; 512 * 2];
     let mut output = vec![0.0f32; 512 * 2];
@@ -257,7 +257,7 @@ fn test_empty_path_fast_gain_is_reused_after_mix_changes() {
 #[test]
 fn test_reset() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process some audio
     let input = vec![1.0; 1000 * 2];
@@ -298,7 +298,7 @@ fn test_rack_configuration() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Two -3dB gains = -6dB total
     let input = vec![1.0; 4800 * 2];
@@ -320,7 +320,7 @@ fn test_rack_configuration() {
 #[test]
 fn test_get_data() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process some audio
     let input = vec![0.5; 4800 * 2];
@@ -338,7 +338,7 @@ fn test_get_data() {
 #[test]
 fn test_runtime_path_change_requires_rebuild() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Change path A at runtime
     let new_config =
@@ -394,7 +394,7 @@ fn test_auto_gain_from_params_disabled() {
 #[test]
 fn test_auto_gain_parameter_set_get() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Test auto_gain_enabled
     plugin
@@ -419,7 +419,7 @@ fn test_auto_gain_parameter_set_get() {
 #[test]
 fn test_auto_gain_parameter_loudness_type() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set to ShortTerm (1)
     plugin
@@ -437,7 +437,7 @@ fn test_auto_gain_parameter_loudness_type() {
 #[test]
 fn test_auto_gain_parameter_max_db() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set max auto-gain
     plugin
@@ -454,7 +454,7 @@ fn test_auto_gain_parameter_max_db() {
 #[test]
 fn test_auto_gain_parameter_smoothing() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set gain smoothing
     plugin
@@ -497,7 +497,7 @@ fn test_latency_compensation_no_latency() {
     let channels = 2;
 
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Default paths have 0 latency
     assert_eq!(plugin.delay_a.len, 0);
@@ -522,7 +522,7 @@ fn test_band_mask_reduces_out_of_band_energy() {
         ..Default::default()
     };
     let mut plugin_full = ABComparePlugin::from_params(channels, params_full).unwrap();
-    plugin_full.initialize(48000).unwrap();
+    plugin_full.initialize(48000.0).unwrap();
 
     // Masked version
     let params_masked = ABComparePluginParams {
@@ -535,7 +535,7 @@ fn test_band_mask_reduces_out_of_band_energy() {
         ..Default::default()
     };
     let mut plugin_masked = ABComparePlugin::from_params(channels, params_masked).unwrap();
-    plugin_masked.initialize(48000).unwrap();
+    plugin_masked.initialize(48000.0).unwrap();
 
     // Generate broadband signal (white-ish noise via simple LCG)
     let num_frames = 48000; // 1 second
@@ -585,7 +585,7 @@ fn test_band_mask_reduces_out_of_band_energy() {
 fn test_large_block_beyond_4096_succeeds() {
     let channels = 2;
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Use a block size of 8192 frames (2× the old hard cap)
     let num_frames = 8192;
@@ -666,7 +666,7 @@ fn test_difference_mode() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![1.0_f32; 4800 * 2];
     let mut output = vec![0.0_f32; 4800 * 2];
     let context = ProcessContext::new(48000, 4800);
@@ -695,7 +695,7 @@ fn test_phase_invert_a() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.5_f32; 4800 * 2];
     let mut output = vec![0.0_f32; 4800 * 2];
     let context = ProcessContext::new(48000, 4800);
@@ -724,7 +724,7 @@ fn test_phase_invert_b() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.5_f32; 4800 * 2];
     let mut output = vec![0.0_f32; 4800 * 2];
     let context = ProcessContext::new(48000, 4800);
@@ -750,7 +750,7 @@ fn test_band_mask_active_processing() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.3_f32; 512 * 2];
     let mut output = vec![0.0_f32; 512 * 2];
     plugin
@@ -761,7 +761,7 @@ fn test_band_mask_active_processing() {
 #[test]
 fn test_process_invalid_input_size() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 100];
     let mut output = vec![0.0_f32; 200];
     let ctx = ProcessContext::new(48000, 100);
@@ -772,7 +772,7 @@ fn test_process_invalid_input_size() {
 #[test]
 fn test_process_invalid_output_size() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 200];
     let mut output = vec![0.0_f32; 100];
     let ctx = ProcessContext::new(48000, 100);
@@ -797,7 +797,7 @@ fn test_binary_mode_mix_transition() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("selected_path"), ParameterValue::Int(1))
         .unwrap();
@@ -835,7 +835,7 @@ fn test_has_empty_paths() {
 #[test]
 fn test_can_use_empty_path_fast_path() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(plugin.can_use_empty_path_fast_path());
     plugin
         .set_parameter(
@@ -849,7 +849,7 @@ fn test_can_use_empty_path_fast_path() {
 #[test]
 fn test_recompute_empty_path_fast_gain() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert_eq!(plugin.empty_path_fast_gain, 1.0);
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
@@ -873,7 +873,7 @@ fn test_latency_samples_with_paths() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
 }
 
@@ -1010,7 +1010,7 @@ fn test_factory_graph_preserves_destination_port_routes() {
 #[test]
 fn test_rebuild_path_a_and_b() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set path A to a gain plugin
     plugin.path_a_config = PathConfig::Plugin {
@@ -1030,7 +1030,7 @@ fn test_rebuild_path_a_and_b() {
 #[test]
 fn test_update_latency_compensation_both_paths_empty() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Both paths empty -> no latency difference
     plugin.path_a_config = PathConfig::None;
@@ -1047,7 +1047,7 @@ fn test_update_latency_compensation_both_paths_empty() {
 #[test]
 fn test_rebuild_band_mask_filters() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let _original_low = plugin.band_mask_low_hz;
     let _original_high = plugin.band_mask_high_hz;
@@ -1075,7 +1075,7 @@ fn test_plugin_info() {
 #[test]
 fn test_process_empty_path_fast() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin.auto_gain.set_enabled(false);
 
     let input = vec![0.5_f32; 512 * 2];
@@ -1102,7 +1102,7 @@ fn test_process_empty_path_fast() {
 #[test]
 fn runtime_structural_parameters_require_plugin_rebuild() {
     let mut plugin = ABComparePlugin::new(2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let latency_before = plugin.latency_samples();
     for (id, value) in [
         (
@@ -1153,9 +1153,9 @@ fn initialize_rejects_invalid_sample_rate_and_active_cutoff_atomically() {
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
     let before_rate = plugin.sample_rate;
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
     assert_eq!(plugin.sample_rate, before_rate);
-    assert!(plugin.initialize(12_000).is_err());
+    assert!(plugin.initialize(12_000.0).is_err());
     assert_eq!(plugin.sample_rate, before_rate);
 }
 
@@ -1163,7 +1163,7 @@ fn initialize_rejects_invalid_sample_rate_and_active_cutoff_atomically() {
 fn diagnostic_scheduler_depends_on_elapsed_frames_not_callback_count() {
     fn render(blocks: &[usize]) -> usize {
         let mut plugin = ABComparePlugin::new(1).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let total = 7_111;
         let input = vec![0.1_f32; total];
         let mut output = vec![0.0_f32; total];
@@ -1199,7 +1199,7 @@ fn unity_preserving_crossfade_cancels_inverted_identical_paths_at_center() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.25_f32; 2_048];
     let mut output = vec![0.0_f32; input.len()];
     plugin

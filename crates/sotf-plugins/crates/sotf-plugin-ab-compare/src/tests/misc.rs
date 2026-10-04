@@ -73,7 +73,7 @@ fn realtime_process_rejects_blocks_larger_than_prepared_capacity() {
         ..Default::default()
     };
     let mut plugin = ABComparePlugin::from_params(1, params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.0; 48_001];
     let mut output = vec![0.0; 48_001];
     assert!(
@@ -86,7 +86,7 @@ fn realtime_process_rejects_blocks_larger_than_prepared_capacity() {
 #[test]
 fn unity_nested_path_uses_same_active_loudness_timeline_as_empty_paths() {
     let mut fast = ABComparePlugin::new(2).unwrap();
-    fast.initialize(48_000).unwrap();
+    fast.initialize(48_000.0).unwrap();
     let mut nested = ABComparePlugin::from_params(
         2,
         ABComparePluginParams {
@@ -98,7 +98,7 @@ fn unity_nested_path_uses_same_active_loudness_timeline_as_empty_paths() {
         },
     )
     .unwrap();
-    nested.initialize(48_000).unwrap();
+    nested.initialize(48_000.0).unwrap();
 
     let input = generate_sine_input(128, 2);
     let mut fast_output = vec![0.0; input.len()];
@@ -140,7 +140,7 @@ fn test_auto_gain_attenuates_louder_b() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800; // 100ms at 48kHz
     let input = generate_sine_input(num_frames, 2);
@@ -181,7 +181,7 @@ fn test_auto_gain_boosts_quieter_b() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -221,7 +221,7 @@ fn test_auto_gain_disabled_no_compensation() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -263,7 +263,7 @@ fn test_auto_gain_max_clamp() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 9600; // 200ms
     let input = generate_sine_input(num_frames, 2);
@@ -301,7 +301,7 @@ fn test_auto_gain_reset_clears_gain() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -345,7 +345,7 @@ fn test_auto_gain_get_data_includes_loudness() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -390,7 +390,7 @@ fn test_auto_gain_runtime_enable_disable() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -483,7 +483,7 @@ fn test_auto_gain_equal_paths_no_compensation() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -522,7 +522,7 @@ fn test_auto_gain_multichannel() {
     };
 
     let mut plugin = ABComparePlugin::from_params(5, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 5);
@@ -558,7 +558,7 @@ fn test_difference_mode_identical_paths_silence() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);
@@ -596,7 +596,7 @@ fn test_difference_mode_a_sine_b_silence() {
     };
 
     let mut plugin = ABComparePlugin::from_params(2, params).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let input = generate_sine_input(num_frames, 2);

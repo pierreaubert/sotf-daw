@@ -505,7 +505,7 @@ fn reset_and_reinitialize_snap_transitions_to_configured_targets() {
     let mut reinitialized = MatrixPlugin::new(1, 1);
     reinitialized.set_phase_invert(0, 0, true).unwrap();
     assert!(one_sample(&mut reinitialized) > -1.0);
-    reinitialized.initialize(96_000).unwrap();
+    reinitialized.initialize(96_000.0).unwrap();
     let mut output = [0.0];
     reinitialized
         .process(&[1.0], &mut output, &ProcessContext::new(96_000, 1))
@@ -703,7 +703,7 @@ fn process_rejects_oversized_buffers_and_sample_rate_mismatch_atomically() {
 #[test]
 fn initialize_rejects_zero_sample_rate_without_changing_the_active_rate() {
     let mut plugin = MatrixPlugin::new(2, 2);
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
 
     let mut output = [0.0; 2];
     plugin

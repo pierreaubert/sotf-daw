@@ -27,13 +27,23 @@ use std::collections::HashMap;
 /// only grow latency and bursts; correctness never depends on this value.
 const CONVERTER_CHUNK_FRAMES: usize = 256;
 
+fn native_output_rate(plugin: &dyn Plugin, input_rate: f64) -> Result<f64, String> {
+    let output_rate = plugin.output_sample_rate(input_rate);
+    if !output_rate.is_finite() || output_rate <= 0.0 {
+        return Err(format!(
+            "A/B Compare plugin returned invalid output sample rate {output_rate}"
+        ));
+    }
+    Ok(output_rate)
+}
+
 /// Create a plugin, delegating to the external factory if provided,
 /// falling back to the built-in limited factory.
 fn create_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     external_factory: Option<PluginFactoryFn>,
 ) -> Result<Box<dyn Plugin>, String> {
     if let Some(factory) = external_factory {
@@ -49,7 +59,7 @@ fn create_plugin_builtin(
     plugin_type: &str,
     parameters: &serde_json::Value,
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     match plugin_type.to_lowercase().as_str() {
         "eq" => {
@@ -94,12 +104,12 @@ fn create_plugin_builtin(
 }
 
 /// Build a DawHost from a PathConfig, optionally using an external plugin factory.
-pub fn build_path_from_config(
+pub fn build_path_from_config<S: Into<f64>>(
     config: &PathConfig,
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
 ) -> Result<DawHost, String> {
-    build_path_from_config_with_factory(config, num_channels, sample_rate, None)
+    build_path_from_config_with_factory(config, num_channels, sample_rate.into(), None)
 }
 
 /// Build a DawHost from a PathConfig with an explicit factory function.
@@ -116,12 +126,16 @@ pub fn build_path_from_config(
 /// sink through the host's fan-in merge with retention. Graphs the
 /// factory cannot clock honestly (fan-in disagreement, cycles) fail
 /// loudly here instead of corrupting silently downstream.
-pub fn build_path_from_config_with_factory(
+pub fn build_path_from_config_with_factory<S: Into<f64>>(
     config: &PathConfig,
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
     factory: Option<PluginFactoryFn>,
 ) -> Result<DawHost, String> {
+    let sample_rate = sample_rate.into();
+    if !sample_rate.is_finite() || sample_rate <= 0.0 {
+        return Err("A/B Compare path sample rate must be finite and positive".to_owned());
+    }
     let mut host = DawHost::new(num_channels, sample_rate);
 
     let (graph_built, chain_final_rate) = match config {
@@ -135,7 +149,7 @@ pub fn build_path_from_config_with_factory(
         } => {
             let plugin =
                 create_plugin(plugin_type, parameters, num_channels, sample_rate, factory)?;
-            let folded = plugin.output_sample_rate(sample_rate);
+            let folded = native_output_rate(plugin.as_ref(), sample_rate)?;
             host.add_plugin(plugin)?;
             (None, Some(folded))
         }
@@ -153,7 +167,7 @@ pub fn build_path_from_config_with_factory(
                     running_rate,
                     factory,
                 )?;
-                running_rate = plugin.output_sample_rate(running_rate);
+                running_rate = native_output_rate(plugin.as_ref(), running_rate)?;
                 host.add_plugin(plugin)?;
             }
             (None, Some(running_rate))
@@ -198,10 +212,10 @@ fn normalize_path_output_clock(
     host: &mut DawHost,
     config: &PathConfig,
     graph_node_ids: Option<&HashMap<String, usize>>,
-    graph_output_clocks: Option<&HashMap<String, u32>>,
-    chain_final_rate: Option<u32>,
+    graph_output_clocks: Option<&HashMap<String, f64>>,
+    chain_final_rate: Option<f64>,
     num_channels: usize,
-    outer_rate: u32,
+    outer_rate: f64,
 ) -> Result<(), String> {
     // Multi-sink graphs arrive unbuilt: normalize converts, joins, and
     // builds them once below. All other paths build here for negotiation.
@@ -225,7 +239,7 @@ fn normalize_path_output_clock(
         }
     }
     host.build()?;
-    let path_rate = host.output_sample_rate(outer_rate);
+    let path_rate = host.output_sample_rate(outer_rate)?;
     // The factory fold must agree with host negotiation exactly: any drift
     // means a stale running rate, which fails here instead of clocking a
     // stage wrong downstream.
@@ -258,7 +272,7 @@ fn normalize_path_output_clock(
             .map_err(|error| format!("A/B Compare clock converter failed: {error}"))?;
     host.add_plugin(Box::new(converter))?;
     host.build()?;
-    let converted_rate = host.output_sample_rate(outer_rate);
+    let converted_rate = host.output_sample_rate(outer_rate)?;
     if converted_rate != outer_rate {
         return Err(format!(
             "A/B Compare clock converter produced {converted_rate} Hz instead of {outer_rate} Hz"
@@ -283,9 +297,9 @@ fn normalize_multi_sink_graph_output_clock(
     nodes: &[GraphNodeConfig],
     edges: &[GraphEdgeConfig],
     node_ids: Option<&HashMap<String, usize>>,
-    output_clocks: Option<&HashMap<String, u32>>,
+    output_clocks: Option<&HashMap<String, f64>>,
     num_channels: usize,
-    outer_rate: u32,
+    outer_rate: f64,
 ) -> Result<(), String> {
     let sinks: Vec<&str> = nodes
         .iter()
@@ -346,8 +360,8 @@ fn normalize_graph_output_clock(
     edges: &[GraphEdgeConfig],
     node_ids: Option<&HashMap<String, usize>>,
     num_channels: usize,
-    path_rate: u32,
-    outer_rate: u32,
+    path_rate: f64,
+    outer_rate: f64,
 ) -> Result<(), String> {
     // Single-sink only by dispatch (multi-sink routes to
     // converters-plus-join); a missing sink here fails closed below.
@@ -368,7 +382,7 @@ fn normalize_graph_output_clock(
     let converter_id = host.add_node_at_rate(name, Box::new(converter), path_rate)?;
     host.add_edge(GraphEdge::new(sink, converter_id))?;
     host.build()?;
-    let converted_rate = host.output_sample_rate(outer_rate);
+    let converted_rate = host.output_sample_rate(outer_rate)?;
     if converted_rate != outer_rate {
         return Err(format!(
             "A/B Compare clock converter produced {converted_rate} Hz instead of {outer_rate} Hz"
@@ -440,7 +454,7 @@ fn graph_construction_order(
 /// the host, so each converter initializes at its own sink clock.
 struct ConstructedGraph {
     node_ids: HashMap<String, usize>,
-    output_clocks: HashMap<String, u32>,
+    output_clocks: HashMap<String, f64>,
 }
 
 fn build_graph(
@@ -448,7 +462,7 @@ fn build_graph(
     nodes: &[GraphNodeConfig],
     edges: &[GraphEdgeConfig],
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     factory: Option<PluginFactoryFn>,
 ) -> Result<ConstructedGraph, String> {
     // Single construction in topological order: each node constructs at its
@@ -461,8 +475,8 @@ fn build_graph(
     let (order, incoming) = graph_construction_order(nodes, edges)?;
     let mut constructed: Vec<Option<Box<dyn Plugin>>> = Vec::with_capacity(nodes.len());
     constructed.resize_with(nodes.len(), || None);
-    let mut input_rates: HashMap<String, u32> = HashMap::new();
-    let mut output_rates: HashMap<String, u32> = HashMap::new();
+    let mut input_rates: HashMap<String, f64> = HashMap::new();
+    let mut output_rates: HashMap<String, f64> = HashMap::new();
     for &index in &order {
         let node = &nodes[index];
         let mut upstream = Vec::with_capacity(incoming[index].len());
@@ -474,7 +488,7 @@ fn build_graph(
                 .get(&nodes[up].id)
                 .copied()
                 .expect("topological construction resolves upstream input clocks first");
-            upstream.push(upstream_plugin.output_sample_rate(upstream_input));
+            upstream.push(native_output_rate(upstream_plugin.as_ref(), upstream_input)?);
         }
         let mut rate = sample_rate;
         if let Some((&first, rest)) = upstream.split_first() {
@@ -493,7 +507,7 @@ fn build_graph(
             rate,
             factory,
         )?;
-        output_rates.insert(node.id.clone(), plugin.output_sample_rate(rate));
+        output_rates.insert(node.id.clone(), native_output_rate(plugin.as_ref(), rate)?);
         constructed[index] = Some(plugin);
         input_rates.insert(node.id.clone(), rate);
     }

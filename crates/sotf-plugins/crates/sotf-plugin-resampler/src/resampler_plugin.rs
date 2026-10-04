@@ -61,9 +61,9 @@ pub struct ResamplerPlugin {
     /// Number of channels
     pub(super) num_channels: usize,
     /// Input sample rate
-    pub(super) input_sample_rate: u32,
+    pub(super) input_sample_rate: f64,
     /// Output sample rate
-    pub(super) output_sample_rate: u32,
+    pub(super) output_sample_rate: f64,
     /// Rubato resampler (planar format)
     pub(super) resampler: Option<Async<f32>>,
     /// Prepared cutoff policy; all coefficient allocation happens during setup.
@@ -127,8 +127,8 @@ impl ResamplerPlugin {
     /// * `chunk_size` - Number of input frames to process at once (default: 1024)
     pub fn new(
         num_channels: usize,
-        input_sample_rate: u32,
-        output_sample_rate: u32,
+        input_sample_rate: impl Into<f64>,
+        output_sample_rate: impl Into<f64>,
         chunk_size: usize,
     ) -> Result<Self, String> {
         Self::with_quality(
@@ -143,22 +143,28 @@ impl ResamplerPlugin {
     /// Create a new resampler plugin with a specified quality preset
     pub fn with_quality(
         num_channels: usize,
-        input_sample_rate: u32,
-        output_sample_rate: u32,
+        input_sample_rate: impl Into<f64>,
+        output_sample_rate: impl Into<f64>,
         chunk_size: usize,
         quality: ResamplerQuality,
     ) -> Result<Self, String> {
         if num_channels == 0 {
             return Err("num_channels must be > 0".to_string());
         }
-        if input_sample_rate == 0 || output_sample_rate == 0 {
-            return Err("sample rates must be > 0".to_string());
+        let input_sample_rate = input_sample_rate.into();
+        let output_sample_rate = output_sample_rate.into();
+        if !input_sample_rate.is_finite()
+            || input_sample_rate <= 0.0
+            || !output_sample_rate.is_finite()
+            || output_sample_rate <= 0.0
+        {
+            return Err("sample rates must be finite and positive".to_string());
         }
         if chunk_size == 0 {
             return Err("chunk_size must be > 0".to_string());
         }
 
-        let nominal_ratio = output_sample_rate as f64 / input_sample_rate as f64;
+        let nominal_ratio = output_sample_rate / input_sample_rate;
 
         // Create resampler
         let (resampler, cutoffs) = Self::create_resampler(
@@ -202,8 +208,8 @@ impl ResamplerPlugin {
     /// Create a new resampler with default chunk size (1024)
     pub fn new_default(
         num_channels: usize,
-        input_sample_rate: u32,
-        output_sample_rate: u32,
+        input_sample_rate: impl Into<f64>,
+        output_sample_rate: impl Into<f64>,
     ) -> Result<Self, String> {
         Self::new(num_channels, input_sample_rate, output_sample_rate, 1024)
     }
@@ -211,8 +217,8 @@ impl ResamplerPlugin {
     /// Create the rubato resampler with quality-dependent parameters
     pub(super) fn create_resampler(
         num_channels: usize,
-        input_sample_rate: u32,
-        output_sample_rate: u32,
+        input_sample_rate: impl Into<f64>,
+        output_sample_rate: impl Into<f64>,
         chunk_size: usize,
         quality: ResamplerQuality,
     ) -> Result<(Async<f32>, CutoffBank), String> {
@@ -224,7 +230,7 @@ impl ResamplerPlugin {
             window: WindowFunction::BlackmanHarris2,
         };
 
-        let nominal = output_sample_rate as f64 / input_sample_rate as f64;
+        let nominal = output_sample_rate.into() / input_sample_rate.into();
         let cutoffs = CutoffBank::new(nominal);
         let resampler = Async::<f32>::new_sinc_with_cutoff_bank(
             nominal,
@@ -277,12 +283,12 @@ impl ResamplerPlugin {
         // A fresh bank starts untracked at slot zero like its fresh backend;
         // the smoothing configuration persists across the quality rebuild.
         self.cutoffs.set_smoothing(smoothing);
-        self.current_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
+        self.current_ratio = self.output_sample_rate / self.input_sample_rate;
         Ok(())
     }
 
     pub(super) fn rebuild_cached_parameters(&mut self) {
-        let nominal_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
+        let nominal_ratio = self.output_sample_rate / self.input_sample_rate;
         self.cached_parameters = vec![
             Parameter::new_int("quality", "Quality", self.quality.index(), 0, 2)
                 .with_update_mode(UpdateMode::Structural)
@@ -347,7 +353,7 @@ impl ResamplerPlugin {
             chunks.saturating_mul(resampler.output_frames_max())
         } else {
             // Fallback estimate if resampler not initialized
-            let ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
+            let ratio = self.output_sample_rate / self.input_sample_rate;
             (input_frames as f64 * ratio).ceil() as usize + 1
         }
     }
@@ -387,7 +393,7 @@ impl ResamplerPlugin {
 
     /// Get the nominal resampling ratio (output_rate / input_rate)
     pub fn ratio(&self) -> f64 {
-        self.output_sample_rate as f64 / self.input_sample_rate as f64
+        self.output_sample_rate / self.input_sample_rate
     }
 
     /// Intrinsic output-domain delay of rubato's interpolation filter.
@@ -724,11 +730,14 @@ impl Plugin for ResamplerPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        // The resampler has its own fixed input/output rates. If the host's
-        // processing rate differs from our input rate, log a warning since the
-        // resampling ratio may not produce the expected output rate.
-        if sample_rate != self.input_sample_rate && self.input_sample_rate > 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Host sample rate must be finite and positive".into());
+        }
+        // The resampler has configured input/output clocks, represented by
+        // the backend's f64 ratio. Reject a different host input clock rather
+        // than silently changing the prepared ratio.
+        if sample_rate != self.input_sample_rate {
             return Err(format!(
                 "Host sample rate ({sample_rate} Hz) differs from configured input rate ({} Hz)",
                 self.input_sample_rate
@@ -747,7 +756,7 @@ impl Plugin for ResamplerPlugin {
         // configuration persists like the dynamic-ratio permission flag.
         self.cutoffs.reset();
         // Reset ratio to nominal
-        self.current_ratio = self.output_sample_rate as f64 / self.input_sample_rate as f64;
+        self.current_ratio = self.output_sample_rate / self.input_sample_rate;
         // Clear residual buffer — zero the data to prevent stale audio leaking through
         // if a future code path reads residual_input without tight bounds checking.
         self.residual_frames = 0;
@@ -1137,7 +1146,7 @@ impl Plugin for ResamplerPlugin {
         ResamplerPlugin::output_frames_for_input(self, input_frames)
     }
 
-    fn output_sample_rate(&self, _input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, _input_rate: f64) -> f64 {
         self.output_sample_rate
     }
 
@@ -1149,7 +1158,7 @@ impl Plugin for ResamplerPlugin {
 #[test]
 fn test_flush_produces_trailing_output() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Process a partial chunk (512 frames)
     let num_frames = 512;

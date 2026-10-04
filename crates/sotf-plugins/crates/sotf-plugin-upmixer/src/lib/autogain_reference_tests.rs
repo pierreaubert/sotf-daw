@@ -18,7 +18,7 @@ fn plugin(rate: u32, fft_size: usize, preview: bool, hr: bool, enabled: bool) ->
         plugin.safety.auto_gain.as_ref().unwrap().is_enabled(),
         enabled
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -87,7 +87,7 @@ fn identity_plugin(rate: u32, fft_size: usize, auto_gain_enabled: bool) -> Upmix
     }))
     .unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     // Identity transform path isolates the genuine WOLA scheduler; no bypass
     // skips analysis, synthesis or its transport delay.
     plugin

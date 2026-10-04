@@ -10,7 +10,7 @@ use clap_sys::{
 use nih_plug::prelude as nih;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, PluginInfo, PluginResult};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex};
 type Log = Arc<Mutex<Vec<ProcessContext<'static>>>>;
 thread_local! {
     static SETUP: RefCell<Option<(Log, u32)>> = const { RefCell::new(None) };
+    static INITIALIZE_CALLS: Cell<usize> = const { Cell::new(0) };
 }
 
 crate::sotf_nih_plugin!(GeneratedProbe, plugin_type: "Gain", name: "Transport Probe", clap_id: "org.sotf.transport-probe", vst3_class_id: *b"SotfTransport001", channels: 2);
@@ -42,7 +43,7 @@ impl Plugin for Recorder {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn initialize(&mut self, _: u32) -> PluginResult<()> {
+    fn initialize(&mut self, _: f64) -> PluginResult<()> {
         Ok(())
     }
     fn process(
@@ -96,7 +97,8 @@ impl nih::Plugin for NativeProbe {
         config: &nih::BufferConfig,
         _: &mut impl nih::InitContext<Self>,
     ) -> bool {
-        self.inner.sample_rate = config.sample_rate as u32;
+        INITIALIZE_CALLS.with(|calls| calls.set(calls.get() + 1));
+        self.inner.sample_rate = config.sample_rate;
         self.inner.max_frames = config.max_buffer_size as usize;
         self.inner.main_input_channels = audio_io_layout
             .main_input_channels
@@ -203,6 +205,9 @@ impl<P: nih::ClapPlugin> NativeHost<P> {
         Self::with_tail_extension(factor, false)
     }
     fn with_tail_extension(factor: u32, enabled: bool) -> Self {
+        Self::with_rate_and_tail_extension(factor, enabled, 48_000.0)
+    }
+    fn with_rate_and_tail_extension(factor: u32, enabled: bool, sample_rate: f64) -> Self {
         unsafe extern "C" fn changed(host: *const clap_host) {
             // SAFETY: the observer and plugin outlive the synchronous callback.
             let observer = unsafe { &*((*host).host_data.cast::<TailObserver>()) };
@@ -262,7 +267,7 @@ impl<P: nih::ClapPlugin> NativeHost<P> {
         // SAFETY: valid NIH plugin, control-thread lifecycle in CLAP order.
         unsafe {
             assert!(((*plugin).init.unwrap())(plugin));
-            assert!(((*plugin).activate.unwrap())(plugin, 48_000.0, 1, 1024));
+            assert!(((*plugin).activate.unwrap())(plugin, sample_rate, 1, 1024));
             assert!(((*plugin).start_processing.unwrap())(plugin));
         }
         Self {
@@ -433,7 +438,7 @@ fn actual_native_context_preserves_independent_origins_flags_and_seeks() {
         assert_eq!(context.transport.sample_position, sample);
         assert!((context.transport.ppq_position - ppq).abs() < 1e-8);
         assert_eq!(context.num_frames, frames);
-        assert_eq!(context.sample_rate, 48_000);
+        assert_eq!(context.sample_rate, 48_000.0);
         assert_eq!(context.transport.bpm, 90.0);
         assert_eq!(
             context.transport.time_signature,
@@ -453,6 +458,45 @@ fn actual_native_context_preserves_independent_origins_flags_and_seeks() {
                 None
             }
         );
+    }
+}
+
+#[test]
+fn native_clap_fractional_rate_reaches_dsp_and_transport_without_integer_rounding() {
+    for sample_rate in [1_234.567_8, 12_345.678, 48_000.0] {
+        let mut host = Host::with_rate_and_tail_extension(1, false, sample_rate);
+        host.process(17, Some(&native(0.0, 0.0)));
+        let mut fallback = native(0.0, 0.0);
+        fallback.flags &= !(CLAP_TRANSPORT_HAS_SECONDS_TIMELINE | CLAP_TRANSPORT_HAS_BEATS_TIMELINE);
+        host.process(63, Some(&fallback));
+
+        let log = host.log.lock().unwrap();
+        assert_eq!(log.len(), 2);
+        assert_eq!(log[0].sample_rate, sample_rate);
+        assert_eq!(log[1].sample_rate, sample_rate);
+        assert_eq!(log[1].transport.sample_position, 17);
+        let expected_ppq = 17.0 / sample_rate * 90.0 / 60.0;
+        assert!((log[1].transport.ppq_position - expected_ppq).abs() < 1e-10);
+    }
+}
+
+#[test]
+fn native_clap_rejects_invalid_rates_before_plugin_initialization() {
+    let host = Host::new(1);
+    let plugin = host.wrapper.clap_plugin.as_ptr();
+    let initialized_before_invalid_rates = INITIALIZE_CALLS.with(Cell::get);
+    // SAFETY: the host owns this live plugin and the test uses CLAP lifecycle
+    // calls serially on the control thread.
+    unsafe {
+        ((*plugin).stop_processing.unwrap())(plugin);
+        ((*plugin).deactivate.unwrap())(plugin);
+        for sample_rate in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert!(!((*plugin).activate.unwrap())(plugin, sample_rate, 1, 1024));
+        }
+        assert_eq!(INITIALIZE_CALLS.with(Cell::get), initialized_before_invalid_rates);
+        assert!(((*plugin).activate.unwrap())(plugin, 48_000.0, 1, 1024));
+        assert_eq!(INITIALIZE_CALLS.with(Cell::get), initialized_before_invalid_rates + 1);
+        assert!(((*plugin).start_processing.unwrap())(plugin));
     }
 }
 
@@ -553,7 +597,7 @@ fn actual_native_origins_survive_oversampling_and_partial_callbacks() {
         let log = host.log.lock().unwrap();
         assert_eq!(log.len(), position / 256);
         for (chunk, context) in log.iter().enumerate() {
-            assert_eq!(context.sample_rate, 48_000 * factor);
+            assert_eq!(context.sample_rate, f64::from(48_000 * factor));
             assert_eq!(context.num_frames, 256 * factor as usize);
             assert_eq!(
                 context.transport.sample_position,

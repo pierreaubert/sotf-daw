@@ -121,7 +121,7 @@ fn render_static(
 ) -> Vec<f32> {
     let mut plugin =
         ResamplerPlugin::with_quality(channels, input_rate, output_rate, CHUNK, quality).unwrap();
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     let mut output = Vec::new();
     for block in input.chunks(CHUNK * channels) {
         let block_frames = block.len() / channels;

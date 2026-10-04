@@ -74,7 +74,7 @@ fn neutral(fft_size: usize) -> UpmixerPlugin {
     }))
     .unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     neutralize_tables(&mut plugin);
     plugin
 }
@@ -2764,7 +2764,7 @@ fn small_fft_hr_autogain_and_surround_height_routes_preserve_frames() {
                     }))
                     .unwrap();
                     let mut plugin = UpmixerPlugin::from_params(params);
-                    plugin.initialize(48_000).unwrap();
+                    plugin.initialize(48_000.0).unwrap();
                     assert_eq!(
                         plugin.safety.auto_gain.as_ref().unwrap().is_enabled(),
                         auto_gain_enabled
@@ -2853,7 +2853,7 @@ fn spatial_and_recursive_drain_match_fixed_hop_zero_continuation() {
             }))
             .unwrap();
             let mut plugin = UpmixerPlugin::from_params(params);
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             plugin
         };
         let frames = n * 4 + 17;

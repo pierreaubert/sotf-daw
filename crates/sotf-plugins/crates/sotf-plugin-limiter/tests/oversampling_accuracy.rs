@@ -26,7 +26,7 @@ fn make(rate: u32, channels: usize, choice: i32, isp: bool, lookahead_ms: f32) -
     set(&mut plugin, "true_peak", ParameterValue::Bool(isp));
     set(&mut plugin, "isp_mode", ParameterValue::Bool(isp));
     set(&mut plugin, "feed_forward", ParameterValue::Bool(true));
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

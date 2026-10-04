@@ -75,7 +75,7 @@ fn multiway_process_and_reset_do_not_allocate_or_deallocate() {
 
     let mut plugin =
         CrossoverPlugin::new_multiway(2, "LR24", 1_000.0, "both", &[1_200.0, 3_500.0]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|index| ((index as f32 * 0.017).sin() + (index as f32 * 0.003).cos()) * 0.2)
         .collect();
@@ -98,7 +98,7 @@ fn multiway_process_and_reset_do_not_allocate_or_deallocate() {
     for kind in ["LR12", "LR48", "BW48", "Bessel12"] {
         let mut family =
             CrossoverPlugin::new_multiway(2, kind, 300.0, "both", &[2_200.0, 9_000.0]).unwrap();
-        family.initialize(SAMPLE_RATE).unwrap();
+        family.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut family_output = vec![0.0; FRAMES * family.output_channels()];
         let family_context = ProcessContext::new(SAMPLE_RATE, FRAMES);
         assert_no_allocator_events(|| {
@@ -142,7 +142,7 @@ fn active_iir_cutoff_updates_reuse_cached_parameter_metadata() {
 
     let mut plugin =
         CrossoverPlugin::new_multiway(2, "LR48", 300.0, "both", &[2_000.0, 6_000.0]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|index| ((index as f32 * 0.071).sin() + (index as f32 * 0.019).cos()) * 0.2)
         .collect();

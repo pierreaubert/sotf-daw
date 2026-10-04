@@ -42,7 +42,7 @@ struct AutoGainDisplay {
 }
 
 impl AutoGainDisplay {
-    fn new(channels: usize, sample_rate: u32) -> PluginResult<Self> {
+    fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> PluginResult<Self> {
         Ok(Self {
             monitor: LoudnessMonitor::new(channels as u32, sample_rate)?,
             data: LoudnessData::new(channels),
@@ -70,7 +70,7 @@ impl FilterTransition {
 
 pub struct LoudnessCompensationPlugin {
     pub(super) num_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     // -- Manual mode fields --
     pub(super) low_freq: f32,
     pub(super) low_gain: f32,
@@ -120,7 +120,7 @@ impl LoudnessCompensationPlugin {
         high_freq: f32,
         high_gain: f32,
     ) -> Self {
-        let sr = 48000;
+        let sr = 48_000.0;
         let playback_db = default_playback_level_db();
         let reference_db = default_reference_level_db();
         let mut p = Self {
@@ -909,8 +909,8 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         self.rebuild_cached_parameters();
         Ok(())
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 {
             return Err("Loudness Compensation sample rate must be greater than zero".into());
         }
         self.sample_rate = sr;

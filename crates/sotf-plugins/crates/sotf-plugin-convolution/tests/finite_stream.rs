@@ -372,7 +372,7 @@ fn preflight_and_control_rejections_preserve_the_remaining_response() {
     assert_eq!(finish(&mut p), finish(&mut reference));
     for reinitialize in [false, true] {
         if reinitialize {
-            p.initialize(48_000).unwrap();
+            p.initialize(48_000.0).unwrap();
         } else {
             p.reset();
         }
@@ -477,12 +477,12 @@ fn finite_response_keeps_the_prepared_clock_at_other_sample_rates() {
             assert_eq!(output.len(), 31 + latency + 2052);
             assert!((output[30 + latency] - 0.1875).abs() < 1e-6);
             assert!((output[30 + latency + 2052] + 0.375).abs() < 1e-6);
-            assert!(p.initialize(0).is_err());
+            assert!(p.initialize(0.0).is_err());
             assert!(
                 p.process_in_place(&mut [0.0], &ProcessContext::new(rate, 1))
                     .is_err()
             );
-            p.initialize(rate).unwrap();
+            p.initialize(f64::from(rate)).unwrap();
             assert_eq!(
                 p.drain(&mut [], &ProcessContext::new(rate, 0)).unwrap(),
                 sotf_host::plugin::PluginDrainResult::COMPLETE

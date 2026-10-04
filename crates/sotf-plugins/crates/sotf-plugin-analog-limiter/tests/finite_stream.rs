@@ -316,7 +316,7 @@ fn errors_bulk_snapshots_and_reset_preserve_finite_history() {
         ..Default::default()
     };
     let mut plugin = AnalogLimiterPlugin::from_params(2, params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!(
         plugin
             .drain(&mut [], &ProcessContext::new(48_000, 0))
@@ -381,7 +381,7 @@ fn errors_bulk_snapshots_and_reset_preserve_finite_history() {
     assert_eq!(rejected, input);
     for reinitialize in [false, true] {
         if reinitialize {
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
         } else {
             plugin.reset();
         }

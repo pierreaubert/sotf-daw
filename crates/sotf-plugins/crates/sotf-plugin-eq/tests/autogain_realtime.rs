@@ -62,7 +62,7 @@ fn make(rate: u32, channels: usize, factor: i32, enabled: bool, finite: bool) ->
             ParameterValue::Int(factor),
         )
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

@@ -161,7 +161,7 @@ impl PreparedHostUpdate {
         if input_sample_rate == 0 {
             return Err("prepared plugin host requires a non-zero input sample rate".into());
         }
-        let output_sample_rate = host.output_sample_rate(input_sample_rate);
+        let output_sample_rate = host.output_sample_rate_native(input_sample_rate)?;
         if output_sample_rate == 0 {
             return Err("prepared plugin host must expose a non-zero output sample rate".into());
         }

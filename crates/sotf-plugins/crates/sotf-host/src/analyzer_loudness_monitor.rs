@@ -25,9 +25,9 @@ use loudness_range::LoudnessRangeHistory;
 
 const TRUE_PEAK_TAPS: usize = 12;
 const TRUE_PEAK_SINC_TAPS: usize = 64;
-const TRUE_PEAK_MIN_RATE_HZ: u32 = 8_000;
-const TRUE_PEAK_MAX_RATE_HZ: u32 = 2_822_400;
-const TRUE_PEAK_TARGET_RATE_HZ: u64 = 192_000;
+const TRUE_PEAK_MIN_RATE_HZ: f64 = 8_000.0;
+const TRUE_PEAK_MAX_RATE_HZ: f64 = 2_822_400.0;
+const TRUE_PEAK_TARGET_RATE_HZ: f64 = 192_000.0;
 const TRUE_PEAK_MAX_OVERSAMPLING: usize = 32;
 pub const INTEGRATED_HISTORY_SECONDS: u32 = 3_600;
 const EXACT_GATING_BLOCK_CAPACITY: usize = INTEGRATED_HISTORY_SECONDS as usize * 10;
@@ -101,12 +101,12 @@ fn parse_integrated_control_command(value: &str) -> Result<IntegratedControlComm
     })
 }
 
-fn required_momentary_frames(sample_rate: u32) -> u64 {
-    (u64::from(sample_rate) * 4).div_ceil(10)
+fn required_momentary_frames(sample_rate: f64) -> u64 {
+    (sample_rate * 0.4).ceil() as u64
 }
 
-fn required_shortterm_frames(sample_rate: u32) -> u64 {
-    u64::from(sample_rate) * 3
+fn required_shortterm_frames(sample_rate: f64) -> u64 {
+    (sample_rate * 3.0).ceil() as u64
 }
 
 fn update_finite_maximum(maximum: &mut Option<f64>, observed: f64) {
@@ -268,7 +268,7 @@ struct ExplicitLoudnessMeters {
 impl ExplicitLoudnessMeters {
     fn new(
         layout: &ChannelLayout,
-        sample_rate: u32,
+        sample_rate: f64,
         integrated_mode: IntegratedLoudnessMode,
         accumulate_integrated: bool,
     ) -> Result<Self, String> {
@@ -450,7 +450,8 @@ const TRUE_PEAK_PHASES: [[f64; TRUE_PEAK_TAPS]; 4] = [
     ],
 ];
 
-fn true_peak_oversampling_factor(sample_rate: u32) -> Option<usize> {
+fn true_peak_oversampling_factor<S: Into<f64>>(sample_rate: S) -> Option<usize> {
+    let sample_rate = sample_rate.into();
     // The upper bound matches math-dsp's current EBU R128 constructor range.
     if !(TRUE_PEAK_MIN_RATE_HZ..=TRUE_PEAK_MAX_RATE_HZ).contains(&sample_rate) {
         return None;
@@ -459,13 +460,13 @@ fn true_peak_oversampling_factor(sample_rate: u32) -> Option<usize> {
     // Two-times interpolation remains useful for high-rate input so the
     // detector still checks inter-sample values instead of sample maxima.
     let mut factor = 2;
-    while u64::from(sample_rate) * (factor as u64) < TRUE_PEAK_TARGET_RATE_HZ
+    while sample_rate * (factor as f64) < TRUE_PEAK_TARGET_RATE_HZ
         && factor < TRUE_PEAK_MAX_OVERSAMPLING
     {
         factor *= 2;
     }
 
-    (u64::from(sample_rate) * (factor as u64) >= TRUE_PEAK_TARGET_RATE_HZ).then_some(factor)
+    (sample_rate * factor as f64 >= TRUE_PEAK_TARGET_RATE_HZ).then_some(factor)
 }
 
 fn blackman_sinc_phase(oversampling_factor: usize, phase: usize) -> [f64; TRUE_PEAK_SINC_TAPS] {
@@ -639,7 +640,8 @@ struct Bs1770TruePeakMeter {
 }
 
 impl Bs1770TruePeakMeter {
-    fn new(channels: usize, sample_rate: u32) -> Self {
+    fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        let sample_rate = sample_rate.into();
         const FOUR_PHASES: &[usize] = &[0, 1, 2, 3];
         const TWO_PHASES: &[usize] = &[0, 2];
         let kernel = match true_peak_oversampling_factor(sample_rate) {
@@ -714,7 +716,7 @@ pub struct LoudnessMonitor {
     /// layout requires role-dependent loudness scaling.
     peak_meter: Option<EbuR128>,
     channels: u32,
-    sample_rate: u32,
+    sample_rate: f64,
     channel_layout: Option<ChannelLayout>,
     loudness_channels: usize,
     loudness_gains: Vec<f32>,
@@ -758,50 +760,50 @@ pub struct LoudnessMonitor {
 }
 
 impl LoudnessMonitor {
-    pub fn new(channels: u32, sr: u32) -> Result<Self, String> {
-        Self::new_inner(channels, sr, None, IntegratedLoudnessMode::Rolling)
+    pub fn new<S: Into<f64>>(channels: u32, sr: S) -> Result<Self, String> {
+        Self::new_inner(channels, sr.into(), None, IntegratedLoudnessMode::Rolling)
     }
 
-    pub fn new_with_integrated_mode(
+    pub fn new_with_integrated_mode<S: Into<f64>>(
         channels: u32,
-        sr: u32,
+        sr: S,
         integrated_mode: IntegratedLoudnessMode,
     ) -> Result<Self, String> {
-        Self::new_inner(channels, sr, None, integrated_mode)
+        Self::new_inner(channels, sr.into(), None, integrated_mode)
     }
 
-    pub fn new_with_layout(
+    pub fn new_with_layout<S: Into<f64>>(
         channels: u32,
-        sr: u32,
+        sr: S,
         channel_layout: ChannelLayout,
     ) -> Result<Self, String> {
         Self::new_inner(
             channels,
-            sr,
+            sr.into(),
             Some(channel_layout),
             IntegratedLoudnessMode::Rolling,
         )
     }
 
-    pub fn new_with_layout_and_integrated_mode(
+    pub fn new_with_layout_and_integrated_mode<S: Into<f64>>(
         channels: u32,
-        sr: u32,
+        sr: S,
         channel_layout: ChannelLayout,
         integrated_mode: IntegratedLoudnessMode,
     ) -> Result<Self, String> {
-        Self::new_inner(channels, sr, Some(channel_layout), integrated_mode)
+        Self::new_inner(channels, sr.into(), Some(channel_layout), integrated_mode)
     }
 
     fn new_inner(
         channels: u32,
-        sr: u32,
+        sr: f64,
         channel_layout: Option<ChannelLayout>,
         integrated_mode: IntegratedLoudnessMode,
     ) -> Result<Self, String> {
         if channels == 0 {
             return Err("loudness monitor requires at least one channel".to_string());
         }
-        if sr < 10 {
+        if !sr.is_finite() || sr < 10.0 {
             return Err("loudness monitor sample rate must be at least 10 Hz".to_string());
         }
         if let Some(layout) = &channel_layout {
@@ -1005,7 +1007,8 @@ impl LoudnessMonitor {
     }
 
     fn loudness_range_is_stable(&self) -> bool {
-        self.integrated_frames_seen >= u64::from(self.sample_rate) * LRA_STABILITY_SECONDS
+        self.integrated_frames_seen
+            >= (self.sample_rate * LRA_STABILITY_SECONDS as f64).ceil() as u64
     }
 
     pub fn channel_layout(&self) -> Option<&ChannelLayout> {
@@ -1443,7 +1446,7 @@ impl LoudnessMonitor {
 /// linear work in retained history; cached queries reuse their scalar result.
 pub struct LoudnessMonitorPlugin {
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     integrated_control_instance_id: u64,
     last_integrated_control_request_id: u64,
     last_integrated_control_operation: Option<IntegratedControlOperation>,
@@ -1485,7 +1488,7 @@ impl LoudnessMonitorPlugin {
         if let Some(layout) = &channel_layout {
             layout.validate_for_width(num_channels)?;
         }
-        let sr = 48000;
+        let sr = 48000.0;
         let integrated_control_instance_id =
             allocate_loudness_control_instance_id(&NEXT_LOUDNESS_CONTROL_INSTANCE_ID)?;
         let monitor = if let Some(layout) = &channel_layout {
@@ -1960,8 +1963,8 @@ impl Plugin for LoudnessMonitorPlugin {
             _ => None,
         }
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr < 10 {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr < 10.0 {
             return Err("loudness monitor sample rate must be at least 10 Hz".to_string());
         }
         // Preserve the spatial-enable bit across reinitialisation so callers

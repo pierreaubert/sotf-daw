@@ -14,7 +14,7 @@ fn plugin(mics: usize, algorithm: usize) -> BeamformerPlugin {
         },
     )
     .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 

@@ -68,7 +68,7 @@ fn host_wraps_exactly_once_and_aligns_dry_wet_in_one_time_domain() {
         );
         let adapter = ParametricInPlacePluginAdapter::new(inner);
         let mut wrapped = AutoOversampledPlugin::new(Box::new(adapter), 2).unwrap();
-        wrapped.initialize(SR).unwrap();
+        wrapped.initialize(f64::from(SR)).unwrap();
         wrapped
     }
 
@@ -125,7 +125,7 @@ fn drive_automation_is_callback_partition_invariant_for_every_topology() {
                         ..Default::default()
                     },
                 );
-                plugin.initialize(SR).unwrap();
+                plugin.initialize(f64::from(SR)).unwrap();
                 plugin
                     .set_parameter(ParameterId::from("drive"), ParameterValue::Float(15.0))
                     .unwrap();
@@ -194,7 +194,7 @@ fn dynamic_control_survives_every_mode_and_actual_host_oversampling_factor() {
         } else {
             Box::new(AutoOversampledPlugin::new(Box::new(adapter), factor).unwrap())
         };
-        plugin.initialize(SR).unwrap();
+        plugin.initialize(f64::from(SR)).unwrap();
         let frames = 4_096;
         let input: Vec<f32> = (0..frames)
             .map(|frame| {
@@ -247,7 +247,7 @@ fn four_x_host_oversampling_reduces_out_of_band_harmonic_aliases() {
         } else {
             Box::new(adapter)
         };
-        plugin.initialize(SR).unwrap();
+        plugin.initialize(f64::from(SR)).unwrap();
         let frames = 8_192;
         let input = sine(9_000.0, frames, 0.8);
         let mut output = vec![0.0; frames];
@@ -309,7 +309,7 @@ fn asymmetric_mode_matches_independent_normalized_curve_oracle() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = [-1.0, -0.5, -0.125, 0.0, 0.125, 0.5, 1.0];
     let mut output = input;
     let frames = output.len();
@@ -341,7 +341,7 @@ fn asymmetric_even_harmonics_and_dc_blocker_have_measured_contracts() {
                 ..Default::default()
             },
         );
-        plugin.initialize(SR).unwrap();
+        plugin.initialize(f64::from(SR)).unwrap();
         let mut output = sine(1_000.0, SR as usize, 0.5);
         let frames = output.len();
         plugin.process_in_place(&mut output, &ctx(frames)).unwrap();
@@ -406,7 +406,7 @@ fn asymmetric_stereo_channels_are_independent() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut buffer = vec![0.0; frames * 2];
     for frame in 0..frames {
         buffer[frame * 2] =
@@ -427,7 +427,7 @@ fn asymmetric_stereo_channels_are_independent() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = SaturationPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // Initialization is expected to succeed and leave the plugin ready to process.
     let mut buf = sine(440.0, 64, 0.5);
     plugin.process_in_place(&mut buf, &ctx(64)).unwrap();
@@ -477,7 +477,7 @@ fn parameter_roundtrip() {
         let read = plugin.get_parameter(&id).expect("parameter should exist");
         assert_eq!(read, value, "round-trip failed for {}", id);
     }
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 }
 
 #[test]
@@ -568,7 +568,7 @@ fn process_soft_clip_bounds_output() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buf = sine(440.0, 2048, 1.0);
     plugin.process_in_place(&mut buf, &ctx(2048)).unwrap();
@@ -595,7 +595,7 @@ fn bypass_mix_zero_passthrough() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let frames = 256;
     let mut buf = vec![0.0f32; frames * 2];
@@ -626,7 +626,7 @@ fn reset_leaves_plugin_ready() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Warm up state.
     let mut buf = sine(1000.0, 512, 0.5);
@@ -642,7 +642,7 @@ fn reset_leaves_plugin_ready() {
 #[test]
 fn process_error_when_buffer_too_short() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut buf = vec![0.0f32; 31]; // 2 channels * 16 frames requires 32
     let err = plugin.process_in_place(&mut buf, &ctx(16)).unwrap_err();
     assert!(err.contains("buffer too short"), "unexpected error: {err}");
@@ -651,7 +651,7 @@ fn process_error_when_buffer_too_short() {
 #[test]
 fn mode_switch_and_oversampling_state() {
     let mut plugin = SaturationPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     assert!(
         plugin
@@ -680,7 +680,7 @@ fn mode_switch_and_oversampling_state() {
             ..Default::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("oversampling")),
         Some(ParameterValue::String("2x".to_string()))
@@ -708,7 +708,7 @@ fn output_gain_affects_level() {
                 ..Default::default()
             },
         );
-        p.initialize(SR).unwrap();
+        p.initialize(f64::from(SR)).unwrap();
         p
     };
 

@@ -19,7 +19,7 @@ fn main() {
         algorithm: "mode_matching".to_owned(),
     };
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     assert_eq!(plugin.input_channels(), 4);
     assert_eq!(plugin.output_channels(), 6);
@@ -58,7 +58,7 @@ fn main() {
         ..config
     };
     let mut allrad = AmbisonicsDecoderPlugin::new(&allrad_config).unwrap();
-    allrad.initialize(sample_rate).unwrap();
+    allrad.initialize(f64::from(sample_rate)).unwrap();
     let mut allrad_output = vec![0.0_f32; num_frames * 6];
     allrad.process(&input, &mut allrad_output, &ctx).unwrap();
     assert!(allrad_output.iter().all(|sample| sample.is_finite()));
@@ -90,7 +90,7 @@ fn main() {
         algorithm: "mode_matching".to_owned(),
     };
     let mut plugin_soa = AmbisonicsDecoderPlugin::new(&config_soa).unwrap();
-    plugin_soa.initialize(sample_rate).unwrap();
+    plugin_soa.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(plugin_soa.input_channels(), 9);
     assert_eq!(plugin_soa.output_channels(), 12);
 
@@ -122,7 +122,7 @@ fn main() {
         algorithm: "mode_matching".to_owned(),
     })
     .unwrap();
-    worst_case.initialize(sample_rate).unwrap();
+    worst_case.initialize(f64::from(sample_rate)).unwrap();
     run_standard_tests(&mut worst_case, "AmbisonicsDecoderTOADualBand");
 
     println!("\n[ALL PASS] Ambisonics QA Complete.");

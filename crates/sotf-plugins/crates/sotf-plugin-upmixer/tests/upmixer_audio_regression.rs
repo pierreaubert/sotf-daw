@@ -250,7 +250,7 @@ fn test_upmixer_5_1_multisine_regression() {
     let golden = load_wav(&golden_path);
 
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let output = process_upmixer_signal(&mut plugin, "multisine");
     let metrics = compute_metrics(&output, &golden);
@@ -280,7 +280,7 @@ fn test_upmixer_5_1_sweep_regression() {
     let golden = load_wav(&golden_path);
 
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let output = process_upmixer_signal(&mut plugin, "sweep_20_20k");
     let metrics = compute_metrics(&output, &golden);
@@ -308,7 +308,7 @@ fn test_upmixer_5_1_dialogue_regression() {
     let golden = load_wav(&golden_path);
 
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let output = process_upmixer_signal(&mut plugin, "dialogue");
     let metrics = compute_metrics(&output, &golden);
@@ -336,7 +336,7 @@ fn test_upmixer_7_1_4_regression() {
     let golden = load_wav(&golden_path);
 
     let mut plugin = create_upmixer("7.1.4");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let output = process_upmixer_signal(&mut plugin, "multisine");
     let metrics = compute_metrics(&output, &golden);
@@ -357,7 +357,7 @@ fn test_upmixer_7_1_4_regression() {
 fn test_upmixer_all_configs_produce_output() {
     for config in ["5.1", "7.1", "5.1.2", "7.1.4", "9.1.6"] {
         let mut plugin = create_upmixer(config);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let output = process_upmixer_signal(&mut plugin, "multisine");
 
@@ -369,7 +369,7 @@ fn test_upmixer_all_configs_produce_output() {
 #[test]
 fn test_upmixer_no_clipping() {
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Process loud signal
     let loud_input = vec![0.9_f32; FFT_SIZE * 2];
@@ -390,7 +390,7 @@ fn test_upmixer_no_clipping() {
 #[test]
 fn test_upmixer_silence_input() {
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = vec![0.0_f32; FFT_SIZE * 2];
     let mut output = vec![0.0_f32; FFT_SIZE * plugin.output_channels()];
@@ -412,7 +412,7 @@ fn test_upmixer_silence_input() {
 #[test]
 fn test_upmixer_stereo_imaging_preserved() {
     let mut plugin = create_upmixer("5.1");
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let latency = plugin.latency_samples();
     let num_frames = latency + FFT_SIZE;

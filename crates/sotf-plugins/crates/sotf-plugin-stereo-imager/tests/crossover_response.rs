@@ -11,7 +11,7 @@ static ALLOCATOR: sotf_host::test_utils::CountingAlloc = sotf_host::test_utils::
 
 fn render(params: StereoImagerPluginParams, sample_rate: u32, input: &[f32]) -> Vec<f32> {
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let mut output = input.to_vec();
     process_partitioned(
         &mut plugin,
@@ -267,7 +267,7 @@ fn automation_is_partition_invariant_and_preserves_mid() {
     let mut results = Vec::new();
     for partitions in [&[8192][..], &[1, 7, 257, 13, 1023][..]] {
         let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = input.clone();
         // Start from the exact neutral fast path, then automate all controls at
         // the same absolute frame, regardless of the host's block boundaries.
@@ -299,7 +299,7 @@ fn automation_is_partition_invariant_and_preserves_mid() {
 fn reset_during_frequency_ramp_matches_fresh_target_configuration() {
     let input = broadband_input(2048);
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     apply_target(&mut plugin, &automation_target());
     let mut warmup = input[..74].to_vec();
     plugin
@@ -314,7 +314,7 @@ fn reset_during_frequency_ramp_matches_fresh_target_configuration() {
 #[test]
 fn cutoff_automation_rejects_nyquist_without_mutation() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(16_000).unwrap();
+    plugin.initialize(16_000.0).unwrap();
     let original = plugin.current_values();
     for cutoff in [8000.0, 10_000.0] {
         let mut values = ParameterSet::new();
@@ -331,7 +331,7 @@ fn cutoff_automation_rejects_nyquist_without_mutation() {
 #[test]
 fn cold_processing_frequency_automation_and_reset_do_not_allocate() {
     let mut plugin = StereoImagerPlugin::new(2, automation_target());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut input = broadband_input(257);
     let context = ProcessContext::new(48_000, 257);
     sotf_host::test_utils::assert_no_allocs("cold complementary crossover", || {

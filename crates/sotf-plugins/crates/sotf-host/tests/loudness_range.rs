@@ -271,7 +271,7 @@ fn stable_true_roundtrips_and_each_epoch_transition_clears_it() {
         .unwrap()
         .with_loudness_range(Some(LoudnessRangeConfig::default()))
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
 
     for transition in ["reset", "start", "reinitialize", "disable-enable"] {
         process_plugin_frames(&mut plugin, rate, &input);
@@ -302,7 +302,7 @@ fn stable_true_roundtrips_and_each_epoch_transition_clears_it() {
                     )
                     .unwrap();
             }
-            "reinitialize" => plugin.initialize(rate).unwrap(),
+            "reinitialize" => plugin.initialize(f64::from(rate)).unwrap(),
             "disable-enable" => {
                 plugin
                     .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
@@ -330,7 +330,7 @@ fn stable_transition_waits_for_nested_weak_readers_then_recovers() {
         .unwrap()
         .with_loudness_range(Some(LoudnessRangeConfig::default()))
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
 
     // Reach a valid false snapshot first, then use three small callbacks to
     // retain nested Weak owners from all cache generations. The two spare
@@ -463,7 +463,7 @@ fn plugin_spatial_rebuild_preserves_clock_and_integrated_mode_restarts_it() {
         .unwrap()
         .with_loudness_range(Some(LoudnessRangeConfig::default()))
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let input = stereo_tone(rate, frames, &[-20.0], usize::MAX);
     let mut output = vec![0.0; input.len()];
     plugin
@@ -507,7 +507,7 @@ fn analyzer_builders_reset_retained_snapshots_and_serialization_preserve_policy(
                 .unwrap()
         }
         .with_spatial();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             snapshot(&plugin).loudness_range.unwrap().status,
             LoudnessRangeStatus::WarmingUp
@@ -564,7 +564,7 @@ fn analyzer_builders_reset_retained_snapshots_and_serialization_preserve_policy(
         plugin
             .set_parameter(id, ParameterValue::Bool(true))
             .unwrap();
-        plugin.initialize(44_101).unwrap();
+        plugin.initialize(44_101.0).unwrap();
         assert_eq!(plugin.loudness_range_config(), Some(range));
         assert!(!snapshot(&plugin).loudness_range.unwrap().timebase_is_exact);
     }

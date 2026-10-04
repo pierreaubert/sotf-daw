@@ -32,7 +32,7 @@ fn test_binaural_channel_normalization_no_clipping() {
         0.0,                  // lfe_level
         RoomModel::default(), // Default room model
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Create high-amplitude input signal (0.95 amplitude across all channels)
     // This tests worst-case summing of multiple channels
@@ -133,7 +133,7 @@ fn test_binaural_denormal_flushing() {
         0.0,                  // lfe_level
         RoomModel::default(), // Default room model
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_samples = 1024;
     let context = sotf_host::ProcessContext::new(sample_rate, num_samples);
@@ -206,7 +206,7 @@ fn test_binaural_silence_after_draining_stft_tail() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let num_samples = 1024;
     let context = sotf_host::ProcessContext::new(sample_rate, num_samples);

@@ -7,7 +7,7 @@
 /// not a spectral noise estimator.
 pub struct HissReducer {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     cutoff_hz: f32,
     threshold_db: f32,
     strength: f32,
@@ -45,7 +45,7 @@ impl HissReducer {
     pub fn new(channels: usize) -> Self {
         let mut reducer = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cutoff_hz: 4000.0,
             threshold_db: -30.0,
             strength: 0.5,
@@ -92,8 +92,9 @@ impl HissReducer {
     ///
     /// Returns an error, leaving all state unchanged, when the sample
     /// rate is zero.
-    pub fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn initialize(&mut self, sample_rate: impl Into<f64>) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be nonzero".to_string());
         }
         self.sample_rate = sample_rate;
@@ -287,7 +288,7 @@ impl HissReducer {
     }
 
     fn update_coefficients(&mut self, snap_cutoff: bool) {
-        let sr = self.sample_rate.max(1) as f32;
+        let sr = self.sample_rate.max(1.0) as f32;
         let cutoff = self.cutoff_hz.min(sr * 0.45).max(20.0);
         self.target_alpha = 1.0 - (-2.0 * std::f32::consts::PI * cutoff / sr).exp();
         if snap_cutoff {
@@ -313,7 +314,7 @@ mod tests {
     fn new_creates_reducer() {
         let reducer = HissReducer::new(2);
         assert_eq!(reducer.channels, 2);
-        assert_eq!(reducer.sample_rate, 48000);
+        assert_eq!(reducer.sample_rate, 48000.0);
         assert_eq!(reducer.latency_samples(), 0);
     }
 
@@ -356,7 +357,7 @@ mod tests {
         let mut reducer = HissReducer::new(1);
         let alpha_before = reducer.alpha;
         reducer.initialize(96000).unwrap();
-        assert_eq!(reducer.sample_rate, 96000);
+        assert_eq!(reducer.sample_rate, 96000.0);
         // Higher sample rate -> smaller alpha (slower filter)
         assert!(reducer.alpha < alpha_before);
     }
@@ -365,7 +366,7 @@ mod tests {
     fn initialize_rejects_zero_sample_rate() {
         let mut reducer = HissReducer::new(1);
         assert!(reducer.initialize(0).is_err());
-        assert_eq!(reducer.sample_rate, 48000);
+        assert_eq!(reducer.sample_rate, 48000.0);
     }
 
     #[test]

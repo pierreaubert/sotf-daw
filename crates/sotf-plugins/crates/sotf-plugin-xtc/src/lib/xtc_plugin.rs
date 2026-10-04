@@ -108,7 +108,7 @@ pub(super) struct XtcFftConfig {
     pub(super) hop_size: usize,
 
     /// Sample rate
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     /// Forward FFT planner
     pub(super) fft_forward: Arc<dyn RealToComplex<f32>>,
@@ -238,14 +238,26 @@ pub(super) struct XtcBypassState {
 }
 
 impl XtcBypassState {
-    fn reset(&mut self, enabled: bool, rate: u32) {
+    pub(super) fn duration_for_rate(rate: f64) -> Result<usize, String> {
+        if !rate.is_finite() || rate <= 0.0 {
+            return Err("XTC sample rate must be finite and positive".into());
+        }
+        // usize/isize audio buffers cannot represent a transition at this
+        // rounded frame count. The exclusive boundary is exact in f64.
+        let exclusive_limit = (1_u128 << (usize::BITS - 1)) as f64;
+        let rounded = (rate / 100.0).round().max(1.0);
+        if !rounded.is_finite() || rounded >= exclusive_limit {
+            return Err("XTC bypass transition exceeds addressable frames".into());
+        }
+        Ok(rounded as usize)
+    }
+
+    pub(super) fn reset(&mut self, enabled: bool) {
         self.dry.fill(0.0);
         self.position = 0;
         self.mix = f64::from(enabled);
         self.step = 0.0;
         self.remaining = 0;
-        // Integer rounding avoids a rate-dependent floating-point boundary.
-        self.duration = ((u64::from(rate) + 50) / 100).max(1) as usize;
     }
 
     fn start(&mut self, enabled: bool) {
@@ -414,7 +426,7 @@ impl XtcPlugin {
     /// still allowed to perform file I/O.
     fn validate_source_configuration(
         params: &XtcPluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
         num_bins: usize,
     ) -> Result<(), String> {
         match params.source_mode.as_str() {
@@ -442,7 +454,7 @@ impl XtcPlugin {
 
     fn validate_room_ir_configuration(
         params: &XtcPluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
         num_bins: usize,
         fft_forward: Arc<dyn RealToComplex<f32>>,
     ) -> Result<(), String> {
@@ -455,7 +467,9 @@ impl XtcPlugin {
     }
 
     /// Create a new XTC plugin
-    pub fn new(params: XtcPluginParams, sample_rate: u32) -> Result<Self, String> {
+    pub fn new(params: XtcPluginParams, sample_rate: impl Into<f64>) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
+        let bypass_duration = XtcBypassState::duration_for_rate(sample_rate)?;
         match params.source_mode.as_str() {
             "synthetic" if params.hrtf_file.is_some() => {
                 return Err(
@@ -647,7 +661,7 @@ impl XtcPlugin {
                 mix: f64::from(params.enabled),
                 step: 0.0,
                 remaining: 0,
-                duration: ((u64::from(sample_rate) + 50) / 100).max(1) as usize,
+                duration: bypass_duration,
             },
             drain_state: XtcDrainState {
                 zeros: vec![0.0; hop_size * 2],
@@ -827,7 +841,10 @@ impl XtcPlugin {
     }
 
     /// Create from parameters helper
-    pub fn from_params(params: XtcPluginParams, sample_rate: u32) -> Result<Self, String> {
+    pub fn from_params(
+        params: XtcPluginParams,
+        sample_rate: impl Into<f64>,
+    ) -> Result<Self, String> {
         Self::new(params, sample_rate)
     }
 
@@ -841,7 +858,7 @@ impl XtcPlugin {
     }
 
     /// Load a complete target-rate configuration without changing the live epoch.
-    fn prepare_initialization(&self, sample_rate: u32) -> PluginResult<PreparedInitialization> {
+    fn prepare_initialization(&self, sample_rate: f64) -> PluginResult<PreparedInitialization> {
         let num_bins = self.fft.fft_size / 2 + 1;
         // Synchronous initialization reloads artifacts once and uses those exact
         // in-memory results. The parameter hash alone does not include rate.
@@ -1429,7 +1446,7 @@ impl XtcPlugin {
         // AutoGain exists only for stereo output. Refresh after each completed
         // sample interval, so new measurements affect only subsequent audio.
         debug_assert_eq!(channels, 2);
-        let interval = (self.fft.sample_rate as usize / 10).max(1);
+        let interval = (self.fft.sample_rate / 10.0).floor().max(1.0) as usize;
         let mut offset = 0;
         while offset < num_frames {
             let dry_start = self.bypass.position;
@@ -1897,15 +1914,13 @@ impl Plugin for XtcPlugin {
         Some(self.diagnostics.cache.load() as Arc<dyn Any + Send + Sync>)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("XTC sample rate must be non-zero".into());
-        }
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        let bypass_duration = XtcBypassState::duration_for_rate(sample_rate)?;
         // AutoGain's two fixed stereo loudness monitors use this validated range.
         // Reject before changing the audio clock or invalidating a pending request.
         if self.params.auto_gain_enabled
             && self.output_channels() == 2
-            && !(16..=2_822_400).contains(&sample_rate)
+            && !(16.0..=2_822_400.0).contains(&sample_rate)
         {
             return Err("XTC AutoGain sample rate must be in 16..=2822400 Hz".into());
         }
@@ -1944,6 +1959,7 @@ impl Plugin for XtcPlugin {
         // A new initialized clock starts the same meter cadence as a fresh
         // instance. Failed preparation never reaches this epoch boundary.
         self.diagnostics.auto_gain_frames = 0;
+        self.bypass.duration = bypass_duration;
         self.reset();
         Ok(())
     }
@@ -1951,7 +1967,7 @@ impl Plugin for XtcPlugin {
     fn reset(&mut self) {
         self.drain_state.received_input = false;
         self.diagnostics.auto_gain_frames = 0;
-        self.bypass.reset(self.params.enabled, self.fft.sample_rate);
+        self.bypass.reset(self.params.enabled);
         self.drain_state.tail_bound = None;
         self.drain_state.input_phase = 0;
         self.drain_state.remaining = None;

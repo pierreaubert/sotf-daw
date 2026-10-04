@@ -15,7 +15,7 @@ fn realtime_getters_setters_and_processing_do_not_allocate() {
         6,
         serde_json::from_str::<LimiterPluginParams>("{}").unwrap(),
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let updates: Vec<_> = [
         ("threshold", ParameterValue::Float(-4.0)),
         ("release", ParameterValue::Float(75.0)),
@@ -60,7 +60,7 @@ fn bulk_and_direct_parameter_paths_report_identical_values() {
     values.insert(ParameterId::from("lookahead"), ParameterValue::Float(8.0));
     values.insert(ParameterId::from("isp_mode"), ParameterValue::Bool(true));
     plugin.apply_values(values).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, value) in plugin.current_values() {
         assert_eq!(plugin.parametric_get_parameter(&id), Some(value));
     }

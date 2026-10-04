@@ -7,7 +7,7 @@ use sotf_plugin_multiband_expander::MultibandExpanderPlugin;
 fn test_multiband_expander_instantiation() {
     let plugin = MultibandExpanderPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(44100).unwrap();
+    adapter.initialize(44100.0).unwrap();
 
     assert_eq!(adapter.channels(), 2);
     assert!(adapter.info().name.contains("Expander"));
@@ -20,7 +20,7 @@ fn test_multiband_expander_processes_audio() {
     let sr = 48000u32;
     let plugin = MultibandExpanderPlugin::new(1);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(sr).unwrap();
+    adapter.initialize(f64::from(sr)).unwrap();
 
     adapter
         .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-20.0))

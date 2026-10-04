@@ -24,7 +24,7 @@ impl UpmixerPlugin {
             self.core.fft_size * self.core.num_output_channels
         );
 
-        debug_assert!(self.core.sample_rate > 0 && self.core.fft_size > 0);
+        debug_assert!(self.core.sample_rate > 0.0 && self.core.fft_size > 0);
 
         self.apply_window_and_forward_fft(input);
 

@@ -15,7 +15,7 @@ const AMPLITUDE_COST_WEIGHT: f32 = 0.1;
 
 pub struct PndAnalyzer {
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     window: Vec<f32>,
     fft: RealFftProcessor,
     ring: RingAccumulator,
@@ -53,7 +53,7 @@ pub struct PndAnalyzer {
 }
 
 impl PndAnalyzer {
-    pub fn new(fft_size: usize, sample_rate: u32, analysis_window_ms: f32) -> Self {
+    pub fn new(fft_size: usize, sample_rate: f64, analysis_window_ms: f32) -> Self {
         let hop_size = fft_size / 4; // 512 for fft_size=2048
         let window = generate_hann_window(fft_size);
         let fft = RealFftProcessor::new_forward_only(fft_size);
@@ -122,7 +122,7 @@ impl PndAnalyzer {
         self.fft.forward();
 
         // Peak picking on the real-FFT spectrum (spectrum_size bins)
-        let bin_hz = self.sample_rate as f32 / self.fft_size as f32;
+        let bin_hz = (self.sample_rate / self.fft_size as f64) as f32;
         self.peak_scratch.clear();
 
         // Derive a level-relative threshold from the frame spectrum. A fixed
@@ -437,10 +437,10 @@ fn match_peaks_one_to_one(
 /// Compute drift history capacity: how many FFT frames fit in `analysis_window_ms`.
 fn compute_drift_history_capacity(
     analysis_window_ms: f32,
-    sample_rate: u32,
+    sample_rate: f64,
     hop_size: usize,
 ) -> usize {
-    let samples_in_window = (analysis_window_ms / 1000.0 * sample_rate as f32) as usize;
+    let samples_in_window = (f64::from(analysis_window_ms) / 1000.0 * sample_rate).floor() as usize;
     let capacity = samples_in_window / hop_size;
     capacity.max(1)
 }
@@ -451,7 +451,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_silence_returns_no_drift() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
         let silence = vec![0.0; 4096];
         let drift = analyzer.analyze(&silence);
         assert!(
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_stable_tone_returns_near_unity() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
 
         // Generate several blocks of 440 Hz sine (enough to fill ring buffer + multiple hops)
         let num_samples = 44100; // 1 second
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_processes_small_blocks() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
 
         // Feed 1024-sample blocks (typical process() call size)
         let block_size = 1024;
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_reset() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
 
         // Feed some data
         let samples: Vec<f32> = (0..4096)
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_analyzer_reset_keeps_median_scratch_capacity() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
         analyzer.reset();
 
         analyzer.drift_history[0] = 1.01;
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn test_update_analysis_window() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
         let initial_capacity = analyzer.drift_history_capacity;
         let initial_storage = analyzer.drift_history.len();
 
@@ -567,7 +567,7 @@ mod tests {
     /// returned after a wrap is the median of the most recent entries.
     #[test]
     fn test_drift_history_wraps_correctly() {
-        let mut analyzer = PndAnalyzer::new(2048, 44100, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 44100.0, 100.0);
         // capacity = floor(100 * 44100 / 1000 / 512) = floor(4410/512) = 8
         let cap = analyzer.drift_history_capacity;
         assert!(cap >= 4, "capacity should be >= 4, got {cap}");
@@ -619,11 +619,11 @@ mod tests {
         // 100ms at 44100 Hz with hop_size 512
         // samples_in_window = 0.1 * 44100 = 4410
         // capacity = 4410 / 512 = 8
-        let cap = compute_drift_history_capacity(100.0, 44100, 512);
+        let cap = compute_drift_history_capacity(100.0, 44100.0, 512);
         assert_eq!(cap, 8);
 
         // Very small window should clamp to 1
-        let cap_min = compute_drift_history_capacity(1.0, 44100, 512);
+        let cap_min = compute_drift_history_capacity(1.0, 44100.0, 512);
         assert_eq!(cap_min, 1);
     }
 
@@ -652,7 +652,7 @@ mod tests {
     fn explicit_reference_identifies_constant_offset_that_temporal_tracking_cannot() {
         fn analyze_tone(frequency: f32) -> (f32, (f32, f32)) {
             let sample_rate = 48_000;
-            let mut analyzer = PndAnalyzer::new(2048, sample_rate, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, f64::from(sample_rate), 100.0);
             let samples = (0..sample_rate)
                 .map(|frame| {
                     (2.0 * std::f32::consts::PI * frequency * frame as f32 / sample_rate as f32)
@@ -681,7 +681,7 @@ mod tests {
 
     #[test]
     fn reference_confidence_uses_local_prominence_not_whole_program_energy() {
-        let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
         analyzer.peak_scratch = vec![
             (444.4, 0.05),
             (1_000.0, 1.0),
@@ -717,7 +717,7 @@ mod tests {
     #[test]
     fn reference_detection_is_amplitude_invariant_over_60_db() {
         for amplitude in [1.0, 0.1, 0.01, 0.001] {
-            let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
             analyzer.analyze(&tone(444.4, amplitude, 48_000));
             let (ratio, confidence) = analyzer.estimate_against_reference(440.0);
             assert!(
@@ -740,7 +740,7 @@ mod tests {
                 sample + noise
             })
             .collect();
-        let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
         analyzer.analyze(&samples);
         let (ratio, confidence) = analyzer.estimate_against_reference(frequency / 1.01);
         assert!((ratio - 1.01).abs() < 0.004, "bin-edge ratio {ratio}");
@@ -764,7 +764,7 @@ mod tests {
                     sample + uniform * noise_peak_to_peak
                 })
                 .collect();
-            let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
             analyzer.analyze(&samples);
             let (ratio, confidence) = analyzer.estimate_against_reference(440.0);
             assert!(
@@ -780,7 +780,7 @@ mod tests {
 
     #[test]
     fn silence_tone_and_musical_motion_do_not_create_stale_authority() {
-        let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+        let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
         analyzer.analyze(&vec![0.0; 4096]);
         assert_eq!(analyzer.estimate_against_reference(440.0), (1.0, 0.0));
 
@@ -796,7 +796,7 @@ mod tests {
     #[test]
     fn harmonic_pilot_confidence_is_level_and_spectrum_robust() {
         for amplitude in [0.5_f32, 0.05, 0.005, 0.0005] {
-            let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
             let samples = (0..48_000)
                 .map(|frame| {
                     let time = frame as f32 / 48_000.0;
@@ -844,7 +844,7 @@ mod tests {
                     }
                 })
                 .collect::<Vec<_>>();
-            let mut analyzer = PndAnalyzer::new(2048, 48_000, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, 48_000.0, 100.0);
             analyzer.analyze(&noise);
             let (_, confidence) = analyzer.estimate_against_reference(440.0);
             assert!(

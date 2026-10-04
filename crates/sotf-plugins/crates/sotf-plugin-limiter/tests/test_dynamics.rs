@@ -81,7 +81,7 @@ fn test_feed_forward_lookahead_tracks_peak() {
         5.0,  // 5 ms lookahead (~240 samples @ 48k)
         false,
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .parametric_set_parameter(
             ParameterId::from("feed_forward"),
@@ -117,7 +117,7 @@ fn test_more_than_32_channels() {
         48, // 48 channels
         -1.0, 50.0, 1.0, false,
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // All 48 channels should be analyzed, not just the first 32.
     let mut buffer = vec![0.0f32; 64 * 48];

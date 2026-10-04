@@ -212,7 +212,7 @@ fn check_streaming_automation<P: nih::ClapPlugin>(name: &str, key: &str, values:
             matches!(plugin.preferred_oversampling(), None | Some(1)),
             "{name} needs a buffered automation design"
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         params.sync_to_plugin(plugin.as_mut()).unwrap();
         plugin
     };

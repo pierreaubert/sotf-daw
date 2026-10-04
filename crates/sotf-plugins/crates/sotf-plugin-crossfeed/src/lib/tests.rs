@@ -10,7 +10,7 @@ use sotf_host::plugin::ProcessContext;
 #[test]
 fn test_crossfeed_basic() {
     let mut p = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut b = vec![1.0, 0.0, 1.0, 0.0];
     p.process_in_place(&mut b, &ProcessContext::new(48000, 2))
         .unwrap();
@@ -97,7 +97,7 @@ fn test_yaw_only_itd_advances_delay_for_every_algorithm() {
             ..Default::default()
         };
         let mut plugin = CrossfeedPlugin::new(params).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut buffer = vec![0.0; 128 * 2];
         buffer[0] = 1.0;
         plugin
@@ -127,7 +127,7 @@ fn test_yaw_itd_automation_is_partition_invariant() {
         params.head_yaw_deg = 0.0;
         params.mix = 1.0;
         let mut plugin = CrossfeedPlugin::new(params).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         plugin
             .set_parameter(
                 ParameterId::from("head_yaw_deg"),
@@ -209,13 +209,13 @@ fn public_presets_converge_to_fresh_reference_audio() {
         (5, CrossfeedPreset::Hrtf),
     ] {
         let mut selected = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-        selected.initialize(SR).unwrap();
+        selected.initialize(f64::from(SR)).unwrap();
         selected
             .set_parameter(ParameterId::from("preset"), ParameterValue::Int(index))
             .unwrap();
         let mut reference =
             CrossfeedPlugin::new(CrossfeedPluginParams::from_preset(preset)).unwrap();
-        reference.initialize(SR).unwrap();
+        reference.initialize(f64::from(SR)).unwrap();
 
         let input: Vec<f32> = (0..FRAMES)
             .flat_map(|frame| {
@@ -249,8 +249,8 @@ fn test_unrelated_parameter_update_preserves_filter_history() {
     let params = CrossfeedPluginParams::from_preset(CrossfeedPreset::Default);
     let mut changed = CrossfeedPlugin::new(params.clone()).unwrap();
     let mut control = CrossfeedPlugin::new(params).unwrap();
-    changed.initialize(48_000).unwrap();
-    control.initialize(48_000).unwrap();
+    changed.initialize(48_000.0).unwrap();
+    control.initialize(48_000.0).unwrap();
     let mut warm_a = vec![0.0; 256 * 2];
     let mut warm_b = vec![0.0; 256 * 2];
     warm_a[0] = 1.0;
@@ -285,7 +285,7 @@ fn test_process_rejects_non_exact_stereo_buffer_lengths() {
             ..Default::default()
         })
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         for len in [7, 9] {
             let mut buffer = vec![0.0; len];
             assert!(
@@ -332,7 +332,7 @@ fn test_invalid_construction_and_sample_rate_are_rejected() {
     assert!(CrossfeedPlugin::new(invalid).is_err());
 
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
 }
 
 #[test]
@@ -344,7 +344,7 @@ fn process_requires_initialized_matching_sample_rate() {
             .process_in_place(&mut buffer, &ProcessContext::new(44_100, 4))
             .is_err()
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!(
         plugin
             .process_in_place(&mut buffer, &ProcessContext::new(44_100, 4))
@@ -357,7 +357,7 @@ fn failed_parameter_batch_is_transactional() {
     use sotf_host::parametric_plugin::ParameterSet;
 
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let before = plugin.current_values();
     let mut update = ParameterSet::new();
     update.insert(ParameterId::from("mix"), ParameterValue::Float(0.25));
@@ -374,7 +374,7 @@ fn scratch_capacity_matches_setup_contract() {
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
     assert_eq!(plugin.dry_l.len(), 257);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut exact = vec![0.0; 257 * 2];
     assert_eq!(
         plugin
@@ -397,7 +397,7 @@ fn non_finite_audio_is_sanitized_before_dsp_state() {
         ..Default::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut poisoned = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.25];
     plugin
         .process_in_place(&mut poisoned, &ProcessContext::new(48_000, 2))
@@ -413,10 +413,10 @@ fn non_finite_audio_is_sanitized_before_dsp_state() {
 
 #[test]
 fn test_zero_delay_still_advances_delay_history() {
-    let mut delay = DelayLine::new(0.0, 48_000);
+    let mut delay = DelayLine::new(0.0, 48_000.0);
     assert_eq!(delay.process(0.25), 0.25);
     assert_eq!(delay.write_pos, 1);
-    delay.set_delay(0.5, 48_000);
+    delay.set_delay(0.5, 48_000.0);
     let peak = (0..25)
         .map(|_| delay.process(0.0).abs())
         .fold(0.0, f32::max);
@@ -459,7 +459,7 @@ fn test_bauer_mono_preserved() {
     params.mode = CrossfeedMode::Bauer;
     params.bauer_feed_db = 6.0;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 4000;
     let mut buf: Vec<f32> = (0..n).flat_map(|_| [0.5f32, 0.5]).collect();
@@ -495,7 +495,7 @@ fn test_bauer_difference_shelved() {
         })
         .collect();
     let mut p = CrossfeedPlugin::new(params.clone()).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
     p.process_in_place(&mut buf_lf, &ProcessContext::new(sr, n))
         .unwrap();
 
@@ -525,7 +525,7 @@ fn test_bauer_difference_shelved() {
         })
         .collect();
     let mut p2 = CrossfeedPlugin::new(params).unwrap();
-    p2.initialize(sr).unwrap();
+    p2.initialize(f64::from(sr)).unwrap();
     p2.process_in_place(&mut buf_hf, &ProcessContext::new(sr, n))
         .unwrap();
 
@@ -551,7 +551,7 @@ fn test_bauer_basic() {
     let mut params = CrossfeedPluginParams::from_preset(CrossfeedPreset::Default);
     params.mode = CrossfeedMode::Bauer;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buffer = vec![1.0, 0.0, 0.0, 1.0];
     p.process_in_place(&mut buffer, &ProcessContext::new(48000, 2))
@@ -569,7 +569,7 @@ fn test_bauer_uses_lowpass() {
     params.mode = CrossfeedMode::Bauer;
     params.bauer_feed_db = 6.0;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // DC signal: all energy in left channel
     let n = 4000;
@@ -591,7 +591,7 @@ fn test_meier_basic() {
     let mut params = CrossfeedPluginParams::from_preset(CrossfeedPreset::Meier);
     params.mode = CrossfeedMode::Meier;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buffer = vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0];
     p.process_in_place(&mut buffer, &ProcessContext::new(48000, 4))
@@ -604,7 +604,7 @@ fn test_mb_basic() {
     let mut params = CrossfeedPluginParams::from_preset(CrossfeedPreset::Mb);
     params.mode = CrossfeedMode::Mb;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 100;
     let mut buffer: Vec<f32> = (0..n).flat_map(|_| [1.0f32, 0.0]).collect();
@@ -627,7 +627,7 @@ fn test_mb_mono_signal_is_headroom_normalized() {
     params.autogain_enabled = false;
 
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 4096;
     let mut buffer: Vec<f32> = (0..n).flat_map(|_| [0.5f32, 0.5f32]).collect();
@@ -675,7 +675,7 @@ fn test_itd_delay() {
         ..CrossfeedPluginParams::default()
     };
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Impulse in left channel only
     let n = 100;
@@ -707,7 +707,7 @@ fn test_itd_delay_zero() {
         ..CrossfeedPluginParams::default()
     };
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 100;
     let mut buffer: Vec<f32> = (0..n).flat_map(|_| [1.0f32, 0.0]).collect();
@@ -719,19 +719,19 @@ fn test_itd_delay_zero() {
 
 #[test]
 fn test_delay_line_supports_fractional_and_high_sample_rate_delay() {
-    let mut delay = DelayLine::new(1.0, 192000);
+    let mut delay = DelayLine::new(1.0, 192000.0);
     assert!(
         delay.capacity >= 194,
         "1ms at 192kHz needs at least 192 samples plus interpolation headroom"
     );
 
-    delay.set_delay(0.5, 48000);
+    delay.set_delay(0.5, 48000.0);
     assert!(
         (delay.delay_samples - 24.0).abs() < 1e-5,
         "0.5ms at 48kHz should be represented as 24 samples"
     );
 
-    delay.set_delay(0.25, 44100);
+    delay.set_delay(0.25, 44100.0);
     assert!(
         delay.delay_samples.fract() > 0.0,
         "0.25ms at 44.1kHz should preserve a fractional delay"
@@ -741,7 +741,7 @@ fn test_delay_line_supports_fractional_and_high_sample_rate_delay() {
 #[test]
 fn test_itd_parameter() {
     let mut p = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Set ITD delay
     p.set_parameter(
@@ -772,7 +772,7 @@ fn test_itd_delay_accuracy() {
             ..CrossfeedPluginParams::default()
         };
         let mut p = CrossfeedPlugin::new(params).unwrap();
-        p.initialize(sr).unwrap();
+        p.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = vec![0.0f32; n * 2];
         buffer[0] = 1.0; // impulse at frame 0, L channel
@@ -823,7 +823,7 @@ fn test_disabled_passthrough() {
         ..CrossfeedPluginParams::default()
     };
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buffer = vec![1.0, 0.5, 0.3, 0.7];
     let original = buffer.clone();
@@ -851,7 +851,7 @@ fn test_crossfeed_frequency_response_low_vs_high() {
     // Helper: generate left-only sine, process, measure right channel energy in tail
     let measure_crossfeed = |freq: f32| -> f32 {
         let mut p = CrossfeedPlugin::new(params.clone()).unwrap();
-        p.initialize(sr).unwrap();
+        p.initialize(f64::from(sr)).unwrap();
 
         let mut buf: Vec<f32> = (0..n)
             .flat_map(|i| {
@@ -897,7 +897,7 @@ fn test_meier_filter_coefficients_correct_after_sample_rate_change() {
         params.mode = CrossfeedMode::Meier;
         params.mix = 1.0;
         let mut p = CrossfeedPlugin::new(params).unwrap();
-        p.initialize(sr).unwrap();
+        p.initialize(f64::from(sr)).unwrap();
 
         let mut buf: Vec<f32> = (0..n)
             .flat_map(|i| {
@@ -958,7 +958,7 @@ fn test_itd_yaw_asymmetry() {
             ..CrossfeedPluginParams::default()
         };
         let mut p = CrossfeedPlugin::new(params).unwrap();
-        p.initialize(sr).unwrap();
+        p.initialize(f64::from(sr)).unwrap();
 
         let mut buffer = vec![0.0f32; n * 2];
         if impulse_on_left {
@@ -1009,7 +1009,7 @@ fn test_mix_ramp_no_step_discontinuity() {
     params.mode = CrossfeedMode::Bauer;
     params.mix = 0.0;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Warm-up block to settle smoother at mix=0
     let mut warmup = vec![0.5f32; n * 2];
@@ -1051,7 +1051,7 @@ fn test_bauer_frequency_automation_is_click_free() {
     params.bauer_feed_db = 12.0;
     params.bauer_fcut_hz = 400.0;
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let render = |start: usize| -> Vec<f32> {
         (0..block)
@@ -1098,7 +1098,7 @@ fn test_multiband_frequency_automation_preserves_crossover_state() {
     params.mix = 1.0;
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
 
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     let render = |start: usize| -> Vec<f32> {
         (0..block)
             .flat_map(|i| {
@@ -1140,7 +1140,7 @@ fn disabled_crossfeed_resets_state_before_reentry() {
     let mut params = CrossfeedPluginParams::from_preset(CrossfeedPreset::Default);
     params.mode = CrossfeedMode::Bauer;
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut warm = vec![0.0; n * 2];
     warm[0] = 1.0;
@@ -1176,7 +1176,7 @@ fn mode_transition_resets_inactive_filter_state() {
     params.mode = CrossfeedMode::Meier;
     params.mix = 1.0;
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut impulse = vec![0.0; n * 2];
     impulse[0] = 1.0;
@@ -1229,9 +1229,9 @@ fn test_reset_clears_all_filter_state() {
         ..CrossfeedPluginParams::default()
     };
     let mut p1 = CrossfeedPlugin::new(params.clone()).unwrap();
-    p1.initialize(sr).unwrap();
+    p1.initialize(f64::from(sr)).unwrap();
     let mut p2 = CrossfeedPlugin::new(params.clone()).unwrap();
-    p2.initialize(sr).unwrap();
+    p2.initialize(f64::from(sr)).unwrap();
 
     // Run p1 for one block to warm up filter state
     let mut block1: Vec<f32> = (0..n)
@@ -1269,7 +1269,7 @@ fn test_reset_clears_all_filter_state() {
 #[test]
 fn test_process_does_not_resize_buffers() {
     let mut p = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let initial_len = p.dry_l.len();
     let initial_cap = p.dry_l.capacity();
@@ -1295,7 +1295,7 @@ fn test_process_does_not_resize_buffers() {
 #[test]
 fn test_oversized_block_returns_error() {
     let mut p = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = p.dry_l.len() + 1;
     let mut buffer: Vec<f32> = vec![0.0f32; nf * 2];
@@ -1321,7 +1321,7 @@ fn test_process_in_place_enabled_off_mode_passthrough() {
         ..Default::default()
     };
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buffer = vec![1.0, 0.5, 0.3, 0.7];
     let original = buffer.clone();
@@ -1339,7 +1339,7 @@ fn test_process_in_place_autogain_enabled() {
     params.autogain_enabled = true;
     params.mode = CrossfeedMode::Bauer;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let n = 4096;
     let mut buffer: Vec<f32> = (0..n).flat_map(|_| [0.5f32, 0.3f32]).collect();
@@ -1364,7 +1364,7 @@ fn autogain_target_lufs_changes_compensation() {
             ..Default::default()
         };
         let mut plugin = CrossfeedPlugin::new(params).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let block_size = 1024;
         for block in 0..120 {
@@ -1399,7 +1399,7 @@ fn autogain_target_lufs_updates_the_helper() {
         ..CrossfeedPluginParams::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("autogain_target_lufs"),
@@ -1424,7 +1424,7 @@ fn test_process_in_place_yaw_parameter_affects_itd() {
             ..CrossfeedPluginParams::default()
         };
         let mut p = CrossfeedPlugin::new(params).unwrap();
-        p.initialize(sr).unwrap();
+        p.initialize(f64::from(sr)).unwrap();
 
         p.set_parameter(
             ParameterId::from("head_yaw_deg"),
@@ -1464,7 +1464,7 @@ fn test_process_in_place_meier_with_itd() {
     params.mode = CrossfeedMode::Meier;
     params.itd_delay_ms = 0.5;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let n = 200;
     let mut buffer = vec![0.0f32; n * 2];
@@ -1490,7 +1490,7 @@ fn test_process_in_place_mb_with_itd() {
     params.mode = CrossfeedMode::Mb;
     params.itd_delay_ms = 0.5;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let n = 200;
     let mut buffer = vec![0.0f32; n * 2];
@@ -1516,7 +1516,7 @@ fn test_process_in_place_mix_zero_passthrough() {
     params.mode = CrossfeedMode::Bauer;
     params.mix = 0.0;
     let mut p = CrossfeedPlugin::new(params).unwrap();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let n = 100;
     let mut buffer: Vec<f32> = (0..n)
@@ -1546,7 +1546,7 @@ fn render_hrtf(input: &[f32], partitions: &[usize]) -> Vec<f32> {
         ..Default::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut output = Vec::with_capacity(input.len());
     let mut frame = 0;
     let mut part = 0;
@@ -1577,7 +1577,7 @@ fn hrtf_hard_pan_bleeds_after_interaural_delay_and_reports_zero_latency() {
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 0);
 }
 

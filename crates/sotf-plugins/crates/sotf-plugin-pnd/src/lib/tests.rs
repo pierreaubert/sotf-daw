@@ -15,7 +15,7 @@ fn test_drift_smoothing_slow_correction() {
     let mut p = PndPlugin::new(2);
     p.drift_smoothing = 0.99; // very high smoothing
     p.correction_strength = 1.0;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = PROCESS_CHUNK_FRAMES;
     let ctx = ProcessContext::new(48000, nf);
@@ -51,8 +51,8 @@ fn test_drift_smoothing_slow_correction() {
 fn drift_smoothing_parameter_is_monotonic_and_high_values_are_slow() {
     let current = 1.0;
     let target = 1.1;
-    let fast = smooth_drift_ratio(current, target, 0.1, 512, 48_000);
-    let slow = smooth_drift_ratio(current, target, 0.9, 512, 48_000);
+    let fast = smooth_drift_ratio(current, target, 0.1, 512, 48_000.0);
+    let slow = smooth_drift_ratio(current, target, 0.9, 512, 48_000.0);
 
     assert!(fast > slow, "lower smoothing should track faster");
     assert!(slow > current, "a finite target should still make progress");
@@ -65,20 +65,20 @@ fn drift_smoothing_is_elapsed_time_and_sample_rate_invariant() {
     let target = 1.1;
     let tau = 0.1;
 
-    let once = smooth_drift_ratio(current, target, tau, 1024, 48_000);
-    let half = smooth_drift_ratio(current, target, tau, 512, 48_000);
-    let twice = smooth_drift_ratio(half, target, tau, 512, 48_000);
+    let once = smooth_drift_ratio(current, target, tau, 1024, 48_000.0);
+    let half = smooth_drift_ratio(current, target, tau, 512, 48_000.0);
+    let twice = smooth_drift_ratio(half, target, tau, 512, 48_000.0);
     assert!((once - twice).abs() < 1e-12);
 
-    let at_96k = smooth_drift_ratio(current, target, tau, 2048, 96_000);
+    let at_96k = smooth_drift_ratio(current, target, tau, 2048, 96_000.0);
     assert!((once - at_96k).abs() < 1e-12);
-    assert_eq!(smooth_drift_ratio(current, target, tau, 0, 48_000), current);
+    assert_eq!(smooth_drift_ratio(current, target, tau, 0, 48_000.0), current);
 }
 
 #[test]
 fn structural_parameters_are_rejected_after_initialization() {
     let mut p = PndPlugin::new(2);
-    p.initialize(44_100).unwrap();
+    p.initialize(44_100.0).unwrap();
 
     for (id, value) in [
         (
@@ -101,7 +101,7 @@ fn sustained_correction_keeps_fixed_frame_contract_without_zeros_or_overflow() {
         let mut p = PndPlugin::new(1);
         p.correction_strength = 1.0;
         p.current_ratio = ratio;
-        p.initialize(48_000).unwrap();
+        p.initialize(48_000.0).unwrap();
         p.current_ratio = ratio;
         p.analyzers.clear();
         let nf = PROCESS_CHUNK_FRAMES;
@@ -132,8 +132,8 @@ fn process_errors_are_transactional() {
     let context = ProcessContext::new(48_000, PROCESS_CHUNK_FRAMES);
     let mut retried = PndPlugin::new(1);
     let mut fresh = PndPlugin::new(1);
-    retried.initialize(48_000).unwrap();
-    fresh.initialize(48_000).unwrap();
+    retried.initialize(48_000.0).unwrap();
+    fresh.initialize(48_000.0).unwrap();
 
     assert!(retried.process(&input, &mut [0.0], &context).is_err());
     let mut retry_output = vec![0.0; PROCESS_CHUNK_FRAMES];
@@ -199,7 +199,7 @@ fn render_multichannel_reference_ratio(frequencies: &[Option<f32>]) -> f64 {
     plugin.reference_frequency_hz = 440.0;
     plugin.confidence_threshold = 0.5;
     plugin.drift_smoothing = 0.001;
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let input = (0..frames)
         .flat_map(|frame| {
             frequencies.iter().map(move |frequency| {
@@ -216,7 +216,7 @@ fn render_multichannel_reference_ratio(frequencies: &[Option<f32>]) -> f64 {
         .process(
             &input,
             &mut output,
-            &ProcessContext::new(sample_rate, frames),
+            &ProcessContext::new(sample_rate as f64, frames),
         )
         .unwrap();
     plugin.current_ratio
@@ -246,7 +246,7 @@ fn end_to_end_spatial_consensus_is_order_independent_and_fails_closed_on_a_split
 fn multichannel_policy_preserves_every_channel_and_uses_shared_correction() {
     for channels in [1, 2, 6] {
         let mut p = PndPlugin::new(channels);
-        p.initialize(48_000).unwrap();
+        p.initialize(48_000.0).unwrap();
         assert_eq!(p.input_channels(), channels);
         assert_eq!(p.output_channels(), channels);
         let frames = PROCESS_CHUNK_FRAMES * 4;
@@ -278,7 +278,7 @@ fn multichannel_policy_preserves_every_channel_and_uses_shared_correction() {
 #[test]
 fn process_rejects_context_sample_rate_mismatch() {
     let mut p = PndPlugin::new(1);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let input = vec![0.0_f32; PROCESS_CHUNK_FRAMES];
     let mut output = vec![0.0_f32; PROCESS_CHUNK_FRAMES];
     let err = p
@@ -298,7 +298,7 @@ fn test_analysis_window_parameter_values() {
     for &window_ms in &[10.0, 50.0, 100.0, 200.0] {
         let mut p = PndPlugin::new(2);
         p.analysis_window_ms = window_ms;
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
 
         let nf = PROCESS_CHUNK_FRAMES;
         let ctx = ProcessContext::new(48000, nf);
@@ -326,7 +326,7 @@ fn test_analysis_window_param_roundtrip() {
         ParameterValue::Float(75.0),
     )
     .unwrap();
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
 
     let val = p.get_parameter(&ParameterId::from("analysis_window_ms"));
     assert_eq!(val, Some(ParameterValue::Float(75.0)));
@@ -335,7 +335,7 @@ fn test_analysis_window_param_roundtrip() {
 #[test]
 fn test_process_rejects_buffer_size_mismatch() {
     let mut p = PndPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let ctx = ProcessContext::new(48000, 64);
     let input = vec![0.0f32; ctx.num_frames * p.input_channels()];
@@ -352,7 +352,7 @@ fn test_process_rejects_buffer_size_mismatch() {
 #[test]
 fn process_accepts_large_callbacks_without_internal_chunk_queues() {
     let mut p = PndPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let frames = PROCESS_CHUNK_FRAMES * 5;
     let ctx = ProcessContext::new(48000, frames);
@@ -365,7 +365,7 @@ fn process_accepts_large_callbacks_without_internal_chunk_queues() {
 #[test]
 fn test_latency_samples_reports_fixed_duration_preserving_latency() {
     let mut p = PndPlugin::new(2);
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
     assert_eq!(p.latency_samples(), PV_LATENCY_FRAMES);
 }
 
@@ -376,7 +376,7 @@ fn render_partitioned_impulse(partitions: &[usize]) -> (Vec<f32>, usize) {
         ParameterValue::Float(0.0),
     )
     .unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let latency = p.latency_samples();
     let total_frames = latency + PV_FFT_SIZE * 3;
     let mut rendered = Vec::with_capacity(total_frames);
@@ -454,7 +454,7 @@ fn render_reference_step(partitions: &[usize]) -> (Vec<f32>, f64) {
 
     let mut plugin = PndPlugin::new(1);
     plugin.reference_frequency_hz = 440.0;
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let mut rendered = Vec::with_capacity(total_frames);
     let mut position = 0;
     let mut partition = 0;
@@ -496,7 +496,7 @@ fn referenced_control_releases_stale_correction_when_pilot_authority_disappears(
     let sample_rate = 48_000;
     let mut plugin = PndPlugin::new(1);
     plugin.reference_frequency_hz = 440.0;
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let process_tone = |plugin: &mut PndPlugin, frequency: Option<f32>, frames: usize| {
         let input: Vec<f32> = (0..frames)
@@ -513,7 +513,7 @@ fn referenced_control_releases_stale_correction_when_pilot_authority_disappears(
                 .process(
                     &input,
                     &mut output,
-                    &ProcessContext::new(sample_rate, frames),
+                    &ProcessContext::new(sample_rate as f64, frames),
                 )
                 .unwrap(),
             frames
@@ -573,7 +573,7 @@ fn reset_publishes_default_diagnostics_with_two_held_generations() {
 #[test]
 fn test_reset_clears_vocoder_state_without_rebuilding_it() {
     let mut p = PndPlugin::new(2);
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
 
     let nf = PROCESS_CHUNK_FRAMES;
     let ctx = ProcessContext::new(44100, nf);
@@ -608,7 +608,7 @@ fn test_pv_path_uses_correction_strength_smoother() {
         ParameterValue::Float(0.0),
     )
     .unwrap();
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
 
     let nf = 512;
     let ctx = ProcessContext::new(44100, nf);
@@ -645,7 +645,7 @@ fn test_pv_path_uses_correction_strength_smoother() {
 #[test]
 fn phase_vocoder_accepts_large_callbacks_directly() {
     let mut p = PndPlugin::new(2);
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
 
     let frames = PROCESS_CHUNK_FRAMES + 256;
     let ctx = ProcessContext::new(44100, frames);
@@ -664,7 +664,7 @@ fn phase_vocoder_accepts_large_callbacks_directly() {
 #[test]
 fn test_drift_smoothing_param_roundtrip() {
     let mut p = PndPlugin::new(1);
-    p.initialize(44100).unwrap();
+    p.initialize(44100.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("drift_smoothing"),

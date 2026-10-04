@@ -60,7 +60,7 @@ fn test_attack_controls_gate_open_speed() {
                 ..GatePluginParams::default()
             },
         );
-        g.initialize(sr).unwrap();
+        g.initialize(f64::from(sr)).unwrap();
         g
     };
 
@@ -130,7 +130,7 @@ fn test_linked_mode_is_open_false_when_gated() {
             ..GatePluginParams::default()
         },
     );
-    gate.initialize(sr).unwrap();
+    gate.initialize(f64::from(sr)).unwrap();
 
     // Feed 500 ms of silence: signal is -inf dB, well below -30 dB threshold.
     // After 500 ms the gate must be fully closed.
@@ -239,7 +239,7 @@ fn test_gate_hysteresis_prevents_chatter() {
 
     let sr = 48000u32;
     let mut gate = GatePlugin::new(1, -20.0, 1.0, 0.1, 0.0, 10.0);
-    gate.initialize(sr).unwrap();
+    gate.initialize(f64::from(sr)).unwrap();
 
     // Set hysteresis to 4dB
     gate.parametric_set_parameter(

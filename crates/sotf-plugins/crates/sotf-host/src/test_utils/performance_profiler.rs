@@ -28,7 +28,7 @@ impl PerformanceProfiler {
         let mut frames_processed = 0;
         while frames_processed < total_frames {
             let num_frames = (self.block_size).min(total_frames - frames_processed);
-            let ctx = ProcessContext::new(self.sample_rate as u32, num_frames);
+            let ctx = ProcessContext::new(self.sample_rate, num_frames);
 
             let in_slice = &input
                 [frames_processed * self.channels..(frames_processed + num_frames) * self.channels];
@@ -68,7 +68,7 @@ pub fn benchmark_plugin_full(
     let buffer_size = 512;
     let input = vec![0.1; buffer_size * plugin.input_channels()];
     let mut output = vec![0.0; buffer_size * plugin.output_channels()];
-    let ctx = ProcessContext::new(sample_rate as u32, buffer_size);
+    let ctx = ProcessContext::new(sample_rate, buffer_size);
 
     group.bench_function("process_512", |b: &mut criterion::Bencher| {
         b.iter(|| {

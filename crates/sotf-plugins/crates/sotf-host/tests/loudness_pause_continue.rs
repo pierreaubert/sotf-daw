@@ -34,7 +34,7 @@ fn make_plugin() -> LoudnessMonitorPlugin {
             capacity_windows: 256,
         }))
         .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -109,7 +109,7 @@ fn layout_plugin(config_id: &str, with_lra: bool, sample_rate: u32) -> LoudnessM
             capacity_windows: 128,
         }))
         .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -206,7 +206,7 @@ fn paused_samples_do_not_satisfy_active_lane_windows_or_consume_lra_capacity() {
             capacity_windows: 2,
         }))
         .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
 
     feed(
         &mut plugin,
@@ -318,7 +318,7 @@ fn reset_and_snapshot_rebuild_preserve_pause_state_until_explicit_continue() {
     );
 
     set_integrated_running(&mut plugin, false);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert!(plugin.integrated_measurement_running());
     assert_eq!(
         plugin

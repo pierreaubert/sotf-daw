@@ -60,7 +60,7 @@ fn make(factor: i32, channels: usize) -> Box<dyn Plugin> {
             ParameterValue::Bool(false),
         )
         .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 
@@ -297,7 +297,7 @@ fn invalid_drain_and_frozen_controls_are_transactional_and_reset_replays() {
         );
         for initialize in [false, true] {
             if initialize {
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
             } else {
                 plugin.reset();
             }
@@ -417,7 +417,7 @@ fn removing_recursive_banks_retains_only_finite_oversampler_history() {
                 ParameterValue::Bool(false),
             )
             .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         process(plugin.as_mut(), &[0.25; 514]);
         plugin
             .as_any_mut()

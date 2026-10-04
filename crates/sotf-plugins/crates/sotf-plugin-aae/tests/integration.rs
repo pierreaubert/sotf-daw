@@ -98,7 +98,7 @@ fn parameter_roundtrip_and_validation() {
 #[test]
 fn initialize_and_process_silence() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).expect("initialize succeeds");
+    plugin.initialize(48_000.0).expect("initialize succeeds");
 
     let num_frames = 64;
     let input = vec![0.0f32; num_frames * plugin.input_channels()];
@@ -122,7 +122,7 @@ fn initialize_and_process_silence() {
 #[test]
 fn bypass_copies_stereo_input() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).expect("initialize succeeds");
+    plugin.initialize(48_000.0).expect("initialize succeeds");
     plugin
         .set_parameter(ParameterId::from("bypass"), ParameterValue::Bool(true))
         .unwrap();
@@ -171,7 +171,7 @@ fn process_with_signal_produces_output() {
     };
 
     let mut plugin = AaePlugin::from_params(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let num_frames = 256;
     let mut input = Vec::with_capacity(num_frames * 2);
@@ -197,7 +197,7 @@ fn process_with_signal_produces_output() {
 #[test]
 fn reset_clears_state() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let num_frames = 128;
     let input: Vec<f32> = (0..num_frames * 2)
@@ -228,7 +228,7 @@ fn reset_clears_state() {
 #[test]
 fn wrong_buffer_sizes_return_error() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let num_frames = 32;
     let good_input = vec![0.0f32; num_frames * plugin.input_channels()];
@@ -262,7 +262,7 @@ fn wrong_buffer_sizes_return_error() {
 #[test]
 fn speaker_config_change_requires_graph_rebuild() {
     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.output_channels(), 6);
 
     plugin
@@ -300,7 +300,7 @@ fn quality_telemetry_observes_detector_and_limiter_without_changing_audio_contra
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     // Amplitude-modulated centered voiced material exercises the detector;
     // deliberately over-range input exercises the linked output limiter.
@@ -346,8 +346,8 @@ fn bypass_advances_tail_before_reenable() {
     };
     let mut bypassed = AaePlugin::from_params(params.clone()).unwrap();
     let mut reference = AaePlugin::from_params(params).unwrap();
-    bypassed.initialize(48_000).unwrap();
-    reference.initialize(48_000).unwrap();
+    bypassed.initialize(48_000.0).unwrap();
+    reference.initialize(48_000.0).unwrap();
 
     let impulse = [1.0_f32, 1.0];
     let mut bypassed_out = vec![0.0; bypassed.output_channels()];

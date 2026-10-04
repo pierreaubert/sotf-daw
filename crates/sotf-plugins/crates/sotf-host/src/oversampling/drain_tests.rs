@@ -79,7 +79,7 @@ impl Plugin for FiniteEcho {
         self.waiting = true;
         self.next_position = None;
     }
-    fn initialize(&mut self, _: u32) -> Result<(), String> {
+    fn initialize(&mut self, _: f64) -> Result<(), String> {
         self.initialized = true;
         Ok(())
     }
@@ -166,7 +166,7 @@ impl InPlacePlugin for InPlaceEcho {
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         self.0.get_parameter(id)
     }
-    fn initialize(&mut self, rate: u32) -> Result<(), String> {
+    fn initialize(&mut self, rate: f64) -> Result<(), String> {
         self.0.initialize(rate)
     }
     fn reset(&mut self) {
@@ -224,7 +224,7 @@ fn wrapper(factor: u32, channels: usize, tail: usize, dynamic: bool) -> Box<dyn 
             .unwrap(),
         ))
     };
-    wrapper.initialize(48_000).unwrap();
+    wrapper.initialize(48_000.0).unwrap();
     wrapper
 }
 
@@ -465,7 +465,7 @@ fn overflowing_inner_drain_bound_is_rejected_before_planar_allocation() {
     let mut dynamic = AutoOversampledPlugin::new(Box::new(echo), 2).unwrap();
     assert!(
         dynamic
-            .initialize(48_000)
+            .initialize(48_000.0)
             .unwrap_err()
             .contains("capacity overflow")
     );
@@ -474,7 +474,7 @@ fn overflowing_inner_drain_bound_is_rejected_before_planar_allocation() {
     let mut generic = OversampledPlugin::new(InPlaceEcho(echo), 4, 2).unwrap();
     assert!(
         generic
-            .initialize(48_000)
+            .initialize(48_000.0)
             .unwrap_err()
             .contains("capacity overflow")
     );
@@ -571,7 +571,7 @@ fn begin_is_idempotent_and_capacity_errors_precede_setup() {
     let begins = Arc::clone(&inner.begins);
     let processes = Arc::clone(&inner.processes);
     let mut plugin = AutoOversampledPlugin::new(Box::new(inner), 2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process(&[0.2; 2], &mut [0.0; 2], &ProcessContext::new(48_000, 1))
         .unwrap();
@@ -594,7 +594,7 @@ fn partially_failed_setup_is_terminal_until_reset_and_never_replays_audio() {
     inner.fail_process = Some(2);
     let processes = Arc::clone(&inner.processes);
     let mut plugin = AutoOversampledPlugin::new(Box::new(inner), 2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process(&[0.2], &mut [0.0], &ProcessContext::new(48_000, 1))
         .unwrap();
@@ -628,7 +628,7 @@ fn nested_preparation_reaches_inner_after_both_resampling_filters() {
     let begins = Arc::clone(&inner.begins);
     let wrapped = AutoOversampledPlugin::new(Box::new(inner), 2).unwrap();
     let mut plugin = AutoOversampledPlugin::new(Box::new(wrapped), 2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process(&[0.25], &mut [0.0], &ProcessContext::new(48_000, 1))
         .unwrap();

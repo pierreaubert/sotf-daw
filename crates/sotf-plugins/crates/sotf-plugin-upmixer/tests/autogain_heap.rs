@@ -66,7 +66,7 @@ fn small_surround_first_process_and_reset_have_no_heap_activity() {
                 }))
                 .unwrap();
                 let mut plugin = UpmixerPlugin::from_params(params);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let input = vec![0.003; 8_193 * 2];
                 let mut output = vec![0.0; 8_193 * plugin.output_channels()];
                 let (plugin, input, output) = std::thread::spawn(move || {
@@ -100,7 +100,7 @@ fn oversized_cold_process_after_control_updates_and_reset_has_no_heap_activity()
             params.output.auto_gain_enabled = enabled;
             params.output.auto_gain_max_db = 12.0;
             let mut plugin = UpmixerPlugin::from_params(params);
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let frames = 32769;
             let input: Vec<_> = (0..frames)
                 .flat_map(|n| {

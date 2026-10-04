@@ -74,7 +74,7 @@ fn typed_refusals_are_allocation_free_and_transactional() {
             // Setup with tracking off: construction allocates backend tables.
             let mut refused =
                 ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
-            refused.initialize(RATE).unwrap();
+            refused.initialize(f64::from(RATE)).unwrap();
             refused
                 .set_parameter(
                     ParameterId::from("dynamic_ratio"),
@@ -84,7 +84,7 @@ fn typed_refusals_are_allocation_free_and_transactional() {
             refused.try_set_cutoff_smoothing(true).unwrap();
             let mut control =
                 ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
-            control.initialize(RATE).unwrap();
+            control.initialize(f64::from(RATE)).unwrap();
             control
                 .set_parameter(
                     ParameterId::from("dynamic_ratio"),

@@ -31,7 +31,7 @@ fn main() {
     };
 
     let mut inner = GatePlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Gate Plugin ===");
 

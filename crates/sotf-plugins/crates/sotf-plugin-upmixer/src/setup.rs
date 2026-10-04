@@ -10,7 +10,7 @@ use sotf_host::speaker_config::{
 };
 
 #[inline]
-fn subharmonic_envelope_coeff(time_ms: f32, sample_rate: u32) -> f32 {
+fn subharmonic_envelope_coeff(time_ms: f32, sample_rate: f64) -> f32 {
     let time_sec = (time_ms / 1000.0).max(1e-6);
     let sample_rate = (sample_rate as f32).max(1.0);
     1.0 - (-1.0_f32 / (time_sec * sample_rate)).exp()
@@ -292,7 +292,7 @@ impl UpmixerPlugin {
     ///
     /// Call this in `initialize()` and whenever any of those parameters change.
     pub(super) fn recache_bin_indices(&mut self) {
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate == 0.0 || self.core.fft_size == 0 {
             return;
         }
         let freq_per_bin = self.core.sample_rate as f32 / self.core.fft_size as f32;
@@ -340,7 +340,7 @@ impl UpmixerPlugin {
     /// Call this in `initialize()` and whenever `subharmonic_freq_hz`,
     /// `subharmonic_attack_ms`, or `subharmonic_release_ms` changes.
     pub(super) fn recache_subharmonic_coeffs(&mut self) {
-        if self.core.sample_rate == 0 {
+        if self.core.sample_rate == 0.0 {
             return;
         }
         let sr = self.core.sample_rate as f32;
@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn subharmonic_envelope_coeff_is_explicit_f32_and_finite() {
-        let coeff = subharmonic_envelope_coeff(1.0, 384_000);
+        let coeff = subharmonic_envelope_coeff(1.0, 384_000.0);
         let expected = 1.0 - (-1.0_f32 / (0.001 * 384_000.0)).exp();
 
         assert!(coeff.is_finite());
@@ -372,7 +372,7 @@ mod tests {
 
     #[test]
     fn subharmonic_envelope_coeff_handles_zero_time_safely() {
-        let coeff = subharmonic_envelope_coeff(0.0, 48_000);
+        let coeff = subharmonic_envelope_coeff(0.0, 48_000.0);
 
         assert!(coeff.is_finite());
         assert!((0.0..=1.0).contains(&coeff));

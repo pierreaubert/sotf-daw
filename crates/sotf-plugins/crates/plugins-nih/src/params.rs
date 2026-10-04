@@ -206,7 +206,7 @@ impl ConvolutionRestoreAttempt {
 
     /// Publish staged parameter and resource values after candidate acceptance.
     #[doc(hidden)]
-    pub fn commit(&mut self, sample_rate: f32) {
+    pub fn commit(&mut self, sample_rate: f64) {
         self.params.complete_convolution_state_restore(sample_rate);
         self.committed = true;
     }
@@ -1547,7 +1547,7 @@ impl DynamicParams {
     /// initialized candidate plugin. A failed candidate leaves both the
     /// published parameters and committed resource path untouched.
     #[doc(hidden)]
-    pub fn complete_convolution_state_restore(&self, sample_rate: f32) {
+    pub fn complete_convolution_state_restore(&self, sample_rate: f64) {
         let Some(state) = &self.convolution_state else {
             return;
         };
@@ -1594,7 +1594,7 @@ impl DynamicParams {
         state: &PluginState,
         is_active: bool,
         is_audio_thread: bool,
-        current_sample_rate: Option<f32>,
+        current_sample_rate: Option<f64>,
     ) -> bool {
         let Some(restore_state) = &self.convolution_state else {
             return true;
@@ -1620,9 +1620,7 @@ impl DynamicParams {
             return false;
         };
         let target_sample_rate = match current_sample_rate {
-            Some(rate) if rate.is_finite() && rate >= 1.0 && rate <= u32::MAX as f32 => {
-                Some(rate.round() as u32)
-            }
+            Some(rate) if rate.is_finite() && rate > 0.0 => Some(rate),
             Some(_) => return false,
             None => None,
         };
@@ -2663,7 +2661,7 @@ unsafe impl Params for DynamicParams {
         state: &PluginState,
         is_active: bool,
         is_audio_thread: bool,
-        sample_rate: Option<f32>,
+        sample_rate: Option<f64>,
     ) -> bool {
         self.validate_eq_native_state(state)
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
@@ -3218,7 +3216,7 @@ mod tests {
         let config = params.linear_phase_eq_config_json().unwrap();
         let mut plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config)
             .expect("ten-band restored state must reconstruct");
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("num_filters")),
             Some(ParameterValue::Int(10))

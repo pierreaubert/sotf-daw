@@ -75,7 +75,7 @@ impl ParametricPlugin for Retained {
         Ok(context.num_frames)
     }
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
-        if context.sample_rate != 96_000 || context.transport.sample_position != 73 {
+        if context.sample_rate != 96_000.0 || context.transport.sample_position != 73 {
             return Err("fixture preparation context".into());
         }
         self.prepared = true;
@@ -93,7 +93,7 @@ impl ParametricPlugin for Retained {
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
         if output.len() < 2
-            || context.sample_rate != 96_000
+            || context.sample_rate != 96_000.0
             || context.transport.sample_position != 73
         {
             return Err("fixture capacity or context".into());

@@ -89,7 +89,7 @@ fn first_drain_and_reset_drain_have_no_heap_activity() {
 fn first_callback_on_fresh_thread_has_no_heap_activity() {
     let params = serde_json::from_value(serde_json::json!({"input_channels": 2})).unwrap();
     let mut plugin = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; 4096 * 2];
     let output = vec![0.0; 4096 * 2];
     // Construction stays on this live thread. No callback or audio-thread
@@ -148,7 +148,7 @@ fn small_plugin(mode: usize) -> crate::BinauralDecoderPlugin {
     }))
     .unwrap();
     let mut plugin = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     // One-hop tests shorten the already prepared transition without changing
     // transform storage. Both linear and spectral modes are exercised.
     plugin.config.crossfade_ms = plugin.config.hop_size as f32 / 48.0;

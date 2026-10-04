@@ -181,7 +181,7 @@ fn spectral_plugin(channels: usize, rate: u32, strength: f32) -> HissReducerPlug
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -193,7 +193,7 @@ fn time_domain_plugin(channels: usize, rate: u32, strength: f32) -> HissReducerP
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -340,7 +340,7 @@ fn guard_off_matches_legacy_defaults_bit_exactly() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            default_plugin.initialize(RATE).unwrap();
+            default_plugin.initialize(f64::from(RATE)).unwrap();
             let mut explicit_off = HissReducerPlugin::from_params(
                 channels,
                 HissReducerPluginParams {
@@ -349,7 +349,7 @@ fn guard_off_matches_legacy_defaults_bit_exactly() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            explicit_off.initialize(RATE).unwrap();
+            explicit_off.initialize(f64::from(RATE)).unwrap();
             assert!(!default_plugin.transient_guard());
             assert!(!explicit_off.transient_guard());
 
@@ -687,7 +687,7 @@ fn guard_toggle_is_bounded_and_partition_independent() {
             ..HissReducerPluginParams::default()
         },
     );
-    on.initialize(RATE).unwrap();
+    on.initialize(f64::from(RATE)).unwrap();
     let capture = spectral_hiss_fixture(RATE as usize, 0x70f1e);
     capture_profile(&mut on, RATE, &capture, 1);
     on.reset();
@@ -760,7 +760,7 @@ fn guard_save_reload_round_trips_bit_exactly() {
     let restored: HissReducerPluginParams = serde_json::from_str(&json).unwrap();
     assert!(restored.transient_guard);
     let mut reloaded = HissReducerPlugin::from_params(2, restored);
-    reloaded.initialize(RATE).unwrap();
+    reloaded.initialize(f64::from(RATE)).unwrap();
     assert!(reloaded.transient_guard());
     assert!(reloaded.has_captured_profile());
     let out_after = render(&mut reloaded, RATE, &input, 2, &PARTITIONS);

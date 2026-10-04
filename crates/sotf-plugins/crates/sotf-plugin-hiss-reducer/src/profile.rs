@@ -27,13 +27,34 @@ use plugins_denoiser::spectral_profile::{
     SPECTRAL_PROFILE_FFT_SIZE, SPECTRAL_PROFILE_HOP_SIZE, SPECTRAL_PROFILE_NUM_BINS,
     SPECTRAL_PROFILE_WINDOW, SpectralCapture, validate_spectrum_slice,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::f32::consts::PI;
 
 /// Persisted [`NoiseProfileData`] schema version for measured spectra.
 pub const PROFILE_FORMAT_VERSION: u32 = 2;
 /// Original broadband-only persisted schema version (still accepted).
 pub const PROFILE_FORMAT_VERSION_V1: u32 = 1;
+/// Fractional-clock profile schema; the spectral payload remains optional.
+pub const PROFILE_FORMAT_VERSION_V3: u32 = 3;
+
+/// Preserve the integer JSON representation consumed by version 1/2 readers.
+fn serialize_profile_rate<S: Serializer>(rate: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+    if rate.is_finite() && *rate > 0.0 && *rate <= f64::from(u32::MAX) && rate.fract() == 0.0 {
+        serializer.serialize_u32(*rate as u32)
+    } else {
+        serializer.serialize_f64(*rate)
+    }
+}
+
+pub(crate) fn profile_format_version(rate: f64, spectral: bool) -> u32 {
+    if rate.fract() != 0.0 || rate > f64::from(u32::MAX) {
+        PROFILE_FORMAT_VERSION_V3
+    } else if spectral {
+        PROFILE_FORMAT_VERSION
+    } else {
+        PROFILE_FORMAT_VERSION_V1
+    }
+}
 /// Noise capture duration in seconds.
 pub const CAPTURE_SECONDS: f64 = 1.0;
 /// Minimum representable profile floor in dBFS (silent capture).
@@ -71,7 +92,8 @@ pub struct SpectralProfileData {
     /// Window identifier (must be `"hann-periodic"`).
     pub window: String,
     /// Sample rate the spectrum was measured at (must match outer).
-    pub sample_rate: u32,
+    #[serde(serialize_with = "serialize_profile_rate")]
+    pub sample_rate: f64,
     /// Channel count the spectrum was measured with (must match outer).
     pub channels: usize,
     /// One-sided bin count (must be 513).
@@ -90,7 +112,7 @@ impl SpectralProfileData {
     /// Returns an error describing the first mismatch found (FFT/hop/
     /// window/bin identifiers, rate/channel agreement, zero hops,
     /// length mismatch, or non-finite/negative powers).
-    pub fn validate(&self, outer_channels: usize, outer_sample_rate: u32) -> Result<(), String> {
+    pub fn validate(&self, outer_channels: usize, outer_sample_rate: f64) -> Result<(), String> {
         if self.fft_size != SPECTRAL_PROFILE_FFT_SIZE {
             return Err(format!(
                 "spectral profile FFT size {} is unsupported, expected {SPECTRAL_PROFILE_FFT_SIZE}",
@@ -115,7 +137,11 @@ impl SpectralProfileData {
                 self.num_bins
             ));
         }
-        if self.sample_rate == 0 || outer_sample_rate == 0 {
+        if !self.sample_rate.is_finite()
+            || self.sample_rate <= 0.0
+            || !outer_sample_rate.is_finite()
+            || outer_sample_rate <= 0.0
+        {
             return Err("spectral profile sample rate must be nonzero".to_string());
         }
         if self.sample_rate != outer_sample_rate {
@@ -160,14 +186,17 @@ impl SpectralProfileData {
 /// spectral backend spreads each floor white across its live high band (a
 /// documented coarse approximation). Format 2 additionally stores the
 /// per-channel measured per-bin spectrum and the backend compares it
-/// directly at the capture rate; other rates fall back to the floors.
+/// directly at the capture rate; other rates fall back to the floors. Format 3
+/// retains that payload choice while storing an exact fractional capture clock.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NoiseProfileData {
-    /// Schema version: 1 (floors only) or 2 (floors plus spectrum).
+    /// Schema version: 1 (integral-rate floors), 2 (integral-rate spectrum),
+    /// or 3 (fractional-rate floors with an optional spectrum).
     pub format_version: u32,
     /// Sample rate the capture was measured at.
-    pub sample_rate: u32,
+    #[serde(serialize_with = "serialize_profile_rate")]
+    pub sample_rate: f64,
     /// Channel count the floors were measured with.
     pub channels: usize,
     /// High-band cutoff in Hz used for the measurement.
@@ -197,14 +226,20 @@ impl NoiseProfileData {
     pub fn validate(&self) -> Result<(), String> {
         if self.format_version != PROFILE_FORMAT_VERSION
             && self.format_version != PROFILE_FORMAT_VERSION_V1
+            && self.format_version != PROFILE_FORMAT_VERSION_V3
         {
             return Err(format!(
                 "unsupported noise profile format version {}",
                 self.format_version
             ));
         }
-        if self.sample_rate == 0 {
+        if !self.sample_rate.is_finite() || self.sample_rate <= 0.0 {
             return Err("noise profile sample rate must be nonzero".to_string());
+        }
+        if self.format_version != PROFILE_FORMAT_VERSION_V3
+            && (self.sample_rate > f64::from(u32::MAX) || self.sample_rate.fract() != 0.0)
+        {
+            return Err("legacy noise profile requires an integral u32 sample rate".to_string());
         }
         if self.channels == 0 {
             return Err("noise profile channels must be nonzero".to_string());
@@ -237,6 +272,10 @@ impl NoiseProfileData {
             (Some(spectral), PROFILE_FORMAT_VERSION) => {
                 spectral.validate(self.channels, self.sample_rate)
             }
+            (Some(spectral), PROFILE_FORMAT_VERSION_V3) => {
+                spectral.validate(self.channels, self.sample_rate)
+            }
+            (None, PROFILE_FORMAT_VERSION_V3) => Ok(()),
             (None, PROFILE_FORMAT_VERSION) => {
                 Err("noise profile format 2 requires a spectral payload".to_string())
             }
@@ -341,7 +380,7 @@ impl ReductionCurve {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CompletedCapture {
     /// Sample rate the capture was measured at.
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     /// Channel count the capture was measured with.
     pub channels: usize,
     /// High-band cutoff in Hz used for the measurement.
@@ -367,7 +406,7 @@ pub struct CompletedCapture {
 pub struct CaptureState {
     active: bool,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     cutoff_hz: f32,
     alpha: f32,
     target_frames: u64,
@@ -383,7 +422,7 @@ impl CaptureState {
         Self {
             active: false,
             channels,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             cutoff_hz: 4_000.0,
             alpha: 0.0,
             target_frames: 0,
@@ -402,11 +441,12 @@ impl CaptureState {
     /// # Errors
     ///
     /// Returns an error for a zero channel count or sample rate.
-    pub fn start(&mut self, sample_rate: u32, cutoff_hz: f32) -> Result<(), String> {
+    pub fn start<S: Into<f64>>(&mut self, sample_rate: S, cutoff_hz: f32) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
         if self.channels == 0 {
             return Err("noise capture requires at least one channel".to_string());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("noise capture requires a nonzero sample rate".to_string());
         }
         let rate = sample_rate as f32;
@@ -418,7 +458,7 @@ impl CaptureState {
         .min(rate * 0.45)
         .max(20.0);
         let target_frames =
-            ((CAPTURE_SECONDS * f64::from(sample_rate)).round() as u64).max(1);
+            ((CAPTURE_SECONDS * sample_rate).round() as u64).max(1);
         self.spectral.start(sample_rate, target_frames)?;
         self.sample_rate = sample_rate;
         self.cutoff_hz = cutoff;

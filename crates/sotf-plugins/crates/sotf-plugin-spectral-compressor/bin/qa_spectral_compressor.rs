@@ -26,7 +26,7 @@ fn main() {
         ..Default::default()
     };
     let mut calibrated = SpectralCompressorPlugin::from_params(1, params);
-    calibrated.initialize(SAMPLE_RATE).unwrap();
+    calibrated.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let frames = 48_000;
     let frequency = 48.0 * SAMPLE_RATE as f32 / 2048.0;
     let amplitude = 10.0_f32.powf(-12.0 / 20.0);
@@ -59,7 +59,7 @@ fn main() {
                     ..Default::default()
                 };
                 let mut plugin = SpectralCompressorPlugin::from_params(channels, params);
-                plugin.initialize(SAMPLE_RATE).unwrap();
+                plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
                 let mut block = vec![0.0; 1024 * channels];
                 for _ in 0..4 {
                     plugin

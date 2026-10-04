@@ -22,7 +22,7 @@ fn main() {
     };
 
     let mut plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Crossover Plugin ===");
 
@@ -74,7 +74,7 @@ fn main() {
         )
         .unwrap(),
     ] {
-        topology.initialize(sample_rate).unwrap();
+        topology.initialize(f64::from(sample_rate)).unwrap();
         let input = vec![0.1; 256 * topology.input_channels()];
         let mut output = vec![0.0; 256 * topology.output_channels()];
         assert_no_allocs("complex crossover topology", || {

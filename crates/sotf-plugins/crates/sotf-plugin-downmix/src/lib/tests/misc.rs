@@ -19,7 +19,7 @@ fn probe_514_channel(channel: usize) -> (f32, f32) {
         itu_mode: false,
         matrix_ltrt: false,
     });
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let num_frames = 2048;
     let mut input = vec![0.0f32; num_frames * input_ch];

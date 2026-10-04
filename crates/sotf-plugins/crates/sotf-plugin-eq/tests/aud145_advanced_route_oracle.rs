@@ -410,7 +410,7 @@ fn advanced_and_svf_placements_match_independent_pair_composition() {
                 )
                 .expect("disable whole-plugin AutoGain for route reference");
             plugin
-                .plugin_initialize(SAMPLE_RATE)
+                .plugin_initialize(f64::from(SAMPLE_RATE))
                 .expect("initialize public route");
             if scenario.use_svf_topology {
                 plugin

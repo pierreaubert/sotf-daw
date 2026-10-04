@@ -17,7 +17,7 @@ use std::sync::atomic::Ordering;
 impl PluginIpcHeader {
     pub(super) fn initialize(&self, layout: PluginIpcLayout) {
         self.sample_rate
-            .store(layout.sample_rate, Ordering::Release);
+            .store(layout.sample_rate.to_bits(), Ordering::Release);
         self.max_frames.store(layout.max_frames, Ordering::Release);
         self.input_channels
             .store(layout.input_channels, Ordering::Release);
@@ -67,7 +67,7 @@ impl PluginIpcHeader {
             return Err(invalid_data("unsupported external-plugin IPC version"));
         }
         PluginIpcLayout::new(
-            self.sample_rate.load(Ordering::Acquire),
+            f64::from_bits(self.sample_rate.load(Ordering::Acquire)),
             self.max_frames.load(Ordering::Acquire),
             self.input_channels.load(Ordering::Acquire),
             self.output_channels.load(Ordering::Acquire),

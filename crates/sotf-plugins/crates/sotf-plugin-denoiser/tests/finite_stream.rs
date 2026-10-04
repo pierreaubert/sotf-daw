@@ -14,7 +14,7 @@ fn plugin(channels: usize, low: bool, multi: bool, pnd: bool, unity: bool) -> De
             ..Default::default()
         },
     );
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     p
 }
 fn process(p: &mut DenoiserPlugin, input: &[f32], channels: usize, blocks: &[usize]) -> Vec<f32> {
@@ -262,7 +262,7 @@ fn errors_controls_reset_and_reinitialization_preserve_stream_contract() {
                         .is_err()
                 );
                 assert_eq!(sentinel, [1234.; 3]);
-                assert!(p.initialize(0).is_err());
+                assert!(p.initialize(0.0).is_err());
                 let mut first = [0.; 2];
                 assert!(
                     !p.drain(&mut first, &ProcessContext::new(RATE, 1))
@@ -301,9 +301,9 @@ fn errors_controls_reset_and_reinitialization_preserve_stream_contract() {
                     process(&mut p, &input, 2, &[1, 137]),
                     process(&mut plugin(2, low, multi, pnd, false), &input, 2, &[1, 137])
                 );
-                p.initialize(96000).unwrap();
+                p.initialize(96000.0).unwrap();
                 let mut fresh = plugin(2, low, multi, pnd, false);
-                fresh.initialize(96000).unwrap();
+                fresh.initialize(96000.0).unwrap();
                 let mut a = input.clone();
                 let mut b = input.clone();
                 p.process_in_place(&mut a, &ProcessContext::new(96000, n + 13))
@@ -398,7 +398,7 @@ fn harmonic_percussive_warm_reset_and_reinitialize_match_fresh_output() {
                 let mut fresh = harmonic_plugin(channels, low);
                 process(&mut p, &warm, channels, &[137]);
                 if reinitialize {
-                    p.initialize(RATE).unwrap();
+                    p.initialize(f64::from(RATE)).unwrap();
                 } else {
                     p.reset();
                 }

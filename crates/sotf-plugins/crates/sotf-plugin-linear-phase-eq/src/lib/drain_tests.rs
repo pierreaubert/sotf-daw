@@ -236,7 +236,7 @@ fn invalid_drain_is_transactional_and_reset_or_reinitialize_replays() {
     assert_eq!(plugin.mix_value, 0.375);
     for initialize in [false, true] {
         if initialize {
-            plugin.initialize(48000).unwrap();
+            plugin.initialize(48000.0).unwrap();
         } else {
             plugin.reset();
         }
@@ -279,14 +279,14 @@ fn ordinary_same_rate_initialize_keeps_history_and_rate_change_clears_it() {
         process(&mut candidate, &[0.25, -0.5], 48000),
         process(&mut reference, &[0.25, -0.5], 48000)
     );
-    candidate.initialize(48000).unwrap();
+    candidate.initialize(48000.0).unwrap();
     let zeros = vec![0.0; 1100 * 2];
     assert_eq!(
         process(&mut candidate, &zeros, 48000),
         process(&mut reference, &zeros, 48000)
     );
     process(&mut candidate, &[0.5, -0.25], 48000);
-    candidate.initialize(44100).unwrap();
+    candidate.initialize(44100.0).unwrap();
     let mut fresh = make(2, 44100, 0, 0, 0.375);
     assert_eq!(
         process(&mut candidate, &zeros, 44100),

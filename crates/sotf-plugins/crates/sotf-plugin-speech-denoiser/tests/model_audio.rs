@@ -45,7 +45,7 @@ fn configured(
             model,
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -223,7 +223,7 @@ fn fresh_restore_is_deterministic_per_model() {
             let restored: SpeechDenoiserPluginParams = serde_json::from_str(&json).unwrap();
             assert_eq!(restored.model, model);
             let mut from_factory = SpeechDenoiserPlugin::from_params(channels, restored);
-            from_factory.initialize(RATE).unwrap();
+            from_factory.initialize(f64::from(RATE)).unwrap();
             let mut live = SpeechDenoiserPlugin::new(channels);
             live.parametric_set_parameter(
                 ParameterId::from("strength"),
@@ -235,7 +235,7 @@ fn fresh_restore_is_deterministic_per_model() {
                 ParameterValue::Int(model.index() as i32),
             )
             .unwrap();
-            live.initialize(RATE).unwrap();
+            live.initialize(f64::from(RATE)).unwrap();
             assert_eq!(
                 process(&mut live, &input, channels, &[137, 1]),
                 process(&mut from_factory, &input, channels, &[137, 1]),

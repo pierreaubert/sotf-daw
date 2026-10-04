@@ -205,8 +205,23 @@ pub(crate) unsafe fn deserialize_object<P: Plugin>(
         return false;
     }
 
-    if !plugin_params.defer_state_parameter_values() {
-        let sample_rate = current_buffer_config.map(|c| c.sample_rate);
+    let apply_parameters_now = !plugin_params.defer_state_parameter_values();
+    if apply_parameters_now {
+        if let Some(config) = current_buffer_config {
+            // Preflight every parameter before changing any value or persisted field. A
+            // restore resets smoothers rather than starting a timed ramp, so their
+            // validated step counts do not need to be retained or allocated here.
+            for (param_id, _) in &state.params {
+                if let Some(param) = params_getter(param_id) {
+                    if param.prepare_smoother(config.sample_rate).is_none() {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    if apply_parameters_now {
         for (param_id_str, param_value) in &state.params {
             let param_ptr = match params_getter(param_id_str.as_str()) {
                 Some(ptr) => ptr,
@@ -252,8 +267,8 @@ pub(crate) unsafe fn deserialize_object<P: Plugin>(
             }
 
             // Make sure everything starts out in sync
-            if let Some(sample_rate) = sample_rate {
-                param_ptr.update_smoother(sample_rate, true);
+            if current_buffer_config.is_some() {
+                param_ptr.update_smoother_prepared(1, true);
             }
         }
     }
@@ -336,8 +351,9 @@ mod admission_tests {
     use super::{ParamValue, PluginState, deserialize_json, deserialize_object};
     use crate::prelude::{
         AudioIOLayout, AuxiliaryBuffers, BoolParam, Buffer, FloatParam, FloatRange, IntParam,
-        IntRange, Param, ParamPtr, Params, Plugin, ProcessContext, ProcessStatus,
+        IntRange, Param, ParamPtr, Params, Plugin, ProcessContext, ProcessMode, ProcessStatus,
     };
+    use crate::params::smoothing::SmoothingStyle;
     #[cfg(not(feature = "assert_process_allocs"))]
     use std::alloc::{GlobalAlloc, Layout, System};
     use std::collections::BTreeMap;
@@ -387,7 +403,7 @@ mod admission_tests {
                         min: 0.0f32,
                         max: 1.0f32,
                     },
-                ),
+                ).with_smoother(SmoothingStyle::Linear(1_000.0)),
                 int: IntParam::new("Int", 1, IntRange::Linear { min: 0, max: 3 }),
                 flag: BoolParam::new("Flag", true),
                 validate_calls: AtomicUsize::new(0),
@@ -423,7 +439,7 @@ mod admission_tests {
             _state: &PluginState,
             _is_active: bool,
             _is_audio_thread: bool,
-            _sample_rate: Option<f32>,
+            _sample_rate: Option<f64>,
         ) -> bool {
             self.validate_calls.fetch_add(1, Ordering::SeqCst);
             // Allocating probe: must not run on audio refusal.
@@ -452,6 +468,58 @@ mod admission_tests {
             params,
             fields,
         }
+    }
+
+    fn live_config(sample_rate: f64) -> super::BufferConfig {
+        super::BufferConfig {
+            sample_rate,
+            min_buffer_size: None,
+            max_buffer_size: 512,
+            process_mode: ProcessMode::Realtime,
+        }
+    }
+
+    #[test]
+    fn live_audio_restore_keeps_existing_valid_preset_behavior() {
+        let params = PopulatedParams::new();
+        let mut state = populated_state();
+        let map = params.param_map();
+        let getter = |id: &str| map.iter().find(|(key, _, _)| key == id).map(|(_, p, _)| *p);
+        let config = live_config(48_000.0);
+        // SAFETY: the Arc owns all pointers in `map` for this call.
+        let restored = unsafe {
+            deserialize_object::<CompatPlugin>(
+                &mut state, params.clone(), getter, Some(&config), true, true,
+            )
+        };
+        assert!(restored);
+        assert_eq!(params.float.value(), 0.9);
+        assert_eq!(params.int.value(), 2);
+        assert!(!params.flag.value());
+        assert_eq!(params.float.smoothed.steps_left(), 0);
+        assert_eq!(params.float.smoothed.previous_value(), 0.9);
+        assert_eq!(params.deserialize_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn invalid_live_horizon_refuses_before_any_active_preset_write() {
+        let params = PopulatedParams::new();
+        let mut state = populated_state();
+        let map = params.param_map();
+        let getter = |id: &str| map.iter().find(|(key, _, _)| key == id).map(|(_, p, _)| *p);
+        let config = live_config(2_147_483_648.0);
+        // SAFETY: the Arc owns all pointers in `map` for this call.
+        let restored = unsafe {
+            deserialize_object::<CompatPlugin>(
+                &mut state, params.clone(), getter, Some(&config), true, true,
+            )
+        };
+        assert!(!restored);
+        assert_eq!(params.float.value(), 0.5);
+        assert_eq!(params.int.value(), 1);
+        assert!(params.flag.value());
+        assert_eq!(params.float.smoothed.steps_left(), 0);
+        assert_eq!(params.deserialize_calls.load(Ordering::SeqCst), 0);
     }
 
     /// A plugin that keeps the default admission hook and records migration

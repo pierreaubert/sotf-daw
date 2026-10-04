@@ -18,7 +18,7 @@ proptest! {
         _range_db in 0.0f32..120.0f32,
     ) {
         let mut p = GatePlugin::new(1, threshold, ratio, attack, 0.0, release);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         let frames = 256usize;
         let mut buf = vec![sample; frames];
         let ctx = ProcessContext::new(48000, frames);
@@ -38,7 +38,7 @@ proptest! {
         mix in 0.0f32..1.0f32,
     ) {
         let mut p = GatePlugin::new(1, -40.0, 10.0, 1.0, 0.0, 50.0);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
 
         p.parametric_set_parameter(ParameterId::from("threshold"), ParameterValue::Float(threshold))
             .unwrap();
@@ -73,7 +73,7 @@ proptest! {
     #[test]
     fn unity_mix_passthrough(sample in -1.0f32..1.0f32) {
         let mut p = GatePlugin::new(1, -40.0, 10.0, 1.0, 0.0, 50.0);
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.parametric_set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
             .unwrap();
 
@@ -103,9 +103,9 @@ proptest! {
         let th_close = -15.0f32;
 
         let mut p_open = GatePlugin::new(1, th_open, 100.0, 1.0, 0.0, 10.0);
-        p_open.initialize(48000).unwrap();
+        p_open.initialize(48000.0).unwrap();
         let mut p_close = GatePlugin::new(1, th_close, 100.0, 1.0, 0.0, 10.0);
-        p_close.initialize(48000).unwrap();
+        p_close.initialize(48000.0).unwrap();
 
         let frames = 512usize;
         let mut buf_open = vec![sample; frames];
@@ -129,13 +129,13 @@ proptest! {
         let threshold = -40.0f32;
 
         let mut p_low = GatePlugin::new(1, threshold, 100.0, 1.0, 0.0, 10.0);
-        p_low.initialize(48000).unwrap();
+        p_low.initialize(48000.0).unwrap();
         p_low
             .parametric_set_parameter(ParameterId::from("range_db"), ParameterValue::Float(0.0))
             .unwrap();
 
         let mut p_high = GatePlugin::new(1, threshold, 100.0, 1.0, 0.0, 10.0);
-        p_high.initialize(48000).unwrap();
+        p_high.initialize(48000.0).unwrap();
         p_high
             .parametric_set_parameter(ParameterId::from("range_db"), ParameterValue::Float(120.0))
             .unwrap();

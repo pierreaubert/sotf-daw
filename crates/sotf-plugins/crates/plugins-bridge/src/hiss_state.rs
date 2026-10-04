@@ -68,7 +68,7 @@ mod tests {
 
     fn hiss_params(channels: usize) -> Box<dyn Plugin> {
         let mut plugin = create_plugin("HissReducer", channels, 48_000, "{}").unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
     }
 
@@ -171,7 +171,7 @@ mod tests {
     fn profiled_hiss_state_rejected_before_any_mutation() {
         // Capture a real v2 profile through the object-safe Plugin surface.
         let mut profiler = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
-        profiler.initialize(48_000).unwrap();
+        profiler.initialize(48_000.0).unwrap();
         profiler
             .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
             .unwrap();
@@ -204,9 +204,9 @@ mod tests {
         // A profiled blob is rejected before any setter runs: the target
         // keeps its accepted configuration and renders like a control.
         let mut target = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
-        target.initialize(48_000).unwrap();
+        target.initialize(48_000.0).unwrap();
         let mut control = create_plugin("HissReducer", 1, 48_000, "{}").unwrap();
-        control.initialize(48_000).unwrap();
+        control.initialize(48_000.0).unwrap();
         let error = load_state(&mut *target, &saved).unwrap_err();
         assert!(
             error.contains(CAPTURED_PROFILE_KEY),

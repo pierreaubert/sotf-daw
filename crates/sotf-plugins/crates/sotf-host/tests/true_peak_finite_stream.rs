@@ -40,7 +40,7 @@ fn direct_plugin_drain_measures_final_impulse_without_emitting_audio() {
     let input = final_impulse();
     let expected = expected_peak(&input);
     let mut plugin = LoudnessMonitorPlugin::new(1).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut output = vec![f32::NAN; input.len()];
     assert_eq!(
         plugin
@@ -160,7 +160,7 @@ fn every_final_impulse_position_matches_full_convolution_across_public_paths() {
                     .unwrap()
                     .with_loudness_range(None)
                     .unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 for offset in 0..12 {
                     plugin.reset();
                     let mut input = vec![0.0; 173 * channels];
@@ -355,7 +355,7 @@ fn backend_finish_only_changes_true_peak_and_starts_next_segment_cleanly() {
 #[test]
 fn plugin_finalization_preserves_loudness_lra_correlation_and_sample_peaks() {
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap().with_spatial();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut input: Vec<f32> = (0..148_803 * 2)
         .map(|i| ((i * 13 % 251) as f32 - 125.0) / 256.0)
         .collect();
@@ -378,7 +378,7 @@ fn invalid_drain_and_lifecycle_changes_do_not_consume_or_replay_peaks() {
         let mut plugin = LoudnessMonitorPlugin::new(1).unwrap();
         let context = ProcessContext::new(rate, 0);
         assert!(plugin.drain(&mut [], &context).is_err());
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
         feed(&mut plugin, &final_impulse(), rate, 1, 0);
         let before = snapshot(&plugin);
         for invalid in [
@@ -409,7 +409,7 @@ fn invalid_drain_and_lifecycle_changes_do_not_consume_or_replay_peaks() {
             finish(&mut plugin, rate);
             match action {
                 0 => plugin.reset(),
-                1 => plugin.initialize(rate).unwrap(),
+                1 => plugin.initialize(f64::from(rate)).unwrap(),
                 2 => plugin
                     .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
                     .unwrap(),
@@ -438,7 +438,7 @@ fn retained_outer_and_nested_readers_delay_final_publication_without_losing_peak
     for rate in [8_000, 12_000, 44_100, 48_000] {
         for weak in [false, true] {
             let mut plugin = LoudnessMonitorPlugin::new(1).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let mut strong_readers = Vec::new();
             let mut weak_readers = Vec::new();
             for _ in 0..3 {
@@ -482,7 +482,7 @@ fn retained_outer_and_nested_readers_delay_final_publication_without_losing_peak
 #[test]
 fn reset_under_retained_readers_never_merges_previous_epoch() {
     let mut plugin = LoudnessMonitorPlugin::new(1).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut retained = Vec::new();
     for _ in 0..3 {
         feed(&mut plugin, &[1.0; 16], 48_000, 1, 0);
@@ -588,7 +588,7 @@ fn host_includes_upstream_tail_before_finishing_downstream_meter() {
 #[test]
 fn unsupported_rate_finish_keeps_true_peak_unavailable() {
     let mut plugin = LoudnessMonitorPlugin::new(1).unwrap();
-    plugin.initialize(7_999).unwrap();
+    plugin.initialize(7_999.0).unwrap();
     feed(&mut plugin, &final_impulse(), 7_999, 1, 0);
     finish(&mut plugin, 7_999);
     let data = snapshot(&plugin);

@@ -119,7 +119,7 @@ fn order_change_requires_host_rebuild() {
         algorithm: "mode_matching".to_owned(),
     };
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let error = plugin
         .set_parameter(ParameterId::from("order"), ParameterValue::Int(2))
@@ -132,7 +132,7 @@ fn order_change_requires_host_rebuild() {
 #[test]
 fn layout_choice_change_requires_host_rebuild() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("target_layout")),
@@ -155,7 +155,7 @@ fn invalid_layout_parameter_rejected() {
 #[test]
 fn process_silence_produces_silence() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = vec![0.0_f32; num_frames * 4];
@@ -170,7 +170,7 @@ fn process_silence_produces_silence() {
 #[test]
 fn process_omni_signal_reaches_all_speakers() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 64;
     // Pure W (omnidirectional) signal
@@ -191,7 +191,7 @@ fn process_omni_signal_reaches_all_speakers() {
 #[test]
 fn dual_band_toggle_via_parameter() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("dual_band")),
@@ -211,7 +211,7 @@ fn dual_band_toggle_via_parameter() {
 #[test]
 fn buffer_size_mismatch_is_error() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let ctx = ProcessContext::new(48000, 32);
     let input = vec![0.0_f32; 32 * 4 - 1];
@@ -226,7 +226,7 @@ fn buffer_size_mismatch_is_error() {
 #[test]
 fn reset_then_process_again() {
     let mut plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = vec![0.1_f32; num_frames * 4];
@@ -301,7 +301,7 @@ fn order_seven_basis_impulses_match_each_public_decoder_matrix_column() {
             algorithm: algorithm.to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let expected = if algorithm == "allrad" {
             DecodeMatrix::build_allrad(7, speaker_config, false).unwrap()
         } else {
@@ -366,7 +366,7 @@ fn order_seven_dual_band_processes_channel_sixty_three_and_keeps_eos_contract() 
             algorithm: algorithm.to_owned(),
         };
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(plugin.input_channels(), 64);
         assert_eq!(plugin.tail_length(), TailLength::Unknown);
         assert_eq!(plugin.drain_call_bound().unwrap().get(), 1);
@@ -449,7 +449,7 @@ fn channel_config_support() {
 #[test]
 fn output_rate_and_frame_mapping() {
     let plugin = AmbisonicsDecoderPlugin::new(&foa_5_1_config()).unwrap();
-    assert_eq!(plugin.output_sample_rate(96000), 96000);
+    assert_eq!(plugin.output_sample_rate(96_000.0), 96_000.0);
     assert_eq!(plugin.output_frames_for_input(128), 128);
 }
 

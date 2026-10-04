@@ -20,7 +20,7 @@ fn settled_band_amplitudes(
 ) -> Vec<f32> {
     let frames = sample_rate as usize / 2;
     let mut plugin = BandSplitPlugin::new_multiband(1, frequencies, crossover_type).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let input: Vec<f32> = (0..frames)
         .map(|frame| {
             (2.0 * std::f32::consts::PI * tone_hz * frame as f32 / sample_rate as f32).sin()
@@ -50,7 +50,7 @@ fn settled_band_amplitudes(
 fn summed_impulse_response(kind: &str, frequencies: &[f64], frames: usize) -> Vec<f32> {
     let bands = frequencies.len() + 1;
     let mut plugin = BandSplitPlugin::new_multiband(1, frequencies, kind).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut input = vec![0.0; frames];
     input[0] = 1.0;
     let mut split = vec![0.0; frames * bands];
@@ -140,7 +140,7 @@ fn multiband_parameters_include_additional_frequencies() {
 #[test]
 fn frequency_roundtrip() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("frequency"), ParameterValue::Float(500.0))
         .unwrap();
@@ -160,13 +160,13 @@ fn crossover_type_roundtrip() {
         plugin.get_parameter(&ParameterId::from("type")),
         Some(ParameterValue::Int(1))
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 }
 
 #[test]
 fn band_gain_roundtrip() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("band_1_gain_db"),
@@ -182,7 +182,7 @@ fn band_gain_roundtrip() {
 #[test]
 fn multiband_frequency_2_roundtrip() {
     let mut plugin = BandSplitPlugin::new_multiband(1, &[250.0, 2000.0], "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("frequency_2"),
@@ -202,7 +202,7 @@ fn multiband_frequency_2_roundtrip() {
 #[test]
 fn process_zero_input_produces_finite_output() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.0f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -216,7 +216,7 @@ fn process_zero_input_produces_finite_output() {
 #[test]
 fn dc_reconstructs_approximately() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -240,7 +240,7 @@ fn dc_reconstructs_approximately() {
 #[test]
 fn multiband_dc_reconstructs_approximately() {
     let mut plugin = BandSplitPlugin::new_multiband(1, &[250.0, 2000.0], "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -264,7 +264,7 @@ fn multiband_dc_reconstructs_approximately() {
 #[test]
 fn band_gain_attenuates_band() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let frames = 4096;
     let dc = 0.5f32;
@@ -303,7 +303,7 @@ fn band_gain_attenuates_band() {
 #[test]
 fn reset_then_process_continues() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -323,8 +323,8 @@ fn reset_then_process_continues() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -341,7 +341,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0))
         .unwrap_err();
@@ -351,7 +351,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_band_gain_for_out_of_range_band_fails() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("band_7_gain_db"),
@@ -364,7 +364,7 @@ fn set_band_gain_for_out_of_range_band_fails() {
 #[test]
 fn set_frequency_with_non_numeric_type_fails() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("frequency"),
@@ -377,7 +377,7 @@ fn set_frequency_with_non_numeric_type_fails() {
 #[test]
 fn process_with_correct_output_size_succeeds() {
     let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
     let frames = plugin
@@ -443,7 +443,7 @@ fn twelve_channel_processing_has_no_cross_channel_leakage() {
     let bands = 4;
     let mut plugin =
         BandSplitPlugin::new_multiband(channels, &[500.0, 2_000.0, 8_000.0], "LR48").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut input = vec![0.0; frames * channels];
     for frame in 0..frames {
         input[frame * channels + 7] =
@@ -523,7 +523,7 @@ fn deterministic_white_noise_split_sum_has_bounded_gain_and_correlation() {
         ] {
             let bands = frequencies.len() + 1;
             let mut plugin = BandSplitPlugin::new_multiband(1, frequencies, kind).unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             let mut output = vec![0.0; frames * bands];
             plugin
                 .process(&input, &mut output, &ProcessContext::new(SR, frames))

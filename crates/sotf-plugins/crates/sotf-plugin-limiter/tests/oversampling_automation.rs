@@ -59,7 +59,7 @@ fn create(rate: u32, choice: usize, delay: usize, isp: bool) -> LimiterPlugin {
     }))
     .unwrap();
     let mut plugin = LimiterPlugin::from_params(2, params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 fn set(plugin: &mut LimiterPlugin, key: &str, value: ParameterValue) {

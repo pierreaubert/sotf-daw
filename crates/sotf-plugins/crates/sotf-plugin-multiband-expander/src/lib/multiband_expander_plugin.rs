@@ -37,7 +37,7 @@ const MAX_DRAIN_FRAMES: usize = 256;
 
 pub struct MultibandExpanderPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     has_input: bool,
     drain_remaining: Option<usize>,
     initialized: bool,
@@ -111,7 +111,7 @@ impl MultibandExpanderPlugin {
                 pk(ME, "num_bands").max_f64() as usize,
             )
         };
-        let sr = 44100;
+        let sr = 44_100.0;
         let default_xfs = [200.0f32, 2000.0, 8000.0, 12000.0];
         let mut xfs = params.crossover_frequencies.clone();
         for (i, &d) in default_xfs.iter().enumerate() {
@@ -518,11 +518,12 @@ impl MultibandExpanderPlugin {
         Self::with_params(channels, params)
     }
 
-    pub fn try_from_params(
+    pub fn try_from_params<S: Into<f64>>(
         channels: usize,
         params: MultibandExpanderPluginParams,
-        sample_rate: u32,
+        sample_rate: S,
     ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("expander requires at least one channel".into());
         }
@@ -1952,8 +1953,8 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
         values
     }
 
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 {
             return Err("multiband expander requires a positive sample rate".into());
         }
         self.sample_rate = sr;

@@ -40,7 +40,7 @@ fn public_plugin(sample_rate: u32, filter: BiquadFilterConfig) -> EqPlugin {
         .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(1))
         .expect("select 1x processing");
     plugin
-        .plugin_initialize(sample_rate)
+        .plugin_initialize(f64::from(sample_rate))
         .expect("initialize public EQ");
     assert_eq!(
         plugin.parametric_get_parameter(&ParameterId::from("oversampling")),

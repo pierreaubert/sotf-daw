@@ -17,7 +17,7 @@ fn test_eq_plugin_basic() {
     ];
 
     let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(2, filters)); // 2 channels (stereo)
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Create test signal: 1kHz sine wave
     let num_frames = 1024;
@@ -62,7 +62,7 @@ fn test_eq_plugin_parametric() {
     ];
 
     let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(2, filters));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process a sweep or noise to test frequency response
     let num_frames = 4096;
@@ -112,7 +112,7 @@ fn test_eq_plugin_filter_update() {
 
     let eq = EqPlugin::new(2, initial_filters);
     let mut plugin = ParametricPluginAdapter::new(eq);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process with initial filter
     let num_frames = 512;
@@ -172,7 +172,7 @@ fn test_eq_plugin_multi_channel() {
     )];
 
     let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(5, filters)); // 5.0 surround
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let mut input = vec![0.0_f32; num_frames * 5];

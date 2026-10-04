@@ -125,7 +125,7 @@ fn capture_pre_edit_lower_order_audio_arrays() {
                             algorithm: algorithm.to_owned(),
                         };
                         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-                        plugin.initialize(SAMPLE_RATE).unwrap();
+                        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
                         let expected_tail = if dual_band {
                             TailLength::Unknown
@@ -218,7 +218,7 @@ fn lower_order_output_fingerprints_match_pre_edit_capture() {
                             algorithm: algorithm.to_owned(),
                         };
                         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
-                        plugin.initialize(SAMPLE_RATE).unwrap();
+                        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
                         let output = render_program_and_silence(&mut plugin);
                         let fixture = expected[case_index];
                         assert_eq!(fixture.0, order);

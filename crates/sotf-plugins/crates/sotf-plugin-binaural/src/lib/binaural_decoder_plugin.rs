@@ -29,7 +29,7 @@ pub(super) struct BinauralConfig {
     pub(super) input_channels: usize,
     pub(super) fft_size: usize,
     pub(super) hop_size: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) hrtf_path: Option<PathBuf>,
     pub(super) speaker_config: &'static SpeakerConfig,
     pub(super) freq_size: usize,
@@ -228,7 +228,7 @@ impl BinauralDecoderPlugin {
         );
 
         let hop_size = fft_size / 4;
-        let sr = 44100;
+        let sr = 44_100.0;
         let freq_size = fft_size / 2 + 1;
         let mut planner = RealFftPlanner::<f32>::new();
         let fft_r2c = planner.plan_fft_forward(fft_size);
@@ -1183,7 +1183,7 @@ impl BinauralDecoderPlugin {
         pitch: f32,
         roll: f32,
     ) -> PluginResult<Arc<BinauralState>> {
-        if config.sample_rate == 0 {
+        if config.sample_rate == 0.0 {
             return Ok(state.load_full());
         }
 
@@ -1342,15 +1342,14 @@ impl Plugin for BinauralDecoderPlugin {
                 Some(PathBuf::from(&path_str))
             };
             if let Some(ref p) = new_path
-                && self.config.sample_rate > 0
+                && self.config.sample_rate > 0.0
             {
                 let loaded = load_sofa(p)
                     .map_err(|e| format!("Failed to load HRTF file '{}': {}", path_str, e))?;
                 let delay_rebase_seconds = loaded.delay_rebase_seconds;
                 let mut sofa = loaded.data;
 
-                let sofa_rate = sofa.sample_rate.round() as u32;
-                if sofa_rate != self.config.sample_rate {
+                if sofa.sample_rate != self.config.sample_rate {
                     super::hrtf::resample_sofa(&mut sofa, self.config.sample_rate)
                         .map_err(|e| format!("HRTF resample failed: {}", e))?;
                 }
@@ -1472,7 +1471,7 @@ impl Plugin for BinauralDecoderPlugin {
                 .ok_or_else(|| "hrtf_database_dir must be a string".to_string())?
                 .to_string();
             self.config.hrtf_database_dir = dir.clone();
-            if self.config.sample_rate > 0 && !dir.is_empty() {
+            if self.config.sample_rate > 0.0 && !dir.is_empty() {
                 if let Some(best) = super::hrtf_database::best_match(
                     std::path::Path::new(&dir),
                     self.config.head_width_cm,
@@ -1505,7 +1504,7 @@ impl Plugin for BinauralDecoderPlugin {
             if v.is_finite() && (10.0..=25.0).contains(&v) {
                 self.config.head_width_cm = v;
                 self.rebuild_cached_parameters();
-                if self.config.sample_rate > 0 && !self.config.hrtf_database_dir.is_empty() {
+                if self.config.sample_rate > 0.0 && !self.config.hrtf_database_dir.is_empty() {
                     let dir = self.config.hrtf_database_dir.clone();
                     if let Some(best) = super::hrtf_database::best_match(
                         std::path::Path::new(&dir),
@@ -1529,7 +1528,7 @@ impl Plugin for BinauralDecoderPlugin {
             if v.is_finite() && (4.0..=16.0).contains(&v) {
                 self.config.ear_height_cm = v;
                 self.rebuild_cached_parameters();
-                if self.config.sample_rate > 0 && !self.config.hrtf_database_dir.is_empty() {
+                if self.config.sample_rate > 0.0 && !self.config.hrtf_database_dir.is_empty() {
                     let dir = self.config.hrtf_database_dir.clone();
                     if let Some(best) = super::hrtf_database::best_match(
                         std::path::Path::new(&dir),
@@ -1614,9 +1613,9 @@ impl Plugin for BinauralDecoderPlugin {
         }
         param_bridge::get_parameter(BN, id, |i| self.param_value(i))
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 {
-            return Err("sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 {
+            return Err("sample rate must be finite and greater than zero".to_string());
         }
         // Validate the candidate file before changing live clocks or DSP history.
         // Later unrelated filter-preparation errors retain their existing behavior.
@@ -1651,8 +1650,7 @@ impl Plugin for BinauralDecoderPlugin {
             let loaded = load_sofa(p)?;
             let delay_rebase_seconds = loaded.delay_rebase_seconds;
             let mut sofa = loaded.data;
-            let sofa_rate = sofa.sample_rate.round() as u32;
-            if sofa_rate != sr {
+            if sofa.sample_rate != sr {
                 super::hrtf::resample_sofa(&mut sofa, sr)?;
             }
             self.validate_linear_convolution_ir(sofa.ir_length)?;
@@ -1970,7 +1968,7 @@ impl BinauralDecoderPlugin {
         // Recursive reverb has no finite support. This is an explicit render
         // cap, not a guaranteed residual level or an exact completion time.
         let reverb_tail = if self.config.late_reverb_enabled {
-            (3.0 * f64::from(self.config.late_reverb_rt60) * f64::from(self.config.sample_rate))
+            (3.0 * f64::from(self.config.late_reverb_rt60) * self.config.sample_rate)
                 .ceil() as usize
         } else {
             0

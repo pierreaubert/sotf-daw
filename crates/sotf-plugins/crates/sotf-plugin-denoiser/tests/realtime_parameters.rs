@@ -47,7 +47,7 @@ fn changed_scalar_controls_and_profile_triggers_are_allocation_free() {
                     ..Default::default()
                 },
             );
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let changes: Vec<_> = plugin
                 .parameter_schema()
                 .into_iter()
@@ -122,7 +122,7 @@ fn cold_shaped_curve_and_audition_callbacks_are_allocation_free() {
                     ..Default::default()
                 },
             );
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             std::thread::spawn(move || {
                 let mut audio = vec![0.0; 4096 * 2];
                 for (i, sample) in audio.iter_mut().enumerate() {
@@ -161,7 +161,7 @@ fn cold_shaped_curve_and_audition_callbacks_are_allocation_free() {
 #[test]
 fn scalar_triggers_and_structural_rejections_keep_snapshot_semantics() {
     let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let learn = ParameterId::from("learn_noise");
     let use_profile = ParameterId::from("use_captured_profile");
     let clear = ParameterId::from("clear_profile");

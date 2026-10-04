@@ -32,7 +32,7 @@ fn finite_output() {
     proptest!(ProptestConfig::with_cases(100), |(args in matrix_strategy())| {
         let (in_ch, out_ch, matrix) = args;
         let mut plugin = MatrixPlugin::with_matrix(in_ch, out_ch, matrix).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let frames = 16;
         let input = vec![0.5f32; frames * in_ch];
@@ -78,7 +78,7 @@ fn parameter_round_trip_phase_invert() {
 fn identity_passthrough() {
     proptest!(ProptestConfig::with_cases(100), |(ch in 1usize..5)| {
         let mut plugin = MatrixPlugin::new(ch, ch);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let last = last_output_frame(&mut plugin, ch, 1_024);
         for (i, v) in last.iter().enumerate() {
@@ -100,11 +100,11 @@ fn monotonic_gain_increases_output() {
             let gain2 = (gain1 + delta).min(24.0);
 
             let mut plugin1 = MatrixPlugin::with_matrix(1, 1, vec![gain1]).unwrap();
-            plugin1.initialize(48_000).unwrap();
+            plugin1.initialize(48_000.0).unwrap();
             let out1 = last_output_frame(&mut plugin1, 1, 1_024);
 
             let mut plugin2 = MatrixPlugin::with_matrix(1, 1, vec![gain2]).unwrap();
-            plugin2.initialize(48_000).unwrap();
+            plugin2.initialize(48_000.0).unwrap();
             let out2 = last_output_frame(&mut plugin2, 1, 1_024);
 
             prop_assert!(
@@ -121,7 +121,7 @@ fn monotonic_gain_increases_output() {
 fn phase_invert_negates_output() {
     let mut plugin = MatrixPlugin::new(1, 1);
     plugin.set_phase_invert(0, 0, true).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let last = last_output_frame(&mut plugin, 1, 1_024);
     assert!(

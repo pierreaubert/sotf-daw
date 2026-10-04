@@ -106,7 +106,7 @@ struct LegacyPath {
 }
 
 impl LegacyPath {
-    fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+    fn new(channels: usize, sample_rate: f64) -> Result<Self, String> {
         Ok(Self {
             channels,
             suppressor: TransientSuppressor::new(channels, sample_rate)?,
@@ -127,7 +127,7 @@ impl LegacyPath {
         self.mix_current = self.mix_target;
     }
 
-    fn set_sample_rate(&mut self, sample_rate: u32) -> Result<(), String> {
+    fn set_sample_rate(&mut self, sample_rate: f64) -> Result<(), String> {
         self.suppressor.set_sample_rate(sample_rate)?;
         self.mix_decay = audition_decay(sample_rate);
         Ok(())
@@ -182,7 +182,7 @@ pub struct DeclickPlugin {
     audition_residual: bool,
     legacy: LegacyPath,
     owned: OwnedEngine,
-    initialized_sample_rate: u32,
+    initialized_sample_rate: f64,
     cached_parameters: Vec<Parameter>,
     has_input: bool,
     drain_remaining: Option<usize>,
@@ -190,19 +190,20 @@ pub struct DeclickPlugin {
 }
 
 impl DeclickPlugin {
-    pub fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Result<Self, String> {
         Self::from_params(channels, sample_rate, DeclickPluginParams::default())
     }
 
-    pub fn from_params(
+    pub fn from_params<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: DeclickPluginParams,
     ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("declick requires at least one channel".into());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("declick sample rate must be greater than zero".into());
         }
         let sensitivity = if params.sensitivity.is_finite() {
@@ -379,7 +380,7 @@ impl DeclickPlugin {
     }
 }
 
-fn audition_decay(sample_rate: u32) -> f32 {
+fn audition_decay(sample_rate: f64) -> f32 {
     // 5 ms crossfade shared with the repair mix smoothing convention.
     let smoothing_samples = sample_rate as f32 * 5.0 * 0.001;
     (-1.0 / smoothing_samples.max(1.0)).exp()
@@ -524,8 +525,8 @@ impl ParametricInPlacePlugin for DeclickPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("declick sample rate must be greater than zero".into());
         }
         self.legacy.set_sample_rate(sample_rate)?;

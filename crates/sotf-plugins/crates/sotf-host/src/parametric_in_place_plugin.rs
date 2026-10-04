@@ -83,7 +83,7 @@ pub trait ParametricInPlacePlugin: Send {
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()>;
 
     /// Initialize the plugin with the given sample rate.
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
     }
@@ -389,7 +389,7 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.parametric_get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.bounded.invalidate();
         self.plugin.initialize(sample_rate)?;
         self.bounded.prepare(
@@ -547,7 +547,7 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
         self.plugin.parametric_get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.bounded.invalidate();
         self.plugin.initialize(sample_rate)?;
         self.bounded.prepare(

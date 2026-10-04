@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut inner = CrossfeedPlugin::new(params).unwrap();
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Crossfeed Plugin ===");
 

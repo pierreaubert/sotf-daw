@@ -679,9 +679,9 @@ fn failed_tilt_reinitialize_preserves_populated_state_and_retries() {
 
     let values_before = candidate.current_values();
     let pivot_before = candidate.bands[0].frequency;
-    let result = candidate.initialize(invalid_rate);
+    let result = candidate.initialize(f64::from(invalid_rate));
     assert!(result.is_err(), "10 kHz tilt pivot must reject 8 kHz");
-    assert_eq!(candidate.sample_rate, original_rate);
+    assert_eq!(candidate.sample_rate, f64::from(original_rate));
     assert_eq!(candidate.bands[0].frequency, pivot_before);
     assert_eq!(candidate.current_values(), values_before);
 
@@ -695,7 +695,7 @@ fn failed_tilt_reinitialize_preserves_populated_state_and_retries() {
         .unwrap();
     assert_eq!(candidate_suffix, twin_suffix);
 
-    candidate.initialize(44_100).unwrap();
+    candidate.initialize(44_100.0).unwrap();
     let mut fresh = make(44_100);
     let retry = make_tone(500.0, 44_100, 2_048, 0.4);
     let mut candidate_retry = retry.clone();

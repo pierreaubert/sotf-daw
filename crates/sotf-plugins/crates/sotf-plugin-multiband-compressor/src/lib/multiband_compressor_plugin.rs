@@ -42,7 +42,7 @@ pub(super) struct BandDynamicsSmoothers {
 
 pub struct MultibandCompressorPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     has_input: bool,
     drain_remaining: Option<usize>,
     pub(super) num_bands: usize,
@@ -128,8 +128,8 @@ pub struct MultibandCompressorPlugin {
 
 impl MultibandCompressorPlugin {
     #[inline]
-    fn envelope_coeff(time_ms: f32, sample_rate: u32) -> f32 {
-        (-1.0 / (time_ms.max(0.01) * 0.001 * sample_rate.max(1) as f32)).exp()
+    fn envelope_coeff(time_ms: f32, sample_rate: f64) -> f32 {
+        (-1.0 / (time_ms.max(0.01) * 0.001 * sample_rate.max(1.0) as f32)).exp()
     }
 
     fn make_band_smoothers(
@@ -139,7 +139,7 @@ impl MultibandCompressorPlugin {
         attack_ms: f32,
         release_ms: f32,
         knee_db: f32,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> BandDynamicsSmoothers {
         const DYNAMICS_SMOOTH_MS: f32 = 20.0;
         BandDynamicsSmoothers {
@@ -174,24 +174,25 @@ impl MultibandCompressorPlugin {
     /// `with_params` is intentionally retained as the infallible constructor used by
     /// in-process callers and tests. Factory boundaries should use this fallible
     /// constructor so malformed presets cannot reach the IIR coefficient builder.
-    pub fn try_from_params(
+    pub fn try_from_params<S: Into<f64>>(
         channels: usize,
         params: MultibandCompressorPluginParams,
-        sample_rate: u32,
+        sample_rate: S,
     ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         Self::validate_params(&params, sample_rate, channels)?;
         Ok(Self::with_params(channels, params))
     }
 
     fn validate_params(
         params: &MultibandCompressorPluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
         channels: usize,
     ) -> Result<(), String> {
         if channels == 0 {
             return Err("channels must be greater than zero".to_string());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample_rate must be greater than zero".to_string());
         }
 
@@ -348,7 +349,7 @@ impl MultibandCompressorPlugin {
         let nb = params
             .num_bands
             .clamp(1, pk(MC, "num_bands").max_f64() as usize);
-        let sr = 44100;
+        let sr = 44_100.0;
         let default_xfs = [200.0f32, 2000.0, 8000.0, 12000.0];
         let mut xfs = params.crossover_frequencies.clone();
         for (i, &d) in default_xfs.iter().enumerate() {
@@ -831,20 +832,20 @@ impl MultibandCompressorPlugin {
         }
     }
 
-    fn new_tilt_pair(tilt_db: f32, sample_rate: u32) -> (Biquad, Biquad) {
+    fn new_tilt_pair(tilt_db: f32, sample_rate: f64) -> (Biquad, Biquad) {
         let half_tilt = tilt_db as f64 * 0.5;
         (
             Biquad::new(
                 BiquadFilterType::Lowshelf,
                 1000.0,
-                sample_rate.max(1) as f64,
+                sample_rate.max(1.0) as f64,
                 0.707,
                 -half_tilt,
             ),
             Biquad::new(
                 BiquadFilterType::Highshelf,
                 1000.0,
-                sample_rate.max(1) as f64,
+                sample_rate.max(1.0) as f64,
                 0.707,
                 half_tilt,
             ),
@@ -858,14 +859,14 @@ impl MultibandCompressorPlugin {
                 low.update_params(
                     BiquadFilterType::Lowshelf,
                     1000.0,
-                    self.sample_rate.max(1) as f64,
+                    self.sample_rate.max(1.0) as f64,
                     0.707,
                     -half_tilt,
                 );
                 high.update_params(
                     BiquadFilterType::Highshelf,
                     1000.0,
-                    self.sample_rate.max(1) as f64,
+                    self.sample_rate.max(1.0) as f64,
                     0.707,
                     half_tilt,
                 );
@@ -956,32 +957,32 @@ impl MultibandCompressorPlugin {
         }
     }
 
-    fn make_detector(mode: DetectionMode, sample_rate: u32) -> LevelDetector {
+    fn make_detector(mode: DetectionMode, sample_rate: f64) -> LevelDetector {
         // Always size the RMS energy buffer first so a later Peak->RMS switch
         // only reuses storage instead of allocating on the audio path.
         let mut detector = LevelDetector::new(
             DetectionMode::Rms {
                 window_ms: Self::RMS_WINDOW_MS,
             },
-            sample_rate.max(1),
+            sample_rate.max(1.0),
         );
         detector.set_mode(mode);
         detector
     }
 
-    fn make_hpf_bank(hz: f32, order_index: usize, sample_rate: u32) -> Vec<Biquad> {
+    fn make_hpf_bank(hz: f32, order_index: usize, sample_rate: f64) -> Vec<Biquad> {
         let order_is_4th = HPF_ORDERS
             .get(order_index)
             .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
         // Coefficients must stay valid while disabled; sections are skipped
         // when the active prefix is empty, so clamp instead of building at 0 Hz.
-        let fc = hz.max(1.0).min(sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        let fc = hz.max(1.0).min(sample_rate.max(1.0) as f32 * 0.45).max(1.0) as f64;
         (0..Self::MAX_HPF_SECTIONS)
             .map(|section| {
                 Biquad::new(
                     BiquadFilterType::Highpass,
                     fc,
-                    sample_rate.max(1) as f64,
+                    sample_rate.max(1.0) as f64,
                     Self::hpf_section_q(section, order_is_4th),
                     0.0,
                 )
@@ -1020,14 +1021,14 @@ impl MultibandCompressorPlugin {
         let order_is_4th = HPF_ORDERS
             .get(self.sidechain_hpf_order_index)
             .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
-        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1.0) as f32 * 0.45).max(1.0) as f64;
         for band in &mut self.sidechain_hpf_biquads {
             for sections in band {
                 for (index, section) in sections.iter_mut().enumerate() {
                     section.update_params(
                         BiquadFilterType::Highpass,
                         fc,
-                        self.sample_rate.max(1) as f64,
+                        self.sample_rate.max(1.0) as f64,
                         Self::hpf_section_q(index, order_is_4th),
                         0.0,
                     );
@@ -1770,14 +1771,14 @@ impl MultibandCompressorPlugin {
                         low.update_params(
                             BiquadFilterType::Lowshelf,
                             1000.0,
-                            self.sample_rate.max(1) as f64,
+                            self.sample_rate.max(1.0),
                             0.707,
                             -half_tilt,
                         );
                         high.update_params(
                             BiquadFilterType::Highshelf,
                             1000.0,
-                            self.sample_rate.max(1) as f64,
+                            self.sample_rate.max(1.0),
                             0.707,
                             half_tilt,
                         );
@@ -2069,13 +2070,13 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         values
     }
 
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 {
             return Err("multiband compressor requires a positive sample rate".into());
         }
         self.sample_rate = sr;
         // Update cache throttle threshold: fire every ~50 ms worth of samples.
-        self.cache_update_threshold = (sr as usize * 50 / 1000).max(1);
+        self.cache_update_threshold = (sr * 0.05).floor().max(1.0) as usize;
         self.build_crossovers();
         self.update_coefficients();
         self.rebuild_sidechain_tilt();

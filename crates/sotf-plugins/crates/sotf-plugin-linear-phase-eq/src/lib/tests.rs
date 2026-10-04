@@ -530,9 +530,9 @@ fn test_process_zero_channels() {
 #[test]
 fn test_initialize_changes_sample_rate() {
     let mut plugin = LinearPhaseEqPlugin::new(1, 44100);
-    assert_eq!(plugin.sample_rate, 44100);
-    plugin.initialize(48000).unwrap();
-    assert_eq!(plugin.sample_rate, 48000);
+    assert_eq!(plugin.sample_rate, 44100.0);
+    plugin.initialize(48000.0).unwrap();
+    assert_eq!(plugin.sample_rate, 48000.0);
 }
 
 #[test]
@@ -666,7 +666,7 @@ fn test_get_data_returns_none() {
 fn test_initialize_same_sample_rate_no_rebuild() {
     let mut plugin = LinearPhaseEqPlugin::new(1, 48000);
     plugin.fir_dirty = false;
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(!plugin.fir_dirty);
 }
 

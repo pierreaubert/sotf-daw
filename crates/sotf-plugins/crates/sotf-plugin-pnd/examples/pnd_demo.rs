@@ -81,7 +81,7 @@ fn main() {
         PndPlugin::from_params(channels, params).expect("PND parameters must be valid");
 
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize PND");
 
     let latency = plugin.latency_samples();

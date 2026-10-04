@@ -22,8 +22,8 @@ fn render_pair(
     let frames = input.len() / channels;
     let mut split = BandSplitPlugin::new_multiband(channels, frequencies(bands), kind).unwrap();
     let mut merge = BandMergePlugin::new(channels, bands).unwrap();
-    split.initialize(sample_rate).unwrap();
-    merge.initialize(sample_rate).unwrap();
+    split.initialize(f64::from(sample_rate)).unwrap();
+    merge.initialize(f64::from(sample_rate)).unwrap();
     let mut output = vec![0.0; input.len()];
     let mut frame = 0;
     let mut partition = 0;

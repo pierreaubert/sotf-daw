@@ -32,6 +32,51 @@ fn test_xtc_creation() {
 }
 
 #[test]
+fn bypass_transition_uses_the_exact_host_clock() {
+    let mut state = super::xtc_plugin::XtcBypassState {
+        dry: vec![0.0; 2],
+        position: 0,
+        mix: 0.0,
+        step: 0.0,
+        remaining: 0,
+        duration: 1,
+    };
+    state.duration = super::xtc_plugin::XtcBypassState::duration_for_rate(48_000.0).unwrap();
+    state.reset(false);
+    assert_eq!(state.duration, 480);
+    state.duration = super::xtc_plugin::XtcBypassState::duration_for_rate(1_234.567_8).unwrap();
+    state.reset(false);
+    assert_eq!(state.duration, 12);
+    state.duration = super::xtc_plugin::XtcBypassState::duration_for_rate(12_345.678).unwrap();
+    state.reset(false);
+    assert_eq!(state.duration, 123);
+
+    for rate in [1_u64, 49, 50, 51, 149, 150, 151, 48_001, 48_050] {
+        let expected = ((rate + 50) / 100).max(1) as usize;
+        assert_eq!(
+            super::xtc_plugin::XtcBypassState::duration_for_rate(rate as f64).unwrap(),
+            expected,
+            "integer rate {rate} must retain the previous whole-frame rounding"
+        );
+    }
+}
+
+#[test]
+fn xtc_rejects_unaddressable_bypass_duration_before_mutating_clock() {
+    let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48_000.0).unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    let before_rate = plugin.fft.sample_rate;
+    let before_duration = plugin.bypass.duration;
+    let boundary = (1_u128 << (usize::BITS - 1)) as f64 * 100.0;
+    assert!(super::xtc_plugin::XtcBypassState::duration_for_rate(boundary).is_err());
+    assert!(XtcPlugin::new(XtcPluginParams::default(), boundary).is_err());
+    assert!(plugin.initialize(boundary).is_err());
+    assert_eq!(plugin.fft.sample_rate, before_rate);
+    assert_eq!(plugin.bypass.duration, before_duration);
+    assert!(plugin.initialize(48_000.0).is_ok());
+}
+
+#[test]
 fn process_before_initialize_returns_err_instead_of_hanging() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
@@ -48,7 +93,7 @@ fn process_before_initialize_returns_err_instead_of_hanging() {
     );
 
     // After initialize the same call processes normally.
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(plugin.process(&input, &mut output, &ctx).is_ok());
 }
 
@@ -225,7 +270,7 @@ fn test_roomeq_recommended_matrix_supports_more_than_two_speakers() {
     assert!((matrix[2][1][0].re - 0.5).abs() < 1e-6);
 
     let mut plugin = plugin;
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
     for i in 0..num_frames {
@@ -261,7 +306,7 @@ fn test_xtc_bypass() {
     let mut params = XtcPluginParams::default();
     params.enabled = false;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -285,7 +330,7 @@ fn test_xtc_bypass() {
 fn test_xtc_processing() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Test with stereo sine wave (must exceed fft_size to produce output)
     let num_frames = 4096;
@@ -351,7 +396,7 @@ fn test_energy_preservation() {
         "auto_gain should be enabled by default"
     );
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Generate test signal: stereo sine wave at 1kHz (in the optimal XTC range)
     // Use enough blocks to let auto-gain converge
@@ -402,7 +447,7 @@ fn test_energy_preservation() {
 fn test_mono_signal_behavior() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Mono signal (same content in L and R)
     let num_frames = 8192;
@@ -454,7 +499,7 @@ fn test_mono_signal_behavior() {
 fn test_continuous_processing() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let block_size = 512;
     let num_blocks = 20;
@@ -524,7 +569,7 @@ fn test_filter_magnitudes() {
 fn test_xtc_denormal_flushing() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Create very low amplitude input (near denormal range)
     let num_frames = 4096;
@@ -783,7 +828,7 @@ fn test_stft_passthrough_unity() {
     let mut params = XtcPluginParams::default();
     params.bypass_xtc_filters = true;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Generate 1kHz stereo sine, long enough to fill past latency
     let num_frames = 16384;
@@ -824,7 +869,7 @@ fn test_auto_gain_prevents_clipping() {
     assert!(params.auto_gain_enabled);
 
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let block_size = 4096;
     let num_blocks = 12; // Enough for auto-gain to converge
@@ -947,7 +992,7 @@ fn test_soft_limit_preserves_phase() {
 fn test_limiter_smooth_attack() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Prime the plugin with silence to fill STFT buffers
     let prime_frames = 8192;
@@ -1224,7 +1269,7 @@ fn test_pinna_model_does_not_saturate() {
     assert!(params.auto_gain_enabled);
 
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let block_size = 4096;
     let num_blocks = 16; // Enough for auto-gain to converge
@@ -1402,7 +1447,7 @@ fn test_itd_explicit_delay_stable_output() {
     let mut params = XtcPluginParams::default();
     params.itd_modeling = "explicit_delay".to_string();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 8192;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -1730,7 +1775,7 @@ fn test_set_parameter_hrtf_file_missing() {
 #[test]
 fn test_process_invalid_input_size() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 100];
     let mut output = vec![0.0_f32; 100];
     let ctx = ProcessContext::new(48000, 64);
@@ -1741,7 +1786,7 @@ fn test_process_invalid_input_size() {
 #[test]
 fn test_process_invalid_output_size() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 128];
     let mut output = vec![0.0_f32; 64];
     let ctx = ProcessContext::new(48000, 64);
@@ -1752,7 +1797,7 @@ fn test_process_invalid_output_size() {
 #[test]
 fn test_process_zero_frames() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.0_f32; 0];
     let mut output = vec![0.0_f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -1765,7 +1810,7 @@ fn test_process_bypass_disabled() {
     let mut params = XtcPluginParams::default();
     params.enabled = false;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![1.0_f32, 2.0_f32, 3.0_f32, 4.0_f32];
     let mut output = vec![0.0_f32; 4];
     let ctx = ProcessContext::new(48000, 2);
@@ -1788,7 +1833,7 @@ fn test_process_auto_gain_disabled() {
     let mut params = XtcPluginParams::default();
     params.auto_gain_enabled = false;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut input = vec![0.0_f32; 4096 * 2];
     for i in 0..4096 {
         input[i * 2] = (i as f32 * 0.01).sin() * 0.5;
@@ -1804,7 +1849,7 @@ fn test_process_auto_gain_disabled() {
 #[test]
 fn test_reset_clears_state() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut input = vec![0.0_f32; 4096 * 2];
     for i in 0..4096 {
         input[i * 2] = (i as f32 * 0.01).sin() * 0.5;
@@ -1825,8 +1870,8 @@ fn test_reset_clears_state() {
 #[test]
 fn test_initialize_different_sample_rate() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(96000).unwrap();
-    assert_eq!(plugin.fft.sample_rate, 96000);
+    plugin.initialize(96000.0).unwrap();
+    assert_eq!(plugin.fft.sample_rate, 96000.0);
 }
 
 #[test]
@@ -1908,7 +1953,7 @@ fn test_latency_samples_matches_expected() {
 #[test]
 fn test_process_with_crossfade() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     // Manually set up crossfade state
     let prev = Arc::clone(&plugin.filter_state.cached_current_filters);
     plugin.filter_state.prev_filters = Some(prev);
@@ -1931,7 +1976,7 @@ fn test_process_bypass_xtc_filters() {
     let mut params = XtcPluginParams::default();
     params.bypass_xtc_filters = true;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut input = vec![0.0_f32; 4096 * 2];
     for i in 0..4096 {
         input[i * 2] = (i as f32 * 0.01).sin() * 0.5;
@@ -2202,7 +2247,7 @@ fn test_load_roomeq_missing_filter() {
 fn test_validate_roomeq_source_wrong_mode() {
     let mut params = XtcPluginParams::default();
     params.source_mode = "default".to_string();
-    let result = super::load::validate_roomeq_recommended_source(&params, 48000, 513);
+    let result = super::load::validate_roomeq_recommended_source(&params, 48000.0, 513);
     assert!(result.is_ok());
 }
 
@@ -2261,7 +2306,7 @@ fn test_xtc_process_disabled() {
     let mut params = XtcPluginParams::default();
     params.enabled = false;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.5; 1024 * 2];
     let mut output = vec![0.0; 1024 * 2];
     let context = ProcessContext::new(48000, 1024);
@@ -2283,7 +2328,7 @@ fn test_xtc_process_disabled() {
 fn test_xtc_process_loud_input_triggers_limiter() {
     let params = XtcPluginParams::default();
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.99; 2048 * 2];
     let mut output = vec![0.0; 2048 * 2];
     let context = ProcessContext::new(48000, 2048);
@@ -2298,7 +2343,7 @@ fn test_xtc_process_auto_gain_measures() {
     let mut params = XtcPluginParams::default();
     params.auto_gain_enabled = true;
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input = vec![0.1; 1024 * 2];
     let mut output = vec![0.0; 1024 * 2];
     let context = ProcessContext::new(48000, 1024);
@@ -2514,7 +2559,7 @@ fn test_energy_preservation_with_reflections() {
     params.wall_absorption = 0.3;
 
     let mut plugin = XtcPlugin::new(params, 48000).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 8192;
     let mut input = vec![0.0_f32; num_frames * 2];

@@ -155,7 +155,7 @@ impl UpmixerPlugin {
             return;
         }
 
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate == 0.0 || self.core.fft_size == 0 {
             return;
         }
 

@@ -259,7 +259,7 @@ fn rate_change_is_unknown_until_resampled_state_is_accepted_and_reset() {
     .unwrap();
     plugin.reset();
     assert_eq!(plugin.tail_length(), TailLength::Finite(2052));
-    plugin.initialize(96_000).unwrap();
+    plugin.initialize(96_000.0).unwrap();
     assert_eq!(plugin.tail_length(), TailLength::Unknown);
 
     // Replace the real loader mailbox from the control thread with an already

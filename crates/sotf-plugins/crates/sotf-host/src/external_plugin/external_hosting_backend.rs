@@ -74,7 +74,7 @@ pub(super) fn select_hosting_backend(format: PluginFormat) -> ExternalHostingBac
 pub(super) fn try_load_dynamic_backend(
     descriptor: &PluginDescriptor,
     backend: ExternalHostingBackend,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
     audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Option<Box<dyn NativeExternalPluginBackend>>, String> {

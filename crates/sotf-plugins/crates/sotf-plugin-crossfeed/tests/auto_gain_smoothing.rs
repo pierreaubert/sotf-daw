@@ -13,7 +13,7 @@ fn plugin(rate: u32, target: f32, smoothing: f32, enabled: bool) -> CrossfeedPlu
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let id = ParameterId::from("autogain_smoothing_ms");
     plugin
         .parametric_set_parameter(id.clone(), ParameterValue::Float(smoothing))

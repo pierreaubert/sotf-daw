@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 pub struct DownmixPlugin {
     pub(super) input_ch: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) speaker_config: Option<&'static SpeakerConfig>,
     pub(crate) target_coeffs: Vec<DownmixCoeffs>,
     pub(super) coeff_smoothers: Vec<Smoother>,
@@ -119,7 +119,7 @@ impl DownmixPlugin {
 
         let mut p = Self {
             input_ch: input_channels,
-            sample_rate: 44100,
+            sample_rate: 44100.0,
             speaker_config: get_speaker_config_by_channels(input_channels),
             target_coeffs: vec![DownmixCoeffs::default(); input_channels],
             coeff_smoothers: Vec::with_capacity(input_channels * 2),
@@ -739,7 +739,7 @@ impl DownmixPlugin {
             // Apply Phase Coherence if enabled
             // Per-bin phase alignment logic
             for bin in 0..num_bins {
-                let freq = bin as f32 * self.sample_rate as f32 / n as f32;
+                let freq = (bin as f64 * self.sample_rate / n as f64) as f32;
                 let blend = if freq <= self.phase_blend_low_hz {
                     0.0
                 } else if freq >= self.phase_blend_high_hz {
@@ -938,9 +938,9 @@ impl Plugin for DownmixPlugin {
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         param_bridge::get_parameter(DM, id, |i| self.param_value(i))
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Downmix sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Downmix sample rate must be finite and positive".into());
         }
         if self.phase_blend_high_hz >= sample_rate as f32 * 0.5 {
             return Err(format!(

@@ -108,7 +108,7 @@ fn create(bands: &[BandConfig]) -> LinearPhaseEqDynamicPlugin {
     let mut plugin =
         LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params_for(bands.to_vec()))
             .expect("wrapper construction must succeed");
-    Plugin::initialize(&mut plugin, RATE).expect("same-rate initialize must succeed");
+    Plugin::initialize(&mut plugin, f64::from(RATE)).expect("same-rate initialize must succeed");
     plugin
 }
 
@@ -240,7 +240,7 @@ fn detached_initial_accepted_base_matches_params() {
     assert_eq!(accepted.generation, 0);
     let snapshot = &accepted.snapshot;
     assert_eq!(snapshot.channels, CHANNELS);
-    assert_eq!(snapshot.sample_rate, RATE);
+    assert_eq!(snapshot.sample_rate, f64::from(RATE));
     assert_eq!(snapshot.num_filters, 2);
     assert_eq!(snapshot.fir_length_index, 0);
     assert_eq!(snapshot.phase_mode_index, 0);
@@ -956,15 +956,15 @@ fn detached_rate_reinit_republishes_without_touching_bands() {
     let handle = detached_handle(&plugin);
     assert_eq!(handle.accepted_generation(), 0);
     // Same-rate initialize publishes nothing.
-    Plugin::initialize(&mut plugin, RATE).expect("same-rate initialize must succeed");
+    Plugin::initialize(&mut plugin, f64::from(RATE)).expect("same-rate initialize must succeed");
     assert_eq!(handle.accepted_generation(), 0);
     // A real rate change republishes the accepted rate and bumps the
     // generation; band shapes are untouched by the rebuild.
-    Plugin::initialize(&mut plugin, 44_100).expect("rate change must succeed");
+    Plugin::initialize(&mut plugin, 44_100.0).expect("rate change must succeed");
     assert_eq!(handle.accepted_generation(), 1);
     let accepted = handle.try_accepted_snapshot().expect("snapshot must read");
     assert_eq!(accepted.generation, 1);
-    assert_eq!(accepted.snapshot.sample_rate, 44_100);
+    assert_eq!(accepted.snapshot.sample_rate, 44_100.0);
     assert_eq!(accepted.snapshot.bands[0].gain_db, 3.0);
     assert_eq!(accepted.snapshot.bands[1].gain_db, -3.0);
     // The new rate renders allocation-free and accepts detached commits.
@@ -1019,15 +1019,15 @@ fn detached_old_rate_payload_refuses_then_cancel_reprepare_recovers() {
     let handle = detached_handle(&plugin);
     // Queue one edit at the construction rate without rendering.
     let old_rate_base = handle.try_accepted_snapshot().expect("base must read");
-    assert_eq!(old_rate_base.snapshot.sample_rate, RATE);
+    assert_eq!(old_rate_base.snapshot.sample_rate, f64::from(RATE));
     let queued = prepare_on_worker(&old_rate_base, 0, band("Peak", 1000.0, 1.0, 6.0));
     handle.try_submit(queued).expect("submit must queue");
     assert_eq!(handle.accepted_generation(), 0);
     // Rate change republishes and bumps; the queued old-rate payload stays.
-    Plugin::initialize(&mut plugin, 44_100).expect("rate change must succeed");
+    Plugin::initialize(&mut plugin, 44_100.0).expect("rate change must succeed");
     assert_eq!(handle.accepted_generation(), 1);
     let republished = handle.try_accepted_snapshot().expect("snapshot must read");
-    assert_eq!(republished.snapshot.sample_rate, 44_100);
+    assert_eq!(republished.snapshot.sample_rate, 44_100.0);
     assert_eq!(republished.snapshot.bands[0].gain_db, 0.0);
     // The old-rate head refuses stale at the new rate; nothing commits.
     let probe_in = pattern(2048);
@@ -1057,7 +1057,7 @@ fn detached_old_rate_payload_refuses_then_cancel_reprepare_recovers() {
     // Fresh reprepare at the new rate recovers and commits.
     let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
-    assert_eq!(fresh.snapshot.sample_rate, 44_100);
+    assert_eq!(fresh.snapshot.sample_rate, 44_100.0);
     let recovered = prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, 6.0));
     handle.try_submit(recovered).expect("recovery submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
@@ -1326,7 +1326,7 @@ fn detached_seqlock_soak_never_tears() {
         s.spawn(|| {
             for round in 0..PUBLISHES {
                 let rate = if round % 2 == 0 { 44_100 } else { RATE };
-                Plugin::initialize(&mut plugin, rate).expect("republish must succeed");
+                Plugin::initialize(&mut plugin, f64::from(rate)).expect("republish must succeed");
             }
             done.store(true, Ordering::Release);
         });
@@ -1338,8 +1338,8 @@ fn detached_seqlock_soak_never_tears() {
                     assert!(accepted.generation >= last_generation);
                     last_generation = accepted.generation;
                     assert!(
-                        accepted.snapshot.sample_rate == 44_100
-                            || accepted.snapshot.sample_rate == RATE
+                        accepted.snapshot.sample_rate == 44_100.0
+                            || accepted.snapshot.sample_rate == f64::from(RATE)
                     );
                     assert_eq!(accepted.snapshot.bands[0].gain_db, 3.0);
                     assert_eq!(accepted.snapshot.bands[1].gain_db, -3.0);
@@ -1354,7 +1354,7 @@ fn detached_seqlock_soak_never_tears() {
             .try_accepted_snapshot()
             .expect("settled read must succeed");
         assert_eq!(accepted.generation, PUBLISHES);
-        assert_eq!(accepted.snapshot.sample_rate, RATE);
+        assert_eq!(accepted.snapshot.sample_rate, f64::from(RATE));
     }
     assert_eq!(handle.accepted_generation(), PUBLISHES);
     eprintln!("seqlock soak: {read_count} consistent reads, {busy_count} busy retries");

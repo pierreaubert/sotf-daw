@@ -99,7 +99,7 @@ impl<P: Plugin> Backend<P> for Dummy {
         loop {
             let period_start = Instant::now();
 
-            let mut transport = Transport::new(self.config.sample_rate);
+            let mut transport = Transport::new(f64::from(self.config.sample_rate));
             transport.pos_samples = Some(num_processed_samples as i64);
             transport.tempo = Some(self.config.tempo as f64);
             transport.time_sig_numerator = Some(self.config.timesig_num as i32);

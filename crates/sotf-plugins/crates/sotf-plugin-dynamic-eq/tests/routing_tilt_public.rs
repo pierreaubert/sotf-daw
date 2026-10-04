@@ -126,7 +126,7 @@ fn json_state_carries_tilt_placement_and_pairs() {
 #[test]
 fn placement_and_tilt_shape_are_structural_through_public_setters() {
     let mut plugin = DynamicEqPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let error = plugin
         .set_parameter(ParameterId::from("band_0_placement"), ParameterValue::Int(2))

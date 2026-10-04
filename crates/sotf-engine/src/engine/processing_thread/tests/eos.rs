@@ -56,8 +56,8 @@ impl Plugin for TailPlugin {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn output_sample_rate(&self, _: u32) -> u32 {
-        96_000
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        96_000.0
     }
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         input_frames * 2

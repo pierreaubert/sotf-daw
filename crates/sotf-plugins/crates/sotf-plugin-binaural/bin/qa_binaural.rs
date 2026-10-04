@@ -21,7 +21,7 @@ fn main() {
         0.0,                // lfe_level
         Default::default(), // room_model
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Binaural Plugin ===");
 

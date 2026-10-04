@@ -1063,7 +1063,7 @@ fn automation_lifecycle_and_partitions_hold_contract() {
         .unwrap();
     assert_final_ceiling(&again, -6.0, "post-reset");
     // Re-initialization at a new rate keeps the retained targets.
-    plugin.initialize(96_000).unwrap();
+    plugin.initialize(96_000.0).unwrap();
     let hi = two_tone(2048, 96_000, 997.0, 3413.0, 1.0);
     let mut hi_block = interleave(&vec![hi; channels]);
     plugin

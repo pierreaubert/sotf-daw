@@ -22,7 +22,7 @@ fn main() {
     };
 
     let mut plugin = DownmixPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Downmix Plugin ===");
 

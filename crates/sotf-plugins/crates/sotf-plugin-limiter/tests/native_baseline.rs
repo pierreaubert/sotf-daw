@@ -105,7 +105,7 @@ fn automate(plugin: &mut LimiterPlugin, event: usize, isp: bool) {
 fn capture(rate: u32, channels: usize, mode: usize) -> String {
     let params = settings(mode);
     let mut plugin = LimiterPlugin::from_params(channels, params.clone());
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let latency = plugin.latency_samples();
     let frames = rate as usize / 8 + 257;
     let mut source = vec![0.0; frames * channels];

@@ -42,7 +42,7 @@ fn bench_process_channels(c: &mut Criterion) {
             &channels,
             |b, &channels| {
                 let mut decoder = create_decoder(channels, fft_size);
-                decoder.initialize(sample_rate).unwrap();
+                decoder.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = vec![0.5f32; block_size * channels];
                 let mut output = vec![0.0f32; block_size * 2];
@@ -81,7 +81,7 @@ fn bench_process_fft_sizes(c: &mut Criterion) {
             &fft_size,
             |b, &fft_size| {
                 let mut decoder = create_decoder(channels, fft_size);
-                decoder.initialize(sample_rate).unwrap();
+                decoder.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = vec![0.5f32; block_size * channels];
                 let mut output = vec![0.0f32; block_size * 2];
@@ -130,7 +130,7 @@ fn bench_externalization(c: &mut Criterion) {
                     0.0,
                     RoomModel::default(),
                 );
-                decoder.initialize(sample_rate).unwrap();
+                decoder.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = vec![0.5f32; block_size * channels];
                 let mut output = vec![0.0f32; block_size * 2];
@@ -171,7 +171,7 @@ fn bench_large_blocks(c: &mut Criterion) {
             &block_size,
             |b, &block_size| {
                 let mut decoder = create_decoder(channels, fft_size);
-                decoder.initialize(sample_rate).unwrap();
+                decoder.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = vec![0.5f32; block_size * channels];
                 let mut output = vec![0.0f32; block_size * 2];
@@ -226,7 +226,7 @@ fn bench_head_tracking(c: &mut Criterion) {
 
     group.bench_function("process_after_yaw_change", |b| {
         let mut decoder = create_decoder(channels, fft_size);
-        decoder.initialize(sample_rate).unwrap();
+        decoder.initialize(f64::from(sample_rate)).unwrap();
         decoder
             .set_parameter(
                 ParameterId::from("hrtf_file"),
@@ -287,7 +287,7 @@ fn bench_passthrough(c: &mut Criterion) {
             &channels,
             |b, &channels| {
                 let mut decoder = create_decoder(channels, fft_size);
-                decoder.initialize(sample_rate).unwrap();
+                decoder.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = vec![0.5f32; block_size * channels];
                 let mut output = vec![0.0f32; block_size * 2];
@@ -335,7 +335,7 @@ fn bench_atmos_7_1_4(c: &mut Criterion) {
             0.0,
             RoomModel::default(),
         );
-        decoder.initialize(sample_rate).unwrap();
+        decoder.initialize(f64::from(sample_rate)).unwrap();
 
         let input = vec![0.5f32; block_size * channels];
         let mut output = vec![0.0f32; block_size * 2];

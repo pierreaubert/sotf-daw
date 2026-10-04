@@ -38,7 +38,7 @@ fn make(
     }))
     .unwrap();
     let mut plugin = LimiterPlugin::from_params(channels, params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

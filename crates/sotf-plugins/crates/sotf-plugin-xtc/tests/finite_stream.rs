@@ -17,7 +17,7 @@ fn neutral(n: usize, rate: u32) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -246,7 +246,7 @@ fn invalid_destinations_and_failed_reinitialize_preserve_audio_and_eof_state() {
         );
         assert_eq!(output, [123.0; 4]);
     }
-    assert!(actual.initialize(0).is_err());
+    assert!(actual.initialize(0.0).is_err());
     assert_eq!(
         process(&mut actual, RATE, &input, &[17]),
         process(&mut reference, RATE, &input, &[17])

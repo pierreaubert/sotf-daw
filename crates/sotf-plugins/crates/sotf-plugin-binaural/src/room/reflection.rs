@@ -8,7 +8,7 @@ pub(super) fn add_image_reflections(
     listener: &[f32; 3],
     direct_dist: f32,
     room: &RoomModel,
-    sample_rate: u32,
+    sample_rate: f64,
     channel_reflections: &mut Vec<Reflection>,
 ) {
     for (img_pos, wall_idx) in images.iter() {
@@ -21,7 +21,7 @@ pub(super) fn add_image_reflections(
 
         if path_diff > 0.0 {
             let delay_sec = path_diff / room.speed_of_sound;
-            let delay_samples = (delay_sec * sample_rate as f32).round() as usize;
+            let delay_samples = (f64::from(delay_sec) * sample_rate).round() as usize;
 
             let dist_att = direct_dist / img_dist;
             let wall_att = 1.0 - room.absorption[*wall_idx];
@@ -54,7 +54,7 @@ pub(super) fn ssir_result_to_reflections(
     result: &SsirResult,
     omni_rir: &[f32],
     wav_sample_rate: u32,
-    engine_sample_rate: u32,
+    engine_sample_rate: f64,
 ) -> Vec<Reflection> {
     let mut reflections = Vec::new();
 
@@ -62,7 +62,7 @@ pub(super) fn ssir_result_to_reflections(
     // Convert each early reflection segment into a Reflection.
     let direct_toa = result.direct_sound().map(|ds| ds.toa_sample).unwrap_or(0);
 
-    let rate_ratio = engine_sample_rate as f64 / wav_sample_rate as f64;
+    let rate_ratio = engine_sample_rate / f64::from(wav_sample_rate);
 
     for segment in result.reflections() {
         // Delay relative to direct sound, converted to engine sample rate

@@ -16,7 +16,7 @@ fn benchmark_realistic_layouts(criterion: &mut Criterion) {
         let mut output = vec![0.0_f32; FRAMES * channels];
         let context = ProcessContext::new(SAMPLE_RATE, FRAMES);
         let mut plugin = BandMergePlugin::new(channels, bands).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         group.throughput(Throughput::Elements((FRAMES * input_channels) as u64));
         group.bench_with_input(
             BenchmarkId::new("channels_x_bands", format!("{channels}x{bands}")),

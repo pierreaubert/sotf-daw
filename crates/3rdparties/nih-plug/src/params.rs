@@ -233,7 +233,13 @@ pub(crate) trait ParamMut: Param {
     /// Update the smoother state to point to the current value. Also used when initializing and
     /// restoring a plugin so everything is in sync. In that case the smoother should completely
     /// reset to the current value.
-    fn update_smoother(&self, sample_rate: f32, reset: bool);
+    fn update_smoother(&self, sample_rate: f64, reset: bool);
+
+    /// Snapshot the current smoothing horizon before a parameter or plugin state change.
+    fn prepare_smoother(&self, sample_rate: f64) -> Option<i32>;
+
+    /// Apply a previously validated horizon without rereading a mutable oversampling factor.
+    fn update_smoother_prepared(&self, steps: i32, reset: bool);
 }
 
 /// Describes a struct containing parameters and other persistent fields.
@@ -315,7 +321,7 @@ pub unsafe trait Params: 'static + Send + Sync {
         _state: &crate::wrapper::state::PluginState,
         _is_active: bool,
         _is_audio_thread: bool,
-        _sample_rate: Option<f32>,
+        _sample_rate: Option<f64>,
     ) -> bool {
         true
     }
@@ -366,7 +372,7 @@ unsafe impl<P: Params> Params for Arc<P> {
         state: &crate::wrapper::state::PluginState,
         is_active: bool,
         is_audio_thread: bool,
-        sample_rate: Option<f32>,
+        sample_rate: Option<f64>,
     ) -> bool {
         self.as_ref()
             .validate_state(state, is_active, is_audio_thread, sample_rate)

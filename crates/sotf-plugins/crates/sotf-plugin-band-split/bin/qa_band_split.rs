@@ -23,7 +23,7 @@ fn main() {
     };
 
     let mut plugin = BandSplitPlugin::from_params(in_ch, &params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: BandSplit Plugin ===");
 
@@ -78,7 +78,7 @@ fn verify_supported_rates_and_layouts() {
             let mut plugin =
                 BandSplitPlugin::new_multiband(channels, &[200.0, 2_000.0, 8_000.0], "LR48")
                     .unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let input = vec![0.1; 257 * channels];
             let mut output = vec![0.0; 257 * channels * 4];
             plugin
@@ -98,7 +98,7 @@ fn benchmark_setup() {
         let started = Instant::now();
         let mut plugin =
             BandSplitPlugin::new_multiband(CHANNELS, &[200.0, 2_000.0, 8_000.0], "LR48").unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         std::hint::black_box(&mut plugin);
         durations.push(started.elapsed());
         drop(plugin);
@@ -121,7 +121,7 @@ fn benchmark_automated_callback() {
     const FRAMES: usize = 512;
     let mut plugin =
         BandSplitPlugin::new_multiband(CHANNELS, &[200.0, 2_000.0, 8_000.0], "LR48").unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; FRAMES * CHANNELS];
     let mut output = vec![0.0; FRAMES * CHANNELS * 4];
     let context = ProcessContext::new(48_000, FRAMES);

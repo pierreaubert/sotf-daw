@@ -14,7 +14,7 @@ fn make(fft_size: usize, rate: u32) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -139,14 +139,14 @@ fn invalid_callbacks_are_transactional_and_initialize_restores_the_clock() {
         render(&mut actual, rate, &suffix, &[137]),
         render(&mut reference, rate, &suffix, &[137])
     );
-    actual.initialize(96_000).unwrap();
+    actual.initialize(96_000.0).unwrap();
     let mut fresh = make(512, 96_000);
     assert_eq!(
         render(&mut actual, 96_000, &suffix, &[17]),
         render(&mut fresh, 96_000, &suffix, &[17])
     );
     actual.reset();
-    assert!(actual.initialize(0).is_err());
+    assert!(actual.initialize(0.0).is_err());
     fresh.reset();
     assert_eq!(
         render(&mut actual, 96_000, &suffix, &[137]),
@@ -190,7 +190,7 @@ fn disabled_direct_routing_preserves_exact_values_at_the_declared_delay() {
         48_000,
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input: Vec<f32> = (0..20_000).map(|i| (i % 31) as f32 / 64.0).collect();
     let delay = plugin.latency_samples();
     let mut padded = input.clone();
@@ -255,7 +255,7 @@ fn cold_default_and_neutral_clocks_reset_without_allocating_or_freeing() {
                     rate,
                 )
                 .unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 // Exceed prepared staging and cover all initial windows/ring wrap.
                 let frames = (fft_size * 5 + 731).max(20_003);
                 let input = vec![0.125; frames * 2];

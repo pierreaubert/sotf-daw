@@ -58,7 +58,7 @@ fn prepared_near_unity_history_is_applied_instead_of_skipped() {
         },
     )
     .unwrap();
-    plugin.initialize(8000).unwrap();
+    plugin.initialize(8000.0).unwrap();
     assert!(plugin.can_use_empty_path_fast_path());
     plugin.auto_gain = prepared_gain();
     let mut reference = prepared_gain();

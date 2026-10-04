@@ -105,7 +105,7 @@ fn linear_rms(samples: &[f32]) -> f64 {
 
 fn make(quality: ResamplerQuality, channels: usize, smoothing: bool) -> ResamplerPlugin {
     let mut plugin = ResamplerPlugin::with_quality(channels, RATE, RATE, CHUNK, quality).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dynamic_ratio"),

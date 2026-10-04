@@ -40,7 +40,7 @@ struct CleanTransitionState {
 }
 
 impl CleanTransitionState {
-    fn new(channels: usize, initial_delay_samples: f32, sample_rate: u32) -> Self {
+    fn new(channels: usize, initial_delay_samples: f32, sample_rate: f64) -> Self {
         Self {
             current_delay_samples: vec![initial_delay_samples; channels],
             next_delay_samples: vec![initial_delay_samples; channels],
@@ -65,7 +65,7 @@ pub(super) struct ModulationState {
 
 pub struct DelayPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) param_delay_ms: ParameterId,
     pub(super) delay_ms: f32,
     pub(super) param_feedback: ParameterId,
@@ -109,7 +109,7 @@ impl DelayPlugin {
     }
 
     #[inline]
-    fn ring_samples(max_delay_ms: f32, sample_rate: u32) -> usize {
+    fn ring_samples(max_delay_ms: f32, sample_rate: f64) -> usize {
         let required = (max_delay_ms * 0.001 * sample_rate as f32).ceil() as usize;
         required
             .checked_add(4)
@@ -191,7 +191,7 @@ impl DelayPlugin {
                 "channels must be in [1, {MAX_DELAY_CHANNELS}], got {channels}"
             ));
         }
-        let sr = 44100;
+        let sr = 44_100.0;
         let max_samples = Self::ring_samples(max_delay_ms, sr);
         let buffer_len = max_samples
             .checked_mul(channels)
@@ -282,7 +282,7 @@ impl DelayPlugin {
             )?;
         }
         let channels = channel_delays_ms.len();
-        let sr = 44100u32;
+        let sr = 44_100.0;
         let max_samples = Self::ring_samples(max_delay_ms, sr);
         let buffer_len = max_samples
             .checked_mul(channels)
@@ -879,8 +879,11 @@ impl ParametricInPlacePlugin for DelayPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if !(1..=MAX_DELAY_SAMPLE_RATE).contains(&sample_rate) {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite()
+            || sample_rate < 1.0
+            || sample_rate > f64::from(MAX_DELAY_SAMPLE_RATE)
+        {
             return Err(format!(
                 "sample rate must be in [1, {MAX_DELAY_SAMPLE_RATE}], got {sample_rate}"
             ));
@@ -1132,7 +1135,9 @@ impl DelayPlugin {
         self.validate_stream_buffer(buffer.len(), num_frames)?;
 
         let lfo_active =
-            self.modulation.rate_hz > 0.0 && self.modulation.depth_ms > 0.0 && self.sample_rate > 0;
+            self.modulation.rate_hz > 0.0
+                && self.modulation.depth_ms > 0.0
+                && self.sample_rate > 0.0;
         let lfo_phase_inc = if lfo_active {
             self.modulation.rate_hz / self.sample_rate as f32
         } else {

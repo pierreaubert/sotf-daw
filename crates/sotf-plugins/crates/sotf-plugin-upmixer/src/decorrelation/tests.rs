@@ -10,7 +10,7 @@ fn stereo(n: usize) -> UpmixerPlugin {
     }))
     .unwrap();
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 

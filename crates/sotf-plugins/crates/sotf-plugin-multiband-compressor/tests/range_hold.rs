@@ -38,8 +38,8 @@ fn scalar_automation_preserves_running_audio_without_callback_heap_operations() 
         };
         let mut actual = MultibandCompressorPlugin::with_params(2, config.clone());
         let mut reference = MultibandCompressorPlugin::with_params(2, config);
-        actual.initialize(48_000).unwrap();
-        reference.initialize(48_000).unwrap();
+        actual.initialize(48_000.0).unwrap();
+        reference.initialize(48_000.0).unwrap();
         let mut changes = vec![
             ("threshold".to_owned(), ParameterValue::Float(-31.0)),
             ("ratio".to_owned(), ParameterValue::Float(7.0)),
@@ -151,7 +151,7 @@ fn scalar_validation_keeps_schema_errors_transactional() {
             ..Default::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let before = plugin.current_values();
     let schema = plugin.parameter_schema();
     for (name, value) in [
@@ -185,7 +185,7 @@ fn scalar_validation_keeps_schema_errors_transactional() {
 #[test]
 fn scalar_controls_reach_the_independent_static_gain_curve() {
     let mut plugin = MultibandCompressorPlugin::with_params(1, params());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (name, value) in [
         ("threshold", -30.0),
         ("ratio", 5.0),
@@ -223,7 +223,7 @@ fn multiband_controls_processing_and_reset_allocate_nothing_on_cold_thread() {
             ..Default::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let ids = ["range_db", "hold_ms", "band_1_range_db", "band_2_hold_ms"].map(ParameterId::from);
     std::thread::spawn(move || {
         let mut buffer = [0.2; 514];
@@ -262,7 +262,7 @@ fn multiband_controls_processing_and_reset_allocate_nothing_on_cold_thread() {
 #[test]
 fn cap_is_enforced_immediately_when_automated_during_reduction() {
     let mut plugin = MultibandCompressorPlugin::with_params(1, params());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut hot = [1.0; 2048];
     plugin
         .process_in_place(&mut hot, &ProcessContext::new(48_000, 2048))
@@ -328,7 +328,7 @@ fn render(
     blocks: &[usize],
 ) -> Vec<f32> {
     let mut plugin = MultibandCompressorPlugin::try_from_params(1, p, sr).unwrap();
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     let mut output = input.to_vec();
     let mut pos = 0;
     let mut block = 0;
@@ -454,7 +454,7 @@ fn per_band_overrides_inherit_and_new_peaks_retrigger_hold() {
             ..Default::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("range_db"), ParameterValue::Float(6.0))
         .unwrap();

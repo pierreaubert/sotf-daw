@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 pub struct DynamicEqPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) num_bands: usize,
 
     // Global params
@@ -329,7 +329,7 @@ impl DynamicEqPlugin {
     }
 
     pub fn new(channels: usize) -> Self {
-        let sr = 44100u32;
+        let sr = 44_100.0;
         let num_bands = default_num_bands();
         let attack = default_attack_ms();
         let release = default_release_ms();
@@ -450,7 +450,7 @@ impl DynamicEqPlugin {
     /// for callers that intentionally use its clamping behaviour; factories
     /// and state-restore paths must use this fallible entry point instead.
     pub fn try_from_params(channels: usize, params: DynamicEqPluginParams) -> PluginResult<Self> {
-        Self::validate_params(channels, &params, 48_000)?;
+        Self::validate_params(channels, &params, 48_000.0)?;
         Ok(Self::from_params(channels, params))
     }
 
@@ -460,8 +460,9 @@ impl DynamicEqPlugin {
     pub fn try_from_params_at_sample_rate(
         channels: usize,
         params: DynamicEqPluginParams,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> PluginResult<Self> {
+        let sample_rate = sample_rate.into();
         Self::validate_params(channels, &params, sample_rate)?;
         let mut plugin = Self::from_params(channels, params);
         plugin.initialize(sample_rate)?;
@@ -471,12 +472,12 @@ impl DynamicEqPlugin {
     fn validate_params(
         channels: usize,
         params: &DynamicEqPluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> PluginResult<()> {
         if channels == 0 {
             return Err("Dynamic EQ requires at least one channel".to_string());
         }
-        if sample_rate < 100 {
+        if !sample_rate.is_finite() || sample_rate < 100.0 {
             return Err(format!("Unsupported Dynamic EQ sample rate: {sample_rate}"));
         }
         if !(1..=MAX_BANDS).contains(&params.num_bands) {
@@ -1202,8 +1203,8 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         self.apply_values(values)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate < 100 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate < 100.0 {
             return Err(format!("Unsupported Dynamic EQ sample rate: {sample_rate}"));
         }
         // Conservative policy: preflight every stored slot, including bands

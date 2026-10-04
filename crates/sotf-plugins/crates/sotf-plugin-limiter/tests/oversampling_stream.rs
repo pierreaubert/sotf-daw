@@ -18,7 +18,7 @@ fn make(
     }))
     .unwrap();
     let mut plugin = LimiterPlugin::from_params(channels, params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 fn programme(frames: usize, channels: usize, scale: f32) -> Vec<f32> {
@@ -183,7 +183,7 @@ fn preflight_and_failed_reinitialization_preserve_live_audio_and_drain() {
             feed(&mut actual, rate, &input, &[513]),
             feed(&mut twin, rate, &input, &[513])
         );
-        assert!(actual.initialize(u32::MAX).is_err());
+        assert!(actual.initialize(f64::from(u32::MAX)).is_err());
         assert_eq!(actual.latency_samples(), twin.latency_samples());
         let mut malformed = [12345.0; 3];
         assert!(
@@ -263,7 +263,7 @@ fn preinitialization_metadata_and_legacy_json_are_unambiguous() {
                 .process_in_place(&mut [0.0; 2], &ProcessContext::new(48_000, 1))
                 .is_err()
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(
             plugin
                 .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(0))
@@ -376,7 +376,7 @@ fn reset_installs_current_controls_and_successful_reinitialize_matches_fresh_rat
         actual.reset();
         for rate in [48_000, 192_000] {
             if rate != 48_000 {
-                actual.initialize(rate).unwrap();
+                actual.initialize(f64::from(rate)).unwrap();
             }
             let mut fresh = make(rate, 2, choice, false, 0.25, 0.137);
             for (key, value) in &settings {
@@ -401,7 +401,7 @@ fn reset_installs_current_controls_and_successful_reinitialize_matches_fresh_rat
                 fresh.drain(&mut b, &context).unwrap()
             );
             assert_eq!(a, b);
-            assert!(actual.initialize(u32::MAX).is_err());
+            assert!(actual.initialize(f64::from(u32::MAX)).is_err());
             assert_eq!(
                 drain(&mut actual, rate, &[1, 17, 256]),
                 drain(&mut fresh, rate, &[256])

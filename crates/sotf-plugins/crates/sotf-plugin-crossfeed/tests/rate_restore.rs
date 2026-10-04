@@ -88,14 +88,14 @@ fn reinitialize_matches_fresh_plugin_bit_exact() {
     for mode in MODES {
         let params = lively_params(mode);
         let mut moved = CrossfeedPlugin::new(params.clone()).unwrap();
-        moved.initialize(48_000).unwrap();
+        moved.initialize(48_000.0).unwrap();
         // Half a second of unrelated audio warms every state at 48 kHz.
         let warmup = tone_pair(48_000, 24_000);
         let _ = render(&mut moved, &warmup, 48_000, 137);
-        moved.initialize(96_000).unwrap();
+        moved.initialize(96_000.0).unwrap();
 
         let mut fresh = CrossfeedPlugin::new(params).unwrap();
-        fresh.initialize(96_000).unwrap();
+        fresh.initialize(96_000.0).unwrap();
 
         let settle = tone_pair(96_000, 48_000);
         let _ = render(&mut moved, &settle, 96_000, 1000);
@@ -133,9 +133,9 @@ fn json_save_reload_preserves_config_and_audio() {
                 "{mode:?} mix={mix}: yaw must be present in saved state"
             );
             let mut before = CrossfeedPlugin::new(params).unwrap();
-            before.initialize(48_000).unwrap();
+            before.initialize(48_000.0).unwrap();
             let mut after = CrossfeedPlugin::new(restored).unwrap();
-            after.initialize(48_000).unwrap();
+            after.initialize(48_000.0).unwrap();
             let input = tone_pair(48_000, 48_000);
             let before_out = render(&mut before, &input, 48_000, 137);
             let after_out = render(&mut after, &input, 48_000, 137);
@@ -155,9 +155,9 @@ fn json_save_reload_preserves_config_and_audio() {
 fn rejected_update_preserves_config_and_audio() {
     let params = lively_params(CrossfeedMode::Mb);
     let mut edited = CrossfeedPlugin::new(params.clone()).unwrap();
-    edited.initialize(48_000).unwrap();
+    edited.initialize(48_000.0).unwrap();
     let mut twin = CrossfeedPlugin::new(params).unwrap();
-    twin.initialize(48_000).unwrap();
+    twin.initialize(48_000.0).unwrap();
 
     let before = edited.current_values();
     let mut hostile = ParameterSet::new();
@@ -207,11 +207,11 @@ fn supported_rate_boundaries_follow_nyquist_validation() {
     // crossover exceeds the 4 kHz Nyquist there).
     for rate in [44_100u32, 48_000, 96_000, 192_000] {
         let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
     }
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
     assert!(
-        plugin.initialize(8_000).is_err(),
+        plugin.initialize(8_000.0).is_err(),
         "default parameters must be rejected where the Nyquist rule fails"
     );
 }

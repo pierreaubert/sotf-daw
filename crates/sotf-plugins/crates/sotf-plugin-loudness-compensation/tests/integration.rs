@@ -57,7 +57,7 @@ fn plugin_processes_stereo_and_five_channel() {
     let mut stereo = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 6.0, 10000.0, 6.0,
     ));
-    stereo.initialize(48000).unwrap();
+    stereo.initialize(48000.0).unwrap();
 
     let input = sine_buffer(512, 2, 440.0, 48000);
     let mut output = vec![0.0_f32; input.len()];
@@ -70,7 +70,7 @@ fn plugin_processes_stereo_and_five_channel() {
     let mut five = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         5, 100.0, 6.0, 10000.0, 6.0,
     ));
-    five.initialize(48000).unwrap();
+    five.initialize(48000.0).unwrap();
 
     let input5 = sine_buffer(512, 5, 440.0, 48000);
     let mut output5 = vec![0.0_f32; input5.len()];
@@ -127,7 +127,7 @@ fn mid_band_toggle_changes_output() {
     let mut enabled = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    enabled.initialize(48000).unwrap();
+    enabled.initialize(48000.0).unwrap();
     enabled
         .set_parameter(ParameterId::from("mid_enabled"), ParameterValue::Bool(true))
         .unwrap();
@@ -138,7 +138,7 @@ fn mid_band_toggle_changes_output() {
     let mut disabled = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    disabled.initialize(48000).unwrap();
+    disabled.initialize(48000.0).unwrap();
     disabled
         .set_parameter(
             ParameterId::from("mid_enabled"),
@@ -177,12 +177,12 @@ fn mode_change_changes_spectral_balance() {
     let mut manual = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    manual.initialize(48000).unwrap();
+    manual.initialize(48000.0).unwrap();
 
     let mut iso = ParametricInPlacePluginAdapter::new(LoudnessCompensationPlugin::new(
         2, 100.0, 0.0, 10000.0, 0.0,
     ));
-    iso.initialize(48000).unwrap();
+    iso.initialize(48000.0).unwrap();
     iso.set_parameter(ParameterId::from("mode"), ParameterValue::Int(1))
         .unwrap();
 
@@ -220,7 +220,7 @@ fn auto_gain_exposes_data() {
     };
     let plugin = LoudnessCompensationPlugin::from_params(2, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = broadband_buffer(2048, 2, 48000);
     let mut output = vec![0.0_f32; input.len()];
@@ -238,7 +238,7 @@ fn auto_gain_exposes_data() {
 fn reset_then_process_is_stable() {
     let plugin = LoudnessCompensationPlugin::new(2, 100.0, 6.0, 10000.0, 6.0);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(512, 2, 440.0, 48000);
     let mut output = vec![0.0_f32; input.len()];

@@ -24,6 +24,7 @@ pub mod external_plugin_process;
 pub mod external_plugin_sandbox;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub mod external_plugin_worker;
+pub mod fractional_delay;
 pub mod host;
 pub mod layout_solver;
 pub mod lufs_target;
@@ -79,7 +80,7 @@ pub type PluginFactoryFn = fn(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn plugin::Plugin>, String>;
 pub use analyzer_loudness_monitor::{LoudnessInfo, LoudnessMonitor, LoudnessMonitorPlugin};
 pub use analyzer_spectrum::{

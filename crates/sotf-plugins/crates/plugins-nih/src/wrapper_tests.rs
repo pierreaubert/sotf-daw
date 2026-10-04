@@ -107,7 +107,7 @@ fn check_routing<P: Plugin + ClapPlugin + TestProcess>(
     assert_eq!(layout.main_output_channels.unwrap().get() as usize, outputs);
     let mut direct = crate::params::configuration::create_plugin(name, 48_000, params).unwrap();
     direct = plugins_bridge::prepare_standalone_plugin(direct, 257).unwrap();
-    direct.initialize(48000).unwrap();
+    direct.initialize(48000.0).unwrap();
     params.sync_to_plugin(direct.as_mut()).unwrap();
     let mut position = 0;
     for frames in [1, 17, 257, 63, 2, 191, 256, 7]
@@ -704,7 +704,7 @@ fn eq_exposes_neutral_bands_and_automates_without_allocations() {
     }
     let mut plugin =
         plugins_bridge::create_plugin("EQ", 2, 48000, &default_plugin_config("EQ")).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let bridge = ParamBridge::new(get_param_specs("EQ"));
     let mut infos: Vec<_> = (0..bridge.count())
         .filter_map(|index| bridge.info(index))
@@ -1098,7 +1098,7 @@ fn ambisonics_vst3_and_clap_process_selected_full_input_vectors() {
             )
             .unwrap();
             reference = plugins_bridge::prepare_standalone_plugin(reference, FRAMES).unwrap();
-            reference.initialize(48_000).unwrap();
+            reference.initialize(48_000.0).unwrap();
             wrapper.params.sync_to_plugin(reference.as_mut()).unwrap();
 
             let input: Vec<f32> = (0..FRAMES)
@@ -1230,7 +1230,7 @@ fn bandsplit_clap_layouts_route_all_selected_band_major_channels() {
             crate::params::configuration::create_plugin("BandSplit", 48_000, &wrapper.params)
                 .unwrap();
         direct = plugins_bridge::prepare_standalone_plugin(direct, MAX_FRAMES).unwrap();
-        direct.initialize(48_000).unwrap();
+        direct.initialize(48_000.0).unwrap();
         wrapper.params.sync_to_plugin(direct.as_mut()).unwrap();
 
         let mut frame_position = 0;
@@ -1562,7 +1562,7 @@ fn check_custom_wrapper_process(
         crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &wrapper.params)
             .unwrap();
     reference = plugins_bridge::prepare_standalone_plugin(reference, FRAMES).unwrap();
-    reference.initialize(48_000).unwrap();
+    reference.initialize(48_000.0).unwrap();
     let mut expected = vec![0.0; FRAMES * outputs];
     assert_eq!(
         reference

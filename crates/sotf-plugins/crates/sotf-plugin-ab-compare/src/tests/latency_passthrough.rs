@@ -121,7 +121,7 @@ fn render_mono_chunks(plugin: &mut ABComparePlugin, input: &[f32], chunks: &[usi
 fn silent_wet_latency_plugin(latency: usize) -> ABComparePlugin {
     let channels = 1;
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(1_000).unwrap();
+    plugin.initialize(1_000.0).unwrap();
 
     let mut host_a = DawHost::new(channels, 1_000);
     host_a
@@ -186,7 +186,7 @@ fn test_latency_compensation() {
     let latency_frames = 64;
 
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Replace host_b with one containing a latency-reporting plugin
     let mut host_b = DawHost::new(channels, 48000);
@@ -277,7 +277,7 @@ fn bypass_preserves_reported_latency() {
     let channels = 1;
     let latency_frames = 8;
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut host_b = DawHost::new(channels, 48_000);
     host_b
         .add_plugin(Box::new(LatencyPassthrough {
@@ -347,7 +347,7 @@ fn bypass_crossfades_without_freezing_nested_path_state() {
     let frames = 64;
     let processed_frames = Arc::new(AtomicUsize::new(0));
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let mut host_a = DawHost::new(channels, 48_000);
     host_a
@@ -408,8 +408,8 @@ fn bypass_crossfades_without_freezing_nested_path_state() {
 fn empty_paths_advance_bypass_in_both_directions_across_callbacks() {
     let mut plugin = ABComparePlugin::new(1).unwrap();
     let mut whole_plugin = ABComparePlugin::new(1).unwrap();
-    plugin.initialize(48_000).unwrap();
-    whole_plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    whole_plugin.initialize(48_000.0).unwrap();
     for candidate in [&mut plugin, &mut whole_plugin] {
         candidate
             .set_parameter(
@@ -563,7 +563,7 @@ fn test_latency_compensation_reset() {
     let channels = 2;
 
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Add latency to path B
     let mut host_b = DawHost::new(channels, 48000);
@@ -597,7 +597,7 @@ fn test_latency_compensation_equal_latency() {
     let channels = 2;
 
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Both paths: 32 samples latency
     let mut host_a = DawHost::new(channels, 48000);
@@ -638,7 +638,7 @@ fn test_latency_compensation_returns_error_on_broken_host() {
 
     let channels = 2;
     let mut plugin = ABComparePlugin::new(channels).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Build a host whose graph has a cycle so that build() will fail.
     let mut cyclic_host = DawHost::new(channels, 48000);

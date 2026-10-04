@@ -68,7 +68,7 @@ fn make(
     dynamic: bool,
 ) -> ResamplerPlugin {
     let mut plugin = ResamplerPlugin::with_quality(1, rate, output_rate, chunk, quality).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     mode(&mut plugin, dynamic).unwrap();
     plugin
 }
@@ -137,7 +137,7 @@ fn same_rate_mode_changes_reject_without_losing_or_reordering_history() {
                         state
                     );
                     // initialize() validates the clock; it does not clear a stream.
-                    tested.initialize(rate).unwrap();
+                    tested.initialize(f64::from(rate)).unwrap();
                     assert!(mode(&mut tested, !dynamic).is_err());
                     feed(&mut tested, &[0.25; 333], rate, &mut actual);
                     feed(&mut control, &[0.25; 333], rate, &mut expected);
@@ -375,7 +375,7 @@ fn cold_valid_setters_process_drain_and_reset_have_no_heap_activity() {
                 ResamplerQuality::High,
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let dynamic_id = ParameterId::from("dynamic_ratio");
             let ratio_id = ParameterId::from("ratio");
             let input = vec![0.125; 1301 * channels];

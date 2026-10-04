@@ -15,7 +15,7 @@ fn main() {
     let params = DenoiserPluginParams::default();
 
     let mut inner = DenoiserPlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Denoiser Plugin ===");
 
@@ -55,7 +55,7 @@ fn main() {
                         ..Default::default()
                     };
                     let mut candidate = DenoiserPlugin::try_from_params(channels, params).unwrap();
-                    candidate.initialize(sample_rate).unwrap();
+                    candidate.initialize(f64::from(sample_rate)).unwrap();
                     if all_modes {
                         candidate
                             .parametric_set_parameter(

@@ -61,7 +61,7 @@ fn native_bound_follows_prepared_geometry_and_stays_constant_through_lifecycle()
                     TailLength::Finite(expected_bound(algorithm, mics, 44_100, angle, 50.0))
                 );
                 for rate in [44_100, 192_000] {
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     let expected =
                         TailLength::Finite(expected_bound(algorithm, mics, rate, angle, 50.0));
                     assert_eq!(plugin.tail_length(), expected);
@@ -106,7 +106,7 @@ fn native_bound_follows_prepared_geometry_and_stays_constant_through_lifecycle()
     }
     let mut unclocked = BeamformerPlugin::new(2, 0).unwrap();
     assert_eq!(unclocked.tail_length(), TailLength::Unknown);
-    unclocked.initialize(48_000).unwrap();
+    unclocked.initialize(48_000.0).unwrap();
     assert_eq!(unclocked.tail_length(), TailLength::Finite(1024));
 }
 

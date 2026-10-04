@@ -36,7 +36,7 @@ impl Controls {
         }
     }
 
-    pub fn install(self, old: Self, kernel: &mut NativeKernel, rate: u32) {
+    pub fn install(self, old: Self, kernel: &mut NativeKernel, rate: f64) {
         if self.threshold != old.threshold {
             kernel.threshold_db_smoother.set_target(self.threshold);
         }
@@ -60,14 +60,14 @@ pub(super) fn subcontext(
 ) -> ProcessContext<'static> {
     let mut transport = context.transport;
     transport.sample_position = transport.sample_position.saturating_add(offset as u64);
-    transport.ppq_position += offset as f64 / f64::from(context.sample_rate) * transport.bpm / 60.0;
+    transport.ppq_position += offset as f64 / context.sample_rate * transport.bpm / 60.0;
     ProcessContext::new(context.sample_rate, frames).with_transport(transport)
 }
 
 /// Build at the actual processing clock with an exact integer audio delay.
 pub(super) fn prepare_kernel(
     channels: usize,
-    rate: u32,
+    rate: f64,
     delay: usize,
     controls: Controls,
 ) -> NativeKernel {
@@ -111,7 +111,7 @@ const EMPTY_DESCRIPTOR: Descriptor = Descriptor {
 pub(super) struct WetCore {
     channels: usize,
     factor: usize,
-    rate: u32,
+    rate: f64,
     delay: usize,
     controls: Controls,
     reset_controls: Controls,
@@ -130,7 +130,7 @@ impl WetCore {
     pub fn new(
         channels: usize,
         factor: usize,
-        rate: u32,
+        rate: f64,
         delay: usize,
         controls: Controls,
     ) -> Self {
@@ -274,7 +274,7 @@ impl InPlacePlugin for WetCore {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn initialize(&mut self, rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, rate: f64) -> PluginResult<()> {
         if rate != self.rate {
             return Err("limiter wet core prepared at a different rate".into());
         }
@@ -378,7 +378,7 @@ mod tests {
             link: 0.0,
         };
         for factor in [2, 4] {
-            let mut core = WetCore::new(2, factor, 48_000 * factor as u32, 0, controls);
+            let mut core = WetCore::new(2, factor, 48_000.0 * factor as f64, 0, controls);
             core.output_frames = (4 * CHUNK * factor) as u64;
             for block in 0..4 {
                 core.descriptors[block] = Descriptor {

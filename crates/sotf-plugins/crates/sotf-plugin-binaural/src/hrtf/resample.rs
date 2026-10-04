@@ -2,7 +2,7 @@
 
 // Rust guideline compliant 2026-02-21
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
-use rubato::{Fft, FixedSync, Resampler, WindowFunction};
+use rubato::{Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction};
 use sotf_host::sofa::SofaFile;
 
 // Bound both FFT grids before Rubato allocates its plans and scratch. Each FFT
@@ -23,27 +23,37 @@ const MAX_FFT_GRID_FRAMES: usize = 262_144;
 ///
 /// Returns an error for invalid rates or IR dimensions, size overflow, failed
 /// staging allocation, backend failure, or an FFT grid exceeding 262144 frames.
-pub fn resample_sofa(sofa: &mut SofaFile, target_rate: u32) -> Result<(), String> {
-    let rounded_rate = f64::from(sofa.sample_rate.round());
-    if !rounded_rate.is_finite()
-        || rounded_rate < 1.0
-        || rounded_rate > f64::from(u32::MAX)
-        || target_rate == 0
+pub fn resample_sofa<S: Into<f64>>(sofa: &mut SofaFile, target_rate: S) -> Result<(), String> {
+    let target_rate = target_rate.into();
+    let source_rate_exact = sofa.sample_rate;
+    if !source_rate_exact.is_finite()
+        || source_rate_exact <= 0.0
+        || source_rate_exact > f64::from(u32::MAX)
+        || !target_rate.is_finite()
+        || target_rate <= 0.0
+        || target_rate > f64::from(u32::MAX)
     {
         return Err("HRTF resampling requires positive representable sample rates".into());
     }
-    let source_rate = rounded_rate as u32;
     let source_samples = stereo_dataset_len(sofa.num_measurements, sofa.ir_length)?;
     if sofa.impulse_responses.len() != source_samples {
         return Err("HRTF resampling requires exactly M x 2 x N impulse samples".into());
     }
-    if source_rate == target_rate {
+    if source_rate_exact == target_rate {
         return Ok(());
     }
 
+    if source_rate_exact.fract() != 0.0
+        || target_rate.fract() != 0.0
+    {
+        return resample_sofa_fractional(sofa, source_rate_exact, target_rate, source_samples);
+    }
+    let source_rate = source_rate_exact as u32;
+    let target_rate_integer = target_rate as u32;
+
     let new_ir_length = sofa
         .ir_length
-        .checked_mul(target_rate as usize)
+        .checked_mul(target_rate_integer as usize)
         .ok_or("HRTF resampling duration overflow")?
         .div_ceil(source_rate as usize);
     let new_samples = stereo_dataset_len(sofa.num_measurements, new_ir_length)?;
@@ -52,7 +62,7 @@ pub fn resample_sofa(sofa: &mut SofaFile, target_rate: u32) -> Result<(), String
         new_impulse_responses = Vec::new();
     } else {
         let (input_frames, output_frames) =
-            fft_geometry(sofa.ir_length, source_rate as usize, target_rate as usize)?;
+            fft_geometry(sofa.ir_length, source_rate as usize, target_rate_integer as usize)?;
         let delay = output_frames / 2;
         let crop_end = delay
             .checked_add(new_ir_length)
@@ -67,7 +77,7 @@ pub fn resample_sofa(sofa: &mut SofaFile, target_rate: u32) -> Result<(), String
         // change delay and block sizes.
         let mut resampler = Fft::<f32>::new_custom(
             source_rate as usize,
-            target_rate as usize,
+            target_rate_integer as usize,
             input_frames,
             1,
             2,
@@ -132,8 +142,8 @@ pub fn resample_sofa(sofa: &mut SofaFile, target_rate: u32) -> Result<(), String
 
     sofa.impulse_responses = new_impulse_responses;
     sofa.ir_length = new_ir_length;
-    sofa.sample_rate = target_rate as f32;
-    sofa.data_sample_rate = Some(target_rate as f32);
+    sofa.sample_rate = target_rate;
+    sofa.data_sample_rate = Some(target_rate);
     log::info!(
         "[BinauralDecoder] Resampled {} HRTF measurements from {} to {} Hz, {} samples each",
         sofa.num_measurements,
@@ -154,6 +164,63 @@ fn stereo_dataset_len(measurements: usize, frames: usize) -> Result<usize, Strin
         .filter(|&bytes| bytes <= isize::MAX as usize)
         .ok_or("HRTF resampling dataset byte size overflow")?;
     Ok(samples)
+}
+
+fn resample_sofa_fractional(
+    sofa: &mut SofaFile,
+    source_rate: f64,
+    target_rate: f64,
+    source_samples: usize,
+) -> Result<(), String> {
+    let ratio = target_rate / source_rate;
+    let length = (sofa.ir_length as f64 * ratio).ceil();
+    if !ratio.is_finite() || ratio <= 0.0 || !length.is_finite() || length > isize::MAX as f64 {
+        return Err("HRTF exact-rate resampling duration is unsupported".into());
+    }
+    let new_ir_length = length as usize;
+    let new_samples = stereo_dataset_len(sofa.num_measurements, new_ir_length)?;
+    let mut new_impulse_responses = zero_samples(new_samples)?;
+    if source_samples != 0 {
+        let mut resampler = Async::<f32>::new_sinc(
+            ratio,
+            1.0,
+            &SincInterpolationParameters::new(256, WindowFunction::BlackmanHarris2),
+            1024,
+            2,
+            FixedAsync::Input,
+        )
+        .map_err(|e| format!("Failed to create exact-rate HRTF resampler: {e}"))?;
+        let output_capacity = resampler.process_all_needed_output_len(sofa.ir_length);
+        let mut output = [zero_samples(output_capacity)?, zero_samples(output_capacity)?];
+        for (source, destination) in sofa
+            .impulse_responses
+            .chunks_exact(2 * sofa.ir_length)
+            .zip(new_impulse_responses.chunks_exact_mut(2 * new_ir_length))
+        {
+            resampler.reset();
+            let (left, right) = source.split_at(sofa.ir_length);
+            let input = [left.to_vec(), right.to_vec()];
+            let input_adapter = SequentialSliceOfVecs::new(&input, 2, sofa.ir_length)
+                .map_err(|e| format!("HRTF input adapter error: {e}"))?;
+            let mut output_adapter =
+                SequentialSliceOfVecs::new_mut(&mut output, 2, output_capacity)
+                    .map_err(|e| format!("HRTF output adapter error: {e}"))?;
+            let (_, written) = resampler
+                .process_all_into_buffer(&input_adapter, &mut output_adapter, sofa.ir_length, None)
+                .map_err(|e| format!("HRTF exact-rate resampling error: {e}"))?;
+            if written != new_ir_length {
+                return Err("HRTF exact-rate resampler changed the expected duration".into());
+            }
+            let (out_left, out_right) = destination.split_at_mut(new_ir_length);
+            out_left.copy_from_slice(&output[0][..written]);
+            out_right.copy_from_slice(&output[1][..written]);
+        }
+    }
+    sofa.impulse_responses = new_impulse_responses;
+    sofa.ir_length = new_ir_length;
+    sofa.sample_rate = target_rate;
+    sofa.data_sample_rate = Some(target_rate);
+    Ok(())
 }
 
 fn zero_samples(frames: usize) -> Result<Vec<f32>, String> {

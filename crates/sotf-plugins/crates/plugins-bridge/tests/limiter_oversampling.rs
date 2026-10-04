@@ -95,7 +95,7 @@ fn limiter_factor_keeps_legacy_indices_and_integer_normalization() {
             bridge.get_normalized(plugin.as_ref(), 10),
             Some(f64::from(choice) / 2.0)
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         bridge
             .set_normalized(plugin.as_mut(), 10, f64::from(choice) / 2.0)
             .unwrap();

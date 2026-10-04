@@ -31,7 +31,7 @@ fn warmed_envelopes_and_unfinished_controls_have_exact_zero_output() {
                         },
                     )
                     .unwrap();
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     let mut input: Vec<f32> = (0..1027 * channels)
                         .map(|i| ((i * 37 % 127) as f32 - 63.0) / 32.0)
                         .collect();
@@ -83,7 +83,7 @@ fn native_tail_metadata_and_public_adapter_preserve_unfrozen_completion() {
     assert_eq!(plugin.drain_call_bound().unwrap().get(), 1);
     let mut plugin = ParametricInPlacePluginAdapter::new(plugin);
     assert_eq!(plugin.tail_length(), TailLength::Finite(0));
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let context = ProcessContext::new(48_000, 0);
     for _ in 0..2 {
         assert_eq!(plugin.drain_output_frames_max(), 0);
@@ -142,7 +142,7 @@ static ALLOCATOR: Allocator = Allocator;
 fn cold_adapter_tail_queries_and_noop_completion_allocate_and_free_nothing() {
     for channels in [1, 2, 6] {
         let mut plugin = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::new(channels));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         std::thread::spawn(move || {
             let context = ProcessContext::new(48_000, 0);
             let mut output = [1234.0; 6];

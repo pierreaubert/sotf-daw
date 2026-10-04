@@ -17,7 +17,7 @@ fn plugin(rate: u32, mode: CrossfeedMode, enabled: bool, target: f32) -> Crossfe
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -231,7 +231,7 @@ fn reset_and_rejected_callbacks_preserve_the_measurement_epoch() {
                 .is_err()
         );
         assert!(too_large.iter().all(|&x| x == 0.25));
-        assert!(actual.initialize(0).is_err());
+        assert!(actual.initialize(0.0).is_err());
         assert_eq!(
             actual
                 .process_in_place(&mut [], &ProcessContext::new(rate, 0))
@@ -250,8 +250,8 @@ fn reset_and_rejected_callbacks_preserve_the_measurement_epoch() {
         );
         // Reinitialization resets meter phase along with its newly constructed
         // monitors. Preserve the preexisting gain-state initialization policy.
-        actual.initialize(96_000).unwrap();
-        fresh.initialize(96_000).unwrap();
+        actual.initialize(96_000.0).unwrap();
+        fresh.initialize(96_000.0).unwrap();
         let input = source(96_000, 96_017);
         assert_eq!(
             render(&mut actual, &input, 96_000, &[17]),

@@ -17,7 +17,7 @@ proptest! {
         input_val in -1.0f32..1.0f32,
     ) {
         let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![input_val; num_frames];
         let mut output = vec![0.0f32; num_frames * 2];
@@ -38,7 +38,7 @@ proptest! {
     fn nan_propagates_through_lr24(nan_offset in 0usize..64) {
         let num_frames = 64;
         let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let mut input = vec![0.5f32; num_frames];
         input[nan_offset % num_frames] = f32::NAN;
@@ -64,7 +64,7 @@ proptest! {
     fn dc_reconstructs_in_both_mode(dc in -0.9f32..0.9f32) {
         let num_frames = 256;
         let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![dc; num_frames];
         let mut output = vec![0.0f32; num_frames * 2];
@@ -92,7 +92,7 @@ proptest! {
     #[test]
     fn frequency_set_get_roundtrip(freq in 20.0f32..20000.0f32) {
         let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         plugin
             .set_parameter(ParameterId::from("frequency"), ParameterValue::Float(freq))

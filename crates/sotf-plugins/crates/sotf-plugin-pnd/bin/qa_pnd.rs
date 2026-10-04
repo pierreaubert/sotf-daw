@@ -10,7 +10,7 @@ fn main() {
     let channels = 2;
 
     let mut plugin = PndPlugin::new(channels);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: PND Plugin ===");
 

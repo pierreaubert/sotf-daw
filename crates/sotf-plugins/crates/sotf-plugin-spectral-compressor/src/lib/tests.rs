@@ -23,7 +23,7 @@ fn test_mix_zero_is_delayed_by_reported_latency_and_block_independent() {
 
     let render = |chunk_frames: usize| {
         let mut plugin = SpectralCompressorPlugin::from_params(2, params.clone());
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
         let mut output = input.clone();
         for chunk in output.chunks_mut(chunk_frames * 2) {
             let nf = chunk.len() / 2;
@@ -63,7 +63,7 @@ fn partial_mix_has_fixed_latency_across_host_block_sizes() {
 
     let render = |chunk_frames: usize| {
         let mut plugin = SpectralCompressorPlugin::from_params(1, params.clone());
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = input.clone();
         for chunk in output.chunks_mut(chunk_frames) {
             let nf = chunk.len();
@@ -176,7 +176,7 @@ fn test_smooth_spectral_envelope_edge_cases() {
 #[test]
 fn adaptive_estimator_has_sample_rate_and_fft_invariant_time_constant() {
     const TAU_SECONDS: f32 = 0.5;
-    for sample_rate in [44_100, 48_000, 96_000, 192_000] {
+    for sample_rate in [44_100.0, 48_000.0, 96_000.0, 192_000.0] {
         for fft_size in [1024, 2048, 4096] {
             let hop = fft_size / 4;
             let alpha = adaptive_alpha(hop, sample_rate, TAU_SECONDS);
@@ -201,7 +201,7 @@ fn adaptive_processing_is_finite_across_supported_rates_and_fft_sizes() {
                 ..Default::default()
             };
             let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let frames = 8192;
             let mut audio = vec![0.0; frames * 2];
             for frame in 0..frames {
@@ -241,7 +241,7 @@ fn test_delta_listen_outputs_difference_signal() {
         ..Default::default()
     };
     let mut plugin = SpectralCompressorPlugin::from_params(1, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("delta_listen"),
@@ -275,7 +275,7 @@ fn test_delta_listen_outputs_difference_signal() {
 fn test_adaptive_threshold_no_nan() {
     let params = SpectralCompressorPluginParams::default();
     let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("adaptive_threshold"),
@@ -303,7 +303,7 @@ fn test_adaptive_threshold_no_nan() {
 fn test_target_mode_tonal_no_nan() {
     let params = SpectralCompressorPluginParams::default();
     let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("target_mode"), ParameterValue::Int(1))
         .unwrap();
@@ -322,7 +322,7 @@ fn test_target_mode_tonal_no_nan() {
 fn test_reset_clears_stft_state() {
     let params = SpectralCompressorPluginParams::default();
     let mut plugin = SpectralCompressorPlugin::from_params(1, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let nf = plugin.latency_samples() + 256;
     let mut buf = vec![0.0f32; nf];
@@ -351,7 +351,7 @@ fn test_recompute_coefficients_after_parameter_change() {
         ..Default::default()
     };
     let mut plugin = SpectralCompressorPlugin::from_params(1, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let old_attack = plugin.attack_coeff;
 
     plugin
@@ -378,7 +378,7 @@ fn local_energy_detector_is_stable_across_fft_size_and_bin_alignment() {
             ..Default::default()
         };
         let mut plugin = SpectralCompressorPlugin::from_params(1, params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let fft_size = plugin.fft_size;
         let bin = 43.0 + fractional_bin;
         for frame in 0..fft_size {
@@ -420,7 +420,7 @@ fn channel_link_preserves_gain_for_correlated_layout_channels() {
             ..Default::default()
         };
         let mut plugin = SpectralCompressorPlugin::from_params(2, params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let fft_size = plugin.fft_size;
         for frame in 0..fft_size {
             let tone = (std::f32::consts::TAU * 32.0 * frame as f32 / fft_size as f32).sin();
@@ -452,7 +452,7 @@ fn adaptive_estimator_primes_from_first_valid_spectrum_and_reprime_on_enable() {
         ..Default::default()
     };
     let mut plugin = SpectralCompressorPlugin::from_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let fft_size = plugin.fft_size;
     for frame in 0..fft_size {
         plugin.stft.input_buffers[0][frame] =
@@ -491,8 +491,8 @@ fn targeted_reset_matches_fresh_instance_for_initial_hops() {
         };
         let mut reset_plugin = SpectralCompressorPlugin::from_params(1, params.clone());
         let mut fresh_plugin = SpectralCompressorPlugin::from_params(1, params);
-        reset_plugin.initialize(48_000).unwrap();
-        fresh_plugin.initialize(48_000).unwrap();
+        reset_plugin.initialize(48_000.0).unwrap();
+        fresh_plugin.initialize(48_000.0).unwrap();
 
         let mut precondition = vec![0.0; 8192];
         for (frame, sample) in precondition.iter_mut().enumerate() {
@@ -545,7 +545,7 @@ fn targeted_processing_has_no_cross_channel_control_leakage_at_twelve_channels()
             ..Default::default()
         };
         let mut plugin = SpectralCompressorPlugin::from_params(12, params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 8192;
         let mut audio = vec![0.0; frames * 12];
         for frame in 0..frames {

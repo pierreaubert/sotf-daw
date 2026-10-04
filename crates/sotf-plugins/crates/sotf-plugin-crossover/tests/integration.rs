@@ -25,7 +25,7 @@ fn lr24_lowpass_happy_path() {
     let mut plugin = CrossoverPlugin::new(2, "LR24", 1000.0, "low").unwrap();
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.5f32; 64 * 2];
     let mut output = vec![0.0f32; 64 * 2];
@@ -37,7 +37,7 @@ fn lr24_lowpass_happy_path() {
 #[test]
 fn lr24_highpass_reduces_dc() {
     let mut plugin = CrossoverPlugin::new(1, "LR24", 500.0, "high").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.8f32; 256];
     let mut output = vec![0.0f32; 256];
@@ -63,7 +63,7 @@ fn multiway_three_way_output_channels() {
     // 2 input channels * 3 bands
     assert_eq!(plugin.output_channels(), 6);
     let mut plugin = plugin;
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.3f32; 128 * 2];
     let mut output = vec![0.0f32; 128 * 6];
@@ -83,7 +83,7 @@ fn linear_phase_has_latency() {
 #[test]
 fn frequency_set_get_roundtrip() {
     let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     plugin
         .set_parameter(
@@ -101,7 +101,7 @@ fn frequency_set_get_roundtrip() {
 #[test]
 fn mode_is_structural_and_requires_rebuild() {
     let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(plugin.output_channels(), 1);
     assert!(
         plugin
@@ -125,7 +125,7 @@ fn mode_is_structural_and_requires_rebuild() {
 #[test]
 fn extra_frequency_roundtrip() {
     let mut plugin = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[2000.0]).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     plugin
         .set_parameter(
@@ -143,7 +143,7 @@ fn extra_frequency_roundtrip() {
 #[test]
 fn fir_taps_live_update_requires_graph_rebuild() {
     let mut plugin = CrossoverPlugin::new(1, "FIR", 1000.0, "low").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let result = plugin.set_parameter(ParameterId::from("fir_taps"), ParameterValue::Int(101));
     assert!(
@@ -160,7 +160,7 @@ fn fir_taps_live_update_requires_graph_rebuild() {
 #[test]
 fn fir_frequency_live_update_requires_graph_rebuild() {
     let mut plugin = CrossoverPlugin::new(1, "FIR", 1000.0, "low").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let result = plugin.set_parameter(
         ParameterId::from("frequency"),
@@ -186,7 +186,7 @@ fn per_channel_live_cutoff_rejects_values_above_current_nyquist() {
         vec![sotf_plugin_crossover::PerChannelOpMode::Lowpass],
     )
     .unwrap();
-    plugin.initialize(32_000).unwrap();
+    plugin.initialize(32_000.0).unwrap();
 
     let result = plugin.set_parameter(
         ParameterId::from("channel_frequency_0"),
@@ -220,7 +220,7 @@ fn from_params_happy_path() {
     let mut plugin = CrossoverPlugin::from_params(2, &params).unwrap();
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 6);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.1f32; 64 * 2];
     let mut output = vec![0.0f32; 64 * 6];
@@ -239,7 +239,7 @@ fn per_channel_mode_happy_path() {
     assert!(plugin.is_per_channel());
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(plugin.output_channels(), 2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.5f32, -0.5f32, 0.5f32, -0.5f32];
     let mut output = vec![0.0f32; 4];
@@ -287,7 +287,7 @@ fn initialized_per_channel_controls_require_graph_rebuild() {
     let mut plugin =
         CrossoverPlugin::new_per_channel("LR24", vec![200.0], vec![PerChannelOpMode::Lowpass])
             .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     for (id, value) in [
         ("channel_frequency_0", ParameterValue::Float(350.0)),
         ("channel_mode_0", ParameterValue::String("mute".into())),
@@ -302,7 +302,7 @@ fn initialized_per_channel_controls_require_graph_rebuild() {
 #[test]
 fn multiway_frequency_crossing_is_rejected_without_rebinding_ids() {
     let mut plugin = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[2_000.0]).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert!(
         plugin
             .set_parameter(
@@ -323,7 +323,7 @@ fn multiway_frequency_crossing_is_rejected_without_rebinding_ids() {
 
 fn render_partitioned(partitions: &[usize]) -> Vec<f32> {
     let mut plugin = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[2_000.0]).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("frequency"), ParameterValue::Float(800.0))
         .unwrap();
@@ -375,7 +375,7 @@ fn lr_multiway_recombination_is_allpass_at_every_test_frequency() {
     for frequency_hz in [80.0_f32, 300.0, 700.0, 1_500.0, 3_500.0, 9_000.0] {
         let mut plugin =
             CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[2_000.0, 6_000.0]).unwrap();
-        plugin.initialize(SR).unwrap();
+        plugin.initialize(f64::from(SR)).unwrap();
         let frames = 16_384;
         let input: Vec<f32> = (0..frames)
             .map(|frame| {
@@ -428,7 +428,7 @@ fn per_channel_mode_roundtrip() {
 #[test]
 fn reset_clears_state() {
     let mut plugin = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut output = vec![0.0f32; 64];
     plugin

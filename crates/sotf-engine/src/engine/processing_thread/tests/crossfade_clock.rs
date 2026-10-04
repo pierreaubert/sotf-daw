@@ -1,10 +1,12 @@
 //! Independent clock oracles for live host transitions.
 
 use super::{ProcessingState, handle_processing_command, request};
-use crate::engine::{PreparedHostUpdate, ProcessingCommand};
+use crate::engine::{PreparedHostUpdate, ProcessingCommand, ProcessingResponse};
 use sotf_plugins::{
     Parameter, ParameterId, ParameterValue, Plugin, PluginHost, PluginInfo, ProcessContext,
 };
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// A constant signal generator with rational frame accounting. Optional
 /// chunking separates accepted input time from the emitted audio timeline.
@@ -40,8 +42,8 @@ impl Plugin for ClockSignal {
         self.accepted = 0;
         self.emitted = 0;
     }
-    fn output_sample_rate(&self, _: u32) -> u32 {
-        self.output_rate
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from(self.output_rate)
     }
     fn output_frames_for_input(&self, input_frames: usize) -> usize {
         ((input_frames + self.chunk) * self.output_rate as usize).div_ceil(self.input_rate as usize)
@@ -52,7 +54,7 @@ impl Plugin for ClockSignal {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
-        assert_eq!(context.sample_rate, self.input_rate);
+        assert_eq!(context.sample_rate, f64::from(self.input_rate));
         self.accepted += context.num_frames;
         let ready = self.accepted / self.chunk * self.chunk;
         let target = ready * self.output_rate as usize / self.input_rate as usize;
@@ -216,4 +218,112 @@ fn crossfade_new_update_restarts_clock_and_empty_callbacks_preserve_it() {
     assert_eq!(state.process_frame(&[], &mut [], 0).unwrap(), 0);
     state.process_frame(&[0.0; 600], &mut output, 600).unwrap();
     assert_eq!(state.crossfade_progress, 0.25);
+}
+
+struct NegotiatedRateProbe(Arc<AtomicU64>);
+
+impl Plugin for NegotiatedRateProbe {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Negotiated rate probe", "1", "Test")
+    }
+
+    fn input_channels(&self) -> usize {
+        1
+    }
+
+    fn output_channels(&self) -> usize {
+        1
+    }
+
+    fn parameters(&self) -> Vec<Parameter> {
+        Vec::new()
+    }
+
+    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+        Err("No parameters".into())
+    }
+
+    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+        None
+    }
+
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from_bits(self.0.load(Ordering::Relaxed))
+    }
+
+    fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        output.copy_from_slice(input);
+        Ok(context.num_frames)
+    }
+}
+
+#[test]
+fn invalid_prepared_clock_cannot_commit_or_replace_the_active_host() {
+    let rate = Arc::new(AtomicU64::new(48_000.0_f64.to_bits()));
+    let mut candidate = PluginHost::new(1, 48_000);
+    candidate
+        .add_plugin(Box::new(NegotiatedRateProbe(Arc::clone(&rate))))
+        .unwrap();
+    candidate.build().unwrap();
+    let prepared = PreparedHostUpdate::prepare(candidate, 48_000, 1, 0).unwrap();
+    rate.store(f64::NAN.to_bits(), Ordering::Relaxed);
+
+    let mut state = ProcessingState::new(
+        1,
+        48_000,
+        #[cfg(feature = "streaming")]
+        None,
+    );
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(4);
+    handle_processing_command(
+        request(ProcessingCommand::CommitHostUpdate(prepared)),
+        &mut state,
+        &response_tx,
+        &event_tx,
+    );
+    let response = response_rx.recv().unwrap().response;
+    assert!(matches!(response, ProcessingResponse::Error(_)));
+    assert_eq!(state.host.plugin_count(), 0);
+    assert!(state.prev_host.is_none());
+    assert_eq!(state.output_sample_rate(48_000).unwrap(), 48_000);
+}
+
+#[test]
+fn prepared_integer_clock_is_reported_without_conversion() {
+    let rate = Arc::new(AtomicU64::new(96_000.0_f64.to_bits()));
+    let mut candidate = PluginHost::new(1, 48_000);
+    candidate
+        .add_plugin(Box::new(NegotiatedRateProbe(rate)))
+        .unwrap();
+    candidate.build().unwrap();
+    let prepared = PreparedHostUpdate::prepare(candidate, 48_000, 1, 0).unwrap();
+    let mut state = ProcessingState::new(
+        1,
+        48_000,
+        #[cfg(feature = "streaming")]
+        None,
+    );
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(4);
+    handle_processing_command(
+        request(ProcessingCommand::CommitHostUpdate(prepared)),
+        &mut state,
+        &response_tx,
+        &event_tx,
+    );
+    let response = response_rx.recv().unwrap().response;
+    assert!(matches!(
+        response,
+        ProcessingResponse::PluginChainUpdated {
+            output_sample_rate: 96_000,
+            ..
+        }
+    ));
+    assert_eq!(state.output_sample_rate(48_000).unwrap(), 96_000);
 }

@@ -9,7 +9,7 @@ static A: CountingAlloc = CountingAlloc;
 
 fn main() {
     let mut plugin = HissReducerPlugin::new(2);
-    plugin.initialize(48_000).expect("initialize QA plugin");
+    plugin.initialize(48_000.0).expect("initialize QA plugin");
     let mut plugin = ParametricInPlacePluginAdapter::new(plugin);
     run_standard_tests(&mut plugin, "HissReducerPlugin");
 
@@ -21,7 +21,7 @@ fn main() {
         )
         .expect("enable spectral QA mode");
     spectral
-        .initialize(48_000)
+        .initialize(48_000.0)
         .expect("initialize spectral QA plugin");
     let mut spectral = ParametricInPlacePluginAdapter::new(spectral);
     run_standard_tests(&mut spectral, "HissReducerPlugin spectral");

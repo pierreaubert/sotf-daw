@@ -599,8 +599,8 @@ impl Plugin for CostClassPlugin {
         self.realtime_quantum_frames
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        self.output_sample_rate.unwrap_or(input_rate)
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        self.output_sample_rate.map(f64::from).unwrap_or(input_rate)
     }
 }
 

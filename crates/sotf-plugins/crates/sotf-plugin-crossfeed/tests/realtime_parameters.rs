@@ -8,7 +8,7 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 #[test]
 fn realtime_parameter_updates_and_reset_do_not_allocate() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let updates = [
         ("mix", ParameterValue::Float(0.5)),
         ("preset", ParameterValue::Int(1)),
@@ -51,7 +51,7 @@ fn hrtf_processing_does_not_allocate() {
         ..CrossfeedPluginParams::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.0; 256 * 2];
     buffer[0] = 1.0;
     assert_no_allocs("Crossfeed HRTF processing", || {

@@ -403,7 +403,7 @@ fn measure_drive(
     let settle_frames = sample_rate as usize / SETTLE_DIVISOR as usize;
     let total_frames = settle_frames + MEASURE_FRAMES;
     let mut plugin = CrossfeedPlugin::new(params.clone()).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let mut input = Vec::with_capacity(total_frames * 2);
     for n in 0..total_frames {
         let phase = omega * n as f64;
@@ -773,7 +773,7 @@ fn transfer_off_is_bit_exact_identity() {
         ..CrossfeedPluginParams::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input: Vec<f32> = (0..4096)
         .flat_map(|n| {
             let tone = (0.4 * (2.0 * PI * 7.0 * f64::from(n) / 4096.0).cos()) as f32;
@@ -878,7 +878,7 @@ fn measure_cross_onset(
         ..CrossfeedPluginParams::default()
     };
     let mut plugin = CrossfeedPlugin::new(params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = sample_rate as usize / 100;
     let mut input = vec![0.0f32; frames * 2];
     input[if drive_left { 0 } else { 1 }] = 1.0;
@@ -931,7 +931,7 @@ fn hrtf_fold_preserved_all_rates_partitions() {
         };
         for partition in PARTITIONS {
             let mut plugin = CrossfeedPlugin::new(params.clone()).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let frames = rate as usize / 10;
             let mut input = Vec::with_capacity(frames * 2);
             for n in 0..frames {

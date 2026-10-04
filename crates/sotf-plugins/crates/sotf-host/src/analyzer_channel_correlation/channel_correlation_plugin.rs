@@ -22,7 +22,7 @@ use std::sync::Arc;
 /// `PluginType::ChannelCorrelation` variant.
 pub struct ChannelCorrelationPlugin {
     pub(super) num_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) enabled: bool,
     pub(super) cache: RealTimeCache<CorrelationData>,
     pub(super) monitor: ChannelCorrelationMonitor,
@@ -41,7 +41,7 @@ impl ChannelCorrelationPlugin {
         {
             return Err("Channel correlation matrix capacity overflow".into());
         }
-        let sr = 48000;
+        let sr = 48000.0;
         let monitor = ChannelCorrelationMonitor::new(num_channels, sr);
         let cache = RealTimeCache::new_triplet(
             CorrelationData::new(num_channels),
@@ -108,8 +108,8 @@ impl Plugin for ChannelCorrelationPlugin {
             None
         }
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 {
             return Err("Channel correlation sample rate must be positive".into());
         }
         self.sample_rate = sr;

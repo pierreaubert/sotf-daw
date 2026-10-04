@@ -17,7 +17,7 @@ mod tests {
         assert_eq!(param_val, Some(ParameterValue::Bool(true)));
 
         // Initialize
-        denoiser.initialize(44100).unwrap();
+        denoiser.initialize(44100.0).unwrap();
 
         // Process a silence buffer (should not crash)
         let mut buffer = vec![0.0; 2048 * 2]; // 2048 frames * 2 channels

@@ -25,7 +25,7 @@ pub struct OversampledPlugin<P: InPlacePlugin> {
     pub(super) oversampler: Oversampler,
     pub(super) factor: u32,
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     /// Pre-allocated interleaved buffer for oversampled processing
     pub(super) os_interleaved: Vec<f32>,
     next_os_context: ProcessContext<'static>,
@@ -71,9 +71,9 @@ impl<P: InPlacePlugin> OversampledPlugin<P> {
             oversampler,
             factor,
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             os_interleaved: vec![0.0; os_buf_size],
-            next_os_context: ProcessContext::new(48_000 * factor, 0),
+            next_os_context: ProcessContext::new(f64::from(48_000 * factor), 0),
             initialized: false,
             drain_prepared: false,
         })
@@ -113,10 +113,13 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
         self.inner.get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        let os_rate = sample_rate * f64::from(self.factor);
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || !os_rate.is_finite() {
+            return Err("Oversampled sample rate must be finite and positive".into());
+        }
         self.sample_rate = sample_rate;
         // Initialize inner plugin at the oversampled rate
-        let os_rate = sample_rate * self.factor;
         self.inner.initialize(os_rate)?;
         let drain_frames = self.inner.drain_output_frames_max();
         let drain_samples = drain_frames

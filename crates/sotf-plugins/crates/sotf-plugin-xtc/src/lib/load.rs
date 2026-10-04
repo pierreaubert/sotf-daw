@@ -14,9 +14,10 @@ use sotf_host::sofa::{SourcePosition, load_sofa};
 pub(super) fn load_hrtf_for_xtc(
     hrtf_path: &str,
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
 ) -> Result<Option<HrtfTransferFunctions>, String> {
+    let sample_rate = sample_rate.into();
     let path = std::path::Path::new(hrtf_path);
     if !path.exists() {
         return Err(format!("HRTF file not found: {}", hrtf_path));
@@ -34,7 +35,7 @@ pub(super) fn load_hrtf_for_xtc(
          Resample the file and ensure it carries a valid DataSamplingRate attribute."
             .to_string()
     })?;
-    if (sofa_sr - sample_rate as f32).abs() > 1.0 {
+    if (sofa_sr - sample_rate).abs() > 1.0 {
         return Err(format!(
             "SOFA sample rate ({} Hz) differs from plugin sample rate ({} Hz). \
              Resample the SOFA file or match sample rates.",
@@ -118,14 +119,15 @@ pub(super) fn load_hrtf_for_xtc(
 
 pub(super) fn load_roomeq_recommended_filters(
     artifact_path: &str,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
 ) -> Result<XtcFilters, String> {
+    let sample_rate = sample_rate.into();
     let bytes = std::fs::read(artifact_path)
         .map_err(|e| format!("Failed to read roomEQ recommended matrix: {}", e))?;
     let artifact: RoomeqRecommendedMatrix = serde_json::from_slice(&bytes)
         .map_err(|e| format!("Invalid roomEQ recommended matrix JSON: {}", e))?;
-    if artifact.sample_rate != sample_rate {
+    if f64::from(artifact.sample_rate) != sample_rate {
         return Err(format!(
             "roomEQ recommended matrix sample rate {} Hz differs from plugin sample rate {} Hz",
             artifact.sample_rate, sample_rate
@@ -180,7 +182,7 @@ pub(super) fn load_roomeq_recommended_filters(
 
 pub(super) fn validate_roomeq_recommended_source(
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: f64,
     num_bins: usize,
 ) -> Result<(), String> {
     if params.source_mode != "roomeq_recommended" {

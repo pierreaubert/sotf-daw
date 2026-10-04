@@ -31,7 +31,7 @@ fn qa_spectrum_analyzer() {
     println!("--- Spectrum Analyzer ---");
 
     let mut plugin = SpectrumAnalyzerPlugin::new(2).expect("create spectrum analyzer");
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     run_standard_tests(&mut plugin, "SpectrumAnalyzer");
 
@@ -65,7 +65,7 @@ fn qa_loudness_monitor() {
     println!("\n--- Loudness Monitor ---");
 
     let mut plugin = LoudnessMonitorPlugin::new(2).expect("create loudness monitor");
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     run_standard_tests(&mut plugin, "LoudnessMonitor");
 
@@ -128,7 +128,7 @@ fn qa_oversampled_plugin() {
     let inner = sotf_host::ParametricInPlacePluginAdapter::new(PassthroughPlugin);
     let os = OversampledPlugin::new(inner, 4, 2).expect("create oversampled plugin");
     let mut plugin = InPlacePluginAdapter::new(os);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     run_standard_tests(&mut plugin, "OversampledPlugin_4x");
 

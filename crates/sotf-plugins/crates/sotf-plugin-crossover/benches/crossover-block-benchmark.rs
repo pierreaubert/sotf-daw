@@ -16,7 +16,7 @@ fn bench_setup(
     group.bench_function(id, |bencher| {
         bencher.iter(|| {
             let mut plugin = create();
-            plugin.initialize(SAMPLE_RATE).unwrap();
+            plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
             black_box(plugin)
         });
     });
@@ -67,7 +67,7 @@ fn bench_plugin(
     frames: usize,
     mut plugin: CrossoverPlugin,
 ) {
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input: Vec<f32> = (0..frames * plugin.input_channels())
         .map(|index| ((index % 101) as f32 - 50.0) / 101.0)
         .collect();

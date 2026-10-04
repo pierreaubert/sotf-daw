@@ -4,23 +4,24 @@ use super::invalid::invalid_input;
 use super::plugin_ipc_header::audio_base_offset;
 use std::io;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PluginIpcLayout {
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     pub max_frames: u32,
     pub input_channels: u32,
     pub output_channels: u32,
 }
 
 impl PluginIpcLayout {
-    pub fn new(
-        sample_rate: u32,
+    pub fn new<S: Into<f64>>(
+        sample_rate: S,
         max_frames: u32,
         input_channels: u32,
         output_channels: u32,
     ) -> io::Result<Self> {
-        if sample_rate == 0 {
-            return Err(invalid_input("sample_rate must be non-zero"));
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err(invalid_input("sample_rate must be finite and positive"));
         }
         if max_frames == 0 || max_frames > MAX_PLUGIN_IPC_FRAMES {
             return Err(invalid_input(format!(

@@ -14,7 +14,7 @@ fn main() {
     };
 
     let mut plugin = AecPlugin::from_params(sample_rate, params).expect("valid QA configuration");
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: AEC Plugin ===");
 

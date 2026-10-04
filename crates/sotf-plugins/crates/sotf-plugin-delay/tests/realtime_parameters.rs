@@ -36,7 +36,7 @@ fn cold_scalar_reads_match_snapshots_without_allocating() {
         DelayPlugin::new(2, 100.0, 0.3, 0.5),
         DelayPlugin::new_per_channel(vec![2.0, 7.0, 13.0]).unwrap(),
     ] {
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let expected = plugin.current_values();
         let unknown = ParameterId::from("missing");
         let invalid_channel = ParameterId::from("delay_ms_64");

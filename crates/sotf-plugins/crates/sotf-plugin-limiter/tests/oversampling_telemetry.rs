@@ -14,7 +14,7 @@ fn make(rate: u32, channels: usize, choice: i32, mix: f32, isp: bool) -> Limiter
     }))
     .unwrap();
     let mut plugin = LimiterPlugin::from_params(channels, params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

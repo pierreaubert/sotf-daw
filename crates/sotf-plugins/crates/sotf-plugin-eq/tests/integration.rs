@@ -34,7 +34,7 @@ fn measured_sine_gain_db(filter_type: &str, shelf_hz: f64, test_hz: f32, gain_db
         auto_gain: AutoGainParams::default(),
     };
     let mut plugin = EqPlugin::from_params(1, SAMPLE_RATE, params).unwrap();
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     let frames = SAMPLE_RATE as usize;
     let input: Vec<f32> = (0..frames)
         .map(|frame| {
@@ -129,7 +129,7 @@ fn parameters_include_global_and_band_params() {
 #[test]
 fn empty_chain_is_exact_passthrough() {
     let mut plugin = EqPlugin::new(2, vec![]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|i| ((i % 13) as f32 - 6.0) / 7.0)
@@ -214,8 +214,8 @@ fn compiled_biquad_bank_matches_regular_process() {
     };
     let mut regular = EqPlugin::new(2, filters());
     let mut compiled = EqPlugin::new(2, filters());
-    regular.plugin_initialize(SAMPLE_RATE).unwrap();
-    compiled.plugin_initialize(SAMPLE_RATE).unwrap();
+    regular.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+    compiled.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input: Vec<f32> = (0..FRAMES * 2)
         .map(|i| (((i * 37) % 101) as f32 - 50.0) / 51.0)
@@ -254,7 +254,7 @@ fn compiled_biquad_bank_matches_regular_process() {
 #[test]
 fn plugin_adapter_exposes_plugin_trait() {
     let mut plugin = ParametricPluginAdapter::new(EqPlugin::new(1, vec![]));
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     assert_eq!(plugin.input_channels(), 1);
     assert_eq!(plugin.output_channels(), 1);
@@ -288,7 +288,7 @@ fn plugin_adapter_exposes_plugin_trait() {
 #[test]
 fn parameter_roundtrip_global_params() {
     let mut plugin = EqPlugin::new(2, vec![]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(2))
@@ -333,7 +333,7 @@ fn parameter_roundtrip_global_params() {
 fn parameter_roundtrip_band_params() {
     let f = Biquad::new(BiquadFilterType::Peak, 1000.0, SAMPLE_RATE as f64, 1.0, 0.0);
     let mut plugin = EqPlugin::new(1, vec![f]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .parametric_set_parameter(
@@ -380,7 +380,7 @@ fn parameter_roundtrip_band_params() {
 fn topology_switch_to_svf_produces_finite_output() {
     let f = Biquad::new(BiquadFilterType::Peak, 1000.0, SAMPLE_RATE as f64, 1.0, 6.0);
     let mut plugin = EqPlugin::new(2, vec![f]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .parametric_set_parameter(
@@ -405,7 +405,7 @@ fn topology_switch_to_svf_produces_finite_output() {
 #[test]
 fn oversampling_switch_updates_internal_state() {
     let mut plugin = EqPlugin::new(1, vec![]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Enable 2x oversampling
     plugin
@@ -448,7 +448,7 @@ fn reset_returns_detinistic_state() {
         0.0,
     );
     let mut plugin = EqPlugin::new(1, vec![f]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input: Vec<f32> = (0..FRAMES).map(|i| ((i % 5) as f32) / 5.0).collect();
 
@@ -483,7 +483,7 @@ fn reset_returns_detinistic_state() {
 #[test]
 fn invalid_oversampling_factor_errors() {
     let mut plugin = EqPlugin::new(1, vec![]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let result =
         plugin.parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(3));
@@ -495,7 +495,7 @@ fn invalid_oversampling_factor_errors() {
 fn odd_band_order_errors() {
     let f = Biquad::new(BiquadFilterType::Peak, 1000.0, SAMPLE_RATE as f64, 1.0, 0.0);
     let mut plugin = EqPlugin::new(1, vec![f]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let result =
         plugin.parametric_set_parameter(ParameterId::from("band_0_order"), ParameterValue::Int(3));
@@ -506,7 +506,7 @@ fn odd_band_order_errors() {
 #[test]
 fn unknown_parameter_errors() {
     let mut plugin = EqPlugin::new(1, vec![]);
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let result = plugin.parametric_set_parameter(
         ParameterId::from("not_a_real_param"),

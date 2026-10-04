@@ -78,7 +78,7 @@ fn hosted_spectral() -> HostedHiss {
         },
     );
     let mut hosted = HostedHiss::new(plugin);
-    hosted.initialize(RATE).unwrap();
+    hosted.initialize(f64::from(RATE)).unwrap();
     hosted
 }
 
@@ -131,6 +131,45 @@ fn regional_mean(spectrum: &[f32], lo_bin: usize, hi_bin: usize) -> f64 {
 }
 
 #[test]
+fn fractional_clock_capture_publishes_v3_snapshot_and_restores_exact_rate() {
+    let rate = 12_345.678_f64;
+    let frames = rate.round() as usize;
+    let mut hosted = HostedHiss::new(HissReducerPlugin::from_params(
+        1,
+        HissReducerPluginParams {
+            spectral_mode: true,
+            ..HissReducerPluginParams::default()
+        },
+    ));
+    hosted.initialize(rate).unwrap();
+    hosted_learn(&mut hosted, true);
+    let mut noise = lcg_noise(frames, 0.03, 0x4567);
+    for block in noise.chunks_mut(257) {
+        hosted
+            .process_in_place(block, &ProcessContext::new(rate, block.len()))
+            .unwrap();
+    }
+    let export = hosted_snapshot(&hosted).try_export().unwrap().unwrap();
+    assert_eq!(export.profile.format_version, 3);
+    assert_eq!(export.profile.sample_rate, rate);
+    assert_eq!(export.profile.frames_analyzed, frames as u64);
+    assert_eq!(export.profile.spectral.as_ref().unwrap().sample_rate, rate);
+    assert_eq!(
+        serde_json::to_value(&export.profile).unwrap()["sample_rate"].as_f64(),
+        Some(rate)
+    );
+
+    let mut restored = HissReducerPlugin::new(1);
+    restored.initialize(rate).unwrap();
+    restored.restore_profile(&export.profile).unwrap();
+    assert_eq!(restored.persisted_params().captured_profile, Some(export.profile.clone()));
+    let mut invalid = export.profile.clone();
+    invalid.sample_rate = f64::NAN;
+    assert!(restored.restore_profile(&invalid).is_err());
+    assert_eq!(restored.persisted_params().captured_profile, Some(export.profile));
+}
+
+#[test]
 fn hosted_capture_export_reconstruct_bitexact() {
     let mut hosted = hosted_spectral();
     // get_data is Some from construction, before any capture or init work
@@ -149,7 +188,7 @@ fn hosted_capture_export_reconstruct_bitexact() {
     let export = snapshot.try_export().unwrap().expect("capture must export");
     assert_eq!(export.profile.format_version, 2);
     assert_eq!(export.profile.channels, 1);
-    assert_eq!(export.profile.sample_rate, RATE);
+    assert_eq!(export.profile.sample_rate, f64::from(RATE));
     let spectral = export.profile.spectral.as_ref().expect("v2 spectrum");
     assert_eq!(spectral.power_per_channel_bin.len(), NUM_BINS);
     assert_eq!(spectral.hops_analyzed, 184);
@@ -199,7 +238,7 @@ fn hosted_capture_export_reconstruct_bitexact() {
             ..HissReducerPluginParams::default()
         },
     );
-    rebuilt.initialize(RATE).unwrap();
+    rebuilt.initialize(f64::from(RATE)).unwrap();
     rebuilt.restore_profile(&export.profile).unwrap();
     let mut rebuilt_out = mix.clone();
     let mut pos = 0;
@@ -232,7 +271,7 @@ fn snapshot_v1_v2_payload_roundtrip_without_action_replay() {
     // v1 floors-only blob exports exactly, with floor fallback engaged.
     let v1 = NoiseProfileData {
         format_version: 1,
-        sample_rate: RATE,
+        sample_rate: f64::from(RATE),
         channels: 1,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![-40.0],
@@ -248,7 +287,7 @@ fn snapshot_v1_v2_payload_roundtrip_without_action_replay() {
         )
         .unwrap();
     hosted = HostedHiss::new(inner);
-    hosted.initialize(RATE).unwrap();
+    hosted.initialize(f64::from(RATE)).unwrap();
     let snapshot = hosted_snapshot(&hosted);
     let export = snapshot.try_export().unwrap().expect("v1 must export");
     assert_eq!(export.profile, v1);
@@ -282,7 +321,7 @@ fn snapshot_v1_v2_payload_roundtrip_without_action_replay() {
             ..HissReducerPluginParams::default()
         },
     );
-    rebuilt.initialize(RATE).unwrap();
+    rebuilt.initialize(f64::from(RATE)).unwrap();
     rebuilt.restore_profile(&reloaded).unwrap();
     assert!(!rebuilt.is_capturing(), "restore must not start capture");
     assert!(rebuilt.has_captured_profile());
@@ -375,11 +414,11 @@ fn snapshot_reset_retains_crossrate_falls_back_use_toggles() {
 
     // Cross-rate: payload keeps capture metadata while engagement falls
     // back to floors; nothing is silently remapped.
-    hosted.initialize(96_000).unwrap();
+    hosted.initialize(96_000.0).unwrap();
     let crossed = snapshot.try_export().unwrap().expect("cross-rate keeps");
     assert_eq!(crossed.profile, before.profile);
-    assert_eq!(crossed.profile.sample_rate, RATE);
-    assert_eq!(crossed.processing_rate, 96_000);
+    assert_eq!(crossed.profile.sample_rate, f64::from(RATE));
+    assert_eq!(crossed.processing_rate, 96_000.0);
     assert!(!crossed.engaged);
     assert_eq!(
         snapshot.try_status().unwrap().fallback,
@@ -436,7 +475,7 @@ fn malformed_restore_keeps_generation_profile_and_audio() {
         .pop();
     let bad_channels = NoiseProfileData {
         format_version: 1,
-        sample_rate: RATE,
+        sample_rate: f64::from(RATE),
         channels: 2,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: vec![-40.0, -41.0],
@@ -556,7 +595,7 @@ fn snapshot_paths_do_not_allocate_or_free() {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let warm = vec![0.01; 4096];
     let mut warm_block = warm.clone();
     plugin
@@ -626,7 +665,7 @@ fn snapshot_paths_do_not_allocate_or_free() {
     // carrier clone on profile-carrying reinit stays control-thread).
     plugin.clear_captured_profile();
     let (allocs, frees) = measure_heap_activity(|| {
-        plugin.initialize(96_000).unwrap();
+        plugin.initialize(96_000.0).unwrap();
     });
     assert_eq!((allocs, frees), (0, 0), "rate init heap activity");
 

@@ -65,7 +65,7 @@ static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
 fn make(quality: ResamplerQuality, channels: usize, smoothing: bool) -> ResamplerPlugin {
     let mut plugin = ResamplerPlugin::with_quality(channels, RATE, RATE, CHUNK, quality).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dynamic_ratio"),
@@ -406,7 +406,7 @@ fn cold_smoothed_changes_process_drain_and_reset_do_not_allocate_or_free() {
     for quality in QUALITIES {
         let mut plugin =
             ResamplerPlugin::with_quality(2, RATE, 44_100, CHUNK, quality).unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let nominal = plugin.ratio();
         let dynamic_id = ParameterId::from("dynamic_ratio");
         let smooth_id = ParameterId::from("cutoff_smoothing");
@@ -518,7 +518,7 @@ fn smoothing_rejection_preserves_audio_and_reset_restores_nominal() {
 
     // Unity passthrough ignores the bank entirely in both modes.
     let mut passthrough = ResamplerPlugin::new(1, RATE, RATE, CHUNK).unwrap();
-    passthrough.initialize(RATE).unwrap();
+    passthrough.initialize(f64::from(RATE)).unwrap();
     passthrough
         .set_parameter(
             ParameterId::from("cutoff_smoothing"),

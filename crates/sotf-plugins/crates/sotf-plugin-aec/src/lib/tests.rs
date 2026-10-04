@@ -180,7 +180,7 @@ fn initialize_clears_partial_input_and_restores_fixed_latency() {
         .process(&input, &mut output, &ProcessContext::new(48_000, frames))
         .unwrap();
 
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     let mut zero_output = vec![1.0; DEFAULT_BLOCK_SIZE * 2];
     plugin
         .process(
@@ -222,7 +222,7 @@ fn reinitialize_matches_fresh_plugin_after_old_stream_was_queued() {
         )
         .unwrap();
 
-    reinitialized.initialize(44_100).unwrap();
+    reinitialized.initialize(44_100.0).unwrap();
     let mut fresh = AecPlugin::from_params(
         44_100,
         AecPluginParams {

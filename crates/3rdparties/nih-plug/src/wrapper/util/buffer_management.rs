@@ -389,10 +389,11 @@ impl BufferManager {
             }
             // Since these buffers are backed by our own storage, we can fill them with zeroes if
             // the pointers are missing for whatever reason that might be
-            nih_debug_assert!(input_channel_pointers.is_some());
             match input_channel_pointers {
                 Some(input_channel_pointers) => {
-                    nih_debug_assert_eq!(input_channel_pointers.num_channels, input_storage.len());
+                    // The host may omit trailing channels from a declared auxiliary
+                    // bus. The prepared storage supplies silence for those channels.
+                    nih_debug_assert!(input_channel_pointers.num_channels <= input_storage.len());
                     for (channel_idx, channel) in input_storage
                         .iter_mut()
                         .enumerate()

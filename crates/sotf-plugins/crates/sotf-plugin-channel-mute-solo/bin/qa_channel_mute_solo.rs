@@ -30,7 +30,7 @@ fn main() {
     };
 
     let mut inner = ChannelMuteSoloPlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: ChannelMuteSolo Plugin ===");
 

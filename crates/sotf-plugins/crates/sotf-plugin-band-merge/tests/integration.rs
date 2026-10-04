@@ -75,7 +75,7 @@ fn parameters_include_bands_and_per_band_controls() {
 #[test]
 fn bands_roundtrip() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert!(
         plugin
             .set_parameter(ParameterId::from("bands"), ParameterValue::Int(4))
@@ -90,7 +90,7 @@ fn bands_roundtrip() {
 #[test]
 fn band_gain_roundtrip() {
     let mut plugin = BandMergePlugin::new(1, 3).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("band_1_gain_db"),
@@ -106,7 +106,7 @@ fn band_gain_roundtrip() {
 #[test]
 fn band_mute_roundtrip() {
     let mut plugin = BandMergePlugin::new(1, 3).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("band_0_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -123,7 +123,7 @@ fn band_mute_roundtrip() {
 #[test]
 fn unity_gains_sum_bands() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.3f32;
     let input = vec![dc; FRAMES * 2]; // 2 bands, 1 channel each
@@ -145,7 +145,7 @@ fn unity_gains_sum_bands() {
 #[test]
 fn gain_db_scales_band_contribution() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("band_0_gain_db"),
@@ -175,7 +175,7 @@ fn gain_db_scales_band_contribution() {
 #[test]
 fn mute_silences_band() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("band_0_mute"), ParameterValue::Bool(true))
         .unwrap();
@@ -202,7 +202,7 @@ fn multi_channel_merge_sums_per_channel() {
     let channels = 2;
     let bands = 3;
     let mut plugin = BandMergePlugin::new(channels, bands).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.25f32;
     let input = vec![dc; FRAMES * channels * bands];
@@ -231,7 +231,7 @@ fn multi_channel_merge_sums_per_channel() {
 #[test]
 fn reconstruction_error_reported() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Request the diagnostic by reading the parameter.
     plugin.get_parameter(&ParameterId::from("reconstruction_error_db"));
@@ -257,7 +257,7 @@ fn reconstruction_error_reported() {
 #[test]
 fn reset_then_process_continues() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.5f32; FRAMES * 2];
     let mut output = vec![0.0f32; FRAMES];
@@ -277,7 +277,7 @@ fn reset_then_process_continues() {
 #[test]
 fn changing_bands_requires_plugin_rebuild() {
     let mut plugin = BandMergePlugin::new(2, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(plugin.input_channels(), 4);
 
     assert!(
@@ -296,7 +296,7 @@ fn changing_bands_requires_plugin_rebuild() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0))
         .unwrap_err();
@@ -306,7 +306,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_band_gain_for_out_of_range_band_fails() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(
             ParameterId::from("band_7_gain_db"),
@@ -319,7 +319,7 @@ fn set_band_gain_for_out_of_range_band_fails() {
 #[test]
 fn set_bands_out_of_range_fails() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("bands"), ParameterValue::Int(1))
         .unwrap_err();
@@ -329,7 +329,7 @@ fn set_bands_out_of_range_fails() {
 #[test]
 fn process_with_correct_buffer_size_succeeds() {
     let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = vec![0.5f32; FRAMES * 2];
     let mut output = vec![0.0f32; FRAMES];
     let frames = plugin

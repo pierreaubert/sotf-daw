@@ -43,7 +43,7 @@ pub(super) fn run_diagnostic(args: Vec<String>) -> Result<(), String> {
     }
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(input.sample_rate)?;
+    plugin.initialize(f64::from(input.sample_rate))?;
     let out_channels = plugin.output_channels();
 
     let file = File::create(&opts.output_path)
@@ -247,7 +247,7 @@ pub(super) fn run_isolation_variant(
     wavs_dir: Option<&Path>,
 ) -> Result<IsolationRunResult, String> {
     let mut plugin = UpmixerPlugin::from_params(variant.params.clone());
-    plugin.initialize(input.sample_rate)?;
+    plugin.initialize(f64::from(input.sample_rate))?;
     let out_channels = plugin.output_channels();
 
     let block_csv_path = blocks_dir.join(format!("{}.csv", variant.name));
@@ -352,7 +352,7 @@ pub(super) fn run_self_qa() {
     params.gains.center_spread = 0.0;
 
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Upmixer Plugin ===");
 

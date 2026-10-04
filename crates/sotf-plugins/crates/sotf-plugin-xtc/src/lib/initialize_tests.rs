@@ -78,8 +78,8 @@ fn rejected_matrix_initialization_retains_uninitialized_live_and_partial_eof_epo
                 let mut actual = XtcPlugin::new(file.params(), RATE).unwrap();
                 let mut reference = XtcPlugin::new(file.params(), RATE).unwrap();
                 if epoch > 0 {
-                    actual.initialize(RATE).unwrap();
-                    reference.initialize(RATE).unwrap();
+                    actual.initialize(f64::from(RATE)).unwrap();
+                    reference.initialize(f64::from(RATE)).unwrap();
                     for p in [&mut actual, &mut reference] {
                         p.set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
                             .unwrap();
@@ -136,7 +136,7 @@ fn rejected_matrix_initialization_retains_uninitialized_live_and_partial_eof_epo
                     }
                     _ => "sample rate",
                 };
-                let error = actual.initialize(requested_rate).expect_err(failure);
+                let error = actual.initialize(f64::from(requested_rate)).expect_err(failure);
                 assert!(error.contains(expected_error), "{failure}: {error}");
                 assert_eq!(
                     before,
@@ -239,20 +239,20 @@ fn successful_matrix_reload_and_rate_change_match_a_fresh_instance() {
                 let mut params = file.params();
                 params.auto_gain_enabled = auto_gain;
                 let mut actual = XtcPlugin::new(params.clone(), RATE).unwrap();
-                actual.initialize(RATE).unwrap();
+                actual.initialize(f64::from(RATE)).unwrap();
                 render(&mut actual, RATE, &[0.125; 4096]);
                 let mut first = vec![0.0; channels];
                 actual
                     .drain(&mut first, &ProcessContext::new(RATE, 0))
                     .unwrap();
                 std::fs::remove_file(&file.0).unwrap();
-                assert!(actual.initialize(rate).is_err());
+                assert!(actual.initialize(f64::from(rate)).is_err());
                 file.write(rate, channels);
                 let generation = actual
                     .filter_state
                     .filter_update_generation
                     .load(Ordering::Acquire);
-                actual.initialize(rate).unwrap();
+                actual.initialize(f64::from(rate)).unwrap();
                 assert_eq!(
                     actual
                         .filter_state
@@ -261,7 +261,7 @@ fn successful_matrix_reload_and_rate_change_match_a_fresh_instance() {
                     generation + 1
                 );
                 let mut fresh = XtcPlugin::new(params, rate).unwrap();
-                fresh.initialize(rate).unwrap();
+                fresh.initialize(f64::from(rate)).unwrap();
                 assert_eq!(
                     actual.diagnostics.auto_gain_frames,
                     fresh.diagnostics.auto_gain_frames
@@ -292,11 +292,11 @@ fn room_spectra_are_prepared_for_the_requested_rate() {
                 ..Default::default()
             };
             let mut actual = XtcPlugin::new(params.clone(), RATE).unwrap();
-            actual.initialize(RATE).unwrap();
+            actual.initialize(f64::from(RATE)).unwrap();
             render(&mut actual, RATE, &[0.125; 258]);
-            actual.initialize(rate).unwrap();
+            actual.initialize(f64::from(rate)).unwrap();
             let mut fresh = XtcPlugin::new(params, rate).unwrap();
-            fresh.initialize(rate).unwrap();
+            fresh.initialize(f64::from(rate)).unwrap();
             let got = actual.filter_state.room_reflection_cache.as_ref().unwrap();
             let expected = fresh.filter_state.room_reflection_cache.as_ref().unwrap();
             assert_eq!(got.h_ll_ipsi, expected.h_ll_ipsi);
@@ -354,8 +354,8 @@ fn missing_or_wrong_rate_active_room_ir_is_rejected_without_losing_its_cache() {
         };
         let mut actual = XtcPlugin::new(params.clone(), RATE).unwrap();
         let mut reference = XtcPlugin::new(params, RATE).unwrap();
-        actual.initialize(RATE).unwrap();
-        reference.initialize(RATE).unwrap();
+        actual.initialize(f64::from(RATE)).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
         assert_eq!(
             render(&mut actual, RATE, &[0.125; 34]),
             render(&mut reference, RATE, &[0.125; 34])
@@ -370,12 +370,12 @@ fn missing_or_wrong_rate_active_room_ir_is_rejected_without_losing_its_cache() {
         if !wrong_rate {
             std::fs::remove_file(&file.0).unwrap();
         }
-        let error = actual.initialize(requested_rate).unwrap_err();
+        let error = actual.initialize(f64::from(requested_rate)).unwrap_err();
         assert!(
             error.contains(if wrong_rate { "sample rate" } else { "IO:" }),
             "{error}"
         );
-        assert_eq!(actual.fft.sample_rate, RATE);
+        assert_eq!(actual.fft.sample_rate, f64::from(RATE));
         assert_eq!(
             actual
                 .filter_state
@@ -393,7 +393,7 @@ fn missing_or_wrong_rate_active_room_ir_is_rejected_without_losing_its_cache() {
         ));
         assert_eq!(tail(&mut actual, RATE), tail(&mut reference, RATE));
         write_room_ir(&file.0, requested_rate);
-        actual.initialize(requested_rate).unwrap();
-        assert_eq!(actual.fft.sample_rate, requested_rate);
+        actual.initialize(f64::from(requested_rate)).unwrap();
+        assert_eq!(actual.fft.sample_rate, f64::from(requested_rate));
     }
 }

@@ -54,8 +54,8 @@ impl Plugin for WorkPlugin {
     fn output_channels(&self) -> usize {
         1
     }
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        self.rate.unwrap_or(input_rate)
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        self.rate.map(f64::from).unwrap_or(input_rate)
     }
     fn parameters(&self) -> Vec<Parameter> {
         vec![Parameter::new_bool("restart", "Restart", false)]
@@ -113,7 +113,7 @@ impl Plugin for WorkPlugin {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         if let Some(expected) = self.expected_rate {
-            assert_eq!(context.sample_rate, expected);
+            assert_eq!(context.sample_rate, f64::from(expected));
         }
         if std::mem::take(&mut self.error_once) {
             return Err("retryable fixture failure".into());
@@ -313,9 +313,9 @@ fn rejected_host_rate_and_rebuild_do_not_refresh_quota_but_graph_replacement_doe
     let calls = Arc::clone(&plugin.calls);
     host.add_plugin(Box::new(plugin)).unwrap();
     assert!(!host.drain(&mut [0.0]).unwrap().complete);
-    host.config.sample_rate = 0;
+    host.config.sample_rate = 0.0;
     assert!(host.drain(&mut [0.0]).is_err());
-    host.config.sample_rate = 48_000;
+    host.config.sample_rate = 48_000.0;
     host.build().unwrap();
     assert!(!host.drain(&mut [0.0]).unwrap().complete);
     assert!(host.drain(&mut [0.0]).is_err());

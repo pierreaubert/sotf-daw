@@ -62,7 +62,7 @@ fn reported_lookahead_matches_dry_audio_at_every_supported_test_rate() {
                     let mut plugin = ParametricInPlacePluginAdapter::new(
                         MultibandExpanderPlugin::from_params(channels, params),
                     );
-                    Plugin::initialize(&mut plugin, rate).unwrap();
+                    Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
                     // A positive active delay is at least one sample; zero disables it.
                     let delay = if lookahead_ms == 0.0 {
                         0
@@ -90,7 +90,7 @@ fn spectral_dry_path_keeps_its_window_latency() {
             let mut plugin = ParametricInPlacePluginAdapter::new(
                 MultibandExpanderPlugin::from_params(channels, params),
             );
-            Plugin::initialize(&mut plugin, rate).unwrap();
+            Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
             verify_dry_delay(&mut plugin, rate, channels, 1024);
         }
     }

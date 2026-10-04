@@ -48,7 +48,7 @@ fn integration_default_parameters() {
         plugin.get_parameter(&ParameterId::from("formant_strength")),
         Some(ParameterValue::Float(0.75))
     );
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     assert!(
         plugin
             .set_parameter(
@@ -62,7 +62,7 @@ fn integration_default_parameters() {
 #[test]
 fn integration_parameter_roundtrip() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Correction strength default should be 1.0
     let v = plugin
@@ -112,8 +112,8 @@ fn formant_mode_reset_reproduces_fresh_state() {
     };
     let mut tested = PndPlugin::from_params(1, params.clone()).unwrap();
     let mut fresh = PndPlugin::from_params(1, params).unwrap();
-    tested.initialize(48_000).unwrap();
-    fresh.initialize(48_000).unwrap();
+    tested.initialize(48_000.0).unwrap();
+    fresh.initialize(48_000.0).unwrap();
     let input: Vec<f32> = (0..4_096)
         .map(|frame| {
             let time = frame as f32 / 48_000.0;
@@ -143,7 +143,7 @@ fn changing_reference_resets_reference_dependent_control_state() {
         },
     )
     .unwrap();
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
 
     let block = 1024;
     let mut phase = 0usize;
@@ -223,7 +223,7 @@ fn integration_parameter_validation_errors() {
 #[test]
 fn integration_legacy_phase_vocoder_false_uses_duration_preserving_engine() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("phase_vocoder")),
         None
@@ -255,7 +255,7 @@ fn legacy_phase_vocoder_values_deserialize_identically_and_are_not_reserialized(
         let serialized = serde_json::to_value(&params).unwrap();
         assert!(serialized.get("phase_vocoder").is_none());
         let mut plugin = PndPlugin::try_from_params(1, params).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(plugin.latency_samples(), 2047);
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("phase_vocoder")),
@@ -267,7 +267,7 @@ fn legacy_phase_vocoder_values_deserialize_identically_and_are_not_reserialized(
 #[test]
 fn integration_process_silence_and_sine() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let silence = vec![0.0f32; num_frames * 2];
@@ -293,7 +293,7 @@ fn integration_process_silence_and_sine() {
 #[test]
 fn integration_reset_clears_state() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let mut input = vec![0.0f32; num_frames * 2];
@@ -318,7 +318,7 @@ fn integration_reset_clears_state() {
 #[test]
 fn integration_process_rejects_buffer_mismatch() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let ctx = ProcessContext::new(44100, 1024);
     let input = vec![0.0f32; 1024 * 2];
@@ -335,7 +335,7 @@ fn integration_process_rejects_buffer_mismatch() {
 #[test]
 fn integration_get_data_returns_pnd_data() {
     let mut plugin = PndPlugin::new(2);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let data = plugin
         .get_data()

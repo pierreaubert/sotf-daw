@@ -43,7 +43,7 @@ fn info_channels_and_zero_latency() {
 #[test]
 fn quiet_signal_gets_no_gain_reduction() {
     let mut plugin = AnalogCompressorPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // −20 dBFS sine, threshold −18 dB: detector barely tickles; expect ~unity.
     let input = make_interleaved_sine(440.0, SR, FRAMES, 1, 0.1);
     let mut buffer = input.clone();
@@ -59,7 +59,7 @@ fn quiet_signal_gets_no_gain_reduction() {
 #[test]
 fn steady_hot_signal_matches_gain_computer() {
     let mut plugin = AnalogCompressorPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // 0 dBFS sine, threshold −12 dB, ratio 4:1, hard knee:
     // GR = (0 − (−12)) × (1 − 1/4) = 9 dB.
     for (key, value) in [
@@ -88,7 +88,7 @@ fn steady_hot_signal_matches_gain_computer() {
 #[test]
 fn makeup_and_mix_behave() {
     let mut plugin = AnalogCompressorPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     for (key, value) in [
         ("threshold", -12.0),
         ("ratio", 4.0),
@@ -127,7 +127,7 @@ fn makeup_and_mix_behave() {
 #[test]
 fn auto_makeup_recovers_level() {
     let mut plugin = AnalogCompressorPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     for (key, value) in [
         ("threshold", -12.0),
         ("ratio", 4.0),
@@ -160,7 +160,7 @@ fn auto_makeup_recovers_level() {
 #[test]
 fn color_stage_adds_character_when_driven() {
     let mut plugin = AnalogCompressorPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("analog_drive"),
@@ -191,7 +191,7 @@ fn color_stage_adds_character_when_driven() {
 #[test]
 fn parameter_roundtrip_and_rejection() {
     let mut plugin = AnalogCompressorPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // The analog model is structural (replacement allocates and
     // re-prepares on the control thread): live changes are refused, while
     // repeating the committed model stays a no-op success.
@@ -280,7 +280,7 @@ fn from_params_rejects_bad_model_and_zero_channels() {
 #[test]
 fn oversized_blocks_are_chunked() {
     let mut plugin = AnalogCompressorPlugin::new(2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let frames = 16384;
     let mut buffer = make_interleaved_sine(440.0, SR, frames, 2, 0.3);
     let context = ProcessContext::new(SR, frames);
@@ -346,7 +346,7 @@ fn analog_model_reconstruction_and_refused_bulk_preserves_history() {
             plugin
                 .set_parameter(ParameterId::from("analog_model"), model.clone())
                 .unwrap();
-            plugin.initialize(SR).unwrap();
+            plugin.initialize(f64::from(SR)).unwrap();
             plugin
                 .set_parameter(
                     ParameterId::from("analog_drive"),

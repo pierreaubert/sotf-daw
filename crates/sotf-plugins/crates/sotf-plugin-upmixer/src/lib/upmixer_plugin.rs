@@ -32,7 +32,7 @@ pub(super) struct UpmixerCore {
     /// Hop size for overlap-add (fft_size / 2 for 50% overlap)
     pub(super) hop_size: usize,
     /// Sample rate
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     /// Speaker configuration
     pub(super) speaker_config: &'static SpeakerConfig,
     /// Number of output channels (dynamic based on config)
@@ -569,7 +569,7 @@ impl UpmixerPlugin {
             "Bandpass frequency must be greater than LFE cutoff"
         );
 
-        let sample_rate = 44100; // Will be updated in initialize()
+        let sample_rate = 44_100.0; // Will be updated in initialize()
         let mut planner = RealFftPlanner::<f32>::new();
         let fft_forward = planner.plan_fft_forward(fft_size);
         let fft_inverse = planner.plan_fft_inverse(fft_size);
@@ -1314,7 +1314,7 @@ impl UpmixerPlugin {
             self.core.fft_size,
         );
 
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate <= 0.0 || self.core.fft_size == 0 {
             return;
         }
 
@@ -2096,11 +2096,14 @@ impl Plugin for UpmixerPlugin {
         param_bridge::get_parameter(UP, id, |i| self.param_value(i))
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         const MIN_SAMPLE_RATE: u32 = 8_000;
         const MAX_SAMPLE_RATE: u32 = 384_000;
 
-        if !(MIN_SAMPLE_RATE..=MAX_SAMPLE_RATE).contains(&sample_rate) {
+        if !sample_rate.is_finite()
+            || sample_rate < f64::from(MIN_SAMPLE_RATE)
+            || sample_rate > f64::from(MAX_SAMPLE_RATE)
+        {
             return Err(format!(
                 "Invalid sample rate: {} Hz (valid range: {}-{} Hz)",
                 sample_rate, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE

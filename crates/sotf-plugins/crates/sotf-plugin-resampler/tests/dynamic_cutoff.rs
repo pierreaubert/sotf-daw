@@ -79,7 +79,7 @@ fn parameters(quality: ResamplerQuality, cutoff_scale: f32) -> SincInterpolation
 fn make_plugin(output_rate: u32, quality: ResamplerQuality) -> ResamplerPlugin {
     let mut plugin =
         ResamplerPlugin::with_quality(CHANNELS, INPUT_RATE, output_rate, CHUNK, quality).unwrap();
-    plugin.initialize(INPUT_RATE).unwrap();
+    plugin.initialize(f64::from(INPUT_RATE)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("dynamic_ratio"),
@@ -381,7 +381,7 @@ fn cold_prepared_changes_and_processing_do_not_allocate_or_free() {
     for quality in QUALITIES {
         let mut plugin =
             ResamplerPlugin::with_quality(CHANNELS, INPUT_RATE, 44_100, CHUNK, quality).unwrap();
-        plugin.initialize(INPUT_RATE).unwrap();
+        plugin.initialize(f64::from(INPUT_RATE)).unwrap();
         let nominal = plugin.ratio();
         let dynamic_id = ParameterId::from("dynamic_ratio");
         let input = vec![0.125; CHUNK * CHANNELS];

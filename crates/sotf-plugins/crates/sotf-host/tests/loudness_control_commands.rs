@@ -8,7 +8,7 @@ const RATE: u32 = 48_000;
 
 fn make_plugin() -> LoudnessMonitorPlugin {
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -163,7 +163,7 @@ fn reinitialize_preserves_runtime_identity_and_request_high_water() {
     let mut plugin = make_plugin();
     let instance_id = plugin.integrated_control_instance_id();
     command(&mut plugin, instance_id, 5, "pause").unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
 
     let after_reinitialize = snapshot(&plugin);
     assert_eq!(

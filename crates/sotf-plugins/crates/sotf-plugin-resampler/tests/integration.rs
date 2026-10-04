@@ -9,7 +9,7 @@ fn render_mono(input: &[f32], partitions: &[usize], input_rate: u32, output_rate
     let mut plugin =
         ResamplerPlugin::with_quality(1, input_rate, output_rate, 64, ResamplerQuality::High)
             .unwrap();
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     let mut rendered = Vec::new();
     let mut offset = 0;
     let mut partition = 0;
@@ -61,7 +61,7 @@ fn integration_constructors_reject_invalid_configs() {
 #[test]
 fn integration_default_constructor() {
     let mut resampler = ResamplerPlugin::new_default(2, 44100, 48000).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     assert_eq!(resampler.input_channels(), 2);
     assert!((resampler.ratio() - 48000.0 / 44100.0).abs() < 1e-6);
 }
@@ -88,7 +88,7 @@ fn integration_quality_change_via_parameter() {
         ParameterValue::String("ultra".to_string()),
     );
     assert!(res.is_err());
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     assert!(
         resampler
             .set_parameter(ParameterId::from("quality"), ParameterValue::Int(1))
@@ -100,7 +100,7 @@ fn integration_quality_change_via_parameter() {
 fn integration_with_quality_constructor() {
     let mut resampler =
         ResamplerPlugin::with_quality(2, 44100, 48000, 1024, ResamplerQuality::High).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let v = resampler
         .get_parameter(&ParameterId::from("quality"))
@@ -111,7 +111,7 @@ fn integration_with_quality_constructor() {
 #[test]
 fn integration_dynamic_ratio_workflow() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
     let nominal = resampler.ratio();
 
     // Cannot change ratio while dynamic mode is disabled.
@@ -165,7 +165,7 @@ fn integration_dynamic_ratio_workflow() {
 #[test]
 fn integration_flush_drains_residual() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Process less than a full chunk: no output yet.
     let partial_frames = 512;
@@ -187,7 +187,7 @@ fn integration_flush_drains_residual() {
 #[test]
 fn integration_multiple_blocks_maintain_continuity() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let num_frames = 1024;
     let max_out = resampler.output_frames_for_input(num_frames);
@@ -216,7 +216,7 @@ fn integration_multiple_blocks_maintain_continuity() {
 #[test]
 fn integration_process_rejects_bad_input_size() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let ctx = ProcessContext::new(44100, 1024);
     let input = vec![0.0f32; 1024 * 2];
@@ -243,7 +243,7 @@ fn integration_output_frames_for_input_matches_ratio() {
 #[test]
 fn integration_reset_recoverable() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     let input = vec![0.5f32; 1024 * 2];
     let max_out = resampler.output_frames_for_input(1024);
@@ -339,7 +339,7 @@ fn complete_stream_counts_cover_all_qualities_ratios_and_residual_boundaries() {
                 let mut plugin =
                     ResamplerPlugin::with_quality(1, input_rate, output_rate, 1024, quality)
                         .unwrap();
-                plugin.initialize(input_rate).unwrap();
+                plugin.initialize(f64::from(input_rate)).unwrap();
                 let input = vec![0.25; input_frames];
                 let capacity = plugin.output_frames_for_input(input_frames);
                 let mut output = vec![0.0; capacity];
@@ -407,8 +407,8 @@ impl Plugin for RateProbe {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == self.expected_rate {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if sample_rate == f64::from(self.expected_rate) {
             Ok(())
         } else {
             Err(format!(
@@ -423,7 +423,7 @@ impl Plugin for RateProbe {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        assert_eq!(context.sample_rate, self.expected_rate);
+        assert_eq!(context.sample_rate, f64::from(self.expected_rate));
         output[..input.len()].copy_from_slice(input);
         self.tail_pending = context.num_frames > 0;
         Ok(context.num_frames)
@@ -436,7 +436,7 @@ impl Plugin for RateProbe {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        assert_eq!(context.sample_rate, self.expected_rate);
+        assert_eq!(context.sample_rate, f64::from(self.expected_rate));
         if self.tail_pending {
             output[0] = 0.125;
             self.tail_pending = false;

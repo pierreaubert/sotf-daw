@@ -49,7 +49,7 @@ pub(super) fn make_noisy_signal(
 fn test_different_sample_rates() {
     for sr in [44100u32, 48000, 96000] {
         let mut plugin = DenoiserPlugin::new(2, false);
-        plugin.initialize(sr).unwrap();
+        plugin.initialize(f64::from(sr)).unwrap();
 
         let num_frames = 2048;
         let freq = 1000.0_f32.min(sr as f32 * 0.4);

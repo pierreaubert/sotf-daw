@@ -11,7 +11,7 @@ fn test_mfcc_extractor_basic() {
     let sample_rate = 44100;
     let fft_size = 2048;
     let spectrum_size = fft_size / 2 + 1;
-    let mut extractor = MfccExtractor::new(sample_rate, fft_size);
+    let mut extractor = MfccExtractor::new(f64::from(sample_rate), fft_size);
 
     let mut freq_left = vec![Complex::new(0.0, 0.0); spectrum_size];
     let mut freq_right = vec![Complex::new(0.0, 0.0); spectrum_size];
@@ -52,7 +52,7 @@ fn test_mfcc_extractor_basic() {
 
 #[test]
 fn test_spatial_features_centered_vs_wide() {
-    let mut extractor = MfccExtractor::new(48000, 2048);
+    let mut extractor = MfccExtractor::new(48_000.0, 2048);
     let spectrum_size = 2048 / 2 + 1;
     let mut centered_l = vec![Complex::new(0.0, 0.0); spectrum_size];
     let mut centered_r = vec![Complex::new(0.0, 0.0); spectrum_size];
@@ -79,7 +79,7 @@ fn test_spatial_features_centered_vs_wide() {
 
 #[test]
 fn test_context_rolls_forward() {
-    let mut extractor = MfccExtractor::new(44100, 2048);
+    let mut extractor = MfccExtractor::new(44_100.0, 2048);
     let spectrum_size = 2048 / 2 + 1;
     let mut freq = vec![Complex::new(0.0, 0.0); spectrum_size];
     freq[20] = Complex::new(1.0, 0.0);
@@ -102,7 +102,7 @@ fn test_context_rolls_forward() {
 
 #[test]
 fn test_mfcc_extractor_silent_input() {
-    let mut extractor = MfccExtractor::new(44100, 2048);
+    let mut extractor = MfccExtractor::new(44_100.0, 2048);
     let spectrum_size = 2048 / 2 + 1;
     let freq = vec![Complex::new(0.0, 0.0); spectrum_size];
 
@@ -114,7 +114,7 @@ fn test_mfcc_extractor_silent_input() {
 
 #[test]
 fn test_mfcc_extractor_reset() {
-    let mut extractor = MfccExtractor::new(44100, 2048);
+    let mut extractor = MfccExtractor::new(44_100.0, 2048);
     let spectrum_size = 2048 / 2 + 1;
     let freq = vec![Complex::new(1.0, 0.0); spectrum_size];
 
@@ -152,7 +152,7 @@ fn test_mel_scale_roundtrip() {
 
 #[test]
 fn test_mel_filterbank_coverage() {
-    let extractor = MfccExtractor::new(44100, 2048);
+    let extractor = MfccExtractor::new(44_100.0, 2048);
 
     for (i, filter) in extractor.mel_filters.iter().enumerate() {
         assert!(filter.len > 0, "Mel filter band {} has no weights", i);

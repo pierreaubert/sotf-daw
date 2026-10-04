@@ -41,7 +41,7 @@ fn linked_range_processing_does_not_allocate() {
             ..Default::default()
         };
         let mut plugin = DeEsserPlugin::from_params(2, params).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let context = ProcessContext::new(48_000, 257);
         let mut signal = vec![0.4; context.num_frames * 2];
         // Include multiple diagnostic publications and hold a snapshot so the
@@ -88,7 +88,7 @@ fn cold_first_process_call_does_not_allocate_on_new_paths() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         assert_eq!(plugin.input_channels(), if external { 4 } else { 2 });
         let frames = 256;
         let mut signal = vec![0.4; frames * plugin.input_channels()];
@@ -122,7 +122,7 @@ fn drain_and_reset_do_not_allocate() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     // Stream engaged input first, outside the measured region.
     let stride = plugin.input_channels();
     assert_eq!(stride, 4);

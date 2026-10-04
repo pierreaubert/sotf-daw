@@ -8,7 +8,7 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 #[test]
 fn realtime_parameter_updates_do_not_allocate() {
     let mut plugin = HissReducerPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let updates = [
         ("enabled", ParameterValue::Bool(false)),
         ("threshold_db", ParameterValue::Float(-36.0)),
@@ -41,7 +41,7 @@ fn new_control_setters_do_not_allocate() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         // Identifiers are built outside: Arc construction allocates,
         // cloning is a refcount bump.
         let updates = [
@@ -96,7 +96,7 @@ fn host_reachable_values_are_accepted_without_allocating() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let updates = [
             ("enabled", ParameterValue::Bool(true)),
             ("enabled", ParameterValue::Bool(false)),
@@ -161,12 +161,12 @@ fn cold_engaged_process_drain_and_reset_do_not_allocate() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         // Everything that allocates (profile blob, identifiers, buffers)
         // is built before counting starts.
         let data = NoiseProfileData {
             format_version: 1,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             channels: 2,
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-40.0, -42.0],

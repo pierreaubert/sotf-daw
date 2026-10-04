@@ -57,7 +57,7 @@ fn cold_first_drain_fft_snapshot_and_reset_have_no_heap_operations() {
     for channels in [1, 2, 6] {
         for history in [1, 511, 513] {
             let mut p = PndPlugin::new(channels);
-            p.initialize(48_000).unwrap();
+            p.initialize(48_000.0).unwrap();
             p.process(
                 &vec![0.1; history * channels],
                 &mut vec![0.0; history * channels],

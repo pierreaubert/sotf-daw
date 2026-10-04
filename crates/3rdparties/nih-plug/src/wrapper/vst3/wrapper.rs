@@ -556,9 +556,16 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
         // custom channel layout overrides we need to initialize here.
         match (state != 0, self.inner.current_buffer_config.load()) {
             (true, Some(buffer_config)) => {
+                let prepared: Option<Vec<_>> = self.inner.param_by_hash.values().map(|param| {
+                    unsafe { param.prepare_smoother(buffer_config.sample_rate) }
+                        .map(|steps| (*param, steps))
+                }).collect();
+                let Some(prepared) = prepared else {
+                    return kInvalidArgument;
+                };
                 // Before initializing the plugin, make sure all smoothers are set the the default values
-                for param in self.inner.param_by_hash.values() {
-                    param.update_smoother(buffer_config.sample_rate, true);
+                for (param, steps) in prepared {
+                    param.update_smoother_prepared(steps, true);
                 }
 
                 // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks
@@ -1124,10 +1131,13 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
         if setup.symbolic_sample_size != vst3_sys::vst::SymbolicSampleSizes::kSample32 as i32 {
             return kResultFalse;
         }
+        if !setup.sample_rate.is_finite() || setup.sample_rate <= 0.0 {
+            return kInvalidArgument;
+        }
 
         // This is needed when activating the plugin and when restoring state
         self.inner.current_buffer_config.store(Some(BufferConfig {
-            sample_rate: setup.sample_rate as f32,
+            sample_rate: setup.sample_rate,
             min_buffer_size: None,
             max_buffer_size: setup.max_samples_per_block as u32,
             process_mode: self.inner.current_process_mode.load(),

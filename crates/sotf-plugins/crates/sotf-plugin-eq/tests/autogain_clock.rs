@@ -12,7 +12,7 @@ fn plugin(rate: u32, enabled: bool) -> Box<dyn Plugin> {
     let mut plugin = EqPlugin::from_params(2, rate, params)
         .unwrap()
         .into_boxed_plugin();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -130,7 +130,7 @@ fn configured(rate: u32, factor: i32, gain_db: Option<f64>, enabled: bool) -> Bo
             sotf_host::ParameterValue::Int(factor),
         )
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -361,7 +361,7 @@ fn warm_finite_eos_advances_clock_only_when_canonical_audio_is_generated() {
                         actual_data.output_lufs.to_bits(),
                         reference_data.output_lufs.to_bits()
                     );
-                    candidate.initialize(rate).unwrap();
+                    candidate.initialize(f64::from(rate)).unwrap();
                     let restarted = meter(candidate.as_ref());
                     assert_eq!(restarted.gain_db, 0.0);
                     assert_eq!(restarted.input_peak, 0.0);
@@ -405,7 +405,7 @@ fn structural_measurement_epochs_clear_diagnostics_without_resetting_gain() {
         assert_eq!((after.input_peak, after.output_peak), (0.0, 0.0));
         // Successful reinitialization starts another aligned meter epoch, but
         // retains the original gain-state contract rather than jumping to 1.
-        candidate.initialize(96_000).unwrap();
+        candidate.initialize(96_000.0).unwrap();
         assert_eq!(
             meter(candidate.as_ref()).gain_db.to_bits(),
             before.gain_db.to_bits()
@@ -451,7 +451,7 @@ fn disabled_diagnostics_and_rejected_or_empty_calls_preserve_the_frame_clock() {
                 .unwrap(),
             0
         );
-        assert!(candidate.initialize(0).is_err());
+        assert!(candidate.initialize(0.0).is_err());
         assert!(
             candidate
                 .set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(3))

@@ -110,7 +110,7 @@ fn render(
 ) -> Vec<f32> {
     let spectral = settings.processing_mode == "spectral";
     let mut plugin = MultibandExpanderPlugin::with_params(channels, settings);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let mut output = signal(spectral, channels, FRAMES, prefix, level);
     process(&mut plugin, &mut output, channels, rate, pattern);
     output
@@ -251,7 +251,7 @@ fn hold_keeps_its_existing_sample_and_hop_duration() {
                 settings.hold_ms = hold_ms;
                 settings.attack_ms = 0.1;
                 let mut plugin = MultibandExpanderPlugin::with_params(1, settings);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 // For a soft knee this is ABOVE its center, but below unity.
                 let level = if knee == 0.0 { -27.0 } else { -21.0 };
                 let mut output = signal(false, 1, 4096, level, level);
@@ -320,7 +320,7 @@ fn band_overrides_and_live_threshold_knee_changes_keep_the_input_clock() {
                             settings.bands[band].knee_db = Some(12.0);
                         }
                         let mut plugin = MultibandExpanderPlugin::with_params(channels, settings);
-                        plugin.initialize(rate).unwrap();
+                        plugin.initialize(f64::from(rate)).unwrap();
                         let mut output = signal(spectral, channels, FRAMES, -50.0, -29.0);
                         let change = 24 * N * channels;
                         process(&mut plugin, &mut output[..change], channels, rate, pattern);

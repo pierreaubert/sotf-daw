@@ -61,7 +61,7 @@ impl Delay {
 
 pub(super) struct OversampledPath {
     channels: usize,
-    rate: u32,
+    rate: f64,
     wet: OversampledPlugin<WetCore>,
     guard: NativeKernel,
     guard_controls: Controls,
@@ -93,22 +93,27 @@ pub(super) struct OversampledPath {
 impl OversampledPath {
     pub fn prepare(
         channels: usize,
-        rate: u32,
+        rate: f64,
         factor: u32,
         lookahead_ms: f32,
         controls: Controls,
         isp: bool,
         mix: f32,
     ) -> PluginResult<Self> {
-        if rate == 0 || !(1..=MAX_CHANNELS).contains(&channels) || ![2, 4].contains(&factor) {
+        if !rate.is_finite()
+            || rate <= 0.0
+            || !(1..=MAX_CHANNELS).contains(&channels)
+            || ![2, 4].contains(&factor)
+        {
             return Err(
                 "oversampled limiter requires a nonzero rate, 1..=32 channels, and factor 2 or 4"
                     .into(),
             );
         }
-        let high_rate = rate
-            .checked_mul(factor)
-            .ok_or_else(|| "limiter oversampled rate overflow".to_string())?;
+        let high_rate = rate * f64::from(factor);
+        if !high_rate.is_finite() {
+            return Err("limiter oversampled rate overflow".to_string());
+        }
         // Quantize once at the native clock, then use an exact integer multiple.
         let delay = (lookahead_ms.max(0.0) * 0.001 * rate as f32) as usize;
         let high_delay = delay
@@ -585,7 +590,7 @@ mod tests {
     fn guard_gain_labels_follow_isp_audio_delay_and_keep_channels_separate() {
         for same_channel in [true, false] {
             let mut path =
-                OversampledPath::prepare(2, 48_000, 2, 0.25, controls(), true, 1.0).unwrap();
+                OversampledPath::prepare(2, 48_000.0, 2, 0.25, controls(), true, 1.0).unwrap();
             let mut cache = RealTimeCache::new(LimiterData {
                 isp_dbtp: vec![-120.0; 2],
                 output_isp_dbtp: vec![-120.0; 2],
@@ -668,7 +673,7 @@ mod tests {
         }
         // A direct final-stage synthetic negative control: opposing dry/wet
         // audio cancels, but no gain stage attenuates either contributor.
-        let mut path = OversampledPath::prepare(1, 48_000, 2, 0.0, controls(), false, 0.5).unwrap();
+        let mut path = OversampledPath::prepare(1, 48_000.0, 2, 0.0, controls(), false, 0.5).unwrap();
         let mut cache = RealTimeCache::new(LimiterData {
             isp_dbtp: vec![-120.0],
             output_isp_dbtp: vec![-120.0],
@@ -713,7 +718,7 @@ mod capacity_tests {
             for phase in 0..256 {
                 for lookahead in [0.0, 0.137, 20.0] {
                     let mut path = OversampledPath::prepare(
-                        1, 192_000, factor, lookahead, controls, false, 1.0,
+                        1, 192_000.0, factor, lookahead, controls, false, 1.0,
                     )
                     .unwrap();
                     let mut cache = RealTimeCache::new(LimiterData {

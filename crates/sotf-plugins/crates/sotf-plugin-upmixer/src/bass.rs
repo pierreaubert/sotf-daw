@@ -36,7 +36,7 @@ impl UpmixerPlugin {
         }
 
         // Fallback: if we don't have a valid sample rate yet, keep all bass in mains
-        if self.core.sample_rate == 0 || self.params.lfe_cutoff_hz <= 0.0 {
+        if self.core.sample_rate == 0.0 || self.params.lfe_cutoff_hz <= 0.0 {
             for i in 0..num_bins {
                 self.spectral.lfe_low_gains[i] = Complex::new(0.0, 0.0);
                 self.spectral.mains_high_gains[i] = Complex::new(1.0, 0.0);

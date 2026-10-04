@@ -24,12 +24,12 @@ pub(super) fn oversampled_context(
         .clamp(0, i128::from(u64::MAX)) as u64;
     let mut transport = context.transport;
     transport.sample_position = position.saturating_mul(u64::from(factor));
-    transport.ppq_position += offset as f64 / f64::from(context.sample_rate) * transport.bpm / 60.0;
+    transport.ppq_position += offset as f64 / context.sample_rate * transport.bpm / 60.0;
     if let Some(range) = &mut transport.loop_range {
         range.start_sample = range.start_sample.saturating_mul(u64::from(factor));
         range.end_sample = range.end_sample.saturating_mul(u64::from(factor));
     }
-    crate::plugin::ProcessContext::new(context.sample_rate * factor, os_frames)
+    crate::plugin::ProcessContext::new(context.sample_rate * f64::from(factor), os_frames)
         .with_transport(transport)
 }
 
@@ -39,7 +39,7 @@ pub(super) fn advance_context(context: &mut crate::plugin::ProcessContext<'stati
         .sample_position
         .saturating_add(frames as u64);
     context.transport.ppq_position +=
-        frames as f64 / f64::from(context.sample_rate) * context.transport.bpm / 60.0;
+        frames as f64 / context.sample_rate * context.transport.bpm / 60.0;
 }
 
 /// Convert interleaved audio to planar format.

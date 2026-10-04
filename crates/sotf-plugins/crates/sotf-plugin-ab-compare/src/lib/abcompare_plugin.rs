@@ -216,7 +216,7 @@ fn classify_path_topology(config: &PathConfig) -> PathTopology {
 pub struct ABComparePlugin {
     // Configuration
     pub(super) num_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     /// External plugin factory -- when set, supports all plugin types.
     /// Falls back to the built-in limited factory when None.
@@ -453,10 +453,10 @@ impl ABComparePlugin {
 
     fn validate_for_sample_rate(
         params: &ABComparePluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> Result<(), String> {
-        if sample_rate == 0 {
-            return Err("A/B Compare sample rate must be greater than zero".into());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("A/B Compare sample rate must be finite and positive".into());
         }
         let nyquist = sample_rate as f32 * 0.5;
         if params.band_mask_low_hz > Self::BAND_MASK_MIN_HZ + Self::BAND_MASK_EDGE_EPSILON
@@ -489,22 +489,22 @@ impl ABComparePlugin {
 
     /// Create from parameters
     pub fn from_params(num_channels: usize, params: ABComparePluginParams) -> Result<Self, String> {
-        Self::from_params_internal(num_channels, 48_000, params, None)
+        Self::from_params_internal(num_channels, 48_000.0, params, None)
     }
 
     /// Construct initial paths with the authoritative factory already installed.
-    pub fn from_params_with_factory(
+    pub fn from_params_with_factory<S: Into<f64>>(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: ABComparePluginParams,
         factory: sotf_host::PluginFactoryFn,
     ) -> Result<Self, String> {
-        Self::from_params_internal(num_channels, sample_rate, params, Some(factory))
+        Self::from_params_internal(num_channels, sample_rate.into(), params, Some(factory))
     }
 
     fn from_params_internal(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         params: ABComparePluginParams,
         factory: Option<sotf_host::PluginFactoryFn>,
     ) -> Result<Self, String> {
@@ -876,7 +876,7 @@ impl ABComparePlugin {
 
     fn frames_until_measurement(&self) -> usize {
         // Refresh at 20 Hz on the sample clock, independently of callback size.
-        let interval = (self.sample_rate as usize / 20).max(1);
+        let interval = (self.sample_rate / 20.0).floor().max(1.0) as usize;
         interval - self.cache_update_counter
     }
 
@@ -910,7 +910,7 @@ impl ABComparePlugin {
     /// Rebuild the bandpass filter pair for the current band mask settings.
     pub(super) fn rebuild_band_mask_filters(&mut self) {
         let q = 1.0 / std::f64::consts::SQRT_2;
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         if self.band_mask_hp.len() == self.num_channels {
             // Update coefficients in place — preserves filter delay state (click-free)
             for f in &mut self.band_mask_hp {
@@ -960,7 +960,7 @@ impl ABComparePlugin {
 
     fn reset_band_mask_filter_state(&mut self) {
         let q = 1.0 / std::f64::consts::SQRT_2;
-        let sample_rate = self.sample_rate as f64;
+        let sample_rate = self.sample_rate;
         for filter in &mut self.band_mask_hp {
             *filter = Biquad::new(
                 BiquadFilterType::Highpass,
@@ -2057,9 +2057,9 @@ impl Plugin for ABComparePlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("A/B Compare sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("A/B Compare graph requires a finite positive sample rate".into());
         }
         let nyquist = sample_rate as f32 * 0.5;
         if self.band_mask_low_hz > Self::BAND_MASK_MIN_HZ + Self::BAND_MASK_EDGE_EPSILON
@@ -2557,7 +2557,7 @@ impl Plugin for ABComparePlugin {
         if context.num_frames != 0 {
             return Err("A/B Compare drain preparation requires a zero-frame context".into());
         }
-        if self.sample_rate == 0 || context.sample_rate != self.sample_rate {
+        if self.sample_rate == 0.0 || context.sample_rate != self.sample_rate {
             return Err(format!(
                 "A/B Compare drain context must use its initialized sample rate of {} Hz",
                 self.sample_rate
@@ -3004,7 +3004,7 @@ mod mask_proof_tests {
         // public API (cutoffs are structural), so this is white-box like
         // the D4 derivation test.
         let mut plugin = ABComparePlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(!plugin.band_mask_active());
         plugin.mask_hist_hp.fill(frozen_histories());
         plugin.mask_hist_lp.fill(frozen_histories());
@@ -3029,7 +3029,7 @@ mod mask_proof_tests {
         // the filter state is frozen, so the live derivation IS the final
         // arm value and the pre-drain query equals the drain total exactly.
         let mut plugin = ABComparePlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
         plugin.rebuild_band_mask_filters();
@@ -3075,7 +3075,7 @@ mod mask_proof_tests {
         // structural, pinned by `runtime_structural_parameters_require_plugin_rebuild`),
         // so the impossible state is constructed white-box.
         let mut plugin = ABComparePlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(!plugin.band_mask_active());
         plugin.mask_hist_hp.fill(frozen_histories());
         plugin.mask_hist_lp.fill(frozen_histories());
@@ -3090,7 +3090,7 @@ mod mask_proof_tests {
         // nonzero flush once cutoffs are active, proving the D4 test above
         // is not vacuous.
         let mut plugin = ABComparePlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
         plugin.rebuild_band_mask_filters();
@@ -3112,7 +3112,7 @@ mod mask_proof_tests {
         // structural — so this pins the construction/initialize path
         // contract white-box; DF-I state preservation itself is math-audio's.)
         let mut plugin = ABComparePlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.mask_hist_hp.fill(frozen_histories());
         plugin.mask_hist_lp.fill(frozen_histories());
         plugin.mask_wet_peak = 0.75;
@@ -3252,7 +3252,7 @@ mod mask_proof_tests {
         let mut plugin = ABComparePlugin::new(CHANNELS).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         assert!(plugin.band_mask_active());
 
         let input = wb_dense(128, CHANNELS);
@@ -3328,7 +3328,7 @@ mod mask_proof_tests {
         let mut plugin = ABComparePlugin::new(CHANNELS).unwrap();
         plugin.band_mask_low_hz = 500.0;
         plugin.band_mask_high_hz = 8_000.0;
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
 
         let input = wb_dense(128, CHANNELS);
         let mut oracle = CascadeOracle::new(CHANNELS, 500.0, 8_000.0, RATE_F64);
@@ -3403,11 +3403,11 @@ mod mask_proof_tests {
         let mut active = ABComparePlugin::new(CHANNELS).unwrap();
         active.band_mask_low_hz = 500.0;
         active.band_mask_high_hz = 8_000.0;
-        active.initialize(RATE).unwrap();
+        active.initialize(f64::from(RATE)).unwrap();
         let mut deactivated = ABComparePlugin::new(CHANNELS).unwrap();
         deactivated.band_mask_low_hz = 500.0;
         deactivated.band_mask_high_hz = 8_000.0;
-        deactivated.initialize(RATE).unwrap();
+        deactivated.initialize(f64::from(RATE)).unwrap();
 
         let process_active = wb_process(&mut active, &input, RATE);
         let process_deactivated = wb_process(&mut deactivated, &input, RATE);

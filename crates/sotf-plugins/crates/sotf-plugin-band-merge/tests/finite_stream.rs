@@ -12,7 +12,7 @@ fn warmed_program_and_unfinished_gain_mute_transitions_have_exact_zero_output() 
         for channels in [1, 2, 6] {
             for bands in 2..=8 {
                 let mut plugin = BandMergePlugin::new(channels, bands).unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let input: Vec<f32> = (0..1027 * channels * bands)
                     .map(|i| ((i * 37 % 127) as f32 - 63.0) / 256.0)
                     .collect();
@@ -68,7 +68,7 @@ fn native_tail_metadata_matches_immediate_unfrozen_completion() {
     let mut plugin = BandMergePlugin::new(2, 3).unwrap();
     for initialize in [false, true] {
         if initialize {
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
         }
         assert_eq!(plugin.tail_length(), TailLength::Finite(0));
         assert_eq!(plugin.drain_call_bound().unwrap().get(), 1);
@@ -134,7 +134,7 @@ static ALLOCATOR: Allocator = Allocator;
 fn cold_tail_queries_and_noop_completion_allocate_and_free_nothing() {
     for bands in [2, 8] {
         let mut plugin = BandMergePlugin::new(2, bands).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         std::thread::spawn(move || {
             let context = ProcessContext::new(48_000, 0);
             let mut output = [1234.0; 2];

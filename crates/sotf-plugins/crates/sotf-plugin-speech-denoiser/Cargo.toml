@@ -23,6 +23,7 @@ required-features = ["qa"]
 [dependencies]
 plugins-denoiser = { workspace = true }
 sotf-host = { workspace = true }
+sotf-plugin-resampler = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

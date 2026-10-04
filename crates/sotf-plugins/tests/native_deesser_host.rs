@@ -312,7 +312,7 @@ fn verify_loaded_deesser_sidechain_route(format: PluginFormat, library_env: &str
         .load_opaque_state(&internal_saved.opaque_state)
         .unwrap_or_else(|error| panic!("{instance} internal self-roundtrip: {error}"));
     default
-        .initialize(44100)
+        .initialize(44100.0)
         .unwrap_or_else(|error| panic!("{instance} reinit to 44100: {error:?}"));
     assert_eq!(default.input_channels(), INPUTS);
     assert_eq!(default.output_channels(), OUTPUTS);

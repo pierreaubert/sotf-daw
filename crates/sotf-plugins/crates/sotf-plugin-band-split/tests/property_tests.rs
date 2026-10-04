@@ -18,7 +18,7 @@ proptest! {
         input_val in -1.0f32..1.0f32,
     ) {
         let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![input_val; num_frames];
         let mut output = vec![0.0f32; num_frames * 2];
@@ -39,7 +39,7 @@ proptest! {
     fn nan_propagates(nan_offset in 0usize..64) {
         let num_frames = 64;
         let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let mut input = vec![0.5f32; num_frames];
         input[nan_offset] = f32::NAN;
@@ -65,7 +65,7 @@ proptest! {
     fn dc_reconstructs_unity(dc in -0.9f32..0.9f32) {
         let num_frames = 256;
         let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![dc; num_frames];
         let mut output = vec![0.0f32; num_frames * 2];
@@ -93,7 +93,7 @@ proptest! {
     #[test]
     fn frequency_set_get_roundtrip(freq in 20.0f32..20000.0f32) {
         let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         plugin
             .set_parameter(ParameterId::from("frequency"), ParameterValue::Float(freq))
@@ -109,7 +109,7 @@ proptest! {
     #[test]
     fn band_gain_set_get_roundtrip(gain_db in -24.0f32..24.0f32) {
         let mut plugin = BandSplitPlugin::new(1, 1000.0, "LR24").unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         plugin
             .set_parameter(
@@ -134,10 +134,10 @@ proptest! {
         let channels = 2;
 
         let mut split = BandSplitPlugin::new(channels, 1000.0, "LR24").unwrap();
-        split.initialize(48000).unwrap();
+        split.initialize(48000.0).unwrap();
 
         let mut merge = BandMergePlugin::new(channels, 2).unwrap();
-        merge.initialize(48000).unwrap();
+        merge.initialize(48000.0).unwrap();
 
         let input = vec![dc; num_frames * channels];
         let mut split_out = vec![0.0f32; num_frames * channels * 2];

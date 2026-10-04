@@ -74,7 +74,7 @@ pub(super) struct Bs1770TruePeakDetector {
 }
 
 impl Bs1770TruePeakDetector {
-    pub(super) fn new(sample_rate: u32) -> Self {
+    pub(super) fn new(sample_rate: f64) -> Self {
         Self {
             history: [0.0; TRUE_PEAK_HISTORY],
             write_pos: 0,
@@ -85,23 +85,23 @@ impl Bs1770TruePeakDetector {
     /// BS.1770 requires the measurement sampling frequency to be at least
     /// 192 kHz. These factors are the specified operating points for common
     /// 44.1/48 kHz families and retain a bounded fallback for other rates.
-    fn factor_for_sample_rate(sample_rate: u32) -> u8 {
-        if sample_rate < 96_000 {
+    fn factor_for_sample_rate(sample_rate: f64) -> u8 {
+        if sample_rate < 96_000.0 {
             4
-        } else if sample_rate < 192_000 {
+        } else if sample_rate < 192_000.0 {
             2
         } else {
             1
         }
     }
 
-    fn set_sample_rate(&mut self, sample_rate: u32) {
+    fn set_sample_rate(&mut self, sample_rate: f64) {
         self.oversample_factor = Self::factor_for_sample_rate(sample_rate);
         self.reset();
     }
 
     #[inline]
-    pub(super) fn detector_delay_samples(sample_rate: u32) -> usize {
+    pub(super) fn detector_delay_samples(sample_rate: f64) -> usize {
         match Self::factor_for_sample_rate(sample_rate) {
             4 => 6,
             2 => 12,
@@ -271,7 +271,7 @@ impl NativeKernel {
         lookahead_ms: f32,
         max_lookahead_len: usize,
     ) -> Self {
-        let sr = 44100;
+        let sr = 44_100.0;
         let lookahead_len = (lookahead_ms.max(0.0) * 0.001 * sr as f32) as usize;
         let detector_delay = Bs1770TruePeakDetector::detector_delay_samples(sr);
         // Reserve the detector delay plus a full interpolation support of preview.
@@ -326,7 +326,7 @@ impl NativeKernel {
     pub(super) fn update_coefficients(
         &mut self,
         channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         release_ms: f32,
         lookahead_ms: f32,
         required_capacity: usize,
@@ -353,7 +353,7 @@ impl NativeKernel {
     pub(super) fn initialize(
         &mut self,
         channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         release_ms: f32,
         capacity: usize,
     ) {
@@ -851,8 +851,8 @@ mod remediation_tests {
 
     #[test]
     fn bs1770_hann_sinc_impulse_matches_independent_fixed_coefficient_oracle() {
-        let mut phase_detector = Bs1770TruePeakDetector::new(48_000);
-        let mut peak_detector = Bs1770TruePeakDetector::new(48_000);
+        let mut phase_detector = Bs1770TruePeakDetector::new(48_000.0);
+        let mut peak_detector = Bs1770TruePeakDetector::new(48_000.0);
         for frame in 0..13 {
             let sample = if frame == 0 { 1.0 } else { 0.0 };
             let actual_phases = phase_detector.push_and_interpolate_4x(sample);
@@ -874,12 +874,12 @@ mod remediation_tests {
         }
         assert!((oracle_coefficient(4, 6, 1) - 0.896_465_150_711).abs() < 1.0e-12);
         assert_eq!(oracle_coefficient(4, 6, 0), 1.0);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(48_000), 6);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(96_000), 12);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(192_000), 0);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(48_000.0), 6);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(96_000.0), 12);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(192_000.0), 0);
         assert_eq!(phase_detector.process_linear(0.0), 0.0);
 
-        let mut two_x_detector = Bs1770TruePeakDetector::new(96_000);
+        let mut two_x_detector = Bs1770TruePeakDetector::new(96_000.0);
         for frame in 0..25 {
             let sample = if frame == 0 { 1.0 } else { 0.0 };
             let expected = (0..2)
@@ -902,7 +902,7 @@ mod remediation_tests {
             let frequency = 12_000.0f32;
             for phase_index in 0..32 {
                 let phase = std::f32::consts::TAU * phase_index as f32 / 32.0;
-                let mut detector = Bs1770TruePeakDetector::new(sample_rate);
+                let mut detector = Bs1770TruePeakDetector::new(f64::from(sample_rate));
                 let mut peak = 0.0_f32;
                 for frame in 0..8192 {
                     let sample = amplitude
@@ -935,7 +935,7 @@ mod remediation_tests {
             let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, lookahead_ms, false);
             plugin.true_peak = true;
             plugin.isp_mode = true;
-            let result = plugin.initialize(sample_rate);
+            let result = plugin.initialize(f64::from(sample_rate));
             assert_eq!(
                 result.is_ok(),
                 should_initialize,
@@ -955,7 +955,7 @@ mod remediation_tests {
                 plugin.true_peak = true;
                 plugin.isp_mode = true;
                 plugin.rebuild_cached_parameters();
-                plugin.initialize(sample_rate).unwrap();
+                plugin.initialize(f64::from(sample_rate)).unwrap();
 
                 let programme_frames = 4096usize;
                 let tail = plugin.latency_samples() + TRUE_PEAK_HISTORY;
@@ -988,7 +988,7 @@ mod remediation_tests {
         let ceiling_db = -6.0_f32;
         let allowed_peak = 10.0_f64.powf((ceiling_db as f64 + 0.1) / 20.0);
         for sample_rate in [44_100, 48_000, 88_200, 96_000, 192_000] {
-            let delay = Bs1770TruePeakDetector::detector_delay_samples(sample_rate);
+            let delay = Bs1770TruePeakDetector::detector_delay_samples(f64::from(sample_rate));
             // The extra microsecond avoids rounding the requested integer
             // number of input frames down when converting milliseconds.
             let minimum_lookahead = delay as f32 * 1000.0 / sample_rate as f32 + 0.001;
@@ -999,7 +999,7 @@ mod remediation_tests {
                             let mut plugin =
                                 LimiterPlugin::new(1, ceiling_db, release_ms, lookahead_ms, false);
                             plugin.isp_mode = true;
-                            plugin.initialize(sample_rate).unwrap();
+                            plugin.initialize(f64::from(sample_rate)).unwrap();
                             let programme_frames = 4096;
                             let mut output =
                                 vec![
@@ -1049,7 +1049,7 @@ mod remediation_tests {
         let sample_rate = 48_000;
         let mut plugin = LimiterPlugin::new(1, -6.0, 10.0, 0.13, false);
         plugin.isp_mode = true;
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let mut output: Vec<f32> = (0..24_000)
             .map(|frame| (1.2 * (std::f64::consts::TAU * frame as f64 / 48.0).sin()) as f32)
             .collect();
@@ -1075,9 +1075,10 @@ mod remediation_tests {
         for sample_rate in [48_000, 96_000, 192_000] {
             let mut plugin = LimiterPlugin::new(1, -6.0, 10.0, 0.13, false);
             plugin.isp_mode = true;
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let latency = plugin.latency_samples();
-            let detector_delay = Bs1770TruePeakDetector::detector_delay_samples(sample_rate);
+            let detector_delay =
+                Bs1770TruePeakDetector::detector_delay_samples(f64::from(sample_rate));
             let mut oracle = OracleDetector::new(sample_rate);
             let mut ceilings = Vec::new();
             for frame in 0..12_000 + latency + TRUE_PEAK_HISTORY {

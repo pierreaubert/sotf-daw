@@ -71,7 +71,7 @@ fn nondefault_realtime_values_preserve_runtime_types() {
         info.default_value = raw_value;
         let params = DynamicParams::from_infos(&infos);
         let mut plugin = plugins_bridge::create_plugin(name, 2, 48_000, "{}").unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let parameter_id = ParameterId::from(id);
         assert_ne!(plugin.get_parameter(&parameter_id), Some(expected.clone()));
         params
@@ -100,7 +100,7 @@ fn aae_room_preset_schema_matches_setup_only_runtime_contract() {
     assert!(!room_preset.realtime);
     assert_eq!(room_preset.kind, BridgedParamKind::Int);
     let mut plugin = plugins_bridge::create_plugin("AAE", 2, 48_000, "{}").unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let parameters = plugin.parameters();
     let runtime = parameters
         .iter()
@@ -218,7 +218,7 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
                 continue;
             }
         };
-        if let Err(error) = plugin.initialize(48_000) {
+        if let Err(error) = plugin.initialize(48_000.0) {
             failures.push(format!("{name} initialization: {error}"));
             continue;
         }
@@ -242,7 +242,7 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
                 continue;
             }
         };
-        if let Err(error) = plugin.initialize(48_000) {
+        if let Err(error) = plugin.initialize(48_000.0) {
             failures.push(format!("{name} restored initialization: {error}"));
             continue;
         }
@@ -348,7 +348,7 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
                             (parameter.id, value)
                         })
                         .collect();
-                    plugin.initialize(48_000)?;
+                    plugin.initialize(48_000.0)?;
                     for (id, expected) in before {
                         if plugin.get_parameter(&id) != expected {
                             return Err(format!(
@@ -425,7 +425,7 @@ fn compressor_detector_roundtrip_restores_and_processes() {
                 "{name}.{id}"
             );
         }
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("detection_mode")),
             Some(ParameterValue::Int(1)),

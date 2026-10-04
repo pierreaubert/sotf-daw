@@ -18,7 +18,7 @@ fn plugin(mode: &str, range_db: f32, stereo_link: f32, sample_rate: u32) -> DeEs
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::from_params(2, params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

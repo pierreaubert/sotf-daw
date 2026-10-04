@@ -42,11 +42,11 @@ fn quadrature_stereo_is_diffuse_and_does_not_invent_front_back_doa() {
 
 #[test]
 fn one_pole_smoothing_is_invariant_to_sample_rate_and_fft_hop() {
-    let reference = time_scaled_alpha(0.18, 1024, 48_000);
-    let high_rate = time_scaled_alpha(0.18, 2048, 96_000);
+    let reference = time_scaled_alpha(0.18, 1024, 48_000.0);
+    let high_rate = time_scaled_alpha(0.18, 2048, 96_000.0);
     assert!((reference - high_rate).abs() < 1e-7);
 
-    let half_hop = time_scaled_alpha(0.18, 512, 48_000);
+    let half_hop = time_scaled_alpha(0.18, 512, 48_000.0);
     let two_half_hops = 1.0 - (1.0 - half_hop).powi(2);
     assert!((reference - two_half_hops).abs() < 1e-6);
 }

@@ -15,7 +15,7 @@ fn finite_delay_bound_retains_integer_impulse_and_covers_fractional_interpolatio
             let delay = DelayPlugin::try_new_with_max_delay(2, delay_ms, 0.0, 1.0, 100.0).unwrap();
             let mut plugin = ParametricInPlacePluginAdapter::new(delay);
             assert_eq!(Plugin::tail_length(&plugin), TailLength::Unknown);
-            Plugin::initialize(&mut plugin, rate).unwrap();
+            Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
             let TailLength::Finite(bound) = Plugin::tail_length(&plugin) else {
                 panic!("nonrecursive delay is finite");
             };
@@ -75,7 +75,7 @@ fn finite_delay_bound_retains_integer_impulse_and_covers_fractional_interpolatio
 fn feedback_history_keeps_infinite_classification_until_reset() {
     for feedback in [-0.5, 0.5] {
         let mut plugin = DelayPlugin::try_new_with_max_delay(1, 1.0, 0.0, 1.0, 20.0).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let finite = plugin.tail_length();
         assert!(matches!(finite, TailLength::Finite(_)));
         plugin

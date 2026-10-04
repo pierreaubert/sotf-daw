@@ -81,7 +81,7 @@ fn cold_native_and_oversampled_spectral_drain_has_zero_allocations_and_deallocat
                                 .unwrap(),
                         );
                     }
-                    native.initialize(48000).unwrap();
+                    native.initialize(48000.0).unwrap();
                     if fading {
                         native
                             .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))

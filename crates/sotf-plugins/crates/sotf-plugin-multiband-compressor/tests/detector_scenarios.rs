@@ -108,7 +108,7 @@ fn settled_window(output: &[f32]) -> &[f32] {
 fn render(params: MultibandCompressorPluginParams, input: &[f32]) -> Vec<f32> {
     let mut plugin =
         MultibandCompressorPlugin::try_from_params(1, params, SAMPLE_RATE).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut output = vec![0.0f32; input.len()];
     for (input_block, output_block) in input.chunks(1024).zip(output.chunks_mut(1024)) {
         let mut block = input_block.to_vec();

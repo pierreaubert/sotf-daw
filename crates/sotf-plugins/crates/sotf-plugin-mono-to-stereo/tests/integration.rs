@@ -66,7 +66,7 @@ fn parameters_include_expected_controls() {
 #[test]
 fn stereo_width_roundtrip() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("stereo_width"),
@@ -82,7 +82,7 @@ fn stereo_width_roundtrip() {
 #[test]
 fn haas_delay_roundtrip() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("haas_delay_ms"),
@@ -110,7 +110,7 @@ fn decor_frequencies_roundtrip() {
             ParameterValue::Float(3000.0),
         )
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("decor_low_hz")),
         Some(ParameterValue::Float(200.0))
@@ -130,7 +130,7 @@ fn freq_dependent_roundtrip() {
             ParameterValue::Bool(false),
         )
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("freq_dependent")),
         Some(ParameterValue::Bool(false))
@@ -144,7 +144,7 @@ fn freq_dependent_roundtrip() {
 #[test]
 fn process_zero_input_produces_finite_output() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.0f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -158,7 +158,7 @@ fn process_zero_input_produces_finite_output() {
 #[test]
 fn process_dc_input_produces_stereo_output() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let dc = 0.5f32;
     let input = vec![dc; FRAMES];
@@ -190,7 +190,7 @@ fn process_dc_input_produces_stereo_output() {
 #[test]
 fn zero_width_outputs_nearly_identical_channels() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("stereo_width"),
@@ -228,7 +228,7 @@ fn zero_width_outputs_nearly_identical_channels() {
 #[test]
 fn reset_then_process_still_works() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -248,8 +248,8 @@ fn reset_then_process_still_works() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
     // No public accessor for sample rate; success means state updated.
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
@@ -266,7 +266,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("nonexistent"), ParameterValue::Float(1.0))
         .unwrap_err();
@@ -276,7 +276,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn process_with_correct_output_size_succeeds() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let input = vec![0.5f32; FRAMES];
     let mut output = vec![0.0f32; FRAMES * 2];
     let frames = plugin

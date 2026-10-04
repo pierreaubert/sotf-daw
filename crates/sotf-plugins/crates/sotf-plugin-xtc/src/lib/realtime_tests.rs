@@ -52,7 +52,7 @@ pub(super) fn callback_counts(f: impl FnOnce()) -> (usize, usize) {
 #[test]
 fn first_callback_on_fresh_thread_has_no_heap_activity() {
     let mut plugin = crate::XtcPlugin::new(crate::XtcPluginParams::default(), 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; 4096 * 2];
     let output = vec![0.0; 4096 * 2];
     // Construction stays on this live thread. No callback or audio-thread
@@ -136,7 +136,7 @@ fn reclaim(plugin: &crate::XtcPlugin) {
 #[test]
 fn publication_contention_keeps_current_filters_and_retries() {
     let mut plugin = crate::XtcPlugin::new(crate::XtcPluginParams::default(), 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     publish(&plugin, 1);
     let exchange = std::sync::Arc::clone(&plugin.filter_state.exchange);
     let guard = exchange.lock().unwrap();
@@ -171,7 +171,7 @@ fn interrupted_fades_and_full_retirement_slots_preserve_every_owner() {
         ..Default::default()
     };
     let mut plugin = crate::XtcPlugin::new(params, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     // Force long fades so each subsequent adoption interrupts the previous.
     plugin.filter_state.progress_per_hop = 0.001;
     let initial = Arc::downgrade(plugin.filter_state.active_filter_update.as_ref().unwrap());
@@ -244,7 +244,7 @@ fn interrupted_fades_and_full_retirement_slots_preserve_every_owner() {
 #[test]
 fn completion_and_stale_publications_remain_allocation_free() {
     let mut plugin = crate::XtcPlugin::new(crate::XtcPluginParams::default(), 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.filter_state.progress_per_hop = 1.0;
     for generation in 1..17 {
         publish(&plugin, generation);

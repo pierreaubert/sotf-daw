@@ -75,7 +75,7 @@ fn construct_new_and_trait_metadata() {
 #[test]
 fn initialize_then_process_silence() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input = vec![0.0_f32; num_frames * 2];
@@ -92,7 +92,7 @@ fn initialize_then_process_silence() {
 #[test]
 fn process_tone_produces_output() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let input: Vec<f32> = (0..num_frames * 2)
@@ -205,7 +205,7 @@ fn unknown_parameter_rejected() {
 #[test]
 fn reset_clears_processing_state() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let input = vec![0.1_f32; num_frames * 2];
@@ -223,7 +223,7 @@ fn reset_clears_processing_state() {
 #[test]
 fn buffer_size_mismatch_is_error() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let ctx = ProcessContext::new(48000, 64);
     let input = vec![0.0_f32; 64 * 2 - 1]; // one sample short
@@ -238,7 +238,7 @@ fn buffer_size_mismatch_is_error() {
 #[test]
 fn missing_hrtf_file_error_during_set() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let result = plugin.set_parameter(
         ParameterId::from("hrtf_file"),
@@ -250,7 +250,7 @@ fn missing_hrtf_file_error_during_set() {
 #[test]
 fn empty_hrtf_file_clears_path() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(
@@ -284,7 +284,7 @@ fn crossfade_mode_parameter_set_get() {
 #[test]
 fn late_reverb_parameter_roundtrip() {
     let mut plugin = BinauralDecoderPlugin::from_params(default_params());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(
@@ -354,7 +354,7 @@ fn latency_reported() {
 #[test]
 fn default_output_rate_and_frame_mapping() {
     let plugin = BinauralDecoderPlugin::from_params(default_params());
-    assert_eq!(plugin.output_sample_rate(48000), 48000);
+    assert_eq!(plugin.output_sample_rate(48_000.0), 48_000.0);
     assert_eq!(plugin.output_frames_for_input(256), 256);
     assert!(plugin.last_output_frames().is_none());
 }

@@ -21,7 +21,7 @@ proptest! {
         prop_assume!(num_bands <= 4); // MAX_BANDS
 
         let mut plugin = BandMergePlugin::new(out_channels, num_bands).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let in_channels = out_channels * num_bands;
         let input = vec![val; num_frames * in_channels];
@@ -48,7 +48,7 @@ proptest! {
         let num_frames = 64;
 
         let mut plugin = BandMergePlugin::new(out_channels, num_bands).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let mut input = vec![0.5f32; num_frames * in_channels];
         let idx = nan_offset % input.len();
@@ -83,7 +83,7 @@ proptest! {
         let num_frames = 128;
 
         let mut plugin = BandMergePlugin::new(out_channels, num_bands).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![dc; num_frames * in_channels];
         let mut output = vec![0.0f32; num_frames * out_channels];
@@ -107,7 +107,7 @@ proptest! {
     #[test]
     fn band_gain_set_get_roundtrip(gain_db in -60.0f32..24.0f32) {
         let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         plugin
             .set_parameter(
@@ -130,7 +130,7 @@ proptest! {
     fn mute_attenuates_output(dc in 0.1f32..0.9f32) {
         let num_frames = 64;
         let mut plugin = BandMergePlugin::new(1, 2).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![dc; num_frames * 2];
         let mut out_unmuted = vec![0.0f32; num_frames];

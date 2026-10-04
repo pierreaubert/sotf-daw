@@ -84,7 +84,7 @@ fn params(linked: bool) -> GatePluginParams {
 
 fn gate(channels: usize, params: GatePluginParams) -> GatePlugin {
     let mut gate = GatePlugin::try_from_params(channels, params).unwrap();
-    gate.initialize(SAMPLE_RATE).unwrap();
+    gate.initialize(f64::from(SAMPLE_RATE)).unwrap();
     gate
 }
 

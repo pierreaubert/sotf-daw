@@ -29,7 +29,7 @@ fn main() {
     // Test 1: Resampling produces output with correct ratio
     println!("\n[Test 1] 44.1kHz → 48kHz resampling");
     let mut plugin = ResamplerPlugin::new_default(channels, input_sr, output_sr).unwrap();
-    plugin.initialize(input_sr).unwrap();
+    plugin.initialize(f64::from(input_sr)).unwrap();
 
     let num_frames = 1024;
     let input = vec![0.5f32; num_frames * channels];
@@ -149,7 +149,7 @@ fn main() {
                         quality,
                     )
                     .unwrap();
-                    candidate.initialize(source_rate).unwrap();
+                    candidate.initialize(f64::from(source_rate)).unwrap();
                     let input = vec![0.1; frames * matrix_channels];
                     // Include one extra chunk in the preallocated capacity because
                     // residual input can make a later callback emit more than the first.
@@ -251,7 +251,7 @@ fn main() {
     let mut instant =
         ResamplerPlugin::with_quality(1, 48_000, 48_000, 256, ResamplerQuality::High).unwrap();
     for plugin in [&mut smooth, &mut instant] {
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .set_parameter(
                 "dynamic_ratio".into(),

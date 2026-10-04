@@ -199,7 +199,7 @@ fn assert_multiway_frequency_response(sample_rate: u32, cutoffs_hz: &[f64], prob
     let input = sine_stereo_input(sample_rate, total_frames, probe_hz);
     let mut plugin =
         CrossoverPlugin::new_multiway(2, "LR24", cutoffs_hz[0], "both", &cutoffs_hz[1..]).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let output_channels = plugin.output_channels();
     let mut output = vec![f32::NAN; total_frames * output_channels];
     assert_eq!(
@@ -350,7 +350,7 @@ fn overlapping_multiway_lr24_bands_match_allpass_decomposition() {
         })
         .collect();
     let mut plugin = CrossoverPlugin::new_multiway(1, "LR24", 1_000.0, "both", &[1_200.0]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut output = vec![0.0_f32; total_frames * 3];
     plugin
         .process(
@@ -444,7 +444,7 @@ fn multiway_low_and_high_modes_select_the_named_bands() {
     let render = |mode: &str| {
         let mut plugin =
             CrossoverPlugin::new_multiway(2, "LR24", 700.0, mode, &[1_800.0, 5_000.0]).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut output = vec![0.0; frames * plugin.output_channels()];
         plugin
             .process(
@@ -475,7 +475,7 @@ fn render_automated(partitions: &[usize]) -> Vec<f32> {
     let input = sine_stereo_input(SAMPLE_RATE, FRAMES, 1_347.0);
     let mut plugin =
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let output_channels = plugin.output_channels();
     let mut output = vec![0.0; FRAMES * output_channels];
     let mut cursor = 0;
@@ -556,8 +556,8 @@ fn rejected_frequency_update_preserves_the_following_audio_state() {
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
     let mut control =
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
-    tested.initialize(SAMPLE_RATE).unwrap();
-    control.initialize(SAMPLE_RATE).unwrap();
+    tested.initialize(f64::from(SAMPLE_RATE)).unwrap();
+    control.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let output_channels = tested.output_channels();
     let mut tested_output = vec![0.0; frames * output_channels];
     let mut control_output = vec![0.0; frames * output_channels];
@@ -605,7 +605,7 @@ fn reset_and_reinitialize_match_fresh_multiway_instances() {
     let input_44k = sine_stereo_input(44_100, 4_096, 1_347.0);
     let mut reused =
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
-    reused.initialize(48_000).unwrap();
+    reused.initialize(48_000.0).unwrap();
     let mut warm_output = vec![0.0; warmup.len() * 4];
     reused
         .process(
@@ -618,7 +618,7 @@ fn reset_and_reinitialize_match_fresh_multiway_instances() {
     reused.reset();
     let mut fresh_48k =
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
-    fresh_48k.initialize(48_000).unwrap();
+    fresh_48k.initialize(48_000.0).unwrap();
     let mut reused_output = vec![0.0; input_48k.len() * 4];
     let mut fresh_output = vec![0.0; input_48k.len() * 4];
     reused
@@ -637,10 +637,10 @@ fn reset_and_reinitialize_match_fresh_multiway_instances() {
         .unwrap();
     assert_eq!(reused_output, fresh_output);
 
-    reused.initialize(44_100).unwrap();
+    reused.initialize(44_100.0).unwrap();
     let mut fresh_44k =
         CrossoverPlugin::new_multiway(2, "LR24", 700.0, "both", &[1_800.0, 5_000.0]).unwrap();
-    fresh_44k.initialize(44_100).unwrap();
+    fresh_44k.initialize(44_100.0).unwrap();
     let mut reused_output = vec![0.0; input_44k.len() * 4];
     let mut fresh_output = vec![0.0; input_44k.len() * 4];
     let context = ProcessContext::new(44_100, input_44k.len() / 2);

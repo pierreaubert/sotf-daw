@@ -59,7 +59,7 @@ fn plugin_info_and_channels() {
 fn plugin_processes_stereo_sine() {
     let plugin = MultibandExpanderPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(2048, 2, 1000.0, 48000);
     let mut output = vec![0.0_f32; input.len()];
@@ -133,7 +133,7 @@ fn expansion_attenuates_quiet_signal() {
     };
     let mut plugin =
         ParametricInPlacePluginAdapter::new(MultibandExpanderPlugin::with_params(2, params));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 8192;
     let amp = 10.0f32.powf(-50.0 / 20.0);
@@ -165,7 +165,7 @@ fn dry_mix_passthrough() {
     };
     let plugin = MultibandExpanderPlugin::with_params(2, params);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 2048;
     let input = sine_buffer(num_frames, 2, 440.0, 48000);
@@ -194,7 +194,7 @@ fn spectral_mode_processes_audio() {
     };
     let plugin = MultibandExpanderPlugin::with_params(2, params);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(4096, 2, 1000.0, 48000);
     let mut output = vec![0.0_f32; input.len()];
@@ -209,7 +209,7 @@ fn spectral_mode_processes_audio() {
 fn changing_num_bands_requires_rebuild() {
     let plugin = MultibandExpanderPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     assert!(
         adapter
@@ -230,7 +230,7 @@ fn changing_num_bands_requires_rebuild() {
 fn reset_then_process_is_stable() {
     let plugin = MultibandExpanderPlugin::new(2);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let input = sine_buffer(1024, 2, 800.0, 48000);
     let mut output = vec![0.0_f32; input.len()];

@@ -157,7 +157,7 @@ fn capture_mixed_realization_multirate_matrix() {
             )
             .unwrap_or_else(|error| panic!("{}: select factor: {error}", case.id));
         plugin
-            .plugin_initialize(case.sample_rate)
+            .plugin_initialize(f64::from(case.sample_rate))
             .unwrap_or_else(|error| panic!("{}: initialize: {error}", case.id));
         assert_eq!(
             plugin.parametric_get_parameter(&ParameterId::from("oversampling")),
@@ -291,7 +291,7 @@ fn make_svf_plugin(configs: &[BiquadFilterConfig], factor: i32, factor_first: bo
         set_factor(&mut plugin);
     }
     plugin
-        .plugin_initialize(SVF_SAMPLE_RATE)
+        .plugin_initialize(f64::from(SVF_SAMPLE_RATE))
         .expect("initialize selected base-rate SVF route");
     assert_eq!(
         plugin.parametric_get_parameter(&ParameterId::from("oversampling")),
@@ -330,7 +330,7 @@ fn make_biquad_plugin(configs: &[BiquadFilterConfig], factor: i32) -> EqPlugin {
         )
         .expect("select Biquad oversampling factor");
     plugin
-        .plugin_initialize(SVF_SAMPLE_RATE)
+        .plugin_initialize(f64::from(SVF_SAMPLE_RATE))
         .expect("initialize Biquad route");
     plugin
 }
@@ -429,7 +429,7 @@ fn selected_oversampling_is_bypassed_for_global_svf_and_reactivated_on_return() 
                 );
                 assert_eq!(restored.current_values(), snapshot);
                 restored
-                    .plugin_initialize(SVF_SAMPLE_RATE)
+                    .plugin_initialize(f64::from(SVF_SAMPLE_RATE))
                     .expect("initialize restored state");
                 assert_eq!(restored.latency_samples(), 0);
                 let restored_output = render(&mut restored, &input, SVF_CHANNELS, SVF_SAMPLE_RATE);

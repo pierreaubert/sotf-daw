@@ -172,8 +172,8 @@ fn flat_curve_matches_default_bit_exact() {
                         ..base
                     },
                 );
-                reference.initialize(RATE).unwrap();
-                configured.initialize(RATE).unwrap();
+                reference.initialize(f64::from(RATE)).unwrap();
+                configured.initialize(f64::from(RATE)).unwrap();
                 let expected = process_all(&mut reference, &input, 2, &[1, 17, 257, 63], RATE);
                 let actual = process_all(&mut configured, &input, 2, &[1, 17, 257, 63], RATE);
                 assert_bit_exact(
@@ -234,8 +234,8 @@ fn unity_gain_ignores_shaped_curve() {
                 ..Default::default()
             },
         );
-        reference.initialize(RATE).unwrap();
-        shaped.initialize(RATE).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
+        shaped.initialize(f64::from(RATE)).unwrap();
         let latency = shaped.latency_samples();
         let expected = process_all(&mut reference, &input, 2, &[3, 1024, 44], RATE);
         let actual = process_all(&mut shaped, &input, 2, &[3, 1024, 44], RATE);
@@ -278,7 +278,7 @@ fn steady_output(curve: (f32, f32, f32), rate: u32, low_latency: bool) -> Vec<f3
             ..Default::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let output = process_all(&mut plugin, &input, 1, &[1024, 63], rate);
     // Converged last second only; MCRA needs about one window (~1 s).
     output[output.len() - rate as usize..].to_vec()
@@ -348,7 +348,7 @@ fn curve_zero_bypasses_reduction_in_every_mode() {
                             ..Default::default()
                         },
                     );
-                    plugin.initialize(RATE).unwrap();
+                    plugin.initialize(f64::from(RATE)).unwrap();
                     let latency = plugin.latency_samples();
                     let output = process_all(&mut plugin, &input, 2, &[5, 1024, 91], RATE);
                     let mut worst = 0.0f32;
@@ -426,8 +426,8 @@ fn curve_knots_persist_and_reproduce_audio() {
     )
     .unwrap();
     let mut reloaded = DenoiserPlugin::try_from_params(2, restored).unwrap();
-    reference.initialize(RATE).unwrap();
-    reloaded.initialize(RATE).unwrap();
+    reference.initialize(f64::from(RATE)).unwrap();
+    reloaded.initialize(f64::from(RATE)).unwrap();
     let expected = process_all(&mut reference, &input, 2, &[1, 17, 257, 63, 1024], RATE);
     // Reloaded twin uses different callback partitions: identical audio.
     let actual = process_all(&mut reloaded, &input, 2, &[4096, 7], RATE);
@@ -463,7 +463,7 @@ fn invalid_curve_configs_rejected_transactionally() {
     }
     // Live setters clamp finite input and reject NaN without side effects.
     let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let before = plugin.current_values();
     plugin
         .parametric_set_parameter(

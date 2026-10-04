@@ -15,7 +15,7 @@ use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 
 pub struct DitherPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Parameters
     pub(super) bit_depth_index: usize,
@@ -58,7 +58,7 @@ impl DitherPlugin {
 
         let mut p = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             bit_depth_index,
             noise_shaping_enabled: noise_shaping,
             dither_type_index: dither_type,
@@ -88,7 +88,7 @@ impl DitherPlugin {
 
         let mut p = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             bit_depth_index,
             noise_shaping_enabled: params.noise_shaping,
             dither_type_index: params.dither_type.min(2),
@@ -187,10 +187,13 @@ impl DitherPlugin {
         history[*head] = error;
     }
 
-    fn configure_noise_shaping_rate(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn configure_noise_shaping_rate(&mut self, sample_rate: f64) -> PluginResult<()> {
         const REFERENCE_SAMPLE_RATE: f32 = 44_100.0;
-        const MAX_SUPPORTED_SAMPLE_RATE: u32 = 768_000;
-        if sample_rate == 0 || sample_rate > MAX_SUPPORTED_SAMPLE_RATE {
+        const MAX_SUPPORTED_SAMPLE_RATE: f64 = 768_000.0;
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > MAX_SUPPORTED_SAMPLE_RATE
+        {
             return Err(format!(
                 "Dither sample rate must be in 1..={MAX_SUPPORTED_SAMPLE_RATE}, got {sample_rate}"
             ));
@@ -354,7 +357,7 @@ impl ParametricInPlacePlugin for DitherPlugin {
         self.parametric_set_parameter(id, value)
     }
 
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
         self.configure_noise_shaping_rate(sr)?;
         self.sample_rate = sr;
         if self.rng_state.len() != self.channels {

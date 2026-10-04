@@ -12,7 +12,7 @@ fn plugin(enabled: bool) -> AaePlugin {
     })
     .unwrap();
     assert!(plugin.auto_gain.is_some());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 
@@ -66,7 +66,7 @@ fn reinitialize_preserves_gain_history_while_reset_clears_it() {
     }
     let gain = plugin.auto_gain.as_ref().unwrap().data().gain_db;
     assert!(gain.abs() > 0.01);
-    plugin.initialize(96_000).unwrap();
+    plugin.initialize(96_000.0).unwrap();
     assert_eq!(plugin.auto_gain.as_ref().unwrap().data().gain_db, gain);
     plugin.reset();
     assert_eq!(plugin.auto_gain.as_ref().unwrap().data().gain_db, 0.0);

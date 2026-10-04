@@ -169,7 +169,7 @@ use super::super::types::{
     fn test_smooth_transition() {
         // Verify that muting fades rather than clicks
         let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         // First frame should be at gain 1.0 (all channels unmuted)
         let mut buffer = vec![1.0, 1.0];

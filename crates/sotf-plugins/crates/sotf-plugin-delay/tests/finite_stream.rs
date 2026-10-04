@@ -60,7 +60,7 @@ fn without_heap<T>(operation: impl FnOnce() -> T) -> T {
 #[test]
 fn drain_retains_the_final_input_impulse() {
     let mut plugin = DelayPlugin::try_new_with_max_delay(2, 10.0, 0.0, 1.0, 20.0).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut input = [0.0; 34];
     input[32] = 0.75;
     input[33] = -0.25;
@@ -91,7 +91,7 @@ fn plugin_adapter_forwards_the_finite_tail_with_program_dimensions() {
     use sotf_host::{ParametricInPlacePluginAdapter, Plugin};
     let raw = DelayPlugin::try_new_with_max_delay(2, 5.0, 0.0, 1.0, 10.0).unwrap();
     let mut plugin: Box<dyn Plugin> = Box::new(ParametricInPlacePluginAdapter::new(raw));
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = [0.75, -0.25];
     let mut first = [0.0; 2];
     plugin
@@ -185,7 +185,7 @@ fn static_taps_match_an_independent_fractional_delay_sum() {
                 // At 1 kHz the delay in milliseconds equals its sample count.
                 let mut plugin =
                     DelayPlugin::try_new_with_max_delay(2, delay, 0.0, mix, 64.0).unwrap();
-                plugin.initialize(1000).unwrap();
+                plugin.initialize(1000.0).unwrap();
                 let mut output = feed(&mut plugin, 1000, &source, 17);
                 output.extend(finish(&mut plugin, 1000, capacity));
                 let integer = delay.floor() as isize;
@@ -269,7 +269,7 @@ fn moving_delay(rate: u32, clean: bool, per_channel: bool) -> DelayPlugin {
                 .unwrap();
         }
     }
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -413,7 +413,7 @@ fn invalid_attempts_preserve_audio_and_controls_then_reset_rearms() {
     }
     for reinitialize in [false, true] {
         if reinitialize {
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
         } else {
             plugin.reset();
         }
@@ -435,7 +435,7 @@ fn recursive_history_preserves_the_existing_unsupported_drain_policy() {
     use sotf_host::{ParameterValue, plugin::PluginDrainResult};
     for feedback in [-0.5, 0.5] {
         let mut plugin = DelayPlugin::try_new_with_max_delay(1, 1.0, feedback, 1.0, 20.0).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         feed(&mut plugin, 48_000, &[1.0], 1);
         assert_eq!(plugin.tail_length(), TailLength::Infinite);
         assert_eq!(plugin.drain_output_frames_max(), 0);
@@ -467,7 +467,7 @@ fn cold_process_and_drain_release_no_heap_storage() {
             let rate = 192_000;
             let mut plugin =
                 DelayPlugin::try_new_with_max_delay(channels, 7.25, 0.0, 0.75, 20.0).unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let mut input = vec![0.25; 17 * channels];
             let mut output = vec![0.0; 1025 * channels];
             let current_mix = sotf_host::ParameterId::from("mix");

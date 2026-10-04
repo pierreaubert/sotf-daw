@@ -371,7 +371,7 @@ fn custom_constructs_and_processes_at_order_7() {
         Some(ParameterValue::Int(8))
     );
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let output = render_deterministic_block(&mut plugin, 64, 12, 48_000, 64, 0xA980_1C4D);
     assert_finite_nonzero(&output);
 }
@@ -385,7 +385,7 @@ fn custom_save_reload_is_bit_exact() {
         crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 48).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let first = render_deterministic_block(&mut plugin, 9, 6, 48_000, 48, 0x51ED_0001);
 
     let saved_fields = params.serialize_fields();
@@ -420,7 +420,7 @@ fn custom_save_reload_is_bit_exact() {
         crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &fresh).unwrap();
     fresh_attempt.commit();
     let mut reloaded = plugins_bridge::prepare_standalone_plugin(reloaded, 48).unwrap();
-    reloaded.initialize(48_000).unwrap();
+    reloaded.initialize(48_000.0).unwrap();
     let second = render_deterministic_block(&mut reloaded, 9, 6, 48_000, 48, 0x51ED_0001);
     assert_eq!(second, first, "reload must render bit-exact output");
     let resaved = fresh.serialize_fields();
@@ -593,7 +593,7 @@ fn wide_64ch_constructs_at_macro_level_with_honest_format_rejections() {
         (64, 64)
     );
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 16).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let output = render_deterministic_block(&mut plugin, 64, 64, 48_000, 16, 0x91DE_0064);
     assert_finite_nonzero(&output);
     // The same geometry honestly reports why no static format claims it.
@@ -899,7 +899,7 @@ fn fieldless_target_8_restore_fails_despite_committed() {
         crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let accepted = render_deterministic_block(&mut plugin, 64, 12, 48_000, 64, 0xA980_1C4D);
     assert_finite_nonzero(&accepted);
 
@@ -958,7 +958,7 @@ fn fieldless_target_8_restore_fails_despite_committed() {
     retry.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 6));
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 48).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let output = render_deterministic_block(&mut plugin, 9, 6, 48_000, 48, 0x51ED_0001);
     assert_finite_nonzero(&output);
 }
@@ -1005,7 +1005,7 @@ fn single_band_custom_reaches_exact_zero_tail() {
     assert_eq!(plugin.latency_samples(), 0);
     assert_eq!(plugin.tail_length(), TailLength::Finite(0));
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let stream = render_stream_to_eof(
         &mut plugin,
         &[31, 1, 32],
@@ -1049,7 +1049,7 @@ fn dual_band_custom_drains_within_bound() {
         "LR4 crossover keeps recursive history"
     );
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let stream = render_stream_to_eof(
         &mut plugin,
         &[17, 47],
@@ -1082,7 +1082,7 @@ fn partitioned_render(dual_band: bool, partitions: &[usize], seed: u32) -> Vec<f
         crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     render_signal_partitions(&mut plugin, 9, 6, 48_000, partitions, seed)
 }
 

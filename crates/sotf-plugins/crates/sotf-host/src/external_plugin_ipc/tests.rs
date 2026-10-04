@@ -96,6 +96,19 @@ fn test_secure_plugin_shared_memory_roundtrip() {
 }
 
 #[test]
+fn ipc_layout_preserves_fractional_native_plugin_clock() {
+    for rate in [1_234.5678_f64, 12_345.678, 48_000.0] {
+        let layout = PluginIpcLayout::new(rate, 128, 2, 2).unwrap();
+        let shared = SecurePluginSharedMemory::create(layout).unwrap();
+        let worker = SecurePluginSharedMemory::open_existing(shared.path()).unwrap();
+        assert_eq!(worker.layout().sample_rate.to_bits(), rate.to_bits());
+    }
+    for invalid in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(PluginIpcLayout::new(invalid, 128, 2, 2).is_err());
+    }
+}
+
+#[test]
 fn test_publish_host_block_clears_only_current_output_block() {
     let layout = PluginIpcLayout::new(48_000, 128, 2, 2).unwrap();
     let mut shared = SecurePluginSharedMemory::create(layout).unwrap();

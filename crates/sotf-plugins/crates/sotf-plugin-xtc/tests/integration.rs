@@ -28,7 +28,7 @@ fn xtc_instantiate_default_params() {
 #[test]
 fn xtc_parameter_roundtrip() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let params = plugin.parameters();
     assert!(params.iter().any(|p| p.id.as_str() == "distance_m"));
@@ -84,7 +84,7 @@ fn xtc_invalid_fft_size_error() {
 #[test]
 fn xtc_invalid_source_mode_error() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let err = plugin
         .set_parameter(
@@ -111,7 +111,7 @@ fn xtc_hrtf_source_requires_an_explicit_file() {
 #[test]
 fn xtc_runtime_hrtf_mode_requires_a_file_before_committing() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44_100).unwrap();
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
 
     let err = plugin
         .set_parameter(
@@ -130,7 +130,7 @@ fn xtc_runtime_hrtf_mode_requires_a_file_before_committing() {
 #[test]
 fn xtc_synthetic_mode_rejects_runtime_hrtf_path_without_committing() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44_100).unwrap();
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
 
     let err = plugin
         .set_parameter(
@@ -162,7 +162,7 @@ fn xtc_synthetic_source_rejects_hidden_hrtf_override() {
 #[test]
 fn xtc_process_silence() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let input = vec![0.0_f32; num_frames * 2];
@@ -182,7 +182,7 @@ fn xtc_process_stereo_produces_output() {
         ..Default::default()
     };
     let mut plugin = XtcPlugin::new(params, 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -215,7 +215,7 @@ fn xtc_disabled_state_passes_through() {
         ..Default::default()
     };
     let mut plugin = XtcPlugin::new(params, 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 512;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -244,7 +244,7 @@ fn xtc_disabled_state_passes_through() {
 #[test]
 fn xtc_state_change_enable_disable() {
     let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];
@@ -291,7 +291,7 @@ fn xtc_reset_clears_state() {
         ..Default::default()
     };
     let mut plugin = XtcPlugin::new(params, 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let num_frames = 4096;
     let mut input = vec![0.0_f32; num_frames * 2];

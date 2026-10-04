@@ -6,7 +6,7 @@ use sotf_host::plugin::{Plugin, ProcessContext};
 
 fn make_plugin() -> AaePlugin {
     let mut p = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p
 }
 

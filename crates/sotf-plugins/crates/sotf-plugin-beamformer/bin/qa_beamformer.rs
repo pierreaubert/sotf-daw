@@ -18,7 +18,7 @@ fn main() {
         },
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Beamformer Plugin ===");
 
@@ -42,7 +42,7 @@ fn main() {
         },
     )
     .unwrap();
-    mvdr.initialize(sample_rate).unwrap();
+    mvdr.initialize(f64::from(sample_rate)).unwrap();
     let mut output2 = vec![0.0f32; num_frames];
     mvdr.process(&input, &mut output2, &ctx).unwrap();
     println!("  MVDR process completed: PASS");
@@ -69,7 +69,7 @@ fn main() {
             },
         )
         .unwrap();
-        candidate.initialize(sample_rate).unwrap();
+        candidate.initialize(f64::from(sample_rate)).unwrap();
         let callback_frames = 512;
         let input = vec![0.05; callback_frames * 8];
         let mut output = vec![0.0; callback_frames];

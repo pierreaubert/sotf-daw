@@ -26,7 +26,7 @@ fn isp_requires_the_detector_delay_at_the_initialized_sample_rate() {
         (192_000, 0.0, true),
     ] {
         let mut plugin = isp_limiter(lookahead_ms, true);
-        let result = plugin.initialize(sample_rate);
+        let result = plugin.initialize(f64::from(sample_rate));
         assert_eq!(
             result.is_ok(),
             should_initialize,
@@ -40,7 +40,7 @@ fn isp_latency_changes_require_a_graph_rebuild() {
     for sample_rate in [44_100, 48_000, 96_000] {
         for enabled in [false, true] {
             let mut plugin = isp_limiter(5.0, enabled);
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let latency = plugin.latency_samples();
             let result = plugin.set_parameter(
                 ParameterId::from("isp_mode"),
@@ -67,7 +67,7 @@ fn isp_output_delay_matches_reported_latency_and_reset() {
     for (sample_rate, correction_delay) in [(44_100, 18), (48_000, 18), (96_000, 36), (192_000, 0)]
     {
         let mut plugin = isp_limiter(5.0, true);
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let input_delay = (5.0 * 0.001 * sample_rate as f32) as usize;
         let latency = input_delay + correction_delay;
         assert_eq!(plugin.latency_samples(), latency);

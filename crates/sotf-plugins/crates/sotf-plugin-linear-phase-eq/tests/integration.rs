@@ -50,7 +50,7 @@ fn plugin_info_and_channels() {
 fn plugin_processes_silence_and_sine() {
     let plugin = LinearPhaseEqPlugin::new(2, 48000);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let input = sine_buffer(num_frames, 2, 1000.0, 48000);
@@ -103,7 +103,7 @@ fn dry_mix_passthrough() {
     };
     let plugin = LinearPhaseEqPlugin::from_params(2, 48000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let input = sine_buffer(num_frames, 2, 440.0, 48000);
@@ -148,7 +148,7 @@ fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48_000).unwrap();
+    adapter.initialize(48_000.0).unwrap();
 
     let block_size = 64;
     let total_frames = 1_024;
@@ -201,7 +201,7 @@ fn eq_boost_changes_amplitude() {
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let input = sine_buffer(num_frames, 1, 1000.0, 48000);
@@ -273,7 +273,7 @@ fn invalid_parameter_value_is_rejected() {
 fn reset_then_process_is_stable() {
     let plugin = LinearPhaseEqPlugin::new(2, 48000);
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48000).unwrap();
+    adapter.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let input = sine_buffer(num_frames, 2, 500.0, 48000);
@@ -317,7 +317,7 @@ fn minimum_phase_processes_finite_audio() {
     };
     let plugin = LinearPhaseEqPlugin::from_params(1, 48_000, params).unwrap();
     let mut adapter = ParametricInPlacePluginAdapter::new(plugin);
-    adapter.initialize(48_000).unwrap();
+    adapter.initialize(48_000.0).unwrap();
 
     let input = sine_buffer(2_048, 1, 1_000.0, 48_000);
     let mut output = vec![0.0; input.len()];

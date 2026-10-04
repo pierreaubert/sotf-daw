@@ -119,7 +119,7 @@ fn start_capture(plugin: &mut HissReducerPlugin) {
 
 fn time_domain_plugin(channels: usize) -> HissReducerPlugin {
     let mut plugin = HissReducerPlugin::new(channels);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -135,7 +135,7 @@ fn spectral_plugin_at_rate(channels: usize, rate: u32) -> HissReducerPlugin {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -315,7 +315,7 @@ fn spectral_capture_matches_independent_dft_and_parseval() {
     assert_eq!(plugin.profile_spectral_hops(), Some(184));
     assert_eq!(
         plugin.profile_metadata(),
-        Some((RATE, 4000.0, u64::from(RATE)))
+        Some((f64::from(RATE), 4000.0, u64::from(RATE)))
     );
 
     // Per-bin agreement against the naive-DFT oracle (2% relative).
@@ -593,7 +593,7 @@ fn separated_cutoff_pair_meets_4x_and_suppresses_regionally() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.restore_profile(profile).unwrap();
         assert!(plugin.profile_uses_spectral());
         let output = process_all(&mut plugin, &test_hiss, 1, &[4096]);
@@ -653,7 +653,7 @@ fn wanted_tone_loss_vs_colored_suppression_separated() {
             ..HissReducerPluginParams::default()
         },
     );
-    hiss_plugin.initialize(RATE).unwrap();
+    hiss_plugin.initialize(f64::from(RATE)).unwrap();
     hiss_plugin.restore_profile(&profile).unwrap();
     let hiss_test = lcg_noise(RATE as usize, 0.04, 0xd15c);
     let hiss_out = process_all(&mut hiss_plugin, &hiss_test, 1, &[4096]);
@@ -676,7 +676,7 @@ fn wanted_tone_loss_vs_colored_suppression_separated() {
             ..HissReducerPluginParams::default()
         },
     );
-    tone_plugin.initialize(RATE).unwrap();
+    tone_plugin.initialize(f64::from(RATE)).unwrap();
     tone_plugin.restore_profile(&profile).unwrap();
     let tone = sine_tone(16384, TONE_AMPLITUDE, TONE_HZ, RATE);
     let tone_out_full = process_all(&mut tone_plugin, &tone, 1, &[4096]);
@@ -803,7 +803,7 @@ fn linked_spectral_with_per_channel_spectra_preserves_dual_mono() {
             ..HissReducerPluginParams::default()
         },
     );
-    profiler.initialize(RATE).unwrap();
+    profiler.initialize(f64::from(RATE)).unwrap();
     start_capture(&mut profiler);
     process_all(&mut profiler, &stereo_capture, 2, &[4096]);
     assert!(profiler.profile_uses_spectral());
@@ -823,7 +823,7 @@ fn linked_spectral_with_per_channel_spectra_preserves_dual_mono() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.restore_profile(&profile).unwrap();
         let output = process_all(&mut plugin, &dual_mono, 2, &[4096]);
         assert!(output.iter().all(|s| s.is_finite()), "{label} finite");
@@ -912,7 +912,7 @@ fn reset_preserves_spectral_and_eof_matches_endpoint() {
                 ..HissReducerPluginParams::default()
             },
         );
-        eof_plugin.initialize(RATE).unwrap();
+        eof_plugin.initialize(f64::from(RATE)).unwrap();
         eof_plugin.restore_profile(&exported).unwrap();
         assert!(eof_plugin.profile_uses_spectral());
         let marker_frames = phase + 1;
@@ -944,7 +944,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
     let reloaded = restored_params.captured_profile.clone().unwrap();
     assert_eq!(reloaded, v2, "v2 JSON must restore exact measured data");
     let mut reloaded_plugin = HissReducerPlugin::from_params(1, restored_params);
-    reloaded_plugin.initialize(RATE).unwrap();
+    reloaded_plugin.initialize(f64::from(RATE)).unwrap();
     assert!(reloaded_plugin.has_measured_spectrum());
     assert_eq!(
         reloaded_plugin.measured_spectrum().unwrap(),
@@ -1004,7 +1004,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
             label,
             NoiseProfileData {
                 format_version: 2,
-                sample_rate: RATE,
+                sample_rate: f64::from(RATE),
                 channels: 1,
                 measurement_cutoff_hz: 4000.0,
                 floor_db_per_channel: vec![-40.0],
@@ -1016,7 +1016,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
     push_variant("bad-fft", &|s| s.fft_size = 2048);
     push_variant("bad-hop", &|s| s.hop_size = 128);
     push_variant("bad-window", &|s| s.window = "hann-symmetric".to_string());
-    push_variant("bad-rate", &|s| s.sample_rate = 96_000);
+    push_variant("bad-rate", &|s| s.sample_rate = 96_000.0);
     push_variant("bad-channels", &|s| s.channels = 2);
     push_variant("bad-bins", &|s| s.num_bins = 256);
     push_variant("zero-hops", &|s| s.hops_analyzed = 0);
@@ -1035,7 +1035,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
         "v1-with-spectral",
         NoiseProfileData {
             format_version: 1,
-            sample_rate: RATE,
+            sample_rate: f64::from(RATE),
             channels: 1,
             measurement_cutoff_hz: 4000.0,
             floor_db_per_channel: vec![-40.0],
@@ -1047,7 +1047,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
         "v2-without-spectral",
         NoiseProfileData {
             format_version: 2,
-            sample_rate: RATE,
+            sample_rate: f64::from(RATE),
             channels: 1,
             measurement_cutoff_hz: 4000.0,
             floor_db_per_channel: vec![-40.0],
@@ -1059,7 +1059,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
         "bad-version",
         NoiseProfileData {
             format_version: 99,
-            sample_rate: RATE,
+            sample_rate: f64::from(RATE),
             channels: 1,
             measurement_cutoff_hz: 4000.0,
             floor_db_per_channel: vec![-40.0],
@@ -1158,7 +1158,7 @@ fn cross_rate_falls_back_to_floors_and_cutoff_keeps_spectral() {
     // matches the v1 floors-only fallback bit-exactly (no silent reuse).
     let v1_fallback = NoiseProfileData {
         format_version: 1,
-        sample_rate: RATE,
+        sample_rate: f64::from(RATE),
         channels: 1,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: v2_48k.floor_db_per_channel.clone(),
@@ -1328,7 +1328,7 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
             ..HissReducerPluginParams::default()
         },
     );
-    profiler.initialize(RATE).unwrap();
+    profiler.initialize(f64::from(RATE)).unwrap();
     let capture = first_difference_hiss(RATE as usize, 0.035, 0x9a5516);
     start_capture(&mut profiler);
     process_all(&mut profiler, &capture, 1, &[4096]);
@@ -1355,7 +1355,7 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.restore_profile(blob).unwrap();
         process_all(&mut plugin, &signal, 1, &PARTITIONS)
     };
@@ -1411,7 +1411,7 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             plugin.restore_profile(blob).unwrap();
             let hiss_only = first_difference_hiss(frames, 0.035, 0x51ab_0002);
             let hiss_out = process_all(&mut plugin, &hiss_only, 1, &PARTITIONS);

@@ -93,7 +93,7 @@ fn assert_close(actual: &[f32], expected: &[f32]) {
 fn first_and_final_markers_survive_every_final_hop_phase() {
     for mode in [Mode::Phase, Mode::LtRt] {
         let mut plugin = make("2.0", 2, mode, false);
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         assert_eq!(plugin.latency_samples(), N);
         for source in 1..=H {
             plugin.reset();
@@ -117,7 +117,7 @@ fn dense_front_channels_have_exact_delay_and_endpoint_across_layouts() {
             for rate in [44_100, RATE, 96_000, 192_000] {
                 for chunks in [&[1][..], &[137, 4096, 17][..], &[8193][..]] {
                     let mut plugin = make(layout, channels, mode, true);
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     let frames = N * 3 + 73;
                     let delay = if matches!(mode, Mode::Simple) { 0 } else { N };
                     let tail = if delay == 0 { 0 } else { tail_frames(frames) };
@@ -147,8 +147,8 @@ fn nontrivial_spectral_tail_matches_ordinary_zero_continuation() {
             for capacities in [&[1][..], &[17, 257, 4096][..]] {
                 let mut plugin = make("5.1", 6, mode, true);
                 let mut reference = make("5.1", 6, mode, true);
-                plugin.initialize(RATE).unwrap();
-                reference.initialize(RATE).unwrap();
+                plugin.initialize(f64::from(RATE)).unwrap();
+                reference.initialize(f64::from(RATE)).unwrap();
                 let input: Vec<f32> = (0..frames * 6)
                     .map(|i| ((i * 37 % 127) as i32 - 63) as f32 / 512.0)
                     .collect();
@@ -180,7 +180,7 @@ fn nontrivial_spectral_tail_matches_ordinary_zero_continuation() {
 fn recursive_lfe_is_eligible_only_when_unobservable() {
     for mode in [Mode::Simple, Mode::Phase] {
         let mut plugin = make("5.1", 6, mode, false);
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         assert_eq!(plugin.tail_length(), TailLength::Infinite);
         let input = vec![0.125; H * 6];
         render(&mut plugin, RATE, &input, &[137]);
@@ -214,7 +214,7 @@ fn recursive_lfe_is_eligible_only_when_unobservable() {
     }
     // Lt/Rt explicitly discards LFE even with a nonzero gain/filter state.
     let mut plugin = make("5.1", 6, Mode::LtRt, false);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let mut input = vec![0.0; (N + 73) * 6];
     input[3] = 1.0;
     let mut output = render(&mut plugin, RATE, &input, &[137]);
@@ -233,7 +233,7 @@ fn drain_validation_and_frozen_controls_preserve_the_audio() {
             .is_err()
     );
     assert_eq!(canary, [987.0; 8]);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert!(
         plugin
             .drain(&mut [], &ProcessContext::new(RATE, 0))
@@ -241,7 +241,7 @@ fn drain_validation_and_frozen_controls_preserve_the_audio() {
             .complete
     );
     let mut reference = make("2.0", 2, Mode::Phase, false);
-    reference.initialize(RATE).unwrap();
+    reference.initialize(f64::from(RATE)).unwrap();
     let input: Vec<f32> = (0..(N + 73) * 2)
         .map(|i| ((i % 31) as f32 - 15.0) / 64.0)
         .collect();
@@ -262,7 +262,7 @@ fn drain_validation_and_frozen_controls_preserve_the_audio() {
             .drain(&mut canary, &ProcessContext::new(44_100, 0))
             .is_err()
     );
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
     assert_eq!(canary, [987.0; 8]);
     let first = plugin
         .drain(&mut canary, &ProcessContext::new(RATE, 0))
@@ -321,8 +321,8 @@ fn drain_validation_and_frozen_controls_preserve_the_audio() {
 fn newly_settled_itu_keeps_prior_analysis_and_overlap_output() {
     let mut plugin = make("5.1", 6, Mode::Phase, false);
     let mut reference = make("5.1", 6, Mode::Phase, false);
-    plugin.initialize(RATE).unwrap();
-    reference.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
+    reference.initialize(f64::from(RATE)).unwrap();
     let frames = N * 2 + 13;
     let input: Vec<f32> = (0..frames * 6)
         .map(|i| ((i * 31 % 127) as i32 - 63) as f32 / 256.0)
@@ -364,7 +364,7 @@ fn reset_and_reinitialize_rearm_finite_streams() {
     for mode in [Mode::Simple, Mode::Phase, Mode::LtRt] {
         for reinitialize in [false, true] {
             let mut plugin = make("5.1", 6, mode, true);
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             render(&mut plugin, RATE, &vec![0.25; (N + 73) * 6], &[137]);
             finish(&mut plugin, RATE, &[257]);
             assert!(
@@ -373,12 +373,12 @@ fn reset_and_reinitialize_rearm_finite_streams() {
                     .is_err()
             );
             if reinitialize {
-                plugin.initialize(RATE).unwrap();
+                plugin.initialize(f64::from(RATE)).unwrap();
             } else {
                 plugin.reset();
             }
             let mut fresh = make("5.1", 6, mode, true);
-            fresh.initialize(RATE).unwrap();
+            fresh.initialize(f64::from(RATE)).unwrap();
             let input: Vec<f32> = (0..(N + 11) * 6)
                 .map(|i| ((i % 63) as f32 - 31.0) / 128.0)
                 .collect();
@@ -400,7 +400,7 @@ fn declared_call_bound_covers_full_capacity_and_partially_served_tails() {
         for source in [1, H - 1, H, H + 1, N - 1, N, N + 1] {
             for partial in [false, true] {
                 let mut plugin = make("5.1", 6, mode, true);
-                plugin.initialize(RATE).unwrap();
+                plugin.initialize(f64::from(RATE)).unwrap();
                 render(&mut plugin, RATE, &vec![0.125; source * 6], &[137]);
                 if partial {
                     plugin
@@ -472,7 +472,7 @@ fn cold_first_final_drain_metadata_and_reset_do_not_allocate_or_free() {
         for mode in [Mode::Simple, Mode::Phase, Mode::LtRt] {
             for rate in [44_100, 192_000] {
                 let mut plugin = make(layout, channels, mode, true);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let input = vec![0.125; (N + 73) * channels];
                 render(&mut plugin, rate, &input, &[137]);
                 let mut output = vec![0.0; (N + 73) * 2];
@@ -525,9 +525,9 @@ fn invalid_ordinary_callbacks_preserve_output_and_prepared_audio() {
                 .is_err()
         );
         assert_eq!(sentinel, [987.0; 2]);
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let mut reference = make("5.1", 6, mode, true);
-        reference.initialize(RATE).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
         let input: Vec<f32> = (0..(N + 73) * 6)
             .map(|i| ((i % 31) as f32 - 15.0) / 64.0)
             .collect();
@@ -568,7 +568,7 @@ fn minimal_oversampled_setup_prepares_the_future_spectral_drain_capacity() {
         let mut plugin =
             sotf_host::AutoOversampledPlugin::new_with_max_frames(Box::new(inner), factor, 1)
                 .unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin
             .process(
                 &[0.25, -0.125],

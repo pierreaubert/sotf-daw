@@ -191,7 +191,7 @@ fn render_frozen_legacy_case(case_name: &str) -> (Vec<f32>, Vec<u8>, usize) {
         )
         .expect("restore frozen oversampling value");
     plugin
-        .plugin_initialize(sample_rate)
+        .plugin_initialize(f64::from(sample_rate))
         .expect("initialize legacy settings replay");
     let output = render(&mut plugin, &input, channels, sample_rate, block_size);
     let actual_bytes = encode_f32le(&output);
@@ -315,7 +315,7 @@ fn capture_base_rate_placement_matrix() {
                 )
                 .expect("construct explicit ordered placement route");
                 plugin
-                    .plugin_initialize(sample_rate)
+                    .plugin_initialize(f64::from(sample_rate))
                     .expect("initialize explicit ordered placement route");
                 let output = render(&mut plugin, &input, channels, sample_rate, FRAMES_PER_BLOCK);
                 let output_name = format!("{sample_rate}-{channels}ch-{label}.f32le");
@@ -378,7 +378,7 @@ fn capture_multirate_prefix_placement_matrix() {
                         )
                         .expect("disable full-plugin AutoGain for transport reference");
                     plugin
-                        .plugin_initialize(sample_rate)
+                        .plugin_initialize(f64::from(sample_rate))
                         .expect("initialize cold multirate route");
                     plugin
                         .parametric_set_parameter(
@@ -528,8 +528,8 @@ fn rejected_legacy_mixed_advanced_reinitialize_preserves_populated_epoch() {
     };
     let mut actual = construct();
     let mut twin = construct();
-    actual.plugin_initialize(48_000).unwrap();
-    twin.plugin_initialize(48_000).unwrap();
+    actual.plugin_initialize(48_000.0).unwrap();
+    twin.plugin_initialize(48_000.0).unwrap();
 
     let prefix = (0..256 * 2)
         .map(|index| {
@@ -544,7 +544,7 @@ fn rejected_legacy_mixed_advanced_reinitialize_preserves_populated_epoch() {
     render(&mut twin, &prefix, 2, 48_000, 37);
 
     assert!(
-        actual.plugin_initialize(16_000).is_err(),
+        actual.plugin_initialize(16_000.0).is_err(),
         "the 10 kHz Kautz pole is invalid below 20 kHz sample rate"
     );
 
@@ -566,7 +566,7 @@ fn rejected_legacy_mixed_advanced_reinitialize_preserves_populated_epoch() {
     );
 
     let mut cold = construct();
-    cold.plugin_initialize(48_000).unwrap();
+    cold.plugin_initialize(48_000.0).unwrap();
     let cold_output = render(&mut cold, &continuation, 2, 48_000, 29);
     let maximum_cold_difference = resumed
         .iter()
@@ -589,8 +589,8 @@ fn rejected_low_sample_rate_preserves_populated_biquad_and_autogain_epoch() {
     };
     let mut actual = construct();
     let mut twin = construct();
-    actual.plugin_initialize(48_000).unwrap();
-    twin.plugin_initialize(48_000).unwrap();
+    actual.plugin_initialize(48_000.0).unwrap();
+    twin.plugin_initialize(48_000.0).unwrap();
 
     let prefix = (0..256 * 2)
         .map(|index| {
@@ -605,7 +605,7 @@ fn rejected_low_sample_rate_preserves_populated_biquad_and_autogain_epoch() {
     render(&mut twin, &prefix, 2, 48_000, 41);
 
     assert!(
-        actual.plugin_initialize(9).is_err(),
+        actual.plugin_initialize(9.0).is_err(),
         "AutoGain's loudness meters reject sample rates below 10 Hz"
     );
     let continuation = (0..96 * 2)
@@ -620,7 +620,7 @@ fn rejected_low_sample_rate_preserves_populated_biquad_and_autogain_epoch() {
     );
 
     let mut cold = construct();
-    cold.plugin_initialize(48_000).unwrap();
+    cold.plugin_initialize(48_000.0).unwrap();
     let cold_output = render(&mut cold, &continuation, 2, 48_000, 31);
     let maximum_cold_difference = resumed
         .iter()

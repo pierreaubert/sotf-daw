@@ -16,7 +16,7 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
         r#"{"harmonic_percussive":true,"spatial_denoise":true,"spatial_strength":0.9,"curve_low":0.0,"curve_mid":0.5,"curve_high":1.0,"audition_residual":true}"#,
     )
     .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, expected) in [
         ("harmonic_percussive", ParameterValue::Bool(true)),
         ("spatial_denoise", ParameterValue::Bool(true)),
@@ -30,7 +30,7 @@ fn bridge_constructor_and_state_roundtrip_retain_denoiser_modes() {
     }
     let saved = save_state(plugin.as_ref());
     let mut restored = create_plugin("Denoiser", 2, 48_000, "{}").unwrap();
-    restored.initialize(48_000).unwrap();
+    restored.initialize(48_000.0).unwrap();
     load_state(restored.as_mut(), &saved).unwrap();
     assert_eq!(save_state(restored.as_ref()), saved);
 }

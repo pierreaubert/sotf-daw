@@ -37,7 +37,7 @@ fn configured(channels: usize, enabled: bool, strength: f32) -> SpeechDenoiserPl
             ..SpeechDenoiserPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -559,7 +559,7 @@ fn fresh_restore_matches_live_configured_twin() {
             let json = serde_json::to_string(&params).unwrap();
             let restored: SpeechDenoiserPluginParams = serde_json::from_str(&json).unwrap();
             let mut from_factory = SpeechDenoiserPlugin::from_params(channels, restored);
-            from_factory.initialize(RATE).unwrap();
+            from_factory.initialize(f64::from(RATE)).unwrap();
             // Live twin configured before its first audio callback.
             let mut live = SpeechDenoiserPlugin::new(channels);
             live.parametric_set_parameter(
@@ -577,11 +577,11 @@ fn fresh_restore_matches_live_configured_twin() {
                 ParameterValue::String("RNNoise Full".to_string()),
             )
             .unwrap();
-            live.initialize(RATE).unwrap();
+            live.initialize(f64::from(RATE)).unwrap();
             // Snapshot restore through the borrowed realtime path.
             let mut snapshot = SpeechDenoiserPlugin::new(channels);
             snapshot.apply_values_realtime(&from_factory.current_values()).unwrap();
-            snapshot.initialize(RATE).unwrap();
+            snapshot.initialize(f64::from(RATE)).unwrap();
             let expected = process(&mut from_factory, &input, channels, &[137, 1]);
             assert_eq!(process(&mut live, &input, channels, &[137, 1]), expected);
             assert_eq!(process(&mut snapshot, &input, channels, &[137, 1]), expected);

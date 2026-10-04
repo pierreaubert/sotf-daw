@@ -76,8 +76,8 @@ impl Plugin for SyntheticRateDoubler {
         input_frames.saturating_mul(2)
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        input_rate.saturating_mul(2)
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        input_rate * 2.0
     }
 }
 
@@ -259,7 +259,7 @@ fn dawhost_retained_clap_crossover_uses_new_rate_and_keeps_unprocessed_scalar_ch
         .expect("add the loaded Crossover after the upstream node");
     host.build()
         .expect("prepare the retained Crossover at 96 kHz");
-    assert_eq!(host.output_sample_rate(NEW_RATE), OLD_RATE);
+    assert_eq!(host.output_sample_rate(NEW_RATE).unwrap(), f64::from(OLD_RATE));
     drop(
         host.remove_plugin(0)
             .expect("remove the upstream synthetic rate-changing node"),
@@ -272,7 +272,7 @@ fn dawhost_retained_clap_crossover_uses_new_rate_and_keeps_unprocessed_scalar_ch
             .expect("DawHost rebuild initializes the retained Crossover at 48 kHz"),
         input.len() / 2
     );
-    assert_eq!(host.output_sample_rate(NEW_RATE), NEW_RATE);
+    assert_eq!(host.output_sample_rate(NEW_RATE).unwrap(), f64::from(NEW_RATE));
 
     let mut reference = ExternalPlugin::from_placeholder_state(
         &crossover_state(descriptor.clone(), Vec::new()),
@@ -604,7 +604,7 @@ fn dawhost_failed_vst3_rate_preparation_preserves_retained_native_object_history
         "failed candidate preparation leaves native state and scalar controls unchanged"
     );
     extracted
-        .initialize(OLD_RATE)
+        .initialize(f64::from(OLD_RATE))
         .expect("failed transition leaves the old sample rate installed");
     assert_eq!(extracted.latency_samples(), latency_before_failure);
     assert_eq!(extracted.tail_length(), tail_before_failure);

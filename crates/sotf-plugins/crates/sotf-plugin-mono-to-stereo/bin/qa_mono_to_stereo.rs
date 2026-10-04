@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut plugin = MonoToStereoPlugin::from_params(1, params);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: MonoToStereo Plugin ===");
 
@@ -29,7 +29,7 @@ fn main() {
         ..Default::default()
     };
     let mut plugin_mono = MonoToStereoPlugin::from_params(1, params_mono);
-    plugin_mono.initialize(sample_rate).unwrap();
+    plugin_mono.initialize(f64::from(sample_rate)).unwrap();
 
     let num_frames = 48000;
     let input = generate_sine(sample_rate, 1000.0, -6.0, num_frames);
@@ -58,7 +58,7 @@ fn main() {
             ..Default::default()
         },
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let mut output_stereo = vec![0.0; num_frames * 2];
     process_streaming(

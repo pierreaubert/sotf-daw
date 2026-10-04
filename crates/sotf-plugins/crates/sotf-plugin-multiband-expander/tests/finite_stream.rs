@@ -13,7 +13,7 @@ fn make(channels: usize, rate: u32, bands: usize, lookahead_ms: f32, mix: f32) -
     };
     let mut plugin =
         ParametricInPlacePluginAdapter::new(MultibandExpanderPlugin::from_params(channels, params));
-    Plugin::initialize(&mut plugin, rate).unwrap();
+    Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
     Box::new(plugin)
 }
 
@@ -275,7 +275,7 @@ fn errors_are_retryable_and_supported_eos_requires_reset() {
     actual.reset();
     assert_eq!(first, process(actual.as_mut(), rate, &input));
     assert_eq!(tail, drain(actual.as_mut(), rate, 7));
-    actual.initialize(rate).unwrap();
+    actual.initialize(f64::from(rate)).unwrap();
     assert_eq!(first, process(actual.as_mut(), rate, &input));
     assert_eq!(tail, drain(actual.as_mut(), rate, 257));
 }
@@ -290,7 +290,7 @@ fn supported_bulk_snapshots_and_zero_delay_keep_the_eos_contract() {
         ..Default::default()
     };
     let mut plugin = MultibandExpanderPlugin::from_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process_in_place(&mut [0.25], &ProcessContext::new(48_000, 1))
         .unwrap();
@@ -413,7 +413,7 @@ fn settled_dry_spectral_output_keeps_its_shorter_exact_response() {
             let mut plugin = ParametricInPlacePluginAdapter::new(
                 MultibandExpanderPlugin::from_params(channels, params),
             );
-            Plugin::initialize(&mut plugin, rate).unwrap();
+            Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
             for frames in [1, 17, 513] {
                 Plugin::reset(&mut plugin);
                 let input: Vec<f32> = (0..frames * channels)
@@ -448,7 +448,7 @@ fn settled_dry_spectral_output_keeps_its_shorter_exact_response() {
     };
     let mut plugin =
         ParametricInPlacePluginAdapter::new(MultibandExpanderPlugin::from_params(2, params));
-    Plugin::initialize(&mut plugin, 48_000).unwrap();
+    Plugin::initialize(&mut plugin, 48_000.0).unwrap();
     cold_measure(Box::new(plugin));
 }
 
@@ -562,7 +562,7 @@ fn drain_call_bound_tracks_full_capacity_partial_empty_and_reset() {
                 let mut plugin = ParametricInPlacePluginAdapter::new(
                     MultibandExpanderPlugin::from_params(2, params),
                 );
-                Plugin::initialize(&mut plugin, rate).unwrap();
+                Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
                 // Last source sample is in hop zero: the final possible wet
                 // output ends at 2N, so 2N - 71 frames remain at this EOS.
                 let tail = if mix == 0.0 { 1024 } else { 2 * 1024 - 71 };

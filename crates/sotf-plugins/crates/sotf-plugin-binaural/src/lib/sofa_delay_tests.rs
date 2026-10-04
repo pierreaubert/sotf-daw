@@ -59,7 +59,7 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
                 ..Default::default()
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .process(
                 &[0.125; 193],
@@ -94,11 +94,11 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
         write(&path.0, f64::NAN);
         assert!(
             plugin
-                .initialize(96_000)
+                .initialize(96_000.0)
                 .unwrap_err()
                 .contains("Data.Delay must contain finite sample counts")
         );
-        assert_eq!(plugin.config.sample_rate, 48_000);
+        assert_eq!(plugin.config.sample_rate, 48_000.0);
         assert!(Arc::ptr_eq(&plugin.state.load_full(), &pending));
         assert!(Arc::ptr_eq(
             &plugin.crossfade.current_state_snapshot,

@@ -335,7 +335,7 @@ pub struct LinearPhaseEqControlHandle {
     /// Immutable explicit stereo pairs.
     accepted_pairs: Vec<[usize; 2]>,
     /// Accepted sample rate, published at construction and on rate change.
-    accepted_sample_rate: AtomicU32,
+    accepted_sample_rate: AtomicU64,
     /// Seqlock accepted generation (even when stable, odd mid-publication).
     accepted_gen: AtomicU64,
     /// Accepted per-band shapes for the configured prefix.
@@ -485,7 +485,8 @@ impl LinearPhaseEqControlHandle {
             if before & 1 == 1 {
                 continue;
             }
-            let sample_rate = self.accepted_sample_rate.load(Ordering::Relaxed);
+            let sample_rate =
+                f64::from_bits(self.accepted_sample_rate.load(Ordering::Relaxed));
             let mut bands = Vec::with_capacity(self.accepted_num_filters);
             for (index, cells) in self
                 .accepted_bands
@@ -554,10 +555,10 @@ impl LinearPhaseEqControlHandle {
     /// Exclusive `&mut` wrapper context only (rate-change initialize runs
     /// outside audio and never concurrently with the commit step). Bumps the
     /// accepted generation; band shapes are unchanged by a rate change.
-    pub(crate) fn publish_sample_rate(&self, sample_rate: u32) {
+    pub(crate) fn publish_sample_rate(&self, sample_rate: f64) {
         self.accepted_gen.fetch_add(1, Ordering::Release);
         self.accepted_sample_rate
-            .store(sample_rate, Ordering::Relaxed);
+            .store(sample_rate.to_bits(), Ordering::Relaxed);
         self.accepted_gen.fetch_add(1, Ordering::Release);
     }
 
@@ -594,8 +595,8 @@ impl LinearPhaseEqControlHandle {
     ///
     /// Used by the wrapper to detect rate-change initialize calls without an
     /// allocating snapshot; always equals the live DSP rate.
-    pub(crate) fn published_sample_rate(&self) -> u32 {
-        self.accepted_sample_rate.load(Ordering::Relaxed)
+    pub(crate) fn published_sample_rate(&self) -> f64 {
+        f64::from_bits(self.accepted_sample_rate.load(Ordering::Relaxed))
     }
 }
 
@@ -640,9 +641,9 @@ impl LinearPhaseEqDynamicPlugin {
     ///
     /// Returns the DSP construction error for invalid rates, mixes, bands or
     /// topologies.
-    pub fn from_params(
+    pub fn from_params<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: LinearPhaseEqPluginParams,
     ) -> Result<Self, String> {
         let inner = LinearPhaseEqPlugin::from_params(channels, sample_rate, params)?;
@@ -675,7 +676,7 @@ impl LinearPhaseEqDynamicPlugin {
             accepted_auto_gain: initial.auto_gain,
             accepted_placements,
             accepted_pairs: initial.stereo_pairs.clone(),
-            accepted_sample_rate: AtomicU32::new(initial.sample_rate),
+            accepted_sample_rate: AtomicU64::new(initial.sample_rate.to_bits()),
             accepted_gen: AtomicU64::new(0),
             accepted_bands: std::array::from_fn(|index| {
                 AcceptedBandCells::new(initial.bands.get(index).unwrap_or(&NEUTRAL_BAND))
@@ -1023,7 +1024,7 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
         self.inner.parametric_get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let before = self.handle.published_sample_rate();
         self.inner.initialize(sample_rate)?;
         // A same-rate initialize may still reset stream state (completing a

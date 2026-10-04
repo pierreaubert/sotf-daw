@@ -126,7 +126,7 @@ fn parameter_roundtrip_and_validation() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = AecPlugin::new(48_000);
-    plugin.initialize(44_100).expect("initialize succeeds");
+    plugin.initialize(44_100.0).expect("initialize succeeds");
     // The internal AEC is rebuilt; processing should still work at the new rate.
     let num_frames = 512;
     let input = vec![0.0f32; num_frames * 2];

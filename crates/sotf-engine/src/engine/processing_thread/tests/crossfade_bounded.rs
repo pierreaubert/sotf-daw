@@ -34,7 +34,7 @@ impl Plugin for ScriptSignal {
     fn reset(&mut self) {
         self.emitted = 0;
     }
-    fn output_sample_rate(&self, rate: u32) -> u32 {
+    fn output_sample_rate(&self, rate: f64) -> f64 {
         rate
     }
     fn output_frames_for_input(&self, input_frames: usize) -> usize {

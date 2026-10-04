@@ -24,7 +24,7 @@ fn gate_choice_labels_indices_and_saved_state_preserve_audio_sign_and_cap() {
             })
             .to_string();
             let mut plugin = create_plugin("Gate", 2, 48_000, &config).unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mode_id = ParameterId::from("mode");
             assert_eq!(
                 plugin.get_parameter(&mode_id),
@@ -33,7 +33,7 @@ fn gate_choice_labels_indices_and_saved_state_preserve_audio_sign_and_cap() {
             let saved = save_state(plugin.as_ref());
             let mut restored = create_plugin("Gate", 2, 48_000, &config).unwrap();
             load_state(restored.as_mut(), &saved).unwrap();
-            restored.initialize(48_000).unwrap();
+            restored.initialize(48_000.0).unwrap();
             assert_eq!(save_state(restored.as_ref()), saved);
             let mut last = Vec::new();
             for frames in [1, 17, 257, 63].into_iter().cycle().take(128) {
@@ -86,7 +86,7 @@ fn gate_external_key_drives_program_channels_through_bridge() {
             .to_string();
             let mut plugin = create_plugin("Gate", 2, 48_000, &config).unwrap();
             assert_eq!((plugin.input_channels(), plugin.output_channels()), (4, 2));
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mut output = [0.0; 126];
             for _ in 0..200 {
                 let input: Vec<_> = (0..63).flat_map(|_| [0.004, -0.002, 0.1, 0.0]).collect();

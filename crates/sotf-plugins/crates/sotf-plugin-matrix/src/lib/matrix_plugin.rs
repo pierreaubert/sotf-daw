@@ -40,7 +40,7 @@ pub struct MatrixPlugin {
     /// When set, the effective gain is negated during processing.
     pub(super) phase_invert: Vec<bool>,
     pub(super) gain_smoothers: Vec<Smoother>,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) physical_input_channels: usize,
     pub(super) physical_output_channels: usize,
     pub(super) channel_states: Vec<ChannelState>,
@@ -62,7 +62,7 @@ pub struct MatrixPlugin {
 impl MatrixPlugin {
     pub fn new(input_channels: usize, output_channels: usize) -> Self {
         let matrix = Self::create_identity_matrix(input_channels, output_channels);
-        let sample_rate = 48000;
+        let sample_rate = 48_000.0;
         let gain_smoothers = matrix
             .iter()
             .map(|&v| Smoother::new(v, GAIN_SMOOTH_MS, sample_rate))
@@ -115,7 +115,7 @@ impl MatrixPlugin {
         if matrix.len() != expected_size {
             return Err("Size mismatch".into());
         }
-        let sample_rate = 48000;
+        let sample_rate = 48_000.0;
         let gain_smoothers = matrix
             .iter()
             .map(|&v| Smoother::new(v, GAIN_SMOOTH_MS, sample_rate))
@@ -218,7 +218,7 @@ impl MatrixPlugin {
                 "Physical channel indices must be below {MAX_MATRIX_CHANNELS}"
             ));
         }
-        let sample_rate = 48000;
+        let sample_rate = 48_000.0;
         let gain_smoothers = matrix
             .iter()
             .map(|&v| Smoother::new(v, GAIN_SMOOTH_MS, sample_rate))
@@ -1008,9 +1008,9 @@ impl Plugin for MatrixPlugin {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Matrix sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Matrix sample rate must be finite and positive".into());
         }
         self.sample_rate = sample_rate;
         for idx in 0..self.gain_smoothers.len() {
@@ -1595,7 +1595,7 @@ mod tests {
     #[test]
     fn test_process_known_mono_downmix() {
         let mut plugin = MatrixPlugin::with_matrix(2, 1, vec![0.5, 0.5]).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let num_frames = 4;
         // Interleaved stereo: [L0, R0, L1, R1, ...]
@@ -1615,7 +1615,7 @@ mod tests {
     #[test]
     fn test_process_known_stereo_swap() {
         let mut plugin = MatrixPlugin::with_matrix(2, 2, vec![0.0, 1.0, 1.0, 0.0]).unwrap();
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![0.1f32, 0.9, 0.2, 0.8];
         let mut output = vec![0.0f32; 4];
@@ -1876,7 +1876,7 @@ mod tests {
         for (input_channels, output_channels, matrix) in cases {
             let mut plugin =
                 MatrixPlugin::with_matrix(input_channels, output_channels, matrix).unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let input = vec![0.25; 257 * input_channels];
             let mut output = vec![0.0; 257 * output_channels];
             let context = ProcessContext::new(48_000, 257);
@@ -1889,7 +1889,7 @@ mod tests {
     #[test]
     fn automation_reclassifies_identity_after_nonzero_transition_settles() {
         let mut plugin = MatrixPlugin::with_matrix(2, 2, vec![0.5, 0.0, 0.0, 0.5]).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.set_gain(0, 0, 1.0).unwrap();
         plugin.set_gain(1, 1, 1.0).unwrap();
         assert_ne!(plugin.kernel, MatrixKernel::Identity);
@@ -1914,7 +1914,7 @@ mod tests {
     fn near_unity_identity_preserves_exact_coefficient() {
         let coefficient = f32::from_bits(1.0f32.to_bits() - 1);
         let mut plugin = MatrixPlugin::with_matrix(1, 1, vec![coefficient]).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = [0.0];
         plugin
             .process(&[1.0], &mut output, &ProcessContext::new(48_000, 1))

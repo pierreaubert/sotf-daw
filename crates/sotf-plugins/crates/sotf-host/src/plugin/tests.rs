@@ -110,7 +110,7 @@ fn test_adapter_forwards_defaults() {
 fn process_context_defaults_to_musical_transport_without_midi() {
     let ctx = ProcessContext::new(48_000, 512);
 
-    assert_eq!(ctx.sample_rate, 48_000);
+    assert_eq!(ctx.sample_rate, 48_000.0);
     assert_eq!(ctx.num_frames, 512);
     assert!(ctx.transport.playing);
     assert_eq!(ctx.transport.bpm, 120.0);
@@ -648,7 +648,7 @@ fn in_place_adapter_dispatches_native_f64_without_rounding_or_allocating() {
                 f32_calls: 0,
                 f64_calls: 0,
             });
-            plugin.initialize(96_000).unwrap();
+            plugin.initialize(96_000.0).unwrap();
             assert!(plugin.supports_f64());
             for frames in [0, 1, 17, 257] {
                 let input_channels = channels + usize::from(sidechain);

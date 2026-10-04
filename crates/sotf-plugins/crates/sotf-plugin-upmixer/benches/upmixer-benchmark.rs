@@ -133,7 +133,7 @@ fn bench_multi_source_processing_matrix(c: &mut Criterion) {
                 &(layout, fft_size, block_size),
                 |b, &(layout, fft_size, block_size)| {
                     let mut upmixer = create_multi_source_upmixer(fft_size, layout);
-                    upmixer.initialize(sample_rate).unwrap();
+                    upmixer.initialize(f64::from(sample_rate)).unwrap();
                     let input = generate_realistic_input(block_size, sample_rate, false);
                     let mut output = vec![0.0f32; block_size * upmixer.output_channels()];
                     let context = ProcessContext::new(sample_rate, block_size);
@@ -174,7 +174,7 @@ fn bench_upmixer_5_1_block_sizes(c: &mut Criterion) {
                 &block_size,
                 |b, &block_size| {
                     let mut upmixer = create_upmixer(fft_size, "5.1");
-                    upmixer.initialize(sample_rate).unwrap();
+                    upmixer.initialize(f64::from(sample_rate)).unwrap();
 
                     let input = generate_realistic_input(block_size, sample_rate, true);
                     let mut output = vec![0.0f32; block_size * upmixer.output_channels()];
@@ -217,7 +217,7 @@ fn bench_upmixer_configs(c: &mut Criterion) {
     for &config in &configs {
         group.bench_with_input(BenchmarkId::from_parameter(config), &config, |b, &cfg| {
             let mut upmixer = create_upmixer(fft_size, cfg);
-            upmixer.initialize(sample_rate).unwrap();
+            upmixer.initialize(f64::from(sample_rate)).unwrap();
 
             let input = generate_realistic_input(block_size, sample_rate, true);
             let mut output = vec![0.0f32; block_size * upmixer.output_channels()];
@@ -257,7 +257,7 @@ fn bench_upmixer_fft_sizes(c: &mut Criterion) {
             &fft_size,
             |b, &fft_size| {
                 let mut upmixer = create_upmixer(fft_size, "5.1");
-                upmixer.initialize(sample_rate).unwrap();
+                upmixer.initialize(f64::from(sample_rate)).unwrap();
                 let input = generate_realistic_input(block_size, sample_rate, true);
                 let mut output = vec![0.0f32; block_size * upmixer.output_channels()];
                 let context = ProcessContext::new(sample_rate, block_size);
@@ -297,7 +297,7 @@ fn bench_upmixer_production_config(c: &mut Criterion) {
             let mut params: UpmixerPluginParams = serde_json::from_str("{}").unwrap();
             params.core.speaker_config = cfg.to_string();
             let mut upmixer = UpmixerPlugin::from_params(params);
-            upmixer.initialize(sample_rate).unwrap();
+            upmixer.initialize(f64::from(sample_rate)).unwrap();
 
             let input = generate_realistic_input(block_size, sample_rate, true);
             let mut output = vec![0.0f32; block_size * upmixer.output_channels()];

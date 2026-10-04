@@ -254,7 +254,7 @@ fn test_xtc_zero_alloc() {
 #[serial]
 fn test_resampler_zero_alloc() {
     let mut plugin = ResamplerPlugin::new(2, 44100, 48000, BUFFER_SIZE).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     let input = vec![0.0f32; BUFFER_SIZE * 2];
     let mut output = vec![0.0f32; plugin.output_frames_for_input(BUFFER_SIZE) * 2];

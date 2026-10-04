@@ -21,7 +21,7 @@ fn benchmark_gain_plugin(c: &mut Criterion) {
     // Single plugin, various buffer sizes
     for &buffer_size in &[256, 512, 1024, 2048] {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(2, 3.0));
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![0.5f32; buffer_size * 2];
         let mut output = vec![0.0f32; buffer_size * 2];
@@ -66,7 +66,7 @@ fn benchmark_gain_plugin(c: &mut Criterion) {
     // Different gain values
     for &gain_db in &[-60.0, -12.0, 0.0, 6.0, 12.0, 24.0] {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(2, gain_db));
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let buffer_size = 512;
         let input = vec![0.5f32; buffer_size * 2];
@@ -89,7 +89,7 @@ fn benchmark_gain_plugin(c: &mut Criterion) {
     // Different channel configurations
     for &channels in &[1, 2, 4, 8] {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(channels, 0.0));
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let buffer_size = 512;
         let input = vec![0.5f32; buffer_size * channels];
@@ -198,7 +198,7 @@ fn benchmark_direct_plugin_processing(c: &mut Criterion) {
 
     for &channels in &[1, 2, 4] {
         let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(channels, 3.0));
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
 
         let input = vec![0.5f32; buffer_size * channels];
         let mut output = vec![0.0f32; buffer_size * channels];
@@ -239,7 +239,7 @@ fn benchmark_per_sample_cost(c: &mut Criterion) {
     for &(name, channels, buffer_size) in &configurations {
         if name.starts_with("gain") {
             let mut plugin = ParametricPluginAdapter::new(GainPlugin::new(channels, 0.0));
-            plugin.initialize(48000).unwrap();
+            plugin.initialize(48000.0).unwrap();
 
             let input = vec![0.5f32; buffer_size * channels];
             let mut output = vec![0.0f32; buffer_size * channels];

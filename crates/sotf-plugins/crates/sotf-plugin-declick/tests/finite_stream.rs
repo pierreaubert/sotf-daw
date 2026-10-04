@@ -236,7 +236,7 @@ fn drain_errors_controls_reset_and_empty_stream_are_transactional() {
             .is_err()
     );
     assert_eq!(sentinel, [1234.0; 3]);
-    assert!(p.initialize(0).is_err());
+    assert!(p.initialize(0.0).is_err());
     let mut first = [0.0; 2];
     let status = p.drain(&mut first, &ProcessContext::new(rate, 1)).unwrap();
     assert!(!status.complete);
@@ -276,7 +276,7 @@ fn drain_errors_controls_reset_and_empty_stream_are_transactional() {
             &[1, 7]
         )
     );
-    p.initialize(96_000).unwrap();
+    p.initialize(96_000.0).unwrap();
     assert_eq!(
         process(&mut p, &input, channels, 96_000, &[1, 7]),
         process(

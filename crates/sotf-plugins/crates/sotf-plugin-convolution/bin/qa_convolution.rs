@@ -11,12 +11,12 @@ use std::time::Instant;
 static A: CountingAlloc = CountingAlloc;
 
 fn main() {
-    let sample_rate = 48000;
+    let sample_rate: u32 = 48000;
     let channels = 2;
 
     // Create convolution plugin without an IR file (dry passthrough)
     let mut inner = ConvolutionPlugin::new(channels, sample_rate);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Convolution Plugin ===");
 

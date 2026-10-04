@@ -21,7 +21,7 @@ fn main() {
     );
     let adapter = ParametricInPlacePluginAdapter::new(inner);
     let mut plugin = AutoOversampledPlugin::new(Box::new(adapter), 4).unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let input: Vec<f32> = (0..1024)
         .flat_map(|frame| {
             let sample =

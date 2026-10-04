@@ -256,7 +256,7 @@ fn settling_minimum_frames(kind: &str, cutoff: f64, sample_rate: u32) -> usize {
 
 fn make_plugin(kind: &str, sample_rate: u32, cutoff: f64, output: &str) -> CrossoverPlugin {
     let mut plugin = CrossoverPlugin::new(1, kind, cutoff, output).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -628,7 +628,7 @@ fn multiway_lr_compensation_and_serial_non_lr_bands_match_their_products() {
         let extra = [CUTOFFS[1], CUTOFFS[2]];
         let mut plugin =
             CrossoverPlugin::new_multiway(1, kind, CUTOFFS[0], "both", &extra).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let settling = CUTOFFS
             .iter()
             .map(|&cutoff| settling_minimum_frames(kind, cutoff, SAMPLE_RATE))
@@ -745,9 +745,9 @@ fn new_family_modes_keep_width_and_per_channel_modes_keep_channel_order() {
             CrossoverPlugin::new_multiway(1, kind, CUTS[0], "low", &[CUTS[1], CUTS[2]]).unwrap();
         let mut high =
             CrossoverPlugin::new_multiway(1, kind, CUTS[0], "high", &[CUTS[1], CUTS[2]]).unwrap();
-        both.initialize(SAMPLE_RATE).unwrap();
-        low.initialize(SAMPLE_RATE).unwrap();
-        high.initialize(SAMPLE_RATE).unwrap();
+        both.initialize(f64::from(SAMPLE_RATE)).unwrap();
+        low.initialize(f64::from(SAMPLE_RATE)).unwrap();
+        high.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(both.output_channels(), 4, "{kind} Both width");
         assert_eq!(low.output_channels(), 1, "{kind} Low width");
         assert_eq!(high.output_channels(), 1, "{kind} High width");
@@ -787,7 +787,7 @@ fn new_family_modes_keep_width_and_per_channel_modes_keep_channel_order() {
             ],
         )
         .unwrap();
-        per_channel.initialize(SAMPLE_RATE).unwrap();
+        per_channel.initialize(f64::from(SAMPLE_RATE)).unwrap();
         assert_eq!(per_channel.output_channels(), 4);
         let interleaved_input: Vec<f32> = (0..FRAMES)
             .flat_map(|frame| {
@@ -874,7 +874,7 @@ fn cutoff_validation_is_atomic_and_valid_reinitialization_matches_a_fresh_instan
         warm.len()
     );
 
-    assert!(test.initialize(8_000).is_err());
+    assert!(test.initialize(8_000.0).is_err());
     let continuation = vec![0.17_f32; 1_024];
     let mut test_output = vec![0.0; continuation.len() * 2];
     let mut twin_output = vec![0.0; continuation.len() * 2];
@@ -915,7 +915,7 @@ fn cutoff_validation_is_atomic_and_valid_reinitialization_matches_a_fresh_instan
         prior.len()
     );
     assert!(prior_out.iter().all(|sample| sample.is_finite()));
-    populated.initialize(44_100).unwrap();
+    populated.initialize(44_100.0).unwrap();
     let mut fresh = make_plugin("Bessel12", 44_100, 3_000.0, "both");
     let next = vec![0.19_f32; 2_048];
     let mut populated_output = vec![0.0; next.len() * 2];
@@ -1065,7 +1065,7 @@ fn make_multiway_plugin(kind: &str, sample_rate: u32, cutoffs: &[f64]) -> Crosso
     } else {
         CrossoverPlugin::new_multiway(2, kind, cutoffs[0], "both", &cutoffs[1..]).unwrap()
     };
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -1270,7 +1270,7 @@ fn admitted_upper_cutoffs_match_independent_oracles_and_reject_just_outside() {
         process_signal(&mut rejected, 48_000, 0, 4_096, 1_231.0, 2, false);
         process_signal(&mut twin, 48_000, 0, 4_096, 1_231.0, 2, false);
         assert!(
-            rejected.initialize(8_000).is_err(),
+            rejected.initialize(8_000.0).is_err(),
             "cutoff {rejected_cutoff} must be inadmissible at the strict 0.495*Fs boundary"
         );
         let rejected_continuation =
@@ -1390,7 +1390,7 @@ fn make_per_channel_plugin(
 ) -> CrossoverPlugin {
     let mut plugin =
         CrossoverPlugin::new_per_channel("LR48", frequencies.to_vec(), modes.to_vec()).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -1469,7 +1469,7 @@ fn per_channel_public_lifecycle_refuses_live_edits_and_reinitializes_transaction
         );
 
         assert!(
-            populated.initialize(8_000).is_err(),
+            populated.initialize(8_000.0).is_err(),
             "20,000 Hz per-channel cutoff must be rejected at 8 kHz"
         );
         let continuation = make_stereo_input(1_027, SAMPLE_RATE);
@@ -1494,7 +1494,7 @@ fn per_channel_public_lifecycle_refuses_live_edits_and_reinitializes_transaction
             "rejected per-channel sample-rate change must preserve populated audio"
         );
 
-        populated.initialize(44_100).unwrap();
+        populated.initialize(44_100.0).unwrap();
         let mut fresh = make_per_channel_plugin(44_100, frequencies, modes);
         let reinit_input = make_stereo_input(1_541, 44_100);
         let reinitialized = render_partitioned(

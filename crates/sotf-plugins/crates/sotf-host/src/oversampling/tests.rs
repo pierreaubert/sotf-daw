@@ -342,7 +342,7 @@ fn test_oversampled_plugin_processes_audio() {
     }
 
     let mut os = OversampledPlugin::new(DoublerPlugin, 2, 1).unwrap();
-    os.initialize(48000).unwrap();
+    os.initialize(48000.0).unwrap();
 
     // Pass the declared delay and one chunk of FIR settling before measuring gain.
     let ctx = ProcessContext::new(48000, 256);
@@ -399,7 +399,7 @@ fn test_oversampled_plugin_propagates_inner_process_error() {
     }
 
     let mut os = OversampledPlugin::new(ErrorPlugin, 2, 1).unwrap();
-    os.initialize(48000).unwrap();
+    os.initialize(48000.0).unwrap();
 
     let ctx = ProcessContext::new(48000, 256);
     let mut buf = vec![0.0f32; 256];
@@ -554,7 +554,7 @@ fn wrappers_preserve_transport_in_oversampled_chunk_clock() {
     };
     use std::sync::{Arc, Mutex};
 
-    type ContextLog = Arc<Mutex<Vec<(u32, usize, TransportInfo)>>>;
+    type ContextLog = Arc<Mutex<Vec<(f64, usize, TransportInfo)>>>;
     struct ContextProbe(ContextLog);
     impl InPlacePlugin for ContextProbe {
         fn info(&self) -> PluginInfo {
@@ -606,7 +606,7 @@ fn wrappers_preserve_transport_in_oversampled_chunk_clock() {
                         OversampledPlugin::new(probe, factor, 1).unwrap(),
                     ))
                 };
-                wrapper.initialize(48_000).unwrap();
+                wrapper.initialize(48_000.0).unwrap();
                 let input = [0.0; 513];
                 let mut output = [0.0; 513];
                 // Reset at a nonzero origin, then seek at a chunk boundary
@@ -641,7 +641,7 @@ fn wrappers_preserve_transport_in_oversampled_chunk_clock() {
                     let entries = log.lock().unwrap();
                     assert_eq!(entries.len(), 8);
                     for (chunk, &(rate, frames, transport)) in entries.iter().enumerate() {
-                        assert_eq!(rate, 48_000 * factor);
+                        assert_eq!(rate, f64::from(48_000 * factor));
                         assert_eq!(frames, OS_CHUNK_SIZE * factor as usize);
                         assert_eq!(
                             transport.sample_position,
@@ -730,7 +730,7 @@ fn fractional_inner_latency_is_reported_conservatively() {
                         OversampledPlugin::new(inner, factor, 1).unwrap(),
                     ))
                 };
-                wrapper.initialize(48_000).unwrap();
+                wrapper.initialize(48_000.0).unwrap();
                 let mut impulse = vec![0.0; 2048];
                 impulse[0] = 1.0;
                 let mut response = vec![0.0; impulse.len()];
@@ -842,7 +842,7 @@ fn auto_oversampled_envelopes_dominate_live_declarations_in_every_state() {
         );
     };
     let mut wrapper = AutoOversampledPlugin::new(Box::new(PassthroughInner), 2).unwrap();
-    wrapper.initialize(48_000).unwrap();
+    wrapper.initialize(48_000.0).unwrap();
     check(&wrapper, "fresh");
     let input = vec![0.25f32; 256 * 2];
     let mut output = vec![0.0f32; 256 * 2];

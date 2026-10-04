@@ -92,7 +92,7 @@ fn benchmark_plugin_construction(criterion: &mut Criterion) {
                         let mut plugin =
                             AmbisonicsDecoderPlugin::new(std::hint::black_box(&dual_config))
                                 .unwrap();
-                        plugin.initialize(SAMPLE_RATE).unwrap();
+                        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
                         std::hint::black_box(plugin);
                     });
                 },
@@ -121,7 +121,7 @@ fn measure_observed_callback_times(
 ) {
     let mut plugin =
         AmbisonicsDecoderPlugin::new(&make_config(order, algorithm, dual_band)).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let mut elapsed_ns = Vec::with_capacity(CALLBACK_OBSERVATIONS);
     for _ in 0..CALLBACK_OBSERVATIONS {
@@ -156,7 +156,7 @@ fn benchmark_callback(criterion: &mut Criterion) {
                 let mut plugin =
                     AmbisonicsDecoderPlugin::new(&make_config(order, algorithm, dual_band))
                         .unwrap();
-                plugin.initialize(SAMPLE_RATE).unwrap();
+                plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
                 let input = callback_input(plugin.input_channels());
                 let mut output = vec![0.0_f32; BLOCK_FRAMES * plugin.output_channels()];
                 let context = ProcessContext::new(SAMPLE_RATE, BLOCK_FRAMES);

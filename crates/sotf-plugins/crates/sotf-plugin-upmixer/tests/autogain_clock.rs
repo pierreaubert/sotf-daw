@@ -8,7 +8,7 @@ fn plugin(rate: u32, enabled: bool) -> UpmixerPlugin {
     params.output.auto_gain_max_db = 12.0;
     params.output.auto_gain_smoothing_ms = 100.0;
     let mut plugin = UpmixerPlugin::from_params(params);
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

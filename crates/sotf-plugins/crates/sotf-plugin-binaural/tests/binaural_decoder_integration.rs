@@ -53,7 +53,7 @@ fn test_binaural_with_minimal_sofa() {
         RoomModel::default(), // Default room model
     );
 
-    decoder.initialize(44100).unwrap();
+    decoder.initialize(44100.0).unwrap();
 
     // Process a sine wave
     let block_size = 512;
@@ -112,7 +112,7 @@ fn test_binaural_sample_rate_resampling() {
     );
 
     // This should trigger automatic resampling
-    decoder.initialize(44100).unwrap();
+    decoder.initialize(44100.0).unwrap();
 
     let block_size = 256;
     let input = vec![0.1f32; block_size * 5];
@@ -151,7 +151,7 @@ fn test_binaural_lfe_handling() {
         RoomModel::default(),
     );
 
-    decoder.initialize(48000).unwrap();
+    decoder.initialize(48000.0).unwrap();
 
     let block_size = 512;
     let mut input = vec![0.0f32; block_size * 6];
@@ -206,7 +206,7 @@ fn test_binaural_externalization() {
         0.0,
         RoomModel::default(),
     );
-    decoder_no_ext.initialize(48000).unwrap();
+    decoder_no_ext.initialize(48000.0).unwrap();
 
     // Test with externalization on
     let mut decoder_with_ext = BinauralDecoderPlugin::new(
@@ -221,7 +221,7 @@ fn test_binaural_externalization() {
         0.0,
         RoomModel::default(),
     );
-    decoder_with_ext.initialize(48000).unwrap();
+    decoder_with_ext.initialize(48000.0).unwrap();
 
     let block_size = 1024;
     let mut input = vec![0.0f32; block_size * 5];
@@ -275,7 +275,7 @@ fn test_binaural_atmos_7_1_4() {
         RoomModel::default(),
     );
 
-    decoder.initialize(48000).unwrap();
+    decoder.initialize(48000.0).unwrap();
 
     let block_size = 512;
     let mut input = vec![0.0f32; block_size * 12];
@@ -321,7 +321,7 @@ fn test_binaural_continuous_processing() {
         RoomModel::default(),
     );
 
-    decoder.initialize(48000).unwrap();
+    decoder.initialize(48000.0).unwrap();
 
     let block_size = 256;
     let num_blocks = 100;

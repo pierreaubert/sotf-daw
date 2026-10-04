@@ -42,8 +42,8 @@ pub(super) const DIFFUSENESS_ENERGY_FLOOR: f32 = 1e-12;
 const REFERENCE_HOP_SECONDS: f32 = 1024.0 / 48_000.0;
 
 #[inline(always)]
-pub(super) fn time_scaled_alpha(reference_alpha: f32, hop_samples: usize, sample_rate: u32) -> f32 {
-    if sample_rate == 0 {
+pub(super) fn time_scaled_alpha(reference_alpha: f32, hop_samples: usize, sample_rate: f64) -> f32 {
+    if sample_rate <= 0.0 {
         return reference_alpha;
     }
     let intervals = hop_samples as f32 / sample_rate as f32 / REFERENCE_HOP_SECONDS;
@@ -71,7 +71,7 @@ pub(super) fn bin_intensity_doa(left: Complex<f32>, right: Complex<f32>) -> Opti
 
 impl UpmixerPlugin {
     pub(in super::super) fn process_frequency_domain_erb_bands(&mut self) {
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate == 0.0 || self.core.fft_size == 0 {
             return;
         }
 

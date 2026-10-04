@@ -38,7 +38,7 @@ fn main() {
     };
 
     let mut inner = LinearPhaseEqPlugin::from_params(channels, sample_rate, params).unwrap();
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: LinearPhaseEQ Plugin ===");
 

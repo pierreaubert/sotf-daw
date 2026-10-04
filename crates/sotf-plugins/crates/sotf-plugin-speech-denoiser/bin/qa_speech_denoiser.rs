@@ -31,7 +31,7 @@ fn run_layout(channels: usize, model: SpeechDenoiserModel) {
             ..SpeechDenoiserPluginParams::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let max_frames = 4_093;
     let mut buffer = vec![0.0; max_frames * channels];
     for frame in 0..max_frames {

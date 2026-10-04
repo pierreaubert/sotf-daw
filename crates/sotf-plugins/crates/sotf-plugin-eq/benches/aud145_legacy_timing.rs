@@ -153,7 +153,7 @@ fn make_plugin(case: &LegacyCase) -> EqPlugin {
             ParameterValue::Int(case.global_topology),
         )
         .unwrap();
-    plugin.plugin_initialize(SAMPLE_RATE).unwrap();
+    plugin.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 

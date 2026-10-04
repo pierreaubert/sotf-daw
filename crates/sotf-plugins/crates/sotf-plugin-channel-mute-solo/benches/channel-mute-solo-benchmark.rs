@@ -25,7 +25,7 @@ fn settled_plugin(channels: usize) -> ChannelMuteSoloPlugin {
             fade_ms: 5.0,
         },
     );
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
 }
 

@@ -71,7 +71,7 @@ pub trait ParametricPlugin: Send {
     }
 
     /// Initialize the plugin with the host sample rate.
-    fn plugin_initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn plugin_initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
     }
@@ -353,7 +353,7 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         self.plugin.parametric_get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.plugin.plugin_initialize(sample_rate)
     }
 
@@ -467,7 +467,7 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
         self.plugin.output_frames_envelope(input_frames)
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 

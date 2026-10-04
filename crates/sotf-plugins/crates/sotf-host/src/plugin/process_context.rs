@@ -7,7 +7,7 @@ use super::transport_info::TransportInfo;
 #[derive(Clone, Copy)]
 pub struct ProcessContext<'a> {
     /// Sample rate in Hz
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     /// Number of frames in this processing block
     pub num_frames: usize,
     /// Transport and musical-time metadata at block start.
@@ -22,7 +22,8 @@ pub struct ProcessContext<'a> {
 
 impl<'a> ProcessContext<'a> {
     /// Create a processing context with default transport and no MIDI events.
-    pub fn new(sample_rate: u32, num_frames: usize) -> Self {
+    pub fn new(sample_rate: impl Into<f64>, num_frames: usize) -> Self {
+        let sample_rate = sample_rate.into();
         Self {
             sample_rate,
             num_frames,

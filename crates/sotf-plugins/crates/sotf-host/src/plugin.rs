@@ -448,7 +448,7 @@ pub trait Plugin: Send {
 
     /// Initialize the plugin with the given sample rate
     /// This is called before any audio processing begins
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
     }
@@ -834,7 +834,7 @@ pub trait Plugin: Send {
     /// Returns the output sample rate given an input rate.
     /// Default: returns input unchanged (no rate change).
     /// Plugins that change sample rate (like resamplers) should override this.
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 

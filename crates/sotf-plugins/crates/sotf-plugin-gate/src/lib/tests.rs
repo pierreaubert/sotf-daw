@@ -10,7 +10,7 @@ use sotf_host::plugin::{PluginCostClass, ProcessContext};
 #[test]
 fn threshold_decision_uses_the_canonical_db_smoother_trajectory() {
     let mut plugin = GatePlugin::new(1, -60.0, 4.0, 5.0, 0.0, 50.0);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .parametric_set_parameter(ParameterId::from("threshold"), ParameterValue::Float(0.0))
         .unwrap();
@@ -27,7 +27,7 @@ fn threshold_decision_uses_the_canonical_db_smoother_trajectory() {
 #[test]
 fn test_gate_basic() {
     let mut p = GatePlugin::new(1, -20.0, 100.0, 1.0, 10.0, 50.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut b = vec![0.05; 1000];
     p.process_in_place(&mut b, &ProcessContext::new(48000, 1000))
         .unwrap();
@@ -39,7 +39,7 @@ fn test_hold_samples_precomputed_and_updated() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 10.0, 50.0);
     assert_eq!(p.hold_samples, 441);
 
-    p.initialize(96000).unwrap();
+    p.initialize(96000.0).unwrap();
     assert_eq!(p.hold_samples, 960);
 
     p.parametric_set_parameter(ParameterId::from("hold"), ParameterValue::Float(1.5))
@@ -54,7 +54,7 @@ fn test_hold_samples_precomputed_and_updated() {
 fn test_attack_controls_opening_speed() {
     let sr = 48000u32;
     let mut p = GatePlugin::new(1, -20.0, 100.0, 1.0, 0.0, 500.0);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Close the gate with very quiet signal (-100 dBFS)
     let quiet_len = sr as usize;
@@ -86,7 +86,7 @@ fn test_attack_controls_opening_speed() {
 fn test_release_controls_closing_speed() {
     let sr = 48000u32;
     let mut p = GatePlugin::new(1, -20.0, 100.0, 50.0, 0.0, 10.0);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Open the gate with loud signal (-6 dBFS)
     let loud_len = sr as usize;
@@ -137,7 +137,7 @@ fn test_linked_stereo_monitoring_cache_reports_closed() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let block_size = 1024;
     let num_blocks = 20; // enough to trigger cache update (every 10 blocks)
@@ -188,7 +188,7 @@ fn test_sidechain_hpf_filters_low_freq_detection() {
             ..GatePluginParams::default()
         },
     );
-    p_low.initialize(sr).unwrap();
+    p_low.initialize(f64::from(sr)).unwrap();
 
     let num_frames = 9600; // 200ms
     let mut buf_low = vec![0.0f32; num_frames];
@@ -227,7 +227,7 @@ fn test_sidechain_hpf_filters_low_freq_detection() {
             ..GatePluginParams::default()
         },
     );
-    p_high.initialize(sr).unwrap();
+    p_high.initialize(f64::from(sr)).unwrap();
 
     let mut buf_high = vec![0.0f32; num_frames];
     for (i, sample) in buf_high.iter_mut().enumerate() {
@@ -288,7 +288,7 @@ fn test_gate_hysteresis_no_chatter() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Build 1-second buffer that alternates every 100 samples between
     // -18 dBFS (above open threshold -20 dB) and -22 dBFS (between open and
@@ -374,7 +374,7 @@ fn test_gate_linear_threshold_no_fast_log10_in_decision() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Signal exactly at the linear threshold (-20 dBFS = 0.1).
     // With exact linear comparison the gate should remain open.
@@ -501,7 +501,7 @@ fn metadata_and_structural_schema_match_runtime_contracts() {
         },
     )
     .unwrap();
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
 
     assert_eq!(gate.info().version, env!("CARGO_PKG_VERSION"));
     assert_eq!(gate.cost_class(), PluginCostClass::Dynamics);
@@ -532,7 +532,7 @@ fn metadata_and_structural_schema_match_runtime_contracts() {
 #[test]
 fn structural_parameters_are_rejected_after_initialize() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 0.0, 50.0);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     for id in [
         "lookahead_ms",
         "sidechain_hpf_hz",
@@ -567,7 +567,7 @@ fn process_diagnostic_blocks(gate: &mut GatePlugin, samples: &[f32]) {
 #[test]
 fn diagnostics_publish_distinct_input_and_attenuation_vectors_when_linked() {
     let mut gate = GatePlugin::new(2, -10.0, 100.0, 1.0, 0.0, 10.0);
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let mut samples = Vec::new();
     for _ in 0..8 {
         for _ in 0..512 {
@@ -592,7 +592,7 @@ fn diagnostics_publish_per_channel_values_when_unlinked() {
         ParameterValue::Bool(false),
     )
     .unwrap();
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let mut samples = Vec::new();
     for _ in 0..8 {
         for _ in 0..512 {
@@ -625,7 +625,7 @@ fn test_set_parameter_all_params_roundtrip() {
         p.parametric_get_parameter(&ParameterId::from("link_channels")),
         Some(ParameterValue::Bool(false))
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let cases: &[(&str, ParameterValue)] = &[
         ("threshold", ParameterValue::Float(-30.0)),
@@ -650,7 +650,7 @@ fn test_set_parameter_all_params_roundtrip() {
 #[test]
 fn test_set_parameter_clamps_out_of_bounds() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 0.0, 50.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // param_bridge clamps floats to range instead of returning Err
     p.parametric_set_parameter(ParameterId::from("threshold"), ParameterValue::Float(10.0))
@@ -676,7 +676,7 @@ fn test_set_parameter_clamps_out_of_bounds() {
 #[test]
 fn test_set_parameter_unknown_id_returns_error() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 0.0, 50.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let result =
         p.parametric_set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0));
@@ -686,7 +686,7 @@ fn test_set_parameter_unknown_id_returns_error() {
 #[test]
 fn test_set_parameter_type_mismatch_returns_error() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 0.0, 50.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // threshold is float, not bool
     let result =
@@ -697,7 +697,7 @@ fn test_set_parameter_type_mismatch_returns_error() {
 #[test]
 fn test_process_empty_buffer_returns_zero() {
     let mut p = GatePlugin::new(1, -20.0, 10.0, 1.0, 0.0, 50.0);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buf = vec![0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -728,7 +728,7 @@ fn test_input_channels_doubles_with_external_sidechain() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert_eq!(p.channels(), 2);
     assert_eq!(p.input_channels(), 4);
@@ -783,7 +783,7 @@ fn test_from_params_hpf_order_4th() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.sidechain_hpf_order_index, 1);
     // Biquads should be built for 4th order (2 sections)
     assert_eq!(p.sidechain_hpf_biquads.len(), 1);
@@ -819,7 +819,7 @@ fn test_info_and_latency() {
             ..GatePluginParams::default()
         },
     );
-    p2.initialize(48000).unwrap();
+    p2.initialize(48000.0).unwrap();
     assert!(p2.latency_samples() > 0);
 }
 
@@ -851,7 +851,7 @@ fn test_process_in_place_rms_detection() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let mut quiet = vec![0.0001f32; sr as usize];
     p.process_in_place(&mut quiet, &ProcessContext::new(sr, sr as usize))
@@ -889,7 +889,7 @@ fn test_process_in_place_lookahead_delays_output() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let delay_samples = (lookahead_ms * 0.001 * sr as f32).round() as usize;
     let num_frames = delay_samples + 100;
@@ -932,7 +932,7 @@ fn lookahead_replacement_instances_render_their_reported_impulse_latency() {
             },
         )
         .unwrap();
-        gate.initialize(sample_rate).unwrap();
+        gate.initialize(f64::from(sample_rate)).unwrap();
 
         let expected_latency = (lookahead_ms * 0.001 * sample_rate as f32).round() as usize;
         assert_eq!(gate.latency_samples(), expected_latency);
@@ -971,7 +971,7 @@ fn rejected_live_lookahead_change_preserves_delay_history_bit_exactly() {
             },
         )
         .unwrap();
-        gate.initialize(48_000).unwrap();
+        gate.initialize(48_000.0).unwrap();
         gate
     }
 
@@ -1033,7 +1033,7 @@ fn test_process_in_place_external_sidechain() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let num_frames = 1000;
     let mut buffer = vec![0.0f32; num_frames * 2];
@@ -1090,7 +1090,7 @@ fn test_process_in_place_mix_half() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // from_params sets p.mix but does not update the mix smoother target.
     // Explicitly set the parameter so the smoother ramps to 0.5.
@@ -1142,7 +1142,7 @@ fn test_process_in_place_unlinked_dual_channel() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let num_frames = sr as usize;
     let mut buffer: Vec<f32> = (0..num_frames).flat_map(|_| [0.5f32, 0.0001f32]).collect();
@@ -1190,7 +1190,7 @@ fn test_process_in_place_hold_counter() {
             ..GatePluginParams::default()
         },
     );
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Open gate with loud signal
     let mut loud = vec![0.5f32; sr as usize];
@@ -1234,7 +1234,7 @@ fn process_requires_initialize_and_matching_sample_rate() {
         .unwrap_err();
     assert!(err.contains("initialized"), "unexpected error: {err}");
 
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let err = gate
         .process_in_place(&mut buffer, &ProcessContext::new(44_100, 16))
         .unwrap_err();
@@ -1244,7 +1244,7 @@ fn process_requires_initialize_and_matching_sample_rate() {
 #[test]
 fn process_requires_exact_buffer_length() {
     let mut gate = GatePlugin::new(2, -40.0, 10.0, 1.0, 0.0, 100.0);
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let mut oversized = vec![0.0; 9];
     let err = gate
         .process_in_place(&mut oversized, &ProcessContext::new(48_000, 4))
@@ -1268,7 +1268,7 @@ fn non_finite_audio_and_sidechain_do_not_poison_state() {
         },
     )
     .unwrap();
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let mut poisoned = [f32::NAN, f32::INFINITY, 0.25, f32::NEG_INFINITY];
     gate.process_in_place(&mut poisoned, &ProcessContext::new(48_000, 2))
         .unwrap();
@@ -1286,7 +1286,7 @@ fn non_finite_audio_and_sidechain_do_not_poison_state() {
 #[test]
 fn structural_updates_allow_noop_but_reject_actual_change_transactionally() {
     let mut gate = GatePlugin::new(2, -40.0, 10.0, 1.0, 0.0, 100.0);
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let noops = [
         ("link_channels", ParameterValue::Bool(true)),
         ("sidechain_hpf_hz", ParameterValue::Float(0.0)),
@@ -1333,7 +1333,7 @@ fn failed_batch_update_does_not_partially_mutate_state() {
 #[test]
 fn lowering_hold_clamps_an_active_hold_counter() {
     let mut gate = GatePlugin::new(1, -40.0, 10.0, 1.0, 100.0, 100.0);
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     gate.hold_counter[0] = gate.hold_samples;
     gate.parametric_set_parameter(ParameterId::from("hold"), ParameterValue::Float(1.0))
         .unwrap();
@@ -1343,7 +1343,7 @@ fn lowering_hold_clamps_an_active_hold_counter() {
 #[test]
 fn held_diagnostic_snapshot_is_immutable_while_new_data_publishes() {
     let mut gate = GatePlugin::new(1, -20.0, 100.0, 1.0, 0.0, 10.0);
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let mut loud = vec![0.5; 2_000];
     gate.process_in_place(&mut loud, &ProcessContext::new(48_000, 2_000))
         .unwrap();
@@ -1365,7 +1365,7 @@ fn held_diagnostic_snapshot_is_immutable_while_new_data_publishes() {
 fn diagnostics_are_callback_partition_invariant() {
     fn run(block_size: usize) -> (usize, f32, f32) {
         let mut gate = GatePlugin::new(1, -20.0, 100.0, 1.0, 0.0, 10.0);
-        gate.initialize(48_000).unwrap();
+        gate.initialize(48_000.0).unwrap();
         let mut remaining = 48_000;
         while remaining > 0 {
             let frames = remaining.min(block_size);
@@ -1397,7 +1397,7 @@ fn steady_state_audio_gain_obeys_range_contract() {
     fn output_gain(range_db: f32) -> f32 {
         let mut gate = GatePlugin::new(1, -20.0, 100.0, 0.1, 0.0, 10.0);
         gate.range_db = range_db;
-        gate.initialize(48_000).unwrap();
+        gate.initialize(48_000.0).unwrap();
         let input = 1.0e-8;
         let mut buffer = vec![input; 48_000];
         gate.process_in_place(&mut buffer, &ProcessContext::new(48_000, 48_000))
@@ -1489,7 +1489,7 @@ fn conventional_ratio_matches_settled_audio_at_multiple_rates_and_channels() {
                         ..Default::default()
                     },
                 );
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let input = 10.0_f64.powf(-30.0 / 20.0) as f32;
                 let expected = conventional_expander_output_db(
                     20.0 * (input as f64).log10(),
@@ -1500,7 +1500,7 @@ fn conventional_ratio_matches_settled_audio_at_multiple_rates_and_channels() {
                 );
                 let mut buffer = vec![input; rate as usize * channels / 2];
                 plugin
-                    .process_in_place(&mut buffer, &ProcessContext::new(rate, rate as usize / 2))
+                    .process_in_place(&mut buffer, &ProcessContext::new(f64::from(rate), rate as usize / 2))
                     .unwrap();
                 for sample in &buffer[buffer.len() - channels..] {
                     let actual = 20.0 * (*sample as f64).abs().log10();

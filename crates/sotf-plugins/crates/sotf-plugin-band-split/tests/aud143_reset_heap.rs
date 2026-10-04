@@ -47,7 +47,7 @@ fn populated_legacy_and_compensated_resets_do_not_allocate_or_deallocate() {
                 recombination_mode,
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             plugin
                 .set_parameter(
                     ParameterId::from("frequency_3"),
@@ -140,7 +140,7 @@ fn populated_legacy_and_compensated_resets_do_not_allocate_or_deallocate() {
                 recombination_mode,
             )
             .unwrap();
-            after_audio.initialize(48_000).unwrap();
+            after_audio.initialize(48_000.0).unwrap();
 
             let frames = 1_024;
             let input: Vec<f32> = (0..frames)
@@ -174,7 +174,7 @@ fn populated_legacy_and_compensated_resets_do_not_allocate_or_deallocate() {
                 recombination_mode,
             )
             .unwrap();
-            fresh.initialize(48_000).unwrap();
+            fresh.initialize(48_000.0).unwrap();
             let mut after_reset_output = vec![0.0; frames * 4];
             let mut fresh_output = vec![0.0; frames * 4];
             let context = ProcessContext::new(48_000, frames);

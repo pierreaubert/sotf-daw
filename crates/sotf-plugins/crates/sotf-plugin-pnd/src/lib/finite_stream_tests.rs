@@ -93,7 +93,7 @@ fn learned(drift: f32, formants: bool) -> (PndPlugin, usize) {
         },
     )
     .unwrap();
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     let frames = 24_113;
     let input: Vec<_> = (0..frames)
         .flat_map(|i| {
@@ -196,14 +196,14 @@ fn failed_reinitialize_preserves_learned_history_and_success_restarts_it() {
     let (mut p, _) = learned(0.98, true);
     let before = snapshot(&p);
     let mut oracle = p.vocoder.as_ref().unwrap().clone();
-    assert!(p.initialize(800).is_err()); // configured 440 Hz reference is above Nyquist
+    assert!(p.initialize(800.0).is_err()); // configured 440 Hz reference is above Nyquist
     assert_eq!(snapshot(&p), before);
     let q = (1.0 + (p.current_ratio - 1.0) * f64::from(p.correction_strength_current)) as f32;
     let expected = continue_zeros(&mut oracle, 7, q, p.formant_strength);
     let mut output = [0.0; 14];
     p.drain(&mut output, &ProcessContext::new(RATE, 0)).unwrap();
     assert_eq!(output.as_slice(), expected);
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     assert_eq!(p.current_ratio, 1.0);
     assert_eq!(p.last_drift_ratio, 1.0);
     assert_eq!(p.correction_strength_current, p.correction_strength);

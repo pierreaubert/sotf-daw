@@ -37,7 +37,7 @@ fn main() {
     };
 
     let mut inner = DynamicEqPlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: DynamicEQ Plugin ===");
 
@@ -98,7 +98,7 @@ fn main() {
                 stereo_pairs: pairs,
             },
         );
-        routed.initialize(sample_rate).unwrap();
+        routed.initialize(f64::from(sample_rate)).unwrap();
         let frames = 8_192;
         let mut audio = vec![0.0; frames * channels];
         for frame in 0..frames {
@@ -140,7 +140,7 @@ fn main() {
                             ..Default::default()
                         },
                     );
-                    candidate.initialize(sample_rate).unwrap();
+                    candidate.initialize(f64::from(sample_rate)).unwrap();
                     for frames in [32, 64, 127, 256, 512, 1_024, 2_048] {
                         let mut audio = vec![0.0; frames * channels];
                         let context = ProcessContext::new(sample_rate, frames);

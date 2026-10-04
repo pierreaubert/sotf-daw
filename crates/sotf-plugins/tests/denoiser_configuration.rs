@@ -10,7 +10,7 @@ fn facade_retains_denoiser_persistent_controls() {
     let typed: sotf_plugins::DenoiserPluginParams = serde_json::from_value(config).unwrap();
     let config = serde_json::to_value(typed).unwrap();
     let mut plugin = create_plugin("denoiser", &config, 2, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, expected) in [
         ("harmonic_percussive", ParameterValue::Bool(true)),
         ("spatial_denoise", ParameterValue::Bool(true)),

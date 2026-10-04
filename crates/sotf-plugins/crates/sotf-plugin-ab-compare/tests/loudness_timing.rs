@@ -23,7 +23,7 @@ fn make_plugin(sample_rate: u32, gain_db: f32, loudness_type: LoudnessType) -> A
         },
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -175,7 +175,7 @@ fn cold_processing_across_measurement_boundaries_does_not_allocate() {
             make_plugin(48_000, 6.0, LoudnessType::Momentary)
         } else {
             let mut plugin = ABComparePlugin::new(2).unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             plugin
         };
         let input = signal(48_000, 1);

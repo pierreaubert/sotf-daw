@@ -89,7 +89,7 @@ fn parameters_include_all_public_params() {
 #[test]
 fn enabled_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
@@ -102,7 +102,7 @@ fn enabled_roundtrip() {
 #[test]
 fn mix_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))
         .unwrap();
@@ -115,7 +115,7 @@ fn mix_roundtrip() {
 #[test]
 fn bauer_params_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("bauer_fcut_hz"),
@@ -141,7 +141,7 @@ fn bauer_params_roundtrip() {
 #[test]
 fn meier_level_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("meier_level"),
@@ -157,7 +157,7 @@ fn meier_level_roundtrip() {
 #[test]
 fn multiband_feed_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("mb_low_feed_db"),
@@ -193,7 +193,7 @@ fn multiband_feed_roundtrip() {
 #[test]
 fn itd_delay_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("itd_delay_ms"),
@@ -209,7 +209,7 @@ fn itd_delay_roundtrip() {
 #[test]
 fn head_yaw_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("head_yaw_deg"),
@@ -225,7 +225,7 @@ fn head_yaw_roundtrip() {
 #[test]
 fn autogain_enable_roundtrip() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("autogain_enabled"),
@@ -241,7 +241,7 @@ fn autogain_enable_roundtrip() {
 #[test]
 fn yaw_out_of_range_is_clamped() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("head_yaw_deg"),
@@ -261,7 +261,7 @@ fn yaw_out_of_range_is_clamped() {
 #[test]
 fn process_zero_input_produces_finite_output() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.0f32; FRAMES * 2];
     plugin
@@ -273,7 +273,7 @@ fn process_zero_input_produces_finite_output() {
 #[test]
 fn disabled_plugin_passthrough() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
@@ -294,7 +294,7 @@ fn disabled_plugin_passthrough() {
 #[test]
 fn mode_off_passthrough() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mode"), ParameterValue::Int(0))
         .unwrap();
@@ -316,7 +316,7 @@ fn mode_off_passthrough() {
 fn bauer_mode_changes_stereo_signal() {
     let mut plugin =
         CrossfeedPlugin::new(CrossfeedPluginParams::from_preset(CrossfeedPreset::Default)).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
         .unwrap();
@@ -340,7 +340,7 @@ fn bauer_mode_changes_stereo_signal() {
 fn meier_mode_changes_stereo_signal() {
     let mut plugin =
         CrossfeedPlugin::new(CrossfeedPluginParams::from_preset(CrossfeedPreset::Meier)).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
         .unwrap();
@@ -362,7 +362,7 @@ fn meier_mode_changes_stereo_signal() {
 fn multiband_mode_changes_stereo_signal() {
     let mut plugin =
         CrossfeedPlugin::new(CrossfeedPluginParams::from_preset(CrossfeedPreset::Mb)).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("mix"), ParameterValue::Float(1.0))
         .unwrap();
@@ -383,7 +383,7 @@ fn multiband_mode_changes_stereo_signal() {
 #[test]
 fn mode_transition_resets_and_continues() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.3f32; FRAMES * 2];
     plugin
@@ -409,7 +409,7 @@ fn mode_transition_resets_and_continues() {
 #[test]
 fn reset_then_process_continues() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.3f32; FRAMES * 2];
     plugin
@@ -428,8 +428,8 @@ fn reset_then_process_continues() {
 #[test]
 fn initialize_changes_sample_rate() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(44100).unwrap();
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(44100.0).unwrap();
+    plugin.initialize(96000.0).unwrap();
 
     let mut buffer = vec![0.3f32; FRAMES * 2];
     let frames = plugin
@@ -446,7 +446,7 @@ fn initialize_changes_sample_rate() {
 #[test]
 fn set_unknown_parameter_fails() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0))
         .unwrap_err();
@@ -456,7 +456,7 @@ fn set_unknown_parameter_fails() {
 #[test]
 fn set_head_yaw_with_non_float_fails() {
     let mut plugin = CrossfeedPlugin::new(CrossfeedPluginParams::default()).unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let err = plugin
         .set_parameter(ParameterId::from("head_yaw_deg"), ParameterValue::Int(45))
         .unwrap_err();

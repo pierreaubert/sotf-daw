@@ -126,11 +126,11 @@ fn integration_parameter_roundtrip_and_validation() {
 }
 
 #[test]
-fn integration_initialize_rejects_non_48khz() {
+fn integration_initialize_prepares_host_rate_conversion() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    assert!(plugin.initialize(44100).is_err());
-    assert!(plugin.initialize(96000).is_err());
-    assert!(plugin.initialize(48000).is_ok());
+    assert!(plugin.initialize(44100.0).is_ok());
+    assert!(plugin.initialize(96000.0).is_ok());
+    assert!(plugin.initialize(48000.0).is_ok());
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn integration_disabled_is_transparent_after_latency() {
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process three model frames: total dry delay is 960 frames, followed
     // by the first source frame.
@@ -157,7 +157,7 @@ fn integration_disabled_is_transparent_after_latency() {
 #[test]
 fn integration_enabled_processes_frame_size_blocks() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buffer: Vec<f32> = (0..SPEECH_DENOISER_FRAME_SIZE)
         .map(|i| ((i % 50) as f32 - 25.0) / 100.0)
@@ -176,7 +176,7 @@ fn integration_enabled_processes_frame_size_blocks() {
 #[test]
 fn integration_reset_is_recoverable() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buffer = vec![0.2f32; SPEECH_DENOISER_FRAME_SIZE];
     let ctx = ProcessContext::new(48000, SPEECH_DENOISER_FRAME_SIZE);
@@ -201,7 +201,7 @@ fn integration_reset_is_recoverable() {
 #[test]
 fn integration_process_rejects_bad_block_size_and_buffer() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Arbitrary host block sizes are accepted.
     for &bad_size in &[64usize, 128, 256, 512, 1024] {
@@ -241,7 +241,7 @@ fn integration_from_params_applies_initial_state() {
 #[test]
 fn first_callback_and_live_toggle_are_allocation_free_without_warmup() {
     let mut plugin = SpeechDenoiserPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let mut buffer = vec![0.1; SPEECH_DENOISER_FRAME_SIZE * 2];
     let context = ProcessContext::new(48000, SPEECH_DENOISER_FRAME_SIZE);
     let held_initial_data = plugin.get_data().unwrap();
@@ -264,7 +264,7 @@ fn first_callback_and_live_toggle_are_allocation_free_without_warmup() {
 #[test]
 fn analyzer_data_is_fixed_size_bounded_and_updates_only_on_model_frames() {
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let initial = plugin
         .get_data()
@@ -327,7 +327,7 @@ fn construction_and_process_contract_reject_invalid_dimensions_and_rate() {
             .unwrap_err()
             .contains("initialized")
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(
         plugin
             .process_in_place(&mut empty, &ProcessContext::new(44100, 0))

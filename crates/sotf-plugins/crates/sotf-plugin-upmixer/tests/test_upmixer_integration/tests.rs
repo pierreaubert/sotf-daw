@@ -111,7 +111,7 @@ fn test_upmixer_parameter_adjustment() {
     let mut plugin = UpmixerPlugin::new(
         2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Test parameter queries
     let params = plugin.parameters();
@@ -193,7 +193,7 @@ fn test_upmixer_synthesis_windowing_no_crackling() {
     let mut plugin = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Create continuous sine wave input (1kHz stereo)
     let num_blocks = 4;
@@ -271,7 +271,7 @@ fn test_upmixer_hr_direct_increases_front_energy() {
     let mut plugin_off = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin_off.initialize(sample_rate).unwrap();
+    plugin_off.initialize(f64::from(sample_rate)).unwrap();
     // Explicitly disable HR direct (it now defaults to true)
     plugin_off
         .set_parameter(
@@ -284,7 +284,7 @@ fn test_upmixer_hr_direct_increases_front_energy() {
     let mut plugin_on = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin_on.initialize(sample_rate).unwrap();
+    plugin_on.initialize(f64::from(sample_rate)).unwrap();
     // HR direct is already enabled by default
 
     // Create transient by starting with low-frequency content, then introducing high-frequency
@@ -363,7 +363,7 @@ fn test_upmixer_channel_normalization_no_clipping() {
     let mut plugin = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Create high-amplitude input signal (0.95 amplitude to avoid input clipping)
     // Use complex waveform (multiple frequencies) to stress-test the upmixer
@@ -456,7 +456,7 @@ fn test_upmixer_denormal_flushing() {
     let mut plugin = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Construct subnormals by bit pattern so the test input remains subnormal
     // even when initialization has already enabled FTZ/DAZ on this thread.
@@ -521,7 +521,7 @@ fn test_upmixer_subharmonic_smoothing() {
     let mut plugin = UpmixerPlugin::new(
         fft_size, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, true, 0.5,
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     // Create input with sharp amplitude transition: silence -> signal -> silence
     // This tests both attack (turn-on) and release (turn-off) smoothing

@@ -12,7 +12,7 @@ fn main() {
     let params = AaePluginParams::default();
 
     let mut plugin = AaePlugin::from_params(params).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: AAE (Active Acoustic Enhancement) Plugin ===");
 
@@ -53,7 +53,7 @@ fn run_aae_standard_tests(_plugin: &mut AaePlugin, sample_rate: u32) {
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     println!("\n[Test 8] Latency Reporting");
     let reported = plugin.latency_samples();
     println!("  Reported Latency: {} samples", reported);
@@ -360,7 +360,7 @@ fn test_speaker_config_change(plugin: &mut AaePlugin, sample_rate: u32) {
         ..AaePluginParams::default()
     };
     let mut rebuilt = AaePlugin::try_from_params(params).unwrap();
-    rebuilt.initialize(sample_rate).unwrap();
+    rebuilt.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(
         rebuilt.output_channels(),
         12,

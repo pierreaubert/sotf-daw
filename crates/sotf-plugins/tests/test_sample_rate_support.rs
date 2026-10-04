@@ -401,13 +401,13 @@ fn test_reinitialize_sample_rate_change() {
     let mut plugin = CompressorPlugin::new(2);
 
     // Initialize at 44100, process some data
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     let mut buffer = generate_sine_stereo(44100, 440.0, 0.5, NUM_FRAMES);
     let context = ProcessContext::new(44100, NUM_FRAMES);
     plugin.process_in_place(&mut buffer, &context).unwrap();
 
     // Reinitialize at 96000, process more data
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(96000.0).unwrap();
     let mut buffer2 = generate_sine_stereo(96000, 440.0, 0.5, NUM_FRAMES);
     let context2 = ProcessContext::new(96000, NUM_FRAMES);
     plugin.process_in_place(&mut buffer2, &context2).unwrap();

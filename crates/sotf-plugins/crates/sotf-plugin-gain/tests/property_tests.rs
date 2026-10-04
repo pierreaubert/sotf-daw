@@ -17,7 +17,7 @@ proptest! {
         gain_db in -60.0f32..20.0f32,
     ) {
         let mut plugin = GainPlugin::new(2, gain_db);
-        plugin.plugin_initialize(48_000).unwrap();
+        plugin.plugin_initialize(48_000.0).unwrap();
 
         let mut buffer = vec![0.0f32; input.len()];
         let context = ProcessContext::new(48_000, 32);
@@ -69,7 +69,7 @@ proptest! {
         input in (-1.0f32..1.0f32).prop_map(|v| vec![v; 32]),
     ) {
         let mut plugin = GainPlugin::with_smoothing(2, 0.0, 0.0);
-        plugin.plugin_initialize(48_000).unwrap();
+        plugin.plugin_initialize(48_000.0).unwrap();
 
         let mut buffer = vec![0.0f32; input.len()];
         let context = ProcessContext::new(48_000, 16);
@@ -96,14 +96,14 @@ proptest! {
         let input = vec![0.5f32; 32];
 
         let mut plugin1 = GainPlugin::with_smoothing(2, gain1, 0.0);
-        plugin1.plugin_initialize(48_000).unwrap();
+        plugin1.plugin_initialize(48_000.0).unwrap();
         let mut buf1 = vec![0.0f32; input.len()];
         plugin1
             .process(&input, &mut buf1, &ProcessContext::new(48_000, 16))
             .unwrap();
 
         let mut plugin2 = GainPlugin::with_smoothing(2, gain2, 0.0);
-        plugin2.plugin_initialize(48_000).unwrap();
+        plugin2.plugin_initialize(48_000.0).unwrap();
         let mut buf2 = vec![0.0f32; input.len()];
         plugin2
             .process(&input, &mut buf2, &ProcessContext::new(48_000, 16))

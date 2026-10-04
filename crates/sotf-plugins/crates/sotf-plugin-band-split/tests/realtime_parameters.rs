@@ -9,7 +9,7 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 #[test]
 fn live_frequency_and_gain_updates_do_not_allocate() {
     let mut plugin = BandSplitPlugin::new_multiband(2, &[500.0, 2_000.0], "LR48").unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let frequency = ParameterId::from("frequency_2");
     let gain = ParameterId::from("band_1_gain_db");
 
@@ -28,7 +28,7 @@ fn live_frequency_and_gain_updates_do_not_allocate() {
 #[test]
 fn structural_type_change_is_rejected_without_rebuilding_dsp() {
     let mut plugin = BandSplitPlugin::new(2, 1_000.0, "LR24").unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let type_id = ParameterId::from("crossover_type");
     let before = plugin.get_parameter(&type_id);
 

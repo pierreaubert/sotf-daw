@@ -9,7 +9,7 @@ fn routing_and_gain_transitions_emit_no_audio_from_prior_input() {
     for (inputs, outputs) in [(1, 1), (2, 3), (3, 2), (8, 8)] {
         let mut plugin = MatrixPlugin::new(inputs, outputs);
         assert_eq!(plugin.tail_length(), TailLength::Finite(0));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let hot = vec![0.75; 257 * inputs];
         let mut output = vec![0.0; 257 * outputs];
         plugin

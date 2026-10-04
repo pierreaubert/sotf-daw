@@ -16,7 +16,7 @@ fn make(channels: usize, rate: u32, bands: usize, lookahead_ms: f32, mix: f32) -
     let mut plugin = ParametricInPlacePluginAdapter::new(MultibandCompressorPlugin::from_params(
         channels, params,
     ));
-    Plugin::initialize(&mut plugin, rate).unwrap();
+    Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
     Box::new(plugin)
 }
 
@@ -278,7 +278,7 @@ fn errors_are_retryable_and_supported_eos_requires_reset() {
     actual.reset();
     assert_eq!(first, process(actual.as_mut(), rate, &input));
     assert_eq!(tail, drain(actual.as_mut(), rate, 7));
-    actual.initialize(rate).unwrap();
+    actual.initialize(f64::from(rate)).unwrap();
     assert_eq!(first, process(actual.as_mut(), rate, &input));
     assert_eq!(tail, drain(actual.as_mut(), rate, 257));
 }
@@ -293,7 +293,7 @@ fn supported_bulk_snapshots_and_zero_delay_keep_the_eos_contract() {
         ..Default::default()
     };
     let mut plugin = MultibandCompressorPlugin::from_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .process_in_place(&mut [0.25], &ProcessContext::new(48_000, 1))
         .unwrap();

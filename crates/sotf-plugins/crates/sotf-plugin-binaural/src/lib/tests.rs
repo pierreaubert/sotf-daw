@@ -139,7 +139,7 @@ fn full_head_update_queue_retries_without_advancing_last_sent_angle() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
     tx.try_send((0.0, 0.0, 0.0)).unwrap();
     plugin.hrtf_update_tx = Some(tx);
@@ -391,7 +391,7 @@ fn ism_reflection_groups_reduce_first_and_second_order_delay_lookups() {
                 ..RoomModel::default()
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let naive_delay_lookups: usize = plugin.room.cached_reflections.iter().map(Vec::len).sum();
         let grouped_delay_lookups = plugin.room.reflection_groups.len();
         assert!(naive_delay_lookups > 0);
@@ -424,7 +424,7 @@ fn render_binaural_partitioned(input: &[f32], blocks: &[usize]) -> Vec<f32> {
             ..RoomModel::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     // Pin deterministic one-tap direct filters so this test isolates the
     // streaming/ring contracts from SOFA interpolation and background state.
     let filters = (0..CHANNELS)
@@ -555,7 +555,7 @@ fn vbap_constant_field_is_reproduced() {
         &gains,
         &sofa,
         64,
-        48_000,
+        48_000.0,
         &fft,
         0.0,
         target.azimuth,
@@ -667,7 +667,7 @@ fn initialize_configures_fdn_for_engine_rate_and_reset_clears_tail() {
     );
     plugin.config.late_reverb_enabled = true;
     plugin.config.late_reverb_mix = 1.0;
-    plugin.initialize(96_000).unwrap();
+    plugin.initialize(96_000.0).unwrap();
 
     // Excite the FDN directly, then reset and require complete silence.
     for i in 0..20_000 {
@@ -705,7 +705,7 @@ fn streaming_process_holds_output_for_reported_latency() {
             0.0,
             RoomModel::default(),
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let mut rendered = Vec::with_capacity(total_frames * 2);
         for start in (0..total_frames).step_by(callback_frames) {
@@ -772,7 +772,7 @@ fn streaming_hrtf_matches_direct_linear_convolution_across_boundaries() {
                     ..Default::default()
                 },
             );
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let left = filter::ir_to_freq(&left_ir, fft_size, &plugin.fft.fft_r2c);
             let right = filter::ir_to_freq(&right_ir, fft_size, &plugin.fft.fft_r2c);
             let mut combined = left;
@@ -954,7 +954,7 @@ fn test_crossfade_triggers_on_state_change() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Simulate state change by storing a new state
     let freq_size = plugin.config.freq_size;
@@ -996,7 +996,7 @@ fn test_crossfade_completes() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Trigger a state change
     let freq_size = plugin.config.freq_size;
@@ -1037,7 +1037,7 @@ fn test_process_produces_output_without_hrtf() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let input = vec![0.1f32; num_frames * 2]; // stereo
@@ -1071,7 +1071,7 @@ fn test_near_field_smoke() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Process enough audio to fill the STFT pipeline and produce output
     let num_frames = 8192;
@@ -1115,7 +1115,7 @@ fn test_reset_clears_crossfade() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Trigger a state change
     let freq_size = plugin.config.freq_size;
@@ -1160,7 +1160,7 @@ fn test_crossfade_ms_parameter_set_get_and_affects_duration() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Default should be 50ms
     let default_val = plugin
@@ -1358,13 +1358,13 @@ fn test_yaw_changes_hrtf_filters() {
     }
 
     let sofa = sotf_host::sofa::SofaFile {
-        sample_rate: SAMPLE_RATE,
+        sample_rate: f64::from(SAMPLE_RATE),
         num_measurements: NUM_MEAS,
         ir_length: IR_LEN,
         positions,
         impulse_responses,
         convention: "SimpleFreeFieldHRIR".to_string(),
-        data_sample_rate: Some(SAMPLE_RATE),
+        data_sample_rate: Some(f64::from(SAMPLE_RATE)),
     };
 
     // Compute the left-ear HRTF frequency spectrum for the L stereo speaker
@@ -1385,7 +1385,7 @@ fn test_yaw_changes_hrtf_filters() {
             &gains,
             &sofa,
             fft_size,
-            44100,
+            44_100.0,
             &fft_r2c,
             0.0,
             tgt.azimuth,
@@ -1460,7 +1460,7 @@ fn test_head_yaw_produces_finite_output() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Set yaw to 30. Without a SOFA file the default filters remain in place;
     // the smoother must advance without causing NaN/Inf.
@@ -1515,7 +1515,7 @@ fn test_spectral_crossfade_no_tonal_shift() {
             RoomModel::default(),
         );
         p.config.crossfade_mode_index = mode;
-        p.initialize(sample_rate).unwrap();
+        p.initialize(f64::from(sample_rate)).unwrap();
         p
     };
 
@@ -1886,7 +1886,7 @@ fn test_reflection_delay_clamped_to_buffer_size() {
         RoomModel::default(),
     );
     let sr = 48000_u32;
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Inject a reflection whose delay exceeds delay_line capacity (16384 samples).
     plugin.room.cached_reflections[0].push(room::Reflection {
@@ -1996,7 +1996,7 @@ fn failed_runtime_sofa_replacement_is_transactional() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let before = plugin.state.load_full();
     assert!(
         plugin
@@ -2024,7 +2024,7 @@ fn test_set_parameter_sofa_file_roundtrips_as_file_path_string() {
         0.0,
         RoomModel::default(),
     );
-    plugin.config.sample_rate = 0;
+    plugin.config.sample_rate = 0.0;
     plugin
         .set_parameter(
             ParameterId::from("sofa_file"),
@@ -2167,7 +2167,7 @@ fn test_set_parameter_late_reverb_params() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     plugin
         .set_parameter(
@@ -2290,8 +2290,8 @@ fn test_initialize_sets_sample_rate_and_lfe_filter() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(96000).unwrap();
-    assert_eq!(plugin.config.sample_rate, 96000);
+    plugin.initialize(96000.0).unwrap();
+    assert_eq!(plugin.config.sample_rate, 96000.0);
     assert!(!plugin.coefficients.lfe_lowpass_filter.is_empty());
     assert!(plugin.coefficients.lfe_gain > 0.0);
 }
@@ -2311,7 +2311,7 @@ fn test_initialize_with_nonexistent_srir_file_falls_back_to_ism() {
         RoomModel::default(),
     );
     plugin.config.srir_file = Some(std::path::PathBuf::from("/nonexistent/path.wav"));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert!(!plugin.room.cached_reflections.is_empty());
 }
 
@@ -2334,7 +2334,7 @@ fn test_initialize_clamps_reflection_delays() {
             ..Default::default()
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let max_delay = plugin.room.reflection_delay_mask;
     for r in plugin.room.cached_reflections.iter().flatten() {
         assert!(
@@ -2361,7 +2361,7 @@ fn test_initialize_empty_hrtf_database_dir_no_crash() {
         RoomModel::default(),
     );
     plugin.config.hrtf_database_dir = "".to_string();
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 }
 
 /// Verify that head-yaw changes trigger a background HRTF recompute and that
@@ -2387,13 +2387,13 @@ fn test_head_yaw_background_update_changes_state() {
     }
 
     let sofa = SofaFile {
-        sample_rate: SAMPLE_RATE_F,
+        sample_rate: f64::from(SAMPLE_RATE_F),
         num_measurements: NUM_MEAS,
         ir_length: IR_LEN,
         positions,
         impulse_responses,
         convention: "SimpleFreeFieldHRIR".to_string(),
-        data_sample_rate: Some(SAMPLE_RATE_F),
+        data_sample_rate: Some(f64::from(SAMPLE_RATE_F)),
     };
 
     let freq_size = 1024 / 2 + 1;
@@ -2416,7 +2416,7 @@ fn test_head_yaw_background_update_changes_state() {
         0.0,
         RoomModel::default(),
     );
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     plugin.state.store(initial_state);
     plugin.spawn_hrtf_update_thread();
 

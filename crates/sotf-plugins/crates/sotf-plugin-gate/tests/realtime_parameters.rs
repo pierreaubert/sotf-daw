@@ -16,7 +16,7 @@ fn realtime_parameter_updates_and_reset_do_not_allocate() {
         },
     )
     .unwrap();
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let updates = [
         ("threshold", ParameterValue::Float(-35.0)),
         ("ratio", ParameterValue::Float(20.0)),
@@ -45,7 +45,7 @@ fn realtime_parameter_updates_and_reset_do_not_allocate() {
 #[test]
 fn cold_scalar_reads_preserve_all_parameter_types_without_allocation() {
     let mut gate = GatePlugin::try_from_params(2, GatePluginParams::default()).unwrap();
-    gate.initialize(48_000).unwrap();
+    gate.initialize(48_000.0).unwrap();
     let parameters = gate.parameter_schema();
     let missing = ParameterId::from("missing");
     std::thread::spawn(move || {

@@ -93,7 +93,7 @@ fn render(case: &Case) -> Vec<f32> {
         .parametric_set_parameter(ParameterId::from("oversampling"), ParameterValue::Int(1))
         .unwrap_or_else(|error| panic!("{}: select 1x processing: {error}", case.id));
     plugin
-        .plugin_initialize(case.sample_rate)
+        .plugin_initialize(f64::from(case.sample_rate))
         .unwrap_or_else(|error| panic!("{}: initialize EQ: {error}", case.id));
     plugin
         .parametric_set_parameter(ParameterId::from("topology"), ParameterValue::Int(1))

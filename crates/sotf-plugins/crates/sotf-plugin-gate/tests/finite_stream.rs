@@ -72,7 +72,7 @@ fn make(rate: u32, channels: usize, params: GatePluginParams) -> Box<dyn Plugin>
     let mut p: Box<dyn Plugin> = Box::new(ParametricInPlacePluginAdapter::new(
         GatePlugin::try_from_params(channels, params).unwrap(),
     ));
-    p.initialize(rate).unwrap();
+    p.initialize(f64::from(rate)).unwrap();
     p
 }
 fn markers(frames: usize, channels: usize, external: bool) -> (Vec<f32>, Vec<f32>) {
@@ -311,7 +311,7 @@ fn empty_eos_controls_reset_and_reinitialize_have_explicit_lifecycle() {
                     p.drain(&mut [0.0; 2], &ProcessContext::new(rate, 0))
                         .is_err()
                 );
-                p.initialize(rate).unwrap();
+                p.initialize(f64::from(rate)).unwrap();
                 assert_eq!(
                     p.drain(&mut [], &ProcessContext::new(rate, 0)).unwrap(),
                     PluginDrainResult::COMPLETE
@@ -355,14 +355,14 @@ fn empty_eos_controls_reset_and_reinitialize_have_explicit_lifecycle() {
                 );
                 for reinitialize in [false, true] {
                     if reinitialize {
-                        p.initialize(rate).unwrap();
+                        p.initialize(f64::from(rate)).unwrap();
                     } else {
                         p.reset();
                     }
                     let mut restored = params.clone();
                     restored.threshold_db = -18.0;
                     let mut fresh = GatePlugin::try_from_params(2, restored).unwrap();
-                    fresh.initialize(rate).unwrap();
+                    fresh.initialize(f64::from(rate)).unwrap();
                     let (mut actual, _) = markers(997, 2, external);
                     let mut expected = actual.clone();
                     p.process_in_place(&mut actual, &ProcessContext::new(rate, 997))

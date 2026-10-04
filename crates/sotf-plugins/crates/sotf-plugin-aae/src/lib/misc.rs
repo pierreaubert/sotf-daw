@@ -9,7 +9,7 @@ use sotf_host::multichannel_auto_gain::MultichannelAutoGain;
 /// `params.auto_gain_enabled`; callers can flip the flag at runtime.
 pub(super) fn create_auto_gain(
     params: &AaePluginParams,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
 ) -> Option<MultichannelAutoGain> {
     MultichannelAutoGain::new(
         sample_rate,
@@ -93,8 +93,8 @@ impl LfeLowpass {
     }
 }
 
-pub(super) fn ms_to_samples(time_ms: f32, sample_rate: u32) -> usize {
-    (time_ms * 0.001 * sample_rate as f32).round().max(1.0) as usize
+pub(super) fn ms_to_samples(time_ms: f32, sample_rate: f64) -> usize {
+    (f64::from(time_ms) * 0.001 * sample_rate).round().max(1.0) as usize
 }
 
 pub(super) fn signed_rms(_sum: f32, energy: f32, count: usize, _polarity_hint: f32) -> f32 {

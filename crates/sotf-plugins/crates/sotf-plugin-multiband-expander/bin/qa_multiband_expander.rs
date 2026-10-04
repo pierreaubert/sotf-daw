@@ -30,7 +30,7 @@ fn main() {
         ((params.threshold_db - input_db) * (params.ratio - 1.0)).clamp(0.0, params.range_db);
     let expected_db = input_db - reduction_db;
     let mut inner = MultibandExpanderPlugin::from_params(channels, params);
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Multiband Expander Plugin ===");
 

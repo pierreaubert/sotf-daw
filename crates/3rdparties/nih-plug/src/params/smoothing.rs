@@ -74,21 +74,51 @@ pub struct SmootherIter<'a, T: Smoothable> {
 }
 
 impl SmoothingStyle {
+    /// Prepare an exact smoothing horizon without changing parameter state.
+    ///
+    /// A signed count is required because `Smoother` stores and skips steps using `AtomicI32`.
+    /// Zero-duration styles retain their existing immediate-target behavior.
+    pub fn checked_num_steps(&self, sample_rate: f64) -> Option<i32> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return None;
+        }
+        match self {
+            Self::OversamplingAware(multiplier, style) => {
+                let multiplier = f64::from(multiplier.load(Ordering::Relaxed));
+                if !multiplier.is_finite() || multiplier <= 0.0 {
+                    return None;
+                }
+                style.checked_num_steps(sample_rate * multiplier)
+            }
+            Self::None => Some(1),
+            Self::Linear(time) | Self::Logarithmic(time) | Self::Exponential(time) => {
+                let time = f64::from(*time);
+                let steps = (sample_rate * time / 1000.0).round();
+                if !time.is_finite() || time < 0.0 || !steps.is_finite()
+                    || steps < 0.0 || steps >= 2_f64.powi(i32::BITS as i32 - 1)
+                {
+                    return None;
+                }
+                Some(steps as i32)
+            }
+        }
+    }
     /// Compute the number of steps to reach the target value based on the sample rate and this
     /// smoothing style's duration.
     #[inline]
-    pub fn num_steps(&self, sample_rate: f32) -> u32 {
+    pub fn num_steps(&self, sample_rate: impl Into<f64>) -> u32 {
+        let sample_rate = sample_rate.into();
         nih_debug_assert!(sample_rate > 0.0);
 
         match self {
             Self::OversamplingAware(oversampling_times, style) => {
-                style.num_steps(sample_rate * oversampling_times.load(Ordering::Relaxed))
+                style.num_steps(sample_rate * f64::from(oversampling_times.load(Ordering::Relaxed)))
             }
 
             Self::None => 1,
             Self::Linear(time) | Self::Logarithmic(time) | Self::Exponential(time) => {
                 nih_debug_assert!(*time >= 0.0);
-                (sample_rate * time / 1000.0).round() as u32
+                (sample_rate * f64::from(*time) / 1000.0).round() as u32
             }
         }
     }
@@ -257,10 +287,18 @@ impl<T: Smoothable> Smoother<T> {
     }
 
     /// Set the target value.
-    pub fn set_target(&self, sample_rate: f32, target: T) {
-        T::atomic_store(&self.target, target);
+    pub fn set_target(&self, sample_rate: impl Into<f64>, target: T) -> bool {
+        let Some(steps_left) = self.style.checked_num_steps(sample_rate.into()) else {
+            return false;
+        };
+        self.set_target_with_steps(steps_left, target);
+        true
+    }
 
-        let steps_left = self.style.num_steps(sample_rate) as i32;
+    /// Apply a horizon prepared before the caller changes its parameter value.
+    pub(crate) fn set_target_with_steps(&self, steps_left: i32, target: T) {
+        debug_assert!(steps_left >= 0);
+        T::atomic_store(&self.target, target);
         self.steps_left.store(steps_left, Ordering::Relaxed);
 
         let current = self.current.load(Ordering::Relaxed);
@@ -330,8 +368,9 @@ impl<T: Smoothable> Smoother<T> {
             // possibility that we only have `n < steps` steps left. This is especially important
             // for the `Exponential` smoothing style, since that won't reach the target value
             // exactly.
-            let old_steps_left = self.steps_left.fetch_sub(steps as i32, Ordering::Relaxed);
-            let new = if old_steps_left <= steps as i32 {
+            let decrement = i32::try_from(steps).unwrap_or(i32::MAX);
+            let old_steps_left = self.steps_left.fetch_sub(decrement, Ordering::Relaxed);
+            let new = if u64::try_from(old_steps_left).unwrap_or(0) <= u64::from(steps) {
                 self.steps_left.store(0, Ordering::Relaxed);
                 target_f32
             } else {
@@ -546,6 +585,61 @@ impl Smoothable for i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checked_horizon_refuses_overflow_without_changing_live_smoother() {
+        let smoother = Smoother::<f32>::new(SmoothingStyle::Linear(1_000.0));
+        smoother.reset(0.25);
+        assert!(smoother.set_target(48_000.0, 0.75));
+        assert_eq!(smoother.steps_left(), 48_000);
+        assert_eq!(smoother.style.checked_num_steps(i32::MAX as f64), Some(i32::MAX));
+        assert_eq!(smoother.style.checked_num_steps(2_147_483_648.0), None);
+
+        for rate in [0.0, f64::NAN, f64::INFINITY, 2_147_483_648.0] {
+            assert!(!smoother.set_target(rate, 0.5));
+            assert_eq!(smoother.steps_left(), 48_000);
+            assert_eq!(smoother.target.load(Ordering::Relaxed), 0.75);
+            assert_eq!(smoother.current.load(Ordering::Relaxed), 0.25);
+        }
+    }
+
+    #[test]
+    fn oversampling_horizon_uses_one_prepared_factor_snapshot() {
+        static STYLE: SmoothingStyle = SmoothingStyle::Linear(100.0);
+        let multiplier = Arc::new(AtomicF32::new(2.0));
+        let smoother = Smoother::<f32>::new(SmoothingStyle::OversamplingAware(
+            Arc::clone(&multiplier),
+            &STYLE,
+        ));
+        smoother.reset(0.0);
+        let steps = smoother.style.checked_num_steps(48_000.0).unwrap();
+        multiplier.store(f32::INFINITY, Ordering::Relaxed);
+        smoother.set_target_with_steps(steps, 1.0);
+        assert_eq!(smoother.steps_left(), 9_600);
+        assert_eq!(smoother.style.checked_num_steps(48_000.0), None);
+    }
+
+    #[test]
+    fn large_skip_finishes_valid_smoothing_without_signed_wrap() {
+        let smoother = Smoother::<f32>::new(SmoothingStyle::Linear(1_000.0));
+        smoother.reset(0.0);
+        assert!(smoother.set_target(48_000.0, 1.0));
+        assert_eq!(smoother.next_step(u32::MAX), 1.0);
+        assert_eq!(smoother.steps_left(), 0);
+    }
+
+    #[test]
+    fn fractional_rate_controls_smoothing_frame_count_without_f32_rounding() {
+        let rate = 1_234.499_999_99_f64;
+        let style = SmoothingStyle::Linear(1_000.0);
+        assert_eq!(style.num_steps(rate), 1_234);
+        assert_eq!(style.num_steps(rate as f32), 1_235);
+
+        let smoother = Smoother::<f32>::new(style);
+        smoother.reset(0.0);
+        smoother.set_target(rate, 1.0);
+        assert_eq!(smoother.steps_left(), 1_234);
+    }
 
     /// Applying `next()` `n` times should be the same as `next_step()` for `n` steps.
     #[test]

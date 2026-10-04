@@ -15,9 +15,12 @@ pub(super) struct AutoGainClock {
 impl AutoGainClock {
     pub(super) fn new(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         delay_frames: usize,
     ) -> Result<Self, String> {
+        if !sample_rate.is_finite() || !(16.0..=2_822_400.0).contains(&sample_rate) {
+            return Err("EQ AutoGain clock sample rate must be finite and in 16..=2822400 Hz".to_string());
+        }
         let prepared_samples = |frames: usize| {
             frames
                 .checked_mul(channels)
@@ -32,7 +35,7 @@ impl AutoGainClock {
             delay_read: 0,
             frames_into_interval: 0,
             // Exactly 10 Hz at standard rates; integer frame cadence otherwise.
-            interval_frames: (sample_rate as usize / 10).max(1),
+            interval_frames: ((sample_rate / 10.0).floor() as usize).max(1),
         })
     }
 
@@ -41,6 +44,11 @@ impl AutoGainClock {
         self.delay.fill(0.0);
         self.delay_read = 0;
         self.frames_into_interval = 0;
+    }
+
+    #[cfg(test)]
+    pub(super) fn interval_frames(&self) -> usize {
+        self.interval_frames
     }
 
     #[cfg(test)]

@@ -18,7 +18,7 @@ fn prepare(channels: usize, rate: u32) -> LoudnessMonitorPlugin {
         .unwrap()
         .with_loudness_range(None)
         .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -370,7 +370,7 @@ fn reset_reinitialize_and_disable_start_fresh_epochs_with_retained_generations()
     assert!(post_reset < high_maximum);
 
     let old_epoch = snapshot(&plugin);
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     assert_eq!(snapshot(&plugin).maximum_true_peak_dbtp, None);
     assert_eq!(old_epoch.maximum_true_peak_dbtp, Some(post_reset));
     let mut lower_rate_peak = vec![0.0_f32; 64];

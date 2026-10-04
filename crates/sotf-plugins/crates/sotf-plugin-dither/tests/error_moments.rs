@@ -35,7 +35,7 @@ fn tpdf_output_error_moments_do_not_depend_on_signal_level() {
                 dither_type: 0,
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut sums = [0.0_f64; CHANNELS];
         let mut squares = [0.0_f64; CHANNELS];
         let mut block = vec![0.0; BLOCK * CHANNELS];

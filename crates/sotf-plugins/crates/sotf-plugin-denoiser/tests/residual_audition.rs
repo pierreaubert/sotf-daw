@@ -152,8 +152,8 @@ fn audition_off_matches_default_bit_exact() {
                 ..Default::default()
             },
         );
-        reference.initialize(RATE).unwrap();
-        explicit.initialize(RATE).unwrap();
+        reference.initialize(f64::from(RATE)).unwrap();
+        explicit.initialize(f64::from(RATE)).unwrap();
         let expected = process_all(&mut reference, &input, 2, &[1, 17, 257, 63]);
         let actual = process_all(&mut explicit, &input, 2, &[1, 17, 257, 63]);
         assert_bit_exact(
@@ -210,8 +210,8 @@ fn cleaned_plus_residual_reconstructs_input() {
                     ..base
                 },
             );
-            cleaned.initialize(RATE).unwrap();
-            residual.initialize(RATE).unwrap();
+            cleaned.initialize(f64::from(RATE)).unwrap();
+            residual.initialize(f64::from(RATE)).unwrap();
             let latency = cleaned.latency_samples();
             let mut out_clean = process_all(&mut cleaned, &input, channels, &[5, 1024, 91]);
             let mut out_res = process_all(&mut residual, &input, channels, &[1024, 3]);
@@ -294,8 +294,8 @@ fn audition_switching_increment_decomposition() {
             },
         );
         let mut fading = DenoiserPlugin::from_params(1, base);
-        snapped.initialize(RATE).unwrap();
-        fading.initialize(RATE).unwrap();
+        snapped.initialize(f64::from(RATE)).unwrap();
+        fading.initialize(f64::from(RATE)).unwrap();
         // Parked twins: mix never moves, so these are the true components
         // c[n] (cleaned) and r[n] (residual); audition never touches DSP.
         let residual = process_all(&mut snapped, &input, 1, &[1024]);
@@ -307,7 +307,7 @@ fn audition_switching_increment_decomposition() {
                 ..Default::default()
             },
         );
-        clean_twin.initialize(RATE).unwrap();
+        clean_twin.initialize(f64::from(RATE)).unwrap();
         let cleaned = process_all(&mut clean_twin, &input, 1, &[1024]);
         // Faded twin: identical stimulus, toggle, and callback pattern as
         // the oracle test.
@@ -544,9 +544,9 @@ fn audition_switching_analytic_gate_multirate_bidirectional() {
                     ..base
                 },
             );
-            parked_residual.initialize(rate).unwrap();
-            parked_cleaned.initialize(rate).unwrap();
-            fading.initialize(rate).unwrap();
+            parked_residual.initialize(f64::from(rate)).unwrap();
+            parked_cleaned.initialize(f64::from(rate)).unwrap();
+            fading.initialize(f64::from(rate)).unwrap();
             let residual = process_all_at_rate(&mut parked_residual, &input, 1, &[1024], rate);
             let cleaned = process_all_at_rate(&mut parked_cleaned, &input, 1, &[1024], rate);
             let mut actual = input.to_vec();
@@ -735,8 +735,8 @@ fn audition_switching_analytic_gate_retoggle() {
     };
     let mut parked = DenoiserPlugin::from_params(1, base.clone());
     let mut fading = DenoiserPlugin::from_params(1, base);
-    parked.initialize(RATE_R).unwrap();
-    fading.initialize(RATE_R).unwrap();
+    parked.initialize(f64::from(RATE_R)).unwrap();
+    fading.initialize(f64::from(RATE_R)).unwrap();
     let cleaned = process_all(&mut parked, &input, 1, &[1024]);
     let mut actual = input.to_vec();
     let mut pos = 0;
@@ -799,7 +799,7 @@ fn audition_switching_analytic_gate_retoggle() {
             ..Default::default()
         },
     );
-    parked_res.initialize(RATE_R).unwrap();
+    parked_res.initialize(f64::from(RATE_R)).unwrap();
     let residual = process_all(&mut parked_res, &input, 1, &[1024]);
     let replica: Vec<f32> = (0..FRAMES)
         .map(|n| {
@@ -885,8 +885,8 @@ fn audition_startup_and_silence_edges_align() {
                 ..base
             },
         );
-        cleaned.initialize(RATE).unwrap();
-        residual.initialize(RATE).unwrap();
+        cleaned.initialize(f64::from(RATE)).unwrap();
+        residual.initialize(f64::from(RATE)).unwrap();
         let latency = cleaned.latency_samples();
         let out_clean = process_all(&mut cleaned, &input, 1, &[1000, 63]);
         let out_res = process_all(&mut residual, &input, 1, &[63, 1000]);
@@ -918,7 +918,7 @@ fn audition_preserves_drain_frame_counts() {
                     ..Default::default()
                 },
             );
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             let voiced = process_all(&mut plugin, &input, 2, &[1000, 63]);
             let tail = drain_all(&mut plugin, 2);
             counts.push((voiced.len(), tail.len()));
@@ -959,8 +959,8 @@ fn audition_persists_and_resets() {
             ..Default::default()
         },
     );
-    original.initialize(RATE).unwrap();
-    reloaded.initialize(RATE).unwrap();
+    original.initialize(f64::from(RATE)).unwrap();
+    reloaded.initialize(f64::from(RATE)).unwrap();
     let expected = process_all(&mut original, &input, 1, &[1024, 9]);
     let actual = process_all(&mut reloaded, &input, 1, &[31, 2048]);
     assert!(!expected.iter().all(|&s| s == 0.0));
@@ -977,7 +977,7 @@ fn audition_persists_and_resets() {
             ..Default::default()
         },
     );
-    fresh.initialize(RATE).unwrap();
+    fresh.initialize(f64::from(RATE)).unwrap();
     let expected = process_all(&mut fresh, &input, 1, &[512]);
     let actual = process_all(&mut original, &input, 1, &[512]);
     assert_bit_exact(&expected, &actual, "post-reset audition twin");
@@ -990,7 +990,7 @@ fn audition_persists_and_resets() {
             ..Default::default()
         },
     );
-    fading.initialize(RATE).unwrap();
+    fading.initialize(f64::from(RATE)).unwrap();
     let mut buffer = input.clone();
     fading
         .process_in_place(&mut buffer[..4096], &ProcessContext::new(RATE, 4096))
@@ -1011,7 +1011,7 @@ fn audition_persists_and_resets() {
             ..Default::default()
         },
     );
-    clean_twin.initialize(RATE).unwrap();
+    clean_twin.initialize(f64::from(RATE)).unwrap();
     let cleaned = process_all(&mut clean_twin, &input, 1, &[4096]);
     let mut res_twin = DenoiserPlugin::from_params(
         1,
@@ -1021,7 +1021,7 @@ fn audition_persists_and_resets() {
             ..Default::default()
         },
     );
-    res_twin.initialize(RATE).unwrap();
+    res_twin.initialize(f64::from(RATE)).unwrap();
     let residual = process_all(&mut res_twin, &input, 1, &[4096]);
     // One frame after the toggle the mix is in (0, 1): output is a strict
     // blend wherever cleaned and residual differ.
@@ -1058,7 +1058,7 @@ fn profile_learn_and_clear_preserve_audition_and_curve() {
             ..Default::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let before = plugin.current_values();
     plugin
         .parametric_set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
@@ -1127,7 +1127,7 @@ fn audition_multichannel_independence() {
             ..Default::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let output = process_all(&mut plugin, &input, 2, &[1024, 33]);
     let latency = plugin.latency_samples();
     let (mut left, mut right) = (0.0f64, 0.0f64);
@@ -1148,8 +1148,8 @@ fn audition_multichannel_independence() {
             ..Default::default()
         },
     );
-    cleaned.initialize(RATE).unwrap();
-    residual.initialize(RATE).unwrap();
+    cleaned.initialize(f64::from(RATE)).unwrap();
+    residual.initialize(f64::from(RATE)).unwrap();
     let latency = cleaned.latency_samples();
     let out_clean = process_all(&mut cleaned, &input, 6, &[100, 1024]);
     let out_res = process_all(&mut residual, &input, 6, &[1024, 100]);

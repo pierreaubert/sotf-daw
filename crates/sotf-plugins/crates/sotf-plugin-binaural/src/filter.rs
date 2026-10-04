@@ -57,12 +57,13 @@ pub fn ir_to_freq(
 ///
 /// Reference: Schörkhuber et al., "Linearly and Quadratically Constrained Least-Squares
 /// Decoder for Signal-Dependent Binaural Rendering" (2018)
-pub fn compute_diffuse_field_eq(
+pub fn compute_diffuse_field_eq<S: Into<f64>>(
     sofa: &SofaFile,
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: S,
     fft_r2c: &Arc<dyn RealToComplex<f32>>,
 ) -> Result<[Vec<Complex<f32>>; 2], String> {
+    let sample_rate = sample_rate.into();
     log::info!("[BinauralDecoder] Computing diffuse-field equalization...");
 
     let freq_size = fft_size / 2 + 1;
@@ -197,13 +198,14 @@ fn smooth_power_log_frequency(power: &[f32]) -> Vec<f32> {
 /// Returns N/2+1 complex bins (half-spectrum representation for real signals).
 ///
 /// Reference: ITU-R BS.775-3 (multichannel stereophonic sound system with surround channels)
-pub fn compute_lfe_filter(
+pub fn compute_lfe_filter<S: Into<f64>>(
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: S,
     lfe_crossover: f32,
     lfe_distance: f32,
     lfe_level: f32,
 ) -> (Vec<Complex<f32>>, f32) {
+    let sample_rate = sample_rate.into();
     let freq_size = fft_size / 2 + 1;
 
     // Compute 2nd-order Butterworth low-pass filter (12 dB/octave rolloff)

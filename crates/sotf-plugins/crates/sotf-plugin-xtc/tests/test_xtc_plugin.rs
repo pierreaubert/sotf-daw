@@ -18,7 +18,7 @@ fn test_xtc_processing() {
     let mut params = XtcPluginParams::default();
     params.auto_gain_enabled = false;
     let mut plugin = XtcPlugin::new(params, 44100).unwrap();
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
 
     // Needs enough frames to fill FFT buffer and produce output
     let num_frames = 4096;

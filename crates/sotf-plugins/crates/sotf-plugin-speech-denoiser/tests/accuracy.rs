@@ -39,7 +39,7 @@ fn configured(channels: usize, strength: f32) -> SpeechDenoiserPlugin {
             ..SpeechDenoiserPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -675,13 +675,13 @@ fn fixed_model_output_is_deterministic_across_partitions() {
 }
 
 #[test]
-fn supported_rate_contract_preserved() {
+fn supported_rate_contract_includes_prepared_host_adaptation() {
     assert_eq!(RATE, 48000);
     let mut plugin = SpeechDenoiserPlugin::new(1);
-    assert!(plugin.initialize(44100).is_err());
-    assert!(plugin.initialize(96000).is_err());
-    assert!(plugin.initialize(192000).is_err());
-    plugin.initialize(48000).unwrap();
+    assert!(plugin.initialize(44100.0).is_ok());
+    assert!(plugin.initialize(96000.0).is_ok());
+    assert!(plugin.initialize(192000.0).is_ok());
+    plugin.initialize(48000.0).unwrap();
 }
 
 #[test]

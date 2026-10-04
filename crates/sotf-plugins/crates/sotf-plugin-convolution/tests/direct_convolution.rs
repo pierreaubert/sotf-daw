@@ -342,7 +342,7 @@ fn every_backend_matches_direct_convolution_with_full_tail_and_partial_callbacks
                     },
                 )
                 .unwrap();
-                processor.initialize(rate).unwrap();
+                processor.initialize(f64::from(rate)).unwrap();
                 // Start playback after loading; reset also ends the deliberate
                 // IR replacement fade, which is not part of the LTI transfer.
                 processor.reset();
@@ -452,7 +452,7 @@ fn true_stereo_four_path_matrix_matches_f64_oracle_through_partitioned_eos() {
                 .load_ir(diagonal_file.0.to_str().unwrap())
                 .expect_err("true-stereo mode must reject a two-channel replacement");
             assert!(replacement_error.contains("requires exactly 4 IR channels"));
-            processor.initialize(RATE).unwrap();
+            processor.initialize(f64::from(RATE)).unwrap();
             processor.reset();
             let latency = processor.latency_samples();
             let expected_latency = if use_nupc && zero_latency_head {
@@ -568,7 +568,7 @@ fn legacy_four_channel_ir_still_uses_only_the_first_two_output_paths() {
             },
         )
         .unwrap();
-        processor.initialize(RATE).unwrap();
+        processor.initialize(f64::from(RATE)).unwrap();
         processor.reset();
         let latency = processor.latency_samples();
         let mut output = Vec::with_capacity((INPUT_FRAMES + latency + IR_FRAMES) * 2);
@@ -664,7 +664,7 @@ fn each_true_stereo_path_isolated_against_the_f64_oracle_through_eos() {
                     true,
                 )
                 .unwrap();
-                processor.initialize(RATE).unwrap();
+                processor.initialize(f64::from(RATE)).unwrap();
                 processor.reset();
                 let expected_latency = if use_nupc && zero_latency_head {
                     0
@@ -742,8 +742,8 @@ fn rejected_true_stereo_ir_replacement_preserves_live_processing_history() {
             ConvolutionPlugin::from_params_with_routing(2, RATE, params.clone(), true).unwrap();
         let mut control =
             ConvolutionPlugin::from_params_with_routing(2, RATE, params, true).unwrap();
-        subject.initialize(RATE).unwrap();
-        control.initialize(RATE).unwrap();
+        subject.initialize(f64::from(RATE)).unwrap();
+        control.initialize(f64::from(RATE)).unwrap();
         subject.reset();
         control.reset();
 
@@ -808,7 +808,7 @@ fn true_stereo_async_replacement_uses_new_ir_and_reset_matches_fresh_instance() 
     };
     let mut subject =
         ConvolutionPlugin::from_params_with_routing(2, RATE, params(&initial_ir.0), true).unwrap();
-    subject.initialize(RATE).unwrap();
+    subject.initialize(f64::from(RATE)).unwrap();
     subject.reset();
 
     let old_signal: Vec<f32> = (0..1_537)
@@ -856,7 +856,7 @@ fn true_stereo_async_replacement_uses_new_ir_and_reset_matches_fresh_instance() 
     let mut fresh =
         ConvolutionPlugin::from_params_with_routing(2, RATE, params(&replacement_ir.0), true)
             .unwrap();
-    fresh.initialize(RATE).unwrap();
+    fresh.initialize(f64::from(RATE)).unwrap();
     fresh.reset();
 
     let replacement_input: Vec<f32> = (0..1_601)
@@ -942,7 +942,7 @@ fn true_stereo_process_and_full_eos_drain_do_not_allocate_or_deallocate() {
             true,
         )
         .unwrap();
-        processor.initialize(RATE).unwrap();
+        processor.initialize(f64::from(RATE)).unwrap();
         processor.reset();
         let mut input: Vec<f32> = (0..INPUT_FRAMES)
             .flat_map(|frame| {
@@ -1250,7 +1250,7 @@ fn capture_aud134_preedit_diagonal_stereo_outputs() {
             },
         )
         .unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.reset();
         let mut output = Vec::new();
         let mut input_offset = 0;
@@ -1366,7 +1366,7 @@ fn capture_aud134_preedit_four_channel_legacy_outputs() {
             },
         )
         .unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.reset();
         let mut output = Vec::new();
         let mut input_offset = 0;
@@ -1474,7 +1474,7 @@ fn aud134_preedit_full_audio_arrays_match_legacy_and_diagonal_routes() {
             },
         )
         .unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         plugin.reset();
         let mut actual = process_callbacks(&mut plugin, &input, &[1, 17, 257, 1_023, 11, 509]);
         let mut drain_buffer = vec![0.0_f32; 137 * 2];

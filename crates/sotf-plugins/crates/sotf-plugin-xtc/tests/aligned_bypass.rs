@@ -17,7 +17,7 @@ fn make(n: usize, rate: u32, enabled: bool) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    p.initialize(rate).unwrap();
+    p.initialize(f64::from(rate)).unwrap();
     p
 }
 
@@ -243,7 +243,7 @@ fn nonidentity_matrix_has_exact_sample_counted_ramps_and_extra_channel_routing()
                 rate,
             )
             .unwrap();
-            p.initialize(rate).unwrap();
+            p.initialize(f64::from(rate)).unwrap();
             std::fs::remove_file(path).unwrap();
             let lengths = [n + ramp + 17, ramp / 3, ramp / 5, ramp + 1, ramp + 3];
             let targets = [true, false, true, false, true];

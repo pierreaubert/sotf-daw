@@ -134,7 +134,7 @@ fn all_six_models_construct_readable_and_render() {
         let params = analog_limiter_params(&infos);
         let mut plugin = configuration::create_plugin("AnalogLimiter", 48_000, &params)
             .expect("construct with restored model");
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(
             plugin.get_parameter(&sotf_host::parameters::ParameterId::from("analog_model")),
             Some(sotf_host::parameters::ParameterValue::String(

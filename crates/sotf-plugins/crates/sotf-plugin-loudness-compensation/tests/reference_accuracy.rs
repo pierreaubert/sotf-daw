@@ -62,7 +62,7 @@ fn plugin(sample_rate: u32, gain_db: f32, position: &str) -> LoudnessCompensatio
         },
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -233,7 +233,7 @@ fn rejected_calibration_removal_preserves_settings_and_audio_history() {
                 },
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             plugin
         };
         let mut actual = make();

@@ -95,7 +95,7 @@ fn main() {
     let mut plugin = ParametricInPlacePluginAdapter::new(denoiser);
 
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize denoiser");
 
     let latency = plugin.latency_samples();

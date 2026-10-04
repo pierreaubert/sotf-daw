@@ -33,7 +33,7 @@ fn main() {
             ..Default::default()
         };
         let mut plugin = ABComparePlugin::from_params(channels, params).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         run_standard_tests(
             &mut plugin,
             &format!("ABComparePlugin-{channels}ch-full-path"),

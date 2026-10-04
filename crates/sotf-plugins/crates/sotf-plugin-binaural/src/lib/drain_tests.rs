@@ -74,7 +74,7 @@ fn finite_decoder(left_ir: &[f32], right_ir: &[f32]) -> BinauralDecoderPlugin {
             ..Default::default()
         },
     );
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut response = filter::ir_to_freq(left_ir, FFT_SIZE, &plugin.fft.fft_r2c);
     response.extend(filter::ir_to_freq(right_ir, FFT_SIZE, &plugin.fft.fft_r2c));
     let state = Arc::new(BinauralState {

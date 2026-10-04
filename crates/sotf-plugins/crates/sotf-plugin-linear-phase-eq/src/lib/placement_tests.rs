@@ -745,13 +745,13 @@ fn reset_and_reprepare_restore_ordered_state() {
     let half = input.len() / 2;
     let mut candidate_out = stream_all(&mut candidate, &input[..half], 48_000);
     let mut reference_out = stream_all(&mut reference, &input[..half], 48_000);
-    candidate.initialize(48_000).unwrap();
+    candidate.initialize(48_000.0).unwrap();
     candidate_out.extend(stream_all(&mut candidate, &input[half..], 48_000));
     reference_out.extend(stream_all(&mut reference, &input[half..], 48_000));
     assert_eq!(candidate_out, reference_out);
 
     // A rate change rebuilds ordered designs and clears old-rate history.
-    candidate.initialize(44_100).unwrap();
+    candidate.initialize(44_100.0).unwrap();
     let mut fresh = LinearPhaseEqPlugin::from_params(
         2,
         44_100,

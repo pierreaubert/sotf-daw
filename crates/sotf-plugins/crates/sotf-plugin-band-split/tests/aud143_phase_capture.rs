@@ -292,7 +292,7 @@ fn captures_public_legacy_complex_controls_before_phase_changes() {
     for case in BASELINE_CASES {
         let bands = case.cutoffs_hz.len() + 1;
         let mut plugin = BandSplitPlugin::new_multiband(2, case.cutoffs_hz, case.slope).unwrap();
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut output = vec![0.0_f32; TOTAL_FRAMES * bands * 2];
         let processed = plugin
             .process(
@@ -443,7 +443,7 @@ fn assert_phase_compensation_magnitude_gate(slope: &str) {
     let bands = cutoffs_hz.len() + 1;
     let input = sine_input();
     let mut plugin = BandSplitPlugin::new_multiband(2, &cutoffs_hz, slope).unwrap();
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut output = vec![0.0_f32; TOTAL_FRAMES * bands * 2];
     plugin
         .process(

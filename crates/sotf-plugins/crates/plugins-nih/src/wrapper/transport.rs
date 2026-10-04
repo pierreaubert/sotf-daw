@@ -51,7 +51,7 @@ impl TransportTracker {
     pub fn context(
         &mut self,
         native: NativeTransport,
-        sample_rate: u32,
+        sample_rate: f64,
         frames: usize,
     ) -> ProcessContext<'static> {
         let bpm = native
@@ -60,7 +60,7 @@ impl TransportTracker {
             .unwrap_or(self.previous.bpm);
         let sample = native.sample_position.unwrap_or(self.next_sample);
         let beat_delta = (i128::from(sample) - i128::from(self.next_sample)) as f64
-            / f64::from(sample_rate.max(1))
+            / sample_rate
             * (bpm / 60.0);
         let estimated_ppq = finite_or(self.next_ppq + beat_delta, self.next_ppq);
         let ppq = native
@@ -100,7 +100,7 @@ impl TransportTracker {
         };
         self.next_sample = sample.saturating_add(advance);
         let elapsed = (i128::from(self.next_sample) - i128::from(sample)) as f64
-            / f64::from(sample_rate.max(1));
+            / sample_rate;
         self.next_ppq = finite_or(ppq + elapsed * (bpm / 60.0), ppq);
         self.previous = transport;
         ProcessContext::new(sample_rate, frames).with_transport(transport)

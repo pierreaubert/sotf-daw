@@ -8,7 +8,7 @@ use sotf_plugin_gain::GainPlugin;
 fn test_gain_plugin() {
     // Test +6dB gain (2x amplitude)
     let mut gain = GainPlugin::new(2, 6.0);
-    gain.plugin_initialize(44100).unwrap();
+    gain.plugin_initialize(44100.0).unwrap();
 
     let input = vec![0.5; 100];
     let mut buffer = vec![0.0; 100];

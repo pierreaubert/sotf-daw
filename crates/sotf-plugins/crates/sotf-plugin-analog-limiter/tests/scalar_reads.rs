@@ -23,7 +23,7 @@ fn cold_primitive_reads_match_default_and_nondefault_snapshots() {
                     .unwrap();
             }
         }
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let snapshot = plugin.current_values();
         for (id, value) in &snapshot {
             assert_eq!(plugin.get_parameter(id).as_ref(), Some(value));

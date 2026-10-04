@@ -31,7 +31,7 @@ fn integration_default_parameters() {
 #[test]
 fn integration_parameter_roundtrip_and_validation() {
     let mut plugin = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::new(1));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("attack"), ParameterValue::Float(50.0))
@@ -140,7 +140,7 @@ fn integration_bypass_preserves_input_after_warmup() {
                 mix: 0.0,
             },
         ));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Warm up the mix smoother so it converges to the dry target.
     let mut warmup = vec![0.0f32; 4800];
@@ -177,7 +177,7 @@ fn integration_output_gain_changes_level() {
                 mix: 1.0,
             },
         ));
-    p_low.initialize(48000).unwrap();
+    p_low.initialize(48000.0).unwrap();
 
     let mut p_high =
         ParametricInPlacePluginAdapter::new(TransientShaperPlugin::from_validated_params(
@@ -190,7 +190,7 @@ fn integration_output_gain_changes_level() {
                 mix: 1.0,
             },
         ));
-    p_high.initialize(48000).unwrap();
+    p_high.initialize(48000.0).unwrap();
 
     // Warm up smoothers.
     let mut warm_low = vec![0.2f32; 4800];
@@ -222,7 +222,7 @@ fn integration_output_gain_changes_level() {
 #[test]
 fn integration_reset_clears_envelope_state() {
     let mut plugin = ParametricInPlacePluginAdapter::new(TransientShaperPlugin::new(1));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Drive the envelope detectors with a loud signal.
     let mut buffer = vec![0.8f32; 4800];
@@ -250,7 +250,7 @@ fn integration_process_finite_output_with_extreme_parameters() {
                 mix: 1.0,
             },
         ));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let frames = 256usize;
     let mut buf: Vec<f32> = (0..frames)

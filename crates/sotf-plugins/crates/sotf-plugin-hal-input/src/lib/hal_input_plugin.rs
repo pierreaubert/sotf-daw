@@ -302,10 +302,15 @@ impl Plugin for HalInputPlugin {
         self.cached_parameters.clone()
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("HAL Input sample rate must be non-zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > f64::from(u32::MAX)
+            || sample_rate.fract() != 0.0
+        {
+            return Err("HAL Input transport requires a positive integer sample rate".to_string());
         }
+        let sample_rate = sample_rate as u32;
         self.sample_rate_mismatch = false;
 
         if let Some(ref reader) = self.reader {
@@ -395,7 +400,7 @@ impl Plugin for HalInputPlugin {
             Self::zero_fill_from(output, 0);
             return Err("HAL Input must be initialized before processing".to_string());
         };
-        if context.sample_rate != initialized_rate {
+        if context.sample_rate != f64::from(initialized_rate) {
             Self::zero_fill_from(output, 0);
             return Err(format!(
                 "HAL Input context rate {} Hz differs from initialized rate {} Hz",
@@ -562,7 +567,7 @@ mod tests {
     fn fake_plugin(channels: usize, frames_to_return: Vec<usize>) -> HalInputPlugin {
         let mut plugin = stub_plugin(channels);
         plugin.reader = Some(Box::new(FakeReader::new(channels, frames_to_return)));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
     }
 
@@ -724,8 +729,8 @@ mod tests {
     fn initialize_succeeds_on_non_hal_build() {
         let mut p = stub_plugin(2);
         // On non-hal builds any sample rate is fine — no reader to check against.
-        assert!(p.initialize(44100).is_ok());
-        assert!(p.initialize(96000).is_ok());
+        assert!(p.initialize(44100.0).is_ok());
+        assert!(p.initialize(96000.0).is_ok());
     }
 
     // -----------------------------------------------------------------------
@@ -818,7 +823,7 @@ mod tests {
         plugin.reader = Some(Box::new(FakeReader::new(6, vec![4])));
         assert!(
             plugin
-                .initialize(48_000)
+                .initialize(48_000.0)
                 .unwrap_err()
                 .contains("Channel mismatch")
         );
@@ -883,7 +888,7 @@ mod tests {
         let mut disconnected = FakeReader::new(2, vec![0]);
         disconnected.connected = false;
         plugin.reader = Some(Box::new(disconnected));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = vec![1.0; 8];
         let context = ProcessContext::new(48_000, 4);
         plugin.process(&[], &mut output, &context).unwrap();

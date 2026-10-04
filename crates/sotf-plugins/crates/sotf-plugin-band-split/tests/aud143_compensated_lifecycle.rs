@@ -72,7 +72,7 @@ fn create_configured_plugin(
         BandSplitRecombinationMode::PhaseCompensated,
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     set_gains(&mut plugin, gains_db);
     plugin.reset();
     assert_eq!(plugin.output_channels(), CHANNELS * BANDS);
@@ -287,7 +287,7 @@ fn populated_refusals_preserve_audio_and_changed_rate_retry_matches_fresh() {
         let twin_warm = process_audio(&mut untouched_twin, &warm_input, INITIAL_SAMPLE_RATE);
         assert_same_audio(&candidate_warm, &twin_warm, "paired warmup");
 
-        assert!(candidate.initialize(0).is_err());
+        assert!(candidate.initialize(0.0).is_err());
         let after_bad_rate_input = make_noise(RESUME_FRAMES, 0xc18f_204b);
         let candidate_after_bad_rate =
             process_audio(&mut candidate, &after_bad_rate_input, INITIAL_SAMPLE_RATE);
@@ -302,7 +302,7 @@ fn populated_refusals_preserve_audio_and_changed_rate_retry_matches_fresh() {
             "rejected sample-rate preparation",
         );
 
-        assert!(candidate.initialize(8_000).is_err());
+        assert!(candidate.initialize(8_000.0).is_err());
         let after_inadmissible_rate_input = make_noise(RESUME_FRAMES, 0x4b16_f839);
         let candidate_after_inadmissible_rate = process_audio(
             &mut candidate,
@@ -364,7 +364,7 @@ fn populated_refusals_preserve_audio_and_changed_rate_retry_matches_fresh() {
             "valid crossing retry",
         );
 
-        candidate.initialize(RETRY_SAMPLE_RATE).unwrap();
+        candidate.initialize(f64::from(RETRY_SAMPLE_RATE)).unwrap();
         let mut fresh_retry = create_configured_plugin(
             crossover_type,
             RETRY_SAMPLE_RATE,

@@ -93,8 +93,8 @@ pub fn render_offline_with_tail(
     // The file rate is an export contract, even when the configured chain
     // changes its internal clock. Normalize the terminal stream before
     // measuring latency, trimming duration, or constructing the WAV header.
-    let terminal_rate = host.output_sample_rate(output_rate);
-    if terminal_rate != output_rate {
+    let terminal_rate = host.output_sample_rate(output_rate)?;
+    if terminal_rate != f64::from(output_rate) {
         host.add_plugin(Box::new(ResamplerPlugin::new(
             host.output_channels(),
             terminal_rate,
@@ -297,15 +297,15 @@ fn continuation_blocks(
 
 /// Sum fractional group delays in the terminal clock without per-stage rounding.
 pub(super) fn serial_signal_delay(host: &DawHost, input_rate: u32) -> Result<f64, String> {
-    let mut rate = input_rate;
+    let mut rate = f64::from(input_rate);
     let mut seconds = 0.0;
     for index in 0..host.plugin_count() {
         let plugin = host
             .get_plugin(index)
             .ok_or("Offline plugin chain is incomplete")?;
         rate = plugin.output_sample_rate(rate);
-        if rate == 0 {
-            return Err("Offline plugin output sample rate must be positive".to_owned());
+        if !rate.is_finite() || rate <= 0.0 {
+            return Err("Offline plugin output sample rate must be finite and positive".to_owned());
         }
         let delay = plugin.signal_delay_samples();
         if !delay.is_finite() || delay < 0.0 {
@@ -313,9 +313,9 @@ pub(super) fn serial_signal_delay(host: &DawHost, input_rate: u32) -> Result<f64
                 "Offline plugin {index} declares invalid signal delay {delay}"
             ));
         }
-        seconds += delay / f64::from(rate);
+        seconds += delay / rate;
     }
-    let output_frames = seconds * f64::from(rate);
+    let output_frames = seconds * rate;
     if !output_frames.is_finite() || output_frames >= usize::MAX as f64 {
         return Err("Offline signal delay exceeds addressable frames".to_owned());
     }

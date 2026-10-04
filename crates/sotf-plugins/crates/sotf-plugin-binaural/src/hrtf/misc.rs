@@ -118,15 +118,16 @@ pub fn calculate_vbap_gains(
 ///
 /// Operates on half-spectrum (N/2+1 bins) - no need to mirror since
 /// real FFT automatically handles conjugate symmetry.
-pub fn apply_near_field_shadowing(
+pub fn apply_near_field_shadowing<S: Into<f64>>(
     left_fft: &mut [Complex<f32>],
     right_fft: &mut [Complex<f32>],
     azimuth: f32,
     elevation: f32,
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: S,
     near_field_strength: f32,
 ) {
+    let sample_rate = sample_rate.into();
     let freq_size = fft_size / 2 + 1;
 
     // Brown-Duda spherical-head shadowing model parameters
@@ -194,7 +195,8 @@ pub fn apply_near_field_shadowing(
 ///
 /// Finds the first sample where the IR exceeds 10% of peak magnitude.
 /// Returns the delay in seconds.
-pub(super) fn detect_ir_onset(ir: &[f32], sample_rate: u32) -> f32 {
+pub(super) fn detect_ir_onset<S: Into<f64>>(ir: &[f32], sample_rate: S) -> f32 {
+    let sample_rate = sample_rate.into();
     if ir.is_empty() {
         return 0.0;
     }

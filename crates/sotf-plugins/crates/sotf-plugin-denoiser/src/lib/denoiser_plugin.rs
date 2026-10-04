@@ -28,7 +28,7 @@ pub(super) struct DenoiserConfig {
     pub channels: usize,
     pub fft_size: usize,
     pub hop_size: usize,
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     pub spectrum_size: usize, // fft_size / 2 + 1
 }
 
@@ -354,7 +354,7 @@ impl DenoiserPlugin {
 
         // PND Analyzers for polyphonic detection
         let pnd_analyzers = (0..channels)
-            .map(|_| PndAnalyzer::new(2048, 44100, 50.0))
+            .map(|_| PndAnalyzer::new(2048, 44100.0, 50.0))
             .collect();
 
         let mut p = Self {
@@ -362,7 +362,7 @@ impl DenoiserPlugin {
                 channels,
                 fft_size,
                 hop_size,
-                sample_rate: 44100, // Updated in initialize()
+                sample_rate: 44100.0, // Updated in initialize()
                 spectrum_size,
             },
 
@@ -395,12 +395,12 @@ impl DenoiserPlugin {
             coeffs: DenoiserCoefficients {
                 attack_coeff: Self::time_to_coeff(
                     pk(DN, "attack_ms").default_f32(),
-                    44100,
+                    44100.0,
                     hop_size,
                 ),
                 release_coeff: Self::time_to_coeff(
                     pk(DN, "release_ms").default_f32(),
-                    44100,
+                    44100.0,
                     hop_size,
                 ),
                 reduction_linear: 10.0_f32.powf(pk(DN, "reduction_db").default_f32() / 10.0),
@@ -537,7 +537,7 @@ impl DenoiserPlugin {
             audition: DenoiserAudition::new(
                 channels,
                 pk(DN, "audition_residual").default_bool(),
-                Self::audition_decay_for_rate(44100),
+                Self::audition_decay_for_rate(44100.0),
                 Self::dry_delay_capacity_for_fft(fft_size),
             ),
         };
@@ -952,8 +952,8 @@ impl DenoiserPlugin {
     ///
     /// A 5 ms time constant shared with the Declick audition convention:
     /// fast enough to feel immediate, slow enough to avoid clicks.
-    pub(super) fn audition_decay_for_rate(sample_rate: u32) -> f64 {
-        let smoothing_samples = sample_rate as f64 * 5.0 * 0.001;
+    pub(super) fn audition_decay_for_rate(sample_rate: f64) -> f64 {
+        let smoothing_samples = sample_rate * 5.0 * 0.001;
         (-1.0 / smoothing_samples.max(1.0)).exp()
     }
 
@@ -1432,13 +1432,13 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
         self.apply_value_refs(std::iter::once((&id, &value)))
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Denoiser sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Denoiser sample rate must be finite and greater than zero".to_string());
         }
         self.config.sample_rate = sample_rate;
         self.noise_profile.learning_frames_target =
-            (sample_rate as usize).div_ceil(self.config.hop_size).max(1);
+            (sample_rate / self.config.hop_size as f64).ceil().max(1.0) as usize;
         self.update_envelope_coefficients();
         self.precompute_bark_mapping();
         self.audition.mix_decay = Self::audition_decay_for_rate(sample_rate);

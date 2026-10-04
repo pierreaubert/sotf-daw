@@ -61,7 +61,7 @@ fn from_params_sets_sidechain_state() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     assert_eq!(plugin.input_channels(), 2);
     assert_eq!(
         plugin.latency_samples(),
@@ -72,7 +72,7 @@ fn from_params_sets_sidechain_state() {
 #[test]
 fn initialize_and_reset() {
     let mut plugin = GatePlugin::new(2, -40.0, 10.0, 1.0, 10.0, 100.0);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin.reset();
     let mut buf = dc(0.1, 256);
     plugin.process_in_place(&mut buf, &ctx(128)).unwrap();
@@ -90,7 +90,7 @@ fn parameter_roundtrip() {
         plugin.parametric_get_parameter(&link_id),
         Some(ParameterValue::Bool(false))
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let cases: Vec<(ParameterId, ParameterValue)> = vec![
         (ParameterId::from("threshold"), ParameterValue::Float(-30.0)),
@@ -167,7 +167,7 @@ fn loud_signal_passes() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let frames = 4096;
     let input = dc(0.5, frames * 2);
@@ -204,7 +204,7 @@ fn quiet_signal_is_attenuated() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let frames = SR as usize; // 1 second
     let input = dc(0.001, frames * 2);
@@ -243,7 +243,7 @@ fn bypass_mix_zero_passthrough() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Set mix to 0 explicitly and let its smoother settle.
     plugin
@@ -298,7 +298,7 @@ fn reset_returns_deterministic_state() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // First run opens the gate on a loud signal.
     let mut loud = dc(0.5, SR as usize);
@@ -343,7 +343,7 @@ fn diagnostic_data_exposed() {
             ..GatePluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Feed silence in small blocks so the cache updater fires.
     let block_size = 512;
