@@ -260,15 +260,15 @@ mod tests {
 
     #[test]
     fn test_inference_with_dummy_model() {
-        // Find the dummy model relative to the workspace root
+        // The checked-in fixture belongs to the plugins workspace.
         let model_path = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/dummy_vocal_detector.onnx"
+            "/../../test_data/dummy_vocal_detector.onnx"
         );
-        if !std::path::Path::new(model_path).exists() {
-            eprintln!("Skipping test: dummy model not found at {}", model_path);
-            return;
-        }
+        assert!(
+            std::path::Path::new(model_path).exists(),
+            "missing checked-in ONNX fixture: {model_path}"
+        );
 
         let mut handle = MlInferenceHandle::new(model_path).expect("Should load dummy model");
 
@@ -315,12 +315,12 @@ mod tests {
         // still publishes and no stale pre-reset value surfaces.
         let model_path = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/test_data/dummy_vocal_detector.onnx"
+            "/../../test_data/dummy_vocal_detector.onnx"
         );
-        if !std::path::Path::new(model_path).exists() {
-            eprintln!("Skipping test: dummy model not found at {}", model_path);
-            return;
-        }
+        assert!(
+            std::path::Path::new(model_path).exists(),
+            "missing checked-in ONNX fixture: {model_path}"
+        );
 
         let mut handle = MlInferenceHandle::new(model_path).expect("Should load dummy model");
         for _ in 0..50 {
