@@ -1065,12 +1065,12 @@ impl<P: ClapPlugin> Wrapper<P> {
                         let normalized_value = clap_plain_value as f32
                             / unsafe { param_ptr.step_count() }.unwrap_or(1) as f32;
 
-                        let changed = unsafe { param_ptr.set_normalized_value(normalized_value) };
+                        let Some(changed) = (unsafe {
+                            param_ptr.set_normalized_value_prepared(normalized_value, sample_rate)
+                        }) else {
+                            return false;
+                        };
                         if changed {
-                            if let Some(sample_rate) = sample_rate {
-                                unsafe { param_ptr.update_smoother(sample_rate, false) };
-                            }
-
                             // The GUI needs to be informed about the changed parameter value. This
                             // triggers an `Editor::param_value_changed()` call on the GUI thread.
                             let task_posted = self
@@ -1093,10 +1093,12 @@ impl<P: ClapPlugin> Wrapper<P> {
                         let normalized_delta = clap_plain_delta as f32
                             / unsafe { param_ptr.step_count() }.unwrap_or(1) as f32;
 
-                        if unsafe { param_ptr.modulate_value(normalized_delta) } {
-                            if let Some(sample_rate) = sample_rate {
-                                unsafe { param_ptr.update_smoother(sample_rate, false) };
-                            }
+                        let Some(changed) = (unsafe {
+                            param_ptr.modulate_value_prepared(normalized_delta, sample_rate)
+                        }) else {
+                            return false;
+                        };
+                        if changed {
 
                             let task_posted = self.schedule_gui(Task::ParameterModulationChanged(
                                 hash,
@@ -2225,9 +2227,17 @@ impl<P: ClapPlugin> Wrapper<P> {
             process_mode: wrapper.current_process_mode.load(),
         };
 
+        // Reject an unrepresentable automation horizon before resetting any parameter.
+        let prepared: Option<Vec<_>> = wrapper.param_by_hash.values().map(|param| {
+            unsafe { param.prepare_smoother(sample_rate) }.map(|steps| (*param, steps))
+        }).collect();
+        let Some(prepared) = prepared else {
+            return false;
+        };
+
         // Before initializing the plugin, make sure all smoothers are set the the default values
-        for param in wrapper.param_by_hash.values() {
-            param.update_smoother(buffer_config.sample_rate, true);
+        for (param, steps) in prepared {
+            param.update_smoother_prepared(steps, true);
         }
 
         // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks

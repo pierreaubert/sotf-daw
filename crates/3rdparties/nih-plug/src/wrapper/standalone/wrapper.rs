@@ -288,8 +288,15 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
             .map(|editor| Arc::new(Mutex::new(editor)));
 
         // Before initializing the plugin, make sure all smoothers are set the the default values
-        for param in wrapper.param_id_to_ptr.values() {
-            unsafe { param.update_smoother(wrapper.buffer_config.sample_rate, true) };
+        let prepared: Option<Vec<_>> = wrapper.param_id_to_ptr.values().map(|param| {
+            unsafe { param.prepare_smoother(wrapper.buffer_config.sample_rate) }
+                .map(|steps| (*param, steps))
+        }).collect();
+        let Some(prepared) = prepared else {
+            return Err(WrapperError::InitializationFailed);
+        };
+        for (param, steps) in prepared {
+            unsafe { param.update_smoother_prepared(steps, true) };
         }
 
         {
@@ -567,8 +574,12 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
                     while let Some((param_ptr, normalized_value)) =
                         self.unprocessed_param_changes.pop()
                     {
-                        if unsafe { param_ptr.set_normalized_value(normalized_value) } {
-                            unsafe { param_ptr.update_smoother(sample_rate, false) };
+                        let Some(changed) = (unsafe {
+                            param_ptr.set_normalized_value_prepared(normalized_value, Some(sample_rate))
+                        }) else {
+                            return false;
+                        };
+                        if changed {
                             let task_posted = self.schedule_gui(Task::ParameterValueChanged(
                                 param_ptr,
                                 normalized_value,

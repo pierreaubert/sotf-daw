@@ -220,6 +220,12 @@ impl ParamMut for BoolParam {
     fn update_smoother(&self, _sample_rate: f64, _init: bool) {
         // Can't really smooth a binary parameter now can you
     }
+
+    fn prepare_smoother(&self, sample_rate: f64) -> Option<i32> {
+        (sample_rate.is_finite() && sample_rate > 0.0).then_some(1)
+    }
+
+    fn update_smoother_prepared(&self, _steps: i32, _reset: bool) {}
 }
 
 impl BoolParam {

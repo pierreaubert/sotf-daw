@@ -234,6 +234,12 @@ pub(crate) trait ParamMut: Param {
     /// restoring a plugin so everything is in sync. In that case the smoother should completely
     /// reset to the current value.
     fn update_smoother(&self, sample_rate: f64, reset: bool);
+
+    /// Snapshot the current smoothing horizon before a parameter or plugin state change.
+    fn prepare_smoother(&self, sample_rate: f64) -> Option<i32>;
+
+    /// Apply a previously validated horizon without rereading a mutable oversampling factor.
+    fn update_smoother_prepared(&self, steps: i32, reset: bool);
 }
 
 /// Describes a struct containing parameters and other persistent fields.

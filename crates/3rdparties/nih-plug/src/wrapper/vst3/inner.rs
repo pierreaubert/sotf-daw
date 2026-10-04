@@ -654,12 +654,12 @@ impl<P: Vst3Plugin> WrapperInner<P> {
     ) -> tresult {
         match self.param_by_hash.get(&hash) {
             Some(param_ptr) => {
-                let changed = unsafe { param_ptr.set_normalized_value(normalized_value) };
+                let Some(changed) = (unsafe {
+                    param_ptr.set_normalized_value_prepared(normalized_value, sample_rate)
+                }) else {
+                    return kInvalidArgument;
+                };
                 if changed {
-                    if let Some(sample_rate) = sample_rate {
-                        unsafe { param_ptr.update_smoother(sample_rate, false) };
-                    }
-
                     let task_posted =
                         self.schedule_gui(Task::ParameterValueChanged(hash, normalized_value));
                     nih_debug_assert!(task_posted, "The task queue is full, dropping task...");
