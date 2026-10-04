@@ -46,7 +46,7 @@ pub(crate) use validate::*;
 struct PluginIpcHeader {
     magic: AtomicU32,
     version: AtomicU32,
-    sample_rate: AtomicU32,
+    sample_rate: AtomicU64,
     max_frames: AtomicU32,
     input_channels: AtomicU32,
     output_channels: AtomicU32,

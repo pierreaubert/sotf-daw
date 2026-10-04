@@ -15,7 +15,7 @@ const AMPLITUDE_COST_WEIGHT: f32 = 0.1;
 
 pub struct PndAnalyzer {
     fft_size: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     window: Vec<f32>,
     fft: RealFftProcessor,
     ring: RingAccumulator,
@@ -53,7 +53,7 @@ pub struct PndAnalyzer {
 }
 
 impl PndAnalyzer {
-    pub fn new(fft_size: usize, sample_rate: u32, analysis_window_ms: f32) -> Self {
+    pub fn new(fft_size: usize, sample_rate: f64, analysis_window_ms: f32) -> Self {
         let hop_size = fft_size / 4; // 512 for fft_size=2048
         let window = generate_hann_window(fft_size);
         let fft = RealFftProcessor::new_forward_only(fft_size);
@@ -122,7 +122,7 @@ impl PndAnalyzer {
         self.fft.forward();
 
         // Peak picking on the real-FFT spectrum (spectrum_size bins)
-        let bin_hz = self.sample_rate as f32 / self.fft_size as f32;
+        let bin_hz = (self.sample_rate / self.fft_size as f64) as f32;
         self.peak_scratch.clear();
 
         // Derive a level-relative threshold from the frame spectrum. A fixed
@@ -437,10 +437,10 @@ fn match_peaks_one_to_one(
 /// Compute drift history capacity: how many FFT frames fit in `analysis_window_ms`.
 fn compute_drift_history_capacity(
     analysis_window_ms: f32,
-    sample_rate: u32,
+    sample_rate: f64,
     hop_size: usize,
 ) -> usize {
-    let samples_in_window = (analysis_window_ms / 1000.0 * sample_rate as f32) as usize;
+    let samples_in_window = (f64::from(analysis_window_ms) / 1000.0 * sample_rate).floor() as usize;
     let capacity = samples_in_window / hop_size;
     capacity.max(1)
 }
@@ -652,7 +652,7 @@ mod tests {
     fn explicit_reference_identifies_constant_offset_that_temporal_tracking_cannot() {
         fn analyze_tone(frequency: f32) -> (f32, (f32, f32)) {
             let sample_rate = 48_000;
-            let mut analyzer = PndAnalyzer::new(2048, sample_rate, 100.0);
+            let mut analyzer = PndAnalyzer::new(2048, f64::from(sample_rate), 100.0);
             let samples = (0..sample_rate)
                 .map(|frame| {
                     (2.0 * std::f32::consts::PI * frequency * frame as f32 / sample_rate as f32)

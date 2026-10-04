@@ -46,15 +46,15 @@ pub struct IsolatedExternalPlugin {
     drain_failed: bool,
     remaining_native_tail_frames: u64,
     remaining_pipeline_frames: u64,
-    sample_rate: u32,
+    sample_rate: f64,
 }
 
 impl IsolatedExternalPlugin {
     /// Resolve scanner-only metadata through a caller-owned quarantined probe
     /// process, then allocate IPC using the validated native bus layout.
-    pub fn new_with_quarantined_probe(
+    pub fn new_with_quarantined_probe<S: Into<f64>>(
         descriptor: PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: S,
         config: IsolatedExternalPluginConfig,
         cache: &mut PluginDescriptorProbeCache,
         probe: impl FnOnce(&PluginDescriptor) -> Result<PluginDescriptor, String>,
@@ -63,13 +63,14 @@ impl IsolatedExternalPlugin {
         Self::new(descriptor, sample_rate, config)
     }
 
-    pub fn new(
+    pub fn new<S: Into<f64>>(
         descriptor: PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: S,
         config: IsolatedExternalPluginConfig,
     ) -> Result<Self, String> {
-        if sample_rate == 0 {
-            return Err("sample rate must be positive".into());
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and positive".into());
         }
         if descriptor.audio_outputs == 0 {
             return Err(format!(
@@ -309,9 +310,9 @@ impl IsolatedExternalPlugin {
         Ok(state)
     }
 
-    pub fn from_placeholder_state(
+    pub fn from_placeholder_state<S: Into<f64>>(
         state: &ExternalPluginState,
-        sample_rate: u32,
+        sample_rate: S,
         config: IsolatedExternalPluginConfig,
     ) -> Result<Self, String> {
         state.validate()?;
@@ -655,8 +656,8 @@ impl Plugin for IsolatedExternalPlugin {
         self.identity_frame_geometry
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate != self.sample_rate {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate != self.sample_rate {
             return Err(format!(
                 "isolated external plugin '{}' was prepared at {} Hz, not {sample_rate} Hz",
                 self.descriptor.name, self.sample_rate

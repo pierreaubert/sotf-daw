@@ -89,7 +89,7 @@ struct DrainCalls {
 }
 
 struct FiniteFirProducer {
-    sample_rate: u32,
+    sample_rate: f64,
     channels: usize,
     previous: Vec<f64>,
     two_back: Vec<f64>,
@@ -113,7 +113,7 @@ impl FiniteFirProducer {
         drain_capacity_frames: usize,
     ) -> Self {
         Self {
-            sample_rate: SAMPLE_RATE,
+            sample_rate: f64::from(SAMPLE_RATE),
             channels,
             previous: vec![0.0; channels],
             two_back: vec![0.0; channels],
@@ -184,8 +184,8 @@ impl Plugin for FiniteFirProducer {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("AUD140 producer sample rate must be positive".to_owned());
         }
         self.sample_rate = sample_rate;
@@ -245,8 +245,8 @@ impl Plugin for FiniteFirProducer {
         self.identity_frame_geometry
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        self.output_sample_rate.unwrap_or(input_rate)
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        self.output_sample_rate.map(f64::from).unwrap_or(input_rate)
     }
 
     fn drain_output_frames_max(&self) -> usize {

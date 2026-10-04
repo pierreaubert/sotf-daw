@@ -64,7 +64,7 @@ fn clamp_to_ceiling(samples: &mut [f32], ceiling: f32) {
 
 pub struct AnalogLimiterPlugin {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     initialized: bool,
     has_input: bool,
     drained: bool,
@@ -449,8 +449,8 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("Analog limiter sample rate must be greater than zero".to_string());
         }
         self.core.initialize(sample_rate)?;

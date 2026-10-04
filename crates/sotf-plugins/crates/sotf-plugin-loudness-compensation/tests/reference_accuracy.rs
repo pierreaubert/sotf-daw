@@ -62,7 +62,7 @@ fn plugin(sample_rate: u32, gain_db: f32, position: &str) -> LoudnessCompensatio
         },
     )
     .unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

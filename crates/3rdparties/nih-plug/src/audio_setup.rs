@@ -78,7 +78,7 @@ pub struct PortNames {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BufferConfig {
     /// The current sample rate.
-    pub sample_rate: f32,
+    pub sample_rate: f64,
     /// The minimum buffer size the host will use. This may not be set.
     pub min_buffer_size: Option<u32>,
     /// The maximum buffer size the host will use. The plugin should be able to accept variable

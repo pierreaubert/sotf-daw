@@ -198,7 +198,7 @@ pub struct EqPlugin {
     pub(super) filters: Vec<Vec<Vec<Biquad>>>,
     /// Per-band order (2, 4, 6, 8). Default is 2.
     pub(super) band_orders: Vec<usize>,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) auto_gain: AutoGain,
     pub(super) cache: RealTimeCache<AutoGainData>,
     auto_gain_clock: AutoGainClock,
@@ -337,7 +337,7 @@ impl EqPlugin {
             // Wrap each biquad in a single-element Vec (1 stage per band)
             channel_filters.push(filters.iter().map(|f| vec![f.clone()]).collect());
         }
-        let sample_rate = DEFAULT_SAMPLE_RATE;
+        let sample_rate = f64::from(DEFAULT_SAMPLE_RATE);
         let auto_gain = AutoGain::new_default(num_channels, sample_rate).expect("ag");
         let transitions = (0..num_bands).map(|_| None).collect();
         let mut p = Self {
@@ -386,7 +386,7 @@ impl EqPlugin {
     /// Each biquad band maps to one SVF. Multi-stage (high-order) bands
     /// use only the primary stage's parameters since SVF doesn't cascade the same way.
     pub(super) fn rebuild_svf_filters(&mut self) {
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         self.svf_filters.clear();
         if self.filters.is_empty() {
             return;
@@ -569,7 +569,7 @@ impl EqPlugin {
             .into_iter()
             .map(|ch| ch.into_iter().map(|f| vec![f]).collect())
             .collect();
-        let sample_rate = DEFAULT_SAMPLE_RATE;
+        let sample_rate = f64::from(DEFAULT_SAMPLE_RATE);
         let auto_gain = AutoGain::new_default(num_channels, sample_rate)?;
         let transitions = (0..num_bands).map(|_| None).collect();
         let mut p = Self {
@@ -608,16 +608,17 @@ impl EqPlugin {
         Ok(p)
     }
 
-    pub fn from_params(
+    pub fn from_params<S: Into<f64>>(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: EqPluginParams,
     ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if num_channels == 0 {
             return Err("EQ requires at least one channel".to_string());
         }
-        if sample_rate == 0 {
-            return Err("EQ sample rate must be greater than zero".to_string());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("EQ sample rate must be finite and greater than zero".to_string());
         }
         let has_channel_filters = params.channel_filters.is_some();
         let global_placement_present = params
@@ -649,7 +650,7 @@ impl EqPlugin {
         )?;
         let config_to_stages = |f: &BiquadFilterConfig| -> Result<(Vec<Biquad>, usize), String> {
             let filter_type = parse_filter_type(&f.filter_type)?;
-            let nyquist = sample_rate as f64 * 0.5;
+            let nyquist = sample_rate * 0.5;
             if !f.freq.is_finite()
                 || !(FREQ_MIN as f64..=FREQ_MAX as f64).contains(&f.freq)
                 || f.freq >= nyquist
@@ -681,7 +682,7 @@ impl EqPlugin {
             let stages = create_band_stages(
                 filter_type,
                 f.freq,
-                sample_rate as f64,
+                sample_rate,
                 f.q,
                 f.db_gain,
                 order,
@@ -690,7 +691,7 @@ impl EqPlugin {
         };
         let config_to_advanced =
             |f: &BiquadFilterConfig| -> Result<Option<AdvancedFilter>, String> {
-                AdvancedFilter::from_config(f, sample_rate as f64, &parse_filter_type)
+                AdvancedFilter::from_config(f, sample_rate, &parse_filter_type)
             };
         let auto_gain = AutoGain::new(num_channels, sample_rate, params.auto_gain)?;
         let mut eq = if let Some(cfgs) = params.channel_filters {
@@ -857,8 +858,8 @@ impl EqPlugin {
             ));
         }
 
-        let filter_rate = self.sample_rate as f64 * f64::from(self.effective_processing_factor());
-        let nyquist = self.sample_rate as f64 * 0.5;
+        let filter_rate = self.sample_rate * f64::from(self.effective_processing_factor());
+        let nyquist = self.sample_rate * 0.5;
         let replacement: Result<Vec<Vec<Vec<Biquad>>>, String> = channel_filters
             .into_iter()
             .map(|channel| {
@@ -919,7 +920,7 @@ impl EqPlugin {
     /// at the active realization rate, which is base-rate for global SVF even
     /// when a non-1x factor remains selected for a later Biquad route.
     pub(super) fn transition_samples(&self) -> usize {
-        (self.sample_rate as f64 * TRANSITION_DURATION_SECS) as usize
+        (self.sample_rate * TRANSITION_DURATION_SECS) as usize
             * self.effective_processing_factor() as usize
     }
 
@@ -1438,7 +1439,7 @@ impl ParametricPlugin for EqPlugin {
         Some(self)
     }
 
-    fn plugin_initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn plugin_initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.initialize(sample_rate)
     }
 
@@ -1520,7 +1521,7 @@ impl ParametricPlugin for EqPlugin {
         if !self.received_input || self.drain_remaining == Some(0) && self.drain_frames == 0 {
             return Ok(PluginDrainResult::COMPLETE);
         }
-        if context.sample_rate == 0 || context.sample_rate != self.sample_rate {
+        if !context.sample_rate.is_finite() || context.sample_rate <= 0.0 || context.sample_rate != self.sample_rate {
             return Err("EQ drain requires the prepared sample rate".into());
         }
         if !output.len().is_multiple_of(self.num_channels)
@@ -1669,12 +1670,12 @@ impl EqPlugin {
             let prepared_advanced =
                 if uses_oversampling && self.ordered_route_active {
                     Some(self.build_advanced_filter_bank(
-                        self.sample_rate as f64 * f64::from(new_factor),
+                        self.sample_rate * f64::from(new_factor),
                     )?)
                 } else if uses_oversampling && new_factor == 1 {
                     // The legacy advanced bank stays at the base rate. Prepare its
                     // replacement before changing the live biquads or oversampler.
-                    Some(self.reconfigure_advanced_filter_bank(self.sample_rate as f64)?)
+                    Some(self.reconfigure_advanced_filter_bank(self.sample_rate)?)
                 } else {
                     None
                 };
@@ -1687,7 +1688,7 @@ impl EqPlugin {
             self.publish_cleared_meter_diagnostics();
             // Re-initialize oversampling state (uses current sample_rate)
             if uses_oversampling {
-                let filter_rate = self.sample_rate as f64 * self.oversampling_factor as f64;
+                let filter_rate = self.sample_rate * self.oversampling_factor as f64;
                 self.apply_sample_rate_to_filters(filter_rate);
             }
             if let Some(advanced_filters) = prepared_advanced {
@@ -1763,9 +1764,9 @@ impl EqPlugin {
                         .map_or(0, Oversampler::latency_samples),
                 )?;
                 let advanced_rate = if self.ordered_route_active && new_topo != 1 {
-                    self.sample_rate as f64 * f64::from(processing_factor)
+                    self.sample_rate * f64::from(processing_factor)
                 } else {
-                    self.sample_rate as f64
+                    self.sample_rate
                 };
                 let prepared_advanced = self.build_advanced_filter_bank(advanced_rate)?;
                 // This is the final fallible preparation step. Do it before
@@ -1784,7 +1785,7 @@ impl EqPlugin {
                     }
                 }
                 self.recycle_transitions(false);
-                let filter_rate = self.sample_rate as f64 * f64::from(processing_factor);
+                let filter_rate = self.sample_rate * f64::from(processing_factor);
                 self.apply_sample_rate_to_filters(filter_rate);
                 self.topology = new_topo;
                 self.oversampler = prepared_oversampler;
@@ -1857,12 +1858,12 @@ impl EqPlugin {
                     )?;
                     let advanced_rate = if route_active {
                         if self.oversampling_factor > 1 && self.topology != 1 {
-                            self.sample_rate as f64 * self.oversampling_factor as f64
+                            self.sample_rate * self.oversampling_factor as f64
                         } else {
-                            self.sample_rate as f64
+                            self.sample_rate
                         }
                     } else {
-                        self.sample_rate as f64
+                        self.sample_rate
                     };
                     let advanced_filters = self.build_advanced_filter_bank(advanced_rate)?;
                     self.reset_ordered_filter_state();
@@ -2131,9 +2132,9 @@ impl EqPlugin {
             None
         }
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("EQ sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("EQ sample rate must be finite and greater than zero".to_string());
         }
         let prepared = if self.oversampling_factor > 1 && self.topology != 1 {
             Some(self.prepare_oversampler(self.oversampling_factor)?)
@@ -2145,7 +2146,7 @@ impl EqPlugin {
             sample_rate,
             prepared.as_ref().map_or(0, Oversampler::latency_samples),
         )?;
-        let filter_rate = sample_rate as f64
+        let filter_rate = sample_rate
             * if self.topology == 1 {
                 1.0
             } else {
@@ -2154,7 +2155,7 @@ impl EqPlugin {
         let advanced_sample_rate = if self.ordered_route_active && self.topology != 1 {
             filter_rate
         } else {
-            sample_rate as f64
+            sample_rate
         };
         // Placement routes can interleave realizations, so a later invalid
         // Kautz/Warped stage must not leave earlier live stages at a new rate.

@@ -15,7 +15,7 @@ pub(super) struct LoudnessRangeHistory {
 }
 
 impl LoudnessRangeHistory {
-    pub(super) fn new(config: LoudnessRangeConfig, sample_rate: u32) -> Result<Self, String> {
+    pub(super) fn new(config: LoudnessRangeConfig, sample_rate: f64) -> Result<Self, String> {
         if !(1..=36_000).contains(&config.capacity_windows) {
             return Err("loudness range capacity must be between 1 and 36000 windows".into());
         }
@@ -46,7 +46,7 @@ impl LoudnessRangeHistory {
                 retained_windows: 0,
                 observed_windows: 0,
                 capacity_windows: config.capacity_windows,
-                timebase_is_exact: sample_rate.is_multiple_of(10),
+                timebase_is_exact: sample_rate.rem_euclid(10.0) == 0.0,
             },
         })
     }

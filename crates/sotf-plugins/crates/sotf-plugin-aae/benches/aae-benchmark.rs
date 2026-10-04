@@ -69,7 +69,7 @@ fn bench_aae_block_sizes(c: &mut Criterion) {
                 &block_size,
                 |b, &block_size| {
                     let mut plugin = AaePlugin::from_params(AaePluginParams::default()).unwrap();
-                    plugin.initialize(sample_rate).unwrap();
+                    plugin.initialize(f64::from(sample_rate)).unwrap();
 
                     let input = generate_realistic_input(block_size, sample_rate);
                     let mut output = vec![0.0f32; block_size * plugin.output_channels()];
@@ -112,7 +112,7 @@ fn bench_aae_configs(c: &mut Criterion) {
                 ..AaePluginParams::default()
             };
             let mut plugin = AaePlugin::from_params(params).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
 
             let input = generate_realistic_input(block_size, sample_rate);
             let mut output = vec![0.0f32; block_size * plugin.output_channels()];
@@ -156,7 +156,7 @@ fn bench_aae_room_presets(c: &mut Criterion) {
                     ..AaePluginParams::default()
                 };
                 let mut plugin = AaePlugin::from_params(params).unwrap();
-                plugin.initialize(sample_rate).unwrap();
+                plugin.initialize(f64::from(sample_rate)).unwrap();
 
                 let input = generate_realistic_input(block_size, sample_rate);
                 let mut output = vec![0.0f32; block_size * plugin.output_channels()];
@@ -201,7 +201,7 @@ fn bench_aae_production(c: &mut Criterion) {
                 ..AaePluginParams::default()
             };
             let mut plugin = AaePlugin::from_params(params).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
 
             let input = generate_realistic_input(block_size, sample_rate);
             let mut output = vec![0.0f32; block_size * plugin.output_channels()];

@@ -32,11 +32,12 @@ pub struct TransientSuppressor {
 }
 
 impl TransientSuppressor {
-    pub fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("transient suppressor requires at least one channel".into());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("transient suppressor sample rate must be greater than zero".into());
         }
         let mut this = Self {
@@ -81,8 +82,9 @@ impl TransientSuppressor {
         self.repair_mix_current = self.repair_mix_target;
     }
 
-    pub fn set_sample_rate(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn set_sample_rate<S: Into<f64>>(&mut self, sample_rate: S) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("transient suppressor sample rate must be greater than zero".into());
         }
         let smoothing_samples = sample_rate as f32 * CONTROL_SMOOTH_MS * 0.001;

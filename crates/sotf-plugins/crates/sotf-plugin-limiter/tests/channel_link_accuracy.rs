@@ -22,7 +22,7 @@ fn limiter(channels: usize, sample_rate: u32, lookahead_ms: f32, link: f32) -> L
             feed_forward: false,
         },
     );
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

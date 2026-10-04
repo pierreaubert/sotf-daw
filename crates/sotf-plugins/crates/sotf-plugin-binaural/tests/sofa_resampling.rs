@@ -11,7 +11,7 @@ fn impulses(rate: u32, length: usize, positions: &[usize]) -> SofaFile {
         samples[(measurement * 2 + 1) * length + position] = -0.5;
     }
     SofaFile {
-        sample_rate: rate as f32,
+        sample_rate: f64::from(rate),
         num_measurements: positions.len(),
         ir_length: length,
         positions: positions
@@ -21,7 +21,7 @@ fn impulses(rate: u32, length: usize, positions: &[usize]) -> SofaFile {
             .collect(),
         impulse_responses: samples,
         convention: "SimpleFreeFieldHRIR".into(),
-        data_sample_rate: Some(rate as f32),
+        data_sample_rate: Some(f64::from(rate)),
     }
 }
 
@@ -41,8 +41,8 @@ fn first_and_last_impulses_preserve_physical_time_across_rates() {
                 (length as u64 * u64::from(target_rate)).div_ceil(u64::from(source_rate)) as usize;
             assert_eq!(sofa.ir_length, expected_length);
             assert_eq!(sofa.impulse_responses.len(), 6 * expected_length);
-            assert_eq!(sofa.sample_rate, target_rate as f32);
-            assert_eq!(sofa.data_sample_rate, Some(target_rate as f32));
+            assert_eq!(sofa.sample_rate, f64::from(target_rate));
+            assert_eq!(sofa.data_sample_rate, Some(f64::from(target_rate)));
             for (measurement, position) in positions.into_iter().enumerate() {
                 let offset = measurement * 2 * expected_length;
                 let left = &sofa.impulse_responses[offset..offset + expected_length];
@@ -132,6 +132,36 @@ fn same_rate_is_exact_and_measurements_have_independent_resampler_history() {
 }
 
 #[test]
+fn fractional_target_keeps_exact_clock_duration_and_independent_ears() {
+    let source_rate = 48_000.0;
+    let target_rate = 12_345.678;
+    let length = 4_097;
+    let mut sofa = impulses(48_000, length, &[0, length - 2]);
+    resample_sofa(&mut sofa, target_rate).unwrap();
+    let expected_length = (length as f64 * target_rate / source_rate).ceil() as usize;
+    assert_eq!(sofa.sample_rate, target_rate);
+    assert_eq!(sofa.data_sample_rate, Some(target_rate));
+    assert_eq!(sofa.ir_length, expected_length);
+    assert_eq!(sofa.impulse_responses.len(), 4 * expected_length);
+    for (measurement, position) in [0, length - 2].into_iter().enumerate() {
+        let offset = measurement * 2 * expected_length;
+        let left = &sofa.impulse_responses[offset..offset + expected_length];
+        let right = &sofa.impulse_responses[offset + expected_length..offset + 2 * expected_length];
+        let (peak, amplitude) = left
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.abs().total_cmp(&b.abs()))
+            .unwrap();
+        let expected_time = position as f64 * target_rate / source_rate;
+        assert!(amplitude.abs() > 0.01);
+        assert!((peak as f64 - expected_time).abs() <= 1.0);
+        for (&left_sample, &right_sample) in left.iter().zip(right) {
+            assert!((right_sample + 0.5 * left_sample).abs() < 2.0e-6);
+        }
+    }
+}
+
+#[test]
 fn invalid_rates_dimensions_and_unsupported_grids_leave_source_unchanged() {
     for case in 0..10 {
         let mut sofa = impulses(48_000, 16, &[2]);
@@ -142,11 +172,11 @@ fn invalid_rates_dimensions_and_unsupported_grids_leave_source_unchanged() {
                 96_000
             }
             2 => {
-                sofa.sample_rate = f32::NAN;
+                sofa.sample_rate = f64::NAN;
                 96_000
             }
             3 => {
-                sofa.sample_rate = f32::INFINITY;
+                sofa.sample_rate = f64::INFINITY;
                 96_000
             }
             4 => {
@@ -172,7 +202,7 @@ fn invalid_rates_dimensions_and_unsupported_grids_leave_source_unchanged() {
                 1_000_033
             }
             9 => {
-                sofa.sample_rate = u32::MAX as f32;
+                sofa.sample_rate = f64::from(u32::MAX) + 1.0;
                 96_000
             }
             _ => unreachable!(),

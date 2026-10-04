@@ -396,7 +396,7 @@ mod tests {
         observed: Arc<Mutex<Option<ObservedContext>>>,
     }
 
-    type ObservedContext = (usize, usize, u64, f64);
+    type ObservedContext = (f64, usize, usize, u64, f64);
 
     impl Plugin for ProtocolPlugin {
         fn info(&self) -> PluginInfo {
@@ -438,6 +438,7 @@ mod tests {
             context: &ProcessContext,
         ) -> PluginResult<usize> {
             *self.observed.lock().unwrap() = Some((
+                context.sample_rate,
                 context
                     .midi_events
                     .first()
@@ -867,7 +868,31 @@ mod tests {
             worker.process_one().unwrap(),
             ExternalPluginWorkerStep::Processed { .. }
         ));
-        assert_eq!(*observed.lock().unwrap(), Some((11, 23, 12_345, 93.0)));
+        assert_eq!(*observed.lock().unwrap(), Some((48_000.0, 11, 23, 12_345, 93.0)));
+    }
+
+    #[test]
+    fn worker_process_context_receives_exact_fractional_ipc_rate() {
+        for rate in [1_234.5678, 12_345.678] {
+            let layout = PluginIpcLayout::new(rate, 64, 1, 1).unwrap();
+            let mut host = SecurePluginSharedMemory::create(layout).unwrap();
+            let worker_shared = SecurePluginSharedMemory::open_existing(host.path()).unwrap();
+            let observed = Arc::new(Mutex::new(None));
+            let mut worker = ExternalPluginWorker::new(
+                worker_shared,
+                Box::new(ProtocolPlugin {
+                    value: 1.0,
+                    observed: Arc::clone(&observed),
+                }),
+            )
+            .unwrap();
+            host.publish_host_block(1, 16, &[0.0; 16]).unwrap();
+            assert!(matches!(
+                worker.process_one().unwrap(),
+                ExternalPluginWorkerStep::Processed { sequence: 1, frames: 16 }
+            ));
+            assert_eq!(observed.lock().unwrap().unwrap().0.to_bits(), rate.to_bits());
+        }
     }
 
     #[test]

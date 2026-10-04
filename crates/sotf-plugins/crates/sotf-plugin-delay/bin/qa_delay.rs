@@ -23,7 +23,7 @@ fn main() {
     };
 
     let mut inner = DelayPlugin::from_params(channels, params).expect("valid params");
-    inner.initialize(sample_rate).unwrap();
+    inner.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Delay Plugin ===");
 
@@ -65,7 +65,7 @@ fn main() {
         channel_delays_ms: Vec::new(),
     };
     let mut clean = DelayPlugin::from_params(2, clean_params).expect("valid clean params");
-    clean.initialize(sample_rate).unwrap();
+    clean.initialize(f64::from(sample_rate)).unwrap();
     let mut clean = ParametricInPlacePluginAdapter::new(clean);
     run_standard_tests(&mut clean, "DelayPlugin pitch-preserving stereo");
 

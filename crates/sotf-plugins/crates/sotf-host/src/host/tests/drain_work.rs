@@ -54,8 +54,8 @@ impl Plugin for WorkPlugin {
     fn output_channels(&self) -> usize {
         1
     }
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        self.rate.unwrap_or(input_rate)
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        self.rate.map(f64::from).unwrap_or(input_rate)
     }
     fn parameters(&self) -> Vec<Parameter> {
         vec![Parameter::new_bool("restart", "Restart", false)]

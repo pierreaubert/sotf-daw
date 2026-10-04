@@ -719,7 +719,7 @@ fn lfo_modulation_has_documented_tape_pitch_excursion_without_clicks() {
         },
     )
     .unwrap();
-    p.initialize(sample_rate).unwrap();
+    p.initialize(f64::from(sample_rate)).unwrap();
     let mut audio: Vec<f32> = (0..frames)
         .map(|i| (std::f32::consts::TAU * 1_000.0 * i as f32 / sample_rate as f32).sin())
         .collect();

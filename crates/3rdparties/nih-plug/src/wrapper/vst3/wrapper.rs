@@ -558,7 +558,7 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
             (true, Some(buffer_config)) => {
                 // Before initializing the plugin, make sure all smoothers are set the the default values
                 for param in self.inner.param_by_hash.values() {
-                    param.update_smoother(buffer_config.sample_rate, true);
+                    param.update_smoother(buffer_config.sample_rate as f32, true);
                 }
 
                 // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks
@@ -868,7 +868,7 @@ impl<P: Vst3Plugin> IEditController for Wrapper<P> {
             .inner
             .current_buffer_config
             .load()
-            .map(|c| c.sample_rate);
+            .map(|c| c.sample_rate as f32);
         self.inner
             .set_normalized_value_by_hash(id, value as f32, sample_rate)
     }
@@ -1124,10 +1124,13 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
         if setup.symbolic_sample_size != vst3_sys::vst::SymbolicSampleSizes::kSample32 as i32 {
             return kResultFalse;
         }
+        if !setup.sample_rate.is_finite() || setup.sample_rate <= 0.0 {
+            return kInvalidArgument;
+        }
 
         // This is needed when activating the plugin and when restoring state
         self.inner.current_buffer_config.store(Some(BufferConfig {
-            sample_rate: setup.sample_rate as f32,
+            sample_rate: setup.sample_rate,
             min_buffer_size: None,
             max_buffer_size: setup.max_samples_per_block as u32,
             process_mode: self.inner.current_process_mode.load(),
@@ -1332,7 +1335,7 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
                                     self.inner.set_normalized_value_by_hash(
                                         param_hash,
                                         value,
-                                        Some(sample_rate),
+                                        Some(sample_rate as f32),
                                     );
                                 }
                             }
@@ -1482,7 +1485,7 @@ impl<P: Vst3Plugin> IAudioProcessor for Wrapper<P> {
                                 self.inner.set_normalized_value_by_hash(
                                     *hash,
                                     *normalized_value,
-                                    Some(sample_rate),
+                                    Some(sample_rate as f32),
                                 );
                             }
                             ProcessEvent::NoteEvent(event) => {

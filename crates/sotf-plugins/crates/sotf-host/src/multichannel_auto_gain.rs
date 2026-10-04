@@ -35,18 +35,26 @@ impl MultichannelAutoGain {
     /// all current SOTF host block sizes (128–8192) without reallocation.
     const MAX_METER_FRAMES: usize = 8192;
 
-    pub fn new(sample_rate: u32, params: AutoGainParams) -> Result<Self, String> {
+    pub fn new(sample_rate: impl Into<f64>, params: AutoGainParams) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("auto-gain sample rate must be finite and positive".into());
+        }
         Ok(Self {
             inner: AutoGain::new(2, sample_rate, params)?,
             meter_buf: vec![0.0; Self::MAX_METER_FRAMES * 2],
-            measurement_interval: (sample_rate / 10).max(1) as usize,
+            measurement_interval: (sample_rate / 10.0).floor().max(1.0) as usize,
             measurement_phase: 0,
         })
     }
 
-    pub fn set_sample_rate(&mut self, sr: u32) -> Result<(), String> {
+    pub fn set_sample_rate(&mut self, sr: impl Into<f64>) -> Result<(), String> {
+        let sr = sr.into();
+        if !sr.is_finite() || sr <= 0.0 {
+            return Err("auto-gain sample rate must be finite and positive".into());
+        }
         self.inner.set_sample_rate(sr)?;
-        self.measurement_interval = (sr / 10).max(1) as usize;
+        self.measurement_interval = (sr / 10.0).floor().max(1.0) as usize;
         self.measurement_phase = 0;
         Ok(())
     }

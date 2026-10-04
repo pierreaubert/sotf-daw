@@ -199,7 +199,7 @@ fn assert_multiway_frequency_response(sample_rate: u32, cutoffs_hz: &[f64], prob
     let input = sine_stereo_input(sample_rate, total_frames, probe_hz);
     let mut plugin =
         CrossoverPlugin::new_multiway(2, "LR24", cutoffs_hz[0], "both", &cutoffs_hz[1..]).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let output_channels = plugin.output_channels();
     let mut output = vec![f32::NAN; total_frames * output_channels];
     assert_eq!(

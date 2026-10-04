@@ -29,7 +29,7 @@ const MAX_DRAIN_FRAMES: usize = 256;
 
 pub struct GatePlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) threshold_db: f32,
     pub(super) ratio: f32,
     pub(super) attack_ms: f32,
@@ -132,7 +132,7 @@ impl GatePlugin {
         hold_ms: f32,
         release_ms: f32,
     ) -> Self {
-        let sr = 44100;
+        let sr = 44_100.0;
         let mut p = Self {
             channels,
             sample_rate: sr,
@@ -418,12 +418,12 @@ impl GatePlugin {
     /// Rebuild the Butterworth HPF biquad chain from current freq/order/sample_rate.
     pub(super) fn rebuild_sidechain_hpf(&mut self) {
         let fc = self.sidechain_hpf_hz.max(0.0);
-        if fc > 0.0 && self.sample_rate > 0 {
+        if fc > 0.0 && self.sample_rate > 0.0 {
             let order = match self.sidechain_hpf_order_index {
                 1 => 4,
                 _ => 2,
             };
-            let peq = peq_butterworth_highpass(order, fc as f64, self.sample_rate as f64);
+            let peq = peq_butterworth_highpass(order, f64::from(fc), self.sample_rate);
             // One set of biquad sections per channel (each needs independent state)
             let sections: Vec<Biquad> = peq.into_iter().map(|(_, bq)| bq).collect();
             self.sidechain_hpf_biquads = (0..self.channels).map(|_| sections.clone()).collect();
@@ -1055,9 +1055,9 @@ impl ParametricInPlacePlugin for GatePlugin {
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
         param_bridge::get_parameter(GT, id, |index| self.param_value(index))
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Gate requires a non-zero sample rate".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Gate requires a finite, positive sample rate".into());
         }
         let drain_samples = MAX_DRAIN_FRAMES
             .checked_mul(self.input_channels())
@@ -1065,7 +1065,7 @@ impl ParametricInPlacePlugin for GatePlugin {
             .ok_or_else(|| "Gate drain scratch capacity overflow".to_string())?;
         self.drain_scratch.resize(drain_samples, 0.0);
         self.sample_rate = sample_rate;
-        self.diagnostic_interval_samples = (sample_rate as usize / 30).max(1);
+        self.diagnostic_interval_samples = ((sample_rate / 30.0).floor() as usize).max(1);
         self.diagnostic_samples = 0;
         self.update_coefficients();
         self.update_hold_samples();

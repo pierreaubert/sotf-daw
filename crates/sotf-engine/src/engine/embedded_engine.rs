@@ -309,7 +309,7 @@ impl EmbeddedAudioEngine {
         self.host.output_channels()
     }
 
-    pub fn output_sample_rate(&self) -> u32 {
+    pub fn output_sample_rate(&self) -> Result<u32, String> {
         self.host.output_sample_rate(self.input_sample_rate)
     }
 

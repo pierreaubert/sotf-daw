@@ -23,7 +23,7 @@ struct StreamDrain {
 
 pub struct AecPlugin {
     drain_state: StreamDrain,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) aec: TwoPathAec,
     pub(super) post_filter: ResidualEchoSuppressor,
     pub(super) post_filter_enabled: bool,
@@ -58,7 +58,8 @@ pub struct AecPlugin {
 }
 
 impl AecPlugin {
-    pub fn new(sample_rate: u32) -> Self {
+    pub fn new(sample_rate: impl Into<f64>) -> Self {
+        let sample_rate = sample_rate.into();
         let block_size = DEFAULT_BLOCK_SIZE;
         let step_size = AecPluginParams::default().step_size as f32;
         let echo_tail_samples = (DEFAULT_ECHO_TAIL_MS / 1000.0 * sample_rate as f32) as usize;
@@ -118,7 +119,11 @@ impl AecPlugin {
         p
     }
 
-    pub fn from_params(sample_rate: u32, params: AecPluginParams) -> Result<Self, String> {
+    pub fn from_params(
+        sample_rate: impl Into<f64>,
+        params: AecPluginParams,
+    ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         Self::validate_configuration(sample_rate, &params)?;
         let mut plugin = Self::new(sample_rate);
         plugin.echo_tail_ms = params.echo_tail_ms as f32;
@@ -132,9 +137,9 @@ impl AecPlugin {
         Ok(plugin)
     }
 
-    fn validate_configuration(sample_rate: u32, params: &AecPluginParams) -> Result<(), String> {
-        if sample_rate == 0 {
-            return Err("AEC sample rate must be greater than zero".to_string());
+    fn validate_configuration(sample_rate: f64, params: &AecPluginParams) -> Result<(), String> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("AEC sample rate must be finite and greater than zero".to_string());
         }
         if !params.echo_tail_ms.is_finite() || !(50.0_f64..=500.0).contains(&params.echo_tail_ms) {
             return Err(format!(
@@ -304,9 +309,9 @@ impl Plugin for AecPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("AEC sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("AEC sample rate must be finite and greater than zero".to_string());
         }
         self.sample_rate = sample_rate;
         self.rebuild_aec();

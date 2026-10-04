@@ -307,14 +307,14 @@ fn test_eq_processing_varied_buffers() {
         6.0,
     )];
     let mut inner = EqPlugin::new(channels, f);
-    inner.plugin_initialize(sample_rate as u32).unwrap();
+    inner.plugin_initialize(sample_rate).unwrap();
     let mut plugin = ParametricPluginAdapter::new(inner);
 
     let mut signal_gen = SignalGen::new_sine(sample_rate, 1000.0, 0.5);
     let input = signal_gen.generate(4800 * channels);
 
     let mut expected_output = vec![0.0; input.len()];
-    let ctx = ProcessContext::new(sample_rate as u32, 4800);
+    let ctx = ProcessContext::new(sample_rate, 4800);
     plugin.process(&input, &mut expected_output, &ctx).unwrap();
 
     plugin.reset();
@@ -861,7 +861,7 @@ fn test_initialize_preserves_state_on_sample_rate_change() {
     // Re-initialize at new sample rate - should use update_params, not new
     // (filter params should stay the same, just recompute coeffs for new rate)
     p.plugin_initialize(96000).unwrap();
-    assert_eq!(p.sample_rate, 96000);
+    assert_eq!(p.sample_rate, 96000.0);
     // Filter should still have the same user parameters
     assert_eq!(p.filters[0][0][0].freq, 1000.0);
     assert_eq!(p.filters[0][0][0].db_gain, 6.0);
@@ -2257,7 +2257,7 @@ fn legacy_warped_reinitialize_matches_state_preserving_update_contract() {
 
     // A same-rate reinitialize also updates the realized filter in place in
     // the legacy route. It must not clear populated WarpedBiquad history.
-    legacy_reference.sample_rate = 48_000;
+    legacy_reference.sample_rate = 48_000.0;
     for channel in &mut legacy_reference.advanced_filters {
         for advanced in channel {
             match advanced {
@@ -2324,7 +2324,7 @@ fn legacy_warped_reinitialize_matches_state_preserving_update_contract() {
     // Reproduce the old successful legacy reinitialization contract directly:
     // WarpedBiquad::update_params changes coefficients/rate without clearing
     // the allpass and recursive histories.
-    legacy_reference.sample_rate = 44_100;
+    legacy_reference.sample_rate = 44_100.0;
     for channel in &mut legacy_reference.advanced_filters {
         for advanced in channel {
             match advanced {
@@ -2761,4 +2761,20 @@ fn test_parametric_plugin_apply_values_updates_filters() {
         ),
         "gain should update to 3.0 dB"
     );
+}
+
+#[test]
+fn fractional_sample_rate_reaches_eq_filter_and_autogain_clock() {
+    let mut plugin = EqPlugin::new(
+        1,
+        vec![Biquad::new(BiquadFilterType::Peak, 1_000.0, 48_000.0, 1.0, 3.0)],
+    );
+    plugin.plugin_initialize(48_000.5).unwrap();
+    assert_eq!(plugin.sample_rate, 48_000.5);
+    assert_eq!(plugin.filters[0][0][0].srate, 48_000.5);
+    assert_eq!(plugin.auto_gain_clock.interval_frames(), 4_800);
+
+    assert!(plugin.plugin_initialize(f64::NAN).is_err());
+    assert_eq!(plugin.sample_rate, 48_000.5);
+    assert_eq!(plugin.filters[0][0][0].srate, 48_000.5);
 }

@@ -43,7 +43,7 @@ pub struct AmbisonicsDecoderPlugin {
     pub(super) lf_frame: Vec<f32>,
     /// Per-frame HF decode output scratch (length = output_channels)
     pub(super) hf_frame: Vec<f32>,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) cached_parameters: Vec<Parameter>,
 }
 
@@ -377,11 +377,11 @@ impl Plugin for AmbisonicsDecoderPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and greater than zero".into());
         }
-        if self.dual_band && sample_rate as f32 <= 2.0 * DUAL_BAND_CROSSOVER_HZ {
+        if self.dual_band && sample_rate <= f64::from(2.0 * DUAL_BAND_CROSSOVER_HZ) {
             return Err(format!(
                 "dual-band sample rate must exceed {} Hz",
                 2.0 * DUAL_BAND_CROSSOVER_HZ
@@ -533,7 +533,7 @@ impl Plugin for AmbisonicsDecoderPlugin {
         true
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 
@@ -947,7 +947,7 @@ mod tests {
         let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
         for sample_rate in [0, 1_400] {
             assert!(plugin.initialize(sample_rate).is_err());
-            assert_eq!(plugin.sample_rate, 48_000);
+            assert_eq!(plugin.sample_rate, 48_000.0);
             assert!(plugin.crossover.is_none());
         }
     }

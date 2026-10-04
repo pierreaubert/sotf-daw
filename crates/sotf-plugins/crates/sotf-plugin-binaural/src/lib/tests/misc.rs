@@ -3,7 +3,7 @@ use sotf_host::sofa::SofaFile;
 use sotf_host::sofa::SourcePosition;
 
 /// Create a minimal synthetic SofaFile for testing (no file I/O needed)
-fn make_test_sofa(sample_rate: f32, ir_length: usize, num_measurements: usize) -> SofaFile {
+fn make_test_sofa(sample_rate: f64, ir_length: usize, num_measurements: usize) -> SofaFile {
     let mut positions = Vec::with_capacity(num_measurements);
     let mut impulse_responses = Vec::with_capacity(num_measurements * 2 * ir_length);
 

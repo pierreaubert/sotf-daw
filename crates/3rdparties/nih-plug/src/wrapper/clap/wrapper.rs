@@ -1293,7 +1293,10 @@ impl<P: ClapPlugin> Wrapper<P> {
     ) {
         // We'll always write these events to the first sample, so even when we add note output we
         // shouldn't have to think about interleaving events here
-        let sample_rate = self.current_buffer_config.load().map(|c| c.sample_rate);
+        let sample_rate = self
+            .current_buffer_config
+            .load()
+            .map(|c| c.sample_rate as f32);
         while let Some(change) = self.output_parameter_events.pop() {
             let push_successful = match change {
                 OutputParamEvent::BeginGesture { param_hash } => {
@@ -1720,7 +1723,9 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueSet(event.value),
-                    self.current_buffer_config.load().map(|c| c.sample_rate),
+                    self.current_buffer_config
+                        .load()
+                        .map(|c| c.sample_rate as f32),
                 );
 
                 // If the parameter supports polyphonic modulation, then the plugin needs to be
@@ -1775,7 +1780,9 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueMod(event.amount),
-                    self.current_buffer_config.load().map(|c| c.sample_rate),
+                    self.current_buffer_config
+                        .load()
+                        .map(|c| c.sample_rate as f32),
                 );
             }
             (CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_TRANSPORT) => {
@@ -2205,11 +2212,14 @@ impl<P: ClapPlugin> Wrapper<P> {
         max_frames_count: u32,
     ) -> bool {
         check_null_ptr!(false, plugin, (*plugin).plugin_data);
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return false;
+        }
         let wrapper = &*((*plugin).plugin_data as *const Self);
 
         let audio_io_layout = wrapper.current_audio_io_layout.load();
         let buffer_config = BufferConfig {
-            sample_rate: sample_rate as f32,
+            sample_rate,
             min_buffer_size: Some(min_frames_count),
             max_buffer_size: max_frames_count,
             process_mode: wrapper.current_process_mode.load(),
@@ -2217,7 +2227,7 @@ impl<P: ClapPlugin> Wrapper<P> {
 
         // Before initializing the plugin, make sure all smoothers are set the the default values
         for param in wrapper.param_by_hash.values() {
-            param.update_smoother(buffer_config.sample_rate, true);
+            param.update_smoother(buffer_config.sample_rate as f32, true);
         }
 
         // NOTE: This needs to be dropped after the `plugin` lock to avoid deadlocks

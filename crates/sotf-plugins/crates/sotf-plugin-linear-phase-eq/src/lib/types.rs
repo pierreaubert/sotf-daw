@@ -106,7 +106,7 @@ pub struct BandConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LiveFilterSnapshot {
     pub channels: usize,
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     pub num_filters: usize,
     pub fir_length_index: usize,
     pub phase_mode_index: usize,

@@ -55,7 +55,7 @@ fn f_weighted_shaper_has_a_bounded_policy_for_every_supported_rate_family() {
         8_000_u32, 16_000, 22_050, 32_000, 44_100, 48_000, 96_000, 192_000, 384_000, 768_000,
     ] {
         let mut plugin = DitherPlugin::new(2);
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         assert!(
             plugin
                 .noise_shaping_delays_samples

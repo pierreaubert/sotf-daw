@@ -11,7 +11,7 @@ use rustfft::num_complex::Complex;
 
 /// Zero-allocation feature extractor that reuses existing FFT data.
 pub struct MfccExtractor {
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) fft_size: usize,
     pub(super) filter_weights: Vec<(usize, f32)>,
     pub(super) mel_filters: Vec<MelFilter>,
@@ -28,7 +28,7 @@ pub struct MfccExtractor {
 
 impl MfccExtractor {
     /// Create a new feature extractor.
-    pub fn new(sample_rate: u32, fft_size: usize) -> Self {
+    pub fn new(sample_rate: f64, fft_size: usize) -> Self {
         let spectrum_size = fft_size / 2 + 1;
         let nyquist = sample_rate as f32 / 2.0;
 

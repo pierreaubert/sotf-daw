@@ -127,7 +127,7 @@ struct AsyncMetadata {
     values: Vec<ParameterValue>,
     input_channels: usize,
     output_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     max_callback_frames: usize,
     quantum_frames: usize,
     inner_latency: usize,
@@ -174,10 +174,10 @@ pub struct AsyncTimelinePlugin {
 impl AsyncTimelinePlugin {
     pub fn new(
         mut inner: Box<dyn Plugin>,
-        sample_rate: u32,
+        sample_rate: f64,
         max_callback_frames: usize,
     ) -> PluginResult<Self> {
-        if sample_rate == 0 || max_callback_frames == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || max_callback_frames == 0 {
             return Err(
                 "async adapter requires a non-zero sample rate and callback maximum".into(),
             );
@@ -675,7 +675,7 @@ impl Plugin for AsyncTimelinePlugin {
             .map(|index| self.metadata.values[index].clone())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         if sample_rate == self.metadata.sample_rate {
             Ok(())
         } else {
@@ -780,7 +780,7 @@ impl Plugin for AsyncTimelinePlugin {
 #[allow(clippy::too_many_arguments)]
 fn run_worker(
     inner: &mut dyn Plugin,
-    sample_rate: u32,
+    sample_rate: f64,
     quantum_frames: usize,
     input_channels: usize,
     output_channels: usize,
@@ -973,7 +973,7 @@ fn skip_worker_gap(
 #[allow(clippy::too_many_arguments)]
 fn process_worker_span(
     inner: &mut dyn Plugin,
-    sample_rate: u32,
+    sample_rate: f64,
     epoch: u64,
     start_frame: u64,
     frames: usize,
@@ -1143,7 +1143,7 @@ mod tests {
                 _ => None,
             }
         }
-        fn initialize(&mut self, _sample_rate: u32) -> PluginResult<()> {
+        fn initialize(&mut self, _sample_rate: f64) -> PluginResult<()> {
             let prior = self.state.initialize_calls.fetch_add(1, Ordering::SeqCst);
             if prior != 0 {
                 return Err("initialized twice".into());

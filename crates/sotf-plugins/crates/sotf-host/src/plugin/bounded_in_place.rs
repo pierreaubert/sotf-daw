@@ -12,12 +12,12 @@ pub(crate) struct BoundedInPlace {
     pub(crate) f32_samples: Vec<f32>,
     pub(crate) f64_samples: Vec<f64>,
     channels: [usize; 2],
-    sample_rate: u32,
+    sample_rate: f64,
 }
 
 impl BoundedInPlace {
     pub(crate) fn invalidate(&mut self) {
-        self.sample_rate = 0;
+        self.sample_rate = 0.0;
     }
 
     pub(crate) fn prepare(
@@ -25,7 +25,7 @@ impl BoundedInPlace {
         enabled: bool,
         channels: [usize; 2],
         native_f64: bool,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> PluginResult<()> {
         self.invalidate();
         if !enabled {
@@ -35,7 +35,7 @@ impl BoundedInPlace {
                 Err("Asymmetric in-place adapter requires bounded subdivision support".into())
             };
         }
-        if sample_rate == 0 || channels[1] == 0 || channels[0] < channels[1] {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || channels[1] == 0 || channels[0] < channels[1] {
             return Err("Invalid bounded in-place sample rate or channel layout".into());
         }
         let samples = channels[0]
@@ -56,7 +56,7 @@ impl BoundedInPlace {
         channels: [usize; 2],
         context: &ProcessContext<'_>,
     ) -> PluginResult<()> {
-        if self.sample_rate == 0 {
+        if self.sample_rate == 0.0 {
             return Err("Bounded in-place adapter must be initialized before processing".into());
         }
         if self.channels != channels || self.sample_rate != context.sample_rate {

@@ -506,7 +506,7 @@ fn loudness_monitor_stereo_correlation_is_centered_and_partition_invariant() {
 fn loudness_data_exposes_validity_true_peak_scope_and_integrated_window() {
     for sample_rate in [7_999, 44_100, 48_000, 88_200, 96_000, 192_000] {
         let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = sample_rate as usize * 4;
         let input = vec![0.1; frames * 2];
         let mut output = vec![0.0; input.len()];
@@ -553,7 +553,7 @@ fn loudness_true_peak_and_centered_correlation_are_partition_invariant_across_ra
         }
 
         let mut plugin = LoudnessMonitorPlugin::new(2).unwrap().with_spatial();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let mut offset = 0;
         let mut max_true_peak = [f64::NEG_INFINITY; 2];
         for &requested in partitions {
@@ -684,7 +684,7 @@ fn exact_whole_program_matches_rolling_reference_and_callback_partitions() {
             .unwrap()
             .with_integrated_mode(mode)
             .unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let mut offset = 0;
         let mut partition_index = 0;
         while offset < frames {

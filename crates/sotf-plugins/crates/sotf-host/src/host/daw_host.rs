@@ -1178,7 +1178,7 @@ impl DawHost {
                 .store(self.next_node_id, Ordering::Release);
         }
         plugin = self.auto_oversample_plugin(plugin)?;
-        plugin.initialize(input_sample_rate)?;
+        plugin.initialize(f64::from(input_sample_rate))?;
         let input_channels = plugin.input_channels();
         let output_channels = plugin.output_channels();
         self.nodes.insert(
@@ -1343,7 +1343,7 @@ impl DawHost {
                 }
                 let plugin = self.plugins[id].as_mut().unwrap();
                 if self.node_input_sample_rates[id] != input_rate {
-                    plugin.initialize(input_rate)?;
+                    plugin.initialize(f64::from(input_rate))?;
                 }
                 if id >= previous_position_slots || self.node_input_sample_rates[id] != input_rate {
                     self.node_input_positions[id] = Self::convert_sample_position(
@@ -1361,7 +1361,7 @@ impl DawHost {
                         id,
                         &self.nodes[&id].name,
                         input_rate,
-                    )
+                    )?
                 };
                 if output_rate == 0 {
                     return Err(format!("Node {id} returned a zero output sample rate"));
@@ -2044,7 +2044,7 @@ impl DawHost {
             Self::plugin_output_frames_for_input_isolated(plugin.as_ref(), id, &node.name, 100)
                 == 100,
             Self::plugin_output_sample_rate_isolated(plugin.as_ref(), id, &node.name, 48_000)
-                == 48_000,
+                .is_ok_and(|rate| rate == 48_000),
         )
     }
 
@@ -2308,8 +2308,8 @@ impl DawHost {
         let has_latency_or_variable_frames = metadata.latency_samples > 0
             || Self::plugin_output_frames_for_input_isolated(plugin, node_id, node_name, 100)
                 != 100
-            || Self::plugin_output_sample_rate_isolated(plugin, node_id, node_name, 48_000)
-                != 48_000;
+            || !Self::plugin_output_sample_rate_isolated(plugin, node_id, node_name, 48_000)
+                .is_ok_and(|rate| rate == 48_000);
         if has_latency_or_variable_frames {
             return HEAVY_PARALLEL_NODE_COST;
         }
@@ -2372,15 +2372,18 @@ impl DawHost {
             return Err("mismatch".into());
         }
         let name = format!("plugin_{id}");
-        let input_rate = self
-            .chain_nodes
-            .iter()
-            .fold(self.config.sample_rate, |rate, &node_id| {
-                self.plugins[node_id]
-                    .as_ref()
-                    .unwrap()
-                    .output_sample_rate(rate)
-            });
+        let input_rate = self.chain_nodes.iter().try_fold(
+            self.config.sample_rate,
+            |rate, &node_id| {
+                let plugin = self.plugins[node_id].as_ref().unwrap();
+                Self::plugin_output_sample_rate_isolated(
+                    plugin.as_ref(),
+                    node_id,
+                    &self.nodes[&node_id].name,
+                    rate,
+                )
+            },
+        )?;
         self.add_node_with_id_at_rate(id, name, plugin, input_rate)?;
         if let Some(&prev) = self.chain_nodes.last() {
             self.add_edge(GraphEdge::new(prev, id))?;
@@ -2843,13 +2846,16 @@ impl DawHost {
         )
     }
 
-    pub fn output_sample_rate(&self, r: u32) -> u32 {
+    pub fn output_sample_rate(&self, r: u32) -> Result<u32, String> {
+        if r == 0 {
+            return Err("Native input sample rate must be positive".to_string());
+        }
         if self.cached_rate_identity {
-            return r;
+            return Ok(r);
         }
         self.output_nodes
             .first()
-            .map_or(r, |&id| self.path_output_rate(id, r))
+            .map_or(Ok(r), |&id| self.path_output_rate(id, r))
     }
 
     /// Whether every host output negotiates to `expected` from `input_rate`.
@@ -2859,22 +2865,25 @@ impl DawHost {
     /// miss a misclocked sibling. Allocates nothing; audio-thread safe. An
     /// empty host passes through, so it checks the input rate itself.
     pub fn all_output_sample_rates_equal(&self, input_rate: u32, expected: u32) -> bool {
+        if input_rate == 0 || expected == 0 {
+            return false;
+        }
         if self.cached_rate_identity || self.output_nodes.is_empty() {
             return input_rate == expected;
         }
         self.output_nodes
             .iter()
-            .all(|&id| self.path_output_rate(id, input_rate) == expected)
+            .all(|&id| self.path_output_rate(id, input_rate).is_ok_and(|rate| rate == expected))
     }
 
-    fn path_output_rate(&self, id: NodeId, rate: u32) -> u32 {
+    fn path_output_rate(&self, id: NodeId, rate: u32) -> Result<u32, String> {
         let input_rate = self
             .predecessors
             .get(id)
             .and_then(|edges| edges.first())
-            .map_or(rate, |edge| self.path_output_rate(edge.from_node, rate));
+            .map_or(Ok(rate), |edge| self.path_output_rate(edge.from_node, rate))?;
         if self.nodes[&id].bypassed {
-            return input_rate;
+            return Ok(input_rate);
         }
         Self::plugin_output_sample_rate_isolated(
             self.plugins[id].as_ref().unwrap().as_ref(),
@@ -3231,9 +3240,20 @@ impl DawHost {
         node_id: NodeId,
         node_name: &str,
         input_rate: u32,
-    ) -> u32 {
-        match catch_unwind(AssertUnwindSafe(|| plugin.output_sample_rate(input_rate))) {
-            Ok(output_rate) => output_rate,
+    ) -> Result<u32, String> {
+        match catch_unwind(AssertUnwindSafe(|| plugin.output_sample_rate(f64::from(input_rate)))) {
+            Ok(output_rate) => {
+                if !output_rate.is_finite()
+                    || output_rate <= 0.0
+                    || output_rate > f64::from(u32::MAX)
+                    || output_rate.fract() != 0.0
+                {
+                    return Err(format!(
+                        "Node {node_id} ({node_name}) returned unsupported native output sample rate {output_rate}"
+                    ));
+                }
+                Ok(output_rate as u32)
+            }
             Err(payload) => {
                 let reason = panic_payload_description(payload.as_ref());
                 crate::rate_limited_log!(
@@ -3244,7 +3264,7 @@ impl DawHost {
                     node_id,
                     reason
                 );
-                input_rate
+                Ok(input_rate)
             }
         }
     }
@@ -3912,7 +3932,7 @@ impl DawHost {
         let sink_position = self.node_input_positions[sink_id];
         let sink_rate = self.node_input_sample_rates[sink_id];
         let context =
-            ProcessContext::new(sink_rate, input_frames).with_sample_position(sink_position);
+            ProcessContext::new(f64::from(sink_rate), input_frames).with_sample_position(sink_position);
         self.preflight_terminal_sink_append(sink_id, input_frames, &context)
             .map_err(SinkProcessError::RetryablePreflight)?;
         if self.terminal_sink_staging.len() < input.len() {
@@ -4363,7 +4383,7 @@ impl DawHost {
     ) -> Result<SinkQueueState, SinkFailure> {
         let sample_rate = self.node_input_sample_rates[sink_id];
         let sample_position = self.node_input_positions[sink_id];
-        let context = ProcessContext::new(sample_rate, 0).with_sample_position(sample_position);
+        let context = ProcessContext::new(f64::from(sample_rate), 0).with_sample_position(sample_position);
         self.plugins[sink_id]
             .as_mut()
             .and_then(|plugin| plugin.terminal_sink_mut())
@@ -4393,7 +4413,12 @@ impl DawHost {
                 ));
             }
             let input_rate = self.node_input_sample_rates[node_id];
-            if plugin.output_sample_rate(input_rate) != self.node_output_sample_rates[node_id]
+            if Self::plugin_output_sample_rate_isolated(
+                plugin.as_ref(),
+                node_id,
+                &node.name,
+                input_rate,
+            )? != self.node_output_sample_rates[node_id]
                 || input_rate != self.node_output_sample_rates[node_id]
             {
                 return Err(format!(
@@ -4752,10 +4777,12 @@ impl DawHost {
                 continue;
             }
             if chain_index < self.drain_state.completed_prefix {
-                input_rate = self.plugins[node_id]
-                    .as_ref()
-                    .unwrap()
-                    .output_sample_rate(input_rate);
+                input_rate = Self::plugin_output_sample_rate_isolated(
+                    self.plugins[node_id].as_ref().unwrap().as_ref(),
+                    node_id,
+                    &node.name,
+                    input_rate,
+                )?;
                 continue;
             }
             let drain_capacity = self.plugins[node_id]
@@ -4769,7 +4796,7 @@ impl DawHost {
                 return Err("Host native drain requires nonzero rate and channels".into());
             }
             ensure_len(&mut bufs.scratch_output, drain_samples);
-            let drain_context = ProcessContext::new(input_rate, 0)
+            let drain_context = ProcessContext::new(f64::from(input_rate), 0)
                 .with_sample_position(self.node_input_positions[node_id]);
             if self.drain_state.active_node != Some(node_id) {
                 self.drain_state.active_node = Some(node_id);
@@ -4822,10 +4849,12 @@ impl DawHost {
             if result.frames > 0 {
                 let mut current_frames = result.frames;
                 let mut current_channels = node.output_channels();
-                let mut current_rate = self.plugins[node_id]
-                    .as_ref()
-                    .unwrap()
-                    .output_sample_rate(input_rate);
+                let mut current_rate = Self::plugin_output_sample_rate_isolated(
+                    self.plugins[node_id].as_ref().unwrap().as_ref(),
+                    node_id,
+                    &node.name,
+                    input_rate,
+                )?;
 
                 for &downstream_id in &self.chain_nodes[chain_index + 1..] {
                     if self.nodes[&downstream_id].bypassed {
@@ -4843,7 +4872,7 @@ impl DawHost {
                     let capacity = downstream.output_frames_for_input(current_frames);
                     let output_samples = capacity.saturating_mul(downstream_node.output_channels());
                     ensure_len(&mut bufs.scratch_output, output_samples);
-                    let context = ProcessContext::new(current_rate, current_frames)
+                    let context = ProcessContext::new(f64::from(current_rate), current_frames)
                         .with_sample_position(self.node_input_positions[downstream_id]);
                     current_frames = downstream.process(
                         &bufs.scratch_input[..samples],
@@ -4854,7 +4883,12 @@ impl DawHost {
                         [downstream_id]
                         .saturating_add(context.num_frames as u64);
                     current_channels = downstream_node.output_channels();
-                    current_rate = downstream.output_sample_rate(current_rate);
+                    current_rate = Self::plugin_output_sample_rate_isolated(
+                        downstream.as_ref(),
+                        downstream_id,
+                        &downstream_node.name,
+                        current_rate,
+                    )?;
                 }
 
                 let samples = current_frames.saturating_mul(current_channels);
@@ -4885,10 +4919,12 @@ impl DawHost {
             }
             self.drain_state.completed_prefix = chain_index + 1;
             self.drain_state.active_node = None;
-            input_rate = self.plugins[node_id]
-                .as_ref()
-                .unwrap()
-                .output_sample_rate(input_rate);
+            input_rate = Self::plugin_output_sample_rate_isolated(
+                self.plugins[node_id].as_ref().unwrap().as_ref(),
+                node_id,
+                &node.name,
+                input_rate,
+            )?;
         }
 
         Ok(PluginDrainResult::COMPLETE)
@@ -6112,7 +6148,7 @@ impl DawHost {
                 "graph drain lost the draining phase of node {node_id}"
             ));
         };
-        let context = ProcessContext::new(input_rate, 0)
+        let context = ProcessContext::new(f64::from(input_rate), 0)
             .with_sample_position(ctx.node_input_positions[node_id]);
         if !*prepared {
             ctx.plugins[node_id]
@@ -6284,7 +6320,7 @@ impl DawHost {
             ));
         }
         let input_rate = ctx.node_input_sample_rates[node_id];
-        let context = ProcessContext::new(input_rate, frames)
+        let context = ProcessContext::new(f64::from(input_rate), frames)
             .with_sample_position(ctx.node_input_positions[node_id]);
         // The holdover and scratch borrows below are disjoint by construction:
         // rebuild the slices after the plugin borrow to satisfy the checker.
@@ -6691,7 +6727,7 @@ impl DawHost {
             .ok_or("terminal tail source plugin is missing")?
             .drain_output_frames_max();
         let sink_context =
-            ProcessContext::new(sink_rate, maximum_frames).with_sample_position(sink_position);
+            ProcessContext::new(f64::from(sink_rate), maximum_frames).with_sample_position(sink_position);
         let sink = self.plugins[sink_id]
             .as_ref()
             .and_then(|plugin| plugin.terminal_sink())
@@ -6730,7 +6766,7 @@ impl DawHost {
             self.drain_state.quota_grant_tail = None;
         }
         let source_context =
-            ProcessContext::new(source_rate, 0).with_sample_position(source_position);
+            ProcessContext::new(f64::from(source_rate), 0).with_sample_position(source_position);
         if !self.drain_state.prepared {
             let prepared = self.plugins[source_id]
                 .as_mut()
@@ -6798,7 +6834,7 @@ impl DawHost {
         let mut handed_frames = 0;
         if result.frames > 0 {
             let append_context =
-                ProcessContext::new(sink_rate, result.frames).with_sample_position(sink_position);
+                ProcessContext::new(f64::from(sink_rate), result.frames).with_sample_position(sink_position);
             let append = self.plugins[sink_id]
                 .as_mut()
                 .unwrap()
@@ -7167,7 +7203,7 @@ impl DawHost {
                     cf
                 } else {
                     let p = self.plugins[nid].as_mut().unwrap();
-                    let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
+                    let context = ProcessContext::new(f64::from(self.node_input_sample_rates[nid]), cf)
                         .with_sample_position(self.node_input_positions[nid]);
                     let mof = Self::plugin_output_frames_for_input_isolated(
                         p.as_ref(),
@@ -7334,7 +7370,7 @@ impl DawHost {
                 && op.kind == CompiledOpKind::AnalyzerTap
                 && !self.bypassed.get(nid).copied().unwrap_or(false)
             {
-                let context = ProcessContext::new(self.config.sample_rate, current_frames)
+                let context = ProcessContext::new(f64::from(self.config.sample_rate), current_frames)
                     .with_sample_position(block_start_sample);
                 let tap_input = match current_source {
                     CompiledLinearSource::ExternalInput => &input[..current_len],
@@ -7737,7 +7773,7 @@ impl DawHost {
             return Ok(num_frames);
         }
         let context =
-            ProcessContext::new(sample_rate, num_frames).with_sample_position(sample_position);
+            ProcessContext::new(f64::from(sample_rate), num_frames).with_sample_position(sample_position);
         if let Some(frames) = plugin_compiled_op(op_kind).and_then(|compiled_op| {
             Self::process_compiled_plugin_f32_isolated(
                 plugin,
@@ -8160,7 +8196,7 @@ impl DawHost {
                     cf
                 } else {
                     let plugin = self.plugins[nid].as_mut().unwrap();
-                    let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
+                    let context = ProcessContext::new(f64::from(self.node_input_sample_rates[nid]), cf)
                         .with_sample_position(self.node_input_positions[nid]);
                     let max_output_frames = Self::plugin_output_frames_for_input_isolated(
                         plugin.as_ref(),
@@ -8397,7 +8433,7 @@ impl DawHost {
             return Ok(num_frames);
         }
         let context =
-            ProcessContext::new(sample_rate, num_frames).with_sample_position(sample_position);
+            ProcessContext::new(f64::from(sample_rate), num_frames).with_sample_position(sample_position);
         let outcome =
             Self::process_plugin_f64_isolated(plugin, node, input, &mut *output, &context);
         if let Some(returned) = outcome.over_reported {
@@ -8523,7 +8559,7 @@ impl DawHost {
                         cf
                     } else {
                         let plugin = plugin_slot.as_mut().unwrap();
-                        let context = ProcessContext::new(sample_rate, cf)
+                        let context = ProcessContext::new(f64::from(sample_rate), cf)
                             .with_sample_position(sample_position);
                         let max_output_frames = Self::plugin_output_frames_for_input_isolated(
                             plugin.as_ref(),

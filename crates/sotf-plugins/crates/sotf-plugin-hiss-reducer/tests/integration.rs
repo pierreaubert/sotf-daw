@@ -26,7 +26,7 @@ fn disabled_is_transparent() {
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.25f32, -0.25, 0.5, -0.5];
     let input = buffer.clone();
@@ -37,7 +37,7 @@ fn disabled_is_transparent() {
 #[test]
 fn enabled_changes_high_frequency_content() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     // Persistent, low-level high-frequency energy above the default 4 kHz
     // cutoff and below the default -30 dBFS detector threshold.
@@ -54,7 +54,7 @@ fn enabled_changes_high_frequency_content() {
 #[test]
 fn parameter_roundtrips() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
@@ -124,7 +124,7 @@ fn from_params_happy_path() {
     };
     let mut plugin = HissReducerPlugin::from_params(2, params);
     assert_eq!(plugin.channels(), 2);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.1f32; 32 * 2];
     plugin.process_in_place(&mut buffer, &ctx(32)).unwrap();
@@ -134,7 +134,7 @@ fn from_params_happy_path() {
 #[test]
 fn reset_clears_reducer_state() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
 
     let mut buffer = vec![0.6f32; 64];
     plugin.process_in_place(&mut buffer, &ctx(64)).unwrap();
@@ -185,7 +185,7 @@ fn initialize_does_not_change_response_at_default_rate() {
     assert!(err.contains("initialized"), "unexpected error: {err}");
 
     let mut init = HissReducerPlugin::new(1);
-    init.initialize(SR).unwrap();
+    init.initialize(f64::from(SR)).unwrap();
     let mut buf_init = vec![0.5f32; 8];
     init.process_in_place(&mut buf_init, &ctx(8)).unwrap();
 
@@ -196,7 +196,7 @@ fn initialize_does_not_change_response_at_default_rate() {
 fn zero_sample_rate_and_context_mismatch_are_rejected() {
     let mut plugin = HissReducerPlugin::new(1);
     assert!(plugin.initialize(0).is_err());
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut buffer = vec![0.0; 8];
     let mismatched = ProcessContext::new(44_100, 8);
     let err = plugin
@@ -254,7 +254,7 @@ fn metadata_reports_iir_cost() {
 #[test]
 fn bypass_reentry_restarts_detector_state() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(ParameterId::from("enabled"), ParameterValue::Bool(false))
         .unwrap();
@@ -315,7 +315,7 @@ fn persisted_params_reject_unknown_fields() {
 #[test]
 fn non_finite_audio_is_sanitized_and_state_recovers() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut poisoned = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.1];
     plugin.process_in_place(&mut poisoned, &ctx(4)).unwrap();
     assert!(poisoned.iter().all(|sample| sample.is_finite()));
@@ -335,7 +335,7 @@ fn live_bypass_transition_is_smoothed() {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     let mut warm: Vec<f32> = (0..SR / 2)
         .map(|index| if index % 2 == 0 { 0.05 } else { -0.05 })
         .collect();
@@ -372,7 +372,7 @@ fn spectral_plugin(enabled: bool, strength: f32) -> HissReducerPlugin {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
 }
 
@@ -481,7 +481,7 @@ fn spectral_mode_improves_stationary_high_band_noise_snr_and_preserves_low_tone(
 #[test]
 fn spectral_mode_change_is_rejected_after_initialization_but_same_value_is_allowed() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
         .set_parameter(
             ParameterId::from("spectral_mode"),

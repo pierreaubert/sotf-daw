@@ -7,7 +7,7 @@ pub(super) struct DelayLine {
 }
 
 impl DelayLine {
-    pub(super) fn new(delay_ms: f32, sample_rate: u32) -> Self {
+    pub(super) fn new(delay_ms: f32, sample_rate: f64) -> Self {
         let capacity = Self::capacity_for_sample_rate(sample_rate);
         let delay_samples = Self::delay_samples(delay_ms, sample_rate, capacity);
         Self {
@@ -18,7 +18,7 @@ impl DelayLine {
         }
     }
 
-    pub(super) fn set_delay(&mut self, delay_ms: f32, sample_rate: u32) {
+    pub(super) fn set_delay(&mut self, delay_ms: f32, sample_rate: f64) {
         let capacity = Self::capacity_for_sample_rate(sample_rate);
         if capacity != self.capacity {
             self.buffer.resize(capacity, 0.0);
@@ -33,11 +33,11 @@ impl DelayLine {
         self.write_pos = 0;
     }
 
-    pub(super) fn capacity_for_sample_rate(sample_rate: u32) -> usize {
-        (sample_rate as f32 * 0.001).ceil() as usize + 2
+    pub(super) fn capacity_for_sample_rate(sample_rate: f64) -> usize {
+        (sample_rate * 0.001).ceil() as usize + 2
     }
 
-    pub(super) fn delay_samples(delay_ms: f32, sample_rate: u32, capacity: usize) -> f32 {
+    pub(super) fn delay_samples(delay_ms: f32, sample_rate: f64, capacity: usize) -> f32 {
         ((delay_ms / 1000.0) * sample_rate as f32)
             .max(0.0)
             .min(capacity as f32 - 2.0)

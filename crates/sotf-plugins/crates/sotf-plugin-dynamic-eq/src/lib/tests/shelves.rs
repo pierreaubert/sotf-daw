@@ -1369,7 +1369,7 @@ fn invalid_shelf_reinitialize_preserves_populated_state_and_allows_valid_retry()
     let values_before = candidate.current_values();
     let frequency_before = candidate.bands[0].frequency;
     let rate_before = candidate.sample_rate;
-    let result = candidate.initialize(invalid_rate);
+    let result = candidate.initialize(f64::from(invalid_rate));
     assert!(
         result.is_err(),
         "10 kHz shelf at {original_rate} Hz should reject {invalid_rate} Hz reinitialize; result={result:?}, committed rate={} Hz, shelf cutoff={} Hz",
@@ -1398,7 +1398,7 @@ fn invalid_shelf_reinitialize_preserves_populated_state_and_allows_valid_retry()
     assert_eq!(candidate_suffix, twin_suffix);
 
     let retry_rate = 44_100;
-    candidate.initialize(retry_rate).unwrap();
+    candidate.initialize(f64::from(retry_rate)).unwrap();
     let mut fresh = make_reinitialization_multiband(retry_rate);
     let mut candidate_retry = reinitialization_signal(0, 2_048, retry_rate);
     let mut fresh_retry = candidate_retry.clone();

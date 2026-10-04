@@ -7,7 +7,7 @@ use super::types::{ConvolutionLoadStatus, IrLoadCompletion, RetiredIrState};
 use crate::params::PARAMS as CV;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use plugins_spatial::{nupc, validate_interleaved_in_place};
-use rubato::{Fft, FixedSync, Resampler, WindowFunction};
+use rubato::{Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction};
 use rustfft::FftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::param_bridge;
@@ -38,7 +38,7 @@ struct IrLoadRequest {
     generation: u64,
     path: String,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     use_nupc: bool,
     zero_latency_head: bool,
     head_taps: usize,
@@ -55,7 +55,7 @@ const FFT_PLAN_METADATA_BYTES: usize = 4 * 1024;
 
 #[derive(Clone, Copy)]
 pub(super) struct IrValidationOptions {
-    pub(super) target_sample_rate: u32,
+    pub(super) target_sample_rate: f64,
     pub(super) output_channels: usize,
     pub(super) use_nupc: bool,
     pub(super) true_stereo: bool,
@@ -222,7 +222,7 @@ pub struct IrRuntimeState {
 
 pub struct ConvolutionPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) ir_runtime: IrRuntimeState,
     pub(super) mix: Smoother,
     pub(super) mix_value: f32,
@@ -310,7 +310,7 @@ impl ConvolutionPlugin {
             &ir_samples,
             ir_sample_rate,
             IrValidationOptions {
-                target_sample_rate: target_sample_rate.unwrap_or(ir_sample_rate),
+                target_sample_rate: target_sample_rate.map_or(f64::from(ir_sample_rate), f64::from),
                 output_channels,
                 use_nupc,
                 true_stereo,
@@ -332,7 +332,7 @@ impl ConvolutionPlugin {
             ir_samples,
             ir_sample_rate,
             IrValidationOptions {
-                target_sample_rate,
+                target_sample_rate: f64::from(target_sample_rate),
                 output_channels,
                 use_nupc,
                 true_stereo: false,
@@ -355,7 +355,7 @@ impl ConvolutionPlugin {
             zero_latency_head,
             head_taps,
         } = options;
-        if ir_sample_rate == 0 || target_sample_rate == 0 {
+        if ir_sample_rate == 0 || !target_sample_rate.is_finite() || target_sample_rate <= 0.0 {
             return Err("IR file is missing a valid sample rate".into());
         }
         if ir_samples.is_empty() || ir_samples.iter().any(Vec::is_empty) {
@@ -389,12 +389,7 @@ impl ConvolutionPlugin {
         }
         let target_lengths: Option<Vec<usize>> = ir_samples
             .iter()
-            .map(|channel| {
-                channel
-                    .len()
-                    .checked_mul(target_sample_rate as usize)
-                    .map(|frames| frames.div_ceil(ir_sample_rate as usize))
-            })
+            .map(|channel| Self::resampled_length(channel.len(), ir_sample_rate, target_sample_rate))
             .collect();
         let estimated_bytes = target_lengths.map_or(usize::MAX, |target_lengths| {
             if true_stereo {
@@ -421,6 +416,22 @@ impl ConvolutionPlugin {
             ));
         }
         Ok(())
+    }
+
+    fn resampled_length(source_len: usize, source_rate: u32, target_rate: f64) -> Option<usize> {
+        if source_rate == 0 || !target_rate.is_finite() || target_rate <= 0.0 {
+            return None;
+        }
+        if target_rate.fract() == 0.0 && target_rate <= f64::from(u32::MAX) {
+            return source_len
+                .checked_mul(target_rate as usize)
+                .map(|frames| frames.div_ceil(source_rate as usize));
+        }
+        let frames = (source_len as f64 * target_rate / f64::from(source_rate)).ceil();
+        if !frames.is_finite() || frames > isize::MAX as f64 {
+            return None;
+        }
+        Some(frames as usize)
     }
 
     pub(super) fn estimated_ir_backend_bytes(
@@ -623,7 +634,8 @@ impl ConvolutionPlugin {
         bytes.checked_add(bytes.div_ceil(8))
     }
 
-    pub fn new(channels: usize, sample_rate: u32) -> Self {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        let sample_rate = sample_rate.into();
         // Prepare background retirement before the instance can reach an audio
         // callback; successful installs and failures then only perform bounded
         // non-allocating channel operations.
@@ -858,9 +870,9 @@ impl ConvolutionPlugin {
         Ok(())
     }
 
-    pub fn from_params(
+    pub fn from_params<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: ConvolutionPluginParams,
     ) -> Result<Self, String> {
         Self::from_params_with_routing(channels, sample_rate, params, false)
@@ -871,9 +883,9 @@ impl ConvolutionPlugin {
     /// The legacy constructor remains diagonal/cyclic. In true-stereo mode the
     /// plugin accepts exactly two input channels and the loaded IR must contain
     /// four LL/LR/RL/RR paths.
-    pub fn from_params_with_routing(
+    pub fn from_params_with_routing<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: ConvolutionPluginParams,
         true_stereo: bool,
     ) -> Result<Self, String> {
@@ -885,8 +897,9 @@ impl ConvolutionPlugin {
                 "True-stereo convolution requires exactly 2 plugin channels, got {channels}"
             ));
         }
-        if sample_rate == 0 {
-            return Err("Convolution requires a non-zero sample rate".into());
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Convolution requires a finite positive sample rate".into());
         }
         if !params.mix.is_finite()
             || params.mix < CV[1].min_f64() as f32
@@ -939,7 +952,7 @@ impl ConvolutionPlugin {
         Self::build_ir_state_with_routing(
             path,
             channels,
-            sample_rate,
+            f64::from(sample_rate),
             use_nupc,
             zero_latency_head,
             head_taps,
@@ -947,15 +960,16 @@ impl ConvolutionPlugin {
         )
     }
 
-    pub(super) fn build_ir_state_with_routing(
+    pub(super) fn build_ir_state_with_routing<S: Into<f64>>(
         path: &str,
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         use_nupc: bool,
         zero_latency_head: bool,
         head_taps: usize,
         true_stereo: bool,
     ) -> Result<IrLoadResult, String> {
+        let sample_rate = sample_rate.into();
         let (ir_samples, ir_sample_rate) = Self::load_audio_file(path)?;
 
         Self::validate_ir_limits_for_routing(
@@ -971,7 +985,7 @@ impl ConvolutionPlugin {
             },
         )?;
 
-        let ir_samples = if ir_sample_rate != 0 && ir_sample_rate != sample_rate {
+        let ir_samples = if ir_sample_rate != 0 && f64::from(ir_sample_rate) != sample_rate {
             log::info!(
                 "Resampling IR from {} Hz to {} Hz",
                 ir_sample_rate,
@@ -1300,11 +1314,15 @@ impl ConvolutionPlugin {
     }
 
     /// Resample IR data from one sample rate to another using rubato.
-    pub(super) fn resample_ir(
+    pub(super) fn resample_ir<S: Into<f64>>(
         ir_samples: &[Vec<f32>],
         source_rate: u32,
-        target_rate: u32,
+        target_rate: S,
     ) -> Result<Vec<Vec<f32>>, String> {
+        let target_rate = target_rate.into();
+        if source_rate == 0 || !target_rate.is_finite() || target_rate <= 0.0 {
+            return Err("IR resampling requires finite positive rates".into());
+        }
         if ir_samples.is_empty() {
             return Err("Cannot resample an IR with no channels".into());
         }
@@ -1318,6 +1336,39 @@ impl ConvolutionPlugin {
 
         let num_channels = ir_samples.len();
         let chunk_size = 1024;
+
+        if target_rate.fract() != 0.0 || target_rate > f64::from(u32::MAX) {
+            let ratio = target_rate / f64::from(source_rate);
+            if !ratio.is_finite() || ratio <= 0.0 {
+                return Err("IR resampling ratio is unsupported".into());
+            }
+            let mut resampler = Async::<f32>::new_sinc(
+                ratio,
+                1.0,
+                &SincInterpolationParameters::new(256, WindowFunction::BlackmanHarris2),
+                chunk_size,
+                num_channels,
+                FixedAsync::Input,
+            )
+            .map_err(|e| format!("Failed to create exact-rate IR resampler: {e}"))?;
+            let output_capacity = resampler.process_all_needed_output_len(source_len);
+            let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
+            let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
+                .map_err(|e| format!("Input adapter error: {e}"))?;
+            let mut output_adapter = SequentialSliceOfVecs::new_mut(
+                &mut output_channels,
+                num_channels,
+                output_capacity,
+            )
+            .map_err(|e| format!("Output adapter error: {e}"))?;
+            let (_, written) = resampler
+                .process_all_into_buffer(&input_adapter, &mut output_adapter, source_len, None)
+                .map_err(|e| format!("Exact-rate IR resampling error: {e}"))?;
+            for channel in &mut output_channels {
+                channel.truncate(written);
+            }
+            return Ok(output_channels);
+        }
 
         // new_custom preserves the historical two-sub-chunk geometry and
         // BlackmanHarris2 window; Fft::new would auto-select sub-chunks and
@@ -1478,9 +1529,9 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
             .validate(value)
             .map_err(|error| format!("{id}: {error}"))
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
-        if sr == 0 || self.channels == 0 {
-            return Err("Convolution requires nonzero rate and channels".into());
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 || self.channels == 0 {
+            return Err("Convolution requires a finite positive rate and nonzero channels".into());
         }
         let old_sr = self.sample_rate;
         self.sample_rate = sr;

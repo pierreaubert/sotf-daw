@@ -57,7 +57,7 @@ fn make(channels: usize, rate: u32, taps: usize, splits: usize, mode: &str) -> C
         band_count: None,
     };
     let mut plugin = CrossoverPlugin::from_params(channels, &params).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -275,7 +275,7 @@ fn errors_do_not_consume_tail_and_reset_replays_it() {
     plugin.reset();
     assert_eq!(first, process_partitioned(&mut plugin, &input, rate));
     assert_eq!(tail, drain_all(&mut plugin, rate, 13));
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     assert_eq!(first, process_partitioned(&mut plugin, &input, rate));
     assert_eq!(tail, drain_all(&mut plugin, rate, 257));
 }

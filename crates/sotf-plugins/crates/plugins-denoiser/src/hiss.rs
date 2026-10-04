@@ -7,7 +7,7 @@
 /// not a spectral noise estimator.
 pub struct HissReducer {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     cutoff_hz: f32,
     threshold_db: f32,
     strength: f32,
@@ -92,8 +92,9 @@ impl HissReducer {
     ///
     /// Returns an error, leaving all state unchanged, when the sample
     /// rate is zero.
-    pub fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn initialize(&mut self, sample_rate: impl Into<f64>) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be nonzero".to_string());
         }
         self.sample_rate = sample_rate;
@@ -287,7 +288,7 @@ impl HissReducer {
     }
 
     fn update_coefficients(&mut self, snap_cutoff: bool) {
-        let sr = self.sample_rate.max(1) as f32;
+        let sr = self.sample_rate.max(1.0) as f32;
         let cutoff = self.cutoff_hz.min(sr * 0.45).max(20.0);
         self.target_alpha = 1.0 - (-2.0 * std::f32::consts::PI * cutoff / sr).exp();
         if snap_cutoff {

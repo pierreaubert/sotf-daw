@@ -132,8 +132,8 @@ impl Plugin for ClockPlugin {
     fn latency_samples(&self) -> usize {
         self.delay
     }
-    fn output_sample_rate(&self, rate: u32) -> u32 {
-        rate * self.numerator as u32 / self.denominator as u32
+    fn output_sample_rate(&self, rate: f64) -> f64 {
+        rate * self.numerator as f64 / self.denominator as f64
     }
     fn output_frames_for_input(&self, frames: usize) -> usize {
         (frames * self.numerator).div_ceil(self.denominator) + self.batch - 1
@@ -233,7 +233,7 @@ fn graph(join: bool) -> (DawHost, Arc<AtomicBool>) {
     assert_eq!(host.node_latency_from_input[up], 8);
     assert_eq!(host.node_latency_from_input[down], 5);
     assert_eq!(host.total_latency_samples(), if join { 7 } else { 5 });
-    assert_eq!(host.output_sample_rate(48000), 48000);
+    assert_eq!(host.output_sample_rate(48000).unwrap(), 48000);
     assert_eq!(host.output_frames_for_input(37), 37);
     (host, valid)
 }
@@ -388,7 +388,7 @@ fn bypassed_rate_converter_keeps_downstream_clock_and_frame_count() {
             .unwrap();
         host.bypass_plugin(0).unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(48000), 48000);
+        assert_eq!(host.output_sample_rate(48000).unwrap(), 48000);
         assert_eq!(host.total_latency_samples(), 0);
         if native {
             let mut output = [0.0_f64; 17];

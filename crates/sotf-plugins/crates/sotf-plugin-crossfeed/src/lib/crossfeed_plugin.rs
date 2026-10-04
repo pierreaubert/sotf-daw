@@ -27,7 +27,7 @@ const HRTF_BASE_ITD_MS: f32 = 0.25;
 const HRTF_CROSSFEED_GAIN: f32 = 0.354_813_4; // -9 dB
 
 pub struct CrossfeedPlugin {
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     initialized: bool,
     pub(super) params: CrossfeedPluginParams,
 
@@ -195,8 +195,8 @@ impl CrossfeedPlugin {
         Ok(plugin)
     }
 
-    fn validate_params(params: &CrossfeedPluginParams, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
+    fn validate_params(params: &CrossfeedPluginParams, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be greater than zero".to_string());
         }
         if params.max_block_frames == 0 || params.max_block_frames > 1_048_576 {
@@ -874,7 +874,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
         Self::validate_params(&self.params, sr)?;
         self.sample_rate = sr;
         self.initialized = true;

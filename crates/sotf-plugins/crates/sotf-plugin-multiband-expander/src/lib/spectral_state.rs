@@ -103,7 +103,7 @@ impl SpectralState {
     pub(super) fn new(
         fft_size: usize,
         channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         crossover_frequencies: &[f32],
         num_bands: usize,
     ) -> Self {
@@ -191,7 +191,7 @@ impl SpectralState {
     pub(super) fn compute_bin_to_band(
         fft_size: usize,
         num_bins: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         crossover_frequencies: &[f32],
         num_bands: usize,
     ) -> Vec<usize> {
@@ -217,7 +217,7 @@ impl SpectralState {
     /// Update the bin→band mapping (called when crossover frequencies change).
     pub(super) fn update_bin_to_band(
         &mut self,
-        sample_rate: u32,
+        sample_rate: f64,
         crossover_frequencies: &[f32],
         num_bands: usize,
     ) {
@@ -241,7 +241,7 @@ impl SpectralState {
         band_params: &[BandExpanderParams],
         global_attack_ms: f32,
         global_release_ms: f32,
-        sample_rate: u32,
+        sample_rate: f64,
     ) {
         let hop_rate = sample_rate as f32 / self.hop_size as f32;
         self.band_attack_hop.resize(num_bands, 0.0);

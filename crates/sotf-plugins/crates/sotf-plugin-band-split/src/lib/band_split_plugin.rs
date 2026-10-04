@@ -36,7 +36,7 @@ fn frequency_parameter_index(id: &str) -> Option<usize> {
 
 pub struct BandSplitPlugin {
     pub(super) input_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) num_bands: usize,
     pub(super) recombination_mode: BandSplitRecombinationMode,
     pub(super) crossover: CrossoverMode,
@@ -123,7 +123,7 @@ impl BandSplitPlugin {
             ));
         }
         Self::validate_frequencies(frequencies, 48_000)?;
-        let sr = 48000;
+        let sr = 48_000.0;
         let freq_f32: Vec<f32> = frequencies.iter().map(|&f| f as f32).collect();
         let mut frequency_targets = [
             BS[0].default_f64() as f32,
@@ -182,11 +182,11 @@ impl BandSplitPlugin {
         Ok(p)
     }
 
-    fn validate_frequencies(frequencies: &[f64], sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("sample rate must be greater than zero".to_string());
+    fn validate_frequencies(frequencies: &[f64], sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and positive".to_string());
         }
-        let max_frequency = (sample_rate as f64 * 0.49).min(20_000.0);
+        let max_frequency = (sample_rate * 0.49).min(20_000.0);
         let mut previous = 0.0;
         for (index, &frequency) in frequencies.iter().enumerate() {
             if !frequency.is_finite() || frequency < 20.0 || frequency > max_frequency {
@@ -557,7 +557,7 @@ impl Plugin for BandSplitPlugin {
 
         None
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let frequencies: Vec<f64> = self
             .freq_smoothers
             .iter()

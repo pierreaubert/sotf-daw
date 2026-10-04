@@ -1061,10 +1061,15 @@ impl Plugin for HalOutputPlugin {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("HAL output sample rate must be non-zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > f64::from(u32::MAX)
+            || sample_rate.fract() != 0.0
+        {
+            return Err("HAL output transport requires a positive integer sample rate".to_string());
         }
+        let sample_rate = sample_rate as u32;
         self.check_transport_format(sample_rate)?;
         self.quiesce_transport()?;
         self.validate_transport_format(sample_rate)?;
@@ -1213,7 +1218,7 @@ impl Plugin for HalOutputPlugin {
         if self.sample_rate == 0 {
             return Err("HAL output must be initialized before processing".to_string());
         }
-        if context.sample_rate != self.sample_rate {
+        if context.sample_rate != f64::from(self.sample_rate) {
             return Err(format!(
                 "HAL output initialized at {} Hz but received {} Hz context",
                 self.sample_rate, context.sample_rate
@@ -1366,7 +1371,7 @@ impl TerminalSink for HalOutputPlugin {
         }
         if self.channels == 0
             || self.sample_rate == 0
-            || context.sample_rate != self.sample_rate
+            || context.sample_rate != f64::from(self.sample_rate)
             || context.num_frames != maximum_frames
             || !self.pending.len().is_multiple_of(self.channels)
             || self.pending.len() > self.pending_capacity_samples
@@ -1411,7 +1416,7 @@ impl TerminalSink for HalOutputPlugin {
         context: &ProcessContext,
     ) -> Result<(), SinkAppendFailure> {
         if self.channels == 0
-            || context.sample_rate != self.sample_rate
+            || context.sample_rate != f64::from(self.sample_rate)
             || context
                 .num_frames
                 .checked_mul(self.channels)

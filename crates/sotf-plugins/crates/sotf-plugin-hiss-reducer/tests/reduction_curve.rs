@@ -178,7 +178,7 @@ fn preset_struct_covers_triggers_curve_and_link() {
 #[test]
 fn curve_round_trips_and_leaves_time_domain_bit_exact() {
     let mut plugin = HissReducerPlugin::new(1);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert!(plugin.reduction_curve().is_flat());
     plugin
         .set_parameter(ParameterId::from("curve_low"), ParameterValue::Float(0.0))
@@ -216,7 +216,7 @@ fn curve_round_trips_and_leaves_time_domain_bit_exact() {
         .process_in_place(&mut shaped, &ProcessContext::new(RATE, frames))
         .unwrap();
     let mut flat = HissReducerPlugin::new(1);
-    flat.initialize(RATE).unwrap();
+    flat.initialize(f64::from(RATE)).unwrap();
     let mut expected = input.clone();
     let expected_frames = expected.len();
     flat.process_in_place(&mut expected, &ProcessContext::new(RATE, expected_frames))
@@ -237,7 +237,7 @@ fn curve_round_trips_and_leaves_time_domain_bit_exact() {
 #[test]
 fn link_mode_round_trip_validation_and_persistence() {
     let mut plugin = HissReducerPlugin::new(2);
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     assert_eq!(plugin.link_mode(), LINK_INDEPENDENT);
     plugin
         .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(1))

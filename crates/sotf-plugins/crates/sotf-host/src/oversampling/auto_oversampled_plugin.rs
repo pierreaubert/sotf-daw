@@ -70,7 +70,7 @@ impl AutoOversampledPlugin {
             channels,
             os_input_interleaved: vec![0.0; os_buf_size],
             os_interleaved: vec![0.0; os_buf_size],
-            next_os_context: ProcessContext::new(48_000 * factor, 0),
+            next_os_context: ProcessContext::new(f64::from(48_000 * factor), 0),
             initialized: false,
             drain_prepared: false,
         })
@@ -108,8 +108,12 @@ impl Plugin for AutoOversampledPlugin {
         self.inner.supports_immediate_momentary_control(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        self.inner.initialize(sample_rate * self.factor)?;
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        let inner_rate = sample_rate * f64::from(self.factor);
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || !inner_rate.is_finite() {
+            return Err("Oversampled sample rate must be finite and positive".into());
+        }
+        self.inner.initialize(inner_rate)?;
         let drain_frames = self.inner.drain_output_frames_max();
         let drain_samples = drain_frames
             .checked_mul(self.channels)
@@ -120,7 +124,7 @@ impl Plugin for AutoOversampledPlugin {
             self.os_interleaved.resize(drain_samples, 0.0);
         }
         self.oversampler.reset();
-        self.next_os_context = ProcessContext::new(sample_rate * self.factor, 0);
+        self.next_os_context = ProcessContext::new(inner_rate, 0);
         self.initialized = true;
         self.drain_prepared = false;
         Ok(())
@@ -240,8 +244,7 @@ impl Plugin for AutoOversampledPlugin {
             return Err("Oversampler must be reset after a failed drain".into());
         }
         if !self.initialized
-            || context.sample_rate.checked_mul(self.factor)
-                != Some(self.next_os_context.sample_rate)
+            || context.sample_rate * f64::from(self.factor) != self.next_os_context.sample_rate
         {
             return Err("Oversampled drain requires its initialized sample rate".into());
         }
@@ -398,7 +401,7 @@ impl Plugin for AutoOversampledPlugin {
         Some(input_frames)
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         input_rate
     }
 

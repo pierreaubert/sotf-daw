@@ -13,7 +13,7 @@ fn plugin(channels: usize, enabled: bool, strength: f32) -> HissReducerPlugin {
             ..Default::default()
         },
     );
-    p.initialize(RATE).unwrap();
+    p.initialize(f64::from(RATE)).unwrap();
     p
 }
 fn process(
@@ -227,7 +227,7 @@ fn spectral_lifecycle_is_transactional_and_classic_mode_keeps_legacy_behavior() 
         .unwrap();
     assert_eq!(a, b);
     let mut classic = HissReducerPlugin::new(1);
-    classic.initialize(RATE).unwrap();
+    classic.initialize(f64::from(RATE)).unwrap();
     assert_eq!(classic.tail_length(), TailLength::Unknown);
     assert_eq!(classic.drain_output_frames_max(), 0);
     assert!(

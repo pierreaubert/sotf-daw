@@ -169,7 +169,7 @@ pub(super) struct AudioUnitBackend {
     metadata: NativePluginMetadata,
     parameters: Vec<Parameter>,
     parameter_bindings: Vec<AudioUnitParameterBinding>,
-    sample_rate: u32,
+    sample_rate: f64,
     sample_position: u64,
     input_storage: Vec<f32>,
     output_storage: Vec<f32>,
@@ -185,7 +185,7 @@ unsafe impl Send for AudioUnitBackend {}
 impl AudioUnitBackend {
     pub(super) fn load(
         descriptor: &PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: f64,
         max_block_frames: usize,
     ) -> Result<Self, String> {
         if descriptor.is_instrument || descriptor.audio_inputs == 0 {
@@ -623,7 +623,7 @@ impl NativeExternalPluginBackend for AudioUnitBackend {
         {
             0
         } else {
-            (latency * f64::from(self.sample_rate)).round() as usize
+            (latency * self.sample_rate).round() as usize
         }
     }
 }
@@ -1062,13 +1062,13 @@ fn format_component_version(version: u32) -> String {
 }
 
 fn planar_f32_format(
-    sample_rate: u32,
+    sample_rate: f64,
     channels: usize,
 ) -> Result<AudioStreamBasicDescription, String> {
     let channels = u32::try_from(channels)
         .map_err(|_| "AudioUnit channel count does not fit the CoreAudio ABI".to_string())?;
     Ok(AudioStreamBasicDescription {
-        mSampleRate: f64::from(sample_rate),
+        mSampleRate: sample_rate,
         mFormatID: kAudioFormatLinearPCM,
         mFormatFlags: kAudioFormatFlagIsFloat
             | kAudioFormatFlagIsPacked

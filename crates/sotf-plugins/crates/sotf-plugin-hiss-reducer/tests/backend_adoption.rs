@@ -182,7 +182,7 @@ fn spectral_plugin(channels: usize, rate: u32, strength: f32) -> HissReducerPlug
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -194,7 +194,7 @@ fn time_domain_plugin(channels: usize, rate: u32, strength: f32) -> HissReducerP
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -263,7 +263,7 @@ fn curve_table_matches_closed_form_at_live_rate() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
         assert_eq!(plugin.curve_gains().len(), SPECTRAL_HISS_NUM_BINS);
         for (bin, gain) in plugin.curve_gains().iter().enumerate() {
             let freq_hz = bin as f32 * rate as f32 / 1024.0;
@@ -403,7 +403,7 @@ fn spectral_curve_shapes_bands_and_preserves_tones() {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     set_float(&mut plugin, "curve_low", 0.0);
     set_float(&mut plugin, "curve_mid", 0.5);
     set_float(&mut plugin, "curve_high", 1.0);
@@ -470,7 +470,7 @@ fn spectral_curve_shapes_bands_and_preserves_tones() {
             ..HissReducerPluginParams::default()
         },
     );
-    flat.initialize(RATE).unwrap();
+    flat.initialize(f64::from(RATE)).unwrap();
     let flat_out = render(&mut flat, RATE, &input, 1, &PARTITIONS);
     assert_ne!(
         output, flat_out,
@@ -502,7 +502,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            explicit.initialize(RATE).unwrap();
+            explicit.initialize(f64::from(RATE)).unwrap();
             set_float(&mut explicit, "curve_low", 1.0);
             set_float(&mut explicit, "curve_mid", 1.0);
             set_float(&mut explicit, "curve_high", 1.0);
@@ -514,7 +514,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plain.initialize(RATE).unwrap();
+            plain.initialize(f64::from(RATE)).unwrap();
             assert_eq!(
                 render(&mut explicit, RATE, &mix, channels, &PARTITIONS),
                 render(&mut plain, RATE, &mix, channels, &PARTITIONS),
@@ -532,7 +532,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                 ..HissReducerPluginParams::default()
             },
         );
-        cleared.initialize(RATE).unwrap();
+        cleared.initialize(f64::from(RATE)).unwrap();
         let noise: Vec<f32> = (0..RATE as usize)
             .map(|i| 0.05 * ((i * 7919 % 1021) as f32 / 510.5 - 1.0))
             .collect();
@@ -548,7 +548,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                 ..HissReducerPluginParams::default()
             },
         );
-        fresh.initialize(RATE).unwrap();
+        fresh.initialize(f64::from(RATE)).unwrap();
         assert_eq!(
             render(&mut cleared, RATE, &input, 1, &PARTITIONS),
             render(&mut fresh, RATE, &input, 1, &PARTITIONS),
@@ -566,7 +566,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                 ..HissReducerPluginParams::default()
             },
         );
-        linked.initialize(RATE).unwrap();
+        linked.initialize(f64::from(RATE)).unwrap();
         set_int(&mut linked, "link_mode", LINK_LINKED);
         let mut independent = HissReducerPlugin::from_params(
             1,
@@ -576,7 +576,7 @@ fn flat_curve_and_disabled_profile_reproduce_defaults_bit_exactly() {
                 ..HissReducerPluginParams::default()
             },
         );
-        independent.initialize(RATE).unwrap();
+        independent.initialize(f64::from(RATE)).unwrap();
         assert_eq!(
             render(&mut linked, RATE, &input, 1, &PARTITIONS),
             render(&mut independent, RATE, &input, 1, &PARTITIONS),
@@ -816,7 +816,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
 
         // Stereo capture with independent per-channel floors.
         let left_noise: Vec<f32> = (0..RATE as usize)
@@ -872,7 +872,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         let json = serde_json::to_string(&plugin.persisted_params()).unwrap();
         let restored: HissReducerPluginParams = serde_json::from_str(&json).unwrap();
         let mut reloaded = HissReducerPlugin::from_params(2, restored);
-        reloaded.initialize(RATE).unwrap();
+        reloaded.initialize(f64::from(RATE)).unwrap();
         assert!(reloaded.has_captured_profile());
         assert_eq!(reloaded.link_mode(), LINK_LINKED);
         let reload_out = render(&mut reloaded, RATE, &mix, 2, &PARTITIONS);
@@ -893,7 +893,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         // next render still matches.
         let corrupt = NoiseProfileData {
             format_version: 1,
-            sample_rate: RATE,
+            sample_rate: f64::from(RATE),
             channels: 2,
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-40.0, f32::NAN],
@@ -949,7 +949,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         // v1 compatibility evidence: floors-only blob, white-spread path.
         let edge = NoiseProfileData {
             format_version: 1,
-            sample_rate: RATE,
+            sample_rate: f64::from(RATE),
             channels: 2,
             measurement_cutoff_hz: 4_000.0,
             floor_db_per_channel: vec![-120.0, 6.0],
@@ -979,7 +979,7 @@ fn direct_curve_link_updates_match_batch_updates() {
                 ..HissReducerPluginParams::default()
             },
         );
-        direct.initialize(RATE).unwrap();
+        direct.initialize(f64::from(RATE)).unwrap();
         let mut batch = HissReducerPlugin::from_params(
             2,
             HissReducerPluginParams {
@@ -988,7 +988,7 @@ fn direct_curve_link_updates_match_batch_updates() {
                 ..HissReducerPluginParams::default()
             },
         );
-        batch.initialize(RATE).unwrap();
+        batch.initialize(f64::from(RATE)).unwrap();
 
         // Both capture the same stereo profile first, so the use toggle
         // below exercises the engaged path on both sides.
@@ -1094,7 +1094,7 @@ fn new_controls_automation_is_click_free_and_partition_independent() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(RATE).unwrap();
+            plugin.initialize(f64::from(RATE)).unwrap();
             capture_profile(&mut plugin, RATE, &capture, 2);
             plugin.reset();
             let frames = input.len() / 2;
@@ -1226,7 +1226,7 @@ fn cross_rate_and_cutoff_profile_reuse_declared_mapping() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             assert_eq!(
                 plugin.latency_samples(),
                 if spectral { LATENCY } else { 0 },
@@ -1270,7 +1270,7 @@ fn cross_rate_and_cutoff_profile_reuse_declared_mapping() {
                 ..HissReducerPluginParams::default()
             },
         );
-        capturer.initialize(RATE).unwrap();
+        capturer.initialize(f64::from(RATE)).unwrap();
         let capture_noise: Vec<f32> = if spectral {
             spectral_hiss_fixture(RATE as usize, 0x51ab_0001)
         } else {
@@ -1279,7 +1279,7 @@ fn cross_rate_and_cutoff_profile_reuse_declared_mapping() {
         };
         capture_profile(&mut capturer, RATE, &capture_noise, 1);
         let blob = capturer.persisted_params().captured_profile.unwrap();
-        assert_eq!(blob.sample_rate, RATE);
+        assert_eq!(blob.sample_rate, f64::from(RATE));
 
         let mut plugin = HissReducerPlugin::from_params(
             1,
@@ -1346,7 +1346,7 @@ fn cross_rate_and_cutoff_profile_reuse_declared_mapping() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         let capture_noise: Vec<f32> = if spectral {
             spectral_hiss_fixture(RATE as usize, 0x51ab_0001)
         } else {
@@ -1397,7 +1397,7 @@ fn cross_rate_and_cutoff_profile_reuse_declared_mapping() {
     assert!(plugin.has_captured_profile());
     assert_eq!(
         plugin.profile_metadata(),
-        Some((RATE, 4_000.0, u64::from(RATE)))
+        Some((f64::from(RATE), 4_000.0, u64::from(RATE)))
     );
     let probe = vec![0.02; 4096];
     let rendered = render(&mut plugin, 96_000, &probe, 1, &[4096]);
@@ -1425,7 +1425,7 @@ fn supported_rates_render_new_controls() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             assert_eq!(
                 plugin.latency_samples(),
                 if spectral { LATENCY } else { 0 },

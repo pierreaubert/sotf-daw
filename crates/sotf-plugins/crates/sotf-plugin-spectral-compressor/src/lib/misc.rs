@@ -30,8 +30,8 @@ pub(super) fn compress_gr(input_db: f32, threshold: f32, ratio: f32, knee: f32) 
 
 /// Adaptive-estimator coefficient for a time constant expressed in seconds.
 #[inline]
-pub(super) fn adaptive_alpha(hop_size: usize, sample_rate: u32, tau_seconds: f32) -> f32 {
-    (-(hop_size as f32) / (tau_seconds * sample_rate as f32)).exp()
+pub(super) fn adaptive_alpha(hop_size: usize, sample_rate: f64, tau_seconds: f32) -> f32 {
+    (-(hop_size as f64) / (f64::from(tau_seconds) * sample_rate)).exp() as f32
 }
 
 /// Apply an edge-normalized, reversal-invariant box smoother.

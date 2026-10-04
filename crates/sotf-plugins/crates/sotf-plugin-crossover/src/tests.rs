@@ -23,7 +23,7 @@ fn low_bass_impulse_matches_lr24_dc_and_cutoff_transfer() {
     for rate in [44_100_u32, 48_000, 96_000] {
         for cutoff in [40.0, 80.0, 120.0] {
             let mut plugin = CrossoverPlugin::new(2, "LR24", cutoff, "both").unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let mut dc = [0.0_f64; 4];
             let mut real = [0.0_f64; 4];
             let mut imag = [0.0_f64; 4];

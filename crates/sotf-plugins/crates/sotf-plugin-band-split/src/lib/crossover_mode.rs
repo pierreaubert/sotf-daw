@@ -13,7 +13,7 @@ enum AllpassCrossover {
 }
 
 impl AllpassCrossover {
-    fn new(frequency: f32, sample_rate: u32, channels: usize, slope_index: usize) -> Self {
+    fn new(frequency: f32, sample_rate: f64, channels: usize, slope_index: usize) -> Self {
         match slope_index {
             1 => Self::LR48(Lr8Crossover::new(frequency, sample_rate as f32, channels)),
             _ => Self::LR24(Lr4Crossover::new(frequency, sample_rate as f32, channels)),
@@ -63,7 +63,7 @@ pub(super) struct CrossoverMode {
 impl CrossoverMode {
     pub(super) fn new(
         frequencies: &[f32],
-        sample_rate: u32,
+        sample_rate: f64,
         channels: usize,
         slope_index: usize,
         recombination_mode: BandSplitRecombinationMode,
@@ -178,7 +178,7 @@ impl CrossoverMode {
     pub(super) fn reinit(
         &mut self,
         frequencies: &[f32],
-        sample_rate: u32,
+        sample_rate: f64,
         channels: usize,
         slope_index: usize,
         recombination_mode: BandSplitRecombinationMode,

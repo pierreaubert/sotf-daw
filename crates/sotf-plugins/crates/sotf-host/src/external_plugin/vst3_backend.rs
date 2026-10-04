@@ -654,7 +654,7 @@ fn unwind_vst3_backend_construction(
 impl Vst3Backend {
     pub(super) fn load(
         descriptor: &PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: f64,
         max_block_frames: usize,
         audio_setup: Option<&NativePluginAudioSetup>,
     ) -> Result<Self, String> {
@@ -830,7 +830,7 @@ impl Vst3Backend {
             #[cfg(test)]
             test_output_bus_observer_valid: false,
             max_block_frames,
-            sample_rate: f64::from(sample_rate),
+            sample_rate,
             cached_tail_length: crate::plugin::TailLength::Unknown,
             tail_metadata_generation,
             cached_tail_generation: 0,
@@ -2917,7 +2917,7 @@ fn prepare_vst3_events(
             }
         };
         let ppq = context.transport.ppq_position
-            + midi.sample_offset as f64 / f64::from(context.sample_rate) * context.transport.bpm
+            + midi.sample_offset as f64 / context.sample_rate * context.transport.bpm
                 / 60.0;
         events.push(Event {
             bus_index: 0,
@@ -2951,7 +2951,7 @@ fn vst3_process_context(context: &crate::plugin::ProcessContext) -> Vst3ProcessC
         state |= CYCLE_ACTIVE | CYCLE_VALID;
     }
     let (cycle_start_music, cycle_end_music) = transport.loop_range.map_or((0.0, 0.0), |range| {
-        let scale = transport.bpm / (60.0 * f64::from(context.sample_rate));
+        let scale = transport.bpm / (60.0 * context.sample_rate);
         (
             range.start_sample as f64 * scale,
             range.end_sample as f64 * scale,
@@ -2959,7 +2959,7 @@ fn vst3_process_context(context: &crate::plugin::ProcessContext) -> Vst3ProcessC
     });
     Vst3ProcessContext {
         state,
-        sample_rate: f64::from(context.sample_rate),
+        sample_rate: context.sample_rate,
         project_time_samples: transport.sample_position.min(i64::MAX as u64) as i64,
         continuous_time_samples: transport.sample_position.min(i64::MAX as u64) as i64,
         project_time_music: transport.ppq_position,
@@ -3058,7 +3058,7 @@ struct Vst3ComponentInitialization<'a> {
     processor: &'a VstPtr<dyn IAudioProcessor>,
     host: &'a VstPtr<dyn IHostApplication>,
     requested: &'a PluginDescriptor,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
     audio_setup: Option<&'a NativePluginAudioSetup>,
     defer_activation: bool,
@@ -3409,7 +3409,7 @@ unsafe fn initialize_component(
             process_mode: ProcessModes::kRealtime as i32,
             symbolic_sample_size: K_SAMPLE32,
             max_samples_per_block: max_block_frames as i32,
-            sample_rate: f64::from(sample_rate),
+            sample_rate,
         };
         ensure_ok(
             processor.setup_processing(&setup),

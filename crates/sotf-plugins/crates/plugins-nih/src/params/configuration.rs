@@ -16,7 +16,7 @@ use sotf_host::plugin::Plugin;
 #[doc(hidden)]
 pub fn create_plugin(
     name: &str,
-    sample_rate: u32,
+    sample_rate: f64,
     params: &DynamicParams,
 ) -> Result<Box<dyn Plugin>, String> {
     create_plugin_with_input_channels(
@@ -37,7 +37,7 @@ pub fn create_plugin(
 #[doc(hidden)]
 pub fn create_plugin_with_input_channels(
     name: &str,
-    sample_rate: u32,
+    sample_rate: f64,
     params: &DynamicParams,
     selected_input_channels: usize,
 ) -> Result<Box<dyn Plugin>, String> {
@@ -172,7 +172,7 @@ pub fn create_plugin_with_input_channels(
 /// does not run from the audio callback.
 #[doc(hidden)]
 pub fn create_native_eq_plugin(
-    sample_rate: u32,
+    sample_rate: f64,
     params: &DynamicParams,
     selected_input_channels: usize,
     route: &super::EqPairRoute,
@@ -210,10 +210,10 @@ pub(crate) fn create_convolution_editor_candidate(
     params: &DynamicParams,
     ir_path: Option<&std::path::Path>,
     true_stereo: bool,
-    sample_rate: u32,
+    sample_rate: f64,
     max_frames: usize,
 ) -> Result<Box<dyn Plugin>, String> {
-    if sample_rate == 0 || max_frames == 0 {
+    if !sample_rate.is_finite() || sample_rate <= 0.0 || max_frames == 0 {
         return Err("Convolution editor requires an initialized audio configuration".to_string());
     }
     let ir_file = ir_path

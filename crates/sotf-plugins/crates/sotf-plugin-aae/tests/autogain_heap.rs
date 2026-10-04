@@ -67,7 +67,7 @@ fn oversized_cold_process_after_control_updates_and_reset_has_no_heap_activity()
                 ..Default::default()
             })
             .unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let frames = 32769;
             let input: Vec<_> = (0..frames)
                 .flat_map(|n| {

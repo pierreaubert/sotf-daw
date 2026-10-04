@@ -64,7 +64,7 @@ pub(crate) const XFADE_FRAMES: usize = 512;
 )]
 pub struct LinearPhaseEqPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) num_filters: usize,
     pub(super) fir_length_index: usize,
     pub(super) phase_mode_index: usize,
@@ -150,7 +150,8 @@ impl LinearPhaseEqPlugin {
         REALTIME_SCHEDULER_QUANTUM_FRAMES
     }
 
-    pub fn new(channels: usize, sample_rate: u32) -> Self {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        let sample_rate = sample_rate.into();
         let fir_length_index = default_fir_length_index();
         let fir_length = fir_length_from_index(fir_length_index);
         let num_filters = default_num_filters();
@@ -170,12 +171,13 @@ impl LinearPhaseEqPlugin {
         )
     }
 
-    pub fn from_params(
+    pub fn from_params<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: LinearPhaseEqPluginParams,
     ) -> Result<Self, String> {
-        if sample_rate == 0 {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be positive".into());
         }
         if !params.mix.is_finite() || !(0.0..=1.0).contains(&params.mix) {
@@ -272,7 +274,7 @@ impl LinearPhaseEqPlugin {
     )]
     pub(super) fn build(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         num_filters: usize,
         fir_length_index: usize,
         fir_length: usize,
@@ -844,8 +846,8 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be positive".into());
         }
         let reset_stream = self.drain_remaining.is_some() || sample_rate != self.sample_rate;
@@ -1367,7 +1369,7 @@ impl LinearPhaseEqPlugin {
         if !frequency_hz.is_finite() || frequency_hz < 0.0 {
             return None;
         }
-        let sr = f64::from(self.sample_rate);
+        let sr = self.sample_rate;
         if frequency_hz > sr * 0.5 {
             return None;
         }
@@ -1396,7 +1398,7 @@ impl LinearPhaseEqPlugin {
         channel: usize,
         frequency_hz: f64,
     ) -> Option<f64> {
-        let sr = f64::from(self.sample_rate);
+        let sr = self.sample_rate;
         if sr <= 0.0 {
             return None;
         }
@@ -1510,7 +1512,7 @@ impl LinearPhaseEqPlugin {
             );
         }
         let filter_type = parse_filter_type(&new_band.filter_type)?;
-        let sr = f64::from(base.sample_rate);
+        let sr = base.sample_rate;
         Self::validate_band(new_band.frequency, new_band.q, new_band.gain_db, sr)?;
         let fir_length = fir_length_from_index(base.fir_length_index);
 
@@ -1626,7 +1628,7 @@ impl LinearPhaseEqPlugin {
         if new.filter_type_index > 4 || self.sample_rate == 0 {
             return false;
         }
-        let sample_rate = f64::from(self.sample_rate);
+        let sample_rate = self.sample_rate;
         let max_frequency = (sample_rate * 0.5 * 0.99).min(20_000.0);
         if !new.frequency.is_finite()
             || new.frequency < 20.0

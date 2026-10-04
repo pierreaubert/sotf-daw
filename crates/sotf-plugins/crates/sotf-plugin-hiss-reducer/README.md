@@ -66,6 +66,11 @@ partial capture while preserving the stored profile, and all trigger/process/
 reset/completion paths are allocation-free (pre-allocated buffers and FFT
 plans, no locks/logging).
 
+Profiles captured at an exact fractional host rate use format v3, with or
+without a measured spectrum. Formats v1/v2 retain integer sample-rate JSON
+values so older readers can still load integral-rate profiles. The new reader
+accepts those profiles and validates finite, positive rates before restoring.
+
 Broadband floors use the same exact-mapped one-pole high-band split the
 time-domain reducer uses. The measured spectrum mirrors the live WOLA
 analysis exactly: 1024-point unnormalized real FFT, periodic Hann window,

@@ -23,7 +23,7 @@ const ADAPTIVE_TAU_SECONDS: f32 = 0.5;
 
 pub struct SpectralCompressorPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Parameters
     pub(super) fft_size_index: usize,
@@ -114,7 +114,7 @@ impl SpectralCompressorPlugin {
 
     fn from_validated_params(channels: usize, params: SpectralCompressorPluginParams) -> Self {
         let fft_size = fft_size_from_index(params.fft_size_index);
-        let sample_rate = 48000u32;
+        let sample_rate = 48_000.0;
         let hop_size = fft_size / 4;
         let hop_rate = sample_rate as f32 / hop_size as f32;
 
@@ -907,9 +907,9 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
         self.apply_parameter(&id, value)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Spectral compressor sample rate must be positive".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Spectral compressor sample rate must be finite and positive".into());
         }
         self.sample_rate = sample_rate;
         self.stft = StftState::new(self.fft_size, self.channels);

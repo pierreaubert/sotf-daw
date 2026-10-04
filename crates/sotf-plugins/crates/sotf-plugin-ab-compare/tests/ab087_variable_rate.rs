@@ -132,8 +132,8 @@ impl Plugin for DecimatorTwoFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err(format!(
                 "AB087 decimator expected {SAMPLE_RATE} Hz, got {sample_rate} Hz"
             ));
@@ -220,8 +220,8 @@ impl Plugin for DecimatorTwoFixture {
         false
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
-        input_rate / 2
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
+        input_rate / 2.0
     }
 
     fn last_output_frames(&self) -> Option<usize> {
@@ -234,7 +234,7 @@ impl Plugin for DecimatorTwoFixture {
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
         DEC_BEGIN_CALLS.with(|count| count.set(count.get() + 1));
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 decimator drain requires a zero-frame 48 kHz context".into());
         }
         self.draining = true;
@@ -251,7 +251,7 @@ impl Plugin for DecimatorTwoFixture {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         DEC_DRAIN_CALLS.with(|count| count.set(count.get() + 1));
-        if !self.draining || context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 decimator was not prepared for drain".into());
         }
         if output.len() != self.channels {
@@ -342,8 +342,8 @@ impl Plugin for BurstFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err(format!(
                 "AB087 burst fixture expected {SAMPLE_RATE} Hz, got {sample_rate} Hz"
             ));
@@ -445,7 +445,7 @@ impl Plugin for BurstFixture {
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
         BURST_BEGIN_CALLS.with(|count| count.set(count.get() + 1));
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 burst fixture drain requires a zero-frame 48 kHz context".into());
         }
         self.draining = true;
@@ -462,7 +462,7 @@ impl Plugin for BurstFixture {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         BURST_DRAIN_CALLS.with(|count| count.set(count.get() + 1));
-        if !self.draining || context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 burst fixture was not prepared for drain".into());
         }
         let required = self.chunk * self.channels;
@@ -526,8 +526,8 @@ impl Plugin for ZGainFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err(format!(
                 "AB087 zgain fixture expected {SAMPLE_RATE} Hz, got {sample_rate} Hz"
             ));
@@ -585,7 +585,7 @@ impl Plugin for ZGainFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 zgain fixture drain requires a zero-frame 48 kHz context".into());
         }
         Ok(())
@@ -600,7 +600,7 @@ impl Plugin for ZGainFixture {
         _output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 zgain fixture was not prepared for drain".into());
         }
         self.last_output = 0;
@@ -655,8 +655,8 @@ impl Plugin for ProcessLyingFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 process-lying fixture expects the outer rate".into());
         }
         Ok(())
@@ -702,7 +702,7 @@ impl Plugin for ProcessLyingFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 process-lying fixture was not prepared for drain".into());
         }
         Ok(())
@@ -713,7 +713,7 @@ impl Plugin for ProcessLyingFixture {
         _output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 process-lying fixture was not prepared for drain".into());
         }
         self.last_output = Some(0);
@@ -768,8 +768,8 @@ impl Plugin for DrainLyingFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 drain-lying fixture expects the outer rate".into());
         }
         Ok(())
@@ -816,7 +816,7 @@ impl Plugin for DrainLyingFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 drain-lying fixture was not prepared for drain".into());
         }
         self.draining = true;
@@ -828,7 +828,7 @@ impl Plugin for DrainLyingFixture {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if !self.draining || context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 drain-lying fixture was not prepared for drain".into());
         }
         if output.len() != 2 * self.channels {
@@ -911,8 +911,8 @@ impl Plugin for EchoTailFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != SAMPLE_RATE {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(SAMPLE_RATE) {
             return Err(format!(
                 "AB087 echo-tail fixture expected {SAMPLE_RATE} Hz, got {sample_rate} Hz"
             ));
@@ -986,7 +986,7 @@ impl Plugin for EchoTailFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err(
                 "AB087 echo-tail fixture drain requires a zero-frame 48 kHz context".into(),
             );
@@ -1005,7 +1005,7 @@ impl Plugin for EchoTailFixture {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if !self.draining || context.num_frames != 0 || context.sample_rate != SAMPLE_RATE {
+        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
             return Err("AB087 echo-tail fixture was not prepared for drain".into());
         }
         if output.len() != self.channels {
@@ -1152,7 +1152,7 @@ fn diamond_reference(
 /// construction).
 fn run_raw_plugin_to_end(plugin: &mut dyn Plugin, input_rate: u32, input: &[f32]) -> Vec<f32> {
     assert!(input.len().is_multiple_of(CHANNELS));
-    plugin.initialize(input_rate).unwrap();
+    plugin.initialize(f64::from(input_rate)).unwrap();
     let input_frames = input.len() / CHANNELS;
     let capacity = plugin.output_frames_for_input(input_frames);
     let mut block = vec![f32::NAN; capacity * CHANNELS];
@@ -1997,7 +1997,7 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
     let mut host =
         build_path_from_config_with_factory(&config, CHANNELS, SAMPLE_RATE, Some(ab087_factory))
             .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE), SAMPLE_RATE);
+    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
     assert!(
         host.total_latency_samples() > 0,
         "nested plus converter latency must be observed"
@@ -2021,7 +2021,7 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
             // Repeated mid-stream rebuild: the composed clock and negotiated
             // state must be untouched.
             host.build().unwrap();
-            assert_eq!(host.output_sample_rate(SAMPLE_RATE), SAMPLE_RATE);
+            assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
         }
         let capacity = host.output_frames_for_input(frames);
         let mut block = vec![f32::NAN; capacity * CHANNELS];
@@ -2675,7 +2675,7 @@ fn graph_builtin_construction_uses_resolved_input_rate() {
         Some(recording_factory),
     )
     .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE), SAMPLE_RATE);
+    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
     let rates = CONSTRUCTION_RATES.with(|rates| rates.borrow().clone());
     assert_eq!(
         rates,
@@ -2825,7 +2825,7 @@ fn decimator_child_drains_independently_with_exact_counts() {
         host.add_plugin(Box::new(DecimatorTwoFixture::new(CHANNELS).unwrap()))
             .unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(SAMPLE_RATE), HALF_RATE);
+        assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), HALF_RATE);
 
         let input_frames = input.len() / CHANNELS;
         let mut chunks = vec![1_usize, 64, 137, 7];
@@ -4025,7 +4025,7 @@ fn band_mask_multirate_oracles_match_to_192k() {
                 ab087_factory,
             )
             .unwrap();
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let mut process_output = render_collected_at_rate(&mut plugin, &input, &chunks, rate);
             assert_ne!(process_output, input, "{label}: mask must filter");
             let (tail, _) = drain_all_collected_at_rate(&mut plugin, rate);
@@ -5369,7 +5369,7 @@ fn fork_odd_chunk_straddle_prepares_full_straddle_need() {
     // Legal geometry, by hand: both outputs resolve to 96 kHz, and the
     // build-state live declaration at MAX_BLOCK is eight full chunks.
     assert_eq!(
-        host.output_sample_rate(SAMPLE_RATE),
+        host.output_sample_rate(SAMPLE_RATE).unwrap(),
         DOUBLE_RATE,
         "fork outputs must resolve to 96 kHz"
     );

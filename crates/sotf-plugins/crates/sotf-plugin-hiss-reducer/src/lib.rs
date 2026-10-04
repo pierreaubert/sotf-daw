@@ -4,7 +4,7 @@ pub mod snapshot;
 
 use crate::params::PARAMS as HP;
 use crate::profile::{
-    LINK_LABELS, PROFILE_FLOOR_MIN_DB, PROFILE_FORMAT_VERSION, PROFILE_FORMAT_VERSION_V1,
+    LINK_LABELS, PROFILE_FLOOR_MIN_DB, profile_format_version,
     PROFILE_THRESHOLD_MARGIN_DB, CaptureState, LINK_INDEPENDENT, LINK_LINKED, NoiseProfileData,
     ReductionCurve, SpectralProfileData,
 };
@@ -197,7 +197,7 @@ impl Default for HissReducerPluginParams {
 
 pub struct HissReducerPlugin {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     initialized: bool,
     params: HissReducerPluginParams,
     reducer: HissReducer,
@@ -212,7 +212,7 @@ pub struct HissReducerPlugin {
     capture: CaptureState,
     profile_floor_db: Vec<f32>,
     has_profile: bool,
-    profile_sample_rate: u32,
+    profile_sample_rate: f64,
     profile_cutoff_hz: f32,
     profile_frames: u64,
     // Pre-sized measured per-bin spectrum (channels * NUM_BINS, zeros
@@ -251,11 +251,12 @@ impl HissReducerPlugin {
         Self::try_from_params_at_sample_rate(channels, 48_000, params)
     }
 
-    pub fn try_from_params_at_sample_rate(
+    pub fn try_from_params_at_sample_rate<S: Into<f64>>(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: HissReducerPluginParams,
     ) -> PluginResult<Self> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("HissReducerPlugin requires at least one channel".to_string());
         }
@@ -330,8 +331,8 @@ impl HissReducerPlugin {
         Ok(plugin)
     }
 
-    fn maximum_frequency(sample_rate: u32) -> PluginResult<f32> {
-        if sample_rate == 0 {
+    fn maximum_frequency(sample_rate: f64) -> PluginResult<f32> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be nonzero".to_string());
         }
         let minimum = pk(HP, "frequency_hz").min_f64() as f32;
@@ -346,7 +347,7 @@ impl HissReducerPlugin {
 
     fn canonicalize_params(
         mut params: HissReducerPluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
         channels: usize,
     ) -> PluginResult<HissReducerPluginParams> {
         let defaults = HissReducerPluginParams::default();
@@ -684,11 +685,7 @@ impl HissReducerPlugin {
             None
         };
         Some(NoiseProfileData {
-            format_version: if spectral.is_some() {
-                PROFILE_FORMAT_VERSION
-            } else {
-                PROFILE_FORMAT_VERSION_V1
-            },
+            format_version: profile_format_version(self.profile_sample_rate, spectral.is_some()),
             sample_rate: self.profile_sample_rate,
             channels: self.channels,
             measurement_cutoff_hz: self.profile_cutoff_hz,
@@ -1075,7 +1072,7 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         self.apply_parameter(id, value)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.params = Self::canonicalize_params(self.params.clone(), sample_rate, self.channels)?;
         self.sample_rate = sample_rate;
         self.reducer.initialize(sample_rate)?;

@@ -128,7 +128,7 @@ impl<P: Plugin> Backend<P> for Jack {
                 return Control::Quit;
             }
 
-            let mut transport = Transport::new(client.sample_rate() as f32);
+            let mut transport = Transport::new(client.sample_rate() as f64);
             transport.tempo = Some(config.tempo as f64);
             transport.time_sig_numerator = Some(config.timesig_num as i32);
             transport.time_sig_denominator = Some(config.timesig_denom as i32);

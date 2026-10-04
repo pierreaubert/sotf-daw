@@ -63,7 +63,7 @@ impl Fdn {
     /// - `mod_depth`: modulation depth 0.0–1.0 (maps to 0–8 samples)
     /// - `safety_limit_db`: limiter threshold below 0 dBFS
     pub fn new(
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
         room_size: f32,
         rt60: f32,
         bass_ratio: f32,
@@ -71,7 +71,7 @@ impl Fdn {
         mod_depth: f32,
         safety_limit_db: f32,
     ) -> Self {
-        let sr = sample_rate as f32;
+        let sr = sample_rate.into() as f32;
         let scale = room_size * sr / 48000.0;
 
         let mut delay_lengths = [0usize; FDN_SIZE];

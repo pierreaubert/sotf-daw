@@ -49,7 +49,7 @@ impl Default for AutoGainParams {
 
 pub struct AutoGain {
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     input_monitor: GainMeter,
     output_monitor: GainMeter,
     gain_db: f64,
@@ -76,11 +76,11 @@ pub struct AutoGain {
     cached_gain_linear: f64,
 }
 
-fn smoothing_coefficient(milliseconds: f32, sample_rate: u32) -> f64 {
-    if milliseconds <= 0.0 || sample_rate == 0 {
+fn smoothing_coefficient(milliseconds: f32, sample_rate: f64) -> f64 {
+    if milliseconds <= 0.0 || sample_rate <= 0.0 {
         0.0
     } else {
-        (-1.0 / (f64::from(milliseconds) * 0.001 * f64::from(sample_rate))).exp()
+        (-1.0 / (f64::from(milliseconds) * 0.001 * sample_rate)).exp()
     }
 }
 
@@ -99,11 +99,12 @@ impl std::fmt::Debug for AutoGain {
 }
 
 impl AutoGain {
-    pub fn new(
+    pub fn new<S: Into<f64>>(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: AutoGainParams,
     ) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         Ok(Self {
             num_channels,
             sample_rate,
@@ -129,11 +130,12 @@ impl AutoGain {
         })
     }
 
-    pub fn new_default(num_channels: usize, sample_rate: u32) -> Result<Self, String> {
+    pub fn new_default<S: Into<f64>>(num_channels: usize, sample_rate: S) -> Result<Self, String> {
         Self::new(num_channels, sample_rate, Default::default())
     }
 
-    pub fn set_sample_rate(&mut self, sr: u32) -> Result<(), String> {
+    pub fn set_sample_rate<S: Into<f64>>(&mut self, sr: S) -> Result<(), String> {
+        let sr = sr.into();
         let input_monitor = GainMeter::new(self.num_channels as u32, sr)?;
         let output_monitor = GainMeter::new(self.num_channels as u32, sr)?;
         self.sample_rate = sr;
@@ -549,6 +551,15 @@ mod tests {
             max_gain - min_gain,
             stable_part
         );
+    }
+
+    #[test]
+    fn fractional_rate_reaches_autogain_smoothing_and_meter() {
+        let gain = AutoGain::new(2, 48_000.5, AutoGainParams::default()).unwrap();
+        let rounded = AutoGain::new(2, 48_000.0, AutoGainParams::default()).unwrap();
+        assert_eq!(gain.sample_rate, 48_000.5);
+        assert_ne!(gain.smoothing_coeff, rounded.smoothing_coeff);
+        assert!(AutoGain::new(2, f64::NAN, AutoGainParams::default()).is_err());
     }
 
     #[test]

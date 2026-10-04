@@ -57,7 +57,7 @@ pub struct ExternalPlugin {
     audio_setup: Option<NativePluginAudioSetup>,
     input_channels: usize,
     output_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
     parameters: Vec<Parameter>,
     hosting_backend: ExternalHostingBackend,
@@ -77,19 +77,19 @@ impl ExternalPlugin {
     ///
     /// A missing format backend is a construction error. A runnable graph must
     /// never silently replace an external processor with dry passthrough.
-    pub fn new(descriptor: &PluginDescriptor, sample_rate: u32) -> Result<Self, String> {
+    pub fn new(descriptor: &PluginDescriptor, sample_rate: impl Into<f64>) -> Result<Self, String> {
         Self::new_with_max_block_frames(descriptor, sample_rate, Self::DEFAULT_MAX_BLOCK_FRAMES)
     }
 
     pub fn new_with_max_block_frames(
         descriptor: &PluginDescriptor,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
         max_block_frames: usize,
     ) -> Result<Self, String> {
         Self::new_with_optional_audio_setup_and_max_block_frames(
             descriptor,
             None,
-            sample_rate,
+            sample_rate.into(),
             max_block_frames,
         )
     }
@@ -101,7 +101,7 @@ impl ExternalPlugin {
     pub fn new_with_audio_setup(
         descriptor: &PluginDescriptor,
         audio_setup: NativePluginAudioSetup,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> Result<Self, String> {
         Self::new_with_audio_setup_and_max_block_frames(
             descriptor,
@@ -118,13 +118,13 @@ impl ExternalPlugin {
     pub fn new_with_audio_setup_and_max_block_frames(
         descriptor: &PluginDescriptor,
         audio_setup: NativePluginAudioSetup,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
         max_block_frames: usize,
     ) -> Result<Self, String> {
         Self::new_with_optional_audio_setup_and_max_block_frames(
             descriptor,
             Some(audio_setup),
-            sample_rate,
+            sample_rate.into(),
             max_block_frames,
         )
     }
@@ -132,11 +132,11 @@ impl ExternalPlugin {
     fn new_with_optional_audio_setup_and_max_block_frames(
         descriptor: &PluginDescriptor,
         audio_setup: Option<NativePluginAudioSetup>,
-        sample_rate: u32,
+        sample_rate: f64,
         max_block_frames: usize,
     ) -> Result<Self, String> {
-        if sample_rate == 0 {
-            return Err("sample rate must be positive".into());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and positive".into());
         }
         if max_block_frames == 0 {
             return Err("maximum block frame count must be positive".into());
@@ -757,7 +757,7 @@ impl ExternalPlugin {
     /// Recreate an external plugin wrapper from a serialized placeholder state.
     pub fn from_placeholder_state(
         state: &ExternalPluginState,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> Result<Self, String> {
         Self::from_placeholder_state_with_max_block_frames(
             state,
@@ -768,11 +768,12 @@ impl ExternalPlugin {
 
     pub fn from_placeholder_state_with_max_block_frames(
         state: &ExternalPluginState,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
         max_block_frames: usize,
     ) -> Result<Self, String> {
-        if sample_rate == 0 {
-            return Err("sample rate must be positive".into());
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("sample rate must be finite and positive".into());
         }
         state.validate()?;
         if state.sandbox_mode != ExternalPluginSandboxMode::InProcess {
@@ -1220,7 +1221,7 @@ impl ExternalPlugin {
         descriptor: &PluginDescriptor,
         audio_setup: Option<&NativePluginAudioSetup>,
         opaque_state: &[u8],
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
         let effective_setup =
             NativePluginAudioSetup::for_descriptor_or_legacy_default(descriptor, audio_setup)?;
@@ -1702,9 +1703,9 @@ impl Plugin for ExternalPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("sample rate must be positive".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("external plugin backend requires a finite positive sample rate".into());
         }
         if sample_rate == self.sample_rate {
             return Ok(());

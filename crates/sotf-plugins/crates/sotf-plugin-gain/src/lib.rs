@@ -45,7 +45,7 @@ pub use crate::params::default_smoothing_ms;
 
 pub struct GainPlugin {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     global_gain_db: f32,
     global_gain_smoother: Smoother,
     channel_gains_db: Vec<f32>,
@@ -643,7 +643,7 @@ impl ParametricPlugin for GainPlugin {
         Ok(())
     }
 
-    fn plugin_initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn plugin_initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.sample_rate = sample_rate;
         self.global_gain_smoother
             .set_time(self.smoothing_ms, sample_rate);

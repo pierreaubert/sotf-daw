@@ -18,9 +18,10 @@ use std::sync::Arc;
 /// contributions per bin.
 pub(crate) fn build_reflection_data_image_source(
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
 ) -> RoomReflectionData {
+    let sample_rate = sample_rate.into();
     let room = RoomGeometry {
         width: params.room_width_m,
         depth: params.room_depth_m,
@@ -124,10 +125,11 @@ pub(crate) fn build_reflection_data_image_source(
 /// When provided, it is reused instead of creating a fresh planner (Optimization 4).
 pub(crate) fn build_reflection_data_ir(
     ir_path: &str,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
     fft_forward: Option<Arc<dyn RealToComplex<f32>>>,
 ) -> Result<RoomReflectionData, String> {
+    let sample_rate = sample_rate.into();
     use symphonia::core::codecs::CodecParameters;
     use symphonia::core::codecs::audio::{AudioDecoder, AudioDecoderOptions};
     use symphonia::core::formats::{FormatOptions, FormatReader, TrackType};
@@ -149,7 +151,7 @@ pub(crate) fn build_reflection_data_ir(
 
     // Validate sample rate
     let ir_sample_rate = codec_params.sample_rate.unwrap_or(0);
-    if ir_sample_rate != sample_rate {
+    if f64::from(ir_sample_rate) != sample_rate {
         return Err(format!(
             "IR sample rate {} does not match engine sample rate {}. Resampling not supported.",
             ir_sample_rate, sample_rate

@@ -10,7 +10,7 @@ pub struct UpmixerControlStats {
 /// Snapshot of internal Upmixer control signals useful for artifact diagnosis.
 #[derive(Debug, Clone, Default)]
 pub struct UpmixerDiagnostics {
-    pub sample_rate: u32,
+    pub sample_rate: f64,
     pub fft_size: usize,
     pub hop_size: usize,
     pub output_channels: usize,

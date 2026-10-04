@@ -105,7 +105,7 @@ pub struct BandMergePlugin {
     /// Per-band one-pole gain smoother to prevent zipper noise during automation.
     pub(super) band_gain_smoothers: [sotf_host::smoothing::Smoother; MAX_BANDS],
     /// Sample rate, needed to reinitialise smoothers on initialize().
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) initialized: bool,
 }
 
@@ -138,7 +138,7 @@ impl BandMergePlugin {
             band_gain_smoothers: std::array::from_fn(|_| {
                 sotf_host::smoothing::Smoother::new(1.0, GAIN_SMOOTH_MS, DEFAULT_SR)
             }),
-            sample_rate: DEFAULT_SR,
+            sample_rate: f64::from(DEFAULT_SR),
             initialized: false,
         };
         p.rebuild_cached_parameters();
@@ -348,9 +348,9 @@ impl Plugin for BandMergePlugin {
         }
         None
     }
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Band Merge sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Band Merge sample rate must be finite and positive".into());
         }
         self.sample_rate = sample_rate;
         for i in 0..MAX_BANDS {

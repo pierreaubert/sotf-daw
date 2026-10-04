@@ -29,7 +29,7 @@ fn main() {
 
     // Initialize plugin
     plugin
-        .initialize(sample_rate)
+        .initialize(f64::from(sample_rate))
         .expect("Failed to initialize");
 
     let info = plugin.info();

@@ -1358,13 +1358,13 @@ fn test_yaw_changes_hrtf_filters() {
     }
 
     let sofa = sotf_host::sofa::SofaFile {
-        sample_rate: SAMPLE_RATE,
+        sample_rate: f64::from(SAMPLE_RATE),
         num_measurements: NUM_MEAS,
         ir_length: IR_LEN,
         positions,
         impulse_responses,
         convention: "SimpleFreeFieldHRIR".to_string(),
-        data_sample_rate: Some(SAMPLE_RATE),
+        data_sample_rate: Some(f64::from(SAMPLE_RATE)),
     };
 
     // Compute the left-ear HRTF frequency spectrum for the L stereo speaker
@@ -2387,13 +2387,13 @@ fn test_head_yaw_background_update_changes_state() {
     }
 
     let sofa = SofaFile {
-        sample_rate: SAMPLE_RATE_F,
+        sample_rate: f64::from(SAMPLE_RATE_F),
         num_measurements: NUM_MEAS,
         ir_length: IR_LEN,
         positions,
         impulse_responses,
         convention: "SimpleFreeFieldHRIR".to_string(),
-        data_sample_rate: Some(SAMPLE_RATE_F),
+        data_sample_rate: Some(f64::from(SAMPLE_RATE_F)),
     };
 
     let freq_size = 1024 / 2 + 1;

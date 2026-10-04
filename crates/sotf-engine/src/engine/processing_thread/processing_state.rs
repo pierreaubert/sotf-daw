@@ -155,9 +155,13 @@ impl ProcessingState {
 
     /// Get the output sample rate for a given input rate.
     /// Accounts for plugins that change sample rate (like resamplers).
-    pub(super) fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    pub(super) fn output_sample_rate(&self, input_rate: u32) -> Result<u32, String> {
         if self.bypassed || self.host.plugin_count() == 0 {
-            input_rate
+            if input_rate == 0 {
+                Err("Processing input sample rate must be positive".to_string())
+            } else {
+                Ok(input_rate)
+            }
         } else {
             self.host.output_sample_rate(input_rate)
         }
@@ -314,7 +318,7 @@ impl ProcessingState {
     fn commit_host_update(
         &mut self,
         update: PreparedHostUpdate,
-    ) -> Result<(u64, usize, usize, usize), &'static str> {
+    ) -> Result<(u64, usize, u32, usize, usize), String> {
         let current_channels = self.host.output_channels();
         let current_latency = self.host.total_latency_samples();
         if (update.generation != 0
@@ -327,7 +331,7 @@ impl ProcessingState {
                 old_path_delay: update.old_path_delay,
                 new_path_delay: update.new_path_delay,
             });
-            return Err("stale prepared host update: active host changed before commit");
+            return Err("stale prepared host update: active host changed before commit".into());
         }
 
         let PreparedHostUpdate {
@@ -341,8 +345,19 @@ impl ProcessingState {
             new_path_delay,
             ..
         } = update;
+        let negotiated_rate = match new_host.output_sample_rate(self.sample_rate) {
+            Ok(rate) => rate,
+            Err(error) => {
+                self.retire(GcItem::HostTransition {
+                    host: new_host,
+                    old_path_delay,
+                    new_path_delay,
+                });
+                return Err(format!("prepared host output rate became invalid: {error}"));
+            }
+        };
         if output_channels != new_host.output_channels()
-            || output_sample_rate != new_host.output_sample_rate(self.sample_rate)
+            || output_sample_rate != negotiated_rate
             || latency_samples != new_host.total_latency_samples()
         {
             self.retire(GcItem::HostTransition {
@@ -350,8 +365,20 @@ impl ProcessingState {
                 old_path_delay,
                 new_path_delay,
             });
-            return Err("prepared host metadata changed before commit");
+            return Err("prepared host metadata changed before commit".into());
         }
+
+        let old_output_rate = match self.host.output_sample_rate(self.sample_rate) {
+            Ok(rate) => rate,
+            Err(error) => {
+                self.retire(GcItem::HostTransition {
+                    host: new_host,
+                    old_path_delay,
+                    new_path_delay,
+                });
+                return Err(format!("active host output rate became invalid: {error}"));
+            }
+        };
 
         if !update.ticket.try_commit() {
             self.retire(GcItem::HostTransition {
@@ -359,10 +386,9 @@ impl ProcessingState {
                 old_path_delay,
                 new_path_delay,
             });
-            return Err("prepared host update was cancelled before commit");
+            return Err("prepared host update was cancelled before commit".into());
         }
 
-        let old_output_rate = self.host.output_sample_rate(self.sample_rate);
         let can_transition = current_channels == output_channels && self.host.plugin_count() > 0;
         if let Some(previous) = self.prev_host.take() {
             let old_path_delay = std::mem::take(&mut self.old_path_delay);
@@ -396,6 +422,7 @@ impl ProcessingState {
         Ok((
             generation,
             output_channels,
+            output_sample_rate,
             current_latency,
             latency_samples,
         ))
@@ -463,7 +490,7 @@ impl ProcessingState {
             // Count emitted frames rather than callbacks or accepted input.
             // Buffered/rate-changing chains can emit zero or multiple chunks;
             // only output samples advance the audible transition timeline.
-            let output_rate = self.host.output_sample_rate(self.sample_rate);
+            let output_rate = self.host.output_sample_rate(self.sample_rate)?;
             let fade_frames = (u64::from(output_rate) * CROSSFADE_DURATION_MS)
                 .div_ceil(1_000)
                 .max(1) as usize;
@@ -582,7 +609,13 @@ pub(super) fn handle_processing_command(
                 output_channels
             );
 
-            let (generation, output_channels, previous_latency_samples, latency_samples) =
+            let (
+                generation,
+                output_channels,
+                output_sample_rate,
+                previous_latency_samples,
+                latency_samples,
+            ) =
                 match state.commit_host_update(update) {
                     Ok(notification) => notification,
                     Err(reason) => {
@@ -596,7 +629,7 @@ pub(super) fn handle_processing_command(
                 .send(ProcessingResponse::PluginChainUpdated {
                     generation,
                     output_channels,
-                    output_sample_rate: state.output_sample_rate(state.sample_rate),
+                    output_sample_rate,
                     previous_latency_samples,
                     latency_samples,
                     latency_changed: previous_latency_samples != latency_samples,
@@ -645,10 +678,21 @@ pub(super) fn handle_processing_command(
                     );
                     let output_channels = state.host.output_channels();
                     state.channels = output_channels;
+                    let output_sample_rate = match state.host.output_sample_rate(state.sample_rate) {
+                        Ok(rate) => rate,
+                        Err(error) => {
+                            response_tx
+                                .send(ProcessingResponse::Error(format!(
+                                    "Plugin parameter produced an invalid output clock: {error}"
+                                )))
+                                .ok();
+                            return CommandOutcome::Continue;
+                        }
+                    };
                     response_tx
                         .send(ProcessingResponse::ParameterUpdated {
                             output_channels,
-                            output_sample_rate: state.host.output_sample_rate(state.sample_rate),
+                            output_sample_rate,
                             latency_samples: state.host.total_latency_samples(),
                         })
                         .ok();
@@ -835,6 +879,19 @@ pub(super) fn run_processing_thread(
 
     let mut decoder_stream_active = true;
 
+    let mut terminal_rate_error = None;
+    macro_rules! checked_processing_rate {
+        ($result:expr) => {
+            match $result {
+                Ok(rate) => rate,
+                Err(error) => {
+                    terminal_rate_error = Some(error);
+                    break 'processing;
+                }
+            }
+        };
+    }
+
     'processing: loop {
         // Check for commands (non-blocking)
         if let Ok(request) = command_rx.try_recv() {
@@ -868,7 +925,9 @@ pub(super) fn run_processing_thread(
                 let output_samples = output_frames * output_channels;
 
                 // Query plugin chain for actual output sample rate
-                let output_sample_rate = state.output_sample_rate(frame.sample_rate);
+                let output_sample_rate = checked_processing_rate!(
+                    state.output_sample_rate(frame.sample_rate)
+                );
 
                 let mut process_buffer = std::mem::take(&mut state.process_buffer);
                 if process_buffer.len() != output_samples {
@@ -988,7 +1047,9 @@ pub(super) fn run_processing_thread(
                                     // A successful update may change only the clock.
                                     // Compare the rendered frame's complete format.
                                     if state.output_channels() != output_channels
-                                        || state.output_sample_rate(state.sample_rate)
+                                        || checked_processing_rate!(state.output_sample_rate(
+                                            state.sample_rate
+                                        ))
                                             != output_sample_rate
                                     {
                                         if let Some(ProcessingMessage::Frame(frame)) =
@@ -1055,7 +1116,9 @@ pub(super) fn run_processing_thread(
                     // A global call cap would truncate legitimate long finite tails.
                     let draining_host_epoch = state.committed_host_epoch;
                     let output_channels = state.output_channels();
-                    let output_sample_rate = state.output_sample_rate(state.sample_rate);
+                    let output_sample_rate = checked_processing_rate!(
+                        state.output_sample_rate(state.sample_rate)
+                    );
                     let capacity = state.host.drain_output_frames_max();
                     let samples = capacity.saturating_mul(output_channels);
                     ProcessingState::prepare_scratch_buffer(&mut state.process_buffer, samples);
@@ -1110,7 +1173,9 @@ pub(super) fn run_processing_thread(
                                         &event_tx,
                                     );
                                     let format_changed = state.output_channels() != output_channels
-                                        || state.output_sample_rate(state.sample_rate)
+                                        || checked_processing_rate!(state.output_sample_rate(
+                                            state.sample_rate
+                                        ))
                                             != output_sample_rate;
                                     if (outcome != CommandOutcome::Continue
                                         || state.bypassed
@@ -1160,7 +1225,9 @@ pub(super) fn run_processing_thread(
                             let old_host_epoch = state.committed_host_epoch;
                             let old_format = (
                                 state.output_channels(),
-                                state.output_sample_rate(state.sample_rate),
+                                checked_processing_rate!(
+                                    state.output_sample_rate(state.sample_rate)
+                                ),
                             );
                             pending_msg = unsent;
                             match handle_processing_command(
@@ -1179,7 +1246,9 @@ pub(super) fn run_processing_thread(
                             if old_format
                                 != (
                                     state.output_channels(),
-                                    state.output_sample_rate(state.sample_rate),
+                                    checked_processing_rate!(
+                                        state.output_sample_rate(state.sample_rate)
+                                    ),
                                 )
                             {
                                 pending_msg = None;
@@ -1278,5 +1347,8 @@ pub(super) fn run_processing_thread(
 
     log::debug!("[Processing Thread] Stopped");
     state.retire_owned_state();
-    Ok(())
+    match terminal_rate_error {
+        Some(error) => Err(error),
+        None => Ok(()),
+    }
 }

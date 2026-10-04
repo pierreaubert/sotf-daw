@@ -21,7 +21,7 @@ use sotf_host::smoothing::Smoother;
 
 pub struct TransientShaperPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Parameters
     pub(super) attack_amount: f32,  // -1.0 to 1.0 (from -100% to +100%)
@@ -62,7 +62,7 @@ impl TransientShaperPlugin {
         let sr = 44100;
         let mut p = Self {
             channels,
-            sample_rate: sr,
+            sample_rate: f64::from(sr),
             attack_amount: 0.0,
             sustain_amount: 0.0,
             sensitivity_db: 0.0,
@@ -368,9 +368,9 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Transient Shaper sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Transient Shaper sample rate must be finite and positive".to_string());
         }
         self.sample_rate = sample_rate;
         self.update_coefficients();
@@ -483,7 +483,7 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
                 self.monitor_extreme_gain = gain;
             }
             self.cache_samples += 1;
-            let cache_interval = (self.sample_rate as usize / 30).max(1);
+            let cache_interval = (self.sample_rate / 30.0).round().max(1.0) as usize;
             if self.cache_samples >= cache_interval {
                 let peak_transient = self.monitor_peak_transient;
                 let peak_sustain = self.monitor_peak_sustain;

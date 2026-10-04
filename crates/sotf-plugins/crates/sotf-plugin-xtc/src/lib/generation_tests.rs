@@ -23,7 +23,7 @@ pub(super) struct WorkerBarrier {
 }
 
 impl WorkerBarrier {
-    pub(super) fn after_check(&self, rate: u32, update: &Arc<PendingFilterUpdate>) -> bool {
+    pub(super) fn after_check(&self, rate: f64, update: &Arc<PendingFilterUpdate>) -> bool {
         if rate != 48_000 || !self.armed.swap(false, Ordering::AcqRel) {
             return false;
         }
@@ -78,7 +78,7 @@ fn actual_post_check_worker_cannot_replace_a_synchronous_installation() {
                 )
                 .unwrap();
             let old = checked_rx.recv_timeout(TIMEOUT).unwrap();
-            plugin.initialize(new_rate).unwrap();
+            plugin.initialize(f64::from(new_rate)).unwrap();
             let installed = Arc::clone(&plugin.filter_state.cached_current_filters);
             assert_ne!(
                 old.generation,
@@ -220,7 +220,7 @@ fn rejected_meter_rates_preserve_audio_epoch_and_ready_publication() {
             48_000,
         )
         .unwrap();
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
     }
     let mut no_meter = XtcPlugin::new(
         XtcPluginParams {

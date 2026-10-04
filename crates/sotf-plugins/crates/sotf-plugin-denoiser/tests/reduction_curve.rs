@@ -278,7 +278,7 @@ fn steady_output(curve: (f32, f32, f32), rate: u32, low_latency: bool) -> Vec<f3
             ..Default::default()
         },
     );
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let output = process_all(&mut plugin, &input, 1, &[1024, 63], rate);
     // Converged last second only; MCRA needs about one window (~1 s).
     output[output.len() - rate as usize..].to_vec()

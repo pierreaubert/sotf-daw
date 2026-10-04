@@ -39,8 +39,8 @@ pub struct ChannelCorrelationMonitor {
 }
 
 impl ChannelCorrelationMonitor {
-    pub fn new(channels: usize, sample_rate: u32) -> Self {
-        let window_samples = (sample_rate as f64 * WINDOW_SECONDS).max(1.0);
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        let window_samples = (sample_rate.into() * WINDOW_SECONDS).max(1.0);
         let triangle_len = channels.saturating_sub(1) * channels / 2;
         Self {
             channels,

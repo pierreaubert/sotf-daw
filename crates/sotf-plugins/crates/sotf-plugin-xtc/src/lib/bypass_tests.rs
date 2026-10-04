@@ -16,7 +16,7 @@ fn make(n: usize, rate: u32, enabled: bool, auto_gain: bool) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    p.initialize(rate).unwrap();
+    p.initialize(f64::from(rate)).unwrap();
     p
 }
 fn enabled(p: &mut XtcPlugin, value: bool) {

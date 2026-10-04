@@ -40,7 +40,7 @@ use std::any::Any;
 use std::sync::Arc;
 
 pub struct AaePlugin {
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) params: AaePluginParams,
     pub(super) speaker_config: &'static SpeakerConfig,
     pub(super) num_output_channels: usize,
@@ -233,7 +233,7 @@ impl AaePlugin {
             .expect("AAE speaker layout must provide FR");
 
         // Pre-compute at a default sample rate; re-done in initialize()
-        let sr = 48000u32;
+        let sr = 48_000.0;
         let pre_delay_samples = (params.pre_delay_ms * 0.001 * sr as f32).round() as usize;
 
         let dialogue_window_samples = ms_to_samples(DIALOGUE_ANALYSIS_WINDOW_MS, sr);
@@ -823,7 +823,10 @@ impl Plugin for AaePlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("AAE sample rate must be finite and positive".into());
+        }
         self.sample_rate = sample_rate;
         let sr = sample_rate as f32;
         self.bypass_mix_step = 1.0 / (BYPASS_CROSSFADE_MS * 0.001 * sr).round().max(1.0);

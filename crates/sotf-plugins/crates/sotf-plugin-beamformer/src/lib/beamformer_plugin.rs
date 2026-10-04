@@ -28,7 +28,7 @@ struct StreamDrain {
 pub struct BeamformerPlugin {
     drain_state: StreamDrain,
     pub(super) num_mics: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) mic_spacing_cm: f32,
     pub(super) steer_angle_deg: f32,
     pub(super) beamformer_type: BeamformerType,
@@ -68,7 +68,11 @@ pub struct BeamformerPlugin {
 }
 
 impl BeamformerPlugin {
-    pub fn new(num_mics: usize, sample_rate: u32) -> PluginResult<Self> {
+    pub fn new(num_mics: usize, sample_rate: impl Into<f64>) -> PluginResult<Self> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Beamformer sample rate must be finite and positive".into());
+        }
         if !(2..=8).contains(&num_mics) {
             return Err(format!(
                 "Beamformer requires 2..=8 microphones, got {num_mics}"
@@ -129,7 +133,10 @@ impl BeamformerPlugin {
         Ok(p)
     }
 
-    pub fn from_params(sample_rate: u32, params: BeamformerPluginParams) -> PluginResult<Self> {
+    pub fn from_params(
+        sample_rate: impl Into<f64>,
+        params: BeamformerPluginParams,
+    ) -> PluginResult<Self> {
         if !(2..=8).contains(&params.num_mics) {
             return Err(format!(
                 "Beamformer requires 2..=8 microphones, got {}",
@@ -298,7 +305,10 @@ impl Plugin for BeamformerPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Beamformer sample rate must be finite and positive".into());
+        }
         self.sample_rate = sample_rate;
         self.update_steering();
         self.reset();
@@ -419,7 +429,7 @@ impl Plugin for BeamformerPlugin {
     }
 
     fn tail_length(&self) -> TailLength {
-        if self.sample_rate == 0 {
+        if self.sample_rate <= 0.0 {
             return TailLength::Unknown;
         }
         // This is the prepared response bound, not a remaining-drain count.

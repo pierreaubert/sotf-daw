@@ -100,12 +100,11 @@ impl IirSplit {
     pub(super) fn new(
         kind: CrossoverKind,
         frequency: f32,
-        sample_rate: u32,
+        sample_rate: f64,
         channels: usize,
     ) -> Result<Self, String> {
         let (designs, high_polarity) = section_designs(kind)?;
         let frequency = f64::from(frequency);
-        let sample_rate = f64::from(sample_rate);
         let prewarp = prewarp(frequency, sample_rate);
         let mut low_sections = Vec::with_capacity(MAX_SECTIONS);
         let mut high_sections = Vec::with_capacity(MAX_SECTIONS);
@@ -136,8 +135,8 @@ impl IirSplit {
     }
 
     /// Changes the sample rate and cutoff, preserving state for a live update.
-    pub(super) fn reconfigure(&mut self, frequency: f32, sample_rate: u32) {
-        self.sample_rate = f64::from(sample_rate);
+    pub(super) fn reconfigure(&mut self, frequency: f32, sample_rate: f64) {
+        self.sample_rate = sample_rate;
         self.set_frequency(frequency);
     }
 

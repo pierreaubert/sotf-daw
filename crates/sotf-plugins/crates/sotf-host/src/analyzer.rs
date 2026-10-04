@@ -336,7 +336,7 @@ pub trait AnalyzerPlugin: Send {
     fn input_channels(&self) -> usize;
 
     /// Initialize the analyzer with a sample rate
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()>;
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()>;
 
     /// Reset the analyzer state
     fn reset(&mut self);

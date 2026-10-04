@@ -12,7 +12,7 @@ use sotf_plugins::{
     Parameter, ParameterId, ParameterValue, Plugin, PluginHost, PluginInfo, ProcessContext,
 };
 use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -21,6 +21,48 @@ const WAIT: Duration = Duration::from_secs(2);
 
 /// Exact zero-order 2x converter: independent frame and duration oracle.
 struct DoubleRate;
+
+struct MutableRate(Arc<AtomicU64>);
+
+impl Plugin for MutableRate {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Mutable rate", "1", "Test")
+    }
+
+    fn input_channels(&self) -> usize {
+        1
+    }
+
+    fn output_channels(&self) -> usize {
+        1
+    }
+
+    fn parameters(&self) -> Vec<Parameter> {
+        Vec::new()
+    }
+
+    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+        Err("No parameters".into())
+    }
+
+    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+        None
+    }
+
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from_bits(self.0.load(Ordering::Relaxed))
+    }
+
+    fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        output.copy_from_slice(input);
+        Ok(context.num_frames)
+    }
+}
 
 impl Plugin for DoubleRate {
     fn info(&self) -> PluginInfo {
@@ -41,8 +83,8 @@ impl Plugin for DoubleRate {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn output_sample_rate(&self, _: u32) -> u32 {
-        96_000
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        96_000.0
     }
     fn output_frames_for_input(&self, frames: usize) -> usize {
         frames * 2
@@ -189,4 +231,34 @@ fn rate_only_commit_discards_old_clock_pending_output() {
         "old clock after new-format commit acknowledgement"
     );
     assert_eq!(frame.data, [0.75]);
+}
+
+#[test]
+fn invalid_runtime_clock_returns_error_and_retires_the_host() {
+    let mut worker = Worker::new();
+    let rate = Arc::new(AtomicU64::new(48_000.0_f64.to_bits()));
+    let mut host = PluginHost::new(1, 48_000);
+    host.add_plugin(Box::new(MutableRate(Arc::clone(&rate))))
+        .unwrap();
+    host.build().unwrap();
+    worker.commit(host, 48_000);
+
+    rate.store(f64::NAN.to_bits(), Ordering::Relaxed);
+    worker.send_frame(0.5);
+    let result = worker.thread.take().unwrap().join().unwrap();
+    assert!(result.unwrap_err().contains("unsupported native output sample rate"));
+    let mut retired_invalid_host = false;
+    for _ in 0..4 {
+        match worker._gc_rx.recv_timeout(WAIT) {
+            Ok(GcItem::PluginHost(host))
+                if host.plugin_count() == 1 && host.output_sample_rate(48_000).is_err() =>
+            {
+                retired_invalid_host = true;
+                break;
+            }
+            Ok(_) => {}
+            Err(_) => break,
+        }
+    }
+    assert!(retired_invalid_host, "invalid active host must reach the GC queue");
 }

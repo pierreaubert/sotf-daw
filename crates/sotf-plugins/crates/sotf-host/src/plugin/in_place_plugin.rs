@@ -59,7 +59,7 @@ pub trait InPlacePlugin: Send {
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue>;
 
     /// Initialize the plugin with the given sample rate
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
     }

@@ -1356,7 +1356,7 @@ macro_rules! sotf_nih_plugin {
             crossover_active_output_buses: u64,
             crossover_host_to_sotf: [usize; 16],
             eq_native_host_to_sotf: [usize; 16],
-            sample_rate: u32,
+            sample_rate: f64,
             structural_fingerprint: u64,
             non_restartable_structural_fingerprint: u64,
             hiss_momentary: $crate::params::hiss_profile::HissMomentaryLatch,
@@ -1563,7 +1563,10 @@ macro_rules! sotf_nih_plugin {
             ) -> bool {
                 let mut eq_pair_apply_attempt = matches!($plugin_type, "EQ")
                     .then(|| $crate::params::EqPairApplyAttempt::new(self.params.clone()));
-                let candidate_sample_rate = buffer_config.sample_rate as u32;
+                let candidate_sample_rate = f64::from(buffer_config.sample_rate);
+                if !candidate_sample_rate.is_finite() || candidate_sample_rate <= 0.0 {
+                    return false;
+                }
                 if !matches!($plugin_type, "EQ") {
                     self.sample_rate = candidate_sample_rate;
                 }

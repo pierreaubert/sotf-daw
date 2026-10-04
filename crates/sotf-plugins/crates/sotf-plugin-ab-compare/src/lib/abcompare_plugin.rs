@@ -2057,10 +2057,15 @@ impl Plugin for ABComparePlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("A/B Compare sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > f64::from(u32::MAX)
+            || sample_rate.fract() != 0.0
+        {
+            return Err("A/B Compare native graph requires a positive integer sample rate".into());
         }
+        let sample_rate = sample_rate as u32;
         let nyquist = sample_rate as f32 * 0.5;
         if self.band_mask_low_hz > Self::BAND_MASK_MIN_HZ + Self::BAND_MASK_EDGE_EPSILON
             && self.band_mask_low_hz >= nyquist
@@ -2280,7 +2285,7 @@ impl Plugin for ABComparePlugin {
             ));
         }
 
-        if context.sample_rate != self.sample_rate {
+        if context.sample_rate != f64::from(self.sample_rate) {
             return Err(format!(
                 "A/B Compare was initialized at {} Hz, got a {} Hz process context",
                 self.sample_rate, context.sample_rate
@@ -2557,7 +2562,7 @@ impl Plugin for ABComparePlugin {
         if context.num_frames != 0 {
             return Err("A/B Compare drain preparation requires a zero-frame context".into());
         }
-        if self.sample_rate == 0 || context.sample_rate != self.sample_rate {
+        if self.sample_rate == 0 || context.sample_rate != f64::from(self.sample_rate) {
             return Err(format!(
                 "A/B Compare drain context must use its initialized sample rate of {} Hz",
                 self.sample_rate
@@ -2634,7 +2639,7 @@ impl Plugin for ABComparePlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        if context.num_frames != 0 || context.sample_rate != self.sample_rate {
+        if context.num_frames != 0 || context.sample_rate != f64::from(self.sample_rate) {
             return Err(
                 "A/B Compare drain requires a zero-frame context at its initialized rate".into(),
             );

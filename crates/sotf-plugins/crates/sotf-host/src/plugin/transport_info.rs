@@ -40,7 +40,8 @@ impl Default for TransportInfo {
 
 impl TransportInfo {
     /// Create default transport metadata for a block starting at `sample_position`.
-    pub fn at_sample(sample_position: u64, sample_rate: u32) -> Self {
+    pub fn at_sample(sample_position: u64, sample_rate: impl Into<f64>) -> Self {
+        let sample_rate = sample_rate.into();
         let bpm = 120.0;
         let ppq_position = samples_to_ppq(sample_position, sample_rate, bpm);
         Self {
@@ -51,7 +52,8 @@ impl TransportInfo {
     }
 
     /// Return a copy with updated tempo and recalculated PPQ position.
-    pub fn with_tempo(mut self, bpm: f64, sample_rate: u32) -> Self {
+    pub fn with_tempo(mut self, bpm: f64, sample_rate: impl Into<f64>) -> Self {
+        let sample_rate = sample_rate.into();
         if bpm.is_finite() && bpm > 0.0 {
             self.bpm = bpm;
             self.ppq_position = samples_to_ppq(self.sample_position, sample_rate, bpm);

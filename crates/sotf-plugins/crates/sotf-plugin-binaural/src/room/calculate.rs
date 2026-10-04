@@ -9,11 +9,12 @@ use std::collections::HashSet;
 use std::path::Path;
 
 #[allow(dead_code)]
-pub fn calculate_reflections(
+pub fn calculate_reflections<S: Into<f64>>(
     room: &RoomModel,
     speaker_config: &SpeakerConfig,
-    sample_rate: u32,
+    sample_rate: S,
 ) -> Vec<Vec<Reflection>> {
+    let sample_rate = sample_rate.into();
     let mut reflections = Vec::with_capacity(speaker_config.speakers.len());
 
     if room.max_order == 0 {
@@ -141,7 +142,7 @@ pub fn calculate_reflections(
                 let path_diff = img_dist - direct_dist;
                 if path_diff > 0.0 {
                     let delay_sec = path_diff / room.speed_of_sound;
-                    let delay_samples = (delay_sec * sample_rate as f32).round() as usize;
+                    let delay_samples = (f64::from(delay_sec) * sample_rate).round() as usize;
 
                     let dist_att = direct_dist / img_dist;
                     let wall_att1 = 1.0 - room.absorption[*wall1_idx];
@@ -181,10 +182,11 @@ pub fn calculate_reflections(
 ///
 /// For multi-channel (4+ ch B-format) input: full SSIR with DOA estimation.
 /// For mono/stereo: energy-based detection only, DOA defaults to (0, 0).
-pub fn calculate_reflections_from_srir(
+pub fn calculate_reflections_from_srir<S: Into<f64>>(
     srir_path: &Path,
-    sample_rate: u32,
+    sample_rate: S,
 ) -> Result<Vec<Reflection>, String> {
+    let sample_rate = sample_rate.into();
     let (channels, wav_sr) = load_wav_channels(srir_path)?;
     if channels.is_empty() || channels[0].is_empty() {
         return Err("SRIR file is empty".to_string());

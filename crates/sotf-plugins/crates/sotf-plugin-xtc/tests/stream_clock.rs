@@ -14,7 +14,7 @@ fn make(fft_size: usize, rate: u32) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -255,7 +255,7 @@ fn cold_default_and_neutral_clocks_reset_without_allocating_or_freeing() {
                     rate,
                 )
                 .unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 // Exceed prepared staging and cover all initial windows/ring wrap.
                 let frames = (fft_size * 5 + 731).max(20_003);
                 let input = vec![0.125; frames * 2];

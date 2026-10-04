@@ -57,7 +57,7 @@ fn gain_reduction_db(level_db: f32, threshold_db: f32, ratio: f32, knee_db: f32)
 
 pub struct AnalogCompressorPlugin {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     initialized: bool,
 
     threshold_db: f32,
@@ -253,9 +253,9 @@ impl AnalogCompressorPlugin {
         );
     }
 
-    fn sample_rate_for_build(&self) -> u32 {
-        if self.sample_rate == 0 {
-            48_000
+    fn sample_rate_for_build(&self) -> f64 {
+        if self.sample_rate <= 0.0 {
+            48_000.0
         } else {
             self.sample_rate
         }
@@ -459,9 +459,11 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
         self.apply_values(values)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Analog compressor sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err(
+                "Analog compressor sample rate must be finite and greater than zero".to_string(),
+            );
         }
         self.sample_rate = sample_rate;
         self.hold_remaining = 0;
@@ -522,7 +524,7 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
             self.range_db
         };
         let hold_samples =
-            (self.hold_ms as f64 * self.sample_rate as f64 / 1000.0).round() as usize;
+            (f64::from(self.hold_ms) * self.sample_rate / 1000.0).round() as usize;
         // Compressor core first, then the analog color stage, both in place.
         for frame in 0..frames {
             // Linked detection: hottest channel drives one shared envelope.

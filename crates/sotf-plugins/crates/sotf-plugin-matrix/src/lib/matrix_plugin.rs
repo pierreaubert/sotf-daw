@@ -40,7 +40,7 @@ pub struct MatrixPlugin {
     /// When set, the effective gain is negated during processing.
     pub(super) phase_invert: Vec<bool>,
     pub(super) gain_smoothers: Vec<Smoother>,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) physical_input_channels: usize,
     pub(super) physical_output_channels: usize,
     pub(super) channel_states: Vec<ChannelState>,
@@ -1008,9 +1008,9 @@ impl Plugin for MatrixPlugin {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Matrix sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Matrix sample rate must be finite and positive".into());
         }
         self.sample_rate = sample_rate;
         for idx in 0..self.gain_smoothers.len() {

@@ -552,11 +552,12 @@ impl RepairCore {
     /// # Errors
     ///
     /// Returns an error for zero channels or a zero sample rate.
-    pub fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("repair core requires at least one channel".into());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("repair core sample rate must be greater than zero".into());
         }
         let mut this = Self {
@@ -638,8 +639,9 @@ impl RepairCore {
     /// # Errors
     ///
     /// Returns an error for a zero sample rate without mutating state.
-    pub fn set_sample_rate(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn set_sample_rate<S: Into<f64>>(&mut self, sample_rate: S) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("repair core sample rate must be greater than zero".into());
         }
         let smoothing_samples = sample_rate as f32 * CONTROL_SMOOTH_MS * 0.001;
@@ -1816,11 +1818,11 @@ impl Crossover {
     /// 1..=3, without mutating state.
     fn set_config(
         &mut self,
-        sample_rate: u32,
+        sample_rate: f64,
         crossover_hz: f32,
         bands: usize,
     ) -> Result<(), String> {
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("crossover sample rate must be greater than zero".into());
         }
         if !(1..=MAX_BANDS).contains(&bands) {
@@ -1927,7 +1929,7 @@ pub struct OwnedEngine {
     base_sensitivity: f32,
     skew: f32,
     crossover_hz: f32,
-    sample_rate: u32,
+    sample_rate: f64,
     audition_current: f32,
     audition_target: f32,
     audition_decay: f32,
@@ -1939,11 +1941,12 @@ impl OwnedEngine {
     /// # Errors
     ///
     /// Returns an error for zero channels or a zero sample rate.
-    pub fn new(channels: usize, sample_rate: u32) -> Result<Self, String> {
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Result<Self, String> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("owned declick engine requires at least one channel".into());
         }
-        if sample_rate == 0 {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("owned declick engine sample rate must be greater than zero".into());
         }
         let mut engine = Self {
@@ -2006,8 +2009,9 @@ impl OwnedEngine {
     /// # Errors
     ///
     /// Returns an error for a zero sample rate without mutating state.
-    pub fn set_sample_rate(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn set_sample_rate<S: Into<f64>>(&mut self, sample_rate: S) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("owned declick engine sample rate must be greater than zero".into());
         }
         for core in &mut self.cores {
@@ -2032,7 +2036,7 @@ impl OwnedEngine {
     }
 
     /// Set the crossover frequency. Structural: the caller resets.
-    pub fn set_crossover_hz(&mut self, crossover_hz: f32, sample_rate: u32) {
+    pub fn set_crossover_hz(&mut self, crossover_hz: f32, sample_rate: f64) {
         let bands = self.bands;
         if self
             .crossover
@@ -2383,7 +2387,7 @@ impl OwnedEngine {
         self.supervisor.set_sensitivity(self.base_sensitivity);
     }
 
-    fn tune_audition(&mut self, sample_rate: u32) {
+    fn tune_audition(&mut self, sample_rate: f64) {
         let smoothing_samples = sample_rate as f32 * CONTROL_SMOOTH_MS * 0.001;
         self.audition_decay = (-1.0 / smoothing_samples.max(1.0)).exp();
     }

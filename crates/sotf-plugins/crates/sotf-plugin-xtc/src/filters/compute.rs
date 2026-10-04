@@ -69,9 +69,10 @@ pub(crate) fn head_shadowing_for_plant(
 /// Pre-computes all path lengths, angles, and ratios that don't change per bin.
 pub(crate) fn compute_geometry_cache(
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
 ) -> GeometryCache {
+    let sample_rate = sample_rate.into();
     let freq_per_bin = sample_rate as f32 / (2.0 * (num_bins - 1) as f32);
 
     // Symmetric geometry
@@ -155,9 +156,10 @@ pub(crate) fn compute_geometry_cache(
 /// Optimization 3: Uses pre-computed geometry cache to avoid redundant calculations.
 pub(crate) fn compute_xtc_filters_full(
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: impl Into<f64>,
     num_bins: usize,
 ) -> XtcFilters {
+    let sample_rate = sample_rate.into();
     // Pre-compute geometry cache (Optimization 3)
     let cache = compute_geometry_cache(params, sample_rate, num_bins);
 
@@ -188,14 +190,14 @@ pub(crate) fn compute_xtc_filters_full(
 /// redundant computation when parameters haven't changed.
 pub(crate) fn compute_xtc_filters_full_with_cache(
     params: &XtcPluginParams,
-    _sample_rate: u32,
+    _sample_rate: impl Into<f64>,
     num_bins: usize,
     cache: &GeometryCache,
     room_data: Option<Arc<RoomReflectionData>>,
 ) -> XtcFilters {
     compute_xtc_filters_full_with_cache_and_hrtf(
         params,
-        _sample_rate,
+        _sample_rate.into(),
         num_bins,
         cache,
         room_data,
@@ -206,12 +208,13 @@ pub(crate) fn compute_xtc_filters_full_with_cache(
 /// Internal filter computation with pre-computed geometry cache and optional HRTF data.
 pub(crate) fn compute_xtc_filters_full_with_cache_and_hrtf(
     params: &XtcPluginParams,
-    _sample_rate: u32,
+    _sample_rate: impl Into<f64>,
     num_bins: usize,
     cache: &GeometryCache,
     room_data: Option<Arc<RoomReflectionData>>,
     hrtf_data: Option<&HrtfTransferFunctions>,
 ) -> XtcFilters {
+    let _sample_rate = _sample_rate.into();
     let is_symmetric = cache.asymmetric.is_none() && hrtf_data.is_none();
     let room_data_ref: Option<&RoomReflectionData> = room_data
         .as_ref()

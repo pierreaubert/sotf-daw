@@ -36,7 +36,7 @@
 
 // Rust guideline compliant 2026-10-21
 use crate::profile::{
-    NoiseProfileData, PROFILE_FORMAT_VERSION, PROFILE_FORMAT_VERSION_V1, SpectralProfileData,
+    NoiseProfileData, SpectralProfileData, profile_format_version,
 };
 use plugins_denoiser::spectral_profile::{
     SPECTRAL_PROFILE_FFT_SIZE, SPECTRAL_PROFILE_HOP_SIZE, SPECTRAL_PROFILE_NUM_BINS,
@@ -55,7 +55,7 @@ pub struct ProfilePublishMeta {
     /// The stored profile carries a measured spectrum.
     pub spectral: bool,
     /// Sample rate the stored profile was captured at.
-    pub capture_rate: u32,
+    pub capture_rate: f64,
     /// High-band cutoff the stored profile was measured at.
     pub cutoff_hz: f32,
     /// Frames backing the stored floors.
@@ -65,7 +65,7 @@ pub struct ProfilePublishMeta {
     /// The live use-captured-profile flag.
     pub use_flag: bool,
     /// Live processing rate.
-    pub processing_rate: u32,
+    pub processing_rate: f64,
 }
 /// Flags bit: a stored profile is present.
 const FLAG_HAS_PROFILE: u64 = 1;
@@ -115,9 +115,9 @@ pub struct ProfileStatus {
     /// The live use-captured-profile flag.
     pub use_flag: bool,
     /// Sample rate the stored profile was captured at (0 when absent).
-    pub capture_rate: u32,
+    pub capture_rate: f64,
     /// Live processing rate at publication time.
-    pub processing_rate: u32,
+    pub processing_rate: f64,
     /// High-band cutoff the stored profile was measured at.
     pub cutoff_hz: f32,
     /// Frames backing the stored floors.
@@ -135,12 +135,12 @@ pub struct ProfileStatus {
 pub struct ProfileExport {
     /// Even generation counter of this consistent read.
     pub generation: u64,
-    /// Exact stored profile (v1 floors-only or v2 with spectrum).
+    /// Exact stored profile (v1/v2 at integral rates or v3 at fractional rates).
     pub profile: NoiseProfileData,
     /// The live use-captured-profile flag at publication time.
     pub use_flag: bool,
     /// Live processing rate at publication time.
-    pub processing_rate: u32,
+    pub processing_rate: f64,
     /// True when per-bin comparison is actually engaged.
     pub engaged: bool,
 }
@@ -161,8 +161,8 @@ pub struct ProfileSnapshot {
     generation: AtomicU64,
     flags: AtomicU64,
     use_flag: AtomicU32,
-    capture_rate: AtomicU32,
-    processing_rate: AtomicU32,
+    capture_rate: AtomicU64,
+    processing_rate: AtomicU64,
     cutoff_bits: AtomicU32,
     frames: AtomicU64,
     hops: AtomicU64,
@@ -191,8 +191,8 @@ impl ProfileSnapshot {
             generation: AtomicU64::new(0),
             flags: AtomicU64::new(0),
             use_flag: AtomicU32::new(0),
-            capture_rate: AtomicU32::new(0),
-            processing_rate: AtomicU32::new(0),
+            capture_rate: AtomicU64::new(0),
+            processing_rate: AtomicU64::new(0),
             cutoff_bits: AtomicU32::new(0),
             frames: AtomicU64::new(0),
             hops: AtomicU64::new(0),
@@ -227,9 +227,10 @@ impl ProfileSnapshot {
         self.flags.store(flags, Ordering::SeqCst);
         self.use_flag
             .store(u32::from(meta.use_flag), Ordering::SeqCst);
-        self.capture_rate.store(meta.capture_rate, Ordering::SeqCst);
+        self.capture_rate
+            .store(meta.capture_rate.to_bits(), Ordering::SeqCst);
         self.processing_rate
-            .store(meta.processing_rate, Ordering::SeqCst);
+            .store(meta.processing_rate.to_bits(), Ordering::SeqCst);
         self.cutoff_bits
             .store(meta.cutoff_hz.to_bits(), Ordering::SeqCst);
         self.frames.store(meta.frames, Ordering::SeqCst);
@@ -248,11 +249,11 @@ impl ProfileSnapshot {
     /// Bumps the generation so engagement inputs stay consistent with the
     /// payload; called only on use-flag and processing-rate changes.
     /// Never allocates, frees, locks, logs, waits, or spins.
-    pub fn publish_live_flags(&self, use_flag: bool, processing_rate: u32) {
+    pub fn publish_live_flags(&self, use_flag: bool, processing_rate: f64) {
         self.generation.fetch_add(1, Ordering::SeqCst);
         self.use_flag.store(u32::from(use_flag), Ordering::SeqCst);
         self.processing_rate
-            .store(processing_rate, Ordering::SeqCst);
+            .store(processing_rate.to_bits(), Ordering::SeqCst);
         self.generation.fetch_add(1, Ordering::SeqCst);
     }
 
@@ -338,10 +339,10 @@ impl ProfileSnapshot {
         let present = (flags & FLAG_HAS_PROFILE) != 0;
         let spectral = present && (flags & FLAG_HAS_SPECTRAL) != 0;
         let use_flag = self.use_flag.load(Ordering::SeqCst) != 0;
-        let capture_rate = self.capture_rate.load(Ordering::SeqCst);
-        let processing_rate = self.processing_rate.load(Ordering::SeqCst);
+        let capture_rate = f64::from_bits(self.capture_rate.load(Ordering::SeqCst));
+        let processing_rate = f64::from_bits(self.processing_rate.load(Ordering::SeqCst));
         let engaged =
-            use_flag && present && spectral && capture_rate == processing_rate && capture_rate != 0;
+            use_flag && present && spectral && capture_rate == processing_rate && capture_rate != 0.0;
         let fallback = if !use_flag || !present {
             ProfileFallback::Disabled
         } else if engaged {
@@ -392,11 +393,7 @@ impl ProfileSnapshot {
             }
         });
         NoiseProfileData {
-            format_version: if spectral.is_some() {
-                PROFILE_FORMAT_VERSION
-            } else {
-                PROFILE_FORMAT_VERSION_V1
-            },
+            format_version: profile_format_version(status.capture_rate, spectral.is_some()),
             sample_rate: status.capture_rate,
             channels: self.channels,
             measurement_cutoff_hz: status.cutoff_hz,

@@ -90,7 +90,7 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         self.plugin.get_parameter(id)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.bounded.invalidate();
         self.plugin.initialize(sample_rate)?;
         self.bounded.prepare(

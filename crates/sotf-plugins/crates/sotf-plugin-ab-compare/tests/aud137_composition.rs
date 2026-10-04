@@ -199,8 +199,8 @@ impl Plugin for FirFixture {
         None
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate != self.expected_input_rate() {
+    fn initialize(&mut self, sample_rate: f64) -> Result<(), String> {
+        if sample_rate != f64::from(self.expected_input_rate()) {
             return Err(format!(
                 "AUD137 FIR fixture expected {} Hz, got {sample_rate} Hz",
                 self.expected_input_rate()
@@ -267,11 +267,11 @@ impl Plugin for FirFixture {
         self.non_identity_input_frames.is_none()
     }
 
-    fn output_sample_rate(&self, input_rate: u32) -> u32 {
+    fn output_sample_rate(&self, input_rate: f64) -> f64 {
         match self.rate_mode {
             FixtureRateMode::Identity => input_rate,
-            FixtureRateMode::Double => input_rate.saturating_mul(2),
-            FixtureRateMode::Half => input_rate / 2,
+            FixtureRateMode::Double => input_rate * 2.0,
+            FixtureRateMode::Half => input_rate / 2.0,
         }
     }
 
@@ -280,7 +280,9 @@ impl Plugin for FirFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0 || context.sample_rate != self.expected_input_rate() {
+        if context.num_frames != 0
+            || context.sample_rate != f64::from(self.expected_input_rate())
+        {
             return Err("AUD137 FIR fixture drain requires a zero-frame 48 kHz context".into());
         }
         if self.count_drain_calls {
@@ -310,7 +312,7 @@ impl Plugin for FirFixture {
         }
         if !self.draining
             || context.num_frames != 0
-            || context.sample_rate != self.expected_input_rate()
+            || context.sample_rate != f64::from(self.expected_input_rate())
         {
             return Err("AUD137 FIR fixture was not prepared for drain".into());
         }

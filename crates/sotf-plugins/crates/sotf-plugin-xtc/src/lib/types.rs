@@ -14,7 +14,7 @@ pub(super) struct PendingFilterUpdate {
 pub(super) struct FilterUpdateRequest {
     pub(super) generation: u64,
     pub(super) params: super::config::XtcPluginParams,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) num_bins: usize,
     pub(super) expected_output_channels: usize,
     pub(super) fft_forward: Arc<dyn realfft::RealToComplex<f32>>,

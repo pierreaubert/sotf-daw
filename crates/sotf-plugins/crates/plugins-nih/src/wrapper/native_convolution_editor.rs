@@ -16,15 +16,15 @@ pub enum BackgroundTask {
         generation: u64,
         path: Option<PathBuf>,
         true_stereo: bool,
-        sample_rate: u32,
+        sample_rate: f64,
         max_frames: usize,
         topology_fingerprint: u64,
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Geometry {
-    pub(crate) sample_rate: u32,
+    pub(crate) sample_rate: f64,
     pub(crate) max_frames: usize,
     pub(crate) input_channels: usize,
     pub(crate) output_channels: usize,

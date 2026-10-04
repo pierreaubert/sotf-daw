@@ -84,7 +84,7 @@ struct BypassFade {
 
 pub struct SpectralHissReducer {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     cutoff_hz: f32,
     threshold_linear: f32,
     strength: f32,
@@ -219,8 +219,9 @@ impl SpectralHissReducer {
         }
     }
 
-    pub fn initialize(&mut self, sample_rate: u32) -> Result<(), String> {
-        if sample_rate == 0 {
+    pub fn initialize(&mut self, sample_rate: impl Into<f64>) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be nonzero".into());
         }
         self.sample_rate = sample_rate;

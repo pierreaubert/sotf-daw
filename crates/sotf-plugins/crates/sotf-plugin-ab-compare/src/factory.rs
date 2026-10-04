@@ -27,6 +27,20 @@ use std::collections::HashMap;
 /// only grow latency and bursts; correctness never depends on this value.
 const CONVERTER_CHUNK_FRAMES: usize = 256;
 
+fn native_output_rate(plugin: &dyn Plugin, input_rate: u32) -> Result<u32, String> {
+    let output_rate = plugin.output_sample_rate(f64::from(input_rate));
+    if !output_rate.is_finite()
+        || output_rate <= 0.0
+        || output_rate > f64::from(u32::MAX)
+        || output_rate.fract() != 0.0
+    {
+        return Err(format!(
+            "A/B Compare plugin returned unsupported native output sample rate {output_rate}"
+        ));
+    }
+    Ok(output_rate as u32)
+}
+
 /// Create a plugin, delegating to the external factory if provided,
 /// falling back to the built-in limited factory.
 fn create_plugin(
@@ -135,7 +149,7 @@ pub fn build_path_from_config_with_factory(
         } => {
             let plugin =
                 create_plugin(plugin_type, parameters, num_channels, sample_rate, factory)?;
-            let folded = plugin.output_sample_rate(sample_rate);
+            let folded = native_output_rate(plugin.as_ref(), sample_rate)?;
             host.add_plugin(plugin)?;
             (None, Some(folded))
         }
@@ -153,7 +167,7 @@ pub fn build_path_from_config_with_factory(
                     running_rate,
                     factory,
                 )?;
-                running_rate = plugin.output_sample_rate(running_rate);
+                running_rate = native_output_rate(plugin.as_ref(), running_rate)?;
                 host.add_plugin(plugin)?;
             }
             (None, Some(running_rate))
@@ -225,7 +239,7 @@ fn normalize_path_output_clock(
         }
     }
     host.build()?;
-    let path_rate = host.output_sample_rate(outer_rate);
+    let path_rate = host.output_sample_rate(outer_rate)?;
     // The factory fold must agree with host negotiation exactly: any drift
     // means a stale running rate, which fails here instead of clocking a
     // stage wrong downstream.
@@ -258,7 +272,7 @@ fn normalize_path_output_clock(
             .map_err(|error| format!("A/B Compare clock converter failed: {error}"))?;
     host.add_plugin(Box::new(converter))?;
     host.build()?;
-    let converted_rate = host.output_sample_rate(outer_rate);
+    let converted_rate = host.output_sample_rate(outer_rate)?;
     if converted_rate != outer_rate {
         return Err(format!(
             "A/B Compare clock converter produced {converted_rate} Hz instead of {outer_rate} Hz"
@@ -368,7 +382,7 @@ fn normalize_graph_output_clock(
     let converter_id = host.add_node_at_rate(name, Box::new(converter), path_rate)?;
     host.add_edge(GraphEdge::new(sink, converter_id))?;
     host.build()?;
-    let converted_rate = host.output_sample_rate(outer_rate);
+    let converted_rate = host.output_sample_rate(outer_rate)?;
     if converted_rate != outer_rate {
         return Err(format!(
             "A/B Compare clock converter produced {converted_rate} Hz instead of {outer_rate} Hz"
@@ -474,7 +488,7 @@ fn build_graph(
                 .get(&nodes[up].id)
                 .copied()
                 .expect("topological construction resolves upstream input clocks first");
-            upstream.push(upstream_plugin.output_sample_rate(upstream_input));
+            upstream.push(native_output_rate(upstream_plugin.as_ref(), upstream_input)?);
         }
         let mut rate = sample_rate;
         if let Some((&first, rest)) = upstream.split_first() {
@@ -493,7 +507,7 @@ fn build_graph(
             rate,
             factory,
         )?;
-        output_rates.insert(node.id.clone(), plugin.output_sample_rate(rate));
+        output_rates.insert(node.id.clone(), native_output_rate(plugin.as_ref(), rate)?);
         constructed[index] = Some(plugin);
         input_rates.insert(node.id.clone(), rate);
     }

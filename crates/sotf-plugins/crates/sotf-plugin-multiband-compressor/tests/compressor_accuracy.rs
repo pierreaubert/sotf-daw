@@ -173,7 +173,7 @@ fn one_band_plugin(
     configure(&mut params);
     let mut plugin = MultibandCompressorPlugin::try_from_params(channels, params, sample_rate)
         .expect("valid one-band configuration");
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -598,7 +598,7 @@ fn adjacent_multitone_matches_lr4_prototype_phase_and_sum() {
         };
         let mut plugin =
             MultibandCompressorPlugin::try_from_params(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         if let Some(band) = solo_band {
             plugin
                 .set_parameter(
@@ -788,7 +788,7 @@ fn broadband_preset_matches_explicit_core_config() {
     };
     let mut reference =
         MultibandCompressorPlugin::try_from_params(2, explicit, sample_rate).unwrap();
-    reference.initialize(sample_rate).unwrap();
+    reference.initialize(f64::from(sample_rate)).unwrap();
 
     // Same configuration reached through the runtime setters instead.
     let mut configured = MultibandCompressorPlugin::try_from_params(
@@ -800,7 +800,7 @@ fn broadband_preset_matches_explicit_core_config() {
         sample_rate,
     )
     .unwrap();
-    configured.initialize(sample_rate).unwrap();
+    configured.initialize(f64::from(sample_rate)).unwrap();
     for (id, value) in [
         ("threshold", ParameterValue::Float(-24.0)),
         ("ratio", ParameterValue::Float(4.0)),
@@ -990,7 +990,7 @@ fn dense_automation_with_new_stages_is_partition_invariant() {
         };
         let mut plugin =
             MultibandCompressorPlugin::try_from_params(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let warmup_frames = 1024usize;
         let mut warmup: Vec<f32> = (0..warmup_frames)
             .flat_map(|frame| {

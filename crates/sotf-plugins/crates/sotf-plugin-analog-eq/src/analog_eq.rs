@@ -35,7 +35,7 @@ const BAND_TYPES: [BiquadFilterType; 4] = [
 
 pub struct AnalogEqPlugin {
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     initialized: bool,
 
     // Band state (f64 DSP precision).
@@ -143,9 +143,9 @@ impl AnalogEqPlugin {
         Ok(plugin)
     }
 
-    fn sample_rate_for_build(&self) -> u32 {
-        if self.sample_rate == 0 {
-            48_000
+    fn sample_rate_for_build(&self) -> f64 {
+        if self.sample_rate <= 0.0 {
+            48_000.0
         } else {
             self.sample_rate
         }
@@ -169,8 +169,8 @@ impl AnalogEqPlugin {
     /// (Re)build the per-channel filter bank in place. Only called from
     /// construction, `initialize`, and parameter application — never from the
     /// realtime process path with a steady layout.
-    fn rebuild_filters(&mut self, sample_rate: u32) {
-        let sr = sample_rate.max(1) as f64;
+    fn rebuild_filters(&mut self, sample_rate: f64) {
+        let sr = sample_rate.max(1.0);
         let bands = band_params(self);
         if self.filters.len() != self.channels {
             self.filters = (0..self.channels)
@@ -433,9 +433,9 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Analog EQ sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Analog EQ sample rate must be finite and greater than zero".to_string());
         }
         self.sample_rate = sample_rate;
         self.rebuild_filters(sample_rate);

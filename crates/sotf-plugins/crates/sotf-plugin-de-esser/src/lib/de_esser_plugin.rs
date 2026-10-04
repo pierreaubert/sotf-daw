@@ -36,7 +36,7 @@ const DETECTOR_POLE_Q: f32 = std::f32::consts::FRAC_1_SQRT_2;
 
 pub struct DeEsserPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Detection
     pub(super) param_frequency: ParameterId,
@@ -125,7 +125,7 @@ pub struct DeEsserPlugin {
 
 impl DeEsserPlugin {
     pub fn new(channels: usize) -> Self {
-        let sr = 44100u32;
+        let sr = 44_100.0;
         let freq = default_frequency();
         let q = default_q();
 
@@ -266,13 +266,14 @@ impl DeEsserPlugin {
     pub fn try_from_params_at_sample_rate(
         channels: usize,
         params: DeEsserPluginParams,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> PluginResult<Self> {
+        let sample_rate = sample_rate.into();
         if channels == 0 {
             return Err("De-Esser requires at least one channel".to_string());
         }
-        if sample_rate == 0 {
-            return Err("De-Esser sample rate must be greater than zero".to_string());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("De-Esser sample rate must be finite and greater than zero".to_string());
         }
         if params.sidechain_external && channels.checked_mul(2).is_none() {
             return Err("De-Esser external-sidechain channel count overflows usize".into());
@@ -315,7 +316,7 @@ impl DeEsserPlugin {
         Ok(Self::from_validated_params(channels, params))
     }
 
-    fn validate_detection_band(frequency: f32, q: f32, sample_rate: u32) -> PluginResult<()> {
+    fn validate_detection_band(frequency: f32, q: f32, sample_rate: f64) -> PluginResult<()> {
         let (_, high_edge) = Self::bandpass_edges(frequency, q);
         let max_frequency = sample_rate as f32 * 0.475;
         if frequency >= max_frequency || high_edge >= max_frequency {
@@ -348,7 +349,7 @@ impl DeEsserPlugin {
         (f_low, f_high)
     }
 
-    pub(super) fn make_hp_filters(channels: usize, freq: f32, q: f32, sr: u32) -> BiquadBank<f32> {
+    pub(super) fn make_hp_filters(channels: usize, freq: f32, q: f32, sr: f64) -> BiquadBank<f32> {
         let (f_low, _) = Self::bandpass_edges(freq, q);
         let template = Biquad::new(
             BiquadFilterType::Highpass,
@@ -360,7 +361,7 @@ impl DeEsserPlugin {
         BiquadBank::new(&template, channels)
     }
 
-    pub(super) fn make_lp_filters(channels: usize, freq: f32, q: f32, sr: u32) -> BiquadBank<f32> {
+    pub(super) fn make_lp_filters(channels: usize, freq: f32, q: f32, sr: f64) -> BiquadBank<f32> {
         let (_, f_high) = Self::bandpass_edges(freq, q);
         let template = Biquad::new(
             BiquadFilterType::Lowpass,
@@ -950,7 +951,7 @@ impl DeEsserPlugin {
 
         // Update diagnostic cache (throttled)
         self.cache_counter = self.cache_counter.saturating_add(num_frames);
-        let cache_interval = (self.sample_rate as usize / 30).max(1);
+        let cache_interval = ((self.sample_rate / 30.0).floor() as usize).max(1);
         if self.cache_counter >= cache_interval {
             self.cache_counter %= cache_interval;
             self.cache.update(|d| {
@@ -1138,9 +1139,9 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         self.apply_parameter(id, value)
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("De-Esser sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("De-Esser sample rate must be finite and greater than zero".to_string());
         }
         Self::validate_detection_band(self.frequency, self.q, sample_rate)?;
         // Size the drain scratch before mutating DSP state so a capacity

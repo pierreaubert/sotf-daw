@@ -38,7 +38,7 @@ fn spectral_plugin(strength: f32) -> HissReducerPlugin {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
 }
 
@@ -50,7 +50,7 @@ fn time_domain_plugin(strength: f32) -> HissReducerPlugin {
             ..HissReducerPluginParams::default()
         },
     );
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     plugin
 }
 
@@ -271,7 +271,7 @@ fn zero_strength_is_exact_and_spectral_unity_reconstructs() {
                     ..HissReducerPluginParams::default()
                 },
             );
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             let frames = 8192;
             let input: Vec<f32> = (0..frames * channels)
                 .map(|i| ((i * 7919 % 1021) as f32 / 510.5 - 1.0) * 0.2)
@@ -323,7 +323,7 @@ fn strength_law_is_monotonic_and_rate_consistent() {
                 ..HissReducerPluginParams::default()
             },
         );
-        plugin.initialize(rate).unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
         let frames = rate as usize * 3;
         let mut state = 0x9a1e_0000u32.wrapping_add(rate);
         let input: Vec<f32> = (0..frames).map(|_| 0.02 * lcg(&mut state)).collect();

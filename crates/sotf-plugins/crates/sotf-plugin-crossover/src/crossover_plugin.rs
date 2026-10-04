@@ -24,7 +24,7 @@ const NEW_IIR_MAX_CUTOFF_HZ: f32 = 20_000.0;
 const NEW_IIR_MAX_SAMPLE_RATE_RATIO: f32 = 0.495;
 const COEFFICIENT_UPDATE_SAMPLES: usize = 16;
 
-fn validate_new_iir_cutoff(frequency: f32, sample_rate: u32) -> Result<(), String> {
+fn validate_new_iir_cutoff(frequency: f32, sample_rate: f64) -> Result<(), String> {
     let sample_rate_limit = sample_rate as f32 * NEW_IIR_MAX_SAMPLE_RATE_RATIO;
     if !frequency.is_finite()
         || frequency < NEW_IIR_MIN_CUTOFF_HZ
@@ -38,7 +38,7 @@ fn validate_new_iir_cutoff(frequency: f32, sample_rate: u32) -> Result<(), Strin
     Ok(())
 }
 
-fn validate_new_iir_frequencies(frequencies: &[f32], sample_rate: u32) -> Result<(), String> {
+fn validate_new_iir_frequencies(frequencies: &[f32], sample_rate: f64) -> Result<(), String> {
     for &frequency in frequencies {
         validate_new_iir_cutoff(frequency, sample_rate)?;
     }
@@ -121,7 +121,7 @@ impl FirBandAlignment {
 
 pub struct CrossoverPlugin {
     pub(super) num_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     /// Set once the host has compiled/initialized this instance. Structural
     /// FIR parameters are configuration-only after this point.
     initialized: bool,
@@ -224,7 +224,7 @@ impl CrossoverPlugin {
         }
         let kind = CrossoverKind::parse(crossover_type)?;
         let mode = CrossoverMode::from_str(output)?;
-        let sr = 48000;
+        let sr = 48_000.0;
         let fir_taps = if fir_taps.is_multiple_of(2) {
             fir_taps
                 .checked_add(1)
@@ -389,7 +389,7 @@ impl CrossoverPlugin {
             }
         }
         let num_channels = channel_frequencies_hz.len();
-        let sr = 48000u32;
+        let sr = 48_000.0;
         let per_channel_lr4: Vec<Lr4Crossover> = if kind == CrossoverKind::Lr24 {
             channel_frequencies_hz
                 .iter()
@@ -1295,9 +1295,9 @@ impl Plugin for CrossoverPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("crossover sample rate must be greater than zero".into());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("crossover sample rate must be finite and greater than zero".into());
         }
         if self.kind.is_new_iir() {
             validate_new_iir_frequencies(&self.all_frequencies, sample_rate)?;

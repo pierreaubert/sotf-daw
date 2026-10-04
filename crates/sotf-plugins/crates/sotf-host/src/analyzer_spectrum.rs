@@ -23,7 +23,7 @@ const MAX_BINS: usize = 120;
 
 pub struct SpectrumAnalyzer {
     pub config: SpectrumConfig,
-    pub sample_rate: u32,
+    pub sample_rate: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,7 +72,7 @@ impl Default for SpectrumConfig {
 
 pub struct SpectrumAnalyzerPlugin {
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     config: SpectrumConfig,
     // Latest analysis window per channel. Keeping only the newest samples gives
     // a display analyzer bounded freshness for arbitrarily large blocks.
@@ -111,14 +111,14 @@ impl SpectrumAnalyzerPlugin {
 
     fn validate_config(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         config: &SpectrumConfig,
     ) -> Result<(), String> {
         if num_channels == 0 {
             return Err("spectrum analyzer requires at least one channel".into());
         }
-        if sample_rate == 0 {
-            return Err("spectrum analyzer sample rate must be non-zero".into());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("spectrum analyzer sample rate must be finite and positive".into());
         }
         if !(MIN_BINS..=MAX_BINS).contains(&config.num_bins) {
             return Err(format!("num_bins must be in {MIN_BINS}..={MAX_BINS}"));
@@ -143,7 +143,7 @@ impl SpectrumAnalyzerPlugin {
         Ok(())
     }
 
-    fn effective_config(config: &SpectrumConfig, sample_rate: u32) -> SpectrumConfig {
+    fn effective_config(config: &SpectrumConfig, sample_rate: f64) -> SpectrumConfig {
         SpectrumConfig {
             max_freq: config.max_freq.min(sample_rate as f32 * 0.5),
             ..config.clone()
@@ -152,7 +152,7 @@ impl SpectrumAnalyzerPlugin {
 
     fn build_bin_to_display(
         config: &SpectrumConfig,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> (Vec<Option<usize>>, Vec<bool>) {
         let fft_bin_hz = sample_rate as f32 / FFT_SIZE as f32;
         let log_min = config.min_freq.log10();
@@ -196,7 +196,7 @@ impl SpectrumAnalyzerPlugin {
 
     fn build_common(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         config: SpectrumConfig,
     ) -> Result<Self, String> {
         Self::validate_config(num_channels, sample_rate, &config)?;
@@ -281,7 +281,7 @@ impl SpectrumAnalyzerPlugin {
     /// be limited to Nyquist without changing the requested maximum frequency.
     pub fn with_config_at_sample_rate(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         config: SpectrumConfig,
     ) -> Result<Self, String> {
         Self::build_common(num_channels, sample_rate, config)
@@ -413,7 +413,7 @@ impl Plugin for SpectrumAnalyzerPlugin {
             _ => None,
         }
     }
-    fn initialize(&mut self, sr: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
         Self::validate_config(self.num_channels, sr, &self.config)?;
         let rate_changed = sr != self.sample_rate;
         self.sample_rate = sr;
@@ -570,7 +570,8 @@ impl Plugin for SpectrumAnalyzerPlugin {
             let s = if tau_seconds <= 0.0 {
                 0.0
             } else {
-                (-(elapsed_samples as f32) / (tau_seconds * self.sample_rate as f32)).exp()
+                (-(elapsed_samples as f64) / (f64::from(tau_seconds) * self.sample_rate)).exp()
+                    as f32
             };
             for i in 0..self.config.num_bins {
                 self.current_magnitudes[i] = if self.new_mags[i] == f32::NEG_INFINITY {

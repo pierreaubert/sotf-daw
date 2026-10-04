@@ -302,10 +302,15 @@ impl Plugin for HalInputPlugin {
         self.cached_parameters.clone()
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("HAL Input sample rate must be non-zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > f64::from(u32::MAX)
+            || sample_rate.fract() != 0.0
+        {
+            return Err("HAL Input transport requires a positive integer sample rate".to_string());
         }
+        let sample_rate = sample_rate as u32;
         self.sample_rate_mismatch = false;
 
         if let Some(ref reader) = self.reader {
@@ -395,7 +400,7 @@ impl Plugin for HalInputPlugin {
             Self::zero_fill_from(output, 0);
             return Err("HAL Input must be initialized before processing".to_string());
         };
-        if context.sample_rate != initialized_rate {
+        if context.sample_rate != f64::from(initialized_rate) {
             Self::zero_fill_from(output, 0);
             return Err(format!(
                 "HAL Input context rate {} Hz differs from initialized rate {} Hz",

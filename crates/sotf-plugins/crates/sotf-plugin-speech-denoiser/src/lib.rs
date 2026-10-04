@@ -128,7 +128,7 @@ pub struct SpeechDenoiserPlugin {
     dry_delay: Vec<Vec<f32>>,
     dry_pos: usize,
     cached_parameters: Vec<Parameter>,
-    initialized_sample_rate: Option<u32>,
+    initialized_sample_rate: Option<f64>,
     analyzer_cache: RealTimeCache<SpeechDenoiserData>,
     published_model_frames: u64,
     has_input: bool,
@@ -535,9 +535,14 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     /// rate. The selected model is parsed, transposed, and built here, off
     /// the audio callback; a failed load retains the previous backend with
     /// its accepted model and populated history.
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if sample_rate != 48_000.0 {
+            return Err(format!(
+                "Speech denoiser requires exactly 48000 Hz; received {sample_rate} Hz"
+            ));
+        }
         self.inner
-            .initialize_with_model(sample_rate, self.channels, self.model.backend_id())?;
+            .initialize_with_model(48_000, self.channels, self.model.backend_id())?;
         let latency = self.inner.latency_samples();
         debug_assert_eq!(latency, SPEECH_DENOISER_LATENCY_FRAMES);
         self.dry_delay = vec![vec![0.0; latency]; self.channels];

@@ -60,7 +60,8 @@ pub struct EarlyReflections {
 
 impl EarlyReflections {
     /// Create an ERG from a room preset.
-    pub fn new(sample_rate: u32, preset: RoomPreset, mod_depth: f32) -> Self {
+    pub fn new(sample_rate: impl Into<f64>, preset: RoomPreset, mod_depth: f32) -> Self {
+        let sample_rate = sample_rate.into();
         let sr = sample_rate as f32;
         let max_delay = max_tap_delay_samples(sr);
         let max_mod_depth = (MAX_MOD_DEPTH_MS * sr * 0.001).ceil() as usize;

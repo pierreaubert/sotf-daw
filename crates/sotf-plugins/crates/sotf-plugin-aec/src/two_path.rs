@@ -93,9 +93,10 @@ impl TwoPathAec {
         echo_tail_samples: usize,
         fg_mu: f32,
         bg_mu: f32,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> Self {
-        let block_seconds = block_size as f32 / sample_rate.max(1) as f32;
+        let sample_rate = sample_rate.into();
+        let block_seconds = (block_size as f64 / sample_rate.max(1.0)) as f32;
         let power_alpha = (-block_seconds / 0.100).exp();
         Self {
             foreground: Pbfdaf::new(block_size, echo_tail_samples, fg_mu, 1e-6),

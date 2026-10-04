@@ -46,7 +46,7 @@ impl Allpass2State {
 }
 
 pub struct MonoToStereoPlugin {
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     pub(super) freq_dependent: bool,
     pub(super) stereo_width: Smoother,
     pub(super) decor_low_hz: f32,
@@ -81,7 +81,7 @@ impl Default for MonoToStereoPlugin {
 impl MonoToStereoPlugin {
     pub fn new() -> Self {
         let mut plugin = Self {
-            sample_rate: 44_100,
+            sample_rate: 44_100.0,
             freq_dependent: pk(MS, "freq_dependent").default_bool(),
             stereo_width: Smoother::new(
                 pk(MS, "stereo_width").default_f64() as f32,
@@ -184,9 +184,10 @@ impl MonoToStereoPlugin {
     pub fn try_from_params_at_sample_rate(
         channels: usize,
         params: MonoToStereoPluginParams,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
     ) -> Result<Self, String> {
-        if sample_rate == 0 {
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be greater than zero".to_string());
         }
         if params.decor_high_hz >= sample_rate as f32 * 0.5 {
@@ -339,8 +340,8 @@ impl Plugin for MonoToStereoPlugin {
         param_bridge::get_parameter(MS, id, |i| self.param_value(i))
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be greater than zero".to_string());
         }
         if self.decor_high_hz >= sample_rate as f32 * 0.5 {

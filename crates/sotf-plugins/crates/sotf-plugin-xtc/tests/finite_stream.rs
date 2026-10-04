@@ -17,7 +17,7 @@ fn neutral(n: usize, rate: u32) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

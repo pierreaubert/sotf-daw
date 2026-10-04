@@ -256,7 +256,7 @@ fn settling_minimum_frames(kind: &str, cutoff: f64, sample_rate: u32) -> usize {
 
 fn make_plugin(kind: &str, sample_rate: u32, cutoff: f64, output: &str) -> CrossoverPlugin {
     let mut plugin = CrossoverPlugin::new(1, kind, cutoff, output).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -1065,7 +1065,7 @@ fn make_multiway_plugin(kind: &str, sample_rate: u32, cutoffs: &[f64]) -> Crosso
     } else {
         CrossoverPlugin::new_multiway(2, kind, cutoffs[0], "both", &cutoffs[1..]).unwrap()
     };
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 
@@ -1390,7 +1390,7 @@ fn make_per_channel_plugin(
 ) -> CrossoverPlugin {
     let mut plugin =
         CrossoverPlugin::new_per_channel("LR48", frequencies.to_vec(), modes.to_vec()).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

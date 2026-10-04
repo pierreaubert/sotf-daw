@@ -21,7 +21,7 @@ use std::sync::Arc;
 pub struct PndPlugin {
     // Configuration
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Components — one analyzer per channel for multi-channel analysis
     pub(super) analyzers: Vec<PndAnalyzer>,
@@ -78,7 +78,7 @@ impl PndPlugin {
     pub fn new(channels: usize) -> Self {
         let mut p = Self {
             channels,
-            sample_rate: 44100, // Default, updated in initialize
+            sample_rate: 44_100.0, // Default, updated in initialize
             analyzers: Vec::new(),
             current_ratio: 1.0,
             last_drift_ratio: 1.0,
@@ -460,13 +460,13 @@ pub(super) fn smooth_drift_ratio(
     target: f64,
     time_seconds: f32,
     elapsed_frames: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> f64 {
-    if elapsed_frames == 0 || sample_rate == 0 {
+    if elapsed_frames == 0 || !sample_rate.is_finite() || sample_rate <= 0.0 {
         return current;
     }
     let tau = f64::from(time_seconds.max(f32::MIN_POSITIVE));
-    let elapsed = elapsed_frames as f64 / sample_rate as f64;
+    let elapsed = elapsed_frames as f64 / sample_rate;
     let alpha = 1.0 - (-elapsed / tau).exp();
     current + (target - current) * alpha
 }
@@ -703,15 +703,15 @@ impl Plugin for PndPlugin {
         }
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         if self.channels == 0 {
             return Err("PND requires at least one channel".to_string());
         }
         let drain_samples = PV_HOP_SIZE
             .checked_mul(self.channels)
             .ok_or_else(|| "PND drain sample count overflow".to_string())?;
-        if sample_rate == 0 {
-            return Err("PND sample rate must be non-zero".to_string());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("PND sample rate must be finite and positive".to_string());
         }
         if self.reference_frequency_hz > 0.0
             && self.reference_frequency_hz >= sample_rate as f32 * 0.5

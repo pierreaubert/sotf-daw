@@ -404,13 +404,13 @@ impl DenoiserPlugin {
     /// Calculate time coefficient for envelope follower
     /// Converts time in milliseconds to exponential smoothing coefficient
     #[inline]
-    pub(in super::super) fn time_to_coeff(time_ms: f32, sample_rate: u32, hop_size: usize) -> f32 {
+    pub(in super::super) fn time_to_coeff(time_ms: f32, sample_rate: f64, hop_size: usize) -> f32 {
         if time_ms <= 0.0 {
             0.0
         } else {
             // Adjust for hop-based frame rate, not sample rate
-            let frame_rate = sample_rate as f32 / hop_size as f32;
-            (-1.0 / (time_ms * 0.001 * frame_rate)).exp()
+            let frame_rate = sample_rate / hop_size as f64;
+            (-1.0 / (f64::from(time_ms) * 0.001 * frame_rate)).exp() as f32
         }
     }
 

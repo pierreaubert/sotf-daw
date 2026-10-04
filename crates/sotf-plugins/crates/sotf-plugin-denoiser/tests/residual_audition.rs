@@ -544,9 +544,9 @@ fn audition_switching_analytic_gate_multirate_bidirectional() {
                     ..base
                 },
             );
-            parked_residual.initialize(rate).unwrap();
-            parked_cleaned.initialize(rate).unwrap();
-            fading.initialize(rate).unwrap();
+            parked_residual.initialize(f64::from(rate)).unwrap();
+            parked_cleaned.initialize(f64::from(rate)).unwrap();
+            fading.initialize(f64::from(rate)).unwrap();
             let residual = process_all_at_rate(&mut parked_residual, &input, 1, &[1024], rate);
             let cleaned = process_all_at_rate(&mut parked_cleaned, &input, 1, &[1024], rate);
             let mut actual = input.to_vec();

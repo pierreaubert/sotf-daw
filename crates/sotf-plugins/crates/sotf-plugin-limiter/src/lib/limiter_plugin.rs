@@ -21,7 +21,7 @@ const MAX_DRAIN_FRAMES: usize = 256;
 
 pub struct LimiterPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
     initialized: bool,
     oversampling: usize,
     oversampled: Option<Box<OversampledPath>>,
@@ -107,7 +107,7 @@ impl LimiterPlugin {
         p
     }
 
-    pub(super) fn max_lookahead_len(sample_rate: u32) -> usize {
+    pub(super) fn max_lookahead_len(sample_rate: f64) -> usize {
         let max_ms = pk(LM, "lookahead").max_f64() as f32;
         ((max_ms * 0.001 * sample_rate as f32) as usize).max(1)
     }
@@ -516,8 +516,8 @@ impl ParametricInPlacePlugin for LimiterPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 || self.channels == 0 {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || self.channels == 0 {
             return Err("limiter requires nonzero sample rate and channels".into());
         }
         if self.oversampling != 0 {

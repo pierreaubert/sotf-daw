@@ -44,7 +44,7 @@ pub(super) fn compute_room_params_hash(params: &XtcPluginParams) -> u64 {
 /// FFT instead of creating a fresh planner on every call (Optimization 4).
 pub(super) fn compute_room_reflection_data(
     params: &XtcPluginParams,
-    sample_rate: u32,
+    sample_rate: f64,
     num_bins: usize,
     fft_forward: Option<Arc<dyn RealToComplex<f32>>>,
 ) -> Option<Arc<RoomReflectionData>> {

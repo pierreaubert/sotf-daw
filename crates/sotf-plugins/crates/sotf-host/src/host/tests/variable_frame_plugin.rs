@@ -66,8 +66,8 @@ impl Plugin for VariableFramePlugin {
     fn output_frames_for_input(&self, _: usize) -> usize {
         self.output_frames
     }
-    fn output_sample_rate(&self, _: u32) -> u32 {
-        self.output_rate
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from(self.output_rate)
     }
     fn latency_samples(&self) -> usize {
         1

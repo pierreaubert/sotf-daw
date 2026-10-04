@@ -16,7 +16,7 @@ fn plugin(rate: u32, smoothing: f32, enabled: bool) -> XtcPlugin {
         rate,
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let id = ParameterId::from("auto_gain_smoothing_ms");
     plugin
         .set_parameter(id.clone(), ParameterValue::Float(smoothing))

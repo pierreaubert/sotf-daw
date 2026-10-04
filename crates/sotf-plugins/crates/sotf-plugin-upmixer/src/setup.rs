@@ -10,7 +10,7 @@ use sotf_host::speaker_config::{
 };
 
 #[inline]
-fn subharmonic_envelope_coeff(time_ms: f32, sample_rate: u32) -> f32 {
+fn subharmonic_envelope_coeff(time_ms: f32, sample_rate: f64) -> f32 {
     let time_sec = (time_ms / 1000.0).max(1e-6);
     let sample_rate = (sample_rate as f32).max(1.0);
     1.0 - (-1.0_f32 / (time_sec * sample_rate)).exp()

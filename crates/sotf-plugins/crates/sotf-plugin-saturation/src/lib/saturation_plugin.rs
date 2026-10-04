@@ -31,7 +31,7 @@ use sotf_host::smoothing::Smoother;
 
 pub struct SaturationPlugin {
     pub(super) channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     // Parameters
     pub(super) param_mode: ParameterId,
@@ -84,7 +84,7 @@ pub struct SaturationPlugin {
 
 impl SaturationPlugin {
     pub fn new(channels: usize) -> Self {
-        let sr = 44100u32;
+        let sr = 44_100.0;
         let drive = default_drive();
         let mix = default_mix();
         let output_gain = default_output_gain();
@@ -860,13 +860,13 @@ impl ParametricInPlacePlugin for SaturationPlugin {
         Ok(())
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
-        if sample_rate == 0 {
-            return Err("Saturation sample rate must be greater than zero".to_string());
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Saturation sample rate must be finite and greater than zero".to_string());
         }
         self.sample_rate = sample_rate;
 
-        let maximum_exciter = sample_rate as f32 * 0.475;
+        let maximum_exciter = (sample_rate * 0.475) as f32;
         if self.exciter_freq > maximum_exciter {
             return Err(format!(
                 "Saturation exciter frequency {} Hz must not exceed {maximum_exciter} Hz at {sample_rate} Hz",

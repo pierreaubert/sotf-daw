@@ -21,7 +21,7 @@ pub fn test_varied_buffer_sizes<P: Plugin>(
 
         while frames_processed < total_frames {
             let num_frames = (block_size).min(total_frames - frames_processed);
-            let ctx = ProcessContext::new(sample_rate as u32, num_frames);
+            let ctx = ProcessContext::new(sample_rate, num_frames);
 
             let in_slice = &input[frames_processed * num_channels_in
                 ..(frames_processed + num_frames) * num_channels_in];
@@ -67,7 +67,7 @@ pub fn test_parameter_ramp(
 
     while warmed_frames < warmup_frames {
         let num_frames = block_size.min(warmup_frames - warmed_frames);
-        let ctx = ProcessContext::new(sample_rate as u32, num_frames);
+        let ctx = ProcessContext::new(sample_rate, num_frames);
         plugin
             .process(
                 &warmup_input[..num_frames * channels],
@@ -91,7 +91,7 @@ pub fn test_parameter_ramp(
             .set_parameter(param_id.clone(), ParameterValue::Float(val))
             .unwrap();
 
-        let ctx = ProcessContext::new(sample_rate as u32, num_frames);
+        let ctx = ProcessContext::new(sample_rate, num_frames);
 
         let in_slice =
             &input[frames_processed * channels..(frames_processed + num_frames) * channels];

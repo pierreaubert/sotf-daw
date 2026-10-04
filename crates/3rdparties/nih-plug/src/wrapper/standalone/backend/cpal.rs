@@ -428,7 +428,17 @@ impl CpalMidir {
                 .context("No default audio output device available")?,
         };
 
-        let requested_sample_rate = cpal::SampleRate(config.sample_rate as u32);
+        // CPAL devices advertise integer rates. Reject fractional or invalid
+        // standalone settings instead of silently truncating them.
+        let requested_rate = config.sample_rate;
+        anyhow::ensure!(
+            requested_rate.is_finite()
+                && requested_rate > 0.0
+                && f64::from(requested_rate) <= f64::from(u32::MAX)
+                && requested_rate.fract() == 0.0,
+            "CPAL sample rate must be a finite positive integer, got {requested_rate}"
+        );
+        let requested_sample_rate = cpal::SampleRate(requested_rate as u32);
         let requested_buffer_size = cpal::BufferSize::Fixed(config.period_size);
         let num_input_channels = audio_io_layout
             .main_input_channels
@@ -757,7 +767,7 @@ impl CpalMidir {
         let config = self.config.clone();
         let mut num_processed_samples = 0usize;
         move |data, _info| {
-            let mut transport = Transport::new(config.sample_rate);
+            let mut transport = Transport::new(f64::from(config.sample_rate));
             transport.pos_samples = Some(num_processed_samples as i64);
             transport.tempo = Some(config.tempo as f64);
             transport.time_sig_numerator = Some(config.timesig_num as i32);

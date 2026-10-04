@@ -79,7 +79,7 @@ fn noise_profile_learning_is_one_second_in_both_fft_modes() {
 #[test]
 fn captured_profile_requested_and_effective_states_are_distinct() {
     let mut plugin = DenoiserPlugin::new(1, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     plugin
         .parametric_set_parameter(
@@ -200,7 +200,7 @@ fn multires_output_is_host_block_invariant() {
         params.multi_resolution = true;
         params.reduction_db = 12.0;
         let mut plugin = DenoiserPlugin::from_params(1, params);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         let mut output = Vec::with_capacity(total_frames);
         for chunk in source.chunks(block_size) {
             let mut block = chunk.to_vec();
@@ -240,7 +240,7 @@ fn test_bypass_mode() {
     let mut params = DenoiserPluginParams::default();
     params.reduction_db = 0.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let input = make_test_signal(num_frames, 2, 1000.0);
@@ -266,7 +266,7 @@ fn test_bypass_mode() {
 fn test_output_nonzero() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -282,7 +282,7 @@ fn test_output_nonzero() {
 #[test]
 fn test_low_latency_accepts_warm_4096_frame_in_place_blocks() {
     let mut plugin = DenoiserPlugin::new(2, true);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let context = ProcessContext::new(SAMPLE_RATE, num_frames);
@@ -305,7 +305,7 @@ fn test_mono_pnd_accepts_4096_frame_in_place_block() {
     let mut params = DenoiserPluginParams::default();
     params.polyphonic_detection = true;
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 1, 1000.0);
@@ -343,7 +343,7 @@ fn streamed_impulse_delay_matches_reported_latency_for_varied_blocks() {
             params.low_latency = true;
         }
         let mut plugin = DenoiserPlugin::from_params(1, params);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
         let fft_size = plugin.config.fft_size;
         let impulse_index = fft_size / 4;
@@ -377,7 +377,7 @@ fn streamed_impulse_delay_matches_reported_latency_for_varied_blocks() {
 #[test]
 fn test_rejects_oversized_classical_in_place_block() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = plugin.max_in_place_frames() + 1;
     let mut buffer = make_test_signal(num_frames, 2, 1000.0);
@@ -400,7 +400,7 @@ fn test_rejects_oversized_classical_in_place_block() {
 #[test]
 fn test_ftz_guard_restores_fpu_control_on_error_returns() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let before = current_fpu_control();
     let mut mismatched = vec![0.0_f32; 1023];
@@ -449,7 +449,7 @@ fn test_denoiser_data_clone_keeps_mutable_cache_slots() {
 fn test_continuous_processing() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let block_size = 512;
     let num_blocks = 20;
@@ -476,7 +476,7 @@ fn test_continuous_processing() {
 #[test]
 fn test_mcra_noise_estimation() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -495,7 +495,7 @@ fn test_noise_reduction_reduces_energy() {
     params.reduction_db = 20.0;
     params.floor_db = -40.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 8192;
     let input = make_noisy_signal(num_frames, 2, -10.0, -30.0);
@@ -523,7 +523,7 @@ fn test_energy_preservation_with_low_reduction() {
     params.reduction_db = 3.0;
     params.floor_db = -20.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 8192;
     let input = make_test_signal(num_frames, 2, 1000.0);
@@ -551,7 +551,7 @@ fn test_polyphonic_detection_mode() {
     params.polyphonic_detection = true;
     params.reduction_db = 12.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -570,7 +570,7 @@ fn test_psychoacoustic_masking() {
     params.psychoacoustic_masking = true;
     params.reduction_db = 20.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -589,7 +589,7 @@ fn test_dd_enabled_mode() {
     params.dd_enabled = true;
     params.dd_alpha = 0.98;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -605,7 +605,7 @@ fn test_dd_enabled_mode() {
 #[test]
 fn test_reset_clears_state() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -626,7 +626,7 @@ fn test_reset_clears_state() {
 fn test_mono_channel() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 1, 1000.0);
@@ -643,7 +643,7 @@ fn test_mono_channel() {
 fn test_multi_channel() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(6, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 6, 1000.0);
@@ -679,7 +679,7 @@ fn test_time_to_coeff() {
 #[test]
 fn test_denoiser_data_exposure() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 1000.0);
@@ -703,7 +703,7 @@ fn test_floor_prevents_complete_attenuation() {
     params.reduction_db = 40.0;
     params.floor_db = -30.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 8192;
     let input = make_noisy_signal(num_frames, 2, 0.0, -40.0);
@@ -727,7 +727,7 @@ fn test_floor_prevents_complete_attenuation() {
 fn test_high_frequency_content() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 4096;
     let mut input = make_test_signal(num_frames, 2, 15000.0);
@@ -744,7 +744,7 @@ fn test_high_frequency_content() {
 fn test_low_frequency_content() {
     let params = DenoiserPluginParams::default();
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let num_frames = 8192;
     let mut input = make_test_signal(num_frames, 2, 50.0);
@@ -768,7 +768,7 @@ fn test_multi_resolution_mode() {
     params.low_latency = false;
 
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Verify parameter round-trip
     let got = plugin.parametric_get_parameter(&ParameterId::from("multi_resolution"));
@@ -823,7 +823,7 @@ fn test_bootstrap_noise_floor_seeding() {
     let mut params = DenoiserPluginParams::default();
     params.reduction_db = 12.0;
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let block_size = plugin.config.fft_size; // one FFT frame = 1 "frame" of STFT
 
@@ -855,7 +855,7 @@ fn test_mcra_noise_floor_converges_on_noise() {
     // Feed pure noise and verify the noise floor estimate converges
     // to a reasonable value, not just stays at zero.
     let mut plugin = DenoiserPlugin::from_params(2, DenoiserPluginParams::default());
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Feed ~2 seconds of moderate-level noise to let MCRA converge
     let block_size = 4096;
@@ -901,7 +901,7 @@ fn test_mcra_noise_floor_converges_on_noise() {
 #[test]
 fn test_mcra_fast_adaptation() {
     let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let block_size = 4096;
     let context = ProcessContext::new(SAMPLE_RATE, block_size);
@@ -1014,7 +1014,7 @@ fn test_median_filter_reduces_spikes() {
 #[test]
 fn test_learn_noise_resets_mcra() {
     let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let block_size = 4096;
     let context = ProcessContext::new(SAMPLE_RATE, block_size);
@@ -1130,7 +1130,7 @@ fn test_harmonic_percussive_transient_gain_not_forced_to_half() {
     params.reduction_db = 5.0;
     params.floor_db = -40.0;
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
         .parametric_set_parameter(
             ParameterId::from("harmonic_percussive"),
@@ -1166,7 +1166,7 @@ fn test_multi_resolution_no_double_smoothing() {
     params.reduction_db = 10.0;
     params.low_latency = false;
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Warm up past bootstrap with a steady tone
     let warmup = make_test_signal(8192, 1, 1000.0);
@@ -1211,7 +1211,7 @@ fn test_psychoacoustic_masking_does_not_pass_noise_only() {
     params.reduction_db = 20.0;
     params.floor_db = -40.0;
     let mut plugin = DenoiserPlugin::from_params(1, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let block_size = 4096;
     let ctx = ProcessContext::new(SAMPLE_RATE, block_size);
@@ -1258,7 +1258,7 @@ fn test_pnd_fed_block_not_sample_by_sample() {
     params.polyphonic_detection = true;
     params.reduction_db = 12.0;
     let mut plugin = DenoiserPlugin::from_params(2, params);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // Use a block size large enough to trigger FFT processing and get output.
     // fft_size=2048, latency=2048 samples; we need >2048 frames to see output.
@@ -1282,7 +1282,7 @@ fn test_pnd_fed_block_not_sample_by_sample() {
 #[test]
 fn test_fft_returns_result() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     let input = vec![0.5f32; plugin.config.fft_size * plugin.config.channels];
 
@@ -1302,14 +1302,14 @@ fn test_initialize_rejects_zero_sample_rate() {
         "Expected sample-rate rejection, got: {err}"
     );
     // Valid rates still accepted.
-    plugin.initialize(SAMPLE_RATE).unwrap();
-    assert_eq!(plugin.config.sample_rate, SAMPLE_RATE);
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
+    assert_eq!(plugin.config.sample_rate, f64::from(SAMPLE_RATE));
 }
 
 #[test]
 fn test_non_finite_input_is_sanitized_and_state_recovers() {
     let mut plugin = DenoiserPlugin::new(2, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
 
     // One block of NaN/inf: must not error, must produce finite output, and
     // must not poison the long-memory MCRA/profile estimators.
@@ -1367,7 +1367,7 @@ fn test_non_finite_input_is_sanitized_and_state_recovers() {
 #[test]
 fn test_curve_and_audition_indices_rebuild_tables_and_fade_target() {
     let mut plugin = DenoiserPlugin::new(1, false);
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     assert_eq!(plugin.param_value(29), Some(1.0));
     assert_eq!(plugin.param_value(32), Some(0.0));
     assert!(plugin.curve.scales.iter().all(|&s| s == 1.0));
@@ -1410,7 +1410,7 @@ fn test_audition_fade_snaps_to_exact_endpoints() {
     // ~2.2x margin.
     for target in [1.0f64, 0.0f64] {
         let mut plugin = DenoiserPlugin::new(1, false);
-        plugin.initialize(SAMPLE_RATE).unwrap();
+        plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
         if target == 0.0 {
             // Start the downward fade from the exact opposite endpoint.
             plugin.set_param_value(32, 1.0);
@@ -1569,7 +1569,7 @@ fn test_audition_fade_multirate_bidirectional_properties() {
     // reconverges to the final target within the same bound from the flip.
     use std::f64::consts::{E, LN_2};
     for rate in [44_100u32, 48_000, 96_000, 192_000] {
-        let decay = DenoiserPlugin::audition_decay_for_rate(rate);
+        let decay = DenoiserPlugin::audition_decay_for_rate(f64::from(rate));
         assert!(
             decay > 0.0 && decay < 1.0,
             "rate {rate}: decay {decay} must be a one-pole coefficient"
@@ -1582,7 +1582,7 @@ fn test_audition_fade_multirate_bidirectional_properties() {
         let tau_frames = (0.005 * f64::from(rate)).round() as i64;
         for target in [1.0f64, 0.0f64] {
             let mut plugin = DenoiserPlugin::new(1, false);
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             if target == 0.0 {
                 // Prepare the exact opposite endpoint (generous cap; the
                 // bound itself is measured on the fade below, not here).
@@ -1663,7 +1663,7 @@ fn test_audition_fade_multirate_bidirectional_properties() {
             // advances (before nominal settle at every rate) and require
             // reconvergence within the bound counted from the flip.
             let mut plugin = DenoiserPlugin::new(1, false);
-            plugin.initialize(rate).unwrap();
+            plugin.initialize(f64::from(rate)).unwrap();
             if target == 0.0 {
                 plugin.set_param_value(32, 1.0);
                 for _ in 0..200_000 {

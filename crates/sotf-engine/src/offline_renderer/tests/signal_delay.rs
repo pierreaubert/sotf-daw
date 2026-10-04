@@ -29,8 +29,8 @@ impl Plugin for DeclaredDelay {
     fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
         None
     }
-    fn output_sample_rate(&self, _: u32) -> u32 {
-        self.rate
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from(self.rate)
     }
     fn signal_delay_samples(&self) -> f64 {
         self.delay

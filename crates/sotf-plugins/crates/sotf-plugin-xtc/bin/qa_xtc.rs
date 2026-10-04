@@ -16,7 +16,7 @@ fn main() {
     };
 
     let mut plugin = XtcPlugin::new(params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     println!("=== QA: Xtc Plugin ===");
 

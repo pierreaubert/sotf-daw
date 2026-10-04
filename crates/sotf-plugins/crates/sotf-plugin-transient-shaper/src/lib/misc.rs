@@ -3,11 +3,11 @@
 ///
 /// coeff = 1.0 - exp(-1.0 / (time_ms * 0.001 * sample_rate))
 #[inline]
-pub(super) fn time_to_coeff(time_ms: f32, sample_rate: u32) -> f32 {
-    if time_ms <= 0.0 || sample_rate == 0 {
+pub(super) fn time_to_coeff(time_ms: f32, sample_rate: f64) -> f32 {
+    if time_ms <= 0.0 || !sample_rate.is_finite() || sample_rate <= 0.0 {
         return 1.0;
     }
-    1.0 - (-1.0 / (time_ms * 0.001 * sample_rate as f32)).exp()
+    (1.0 - (-1.0 / (f64::from(time_ms) * 0.001 * sample_rate)).exp()) as f32
 }
 
 /// One-pole envelope follower: tracks `target` with separate attack/release

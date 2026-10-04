@@ -10,7 +10,7 @@ fn plugin(rate: u32, enabled: bool) -> AaePlugin {
         ..Default::default()
     })
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 

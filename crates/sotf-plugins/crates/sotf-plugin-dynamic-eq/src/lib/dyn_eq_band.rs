@@ -42,13 +42,14 @@ pub(super) struct DynEqBand {
 impl DynEqBand {
     pub(super) fn new(
         channels: usize,
-        sample_rate: u32,
+        sample_rate: impl Into<f64>,
         frequency: f32,
         q: f32,
         target_gain_db: f32,
         attack_ms: f32,
         release_ms: f32,
     ) -> Self {
+        let sample_rate = sample_rate.into();
         let (f_low, f_high) = bandpass_edges(frequency, q);
 
         let sidechain_bp_hp = (0..channels)
@@ -149,11 +150,15 @@ impl DynEqBand {
         ((desired_amplitude - 1.0) / (full_amplitude - 1.0)).clamp(0.0, 1.0)
     }
 
-    fn max_frequency(sample_rate: u32) -> f32 {
+    fn max_frequency(sample_rate: f64) -> f32 {
         (sample_rate as f32 * 0.475).min(20_000.0)
     }
 
-    pub(super) fn preflight_reinitialize(&self, sample_rate: u32) -> Result<(), String> {
+    pub(super) fn preflight_reinitialize(
+        &self,
+        sample_rate: impl Into<f64>,
+    ) -> Result<(), String> {
+        let sample_rate = sample_rate.into();
         if self.shape == DynEqShape::Peak {
             return Ok(());
         }
@@ -202,7 +207,8 @@ impl DynEqBand {
         Ok(())
     }
 
-    pub(super) fn rebuild_sidechain_filters(&mut self, sample_rate: u32) {
+    pub(super) fn rebuild_sidechain_filters(&mut self, sample_rate: impl Into<f64>) {
+        let sample_rate = sample_rate.into();
         self.frequency = self.frequency.clamp(20.0, Self::max_frequency(sample_rate));
         match self.shape {
             DynEqShape::Peak => {
@@ -254,7 +260,8 @@ impl DynEqBand {
         }
     }
 
-    pub(super) fn rebuild_eq_filters(&mut self, sample_rate: u32) {
+    pub(super) fn rebuild_eq_filters(&mut self, sample_rate: impl Into<f64>) {
+        let sample_rate = sample_rate.into();
         self.frequency = self.frequency.clamp(20.0, Self::max_frequency(sample_rate));
         match self.shape {
             DynEqShape::Peak => {
@@ -325,7 +332,8 @@ impl DynEqBand {
         }
     }
 
-    pub(super) fn reset(&mut self, sample_rate: u32) {
+    pub(super) fn reset(&mut self, sample_rate: impl Into<f64>) {
+        let sample_rate = sample_rate.into();
         self.rebuild_sidechain_filters(sample_rate);
         self.rebuild_eq_filters(sample_rate);
         for core in &mut self.cores {

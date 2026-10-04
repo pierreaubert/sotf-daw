@@ -36,7 +36,7 @@ fn create_nested_plugin(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     create_plugin(plugin_type, channels, sample_rate, &parameters.to_string())
 }
@@ -51,7 +51,7 @@ fn create_nested_plugin(
 pub fn create_plugin(
     plugin_type: &str,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     config_json: &str,
 ) -> Result<Box<dyn Plugin>, String> {
     match plugin_type {

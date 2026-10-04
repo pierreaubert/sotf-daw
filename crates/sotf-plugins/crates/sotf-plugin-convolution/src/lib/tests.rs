@@ -693,6 +693,32 @@ fn resampled_ir_delta_at_tail_preserves_the_last_response() {
 }
 
 #[test]
+fn fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin() {
+    let source_rate = 48_000;
+    let target_rate = 12_345.678;
+    let source_len = 4_097;
+    let mut left = vec![0.0_f32; source_len];
+    let mut right = vec![0.0_f32; source_len];
+    left[0] = 1.0;
+    right[source_len - 1] = 1.0;
+    let output = ConvolutionPlugin::resample_ir(&[left, right], source_rate, target_rate).unwrap();
+    let expected_len = (source_len as f64 * target_rate / f64::from(source_rate)).ceil() as usize;
+    assert_eq!(output.len(), 2);
+    assert_eq!(output[0].len(), expected_len);
+    assert_eq!(output[1].len(), expected_len);
+    let first_peak = output[0]
+        .iter()
+        .enumerate()
+        .max_by(|(_, left), (_, right)| left.abs().total_cmp(&right.abs()))
+        .map(|(index, sample)| (index, sample.abs()))
+        .unwrap();
+    assert!(first_peak.0 < 16 && first_peak.1 > 0.1);
+    let last_expected = ((source_len - 1) as f64 * target_rate / f64::from(source_rate)).round() as usize;
+    let tail = &output[1][last_expected.saturating_sub(8)..(last_expected + 9).min(expected_len)];
+    assert!(tail.iter().any(|sample| sample.abs() > 0.05));
+}
+
+#[test]
 fn configured_zero_latency_head_is_stable_before_runtime_ir_load() {
     let params = ConvolutionPluginParams {
         ir_file: String::new(),

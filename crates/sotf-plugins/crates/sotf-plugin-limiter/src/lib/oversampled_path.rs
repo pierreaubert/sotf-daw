@@ -61,7 +61,7 @@ impl Delay {
 
 pub(super) struct OversampledPath {
     channels: usize,
-    rate: u32,
+    rate: f64,
     wet: OversampledPlugin<WetCore>,
     guard: NativeKernel,
     guard_controls: Controls,
@@ -93,22 +93,27 @@ pub(super) struct OversampledPath {
 impl OversampledPath {
     pub fn prepare(
         channels: usize,
-        rate: u32,
+        rate: f64,
         factor: u32,
         lookahead_ms: f32,
         controls: Controls,
         isp: bool,
         mix: f32,
     ) -> PluginResult<Self> {
-        if rate == 0 || !(1..=MAX_CHANNELS).contains(&channels) || ![2, 4].contains(&factor) {
+        if !rate.is_finite()
+            || rate <= 0.0
+            || !(1..=MAX_CHANNELS).contains(&channels)
+            || ![2, 4].contains(&factor)
+        {
             return Err(
                 "oversampled limiter requires a nonzero rate, 1..=32 channels, and factor 2 or 4"
                     .into(),
             );
         }
-        let high_rate = rate
-            .checked_mul(factor)
-            .ok_or_else(|| "limiter oversampled rate overflow".to_string())?;
+        let high_rate = rate * f64::from(factor);
+        if !high_rate.is_finite() {
+            return Err("limiter oversampled rate overflow".to_string());
+        }
         // Quantize once at the native clock, then use an exact integer multiple.
         let delay = (lookahead_ms.max(0.0) * 0.001 * rate as f32) as usize;
         let high_delay = delay

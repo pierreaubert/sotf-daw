@@ -5,7 +5,7 @@ use super::plugin_descriptor::PluginDescriptor;
 #[cfg(feature = "external-plugin-clap")]
 pub(super) fn load_clap_backend(
     descriptor: &PluginDescriptor,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
     audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
@@ -20,7 +20,7 @@ pub(super) fn load_clap_backend(
 #[cfg(not(feature = "external-plugin-clap"))]
 pub(super) fn load_clap_backend(
     _descriptor: &PluginDescriptor,
-    _sample_rate: u32,
+    _sample_rate: f64,
     _max_block_frames: usize,
     _audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
@@ -30,7 +30,7 @@ pub(super) fn load_clap_backend(
 #[cfg(feature = "external-plugin-vst3")]
 pub(super) fn load_vst3_backend(
     descriptor: &PluginDescriptor,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
     audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
@@ -45,7 +45,7 @@ pub(super) fn load_vst3_backend(
 #[cfg(not(feature = "external-plugin-vst3"))]
 pub(super) fn load_vst3_backend(
     _descriptor: &PluginDescriptor,
-    _sample_rate: u32,
+    _sample_rate: f64,
     _max_block_frames: usize,
     _audio_setup: Option<&NativePluginAudioSetup>,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
@@ -55,7 +55,7 @@ pub(super) fn load_vst3_backend(
 #[cfg(all(feature = "external-plugin-au", target_os = "macos"))]
 pub(super) fn load_audio_unit_backend(
     descriptor: &PluginDescriptor,
-    sample_rate: u32,
+    sample_rate: f64,
     max_block_frames: usize,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
     Ok(Box::new(super::au_backend::AudioUnitBackend::load(
@@ -71,7 +71,7 @@ pub(super) fn load_audio_unit_backend(
 ))]
 pub(super) fn load_audio_unit_backend(
     _descriptor: &PluginDescriptor,
-    _sample_rate: u32,
+    _sample_rate: f64,
     _max_block_frames: usize,
 ) -> Result<Box<dyn NativeExternalPluginBackend>, String> {
     Err("AudioUnit backend is available only on macOS builds with external-plugin-au".to_string())

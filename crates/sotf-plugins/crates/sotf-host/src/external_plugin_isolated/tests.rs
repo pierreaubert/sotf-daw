@@ -309,7 +309,7 @@ impl Plugin for DrainObservedPlugin {
         self.inner.reset_checked()
     }
 
-    fn initialize(&mut self, sample_rate: u32) -> PluginResult<()> {
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.inner.initialize(sample_rate)
     }
 
