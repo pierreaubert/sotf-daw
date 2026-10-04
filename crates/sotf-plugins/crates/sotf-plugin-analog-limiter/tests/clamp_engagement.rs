@@ -137,7 +137,7 @@ fn render(input: &[f32]) -> Vec<f32> {
         analog_trim: 0.0,
     };
     let mut plugin = AnalogLimiterPlugin::from_params(2, params).expect("plugin must construct");
-    plugin.initialize(RATE).expect("plugin must initialize");
+    plugin.initialize(f64::from(RATE)).expect("plugin must initialize");
     let mut output = vec![0.0; input.len()];
     for (block_index, chunk) in input.chunks(BLOCK_FRAMES * 2).enumerate() {
         let mut block = chunk.to_vec();

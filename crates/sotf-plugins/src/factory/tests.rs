@@ -1177,6 +1177,41 @@ fn ab_compare_facade_injects_factory_before_initial_path_build() {
 }
 
 #[test]
+fn ab_compare_factory_accepts_exact_fractional_nested_clock() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NESTED_RATE_BITS: AtomicU64 = AtomicU64::new(0);
+
+    fn recording_factory(
+        plugin_type: &str,
+        parameters: &serde_json::Value,
+        channels: usize,
+        sample_rate: f64,
+    ) -> Result<Box<dyn Plugin>, String> {
+        NESTED_RATE_BITS.store(sample_rate.to_bits(), Ordering::SeqCst);
+        create_plugin(plugin_type, parameters, channels, sample_rate)
+    }
+
+    let parameters = serde_json::json!({
+        "path_a": {"type": "Plugin", "plugin_type": "gain", "parameters": {}},
+        "path_b": {"type": "Plugin", "plugin_type": "gain", "parameters": {}},
+        "auto_gain_enabled": false
+    });
+    let plugin = create_plugin("ab_compare", &parameters, 2, 12_345.678)
+        .expect("nested factory must accept the host's exact fractional rate");
+    assert_eq!(plugin.input_channels(), 2);
+    assert_eq!(plugin.output_channels(), 2);
+    let rate = 12_345.678;
+    let params = serde_json::from_value(parameters.clone()).unwrap();
+    crate::ABComparePlugin::from_params_with_factory(2, rate, params, recording_factory)
+        .expect("nested path must construct at the exact host rate");
+    assert_eq!(NESTED_RATE_BITS.load(Ordering::SeqCst), rate.to_bits());
+    for invalid_rate in [f64::NAN, f64::INFINITY, 0.0] {
+        assert!(create_plugin("ab_compare", &parameters, 2, invalid_rate).is_err());
+    }
+}
+
+#[test]
 fn binaural_catalog_and_factory_share_exact_layout_contract() {
     let entry = catalog_entry("binaural_decoder").unwrap();
     assert_eq!(

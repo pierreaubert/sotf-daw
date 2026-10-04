@@ -70,13 +70,13 @@ use std::path::PathBuf;
 /// External-key construction is refused here: single-width callers cannot
 /// route the 2N key bus. Graph contexts that route key buses through
 /// sidechain edges use [`create_plugin_with_external_key`] instead.
-pub fn create_plugin(
+pub fn create_plugin<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
 ) -> Result<Box<dyn Plugin>, String> {
-    create_plugin_inner(plugin_type, parameters, channels, sample_rate, false)
+    create_plugin_inner(plugin_type, parameters, channels, sample_rate.into(), false)
 }
 
 /// Create a plugin instance, permitting external-key construction.
@@ -87,22 +87,25 @@ pub fn create_plugin(
 /// sidechain edges onto the key bus) and the FFI two-bus path. Linear
 /// single-width chains must keep using [`create_plugin`] so external-key
 /// requests keep failing loudly there.
-pub fn create_plugin_with_external_key(
+pub fn create_plugin_with_external_key<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
 ) -> Result<Box<dyn Plugin>, String> {
-    create_plugin_inner(plugin_type, parameters, channels, sample_rate, true)
+    create_plugin_inner(plugin_type, parameters, channels, sample_rate.into(), true)
 }
 
 fn create_plugin_inner(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     allow_external_key_bus: bool,
 ) -> Result<Box<dyn Plugin>, String> {
+    if !sample_rate.is_finite() || sample_rate <= 0.0 {
+        return Err(format!("Plugin sample rate must be finite and positive, got {sample_rate}"));
+    }
     let plugin_type = catalog_entry(plugin_type)
         .map(|entry| entry.canonical_type)
         .ok_or_else(|| format!("Unknown plugin type: {plugin_type}"))?;
@@ -929,11 +932,11 @@ fn require_graph_input_channels(
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-pub fn create_plugin_with_sandbox_grants(
+pub fn create_plugin_with_sandbox_grants<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
     sandbox_grants: &PluginSandboxGrantStore,
     preset_root: impl Into<PathBuf>,
 ) -> Result<Box<dyn Plugin>, String> {
@@ -941,7 +944,7 @@ pub fn create_plugin_with_sandbox_grants(
         plugin_type,
         parameters,
         channels,
-        sample_rate,
+        sample_rate.into(),
         &SandboxedPluginCreationOptions::authorized_runtime(
             sandbox_grants.clone(),
             preset_root,
@@ -951,11 +954,11 @@ pub fn create_plugin_with_sandbox_grants(
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-pub fn create_plugin_with_sandbox_grants_for_backend(
+pub fn create_plugin_with_sandbox_grants_for_backend<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
     sandbox_grants: &PluginSandboxGrantStore,
     preset_root: impl Into<PathBuf>,
     sandbox_launch_backend: PluginSandboxLaunchBackend,
@@ -964,7 +967,7 @@ pub fn create_plugin_with_sandbox_grants_for_backend(
         plugin_type,
         parameters,
         channels,
-        sample_rate,
+        sample_rate.into(),
         &SandboxedPluginCreationOptions::authorized_runtime(
             sandbox_grants.clone(),
             preset_root,
@@ -977,11 +980,11 @@ pub fn create_plugin_with_sandbox_grants_for_backend(
 
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 #[allow(clippy::too_many_arguments)]
-pub fn create_plugin_with_sandbox_grants_for_backend_and_launcher(
+pub fn create_plugin_with_sandbox_grants_for_backend_and_launcher<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
     sandbox_grants: &PluginSandboxGrantStore,
     preset_root: impl Into<PathBuf>,
     sandbox_launch_backend: PluginSandboxLaunchBackend,
@@ -991,7 +994,7 @@ pub fn create_plugin_with_sandbox_grants_for_backend_and_launcher(
         plugin_type,
         parameters,
         channels,
-        sample_rate,
+        sample_rate.into(),
         &SandboxedPluginCreationOptions::authorized_runtime(
             sandbox_grants.clone(),
             preset_root,
@@ -1003,13 +1006,17 @@ pub fn create_plugin_with_sandbox_grants_for_backend_and_launcher(
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-pub fn create_plugin_with_sandbox_options(
+pub fn create_plugin_with_sandbox_options<S: Into<f64>>(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: S,
     options: &SandboxedPluginCreationOptions,
 ) -> Result<Box<dyn Plugin>, String> {
+    let sample_rate = sample_rate.into();
+    if !sample_rate.is_finite() || sample_rate <= 0.0 {
+        return Err(format!("Plugin sample rate must be finite and positive, got {sample_rate}"));
+    }
     if catalog_entry(plugin_type).is_some_and(|entry| entry.canonical_type == "external") {
         create_external_plugin_with_sandbox_options(parameters, channels, sample_rate, options)
     } else {
@@ -1021,7 +1028,7 @@ pub fn create_plugin_with_sandbox_options(
 fn create_external_plugin_with_sandbox_options(
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
     options: &SandboxedPluginCreationOptions,
 ) -> Result<Box<dyn Plugin>, String> {
     validate_external_plugin_security_config(parameters)?;

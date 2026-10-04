@@ -36,7 +36,7 @@ fn info_channels_and_core_latency() {
     let info = plugin.info();
     assert_eq!(info.name, "Analog Limiter");
     assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
-    plugin.initialize(SR).unwrap();
+    plugin.initialize(f64::from(SR)).unwrap();
     // Latency is whatever the wrapped core reports for identical settings:
     // build the core directly as an independent oracle.
     let core = sotf_plugin_limiter::LimiterPlugin::from_params(
