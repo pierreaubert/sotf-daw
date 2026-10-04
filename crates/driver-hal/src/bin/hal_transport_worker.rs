@@ -1,9 +1,13 @@
 //! Cross-process worker for the Swift/Rust HAL transport stress test.
 
+#[cfg(target_os = "macos")]
 use driver_hal::SharedAudioBuffer;
+#[cfg(target_os = "macos")]
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
 use std::time::Duration;
 
+#[cfg(target_os = "macos")]
 fn parse_arguments() -> Result<(PathBuf, usize), String> {
     let mut arguments = std::env::args_os().skip(1);
     let path = arguments.next().map(PathBuf::from).ok_or_else(|| {
@@ -25,6 +29,7 @@ fn parse_arguments() -> Result<(PathBuf, usize), String> {
     Ok((path, iterations))
 }
 
+#[cfg(target_os = "macos")]
 fn run() -> Result<(), String> {
     let (path, iterations) = parse_arguments()?;
     let mut transport = SharedAudioBuffer::open(&path)
@@ -54,9 +59,16 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn main() {
     if let Err(error) = run() {
         eprintln!("{error}");
         std::process::exit(1);
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn main() {
+    eprintln!("hal_transport_worker is supported only on macOS");
+    std::process::exit(1);
 }
