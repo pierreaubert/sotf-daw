@@ -700,7 +700,7 @@ mod tests {
                     assert_eq!(config["recombination_mode"], mode);
                     assert_eq!(config["num_bands"], num_bands);
 
-                    let plugin = create_plugin("BandSplit", 48_000, &params).unwrap();
+                    let plugin = create_plugin("BandSplit", 48_000.0, &params).unwrap();
                     assert_eq!(
                         (plugin.input_channels(), plugin.output_channels()),
                         (2, num_bands * 2)
@@ -736,7 +736,7 @@ mod tests {
         } else {
             serde_json::json!({ "num_bands": num_bands }).to_string()
         };
-        let mut plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, &config).unwrap();
+        let mut plugin = plugins_bridge::create_plugin("DynamicEQ", 2, 48_000.0, &config).unwrap();
         plugin.initialize(48_000.0).unwrap();
         let mut infos = plugin
             .parameters()
@@ -771,7 +771,7 @@ mod tests {
         integer_shape_config["bands"][0]["shape"] = Value::from(0);
         let integer_shape_json = serde_json::to_string(&integer_shape_config).unwrap();
         let integer_shape_error =
-            match plugins_bridge::create_plugin("DynamicEQ", 2, 48_000, &integer_shape_json) {
+            match plugins_bridge::create_plugin("DynamicEQ", 2, 48_000.0, &integer_shape_json) {
                 Ok(_) => panic!("integer DynamicEQ shape unexpectedly parsed"),
                 Err(error) => error,
             };
@@ -779,7 +779,7 @@ mod tests {
             "AUD139 pre-fix DynamicEQ constructor JSON: {integer_shape_json}; parse error: {integer_shape_error}"
         );
         assert!(integer_shape_error.to_string().contains("expected value"));
-        let default_plugin = create_plugin("DynamicEQ", 48_000, &default_params).unwrap();
+        let default_plugin = create_plugin("DynamicEQ", 48_000.0, &default_params).unwrap();
         assert_eq!(default_plugin.output_channels(), 2);
 
         let shape_indices = [0, 1, 2, 3, 0, 1, 2, 3];
@@ -819,7 +819,7 @@ mod tests {
             );
         }
 
-        let restored = create_plugin("DynamicEQ", 48_000, &params).unwrap();
+        let restored = create_plugin("DynamicEQ", 48_000.0, &params).unwrap();
         assert_eq!(
             restored.get_parameter(&ParameterId::from("band_7_shape")),
             Some(ParameterValue::Int(3))

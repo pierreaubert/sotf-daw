@@ -25,7 +25,7 @@ fn analog_limiter_infos() -> Vec<BridgedParamInfo> {
     let plugin = plugins_bridge::create_plugin(
         "AnalogLimiter",
         crate::wrapper::plugin_constructor_channels("AnalogLimiter"),
-        48_000,
+        48_000.0,
         &crate::wrapper::default_plugin_config("AnalogLimiter"),
     )
     .expect("create AnalogLimiter to inspect its complete parameter schema");
@@ -132,7 +132,7 @@ fn all_six_models_construct_readable_and_render() {
             .expect("model info")
             .default_value = index as f64;
         let params = analog_limiter_params(&infos);
-        let mut plugin = configuration::create_plugin("AnalogLimiter", 48_000, &params)
+        let mut plugin = configuration::create_plugin("AnalogLimiter", 48_000.0, &params)
             .expect("construct with restored model");
         plugin.initialize(48_000.0).unwrap();
         assert_eq!(

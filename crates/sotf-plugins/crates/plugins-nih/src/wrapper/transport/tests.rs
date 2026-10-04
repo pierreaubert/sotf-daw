@@ -631,7 +631,7 @@ fn malformed_values_preroll_and_overflow_keep_fallback_bounded() {
         loop_range: Some((-1, 20)),
         ..Default::default()
     };
-    let first = tracker.context(native, 48_000, 7);
+    let first = tracker.context(native, 48_000.0, 7);
     assert_eq!(first.transport.sample_position, 0);
     assert_eq!(first.transport.ppq_position, -2.0);
     assert_eq!(first.transport.loop_range, LoopRange::new(0, 20));
@@ -640,20 +640,20 @@ fn malformed_values_preroll_and_overflow_keep_fallback_bounded() {
     native.bpm = Some(f64::INFINITY);
     native.time_signature = Some((0, 999));
     native.loop_range = Some((20, 10));
-    let second = tracker.context(native, 48_000, 17);
+    let second = tracker.context(native, 48_000.0, 17);
     assert_eq!(second.transport.sample_position, 0);
     assert_eq!(second.transport.bpm, 60.0);
     assert!((second.transport.ppq_position - (-2.0 + 7.0 / 48_000.0)).abs() < 1e-12);
     assert_eq!(second.transport.time_signature, TimeSignature::default());
     assert_eq!(second.transport.loop_range, None);
     assert_eq!(
-        tracker.context(native, 48_000, 1).transport.sample_position,
+        tracker.context(native, 48_000.0, 1).transport.sample_position,
         7
     );
     native.sample_position = Some(i64::MAX - 1);
-    tracker.context(native, 48_000, usize::MAX);
+    tracker.context(native, 48_000.0, usize::MAX);
     native.sample_position = None;
-    let saturated = tracker.context(native, 48_000, usize::MAX);
+    let saturated = tracker.context(native, 48_000.0, usize::MAX);
     assert_eq!(saturated.transport.sample_position, i64::MAX as u64);
     assert!(saturated.transport.ppq_position.is_finite());
 }

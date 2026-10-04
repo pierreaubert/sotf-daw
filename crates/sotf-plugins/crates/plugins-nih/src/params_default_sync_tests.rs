@@ -11,7 +11,7 @@ pub(super) fn schema_infos(name: &str) -> Vec<BridgedParamInfo> {
         let plugin = plugins_bridge::create_plugin(
             name,
             crate::wrapper::plugin_constructor_channels(name),
-            48_000,
+            48_000.0,
             &crate::wrapper::default_plugin_config(name),
         )
         .unwrap();
@@ -70,7 +70,7 @@ fn nondefault_realtime_values_preserve_runtime_types() {
         // Model the parameter state restored by the DAW before activation.
         info.default_value = raw_value;
         let params = DynamicParams::from_infos(&infos);
-        let mut plugin = plugins_bridge::create_plugin(name, 2, 48_000, "{}").unwrap();
+        let mut plugin = plugins_bridge::create_plugin(name, 2, 48_000.0, "{}").unwrap();
         plugin.initialize(48_000.0).unwrap();
         let parameter_id = ParameterId::from(id);
         assert_ne!(plugin.get_parameter(&parameter_id), Some(expected.clone()));
@@ -99,7 +99,7 @@ fn aae_room_preset_schema_matches_setup_only_runtime_contract() {
     let room_preset = infos.iter().find(|info| info.id == "room_preset").unwrap();
     assert!(!room_preset.realtime);
     assert_eq!(room_preset.kind, BridgedParamKind::Int);
-    let mut plugin = plugins_bridge::create_plugin("AAE", 2, 48_000, "{}").unwrap();
+    let mut plugin = plugins_bridge::create_plugin("AAE", 2, 48_000.0, "{}").unwrap();
     plugin.initialize(48_000.0).unwrap();
     let parameters = plugin.parameters();
     let runtime = parameters
@@ -211,7 +211,7 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
         let mut infos: Vec<_> = (0..bridge.count()).filter_map(|i| bridge.info(i)).collect();
         let channels = crate::wrapper::plugin_constructor_channels(name);
         let config = crate::wrapper::default_plugin_config(name);
-        let mut plugin = match plugins_bridge::create_plugin(name, channels, 48_000, &config) {
+        let mut plugin = match plugins_bridge::create_plugin(name, channels, 48_000.0, &config) {
             Ok(plugin) => plugin,
             Err(error) => {
                 failures.push(format!("{name} construction: {error}"));
@@ -235,7 +235,7 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
             info.id = crate::wrapper::legacy_external_param_id(name, &info.id).into_owned();
         }
         let params = DynamicParams::from_infos_for_plugin(name, &infos);
-        plugin = match super::configuration::create_plugin(name, 48_000, &params) {
+        plugin = match super::configuration::create_plugin(name, 48_000.0, &params) {
             Ok(plugin) => plugin,
             Err(error) => {
                 failures.push(format!("{name} restored construction: {error}"));
@@ -338,7 +338,7 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
             };
             infos[index].default_value = value;
             let params = DynamicParams::from_infos(&infos);
-            let result = super::configuration::create_plugin(name, 48_000, &params).and_then(
+            let result = super::configuration::create_plugin(name, 48_000.0, &params).and_then(
                 |mut plugin| {
                     let before: Vec<_> = plugin
                         .parameters()
@@ -411,7 +411,7 @@ fn compressor_detector_roundtrip_restores_and_processes() {
             info.default_value = value;
         }
         let params = DynamicParams::from_infos(&infos);
-        let mut plugin = super::configuration::create_plugin(name, 48_000, &params)
+        let mut plugin = super::configuration::create_plugin(name, 48_000.0, &params)
             .unwrap_or_else(|error| panic!("{name} detector restore: {error}"));
         for (id, expected) in [
             ("sidechain_hpf_hz", ParameterValue::Float(120.0)),
@@ -466,7 +466,7 @@ fn compressor_detector_roundtrip_restores_and_processes() {
             .unwrap_or_else(|| panic!("missing Compressor.{id}"))
             .default_value = 1.0;
         let params = DynamicParams::from_infos(&infos);
-        let error = match super::configuration::create_plugin("Compressor", 48_000, &params) {
+        let error = match super::configuration::create_plugin("Compressor", 48_000.0, &params) {
             Ok(_) => panic!("unsupported control must reject"),
             Err(error) => error,
         };

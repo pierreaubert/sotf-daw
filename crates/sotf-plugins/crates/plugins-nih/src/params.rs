@@ -2883,7 +2883,7 @@ mod tests {
             .filter_map(|index| bridge.info(index))
             .collect::<Vec<_>>();
         let plugin =
-            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, r#"{"num_filters":10}"#)
+            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, r#"{"num_filters":10}"#)
                 .unwrap();
         for parameter in plugin.parameters() {
             if infos.iter().any(|info| info.id == parameter.id.as_str()) {
@@ -2928,10 +2928,10 @@ mod tests {
         let config = params.linear_phase_eq_config_json().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&config).unwrap();
         assert_eq!(parsed["filters"][0]["placement"], "left");
-        let inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config).unwrap();
+        let inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, &config).unwrap();
         let inner_latency = inner.latency_samples();
         let expected_adapter_latency = 2 * inner.realtime_quantum_frames().max(64);
-        let mut adapter = sotf_host::AsyncTimelinePlugin::new(inner, 48_000, 64).unwrap();
+        let mut adapter = sotf_host::AsyncTimelinePlugin::new(inner, 48_000.0, 64).unwrap();
 
         assert_eq!(
             adapter.latency_samples(),
@@ -3003,7 +3003,7 @@ mod tests {
             // Two channels resolve the default pair, so every placement
             // builds, and the DSP reports the same index back.
             let plugin =
-                plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config).unwrap();
+                plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, &config).unwrap();
             assert_eq!(
                 plugin.get_parameter(&ParameterId::from("band_0_placement")),
                 Some(ParameterValue::Int(index as i32)),
@@ -3028,7 +3028,7 @@ mod tests {
         let config = params.linear_phase_eq_config_json().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&config).unwrap();
         assert!(parsed["filters"][0].get("placement").is_none());
-        let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config).unwrap();
+        let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, &config).unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("band_0_placement")),
             Some(ParameterValue::Int(0))
@@ -3063,7 +3063,7 @@ mod tests {
             let parsed: serde_json::Value = serde_json::from_str(&config).unwrap();
             assert_eq!(parsed["filters"][0]["filter_type"], *label, "index {index}");
             let plugin =
-                plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config).unwrap();
+                plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, &config).unwrap();
             assert_eq!(
                 plugin.get_parameter(&ParameterId::from("band_0_type")),
                 Some(ParameterValue::Int(index as i32)),
@@ -3214,7 +3214,7 @@ mod tests {
         }
         let params = DynamicParams::from_infos(&infos);
         let config = params.linear_phase_eq_config_json().unwrap();
-        let mut plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000, &config)
+        let mut plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, &config)
             .expect("ten-band restored state must reconstruct");
         plugin.initialize(48_000.0).unwrap();
         assert_eq!(

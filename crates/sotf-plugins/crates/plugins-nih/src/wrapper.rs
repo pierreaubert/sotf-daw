@@ -1389,7 +1389,7 @@ macro_rules! sotf_nih_plugin {
                     && let Ok(plugin) = plugins_bridge::create_plugin(
                         $plugin_type,
                         $crate::wrapper::plugin_constructor_channels($plugin_type),
-                        48000,
+                        48000.0,
                         &$crate::wrapper::default_plugin_config($plugin_type),
                     )
                 {
@@ -1443,7 +1443,7 @@ macro_rules! sotf_nih_plugin {
                     crossover_active_output_buses: 1,
                     crossover_host_to_sotf: [0; 16],
                     eq_native_host_to_sotf: [0; 16],
-                    sample_rate: 48000,
+                    sample_rate: 48000.0,
                     structural_fingerprint: 0,
                     non_restartable_structural_fingerprint: 0,
                     hiss_momentary: $crate::params::hiss_profile::HissMomentaryLatch::default(),
@@ -2156,7 +2156,7 @@ macro_rules! sotf_nih_plugin {
                                 self.convolution_editor_service.mark_applied(generation);
                             }
                         } else if let Some(attempt) = convolution_restore_attempt.as_mut() {
-                            attempt.commit(candidate_sample_rate as f32);
+                            attempt.commit(candidate_sample_rate);
                         }
                         if let Some(attempt) = hiss_restore_attempt.as_mut() {
                             attempt.commit();

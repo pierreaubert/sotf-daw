@@ -207,7 +207,7 @@ fn check_streaming_automation<P: nih::ClapPlugin>(name: &str, key: &str, values:
     let params = crate::params::DynamicParams::from_infos(&infos);
     let create = || {
         let mut plugin =
-            crate::params::configuration::create_plugin(name, 48_000, &params).unwrap();
+            crate::params::configuration::create_plugin(name, 48_000.0, &params).unwrap();
         assert!(
             matches!(plugin.preferred_oversampling(), None | Some(1)),
             "{name} needs a buffered automation design"

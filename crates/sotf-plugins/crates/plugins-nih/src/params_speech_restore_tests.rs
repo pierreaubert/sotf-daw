@@ -42,9 +42,9 @@ fn speech_state(pairs: &[(&str, ParamValue)]) -> PluginState {
 
 fn build_speech_dsp(params: &DynamicParams, sample_rate: u32, max_block: usize) -> Box<dyn Plugin> {
     let plugin =
-        crate::params::configuration::create_plugin("SpeechDenoiser", sample_rate, params).unwrap();
+        crate::params::configuration::create_plugin("SpeechDenoiser", f64::from(sample_rate), params).unwrap();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, max_block).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     plugin
 }
 

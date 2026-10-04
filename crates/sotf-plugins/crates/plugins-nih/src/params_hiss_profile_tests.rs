@@ -139,7 +139,7 @@ fn seeded_v1(channels: usize, rate: u32) -> NoiseProfileData {
     let floors = (0..channels).map(|ch| -40.0 - ch as f32).collect();
     NoiseProfileData {
         format_version: 1,
-        sample_rate: rate,
+        sample_rate: f64::from(rate),
         channels,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: floors,
@@ -152,7 +152,7 @@ fn seeded_v2(channels: usize, rate: u32) -> NoiseProfileData {
     let powers = vec![1.0f32; channels * 513];
     NoiseProfileData {
         format_version: 2,
-        sample_rate: rate,
+        sample_rate: f64::from(rate),
         channels,
         measurement_cutoff_hz: 4000.0,
         floor_db_per_channel: (0..channels).map(|ch| -40.0 - ch as f32).collect(),
@@ -162,7 +162,7 @@ fn seeded_v2(channels: usize, rate: u32) -> NoiseProfileData {
                 fft_size: 1024,
                 hop_size: 256,
                 window: "hann-periodic".to_string(),
-                sample_rate: rate,
+                sample_rate: f64::from(rate),
                 channels,
                 num_bins: 513,
                 power_per_channel_bin: powers,
@@ -260,9 +260,9 @@ fn construction_config(
 fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
     let source_params = hiss_params();
     let mut source =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, r#"{"spectral_mode": true, "strength": 0.85}"#)
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true, "strength": 0.85}"#)
             .unwrap();
-    source.initialize(RATE_48K).unwrap();
+    source.initialize(f64::from(RATE_48K)).unwrap();
     apply_incoming_params(
         &source_params,
         &BTreeMap::from([
@@ -364,8 +364,8 @@ fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
     assert_eq!(carried, export.profile);
     let config = construction_config(&fresh_params, Some(&carried));
     let mut fresh_attempt = HissProfileRestoreAttempt::new(fresh_params.clone());
-    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    fresh.initialize(RATE_48K).unwrap();
+    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    fresh.initialize(f64::from(RATE_48K)).unwrap();
     fresh_params.complete_hiss_profile_restore();
     fresh_attempt.commit();
     install_snapshot(&fresh_params, &*fresh);
@@ -405,8 +405,8 @@ fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
 #[test]
 fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
     let mut profiler =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, "{}").unwrap();
-    profiler.initialize(RATE_48K).unwrap();
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), "{}").unwrap();
+    profiler.initialize(f64::from(RATE_48K)).unwrap();
     let colored_mono = first_difference_hiss(RATE_48K as usize, 0.035, 0xa07c);
     let colored = interleave_dual_mono(&colored_mono);
     hiss_start_capture(profiler.as_mut()).unwrap();
@@ -430,8 +430,8 @@ fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
 
     let source_params = hiss_params();
     let mut source =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, "{}").unwrap();
-    source.initialize(RATE_48K).unwrap();
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), "{}").unwrap();
+    source.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&source_params, &*source);
     let encoded = encode_hiss_field(7, Some(&v1));
     let incoming = PluginState {
@@ -452,8 +452,8 @@ fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
     assert_eq!(carried, v1);
     let config = construction_config(&source_params, Some(&carried));
     let mut attempt = HissProfileRestoreAttempt::new(source_params.clone());
-    source = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    source.initialize(RATE_48K).unwrap();
+    source = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    source.initialize(f64::from(RATE_48K)).unwrap();
     source_params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&source_params, &*source);
@@ -475,8 +475,8 @@ fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
         .expect("fresh v1 must carry");
     let config = construction_config(&fresh_params, Some(&carried));
     let mut fresh_attempt = HissProfileRestoreAttempt::new(fresh_params.clone());
-    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    fresh.initialize(RATE_48K).unwrap();
+    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    fresh.initialize(f64::from(RATE_48K)).unwrap();
     fresh_params.complete_hiss_profile_restore();
     fresh_attempt.commit();
 
@@ -503,11 +503,11 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
     let mut plugin = plugins_bridge::create_plugin(
         "HissReducer",
         2,
-        RATE_48K,
+        f64::from(RATE_48K),
         r#"{"spectral_mode": true}"#,
     )
     .unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     apply_incoming_params(
         &params,
@@ -530,8 +530,8 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -548,8 +548,8 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
     assert_eq!(kept, v2);
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let config = construction_config(&params, Some(&kept));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -574,8 +574,8 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
     assert!(params.hiss_profile_for_construction().unwrap().is_none());
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let config = construction_config(&params, None);
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -611,8 +611,8 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -653,9 +653,9 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
 
     let params_v2 = hiss_params();
     let mut with_v2 =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_96K, r#"{"spectral_mode": true}"#)
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), r#"{"spectral_mode": true}"#)
             .unwrap();
-    with_v2.initialize(RATE_96K).unwrap();
+    with_v2.initialize(f64::from(RATE_96K)).unwrap();
     install_snapshot(&params_v2, &*with_v2);
     apply_incoming_params(
         &params_v2,
@@ -678,8 +678,8 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     let mut attempt = HissProfileRestoreAttempt::new(params_v2.clone());
     let carried = params_v2.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params_v2, Some(&carried));
-    with_v2 = plugins_bridge::create_plugin("HissReducer", 2, RATE_96K, &config).unwrap();
-    with_v2.initialize(RATE_96K).unwrap();
+    with_v2 = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
+    with_v2.initialize(f64::from(RATE_96K)).unwrap();
     params_v2.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params_v2, &*with_v2);
@@ -690,7 +690,7 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     )
     .unwrap();
     let kept = kept.unwrap();
-    assert_eq!(kept.sample_rate, RATE_48K);
+    assert_eq!(kept.sample_rate, f64::from(RATE_48K));
     assert_eq!(kept, v2_48);
     assert!(
         !hiss_snapshot(&*with_v2)
@@ -703,9 +703,9 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
 
     let params_v1 = hiss_params();
     let mut with_v1 =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_96K, r#"{"spectral_mode": true}"#)
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), r#"{"spectral_mode": true}"#)
             .unwrap();
-    with_v1.initialize(RATE_96K).unwrap();
+    with_v1.initialize(f64::from(RATE_96K)).unwrap();
     install_snapshot(&params_v1, &*with_v1);
     apply_incoming_params(
         &params_v1,
@@ -728,8 +728,8 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     let mut attempt = HissProfileRestoreAttempt::new(params_v1.clone());
     let carried = params_v1.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params_v1, Some(&carried));
-    with_v1 = plugins_bridge::create_plugin("HissReducer", 2, RATE_96K, &config).unwrap();
-    with_v1.initialize(RATE_96K).unwrap();
+    with_v1 = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
+    with_v1.initialize(f64::from(RATE_96K)).unwrap();
     params_v1.complete_hiss_profile_restore();
     attempt.commit();
 
@@ -748,11 +748,11 @@ fn hiss_native_malformed_rejected_live_retained() {
     let mut plugin = plugins_bridge::create_plugin(
         "HissReducer",
         2,
-        RATE_48K,
+        f64::from(RATE_48K),
         r#"{"spectral_mode": true}"#,
     )
     .unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     apply_incoming_params(
         &params,
@@ -775,8 +775,8 @@ fn hiss_native_malformed_rejected_live_retained() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -897,8 +897,8 @@ fn hiss_native_no_action_replay_and_momentaries_excluded() {
     }
 
     let mut plugin =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, "{}").unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), "{}").unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     let good = PluginState {
         version: "hiss-good".to_owned(),
@@ -917,8 +917,8 @@ fn hiss_native_no_action_replay_and_momentaries_excluded() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -951,8 +951,8 @@ fn hiss_native_no_action_replay_and_momentaries_excluded() {
     assert_eq!(kept, v2);
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let config = construction_config(&params, Some(&kept));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -1021,11 +1021,11 @@ fn hiss_native_busy_never_drops_blob() {
     let mut plugin = plugins_bridge::create_plugin(
         "HissReducer",
         2,
-        RATE_48K,
+        f64::from(RATE_48K),
         r#"{"spectral_mode": true}"#,
     )
     .unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     apply_incoming_params(
         &params,
@@ -1048,8 +1048,8 @@ fn hiss_native_busy_never_drops_blob() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -1068,7 +1068,7 @@ fn hiss_native_busy_never_drops_blob() {
         let mut flag = false;
         while !churn_stop.load(Ordering::Relaxed) {
             flag = !flag;
-            snapshot.publish_live_flags(flag, RATE_48K);
+            snapshot.publish_live_flags(flag, f64::from(RATE_48K));
         }
     });
 
@@ -1090,9 +1090,9 @@ fn hiss_native_busy_never_drops_blob() {
 fn hiss_native_process_path_allocates_and_locks_nothing() {
     let params = hiss_params();
     let mut plugin =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, r#"{"spectral_mode": true}"#)
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true}"#)
             .unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     let v2 = seeded_v2(2, RATE_48K);
     let incoming = PluginState {
@@ -1112,8 +1112,8 @@ fn hiss_native_process_path_allocates_and_locks_nothing() {
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
     let carried = params.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params, Some(&carried));
-    plugin = plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, &config).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     params.complete_hiss_profile_restore();
     attempt.commit();
     install_snapshot(&params, &*plugin);
@@ -1159,7 +1159,7 @@ impl nih_plug::prelude::InitContext<HissWiringWrapper> for HissWiringInitContext
 fn hiss_wiring_initialize(wrapper: &mut HissWiringWrapper, rate: f32) {
     let layout = <HissWiringWrapper as nih_plug::prelude::Plugin>::AUDIO_IO_LAYOUTS[0];
     let config = nih_plug::prelude::BufferConfig {
-        sample_rate: rate,
+        sample_rate: f64::from(rate),
         min_buffer_size: Some(1),
         max_buffer_size: 512,
         process_mode: nih_plug::prelude::ProcessMode::Realtime,
@@ -1234,9 +1234,9 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
 
     let params = hiss_params();
     let mut plugin =
-        plugins_bridge::create_plugin("HissReducer", 2, RATE_48K, r#"{"spectral_mode": true}"#)
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true}"#)
             .unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     let prime = current_state(&params);
     let (_, prime_blob) = decode_hiss_field(
@@ -1253,7 +1253,7 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
         let mut flag = false;
         while !churn_stop.load(Ordering::Relaxed) {
             flag = !flag;
-            snapshot.publish_live_flags(flag, RATE_48K);
+            snapshot.publish_live_flags(flag, f64::from(RATE_48K));
         }
     });
 
@@ -1320,7 +1320,7 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
         let mut flag = false;
         while !churn_stop.load(Ordering::Relaxed) {
             flag = !flag;
-            snapshot.publish_live_flags(flag, RATE_48K);
+            snapshot.publish_live_flags(flag, f64::from(RATE_48K));
         }
     });
     for _ in 0..100 {
@@ -1454,8 +1454,8 @@ fn hiss_native_legacy_generic_construction_carries_no_profile() {
     let params = DynamicParams::from_infos(&hiss_infos());
     assert!(params.hiss_profile_for_construction().unwrap().is_none());
     let mut plugin =
-        super::configuration::create_plugin("HissReducer", RATE_48K, &params).unwrap();
-    plugin.initialize(RATE_48K).unwrap();
+        super::configuration::create_plugin("HissReducer", f64::from(RATE_48K), &params).unwrap();
+    plugin.initialize(f64::from(RATE_48K)).unwrap();
     assert!(
         hiss_snapshot(&*plugin)
             .unwrap()

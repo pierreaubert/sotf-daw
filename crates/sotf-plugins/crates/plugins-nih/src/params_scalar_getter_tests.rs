@@ -20,7 +20,7 @@ fn check_cold_sync(name: &str, changed_id: &str, changed_value: ParameterValue) 
             info.default_value = raw;
         }
         let params = DynamicParams::from_infos(&infos);
-        let mut plugin = super::configuration::create_plugin(name, 48_000, &params).unwrap();
+        let mut plugin = super::configuration::create_plugin(name, 48_000.0, &params).unwrap();
         plugin.initialize(48_000.0).unwrap();
         // The native activation path restores parameters on the control thread.
         params.sync_to_plugin(plugin.as_mut()).unwrap();

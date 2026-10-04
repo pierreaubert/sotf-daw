@@ -55,7 +55,7 @@ fn expected_sample(oracle: Oracle, frame: usize, channel: usize) -> f64 {
 fn check_changed_sync(name: &str, changes: &[(&str, ParameterValue)], oracle: Option<Oracle>) {
     let mut infos = schema_infos(name);
     let initial = DynamicParams::from_infos(&infos);
-    let mut plugin = super::configuration::create_plugin(name, 48_000, &initial).unwrap();
+    let mut plugin = super::configuration::create_plugin(name, 48_000.0, &initial).unwrap();
     plugin.initialize(48_000.0).unwrap();
     initial.sync_to_plugin(plugin.as_mut()).unwrap();
     let changes: Vec<_> = changes
@@ -251,7 +251,7 @@ fn invalid_scalar_writes_preserve_existing_values() {
         "StereoImager",
     ] {
         let params = DynamicParams::from_infos(&schema_infos(name));
-        let mut plugin = super::configuration::create_plugin(name, 48_000, &params).unwrap();
+        let mut plugin = super::configuration::create_plugin(name, 48_000.0, &params).unwrap();
         plugin.initialize(48_000.0).unwrap();
         params.sync_to_plugin(plugin.as_mut()).unwrap();
         let snapshot = plugin.parameters();
@@ -307,7 +307,7 @@ fn speech_large_callbacks_are_cold_allocation_free_and_preserve_sentinels() {
     for channels in [1, 2] {
         for bypass in [false, true] {
             let mut plugin =
-                plugins_bridge::create_plugin("SpeechDenoiser", channels, 48_000, "{}").unwrap();
+                plugins_bridge::create_plugin("SpeechDenoiser", channels, 48_000.0, "{}").unwrap();
             plugin.initialize(48_000.0).unwrap();
             let enabled = ParameterId::from("enabled");
             let mut samples = vec![0.0; 4097 * channels + 2];

@@ -15,7 +15,7 @@ fn de_esser_infos() -> Vec<BridgedParamInfo> {
     let plugin = plugins_bridge::create_plugin(
         "DeEsser",
         crate::wrapper::plugin_constructor_channels("DeEsser"),
-        48_000,
+        48_000.0,
         &crate::wrapper::default_plugin_config("DeEsser"),
     )
     .expect("create DeEsser to inspect its complete parameter schema");

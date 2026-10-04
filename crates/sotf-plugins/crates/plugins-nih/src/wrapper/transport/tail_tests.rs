@@ -243,7 +243,7 @@ impl nih::Plugin for TailProbe {
         {
             self.control.store(value, Ordering::Relaxed);
         }
-        self.inner.sample_rate = config.sample_rate as u32;
+        self.inner.sample_rate = config.sample_rate;
         self.inner.max_frames = config.max_buffer_size as usize;
         self.inner.main_input_channels = audio_io_layout
             .main_input_channels

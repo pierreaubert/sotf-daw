@@ -46,7 +46,7 @@ fn eq_infos() -> Vec<BridgedParamInfo> {
     let plugin = plugins_bridge::create_plugin(
         "EQ",
         crate::wrapper::plugin_constructor_channels("EQ"),
-        48_000,
+        48_000.0,
         &crate::wrapper::default_plugin_config("EQ"),
     )
     .expect("construct native EQ to inspect its dynamic parameter schema");

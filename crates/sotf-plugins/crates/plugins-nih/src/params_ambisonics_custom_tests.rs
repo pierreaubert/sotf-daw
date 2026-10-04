@@ -363,7 +363,7 @@ fn custom_constructs_and_processes_at_order_7() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (64, 12));
     assert_eq!(
@@ -382,7 +382,7 @@ fn custom_save_reload_is_bit_exact() {
     restore_custom(&params, 2, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_5_1_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 48).unwrap();
     plugin.initialize(48_000.0).unwrap();
@@ -417,7 +417,7 @@ fn custom_save_reload_is_bit_exact() {
     fresh.deserialize_fields(&state.fields);
     let mut fresh_attempt = AmbisonicsCustomRestoreAttempt::new(fresh.clone());
     let reloaded =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &fresh).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &fresh).unwrap();
     fresh_attempt.commit();
     let mut reloaded = plugins_bridge::prepare_standalone_plugin(reloaded, 48).unwrap();
     reloaded.initialize(48_000.0).unwrap();
@@ -436,7 +436,7 @@ fn malformed_restore_fails_and_preserves_accepted() {
     let params = ambisonics_params();
     restore_custom(&params, 2, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_5_1_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
-    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
 
     // A malformed candidate stages invalid and fails construction.
@@ -446,7 +446,7 @@ fn malformed_restore_fails_and_preserves_accepted() {
         .unwrap_err();
     assert!(error.contains("invalid"), "unexpected: {error}");
     let Err(error) =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params)
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params)
     else {
         panic!("malformed restore must fail construction");
     };
@@ -457,7 +457,7 @@ fn malformed_restore_fails_and_preserves_accepted() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut retry = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     retry.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (64, 12));
 }
@@ -467,7 +467,7 @@ fn target_8_without_geometry_fails_construction() {
     let params = ambisonics_params();
     restore_custom(&params, 3, AMBISONICS_CUSTOM_TARGET_INDEX, None);
     let Err(error) =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params)
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params)
     else {
         panic!("target 8 without geometry must fail construction");
     };
@@ -482,13 +482,13 @@ fn named_construction_ignores_stale_staged_geometry() {
     let params = ambisonics_params();
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
-    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     // A later named selection on the same params must not trip over the
     // retained custom carrier.
     params.set_ambisonics_layout(2, 1).unwrap();
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 8));
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("target_layout")),
@@ -566,12 +566,12 @@ fn crossrate_custom_processes_finite_nonzero() {
         );
         let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
         let plugin =
-            crate::params::configuration::create_plugin("AmbisonicsDecoder", sample_rate, &params)
+            crate::params::configuration::create_plugin("AmbisonicsDecoder", f64::from(sample_rate), &params)
                 .unwrap();
         attempt.commit();
         assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 6));
         let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 32).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let output = render_deterministic_block(&mut plugin, 9, 6, sample_rate, 32, sample_rate);
         assert_finite_nonzero(&output);
     }
@@ -586,7 +586,7 @@ fn wide_64ch_constructs_at_macro_level_with_honest_format_rejections() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&json));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert_eq!(
         (plugin.input_channels(), plugin.output_channels()),
@@ -775,7 +775,7 @@ fn stereo_constructs_but_reports_format_rejection_reasons() {
     restore_custom(&params, 1, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&stereo_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (4, 2));
     let geometry: NativeAmbisonicsCustomGeometry = serde_json::from_str(&stereo_json()).unwrap();
@@ -866,7 +866,7 @@ fn serialize_omits_stale_committed_after_custom_to_named() {
     let params = ambisonics_params();
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
-    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert!(
         params
@@ -879,7 +879,7 @@ fn serialize_omits_stale_committed_after_custom_to_named() {
     // a fieldless named state constructs named and saves canonically.
     restore_custom(&params, 2, 1, None);
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 8));
     assert!(
         !params
@@ -896,7 +896,7 @@ fn fieldless_target_8_restore_fails_despite_committed() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
     plugin.initialize(48_000.0).unwrap();
@@ -918,7 +918,7 @@ fn fieldless_target_8_restore_fails_despite_committed() {
         "unexpected: {error}"
     );
     let Err(error) =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params)
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params)
     else {
         panic!("fieldless restore must fail construction");
     };
@@ -954,7 +954,7 @@ fn fieldless_target_8_restore_fails_despite_committed() {
     restore_custom(&params, 2, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_5_1_json()));
     let mut retry = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     retry.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 6));
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 48).unwrap();
@@ -976,7 +976,7 @@ fn malformed_then_fieldless_named_recovers_cleanly() {
     // A valid fieldless named state clears invalid and constructs named.
     restore_custom(&params, 2, 1, None);
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (9, 8));
     assert!(
         !params
@@ -989,7 +989,7 @@ fn malformed_then_fieldless_named_recovers_cleanly() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut retry = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     retry.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (64, 12));
 }
@@ -1000,7 +1000,7 @@ fn single_band_custom_reaches_exact_zero_tail() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert_eq!(plugin.latency_samples(), 0);
     assert_eq!(plugin.tail_length(), TailLength::Finite(0));
@@ -1036,7 +1036,7 @@ fn dual_band_custom_drains_within_bound() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     assert_eq!(
         plugin.latency_samples(),
@@ -1079,7 +1079,7 @@ fn partitioned_render(dual_band: bool, partitions: &[usize], seed: u32) -> Vec<f
     restore_custom(&params, 2, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_5_1_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, 64).unwrap();
     plugin.initialize(48_000.0).unwrap();
@@ -1145,7 +1145,7 @@ fn missing_survives_attempt_drop_and_refuses_until_valid_stage() {
     // Commit accepted good geometry through the real construction path.
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut attempt = AmbisonicsCustomRestoreAttempt::new(params.clone());
-    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+    crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     attempt.commit();
     // A fieldless target-8 restore records missing-field intent.
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, None);
@@ -1178,7 +1178,7 @@ fn missing_survives_attempt_drop_and_refuses_until_valid_stage() {
     restore_custom(&params, 7, AMBISONICS_CUSTOM_TARGET_INDEX, Some(&geometry_7_1_4_json()));
     let mut retry = AmbisonicsCustomRestoreAttempt::new(params.clone());
     let plugin =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &params).unwrap();
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &params).unwrap();
     retry.commit();
     assert_eq!((plugin.input_channels(), plugin.output_channels()), (64, 12));
 }

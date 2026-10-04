@@ -105,7 +105,7 @@ fn check_routing<P: Plugin + ClapPlugin + TestProcess>(
         inputs
     );
     assert_eq!(layout.main_output_channels.unwrap().get() as usize, outputs);
-    let mut direct = crate::params::configuration::create_plugin(name, 48_000, params).unwrap();
+    let mut direct = crate::params::configuration::create_plugin(name, 48_000.0, params).unwrap();
     direct = plugins_bridge::prepare_standalone_plugin(direct, 257).unwrap();
     direct.initialize(48000.0).unwrap();
     params.sync_to_plugin(direct.as_mut()).unwrap();
@@ -703,7 +703,7 @@ fn eq_exposes_neutral_bands_and_automates_without_allocations() {
         }
     }
     let mut plugin =
-        plugins_bridge::create_plugin("EQ", 2, 48000, &default_plugin_config("EQ")).unwrap();
+        plugins_bridge::create_plugin("EQ", 2, 48000.0, &default_plugin_config("EQ")).unwrap();
     plugin.initialize(48000.0).unwrap();
     let bridge = ParamBridge::new(get_param_specs("EQ"));
     let mut infos: Vec<_> = (0..bridge.count())
@@ -1093,7 +1093,7 @@ fn ambisonics_vst3_and_clap_process_selected_full_input_vectors() {
 
             let mut reference = crate::params::configuration::create_plugin(
                 "AmbisonicsDecoder",
-                48_000,
+                48_000.0,
                 &wrapper.params,
             )
             .unwrap();
@@ -1227,7 +1227,7 @@ fn bandsplit_clap_layouts_route_all_selected_band_major_channels() {
         );
 
         let mut direct =
-            crate::params::configuration::create_plugin("BandSplit", 48_000, &wrapper.params)
+            crate::params::configuration::create_plugin("BandSplit", 48_000.0, &wrapper.params)
                 .unwrap();
         direct = plugins_bridge::prepare_standalone_plugin(direct, MAX_FRAMES).unwrap();
         direct.initialize(48_000.0).unwrap();
@@ -1559,7 +1559,7 @@ fn check_custom_wrapper_process(
         })
         .collect();
     let mut reference =
-        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000, &wrapper.params)
+        crate::params::configuration::create_plugin("AmbisonicsDecoder", 48_000.0, &wrapper.params)
             .unwrap();
     reference = plugins_bridge::prepare_standalone_plugin(reference, FRAMES).unwrap();
     reference.initialize(48_000.0).unwrap();
