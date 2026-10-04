@@ -196,7 +196,7 @@ fn make_plugin(
     params: AnalogLimiterPluginParams,
 ) -> AnalogLimiterPlugin {
     let mut plugin = AnalogLimiterPlugin::from_params(channels, params).unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     plugin
 }
 
@@ -641,7 +641,7 @@ fn color_off_matches_clean_limiter() {
                         oversampling: 0,
                     },
                 );
-                core.initialize(rate).unwrap();
+                core.initialize(f64::from(rate)).unwrap();
                 let out_analog = process_all(&mut analog, rate, &input, channels);
                 let mut out_core = input.clone();
                 core.process_in_place(&mut out_core, &ProcessContext::new(rate, 2048))

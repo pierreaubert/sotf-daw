@@ -47,7 +47,7 @@ fn report_deadline_distribution(
 }
 
 fn main() {
-    let sample_rate = 48000;
+    let sample_rate = 48_000.0;
     let input_channels = 2;
     let output_channels = 2;
 

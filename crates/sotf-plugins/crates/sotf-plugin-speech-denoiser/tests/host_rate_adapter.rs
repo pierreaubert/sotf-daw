@@ -126,7 +126,7 @@ fn adapted_process_has_no_heap_allocation_after_preparation() {
     let rate = 12_345.678;
     let mut plugin = disabled(rate, 2);
     let mut block = [0.25_f32; 128];
-    assert_no_allocs(|| {
+    assert_no_allocs("speech adapter disabled process", || {
         plugin.process_in_place(&mut block, &ProcessContext::new(rate, 64)).unwrap();
     });
     let mut enabled = SpeechDenoiserPlugin::new(2);
@@ -135,7 +135,7 @@ fn adapted_process_has_no_heap_allocation_after_preparation() {
     enabled
         .process_in_place(&mut warmed, &ProcessContext::new(rate, 64))
         .unwrap();
-    assert_no_allocs(|| {
+    assert_no_allocs("speech adapter enabled process", || {
         enabled
             .process_in_place(&mut block, &ProcessContext::new(rate, 64))
             .unwrap();

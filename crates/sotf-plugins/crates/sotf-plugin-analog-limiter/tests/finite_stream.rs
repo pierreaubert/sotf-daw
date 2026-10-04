@@ -18,7 +18,7 @@ fn make(channels: usize, rate: u32, model: &str, lookahead: f32, color: f32) -> 
     let mut plugin = ParametricInPlacePluginAdapter::new(
         AnalogLimiterPlugin::from_params(channels, params).unwrap(),
     );
-    Plugin::initialize(&mut plugin, rate).unwrap();
+    Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
     Box::new(plugin)
 }
 
