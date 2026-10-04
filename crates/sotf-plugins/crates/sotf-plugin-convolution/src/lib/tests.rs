@@ -719,6 +719,13 @@ fn fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin() {
 }
 
 #[test]
+fn fractional_ir_resampling_rejects_unbounded_temporary_output_before_allocation() {
+    let error = ConvolutionPlugin::resample_ir(&[vec![1.0]], 1, 1_000_000_000_000.5)
+        .unwrap_err();
+    assert!(error.contains("temporary output memory limit"), "{error}");
+}
+
+#[test]
 fn configured_zero_latency_head_is_stable_before_runtime_ir_load() {
     let params = ConvolutionPluginParams {
         ir_file: String::new(),

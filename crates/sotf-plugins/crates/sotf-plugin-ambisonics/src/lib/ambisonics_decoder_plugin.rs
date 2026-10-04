@@ -105,7 +105,7 @@ impl AmbisonicsDecoderPlugin {
             hf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
             lf_frame: vec![0.0; output_ch],
             hf_frame: vec![0.0; output_ch],
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cached_parameters: Vec::new(),
         };
         plugin.rebuild_cached_parameters();
@@ -175,7 +175,7 @@ impl AmbisonicsDecoderPlugin {
             hf_ambi_frame: [0.0; MAX_AMBI_CHANNELS],
             lf_frame: vec![0.0; output_ch],
             hf_frame: vec![0.0; output_ch],
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             cached_parameters: Vec::new(),
         };
         plugin.rebuild_cached_parameters();

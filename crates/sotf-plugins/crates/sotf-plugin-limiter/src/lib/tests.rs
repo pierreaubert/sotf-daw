@@ -10,7 +10,7 @@ use sotf_host::plugin::{PluginCompiledOp, ProcessContext};
 #[test]
 fn test_limiter_basic() {
     let mut p = LimiterPlugin::new(1, -1.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut b = vec![2.0; 1000];
     p.process_in_place(&mut b, &ProcessContext::new(48000, 1000))
         .unwrap();
@@ -23,7 +23,7 @@ fn test_limiter_basic() {
 #[test]
 fn threshold_smoother_operates_in_decibels() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!((plugin.kernel.threshold_db_smoother.current() + 6.0).abs() < 1e-6);
 
     plugin
@@ -92,8 +92,8 @@ fn test_limiter_compiled_op_matches_process_in_place() {
     let channels = 2;
     let mut regular = LimiterPlugin::new(channels, -6.0, 50.0, 0.0, false);
     let mut compiled = LimiterPlugin::new(channels, -6.0, 50.0, 0.0, false);
-    regular.initialize(sr).unwrap();
-    compiled.initialize(sr).unwrap();
+    regular.initialize(f64::from(sr)).unwrap();
+    compiled.initialize(f64::from(sr)).unwrap();
 
     let input: Vec<f32> = (0..frames * channels)
         .map(|i| 0.82 * (i as f32 * 0.071).sin())
@@ -123,7 +123,7 @@ fn test_limiter_compiled_op_matches_process_in_place() {
 #[test]
 fn test_limiter_compile_metadata_tracks_lookahead_latency() {
     let mut no_lookahead = LimiterPlugin::new(2, -6.0, 50.0, 0.0, false);
-    no_lookahead.initialize(48000).unwrap();
+    no_lookahead.initialize(48000.0).unwrap();
     let metadata = no_lookahead.compile_metadata();
     assert_eq!(metadata.compiled_op, Some(PluginCompiledOp::Limiter));
     assert_eq!(metadata.latency_samples, 0);
@@ -132,7 +132,7 @@ fn test_limiter_compile_metadata_tracks_lookahead_latency() {
     assert!(!metadata.linear);
 
     let mut lookahead = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
-    lookahead.initialize(48000).unwrap();
+    lookahead.initialize(48000.0).unwrap();
     let metadata = lookahead.compile_metadata();
     assert_eq!(metadata.compiled_op, None);
     assert!(metadata.latency_samples > 0);
@@ -142,7 +142,7 @@ fn test_limiter_compile_metadata_tracks_lookahead_latency() {
 #[test]
 fn zero_lookahead_is_sample_exact_without_hidden_latency() {
     let mut plugin = LimiterPlugin::new(1, 0.0, 50.0, 0.0, false);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let expected = vec![0.1, -0.2, 0.3, -0.4];
     let mut buffer = expected.clone();
     plugin
@@ -155,7 +155,7 @@ fn zero_lookahead_is_sample_exact_without_hidden_latency() {
 #[test]
 fn process_rejects_wrong_buffer_lengths_without_advancing_state() {
     let mut plugin = LimiterPlugin::new(2, -1.0, 50.0, 5.0, false);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for len in [7, 9] {
         let mut buffer = vec![0.0; len];
         assert!(
@@ -170,7 +170,7 @@ fn process_rejects_wrong_buffer_lengths_without_advancing_state() {
 #[test]
 fn reset_matches_fresh_instance_observable_state() {
     let mut plugin = LimiterPlugin::new(1, -6.0, 10.0, 5.0, false);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut loud = vec![1.0; 512];
     plugin
         .process_in_place(&mut loud, &ProcessContext::new(48_000, 512))
@@ -188,7 +188,7 @@ fn reset_matches_fresh_instance_observable_state() {
 #[test]
 fn test_threshold_transition_is_smooth() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed loud signal to establish steady-state
     let mut b = vec![1.0f32; 4800];
@@ -230,7 +230,7 @@ fn test_threshold_transition_is_smooth() {
 #[test]
 fn test_mix_smoother_advances_per_frame() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Start from dry.
     p.parametric_set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
@@ -263,7 +263,7 @@ fn test_mix_smoother_advances_per_frame() {
 #[test]
 fn test_limiter_clamps_output() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed loud stereo signal (well above -6 dB threshold)
     let mut b = vec![0.0f32; 2048 * 2];
@@ -295,7 +295,7 @@ fn test_true_peak_detection() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p.true_peak = true;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Create a signal with inter-sample peaks: alternating +0.8/-0.8
     // at Nyquist causes overshoots between samples
@@ -323,7 +323,7 @@ fn test_true_peak_detection() {
 #[test]
 fn test_true_peak_parameter() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(!p.true_peak);
 
     p.parametric_set_parameter(ParameterId::from("true_peak"), ParameterValue::Bool(true))
@@ -338,7 +338,7 @@ fn test_true_peak_parameter() {
 #[test]
 fn test_dual_release_parameter() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(!p.dual_release);
 
     p.parametric_set_parameter(
@@ -358,7 +358,7 @@ fn test_dual_release_limits() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p.dual_release = true;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let frames = 4096;
     let mut b = vec![0.0f32; frames];
@@ -415,13 +415,13 @@ fn test_limiter_mix_parameter() {
 
     // Create limiter with mix=0 set via parameter after init (so smoother starts at 0)
     let mut p_dry = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p_dry.initialize(sr).unwrap();
+    p_dry.initialize(f64::from(sr)).unwrap();
     p_dry
         .parametric_set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.0))
         .unwrap();
 
     let mut p_wet = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p_wet.initialize(sr).unwrap();
+    p_wet.initialize(f64::from(sr)).unwrap();
 
     // Process a warmup block to let the mix smoother converge to 0
     let warmup = 4800; // 100ms
@@ -477,7 +477,7 @@ fn test_limiter_mix_parameter() {
 #[test]
 fn test_limiter_ceiling_enforcement() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let num_frames = 4096;
     let mut buf = vec![1.0f32; num_frames]; // 0 dBFS
@@ -501,7 +501,7 @@ fn test_isp_meter_exposure() {
     let mut p = LimiterPlugin::new(2, -1.0, 50.0, 5.0, false);
     p.true_peak = true;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Create a signal with inter-sample peaks on both channels
     let frames = 2048;
@@ -545,7 +545,7 @@ fn test_isp_meter_exposure() {
 #[test]
 fn test_isp_meter_floor_without_true_peak() {
     let mut p = LimiterPlugin::new(1, -1.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(!p.true_peak);
 
     let frames = 512;
@@ -570,7 +570,7 @@ fn test_isp_meter_resets_to_floor_when_true_peak_disabled() {
     let mut p = LimiterPlugin::new(1, -1.0, 50.0, 5.0, false);
     p.parametric_set_parameter(ParameterId::from("true_peak"), ParameterValue::Bool(true))
         .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let frames = 512;
     let mut b = vec![0.8f32; frames];
@@ -606,7 +606,7 @@ fn test_isp_mode_parameter() {
 
     p.parametric_set_parameter(ParameterId::from("isp_mode"), ParameterValue::Bool(true))
         .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(p.isp_mode);
 
     let val = p.parametric_get_parameter(&ParameterId::from("isp_mode"));
@@ -620,7 +620,7 @@ fn test_isp_mode_implies_true_peak() {
     p.isp_mode = true;
     // true_peak is false, but isp_mode forces true peak detection
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let frames = 512;
     let mut b = vec![0.0f32; frames];
@@ -661,7 +661,7 @@ fn test_soft_knee_at_threshold_equals_hard_knee() {
     let thresh_lin = fast_pow10(thresh_db / 20.0);
 
     let mut p_soft = LimiterPlugin::new(1, thresh_db, 50.0, 0.0, true); // soft=true
-    p_soft.initialize(48000).unwrap();
+    p_soft.initialize(48000.0).unwrap();
 
     // Feed a DC signal exactly at threshold for enough frames to converge
     let frames = 8192;
@@ -688,8 +688,8 @@ fn test_soft_knee_not_stricter_than_hard() {
 
     let mut p_hard = LimiterPlugin::new(1, thresh_db, 50.0, 0.0, false); // hard
     let mut p_soft = LimiterPlugin::new(1, thresh_db, 50.0, 0.0, true); // soft
-    p_hard.initialize(48000).unwrap();
-    p_soft.initialize(48000).unwrap();
+    p_hard.initialize(48000.0).unwrap();
+    p_soft.initialize(48000.0).unwrap();
 
     // DC at threshold — both limiters should treat this the same (no gain reduction).
     let frames = 4096;
@@ -723,7 +723,7 @@ fn test_isp_correction_decay_speed() {
     p.isp_mode = true;
     p.true_peak = true;
     p.rebuild_cached_parameters();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Inject enough ISP violations to build up correction
     let thresh_lin = fast_pow10(-3.0f32 / 20.0);
@@ -779,7 +779,7 @@ fn test_channel_count_above_32() {
     // because of a fixed `[0.0f32; 32]` array cap.
     let ch = 33usize;
     let mut p = LimiterPlugin::new(ch, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let thresh_lin = fast_pow10(-6.0f32 / 20.0);
     let frames = 2048;
@@ -810,7 +810,7 @@ fn test_lookahead_parameter_change_uses_preallocated_storage() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
     p.parametric_set_parameter(ParameterId::from("lookahead"), ParameterValue::Float(20.0))
         .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.kernel.lookahead_len, 960);
     assert!(
         p.parametric_set_parameter(ParameterId::from("lookahead"), ParameterValue::Float(1.0))
@@ -834,7 +834,7 @@ fn test_link_amount_interpolates_average_to_peak_detection() {
 
     let mut linked = LimiterPlugin::new(2, threshold_db, 50.0, 0.0, false);
     linked.link_amount = 1.0;
-    linked.initialize(sr).unwrap();
+    linked.initialize(f64::from(sr)).unwrap();
     let mut linked_buf = make_input();
     linked
         .process_in_place(&mut linked_buf, &ProcessContext::new(sr, frames))
@@ -842,7 +842,7 @@ fn test_link_amount_interpolates_average_to_peak_detection() {
 
     let mut half = LimiterPlugin::new(2, threshold_db, 50.0, 0.0, false);
     half.link_amount = 0.5;
-    half.initialize(sr).unwrap();
+    half.initialize(f64::from(sr)).unwrap();
     let mut half_buf = make_input();
     half.process_in_place(&mut half_buf, &ProcessContext::new(sr, frames))
         .unwrap();
@@ -861,7 +861,7 @@ fn test_reset_clears_new_state() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
     p.true_peak = true;
     p.dual_release = true;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Process some audio to build up state
     let mut b = vec![0.9f32; 2 * 1024];
@@ -884,7 +884,7 @@ fn test_reset_clears_new_state() {
 #[test]
 fn test_process_empty_buffer_returns_zero() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let mut buf = vec![0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -895,7 +895,7 @@ fn test_process_empty_buffer_returns_zero() {
 #[test]
 fn test_set_parameter_unknown_id_returns_error() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let result =
         p.parametric_set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0));
@@ -905,7 +905,7 @@ fn test_set_parameter_unknown_id_returns_error() {
 #[test]
 fn test_set_parameter_out_of_bounds_returns_error() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Threshold range [-20, 0]
     assert!(
@@ -933,7 +933,7 @@ fn test_set_parameter_out_of_bounds_returns_error() {
 #[test]
 fn test_set_parameter_nan_returns_error() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(
@@ -961,7 +961,7 @@ fn test_get_parameter_unknown_id_returns_none() {
 #[test]
 fn test_set_parameter_feed_forward_and_link_amount() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.parametric_set_parameter(
         ParameterId::from("feed_forward"),
@@ -983,7 +983,7 @@ fn test_set_parameter_feed_forward_and_link_amount() {
 #[test]
 fn test_set_release_recomputes_coefficients() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let old_coeff = p.kernel.release_coeff;
     p.parametric_set_parameter(ParameterId::from("release"), ParameterValue::Float(200.0))
@@ -995,7 +995,7 @@ fn test_set_release_recomputes_coefficients() {
 #[test]
 fn test_latency_samples_matches_lookahead() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // 5ms @ 48kHz = 240 samples
     let latency = p.latency_samples();
@@ -1053,7 +1053,7 @@ fn test_parameters_returns_all_params() {
 #[test]
 fn test_set_parameter_soft_roundtrip() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(!p.soft);
 
     p.parametric_set_parameter(ParameterId::from("soft"), ParameterValue::Bool(true))
@@ -1073,7 +1073,7 @@ fn test_set_parameter_soft_roundtrip() {
 #[test]
 fn test_set_release_below_min_errors() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(ParameterId::from("release"), ParameterValue::Float(0.5))
@@ -1087,7 +1087,7 @@ fn test_set_parameter_boundary_values() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
     p.parametric_set_parameter(ParameterId::from("lookahead"), ParameterValue::Float(20.0))
         .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Threshold boundaries [-20, 0]
     p.parametric_set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-20.0))
@@ -1132,7 +1132,7 @@ fn test_get_parameter_all_ids() {
     p.link_amount = 0.5;
     p.mix = 1.0;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert_eq!(
         p.get_parameter(&ParameterId::from("threshold")),
@@ -1180,7 +1180,7 @@ fn test_get_parameter_all_ids() {
 #[test]
 fn test_process_silence_no_gr() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let frames = 512;
     let mut b = vec![0.0f32; frames];
@@ -1208,7 +1208,7 @@ fn test_process_silence_no_gr() {
 fn test_process_below_threshold_no_limiting() {
     let sr = 48000u32;
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Signal at -20 dBFS = 0.1 linear, well below -6 dB threshold
     let frames = 1024;
@@ -1243,7 +1243,7 @@ fn test_soft_knee_identity_region() {
     let thresh_db = -6.0f32;
     let thresh_lin = fast_pow10(thresh_db / 20.0);
     let mut p = LimiterPlugin::new(1, thresh_db, 50.0, 0.0, true);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Use a signal amplitude of 0.05 * thresh_lin — far below soft_start
     let amplitude = thresh_lin * 0.05;
@@ -1272,7 +1272,7 @@ fn test_feed_forward_disabled_when_lookahead_zero() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
     p.feed_forward = true;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert_eq!(p.kernel.lookahead_len, 0);
 
@@ -1294,14 +1294,14 @@ fn test_feed_forward_disabled_when_lookahead_zero() {
 #[test]
 fn test_initialize_different_sample_rates() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(96000).unwrap();
+    p.initialize(96000.0).unwrap();
     assert_eq!(p.sample_rate, 96000.0);
 
     // 5ms @ 96kHz = 480 samples
     assert_eq!(p.kernel.lookahead_len, 480);
 
     let mut p2 = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p2.initialize(192000).unwrap();
+    p2.initialize(192000.0).unwrap();
     assert_eq!(p2.sample_rate, 192000.0);
     assert_eq!(p2.kernel.lookahead_len, 960);
 }
@@ -1310,7 +1310,7 @@ fn test_initialize_different_sample_rates() {
 #[test]
 fn test_get_data_returns_typed_data() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let data = p.get_data();
     assert!(data.is_some());
@@ -1327,7 +1327,7 @@ fn test_process_stereo_independent_channels() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 0.0, false);
     p.link_amount = 0.0;
     p.rebuild_cached_parameters();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let frames = 1024;
     let mut b = vec![0.0f32; frames * 2];
@@ -1370,7 +1370,7 @@ fn test_process_stereo_independent_channels() {
 fn test_envelope_decay_after_transient() {
     let sr = 48000u32;
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Loud transient
     let mut b = vec![1.0f32; sr as usize]; // 1 second of loud signal
@@ -1397,7 +1397,7 @@ fn test_envelope_decay_after_transient() {
 fn test_lookahead_buffer_wraps_correctly() {
     let sr = 48000u32;
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let block = 256usize;
     let mut buf = vec![0.9f32; block];
@@ -1422,7 +1422,7 @@ fn test_lookahead_buffer_wraps_correctly() {
 fn test_threshold_zero_db() {
     let sr = 48000u32;
     let mut p = LimiterPlugin::new(1, 0.0, 50.0, 0.0, false);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Signal at 0.8 (below 0 dB = 1.0) should pass through
     let frames = 1024;
@@ -1451,7 +1451,7 @@ fn test_threshold_zero_db() {
 fn test_lookahead_causes_delay() {
     let sr = 48000u32;
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Impulse at sample 0
     let frames = 512;
@@ -1474,7 +1474,7 @@ fn test_lookahead_causes_delay() {
 #[test]
 fn test_set_parameter_infinite_rejected_by_validation() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(
@@ -1499,7 +1499,7 @@ fn test_single_channel_ignores_link_amount() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
     p.link_amount = 0.0; // would use avg for stereo, but ignored for mono
     p.rebuild_cached_parameters();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let frames = 512;
     let mut b = vec![0.9f32; frames];
@@ -1521,7 +1521,7 @@ fn test_dual_release_envelope_decay() {
     let mut p = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
     p.dual_release = true;
     p.rebuild_cached_parameters();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // Loud signal to build envelope
     let mut b = vec![1.0f32; sr as usize];
@@ -1549,7 +1549,7 @@ fn test_isp_mode_correction_decay_path() {
     p.isp_mode = true;
     p.true_peak = true;
     p.rebuild_cached_parameters();
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     // First, build up some ISP correction with a high-freq signal
     let frames = 4096;
@@ -1583,7 +1583,7 @@ fn test_cache_update_channel_mismatch_does_not_panic() {
     let mut p = LimiterPlugin::new(1, -1.0, 50.0, 5.0, false);
     p.true_peak = true;
     p.rebuild_cached_parameters();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Force a mismatch by manually changing cache data channel count
     p.cache.update(|d| {
@@ -1603,7 +1603,7 @@ fn test_cache_update_channel_mismatch_does_not_panic() {
 #[test]
 fn test_initialize_resizes_detectors() {
     let mut p = LimiterPlugin::new(2, -6.0, 50.0, 5.0, false);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.kernel.true_peak_detectors.len(), 2);
     assert_eq!(p.kernel.output_isp_detectors.len(), 2);
     assert_eq!(p.kernel.channel_peaks.len(), 2);
@@ -1611,7 +1611,7 @@ fn test_initialize_resizes_detectors() {
 
     // The plugin's channels field doesn't change, but we can verify the resize path
     // by calling initialize again with same channels (resize_with should be no-op)
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.kernel.true_peak_detectors.len(), 2);
 }
 
@@ -1622,8 +1622,8 @@ fn test_soft_vs_hard_clipping_difference() {
     let frames = 1024;
     let mut p_soft = LimiterPlugin::new(1, -6.0, 50.0, 0.0, true);
     let mut p_hard = LimiterPlugin::new(1, -6.0, 50.0, 0.0, false);
-    p_soft.initialize(sr).unwrap();
-    p_hard.initialize(sr).unwrap();
+    p_soft.initialize(f64::from(sr)).unwrap();
+    p_hard.initialize(f64::from(sr)).unwrap();
 
     let mut b_soft = vec![0.0f32; frames];
     let mut b_hard = vec![0.0f32; frames];

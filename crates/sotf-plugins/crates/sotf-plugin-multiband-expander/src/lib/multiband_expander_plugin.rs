@@ -111,7 +111,7 @@ impl MultibandExpanderPlugin {
                 pk(ME, "num_bands").max_f64() as usize,
             )
         };
-        let sr = 44100;
+        let sr = 44_100.0;
         let default_xfs = [200.0f32, 2000.0, 8000.0, 12000.0];
         let mut xfs = params.crossover_frequencies.clone();
         for (i, &d) in default_xfs.iter().enumerate() {

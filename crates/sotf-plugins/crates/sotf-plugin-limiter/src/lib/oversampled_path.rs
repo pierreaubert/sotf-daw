@@ -590,7 +590,7 @@ mod tests {
     fn guard_gain_labels_follow_isp_audio_delay_and_keep_channels_separate() {
         for same_channel in [true, false] {
             let mut path =
-                OversampledPath::prepare(2, 48_000, 2, 0.25, controls(), true, 1.0).unwrap();
+                OversampledPath::prepare(2, 48_000.0, 2, 0.25, controls(), true, 1.0).unwrap();
             let mut cache = RealTimeCache::new(LimiterData {
                 isp_dbtp: vec![-120.0; 2],
                 output_isp_dbtp: vec![-120.0; 2],
@@ -673,7 +673,7 @@ mod tests {
         }
         // A direct final-stage synthetic negative control: opposing dry/wet
         // audio cancels, but no gain stage attenuates either contributor.
-        let mut path = OversampledPath::prepare(1, 48_000, 2, 0.0, controls(), false, 0.5).unwrap();
+        let mut path = OversampledPath::prepare(1, 48_000.0, 2, 0.0, controls(), false, 0.5).unwrap();
         let mut cache = RealTimeCache::new(LimiterData {
             isp_dbtp: vec![-120.0],
             output_isp_dbtp: vec![-120.0],
@@ -718,7 +718,7 @@ mod capacity_tests {
             for phase in 0..256 {
                 for lookahead in [0.0, 0.137, 20.0] {
                     let mut path = OversampledPath::prepare(
-                        1, 192_000, factor, lookahead, controls, false, 1.0,
+                        1, 192_000.0, factor, lookahead, controls, false, 1.0,
                     )
                     .unwrap();
                     let mut cache = RealTimeCache::new(LimiterData {

@@ -309,7 +309,7 @@ fn cold_bool_automation_dry_wet_drain_and_reset_have_no_allocations_or_frees() {
                 params.enabled = initial;
                 params.auto_gain_enabled = auto_gain;
                 let mut p = XtcPlugin::new(params, 48000).unwrap();
-                p.initialize(48000).unwrap();
+                p.initialize(48000.0).unwrap();
                 let id = ParameterId::from("enabled");
                 let input = vec![0.125; 2048];
                 let mut output = vec![0.0; 1024 * channels];

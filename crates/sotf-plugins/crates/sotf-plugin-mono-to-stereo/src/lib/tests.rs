@@ -8,7 +8,7 @@ use crate::*;
 #[test]
 fn test_mono_to_stereo_basic() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let i = vec![0.5; 1024];
     let mut o = vec![0.0; 2048];
     p.process(&i, &mut o, &ProcessContext::new(48000, 1024))
@@ -20,7 +20,7 @@ fn test_mono_to_stereo_basic() {
 fn test_mono_to_stereo_width_zero_is_mono() {
     let mut p = MonoToStereoPlugin::new();
     p.haas_delay_ms = 0.0;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.stereo_width.reset(0.0);
     let total_frames = FFT_SIZE * 10;
     let input: Vec<f32> = (0..total_frames).map(|i| (i as f32 * 0.1).sin()).collect();
@@ -44,7 +44,7 @@ fn test_mono_to_stereo_width_zero_is_mono() {
 #[test]
 fn test_mono_to_stereo_width_one_differs() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.stereo_width.reset(1.0);
     let total_frames = FFT_SIZE * 10;
     let input: Vec<f32> = (0..total_frames).map(|i| (i as f32 * 0.1).sin()).collect();
@@ -78,7 +78,7 @@ fn test_mono_to_stereo_width_one_differs() {
 #[test]
 fn test_haas_delay_is_not_reported_as_host_latency() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let base_latency = p.latency_samples();
 
     p.set_parameter(
@@ -102,7 +102,7 @@ fn test_haas_delay_is_not_reported_as_host_latency() {
 fn test_mono_to_stereo_energy_compensation() {
     let mut p = MonoToStereoPlugin::new();
     p.haas_delay_ms = 0.0;
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.stereo_width.reset(0.5); // moderate width
 
     let total_frames = FFT_SIZE * 20;
@@ -156,7 +156,7 @@ fn test_freq_dependent_bass_stays_mono() {
         let mut p = MonoToStereoPlugin::new();
         p.freq_dependent = freq_dep;
         p.haas_delay_ms = 0.0; // Disable Haas delay for this correlation test
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.stereo_width.reset(1.0);
 
         let total_frames = FFT_SIZE * 16;
@@ -224,7 +224,7 @@ fn test_decor_low_hz_parameter_is_honoured() {
             ParameterValue::Float(decor_low),
         )
         .unwrap();
-        p.initialize(48000).unwrap();
+        p.initialize(48000.0).unwrap();
         p.stereo_width.reset(1.0);
         p.haas_delay_ms = 0.0;
         p.update_haas_delay_samples();
@@ -298,7 +298,7 @@ fn test_decor_high_hz_parameter_is_honoured() {
         ParameterValue::Float(1000.0),
     )
     .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.stereo_width.reset(1.0);
     p.haas_delay_ms = 0.0;
     p.update_haas_delay_samples();
@@ -346,7 +346,7 @@ fn test_decor_high_hz_parameter_is_honoured() {
 #[test]
 fn test_process_no_stale_output_on_small_blocks() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     // Process in tiny 1-sample blocks for a full FFT window worth of input.
     let total_frames = FFT_SIZE + 10;
     for i in 0..total_frames {
@@ -369,7 +369,7 @@ fn test_process_no_stale_output_on_small_blocks() {
 #[test]
 fn test_mono_to_stereo_lr_energy_balance() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.stereo_width.reset(1.0);
     let total_frames = FFT_SIZE * 32;
     // Sum of many sines for broadband coverage (300–15000 Hz decorrelation band)
@@ -415,7 +415,7 @@ fn test_mono_to_stereo_lr_energy_balance() {
 #[test]
 fn test_set_parameter_stereo_width() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(
         ParameterId::from("stereo_width"),
         ParameterValue::Float(0.75),
@@ -427,7 +427,7 @@ fn test_set_parameter_stereo_width() {
 #[test]
 fn test_set_parameter_haas_delay_ms_updates_samples() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(
         ParameterId::from("haas_delay_ms"),
         ParameterValue::Float(3.0),
@@ -451,7 +451,7 @@ fn test_structural_decor_frequencies_prepare_topology_before_initialize() {
         ParameterValue::Float(1000.0),
     )
     .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!((p.decor_low_hz - 200.0).abs() < 1e-6);
     assert!((p.decor_high_hz - 1000.0).abs() < 1e-6);
     let expected_low = (std::f32::consts::TAU * 200.0 / 48_000.0).cos();
@@ -469,7 +469,7 @@ fn test_set_parameter_freq_dependent() {
     )
     .unwrap();
     assert!(!p.freq_dependent);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(p.target_radius < 0.7);
     p = MonoToStereoPlugin::new();
     p.set_parameter(
@@ -483,7 +483,7 @@ fn test_set_parameter_freq_dependent() {
 #[test]
 fn test_set_parameter_unknown_returns_err() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let result = p.set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(0.0));
     assert!(result.is_err(), "unknown parameter must error");
 }
@@ -491,7 +491,7 @@ fn test_set_parameter_unknown_returns_err() {
 #[test]
 fn test_set_parameter_wrong_type_returns_err() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let result = p.set_parameter(
         ParameterId::from("stereo_width"),
         ParameterValue::Bool(true),
@@ -502,7 +502,7 @@ fn test_set_parameter_wrong_type_returns_err() {
 #[test]
 fn test_set_parameter_out_of_range_clamps() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(
         ParameterId::from("stereo_width"),
         ParameterValue::Float(2.0),
@@ -526,7 +526,7 @@ fn test_set_parameter_out_of_range_clamps() {
 #[test]
 fn test_process_zero_frames_returns_ok() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input: Vec<f32> = vec![];
     let mut output: Vec<f32> = vec![];
     let produced = p
@@ -538,7 +538,7 @@ fn test_process_zero_frames_returns_ok() {
 #[test]
 fn test_process_returns_num_frames() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 1024;
     let input = vec![0.5_f32; num_frames];
     let mut output = vec![0.0_f32; num_frames * 2];
@@ -577,7 +577,7 @@ fn test_from_params_honours_arguments() {
 #[test]
 fn test_process_returns_ok_num_frames() {
     let mut p = MonoToStereoPlugin::new();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 1024;
     let input: Vec<f32> = (0..num_frames).map(|i| (i as f32 * 0.1).sin()).collect();
     let mut output = vec![0.0_f32; num_frames * 2];
@@ -597,7 +597,7 @@ fn test_process_is_partition_invariant_with_fixed_latency() {
             .map(|i| (i as f32 * 0.017).sin() * 0.4)
             .collect();
         let mut plugin = MonoToStereoPlugin::new();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.stereo_width.reset(0.35);
         plugin.haas_delay_ms = 0.0;
         let mut output = vec![0.0; total_frames * 2];
@@ -641,7 +641,7 @@ fn test_process_is_partition_invariant_with_fixed_latency() {
 #[test]
 fn test_process_rejects_short_buffers_without_mutating_state() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.25; 8];
     let mut output = vec![7.0; 16];
     let before_last_input = plugin.last_input;
@@ -667,7 +667,7 @@ fn test_process_rejects_short_buffers_without_mutating_state() {
 #[test]
 fn test_process_rejects_oversized_buffers_without_mutating_state() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = [0.25_f32, -0.5, 91.0, 92.0];
     let mut output = [77.0_f32; 8];
     let before_last_input = plugin.last_input;
@@ -694,7 +694,7 @@ fn test_process_rejects_oversized_buffers_without_mutating_state() {
 #[test]
 fn test_process_rejects_stereo_sample_count_overflow_without_mutating_state() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let before_last_input = plugin.last_input;
     let before_right_state = plugin.first_order_y1;
     let mut output = [73.0_f32; 2];
@@ -712,11 +712,11 @@ fn test_process_rejects_stereo_sample_count_overflow_without_mutating_state() {
 #[test]
 fn initialize_rejects_zero_sample_rate_atomically() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let before_rate = plugin.sample_rate;
     let before_cosines = plugin.section_cosines;
 
-    let error = plugin.initialize(0).unwrap_err();
+    let error = plugin.initialize(0.0).unwrap_err();
 
     assert!(error.contains("sample rate"), "unexpected error: {error}");
     assert_eq!(plugin.sample_rate, before_rate);
@@ -734,7 +734,7 @@ fn plugin_info_version_matches_crate_version() {
 #[test]
 fn test_second_order_allpass_keeps_every_bin_unit_magnitude() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for radius in [0.25_f32, 0.68, 0.998, IDENTITY_RADIUS] {
         for cosine in plugin.section_cosines {
             for bin in 0..=FFT_SIZE / 2 {
@@ -858,7 +858,7 @@ fn rendered_audio_preserves_lr_energy_at_every_width_and_frequency() {
     for width in [0.0_f32, 0.25, 0.5, 0.75, 1.0] {
         for frequency in [80.0_f32, 300.0, 1_000.0, 5_000.0, 12_000.0, 20_000.0] {
             let mut plugin = MonoToStereoPlugin::new();
-            plugin.initialize(SAMPLE_RATE).unwrap();
+            plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
             plugin.stereo_width.reset(width);
             plugin.haas_delay_ms = 0.0;
             plugin.update_haas_delay_samples();
@@ -925,7 +925,7 @@ fn rendered_audio_preserves_lr_energy_at_every_width_and_frequency() {
 #[test]
 fn decorrelator_is_causal_and_has_no_circular_pre_echo() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.stereo_width.reset(1.0);
     plugin.haas_delay_ms = 0.0;
     plugin.update_haas_delay_samples();
@@ -947,7 +947,7 @@ fn decorrelator_is_causal_and_has_no_circular_pre_echo() {
 #[test]
 fn decorrelator_topology_parameters_require_graph_rebuild_after_initialize() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for (id, value) in [
         ("decor_low_hz", ParameterValue::Float(250.0)),
         ("decor_high_hz", ParameterValue::Float(3_000.0)),
@@ -965,7 +965,7 @@ fn decorrelator_topology_parameters_require_graph_rebuild_after_initialize() {
 #[test]
 fn settled_zero_width_uses_exact_duplicate_fast_path() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.stereo_width.reset(0.0);
     plugin.haas_delay_ms = 0.0;
     plugin.update_haas_delay_samples();
@@ -995,7 +995,7 @@ fn settled_zero_width_uses_exact_duplicate_fast_path() {
 #[test]
 fn settled_nonzero_width_avoids_per_sample_smoother_work() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.stereo_width.reset(0.75);
     plugin.haas_delay_ms = 0.0;
     plugin.update_haas_delay_samples();
@@ -1030,7 +1030,7 @@ fn non_finite_input_is_silenced_and_never_poisons_state() {
     // and must not poison the allpass/delay state for later blocks.
     for width in [0.0_f32, 1.0] {
         let mut plugin = MonoToStereoPlugin::new();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.stereo_width.reset(width);
         plugin.haas_delay_ms = 0.0;
         plugin.update_haas_delay_samples();
@@ -1075,7 +1075,7 @@ fn non_finite_input_is_silenced_and_never_poisons_state() {
 #[test]
 fn leaving_duplicate_fast_path_primes_state_without_a_transition_spike() {
     let mut plugin = MonoToStereoPlugin::new();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.haas_delay_ms = 0.0;
     plugin.update_haas_delay_samples();
     plugin.stereo_width.reset(0.0);
@@ -1100,7 +1100,7 @@ fn hostile_final_duplicate_sample_is_sanitized_before_width_automation() {
         for reset in [false, true] {
             let make_plugin = || {
                 let mut plugin = MonoToStereoPlugin::new();
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
                 plugin.haas_delay_ms = 0.0;
                 plugin.update_haas_delay_samples();
                 plugin.stereo_width.reset(0.0);

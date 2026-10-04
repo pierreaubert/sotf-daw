@@ -163,7 +163,7 @@ impl ProcessingState {
                 Ok(input_rate)
             }
         } else {
-            self.host.output_sample_rate(input_rate)
+            self.host.output_sample_rate_native(input_rate)
         }
     }
 
@@ -345,7 +345,7 @@ impl ProcessingState {
             new_path_delay,
             ..
         } = update;
-        let negotiated_rate = match new_host.output_sample_rate(self.sample_rate) {
+        let negotiated_rate = match new_host.output_sample_rate_native(self.sample_rate) {
             Ok(rate) => rate,
             Err(error) => {
                 self.retire(GcItem::HostTransition {
@@ -368,7 +368,7 @@ impl ProcessingState {
             return Err("prepared host metadata changed before commit".into());
         }
 
-        let old_output_rate = match self.host.output_sample_rate(self.sample_rate) {
+        let old_output_rate = match self.host.output_sample_rate_native(self.sample_rate) {
             Ok(rate) => rate,
             Err(error) => {
                 self.retire(GcItem::HostTransition {
@@ -490,7 +490,7 @@ impl ProcessingState {
             // Count emitted frames rather than callbacks or accepted input.
             // Buffered/rate-changing chains can emit zero or multiple chunks;
             // only output samples advance the audible transition timeline.
-            let output_rate = self.host.output_sample_rate(self.sample_rate)?;
+            let output_rate = self.host.output_sample_rate_native(self.sample_rate)?;
             let fade_frames = (u64::from(output_rate) * CROSSFADE_DURATION_MS)
                 .div_ceil(1_000)
                 .max(1) as usize;
@@ -678,7 +678,7 @@ pub(super) fn handle_processing_command(
                     );
                     let output_channels = state.host.output_channels();
                     state.channels = output_channels;
-                    let output_sample_rate = match state.host.output_sample_rate(state.sample_rate) {
+                    let output_sample_rate = match state.host.output_sample_rate_native(state.sample_rate) {
                         Ok(rate) => rate,
                         Err(error) => {
                             response_tx

@@ -91,7 +91,7 @@ impl AnalogCompressorPlugin {
         let params = AnalogCompressorPluginParams::default();
         let mut plugin = Self {
             channels,
-            sample_rate: 0,
+            sample_rate: 0.0,
             initialized: false,
             threshold_db: params.threshold,
             ratio: params.ratio,

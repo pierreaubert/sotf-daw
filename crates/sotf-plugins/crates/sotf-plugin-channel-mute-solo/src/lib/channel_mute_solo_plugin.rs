@@ -136,7 +136,7 @@ impl ChannelMuteSoloPlugin {
     /// Create a new channel mute/solo plugin
     pub fn new(channels: usize, enabled: bool) -> Self {
         let channel_states = vec![ChannelState::default(); channels];
-        let sample_rate = 48000;
+        let sample_rate = 48_000.0;
         let dim_gain_db = default_dim_gain_db();
         let fade_ms = default_fade_ms();
         let channel_smoothers = vec![Smoother::new(1.0, fade_ms, sample_rate); channels];

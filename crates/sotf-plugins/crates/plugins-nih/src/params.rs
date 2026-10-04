@@ -1620,9 +1620,7 @@ impl DynamicParams {
             return false;
         };
         let target_sample_rate = match current_sample_rate {
-            Some(rate) if rate.is_finite() && rate >= 1.0 && rate <= u32::MAX as f64 => {
-                Some(rate.round() as u32)
-            }
+            Some(rate) if rate.is_finite() && rate > 0.0 => Some(rate),
             Some(_) => return false,
             None => None,
         };

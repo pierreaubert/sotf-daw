@@ -12,7 +12,7 @@ mod misc;
 fn test_parameter_roundtrip() {
     let channels = 2;
     let mut plugin = TransientShaperPlugin::new(channels);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set attack to 50%
     plugin
@@ -55,10 +55,10 @@ fn test_parameter_roundtrip() {
 
 #[test]
 fn test_time_to_coeff_handles_bad_inputs() {
-    assert_eq!(time_to_coeff(0.0, 48000), 1.0);
-    assert_eq!(time_to_coeff(-1.0, 48000), 1.0);
-    assert_eq!(time_to_coeff(10.0, 0), 1.0);
-    assert!(time_to_coeff(10.0, 48000).is_finite());
+    assert_eq!(time_to_coeff(0.0, 48000.0), 1.0);
+    assert_eq!(time_to_coeff(-1.0, 48000.0), 1.0);
+    assert_eq!(time_to_coeff(10.0, 0.0), 1.0);
+    assert!(time_to_coeff(10.0, 48000.0).is_finite());
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn test_fallible_constructor_and_buffer_validation() {
     assert!(TransientShaperPlugin::from_params(1, invalid).is_err());
 
     let mut plugin = TransientShaperPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut short = vec![0.0; 7];
     assert!(
         plugin
@@ -89,7 +89,7 @@ fn test_attack_component_is_positive_only() {
 #[test]
 fn sensitivity_and_output_gain_automation_are_smoothed() {
     let mut plugin = TransientShaperPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .parametric_set_parameter(
             ParameterId::from("output_gain"),
@@ -127,7 +127,7 @@ fn asymmetric_stereo_transient_uses_linked_gain() {
         mix: 1.0,
     };
     let mut plugin = TransientShaperPlugin::from_validated_params(2, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.reset();
     let mut buffer = vec![0.8, 0.2];
     plugin
@@ -148,7 +148,7 @@ fn extreme_shaping_has_bounded_output() {
         mix: 1.0,
     };
     let mut plugin = TransientShaperPlugin::from_validated_params(2, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![1.0; 48_000 * 2];
     plugin
         .process_in_place(&mut buffer, &ProcessContext::new(48_000, 48_000))
@@ -163,7 +163,7 @@ fn extreme_shaping_has_bounded_output() {
 #[test]
 fn neutral_controls_preserve_overrange_input() {
     let mut plugin = TransientShaperPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![1.25, -1.5];
     let expected = buffer.clone();
     plugin
@@ -185,7 +185,7 @@ fn monitoring_is_sample_cadenced_and_partition_invariant() {
                 mix: 1.0,
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let total = 3_200;
         let mut offset = 0;
         while offset < total {
@@ -218,7 +218,7 @@ fn attenuation_only_window_is_reported_by_gain_meter() {
             mix: 1.0,
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.8; 1_600];
     plugin
         .process_in_place(&mut buffer, &ProcessContext::new(48_000, 1_600))
@@ -230,7 +230,7 @@ fn attenuation_only_window_is_reported_by_gain_meter() {
 fn sensitivity_and_output_automation_are_partition_invariant() {
     fn render(block: usize) -> Vec<f32> {
         let mut plugin = TransientShaperPlugin::new(1);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .parametric_set_parameter(
                 ParameterId::from("sensitivity"),
@@ -257,7 +257,7 @@ fn sensitivity_and_output_automation_are_partition_invariant() {
 #[test]
 fn process_rejects_oversized_buffer_without_state_change() {
     let mut plugin = TransientShaperPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let fast_before = plugin.fast_env.clone();
     let mut buffer = vec![0.5; 9];
     assert!(
@@ -289,7 +289,7 @@ fn parameter_updates_reuse_cached_schema_storage() {
 #[test]
 fn test_process_silence_is_silent() {
     let mut plugin = TransientShaperPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buf = vec![0.0f32; 512];
     let ctx = ProcessContext::new(48000, 512);
@@ -313,7 +313,7 @@ fn test_process_stereo_passthrough_when_bypassed() {
             mix: 0.0,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.0f32; 256 * 2];
     for frame in 0..256 {
@@ -342,7 +342,7 @@ fn test_attack_boost_increases_transients() {
             mix: 1.0,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Impulse-like signal: quiet then loud then quiet
     let mut buf = vec![0.0f32; sr as usize];
@@ -382,7 +382,7 @@ fn test_sustain_reduction_lowers_tail() {
             mix: 1.0,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Constant loud signal - the sustain portion should be reduced
     let mut buf = vec![0.5f32; sr as usize / 10]; // 100ms
@@ -411,7 +411,7 @@ fn test_output_gain_applies_makeup() {
             mix: 0.0, // fully dry - output gain still applies to mixed output
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.25f32; 256];
     let ctx = ProcessContext::new(sr, 256);
@@ -435,7 +435,7 @@ fn test_sensitivity_gates_quiet_signals() {
             mix: 1.0,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Quiet signal should pass unshaped because it's below threshold
     let mut buf = vec![0.001f32; 256];
@@ -460,7 +460,7 @@ fn test_reset_clears_envelope_state() {
             mix: 1.0,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = vec![0.5f32; 256];
     let ctx = ProcessContext::new(sr, 256);
@@ -479,7 +479,7 @@ fn test_reset_clears_envelope_state() {
 #[test]
 fn test_process_empty_buffer() {
     let mut plugin = TransientShaperPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buf = vec![0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -494,7 +494,7 @@ fn test_process_empty_buffer() {
 #[test]
 fn test_set_parameter_out_of_bounds_returns_error() {
     let mut plugin = TransientShaperPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Attack is bounded to [-100, 100] by ParamSpec validation
     assert!(
@@ -557,7 +557,7 @@ fn from_params_rejects_out_of_range_values_instead_of_clamping() {
 #[test]
 fn test_set_parameter_nan_returns_error() {
     let mut plugin = TransientShaperPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let original = plugin.attack_amount;
     assert!(
@@ -582,7 +582,7 @@ fn test_set_parameter_nan_returns_error() {
 #[test]
 fn test_set_parameter_unknown_id_returns_error() {
     let mut plugin = TransientShaperPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let result = plugin.parametric_set_parameter(
         ParameterId::from("not_a_real_param"),

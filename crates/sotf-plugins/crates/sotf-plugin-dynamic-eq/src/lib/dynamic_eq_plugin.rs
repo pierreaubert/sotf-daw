@@ -450,7 +450,7 @@ impl DynamicEqPlugin {
     /// for callers that intentionally use its clamping behaviour; factories
     /// and state-restore paths must use this fallible entry point instead.
     pub fn try_from_params(channels: usize, params: DynamicEqPluginParams) -> PluginResult<Self> {
-        Self::validate_params(channels, &params, 48_000)?;
+        Self::validate_params(channels, &params, 48_000.0)?;
         Ok(Self::from_params(channels, params))
     }
 

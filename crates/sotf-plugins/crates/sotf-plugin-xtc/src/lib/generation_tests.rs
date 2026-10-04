@@ -24,7 +24,7 @@ pub(super) struct WorkerBarrier {
 
 impl WorkerBarrier {
     pub(super) fn after_check(&self, rate: f64, update: &Arc<PendingFilterUpdate>) -> bool {
-        if rate != 48_000 || !self.armed.swap(false, Ordering::AcqRel) {
+        if rate != 48_000.0 || !self.armed.swap(false, Ordering::AcqRel) {
             return false;
         }
         self.checked.send(Arc::clone(update)).unwrap();
@@ -59,7 +59,7 @@ fn actual_post_check_worker_cannot_replace_a_synchronous_installation() {
                 48_000,
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let (checked_tx, checked_rx) = mpsc::sync_channel(1);
             let (release_tx, release_rx) = mpsc::sync_channel(1);
             let (published_tx, published_rx) = mpsc::sync_channel(1);
@@ -167,7 +167,7 @@ fn rejected_meter_rates_preserve_audio_epoch_and_ready_publication() {
             48_000,
         )
         .unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .process(
                 &[0.125; 34],
@@ -183,7 +183,7 @@ fn rejected_meter_rates_preserve_audio_epoch_and_ready_publication() {
         plugin.filter_state.exchange.lock().unwrap().pending = Some(Arc::clone(&active));
         let input = plugin.input.input_buffer_l.clone();
         let fill = plugin.input.input_fill;
-        assert!(plugin.initialize(invalid).is_err());
+        assert!(plugin.initialize(f64::from(invalid)).is_err());
         assert_eq!(plugin.fft.sample_rate, 48_000.0);
         assert_eq!(
             plugin
@@ -231,7 +231,7 @@ fn rejected_meter_rates_preserve_audio_epoch_and_ready_publication() {
         48_000,
     )
     .unwrap();
-    no_meter.initialize(1).unwrap();
+    no_meter.initialize(1.0).unwrap();
 }
 
 #[test]
@@ -240,7 +240,7 @@ fn failed_source_load_keeps_ready_or_paused_worker_results_eligible() {
     for publish_before_failure in [false, true] {
         let file = MatrixFile::new(48_000, 2);
         let mut plugin = XtcPlugin::new(file.params(), 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .process(
                 &[0.125; 34],
@@ -278,7 +278,7 @@ fn failed_source_load_keeps_ready_or_paused_worker_results_eligible() {
         let input = plugin.input.input_buffer_l.clone();
         let fill = plugin.input.input_fill;
         std::fs::remove_file(&file.0).unwrap();
-        assert!(plugin.initialize(96_000).is_err());
+        assert!(plugin.initialize(96_000.0).is_err());
         assert_eq!(plugin.fft.sample_rate, 48_000.0);
         assert_eq!(
             plugin

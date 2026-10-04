@@ -958,7 +958,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
     }
 
     fn tail_length(&self) -> TailLength {
-        if self.fir_dirty || self.sample_rate == 0 {
+        if self.fir_dirty || self.sample_rate == 0.0 {
             TailLength::Unknown
         } else {
             TailLength::Finite(self.response_frames() as u64)
@@ -987,7 +987,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         if !self.has_input || self.drain_remaining == Some(0) {
             return Ok(PluginDrainResult::COMPLETE);
         }
-        if self.sample_rate == 0 || context.sample_rate != self.sample_rate || self.fir_dirty {
+        if self.sample_rate == 0.0 || context.sample_rate != self.sample_rate || self.fir_dirty {
             return Err("FIR EQ drain requires clean state at the prepared sample rate".into());
         }
         if output.len() < self.channels || !output.len().is_multiple_of(self.channels) {
@@ -1363,7 +1363,7 @@ impl LinearPhaseEqPlugin {
         channel: usize,
         frequency_hz: f64,
     ) -> Option<Complex<f64>> {
-        if channel >= self.channels || self.sample_rate == 0 {
+        if channel >= self.channels || self.sample_rate == 0.0 {
             return None;
         }
         if !frequency_hz.is_finite() || frequency_hz < 0.0 {
@@ -1502,7 +1502,7 @@ impl LinearPhaseEqPlugin {
                 "band index {band_index} exceeds {live_bands} configured bands"
             ));
         }
-        if base.sample_rate == 0 {
+        if base.sample_rate == 0.0 {
             return Err("sample rate must be positive".into());
         }
         let old = &base.bands[band_index];
@@ -1625,7 +1625,7 @@ impl LinearPhaseEqPlugin {
     /// Mirrors [`Self::validate_band`] without allocating an error message, so
     /// the realtime commit path can refuse invalid parameters transactionally.
     fn prepared_band_params_valid(&self, new: &BandSnapshot) -> bool {
-        if new.filter_type_index > 4 || self.sample_rate == 0 {
+        if new.filter_type_index > 4 || self.sample_rate == 0.0 {
             return false;
         }
         let sample_rate = self.sample_rate;

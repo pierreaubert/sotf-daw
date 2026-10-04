@@ -14,7 +14,7 @@ use sotf_host::{ParameterId, ParameterValue, ParametricPlugin, ParametricPluginA
 #[doc(hidden)]
 pub fn validate_convolution_ir_resource(
     path: &str,
-    target_sample_rate: Option<u32>,
+    target_sample_rate: Option<f64>,
     output_channels: usize,
     use_nupc: bool,
     true_stereo: bool,

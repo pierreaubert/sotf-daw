@@ -156,7 +156,7 @@ fn loudness_range_cold_full_dirty_queries_and_reset_reuse_prepared_storage() {
                     capacity_windows: capacity,
                 }))
                 .unwrap();
-            plugin.initialize(8_000).unwrap();
+            plugin.initialize(8_000.0).unwrap();
             let mut input = vec![0.0; (capacity + 35) * 1_600];
             for (index, sample) in input.iter_mut().enumerate() {
                 *sample = if index % 4 < 2 { 0.001 } else { -0.001 };

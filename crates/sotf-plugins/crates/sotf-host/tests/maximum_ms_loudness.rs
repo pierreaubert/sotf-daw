@@ -552,7 +552,7 @@ fn process_plugin(plugin: &mut LoudnessMonitorPlugin, input: &[f32], channels: u
 fn plugin_cache_rebuild_and_retained_generations_do_not_leak_old_epoch_maxima() {
     let channels = 2;
     let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let high = tone(RATE, 0, RATE as usize * 4, channels, -18.0);
     for block in high.chunks(OBSERVATION_FRAMES * channels) {
         process_plugin(&mut plugin, block, channels);
@@ -629,7 +629,7 @@ fn plugin_cache_rebuild_and_retained_generations_do_not_leak_old_epoch_maxima() 
         "old Short-term maximum {retained_shortterm} must exceed new epoch {new_shortterm}"
     );
 
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     let reinitialized = plugin_snapshot(&plugin);
     assert_eq!(reinitialized.maximum_momentary_lufs, None);
     assert_eq!(reinitialized.maximum_shortterm_lufs, None);

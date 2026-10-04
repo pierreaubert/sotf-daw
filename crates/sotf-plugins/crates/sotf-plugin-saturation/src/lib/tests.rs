@@ -49,7 +49,7 @@ fn low_sample_rate_rejects_exciter_at_or_above_conservative_nyquist() {
     );
     assert!(
         plugin
-            .initialize(6_000)
+            .initialize(6_000.0)
             .unwrap_err()
             .contains("exciter frequency")
     );
@@ -58,7 +58,7 @@ fn low_sample_rate_rejects_exciter_at_or_above_conservative_nyquist() {
 #[test]
 fn continuous_bulk_automation_does_not_allocate_or_rebuild_metadata() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let metadata_capacity = plugin.cached_parameters.capacity();
     let mut values = ParameterSet::new();
     values.insert(ParameterId::from("drive"), ParameterValue::Float(7.0));
@@ -84,7 +84,7 @@ fn asymmetric_processing_does_not_allocate() {
             ..Default::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.25; 2_048];
     let context = make_context(1_024);
     plugin.process_in_place(&mut buffer, &context).unwrap();
@@ -96,7 +96,7 @@ fn asymmetric_processing_does_not_allocate() {
 #[test]
 fn structural_bulk_update_is_atomic_after_initialization() {
     let mut plugin = SaturationPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let original_mode = plugin.mode;
     let original_drive = plugin.drive;
     let mut values = ParameterSet::new();
@@ -132,7 +132,7 @@ fn test_exciter_only_affects_hf() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Test with 200Hz signal (well below exciter freq)
     let mut buf_lf = make_sine(200.0, sr, num_frames, 0.5);
@@ -225,7 +225,7 @@ fn dynamic_exciter_keeps_low_band_topology() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(1, params);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     let input = make_sine(200.0, sr, frames, 0.5);
     let mut output = input.clone();
     plugin
@@ -260,8 +260,8 @@ fn dynamic_exciter_is_applied_inside_oversampled_topology() {
     let mut dynamic_params = base;
     dynamic_params.dynamic_amount = 1.0;
     let mut dynamic_plugin = SaturationPlugin::from_validated_params(1, dynamic_params);
-    static_plugin.initialize(sr).unwrap();
-    dynamic_plugin.initialize(sr).unwrap();
+    static_plugin.initialize(f64::from(sr)).unwrap();
+    dynamic_plugin.initialize(f64::from(sr)).unwrap();
 
     let input = make_sine(8_000.0, sr, frames, 0.5);
     let mut static_output = input.clone();
@@ -292,7 +292,7 @@ fn dynamic_exciter_is_applied_inside_oversampled_topology() {
 #[test]
 fn reset_settles_parameter_smoothers() {
     let mut plugin = SaturationPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
         .set_parameter(ParameterId::from("drive"), ParameterValue::Float(15.0))
         .unwrap();
@@ -411,13 +411,13 @@ fn test_parameter_roundtrip() {
         .unwrap();
     let val = plugin.get_parameter(&ParameterId::from("mix"));
     assert_eq!(val, Some(ParameterValue::Float(0.75)));
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 }
 
 #[test]
 fn test_get_parameter_sota_params() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("dynamic_amount")),
@@ -454,7 +454,7 @@ fn test_get_parameter_unknown_returns_none() {
 #[test]
 fn test_set_parameter_sota_roundtrip() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(
@@ -493,7 +493,7 @@ fn test_set_parameter_sota_roundtrip() {
 #[test]
 fn test_set_parameter_sota_updates_envelope_followers() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Changing dynamic_attack_ms should update envelope follower times
     plugin
@@ -522,7 +522,7 @@ fn test_set_parameter_sota_updates_envelope_followers() {
 #[test]
 fn test_get_parameter_output_gain_and_tone() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .set_parameter(ParameterId::from("tone"), ParameterValue::Float(2.5))
@@ -592,7 +592,7 @@ fn oversize_block_is_rejected_without_growing_scratch_buffers() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let initial_dry_len = plugin.dry_buf.len();
     let num_frames = initial_dry_len / 2 + 1;

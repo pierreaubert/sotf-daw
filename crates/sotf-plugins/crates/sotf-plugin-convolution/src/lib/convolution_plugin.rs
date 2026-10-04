@@ -298,7 +298,7 @@ impl ConvolutionPlugin {
     #[doc(hidden)]
     pub fn validate_ir_resource_for_routing(
         path: &str,
-        target_sample_rate: Option<u32>,
+        target_sample_rate: Option<f64>,
         output_channels: usize,
         use_nupc: bool,
         true_stereo: bool,
@@ -310,7 +310,7 @@ impl ConvolutionPlugin {
             &ir_samples,
             ir_sample_rate,
             IrValidationOptions {
-                target_sample_rate: target_sample_rate.map_or(f64::from(ir_sample_rate), f64::from),
+                target_sample_rate: target_sample_rate.unwrap_or(f64::from(ir_sample_rate)),
                 output_channels,
                 use_nupc,
                 true_stereo,
@@ -1336,12 +1336,41 @@ impl ConvolutionPlugin {
 
         let num_channels = ir_samples.len();
         let chunk_size = 1024;
+        let ratio = target_rate / f64::from(source_rate);
+        let nominal_frames = Self::resampled_length(source_len, source_rate, target_rate)
+            .ok_or("IR resampling output length is unsupported")?;
+        let bytes_per_frame = std::mem::size_of::<f32>()
+            .checked_mul(num_channels)
+            .ok_or("IR resampling channel count is unsupported")?;
+        let frame_limit = MAX_IR_MEMORY_BYTES / bytes_per_frame;
+        // Rubato's whole-clip capacity includes the nominal output, one
+        // maximum-size output chunk and filter startup delay. Reject an
+        // unbounded ratio before constructing either resampler, whose own
+        // capacity arithmetic uses usize. The actual capacity is checked
+        // again after construction, before allocating its output buffers.
+        let chunk_frames = ((chunk_size as f64 + 1.0 / ratio) * ratio).ceil() + 1.0;
+        let startup_frames = (256.0 * ratio / 2.0).ceil();
+        if !ratio.is_finite()
+            || ratio <= 0.0
+            || !chunk_frames.is_finite()
+            || !startup_frames.is_finite()
+            || nominal_frames as f64 + chunk_frames + startup_frames > frame_limit as f64
+        {
+            return Err("IR resampling exceeds the temporary output memory limit".into());
+        }
+
+        let checked_output_capacity = |output_capacity: usize| -> Result<usize, String> {
+            let bytes = output_capacity
+                .checked_mul(num_channels)
+                .and_then(|samples| samples.checked_mul(std::mem::size_of::<f32>()))
+                .ok_or("IR resampling output capacity overflows")?;
+            if bytes > MAX_IR_MEMORY_BYTES {
+                return Err("IR resampling exceeds the temporary output memory limit".into());
+            }
+            Ok(output_capacity)
+        };
 
         if target_rate.fract() != 0.0 || target_rate > f64::from(u32::MAX) {
-            let ratio = target_rate / f64::from(source_rate);
-            if !ratio.is_finite() || ratio <= 0.0 {
-                return Err("IR resampling ratio is unsupported".into());
-            }
             let mut resampler = Async::<f32>::new_sinc(
                 ratio,
                 1.0,
@@ -1351,7 +1380,8 @@ impl ConvolutionPlugin {
                 FixedAsync::Input,
             )
             .map_err(|e| format!("Failed to create exact-rate IR resampler: {e}"))?;
-            let output_capacity = resampler.process_all_needed_output_len(source_len);
+            let output_capacity =
+                checked_output_capacity(resampler.process_all_needed_output_len(source_len))?;
             let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
             let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
                 .map_err(|e| format!("Input adapter error: {e}"))?;
@@ -1390,7 +1420,8 @@ impl ConvolutionPlugin {
         // exactly `output_delay()` leading frames, and returns the rounded nominal
         // output length.  Allocate its documented temporary capacity once, then
         // retain only the returned clip frames.
-        let output_capacity = resampler.process_all_needed_output_len(source_len);
+        let output_capacity =
+            checked_output_capacity(resampler.process_all_needed_output_len(source_len))?;
         let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
         let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
             .map_err(|e| format!("Input adapter error: {e}"))?;

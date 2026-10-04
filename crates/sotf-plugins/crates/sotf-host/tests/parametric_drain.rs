@@ -54,7 +54,7 @@ impl ParametricInPlacePlugin for Tail {
         Ok(context.num_frames)
     }
     fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
-        if context.sample_rate != 96_000 {
+        if context.sample_rate != 96_000.0 {
             return Err("fixture preparation context".into());
         }
         self.prepared = true;
@@ -71,7 +71,7 @@ impl ParametricInPlacePlugin for Tail {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        if context.sample_rate != 96_000 || output.len() < 2 {
+        if context.sample_rate != 96_000.0 || output.len() < 2 {
             return Err("fixture capacity/rate".into());
         }
         if self.calls > 0 {

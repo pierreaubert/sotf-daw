@@ -84,7 +84,7 @@ fn benchmark_automation_event(c: &mut Criterion) {
     let sample_rate = 48_000;
     let block_size = 64;
     let mut plugin = GainPlugin::new(2, 0.0);
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
 
     let id = ParameterId::from("gain");
     let input = vec![0.5f32; block_size * 2];

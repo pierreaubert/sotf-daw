@@ -63,7 +63,7 @@ impl LimiterPlugin {
     ) -> Self {
         let mut p = Self {
             channels,
-            sample_rate: 44100,
+            sample_rate: 44100.0,
             initialized: false,
             oversampling: 0,
             oversampled: None,
@@ -94,7 +94,7 @@ impl LimiterPlugin {
                 threshold_db,
                 release_ms,
                 lookahead_ms,
-                Self::max_lookahead_len(44100),
+                Self::max_lookahead_len(44100.0),
             ),
             cached_parameters: Vec::new(),
             cache: RealTimeCache::new(LimiterData {

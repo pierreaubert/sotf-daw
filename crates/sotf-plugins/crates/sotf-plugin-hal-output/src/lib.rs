@@ -809,7 +809,7 @@ impl HalOutputPlugin {
         if self.sample_rate == 0 {
             return Err("HAL output must be initialized before draining".to_string());
         }
-        if context.sample_rate == 0 || context.sample_rate != self.sample_rate {
+        if context.sample_rate == 0.0 || context.sample_rate != f64::from(self.sample_rate) {
             return Err(format!(
                 "HAL output initialized at {} Hz but received {} Hz drain context",
                 self.sample_rate, context.sample_rate
@@ -4657,7 +4657,7 @@ mod tests {
             maximum_frames: usize,
             context: &ProcessContext,
         ) -> Result<(), SinkTailPreflightError> {
-            if context.sample_rate != 48_000 || context.num_frames != maximum_frames {
+            if context.sample_rate != 48_000.0 || context.num_frames != maximum_frames {
                 return Err(SinkTailPreflightError::InvalidGeometry);
             }
             if maximum_frames > 16 {
@@ -4690,7 +4690,7 @@ mod tests {
             &mut self,
             context: &ProcessContext,
         ) -> Result<SinkQueueState, SinkServiceFailure> {
-            if context.sample_rate != 48_000 || context.num_frames != 0 {
+            if context.sample_rate != 48_000.0 || context.num_frames != 0 {
                 return Err(SinkServiceFailure::ContractViolation);
             }
             if self.state.lock().unwrap().fail_service {
@@ -4977,7 +4977,7 @@ mod tests {
     #[test]
     fn hal_output_reset_cancels_pending_samples_and_counts_drops_without_transport_io() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .process(
                 &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -5107,7 +5107,7 @@ mod tests {
             let frames = 32;
             let (mut plugin, _) =
                 make_plugin_with_writer(channels, (48_000, channels as u32, 256), vec![frames]);
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let input = vec![0.25; frames * channels];
             let mut output = Vec::new();
             assert_eq!(
@@ -5125,7 +5125,7 @@ mod tests {
     #[test]
     fn partial_write_retries_tail_before_new_audio() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 2, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = Vec::new();
         let first: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         plugin
@@ -5148,7 +5148,7 @@ mod tests {
     #[test]
     fn eof_drain_flushes_the_final_partial_write_to_the_writer() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         let tail = vec![4.0, 5.0, 6.0, 7.0];
 
@@ -5178,7 +5178,7 @@ mod tests {
     #[test]
     fn eof_drain_reports_backpressure_and_retries_without_new_input() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 0, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         let tail = vec![4.0, 5.0, 6.0, 7.0];
 
@@ -5224,7 +5224,7 @@ mod tests {
             (48_000, channels as u32, frames as u32),
             vec![first_write_frames, 1],
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.pending = wrapped_pending;
         plugin.pending_capacity_samples = frames * channels;
 
@@ -5267,7 +5267,7 @@ mod tests {
     #[test]
     fn drain_validation_errors_preserve_pending_and_destination() {
         let (mut plugin, _) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         plugin
             .process(&input, &mut [], &ProcessContext::new(48_000, 4))
@@ -5296,7 +5296,7 @@ mod tests {
     #[test]
     fn drain_gates_and_control_recovery_preserve_pending_samples() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         plugin
             .process(&input, &mut [], &ProcessContext::new(48_000, 4))
@@ -5372,7 +5372,7 @@ mod tests {
     #[test]
     fn failed_recovery_format_preparation_retains_pending_for_later_service() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         plugin
             .process(&input, &mut [], &ProcessContext::new(48_000, 4))
@@ -5397,7 +5397,7 @@ mod tests {
     #[test]
     fn drain_errors_leave_unaccepted_frames_queued() {
         let (mut unavailable, _) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2]);
-        unavailable.initialize(48_000).unwrap();
+        unavailable.initialize(48_000.0).unwrap();
         unavailable
             .process(
                 &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -5415,7 +5415,7 @@ mod tests {
         unavailable.writer = writer;
 
         let (mut overreport, _) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 3]);
-        overreport.initialize(48_000).unwrap();
+        overreport.initialize(48_000.0).unwrap();
         overreport
             .process(
                 &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -5435,7 +5435,7 @@ mod tests {
     #[test]
     fn drain_orders_new_input_around_an_incomplete_and_completed_eof() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2, 0, 2, 0, 2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let first: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         let second = vec![8.0, 9.0, 10.0, 11.0];
         let third = vec![12.0, 13.0, 14.0, 15.0];
@@ -5474,7 +5474,7 @@ mod tests {
     #[test]
     fn bounded_queue_drops_newest_complete_frames_and_preserves_oldest_order() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 4), vec![0, 0, 4, 4]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut output = Vec::new();
         let first: Vec<f32> = (0..8).map(|sample| sample as f32).collect();
         let second: Vec<f32> = (8..16).map(|sample| sample as f32).collect();
@@ -5526,7 +5526,7 @@ mod tests {
     #[test]
     fn initialization_primes_negotiated_fill_and_reports_v2_boundary_latency() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let telemetry = plugin.telemetry();
         assert_eq!(telemetry.version, HAL_OUTPUT_TELEMETRY_VERSION);
@@ -5544,7 +5544,7 @@ mod tests {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
         state.lock().unwrap().prime_write = Some(4);
 
-        let error = plugin.initialize(48_000).unwrap_err();
+        let error = plugin.initialize(48_000.0).unwrap_err();
 
         assert!(error.contains("could not establish target fill"));
         assert_eq!(plugin.sample_rate, 0);
@@ -5558,7 +5558,7 @@ mod tests {
     #[test]
     fn reservice_preserves_pending_and_reestablishes_target_fill() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.pending.extend([1.0, 2.0, 3.0, 4.0]);
 
         plugin.service_transport().unwrap();
@@ -5577,7 +5577,7 @@ mod tests {
     #[test]
     fn reinitialize_cancels_pending_only_after_successful_preflight_and_counts_it() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![2]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .process(
                 &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -5588,12 +5588,12 @@ mod tests {
         assert_eq!(plugin.telemetry().queued_frames, 2);
 
         state.lock().unwrap().transport_format = Some((44_100, 2, 8));
-        assert!(plugin.initialize(48_000).is_err());
+        assert!(plugin.initialize(48_000.0).is_err());
         assert_eq!(plugin.telemetry().queued_frames, 2);
         assert_eq!(plugin.telemetry().dropped_frames, 0);
 
         state.lock().unwrap().transport_format = None;
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert_eq!(plugin.telemetry().queued_frames, 0);
         assert_eq!(plugin.telemetry().dropped_frames, 2);
         assert_eq!(plugin.telemetry().requested_frames, 4);
@@ -5602,7 +5602,7 @@ mod tests {
     #[test]
     fn failed_reservice_cannot_publish_or_write_partial_prime() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         state.lock().unwrap().prime_write = Some(4);
 
         assert!(plugin.service_transport().is_err());
@@ -5622,7 +5622,7 @@ mod tests {
     fn config_change_is_quiesced_until_control_thread_service() {
         let (mut plugin, state) =
             make_plugin_with_writer_state(2, (48_000, 2, 8), vec![], true, true);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         state.lock().unwrap().config_changed = true;
         let input = vec![0.0; 8];
         plugin
@@ -5640,7 +5640,7 @@ mod tests {
     #[test]
     fn invalid_transport_frame_count_is_rejected_without_losing_writer() {
         let (mut plugin, _) = make_plugin_with_writer(2, (48_000, 2, 8), vec![5, 4]);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let context = ProcessContext::new(48_000, 4);
         assert!(plugin.process(&[0.0; 8], &mut [], &context).is_err());
         assert!(plugin.process(&[0.0; 8], &mut [], &context).is_ok());
@@ -5701,7 +5701,7 @@ mod tests {
             priming: std::cell::Cell::new(false),
             fill_frames: std::cell::Cell::new(0),
         }));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = [0.25; 8 * 16];
         let context = ProcessContext::new(48_000, 8);
         assert_no_allocs("HAL output full write", || {
@@ -5782,7 +5782,7 @@ mod tests {
             priming: std::cell::Cell::new(false),
             fill_frames: std::cell::Cell::new(0),
         }));
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let context = ProcessContext::new(48_000, 0);
         let mut empty = PluginDrainResult {
             frames: 0,
@@ -5827,10 +5827,10 @@ mod tests {
     #[test]
     fn initialize_rejects_transport_rate_and_channel_mismatch() {
         let (mut wrong_rate, _) = make_plugin_with_writer(2, (44_100, 2, 256), vec![]);
-        assert!(wrong_rate.initialize(48_000).is_err());
+        assert!(wrong_rate.initialize(48_000.0).is_err());
 
         let (mut wrong_channels, _) = make_plugin_with_writer(2, (48_000, 6, 256), vec![]);
-        assert!(wrong_channels.initialize(48_000).is_err());
+        assert!(wrong_channels.initialize(48_000.0).is_err());
     }
 
     #[test]
@@ -5843,7 +5843,7 @@ mod tests {
                 .is_err()
         );
 
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         assert!(
             plugin
                 .process(&[0.0; 8], &mut output, &ProcessContext::new(44_100, 4))

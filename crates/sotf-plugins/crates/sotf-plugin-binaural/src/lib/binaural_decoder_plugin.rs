@@ -228,7 +228,7 @@ impl BinauralDecoderPlugin {
         );
 
         let hop_size = fft_size / 4;
-        let sr = 44100;
+        let sr = 44_100.0;
         let freq_size = fft_size / 2 + 1;
         let mut planner = RealFftPlanner::<f32>::new();
         let fft_r2c = planner.plan_fft_forward(fft_size);
@@ -1183,7 +1183,7 @@ impl BinauralDecoderPlugin {
         pitch: f32,
         roll: f32,
     ) -> PluginResult<Arc<BinauralState>> {
-        if config.sample_rate == 0 {
+        if config.sample_rate == 0.0 {
             return Ok(state.load_full());
         }
 
@@ -1342,7 +1342,7 @@ impl Plugin for BinauralDecoderPlugin {
                 Some(PathBuf::from(&path_str))
             };
             if let Some(ref p) = new_path
-                && self.config.sample_rate > 0
+                && self.config.sample_rate > 0.0
             {
                 let loaded = load_sofa(p)
                     .map_err(|e| format!("Failed to load HRTF file '{}': {}", path_str, e))?;
@@ -1471,7 +1471,7 @@ impl Plugin for BinauralDecoderPlugin {
                 .ok_or_else(|| "hrtf_database_dir must be a string".to_string())?
                 .to_string();
             self.config.hrtf_database_dir = dir.clone();
-            if self.config.sample_rate > 0 && !dir.is_empty() {
+            if self.config.sample_rate > 0.0 && !dir.is_empty() {
                 if let Some(best) = super::hrtf_database::best_match(
                     std::path::Path::new(&dir),
                     self.config.head_width_cm,
@@ -1504,7 +1504,7 @@ impl Plugin for BinauralDecoderPlugin {
             if v.is_finite() && (10.0..=25.0).contains(&v) {
                 self.config.head_width_cm = v;
                 self.rebuild_cached_parameters();
-                if self.config.sample_rate > 0 && !self.config.hrtf_database_dir.is_empty() {
+                if self.config.sample_rate > 0.0 && !self.config.hrtf_database_dir.is_empty() {
                     let dir = self.config.hrtf_database_dir.clone();
                     if let Some(best) = super::hrtf_database::best_match(
                         std::path::Path::new(&dir),
@@ -1528,7 +1528,7 @@ impl Plugin for BinauralDecoderPlugin {
             if v.is_finite() && (4.0..=16.0).contains(&v) {
                 self.config.ear_height_cm = v;
                 self.rebuild_cached_parameters();
-                if self.config.sample_rate > 0 && !self.config.hrtf_database_dir.is_empty() {
+                if self.config.sample_rate > 0.0 && !self.config.hrtf_database_dir.is_empty() {
                     let dir = self.config.hrtf_database_dir.clone();
                     if let Some(best) = super::hrtf_database::best_match(
                         std::path::Path::new(&dir),

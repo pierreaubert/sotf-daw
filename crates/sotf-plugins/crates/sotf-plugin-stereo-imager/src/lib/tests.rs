@@ -15,7 +15,7 @@ fn make_context(num_frames: usize) -> ProcessContext<'static> {
 #[test]
 fn test_reset_snaps_smoothers() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Drive the width smoother into a transition: set a new target
     plugin
@@ -54,7 +54,7 @@ fn test_reset_snaps_smoothers() {
 #[test]
 fn test_crossover_frequency_changes_are_smoothed() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let initial = plugin.crossover_low.frequency();
     plugin
@@ -91,7 +91,7 @@ fn test_crossover_frequency_changes_are_smoothed() {
 #[test]
 fn test_rapid_mono_bass_toggle_no_nan() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let mut buffer: Vec<f32> = (0..num_frames * 2)
@@ -127,7 +127,7 @@ fn test_rapid_mono_bass_toggle_no_nan() {
 #[test]
 fn mono_bass_toggle_is_smoothed_without_a_sample_step() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     // Out-of-phase low-frequency programme maximizes the side-band change.
     let frames = 4096;
@@ -167,7 +167,7 @@ fn mono_bass_toggle_is_smoothed_without_a_sample_step() {
 #[test]
 fn test_large_buffer_no_panic() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 16384;
     let mut buffer = vec![0.5_f32; num_frames * 2];
@@ -180,7 +180,7 @@ fn test_large_buffer_no_panic() {
 #[test]
 fn arbitrary_large_mixed_block_needs_no_scratch_buffer() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .parametric_set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))
@@ -211,7 +211,7 @@ fn test_mix_zero_full_passthrough() {
         mono_bass: false,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let mut buffer: Vec<f32> = (0..num_frames * 2)
@@ -245,7 +245,7 @@ fn test_stereo_imager_passthrough() {
         mix: 1.0,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Feed a constant stereo signal for long enough to settle crossover transients
     let num_frames = 10000;
@@ -293,7 +293,7 @@ fn test_stereo_imager_mono() {
         mix: 1.0,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 10000;
     let mut buffer = Vec::with_capacity(num_frames * 2);
@@ -334,7 +334,7 @@ fn test_stereo_imager_mono_bass() {
         mix: 1.0,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Feed a DC offset (which is all "low" band): L=0.8, R=0.2
     // With mono_bass, the low band side is collapsed to zero.
@@ -380,7 +380,7 @@ fn test_stereo_imager_wide() {
         mix: 1.0,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // With width=2.0 and all band widths=1.0, the side is scaled by 2.0.
     // For a constant signal: L=0.8, R=0.2:
@@ -422,7 +422,7 @@ fn test_stereo_imager_wide() {
 #[test]
 fn test_parameter_roundtrip() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set width
     plugin
@@ -474,7 +474,7 @@ fn test_non_stereo_passthrough() {
 #[test]
 fn test_process_does_not_reinitialize_on_sample_rate_mismatch() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     assert_eq!(plugin.sample_rate, 48000.0);
 
     let mut buffer = vec![0.5_f32; 256 * 2];
@@ -483,7 +483,7 @@ fn test_process_does_not_reinitialize_on_sample_rate_mismatch() {
 
     // initialize() should NOT have been called, so sample_rate stays 48000
     assert_eq!(
-        plugin.sample_rate, 48000,
+        plugin.sample_rate, 48000.0,
         "process_in_place must not call initialize() when context.sample_rate differs"
     );
 }
@@ -495,7 +495,7 @@ fn test_process_does_not_reinitialize_on_sample_rate_mismatch() {
 #[test]
 fn test_set_parameter_all_band_params_roundtrip() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, f32)] = &[
         ("low_mid_freq", 500.0),
@@ -522,7 +522,7 @@ fn test_set_parameter_all_band_params_roundtrip() {
 #[test]
 fn test_set_parameter_unknown_returns_error() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert!(
         plugin
@@ -534,7 +534,7 @@ fn test_set_parameter_unknown_returns_error() {
 #[test]
 fn test_set_parameter_out_of_range_returns_error() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // width range [0, 2]
     assert!(
@@ -563,7 +563,7 @@ fn test_set_parameter_out_of_range_returns_error() {
 #[test]
 fn test_process_empty_buffer() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buffer = vec![0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -584,7 +584,7 @@ fn test_process_mix_one_wet_path() {
         mono_bass: false,
     };
     let mut plugin = StereoImagerPlugin::new(2, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let mut buffer: Vec<f32> = (0..num_frames * 2)
@@ -602,7 +602,7 @@ fn test_process_mix_one_wet_path() {
 #[test]
 fn test_process_freq_swap_when_low_greater_than_high() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Deliberately set low > high by mutating fields directly (bypasses
     // validate_parameter which would reject this combination).
@@ -637,7 +637,7 @@ fn single_float_set(id: &str, value: f32) -> ParameterSet {
 #[test]
 fn test_hostile_width_values_rejected_with_state_untouched() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -1.0, 2.5] {
         assert!(
@@ -664,7 +664,7 @@ fn test_hostile_width_values_rejected_with_state_untouched() {
 #[test]
 fn test_hostile_crossover_values_rejected_with_state_untouched() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Out-of-range / non-finite low_mid_freq.
     for bad in [f32::NAN, f32::INFINITY, 10.0, 5000.0] {
@@ -717,7 +717,7 @@ fn test_hostile_crossover_values_rejected_with_state_untouched() {
 #[test]
 fn test_hostile_mix_and_unknown_rejected_then_output_stays_finite() {
     let mut plugin = StereoImagerPlugin::new(2, StereoImagerPluginParams::default());
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     for bad in [f32::NAN, f32::INFINITY, -0.5, 1.5] {
         assert!(

@@ -32,9 +32,9 @@ fn noise_transfer_magnitude(plugin: &DitherPlugin, frequency_hz: f32) -> f32 {
 #[test]
 fn f_weighted_shaper_preserves_absolute_frequency_response_across_sample_rates() {
     let mut reference = DitherPlugin::new(1);
-    reference.initialize(44_100).unwrap();
+    reference.initialize(44_100.0).unwrap();
     let mut double_rate = DitherPlugin::new(1);
-    double_rate.initialize(88_200).unwrap();
+    double_rate.initialize(88_200.0).unwrap();
 
     assert_eq!(reference.noise_shaping_delays_samples, [1.0, 2.0, 3.0]);
     assert_eq!(double_rate.noise_shaping_delays_samples, [2.0, 4.0, 6.0]);
@@ -74,8 +74,8 @@ fn f_weighted_shaper_has_a_bounded_policy_for_every_supported_rate_family() {
         assert!(signal.iter().all(|sample| sample.is_finite()));
     }
 
-    assert!(DitherPlugin::new(1).initialize(0).is_err());
-    assert!(DitherPlugin::new(1).initialize(768_001).is_err());
+    assert!(DitherPlugin::new(1).initialize(0.0).is_err());
+    assert!(DitherPlugin::new(1).initialize(768_001.0).is_err());
 }
 
 fn averaged_error_spectrum(noise_shaping: bool) -> Vec<f64> {
@@ -98,7 +98,7 @@ fn averaged_error_spectrum(noise_shaping: bool) -> Vec<f64> {
             dither_type: 1,
         },
     );
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     plugin
         .process_in_place(&mut quantized, &ProcessContext::new(SAMPLE_RATE, TOTAL))
         .unwrap();
@@ -156,7 +156,7 @@ fn f_weighted_noise_shaping_moves_quantization_error_out_of_the_sensitive_band()
 fn test_dither_basic() {
     // Process silence, verify output stays near zero
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let mut buffer = vec![0.0f32; num_frames * 2];
@@ -186,7 +186,7 @@ fn test_dither_quantizes_to_target_depth() {
             dither_type: 1, // None (no dither, just quantize)
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let scale_16 = 32768.0_f32;
     let num_frames = 512;
@@ -237,7 +237,7 @@ fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
             dither_type: 0,
         },
     );
-    plugin_no_ns.initialize(48000).unwrap();
+    plugin_no_ns.initialize(48000.0).unwrap();
     let mut buf_no_ns = original.clone();
     plugin_no_ns
         .process_in_place(&mut buf_no_ns, &make_context(num_frames))
@@ -252,7 +252,7 @@ fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
             dither_type: 0,
         },
     );
-    plugin_ns.initialize(48000).unwrap();
+    plugin_ns.initialize(48000.0).unwrap();
     let mut buf_ns = original.clone();
     plugin_ns
         .process_in_place(&mut buf_ns, &make_context(num_frames))
@@ -393,7 +393,7 @@ fn test_random_f32_boundary_precision() {
 #[test]
 fn test_tpdf_is_independent_triangular_noise() {
     let mut plugin = DitherPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let samples: Vec<f64> = (0..100_000).map(|_| plugin.next_tpdf(0) as f64).collect();
     let mean = samples.iter().sum::<f64>() / samples.len() as f64;
     let variance = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / samples.len() as f64;
@@ -425,7 +425,7 @@ fn test_noise_shaping_feedback_excludes_dither_term() {
             dither_type: 0, // TPDF
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Use a deterministic sample and capture the next TPDF token before processing.
     let input = 0.123456_f32;
@@ -482,7 +482,7 @@ fn test_truncate_mode_quantizes_without_rounding() {
             dither_type: 2, // Truncate
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let scale_16 = 32768.0_f32;
     let mut buffer = vec![-0.123456, 0.123456];
@@ -515,7 +515,7 @@ fn test_24bit_quantization_grid() {
             dither_type: 1, // None
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let scale_24 = 8388608.0_f32; // 2^23
     let num_frames = 256;
@@ -556,7 +556,7 @@ fn signed_pcm_endpoints_are_saturated_before_error_feedback() {
                 dither_type: 1, // None (round)
             },
         );
-        plugin.initialize(48000).unwrap();
+        plugin.initialize(48000.0).unwrap();
         let near_full_scale = 1.0 - 1.5 * inv_scale;
         let mut buffer = vec![-1.0, 1.0, near_full_scale];
         let num_frames = buffer.len();
@@ -586,7 +586,7 @@ fn signed_pcm_endpoints_are_saturated_before_error_feedback() {
                 dither_type: 1, // None (round)
             },
         );
-        shaped_plugin.initialize(48000).unwrap();
+        shaped_plugin.initialize(48000.0).unwrap();
         let mut overshoot = vec![1.0];
         let num_frames = overshoot.len();
         shaped_plugin
@@ -616,7 +616,7 @@ fn test_multichannel_independent() {
             dither_type: 0,
         },
     );
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     // Same value on both channels
@@ -646,7 +646,7 @@ fn test_multichannel_independent() {
 #[test]
 fn short_host_buffer_returns_err_instead_of_panicking() {
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let frames = 64;
     // One sample short of the required frames * channels: without the
     // length check this indexes past the buffer on the audio thread.
@@ -732,7 +732,7 @@ fn final_quantized_error_has_zero_mean_and_quarter_lsb_second_moment() {
                     dither_type: 0, // TPDF
                 },
             );
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
 
             let input = (level_lsb / scale) as f32;
             let mut buffer = vec![input; MOMENT_SAMPLES_PER_CASE];
@@ -799,7 +799,7 @@ fn block_partitioning_is_bit_identical() {
                 dither_type: 0, // TPDF
             },
         );
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
     };
     let input: Vec<f32> = (0..FRAMES * CHANNELS)
@@ -881,7 +881,7 @@ fn unshaped_tpdf_final_error_is_uncorrelated_across_time() {
             dither_type: 0, // TPDF
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = (0.37 / 32768.0) as f32;
     let mut buffer = vec![input; FRAMES];
     plugin
@@ -921,7 +921,7 @@ fn unshaped_tpdf_error_spectrum_is_flat() {
             dither_type: 0, // TPDF
         },
     );
-    plugin.initialize(SAMPLE_RATE).unwrap();
+    plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let input = (0.37 / 32768.0) as f32;
     let mut quantized = vec![input; TOTAL];
     plugin
@@ -977,7 +977,7 @@ fn channel_errors_are_mutually_uncorrelated() {
             dither_type: 0, // TPDF
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = (0.37 / 32768.0) as f32;
     let mut buffer = vec![input; FRAMES * CHANNELS];
     plugin
@@ -1022,7 +1022,7 @@ fn full_output_is_deterministic_across_instances_and_reset() {
             dither_type: 0, // TPDF
         },
     );
-    first.initialize(48_000).unwrap();
+    first.initialize(48_000.0).unwrap();
     let mut second = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
@@ -1031,7 +1031,7 @@ fn full_output_is_deterministic_across_instances_and_reset() {
             dither_type: 0,
         },
     );
-    second.initialize(48_000).unwrap();
+    second.initialize(48_000.0).unwrap();
 
     let mut output_first = input.clone();
     first
@@ -1081,7 +1081,7 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                         dither_type,
                     },
                 );
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
                 let mut inputs: Vec<f32> =
                     (0..1024).map(|i| -1.0 + 2.0 * (i as f32) / 1023.0).collect();
                 for sub_lsb in [0.1_f64, 0.25, 0.4, 0.6] {
@@ -1119,7 +1119,7 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                         dither_type,
                     },
                 );
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
                 let mut buffer = vec![input];
                 plugin.process_in_place(&mut buffer, &make_context(1)).unwrap();
                 assert_eq!(export_signed_pcm(buffer[0], bits), expected);
@@ -1159,7 +1159,7 @@ fn quantization_grid_covers_all_depths_and_rounding_modes() {
                     dither_type: if truncate { 2 } else { 1 },
                 },
             );
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             // Full-scale sweep, half-LSB tie points, and exact endpoints.
             let scale = 2.0_f64.powi(bits - 1);
             let mut inputs: Vec<f32> =
@@ -1340,7 +1340,7 @@ fn apply_values_is_transactional_on_batch_errors() {
     // batches below place a valid entry before the invalid one and
     // therefore partially applied before the R1 fix.)
     let mut plugin = DitherPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut prefix = vec![0.1_f32; 256 * 2];
     plugin
         .process_in_place(&mut prefix, &make_context(256))
@@ -1442,7 +1442,7 @@ fn non_default_config_save_reload_reproduces_output_bit_exactly() {
         .map(|i| (i as f32 * 0.013).sin() * 0.6)
         .collect();
     let mut plugin = DitherPlugin::from_params(CHANNELS, stored.clone());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = input.clone();
     plugin
         .process_in_place(&mut buffer, &make_context(FRAMES))
@@ -1454,7 +1454,7 @@ fn non_default_config_save_reload_reproduces_output_bit_exactly() {
     assert!(!reloaded.noise_shaping);
     assert_eq!(reloaded.dither_type, 2);
     let mut restored = DitherPlugin::from_params(CHANNELS, reloaded);
-    restored.initialize(48_000).unwrap();
+    restored.initialize(48_000.0).unwrap();
     let mut actual = input.clone();
     restored
         .process_in_place(&mut actual, &make_context(FRAMES))
@@ -1485,7 +1485,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
         dither_type: 0, // TPDF
     };
     let mut plugin = DitherPlugin::from_params(CHANNELS, stored.clone());
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = gained.clone();
     plugin
         .process_in_place(&mut buffer, &make_context(FRAMES))
@@ -1519,7 +1519,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     assert_eq!(params_reloaded.noise_shaping, Params::default().noise_shaping);
     assert_eq!(params_reloaded.dither_type, Params::default().dither_type);
     let mut restored = DitherPlugin::from_params(CHANNELS, reloaded);
-    restored.initialize(48_000).unwrap();
+    restored.initialize(48_000.0).unwrap();
     let mut restored_buffer = gained.clone();
     restored
         .process_in_place(&mut restored_buffer, &make_context(FRAMES))
@@ -1536,7 +1536,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
             dither_type: 0,
         },
     );
-    candidate.initialize(48_000).unwrap();
+    candidate.initialize(48_000.0).unwrap();
     let mut twin = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
@@ -1545,7 +1545,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
             dither_type: 0,
         },
     );
-    twin.initialize(48_000).unwrap();
+    twin.initialize(48_000.0).unwrap();
     let prefix_frames = 1024;
     let mut prefix = gained[..prefix_frames * CHANNELS].to_vec();
     candidate

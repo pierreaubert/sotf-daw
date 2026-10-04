@@ -695,7 +695,7 @@ fn failed_tilt_reinitialize_preserves_populated_state_and_retries() {
         .unwrap();
     assert_eq!(candidate_suffix, twin_suffix);
 
-    candidate.initialize(44_100).unwrap();
+    candidate.initialize(44_100.0).unwrap();
     let mut fresh = make(44_100);
     let retry = make_tone(500.0, 44_100, 2_048, 0.4);
     let mut candidate_retry = retry.clone();

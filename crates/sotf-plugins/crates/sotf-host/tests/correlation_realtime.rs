@@ -74,7 +74,7 @@ fn input(channels: usize, anti_phase: bool) -> Vec<f32> {
 }
 fn prepared(channels: usize) -> ChannelCorrelationPlugin {
     let mut plugin = ChannelCorrelationPlugin::new(channels).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 fn process(plugin: &mut ChannelCorrelationPlugin, values: &[f32], output: &mut [f32]) {

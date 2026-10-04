@@ -26,7 +26,7 @@ fn render_loudness(layout: ChannelLayout, role_samples: &[(ChannelRole, f32)]) -
     let channels = layout.channels.len();
     let frames = 48_000 * 4;
     let mut plugin = LoudnessMonitorPlugin::with_channel_layout(layout).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut input = vec![0.0; frames * channels];
     for (frame_index, frame) in input.chunks_exact_mut(channels).enumerate() {
         let polarity = if frame_index.is_multiple_of(2) {
@@ -72,7 +72,7 @@ fn render_layout_role(config_id: &str, role: ChannelRole) -> LoudnessData {
         .index;
     let frames = 48_000 * 4;
     let mut plugin = LoudnessMonitorPlugin::with_channel_layout(layout).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut input = vec![0.0; frames * channels];
     for (frame_index, frame) in input.chunks_exact_mut(channels).enumerate() {
         frame[role_index] = if frame_index.is_multiple_of(2) {
@@ -128,7 +128,7 @@ fn loudness_input_only_tap_updates_measurement_without_output_copy() {
         })
         .collect();
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     assert_eq!(
         plugin
@@ -206,7 +206,7 @@ fn explicit_large_layouts_are_compliant_and_count_only_multichannel_is_not() {
         .unwrap();
         let channels = layout.channels.len();
         let mut plugin = LoudnessMonitorPlugin::with_channel_layout(layout).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = vec![0.0; channels];
         let mut output = vec![0.0; channels];
         plugin
@@ -222,7 +222,7 @@ fn explicit_large_layouts_are_compliant_and_count_only_multichannel_is_not() {
     }
 
     let mut ambiguous = LoudnessMonitorPlugin::new(8).unwrap();
-    ambiguous.initialize(48_000).unwrap();
+    ambiguous.initialize(48_000.0).unwrap();
     ambiguous
         .process(&[0.0; 8], &mut [0.0; 8], &ProcessContext::new(48_000, 1))
         .unwrap();
@@ -271,7 +271,7 @@ fn test_loudness_monitor_rejects_invalid_construction_and_initialization() {
     assert!(LoudnessMonitorPlugin::new(0).is_err());
 
     let mut monitor = LoudnessMonitorPlugin::new(2).unwrap();
-    assert!(monitor.initialize(0).is_err());
+    assert!(monitor.initialize(0.0).is_err());
 
     let input = vec![0.0; 8];
     let mut output = vec![0.0; 8];
@@ -282,7 +282,7 @@ fn test_loudness_monitor_rejects_invalid_construction_and_initialization() {
 #[test]
 fn test_loudness_monitor_validates_context_and_exact_buffer_geometry() {
     let mut monitor = LoudnessMonitorPlugin::new(2).unwrap();
-    monitor.initialize(48_000).unwrap();
+    monitor.initialize(48_000.0).unwrap();
 
     let context = ProcessContext::new(48_000, 4);
     let input = vec![0.0; 8];
@@ -320,7 +320,7 @@ fn test_loudness_monitor_validates_context_and_exact_buffer_geometry() {
 fn test_loudness_monitor_keeps_frames_across_former_ring_wrap() {
     let channels = 7;
     let mut monitor = LoudnessMonitorPlugin::new(channels).unwrap();
-    monitor.initialize(48_000).unwrap();
+    monitor.initialize(48_000.0).unwrap();
 
     // 13,714 * 7 = 95,998 samples. The old 96,000-sample ring then split
     // the next two frames into 2- and 12-sample slices, neither frame-aligned.
@@ -352,7 +352,7 @@ fn test_loudness_monitor_does_not_truncate_blocks_larger_than_old_ring() {
     let channels = 32;
     let frames = 3_001;
     let mut monitor = LoudnessMonitorPlugin::new(channels).unwrap();
-    monitor.initialize(48_000).unwrap();
+    monitor.initialize(48_000.0).unwrap();
 
     let mut input = vec![0.0; frames * channels];
     input[(frames - 1) * channels..].fill(0.9);
@@ -370,7 +370,7 @@ fn test_loudness_monitor_does_not_truncate_blocks_larger_than_old_ring() {
 #[test]
 fn test_loudness_monitor_disable_clears_and_reenable_starts_fresh() {
     let mut monitor = LoudnessMonitorPlugin::new(2).unwrap();
-    monitor.initialize(48_000).unwrap();
+    monitor.initialize(48_000.0).unwrap();
     let input = vec![0.8; 2_048];
     let mut output = vec![0.0; input.len()];
     let context = ProcessContext::new(48_000, 1_024);
@@ -401,7 +401,7 @@ fn test_loudness_monitor_disable_clears_and_reenable_starts_fresh() {
 fn test_loudness_monitor_stereo() {
     // Create a loudness monitor for stereo audio
     let mut monitor = LoudnessMonitorPlugin::new(2).unwrap();
-    monitor.initialize(48000).unwrap();
+    monitor.initialize(48000.0).unwrap();
 
     // Generate test signal: -20dBFS tone
     let num_frames = 4800; // 100ms at 48kHz
@@ -450,7 +450,7 @@ fn test_loudness_monitor_stereo() {
 fn loudness_monitor_stereo_correlation_is_centered_and_partition_invariant() {
     fn render(partitions: &[usize]) -> f64 {
         let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let frames = 8192;
         let input: Vec<f32> = (0..frames)
             .flat_map(|frame| {
@@ -630,7 +630,7 @@ fn loudness_true_peak_and_centered_correlation_are_partition_invariant_across_ra
 fn count_only_multichannel_measurement_is_explicitly_noncompliant() {
     for channels in [5, 6, 8, 12, 16] {
         let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let input = vec![0.1; 48_000 * channels];
         let mut output = vec![0.0; input.len()];
         plugin
@@ -645,7 +645,7 @@ fn count_only_multichannel_measurement_is_explicitly_noncompliant() {
 #[test]
 fn incomplete_loudness_windows_are_invalid_not_plausible_minus_120() {
     let mut plugin = LoudnessMonitorPlugin::new(2).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; 256 * 2];
     let mut output = vec![0.0; input.len()];
     plugin
@@ -730,7 +730,7 @@ fn reset_and_reenable_publish_enabled_but_cold_generations() {
         .unwrap()
         .with_integrated_mode(IntegratedLoudnessMode::WholeProgram)
         .unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let input = vec![0.1; 48_000 * 4 * 2];
     let mut output = vec![0.0; input.len()];
     plugin
@@ -774,7 +774,7 @@ fn reset_and_reenable_publish_enabled_but_cold_generations() {
 fn test_loudness_monitor_keeps_32_channel_peak_slots() {
     let channels = 32;
     let mut monitor = LoudnessMonitorPlugin::new(channels).unwrap();
-    monitor.initialize(48000).unwrap();
+    monitor.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
     let input = vec![0.05_f32; num_frames * channels];
@@ -803,7 +803,7 @@ fn test_loudness_monitor_spatial_matrix_is_opt_in_and_survives_initialize() {
     let mut output = vec![0.0_f32; input.len()];
 
     let mut disabled = LoudnessMonitorPlugin::new(2).unwrap();
-    disabled.initialize(48_000).unwrap();
+    disabled.initialize(48_000.0).unwrap();
     disabled.process(&input, &mut output, &context).unwrap();
     let disabled_data = disabled.get_data().unwrap();
     let disabled_loudness = disabled_data.downcast_ref::<LoudnessData>().unwrap();
@@ -811,7 +811,7 @@ fn test_loudness_monitor_spatial_matrix_is_opt_in_and_survives_initialize() {
     assert_eq!(disabled_loudness.correlation_samples_seen, 0);
 
     let mut enabled = LoudnessMonitorPlugin::new(2).unwrap().with_spatial();
-    enabled.initialize(48_000).unwrap();
+    enabled.initialize(48_000.0).unwrap();
     enabled.process(&input, &mut output, &context).unwrap();
     let enabled_data = enabled.get_data().unwrap();
     let enabled_loudness = enabled_data.downcast_ref::<LoudnessData>().unwrap();
@@ -832,7 +832,7 @@ fn test_spectrum_analyzer_stereo() {
     };
 
     let mut analyzer = SpectrumAnalyzerPlugin::with_config(2, config).unwrap();
-    analyzer.initialize(48000).unwrap();
+    analyzer.initialize(48000.0).unwrap();
 
     // Generate test signal: 440Hz sine wave
     let num_frames = 2048;
@@ -889,8 +889,8 @@ fn test_both_analyzers_together() {
     let mut loudness = LoudnessMonitorPlugin::new(2).unwrap();
     let mut spectrum = SpectrumAnalyzerPlugin::new(2).unwrap();
 
-    loudness.initialize(48000).unwrap();
-    spectrum.initialize(48000).unwrap();
+    loudness.initialize(48000.0).unwrap();
+    spectrum.initialize(48000.0).unwrap();
 
     // Generate complex signal (mix of frequencies)
     let num_frames = 4096;
@@ -947,8 +947,8 @@ fn test_analyzer_with_5ch_audio() {
     let mut loudness = LoudnessMonitorPlugin::new(5).unwrap();
     let mut spectrum = SpectrumAnalyzerPlugin::new(5).unwrap();
 
-    loudness.initialize(48000).unwrap();
-    spectrum.initialize(48000).unwrap();
+    loudness.initialize(48000.0).unwrap();
+    spectrum.initialize(48000.0).unwrap();
 
     // Generate 5-channel audio
     let num_frames = 2048;
@@ -998,7 +998,7 @@ fn test_analyzer_with_5ch_audio() {
 #[test]
 fn test_analyzer_reset() {
     let mut monitor = LoudnessMonitorPlugin::new(2).unwrap();
-    monitor.initialize(48000).unwrap();
+    monitor.initialize(48000.0).unwrap();
 
     // Process some audio
     let num_frames = 1024;

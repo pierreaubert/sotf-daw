@@ -71,7 +71,7 @@ pub(super) fn bin_intensity_doa(left: Complex<f32>, right: Complex<f32>) -> Opti
 
 impl UpmixerPlugin {
     pub(in super::super) fn process_frequency_domain_erb_bands(&mut self) {
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate == 0.0 || self.core.fft_size == 0 {
             return;
         }
 

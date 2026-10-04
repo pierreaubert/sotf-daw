@@ -41,7 +41,7 @@ fn test_de_esser_reduces_sibilance() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // 8kHz sine in the sibilance range
     let mut buf = make_sine(8000.0, sr, num_frames, amplitude);
@@ -84,7 +84,7 @@ fn test_wideband_reduction_is_channel_specific() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = Vec::with_capacity(sample_count);
     let mut low_input = Vec::with_capacity(num_frames);
@@ -153,7 +153,7 @@ fn test_de_esser_passes_low_frequencies() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // 200Hz sine — well below detection range
     let mut buf = make_sine(200.0, sr, num_frames, amplitude);
@@ -176,7 +176,7 @@ fn test_de_esser_passes_low_frequencies() {
 #[test]
 fn test_de_esser_parameter_set_get() {
     let mut plugin = DeEsserPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Set threshold
     plugin
@@ -218,7 +218,7 @@ fn test_mix_smoother_ramps_per_sample() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // Now request mix = 1.0 (fully wet). The smoother has a 5 ms ramp.
     plugin
@@ -287,7 +287,7 @@ fn test_mix_smoother_ramps_per_sample() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin2.initialize(sr).unwrap();
+    plugin2.initialize(f64::from(sr)).unwrap();
 
     // Ramp to fully wet over 5ms
     plugin2
@@ -348,7 +348,7 @@ fn test_split_band_mode() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     // --- Test that HF is attenuated ---
     let mut buf_hf = make_sine(8000.0, sr, num_frames, amplitude);
@@ -388,7 +388,7 @@ fn test_split_band_mode() {
 #[test]
 fn test_set_parameter_all_float_params_roundtrip() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let cases: &[(&str, f32)] = &[
         ("threshold", -30.0),
@@ -415,7 +415,7 @@ fn test_set_parameter_all_float_params_roundtrip() {
 #[test]
 fn test_set_parameter_out_of_bounds_returns_error() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Frequency range [2000, 16000]
     assert!(
@@ -457,7 +457,7 @@ fn test_set_parameter_out_of_bounds_returns_error() {
 #[test]
 fn test_set_parameter_nan_returns_error() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert!(
         plugin
@@ -480,7 +480,7 @@ fn test_set_parameter_nan_returns_error() {
 #[test]
 fn test_set_parameter_unknown_id_returns_error() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     assert!(
         plugin
@@ -492,7 +492,7 @@ fn test_set_parameter_unknown_id_returns_error() {
 #[test]
 fn test_set_parameter_mode_variants() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let error = plugin
         .parametric_set_parameter(
@@ -538,7 +538,7 @@ fn from_params_rejects_out_of_range_values() {
 #[test]
 fn test_process_empty_buffer_returns_zero() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let mut buf = vec![0.0f32; 0];
     let ctx = ProcessContext::new(48000, 0);
@@ -568,7 +568,7 @@ fn test_fallible_constructor_rejects_invalid_values() {
 #[test]
 fn test_short_buffer_returns_error() {
     let mut plugin = DeEsserPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.0; 7];
     assert!(
         plugin
@@ -581,8 +581,8 @@ fn test_short_buffer_returns_error() {
 fn test_short_buffer_is_rejected_before_state_or_data_changes() {
     let mut rejected = DeEsserPlugin::new(2);
     let mut reference = DeEsserPlugin::new(2);
-    rejected.initialize(48_000).unwrap();
-    reference.initialize(48_000).unwrap();
+    rejected.initialize(48_000.0).unwrap();
+    reference.initialize(48_000.0).unwrap();
 
     let mut short = vec![99.0_f32; 7];
     let error = rejected
@@ -605,7 +605,7 @@ fn test_short_buffer_is_rejected_before_state_or_data_changes() {
 #[test]
 fn test_frame_channel_overflow_is_rejected_before_dsp() {
     let mut plugin = DeEsserPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.25_f32; 8];
     let error = plugin
         .process_in_place(
@@ -652,7 +652,7 @@ fn test_reset_clears_filter_state() {
         },
     )
     .expect("valid De-Esser parameters");
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let mut buf = make_sine(8000.0, sr, 4800, 0.5);
     let ctx = ProcessContext::new(sr, 4800);
@@ -679,7 +679,7 @@ fn test_reset_clears_filter_state() {
 #[test]
 fn test_structural_q_update_requires_host_rebuild() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let original_q = plugin.q;
     let error = plugin
@@ -692,7 +692,7 @@ fn test_structural_q_update_requires_host_rebuild() {
 #[test]
 fn test_parameter_updates_reject_detector_band_at_initialized_nyquist() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(32_000).unwrap();
+    plugin.initialize(32_000.0).unwrap();
     let original_frequency = plugin.frequency;
 
     // 16 kHz is inside the serialized parameter range, but it is not a valid
@@ -711,7 +711,7 @@ fn test_parameter_updates_reject_detector_band_at_initialized_nyquist() {
 #[test]
 fn test_set_parameter_attack_updates_cores() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .parametric_set_parameter(ParameterId::from("attack"), ParameterValue::Float(5.0))
@@ -726,7 +726,7 @@ fn test_set_parameter_attack_updates_cores() {
 #[test]
 fn test_set_parameter_release_updates_cores() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .parametric_set_parameter(ParameterId::from("release"), ParameterValue::Float(100.0))
@@ -741,10 +741,10 @@ fn test_set_parameter_release_updates_cores() {
 #[test]
 fn test_initialize_different_sample_rate() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(44100).unwrap();
+    plugin.initialize(44100.0).unwrap();
     assert_eq!(plugin.sample_rate, 44100.0);
 
-    plugin.initialize(96000).unwrap();
+    plugin.initialize(96000.0).unwrap();
     assert_eq!(plugin.sample_rate, 96000.0);
     // Filters and crossovers should have been rebuilt for the new rate without panic
 }
@@ -752,7 +752,7 @@ fn test_initialize_different_sample_rate() {
 #[test]
 fn test_set_parameter_mode_unknown_string_is_rejected() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let error = plugin
         .parametric_set_parameter(
@@ -771,7 +771,7 @@ fn test_set_parameter_mode_unknown_string_is_rejected() {
 #[test]
 fn test_set_parameter_mix_updates_smoother_target() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     plugin
         .parametric_set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.75))
@@ -795,7 +795,7 @@ fn split_band_inactive_output_is_mix_invariant() {
             ..Default::default()
         };
         let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, 48_000).unwrap();
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut signal: Vec<f32> = (0..16_384)
             .map(|frame| {
                 0.2 * (std::f32::consts::TAU * 997.0 * frame as f32 / 48_000.0).sin()
@@ -841,7 +841,7 @@ fn detector_q_defines_bandwidth_once_with_butterworth_poles() {
 #[test]
 fn structural_detector_controls_are_marked_and_transactional() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     for id in ["frequency", "q", "mode"] {
         let parameter = plugin
             .parameter_schema()
@@ -870,7 +870,7 @@ fn structural_detector_controls_are_marked_and_transactional() {
 fn meter_cadence_depends_on_samples_not_callback_count() {
     fn counter_after(block: usize, total: usize) -> usize {
         let mut plugin = DeEsserPlugin::new(1);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut remaining = total;
         while remaining > 0 {
             let frames = remaining.min(block);
@@ -901,7 +901,7 @@ fn held_monitor_snapshot_does_not_freeze_future_publication() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, 48_000).unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let held = plugin.get_data().unwrap();
     let mut signal = make_sine(8_000.0, 48_000, 4_800, 0.8);
     plugin
@@ -920,7 +920,7 @@ fn held_monitor_snapshot_does_not_freeze_future_publication() {
 #[test]
 fn non_finite_audio_is_sanitized_without_poisoning_state() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut malformed = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.25];
     plugin
         .process_in_place(&mut malformed, &ProcessContext::new(48_000, 4))
@@ -1100,7 +1100,7 @@ fn lookahead_impulse_emerges_exactly_at_reported_latency() {
             };
             let mut plugin =
                 DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let expected = if ms > 0.0 {
                 (ms * 0.001 * sample_rate as f32).round() as usize
             } else {
@@ -1142,7 +1142,7 @@ fn lookahead_dry_path_is_aligned_with_wet() {
         ..unity_params()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let latency = plugin.latency_samples();
     assert_eq!(latency, 96);
     // Settle the mix smoother (fresh instances ramp toward a non-default mix).
@@ -1193,7 +1193,7 @@ fn lookahead_detector_reacts_before_delayed_program() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let latency = plugin.latency_samples();
         let frames = 9_600;
         let mut buf = vec![0.0f32; frames];
@@ -1236,7 +1236,7 @@ fn fir_split_reports_group_delay_and_reconstructs_exactly() {
         ..unity_params()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(plugin.latency_samples(), (taps - 1) / 2);
     // Published taps are symmetric: the bank is linear-phase by design.
     let lp = plugin
@@ -1293,7 +1293,7 @@ fn fir_split_dense_signal_reconstructs_delayed_input() {
         ..unity_params()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let latency = plugin.latency_samples();
     let frames = 16_384;
     let input: Vec<f32> = (0..frames)
@@ -1336,7 +1336,7 @@ fn fir_taps_match_independent_kaiser_windowed_sinc_design() {
             };
             let mut plugin =
                 DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let fir = plugin.fir_split.as_ref().unwrap();
             let published_lp = fir.lowpass_coefficients().to_vec();
             assert_eq!(published_lp.len(), taps);
@@ -1413,7 +1413,7 @@ fn fir_split_bands_match_independent_dtft_reference() {
             )
             .unwrap();
             // Taps are rate-dependent; rebuild the bank at the test rate first.
-            probe.initialize(sample_rate).unwrap();
+            probe.initialize(f64::from(sample_rate)).unwrap();
             let fir = probe.fir_split.as_ref().unwrap();
             let lp = fir.lowpass_coefficients().to_vec();
             let hp = fir.highpass_coefficients();
@@ -1441,7 +1441,7 @@ fn fir_split_bands_match_independent_dtft_reference() {
                     let mut plugin =
                         DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate)
                             .unwrap();
-                    plugin.initialize(sample_rate).unwrap();
+                    plugin.initialize(f64::from(sample_rate)).unwrap();
                     let mut buf = input.clone();
                     plugin
                         .process_in_place(&mut buf, &ProcessContext::new(sample_rate, frames))
@@ -1470,7 +1470,7 @@ fn fir_split_bands_match_independent_dtft_reference() {
                     let mut plugin =
                         DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate)
                             .unwrap();
-                    plugin.initialize(sample_rate).unwrap();
+                    plugin.initialize(f64::from(sample_rate)).unwrap();
                     assert_eq!(plugin.input_channels(), 2);
                     let mut buf = vec![0.0f32; frames * 2];
                     for i in 0..frames {
@@ -1552,7 +1552,7 @@ fn lr4_split_recombine_is_allpass_flat() {
                 };
                 let mut plugin =
                     DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-                plugin.initialize(sample_rate).unwrap();
+                plugin.initialize(f64::from(sample_rate)).unwrap();
                 assert_eq!(plugin.latency_samples(), 0);
                 let frames = sample_rate as usize / 2;
                 let mut buf: Vec<f32> = (0..frames)
@@ -1594,7 +1594,7 @@ fn split_topology_is_inert_in_wideband() {
             sample_rate,
         )
         .unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         assert_eq!(plugin.latency_samples(), 0);
         let mut buf = input.clone();
         let frames = buf.len();
@@ -1629,7 +1629,7 @@ fn steady_gr_db(sample_rate: u32, center_hz: f32, ratio: f32, peak_db: f32, rang
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = sample_rate as usize / 2;
     let peak = 10.0f32.powf(peak_db / 20.0);
     let mut buf: Vec<f32> = (0..frames)
@@ -1691,7 +1691,7 @@ fn gr_range_cap_is_exact_and_zero_range_is_unity() {
         ..unity_params()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = 8_192;
     let input: Vec<f32> = (0..frames)
         .map(|i| 0.4 * (std::f32::consts::TAU * 8_000.0 * i as f32 / sample_rate as f32).sin())
@@ -1722,7 +1722,7 @@ fn gr_is_zero_below_knee() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = sample_rate as usize;
         let peak = 10.0f32.powf(-30.0 / 20.0);
         let mut buf: Vec<f32> = (0..frames)
@@ -1761,7 +1761,7 @@ fn output_gain_matches_measured_gr() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = sample_rate as usize;
     let peak = 10.0f32.powf(-10.0 / 20.0);
     let input: Vec<f32> = (0..frames)
@@ -1795,7 +1795,7 @@ fn full_link_equalizes_channel_reduction() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = sample_rate as usize;
     // Hot left, quiet right: unlinked, only the left would reduce.
     let mut buf = vec![0.0f32; frames * 2];
@@ -1837,7 +1837,7 @@ fn ms_roundtrip_is_transparent_without_reduction() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = 8_192;
         let mut input = vec![0.0f32; frames * 2];
         for i in 0..frames {
@@ -1877,7 +1877,7 @@ fn ms_roundtrip_is_transparent_without_reduction() {
                 sample_rate,
             )
             .unwrap();
-            lr_plugin.initialize(sample_rate).unwrap();
+            lr_plugin.initialize(f64::from(sample_rate)).unwrap();
             let mut lr_output = input.clone();
             lr_plugin
                 .process_in_place(&mut lr_output, &ProcessContext::new(sample_rate, frames))
@@ -1928,7 +1928,7 @@ fn ms_mode_processes_sum_and_difference_channels() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = sample_rate as usize;
         let mut buf = vec![0.0f32; frames * 2];
         for i in 0..frames {
@@ -1976,7 +1976,7 @@ fn ms_center_image_is_preserved() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = sample_rate as usize;
     let mut buf = vec![0.0f32; frames * 2];
     for i in 0..frames {
@@ -2017,7 +2017,7 @@ fn ms_mode_is_ignored_when_not_stereo() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let mut buf = input.clone();
         let frames = buf.len();
         plugin
@@ -2049,7 +2049,7 @@ fn external_sidechain_drives_detection_and_preserves_key() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(plugin.input_channels(), 2);
     let frames = sample_rate as usize;
     let mut buf = vec![0.0f32; frames * 2];
@@ -2103,7 +2103,7 @@ fn external_sidechain_isolation_both_directions() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = sample_rate as usize;
         let program_peak = 10.0f32.powf(program_db / 20.0);
         let mut buf = vec![0.0f32; frames * 2];
@@ -2145,10 +2145,10 @@ fn missing_key_is_rejected_before_state_changes() {
     };
     let mut rejected =
         DeEsserPlugin::try_from_params_at_sample_rate(1, params.clone(), sample_rate).unwrap();
-    rejected.initialize(sample_rate).unwrap();
+    rejected.initialize(f64::from(sample_rate)).unwrap();
     let mut reference =
         DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    reference.initialize(sample_rate).unwrap();
+    reference.initialize(f64::from(sample_rate)).unwrap();
     // Program-width buffer without the key bus must be rejected untouched.
     let mut short = vec![0.25f32; 64];
     let error = rejected
@@ -2185,7 +2185,7 @@ fn sibilant_burst_reduced_while_thump_and_image_preserved() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let burst = 1_440; // 30 ms sibilance
     let gap = 9_600; // 200 ms release settle
     let thump = 1_440; // 30 ms LF transient
@@ -2302,7 +2302,7 @@ fn processing_is_partition_invariant() {
         let mut reference =
             DeEsserPlugin::try_from_params_at_sample_rate(channels, params.clone(), sample_rate)
                 .unwrap();
-        reference.initialize(sample_rate).unwrap();
+        reference.initialize(f64::from(sample_rate)).unwrap();
         let expected = render_partitioned(&mut reference, &input, channels, sample_rate, frames);
         for block in [1_024, 63, 7] {
             let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(
@@ -2311,7 +2311,7 @@ fn processing_is_partition_invariant() {
                 sample_rate,
             )
             .unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let output = render_partitioned(&mut plugin, &input, channels, sample_rate, block);
             assert_eq!(output, expected, "partition {block} diverged for {name}");
         }
@@ -2337,7 +2337,7 @@ fn drain_emits_exactly_the_retained_tail() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let latency = plugin.latency_samples();
         let retained = plugin.retained_frames();
         assert_eq!(plugin.drain_output_frames_max(), retained.min(256));
@@ -2409,7 +2409,7 @@ fn drain_emits_exactly_the_retained_tail() {
 #[test]
 fn new_controls_register_with_automation_classification() {
     let mut plugin = DeEsserPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let schema = plugin.parameter_schema();
     assert_eq!(schema.len(), 14, "ten legacy plus four audit controls");
     let mode_of = |id: &str| {
@@ -2450,7 +2450,7 @@ fn new_controls_register_with_automation_classification() {
 #[test]
 fn structural_topology_controls_reject_live_changes() {
     let mut plugin = DeEsserPlugin::new(1);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let error = plugin
         .parametric_set_parameter(
             ParameterId::from("lookahead_ms"),
@@ -2610,7 +2610,7 @@ fn compile_metadata_reports_latency_and_coupling() {
         },
     )
     .unwrap();
-    ahead.initialize(sample_rate).unwrap();
+    ahead.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(ahead.compile_metadata().latency_samples, 240);
     // Linear-phase split latency is reported.
     let fir = DeEsserPlugin::try_from_params(
@@ -2662,7 +2662,7 @@ fn tail_length_is_finite_except_recursive_split() {
         },
     )
     .unwrap();
-    ahead.initialize(sample_rate).unwrap();
+    ahead.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(ahead.tail_length(), TailLength::Finite(96));
     // Linear-phase split: finite retained support.
     let mut fir = DeEsserPlugin::try_from_params(
@@ -2674,7 +2674,7 @@ fn tail_length_is_finite_except_recursive_split() {
         },
     )
     .unwrap();
-    fir.initialize(sample_rate).unwrap();
+    fir.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(
         fir.tail_length(),
         TailLength::Finite((sotf_host::fir_crossover::DEFAULT_FIR_CROSSOVER_TAPS - 1) as u64)
@@ -2689,7 +2689,7 @@ fn tail_length_is_finite_except_recursive_split() {
         },
     )
     .unwrap();
-    lr4.initialize(sample_rate).unwrap();
+    lr4.initialize(f64::from(sample_rate)).unwrap();
     assert_eq!(lr4.tail_length(), TailLength::Unknown);
 }
 
@@ -2697,7 +2697,7 @@ fn tail_length_is_finite_except_recursive_split() {
 fn drain_without_input_or_latency_completes_immediately() {
     let sample_rate = 48_000u32;
     let mut plugin = DeEsserPlugin::try_from_params(1, DeEsserPluginParams::default()).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     // No input yet: complete without output.
     let mut out = vec![0.0f32; 256];
     let idle = plugin
@@ -2735,7 +2735,7 @@ fn process_rejects_uninitialized_and_rate_mismatch() {
         .unwrap_err();
     assert!(error.contains("initialized"), "unexpected: {error}");
     assert!(buf.iter().all(|&x| x == 0.25));
-    plugin.initialize(44_100).unwrap();
+    plugin.initialize(44_100.0).unwrap();
     let error = plugin
         .process_in_place(&mut buf, &ProcessContext::new(48_000, 64))
         .unwrap_err();
@@ -2752,7 +2752,7 @@ fn process_rejects_uninitialized_and_rate_mismatch() {
         44_100,
     )
     .unwrap();
-    reference.initialize(44_100).unwrap();
+    reference.initialize(44_100.0).unwrap();
     let mut out = vec![0.1f32; 64];
     let mut expected = out.clone();
     plugin
@@ -2790,7 +2790,7 @@ fn drain_with_engaged_reduction_completes_exactly() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let retained = plugin.retained_frames();
         assert!(retained > 0);
         let frames = sample_rate as usize / 2;
@@ -2865,7 +2865,7 @@ fn drain_supports_irregular_output_sizes() {
     let mk = || {
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(1, params.clone(), sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = 4_096;
         let mut buf = vec![0.0f32; frames];
         buf[frames - 1] = 1.0;
@@ -2951,7 +2951,7 @@ fn multichannel_new_paths_render_finite_and_ms_inert() {
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(channels, base.clone(), sample_rate)
                 .unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         assert_eq!(plugin.latency_samples(), 96 + 512);
         assert_eq!(plugin.retained_frames(), 96 + 1024);
         let frames = 4_096;
@@ -2987,7 +2987,7 @@ fn multichannel_new_paths_render_finite_and_ms_inert() {
             sample_rate,
         )
         .unwrap();
-        plain.initialize(sample_rate).unwrap();
+        plain.initialize(f64::from(sample_rate)).unwrap();
         let mut expected = input.clone();
         plain
             .process_in_place(&mut expected, &ProcessContext::new(sample_rate, frames))
@@ -3000,7 +3000,7 @@ fn multichannel_new_paths_render_finite_and_ms_inert() {
         // Partition invariance on the multichannel path.
         let mut chunked =
             DeEsserPlugin::try_from_params_at_sample_rate(channels, base, sample_rate).unwrap();
-        chunked.initialize(sample_rate).unwrap();
+        chunked.initialize(f64::from(sample_rate)).unwrap();
         assert_eq!(
             render_partitioned(&mut chunked, &input, channels, sample_rate, 63),
             output
@@ -3030,7 +3030,7 @@ fn half_link_interpolates_reduction() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let frames = sample_rate as usize;
         let mut buf = vec![0.0f32; frames * 2];
         for i in 0..frames {
@@ -3089,7 +3089,7 @@ fn noise_and_dc_offset_render_finite_through_new_modes() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let frames = 16_384;
     let mut buf = vec![0.0f32; frames * 2];
     for sample in buf.iter_mut() {
@@ -3118,7 +3118,7 @@ fn noise_and_dc_offset_render_finite_through_new_modes() {
         ..Default::default()
     };
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     let mut buf = vec![0.0f32; frames * 2];
     for i in 0..frames {
         buf[i * 2] = 0.2 * next_noise() + 0.25;
@@ -3175,10 +3175,10 @@ fn processing_is_invariant_under_seeded_random_partitions() {
     }
     let mut reference =
         DeEsserPlugin::try_from_params_at_sample_rate(1, params.clone(), sample_rate).unwrap();
-    reference.initialize(sample_rate).unwrap();
+    reference.initialize(f64::from(sample_rate)).unwrap();
     let expected = render_partitioned(&mut reference, &input, 1, sample_rate, frames);
     let mut plugin = DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-    plugin.initialize(sample_rate).unwrap();
+    plugin.initialize(f64::from(sample_rate)).unwrap();
     // Seeded xorshift64: deterministic pseudo-random blocks in 1..=1500.
     let mut rng = 0x243f_6a88_85a3_08d3u64;
     let mut output = input.clone();
@@ -3229,7 +3229,7 @@ fn split_band_dry_path_is_aligned_for_both_topologies() {
             };
             let mut plugin =
                 DeEsserPlugin::try_from_params_at_sample_rate(1, params, sample_rate).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             // Settle the mix smoother toward a non-default mix.
             let mut warmup = vec![0.0f32; sample_rate as usize];
             plugin
@@ -3348,7 +3348,7 @@ fn split_band_ms_mode_engages_sum_and_difference_under_reduction() {
             };
             let mut plugin =
                 DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-            plugin.initialize(sample_rate).unwrap();
+            plugin.initialize(f64::from(sample_rate)).unwrap();
             let frames = sample_rate as usize;
             let mut buf = vec![0.0f32; frames * 2];
             for i in 0..frames {
@@ -3426,7 +3426,7 @@ fn stereo_drain_preserves_ms_and_eof_contract() {
         };
         let mut plugin =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params, sample_rate).unwrap();
-        plugin.initialize(sample_rate).unwrap();
+        plugin.initialize(f64::from(sample_rate)).unwrap();
         let latency = plugin.latency_samples();
         let retained = plugin.retained_frames();
         assert_eq!(plugin.drain_output_frames_max(), retained.min(256));
@@ -3562,7 +3562,7 @@ fn reset_replay_matches_fresh_with_populated_detector_and_key() {
         };
         let mut used =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params(), sample_rate).unwrap();
-        used.initialize(sample_rate).unwrap();
+        used.initialize(f64::from(sample_rate)).unwrap();
         assert_eq!(used.input_channels(), 4);
         let mut first = input();
         used.process_in_place(&mut first, &ProcessContext::new(sample_rate, frames))
@@ -3576,7 +3576,7 @@ fn reset_replay_matches_fresh_with_populated_detector_and_key() {
         used.reset();
         let mut fresh =
             DeEsserPlugin::try_from_params_at_sample_rate(2, params(), sample_rate).unwrap();
-        fresh.initialize(sample_rate).unwrap();
+        fresh.initialize(f64::from(sample_rate)).unwrap();
         let mut replay = input();
         let mut reference = input();
         used.process_in_place(&mut replay, &ProcessContext::new(sample_rate, frames))

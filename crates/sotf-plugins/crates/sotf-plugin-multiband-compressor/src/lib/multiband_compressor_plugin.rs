@@ -129,7 +129,7 @@ pub struct MultibandCompressorPlugin {
 impl MultibandCompressorPlugin {
     #[inline]
     fn envelope_coeff(time_ms: f32, sample_rate: f64) -> f32 {
-        (-1.0 / (time_ms.max(0.01) * 0.001 * sample_rate.max(1) as f32)).exp()
+        (-1.0 / (time_ms.max(0.01) * 0.001 * sample_rate.max(1.0) as f32)).exp()
     }
 
     fn make_band_smoothers(
@@ -349,7 +349,7 @@ impl MultibandCompressorPlugin {
         let nb = params
             .num_bands
             .clamp(1, pk(MC, "num_bands").max_f64() as usize);
-        let sr = 44100;
+        let sr = 44_100.0;
         let default_xfs = [200.0f32, 2000.0, 8000.0, 12000.0];
         let mut xfs = params.crossover_frequencies.clone();
         for (i, &d) in default_xfs.iter().enumerate() {
@@ -838,14 +838,14 @@ impl MultibandCompressorPlugin {
             Biquad::new(
                 BiquadFilterType::Lowshelf,
                 1000.0,
-                sample_rate.max(1) as f64,
+                sample_rate.max(1.0) as f64,
                 0.707,
                 -half_tilt,
             ),
             Biquad::new(
                 BiquadFilterType::Highshelf,
                 1000.0,
-                sample_rate.max(1) as f64,
+                sample_rate.max(1.0) as f64,
                 0.707,
                 half_tilt,
             ),
@@ -859,14 +859,14 @@ impl MultibandCompressorPlugin {
                 low.update_params(
                     BiquadFilterType::Lowshelf,
                     1000.0,
-                    self.sample_rate.max(1) as f64,
+                    self.sample_rate.max(1.0) as f64,
                     0.707,
                     -half_tilt,
                 );
                 high.update_params(
                     BiquadFilterType::Highshelf,
                     1000.0,
-                    self.sample_rate.max(1) as f64,
+                    self.sample_rate.max(1.0) as f64,
                     0.707,
                     half_tilt,
                 );
@@ -964,7 +964,7 @@ impl MultibandCompressorPlugin {
             DetectionMode::Rms {
                 window_ms: Self::RMS_WINDOW_MS,
             },
-            sample_rate.max(1),
+            sample_rate.max(1.0),
         );
         detector.set_mode(mode);
         detector
@@ -976,13 +976,13 @@ impl MultibandCompressorPlugin {
             .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
         // Coefficients must stay valid while disabled; sections are skipped
         // when the active prefix is empty, so clamp instead of building at 0 Hz.
-        let fc = hz.max(1.0).min(sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        let fc = hz.max(1.0).min(sample_rate.max(1.0) as f32 * 0.45).max(1.0) as f64;
         (0..Self::MAX_HPF_SECTIONS)
             .map(|section| {
                 Biquad::new(
                     BiquadFilterType::Highpass,
                     fc,
-                    sample_rate.max(1) as f64,
+                    sample_rate.max(1.0) as f64,
                     Self::hpf_section_q(section, order_is_4th),
                     0.0,
                 )
@@ -1021,14 +1021,14 @@ impl MultibandCompressorPlugin {
         let order_is_4th = HPF_ORDERS
             .get(self.sidechain_hpf_order_index)
             .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
-        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1) as f32 * 0.45).max(1.0) as f64;
+        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1.0) as f32 * 0.45).max(1.0) as f64;
         for band in &mut self.sidechain_hpf_biquads {
             for sections in band {
                 for (index, section) in sections.iter_mut().enumerate() {
                     section.update_params(
                         BiquadFilterType::Highpass,
                         fc,
-                        self.sample_rate.max(1) as f64,
+                        self.sample_rate.max(1.0) as f64,
                         Self::hpf_section_q(index, order_is_4th),
                         0.0,
                     );
@@ -1771,14 +1771,14 @@ impl MultibandCompressorPlugin {
                         low.update_params(
                             BiquadFilterType::Lowshelf,
                             1000.0,
-                            self.sample_rate.max(1) as f64,
+                            self.sample_rate.max(1.0),
                             0.707,
                             -half_tilt,
                         );
                         high.update_params(
                             BiquadFilterType::Highshelf,
                             1000.0,
-                            self.sample_rate.max(1) as f64,
+                            self.sample_rate.max(1.0),
                             0.707,
                             half_tilt,
                         );

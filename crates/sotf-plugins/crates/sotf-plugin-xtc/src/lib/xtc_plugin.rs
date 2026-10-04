@@ -238,14 +238,26 @@ pub(super) struct XtcBypassState {
 }
 
 impl XtcBypassState {
-    fn reset(&mut self, enabled: bool, rate: u32) {
+    pub(super) fn duration_for_rate(rate: f64) -> Result<usize, String> {
+        if !rate.is_finite() || rate <= 0.0 {
+            return Err("XTC sample rate must be finite and positive".into());
+        }
+        // usize/isize audio buffers cannot represent a transition at this
+        // rounded frame count. The exclusive boundary is exact in f64.
+        let exclusive_limit = (1_u128 << (usize::BITS - 1)) as f64;
+        let rounded = (rate / 100.0).round().max(1.0);
+        if !rounded.is_finite() || rounded >= exclusive_limit {
+            return Err("XTC bypass transition exceeds addressable frames".into());
+        }
+        Ok(rounded as usize)
+    }
+
+    pub(super) fn reset(&mut self, enabled: bool) {
         self.dry.fill(0.0);
         self.position = 0;
         self.mix = f64::from(enabled);
         self.step = 0.0;
         self.remaining = 0;
-        // Integer rounding avoids a rate-dependent floating-point boundary.
-        self.duration = ((u64::from(rate) + 50) / 100).max(1) as usize;
     }
 
     fn start(&mut self, enabled: bool) {
@@ -457,9 +469,7 @@ impl XtcPlugin {
     /// Create a new XTC plugin
     pub fn new(params: XtcPluginParams, sample_rate: impl Into<f64>) -> Result<Self, String> {
         let sample_rate = sample_rate.into();
-        if !sample_rate.is_finite() || sample_rate <= 0.0 {
-            return Err("XTC sample rate must be finite and positive".into());
-        }
+        let bypass_duration = XtcBypassState::duration_for_rate(sample_rate)?;
         match params.source_mode.as_str() {
             "synthetic" if params.hrtf_file.is_some() => {
                 return Err(
@@ -651,7 +661,7 @@ impl XtcPlugin {
                 mix: f64::from(params.enabled),
                 step: 0.0,
                 remaining: 0,
-                duration: (sample_rate / 100.0).round().max(1.0) as usize,
+                duration: bypass_duration,
             },
             drain_state: XtcDrainState {
                 zeros: vec![0.0; hop_size * 2],
@@ -1905,9 +1915,7 @@ impl Plugin for XtcPlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
-        if !sample_rate.is_finite() || sample_rate <= 0.0 {
-            return Err("XTC sample rate must be finite and positive".into());
-        }
+        let bypass_duration = XtcBypassState::duration_for_rate(sample_rate)?;
         // AutoGain's two fixed stereo loudness monitors use this validated range.
         // Reject before changing the audio clock or invalidating a pending request.
         if self.params.auto_gain_enabled
@@ -1951,6 +1959,7 @@ impl Plugin for XtcPlugin {
         // A new initialized clock starts the same meter cadence as a fresh
         // instance. Failed preparation never reaches this epoch boundary.
         self.diagnostics.auto_gain_frames = 0;
+        self.bypass.duration = bypass_duration;
         self.reset();
         Ok(())
     }
@@ -1958,7 +1967,7 @@ impl Plugin for XtcPlugin {
     fn reset(&mut self) {
         self.drain_state.received_input = false;
         self.diagnostics.auto_gain_frames = 0;
-        self.bypass.reset(self.params.enabled, self.fft.sample_rate);
+        self.bypass.reset(self.params.enabled);
         self.drain_state.tail_bound = None;
         self.drain_state.input_phase = 0;
         self.drain_state.remaining = None;

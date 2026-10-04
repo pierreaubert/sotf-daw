@@ -119,7 +119,7 @@ impl DownmixPlugin {
 
         let mut p = Self {
             input_ch: input_channels,
-            sample_rate: 44100,
+            sample_rate: 44100.0,
             speaker_config: get_speaker_config_by_channels(input_channels),
             target_coeffs: vec![DownmixCoeffs::default(); input_channels],
             coeff_smoothers: Vec::with_capacity(input_channels * 2),

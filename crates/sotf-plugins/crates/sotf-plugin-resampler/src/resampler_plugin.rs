@@ -1158,7 +1158,7 @@ impl Plugin for ResamplerPlugin {
 #[test]
 fn test_flush_produces_trailing_output() {
     let mut resampler = ResamplerPlugin::new(2, 44100, 48000, 1024).unwrap();
-    resampler.initialize(44100).unwrap();
+    resampler.initialize(44100.0).unwrap();
 
     // Process a partial chunk (512 frames)
     let num_frames = 512;

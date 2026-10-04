@@ -354,7 +354,7 @@ impl DenoiserPlugin {
 
         // PND Analyzers for polyphonic detection
         let pnd_analyzers = (0..channels)
-            .map(|_| PndAnalyzer::new(2048, 44100, 50.0))
+            .map(|_| PndAnalyzer::new(2048, 44100.0, 50.0))
             .collect();
 
         let mut p = Self {
@@ -362,7 +362,7 @@ impl DenoiserPlugin {
                 channels,
                 fft_size,
                 hop_size,
-                sample_rate: 44100, // Updated in initialize()
+                sample_rate: 44100.0, // Updated in initialize()
                 spectrum_size,
             },
 
@@ -395,12 +395,12 @@ impl DenoiserPlugin {
             coeffs: DenoiserCoefficients {
                 attack_coeff: Self::time_to_coeff(
                     pk(DN, "attack_ms").default_f32(),
-                    44100,
+                    44100.0,
                     hop_size,
                 ),
                 release_coeff: Self::time_to_coeff(
                     pk(DN, "release_ms").default_f32(),
-                    44100,
+                    44100.0,
                     hop_size,
                 ),
                 reduction_linear: 10.0_f32.powf(pk(DN, "reduction_db").default_f32() / 10.0),
@@ -537,7 +537,7 @@ impl DenoiserPlugin {
             audition: DenoiserAudition::new(
                 channels,
                 pk(DN, "audition_residual").default_bool(),
-                Self::audition_decay_for_rate(44100),
+                Self::audition_decay_for_rate(44100.0),
                 Self::dry_delay_capacity_for_fft(fft_size),
             ),
         };

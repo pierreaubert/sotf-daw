@@ -36,7 +36,7 @@ fn test_soft_clip_limits_output() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let mut buffer = make_sine(1000.0, 48000, num_frames, 0.8);
@@ -75,7 +75,7 @@ fn test_tape_saturation() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let mut buffer = make_sine(1000.0, 48000, num_frames, 0.8);
@@ -112,7 +112,7 @@ fn test_saturation_passthrough() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 256;
     let mut buffer = vec![0.0f32; num_frames * channels];
@@ -156,7 +156,7 @@ fn test_oversampling_processes() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
 
@@ -178,7 +178,7 @@ fn test_oversampling_processes() {
 #[test]
 fn test_short_buffer_returns_error() {
     let mut plugin = SaturationPlugin::new(2);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
     let ctx = make_context(16);
     let mut buffer = vec![0.0f32; 31];
 
@@ -201,7 +201,7 @@ fn test_exciter_with_oversampling_processes() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 512;
     let ctx = make_context(num_frames);
@@ -230,7 +230,7 @@ fn test_exciter_large_block_no_panic() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Send a block larger than DEFAULT_BUF_SIZE (96000 samples total = 48000 frames * 2 ch)
     let num_frames = 50000; // > 48000 default frames per channel
@@ -271,9 +271,9 @@ fn test_tube_adaa_matches_direct_when_tone_not_one() {
     };
 
     let mut plugin_adaa = make_tube_plugin(true);
-    plugin_adaa.initialize(48000).unwrap();
+    plugin_adaa.initialize(48000.0).unwrap();
     let mut plugin_direct = make_tube_plugin(false);
-    plugin_direct.initialize(48000).unwrap();
+    plugin_direct.initialize(48000.0).unwrap();
 
     let signal = make_sine(1000.0, 48000, num_frames, 0.5);
     let mut buf_adaa = signal.clone();
@@ -316,7 +316,7 @@ fn test_drive_smoother_ramps_across_block() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Change drive to maximum — smoother will ramp from 1 to 20 over ~10ms
     plugin
@@ -361,7 +361,7 @@ fn test_dynamic_saturation_bounded_no_pumping() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Full-scale input: drive modulation should not blow up
     let num_frames = 2048;
@@ -398,7 +398,7 @@ fn test_flush_denormals_limited_to_valid_samples() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     // Allocate a buffer larger than nf*nc, fill tail with sentinel
     let num_frames = 64;
@@ -441,7 +441,7 @@ fn test_no_lufs_auto_gain_on_passthrough() {
         ..Default::default()
     };
     let mut plugin = SaturationPlugin::from_validated_params(channels, params);
-    plugin.initialize(48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
 
     let num_frames = 4800;
     let signal = make_sine(440.0, 48000, num_frames, 0.5);

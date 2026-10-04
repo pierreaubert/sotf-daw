@@ -94,7 +94,7 @@ pub fn render_offline_with_tail(
     // changes its internal clock. Normalize the terminal stream before
     // measuring latency, trimming duration, or constructing the WAV header.
     let terminal_rate = host.output_sample_rate(output_rate)?;
-    if terminal_rate != output_rate {
+    if terminal_rate != f64::from(output_rate) {
         host.add_plugin(Box::new(ResamplerPlugin::new(
             host.output_channels(),
             terminal_rate,

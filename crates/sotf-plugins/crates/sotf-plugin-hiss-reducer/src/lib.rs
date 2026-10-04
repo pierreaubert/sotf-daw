@@ -724,7 +724,7 @@ impl HissReducerPlugin {
     }
 
     /// Returns stored profile metadata as (sample rate, cutoff, frames).
-    pub fn profile_metadata(&self) -> Option<(u32, f32, u64)> {
+    pub fn profile_metadata(&self) -> Option<(f64, f32, u64)> {
         if !self.has_profile {
             return None;
         }
@@ -790,7 +790,7 @@ impl HissReducerPlugin {
     /// restore/clear), never on the sample path.
     fn refresh_curve_gains(&mut self) {
         let curve = self.reduction_curve();
-        let rate = self.sample_rate.max(1) as f32;
+        let rate = self.sample_rate.max(1.0) as f32;
         for (bin, gain) in self.curve_gains.iter_mut().enumerate() {
             let freq_hz = bin as f32 * rate / SPECTRAL_HISS_FFT_SIZE as f32;
             *gain = ReductionCurve::canonicalize(curve.gain_at(freq_hz));

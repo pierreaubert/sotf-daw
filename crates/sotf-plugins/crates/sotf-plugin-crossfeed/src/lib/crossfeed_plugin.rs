@@ -83,7 +83,7 @@ pub struct CrossfeedPlugin {
 
 impl CrossfeedPlugin {
     pub fn new(params: CrossfeedPluginParams) -> Result<Self, String> {
-        let sr = 44100;
+        let sr = 44_100.0;
         Self::validate_params(&params, sr)?;
         let cap = params.max_block_frames;
         let bauer_shelf = Biquad::new(

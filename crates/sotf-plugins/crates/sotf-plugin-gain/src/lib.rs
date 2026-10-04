@@ -94,7 +94,7 @@ impl GainPlugin {
 
     pub fn with_smoothing(channels: usize, gain_db: f32, smoothing_ms: f32) -> Self {
         // Placeholder rate; real rate is set in initialize()
-        let sr = 48000;
+        let sr = 48_000.0;
         let gain_linear = Self::db_to_linear(gain_db);
         Self {
             channels,
@@ -142,7 +142,7 @@ impl GainPlugin {
         }
         let channels = channel_gains.len();
         // Placeholder rate; real rate is set in initialize()
-        let sr = 48000;
+        let sr = 48_000.0;
         let cgs: Vec<Smoother> = channel_gains
             .iter()
             .map(|&db| Smoother::new(Self::db_to_linear(db), smoothing_ms, sr))
@@ -834,7 +834,7 @@ mod tests {
     fn test_sample_rate_deferred_initialization() {
         let mut p = GainPlugin::with_smoothing(1, 0.0, default_smoothing_ms());
         // Initialize at 96000 Hz
-        p.plugin_initialize(96000).unwrap();
+        p.plugin_initialize(96000.0).unwrap();
 
         // Set a new gain target
         p.set_gain_db(-6.0);
@@ -869,7 +869,7 @@ mod tests {
     fn test_channel_gain_before_initialize_uses_host_sample_rate_after_initialize() {
         let mut p = GainPlugin::with_smoothing(1, 0.0, default_smoothing_ms());
         p.set_channel_gain_db(0, -6.0).unwrap();
-        p.plugin_initialize(96000).unwrap();
+        p.plugin_initialize(96000.0).unwrap();
 
         let target_linear = GainPlugin::db_to_linear(-6.0);
         let num_frames = 19200; // 200ms at 96kHz
@@ -906,7 +906,7 @@ mod tests {
     #[test]
     fn test_process_in_place_global_gain_known_output() {
         let mut p = GainPlugin::with_smoothing(2, 6.0, 0.0); // no smoothing
-        p.plugin_initialize(48000).unwrap();
+        p.plugin_initialize(48000.0).unwrap();
 
         let input = vec![0.1f32, 0.2, 0.3, 0.4];
         let mut buffer = vec![0.0f32; input.len()];
@@ -929,7 +929,7 @@ mod tests {
     #[test]
     fn test_process_in_place_per_channel_known_output() {
         let mut p = GainPlugin::new_per_channel(vec![0.0f32, -6.0]).unwrap();
-        p.plugin_initialize(48000).unwrap();
+        p.plugin_initialize(48000.0).unwrap();
 
         // interleaved stereo: [L0, R0, L1, R1]
         let input = vec![1.0f32, 1.0, 1.0, 1.0];
@@ -954,8 +954,8 @@ mod tests {
         let context = ProcessContext::new(48000, input.len() / 2);
         let mut regular = GainPlugin::with_smoothing(2, -6.0, 0.0);
         let mut compiled = GainPlugin::with_smoothing(2, -6.0, 0.0);
-        regular.plugin_initialize(48000).unwrap();
-        compiled.plugin_initialize(48000).unwrap();
+        regular.plugin_initialize(48000.0).unwrap();
+        compiled.plugin_initialize(48000.0).unwrap();
         let mut regular_output = vec![0.0; input.len()];
         let mut compiled_output = vec![0.0; input.len()];
 
@@ -1073,7 +1073,7 @@ mod tests {
     #[test]
     fn test_process_in_place_zero_frames() {
         let mut p = GainPlugin::new(2, 6.0);
-        p.plugin_initialize(48000).unwrap();
+        p.plugin_initialize(48000.0).unwrap();
         let input = vec![0.5, 0.6, 0.7, 0.8];
         let mut buffer = vec![0.0; input.len()];
         let processed = p
@@ -1144,7 +1144,7 @@ mod tests {
     #[test]
     fn test_per_channel_gain_round_trip() {
         let mut p = GainPlugin::new_per_channel(vec![0.0f32, 0.0]).unwrap();
-        p.plugin_initialize(48000).unwrap();
+        p.plugin_initialize(48000.0).unwrap();
 
         p.parametric_set_parameter(ParameterId::from("gain_db_0"), ParameterValue::Float(3.0))
             .unwrap();
@@ -1224,7 +1224,7 @@ mod tests {
             } else {
                 GainPlugin::with_smoothing(2, -3.0, 100.0)
             };
-            plugin.plugin_initialize(1_000).unwrap();
+            plugin.plugin_initialize(1_000.0).unwrap();
             if starts_per_channel {
                 plugin.set_channel_gain_db(0, -18.0).unwrap();
             } else {
@@ -1300,7 +1300,7 @@ mod tests {
             } else {
                 GainPlugin::with_smoothing(2, -3.0, 100.0)
             };
-            reference.plugin_initialize(1_000).unwrap();
+            reference.plugin_initialize(1_000.0).unwrap();
             if starts_per_channel {
                 reference.set_channel_gain_db(0, -18.0).unwrap();
             } else {
@@ -1317,7 +1317,7 @@ mod tests {
     #[test]
     fn entering_per_channel_mode_preserves_global_ramp_for_untouched_channels() {
         let mut plugin = GainPlugin::with_smoothing(2, 0.0, 100.0);
-        plugin.plugin_initialize(1_000).unwrap();
+        plugin.plugin_initialize(1_000.0).unwrap();
         plugin.set_gain_db(-20.0);
         let input = vec![1.0; 20];
         let mut output = vec![0.0; 20];
@@ -1343,7 +1343,7 @@ mod tests {
     fn returning_to_global_mode_starts_from_current_channel_gain() {
         let mut plugin =
             GainPlugin::new_per_channel_with_smoothing(vec![-20.0, 0.0], 100.0).unwrap();
-        plugin.plugin_initialize(1_000).unwrap();
+        plugin.plugin_initialize(1_000.0).unwrap();
         plugin.set_channel_gain_db(0, 0.0).unwrap();
         let input = vec![1.0; 20];
         let mut output = vec![0.0; 20];
@@ -1394,7 +1394,7 @@ mod tests {
     #[test]
     fn reset_snaps_global_and_channel_ramps_to_targets() {
         let mut global = GainPlugin::with_smoothing(1, 0.0, 100.0);
-        global.plugin_initialize(1_000).unwrap();
+        global.plugin_initialize(1_000.0).unwrap();
         global.set_gain_db(-20.0);
         global.plugin_reset();
         let mut output = [0.0];
@@ -1418,7 +1418,7 @@ mod tests {
     #[test]
     fn settled_global_gain_uses_one_block_kernel() {
         let mut plugin = GainPlugin::with_smoothing(2, -6.0, 10.0);
-        plugin.plugin_initialize(48_000).unwrap();
+        plugin.plugin_initialize(48_000.0).unwrap();
         let input = vec![0.25; 4096 * 2];
         let mut output = vec![0.0; input.len()];
         plugin
@@ -1430,7 +1430,7 @@ mod tests {
     #[test]
     fn settled_per_channel_gain_uses_one_block_kernel() {
         let mut plugin = GainPlugin::new_per_channel_with_smoothing(vec![0.0, -6.0], 10.0).unwrap();
-        plugin.plugin_initialize(48_000).unwrap();
+        plugin.plugin_initialize(48_000.0).unwrap();
         let input = vec![0.25; 4096 * 2];
         let mut output = vec![0.0; input.len()];
         plugin
@@ -1442,7 +1442,7 @@ mod tests {
     #[test]
     fn moving_gain_keeps_sample_accurate_smoothed_path() {
         let mut plugin = GainPlugin::with_smoothing(2, 0.0, 100.0);
-        plugin.plugin_initialize(48_000).unwrap();
+        plugin.plugin_initialize(48_000.0).unwrap();
         plugin.set_gain_db(-12.0);
         let input = vec![0.25; 64 * 2];
         let mut output = vec![0.0; input.len()];
@@ -1457,7 +1457,7 @@ mod tests {
     fn settled_fast_path_preserves_ramp_partition_invariance() {
         fn render(partitions: &[usize]) -> Vec<f32> {
             let mut plugin = GainPlugin::with_smoothing(2, 0.0, 10.0);
-            plugin.plugin_initialize(1_000).unwrap();
+            plugin.plugin_initialize(1_000.0).unwrap();
             plugin.set_gain_db(-12.0);
             let mut rendered = Vec::new();
             for &frames in partitions {
@@ -1604,7 +1604,7 @@ mod tests {
         // settled again after convergence.
         let mut global: Box<dyn Plugin> =
             Box::new(ParametricPluginAdapter::new(GainPlugin::new(2, 0.0)));
-        global.initialize(48_000).unwrap();
+        global.initialize(48_000.0).unwrap();
         check(&*global, "global fresh");
         let settled = run(&mut *global, 64);
         assert!(is_flat(&settled), "fresh unity gain must render flat");
@@ -1626,7 +1626,7 @@ mod tests {
         // (the untouched lane stays flat, so the ramp proves lane 1).
         let inner = GainPlugin::new_per_channel(vec![0.0, 0.0]).unwrap();
         let mut lanes: Box<dyn Plugin> = Box::new(ParametricPluginAdapter::new(inner));
-        lanes.initialize(48_000).unwrap();
+        lanes.initialize(48_000.0).unwrap();
         check(&*lanes, "lanes fresh");
         let settled = run(&mut *lanes, 64);
         assert!(is_flat(&settled), "fresh per-channel gain must render flat");

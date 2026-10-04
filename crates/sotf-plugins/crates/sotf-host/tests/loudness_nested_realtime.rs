@@ -61,7 +61,7 @@ fn without_heap<T>(call: impl FnOnce() -> T) -> T {
 fn prepared(channels: usize, spatial: bool) -> LoudnessMonitorPlugin {
     let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
     plugin.set_spatial_enabled(spatial);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 fn input(channels: usize, scale: f32) -> Vec<f32> {
@@ -383,11 +383,11 @@ fn cold_reset_and_spatial_builders_prepare_every_callback_buffer() {
         for after_initialize in [false, true] {
             let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
             if after_initialize {
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
             }
             plugin = plugin.with_spatial();
             if !after_initialize {
-                plugin.initialize(48_000).unwrap();
+                plugin.initialize(48_000.0).unwrap();
             }
             let values = input(channels, 0.5);
             let mut output = vec![0.0; values.len()];

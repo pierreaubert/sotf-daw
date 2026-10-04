@@ -8,6 +8,7 @@ mod compensation_delays;
 mod compiled_plan;
 mod daw_host;
 mod delay_buffer;
+mod exact_clock;
 mod graph_edge;
 mod graph_mutation_sender;
 mod graph_node;

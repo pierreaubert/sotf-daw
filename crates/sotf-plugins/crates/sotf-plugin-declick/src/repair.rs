@@ -2456,9 +2456,9 @@ mod tests {
                 .is_err()
         );
         let mut crossover = Crossover::new(1);
-        assert!(crossover.set_config(0, 4000.0, 2).is_err());
-        assert!(crossover.set_config(48_000, 4000.0, 0).is_err());
-        assert!(crossover.set_config(48_000, 4000.0, 4).is_err());
+        assert!(crossover.set_config(0.0, 4000.0, 2).is_err());
+        assert!(crossover.set_config(48_000.0, 4000.0, 0).is_err());
+        assert!(crossover.set_config(48_000.0, 4000.0, 4).is_err());
     }
 
     #[test]
@@ -2501,7 +2501,7 @@ mod tests {
             for bands in [1, 2, 3] {
                 for center in [80.0, 4000.0, 12_000.0, f32::NAN] {
                     let mut crossover = Crossover::new(2);
-                    crossover.set_config(rate, center, bands).unwrap();
+                    crossover.set_config(f64::from(rate), center, bands).unwrap();
                     let mut scratch = vec![0.0; 2 * MAX_BANDS];
                     let mut worst = 0.0_f32;
                     for frame in 0..512 {
@@ -4365,7 +4365,7 @@ mod tests {
             // onset response to the 0.5 increment is state
             // independent; measure it once from zero state.
             let mut share_xover = Crossover::new(channels);
-            share_xover.set_config(48_000, 4000.0, 3).unwrap();
+            share_xover.set_config(48_000.0, 4000.0, 3).unwrap();
             let impulse = vec![0.5_f32; channels];
             let mut share_frame = vec![0.0_f32; channels * MAX_BANDS];
             share_xover.split(&impulse, &mut share_frame);
@@ -4378,7 +4378,7 @@ mod tests {
                 // Clean band reference at the slot: parallel
                 // crossover over the clean prefix.
                 let mut clean_xover = Crossover::new(channels);
-                clean_xover.set_config(48_000, 4000.0, 3).unwrap();
+                clean_xover.set_config(48_000.0, 4000.0, 3).unwrap();
                 let mut clean_frame = vec![0.0_f32; channels * MAX_BANDS];
                 for frame in clean.chunks_exact(channels).take(slot + 1) {
                     clean_xover.split(frame, &mut clean_frame);
@@ -7870,7 +7870,7 @@ mod tests {
         // (mono, zero width, linked, neutral skew, enabled, no audition).
         let mut engine = OwnedEngine::new(1, rate).unwrap();
         engine.set_bands(bands);
-        engine.set_crossover_hz(crossover_hz, rate);
+        engine.set_crossover_hz(crossover_hz, f64::from(rate));
         engine.set_repair_width(0);
         engine.set_periodic(periodic);
         engine.set_skew(0.0);
@@ -8201,7 +8201,7 @@ mod tests {
     ) -> OwnedEngine {
         let mut engine = OwnedEngine::new(2, rate).unwrap();
         engine.set_bands(bands);
-        engine.set_crossover_hz(crossover_hz, rate);
+        engine.set_crossover_hz(crossover_hz, f64::from(rate));
         engine.set_repair_width(0);
         engine.set_periodic(periodic);
         engine.set_skew(0.0);

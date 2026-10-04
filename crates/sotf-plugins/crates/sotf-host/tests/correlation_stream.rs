@@ -101,7 +101,7 @@ fn oversized_and_irregular_callbacks_preserve_every_frame_and_centered_correlati
             for compiled in [false, true] {
                 for pattern in [&[20_000, 8_000][..], &[1, 137, 8_193, 17][..]] {
                     let mut plugin = ChannelCorrelationPlugin::new(channels).unwrap();
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     feed(&mut plugin, &input, rate, pattern, compiled);
                     let actual = snapshot(&plugin);
                     assert_eq!(actual.0, 28_000, "{rate} Hz, {channels} channels");
@@ -143,8 +143,8 @@ fn invalid_callbacks_preserve_output_and_subsequent_measurements() {
             let mut context = ProcessContext::new(48_000, 17);
             match case {
                 0 => context.num_frames = 16,
-                1 => context.sample_rate = 24_000,
-                2 => context.sample_rate = 0,
+                1 => context.sample_rate = 24_000.0,
+                2 => context.sample_rate = 0.0,
                 3 => *input.last_mut().unwrap() = f32::NAN,
                 4 => *input.last_mut().unwrap() = f32::INFINITY,
                 5 => *input.last_mut().unwrap() = f32::NEG_INFINITY,
@@ -178,7 +178,7 @@ fn reset_reinitialize_disabled_and_empty_calls_preserve_the_analysis_clock() {
     let mut plugin = ChannelCorrelationPlugin::new(7).unwrap();
     feed(&mut plugin, &input, 48_000, &[20_000], false);
     let original = snapshot(&plugin);
-    assert!(plugin.initialize(0).is_err());
+    assert!(plugin.initialize(0.0).is_err());
     assert_eq!(snapshot(&plugin), original);
     assert_eq!(
         plugin
@@ -203,9 +203,9 @@ fn reset_reinitialize_disabled_and_empty_calls_preserve_the_analysis_clock() {
     }
     feed(&mut plugin, &input, 48_000, &[137, 8_193], false);
     assert_eq!(snapshot(&plugin), original);
-    plugin.initialize(96_000).unwrap();
+    plugin.initialize(96_000.0).unwrap();
     let mut fresh = ChannelCorrelationPlugin::new(7).unwrap();
-    fresh.initialize(96_000).unwrap();
+    fresh.initialize(96_000.0).unwrap();
     feed(&mut plugin, &input, 96_000, &[20_000], false);
     feed(&mut fresh, &input, 96_000, &[20_000], false);
     assert_eq!(snapshot(&plugin), snapshot(&fresh));

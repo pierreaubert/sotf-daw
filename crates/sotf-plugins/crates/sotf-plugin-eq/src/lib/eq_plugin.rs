@@ -2487,3 +2487,31 @@ impl EqPlugin {
         Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
     }
 }
+
+#[cfg(test)]
+mod fractional_rate_tests {
+    use super::*;
+
+    #[test]
+    fn fractional_sample_rate_reaches_eq_filter_and_autogain_clock() {
+        let mut plugin = EqPlugin::new(
+            1,
+            vec![Biquad::new(BiquadFilterType::Peak, 1_000.0, 48_000.0, 1.0, 3.0)],
+        );
+        plugin.plugin_initialize(48_000.5).unwrap();
+        assert_eq!(plugin.sample_rate, 48_000.5);
+        assert_eq!(plugin.filters[0][0][0].srate, 48_000.5);
+        assert_eq!(plugin.auto_gain_clock.interval_frames(), 4_800);
+
+        let fractional = Biquad::new(BiquadFilterType::Peak, 1_000.0, 48_000.5, 1.0, 3.0);
+        let integral = Biquad::new(BiquadFilterType::Peak, 1_000.0, 48_000.0, 1.0, 3.0);
+        let actual_b0 = plugin.filters[0][0][0].coefficients().b0;
+        assert_eq!(actual_b0, fractional.coefficients().b0);
+        assert_ne!(actual_b0, integral.coefficients().b0);
+
+        assert!(plugin.plugin_initialize(f64::NAN).is_err());
+        assert_eq!(plugin.sample_rate, 48_000.5);
+        assert_eq!(plugin.filters[0][0][0].srate, 48_000.5);
+        assert_eq!(plugin.auto_gain_clock.interval_frames(), 4_800);
+    }
+}

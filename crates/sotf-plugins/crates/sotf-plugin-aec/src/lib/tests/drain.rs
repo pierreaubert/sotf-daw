@@ -67,12 +67,12 @@ fn native_tail_tracks_prepared_partitions_and_survives_reset() {
             .unwrap();
             for initialized_rate in [rate, 192_000] {
                 if initialized_rate != rate {
-                    plugin.initialize(initialized_rate).unwrap();
+                    plugin.initialize(f64::from(initialized_rate)).unwrap();
                 }
                 let samples = (initialized_rate as f64 * echo_tail_ms / 1000.0) as usize;
                 let expected = TailLength::Finite(((samples.div_ceil(B) + 2) * B) as u64);
                 assert_eq!(plugin.tail_length(), expected);
-                assert!(plugin.initialize(0).is_err());
+                assert!(plugin.initialize(0.0).is_err());
                 assert_eq!(plugin.tail_length(), expected);
                 plugin.reset();
                 assert_eq!(plugin.tail_length(), expected);
@@ -187,7 +187,7 @@ fn drain_matches_direct_nonzero_last_partition_convolution_and_freezes_learning(
                     },
                 )
                 .unwrap();
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let support = ((rate as f64 * 0.05) as usize).div_ceil(B) * B;
                 let mut impulse = vec![0.0; support];
                 impulse[0] = 0.25;
@@ -245,7 +245,7 @@ fn drain_uses_frozen_nonconstant_suppressor_gains_with_direct_time_domain_oracle
                 },
             )
             .unwrap();
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let support = 10 * B;
             let mut impulse = vec![0.0; support];
             impulse[support - 1] = -0.125;

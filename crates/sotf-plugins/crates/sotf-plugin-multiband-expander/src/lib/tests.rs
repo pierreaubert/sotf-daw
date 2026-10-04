@@ -14,7 +14,7 @@ use sotf_host::plugin::ProcessContext;
 #[test]
 fn test_mb_exp_basic() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut b = vec![0.1; 1000];
     p.process_in_place(&mut b, &ProcessContext::new(48000, 1000))
         .unwrap();
@@ -48,7 +48,7 @@ fn test_low_frequency_triggers_expansion() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed a loud 50 Hz signal (above threshold) to open the gate
     let nf = 9600;
@@ -118,7 +118,7 @@ fn test_mb_expander_attack_release_not_swapped() {
         },
     ];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed loud broadband signal to open gates
     let mut loud = Vec::with_capacity(9600);
@@ -161,7 +161,7 @@ fn test_mb_expander_unity_passthrough() {
         band.ratio = Some(1.0); // no expansion
     }
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Generate test signal
     let mut input = vec![0.0f32; 4800 * 2];
@@ -303,11 +303,11 @@ fn single_band_two_tone_matches_independent_non_unity_broadband_detector_oracle(
     let oracle = independent_single_band_peak_oracle(&input);
 
     let mut whole = MultibandExpanderPlugin::with_params(1, non_unity_peak_params(1));
-    whole.initialize(48_000).unwrap();
+    whole.initialize(48_000.0).unwrap();
     let whole_output = render_expander_chunks(&mut whole, &input, &[frames]);
 
     let mut irregular = MultibandExpanderPlugin::with_params(1, non_unity_peak_params(1));
-    irregular.initialize(48_000).unwrap();
+    irregular.initialize(48_000.0).unwrap();
     let irregular_output =
         render_expander_chunks(&mut irregular, &input, &[1, 19, 3, 251, 2, 64, 509, 7]);
 
@@ -334,13 +334,13 @@ fn broadband_and_multiband_detectors_make_distinct_two_tone_decisions() {
         .collect();
 
     let mut broadband = MultibandExpanderPlugin::with_params(1, non_unity_peak_params(1));
-    broadband.initialize(48_000).unwrap();
+    broadband.initialize(48_000.0).unwrap();
     let broadband_output = render_expander_chunks(&mut broadband, &input, &[257, 31, 1, 509]);
 
     let mut multiband_params = non_unity_peak_params(2);
     multiband_params.crossover_frequencies = vec![1_000.0];
     let mut multiband = MultibandExpanderPlugin::with_params(1, multiband_params);
-    multiband.initialize(48_000).unwrap();
+    multiband.initialize(48_000.0).unwrap();
     let multiband_output = render_expander_chunks(&mut multiband, &input, &[257, 31, 1, 509]);
 
     assert_eq!(broadband.band_expanders[0].gate_state[0], GateState::Open);
@@ -391,7 +391,7 @@ fn test_spectral_mode_basic() {
         ..Default::default()
     };
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // The streaming scheduler emits a fixed one-window causal latency.
     assert_eq!(
@@ -445,7 +445,7 @@ fn spectral_streamed_impulse_delay_is_block_size_independent() {
             band.ratio = Some(1.0);
         }
         let mut plugin = MultibandExpanderPlugin::with_params(1, params);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
 
         let fft_size = plugin.spectral.as_ref().unwrap().fft_size;
         let impulse_index = fft_size / 2;
@@ -483,7 +483,7 @@ fn spectral_hops_reuse_preallocated_band_metadata() {
         ..Default::default()
     };
     let mut plugin = MultibandExpanderPlugin::with_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
 
     let band_info_ptr = plugin.spectral.as_ref().unwrap().band_info.as_ptr();
     let band_info_capacity = plugin.spectral.as_ref().unwrap().band_info.capacity();
@@ -523,7 +523,7 @@ fn test_multiband_expander_processes_audio() {
         ..Default::default()
     };
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Quiet DC-offset signal at -40 dBFS (well below -20 dB threshold)
     let amp = 10.0_f32.powf(-40.0 / 20.0);
@@ -588,10 +588,10 @@ fn test_spectral_vs_time_domain_attenuation() {
     };
 
     let mut td_plugin = MultibandExpanderPlugin::with_params(1, make_params("time_domain"));
-    td_plugin.initialize(sr).unwrap();
+    td_plugin.initialize(f64::from(sr)).unwrap();
 
     let mut sp_plugin = MultibandExpanderPlugin::with_params(1, make_params("spectral"));
-    sp_plugin.initialize(sr).unwrap();
+    sp_plugin.initialize(f64::from(sr)).unwrap();
 
     let ctx = ProcessContext::new(sr, nf);
 
@@ -641,7 +641,7 @@ fn test_spectral_mode_more_than_5_bands_no_panic() {
         ..Default::default()
     };
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut buf = vec![0.1f32; 4096 * 2];
     p.process_in_place(&mut buf, &ProcessContext::new(48000, 4096))
         .unwrap();
@@ -661,14 +661,14 @@ fn test_spectral_mode_latency_correct() {
         ..Default::default()
     };
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.latency_samples(), 1024);
 }
 
 #[test]
 fn test_time_domain_chunks_oversized_blocks_without_resizing() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let dry_len = p.dry_buffer.len();
     let band_len = p.band_buffers.len();
 
@@ -714,7 +714,7 @@ fn test_measured_auto_makeup_stereo_no_jitter() {
         },
     ];
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed stereo signal with different L/R amplitudes to stress test makeup tracker
     let nf = 4800usize;
@@ -738,7 +738,7 @@ fn test_measured_auto_makeup_stereo_no_jitter() {
 #[test]
 fn test_initialize_clears_state() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Run a loud signal to drive up envelope state
     let nf = 4800usize;
@@ -747,7 +747,7 @@ fn test_initialize_clears_state() {
         .unwrap();
 
     // Re-initialize (simulates host sample-rate change)
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed silence — if state was not cleared, residual envelope might still be active.
     // The output must be finite (not NaN/inf from a contaminated envelope).
@@ -776,7 +776,7 @@ fn test_lookahead_dry_path_is_latency_compensated() {
         ..Default::default()
     };
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let la_samples = (la_ms * 0.001 * sr as f32).round() as usize;
     // Build a 1-second buffer with an impulse at position `la_samples`
@@ -846,7 +846,7 @@ fn test_calculate_expansion_attenuation() {
 #[test]
 fn test_global_param_value_roundtrip() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_param_value(6, -25.0); // threshold
     p.set_param_value(17, 5.0); // lookahead_ms
@@ -862,7 +862,7 @@ fn test_global_param_value_roundtrip() {
 #[test]
 fn test_processing_mode_is_structural() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(p.spectral.is_none());
 
     assert!(
@@ -882,7 +882,7 @@ fn test_num_bands_is_structural_in_spectral_mode() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let max_band_before = p
         .spectral
         .as_ref()
@@ -904,7 +904,7 @@ fn test_num_bands_is_structural_in_spectral_mode() {
 #[test]
 fn test_set_parameter_invalid_band_index_error() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let res = p.set_parameter(
         ParameterId::from("band_99_threshold"),
         ParameterValue::Float(-10.0),
@@ -916,7 +916,7 @@ fn test_set_parameter_invalid_band_index_error() {
 #[test]
 fn test_set_parameter_unknown_returns_error() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let res = p.set_parameter(
         ParameterId::from("not_a_real_param"),
         ParameterValue::Float(0.0),
@@ -927,7 +927,7 @@ fn test_set_parameter_unknown_returns_error() {
 #[test]
 fn test_lookahead_ms_roundtrip_and_clamp() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(
         ParameterId::from("lookahead_ms"),
         ParameterValue::Float(25.0),
@@ -958,7 +958,7 @@ fn test_reset_clears_expander_gate_state() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut buf = vec![0.001f32; 4800];
     p.process_in_place(&mut buf, &ProcessContext::new(48000, 4800))
         .unwrap();
@@ -974,7 +974,7 @@ fn test_reset_clears_expander_gate_state() {
 #[test]
 fn test_process_silence_finite() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut buf = vec![0.0f32; 512 * 2];
     p.process_in_place(&mut buf, &ProcessContext::new(48000, 512))
         .unwrap();
@@ -993,7 +993,7 @@ fn test_time_domain_unity_ratio_passthrough() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let nf = 2048usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.2 * (i as f32 * 0.1).sin()).collect();
     let original = buf.clone();
@@ -1058,7 +1058,7 @@ fn test_set_param_value_out_of_range() {
 #[test]
 fn test_get_parameter_global() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let v = p.get_parameter(&ParameterId::from("threshold")).unwrap();
     assert!(matches!(v, ParameterValue::Float(_)));
 }
@@ -1072,7 +1072,7 @@ fn test_get_parameter_band_fields() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(matches!(
         p.get_parameter(&ParameterId::from("band_0_threshold"))
@@ -1138,7 +1138,7 @@ fn test_get_parameter_band_fields() {
 #[test]
 fn test_get_parameter_invalid_band() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(
         p.get_parameter(&ParameterId::from("band_99_threshold"))
             .is_none()
@@ -1148,7 +1148,7 @@ fn test_get_parameter_invalid_band() {
 #[test]
 fn test_get_parameter_unknown() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(
         p.get_parameter(&ParameterId::from("unknown_param"))
             .is_none()
@@ -1158,7 +1158,7 @@ fn test_get_parameter_unknown() {
 #[test]
 fn test_get_parameter_single_band_aliases() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(matches!(
         p.get_parameter(&ParameterId::from("auto_makeup")).unwrap(),
@@ -1190,7 +1190,7 @@ fn test_set_parameter_crossover_freq() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("crossover_freq_1"),
@@ -1203,7 +1203,7 @@ fn test_set_parameter_crossover_freq() {
 #[test]
 fn test_set_parameter_all_crossover_freqs() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("crossover_freq_2"),
@@ -1229,7 +1229,7 @@ fn test_set_parameter_all_crossover_freqs() {
 #[test]
 fn test_set_parameter_threshold() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-30.0))
         .unwrap();
     assert!((p.threshold_db - (-30.0)).abs() < 1e-6);
@@ -1238,7 +1238,7 @@ fn test_set_parameter_threshold() {
 #[test]
 fn test_set_parameter_mix() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))
         .unwrap();
     assert!((p.mix - 0.5).abs() < 1e-6);
@@ -1248,7 +1248,7 @@ fn test_set_parameter_mix() {
 fn automation_values_are_independent_of_host_block_partitioning() {
     fn render(chunks: &[usize]) -> Vec<[f32; 2]> {
         let mut plugin = MultibandExpanderPlugin::new(1);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin
             .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-30.0))
             .unwrap();
@@ -1279,7 +1279,7 @@ fn automation_values_are_independent_of_host_block_partitioning() {
 #[test]
 fn test_set_parameter_attack_release_updates_coefficients() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let old_attack = p.band_expanders[0].attack_coeff;
     let old_release = p.band_expanders[0].release_coeff;
 
@@ -1295,7 +1295,7 @@ fn test_set_parameter_attack_release_updates_coefficients() {
 #[test]
 fn test_set_parameter_detection_mode() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("detection_mode"), ParameterValue::Int(1))
         .unwrap();
@@ -1315,7 +1315,7 @@ fn test_set_parameter_band_threshold() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("band_0_threshold"),
@@ -1334,7 +1334,7 @@ fn test_set_parameter_band_bools() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("band_0_auto"), ParameterValue::Bool(true))
         .unwrap();
@@ -1369,7 +1369,7 @@ fn test_set_parameter_band_bools() {
 #[test]
 fn test_set_parameter_auto_makeup_alias() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("auto_makeup"), ParameterValue::Bool(true))
         .unwrap();
@@ -1379,7 +1379,7 @@ fn test_set_parameter_auto_makeup_alias() {
 #[test]
 fn test_set_parameter_measured_auto_makeup_alias() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("measured_auto_makeup"),
@@ -1392,7 +1392,7 @@ fn test_set_parameter_measured_auto_makeup_alias() {
 #[test]
 fn test_set_parameter_sidechain_hpf_alias() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("sidechain_hpf_hz"),
@@ -1411,7 +1411,7 @@ fn test_set_parameter_processing_mode_time_domain_is_structural() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(p.spectral.is_some());
 
     assert!(
@@ -1430,7 +1430,7 @@ fn test_set_parameter_num_bands_rejected_as_structural() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(ParameterId::from("num_bands"), ParameterValue::Int(4))
@@ -1442,7 +1442,7 @@ fn test_set_parameter_num_bands_rejected_as_structural() {
 #[test]
 fn test_set_parameter_global_misc() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(ParameterId::from("range"), ParameterValue::Float(60.0))
         .unwrap();
@@ -1464,7 +1464,7 @@ fn test_set_parameter_global_misc() {
 #[test]
 fn test_set_parameter_link_channels() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     p.set_parameter(
         ParameterId::from("link_channels"),
@@ -1484,7 +1484,7 @@ fn test_set_parameter_link_channels() {
 #[test]
 fn test_set_parameter_invalid_type() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // processing_mode expects int
     let res = p.set_parameter(
@@ -1501,7 +1501,7 @@ fn test_set_parameter_invalid_type() {
 #[test]
 fn test_set_parameter_band_invalid_type() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let res = p.set_parameter(
         ParameterId::from("band_0_threshold"),
@@ -1516,7 +1516,7 @@ fn test_set_parameter_band_invalid_type() {
 #[test]
 fn test_set_parameter_processing_mode_boundary() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     assert!(
         p.set_parameter(ParameterId::from("processing_mode"), ParameterValue::Int(0))
@@ -1540,7 +1540,7 @@ fn test_rebuild_cached_parameters() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let params_before = p.parameters().len();
     p.rebuild_cached_parameters();
@@ -1556,7 +1556,7 @@ fn test_rebuild_cached_parameters() {
 #[test]
 fn test_initialize_different_sample_rate() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(96000).unwrap();
+    p.initialize(96000.0).unwrap();
     assert_eq!(p.sample_rate, 96000.0);
 }
 
@@ -1569,7 +1569,7 @@ fn test_initialize_with_lookahead() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let expected = (5.0_f32 * 0.001 * 48000.0).round() as usize;
     assert_eq!(p.latency_samples(), expected);
 }
@@ -1583,7 +1583,7 @@ fn test_initialize_spectral_mode() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(p.spectral.is_some());
 }
 
@@ -1594,7 +1594,7 @@ fn test_initialize_spectral_mode() {
 #[test]
 fn test_process_empty_buffer() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let mut buf: Vec<f32> = vec![];
     let res = p.process_in_place(&mut buf, &ProcessContext::new(48000, 0));
     assert!(res.is_ok());
@@ -1604,7 +1604,7 @@ fn test_process_empty_buffer() {
 #[test]
 fn test_process_rejects_wrong_buffer_lengths_without_advancing_cache_counter() {
     let mut p = MultibandExpanderPlugin::new(2);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     for len in [7, 9] {
         let mut buffer = vec![0.0; len];
         assert!(
@@ -1618,7 +1618,7 @@ fn test_process_rejects_wrong_buffer_lengths_without_advancing_cache_counter() {
 #[test]
 fn test_cache_snapshot_updates_after_processing() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let mut phase = 0.0_f32;
     let mut buffer: Vec<f32> = (0..4096)
         .map(|_| {
@@ -1926,7 +1926,7 @@ fn spectral_mode_publishes_live_analyzer_snapshots() {
 fn cache_cadence_depends_on_samples_not_callback_count() {
     fn counter_after(block: usize, total: usize) -> usize {
         let mut plugin = MultibandExpanderPlugin::new(1);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let mut remaining = total;
         while remaining > 0 {
             let frames = remaining.min(block);
@@ -1945,7 +1945,7 @@ fn cache_cadence_depends_on_samples_not_callback_count() {
 #[test]
 fn non_finite_input_is_sanitized_without_poisoning_state() {
     let mut plugin = MultibandExpanderPlugin::new(2);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let mut audio = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 0.25];
     plugin
         .process_in_place(&mut audio, &ProcessContext::new(48_000, 2))
@@ -1982,7 +1982,7 @@ fn spectral_mode_rejects_controls_without_feature_parity() {
 #[test]
 fn test_reset_clears_complete_observable_state() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let mut buffer = vec![0.5; 4096];
     p.process_in_place(&mut buffer, &ProcessContext::new(48_000, 4096))
         .unwrap();
@@ -2006,7 +2006,7 @@ fn test_process_link_channels_rms() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf * 2).map(|i| 0.1 * (i as f32 * 0.05).sin()).collect();
@@ -2029,7 +2029,7 @@ fn test_process_unlink_channels_peak() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf * 2).map(|i| 0.1 * (i as f32 * 0.05).sin()).collect();
@@ -2052,7 +2052,7 @@ fn test_process_unlink_channels_rms() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf * 2).map(|i| 0.1 * (i as f32 * 0.05).sin()).collect();
@@ -2079,7 +2079,7 @@ fn test_process_bypassed_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.2 * (i as f32 * 0.1).sin()).collect();
@@ -2106,7 +2106,7 @@ fn test_process_inactive_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.2 * (i as f32 * 0.1).sin()).collect();
@@ -2133,7 +2133,7 @@ fn test_process_solo_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.2 * (i as f32 * 0.1).sin()).collect();
@@ -2157,7 +2157,7 @@ fn test_process_auto_makeup() {
         ..Default::default()
     }];
     let mut p = MultibandExpanderPlugin::with_params(1, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.05 * (i as f32 * 0.1).sin()).collect();
@@ -2179,7 +2179,7 @@ fn test_process_time_domain_lookahead() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.1 * (i as f32 * 0.1).sin()).collect();
@@ -2201,7 +2201,7 @@ fn test_process_knee_expansion() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.05 * (i as f32 * 0.1).sin()).collect();
@@ -2224,7 +2224,7 @@ fn test_process_hysteresis_and_hold() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.05 * (i as f32 * 0.1).sin()).collect();
@@ -2243,7 +2243,7 @@ fn test_process_mix_dry_only() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 2048usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.2 * (i as f32 * 0.1).sin()).collect();
@@ -2272,7 +2272,7 @@ fn test_process_mix_wet_only() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 2048usize;
     let mut buf: Vec<f32> = (0..nf).map(|i| 0.05 * (i as f32 * 0.1).sin()).collect();
@@ -2294,7 +2294,7 @@ fn test_process_stereo_separate_channels() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 4800usize;
     let mut buf: Vec<f32> = (0..nf)
@@ -2331,7 +2331,7 @@ fn test_process_spectral_solo_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 8192usize;
     let mut buf: Vec<f32> = (0..nf)
@@ -2364,7 +2364,7 @@ fn test_process_spectral_bypassed_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 8192usize;
     let mut buf: Vec<f32> = (0..nf)
@@ -2397,7 +2397,7 @@ fn test_process_spectral_inactive_band() {
         BandExpanderParams::default(),
     ];
     let mut p = MultibandExpanderPlugin::with_params(2, params);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     let nf = 8192usize;
     let mut buf: Vec<f32> = (0..nf)
@@ -2424,7 +2424,7 @@ fn test_latency_samples_lookahead() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let expected = (5.0_f32 * 0.001 * 48000.0).round() as usize;
     assert_eq!(p.latency_samples(), expected);
 }
@@ -2432,7 +2432,7 @@ fn test_latency_samples_lookahead() {
 #[test]
 fn test_latency_samples_zero() {
     let mut p = MultibandExpanderPlugin::new(1);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.latency_samples(), 0);
 }
 
@@ -2445,7 +2445,7 @@ fn test_build_crossovers() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.crossover_points.len(), 2);
 
     p.set_param_value(0, 5.0); // num_bands = 5
@@ -2464,7 +2464,7 @@ fn test_update_coefficients() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let old_attack = p.band_expanders[0].attack_coeff;
 
     p.attack_ms = 10.0;
@@ -2485,7 +2485,7 @@ fn test_update_lookahead_delay() {
             ..Default::default()
         },
     );
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     p.lookahead_ms = 10.0;
     p.update_lookahead_delay();
     // Just verify it doesn't panic
@@ -2500,7 +2500,7 @@ fn test_compute_bin_to_band() {
     use super::spectral_state::SpectralState;
 
     let bin_to_band =
-        SpectralState::compute_bin_to_band(1024, 513, 48000, &[300.0, 3000.0, 8000.0, 12000.0], 5);
+        SpectralState::compute_bin_to_band(1024, 513, 48000.0, &[300.0, 3000.0, 8000.0, 12000.0], 5);
 
     assert_eq!(bin_to_band[0], 0); // DC bin -> lowest band
     assert_eq!(bin_to_band[10], 1); // ~469 Hz -> above 300 Hz crossover
@@ -2508,7 +2508,7 @@ fn test_compute_bin_to_band() {
 
 #[test]
 fn spectral_window_product_is_constant_overlap_add() {
-    let state = SpectralState::new(256, 1, 48_000, &[1_000.0], 2);
+    let state = SpectralState::new(256, 1, 48_000.0, &[1_000.0], 2);
     let overlap_count = state.fft_size / state.hop_size;
     let mut min_sum = f32::INFINITY;
     let mut max_sum = f32::NEG_INFINITY;
@@ -2534,7 +2534,7 @@ fn spectral_window_product_is_constant_overlap_add() {
 fn test_spectral_state_reset() {
     use super::spectral_state::SpectralState;
 
-    let mut ss = SpectralState::new(1024, 2, 48000, &[300.0, 3000.0], 3);
+    let mut ss = SpectralState::new(1024, 2, 48000.0, &[300.0, 3000.0], 3);
 
     ss.input_fill = 500;
     ss.bin_states[0][0].envelope_db = 10.0;
@@ -2631,7 +2631,7 @@ fn spectral_mode_missing_state_returns_error_not_panic() {
         ..Default::default()
     };
     let mut plugin = MultibandExpanderPlugin::with_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert!(plugin.spectral.is_some());
     plugin.spectral = None;
     let mut buf = vec![0.1f32; 256];
@@ -2650,7 +2650,7 @@ fn spectral_mode_nan_input_yields_finite_output() {
         ..Default::default()
     };
     let mut plugin = MultibandExpanderPlugin::with_params(2, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 1024);
     let nf = 512usize;
     let mut buf = vec![0.1f32; nf * 2];
@@ -2675,7 +2675,7 @@ fn spectral_mode_variable_and_zero_blocks_return_num_frames() {
         ..Default::default()
     };
     let mut plugin = MultibandExpanderPlugin::with_params(1, params);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     assert_eq!(plugin.latency_samples(), 1024);
     // Zero-length block: returns 0 without error.
     let mut empty: Vec<f32> = Vec::new();
@@ -2768,10 +2768,10 @@ fn conventional_ratio_matches_single_and_multiband_settled_audio() {
                     band.ratio = Some(1.0);
                 }
                 let mut unity = MultibandExpanderPlugin::with_params(channels, unity_params);
-                unity.initialize(rate).unwrap();
+                unity.initialize(f64::from(rate)).unwrap();
                 let mut unity_output = vec![input; frames * channels];
                 unity
-                    .process_in_place(&mut unity_output, &ProcessContext::new(rate, frames))
+                    .process_in_place(&mut unity_output, &ProcessContext::new(f64::from(rate), frames))
                     .unwrap();
                 let filtered_input = unity_output[unity_output.len() - 1] as f64;
                 assert!((20.0 * (filtered_input / input as f64).log10()).abs() < 0.01);
@@ -2784,7 +2784,7 @@ fn conventional_ratio_matches_single_and_multiband_settled_audio() {
                         band.range_db = Some(80.0);
                     }
                     let mut plugin = MultibandExpanderPlugin::with_params(channels, params);
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     let expected = conventional_expander_output_db(
                         20.0 * filtered_input.log10(),
                         -20.0,
@@ -2831,9 +2831,9 @@ fn conventional_ratio_matches_spectral_coherent_tone_oracle() {
                     band.ratio = Some(ratio);
                 }
                 let mut aligned = MultibandExpanderPlugin::with_params(1, params.clone());
-                aligned.initialize(rate).unwrap();
+                aligned.initialize(f64::from(rate)).unwrap();
                 let mut plugin = MultibandExpanderPlugin::with_params(1, params);
-                plugin.initialize(rate).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
                 let input: Vec<f32> = (0..frames)
                     .map(|frame| {
                         (amplitude
@@ -2908,11 +2908,11 @@ fn spectral_expander_consumes_every_input_sample_across_callback_partitions() {
         })
         .collect();
     let mut reference = MultibandExpanderPlugin::with_params(1, params.clone());
-    reference.initialize(48_000).unwrap();
+    reference.initialize(48_000.0).unwrap();
     let expected = render_expander_chunks(&mut reference, &input, &[256]);
     for pattern in [&[1][..], &[127], &[257], &[4096], &[1, 257, 17, 2048, 3]] {
         let mut plugin = MultibandExpanderPlugin::with_params(1, params.clone());
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         let actual = render_expander_chunks(&mut plugin, &input, pattern);
         let error = actual
             .iter()

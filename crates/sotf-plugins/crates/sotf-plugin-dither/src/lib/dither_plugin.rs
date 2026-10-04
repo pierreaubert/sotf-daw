@@ -58,7 +58,7 @@ impl DitherPlugin {
 
         let mut p = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             bit_depth_index,
             noise_shaping_enabled: noise_shaping,
             dither_type_index: dither_type,
@@ -88,7 +88,7 @@ impl DitherPlugin {
 
         let mut p = Self {
             channels,
-            sample_rate: 48000,
+            sample_rate: 48000.0,
             bit_depth_index,
             noise_shaping_enabled: params.noise_shaping,
             dither_type_index: params.dither_type.min(2),

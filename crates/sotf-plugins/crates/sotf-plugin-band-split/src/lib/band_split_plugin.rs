@@ -122,7 +122,7 @@ impl BandSplitPlugin {
                 "unsupported crossover type {crossover_type:?}; expected LR24 or LR48"
             ));
         }
-        Self::validate_frequencies(frequencies, 48_000)?;
+        Self::validate_frequencies(frequencies, 48_000.0)?;
         let sr = 48_000.0;
         let freq_f32: Vec<f32> = frequencies.iter().map(|&f| f as f32).collect();
         let mut frequency_targets = [

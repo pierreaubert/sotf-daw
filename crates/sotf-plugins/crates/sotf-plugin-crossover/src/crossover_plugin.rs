@@ -375,7 +375,7 @@ impl CrossoverPlugin {
         }
         if kind.is_new_iir() {
             for &frequency in &channel_frequencies_hz {
-                validate_new_iir_cutoff(frequency, 48_000)?;
+                validate_new_iir_cutoff(frequency, 48_000.0)?;
             }
         } else {
             let nyquist_limit = 48_000.0 * 0.5 * 0.99;

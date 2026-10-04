@@ -10,7 +10,7 @@ use sotf_host::plugin::{Plugin, ProcessContext};
 #[test]
 fn test_crossover_basic() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![1.0; 1000];
     let mut output = vec![0.0; 1000];
     p.process(&input, &mut output, &ProcessContext::new(48000, 1000))
@@ -78,7 +78,7 @@ fn low_bass_impulse_matches_lr24_dc_and_cutoff_transfer() {
 #[test]
 fn test_crossover_highpass() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "high").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![1.0; 1000];
     let mut output = vec![0.0; 1000];
     p.process(&input, &mut output, &ProcessContext::new(48000, 1000))
@@ -91,7 +91,7 @@ fn test_linear_phase_crossover_reconstructs_delayed_input() {
     let mut p = CrossoverPlugin::new(1, "LinearPhase", 1000.0, "both").unwrap();
     p.set_parameter(ParameterId::from("fir_taps"), ParameterValue::Int(127))
         .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let latency = p.latency_samples();
     let frames = 512;
     let input: Vec<f32> = (0..frames).map(|i| (i as f32 * 0.1).sin()).collect();
@@ -115,7 +115,7 @@ fn test_multiband_linear_phase_crossover_reconstructs_delayed_input() {
     let mut p = CrossoverPlugin::new_multiway(1, "LinearPhase", 500.0, "both", &[5_000.0]).unwrap();
     p.set_parameter(ParameterId::from("fir_taps"), ParameterValue::Int(127))
         .unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
 
     let latency = p.latency_samples();
     let frames = 768;
@@ -138,7 +138,7 @@ fn test_multiband_linear_phase_crossover_reconstructs_delayed_input() {
 #[test]
 fn test_crossover_stereo() {
     let mut p = CrossoverPlugin::new(2, "LR24", 500.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![0.5; 200];
     let mut output = vec![0.0; 200];
     p.process(&input, &mut output, &ProcessContext::new(48000, 100))
@@ -150,7 +150,7 @@ fn test_crossover_stereo() {
 #[test]
 fn test_crossover_dc_passes_lowpass() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![1.0; 10000];
     let mut output = vec![0.0; 10000];
     p.process(&input, &mut output, &ProcessContext::new(48000, 10000))
@@ -165,7 +165,7 @@ fn test_crossover_dc_passes_lowpass() {
 #[test]
 fn test_crossover_dc_rejected_highpass() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "high").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![1.0; 10000];
     let mut output = vec![0.0; 10000];
     p.process(&input, &mut output, &ProcessContext::new(48000, 10000))
@@ -186,7 +186,7 @@ fn test_crossover_invalid_output() {
 #[test]
 fn test_crossover_both_mode_doubles_channels() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.input_channels(), 1);
     assert_eq!(p.output_channels(), 2); // 1 channel * 2 bands
 
@@ -214,7 +214,7 @@ fn test_crossover_both_mode_doubles_channels() {
 #[test]
 fn test_crossover_both_bands_sum_preserves_energy() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "both").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Feed a signal and verify low + high sum has comparable energy to input.
     // LR4 crossovers sum to flat magnitude but introduce group delay,
@@ -252,7 +252,7 @@ fn test_crossover_both_bands_sum_preserves_energy() {
 #[test]
 fn test_crossover_stereo_both_mode() {
     let mut p = CrossoverPlugin::new(2, "LR24", 1000.0, "both").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.input_channels(), 2);
     assert_eq!(p.output_channels(), 4); // 2 channels * 2 bands
 
@@ -268,7 +268,7 @@ fn test_crossover_stereo_both_mode() {
 #[test]
 fn test_crossover_3way() {
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.input_channels(), 1);
     assert_eq!(p.output_channels(), 3); // 1 channel * 3 bands
 
@@ -300,7 +300,7 @@ fn test_crossover_3way() {
 #[test]
 fn test_crossover_4way() {
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 200.0, "both", &[1000.0, 5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.input_channels(), 1);
     assert_eq!(p.output_channels(), 4); // 1 channel * 4 bands
 
@@ -318,7 +318,7 @@ fn test_crossover_4way() {
 fn test_crossover_3way_lowpass_mode() {
     // In lowpass mode, 3-way should output only the lowest band
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "low", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.output_channels(), 1); // Only lowest band
 
     let num_frames = 10000;
@@ -339,7 +339,7 @@ fn test_crossover_3way_lowpass_mode() {
 fn test_crossover_output_selection_highpass_rejects_dc() {
     // Highpass mode should reject DC (output near zero)
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "high").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 10000;
     let input = vec![1.0f32; num_frames]; // DC
     let mut output = vec![0.0; num_frames];
@@ -356,7 +356,7 @@ fn test_crossover_output_selection_highpass_rejects_dc() {
 fn test_crossover_output_selection_lowpass_passes_dc() {
     // Lowpass mode should pass DC (output near 1.0)
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 10000;
     let input = vec![1.0f32; num_frames]; // DC
     let mut output = vec![0.0; num_frames];
@@ -372,7 +372,7 @@ fn test_crossover_output_selection_lowpass_passes_dc() {
 #[test]
 fn test_crossover_mode_parameter() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.output_channels(), 1);
 
     assert!(
@@ -404,7 +404,7 @@ fn rejects_more_than_four_bands_and_invalid_frequencies() {
 #[test]
 fn process_rejects_wrong_buffer_lengths() {
     let mut plugin = CrossoverPlugin::new(2, "LR24", 1_000.0, "both").unwrap();
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     let context = ProcessContext::new(48_000, 4);
     for input_len in [7, 9] {
         let input = vec![0.0; input_len];
@@ -423,7 +423,7 @@ fn process_rejects_wrong_buffer_lengths() {
 #[test]
 fn test_3way_frequency_update_no_panic() {
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert_eq!(p.output_channels(), 3); // 3 bands
 
     let num_frames = 2000;
@@ -473,7 +473,7 @@ fn test_3way_frequency_update_no_panic() {
 fn test_all_frequencies_remain_sorted_after_primary_update() {
     // 3-way: [500, 5000]
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Move primary frequency above the second point — without the fix this
     // would leave all_frequencies = [10000, 5000] (unsorted).
@@ -519,7 +519,7 @@ fn test_all_frequencies_remain_sorted_after_primary_update() {
 fn test_all_frequencies_remain_sorted_after_extra_freq_update() {
     // 3-way: [500, 5000]
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Move frequency_2 below the primary — without the fix this would leave
     // all_frequencies = [500, 200] (unsorted).
@@ -552,7 +552,7 @@ fn test_all_frequencies_remain_sorted_after_extra_freq_update() {
 #[test]
 fn ordinary_frequency_update_preserves_smoothing() {
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5_000.0]).unwrap();
-    p.initialize(48_000).unwrap();
+    p.initialize(48_000.0).unwrap();
     let before = p.freq_smoother.current();
 
     p.set_parameter(ParameterId::from("frequency"), ParameterValue::Float(750.0))
@@ -609,7 +609,7 @@ fn test_crossover_mode_from_str_is_case_insensitive() {
 #[test]
 fn test_reset_snaps_smoothers_to_target() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
 
     // Start a slow parameter transition (20 ms @ 48 kHz = ~960 samples to converge).
     p.set_parameter(
@@ -639,7 +639,7 @@ fn test_reset_snaps_smoothers_to_target() {
 #[test]
 fn test_initialize_rejects_frequency_above_nyquist() {
     let mut p = CrossoverPlugin::new(1, "LR24", 20000.0, "low").unwrap();
-    assert!(p.initialize(32000).is_err());
+    assert!(p.initialize(32000.0).is_err());
 }
 
 #[test]
@@ -667,7 +667,7 @@ fn test_per_channel_mute_outputs_silence() {
         vec![PerChannelOpMode::Highpass, PerChannelOpMode::Mute],
     )
     .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 512;
     let mut input = vec![0.0f32; num_frames * 2];
     for f in 0..num_frames {
@@ -695,7 +695,7 @@ fn test_per_channel_independent_cutoffs() {
     )
     .unwrap();
     let sr = 48000u32;
-    p.initialize(sr).unwrap();
+    p.initialize(f64::from(sr)).unwrap();
 
     let num_frames = 8192;
     let mut input = vec![0.0f32; num_frames * 2];
@@ -741,7 +741,7 @@ fn test_per_channel_passthrough_preserves_input() {
         vec![PerChannelOpMode::Highpass, PerChannelOpMode::Passthrough],
     )
     .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let num_frames = 256;
     let mut input = vec![0.0f32; num_frames * 2];
     for f in 0..num_frames {
@@ -789,7 +789,7 @@ fn test_per_channel_set_get_frequency_and_mode() {
         .get_parameter(&ParameterId::from("channel_mode_1"))
         .unwrap();
     assert_eq!(got, ParameterValue::String("passthrough".to_string()));
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(
         p.set_parameter(
             ParameterId::from("channel_frequency_0"),
@@ -807,7 +807,7 @@ fn test_per_channel_initialize_rejects_above_nyquist() {
         vec![PerChannelOpMode::Lowpass, PerChannelOpMode::Lowpass],
     )
     .unwrap();
-    assert!(p.initialize(32000).is_err());
+    assert!(p.initialize(32000.0).is_err());
 }
 
 #[test]
@@ -835,7 +835,7 @@ fn test_per_channel_rejects_global_frequency_and_mode_writes() {
         vec![PerChannelOpMode::Lowpass, PerChannelOpMode::Highpass],
     )
     .unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     // Writing the global `frequency` / `mode` must error in per-channel
     // mode — silently updating unused global state would mask routing bugs.
     assert!(
@@ -1095,7 +1095,7 @@ fn test_is_linear_phase_type_variations() {
 #[test]
 fn test_nan_frequency_is_rejected() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let before = p.freq_smoother.target();
     assert!(
         p.set_parameter(
@@ -1110,7 +1110,7 @@ fn test_nan_frequency_is_rejected() {
 #[test]
 fn test_nan_extra_frequency_is_rejected() {
     let mut p = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let before = p.extra_freq_smoothers[0].target();
     assert!(
         p.set_parameter(
@@ -1125,7 +1125,7 @@ fn test_nan_extra_frequency_is_rejected() {
 #[test]
 fn test_process_nan_input_does_not_panic() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let input = vec![f32::NAN; 64];
     let mut output = vec![0.0; 64];
     p.process(&input, &mut output, &ProcessContext::new(48000, 64))
@@ -1139,7 +1139,7 @@ fn test_process_nan_input_does_not_panic() {
 #[test]
 fn test_unknown_parameter_returns_error() {
     let mut p = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     assert!(
         p.set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0))
             .is_err()
@@ -1228,7 +1228,7 @@ fn test_missing_fir_and_lr_banks_return_errors_instead_of_panicking() {
 
     // FIR two-way with the two-way bank removed.
     let mut fir2 = CrossoverPlugin::new(1, "LinearPhase", 1000.0, "low").unwrap();
-    fir2.initialize(48000).unwrap();
+    fir2.initialize(48000.0).unwrap();
     fir2.fir_crossover_2way = None;
     let input = vec![0.5; 64];
     let mut output = vec![0.0; 64];
@@ -1240,7 +1240,7 @@ fn test_missing_fir_and_lr_banks_return_errors_instead_of_panicking() {
     // FIR multi-way with the multiband bank removed.
     let mut firm =
         CrossoverPlugin::new_multiway(1, "LinearPhase", 500.0, "both", &[5000.0]).unwrap();
-    firm.initialize(48000).unwrap();
+    firm.initialize(48000.0).unwrap();
     firm.fir_multiband = None;
     let input = vec![0.5; 64];
     let mut output = vec![0.0; 64 * 3];
@@ -1254,7 +1254,7 @@ fn test_missing_fir_and_lr_banks_return_errors_instead_of_panicking() {
 
     // LR multi-way with the IIR bank removed.
     let mut lr = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    lr.initialize(48000).unwrap();
+    lr.initialize(48000.0).unwrap();
     lr.multiband = None;
     let input = vec![0.5; 64];
     let mut output = vec![0.0; 64 * 3];
@@ -1269,12 +1269,12 @@ fn test_latency_reports_survive_initialize() {
     // LR topologies are zero-latency before and after initialize.
     let mut lr2 = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
     assert_eq!(lr2.latency_samples(), 0);
-    lr2.initialize(48000).unwrap();
+    lr2.initialize(48000.0).unwrap();
     assert_eq!(lr2.latency_samples(), 0);
 
     let mut lr3 = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
     assert_eq!(lr3.latency_samples(), 0);
-    lr3.initialize(48000).unwrap();
+    lr3.initialize(48000.0).unwrap();
     assert_eq!(lr3.latency_samples(), 0);
 
     // FIR group delay is (taps - 1) / 2 samples per split; the multiband
@@ -1284,7 +1284,7 @@ fn test_latency_reports_survive_initialize() {
         .unwrap();
     let expected_two_way = (127 - 1) / 2;
     assert_eq!(fir2.latency_samples(), expected_two_way);
-    fir2.initialize(48000).unwrap();
+    fir2.initialize(48000.0).unwrap();
     assert_eq!(fir2.latency_samples(), expected_two_way);
 
     let mut fir3 =
@@ -1293,7 +1293,7 @@ fn test_latency_reports_survive_initialize() {
         .unwrap();
     let expected_three_band = 2 * ((127 - 1) / 2);
     assert_eq!(fir3.latency_samples(), expected_three_band);
-    fir3.initialize(48000).unwrap();
+    fir3.initialize(48000.0).unwrap();
     assert_eq!(fir3.latency_samples(), expected_three_band);
 }
 
@@ -1304,7 +1304,7 @@ fn test_fir_taps_change_rejected_after_initialize() {
     p.set_parameter(ParameterId::from("fir_taps"), ParameterValue::Int(127))
         .unwrap();
     assert_eq!(p.latency_samples(), (127 - 1) / 2);
-    p.initialize(48000).unwrap();
+    p.initialize(48000.0).unwrap();
     let latency = p.latency_samples();
     // Post-init the tap count is structural: the write is rejected and the
     // declared latency (and stored value) is unchanged.
@@ -1324,7 +1324,7 @@ fn test_non_finite_input_never_panics_or_escalates_to_infinite() {
     // Every topology must return Ok on non-finite input. NaN-only input
     // must not escalate to infinite output samples.
     let mut lr2 = CrossoverPlugin::new(1, "LR24", 1000.0, "low").unwrap();
-    lr2.initialize(48000).unwrap();
+    lr2.initialize(48000.0).unwrap();
     let input = vec![f32::NAN; 64];
     let mut output = vec![0.0; 64];
     lr2.process(&input, &mut output, &ProcessContext::new(48000, 64))
@@ -1332,7 +1332,7 @@ fn test_non_finite_input_never_panics_or_escalates_to_infinite() {
     assert!(!output.iter().any(|s| s.is_infinite()));
 
     let mut fir2 = CrossoverPlugin::new(1, "LinearPhase", 1000.0, "low").unwrap();
-    fir2.initialize(48000).unwrap();
+    fir2.initialize(48000.0).unwrap();
     let input = vec![f32::NAN; 64];
     let mut output = vec![0.0; 64];
     fir2.process(&input, &mut output, &ProcessContext::new(48000, 64))
@@ -1341,7 +1341,7 @@ fn test_non_finite_input_never_panics_or_escalates_to_infinite() {
 
     // Infinite input must also be processed without panicking or erroring.
     let mut lr_multi = CrossoverPlugin::new_multiway(1, "LR24", 500.0, "both", &[5000.0]).unwrap();
-    lr_multi.initialize(48000).unwrap();
+    lr_multi.initialize(48000.0).unwrap();
     let input = vec![f32::INFINITY; 64];
     let mut output = vec![0.0; 64 * 3];
     lr_multi
@@ -1350,7 +1350,7 @@ fn test_non_finite_input_never_panics_or_escalates_to_infinite() {
 
     let mut fir_multi =
         CrossoverPlugin::new_multiway(1, "LinearPhase", 500.0, "both", &[5000.0]).unwrap();
-    fir_multi.initialize(48000).unwrap();
+    fir_multi.initialize(48000.0).unwrap();
     let input = vec![f32::NEG_INFINITY; 64];
     let mut output = vec![0.0; 64 * 3];
     fir_multi

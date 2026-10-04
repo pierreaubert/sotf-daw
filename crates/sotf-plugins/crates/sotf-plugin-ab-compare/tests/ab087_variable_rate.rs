@@ -47,6 +47,59 @@ const CONVERTER_CHUNK_PIN: usize = 256;
 /// `MASK_RESIDUAL_RATIO`: program peak x 2^-24.
 const MASK_RESIDUAL_RATIO: f64 = 1.0 / 16_777_216.0;
 
+#[test]
+fn fractional_outer_clock_runs_two_sink_free_paths_without_truncation() {
+    let rate = 1234.5678_f64;
+    let params = ABComparePluginParams {
+        path_a: PathConfig::None,
+        path_b: PathConfig::None,
+        mix: -1.0,
+        auto_gain_enabled: false,
+        ..ABComparePluginParams::default()
+    };
+    let mut plugin = ABComparePlugin::from_params_with_factory(
+        CHANNELS,
+        rate,
+        params,
+        ab087_factory,
+    )
+    .unwrap();
+    plugin.initialize(rate).unwrap();
+    let input = vec![0.25_f32; CHANNELS * 17];
+    let mut output = vec![0.0_f32; input.len()];
+    let frames = plugin
+        .process(&input, &mut output, &ProcessContext::new(rate, 17))
+        .unwrap();
+    assert_eq!(frames, 17);
+    assert_eq!(output, input);
+}
+
+#[test]
+fn fractional_outer_clock_runs_nested_gain_path_without_rounding() {
+    let rate = 12_345.678_f64;
+    let params = ABComparePluginParams {
+        path_a: PathConfig::Plugin {
+            plugin_type: "gain".to_owned(),
+            parameters: json!({"gain_db": 0.0, "smoothing_ms": 0.0}),
+        },
+        path_b: PathConfig::None,
+        mix: -1.0,
+        auto_gain_enabled: false,
+        ..ABComparePluginParams::default()
+    };
+    let mut plugin = ABComparePlugin::from_params(CHANNELS, params).unwrap();
+    plugin.initialize(rate).unwrap();
+    let input = vec![0.25_f32; CHANNELS * 17];
+    let mut output = vec![0.0_f32; input.len()];
+    assert_eq!(
+        plugin
+            .process(&input, &mut output, &ProcessContext::new(rate, 17))
+            .unwrap(),
+        17
+    );
+    assert_eq!(output, input);
+}
+
 thread_local! {
     static DEC_PROCESS_CALLS: Cell<usize> = const { Cell::new(0) };
     static DEC_BEGIN_CALLS: Cell<usize> = const { Cell::new(0) };
@@ -54,7 +107,7 @@ thread_local! {
     static BURST_PROCESS_CALLS: Cell<usize> = const { Cell::new(0) };
     static BURST_BEGIN_CALLS: Cell<usize> = const { Cell::new(0) };
     static BURST_DRAIN_CALLS: Cell<usize> = const { Cell::new(0) };
-    static CONSTRUCTION_RATES: RefCell<Vec<(String, u32)>> = const { RefCell::new(Vec::new()) };
+    static CONSTRUCTION_RATES: RefCell<Vec<(String, f64)>> = const { RefCell::new(Vec::new()) };
 }
 
 fn reset_ab087_counters() {
@@ -1029,11 +1082,11 @@ fn ab087_factory(
     plugin_type: &str,
     parameters: &Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     // Part B passes topologically resolved input clocks (24 kHz mid-graph
     // nodes, 96/192 kHz upsampled stages); only a zero rate is illegitimate.
-    if sample_rate == 0 {
+    if !sample_rate.is_finite() || sample_rate <= 0.0 {
         return Err("AB087 factory requires a nonzero sample rate".to_owned());
     }
     match plugin_type {
@@ -1067,12 +1120,12 @@ fn ab087_factory(
         "resampler" => {
             let input_rate = parameters
                 .get("input_sample_rate")
-                .and_then(Value::as_u64)
-                .unwrap_or(u64::from(sample_rate)) as u32;
+                .and_then(Value::as_f64)
+                .unwrap_or(sample_rate);
             let output_rate = parameters
                 .get("output_sample_rate")
-                .and_then(Value::as_u64)
-                .unwrap_or(u64::from(sample_rate)) as u32;
+                .and_then(Value::as_f64)
+                .unwrap_or(sample_rate);
             let chunk = parameters
                 .get("chunk_size")
                 .and_then(Value::as_u64)
@@ -1997,7 +2050,7 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
     let mut host =
         build_path_from_config_with_factory(&config, CHANNELS, SAMPLE_RATE, Some(ab087_factory))
             .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
+    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
     assert!(
         host.total_latency_samples() > 0,
         "nested plus converter latency must be observed"
@@ -2021,7 +2074,7 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
             // Repeated mid-stream rebuild: the composed clock and negotiated
             // state must be untouched.
             host.build().unwrap();
-            assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
+            assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
         }
         let capacity = host.output_frames_for_input(frames);
         let mut block = vec![f32::NAN; capacity * CHANNELS];
@@ -2611,7 +2664,7 @@ fn recording_factory(
     plugin_type: &str,
     parameters: &Value,
     num_channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     CONSTRUCTION_RATES.with(|rates| {
         rates
@@ -2675,13 +2728,13 @@ fn graph_builtin_construction_uses_resolved_input_rate() {
         Some(recording_factory),
     )
     .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), SAMPLE_RATE);
+    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
     let rates = CONSTRUCTION_RATES.with(|rates| rates.borrow().clone());
     assert_eq!(
         rates,
         vec![
-            ("down".to_owned(), SAMPLE_RATE),
-            ("mid".to_owned(), HALF_RATE),
+            ("down".to_owned(), f64::from(SAMPLE_RATE)),
+            ("mid".to_owned(), f64::from(HALF_RATE)),
         ],
         "mid-graph nodes must construct at their resolved input clock"
     );
@@ -2825,7 +2878,7 @@ fn decimator_child_drains_independently_with_exact_counts() {
         host.add_plugin(Box::new(DecimatorTwoFixture::new(CHANNELS).unwrap()))
             .unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), HALF_RATE);
+        assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(HALF_RATE));
 
         let input_frames = input.len() / CHANNELS;
         let mut chunks = vec![1_usize, 64, 137, 7];
@@ -5370,7 +5423,7 @@ fn fork_odd_chunk_straddle_prepares_full_straddle_need() {
     // build-state live declaration at MAX_BLOCK is eight full chunks.
     assert_eq!(
         host.output_sample_rate(SAMPLE_RATE).unwrap(),
-        DOUBLE_RATE,
+        f64::from(DOUBLE_RATE),
         "fork outputs must resolve to 96 kHz"
     );
     assert_eq!(
@@ -5731,7 +5784,7 @@ fn ab_nested_factory(
     plugin_type: &str,
     parameters: &Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     if plugin_type == "ab-nested" {
         let low_hz = parameters

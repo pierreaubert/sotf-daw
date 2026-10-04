@@ -79,7 +79,7 @@ pub type PluginFactoryFn = fn(
     plugin_type: &str,
     parameters: &serde_json::Value,
     channels: usize,
-    sample_rate: u32,
+    sample_rate: f64,
 ) -> Result<Box<dyn plugin::Plugin>, String>;
 pub use analyzer_loudness_monitor::{LoudnessInfo, LoudnessMonitor, LoudnessMonitorPlugin};
 pub use analyzer_spectrum::{

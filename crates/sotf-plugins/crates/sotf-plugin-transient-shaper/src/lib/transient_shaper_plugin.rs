@@ -59,10 +59,10 @@ pub struct TransientShaperPlugin {
 
 impl TransientShaperPlugin {
     pub fn new(channels: usize) -> Self {
-        let sr = 44100;
+        let sr = 44_100.0;
         let mut p = Self {
             channels,
-            sample_rate: f64::from(sr),
+            sample_rate: sr,
             attack_amount: 0.0,
             sustain_amount: 0.0,
             sensitivity_db: 0.0,

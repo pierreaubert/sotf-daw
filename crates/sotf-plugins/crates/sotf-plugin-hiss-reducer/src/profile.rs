@@ -422,7 +422,7 @@ impl CaptureState {
         Self {
             active: false,
             channels,
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             cutoff_hz: 4_000.0,
             alpha: 0.0,
             target_frames: 0,

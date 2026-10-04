@@ -72,7 +72,7 @@ fn zero_history_public_constructors_and_resets_have_identical_canonical_waveform
             let mut direct = AecPlugin::new(rate);
             let mut params = AecPlugin::from_params(rate, AecPluginParams::default()).unwrap();
             let mut initialized = AecPlugin::new(rate);
-            initialized.initialize(rate).unwrap();
+            initialized.initialize(f64::from(rate)).unwrap();
             for epoch in 0..2 {
                 if epoch > 0 {
                     direct.reset();

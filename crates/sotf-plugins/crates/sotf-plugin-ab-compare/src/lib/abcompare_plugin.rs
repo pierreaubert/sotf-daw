@@ -216,7 +216,7 @@ fn classify_path_topology(config: &PathConfig) -> PathTopology {
 pub struct ABComparePlugin {
     // Configuration
     pub(super) num_channels: usize,
-    pub(super) sample_rate: u32,
+    pub(super) sample_rate: f64,
 
     /// External plugin factory -- when set, supports all plugin types.
     /// Falls back to the built-in limited factory when None.
@@ -453,10 +453,10 @@ impl ABComparePlugin {
 
     fn validate_for_sample_rate(
         params: &ABComparePluginParams,
-        sample_rate: u32,
+        sample_rate: f64,
     ) -> Result<(), String> {
-        if sample_rate == 0 {
-            return Err("A/B Compare sample rate must be greater than zero".into());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("A/B Compare sample rate must be finite and positive".into());
         }
         let nyquist = sample_rate as f32 * 0.5;
         if params.band_mask_low_hz > Self::BAND_MASK_MIN_HZ + Self::BAND_MASK_EDGE_EPSILON
@@ -493,18 +493,18 @@ impl ABComparePlugin {
     }
 
     /// Construct initial paths with the authoritative factory already installed.
-    pub fn from_params_with_factory(
+    pub fn from_params_with_factory<S: Into<f64>>(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: S,
         params: ABComparePluginParams,
         factory: sotf_host::PluginFactoryFn,
     ) -> Result<Self, String> {
-        Self::from_params_internal(num_channels, sample_rate, params, Some(factory))
+        Self::from_params_internal(num_channels, sample_rate.into(), params, Some(factory))
     }
 
     fn from_params_internal(
         num_channels: usize,
-        sample_rate: u32,
+        sample_rate: f64,
         params: ABComparePluginParams,
         factory: Option<sotf_host::PluginFactoryFn>,
     ) -> Result<Self, String> {
@@ -876,7 +876,7 @@ impl ABComparePlugin {
 
     fn frames_until_measurement(&self) -> usize {
         // Refresh at 20 Hz on the sample clock, independently of callback size.
-        let interval = (self.sample_rate as usize / 20).max(1);
+        let interval = (self.sample_rate / 20.0).floor().max(1.0) as usize;
         interval - self.cache_update_counter
     }
 
@@ -910,7 +910,7 @@ impl ABComparePlugin {
     /// Rebuild the bandpass filter pair for the current band mask settings.
     pub(super) fn rebuild_band_mask_filters(&mut self) {
         let q = 1.0 / std::f64::consts::SQRT_2;
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         if self.band_mask_hp.len() == self.num_channels {
             // Update coefficients in place — preserves filter delay state (click-free)
             for f in &mut self.band_mask_hp {
@@ -960,7 +960,7 @@ impl ABComparePlugin {
 
     fn reset_band_mask_filter_state(&mut self) {
         let q = 1.0 / std::f64::consts::SQRT_2;
-        let sample_rate = self.sample_rate as f64;
+        let sample_rate = self.sample_rate;
         for filter in &mut self.band_mask_hp {
             *filter = Biquad::new(
                 BiquadFilterType::Highpass,
@@ -2058,14 +2058,9 @@ impl Plugin for ABComparePlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
-        if !sample_rate.is_finite()
-            || sample_rate <= 0.0
-            || sample_rate > f64::from(u32::MAX)
-            || sample_rate.fract() != 0.0
-        {
-            return Err("A/B Compare native graph requires a positive integer sample rate".into());
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("A/B Compare graph requires a finite positive sample rate".into());
         }
-        let sample_rate = sample_rate as u32;
         let nyquist = sample_rate as f32 * 0.5;
         if self.band_mask_low_hz > Self::BAND_MASK_MIN_HZ + Self::BAND_MASK_EDGE_EPSILON
             && self.band_mask_low_hz >= nyquist
@@ -2285,7 +2280,7 @@ impl Plugin for ABComparePlugin {
             ));
         }
 
-        if context.sample_rate != f64::from(self.sample_rate) {
+        if context.sample_rate != self.sample_rate {
             return Err(format!(
                 "A/B Compare was initialized at {} Hz, got a {} Hz process context",
                 self.sample_rate, context.sample_rate
@@ -2562,7 +2557,7 @@ impl Plugin for ABComparePlugin {
         if context.num_frames != 0 {
             return Err("A/B Compare drain preparation requires a zero-frame context".into());
         }
-        if self.sample_rate == 0 || context.sample_rate != f64::from(self.sample_rate) {
+        if self.sample_rate == 0.0 || context.sample_rate != self.sample_rate {
             return Err(format!(
                 "A/B Compare drain context must use its initialized sample rate of {} Hz",
                 self.sample_rate
@@ -2639,7 +2634,7 @@ impl Plugin for ABComparePlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        if context.num_frames != 0 || context.sample_rate != f64::from(self.sample_rate) {
+        if context.num_frames != 0 || context.sample_rate != self.sample_rate {
             return Err(
                 "A/B Compare drain requires a zero-frame context at its initialized rate".into(),
             );

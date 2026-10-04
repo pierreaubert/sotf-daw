@@ -79,7 +79,7 @@ impl AnalogEqPlugin {
         let params = AnalogEqPluginParams::default();
         let mut plugin = Self {
             channels,
-            sample_rate: 0,
+            sample_rate: 0.0,
             initialized: false,
             low_freq: params.low_freq,
             low_gain: params.low_gain,
@@ -100,7 +100,7 @@ impl AnalogEqPlugin {
             stage: AnalogColorStage::new(channels),
             cached_parameters: Vec::new(),
         };
-        plugin.rebuild_filters(48_000);
+        plugin.rebuild_filters(48_000.0);
         // Defaults are inside every model range by construction.
         plugin
             .push_analog_state()

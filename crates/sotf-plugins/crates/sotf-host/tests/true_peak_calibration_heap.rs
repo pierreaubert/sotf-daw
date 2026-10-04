@@ -156,7 +156,7 @@ fn plugin_first_drain_retries_and_reset_do_not_allocate_or_free() {
                 for retained in 0..3 {
                     let mut plugin = LoudnessMonitorPlugin::new(channels).unwrap();
                     plugin.set_spatial_enabled(spatial);
-                    plugin.initialize(rate).unwrap();
+                    plugin.initialize(f64::from(rate)).unwrap();
                     let mut audio = vec![0.0; 64 * channels];
                     audio[63 * channels..].fill(1.0);
                     let mut output = vec![0.0; audio.len()];

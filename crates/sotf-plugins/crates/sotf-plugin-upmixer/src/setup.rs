@@ -292,7 +292,7 @@ impl UpmixerPlugin {
     ///
     /// Call this in `initialize()` and whenever any of those parameters change.
     pub(super) fn recache_bin_indices(&mut self) {
-        if self.core.sample_rate == 0 || self.core.fft_size == 0 {
+        if self.core.sample_rate == 0.0 || self.core.fft_size == 0 {
             return;
         }
         let freq_per_bin = self.core.sample_rate as f32 / self.core.fft_size as f32;
@@ -340,7 +340,7 @@ impl UpmixerPlugin {
     /// Call this in `initialize()` and whenever `subharmonic_freq_hz`,
     /// `subharmonic_attack_ms`, or `subharmonic_release_ms` changes.
     pub(super) fn recache_subharmonic_coeffs(&mut self) {
-        if self.core.sample_rate == 0 {
+        if self.core.sample_rate == 0.0 {
             return;
         }
         let sr = self.core.sample_rate as f32;

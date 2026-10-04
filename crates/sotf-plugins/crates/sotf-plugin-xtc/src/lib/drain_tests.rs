@@ -24,7 +24,7 @@ fn make(n: usize, auto_gain: bool) -> XtcPlugin {
         RATE,
     )
     .unwrap();
-    plugin.initialize(RATE).unwrap();
+    plugin.initialize(f64::from(RATE)).unwrap();
     plugin
 }
 
@@ -100,7 +100,7 @@ fn nonidentity_matrix_matches_independent_f64_windowed_circular_fir() {
             RATE,
         )
         .unwrap();
-        plugin.initialize(RATE).unwrap();
+        plugin.initialize(f64::from(RATE)).unwrap();
         std::fs::remove_file(path).unwrap();
         for frames in [1, 17, 32, 33, 129] {
             plugin.reset();

@@ -347,7 +347,7 @@ fn fir_factory(
     plugin_type: &str,
     parameters: &Value,
     channels: usize,
-    _sample_rate: u32,
+    _sample_rate: f64,
 ) -> Result<Box<dyn Plugin>, String> {
     let taps = parameters["taps"]
         .as_array()

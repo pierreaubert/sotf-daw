@@ -200,7 +200,7 @@ fn make(route: usize, native: bool, delta: isize) -> Box<dyn Plugin> {
             ..Probe::default()
         },
     );
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin
 }
 fn context(frames: usize) -> ProcessContext<'static> {
@@ -386,7 +386,7 @@ fn unsupported_asymmetry_and_uninitialized_processing_fail_explicitly() {
     for route in 0..3 {
         assert!(
             wrap(route, Probe::default())
-                .initialize(48_000)
+                .initialize(48_000.0)
                 .unwrap_err()
                 .contains("subdivision")
         );
@@ -408,7 +408,7 @@ fn direct_parametric_in_place_fallback_retains_keys_and_input_stride() {
         opt_in: true,
         ..Probe::default()
     });
-    InPlacePlugin::initialize(&mut plugin, 48_000).unwrap();
+    InPlacePlugin::initialize(&mut plugin, 48_000.0).unwrap();
     let original = input(1025);
     let mut buffer = original.clone();
     without_heap(|| {

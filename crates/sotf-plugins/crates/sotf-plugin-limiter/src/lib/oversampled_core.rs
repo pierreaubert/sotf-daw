@@ -378,7 +378,7 @@ mod tests {
             link: 0.0,
         };
         for factor in [2, 4] {
-            let mut core = WetCore::new(2, factor, 48_000 * factor as u32, 0, controls);
+            let mut core = WetCore::new(2, factor, 48_000.0 * factor as f64, 0, controls);
             core.output_frames = (4 * CHUNK * factor) as u64;
             for block in 0..4 {
                 core.descriptors[block] = Descriptor {

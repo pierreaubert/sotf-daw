@@ -474,7 +474,7 @@ fn final_sample_matches_advanced_smoother_state() {
 fn smoothing_is_invariant_to_block_partition() {
     fn render(parts: &[usize]) -> Vec<f32> {
         let mut plugin = ChannelMuteSoloPlugin::new(1, true);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.set_fade_ms(5.0);
         plugin.set_channel_state(0, true, false, false).unwrap();
         let mut output = Vec::new();
@@ -522,11 +522,11 @@ fn bulk_state_length_mismatch_is_rejected() {
 fn transport_reset_preserves_every_in_flight_routing_fade() {
     fn assert_reset_continues(setup: impl Fn(&mut ChannelMuteSoloPlugin), observed_channel: usize) {
         let mut reference = ChannelMuteSoloPlugin::new(2, true);
-        reference.initialize(48_000).unwrap();
+        reference.initialize(48_000.0).unwrap();
         reference.set_fade_ms(20.0);
         setup(&mut reference);
         let mut reset = ChannelMuteSoloPlugin::new(2, true);
-        reset.initialize(48_000).unwrap();
+        reset.initialize(48_000.0).unwrap();
         reset.set_fade_ms(20.0);
         setup(&mut reset);
 
@@ -608,7 +608,7 @@ fn transport_reset_preserves_every_in_flight_routing_fade() {
 #[test]
 fn settled_processing_uses_static_block_path_and_transition_sensitive_metadata() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-    plugin.initialize(48_000).unwrap();
+    plugin.initialize(48_000.0).unwrap();
     plugin.set_fade_ms(5.0);
     plugin.set_channel_state(0, true, false, false).unwrap();
 
@@ -683,7 +683,7 @@ fn settled_block_kernel_matches_scalar_reference_across_layouts_and_blocks() {
                     fade_ms: 5.0,
                 },
             );
-            plugin.initialize(48_000).unwrap();
+            plugin.initialize(48_000.0).unwrap();
             let mut actual: Vec<f32> = (0..channels * frames)
                 .map(|index| ((index % 29) as f32 - 14.0) / 14.0)
                 .collect();
@@ -714,7 +714,7 @@ fn settled_block_kernel_matches_scalar_reference_across_layouts_and_blocks() {
 fn settled_blocks_do_not_advance_state_before_the_next_automation_transition() {
     fn prepare() -> ChannelMuteSoloPlugin {
         let mut plugin = ChannelMuteSoloPlugin::new(2, true);
-        plugin.initialize(48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
         plugin.set_fade_ms(5.0);
         plugin.set_channel_state(0, true, false, false).unwrap();
         let mut settling = vec![1.0; 8_192];
@@ -769,9 +769,9 @@ fn settled_and_transitioning_callbacks_do_not_allocate() {
             fade_ms: 5.0,
         },
     );
-    settled.initialize(48_000).unwrap();
+    settled.initialize(48_000.0).unwrap();
     let mut transitioning = ChannelMuteSoloPlugin::new(8, true);
-    transitioning.initialize(48_000).unwrap();
+    transitioning.initialize(48_000.0).unwrap();
     transitioning.set_fade_ms(5.0);
     transitioning
         .set_channel_state(0, true, false, false)

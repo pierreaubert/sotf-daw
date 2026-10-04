@@ -86,9 +86,9 @@ impl Bs1770TruePeakDetector {
     /// 192 kHz. These factors are the specified operating points for common
     /// 44.1/48 kHz families and retain a bounded fallback for other rates.
     fn factor_for_sample_rate(sample_rate: f64) -> u8 {
-        if sample_rate < 96_000 {
+        if sample_rate < 96_000.0 {
             4
-        } else if sample_rate < 192_000 {
+        } else if sample_rate < 192_000.0 {
             2
         } else {
             1
@@ -271,7 +271,7 @@ impl NativeKernel {
         lookahead_ms: f32,
         max_lookahead_len: usize,
     ) -> Self {
-        let sr = 44100;
+        let sr = 44_100.0;
         let lookahead_len = (lookahead_ms.max(0.0) * 0.001 * sr as f32) as usize;
         let detector_delay = Bs1770TruePeakDetector::detector_delay_samples(sr);
         // Reserve the detector delay plus a full interpolation support of preview.
@@ -851,8 +851,8 @@ mod remediation_tests {
 
     #[test]
     fn bs1770_hann_sinc_impulse_matches_independent_fixed_coefficient_oracle() {
-        let mut phase_detector = Bs1770TruePeakDetector::new(48_000);
-        let mut peak_detector = Bs1770TruePeakDetector::new(48_000);
+        let mut phase_detector = Bs1770TruePeakDetector::new(48_000.0);
+        let mut peak_detector = Bs1770TruePeakDetector::new(48_000.0);
         for frame in 0..13 {
             let sample = if frame == 0 { 1.0 } else { 0.0 };
             let actual_phases = phase_detector.push_and_interpolate_4x(sample);
@@ -874,12 +874,12 @@ mod remediation_tests {
         }
         assert!((oracle_coefficient(4, 6, 1) - 0.896_465_150_711).abs() < 1.0e-12);
         assert_eq!(oracle_coefficient(4, 6, 0), 1.0);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(48_000), 6);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(96_000), 12);
-        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(192_000), 0);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(48_000.0), 6);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(96_000.0), 12);
+        assert_eq!(Bs1770TruePeakDetector::detector_delay_samples(192_000.0), 0);
         assert_eq!(phase_detector.process_linear(0.0), 0.0);
 
-        let mut two_x_detector = Bs1770TruePeakDetector::new(96_000);
+        let mut two_x_detector = Bs1770TruePeakDetector::new(96_000.0);
         for frame in 0..25 {
             let sample = if frame == 0 { 1.0 } else { 0.0 };
             let expected = (0..2)

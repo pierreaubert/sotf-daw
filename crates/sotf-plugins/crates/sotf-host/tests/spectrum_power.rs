@@ -25,7 +25,7 @@ fn signal(tones: &[(usize, f64, f64)]) -> Vec<f32> {
 fn analyze(input: &[f32], channels: usize, rate: u32, maximum: f32) -> Arc<SpectrumData> {
     let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
         channels,
-        rate,
+        f64::from(rate),
         SpectrumConfig {
             num_bins: 100,
             min_freq: 10.0,
@@ -34,7 +34,7 @@ fn analyze(input: &[f32], channels: usize, rate: u32, maximum: f32) -> Arc<Spect
         },
     )
     .unwrap();
-    plugin.initialize(rate).unwrap();
+    plugin.initialize(f64::from(rate)).unwrap();
     let mut output = vec![f32::NAN; input.len()];
     assert_eq!(
         plugin

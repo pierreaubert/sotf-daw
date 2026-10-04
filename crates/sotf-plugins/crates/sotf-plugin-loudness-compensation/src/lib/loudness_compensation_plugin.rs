@@ -120,7 +120,7 @@ impl LoudnessCompensationPlugin {
         high_freq: f32,
         high_gain: f32,
     ) -> Self {
-        let sr = 48000;
+        let sr = 48_000.0;
         let playback_db = default_playback_level_db();
         let reference_db = default_reference_level_db();
         let mut p = Self {
