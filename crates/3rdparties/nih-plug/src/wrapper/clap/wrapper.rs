@@ -593,6 +593,45 @@ impl<P: ClapPlugin> MainThreadExecutor<Task<P>> for Wrapper<P> {
     }
 }
 
+// The CLAP ABI passes normalized values as f64, but NIH parameters and their
+// display converters use f32. A plain-value roundtrip can move one normalized
+// f32 ULP and change the last displayed digit. Prefer the nearest normalized
+// value that produces the exact text the host supplied. This only affects
+// canonical text close to the parser's existing result; arbitrary input keeps
+// the original parsed value.
+fn normalized_value_matching_text(param_ptr: &ParamPtr, parsed: f32, display: &str) -> f32 {
+    if !parsed.is_finite() || !(0.0..=1.0).contains(&parsed) {
+        return parsed;
+    }
+
+    // SAFETY: callers retain the Params object that owns this parameter pointer.
+    let matches = |candidate| unsafe {
+        param_ptr.normalized_value_to_string(candidate, true) == display
+    };
+    if matches(parsed) {
+        return parsed;
+    }
+
+    let bits = if parsed == 0.0 { 0 } else { parsed.to_bits() };
+    let one_bits = 1.0_f32.to_bits();
+    // All observed release-validator discrepancies were one ULP. Search a
+    // small symmetric neighborhood, then preserve the old parser result.
+    for distance in 1..=8_u32 {
+        if let Some(lower) = bits.checked_sub(distance) {
+            if matches(f32::from_bits(lower)) {
+                return f32::from_bits(lower);
+            }
+        }
+        if let Some(upper) = bits.checked_add(distance) {
+            if upper <= one_bits && matches(f32::from_bits(upper)) {
+                return f32::from_bits(upper);
+            }
+        }
+    }
+
+    parsed
+}
+
 impl<P: ClapPlugin> Wrapper<P> {
     /// # Safety
     ///
@@ -3469,7 +3508,7 @@ impl<P: ClapPlugin> Wrapper<P> {
         match wrapper.param_by_hash.get(&param_id) {
             Some(param_ptr) => {
                 let normalized_value = match param_ptr.string_to_normalized_value(display) {
-                    Some(v) => v as f64,
+                    Some(v) => normalized_value_matching_text(param_ptr, v, display) as f64,
                     None => return false,
                 };
                 *value = normalized_value * param_ptr.step_count().unwrap_or(1) as f64;
