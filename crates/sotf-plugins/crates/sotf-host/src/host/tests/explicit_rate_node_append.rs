@@ -759,7 +759,7 @@ fn plain_add_node_rejects_mid_graph_rate_mismatch() {
     )
     .unwrap();
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 
     let err = host
         .add_node(
@@ -774,7 +774,7 @@ fn plain_add_node_rejects_mid_graph_rate_mismatch() {
 
     // The failed admission leaves no partial node behind.
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 }
 
 #[test]
@@ -792,7 +792,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
         )
         .unwrap();
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 24_000.0);
 
     // Mid-graph insertion at the stage's own input rate.
     let up = host
@@ -808,7 +808,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
     // Pure-graph order refresh: the appended stage joins the derived order,
     // so the composed output clock, tail readback, and latency follow it.
     assert_eq!(host.chain_nodes, vec![down, up]);
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
     assert_eq!(host.total_latency_samples(), 0);
 
     let total_frames: usize = BLOCKS.iter().sum();
@@ -823,7 +823,7 @@ fn appended_converter_composes_bit_exact_with_eof() {
             // derived order and negotiated rates must be untouched.
             host.build().unwrap();
             assert_eq!(host.chain_nodes, vec![down, up]);
-            assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000);
+            assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
         }
         let block = &input[cursor * CHANNELS..(cursor + block_frames) * CHANNELS];
         cursor += block_frames;
@@ -1211,7 +1211,7 @@ fn variable_diamond_lossless_join_requires_edge_retention() {
         host.add_edge(GraphEdge::new(from, to)).unwrap();
     }
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
 
     let total_frames: usize = BLOCKS.iter().sum();
     let input = exact_stereo_input(total_frames, CHANNELS);

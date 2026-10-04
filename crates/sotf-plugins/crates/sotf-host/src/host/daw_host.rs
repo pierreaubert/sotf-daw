@@ -1380,7 +1380,7 @@ impl DawHost {
                         input_rate,
                     )?
                 };
-                if output_rate == 0 {
+                if output_rate == 0.0 {
                     return Err(format!("Node {id} returned a zero output sample rate"));
                 }
                 self.node_output_sample_rates[id] = output_rate;
@@ -2106,8 +2106,8 @@ impl DawHost {
             plugin.supports_f64(),
             Self::plugin_output_frames_for_input_isolated(plugin.as_ref(), id, &node.name, 100)
                 == 100,
-            Self::plugin_output_sample_rate_isolated(plugin.as_ref(), id, &node.name, 48_000)
-                .is_ok_and(|rate| rate == 48_000),
+            Self::plugin_output_sample_rate_isolated(plugin.as_ref(), id, &node.name, 48_000.0)
+                .is_ok_and(|rate| rate == 48_000.0),
         )
     }
 
@@ -2371,8 +2371,8 @@ impl DawHost {
         let has_latency_or_variable_frames = metadata.latency_samples > 0
             || Self::plugin_output_frames_for_input_isolated(plugin, node_id, node_name, 100)
                 != 100
-            || !Self::plugin_output_sample_rate_isolated(plugin, node_id, node_name, 48_000)
-                .is_ok_and(|rate| rate == 48_000);
+            || !Self::plugin_output_sample_rate_isolated(plugin, node_id, node_name, 48_000.0)
+                .is_ok_and(|rate| rate == 48_000.0);
         if has_latency_or_variable_frames {
             return HEAVY_PARALLEL_NODE_COST;
         }
@@ -4933,7 +4933,7 @@ impl DawHost {
             let drain_samples = drain_capacity
                 .checked_mul(node.output_channels())
                 .ok_or("Host native drain capacity overflow")?;
-            if input_rate == 0 || node.input_channels() == 0 || node.output_channels() == 0 {
+            if input_rate == 0.0 || node.input_channels() == 0 || node.output_channels() == 0 {
                 return Err("Host native drain requires nonzero rate and channels".into());
             }
             ensure_len(&mut bufs.scratch_output, drain_samples);
@@ -5947,8 +5947,8 @@ impl DawHost {
                 .node_input_sample_rates
                 .get(node_id)
                 .copied()
-                .unwrap_or(0);
-            if input_rate == 0 {
+                .unwrap_or(0.0);
+            if input_rate == 0.0 {
                 return Err(format!(
                     "graph drain requires a nonzero sample rate at '{}'",
                     node.name
@@ -6278,7 +6278,7 @@ impl DawHost {
         let drain_samples = drain_capacity
             .checked_mul(node.output_channels())
             .ok_or("Host native drain capacity overflow")?;
-        if input_rate == 0 || node.input_channels() == 0 || node.output_channels() == 0 {
+        if input_rate == 0.0 || node.input_channels() == 0 || node.output_channels() == 0 {
             return Err("Host native drain requires nonzero rate and channels".into());
         }
         let GraphNodeDrainPhase::Draining {

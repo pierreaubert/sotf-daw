@@ -313,9 +313,9 @@ fn rejected_host_rate_and_rebuild_do_not_refresh_quota_but_graph_replacement_doe
     let calls = Arc::clone(&plugin.calls);
     host.add_plugin(Box::new(plugin)).unwrap();
     assert!(!host.drain(&mut [0.0]).unwrap().complete);
-    host.config.sample_rate = 0;
+    host.config.sample_rate = 0.0;
     assert!(host.drain(&mut [0.0]).is_err());
-    host.config.sample_rate = 48_000;
+    host.config.sample_rate = 48_000.0;
     host.build().unwrap();
     assert!(!host.drain(&mut [0.0]).unwrap().complete);
     assert!(host.drain(&mut [0.0]).is_err());

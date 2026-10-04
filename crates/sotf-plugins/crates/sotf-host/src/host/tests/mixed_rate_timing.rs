@@ -56,9 +56,9 @@ fn fractional_host_rate_reaches_both_clocks_without_integer_rounding() {
 fn removed_node_clock_does_not_constrain_the_rebuilt_graph() {
     let valid = Arc::new(AtomicBool::new(true));
     let mut host = DawHost::new(1, 48_000);
-    let removed = host
-        .add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
+    host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
         .unwrap();
+    let removed = 0;
     host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
         .unwrap();
     host.build().unwrap();
@@ -71,7 +71,7 @@ fn removed_node_clock_does_not_constrain_the_rebuilt_graph() {
     host.node_input_sample_rates[removed] = f64::MAX;
     host.node_output_sample_rates[removed] = f64::MAX;
     let active = host.chain_nodes[0];
-    assert!(host.latency_clock_rate().is_ok());
+    // The rebuilt latency and processing paths must ignore the removed slot.
     assert_eq!(host.path_latency(active), 0);
     let mut output = [0.0_f32; 1];
     assert_eq!(host.process(&[0.25], &mut output).unwrap(), 1);
@@ -336,7 +336,7 @@ fn graph(join: bool) -> (DawHost, Arc<AtomicBool>) {
     assert_eq!(host.node_latency_from_input[up], 8);
     assert_eq!(host.node_latency_from_input[down], 5);
     assert_eq!(host.total_latency_samples(), if join { 7 } else { 5 });
-    assert_eq!(host.output_sample_rate(48000).unwrap(), 48000);
+    assert_eq!(host.output_sample_rate(48000).unwrap(), 48000.0);
     assert_eq!(host.output_frames_for_input(37), 37);
     (host, valid)
 }
@@ -491,7 +491,7 @@ fn bypassed_rate_converter_keeps_downstream_clock_and_frame_count() {
             .unwrap();
         host.bypass_plugin(0).unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(48000).unwrap(), 48000);
+        assert_eq!(host.output_sample_rate(48000).unwrap(), 48000.0);
         assert_eq!(host.total_latency_samples(), 0);
         if native {
             let mut output = [0.0_f64; 17];

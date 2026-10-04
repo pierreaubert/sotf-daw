@@ -1133,7 +1133,7 @@ fn build_twin_host_inner(wide_up_block: bool, publish_envelopes: bool) -> (DawHo
         host.add_edge(GraphEdge::new(from, to)).unwrap();
     }
     host.build().unwrap();
-    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000);
+    assert_eq!(host.output_sample_rate(48_000).unwrap(), 48_000.0);
     (host, down_a)
 }
 
