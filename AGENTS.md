@@ -33,8 +33,8 @@ This workspace must stay independent of `sotf` and `sotf-systemwide`:
   optional or dev-only ones. `sotf-streaming` and the test crates
   (`crates/sotf-testkit`, `crates/sotf-test-macros`) are local members,
   so `cargo metadata` resolves with no sibling checkout present.
-- `[patch.crates-io]` mirrors the vendored forks (`nnnoiseless`,
-  `coreaudio-rs`) and the Zed `wgpu` fork pins from `sotf`; patches are
+- `[patch.crates-io]` mirrors the vendored `nnnoiseless` fork, the pinned
+  external `coreaudio-rs` fork, and the Zed `wgpu` fork pins from `sotf`; patches are
   root-workspace configuration and must be repeated here, not inherited.
 - `gpui-toolkit` git dependencies are pinned to a `rev` (not floating
   `branch = "main"`); bump deliberately in step with `sotf`'s lockfile.

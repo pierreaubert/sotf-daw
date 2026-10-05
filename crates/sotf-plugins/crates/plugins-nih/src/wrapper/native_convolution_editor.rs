@@ -739,7 +739,7 @@ mod tests {
             let plugin = plugins_bridge::create_plugin(
                 "Convolution",
                 crate::wrapper::plugin_constructor_channels("Convolution"),
-                48_000,
+                48_000.0,
                 &crate::wrapper::default_plugin_config("Convolution"),
             )
             .expect("create default Convolution for native parameter schema");
@@ -760,7 +760,7 @@ mod tests {
 
     fn geometry() -> Geometry {
         Geometry {
-            sample_rate: 48_000,
+            sample_rate: 48_000.0,
             max_frames: 256,
             input_channels: 2,
             output_channels: 2,

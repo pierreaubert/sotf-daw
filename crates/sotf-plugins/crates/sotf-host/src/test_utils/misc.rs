@@ -56,7 +56,10 @@ pub fn measure_heap_activity<F: FnOnce()>(f: F) -> (usize, usize) {
 /// 2. Real-time Safety (Zero Allocations)
 /// 3. Performance Benchmark
 pub fn run_standard_tests(plugin: &mut dyn Plugin, label: &str) {
-    let sample_rate = 48000;
+    let sample_rate = 48_000.0;
+    plugin
+        .initialize(sample_rate)
+        .expect("standard QA plugin initialization failed");
 
     // Test 2: Latency Reporting
     println!("\n[Test 2] Latency Reporting");
@@ -103,7 +106,7 @@ pub fn run_standard_tests(plugin: &mut dyn Plugin, label: &str) {
         pos = end;
     }
     let duration = start.elapsed();
-    let audio_duration_sec = bench_frames as f64 / sample_rate as f64;
+    let audio_duration_sec = bench_frames as f64 / sample_rate;
     let cpu_usage = (duration.as_secs_f64() / audio_duration_sec) * 100.0;
 
     println!(

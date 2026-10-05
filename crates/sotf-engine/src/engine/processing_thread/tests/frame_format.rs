@@ -245,8 +245,18 @@ fn invalid_runtime_clock_returns_error_and_retires_the_host() {
 
     rate.store(f64::NAN.to_bits(), Ordering::Relaxed);
     worker.send_frame(0.5);
+    // A regression can publish an output frame to this rendezvous channel.
+    // Observe that failure with a deadline instead of joining a blocked sender.
+    assert!(matches!(
+        worker.output_rx.as_ref().unwrap().recv_timeout(WAIT),
+        Err(mpsc::RecvTimeoutError::Disconnected)
+    ));
     let result = worker.thread.take().unwrap().join().unwrap();
-    assert!(result.unwrap_err().contains("unsupported native output sample rate"));
+    let error = result.unwrap_err();
+    assert!(
+        error.contains("returned invalid output sample rate NaN"),
+        "expected the live plugin rate to be rejected before native conversion: {error}"
+    );
     let mut retired_invalid_host = false;
     for _ in 0..4 {
         match worker._gc_rx.recv_timeout(WAIT) {

@@ -2232,7 +2232,7 @@ fn generated_editor_discards_geometry_and_out_of_order_generations_before_retry(
     let service = Arc::clone(&subject.convolution_editor_service);
     let topology = params.convolution_editor_topology_fingerprint();
     let old_geometry = Geometry {
-        sample_rate: SAMPLE_RATE as u32,
+        sample_rate: SAMPLE_RATE,
         max_frames: 257,
         input_channels: 2,
         output_channels: 2,
@@ -2269,7 +2269,7 @@ fn generated_editor_discards_geometry_and_out_of_order_generations_before_retry(
     NihPlugin::reset(&mut subject);
     NihPlugin::reset(&mut old_control);
     let retry_geometry = Geometry {
-        sample_rate: SAMPLE_RATE as u32,
+        sample_rate: SAMPLE_RATE,
         max_frames: RETRY_MAX_FRAMES,
         input_channels: 2,
         output_channels: 2,

@@ -2973,9 +2973,9 @@ impl DawHost {
         if !rate.is_finite() || rate <= 0.0 {
             return Err("Input sample rate must be finite and positive".to_string());
         }
-        if self.cached_rate_identity {
-            return Ok(rate);
-        }
+        // Build-time identity describes the prepared graph, but a plugin may
+        // report invalid rate metadata later. Query the active path so the
+        // native boundary can reject it before the audio frame is published.
         self.output_nodes
             .first()
             .map_or(Ok(rate), |&id| self.path_output_rate(id, rate))
@@ -3002,7 +3002,7 @@ impl DawHost {
         if !input_rate.is_finite() || input_rate <= 0.0 || !expected.is_finite() || expected <= 0.0 {
             return false;
         }
-        if self.cached_rate_identity || self.output_nodes.is_empty() {
+        if self.output_nodes.is_empty() {
             return input_rate == expected;
         }
         self.output_nodes

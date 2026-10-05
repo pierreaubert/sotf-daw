@@ -1928,7 +1928,7 @@ macro_rules! sotf_nih_plugin {
                     self.aux_output_channels = aux_output_channels;
                     self.aux_output_count = audio_io_layout.aux_output_ports.len();
                     if let Some(attempt) = convolution_restore_attempt.as_mut() {
-                        attempt.commit(candidate_sample_rate as f32);
+                        attempt.commit(candidate_sample_rate);
                     }
                     self.convolution_editor_service
                         .complete_initialization(convolution_geometry, None);
@@ -2816,7 +2816,7 @@ mod convolution_reactivation_tests {
     use super::{convolution_reactivation_is_compatible, native_convolution_editor::Geometry};
 
     const GEOMETRY: Geometry = Geometry {
-        sample_rate: 48_000,
+        sample_rate: 48_000.0,
         max_frames: 256,
         input_channels: 2,
         output_channels: 2,
@@ -2835,7 +2835,7 @@ mod convolution_reactivation_tests {
 
         for changed in [
             Geometry {
-                sample_rate: 44_100,
+                sample_rate: 44_100.0,
                 ..GEOMETRY
             },
             Geometry {
