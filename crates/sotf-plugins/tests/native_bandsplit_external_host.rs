@@ -136,8 +136,8 @@ fn verify_conflicting_candidate_is_transactional(
                     .unwrap_or_else(|error| panic!("load exported {format:?} BandSplit: {error}"));
             let mut saved = save_state(&live);
             edit_native_state(&mut saved.opaque_state, format, |state| {
-                set_state_int(state, "crossover_type", slope_index as i32);
-                set_state_int(state, "recombination_mode", mode_index as i32);
+                set_state_int(state, "crossover_type", slope_index);
+                set_state_int(state, "recombination_mode", mode_index);
             });
             live.load_opaque_state(&saved.opaque_state)
                 .unwrap_or_else(|error| panic!("set {format:?} BandSplit mode/slope: {error}"));

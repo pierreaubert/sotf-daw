@@ -760,3 +760,54 @@ fn fractional_clock_seek_and_reset_anchor_the_new_transport_position() {
         }
     }
 }
+
+#[test]
+fn failed_reanchor_preserves_every_node_position() {
+    let valid = Arc::new(AtomicBool::new(true));
+    let mut host = DawHost::new(1, 48_000);
+    host.add_plugin(Box::new(ClockPlugin::new(2, 1, 0, &valid)))
+        .unwrap();
+    host.add_plugin(Box::new(ClockPlugin::new(1, 1, 0, &valid)))
+        .unwrap();
+    host.build().unwrap();
+    let traversal_order = host.nodes.keys().copied().collect::<Vec<_>>();
+    assert!(traversal_order.len() >= 2);
+    let later_failing_node = *traversal_order.last().unwrap();
+    for &node_id in &traversal_order[..traversal_order.len() - 1] {
+        host.node_input_sample_rates[node_id] = 48_000.0;
+    }
+    host.node_input_sample_rates[later_failing_node] = 96_000.0;
+    assert!(
+        traversal_order[..traversal_order.len() - 1]
+            .iter()
+            .all(|&node_id| host.node_input_sample_rates[node_id] == 48_000.0)
+    );
+    assert_eq!(host.node_input_sample_rates[later_failing_node], 96_000.0);
+
+    host.set_playback_position(101).unwrap();
+    assert!(
+        traversal_order[..traversal_order.len() - 1]
+            .iter()
+            .all(|&node_id| host.node_input_positions[node_id] == 101)
+    );
+    assert_eq!(host.node_input_positions[later_failing_node], 202);
+    let before = host.node_input_positions.clone();
+    let playback_position_before = host.automation_state.playback_position;
+
+    assert!(host.set_playback_position(u64::MAX).is_err());
+    assert_eq!(host.node_input_positions, before);
+    assert_eq!(
+        host.automation_state.playback_position,
+        playback_position_before
+    );
+}
+
+#[test]
+fn cold_unbuilt_reset_keeps_the_empty_graph_reanchored() {
+    let mut host = DawHost::new(1, 48_000);
+    assert!(host.node_input_positions.is_empty());
+
+    host.reset();
+
+    assert!(host.node_input_positions.is_empty());
+}

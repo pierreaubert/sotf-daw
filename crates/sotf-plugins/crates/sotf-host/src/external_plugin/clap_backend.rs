@@ -2639,7 +2639,10 @@ struct StateReader<'a> {
 }
 
 fn bounded_c_char_array<const N: usize>(chars: &[c_char; N]) -> Option<String> {
-    let bytes = chars.iter().map(|value| *value as u8).collect::<Vec<_>>();
+    let bytes = chars
+        .iter()
+        .map(|value| value.to_ne_bytes()[0])
+        .collect::<Vec<_>>();
     let nul = bytes
         .iter()
         .position(|byte| *byte == 0)

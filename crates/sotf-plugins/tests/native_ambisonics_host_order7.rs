@@ -720,12 +720,13 @@ fn direct_decoder_with_controls(
     dual_band: bool,
     algorithm: &str,
 ) -> AmbisonicsDecoderPlugin {
-    let mut config = AmbisonicsDecoderConfig::default();
-    config.order = order;
-    config.target_layout = target_layout.to_string();
-    config.max_re_weighting = max_re_weighting;
-    config.dual_band = dual_band;
-    config.algorithm = algorithm.to_string();
+    let config = AmbisonicsDecoderConfig {
+        order,
+        target_layout: target_layout.to_string(),
+        max_re_weighting,
+        dual_band,
+        algorithm: algorithm.to_string(),
+    };
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).expect("build direct reference");
     plugin
         .initialize(f64::from(SAMPLE_RATE))

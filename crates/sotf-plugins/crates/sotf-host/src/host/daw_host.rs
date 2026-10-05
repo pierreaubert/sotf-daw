@@ -1067,25 +1067,33 @@ impl DawHost {
 
     fn reanchor_node_positions(&mut self, sample_position: u64) -> Result<(), String> {
         let source = ExactRate::new(self.config.sample_rate)?;
-        let rates = self
-            .nodes
-            .keys()
-            .map(|&id| ExactRate::new(self.node_input_sample_rates[id]))
-            .collect::<Result<Vec<_>, _>>()?;
         let clock = if let Some(clock) = self.exact_clock {
             clock
         } else {
-            ExactClock::new(std::iter::once(source).chain(rates.iter().copied()))?
+            let rates = self
+                .nodes
+                .keys()
+                .map(|&id| ExactRate::new(self.node_input_sample_rates[id]))
+                .collect::<Result<Vec<_>, _>>()?;
+            ExactClock::new(std::iter::once(source).chain(rates))?
         };
-        let mut positions = self.node_input_positions.clone();
+        // Validate every conversion before changing any position, preserving
+        // the previous all-or-nothing update while avoiding a cloned Vec on
+        // the already-built graph reset path.
         for &id in self.nodes.keys() {
-            positions[id] = clock.convert_position(
+            clock.convert_position(
                 sample_position,
                 source,
                 ExactRate::new(self.node_input_sample_rates[id])?,
             )?;
         }
-        self.node_input_positions = positions;
+        for &id in self.nodes.keys() {
+            self.node_input_positions[id] = clock.convert_position(
+                sample_position,
+                source,
+                ExactRate::new(self.node_input_sample_rates[id])?,
+            )?;
+        }
         Ok(())
     }
 
@@ -10734,5 +10742,42 @@ impl Host for DawHost {
         &mut self,
     ) -> Vec<IsolatedExternalPluginWorkerReport> {
         DawHost::ensure_isolated_external_plugin_workers_running(self)
+    }
+}
+
+#[cfg(test)]
+mod reanchor_cold_clock_tests {
+    use super::{DawHost, GraphNode};
+
+    #[test]
+    fn populated_cold_clock_reanchors_and_preserves_positions_on_late_overflow() {
+        let mut host = DawHost::new(1, 48_000);
+        host.nodes
+            .insert(0, GraphNode::new(0, "unity input".into(), 1, 1));
+        host.nodes
+            .insert(1, GraphNode::new(1, "converted input".into(), 1, 1));
+        host.node_input_sample_rates = vec![48_000.0; 2];
+        host.node_input_positions = vec![0; 2];
+
+        let traversal_order = host.nodes.keys().copied().collect::<Vec<_>>();
+        assert_eq!(traversal_order.len(), 2);
+        let later_failing_node = *traversal_order.last().unwrap();
+        for &node_id in &traversal_order[..traversal_order.len() - 1] {
+            host.node_input_sample_rates[node_id] = 48_000.0;
+        }
+        host.node_input_sample_rates[later_failing_node] = 96_000.0;
+
+        assert!(host.exact_clock.is_none());
+        host.reanchor_node_positions(101).unwrap();
+        assert!(
+            traversal_order[..traversal_order.len() - 1]
+                .iter()
+                .all(|&node_id| host.node_input_positions[node_id] == 101)
+        );
+        assert_eq!(host.node_input_positions[later_failing_node], 202);
+
+        let before = host.node_input_positions.clone();
+        assert!(host.reanchor_node_positions(u64::MAX).is_err());
+        assert_eq!(host.node_input_positions, before);
     }
 }

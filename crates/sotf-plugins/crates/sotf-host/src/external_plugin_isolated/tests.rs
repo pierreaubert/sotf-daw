@@ -676,6 +676,20 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
         "audio/control interleave timed out or used stale parameter state"
     );
 
+    // The previous callback submits another asynchronous worker block.
+    // This test checks metadata from completed automation, so ensure that
+    // slot is free before submitting it. Deferred-event recovery is tested
+    // separately with an intentionally occupied slot.
+    let preceding_deadline = std::time::Instant::now() + Duration::from_secs(1);
+    while observer.worker_state() != crate::external_plugin_ipc::PluginIpcState::WorkerReady {
+        assert!(
+            std::time::Instant::now() < preceding_deadline,
+            "worker did not finish the block preceding automation"
+        );
+        std::thread::yield_now();
+    }
+    let preceding_sequence = observer.host_sequence();
+
     let automation = [ParameterEvent::new(
         0,
         ParameterId::from("value"),
@@ -688,6 +702,11 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
             &ProcessContext::new(48_000, 8_192).with_parameter_events(&automation),
         )
         .unwrap();
+    assert_eq!(
+        observer.host_sequence(),
+        preceding_sequence + 1,
+        "automation block must be submitted rather than deferred"
+    );
     let tail_deadline = std::time::Instant::now() + Duration::from_secs(1);
     while plugin.tail_length() != crate::plugin::TailLength::Infinite {
         assert!(
@@ -708,6 +727,16 @@ fn isolated_control_state_and_audio_share_transport_without_stale_sidecar() {
     plugin
         .process(&input, &mut output, &ProcessContext::new(48_000, 8_192))
         .unwrap();
+    // Read the completed reset render, rather than its intentionally valid
+    // deadline fallback, when checking recursive processing history.
+    let reset_ready_deadline = std::time::Instant::now() + Duration::from_secs(1);
+    while observer.worker_state() != crate::external_plugin_ipc::PluginIpcState::WorkerReady {
+        assert!(
+            std::time::Instant::now() < reset_ready_deadline,
+            "worker did not finish the primed block after reset"
+        );
+        std::thread::yield_now();
+    }
     plugin
         .process(&input, &mut output, &ProcessContext::new(48_000, 8_192))
         .unwrap();
