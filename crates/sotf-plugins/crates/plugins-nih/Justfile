@@ -83,9 +83,10 @@ prod-clap: build-nih-all
 	mkdir -p "$CLAP_DIR"
 	for dylib in dist/nih/lib*.dylib; do
 		base=$(basename "$dylib" .dylib | sed 's/^lib//')
-		cp "$dylib" "$CLAP_DIR/${base}.clap"
+		bundle="$CLAP_DIR/${base}.clap"
+		bash ../../../../scripts/release/package_macos_clap.sh "$dylib" "$bundle"
 	done
-	echo "Bundled $(ls "$CLAP_DIR"/*.clap | wc -l | tr -d ' ') CLAP plugins"
+	echo "Bundled $(ls -d "$CLAP_DIR"/*.clap | wc -l | tr -d ' ') CLAP plugins"
 
 # Install VST3 plugins
 [group('install')]
@@ -108,8 +109,12 @@ install-clap: prod-clap
 	set -euo pipefail
 	DEST="$HOME/Library/Audio/Plug-Ins/CLAP"
 	mkdir -p "$DEST"
-	cp dist/clap/*.clap "$DEST/"
-	echo "Installed $(ls "$DEST"/sotf_*.clap 2>/dev/null | wc -l | tr -d ' ') CLAP plugins to $DEST"
+	for bundle in dist/clap/*.clap; do
+		name=$(basename "$bundle")
+		rm -rf "$DEST/$name"
+		cp -R "$bundle" "$DEST/$name"
+	done
+	echo "Installed $(ls -d "$DEST"/sotf_*.clap 2>/dev/null | wc -l | tr -d ' ') CLAP plugins to $DEST"
 
 # Build + install everything
 [group('install')]
