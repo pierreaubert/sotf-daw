@@ -2700,13 +2700,7 @@ fn recording_factory(
                 .get("q")
                 .and_then(Value::as_f64)
                 .ok_or("recording factory mid node requires q")?;
-            let band = Biquad::new(
-                BiquadFilterType::Lowpass,
-                freq,
-                f64::from(sample_rate),
-                q,
-                0.0,
-            );
+            let band = Biquad::new(BiquadFilterType::Lowpass, freq, sample_rate, q, 0.0);
             Ok(EqPlugin::new(num_channels, vec![band]).into_boxed_plugin())
         }
         other => Err(format!("recording factory has no plugin type {other}")),

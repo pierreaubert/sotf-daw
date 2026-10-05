@@ -544,7 +544,7 @@ impl ABComparePlugin {
                 Biquad::new(
                     BiquadFilterType::Highpass,
                     band_mask_low_hz as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     q,
                     0.0,
                 )
@@ -555,7 +555,7 @@ impl ABComparePlugin {
                 Biquad::new(
                     BiquadFilterType::Lowpass,
                     band_mask_high_hz as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     q,
                     0.0,
                 )
