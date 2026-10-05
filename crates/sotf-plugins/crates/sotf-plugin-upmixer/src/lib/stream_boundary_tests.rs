@@ -2473,27 +2473,13 @@ fn capture_samples(fft_size: usize, route: &str, signal: &str, samples: &[f32]) 
 fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
     const INPUT_FRAMES: usize = 4_096;
 
-    let input: Vec<f32> = (0..INPUT_FRAMES)
-        .flat_map(|frame| {
-            let level = match frame / 512 % 4 {
-                0 => 0.02,
-                1 => 0.2,
-                2 => 0.003,
-                _ => 0.1,
-            };
-            let phase = std::f32::consts::TAU * 997.0 * frame as f32 / 48_000.0;
-            let pulse = if frame == 0 || frame == 2_337 {
-                0.25
-            } else {
-                0.0
-            };
-            [
-                level * phase.sin() + pulse,
-                -0.5 * level * phase.cos() - pulse / 2.0,
-            ]
-        })
-        .collect();
+    let input = samples_from_f32le(include_bytes!(
+        "../../tests/data/aud132-preedit/n2_pre_edit_control_input.f32le"
+    ));
+    assert_eq!(input.len(), INPUT_FRAMES * 2);
+    assert_eq!(sample_digest(&input), 0x9472_a42f_24a8_c44e);
 
+    let mut mismatches = Vec::new();
     for fft_size in [2_usize, 256, 512] {
         for hr_enabled in [false, true] {
             let mut plugin = neutral(fft_size);
@@ -2534,12 +2520,18 @@ fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
                 output.len() / plugin.output_channels(),
                 plugin.latency_samples(),
             );
-            assert_eq!(
-                digest, expected_digest,
-                "captured pre-edit control changed at N={fft_size}, HR={hr_enabled}"
-            );
+            if digest != expected_digest {
+                mismatches.push(format!(
+                    "N={fft_size} HR={hr_enabled} expected={expected_digest:016x} actual={digest:016x}"
+                ));
+            }
         }
     }
+    assert!(
+        mismatches.is_empty(),
+        "captured pre-edit controls changed: {}",
+        mismatches.join("; ")
+    );
 }
 
 #[test]

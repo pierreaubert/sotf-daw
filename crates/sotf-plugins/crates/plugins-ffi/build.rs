@@ -85,6 +85,9 @@ fn main() {
 
 fn copy_if_parent_exists(src: &Path, dst: &Path) {
     if dst.parent().is_some_and(Path::exists) {
+        if files_are_identical(src, dst) {
+            return;
+        }
         std::fs::copy(src, dst).unwrap_or_else(|err| {
             panic!(
                 "Unable to copy generated header from {} to {}: {err}",
@@ -95,8 +98,18 @@ fn copy_if_parent_exists(src: &Path, dst: &Path) {
     }
 }
 
+fn files_are_identical(src: &Path, dst: &Path) -> bool {
+    match (std::fs::read(src), std::fs::read(dst)) {
+        (Ok(source), Ok(destination)) => source == destination,
+        _ => false,
+    }
+}
+
 fn copy_text_if_parent_exists(dst: &Path, text: &str) {
     if dst.parent().is_some_and(Path::exists) {
+        if std::fs::read(dst).is_ok_and(|existing| existing == text.as_bytes()) {
+            return;
+        }
         std::fs::write(dst, text)
             .unwrap_or_else(|err| panic!("Unable to write {}: {err}", dst.display()));
     }
