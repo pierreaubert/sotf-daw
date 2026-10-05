@@ -2469,6 +2469,80 @@ fn capture_samples(fft_size: usize, route: &str, signal: &str, samples: &[f32]) 
 }
 
 #[test]
+#[ignore = "AUD132 diagnostic capture from the reviewed canonical input; no golden update"]
+fn aud132_canonical_first_stage_trace() {
+    let input_path = std::env::var("SOTF_AUD132_CANONICAL_INPUT")
+        .expect("set SOTF_AUD132_CANONICAL_INPUT to the reviewed 32768-byte f32le fixture");
+    let capture_path = std::env::var("SOTF_AUD132_CAPTURE_DIR")
+        .expect("set SOTF_AUD132_CAPTURE_DIR to a fresh diagnostic directory");
+    assert!(!capture_path.is_empty());
+    let bytes = std::fs::read(input_path).expect("read reviewed canonical input");
+    assert_eq!(bytes.len(), 4_096 * 2 * 4);
+    let input: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|sample| f32::from_le_bytes(sample.try_into().unwrap()))
+        .collect();
+    assert!(input.iter().all(|sample| sample.is_finite()));
+
+    for fft_size in [2_usize, 256, 512] {
+        let first_block = &input[..fft_size * 2];
+        let mut analysis = neutral(fft_size);
+        capture_samples(fft_size, "canonical_stage", "window", &analysis.main_buffers.window);
+        capture_samples(fft_size, "canonical_stage", "first_input", first_block);
+        let mut windowed_left = vec![0.0_f32; fft_size];
+        let mut windowed_right = vec![0.0_f32; fft_size];
+        sotf_host::simd::deinterleave_stereo(
+            first_block,
+            &mut windowed_left,
+            &mut windowed_right,
+        );
+        for channel in [&mut windowed_left, &mut windowed_right] {
+            sotf_host::simd::window_mul_simd_inplace(channel, &analysis.main_buffers.window);
+            sotf_host::simd::scale_add_simd_inplace(
+                channel,
+                std::f32::consts::FRAC_1_SQRT_2,
+            );
+        }
+        capture_samples(fft_size, "canonical_stage", "reconstructed_windowed_left", &windowed_left);
+        capture_samples(fft_size, "canonical_stage", "reconstructed_windowed_right", &windowed_right);
+        analysis.apply_window_and_forward_fft(first_block);
+        let left_spectrum: Vec<f32> = analysis
+            .main_buffers
+            .freq_domain_left
+            .iter()
+            .flat_map(|bin| [bin.re, bin.im])
+            .collect();
+        let right_spectrum: Vec<f32> = analysis
+            .main_buffers
+            .freq_domain_right
+            .iter()
+            .flat_map(|bin| [bin.re, bin.im])
+            .collect();
+        capture_samples(fft_size, "canonical_stage", "fft_left_complex", &left_spectrum);
+        capture_samples(fft_size, "canonical_stage", "fft_right_complex", &right_spectrum);
+
+        let mut synthesis = neutral(fft_size);
+        let mut block = vec![0.0_f32; fft_size * synthesis.output_channels()];
+        synthesis.process_fft_block(first_block, &mut block);
+        for (channel, samples) in synthesis.main_buffers.time_out_channels.iter().enumerate() {
+            capture_samples(
+                fft_size,
+                "canonical_stage",
+                &format!("inverse_windowed_channel_{channel}"),
+                samples,
+            );
+        }
+        capture_samples(fft_size, "canonical_stage", "first_block_output", &block);
+
+        let mut whole = neutral(fft_size);
+        let mut output = render(&mut whole, &input, &[17, 137, 256]);
+        output.extend(finish_with_capacity(&mut whole, 512));
+        assert!(output.iter().all(|sample| sample.is_finite()));
+        capture_samples(fft_size, "canonical_stage", "full_output", &output);
+    }
+}
+
+#[test]
 fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
     const INPUT_FRAMES: usize = 4_096;
 
