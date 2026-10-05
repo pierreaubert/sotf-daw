@@ -45,7 +45,7 @@ impl UpmixerPlugin {
         }
 
         let cutoff = self.params.lfe_cutoff_hz as f64;
-        let srate = self.core.sample_rate as f64;
+        let srate = self.core.sample_rate;
         let q = 1.0 / std::f64::consts::SQRT_2;
         let low_section = Biquad::new(BiquadFilterType::Lowpass, cutoff, srate, q, 0.0);
         let high_section = Biquad::new(BiquadFilterType::Highpass, cutoff, srate, q, 0.0);

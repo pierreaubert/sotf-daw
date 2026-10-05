@@ -552,7 +552,7 @@ impl DynamicEqPlugin {
                 && super::dyn_eq_band::design_shelf_coefficients(
                     band.shape,
                     band.frequency as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     band.gain as f64,
                     band.shelf_slope as f64,
                 )
@@ -565,7 +565,7 @@ impl DynamicEqPlugin {
             if band.shape == DynEqShape::Tilt
                 && super::dyn_eq_band::design_tilt_coefficients(
                     band.frequency as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     band.gain as f64,
                 )
                 .is_none()

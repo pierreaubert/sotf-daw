@@ -326,8 +326,18 @@ mod tests {
     #[test]
     fn bypassed_model_impulse_exposes_aligned_latency_and_complete_finite_filter_tail() {
         for rate in [
-            8_000.0, 22_050.0, 44_100.0, 88_200.0, 96_000.0, 192_000.0, 384_000.0, 768_000.0,
-            1_234.5678, 12_345.678, 45_678.901, 123_456.78,
+            8_000.0,
+            22_050.0,
+            44_100.0,
+            88_200.0,
+            96_000.0,
+            192_000.0,
+            384_000.0,
+            768_000.0,
+            1_234.567_8,
+            12_345.678,
+            45_678.901,
+            123_456.78,
         ] {
             let mut adapter = RateAdapter::new(rate, 1).unwrap();
             let mut backend = RnnoiseBackend::new();

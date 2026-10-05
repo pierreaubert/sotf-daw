@@ -99,9 +99,7 @@ impl UpmixerPlugin {
             } else {
                 // If f32 coefficient quantization collapses the decay to zero
                 // at an extreme rate, retain a bounded configured-time policy.
-                f64::from(self.subharmonic.subharmonic_release_ms)
-                    * f64::from(self.core.sample_rate)
-                    / 1000.0
+                f64::from(self.subharmonic.subharmonic_release_ms) * self.core.sample_rate / 1000.0
             };
             // Fourteen effective time constants plus one synthesis window.
             // This is a render cap, not a claim of exact recursive silence.
