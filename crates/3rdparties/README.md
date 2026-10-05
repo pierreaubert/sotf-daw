@@ -9,6 +9,9 @@ paths, so their builds use the same implementation as `sotf-daw`.
   `tests/testing.raw` and `tests/reference_output.raw` fixtures are
   embedded by `plugins-denoiser` tests via `include_bytes!`, so the
   directory must stay at this path.
-- `coreaudio-rs` — CoreAudio bindings used by `sotf-engine` on macOS.
+
+`sotf-engine` uses the pinned external `coreaudio-rs` fork in the workspace
+`[patch.crates-io]`. The removed local 0.13.1 copy and its licenses remain
+available in Git history; the external 0.14.2 fork retains both license files.
 
 The shared Rubato fork lives in `math-audio/crates/3rdparties/rubato`.
