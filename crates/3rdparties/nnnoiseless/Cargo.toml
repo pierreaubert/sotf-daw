@@ -19,6 +19,8 @@ description = "Audio denoising, derived from Xiph's RNNoise library"
 readme = "README.md"
 license = "BSD-3-Clause"
 repository = "https://github.com/jneem/nnnoiseless"
+# Retained upstream manifest is provenance, not a Cargo package input.
+exclude = ["Cargo.toml.orig"]
 
 [[bin]]
 name = "munge"
