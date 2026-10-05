@@ -79,6 +79,10 @@ mod ambisonics_custom_tests;
 #[path = "params_speech_restore_tests.rs"]
 mod speech_restore_tests;
 
+#[cfg(all(test, feature = "convolution"))]
+#[path = "params_convolution_no_ir_restore_tests.rs"]
+mod convolution_no_ir_restore_tests;
+
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
     float_params: Vec<FloatParam>,
@@ -1663,6 +1667,13 @@ impl DynamicParams {
             {
                 return false;
             }
+        }
+        if ir_path.is_none() && restore_state.committed_ir_path.is_none() {
+            // There is no external resource to prepare or roll back. NIH can
+            // publish the validated scalar controls as it loads this state.
+            // A newer valid dry state also replaces any older pending restore.
+            restore_state.pending = None;
+            return true;
         }
         restore_state.pending = Some(ConvolutionPendingRestore {
             ir_path,
