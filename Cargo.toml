@@ -296,6 +296,7 @@ strip = "symbols"
 
 # Vendored forks owned by this workspace.
 [patch.crates-io]
+realfft = { git = "https://github.com/pierreaubert/realfft.git", rev = "482810f819e0821b37123c51d6fc4dfdbfd3e0e0" }
 psm = { git = "https://github.com/pierreaubert/stacker.git", rev = "48bf8e3abfb350de9387a675275a629e4daf9717" }
 nalgebra = { git = "https://github.com/pierreaubert/nalgebra.git", rev = "a42573dbc9649af62fb07b469c98c852e62720fd" }
 tract-core = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }

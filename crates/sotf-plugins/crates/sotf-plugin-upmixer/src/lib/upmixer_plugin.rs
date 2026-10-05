@@ -589,8 +589,27 @@ impl UpmixerPlugin {
         // time resolution. For now this is internal and disabled by default.
         let hr_fft_size = 512;
         let hr_spectrum_size = hr_fft_size / 2 + 1;
-        let hr_fft_forward = planner.plan_fft_forward(hr_fft_size);
-        let hr_fft_inverse = planner.plan_fft_inverse(hr_fft_size);
+        #[cfg(test)]
+        let (hr_fft_forward, hr_fft_inverse) = if std::env::var_os("SOTF_AUD132_SCALAR_HR_FFT")
+            .as_deref()
+            == Some(std::ffi::OsStr::new("1"))
+        {
+            let mut scalar_planner = RealFftPlanner::<f32>::new_scalar();
+            (
+                scalar_planner.plan_fft_forward(hr_fft_size),
+                scalar_planner.plan_fft_inverse(hr_fft_size),
+            )
+        } else {
+            (
+                planner.plan_fft_forward(hr_fft_size),
+                planner.plan_fft_inverse(hr_fft_size),
+            )
+        };
+        #[cfg(not(test))]
+        let (hr_fft_forward, hr_fft_inverse) = (
+            planner.plan_fft_forward(hr_fft_size),
+            planner.plan_fft_inverse(hr_fft_size),
+        );
 
         let hr_window = periodic_sqrt_hann_window(hr_fft_size);
 
