@@ -1,0 +1,9 @@
+Default RNNoise denoising weights
+
+The embedded default weights in the local nnnoiseless implementation match
+the 15 weight arrays (87,503 values) from nnnoiseless 0.1.1.
+Upstream source revision: 75cd57ad6daa14e522667fa64808a57d66f21adf.
+The accompanying nnnoiseless-COPYING.txt reproduces its copyright and license.
+
+This payload covers the default nnnoiseless weights. Other model assets
+require their own recorded provenance and qualification before release.
