@@ -39,8 +39,8 @@ fn native_band_split_constructs_with_requested_cutoff_at_fractional_low_rate() {
     plugin.initialize(1_234.567_8).unwrap();
     params.sync_to_plugin(plugin.as_mut()).unwrap();
     assert_eq!(plugin.get_parameter(&cutoff), Some(ParameterValue::Float(300.0)));
-    let input = vec![0.1_f32; 64];
-    let mut output = vec![0.0_f32; 128];
+    let input = vec![0.1_f32; 64 * plugin.input_channels()];
+    let mut output = vec![0.0_f32; 64 * plugin.output_channels()];
     let written = plugin
         .process(&input, &mut output, &sotf_host::ProcessContext::new(1_234.567_8, 64))
         .unwrap();
