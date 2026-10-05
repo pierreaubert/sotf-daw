@@ -2098,7 +2098,10 @@ macro_rules! sotf_nih_plugin {
                         // Validate the complete saved state on the control thread.
                         // Realtime values may depend on structural settings, such
                         // as the limiter requiring a fully wet mix in ISP mode.
-                        if let Err(error) = self.params.sync_to_plugin(plugin.as_mut()) {
+                        if let Err(error) = self
+                            .params
+                            .sync_to_plugin_for_activation(plugin.as_mut(), candidate_sample_rate)
+                        {
                             log::error!("Failed to restore {} parameters: {error}", $plugin_type);
                             return false;
                         }
@@ -2406,11 +2409,13 @@ macro_rules! sotf_nih_plugin {
                 }
 
                 // Sync nih-plug params → SOTF plugin
-                if self
-                    .bridge
-                    .sync_params_to_plugin(&self.params, plugin.as_mut())
-                    .is_err()
-                {
+                let sync_result = if matches!($plugin_type, "HissReducer") {
+                    self.params
+                        .sync_to_plugin_for_activation(plugin.as_mut(), self.sample_rate)
+                } else {
+                    self.bridge.sync_params_to_plugin(&self.params, plugin.as_mut())
+                };
+                if sync_result.is_err() {
                     $crate::wrapper::silence_host_outputs(buffer, aux);
                     return nih_plug::prelude::ProcessStatus::Error("Parameter update failed");
                 }

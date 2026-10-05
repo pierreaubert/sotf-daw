@@ -1205,6 +1205,59 @@ fn hiss_wiring_process_one(wrapper: &mut HissWiringWrapper, input: &[f32]) -> Ve
     output
 }
 
+#[test]
+fn hiss_wiring_keeps_requested_cutoff_and_processes_at_low_rate() {
+    let mut wrapper = HissWiringWrapper::default();
+    hiss_wiring_initialize(&mut wrapper, 8_000.0);
+    let cutoff = sotf_host::plugin::ParameterId::from("frequency_hz");
+    assert_eq!(
+        wrapper.params.value("frequency_hz"),
+        Some(sotf_host::plugin::ParameterValue::Float(4_000.0))
+    );
+    let silence = vec![0.0f32; 256 * 2];
+    let output = hiss_wiring_process_one(&mut wrapper, &silence);
+    assert!(output.iter().all(|sample| sample.is_finite()));
+    assert_eq!(
+        wrapper.inner.as_ref().unwrap().get_parameter(&cutoff),
+        Some(sotf_host::plugin::ParameterValue::Float(3_600.0))
+    );
+    assert_eq!(
+        wrapper.params.value("frequency_hz"),
+        Some(sotf_host::plugin::ParameterValue::Float(4_000.0))
+    );
+
+    // A valid change below Nyquist must still reach the live DSP.
+    apply_incoming_params(
+        &wrapper.params,
+        &BTreeMap::from([("frequency_hz".to_string(), ParamValue::F32(300.0))]),
+    );
+    let output = hiss_wiring_process_one(&mut wrapper, &silence);
+    assert!(output.iter().all(|sample| sample.is_finite()));
+    assert_eq!(
+        wrapper.inner.as_ref().unwrap().get_parameter(&cutoff),
+        Some(sotf_host::plugin::ParameterValue::Float(300.0))
+    );
+
+    apply_incoming_params(
+        &wrapper.params,
+        &BTreeMap::from([("frequency_hz".to_string(), ParamValue::F32(4_000.0))]),
+    );
+    let output = hiss_wiring_process_one(&mut wrapper, &silence);
+    assert!(output.iter().all(|sample| sample.is_finite()));
+    assert_eq!(
+        wrapper.inner.as_ref().unwrap().get_parameter(&cutoff),
+        Some(sotf_host::plugin::ParameterValue::Float(3_600.0))
+    );
+
+    hiss_wiring_initialize(&mut wrapper, 48_000.0);
+    let output = hiss_wiring_process_one(&mut wrapper, &silence);
+    assert!(output.iter().all(|sample| sample.is_finite()));
+    assert_eq!(
+        wrapper.inner.as_ref().unwrap().get_parameter(&cutoff),
+        Some(sotf_host::plugin::ParameterValue::Float(4_000.0))
+    );
+}
+
 fn hiss_wiring_process_blocks(
     wrapper: &mut HissWiringWrapper,
     input: &[f32],

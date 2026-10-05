@@ -2373,6 +2373,22 @@ impl DynamicParams {
     /// # Errors
     /// Returns the plugin's error when a parameter update is rejected.
     pub fn sync_to_plugin(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
+        self.sync_to_plugin_for_rate(plugin, None)
+    }
+
+    pub(crate) fn sync_to_plugin_for_activation(
+        &self,
+        plugin: &mut dyn sotf_host::plugin::Plugin,
+        sample_rate: f64,
+    ) -> Result<(), String> {
+        self.sync_to_plugin_for_rate(plugin, Some(sample_rate))
+    }
+
+    fn sync_to_plugin_for_rate(
+        &self,
+        plugin: &mut dyn sotf_host::plugin::Plugin,
+        sample_rate: Option<f64>,
+    ) -> Result<(), String> {
         let prepared_per_channel = self
             .crossover_channel_frequency_probe
             .as_ref()
@@ -2388,6 +2404,19 @@ impl DynamicParams {
                 .initialization_value(entry.id.as_str())
                 .unwrap_or_else(|| self.value_for_entry(entry));
             let current = plugin.get_parameter(&entry.id);
+            if self.hiss_schema
+                && entry.id.as_str() == "frequency_hz"
+                && let (Some(sample_rate), ParameterValue::Float(requested), Some(ParameterValue::Float(effective))) =
+                    (sample_rate, &value, &current)
+            {
+                // HissReducer initializes its DSP with the highest usable
+                // cutoff at this rate. Keep the host's requested value for
+                // persistence and a later higher-rate activation.
+                let maximum = (sample_rate as f32 * 0.45).min(16_000.0);
+                if *requested > maximum && *effective == maximum {
+                    continue;
+                }
+            }
             if self.crossover_schema
                 && matches!(
                     entry.id.as_str(),
