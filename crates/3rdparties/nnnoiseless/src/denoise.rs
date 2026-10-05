@@ -248,9 +248,7 @@ impl DenoiseState {
 
 fn frame_analysis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch, fft_scratch: &mut [Complex]) {
     let buf = &mut scratch.analysis_window;
-    for i in 0..FRAME_SIZE {
-        buf[i] = core.analysis_mem[i];
-    }
+    buf[..FRAME_SIZE].copy_from_slice(&core.analysis_mem);
     for i in 0..crate::FRAME_SIZE {
         buf[i + crate::FRAME_SIZE] = scratch.x_time[i];
         core.analysis_mem[i] = scratch.x_time[i];
@@ -420,9 +418,17 @@ fn frame_synthesis(
         fft_scratch,
     );
     crate::apply_window(&mut scratch.synthesis_window[..]);
-    for i in 0..FRAME_SIZE {
-        out[i] = scratch.synthesis_window[i] + core.synthesis_mem[i];
-        core.synthesis_mem[i] = scratch.synthesis_window[FRAME_SIZE + i];
+    for ((sample, memory), (&current, &next)) in out[..FRAME_SIZE]
+        .iter_mut()
+        .zip(core.synthesis_mem.iter_mut())
+        .zip(
+            scratch.synthesis_window[..FRAME_SIZE]
+                .iter()
+                .zip(&scratch.synthesis_window[FRAME_SIZE..]),
+        )
+    {
+        *sample = current + *memory;
+        *memory = next;
     }
 }
 

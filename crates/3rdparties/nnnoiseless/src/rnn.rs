@@ -281,9 +281,7 @@ fn compute_gru(
         };
         h[i] = z[i] * state[i] + (1.0 - z[i]) * sum;
     }
-    for i in 0..n {
-        state[i] = h[i];
-    }
+    state[..n].copy_from_slice(&h[..n]);
 }
 
 const INPUT_SIZE: usize = 42;
@@ -314,15 +312,12 @@ pub fn compute_rnn(rnn: &mut RnnState, gains: &mut [f32], vad: &mut [f32], input
     );
     compute_dense(&model.vad_output, vad, vad_gru_state);
 
-    for i in 0..model.input_dense_size {
-        noise_input[i] = dense_out[i];
-    }
-    for i in 0..model.vad_gru_size {
-        noise_input[i + model.input_dense_size] = vad_gru_state[i];
-    }
-    for i in 0..INPUT_SIZE {
-        noise_input[i + model.input_dense_size + model.vad_gru_size] = input[i];
-    }
+    noise_input[..model.input_dense_size].copy_from_slice(&dense_out[..model.input_dense_size]);
+    noise_input[model.input_dense_size..model.input_dense_size + model.vad_gru_size]
+        .copy_from_slice(&vad_gru_state[..model.vad_gru_size]);
+    noise_input[model.input_dense_size + model.vad_gru_size
+        ..model.input_dense_size + model.vad_gru_size + INPUT_SIZE]
+        .copy_from_slice(&input[..INPUT_SIZE]);
     compute_gru(
         &model.noise_gru,
         noise_gru_state,
@@ -332,15 +327,12 @@ pub fn compute_rnn(rnn: &mut RnnState, gains: &mut [f32], vad: &mut [f32], input
         gru_h,
     );
 
-    for i in 0..model.vad_gru_size {
-        denoise_input[i] = vad_gru_state[i];
-    }
-    for i in 0..model.noise_gru_size {
-        denoise_input[i + model.vad_gru_size] = noise_gru_state[i];
-    }
-    for i in 0..INPUT_SIZE {
-        denoise_input[i + model.vad_gru_size + model.noise_gru_size] = input[i];
-    }
+    denoise_input[..model.vad_gru_size].copy_from_slice(&vad_gru_state[..model.vad_gru_size]);
+    denoise_input[model.vad_gru_size..model.vad_gru_size + model.noise_gru_size]
+        .copy_from_slice(&noise_gru_state[..model.noise_gru_size]);
+    denoise_input[model.vad_gru_size + model.noise_gru_size
+        ..model.vad_gru_size + model.noise_gru_size + INPUT_SIZE]
+        .copy_from_slice(&input[..INPUT_SIZE]);
     compute_gru(
         &model.denoise_gru,
         denoise_gru_state,

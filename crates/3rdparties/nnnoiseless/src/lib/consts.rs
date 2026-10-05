@@ -276,9 +276,7 @@ pub(crate) fn inverse_transform(
 ) {
     let c = common();
     scratch_input.fill(Complex::from(0.0));
-    for i in 0..FREQ_SIZE {
-        scratch_input[i] = input[i];
-    }
+    scratch_input[..FREQ_SIZE].copy_from_slice(&input[..FREQ_SIZE]);
     for i in FREQ_SIZE..WINDOW_SIZE {
         scratch_input[i] = scratch_input[WINDOW_SIZE - i].conj();
     }
