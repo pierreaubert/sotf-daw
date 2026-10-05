@@ -36,6 +36,10 @@ pub mod ambisonics_custom;
 mod default_sync_tests;
 
 #[cfg(test)]
+#[path = "params_native_eq_lowrate_tests.rs"]
+mod native_eq_lowrate_tests;
+
+#[cfg(test)]
 #[path = "params_scalar_getter_tests.rs"]
 mod scalar_getter_tests;
 
@@ -2373,6 +2377,27 @@ impl DynamicParams {
     /// # Errors
     /// Returns the plugin's error when a parameter update is rejected.
     pub fn sync_to_plugin(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
+        self.sync_to_plugin_with_eq_rate(plugin, None)
+    }
+
+    /// Sync native EQ controls using the active host clock while leaving the
+    /// persisted NIH values at their requested frequencies.
+    pub(crate) fn sync_to_native_eq_plugin(
+        &self,
+        plugin: &mut dyn sotf_host::plugin::Plugin,
+        sample_rate: f64,
+    ) -> Result<(), String> {
+        if self.eq_schema && (!sample_rate.is_finite() || sample_rate <= 0.0) {
+            return Err("EQ sample rate must be finite and greater than zero".into());
+        }
+        self.sync_to_plugin_with_eq_rate(plugin, Some(sample_rate))
+    }
+
+    fn sync_to_plugin_with_eq_rate(
+        &self,
+        plugin: &mut dyn sotf_host::plugin::Plugin,
+        eq_rate: Option<f64>,
+    ) -> Result<(), String> {
         let prepared_per_channel = self
             .crossover_channel_frequency_probe
             .as_ref()
@@ -2384,9 +2409,19 @@ impl DynamicParams {
             if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
                 continue;
             }
-            let value = self
+            let mut value = self
                 .initialization_value(entry.id.as_str())
                 .unwrap_or_else(|| self.value_for_entry(entry));
+            if self.eq_schema
+                && let Some(rate) = eq_rate
+                && entry.id.as_str().starts_with("band_")
+                && entry.id.as_str().ends_with("_freq")
+                && let Some(requested) = value.as_float()
+            {
+                value = ParameterValue::Float(
+                    crate::wrapper::native_eq_effective_frequency(requested, rate)?,
+                );
+            }
             let current = plugin.get_parameter(&entry.id);
             if self.crossover_schema
                 && matches!(

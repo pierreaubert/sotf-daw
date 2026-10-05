@@ -2098,7 +2098,10 @@ macro_rules! sotf_nih_plugin {
                         // Validate the complete saved state on the control thread.
                         // Realtime values may depend on structural settings, such
                         // as the limiter requiring a fully wet mix in ISP mode.
-                        if let Err(error) = self.params.sync_to_plugin(plugin.as_mut()) {
+                        if let Err(error) = self
+                            .params
+                            .sync_to_native_eq_plugin(plugin.as_mut(), candidate_sample_rate)
+                        {
                             log::error!("Failed to restore {} parameters: {error}", $plugin_type);
                             return false;
                         }
@@ -2408,7 +2411,7 @@ macro_rules! sotf_nih_plugin {
                 // Sync nih-plug params → SOTF plugin
                 if self
                     .bridge
-                    .sync_params_to_plugin(&self.params, plugin.as_mut())
+                    .sync_params_to_plugin(&self.params, plugin.as_mut(), self.sample_rate)
                     .is_err()
                 {
                     $crate::wrapper::silence_host_outputs(buffer, aux);
@@ -2962,6 +2965,7 @@ pub fn eq_config_json(
 pub fn eq_config_json_with_native_route(
     value: impl Fn(&str) -> Option<sotf_host::parameters::ParameterValue>,
     route: &crate::params::EqPairRoute,
+    sample_rate: f64,
 ) -> Result<String, String> {
     use sotf_host::parameters::ParameterValue;
 
@@ -2998,6 +3002,12 @@ pub fn eq_config_json_with_native_route(
         let object = filter
             .as_object_mut()
             .ok_or_else(|| format!("EQ filter {band} is not an object"))?;
+        let requested = object
+            .get("freq")
+            .and_then(serde_json::Value::as_f64)
+            .ok_or_else(|| format!("EQ filter {band} has no frequency"))?;
+        let effective = native_eq_effective_frequency(requested as f32, sample_rate)?;
+        object.insert("freq".to_string(), serde_json::json!(effective));
         if let Some(name) = placement_name {
             object.insert(
                 "placement".to_string(),
@@ -3037,6 +3047,30 @@ pub fn eq_config_json_with_native_route(
     }
     serde_json::to_string(&config)
         .map_err(|error| format!("EQ native configuration is invalid: {error}"))
+}
+
+/// Use the requested native EQ frequency unless it is beyond this host clock's
+/// Nyquist limit. The conservative f32 margin survives the NIH parameter
+/// conversion; the owned Biquad uses the same square-root-epsilon form.
+pub(crate) fn native_eq_effective_frequency(
+    requested: f32,
+    sample_rate: f64,
+) -> Result<f32, String> {
+    if !requested.is_finite() || !(20.0..=20_000.0).contains(&requested) {
+        return Err(format!("Invalid native EQ frequency {requested}"));
+    }
+    if !sample_rate.is_finite() || sample_rate <= 0.0 {
+        return Err("EQ sample rate must be finite and greater than zero".into());
+    }
+    let nyquist = sample_rate * 0.5;
+    if f64::from(requested) < nyquist {
+        return Ok(requested);
+    }
+    let cap = (nyquist * (1.0 - f64::from(f32::EPSILON.sqrt()))) as f32;
+    if !cap.is_finite() || cap < 20.0 || f64::from(cap) >= nyquist {
+        return Err(format!("EQ sample rate {sample_rate} cannot represent a valid band"));
+    }
+    Ok(cap)
 }
 
 /// Apply structural controls on the control thread. Their host representation

@@ -114,8 +114,9 @@ impl PluginBridgeWrapper {
         &self,
         params: &std::sync::Arc<params::DynamicParams>,
         plugin: &mut dyn sotf_host::plugin::Plugin,
+        sample_rate: f64,
     ) -> Result<(), String> {
-        params.sync_to_plugin(plugin)
+        params.sync_to_native_eq_plugin(plugin, sample_rate)
     }
 }
 

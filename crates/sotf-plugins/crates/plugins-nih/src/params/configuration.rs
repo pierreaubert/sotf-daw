@@ -185,6 +185,7 @@ pub fn create_native_eq_plugin(
     let config = crate::wrapper::eq_config_json_with_native_route(
         |id| params.value(id),
         route,
+        sample_rate,
     )?;
     let mut plugin = plugins_bridge::create_plugin(
         "EQ",
