@@ -2080,7 +2080,7 @@ dependencies = [
  "mio",
  "parking_lot",
  "rustix 1.1.5",
- "signal-hook 0.3.18",
+ "signal-hook",
  "signal-hook-mio",
  "winapi",
 ]
@@ -8733,16 +8733,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-hook"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2a0c28ca5908dbdbcd52e6fdaa00358ab88637f8ab33e1f188dd510eb44b53d"
-dependencies = [
- "libc",
- "signal-hook-registry",
-]
-
-[[package]]
 name = "signal-hook-mio"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8750,7 +8740,7 @@ checksum = "b75a19a7a740b25bc7944bdee6172368f988763b744e3d4dfe753f6b4ece40cc"
 dependencies = [
  "libc",
  "mio",
- "signal-hook 0.3.18",
+ "signal-hook",
 ]
 
 [[package]]
@@ -8982,7 +8972,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serial_test",
- "signal-hook 0.4.4",
+ "signal-hook",
  "sotf-capture",
  "sotf-iamf",
  "sotf-midi",
@@ -9674,7 +9664,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serial_test",
- "signal-hook 0.4.4",
+ "signal-hook",
  "sofa-reader",
  "sotf-engine",
  "sotf-host",
@@ -10370,7 +10360,7 @@ dependencies = [
  "bitflags 2.13.2",
  "parking_lot",
  "rustix 1.1.5",
- "signal-hook 0.3.18",
+ "signal-hook",
  "windows-sys 0.61.2",
 ]
 
@@ -10421,7 +10411,7 @@ dependencies = [
  "pest_derive",
  "phf 0.11.3",
  "sha2 0.10.9",
- "signal-hook 0.3.18",
+ "signal-hook",
  "siphasher",
  "terminfo",
  "termios",
