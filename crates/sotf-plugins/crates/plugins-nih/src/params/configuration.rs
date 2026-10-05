@@ -465,6 +465,17 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
         };
         config.insert(key.to_string(), value);
     }
+    if name == "BandSplit" {
+        // The native cutoff is realtime, but the DSP needs an initial cutoff
+        // before it can be constructed. Its legacy serde fallback is 1 kHz,
+        // while the native default is 300 Hz. Use the requested native value;
+        // the normal realtime sync still owns subsequent automation.
+        for id in ["frequency", "frequency_2", "frequency_3"] {
+            if let Some(value) = params.initialization_value(id) {
+                config.insert(id.to_string(), scalar_json(value));
+            }
+        }
+    }
     if name == "DynamicEQ" {
         config.insert(
             "bands".to_string(),

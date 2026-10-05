@@ -2098,7 +2098,10 @@ macro_rules! sotf_nih_plugin {
                         // Validate the complete saved state on the control thread.
                         // Realtime values may depend on structural settings, such
                         // as the limiter requiring a fully wet mix in ISP mode.
-                        if let Err(error) = self.params.sync_to_plugin(plugin.as_mut()) {
+                        if let Err(error) = self
+                            .params
+                            .sync_to_plugin_for_activation(plugin.as_mut(), candidate_sample_rate)
+                        {
                             log::error!("Failed to restore {} parameters: {error}", $plugin_type);
                             return false;
                         }
