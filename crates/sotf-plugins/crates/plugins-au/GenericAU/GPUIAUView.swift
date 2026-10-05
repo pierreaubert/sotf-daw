@@ -12,6 +12,8 @@ public class GPUIAUView: NSView {
     private let pluginType: String
     /// Atomic parameter cache for thread-safe UI rendering.
     nonisolated(unsafe) private var paramCache: OpaquePointer?
+    /// Parameter observer registrations that write to `paramCache` from arbitrary threads.
+    private var parameterObserverTokens: [(AUParameter, AUParameterObserverToken)] = []
     /// Reference to the AU for parameter writes through AUParameterTree.
     /// Strong ref: AU must outlive the GPUI view (callback userdata points to it).
     private var audioUnit: GenericRustAudioUnit?
@@ -62,7 +64,10 @@ public class GPUIAUView: NSView {
         let allParams = tree.allParameters
         for (i, param) in allParams.enumerated() {
             let idx = i
-            param.token(byAddingParameterObserver: Self.makeParamObserver(cachePtr: cachePtr, index: idx))
+            let token = param.token(
+                byAddingParameterObserver: Self.makeParamObserver(cachePtr: cachePtr, index: idx)
+            )
+            parameterObserverTokens.append((param, token))
         }
     }
 
@@ -207,9 +212,13 @@ public class GPUIAUView: NSView {
         }
     }
 
-    deinit {
+    isolated deinit {
         teardownGPUI()
-        // Cache is a raw pointer to Rust-allocated memory — safe to destroy from any thread
+        // This blocks until any in-flight callback finishes before the cache is freed.
+        for (parameter, token) in parameterObserverTokens {
+            parameter.removeParameterObserver(token)
+        }
+        // Observer removal has joined callbacks before the Rust cache owner is released.
         let cache = paramCache
         if let cache = cache {
             au_param_cache_destroy(cache)
