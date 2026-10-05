@@ -124,11 +124,7 @@ fn reconstructed_peak_db(signal: &[f32], rate: u32) -> f64 {
     });
     let mut history = [0.0; 25];
     let mut peak: f64 = 0.0;
-    for sample in signal
-        .iter()
-        .copied()
-        .chain(std::iter::repeat_n(0.0, 25))
-    {
+    for sample in signal.iter().copied().chain(std::iter::repeat_n(0.0, 25)) {
         history.copy_within(..24, 1);
         history[0] = f64::from(sample);
         for kernel in &kernels[..factor] {
@@ -275,8 +271,10 @@ fn disabled_true_peak_protection_only_promises_the_sample_ceiling() {
     let reconstructed = reconstructed_peak_db(&output, rate);
     assert!(sample <= THRESHOLD_DB + SAMPLE_TOLERANCE_DB);
     assert!(sample > THRESHOLD_DB - 0.001);
-    assert!(reconstructed > THRESHOLD_DB + 0.5,
-        "counterexample must expose intersample overshoot: {reconstructed:.4} dBTP");
+    assert!(
+        reconstructed > THRESHOLD_DB + 0.5,
+        "counterexample must expose intersample overshoot: {reconstructed:.4} dBTP"
+    );
 }
 
 #[test]
@@ -315,8 +313,7 @@ fn two_tone_phase_ceiling_and_limiter_engages() {
                                 THRESHOLD_DB as f32,
                                 false,
                             );
-                            let emitted =
-                                render_full(&mut plugin, rate, &input, &[257, 63, 1]);
+                            let emitted = render_full(&mut plugin, rate, &input, &[257, 63, 1]);
                             let peak = sample_peak_db(&emitted);
                             worst = worst.max(peak);
                             assert!(
@@ -599,11 +596,13 @@ fn old_preset_defaults_and_save_reload_preserve_audio() {
     let out_c = render_full(&mut c, rate, &input, &[257, 63]);
     assert_eq!(out_b, out_c);
     // Malformed state is rejected before construction (transactional).
-    assert!(serde_json::from_value::<LimiterPluginParams>(serde_json::json!({
-        "threshold_db": "loud",
-        "oversampling": 7,
-    }))
-    .is_err());
+    assert!(
+        serde_json::from_value::<LimiterPluginParams>(serde_json::json!({
+            "threshold_db": "loud",
+            "oversampling": 7,
+        }))
+        .is_err()
+    );
 }
 
 #[test]

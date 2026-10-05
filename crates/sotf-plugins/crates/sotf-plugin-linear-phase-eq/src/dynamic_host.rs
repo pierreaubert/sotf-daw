@@ -60,11 +60,11 @@
 
 // Rust guideline compliant 2026-02-21
 
+use crate::params::MAX_FILTERS;
 use crate::{
     BandConfig, BandSnapshot, CommitRefusal, LinearPhaseEqBandPlacement, LinearPhaseEqPlugin,
     LinearPhaseEqPluginParams, LiveFilterSnapshot, PreparedBandUpdate, RouteBanks,
 };
-use crate::params::MAX_FILTERS;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::{
@@ -217,8 +217,8 @@ impl AcceptedBandCells {
     /// seqlock bracket); `Relaxed` stores are ordered by the surrounding
     /// `Release` generation updates.
     fn store(&self, shape: &BandSnapshot) {
-        let packed = shape.filter_type_index.min(u8::MAX as usize) as u64
-            | (u64::from(shape.active) << 8);
+        let packed =
+            shape.filter_type_index.min(u8::MAX as usize) as u64 | (u64::from(shape.active) << 8);
         self.type_and_active.store(packed, Ordering::Relaxed);
         self.frequency_bits
             .store(shape.frequency.to_bits(), Ordering::Relaxed);
@@ -485,8 +485,7 @@ impl LinearPhaseEqControlHandle {
             if before & 1 == 1 {
                 continue;
             }
-            let sample_rate =
-                f64::from_bits(self.accepted_sample_rate.load(Ordering::Relaxed));
+            let sample_rate = f64::from_bits(self.accepted_sample_rate.load(Ordering::Relaxed));
             let mut bands = Vec::with_capacity(self.accepted_num_filters);
             for (index, cells) in self
                 .accepted_bands
@@ -647,11 +646,9 @@ impl LinearPhaseEqDynamicPlugin {
         params: LinearPhaseEqPluginParams,
     ) -> Result<Self, String> {
         let inner = LinearPhaseEqPlugin::from_params(channels, sample_rate, params)?;
-        let (prepared_tx, prepared_rx) =
-            rt_mailbox::<PreparedBandUpdate>(PREPARED_CAPACITY);
+        let (prepared_tx, prepared_rx) = rt_mailbox::<PreparedBandUpdate>(PREPARED_CAPACITY);
         let (retired_tx, retired_rx) = rt_mailbox::<RouteBanks>(RETIRED_CAPACITY);
-        let (cancelled_tx, cancelled_rx) =
-            rt_mailbox::<PreparedBandUpdate>(CANCELLED_CAPACITY);
+        let (cancelled_tx, cancelled_rx) = rt_mailbox::<PreparedBandUpdate>(CANCELLED_CAPACITY);
         // Seed detached accepted state from the initial live configuration.
         // Control thread only; the snapshot allocates once here and the
         // handle is not yet shared, so plain stores need no fencing.
@@ -727,10 +724,7 @@ impl LinearPhaseEqDynamicPlugin {
     /// # Errors
     ///
     /// Returns a full-queue error when two updates are already retained.
-    pub fn submit_prepared_update(
-        &mut self,
-        prepared: PreparedBandUpdate,
-    ) -> Result<(), String> {
+    pub fn submit_prepared_update(&mut self, prepared: PreparedBandUpdate) -> Result<(), String> {
         if self.pending.is_none() {
             self.pending = Some(prepared);
             self.publish_status();
@@ -762,8 +756,7 @@ impl LinearPhaseEqDynamicPlugin {
         new_band: BandConfig,
     ) -> Result<(), String> {
         let base = self.inner.snapshot_config();
-        let prepared =
-            LinearPhaseEqPlugin::prepare_band_update(&base, band_index, new_band)?;
+        let prepared = LinearPhaseEqPlugin::prepare_band_update(&base, band_index, new_band)?;
         self.submit_prepared_update(prepared)
     }
 

@@ -868,7 +868,10 @@ mod tests {
             worker.process_one().unwrap(),
             ExternalPluginWorkerStep::Processed { .. }
         ));
-        assert_eq!(*observed.lock().unwrap(), Some((48_000.0, 11, 23, 12_345, 93.0)));
+        assert_eq!(
+            *observed.lock().unwrap(),
+            Some((48_000.0, 11, 23, 12_345, 93.0))
+        );
     }
 
     #[test]
@@ -889,9 +892,15 @@ mod tests {
             host.publish_host_block(1, 16, &[0.0; 16]).unwrap();
             assert!(matches!(
                 worker.process_one().unwrap(),
-                ExternalPluginWorkerStep::Processed { sequence: 1, frames: 16 }
+                ExternalPluginWorkerStep::Processed {
+                    sequence: 1,
+                    frames: 16
+                }
             ));
-            assert_eq!(observed.lock().unwrap().unwrap().0.to_bits(), rate.to_bits());
+            assert_eq!(
+                observed.lock().unwrap().unwrap().0.to_bits(),
+                rate.to_bits()
+            );
         }
     }
 

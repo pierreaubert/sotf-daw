@@ -32,7 +32,11 @@ impl YawHandle {
         let kind = CString::new("Crossfeed").unwrap();
         let config = CString::new(config).unwrap();
         let handle = plugin_create(kind.as_ptr(), config.as_ptr(), 48_000, 2, 2);
-        assert!(!handle.is_null(), "Crossfeed construction failed: {}", yaw_last_error());
+        assert!(
+            !handle.is_null(),
+            "Crossfeed construction failed: {}",
+            yaw_last_error()
+        );
         Self { pointer: handle }
     }
 
@@ -67,7 +71,16 @@ impl YawHandle {
             let id = CStr::from_ptr(info.id).to_string_lossy().into_owned();
             let name = CStr::from_ptr(info.name).to_string_lossy().into_owned();
             let unit = CStr::from_ptr(info.unit).to_string_lossy().into_owned();
-            (id, name, unit, info.min_value, info.max_value, info.default_value, info.steps, info.logarithmic)
+            (
+                id,
+                name,
+                unit,
+                info.min_value,
+                info.max_value,
+                info.default_value,
+                info.steps,
+                info.logarithmic,
+            )
         }
     }
 
@@ -115,7 +128,11 @@ impl YawHandle {
         let inputs = self.inner().input_channels;
         let outputs = self.inner().output_channels;
         let frames = input.len() / inputs;
-        assert_eq!(input.len() % inputs, 0, "complete interleaved frames required");
+        assert_eq!(
+            input.len() % inputs,
+            0,
+            "complete interleaved frames required"
+        );
         let callback_frames = self.inner().max_callback_frames;
         let mut output = vec![f32::NAN; frames * outputs];
         for start in (0..frames).step_by(callback_frames) {
@@ -149,7 +166,9 @@ fn yaw_last_error() -> String {
         return String::new();
     }
     // SAFETY: The current thread owns this valid diagnostic until its next call.
-    unsafe { CStr::from_ptr(error) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(error) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// First frame where `channel` exceeds `ONSET_THRESHOLD`, if any.
@@ -174,11 +193,24 @@ fn render_single_sided_impulse(yaw_deg: f32, left_side: bool) -> Vec<f32> {
     let mut handle = YawHandle::create("{}");
     // FFI creation deserializes `{}` with the derived mode default (Off),
     // not the descriptor default (Multiband), so select the mode explicitly.
-    assert_eq!(handle.set_normalized("mode", 3.0 / 4.0), 0, "{}", yaw_last_error());
-    assert!((handle.get_normalized("mode") - 0.75).abs() < 1e-12, "mode must read Multiband");
+    assert_eq!(
+        handle.set_normalized("mode", 3.0 / 4.0),
+        0,
+        "{}",
+        yaw_last_error()
+    );
+    assert!(
+        (handle.get_normalized("mode") - 0.75).abs() < 1e-12,
+        "mode must read Multiband"
+    );
     // Normalized yaw: (45 + 90) / 180 = 0.75, (-45 + 90) / 180 = 0.25.
     let normalized = (f64::from(yaw_deg) + 90.0) / 180.0;
-    assert_eq!(handle.set_normalized("head_yaw_deg", normalized), 0, "{}", yaw_last_error());
+    assert_eq!(
+        handle.set_normalized("head_yaw_deg", normalized),
+        0,
+        "{}",
+        yaw_last_error()
+    );
     let silence = vec![0.0; SMOOTHER_PREROLL_FRAMES * 2];
     handle.process(&silence);
     let mut impulse = vec![0.0; 4096 * 2];
@@ -239,13 +271,40 @@ fn crossfeed_yaw_count_order_and_metadata_stable() {
 #[test]
 fn crossfeed_yaw_normalized_setter_roundtrip_and_clamp() {
     let mut handle = YawHandle::create("{}");
-    assert!((handle.get_normalized("head_yaw_deg") - 0.5).abs() < 1e-12, "default yaw must read 0.5");
-    assert_eq!(handle.set_normalized("head_yaw_deg", 0.75), 0, "{}", yaw_last_error());
-    assert!((handle.get_normalized("head_yaw_deg") - 0.75).abs() < 1e-12, "yaw must read back 0.75");
-    assert_eq!(handle.set_normalized("head_yaw_deg", 1.5), 0, "{}", yaw_last_error());
-    assert!((handle.get_normalized("head_yaw_deg") - 1.0).abs() < 1e-12, "yaw must clamp to +90");
-    assert_eq!(handle.set_normalized("head_yaw_deg", -2.0), 0, "{}", yaw_last_error());
-    assert!((handle.get_normalized("head_yaw_deg") - 0.0).abs() < 1e-12, "yaw must clamp to -90");
+    assert!(
+        (handle.get_normalized("head_yaw_deg") - 0.5).abs() < 1e-12,
+        "default yaw must read 0.5"
+    );
+    assert_eq!(
+        handle.set_normalized("head_yaw_deg", 0.75),
+        0,
+        "{}",
+        yaw_last_error()
+    );
+    assert!(
+        (handle.get_normalized("head_yaw_deg") - 0.75).abs() < 1e-12,
+        "yaw must read back 0.75"
+    );
+    assert_eq!(
+        handle.set_normalized("head_yaw_deg", 1.5),
+        0,
+        "{}",
+        yaw_last_error()
+    );
+    assert!(
+        (handle.get_normalized("head_yaw_deg") - 1.0).abs() < 1e-12,
+        "yaw must clamp to +90"
+    );
+    assert_eq!(
+        handle.set_normalized("head_yaw_deg", -2.0),
+        0,
+        "{}",
+        yaw_last_error()
+    );
+    assert!(
+        (handle.get_normalized("head_yaw_deg") - 0.0).abs() < 1e-12,
+        "yaw must clamp to -90"
+    );
 }
 
 /// Yaw steers differential ITD direction on single-sided impulses.
@@ -263,8 +322,14 @@ fn crossfeed_yaw_normalized_setter_roundtrip_and_clamp() {
 fn crossfeed_yaw_steers_itd_direction_on_single_sided_impulse() {
     let plus = render_single_sided_impulse(45.0, true);
     let minus = render_single_sided_impulse(-45.0, true);
-    assert!(channel_peak(&plus, 2, 1) > MIN_CROSS_PEAK, "yaw +45 needs nonzero R bleed");
-    assert!(channel_peak(&minus, 2, 1) > MIN_CROSS_PEAK, "yaw -45 needs nonzero R bleed");
+    assert!(
+        channel_peak(&plus, 2, 1) > MIN_CROSS_PEAK,
+        "yaw +45 needs nonzero R bleed"
+    );
+    assert!(
+        channel_peak(&minus, 2, 1) > MIN_CROSS_PEAK,
+        "yaw -45 needs nonzero R bleed"
+    );
     let onset_plus = onset_frame(&plus, 2, 1).expect("R onset must exist at +45");
     let onset_minus = onset_frame(&minus, 2, 1).expect("R onset must exist at -45");
     println!(
@@ -285,7 +350,10 @@ fn crossfeed_yaw_steers_itd_direction_on_single_sided_impulse() {
         .zip(mirror.as_chunks::<2>().0.iter())
         .map(|(plus_frame, mirror_frame)| (plus_frame[1] - mirror_frame[0]).abs())
         .fold(0.0f32, f32::max);
-    assert!(worst < 1e-6, "mirrored cross paths must match, worst {worst:.3e}");
+    assert!(
+        worst < 1e-6,
+        "mirrored cross paths must match, worst {worst:.3e}"
+    );
 }
 
 /// Saved yaw, mix, and ITD survive state and preset-JSON reload.
@@ -298,14 +366,33 @@ fn crossfeed_yaw_mix_itd_survive_state_and_preset_json_reload() {
         let mut source = YawHandle::create("{}");
         // Preset first: a preset selection is a full DSP reset, so custom
         // values must follow it (mirrors the preset-first replay order).
-        assert_eq!(source.set_normalized("preset", 3.0 / 5.0), 0, "{}", yaw_last_error());
-        assert_eq!(source.set_normalized("head_yaw_deg", 0.75), 0, "{}", yaw_last_error());
+        assert_eq!(
+            source.set_normalized("preset", 3.0 / 5.0),
+            0,
+            "{}",
+            yaw_last_error()
+        );
+        assert_eq!(
+            source.set_normalized("head_yaw_deg", 0.75),
+            0,
+            "{}",
+            yaw_last_error()
+        );
         assert_eq!(source.set_normalized("mix", 0.5), 0, "{}", yaw_last_error());
-        assert_eq!(source.set_normalized("itd_delay_ms", 0.3), 0, "{}", yaw_last_error());
+        assert_eq!(
+            source.set_normalized("itd_delay_ms", 0.3),
+            0,
+            "{}",
+            yaw_last_error()
+        );
         let saved = source.save();
         let mut target = YawHandle::create("{}");
         assert_eq!(target.load(&saved, document), 0, "{}", yaw_last_error());
-        assert_eq!(target.save(), saved, "document={document} state must round-trip");
+        assert_eq!(
+            target.save(),
+            saved,
+            "document={document} state must round-trip"
+        );
         assert!((target.get_normalized("head_yaw_deg") - 0.75).abs() < 1e-12);
         assert!((target.get_normalized("mix") - 0.5).abs() < 1e-12);
         // 0.3 is not dyadic: |0.3f32 - 0.3| = 1.19e-8, so the tolerance must
@@ -317,7 +404,11 @@ fn crossfeed_yaw_mix_itd_survive_state_and_preset_json_reload() {
         target.reset();
         let mut impulse = vec![0.0; 2048 * 2];
         impulse[0] = 0.5;
-        assert_eq!(target.process(&impulse), source.process(&impulse), "document={document} audio must match");
+        assert_eq!(
+            target.process(&impulse),
+            source.process(&impulse),
+            "document={document} audio must match"
+        );
     }
 }
 
@@ -331,8 +422,18 @@ fn crossfeed_preset_action_resets_yaw_but_explicit_yaw_wins() {
     for document in [false, true] {
         // Preset-only selection resets yaw to the preset default (0).
         let mut handle = YawHandle::create("{}");
-        assert_eq!(handle.set_normalized("head_yaw_deg", 0.75), 0, "{}", yaw_last_error());
-        assert_eq!(handle.load(br#"{"preset":5}"#, document), 0, "{}", yaw_last_error());
+        assert_eq!(
+            handle.set_normalized("head_yaw_deg", 0.75),
+            0,
+            "{}",
+            yaw_last_error()
+        );
+        assert_eq!(
+            handle.load(br#"{"preset":5}"#, document),
+            0,
+            "{}",
+            yaw_last_error()
+        );
         assert!(
             (handle.get_normalized("head_yaw_deg") - 0.5).abs() < 1e-12,
             "document={document} preset action must reset yaw to 0"
@@ -369,13 +470,24 @@ fn crossfeed_invalid_state_refused_with_engaged_twin_continuation() {
         for twin_handle in [&mut handle, &mut twin] {
             // Multiband mode: FFI creation defaults to Off, which would pass
             // dry audio and leave crossfeed history unpopulated.
-            assert_eq!(twin_handle.set_normalized("mode", 3.0 / 4.0), 0, "{}", yaw_last_error());
-            assert_eq!(twin_handle.set_normalized("head_yaw_deg", 0.75), 0, "{}", yaw_last_error());
+            assert_eq!(
+                twin_handle.set_normalized("mode", 3.0 / 4.0),
+                0,
+                "{}",
+                yaw_last_error()
+            );
+            assert_eq!(
+                twin_handle.set_normalized("head_yaw_deg", 0.75),
+                0,
+                "{}",
+                yaw_last_error()
+            );
         }
         // Engage DSP history identically on both handles.
         let engage: Vec<f32> = (0..8192)
             .flat_map(|frame| {
-                let sample = 0.4 * (2.0 * std::f32::consts::PI * 440.0 * frame as f32 / SAMPLE_RATE_HZ).sin();
+                let sample = 0.4
+                    * (2.0 * std::f32::consts::PI * 440.0 * frame as f32 / SAMPLE_RATE_HZ).sin();
                 [sample, 0.25 * sample]
             })
             .collect();
@@ -389,14 +501,31 @@ fn crossfeed_invalid_state_refused_with_engaged_twin_continuation() {
             br#"{"preset":99}"#.as_slice(),
             br#"{"head_yaw_deg":45.0"#.as_slice(),
         ] {
-            assert_ne!(handle.load(bad, document), 0, "document={document} must refuse {bad:?}");
-            assert_eq!(handle.save(), saved, "document={document} refused state must roll back");
+            assert_ne!(
+                handle.load(bad, document),
+                0,
+                "document={document} must refuse {bad:?}"
+            );
+            assert_eq!(
+                handle.save(),
+                saved,
+                "document={document} refused state must roll back"
+            );
         }
         // Continued renders stay bit-identical to the untouched twin.
-        assert_eq!(twin.process(&engage), handle.process(&engage), "document={document} history must survive refusal");
+        assert_eq!(
+            twin.process(&engage),
+            handle.process(&engage),
+            "document={document} history must survive refusal"
+        );
 
         // Finite out-of-range yaw clamps (accepted contract), not refusal.
-        assert_eq!(handle.load(br#"{"head_yaw_deg":999.0}"#, document), 0, "{}", yaw_last_error());
+        assert_eq!(
+            handle.load(br#"{"head_yaw_deg":999.0}"#, document),
+            0,
+            "{}",
+            yaw_last_error()
+        );
         assert!((handle.get_normalized("head_yaw_deg") - 1.0).abs() < 1e-12);
 
         // Valid restore after refusal adopts and renders nonzero audio.
@@ -404,6 +533,9 @@ fn crossfeed_invalid_state_refused_with_engaged_twin_continuation() {
         assert_eq!(handle.save(), saved);
         assert!((handle.get_normalized("head_yaw_deg") - 0.75).abs() < 1e-12);
         let output = handle.process(&engage);
-        assert!(output.iter().any(|sample| sample.abs() > 0.01), "restored handle must render nonzero audio");
+        assert!(
+            output.iter().any(|sample| sample.abs() > 0.01),
+            "restored handle must render nonzero audio"
+        );
     }
 }

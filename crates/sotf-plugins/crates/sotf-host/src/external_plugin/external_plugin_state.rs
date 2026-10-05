@@ -385,9 +385,7 @@ struct CustomSurroundTopology {
 }
 
 /// Classifies the ear-level surround pairs of a custom layout.
-fn custom_surround_topology(
-    speakers: &[NativeAmbisonicsCustomSpeaker],
-) -> CustomSurroundTopology {
+fn custom_surround_topology(speakers: &[NativeAmbisonicsCustomSpeaker]) -> CustomSurroundTopology {
     let has = |azimuth: f32| {
         speakers.iter().any(|speaker| {
             !speaker.is_lfe && speaker.elevation_deg == 0.0 && speaker.azimuth_deg == azimuth
@@ -734,7 +732,9 @@ impl NativePluginAudioSetup {
                 Ok((input_channels, custom.speakers.len()))
             }
             Self::AmbisonicsCustom { order, custom } => Err(if !(1..=7).contains(order) {
-                format!("Ambisonics order {order} is unsupported; expected an order from 1 through 7")
+                format!(
+                    "Ambisonics order {order} is unsupported; expected an order from 1 through 7"
+                )
             } else {
                 format!(
                     "Custom Ambisonics geometry has {} speakers; expected 1 through {MAX_AMBISONICS_CUSTOM_SPEAKERS}",
@@ -1079,10 +1079,7 @@ mod ambisonics_custom_setup_tests {
     }
 
     fn vst3_descriptor() -> PluginDescriptor {
-        descriptor(
-            PluginFormat::Vst3,
-            "536F7466416D6269736E696330303031",
-        )
+        descriptor(PluginFormat::Vst3, "536F7466416D6269736E696330303031")
     }
 
     #[test]
@@ -1203,26 +1200,17 @@ mod ambisonics_custom_setup_tests {
             duplicate.validate().unwrap_err(),
             "Custom speaker label 'FL' is used more than once"
         );
-        let non_finite = geometry(
-            "angles",
-            vec![speaker("FL", f32::NAN, 0.0, false)],
-        );
+        let non_finite = geometry("angles", vec![speaker("FL", f32::NAN, 0.0, false)]);
         assert_eq!(
             non_finite.validate().unwrap_err(),
             "Custom speaker 'FL' has a non-finite angle"
         );
-        let bad_azimuth = geometry(
-            "angles",
-            vec![speaker("FL", 181.0, 0.0, false)],
-        );
+        let bad_azimuth = geometry("angles", vec![speaker("FL", 181.0, 0.0, false)]);
         assert_eq!(
             bad_azimuth.validate().unwrap_err(),
             "Custom speaker 'FL' azimuth 181 is outside [-180, 180]"
         );
-        let bad_elevation = geometry(
-            "angles",
-            vec![speaker("FL", 30.0, -91.0, false)],
-        );
+        let bad_elevation = geometry("angles", vec![speaker("FL", 30.0, -91.0, false)]);
         assert_eq!(
             bad_elevation.validate().unwrap_err(),
             "Custom speaker 'FL' elevation -91 is outside [-90, 90]"
@@ -1309,9 +1297,7 @@ mod ambisonics_custom_setup_tests {
     fn custom_clap_configuration_rejects_with_explicit_reasons() {
         let mut moved_lfe = geometry_from_const(&CONFIG_7_1_4);
         moved_lfe.speakers.swap(3, 5);
-        let error = moved_lfe
-            .matching_clap_configuration(7)
-            .unwrap_err();
+        let error = moved_lfe.matching_clap_configuration(7).unwrap_err();
         assert!(
             error.contains("place LFE at channel 3"),
             "unexpected: {error}"
@@ -1467,10 +1453,7 @@ mod ambisonics_custom_setup_tests {
                 .unwrap_err()
                 .contains("is not one of the natively advertised")
         );
-        let audio_unit = descriptor(
-            PluginFormat::AudioUnit,
-            "org.spinorama.sotf.ambisonics",
-        );
+        let audio_unit = descriptor(PluginFormat::AudioUnit, "org.spinorama.sotf.ambisonics");
         assert!(exact.validate_for_descriptor(&audio_unit).is_err());
         let named_wide = NativePluginAudioSetup::Ambisonics {
             order: 7,

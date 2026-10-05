@@ -17,7 +17,9 @@ impl GainMeter {
             return Err("loudness monitor requires at least one channel".to_string());
         }
         if !sample_rate.is_finite() || !(16.0..=2_822_400.0).contains(&sample_rate) {
-            return Err("loudness monitor sample rate must be finite and in 16..=2822400 Hz".to_string());
+            return Err(
+                "loudness monitor sample rate must be finite and in 16..=2822400 Hz".to_string(),
+            );
         }
         Ok(Self {
             channels,

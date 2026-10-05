@@ -31,9 +31,7 @@ const TONE_AMPLITUDE: f32 = 0.06;
 const MEASURE_WIN: usize = 16384;
 
 fn lcg(state: &mut u32) -> f32 {
-    *state = state
-        .wrapping_mul(1_664_525)
-        .wrapping_add(1_013_904_223);
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     (*state as f32 / u32::MAX as f32) * 2.0 - 1.0
 }
 
@@ -72,12 +70,7 @@ fn interleave(left: &[f32], right: &[f32]) -> Vec<f32> {
 }
 
 fn channel(signal: &[f32], channels: usize, ch: usize) -> Vec<f32> {
-    signal
-        .iter()
-        .skip(ch)
-        .step_by(channels)
-        .copied()
-        .collect()
+    signal.iter().skip(ch).step_by(channels).copied().collect()
 }
 
 fn mean_power(signal: &[f32]) -> f64 {
@@ -276,10 +269,7 @@ fn curve_table_matches_closed_form_at_live_rate() {
         // Anchors reproduce through the table: bin 0 sits at 0 Hz (low),
         // the top bin sits above 12 kHz at every supported rate (high).
         assert_eq!(plugin.curve_gains()[0], 0.0);
-        assert_eq!(
-            plugin.curve_gains()[SPECTRAL_HISS_NUM_BINS - 1],
-            1.0
-        );
+        assert_eq!(plugin.curve_gains()[SPECTRAL_HISS_NUM_BINS - 1], 1.0);
     }
 
     // Named and batch updates refresh the pushed table identically.
@@ -287,10 +277,7 @@ fn curve_table_matches_closed_form_at_live_rate() {
     set_float(&mut plugin, "curve_low", 0.25);
     assert_eq!(plugin.curve_gains()[0], 0.25);
     let mut values = ParameterSet::new();
-    values.insert(
-        ParameterId::from("curve_mid"),
-        ParameterValue::Float(0.75),
-    );
+    values.insert(ParameterId::from("curve_mid"), ParameterValue::Float(0.75));
     plugin.apply_values(values).unwrap();
     let curve = plugin.reduction_curve();
     for (bin, gain) in plugin.curve_gains().iter().enumerate() {
@@ -387,11 +374,7 @@ fn spectral_curve_shapes_bands_and_preserves_tones() {
     let frames = RATE as usize * 2;
     let hiss = spectral_hiss_fixture(frames, 0x51ab_0001);
     let tone = sine_tone(frames, TONE_AMPLITUDE, TONE_HZ, RATE);
-    let input: Vec<f32> = hiss
-        .iter()
-        .zip(tone.iter())
-        .map(|(h, t)| h + t)
-        .collect();
+    let input: Vec<f32> = hiss.iter().zip(tone.iter()).map(|(h, t)| h + t).collect();
 
     let mut plugin = HissReducerPlugin::from_params(
         1,
@@ -433,14 +416,7 @@ fn spectral_curve_shapes_bands_and_preserves_tones() {
             12_000.0,
             Some(TONE_HZ),
             3,
-        ) / band_power(
-            in_win,
-            f64::from(RATE),
-            9_000.0,
-            12_000.0,
-            Some(TONE_HZ),
-            3,
-        ),
+        ) / band_power(in_win, f64::from(RATE), 9_000.0, 12_000.0, Some(TONE_HZ), 3),
     );
     assert!(
         high_db < -2.0,
@@ -451,9 +427,7 @@ fn spectral_curve_shapes_bands_and_preserves_tones() {
         "curve did not separate bands: low {low_db:.2} dB, high {high_db:.2} dB"
     );
 
-    let tone_db = power_db(
-        goertzel_power(out_win, tone_bin) / goertzel_power(in_win, tone_bin),
-    );
+    let tone_db = power_db(goertzel_power(out_win, tone_bin) / goertzel_power(in_win, tone_bin));
     assert!(
         tone_db.abs() < 1.0,
         "tonal bin changed by {tone_db:.2} dB under the curve"
@@ -825,12 +799,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         let right_noise: Vec<f32> = (0..RATE as usize)
             .map(|i| 0.03 * ((i * 3571 % 2053) as f32 / 1026.5 - 1.0))
             .collect();
-        capture_profile(
-            &mut plugin,
-            RATE,
-            &interleave(&left_noise, &right_noise),
-            2,
-        );
+        capture_profile(&mut plugin, RATE, &interleave(&left_noise, &right_noise), 2);
         set_bool(&mut plugin, "use_captured_profile", true);
         set_float(&mut plugin, "curve_low", 0.0);
         set_float(&mut plugin, "curve_mid", 0.5);
@@ -854,16 +823,8 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         let tone = sine_tone(RATE as usize, 0.12, 750.0, RATE);
         let hiss_l = spectral_hiss_fixture(RATE as usize, 0x51ab_0001);
         let hiss_r = spectral_hiss_fixture(RATE as usize, 0x51ab_0002);
-        let mix_l: Vec<f32> = tone
-            .iter()
-            .zip(hiss_l.iter())
-            .map(|(t, h)| t + h)
-            .collect();
-        let mix_r: Vec<f32> = tone
-            .iter()
-            .zip(hiss_r.iter())
-            .map(|(t, h)| t + h)
-            .collect();
+        let mix_l: Vec<f32> = tone.iter().zip(hiss_l.iter()).map(|(t, h)| t + h).collect();
+        let mix_r: Vec<f32> = tone.iter().zip(hiss_r.iter()).map(|(t, h)| t + h).collect();
         let mix = interleave(&mix_l, &mix_r);
         let reference = render(&mut plugin, RATE, &mix, 2, &PARTITIONS);
 
@@ -911,10 +872,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
 
         // Rejected scalar updates keep config and audio.
         let error = plugin
-            .set_parameter(
-                ParameterId::from("curve_low"),
-                ParameterValue::Float(2.0),
-            )
+            .set_parameter(ParameterId::from("curve_low"), ParameterValue::Float(2.0))
             .unwrap_err();
         assert!(error.contains("maximum"), "unexpected error: {error}");
         let error = plugin
@@ -933,10 +891,7 @@ fn reset_save_reload_rejection_reproduce_accepted_audio() {
         // Batch updates preserve the stored profile blob.
         let blob_before = plugin.persisted_params().captured_profile;
         let mut values = ParameterSet::new();
-        values.insert(
-            ParameterId::from("strength"),
-            ParameterValue::Float(0.7),
-        );
+        values.insert(ParameterId::from("strength"), ParameterValue::Float(0.7));
         plugin.apply_values(values).unwrap();
         assert!(plugin.has_captured_profile());
         assert_eq!(
@@ -1015,18 +970,9 @@ fn direct_curve_link_updates_match_batch_updates() {
             ParameterId::from("use_captured_profile"),
             ParameterValue::Bool(true),
         );
-        values.insert(
-            ParameterId::from("curve_low"),
-            ParameterValue::Float(0.0),
-        );
-        values.insert(
-            ParameterId::from("curve_mid"),
-            ParameterValue::Float(0.5),
-        );
-        values.insert(
-            ParameterId::from("curve_high"),
-            ParameterValue::Float(1.0),
-        );
+        values.insert(ParameterId::from("curve_low"), ParameterValue::Float(0.0));
+        values.insert(ParameterId::from("curve_mid"), ParameterValue::Float(0.5));
+        values.insert(ParameterId::from("curve_high"), ParameterValue::Float(1.0));
         values.insert(
             ParameterId::from("link_mode"),
             ParameterValue::Int(LINK_LINKED),
@@ -1038,11 +984,7 @@ fn direct_curve_link_updates_match_batch_updates() {
 
         let tone = sine_tone(RATE as usize, 0.12, 750.0, RATE);
         let hiss = spectral_hiss_fixture(RATE as usize, 0x51ab_0001);
-        let mixed: Vec<f32> = tone
-            .iter()
-            .zip(hiss.iter())
-            .map(|(t, h)| t + h)
-            .collect();
+        let mixed: Vec<f32> = tone.iter().zip(hiss.iter()).map(|(t, h)| t + h).collect();
         let input = interleave(&mixed, &mixed);
         assert_eq!(
             render(&mut direct, RATE, &input, 2, &PARTITIONS),
@@ -1060,9 +1002,7 @@ fn new_controls_automation_is_click_free_and_partition_independent() {
         // 6 dB time-domain, unbiased per-bin reference spectrally) bites
         // harder than the default -30 dBFS threshold once toggled on.
         let mut seed = 0xa715u32;
-        let capture: Vec<f32> = (0..RATE as usize)
-            .map(|_| 0.14 * lcg(&mut seed))
-            .collect();
+        let capture: Vec<f32> = (0..RATE as usize).map(|_| 0.14 * lcg(&mut seed)).collect();
         let capture = interleave(&capture, &capture);
 
         // Stereo program: identical tone, independent quiet hiss.
@@ -1071,18 +1011,14 @@ fn new_controls_automation_is_click_free_and_partition_independent() {
         let tone = sine_tone(signal_frames, 0.12, 750.0, RATE);
         let mut seed_l = 0x1eafu32;
         let mut seed_r = 0x9e3779b9u32;
-        let hiss_l: Vec<f32> = (0..signal_frames).map(|_| 0.02 * lcg(&mut seed_l)).collect();
-        let hiss_r: Vec<f32> = (0..signal_frames).map(|_| 0.02 * lcg(&mut seed_r)).collect();
-        let left: Vec<f32> = tone
-            .iter()
-            .zip(hiss_l.iter())
-            .map(|(t, h)| t + h)
+        let hiss_l: Vec<f32> = (0..signal_frames)
+            .map(|_| 0.02 * lcg(&mut seed_l))
             .collect();
-        let right: Vec<f32> = tone
-            .iter()
-            .zip(hiss_r.iter())
-            .map(|(t, h)| t + h)
+        let hiss_r: Vec<f32> = (0..signal_frames)
+            .map(|_| 0.02 * lcg(&mut seed_r))
             .collect();
+        let left: Vec<f32> = tone.iter().zip(hiss_l.iter()).map(|(t, h)| t + h).collect();
+        let right: Vec<f32> = tone.iter().zip(hiss_r.iter()).map(|(t, h)| t + h).collect();
         let input = interleave(&left, &right);
 
         let render_leg = |input: &[f32], partitions: &[usize], automate: bool| -> Vec<f32> {
@@ -1107,11 +1043,7 @@ fn new_controls_automation_is_click_free_and_partition_independent() {
                     set_float(&mut plugin, "curve_low", 0.0);
                     set_int(&mut plugin, "link_mode", LINK_LINKED);
                 }
-                let edge = if offset < boundary {
-                    boundary
-                } else {
-                    frames
-                };
+                let edge = if offset < boundary { boundary } else { frames };
                 let count = partitions[part % partitions.len()]
                     .min(edge - offset)
                     .max(1);
@@ -1193,8 +1125,12 @@ fn new_controls_automation_is_click_free_and_partition_independent() {
         // time-domain, stronger spectrally).
         let mut seed_05l = 0x2b2b_0001u32;
         let mut seed_05r = 0x2b2b_0002u32;
-        let hiss_05_l: Vec<f32> = (0..signal_frames).map(|_| 0.05 * lcg(&mut seed_05l)).collect();
-        let hiss_05_r: Vec<f32> = (0..signal_frames).map(|_| 0.05 * lcg(&mut seed_05r)).collect();
+        let hiss_05_l: Vec<f32> = (0..signal_frames)
+            .map(|_| 0.05 * lcg(&mut seed_05l))
+            .collect();
+        let hiss_05_r: Vec<f32> = (0..signal_frames)
+            .map(|_| 0.05 * lcg(&mut seed_05r))
+            .collect();
         let hiss_input = interleave(&hiss_05_l, &hiss_05_r);
         let auto_hiss = render_leg(&hiss_input, &[1, 64, 511, 997], true);
         assert_eq!(
@@ -1460,16 +1396,8 @@ fn supported_rates_render_new_controls() {
                 let mut seed = 0x7e5f_0002u32.wrapping_add(rate);
                 (0..frames).map(|_| 0.02 * lcg(&mut seed)).collect()
             };
-            let left: Vec<f32> = tone
-                .iter()
-                .zip(hiss_l.iter())
-                .map(|(t, h)| t + h)
-                .collect();
-            let right: Vec<f32> = tone
-                .iter()
-                .zip(hiss_r.iter())
-                .map(|(t, h)| t + h)
-                .collect();
+            let left: Vec<f32> = tone.iter().zip(hiss_l.iter()).map(|(t, h)| t + h).collect();
+            let right: Vec<f32> = tone.iter().zip(hiss_r.iter()).map(|(t, h)| t + h).collect();
             let mix = interleave(&left, &right);
 
             let whole = render(&mut plugin, rate, &mix, 2, &[frames]);
@@ -1490,7 +1418,10 @@ fn supported_rates_render_new_controls() {
             let in_l = channel(&mix, 2, 0);
             let start = rate as usize / 2;
             let (out_w, in_w) = if spectral {
-                (&out_l[start + LATENCY..], &in_l[start..in_l.len() - LATENCY])
+                (
+                    &out_l[start + LATENCY..],
+                    &in_l[start..in_l.len() - LATENCY],
+                )
             } else {
                 (&out_l[start..], &in_l[start..])
             };
@@ -1603,9 +1534,8 @@ fn engaged_transients_are_co_attenuated_known_limitation() {
         let hiss_only = spectral_hiss_fixture(frames, 0x51ab_0001);
         let hiss_out = render(&mut engaged, RATE, &hiss_only, 1, &PARTITIONS);
         let start = RATE as usize + LATENCY;
-        let suppression = power_db(
-            mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]),
-        );
+        let suppression =
+            power_db(mean_power(&hiss_out[start..]) / mean_power(&hiss_only[start - LATENCY..]));
         assert!(
             suppression < -2.0,
             "spectral engaged proof too weak: {suppression:.2} dB"

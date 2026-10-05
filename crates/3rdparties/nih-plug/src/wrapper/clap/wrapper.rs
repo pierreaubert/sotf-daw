@@ -605,9 +605,8 @@ fn normalized_value_matching_text(param_ptr: &ParamPtr, parsed: f32, display: &s
     }
 
     // SAFETY: callers retain the Params object that owns this parameter pointer.
-    let matches = |candidate| unsafe {
-        param_ptr.normalized_value_to_string(candidate, true) == display
-    };
+    let matches =
+        |candidate| unsafe { param_ptr.normalized_value_to_string(candidate, true) == display };
     if matches(parsed) {
         return parsed;
     }
@@ -1099,7 +1098,6 @@ impl<P: ClapPlugin> Wrapper<P> {
                             return false;
                         };
                         if changed {
-
                             let task_posted = self.schedule_gui(Task::ParameterModulationChanged(
                                 hash,
                                 normalized_delta,
@@ -1295,10 +1293,7 @@ impl<P: ClapPlugin> Wrapper<P> {
     ) {
         // We'll always write these events to the first sample, so even when we add note output we
         // shouldn't have to think about interleaving events here
-        let sample_rate = self
-            .current_buffer_config
-            .load()
-            .map(|c| c.sample_rate);
+        let sample_rate = self.current_buffer_config.load().map(|c| c.sample_rate);
         while let Some(change) = self.output_parameter_events.pop() {
             let push_successful = match change {
                 OutputParamEvent::BeginGesture { param_hash } => {
@@ -1725,9 +1720,7 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueSet(event.value),
-                    self.current_buffer_config
-                        .load()
-                        .map(|c| c.sample_rate),
+                    self.current_buffer_config.load().map(|c| c.sample_rate),
                 );
 
                 // If the parameter supports polyphonic modulation, then the plugin needs to be
@@ -1782,9 +1775,7 @@ impl<P: ClapPlugin> Wrapper<P> {
                 self.update_plain_value_by_hash(
                     event.param_id,
                     ClapParamUpdate::PlainValueMod(event.amount),
-                    self.current_buffer_config
-                        .load()
-                        .map(|c| c.sample_rate),
+                    self.current_buffer_config.load().map(|c| c.sample_rate),
                 );
             }
             (CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_TRANSPORT) => {
@@ -2228,9 +2219,13 @@ impl<P: ClapPlugin> Wrapper<P> {
         };
 
         // Reject an unrepresentable automation horizon before resetting any parameter.
-        let prepared: Option<Vec<_>> = wrapper.param_by_hash.values().map(|param| {
-            unsafe { param.prepare_smoother(sample_rate) }.map(|steps| (*param, steps))
-        }).collect();
+        let prepared: Option<Vec<_>> = wrapper
+            .param_by_hash
+            .values()
+            .map(|param| {
+                unsafe { param.prepare_smoother(sample_rate) }.map(|steps| (*param, steps))
+            })
+            .collect();
         let Some(prepared) = prepared else {
             return false;
         };

@@ -20,9 +20,7 @@
 //! (`cargo test -- --nocapture`); assertions are exact or pre-fixed, never
 //! fitted here.
 
-use sotf_audio::{
-    EmbeddedAudioEngine, EngineConfig, PluginConfig, PluginSettings, PluginType,
-};
+use sotf_audio::{EmbeddedAudioEngine, EngineConfig, PluginConfig, PluginSettings, PluginType};
 use sotf_plugins::{DawHost, ParameterId, ParameterValue, ProcessContext, create_plugin};
 
 const RATE: u32 = 48_000;
@@ -123,7 +121,11 @@ fn check_cleaned(
     is_click: &[Vec<bool>],
     latency: usize,
 ) {
-    assert_eq!(output.len(), (FRAMES + latency) * CHANNELS, "{label}: length");
+    assert_eq!(
+        output.len(),
+        (FRAMES + latency) * CHANNELS,
+        "{label}: length"
+    );
     assert!(
         output.iter().all(|sample| sample.is_finite()),
         "{label}: finite"
@@ -221,7 +223,10 @@ fn check_residual(
     let total = true_hot + missed;
     let recall = true_hot as f32 / total as f32;
     let precision = true_hot as f32 / (true_hot + false_hot).max(1) as f32;
-    assert!(recall >= 0.95, "{label}: recall={recall} ({true_hot}/{total})");
+    assert!(
+        recall >= 0.95,
+        "{label}: recall={recall} ({true_hot}/{total})"
+    );
     assert!(
         precision >= 0.95,
         "{label}: precision={precision} false_hot={false_hot}"
@@ -258,8 +263,7 @@ fn declick_typed_settings_converter_and_factory_carry_all_nine_controls() {
     }
 
     // Non-default save shape converts key-for-key with exact values.
-    let settings: PluginSettings =
-        serde_json::from_value(nondefault_settings_json(false)).unwrap();
+    let settings: PluginSettings = serde_json::from_value(nondefault_settings_json(false)).unwrap();
     let config = settings.to_plugin_config(RATE as f64);
     assert_eq!(config.plugin_type, "declick");
     for (key, expected) in [
@@ -322,8 +326,7 @@ fn declick_typed_settings_converter_and_factory_carry_all_nine_controls() {
     let mut bad = config.parameters.clone();
     bad["mode"] = serde_json::json!("Bogus");
     assert!(create_plugin(&config.plugin_type, &bad, CHANNELS, RATE).is_err());
-    let rebuilt =
-        create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
+    let rebuilt = create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap();
     assert_eq!(
         rebuilt.get_parameter(&ParameterId::from("mode")),
         Some(ParameterValue::Int(1))
@@ -379,8 +382,7 @@ fn render_factory_plugin(
 
 #[test]
 fn declick_factory_audio_and_eof_match_manual_oracle() {
-    let settings: PluginSettings =
-        serde_json::from_value(nondefault_settings_json(false)).unwrap();
+    let settings: PluginSettings = serde_json::from_value(nondefault_settings_json(false)).unwrap();
     let config = settings.to_plugin_config(RATE as f64);
     let (corrupted, clean, is_click) = stereo_fixture();
 
@@ -439,8 +441,7 @@ fn declick_factory_audio_and_eof_match_manual_oracle() {
 
 #[test]
 fn declick_daw_host_chain_renders_and_drains_with_manual_oracle() {
-    let settings: PluginSettings =
-        serde_json::from_value(nondefault_settings_json(false)).unwrap();
+    let settings: PluginSettings = serde_json::from_value(nondefault_settings_json(false)).unwrap();
     let config = settings.to_plugin_config(RATE as f64);
     let (corrupted, clean, is_click) = stereo_fixture();
 
@@ -490,8 +491,10 @@ fn declick_daw_host_chain_renders_and_drains_with_manual_oracle() {
 
     // Host reset reproduces the render bit-exactly.
     let mut host = DawHost::new(CHANNELS, RATE);
-    host.add_plugin(create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap())
-        .unwrap();
+    host.add_plugin(
+        create_plugin(&config.plugin_type, &config.parameters, CHANNELS, RATE).unwrap(),
+    )
+    .unwrap();
     host.build().unwrap();
     let mut first = Vec::new();
     for chunk in corrupted.chunks(300 * CHANNELS) {
@@ -511,8 +514,7 @@ fn declick_daw_host_chain_renders_and_drains_with_manual_oracle() {
 
 #[test]
 fn declick_embedded_engine_renders_tail_and_reports_geometry() {
-    let settings: PluginSettings =
-        serde_json::from_value(nondefault_settings_json(false)).unwrap();
+    let settings: PluginSettings = serde_json::from_value(nondefault_settings_json(false)).unwrap();
     let config = settings.to_plugin_config(RATE as f64);
     let engine_config = EngineConfig {
         frame_size: 512,
@@ -569,7 +571,10 @@ fn declick_engine_rejections_preserve_history_and_structural_params_rebuild() {
         let start = *position as usize * CHANNELS;
         let chunk = &corrupted[start..start + frames * CHANNELS];
         let mut block = vec![0.0; chunk.len()];
-        assert_eq!(engine.process_at(*position, chunk, &mut block).unwrap(), frames);
+        assert_eq!(
+            engine.process_at(*position, chunk, &mut block).unwrap(),
+            frames
+        );
         *position += frames as u64;
         block
     };
@@ -685,13 +690,7 @@ fn declick_engine_rejections_preserve_history_and_structural_params_rebuild() {
         rebuilt_out.extend_from_slice(&block);
     }
     let (_, clean, is_click) = stereo_fixture();
-    check_cleaned(
-        "rebuilt cleaned",
-        &rebuilt_out,
-        &clean,
-        &is_click,
-        LATENCY,
-    );
+    check_cleaned("rebuilt cleaned", &rebuilt_out, &clean, &is_click, LATENCY);
 }
 
 #[test]
@@ -720,17 +719,18 @@ fn declick_clean_controls_preserve_transparency_at_engine_scope() {
         &control,
         LEGACY_LATENCY,
     );
-    assert_eq!(legacy_out.len(), (SPAN + CONTEXT + LEGACY_LATENCY) * CHANNELS);
+    assert_eq!(
+        legacy_out.len(),
+        (SPAN + CONTEXT + LEGACY_LATENCY) * CHANNELS
+    );
     assert_eq!(
         &legacy_out[LEGACY_LATENCY * CHANNELS..(LEGACY_LATENCY + SPAN) * CHANNELS],
         &control[..SPAN * CHANNELS]
     );
 
-    let settings: PluginSettings =
-        serde_json::from_value(nondefault_settings_json(false)).unwrap();
+    let settings: PluginSettings = serde_json::from_value(nondefault_settings_json(false)).unwrap();
     let config = settings.to_plugin_config(RATE as f64);
-    let output =
-        render_factory_plugin(&config.plugin_type, &config.parameters, &control, LATENCY);
+    let output = render_factory_plugin(&config.plugin_type, &config.parameters, &control, LATENCY);
     assert_eq!(output.len(), (SPAN + CONTEXT + LATENCY) * CHANNELS);
     let mut worst = 0.0_f32;
     for (actual, expected) in output[LATENCY * CHANNELS..(LATENCY + SPAN) * CHANNELS]

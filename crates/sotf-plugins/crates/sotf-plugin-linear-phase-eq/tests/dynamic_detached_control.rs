@@ -365,7 +365,11 @@ fn detached_worker_submit_commits_once_with_exact_blend() {
     let reference = run_detached_automation_once(1);
     assert_eq!(output, reference);
     for block in [63, 512] {
-        assert_eq!(run_detached_automation_once(block), reference, "block {block}");
+        assert_eq!(
+            run_detached_automation_once(block),
+            reference,
+            "block {block}"
+        );
     }
 }
 
@@ -395,7 +399,9 @@ fn detached_second_edit_during_blend_applies_after_retirement() {
     let handle = detached_handle(&plugin);
     let base = handle.try_accepted_snapshot().expect("base must read");
     let prepared = prepare_on_worker(&base, 0, band("Peak", 1000.0, 1.0, -6.0));
-    handle.try_submit(prepared).expect("first submit must queue");
+    handle
+        .try_submit(prepared)
+        .expect("first submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
@@ -409,7 +415,9 @@ fn detached_second_edit_during_blend_applies_after_retirement() {
     assert_eq!(get_gain(&plugin, 0), -6.0);
     assert!(handle.control_status().blend_in_progress);
     // Second edit during the first blend, from the fresh detached base.
-    let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
     let second = prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, -12.0));
     handle.try_submit(second).expect("second submit must queue");
@@ -536,10 +544,14 @@ fn detached_stale_base_refuses_and_reprepare_recovers() {
     });
     assert_eq!((allocs, frees), (0, 0));
     assert_eq!(handle.take_cancelled().len(), 1);
-    let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
     let recovered = prepare_on_worker(&fresh, 1, band("Peak", 3000.0, 1.0, -6.0));
-    handle.try_submit(recovered).expect("recovery submit must queue");
+    handle
+        .try_submit(recovered)
+        .expect("recovery submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(&mut plugin, &probe_in, &mut probe_out, 64);
     });
@@ -610,7 +622,9 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     );
     assert_eq!(handle.control_status().retained_queued, 1);
     // Queue a fresh edit behind the wedged stale head.
-    let fresh_base = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh_base = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     let fresh = prepare_on_worker(&fresh_base, 1, band("Peak", 3000.0, 1.0, -6.0));
     handle.try_submit(fresh).expect("fresh submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
@@ -780,7 +794,9 @@ fn detached_orphan_handle_cannot_touch_new_graph() {
     let base_b = handle_b.try_accepted_snapshot().expect("base must read");
     assert_eq!(base_b.generation, 0);
     let orphaned = prepare_on_worker(
-        &handle_a.try_accepted_snapshot().expect("orphan reads frozen"),
+        &handle_a
+            .try_accepted_snapshot()
+            .expect("orphan reads frozen"),
         0,
         band("Peak", 1000.0, 1.0, 12.0),
     );
@@ -988,7 +1004,9 @@ fn detached_rate_reinit_republishes_without_touching_bands() {
     });
     assert_eq!((allocs, frees), (0, 0));
     assert!(rms(&output) > 1e-4);
-    let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     let prepared = prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, 6.0));
     handle.try_submit(prepared).expect("submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
@@ -1055,11 +1073,15 @@ fn detached_old_rate_payload_refuses_then_cancel_reprepare_recovers() {
     assert_eq!(handle.control_status().last_refusal, None);
     assert_eq!(handle.control_status().retained_queued, 0);
     // Fresh reprepare at the new rate recovers and commits.
-    let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
     assert_eq!(fresh.snapshot.sample_rate, 44_100.0);
     let recovered = prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, 6.0));
-    handle.try_submit(recovered).expect("recovery submit must queue");
+    handle
+        .try_submit(recovered)
+        .expect("recovery submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into_44100(&mut plugin, &probe_in, &mut probe_out);
     });
@@ -1209,10 +1231,14 @@ fn detached_cancel_defers_when_outbox_full_then_recovers() {
     assert_eq!(evicted.len(), 1);
     drop_on_worker(evicted);
     // Fresh reprepare recovers and commits.
-    let fresh = handle.try_accepted_snapshot().expect("fresh base must read");
+    let fresh = handle
+        .try_accepted_snapshot()
+        .expect("fresh base must read");
     assert_eq!(fresh.generation, 1);
     let recovered = prepare_on_worker(&fresh, 1, band("Peak", 3000.0, 1.0, -6.0));
-    handle.try_submit(recovered).expect("recovery submit must queue");
+    handle
+        .try_submit(recovered)
+        .expect("recovery submit must queue");
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(&mut plugin, &probe_in, &mut probe_out, 64);
     });

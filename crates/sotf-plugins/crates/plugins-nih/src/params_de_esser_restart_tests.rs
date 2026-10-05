@@ -6,9 +6,8 @@ use super::DynamicParams;
 fn de_esser_infos() -> Vec<BridgedParamInfo> {
     // Specs provide stable integer Choice metadata for String-typed runtime
     // controls (mode, split_topology). Merge runtime for any missing IDs.
-    let bridge = plugins_bridge::param_bridge::ParamBridge::new(
-        crate::wrapper::get_param_specs("DeEsser"),
-    );
+    let bridge =
+        plugins_bridge::param_bridge::ParamBridge::new(crate::wrapper::get_param_specs("DeEsser"));
     let mut infos = (0..bridge.count())
         .filter_map(|index| bridge.info(index))
         .collect::<Vec<_>>();

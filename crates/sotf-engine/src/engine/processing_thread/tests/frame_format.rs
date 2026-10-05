@@ -270,5 +270,8 @@ fn invalid_runtime_clock_returns_error_and_retires_the_host() {
             Err(_) => break,
         }
     }
-    assert!(retired_invalid_host, "invalid active host must reach the GC queue");
+    assert!(
+        retired_invalid_host,
+        "invalid active host must reach the GC queue"
+    );
 }

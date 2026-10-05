@@ -602,13 +602,16 @@ fn test_jacobi_reference_converges_and_applies_strict_cutoff_and_null_modes() {
         .filter(|&sigma| sigma > threshold)
         .collect();
     assert_eq!(retained.len(), 2);
-    assert!(retained
-        .iter()
-        .any(|sigma| (*sigma - 1.01e-7).abs() < 1.0e-15));
-    assert!(svd
-        .singular_values
-        .iter()
-        .any(|sigma| (*sigma - 0.99e-7).abs() < 1.0e-15));
+    assert!(
+        retained
+            .iter()
+            .any(|sigma| (*sigma - 1.01e-7).abs() < 1.0e-15)
+    );
+    assert!(
+        svd.singular_values
+            .iter()
+            .any(|sigma| (*sigma - 0.99e-7).abs() < 1.0e-15)
+    );
     assert!(svd.singular_values.contains(&0.0));
     let (rank, _) = svd_rank_and_condition(&svd, 1.0e-7);
     assert_eq!(rank, 2);
@@ -830,8 +833,10 @@ fn mode_matching_and_allrad_match_independent_references_on_named_layouts() {
                 );
                 assert_eq!(mode.quality().rank, expected_quality_rank);
                 assert!(
-                    relative_difference(mode.quality().condition_number, expected_quality_condition)
-                        <= 2.0e-6,
+                    relative_difference(
+                        mode.quality().condition_number,
+                        expected_quality_condition
+                    ) <= 2.0e-6,
                     "mode quality {layout} order {order}: actual={}, expected={expected_quality_condition}",
                     mode.quality().condition_number
                 );

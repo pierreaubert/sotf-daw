@@ -39,10 +39,7 @@ pub(super) fn assert_no_alloc_or_free<F: FnOnce()>(label: &str, f: F) {
 
 /// Read the current (alloc, free) counts without resetting.
 pub(super) fn alloc_free_counts() -> (usize, usize) {
-    (
-        ALLOC_COUNT.with(|c| c.get()),
-        FREE_COUNT.with(|c| c.get()),
-    )
+    (ALLOC_COUNT.with(|c| c.get()), FREE_COUNT.with(|c| c.get()))
 }
 
 /// Reset both counters and enable counting; returns a guard closure that

@@ -90,8 +90,7 @@ fn make_routed_plugin(
 fn left_and_right_bands_leave_the_other_channel_bit_exact() {
     for sample_rate in [44_100_u32, 48_000, 96_000] {
         for linked in [true, false] {
-            for (placement, hot_channel) in
-                [(DynEqPlacement::Left, 0), (DynEqPlacement::Right, 1)]
+            for (placement, hot_channel) in [(DynEqPlacement::Left, 0), (DynEqPlacement::Right, 1)]
             {
                 let frames = 8_192;
                 let left_tone = make_tone(1_000.0, sample_rate, frames, 0.5);
@@ -189,7 +188,10 @@ fn mid_band_passes_side_only_content_bit_exact_and_boosts_mid() {
     plugin
         .process_in_place(&mut actual, &ProcessContext::new(sample_rate, frames))
         .unwrap();
-    assert_eq!(actual, anti_correlated, "mid band touched side-only content");
+    assert_eq!(
+        actual, anti_correlated,
+        "mid band touched side-only content"
+    );
     assert!(
         plugin.monitoring_gr[0].abs() < 1.0e-6,
         "mid detector saw side-only content: {} dB",
@@ -211,7 +213,13 @@ fn side_band_passes_correlated_content_bit_exact_and_boosts_side() {
     let mut plugin = make_routed_plugin(
         2,
         None,
-        vec![routed_band(DynEqPlacement::Side, 1_000.0, 12.0, -60.0, 20.0)],
+        vec![routed_band(
+            DynEqPlacement::Side,
+            1_000.0,
+            12.0,
+            -60.0,
+            20.0,
+        )],
         false,
         sample_rate,
     );
@@ -233,7 +241,13 @@ fn side_band_passes_correlated_content_bit_exact_and_boosts_side() {
     let mut plugin = make_routed_plugin(
         2,
         None,
-        vec![routed_band(DynEqPlacement::Side, 1_000.0, 12.0, -60.0, 20.0)],
+        vec![routed_band(
+            DynEqPlacement::Side,
+            1_000.0,
+            12.0,
+            -60.0,
+            20.0,
+        )],
         false,
         sample_rate,
     );
@@ -269,7 +283,13 @@ fn explicit_pairs_route_each_pair_and_pair_order_is_deterministic() {
         let mut plugin = make_routed_plugin(
             channels,
             Some(pairs),
-            vec![routed_band(DynEqPlacement::Left, 1_000.0, 12.0, -30.0, 20.0)],
+            vec![routed_band(
+                DynEqPlacement::Left,
+                1_000.0,
+                12.0,
+                -30.0,
+                20.0,
+            )],
             linked,
             sample_rate,
         );
@@ -303,8 +323,7 @@ fn explicit_pairs_route_each_pair_and_pair_order_is_deterministic() {
     assert!(linked.iter().all(|sample| sample.is_finite()));
     let quiet_pair_movement = (0..frames)
         .map(|frame| {
-            (f64::from(linked[frame * channels + 1]) - f64::from(input[frame * channels + 1]))
-                .abs()
+            (f64::from(linked[frame * channels + 1]) - f64::from(input[frame * channels + 1])).abs()
         })
         .fold(0.0_f64, f64::max);
     assert!(
@@ -441,7 +460,13 @@ fn threshold_automation_moves_routed_audio_at_all_rates() {
             let mut plugin = make_routed_plugin(
                 2,
                 None,
-                vec![routed_band(DynEqPlacement::Left, 1_000.0, 12.0, -60.0, 20.0)],
+                vec![routed_band(
+                    DynEqPlacement::Left,
+                    1_000.0,
+                    12.0,
+                    -60.0,
+                    20.0,
+                )],
                 linked,
                 sample_rate,
             );
@@ -522,7 +547,13 @@ fn placement_is_structural_and_validated() {
     let mut plugin = make_routed_plugin(
         2,
         None,
-        vec![routed_band(DynEqPlacement::Stereo, 1_000.0, 6.0, -30.0, 4.0)],
+        vec![routed_band(
+            DynEqPlacement::Stereo,
+            1_000.0,
+            6.0,
+            -30.0,
+            4.0,
+        )],
         false,
         48_000,
     );
@@ -549,14 +580,20 @@ fn placement_is_structural_and_validated() {
 
     // Live placement edits are refused as structural; state is preserved.
     let error = plugin
-        .set_parameter(ParameterId::from("band_0_placement"), ParameterValue::Int(3))
+        .set_parameter(
+            ParameterId::from("band_0_placement"),
+            ParameterValue::Int(3),
+        )
         .unwrap_err();
     assert!(error.contains("structural"), "unexpected error: {error}");
     assert_eq!(plugin.bands[0].placement, DynEqPlacement::Stereo);
 
     // Out-of-range choice indices fail validation instead.
     let error = plugin
-        .set_parameter(ParameterId::from("band_0_placement"), ParameterValue::Int(5))
+        .set_parameter(
+            ParameterId::from("band_0_placement"),
+            ParameterValue::Int(5),
+        )
         .unwrap_err();
     assert!(!error.contains("structural"), "unexpected error: {error}");
     assert_eq!(plugin.bands[0].placement, DynEqPlacement::Stereo);
@@ -575,7 +612,15 @@ fn placement_is_structural_and_validated() {
 #[test]
 fn invalid_pair_geometry_is_rejected_and_clamping_falls_back() {
     let bands = || vec![routed_band(DynEqPlacement::Left, 1_000.0, 6.0, -30.0, 4.0)];
-    let stereo_bands = || vec![routed_band(DynEqPlacement::Stereo, 1_000.0, 6.0, -30.0, 4.0)];
+    let stereo_bands = || {
+        vec![routed_band(
+            DynEqPlacement::Stereo,
+            1_000.0,
+            6.0,
+            -30.0,
+            4.0,
+        )]
+    };
 
     // Overlapping, out-of-range, and degenerate pairs are rejected.
     for pairs in [
@@ -669,7 +714,10 @@ fn failed_tilt_reinitialize_preserves_populated_state_and_retries() {
     let mut candidate_prefix = prefix.clone();
     let mut twin_prefix = prefix.clone();
     candidate
-        .process_in_place(&mut candidate_prefix, &ProcessContext::new(original_rate, 4_096))
+        .process_in_place(
+            &mut candidate_prefix,
+            &ProcessContext::new(original_rate, 4_096),
+        )
         .unwrap();
     twin.process_in_place(&mut twin_prefix, &ProcessContext::new(original_rate, 4_096))
         .unwrap();
@@ -689,7 +737,10 @@ fn failed_tilt_reinitialize_preserves_populated_state_and_retries() {
     let mut candidate_suffix = suffix.clone();
     let mut twin_suffix = suffix.clone();
     candidate
-        .process_in_place(&mut candidate_suffix, &ProcessContext::new(original_rate, 2_048))
+        .process_in_place(
+            &mut candidate_suffix,
+            &ProcessContext::new(original_rate, 2_048),
+        )
         .unwrap();
     twin.process_in_place(&mut twin_suffix, &ProcessContext::new(original_rate, 2_048))
         .unwrap();
@@ -722,7 +773,13 @@ fn routed_band_without_pairs_is_a_documented_silent_bypass_on_the_infallible_pat
         channels,
         DynamicEqPluginParams {
             num_bands: 1,
-            bands: vec![routed_band(DynEqPlacement::Left, 1_000.0, 12.0, -60.0, 20.0)],
+            bands: vec![routed_band(
+                DynEqPlacement::Left,
+                1_000.0,
+                12.0,
+                -60.0,
+                20.0,
+            )],
             stereo_pairs: None,
             ..DynamicEqPluginParams::default()
         },
@@ -756,7 +813,13 @@ fn routed_band_without_pairs_is_a_documented_silent_bypass_on_the_infallible_pat
     // The strict constructor rejects the same configuration (fail-fast).
     let strict_params = DynamicEqPluginParams {
         num_bands: 1,
-        bands: vec![routed_band(DynEqPlacement::Left, 1_000.0, 12.0, -60.0, 20.0)],
+        bands: vec![routed_band(
+            DynEqPlacement::Left,
+            1_000.0,
+            12.0,
+            -60.0,
+            20.0,
+        )],
         stereo_pairs: None,
         ..DynamicEqPluginParams::default()
     };

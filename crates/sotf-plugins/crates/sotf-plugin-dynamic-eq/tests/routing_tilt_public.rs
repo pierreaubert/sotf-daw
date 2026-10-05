@@ -76,8 +76,7 @@ fn json_state_carries_tilt_placement_and_pairs() {
         ]
     }"#;
     let params: DynamicEqPluginParams = serde_json::from_str(json).unwrap();
-    let mut plugin =
-        DynamicEqPlugin::try_from_params_at_sample_rate(2, params, 48_000).unwrap();
+    let mut plugin = DynamicEqPlugin::try_from_params_at_sample_rate(2, params, 48_000).unwrap();
 
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("band_0_shape")),
@@ -93,14 +92,14 @@ fn json_state_carries_tilt_placement_and_pairs() {
     );
 
     // Unknown spellings are rejected instead of silently defaulting.
-    assert!(serde_json::from_str::<DynamicEqPluginParams>(
-        r#"{"bands": [{"shape": "comb"}]}"#,
-    )
-    .is_err());
-    assert!(serde_json::from_str::<DynamicEqPluginParams>(
-        r#"{"bands": [{"placement": "diagonal"}]}"#,
-    )
-    .is_err());
+    assert!(
+        serde_json::from_str::<DynamicEqPluginParams>(r#"{"bands": [{"shape": "comb"}]}"#,)
+            .is_err()
+    );
+    assert!(
+        serde_json::from_str::<DynamicEqPluginParams>(r#"{"bands": [{"placement": "diagonal"}]}"#,)
+            .is_err()
+    );
 
     // The tilt/left band audibly moves the left leg on real audio.
     let sample_rate = 48_000_u32;
@@ -129,7 +128,10 @@ fn placement_and_tilt_shape_are_structural_through_public_setters() {
     plugin.initialize(48_000.0).unwrap();
 
     let error = plugin
-        .set_parameter(ParameterId::from("band_0_placement"), ParameterValue::Int(2))
+        .set_parameter(
+            ParameterId::from("band_0_placement"),
+            ParameterValue::Int(2),
+        )
         .unwrap_err();
     assert!(error.contains("structural"), "unexpected error: {error}");
 

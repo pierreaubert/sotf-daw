@@ -32,9 +32,7 @@ const MEASURE_WIN: usize = 16384;
 const TONE_BIN_16K: usize = 3408;
 
 fn lcg(state: &mut u32) -> f32 {
-    *state = state
-        .wrapping_mul(1_664_525)
-        .wrapping_add(1_013_904_223);
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     (*state as f32 / u32::MAX as f32) * 2.0 - 1.0
 }
 
@@ -73,12 +71,7 @@ fn interleave(left: &[f32], right: &[f32]) -> Vec<f32> {
 }
 
 fn channel(signal: &[f32], channels: usize, ch: usize) -> Vec<f32> {
-    signal
-        .iter()
-        .skip(ch)
-        .step_by(channels)
-        .copied()
-        .collect()
+    signal.iter().skip(ch).step_by(channels).copied().collect()
 }
 
 fn mean_power(signal: &[f32]) -> f64 {
@@ -278,9 +271,7 @@ fn drain_all(plugin: &mut HissReducerPlugin, channels: usize, blocks: &[usize]) 
     for call in 0..4096 {
         let n = blocks[call % blocks.len()];
         let mut b = vec![0.0f32; n * channels];
-        let s = plugin
-            .drain(&mut b, &ProcessContext::new(RATE, n))
-            .unwrap();
+        let s = plugin.drain(&mut b, &ProcessContext::new(RATE, n)).unwrap();
         assert!(s.frames <= n);
         out.extend_from_slice(&b[..s.frames * channels]);
         if s.complete {
@@ -356,20 +347,13 @@ fn guard_off_matches_legacy_defaults_bit_exactly() {
             let frames = 8192;
             let tone = sine_tone(frames, 0.12, 750.0, RATE);
             let hiss_l = spectral_hiss_fixture(frames, 0x6106);
-            let mixed_l: Vec<f32> = tone
-                .iter()
-                .zip(hiss_l.iter())
-                .map(|(t, h)| t + h)
-                .collect();
+            let mixed_l: Vec<f32> = tone.iter().zip(hiss_l.iter()).map(|(t, h)| t + h).collect();
             let input = if channels == 1 {
                 mixed_l
             } else {
                 let hiss_r = spectral_hiss_fixture(frames, 0x6107);
-                let mixed_r: Vec<f32> = tone
-                    .iter()
-                    .zip(hiss_r.iter())
-                    .map(|(t, h)| t + h)
-                    .collect();
+                let mixed_r: Vec<f32> =
+                    tone.iter().zip(hiss_r.iter()).map(|(t, h)| t + h).collect();
                 interleave(&mixed_l, &mixed_r)
             };
             let out_default = render(&mut default_plugin, RATE, &input, channels, &PARTITIONS);
@@ -424,23 +408,19 @@ fn stationary_program_never_fires_guard() {
     // block all reduction). Same operating point as the backend
     // quiet-tone proof; tone/hiss programs and bounds unchanged.
     for guard in [false, true] {
-        let mut plugin =
-            profiled_spectral_plugin_with_threshold(1, 0.85, guard, 0xc0ffee, -20.0);
+        let mut plugin = profiled_spectral_plugin_with_threshold(1, 0.85, guard, 0xc0ffee, -20.0);
         let frames = RATE as usize * 2;
         let tone = sine_tone(frames, 0.06, TONE_HZ, RATE);
         let hiss = spectral_hiss_fixture(frames, 0x70e5);
-        let mixed: Vec<f32> = tone
-            .iter()
-            .zip(hiss.iter())
-            .map(|(t, h)| t + h)
-            .collect();
+        let mixed: Vec<f32> = tone.iter().zip(hiss.iter()).map(|(t, h)| t + h).collect();
         let output = render(&mut plugin, RATE, &mixed, 1, &PARTITIONS);
         assert!(output.iter().all(|s| s.is_finite()));
 
         let start = RATE as usize;
         let in_win = &mixed[start..start + MEASURE_WIN];
         let out_win = &output[start + LATENCY..start + LATENCY + MEASURE_WIN];
-        let tone_db = power_db(goertzel_power(out_win, TONE_BIN_16K) / goertzel_power(in_win, TONE_BIN_16K));
+        let tone_db =
+            power_db(goertzel_power(out_win, TONE_BIN_16K) / goertzel_power(in_win, TONE_BIN_16K));
         assert!(
             tone_db.abs() < 1.0,
             "guard={guard}: quiet tone changed by {tone_db:.2} dB"
@@ -466,11 +446,7 @@ fn stationary_program_never_fires_guard() {
     let frames = RATE as usize * 2;
     let tone = sine_tone(frames, 0.06, TONE_HZ, RATE);
     let hiss = spectral_hiss_fixture(frames, 0x70e5);
-    let mixed: Vec<f32> = tone
-        .iter()
-        .zip(hiss.iter())
-        .map(|(t, h)| t + h)
-        .collect();
+    let mixed: Vec<f32> = tone.iter().zip(hiss.iter()).map(|(t, h)| t + h).collect();
     let mut off = profiled_spectral_plugin_with_threshold(1, 0.85, false, 0xc0ffee, -20.0);
     let mut on = profiled_spectral_plugin_with_threshold(1, 0.85, true, 0xc0ffee, -20.0);
     let out_off = render(&mut off, RATE, &mixed, 1, &PARTITIONS);
@@ -498,7 +474,11 @@ fn guard_preserves_settled_impulses_without_losing_suppression() {
         signal[base] += 1.0;
     }
     let bases = settled_bases(frames, RATE as usize, 2400);
-    assert!(bases.len() >= 10, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 10,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let mut off = profiled_spectral_plugin(1, 0.85, false, 0x9a5515);
     let mut on = profiled_spectral_plugin(1, 0.85, true, 0x9a5515);
@@ -623,11 +603,7 @@ fn guard_toggle_is_bounded_and_partition_independent() {
     let boundary = 8192;
     let tone = sine_tone(frames, 0.12, 750.0, RATE);
     let hiss = spectral_hiss_fixture(frames, 0x70661e);
-    let mut signal: Vec<f32> = tone
-        .iter()
-        .zip(hiss.iter())
-        .map(|(t, h)| t + h)
-        .collect();
+    let mut signal: Vec<f32> = tone.iter().zip(hiss.iter()).map(|(t, h)| t + h).collect();
     for base in (9000..frames).step_by(1200) {
         signal[base] += 1.0;
     }
@@ -819,7 +795,11 @@ fn guard_shares_onset_when_linked_and_covers_channels() {
     }
     let input = interleave(&sig_l, &sig_r);
     let bases = settled_bases(frames, RATE as usize, 2400);
-    assert!(bases.len() >= 10, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 10,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let render_linked = |guard: bool| {
         let mut plugin = profiled_spectral_plugin(2, 0.85, guard, 0x11c0);
@@ -1001,10 +981,7 @@ fn reset_retains_guard_flag_but_restarts_blind_window() {
     }
     let mut plugin = profiled_spectral_plugin(1, 0.85, true, 0x9e5e7);
     plugin.reset();
-    assert!(
-        plugin.transient_guard(),
-        "reset must retain the guard flag"
-    );
+    assert!(plugin.transient_guard(), "reset must retain the guard flag");
     assert!(plugin.has_captured_profile());
     let out_on = render(&mut plugin, RATE, &signal, 1, &PARTITIONS);
     set_bool(&mut plugin, "transient_guard", false);
@@ -1033,7 +1010,11 @@ fn guard_preserves_settled_impulses_across_hop_phases() {
         signal[base] += 1.0;
     }
     let bases = settled_bases(frames, first, step);
-    assert!(bases.len() >= 10, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 10,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let mut off = profiled_spectral_plugin(1, 0.85, false, 0x9a5516);
     let mut on = profiled_spectral_plugin(1, 0.85, true, 0x9a5516);
@@ -1078,11 +1059,19 @@ fn guard_linked_one_sided_onset_guards_both_channels() {
     }
     let input = interleave(&sig_l, &hiss_r);
     let bases = settled_bases(frames, RATE as usize, 2400);
-    assert!(bases.len() >= 10, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 10,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let render_mode = |guard: bool, linked: bool| {
         let mut plugin = profiled_spectral_plugin(2, 0.85, guard, 0x015e);
-        let mode = if linked { LINK_LINKED } else { LINK_INDEPENDENT };
+        let mode = if linked {
+            LINK_LINKED
+        } else {
+            LINK_INDEPENDENT
+        };
         plugin
             .set_parameter(ParameterId::from("link_mode"), ParameterValue::Int(mode))
             .unwrap();
@@ -1140,7 +1129,11 @@ fn guard_preserves_settled_impulses_at_44_1khz() {
         .step_by(step)
         .filter(|&b| b >= RATE_44K as usize * 3 / 2 && b + LATENCY + 64 < frames)
         .collect();
-    assert!(bases.len() >= 8, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 8,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let make = |guard: bool| {
         let mut plugin = spectral_plugin(1, RATE_44K, 0.85);
@@ -1172,10 +1165,7 @@ fn guard_preserves_settled_impulses_at_44_1khz() {
         worst_on > -3.0,
         "44.1 kHz worst peak lost ({worst_on:.2} dB, mean {loss_on:.2} dB)"
     );
-    assert!(
-        best_on < 2.0,
-        "44.1 kHz amplified a peak ({best_on:.2} dB)"
-    );
+    assert!(best_on < 2.0, "44.1 kHz amplified a peak ({best_on:.2} dB)");
 }
 
 #[test]

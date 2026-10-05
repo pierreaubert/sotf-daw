@@ -51,7 +51,10 @@ pub(super) fn index_to_de_esser_split_topology(index: f64) -> String {
 
 pub(super) fn index_to_speech_denoiser_model(index: f64) -> String {
     let idx = index as usize;
-    speech_denoiser_models().get(idx).unwrap_or(&"RNNoise Full").to_string()
+    speech_denoiser_models()
+        .get(idx)
+        .unwrap_or(&"RNNoise Full")
+        .to_string()
 }
 
 pub(super) fn index_to_aae_speaker_config(index: f64) -> String {

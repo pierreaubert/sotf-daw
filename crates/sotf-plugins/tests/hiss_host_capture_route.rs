@@ -134,7 +134,10 @@ fn immediate_admits_learn_and_clear_with_live_snapshot() {
 
     // Idle cancel preserves the accepted profile and generation.
     immediate(&mut host, "learn_noise", false).unwrap();
-    let kept = snapshot.try_export().unwrap().expect("cancel keeps profile");
+    let kept = snapshot
+        .try_export()
+        .unwrap()
+        .expect("cancel keeps profile");
     assert_eq!(kept.generation, done.generation);
     assert_eq!(kept.profile, done.profile);
 
@@ -210,19 +213,12 @@ fn structural_refusals_and_automation_rejections_hold() {
             .validate_automatable_plugin_parameter(0, id, &value)
             .unwrap_err();
         assert!(error.contains("requires rebuilding"), "{id}: {error}");
-        let error = host
-            .set_plugin_parameter_at(0, id, value, 0)
-            .unwrap_err();
+        let error = host.set_plugin_parameter_at(0, id, value, 0).unwrap_err();
         assert!(error.contains("requires rebuilding"), "{id}: {error}");
     }
     // A realtime Hiss flag remains automatable as a control case.
-    host.set_plugin_parameter_at(
-        0,
-        "use_captured_profile",
-        ParameterValue::Bool(false),
-        0,
-    )
-    .unwrap();
+    host.set_plugin_parameter_at(0, "use_captured_profile", ParameterValue::Bool(false), 0)
+        .unwrap();
 
     // The detached automation sender also rejects momentary ids.
     let mut sender_host = hiss_host(&serde_json::json!({}));
@@ -241,7 +237,12 @@ fn structural_refusals_and_automation_rejections_hold() {
     let plugin = create_plugin("denoiser", &serde_json::json!({}), 1, RATE).unwrap();
     denoiser.add_plugin(plugin).unwrap();
     denoiser.build().unwrap();
-    for id in ["learn_noise", "clear_profile", "low_latency", "multi_resolution"] {
+    for id in [
+        "learn_noise",
+        "clear_profile",
+        "low_latency",
+        "multi_resolution",
+    ] {
         let error = denoiser
             .set_plugin_parameter_immediate(0, id, ParameterValue::Bool(true))
             .unwrap_err();
@@ -311,8 +312,7 @@ fn live_capture_typed_carrier_rebuild_matches_audio_and_eof() {
 
     // Fresh factory rebuild from the converted carrier.
     let mut rebuilt_host = DawHost::new(1, RATE);
-    let plugin =
-        create_plugin(&config.plugin_type, &config.parameters, 1, RATE).unwrap();
+    let plugin = create_plugin(&config.plugin_type, &config.parameters, 1, RATE).unwrap();
     rebuilt_host.add_plugin(plugin).unwrap();
     rebuilt_host.build().unwrap();
     let rebuilt_snapshot = hiss_snapshot(&rebuilt_host);
@@ -351,15 +351,13 @@ impl Plugin for PanicHookPlugin {
     }
 
     fn parameters(&self) -> Vec<Parameter> {
-        vec![Parameter::new_bool("trigger", "Trigger", false)
-            .with_update_mode(UpdateMode::Structural)]
+        vec![
+            Parameter::new_bool("trigger", "Trigger", false)
+                .with_update_mode(UpdateMode::Structural),
+        ]
     }
 
-    fn set_parameter(
-        &mut self,
-        _id: ParameterId,
-        _value: ParameterValue,
-    ) -> Result<(), String> {
+    fn set_parameter(&mut self, _id: ParameterId, _value: ParameterValue) -> Result<(), String> {
         Ok(())
     }
 
@@ -402,11 +400,7 @@ impl Plugin for PanicMetadataPlugin {
         panic!("injected metadata panic")
     }
 
-    fn set_parameter(
-        &mut self,
-        _id: ParameterId,
-        _value: ParameterValue,
-    ) -> Result<(), String> {
+    fn set_parameter(&mut self, _id: ParameterId, _value: ParameterValue) -> Result<(), String> {
         Ok(())
     }
 

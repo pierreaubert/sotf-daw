@@ -93,8 +93,7 @@ impl CascadeRef {
                 let left_selected = self.placements[stage] == Placement::Left;
                 for (channel, slot) in output.iter_mut().enumerate().take(self.channels) {
                     let selected = self.pairs.iter().any(|[left, right]| {
-                        (left_selected && *left == channel)
-                            || (!left_selected && *right == channel)
+                        (left_selected && *left == channel) || (!left_selected && *right == channel)
                     });
                     *slot = conv(
                         &self.histories[stage][channel],
@@ -212,7 +211,13 @@ fn seeded_input(frames: usize, channels: usize) -> Vec<f32> {
         .collect()
 }
 
-fn band(filter_type: &str, frequency: f64, q: f64, gain_db: f64, placement: Option<Placement>) -> BandConfig {
+fn band(
+    filter_type: &str,
+    frequency: f64,
+    q: f64,
+    gain_db: f64,
+    placement: Option<Placement>,
+) -> BandConfig {
     BandConfig {
         filter_type: filter_type.to_string(),
         frequency,
@@ -314,13 +319,22 @@ fn run_exact_case(
 #[test]
 fn exact_ordered_output_matches_independent_f64_cascade() {
     let sets: Vec<ExactCaseSet> = vec![
-        (vec![Some(Placement::Left)], vec![("Peak", 1000.0, 1.0, 3.0)]),
-        (vec![Some(Placement::Right)], vec![("Peak", 2000.0, 1.5, -4.0)]),
+        (
+            vec![Some(Placement::Left)],
+            vec![("Peak", 1000.0, 1.0, 3.0)],
+        ),
+        (
+            vec![Some(Placement::Right)],
+            vec![("Peak", 2000.0, 1.5, -4.0)],
+        ),
         (
             vec![Some(Placement::Mid)],
             vec![("Lowshelf", 300.0, 1.0, 3.0)],
         ),
-        (vec![Some(Placement::Side)], vec![("Highpass", 500.0, 0.707, 0.0)]),
+        (
+            vec![Some(Placement::Side)],
+            vec![("Highpass", 500.0, 0.707, 0.0)],
+        ),
         (
             vec![None, Some(Placement::Left)],
             vec![("Peak", 1000.0, 1.0, 3.0), ("Peak", 2000.0, 1.0, -4.0)],
@@ -429,30 +443,10 @@ fn exact_ordered_output_matches_independent_f64_cascade() {
     );
     // 44.1 kHz and 8192-tap smoke coverage.
     run_exact_case(
-        &sets[5].0,
-        &sets[5].1,
-        2,
-        None,
-        44_100,
-        1.0,
-        0,
-        0,
-        3,
-        1e-5,
-        "44.1kHz",
+        &sets[5].0, &sets[5].1, 2, None, 44_100, 1.0, 0, 0, 3, 1e-5, "44.1kHz",
     );
     run_exact_case(
-        &sets[0].0,
-        &sets[0].1,
-        2,
-        None,
-        96_000,
-        1.0,
-        3,
-        0,
-        257,
-        1e-5,
-        "8192taps",
+        &sets[0].0, &sets[0].1, 2, None, 96_000, 1.0, 3, 0, 257, 1e-5, "8192taps",
     );
 }
 
@@ -488,7 +482,17 @@ fn exactness_covers_ten_stages_two_pairs_and_eight_channels() {
         ("Peak", 1500.0, 1.0, -2.0),
     ];
     run_exact_case(
-        &ten, &specs, 2, None, 48_000, 1.0, 0, 0, 17, 3e-5, "ten-stage/linear",
+        &ten,
+        &specs,
+        2,
+        None,
+        48_000,
+        1.0,
+        0,
+        0,
+        17,
+        3e-5,
+        "ten-stage/linear",
     );
     // Two explicit pairs on four channels: both pairs process, no channel is
     // left unpaired.
@@ -508,10 +512,7 @@ fn exactness_covers_ten_stages_two_pairs_and_eight_channels() {
     // Eight channels with two pairs: channels 2-5 take the identity path.
     run_exact_case(
         &[Some(Placement::Side), Some(Placement::Right)],
-        &[
-            ("Highpass", 500.0, 0.707, 0.0),
-            ("Peak", 2000.0, 1.0, -4.0),
-        ],
+        &[("Highpass", 500.0, 0.707, 0.0), ("Peak", 2000.0, 1.0, -4.0)],
         8,
         Some(vec![[0, 1], [6, 7]]),
         48_000,
@@ -693,18 +694,22 @@ fn invalid_pairs_placements_and_mixes_are_rejected() {
         "auto_gain is not supported",
     );
     // Unknown placement labels fail closed at the serde boundary.
-    assert!(serde_json::from_value::<LinearPhaseEqPluginParams>(serde_json::json!({
-        "num_filters": 1,
-        "filters": [{"filter_type": "Peak", "placement": "diagonal"}],
-    }))
-    .is_err());
+    assert!(
+        serde_json::from_value::<LinearPhaseEqPluginParams>(serde_json::json!({
+            "num_filters": 1,
+            "filters": [{"filter_type": "Peak", "placement": "diagonal"}],
+        }))
+        .is_err()
+    );
     // Malformed pair shapes fail closed as well.
-    assert!(serde_json::from_value::<LinearPhaseEqPluginParams>(serde_json::json!({
-        "num_filters": 1,
-        "filters": [{"filter_type": "Peak", "placement": "left"}],
-        "stereo_pairs": [[0]],
-    }))
-    .is_err());
+    assert!(
+        serde_json::from_value::<LinearPhaseEqPluginParams>(serde_json::json!({
+            "num_filters": 1,
+            "filters": [{"filter_type": "Peak", "placement": "left"}],
+            "stereo_pairs": [[0]],
+        }))
+        .is_err()
+    );
     // Valid controls: explicit pairs on four channels, default pair on stereo.
     let four = LinearPhaseEqPlugin::from_params(
         4,
@@ -1002,7 +1007,10 @@ fn inactive_slots_keep_ordered_latency_stable() {
         .zip(b.iter())
         .map(|(x, y)| (x - y).abs())
         .fold(0.0f32, f32::max);
-    assert!(diff > 0.01, "disabling a band must change audio, diff={diff}");
+    assert!(
+        diff > 0.01,
+        "disabling a band must change audio, diff={diff}"
+    );
 }
 
 fn streamed_impulse(
@@ -1024,7 +1032,13 @@ fn streamed_impulse(
     output
 }
 
-fn dft_at(output: &[f32], channel: usize, channels: usize, rate: u32, frequency: f64) -> (f64, f64) {
+fn dft_at(
+    output: &[f32],
+    channel: usize,
+    channels: usize,
+    rate: u32,
+    frequency: f64,
+) -> (f64, f64) {
     let mut re = 0.0;
     let mut im = 0.0;
     for (n, frame) in output.chunks_exact(channels).enumerate() {

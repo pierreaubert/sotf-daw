@@ -95,11 +95,7 @@ fn floor_power_db() -> f64 {
 
 /// Linear RMS (not dB) for floor-aware comparisons.
 fn linear_rms(samples: &[f32]) -> f64 {
-    (samples
-        .iter()
-        .map(|x| f64::from(*x).powi(2))
-        .sum::<f64>()
-        / samples.len().max(1) as f64)
+    (samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>() / samples.len().max(1) as f64)
         .sqrt()
 }
 
@@ -144,8 +140,8 @@ fn feed(plugin: &mut ResamplerPlugin, input: &[f32], frames: usize, output: &mut
 }
 
 fn rms_db(samples: &[f32]) -> f64 {
-    let energy = samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>()
-        / samples.len().max(1) as f64;
+    let energy =
+        samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>() / samples.len().max(1) as f64;
     10.0 * (energy / (AMPLITUDE * AMPLITUDE / 2.0)).log10()
 }
 
@@ -205,13 +201,7 @@ fn analytic_gain(
     real.hypot(imaginary)
 }
 
-fn analytic_db(
-    taps: usize,
-    phases: usize,
-    ratio_scale: f64,
-    freq_hz: f64,
-    input_rate: u32,
-) -> f64 {
+fn analytic_db(taps: usize, phases: usize, ratio_scale: f64, freq_hz: f64, input_rate: u32) -> f64 {
     20.0 * analytic_gain(taps, phases, ratio_scale, freq_hz, input_rate).log10()
 }
 
@@ -283,16 +273,17 @@ fn fit_tone(samples: &[f32], rate: u32, frequency: f64) -> (f64, f64) {
 /// the real spurious. Never used for acceptance.
 fn fit_tone_coherent_only(samples: &[f32], rate: u32, frequency: f64) -> (f64, f64) {
     let count = samples.len().max(1);
-    let (sin_sum, cos_sum) = samples.iter().enumerate().fold(
-        (0.0, 0.0),
-        |(s, c), (frame, &value)| {
-            let phase = TAU * frequency * frame as f64 / f64::from(rate);
-            (
-                s + f64::from(value) * phase.sin(),
-                c + f64::from(value) * phase.cos(),
-            )
-        },
-    );
+    let (sin_sum, cos_sum) =
+        samples
+            .iter()
+            .enumerate()
+            .fold((0.0, 0.0), |(s, c), (frame, &value)| {
+                let phase = TAU * frequency * frame as f64 / f64::from(rate);
+                (
+                    s + f64::from(value) * phase.sin(),
+                    c + f64::from(value) * phase.cos(),
+                )
+            });
     let sin_gain = 2.0 * sin_sum / count as f64;
     let cos_gain = 2.0 * cos_sum / count as f64;
     let fitted = sin_gain.hypot(cos_gain);
@@ -497,9 +488,7 @@ fn render_fixed_two(quality: ResamplerQuality) -> Vec<Vec<f32>> {
     blocks
 }
 
-fn render_upward(
-    quality: ResamplerQuality,
-) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
+fn render_upward(quality: ResamplerQuality) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
     let mut smoothed = make(quality, 2, true);
     let mut instant = make(quality, 2, false);
     smoothed.set_ratio(0.5, false).unwrap();
@@ -546,8 +535,7 @@ fn upward_transition_has_derived_hf_release_and_tight_lf() {
              the 3 dB bound with a 1 dB history-mixing margin"
         );
         let (smooth_blocks, instant_blocks) = render_upward(quality);
-        let transition_smooth: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let transition_instant: Vec<f32> =
             instant_blocks[9..13].iter().flatten().copied().collect();
         let hf_smooth = rms_db(&channel_samples(&transition_smooth, 2, 1));
@@ -580,8 +568,7 @@ fn upward_transition_coherent_residual_bounds_spurious() {
     // regression test below and is never used for acceptance.
     for quality in QUALITIES {
         let (smooth_blocks, instant_blocks) = render_upward(quality);
-        let transition_smooth: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let transition_instant: Vec<f32> =
             instant_blocks[9..13].iter().flatten().copied().collect();
         let lf_smooth = channel_samples(&transition_smooth, 2, 0);
@@ -613,10 +600,8 @@ fn slew_full_trajectory_uses_unified_window() {
     let rms_floor = floor_rms();
     for quality in QUALITIES {
         let (smooth_blocks, instant_blocks) = render_upward(quality);
-        let early_smooth: Vec<f32> =
-            smooth_blocks[9..11].iter().flatten().copied().collect();
-        let early_instant: Vec<f32> =
-            instant_blocks[9..11].iter().flatten().copied().collect();
+        let early_smooth: Vec<f32> = smooth_blocks[9..11].iter().flatten().copied().collect();
+        let early_instant: Vec<f32> = instant_blocks[9..11].iter().flatten().copied().collect();
         let hf_early_smooth = rms_db(&channel_samples(&early_smooth, 2, 1));
         let hf_early_instant = rms_db(&channel_samples(&early_instant, 2, 1));
         assert!(
@@ -878,8 +863,7 @@ fn cumulative_clock_proves_stable_window_and_quantifies_ramp_chirp() {
         // -50 dB discriminates real DSP timing regressions from a recurrence
         // bug copied in both clocks: a shared chirp would pass the
         // clock-derived fit vacuously but fail the uniform fit.
-        let transition_smooth: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let lf_moving = channel_samples(&transition_smooth, 2, 0);
         let clock_times: Vec<f64> = window
             .iter()
@@ -954,11 +938,9 @@ fn unchanged_ratio_control_isolates_ramp_from_estimator() {
         let lf = channel_samples(&window, 2, 0);
         let (gain_fixed, residual_fixed) = fit_tone(&lf, 96_000, 997.0);
         let (smooth_blocks, _) = render_upward(quality);
-        let transition: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let lf_transition = channel_samples(&transition, 2, 0);
-        let (gain_transition, residual_transition) =
-            fit_tone(&lf_transition, 96_000, 997.0);
+        let (gain_transition, residual_transition) = fit_tone(&lf_transition, 96_000, 997.0);
         eprintln!(
             "SLEW-REGRESSION {quality:?} control gain={gain_fixed:.3}dB residual={residual_fixed:.1}dB; \
              transition gain={gain_transition:.3}dB residual={residual_transition:.1}dB"
@@ -1011,9 +993,7 @@ fn corrected_fit_detects_true_spur_and_rejects_old_bias() {
     // from steady-state noise); amplitude 0.5*10^(-60/20) = 5e-4 peak.
     const SPUR_PEAK: f64 = 0.5 * 0.001;
     let pure: Vec<f32> = (0..SYNTH_LEN)
-        .map(|n| {
-            (AMPLITUDE * (TAU * 997.0 * n as f64 / f64::from(SYNTH_RATE)).sin()) as f32
-        })
+        .map(|n| (AMPLITUDE * (TAU * 997.0 * n as f64 / f64::from(SYNTH_RATE)).sin()) as f32)
         .collect();
     let (gain_true, residual_true) = fit_tone(&pure, SYNTH_RATE, 997.0);
     let (gain_old, residual_old) = fit_tone_coherent_only(&pure, SYNTH_RATE, 997.0);
@@ -1060,8 +1040,7 @@ fn corrected_fit_detects_true_spur_and_rejects_old_bias() {
             let phase_rad = phase_deg * std::f64::consts::PI / 180.0;
             let tone: Vec<f32> = (0..SYNTH_LEN)
                 .map(|n| {
-                    (AMPLITUDE
-                        * (TAU * 997.0 * n as f64 / f64::from(SYNTH_RATE) + phase_rad).sin())
+                    (AMPLITUDE * (TAU * 997.0 * n as f64 / f64::from(SYNTH_RATE) + phase_rad).sin())
                         as f32
                 })
                 .collect();
@@ -1090,10 +1069,7 @@ fn corrected_fit_detects_true_spur_and_rejects_old_bias() {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let min_gain = coherent_gains
-            .iter()
-            .copied()
-            .fold(f64::INFINITY, f64::min);
+        let min_gain = coherent_gains.iter().copied().fold(f64::INFINITY, f64::min);
         let spread = max_gain - min_gain;
         eprintln!(
             "SLEW-REGRESSION coherent-only gain spread over 4 phases: {spread:.4}dB (min {min_gain:.4}dB, max {max_gain:.4}dB)"

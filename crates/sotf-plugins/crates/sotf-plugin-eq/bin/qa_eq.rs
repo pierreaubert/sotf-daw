@@ -82,7 +82,9 @@ fn main() {
     };
     let mut inner_ls_orf =
         EqPlugin::from_params(channels, sample_rate, params_lowshelf_orf).unwrap();
-    inner_ls_orf.plugin_initialize(f64::from(sample_rate)).unwrap();
+    inner_ls_orf
+        .plugin_initialize(f64::from(sample_rate))
+        .unwrap();
 
     let input = generate_sine(sample_rate, 50.0, -20.0, num_frames);
     let mut buf_50hz = vec![0.0f32; input.len()];
@@ -130,7 +132,9 @@ fn main() {
     };
     let mut inner_hs_orf =
         EqPlugin::from_params(channels, sample_rate, params_highshelf_orf).unwrap();
-    inner_hs_orf.plugin_initialize(f64::from(sample_rate)).unwrap();
+    inner_hs_orf
+        .plugin_initialize(f64::from(sample_rate))
+        .unwrap();
 
     let input = generate_sine(sample_rate, 10000.0, -20.0, num_frames);
     let mut buf_10khz = vec![0.0f32; input.len()];

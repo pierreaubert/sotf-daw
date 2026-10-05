@@ -80,11 +80,7 @@ fn reconstructed_peak(samples: &[f32], rate: u32) -> f64 {
     });
     let mut history = [0.0; 25];
     let mut peak: f64 = 0.0;
-    for sample in samples
-        .iter()
-        .copied()
-        .chain(std::iter::repeat_n(0.0, 25))
-    {
+    for sample in samples.iter().copied().chain(std::iter::repeat_n(0.0, 25)) {
         history.copy_within(..24, 1);
         history[0] = f64::from(sample);
         for kernel in &kernels[..factor] {
@@ -118,8 +114,7 @@ fn render_and_check_output_peak(
     let mut input = vec![0.0; frames * channels];
     for frame in 0..frames {
         let t = frame as f64 / f64::from(rate);
-        let sample = (0.9 * (TAU * 1000.0 * t).sin()
-            + 0.4 * (TAU * 3333.0 * t + 0.7).sin()) as f32;
+        let sample = (0.9 * (TAU * 1000.0 * t).sin() + 0.4 * (TAU * 3333.0 * t + 0.7).sin()) as f32;
         for ch in 0..channels {
             let scale = if ch % 2 == 0 { 1.0 } else { 0.5 };
             input[frame * channels + ch] = sample * scale;
@@ -180,7 +175,10 @@ fn render_and_check_output_peak(
         position += count;
         call += 1;
     }
-    assert!(publications >= 3, "expected 3+ publications, got {publications}");
+    assert!(
+        publications >= 3,
+        "expected 3+ publications, got {publications}"
+    );
 }
 
 #[test]
@@ -252,8 +250,7 @@ fn output_true_peak_matches_independent_reconstruction() {
                     let error = (got - expected).abs();
                     if error > worst {
                         worst = error;
-                        worst_case =
-                            format!("rate={rate} ch={channels}/{ch} os={oversampling}");
+                        worst_case = format!("rate={rate} ch={channels}/{ch} os={oversampling}");
                     }
                     assert!(
                         error <= METER_TOLERANCE_DB,
@@ -346,10 +343,7 @@ fn threshold_automation_keeps_output_meters_consistent() {
     let data = meter(&plugin);
     // Final interval is limited to the tighter -18 dB ceiling (plus smoothing).
     let tail: Vec<f32> = output[(frames - interval) * channels..].to_vec();
-    let measured = tail
-        .iter()
-        .map(|s| f64::from(*s).abs())
-        .fold(0.0, f64::max);
+    let measured = tail.iter().map(|s| f64::from(*s).abs()).fold(0.0, f64::max);
     let measured_db = 20.0 * measured.max(1.0e-10).log10();
     assert!(
         measured_db <= -18.0 + 0.5,

@@ -29,4 +29,3 @@ pub(super) fn single_channel_matrix_parameters(
     }
     parameters
 }
-

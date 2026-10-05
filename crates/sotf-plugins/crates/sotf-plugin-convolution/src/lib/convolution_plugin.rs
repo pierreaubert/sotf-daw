@@ -7,7 +7,9 @@ use super::types::{ConvolutionLoadStatus, IrLoadCompletion, RetiredIrState};
 use crate::params::PARAMS as CV;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use plugins_spatial::{nupc, validate_interleaved_in_place};
-use rubato::{Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction};
+use rubato::{
+    Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction,
+};
 use rustfft::FftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::param_bridge;
@@ -389,7 +391,9 @@ impl ConvolutionPlugin {
         }
         let target_lengths: Option<Vec<usize>> = ir_samples
             .iter()
-            .map(|channel| Self::resampled_length(channel.len(), ir_sample_rate, target_sample_rate))
+            .map(|channel| {
+                Self::resampled_length(channel.len(), ir_sample_rate, target_sample_rate)
+            })
             .collect();
         let estimated_bytes = target_lengths.map_or(usize::MAX, |target_lengths| {
             if true_stereo {
@@ -1385,12 +1389,9 @@ impl ConvolutionPlugin {
             let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
             let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
                 .map_err(|e| format!("Input adapter error: {e}"))?;
-            let mut output_adapter = SequentialSliceOfVecs::new_mut(
-                &mut output_channels,
-                num_channels,
-                output_capacity,
-            )
-            .map_err(|e| format!("Output adapter error: {e}"))?;
+            let mut output_adapter =
+                SequentialSliceOfVecs::new_mut(&mut output_channels, num_channels, output_capacity)
+                    .map_err(|e| format!("Output adapter error: {e}"))?;
             let (_, written) = resampler
                 .process_all_into_buffer(&input_adapter, &mut output_adapter, source_len, None)
                 .map_err(|e| format!("Exact-rate IR resampling error: {e}"))?;
@@ -1748,7 +1749,8 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
 
 impl ConvolutionPlugin {
     fn validate_stream_rate(&self, context: &ProcessContext) -> PluginResult<()> {
-        if self.channels == 0 || self.sample_rate == 0.0 || context.sample_rate != self.sample_rate {
+        if self.channels == 0 || self.sample_rate == 0.0 || context.sample_rate != self.sample_rate
+        {
             return Err(
                 "Convolution requires the prepared sample rate and nonzero channels".into(),
             );

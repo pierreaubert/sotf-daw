@@ -247,7 +247,9 @@ fn aud139_shelf_parameter_descriptors_append_after_legacy_addresses() {
             );
         }
         let shape_index = 64 + band * 2;
-        for (choice_index, expected) in ["Peak", "Low Shelf", "High Shelf", "Tilt"].into_iter().enumerate()
+        for (choice_index, expected) in ["Peak", "Low Shelf", "High Shelf", "Tilt"]
+            .into_iter()
+            .enumerate()
         {
             let label = plugin_get_parameter_choice_label(handle_const, shape_index, choice_index);
             assert_eq!(c_string(label), expected);
@@ -257,7 +259,10 @@ fn aud139_shelf_parameter_descriptors_append_after_legacy_addresses() {
         let placement_info = plugin_get_parameter_info(handle_const, 80 + band);
         assert!(!placement_info.is_null());
         // SAFETY: the metadata is borrowed from this live handle.
-        assert_eq!(c_string(unsafe { (*placement_info).id }), format!("band_{band}_placement"));
+        assert_eq!(
+            c_string(unsafe { (*placement_info).id }),
+            format!("band_{band}_placement")
+        );
     }
 
     plugin_destroy(handle);

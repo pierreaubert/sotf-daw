@@ -92,13 +92,7 @@ fn analytic_gain(
     real.hypot(imaginary)
 }
 
-fn analytic_db(
-    taps: usize,
-    phases: usize,
-    ratio_scale: f64,
-    freq_hz: f64,
-    input_rate: u32,
-) -> f64 {
+fn analytic_db(taps: usize, phases: usize, ratio_scale: f64, freq_hz: f64, input_rate: u32) -> f64 {
     20.0 * analytic_gain(taps, phases, ratio_scale, freq_hz, input_rate).log10()
 }
 
@@ -127,7 +121,11 @@ fn render_static(
         let block_frames = block.len() / channels;
         let mut cell = vec![f32::NAN; plugin.output_frames_for_input(block_frames) * channels];
         let written = plugin
-            .process(block, &mut cell, &ProcessContext::new(input_rate, block_frames))
+            .process(
+                block,
+                &mut cell,
+                &ProcessContext::new(input_rate, block_frames),
+            )
             .unwrap();
         output.extend_from_slice(&cell[..written * channels]);
         assert!(cell[written * channels..].iter().all(|x| x.is_nan()));

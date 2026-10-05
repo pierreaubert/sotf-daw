@@ -42,8 +42,9 @@ fn assert_port_types<P: Plugin + ClapPlugin>(
     // SAFETY: extension pointers and selected layouts belong to the live wrapper.
     unsafe {
         assert!(((*plugin).init.unwrap())(plugin));
-        let configs = ((*plugin).get_extension.unwrap())(plugin, CLAP_EXT_AUDIO_PORTS_CONFIG.as_ptr())
-            .cast::<clap_plugin_audio_ports_config>();
+        let configs =
+            ((*plugin).get_extension.unwrap())(plugin, CLAP_EXT_AUDIO_PORTS_CONFIG.as_ptr())
+                .cast::<clap_plugin_audio_ports_config>();
         let ports = ((*plugin).get_extension.unwrap())(plugin, CLAP_EXT_AUDIO_PORTS.as_ptr())
             .cast::<clap_plugin_audio_ports>();
         assert!(!configs.is_null() && !ports.is_null());
@@ -53,9 +54,8 @@ fn assert_port_types<P: Plugin + ClapPlugin>(
             assert!(((*configs).get.unwrap())(plugin, index, &mut config));
             assert_eq!(config.main_input_channel_count, input_channels);
             assert_eq!(config.main_output_channel_count, output_channels);
-            let port_type = |ptr: *const c_char| {
-                (!ptr.is_null()).then(|| CStr::from_ptr(ptr).to_bytes())
-            };
+            let port_type =
+                |ptr: *const c_char| (!ptr.is_null()).then(|| CStr::from_ptr(ptr).to_bytes());
             assert_eq!(port_type(config.main_input_port_type), input_type);
             assert_eq!(port_type(config.main_output_port_type), output_type);
             assert!(((*configs).select.unwrap())(plugin, config.id));

@@ -339,9 +339,7 @@ pub unsafe trait Params: 'static + Send + Sync {
     /// This lets a fresh, not-yet-initialized plugin save the accepted candidate
     /// state without publishing it to the live parameter objects before DSP
     /// preparation succeeds.
-    fn serialize_parameter_overrides(
-        &self,
-    ) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
+    fn serialize_parameter_overrides(&self) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
         BTreeMap::new()
     }
 
@@ -382,9 +380,7 @@ unsafe impl<P: Params> Params for Arc<P> {
         self.as_ref().defer_state_parameter_values()
     }
 
-    fn serialize_parameter_overrides(
-        &self,
-    ) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
+    fn serialize_parameter_overrides(&self) -> BTreeMap<String, crate::wrapper::state::ParamValue> {
         self.as_ref().serialize_parameter_overrides()
     }
 

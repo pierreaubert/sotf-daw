@@ -72,7 +72,8 @@ fn reference_split(
     params
         .select_band_split_layout(num_bands)
         .expect("the reference uses the negotiated BandSplit count");
-    let plugin = crate::params::configuration::create_plugin("BandSplit", 48_000.0, params).unwrap();
+    let plugin =
+        crate::params::configuration::create_plugin("BandSplit", 48_000.0, params).unwrap();
     let mut plugin = plugins_bridge::prepare_standalone_plugin(plugin, FRAMES).unwrap();
     plugin.initialize(48_000.0).unwrap();
     params.sync_to_plugin(plugin.as_mut()).unwrap();

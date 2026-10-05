@@ -44,7 +44,12 @@ impl FrameRing {
         if initial_zeros > capacity || capacity == 0 {
             return Err("speech adapter ring has invalid capacity".into());
         }
-        Ok(Self { samples: prepared_samples(count)?, channels, read: 0, len: initial_zeros })
+        Ok(Self {
+            samples: prepared_samples(count)?,
+            channels,
+            read: 0,
+            len: initial_zeros,
+        })
     }
 
     fn capacity(&self) -> usize {
@@ -154,10 +159,9 @@ impl RateAdapter {
         // Count several internal backend blocks, both channel buffers, the
         // delayed host dry path, and the wet FIFO before constructing rubato.
         // Final capacities are still checked and fallibly reserved below.
-        let prepared_bytes = PREPARED_SINC_TABLE_BYTES + (maximum_chunk_frames * 8.0
-            + host_ratio * 1_200.0 * 4.0
-            + 4_096.0)
-            * (channels * size_of::<f32>()) as f64;
+        let prepared_bytes = PREPARED_SINC_TABLE_BYTES
+            + (maximum_chunk_frames * 8.0 + host_ratio * 1_200.0 * 4.0 + 4_096.0)
+                * (channels * size_of::<f32>()) as f64;
         if !prepared_bytes.is_finite() || prepared_bytes > MAX_PREPARED_AUDIO_BYTES {
             return Err("speech adapter prepared audio exceeds memory budget".into());
         }
@@ -172,8 +176,7 @@ impl RateAdapter {
             .output_frames_envelope(model_frames)
             .ok_or("speech adapter output envelope unavailable")?;
         let ratio = host_rate / MODEL_RATE;
-        let delay = (input.signal_delay_samples() + 960.0) * ratio
-            + output.signal_delay_samples();
+        let delay = (input.signal_delay_samples() + 960.0) * ratio + output.signal_delay_samples();
         if !delay.is_finite() || delay < 0.0 {
             return Err("speech adapter has invalid signal delay".into());
         }
@@ -262,14 +265,19 @@ impl RateAdapter {
         bypass: bool,
     ) -> PluginResult<()> {
         let frames = buffer.len() / self.channels;
-        if frames > HOST_CHUNK || frames * self.channels != buffer.len()
+        if frames > HOST_CHUNK
+            || frames * self.channels != buffer.len()
             || dry_output.len() != buffer.len()
         {
             return Err("speech adapter chunk shape is invalid".into());
         }
         let mut sanitized = [0.0_f32; HOST_CHUNK * 2];
         for (index, sample) in buffer.iter().enumerate() {
-            sanitized[index] = if sample.is_finite() { sample.clamp(-1.0, 1.0) } else { 0.0 };
+            sanitized[index] = if sample.is_finite() {
+                sample.clamp(-1.0, 1.0)
+            } else {
+                0.0
+            };
         }
         for frame in 0..frames {
             let range = frame * self.channels..(frame + 1) * self.channels;
@@ -287,7 +295,8 @@ impl RateAdapter {
                 model_frames,
                 self.channels,
                 bypass,
-            ) != model_frames {
+            ) != model_frames
+            {
                 return Err("RNNoise did not accept all converted frames".into());
             }
             let converted_frames = self.output.process(
@@ -297,7 +306,8 @@ impl RateAdapter {
             )?;
             for frame in 0..converted_frames {
                 let range = frame * self.channels..(frame + 1) * self.channels;
-                self.fractional.process(&self.converted[range], &mut self.wet_frame[..self.channels]);
+                self.fractional
+                    .process(&self.converted[range], &mut self.wet_frame[..self.channels]);
                 self.wet.push(&self.wet_frame[..self.channels])?;
             }
         }
@@ -316,13 +326,17 @@ mod tests {
     #[test]
     fn bypassed_model_impulse_exposes_aligned_latency_and_complete_finite_filter_tail() {
         for rate in [
-            8_000.0, 22_050.0, 44_100.0, 88_200.0, 96_000.0, 192_000.0,
-            384_000.0, 768_000.0, 1_234.5678, 12_345.678, 45_678.901, 123_456.78,
+            8_000.0, 22_050.0, 44_100.0, 88_200.0, 96_000.0, 192_000.0, 384_000.0, 768_000.0,
+            1_234.5678, 12_345.678, 45_678.901, 123_456.78,
         ] {
             let mut adapter = RateAdapter::new(rate, 1).unwrap();
             let mut backend = RnnoiseBackend::new();
             backend
-                .initialize_with_model(48_000, 1, crate::SpeechDenoiserModel::default().backend_id())
+                .initialize_with_model(
+                    48_000,
+                    1,
+                    crate::SpeechDenoiserModel::default().backend_id(),
+                )
                 .unwrap();
             let expected_peak = adapter.latency() + 17;
             let frames = adapter.drain_frames() + 256;
@@ -335,7 +349,12 @@ mod tests {
                     input[17 - offset] = 1.0;
                 }
                 adapter
-                    .process_chunk(&mut input[..count], &mut delayed_dry[..count], &mut backend, true)
+                    .process_chunk(
+                        &mut input[..count],
+                        &mut delayed_dry[..count],
+                        &mut backend,
+                        true,
+                    )
                     .unwrap();
                 output.extend_from_slice(&input[..count]);
             }
@@ -350,7 +369,9 @@ mod tests {
                 actual_peak.0
             );
             assert!(
-                output[adapter.drain_frames()..].iter().all(|sample| sample.abs() < 1.0e-4),
+                output[adapter.drain_frames()..]
+                    .iter()
+                    .all(|sample| sample.abs() < 1.0e-4),
                 "{rate} Hz finite converter/filter support outlived the declared drain"
             );
         }
@@ -362,7 +383,11 @@ mod tests {
             let mut adapter = RateAdapter::new(rate, 1).unwrap();
             let mut backend = RnnoiseBackend::new();
             backend
-                .initialize_with_model(48_000, 1, crate::SpeechDenoiserModel::default().backend_id())
+                .initialize_with_model(
+                    48_000,
+                    1,
+                    crate::SpeechDenoiserModel::default().backend_id(),
+                )
                 .unwrap();
             let frames = adapter.latency() + 4096;
             let mut wet = Vec::with_capacity(frames);
@@ -376,7 +401,12 @@ mod tests {
                     *sample = (0.5 * phase.sin()) as f32;
                 }
                 adapter
-                    .process_chunk(&mut input[..count], &mut delayed_dry[..count], &mut backend, true)
+                    .process_chunk(
+                        &mut input[..count],
+                        &mut delayed_dry[..count],
+                        &mut backend,
+                        true,
+                    )
                     .unwrap();
                 wet.extend_from_slice(&input[..count]);
                 dry.extend_from_slice(&delayed_dry[..count]);
@@ -390,12 +420,18 @@ mod tests {
             assert!(energy > 100.0, "{rate} Hz dry oracle is silent");
             let correlation = |lag: isize| -> f64 {
                 (start..end)
-                    .map(|index| f64::from(dry[index]) * f64::from(wet[index.checked_add_signed(lag).unwrap()]))
+                    .map(|index| {
+                        f64::from(dry[index])
+                            * f64::from(wet[index.checked_add_signed(lag).unwrap()])
+                    })
                     .sum::<f64>()
             };
             let centered = correlation(0);
             for lag in [-3, -2, -1, 1, 2, 3] {
-                assert!(centered >= correlation(lag), "{rate} Hz wet/dry peak shifted by {lag} frames");
+                assert!(
+                    centered >= correlation(lag),
+                    "{rate} Hz wet/dry peak shifted by {lag} frames"
+                );
             }
         }
     }

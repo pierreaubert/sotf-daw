@@ -15,14 +15,11 @@ fn key_layout() -> AudioIOLayout {
     layout
 }
 
-fn de_esser_params_with(
-    overrides: &[(&str, f64)],
-) -> std::sync::Arc<crate::params::DynamicParams> {
+fn de_esser_params_with(overrides: &[(&str, f64)]) -> std::sync::Arc<crate::params::DynamicParams> {
     // Specs provide stable integer Choice metadata for String-typed runtime
     // controls (mode, split_topology). Merge runtime for any missing IDs.
-    let bridge = plugins_bridge::param_bridge::ParamBridge::new(
-        crate::wrapper::get_param_specs("DeEsser"),
-    );
+    let bridge =
+        plugins_bridge::param_bridge::ParamBridge::new(crate::wrapper::get_param_specs("DeEsser"));
     let mut infos = (0..bridge.count())
         .filter_map(|index| bridge.info(index))
         .collect::<Vec<_>>();
@@ -304,7 +301,10 @@ fn sibilant_tone(start_frame: usize, frames: usize, peak: f32) -> [Vec<f32>; 2] 
 }
 
 fn tone_rms(channel: &[f32], from_sample: usize) -> f32 {
-    let sum: f32 = channel[from_sample..].iter().map(|sample| sample * sample).sum();
+    let sum: f32 = channel[from_sample..]
+        .iter()
+        .map(|sample| sample * sample)
+        .sum();
     (sum / (channel.len() - from_sample) as f32).sqrt()
 }
 
@@ -361,7 +361,10 @@ fn native_deesser_silent_and_swapped_keys_pass_program() {
             let mut program = sibilant_tone(position, frames, program_peak);
             let mut keys = sibilant_tone(position, frames, key_peak);
             let status = callback(&mut wrapper, &mut program, Some(&mut keys));
-            assert!(!matches!(status, ProcessStatus::Error(_)), "{label}: {status:?}");
+            assert!(
+                !matches!(status, ProcessStatus::Error(_)),
+                "{label}: {status:?}"
+            );
             rendered[0].extend_from_slice(&program[0]);
             rendered[1].extend_from_slice(&program[1]);
             position += frames;
@@ -403,8 +406,8 @@ fn native_deesser_internal_detection_with_hot_key_connected_matches_no_bus() {
         position += frames;
     }
     let reference = sibilant_tone(0, position, 0.05);
-    let ratio_db =
-        20.0 * (tone_rms(&rendered[0], position / 2) / tone_rms(&reference[0], position / 2)).log10();
+    let ratio_db = 20.0
+        * (tone_rms(&rendered[0], position / 2) / tone_rms(&reference[0], position / 2)).log10();
     assert!(
         ratio_db.abs() < 1.0,
         "internal detection must pass within 1 dB, got {ratio_db:.2} dB"
@@ -458,7 +461,10 @@ fn native_deesser_invalid_key_refusal_retains_engaged_history() {
         );
         assert!(rejected.iter().flatten().all(|sample| *sample == 0.0));
         if keyed {
-            assert_eq!(keys, key_snapshot, "{case}: rejected key must stay immutable");
+            assert_eq!(
+                keys, key_snapshot,
+                "{case}: rejected key must stay immutable"
+            );
         }
 
         let program = sibilant_tone(position, frames, 0.05);
@@ -480,7 +486,10 @@ fn native_deesser_invalid_key_refusal_retains_engaged_history() {
             "{case}: refusal must not disturb engaged history"
         );
         assert!(
-            continued_live.iter().flatten().any(|sample| sample.abs() > 1.0e-3),
+            continued_live
+                .iter()
+                .flatten()
+                .any(|sample| sample.abs() > 1.0e-3),
             "{case}: rejected callback must leave the route processing"
         );
         let max_difference = continued_live
@@ -549,8 +558,8 @@ fn native_deesser_structural_key_flip_fails_then_restart_recovers() {
         position += frames;
     }
     let reference = sibilant_tone(0, position, 0.05);
-    let hot_db =
-        20.0 * (tone_rms(&rendered[0], position / 2) / tone_rms(&reference[0], position / 2)).log10();
+    let hot_db = 20.0
+        * (tone_rms(&rendered[0], position / 2) / tone_rms(&reference[0], position / 2)).log10();
     assert!(
         hot_db < -6.0,
         "restarted key route must reduce past -6 dB, got {hot_db:.2} dB"

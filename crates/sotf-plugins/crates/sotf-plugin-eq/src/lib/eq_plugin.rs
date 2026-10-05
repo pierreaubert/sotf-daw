@@ -679,14 +679,8 @@ impl EqPlugin {
                     "Filter order must be even (2, 4, 6, 8); got {order}"
                 ));
             }
-            let stages = create_band_stages(
-                filter_type,
-                f.freq,
-                sample_rate,
-                f.q,
-                f.db_gain,
-                order,
-            );
+            let stages =
+                create_band_stages(filter_type, f.freq, sample_rate, f.q, f.db_gain, order);
             Ok((stages, order))
         };
         let config_to_advanced =
@@ -1521,7 +1515,10 @@ impl ParametricPlugin for EqPlugin {
         if !self.received_input || self.drain_remaining == Some(0) && self.drain_frames == 0 {
             return Ok(PluginDrainResult::COMPLETE);
         }
-        if !context.sample_rate.is_finite() || context.sample_rate <= 0.0 || context.sample_rate != self.sample_rate {
+        if !context.sample_rate.is_finite()
+            || context.sample_rate <= 0.0
+            || context.sample_rate != self.sample_rate
+        {
             return Err("EQ drain requires the prepared sample rate".into());
         }
         if !output.len().is_multiple_of(self.num_channels)
@@ -1667,18 +1664,15 @@ impl EqPlugin {
             // A placement route changes the realization's processing domain
             // when oversampling changes. Build every advanced filter detached
             // before committing any live filter, clock, or sample-rate state.
-            let prepared_advanced =
-                if uses_oversampling && self.ordered_route_active {
-                    Some(self.build_advanced_filter_bank(
-                        self.sample_rate * f64::from(new_factor),
-                    )?)
-                } else if uses_oversampling && new_factor == 1 {
-                    // The legacy advanced bank stays at the base rate. Prepare its
-                    // replacement before changing the live biquads or oversampler.
-                    Some(self.reconfigure_advanced_filter_bank(self.sample_rate)?)
-                } else {
-                    None
-                };
+            let prepared_advanced = if uses_oversampling && self.ordered_route_active {
+                Some(self.build_advanced_filter_bank(self.sample_rate * f64::from(new_factor))?)
+            } else if uses_oversampling && new_factor == 1 {
+                // The legacy advanced bank stays at the base rate. Prepare its
+                // replacement before changing the live biquads or oversampler.
+                Some(self.reconfigure_advanced_filter_bank(self.sample_rate)?)
+            } else {
+                None
+            };
             // New measurement/reference epoch, preserving the current and
             // target gain trajectory across control-thread reconstruction.
             self.auto_gain.set_sample_rate(self.sample_rate)?;
@@ -2496,7 +2490,13 @@ mod fractional_rate_tests {
     fn fractional_sample_rate_reaches_eq_filter_and_autogain_clock() {
         let mut plugin = EqPlugin::new(
             1,
-            vec![Biquad::new(BiquadFilterType::Peak, 1_000.0, 48_000.0, 1.0, 3.0)],
+            vec![Biquad::new(
+                BiquadFilterType::Peak,
+                1_000.0,
+                48_000.0,
+                1.0,
+                3.0,
+            )],
         );
         plugin.plugin_initialize(48_000.5).unwrap();
         assert_eq!(plugin.sample_rate, 48_000.5);

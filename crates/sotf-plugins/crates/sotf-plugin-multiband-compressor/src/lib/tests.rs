@@ -940,11 +940,8 @@ fn test_set_parameter_global_roundtrips() {
     );
 
     // detection_mode
-    p.set_parameter(
-        ParameterId::from("detection_mode"),
-        ParameterValue::Int(1),
-    )
-    .unwrap();
+    p.set_parameter(ParameterId::from("detection_mode"), ParameterValue::Int(1))
+        .unwrap();
     assert_eq!(
         p.get_parameter(&ParameterId::from("detection_mode"))
             .unwrap(),
@@ -2600,8 +2597,7 @@ fn legacy_hpf_frequency_without_enabled_keeps_legacy_audio() {
     // enabled key. The HPF must stay inactive: output bit-identical to the
     // default construction. Only the enabled flag opts in.
     fn render(params: MultibandCompressorPluginParams) -> Vec<f32> {
-        let mut plugin =
-            MultibandCompressorPlugin::try_from_params(2, params, 48_000).unwrap();
+        let mut plugin = MultibandCompressorPlugin::try_from_params(2, params, 48_000).unwrap();
         plugin.initialize(48_000.0).unwrap();
         let mut block: Vec<f32> = (0..1024)
             .flat_map(|frame| {

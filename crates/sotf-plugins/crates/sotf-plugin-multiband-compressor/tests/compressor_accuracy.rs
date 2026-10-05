@@ -112,7 +112,10 @@ fn c_mul(a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
 }
 fn c_div(a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
     let denom = b.0 * b.0 + b.1 * b.1;
-    ((a.0 * b.0 + a.1 * b.1) / denom, (a.1 * b.0 - a.0 * b.1) / denom)
+    (
+        (a.0 * b.0 + a.1 * b.1) / denom,
+        (a.1 * b.0 - a.0 * b.1) / denom,
+    )
 }
 fn c_error(a: (f64, f64), b: (f64, f64)) -> f64 {
     (a.0 - b.0).hypot(a.1 - b.1)
@@ -207,7 +210,6 @@ fn peak_db(samples: &[f32]) -> f64 {
 // A1: static knee/ratio/range law and absolute timing
 // ---------------------------------------------------------------------------
 
-
 #[test]
 fn static_knee_ratio_range_law_matches_f64_oracle() {
     const BOUND_DB: f64 = 0.08;
@@ -232,10 +234,8 @@ fn static_knee_ratio_range_law_matches_f64_oracle() {
                         // Fresh envelope per level so each case is independent.
                         plugin.reset();
                         let frames = sample_rate as usize * 150 / 1000;
-                        let input =
-                            vec![db_to_linear(input_db) as f32; frames];
-                        let output =
-                            process_all(&mut plugin, sample_rate, 1, &input, 1024);
+                        let input = vec![db_to_linear(input_db) as f32; frames];
+                        let output = process_all(&mut plugin, sample_rate, 1, &input, 1024);
                         let measured = linear_to_db(f64::from(output[frames - 1]));
                         let target = oracle_gain_reduction(
                             input_db,
@@ -556,8 +556,7 @@ fn measure_tone_transfer(
 ) -> (f64, f64) {
     let (mut sin_sum, mut cos_sum) = (0.0f64, 0.0f64);
     for (index, sample) in samples.iter().enumerate() {
-        let phase =
-            2.0 * std::f64::consts::PI * freq * (start + index) as f64 / sample_rate;
+        let phase = 2.0 * std::f64::consts::PI * freq * (start + index) as f64 / sample_rate;
         sin_sum += f64::from(*sample) * phase.sin();
         cos_sum += f64::from(*sample) * phase.cos();
     }
@@ -572,7 +571,12 @@ fn adjacent_multitone_matches_lr4_prototype_phase_and_sum() {
     let sr = sample_rate as f64;
     let cuts = [500.0f64, 2000.0];
     // Coherent adjacent pairs around each cut (N = 4096, df = 11.71875 Hz).
-    let tones = [42.0 * sr / 4096.0, 43.0 * sr / 4096.0, 170.0 * sr / 4096.0, 171.0 * sr / 4096.0];
+    let tones = [
+        42.0 * sr / 4096.0,
+        43.0 * sr / 4096.0,
+        170.0 * sr / 4096.0,
+        171.0 * sr / 4096.0,
+    ];
     let amplitude = 0.2f64;
     let settle = 8192usize;
     let measure = 4096usize;
@@ -581,9 +585,7 @@ fn adjacent_multitone_matches_lr4_prototype_phase_and_sum() {
         .map(|n| {
             tones
                 .iter()
-                .map(|freq| {
-                    amplitude * (2.0 * std::f64::consts::PI * freq * n as f64 / sr).sin()
-                })
+                .map(|freq| amplitude * (2.0 * std::f64::consts::PI * freq * n as f64 / sr).sin())
                 .sum::<f64>() as f32
         })
         .collect();
@@ -857,9 +859,7 @@ fn broadband_preset_matches_explicit_core_config() {
             ..Default::default()
         },
     ] {
-        assert!(
-            MultibandCompressorPlugin::try_from_params(2, params, sample_rate).is_err()
-        );
+        assert!(MultibandCompressorPlugin::try_from_params(2, params, sample_rate).is_err());
     }
     for (id, value) in [
         ("program_dependent_release", ParameterValue::Bool(true)),
@@ -952,8 +952,7 @@ fn legacy_parameter_ids_and_defaults_are_preserved() {
     )
     .unwrap();
     assert_eq!(engine_old.sidechain_hpf_enabled, None);
-    let engine_plugin =
-        MultibandCompressorPlugin::try_from_params(2, engine_old, 48_000).unwrap();
+    let engine_plugin = MultibandCompressorPlugin::try_from_params(2, engine_old, 48_000).unwrap();
     assert_eq!(
         engine_plugin.get_parameter(&ParameterId::from("sidechain_hpf_hz")),
         Some(ParameterValue::Float(80.0))
@@ -1000,7 +999,10 @@ fn dense_automation_with_new_stages_is_partition_invariant() {
             })
             .collect();
         plugin
-            .process_in_place(&mut warmup, &ProcessContext::new(sample_rate, warmup_frames))
+            .process_in_place(
+                &mut warmup,
+                &ProcessContext::new(sample_rate, warmup_frames),
+            )
             .unwrap();
         for (id, value) in [
             ("crossover_freq_1", ParameterValue::Float(350.0)),
@@ -1075,14 +1077,8 @@ fn eos_drain_accounts_with_new_stages_active() {
     });
     let delay = plugin.latency_samples();
     assert_eq!(delay, 240);
-    assert_eq!(
-        plugin.tail_length(),
-        TailLength::Finite(delay as u64)
-    );
-    assert_eq!(
-        plugin.drain_call_bound().map(|bound| bound.get()),
-        Some(1)
-    );
+    assert_eq!(plugin.tail_length(), TailLength::Finite(delay as u64));
+    assert_eq!(plugin.drain_call_bound().map(|bound| bound.get()), Some(1));
 
     let input: Vec<f32> = (0..2048 * 2)
         .map(|i| ((i * 7 % 23) as f32 - 11.0) / 64.0)

@@ -1,14 +1,14 @@
 use atomic_float::AtomicF32;
 use parking_lot::{Mutex, RwLock};
 use std::any::Any;
-use std::ffi::{CStr, c_void};
+use std::ffi::{c_void, CStr};
 use std::mem;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Weak};
-use vst3_sys::VST3;
-use vst3_sys::base::{TBool, kInvalidArgument, kNotImplemented, kResultFalse, kResultOk, tresult};
+use vst3_sys::base::{kInvalidArgument, kNotImplemented, kResultFalse, kResultOk, tresult, TBool};
 use vst3_sys::gui::{IPlugFrame, IPlugView, IPlugViewContentScaleSupport, ViewRect};
 use vst3_sys::utils::SharedVstPtr;
+use vst3_sys::VST3;
 
 use super::inner::{Task, WrapperInner};
 use super::util::{ObjectPtr, VstPtr};

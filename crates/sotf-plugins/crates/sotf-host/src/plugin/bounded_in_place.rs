@@ -35,7 +35,11 @@ impl BoundedInPlace {
                 Err("Asymmetric in-place adapter requires bounded subdivision support".into())
             };
         }
-        if !sample_rate.is_finite() || sample_rate <= 0.0 || channels[1] == 0 || channels[0] < channels[1] {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || channels[1] == 0
+            || channels[0] < channels[1]
+        {
             return Err("Invalid bounded in-place sample rate or channel layout".into());
         }
         let samples = channels[0]

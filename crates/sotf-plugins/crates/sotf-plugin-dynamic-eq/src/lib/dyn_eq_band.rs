@@ -154,10 +154,7 @@ impl DynEqBand {
         (sample_rate as f32 * 0.475).min(20_000.0)
     }
 
-    pub(super) fn preflight_reinitialize(
-        &self,
-        sample_rate: impl Into<f64>,
-    ) -> Result<(), String> {
+    pub(super) fn preflight_reinitialize(&self, sample_rate: impl Into<f64>) -> Result<(), String> {
         let sample_rate = sample_rate.into();
         if self.shape == DynEqShape::Peak {
             return Ok(());
@@ -176,14 +173,12 @@ impl DynEqBand {
             ));
         }
         let valid = match self.shape {
-            DynEqShape::Tilt => {
-                design_tilt_coefficients(
-                    self.frequency as f64,
-                    sample_rate as f64,
-                    self.target_gain_db as f64,
-                )
-                .is_some()
-            }
+            DynEqShape::Tilt => design_tilt_coefficients(
+                self.frequency as f64,
+                sample_rate as f64,
+                self.target_gain_db as f64,
+            )
+            .is_some(),
             _ => design_shelf_coefficients(
                 self.shape,
                 self.frequency as f64,
@@ -478,13 +473,9 @@ pub(super) fn design_tilt_coefficients(
         a1: (warped - gain * bilinear) / a0,
         a2: 0.0,
     };
-    if [
-        coefficients.b0,
-        coefficients.b1,
-        coefficients.a1,
-    ]
-    .iter()
-    .any(|coefficient| !coefficient.is_finite())
+    if [coefficients.b0, coefficients.b1, coefficients.a1]
+        .iter()
+        .any(|coefficient| !coefficient.is_finite())
     {
         return None;
     }

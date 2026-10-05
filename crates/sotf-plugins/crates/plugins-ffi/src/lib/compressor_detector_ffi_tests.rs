@@ -41,7 +41,11 @@ impl DetectorHandle {
         let kind = CString::new(kind).unwrap();
         let config = CString::new(config).unwrap();
         let handle = plugin_create(kind.as_ptr(), config.as_ptr(), 48_000, 2, 2);
-        assert!(!handle.is_null(), "compressor construction failed: {}", detector_last_error());
+        assert!(
+            !handle.is_null(),
+            "compressor construction failed: {}",
+            detector_last_error()
+        );
         Self { pointer: handle }
     }
 
@@ -76,7 +80,16 @@ impl DetectorHandle {
             let id = CStr::from_ptr(info.id).to_string_lossy().into_owned();
             let name = CStr::from_ptr(info.name).to_string_lossy().into_owned();
             let unit = CStr::from_ptr(info.unit).to_string_lossy().into_owned();
-            (id, name, unit, info.min_value, info.max_value, info.default_value, info.steps, info.logarithmic)
+            (
+                id,
+                name,
+                unit,
+                info.min_value,
+                info.max_value,
+                info.default_value,
+                info.steps,
+                info.logarithmic,
+            )
         }
     }
 
@@ -124,7 +137,11 @@ impl DetectorHandle {
         let inputs = self.inner().input_channels;
         let outputs = self.inner().output_channels;
         let frames = input.len() / inputs;
-        assert_eq!(input.len() % inputs, 0, "complete interleaved frames required");
+        assert_eq!(
+            input.len() % inputs,
+            0,
+            "complete interleaved frames required"
+        );
         let callback_frames = self.inner().max_callback_frames;
         let mut output = vec![f32::NAN; frames * outputs];
         for start in (0..frames).step_by(callback_frames) {
@@ -158,7 +175,9 @@ fn detector_last_error() -> String {
         return String::new();
     }
     // SAFETY: The current thread owns this valid diagnostic until its next call.
-    unsafe { CStr::from_ptr(error) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(error) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// Dual-mono probe: 50 Hz at -3 dB peak plus 1 kHz at -24 dB peak.
@@ -167,7 +186,8 @@ fn probe_signal(frames: usize) -> Vec<f32> {
     let hf = 10.0f32.powf(HF_PEAK_DB / 20.0);
     let mut buffer = vec![0.0; frames * 2];
     for frame in 0..frames {
-        let sample = lf * (2.0 * std::f32::consts::PI * LF_HZ * frame as f32 / SAMPLE_RATE_HZ).sin()
+        let sample = lf
+            * (2.0 * std::f32::consts::PI * LF_HZ * frame as f32 / SAMPLE_RATE_HZ).sin()
             + hf * (2.0 * std::f32::consts::PI * HF_HZ * frame as f32 / SAMPLE_RATE_HZ).sin();
         buffer[frame * 2] = sample;
         buffer[frame * 2 + 1] = sample;
@@ -196,9 +216,24 @@ fn settled_output_db(output: &[f32]) -> f32 {
 /// Normalized values invert the linear bridge mapping exactly:
 /// threshold 40/60, ratio 3/19, knee 0.
 fn configure_static_oracle(handle: &mut DetectorHandle, kind: &str) {
-    assert_eq!(handle.set_normalized("threshold", 40.0 / 60.0), 0, "{kind}: {}", detector_last_error());
-    assert_eq!(handle.set_normalized("ratio", 3.0 / 19.0), 0, "{kind}: {}", detector_last_error());
-    assert_eq!(handle.set_normalized("knee", 0.0), 0, "{kind}: {}", detector_last_error());
+    assert_eq!(
+        handle.set_normalized("threshold", 40.0 / 60.0),
+        0,
+        "{kind}: {}",
+        detector_last_error()
+    );
+    assert_eq!(
+        handle.set_normalized("ratio", 3.0 / 19.0),
+        0,
+        "{kind}: {}",
+        detector_last_error()
+    );
+    assert_eq!(
+        handle.set_normalized("knee", 0.0),
+        0,
+        "{kind}: {}",
+        detector_last_error()
+    );
 }
 
 /// Detector descriptor and defaults match on both compressor kinds.
@@ -258,7 +293,15 @@ fn compressor_detector_metadata_and_defaults_both_kinds() {
     // Detector addresses are non-contiguous on broadband (9/10/11/18)
     // and contiguous on multiband (19/20/21/22); index each explicitly.
     for (kind, count, globals, hz_idx, ord_idx, det_idx, en_idx) in [
-        ("Compressor", 19usize, broadband_ids.as_slice(), 9usize, 10usize, 11usize, 18usize),
+        (
+            "Compressor",
+            19usize,
+            broadband_ids.as_slice(),
+            9usize,
+            10usize,
+            11usize,
+            18usize,
+        ),
         (
             "MultibandCompressor",
             83usize,
@@ -293,24 +336,63 @@ fn compressor_detector_metadata_and_defaults_both_kinds() {
         // Order and detection are 2-label choices reading as indices 0..=1.
         assert_eq!(
             handle.param_info(ord_idx),
-            ("sidechain_hpf_order".to_string(), "Sidechain HPF Order".to_string(), String::new(), 0.0, 1.0, 0.0, 2, false),
+            (
+                "sidechain_hpf_order".to_string(),
+                "Sidechain HPF Order".to_string(),
+                String::new(),
+                0.0,
+                1.0,
+                0.0,
+                2,
+                false
+            ),
             "{kind} hpf order metadata moved"
         );
         assert_eq!(
             handle.param_info(det_idx),
-            ("detection_mode".to_string(), "Detection Mode".to_string(), String::new(), 0.0, 1.0, 0.0, 2, false),
+            (
+                "detection_mode".to_string(),
+                "Detection Mode".to_string(),
+                String::new(),
+                0.0,
+                1.0,
+                0.0,
+                2,
+                false
+            ),
             "{kind} detection metadata moved"
         );
         assert_eq!(
             handle.param_info(en_idx),
-            ("sidechain_hpf_enabled".to_string(), "Sidechain HPF Enabled".to_string(), String::new(), 0.0, 1.0, 0.0, 1, false),
+            (
+                "sidechain_hpf_enabled".to_string(),
+                "Sidechain HPF Enabled".to_string(),
+                String::new(),
+                0.0,
+                1.0,
+                0.0,
+                1,
+                false
+            ),
             "{kind} hpf enable metadata moved"
         );
         // Legacy defaults read back: 80 Hz, 2nd order, Peak, disabled.
-        assert!((handle.get_normalized("sidechain_hpf_hz") - 0.4).abs() < 1e-12, "{kind} hpf default");
-        assert!((handle.get_normalized("sidechain_hpf_order") - 0.0).abs() < 1e-12, "{kind} order default");
-        assert!((handle.get_normalized("detection_mode") - 0.0).abs() < 1e-12, "{kind} detection default");
-        assert!((handle.get_normalized("sidechain_hpf_enabled") - 0.0).abs() < 1e-12, "{kind} enable default");
+        assert!(
+            (handle.get_normalized("sidechain_hpf_hz") - 0.4).abs() < 1e-12,
+            "{kind} hpf default"
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_order") - 0.0).abs() < 1e-12,
+            "{kind} order default"
+        );
+        assert!(
+            (handle.get_normalized("detection_mode") - 0.0).abs() < 1e-12,
+            "{kind} detection default"
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_enabled") - 0.0).abs() < 1e-12,
+            "{kind} enable default"
+        );
     }
     // Multiband band block follows the 23 globals: 5 bands x 12 fields.
     let multiband = DetectorHandle::create("MultibandCompressor", "{}");
@@ -328,16 +410,56 @@ fn compressor_detector_metadata_and_defaults_both_kinds() {
 fn compressor_detector_live_setters_roundtrip_both_kinds() {
     for kind in ["Compressor", "MultibandCompressor"] {
         let mut handle = DetectorHandle::create(kind, "{}");
-        assert_eq!(handle.set_normalized("sidechain_hpf_hz", 0.6), 0, "{kind}: {}", detector_last_error());
-        assert!((handle.get_normalized("sidechain_hpf_hz") - 0.6).abs() < 1e-12, "{kind} hz must read 120 Hz");
-        assert_eq!(handle.set_normalized("sidechain_hpf_order", 1.0), 0, "{kind}: {}", detector_last_error());
-        assert!((handle.get_normalized("sidechain_hpf_order") - 1.0).abs() < 1e-12, "{kind} order must read 4th");
-        assert_eq!(handle.set_normalized("detection_mode", 1.0), 0, "{kind}: {}", detector_last_error());
-        assert!((handle.get_normalized("detection_mode") - 1.0).abs() < 1e-12, "{kind} detection must read RMS");
-        assert_eq!(handle.set_normalized("sidechain_hpf_enabled", 1.0), 0, "{kind}: {}", detector_last_error());
-        assert!((handle.get_normalized("sidechain_hpf_enabled") - 1.0).abs() < 1e-12, "{kind} enable must latch");
-        assert_eq!(handle.set_normalized("sidechain_hpf_enabled", 0.0), 0, "{kind}: {}", detector_last_error());
-        assert!((handle.get_normalized("sidechain_hpf_enabled") - 0.0).abs() < 1e-12, "{kind} enable must clear");
+        assert_eq!(
+            handle.set_normalized("sidechain_hpf_hz", 0.6),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_hz") - 0.6).abs() < 1e-12,
+            "{kind} hz must read 120 Hz"
+        );
+        assert_eq!(
+            handle.set_normalized("sidechain_hpf_order", 1.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_order") - 1.0).abs() < 1e-12,
+            "{kind} order must read 4th"
+        );
+        assert_eq!(
+            handle.set_normalized("detection_mode", 1.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert!(
+            (handle.get_normalized("detection_mode") - 1.0).abs() < 1e-12,
+            "{kind} detection must read RMS"
+        );
+        assert_eq!(
+            handle.set_normalized("sidechain_hpf_enabled", 1.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_enabled") - 1.0).abs() < 1e-12,
+            "{kind} enable must latch"
+        );
+        assert_eq!(
+            handle.set_normalized("sidechain_hpf_enabled", 0.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert!(
+            (handle.get_normalized("sidechain_hpf_enabled") - 0.0).abs() < 1e-12,
+            "{kind} enable must clear"
+        );
     }
 }
 
@@ -352,16 +474,42 @@ fn compressor_default_audio_preserved_and_hpf_inert_when_disabled() {
         let input = probe_signal(4800);
         let mut default = DetectorHandle::create(kind, "{}");
         let default_out = default.process(&input);
-        assert!(default_out.iter().any(|sample| sample.abs() > 0.01), "{kind} default must render nonzero audio");
+        assert!(
+            default_out.iter().any(|sample| sample.abs() > 0.01),
+            "{kind} default must render nonzero audio"
+        );
         // Retuning the cutoff while disabled cannot change audio.
         let mut retuned = DetectorHandle::create(kind, "{}");
-        assert_eq!(retuned.set_normalized("sidechain_hpf_hz", 0.0), 0, "{kind}: {}", detector_last_error());
-        assert_eq!(retuned.process(&input), default_out, "{kind} hz must be inert while disabled");
+        assert_eq!(
+            retuned.set_normalized("sidechain_hpf_hz", 0.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert_eq!(
+            retuned.process(&input),
+            default_out,
+            "{kind} hz must be inert while disabled"
+        );
         // Enabled with a 0 Hz cutoff stays inactive by the AND contract.
         let mut zero_cutoff = DetectorHandle::create(kind, "{}");
-        assert_eq!(zero_cutoff.set_normalized("sidechain_hpf_hz", 0.0), 0, "{kind}: {}", detector_last_error());
-        assert_eq!(zero_cutoff.set_normalized("sidechain_hpf_enabled", 1.0), 0, "{kind}: {}", detector_last_error());
-        assert_eq!(zero_cutoff.process(&input), default_out, "{kind} 0 Hz cutoff must stay inactive");
+        assert_eq!(
+            zero_cutoff.set_normalized("sidechain_hpf_hz", 0.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert_eq!(
+            zero_cutoff.set_normalized("sidechain_hpf_enabled", 1.0),
+            0,
+            "{kind}: {}",
+            detector_last_error()
+        );
+        assert_eq!(
+            zero_cutoff.process(&input),
+            default_out,
+            "{kind} 0 Hz cutoff must stay inactive"
+        );
     }
 }
 
@@ -391,10 +539,30 @@ fn compressor_hpf_engaged_produces_lf_gr_separation_both_kinds() {
         let render = |hpf_enabled: f64, detection: f64| -> f32 {
             let mut handle = DetectorHandle::create(kind, "{}");
             configure_static_oracle(&mut handle, kind);
-            assert_eq!(handle.set_normalized("sidechain_hpf_hz", 0.6), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(handle.set_normalized("sidechain_hpf_order", 1.0), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(handle.set_normalized("detection_mode", detection), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(handle.set_normalized("sidechain_hpf_enabled", hpf_enabled), 0, "{kind}: {}", detector_last_error());
+            assert_eq!(
+                handle.set_normalized("sidechain_hpf_hz", 0.6),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                handle.set_normalized("sidechain_hpf_order", 1.0),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                handle.set_normalized("detection_mode", detection),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                handle.set_normalized("sidechain_hpf_enabled", hpf_enabled),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
             settled_output_db(&handle.process(&input))
         };
         let peak_off = render(0.0, 0.0);
@@ -408,8 +576,18 @@ fn compressor_hpf_engaged_produces_lf_gr_separation_both_kinds() {
         let render_gap = |detection: f64| -> f32 {
             let mut handle = DetectorHandle::create(kind, "{}");
             configure_static_oracle(&mut handle, kind);
-            assert_eq!(handle.set_normalized("release", 1.0), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(handle.set_normalized("detection_mode", detection), 0, "{kind}: {}", detector_last_error());
+            assert_eq!(
+                handle.set_normalized("release", 1.0),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                handle.set_normalized("detection_mode", detection),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
             settled_output_db(&handle.process(&input))
         };
         let peak_gap = render_gap(0.0);
@@ -419,12 +597,24 @@ fn compressor_hpf_engaged_produces_lf_gr_separation_both_kinds() {
             rms_off - peak_off,
             rms_gap - peak_gap
         );
-        assert!((-22.0..=-15.0).contains(&peak_off), "{kind} Peak/HPF-off {peak_off:.2} dB outside [-22,-15]");
-        assert!((-20.0..=-13.0).contains(&rms_off), "{kind} RMS/HPF-off {rms_off:.2} dB outside [-20,-13]");
-        assert!((-8.0..=-4.0).contains(&rms_on), "{kind} RMS/HPF-on {rms_on:.2} dB outside [-8,-4]");
+        assert!(
+            (-22.0..=-15.0).contains(&peak_off),
+            "{kind} Peak/HPF-off {peak_off:.2} dB outside [-22,-15]"
+        );
+        assert!(
+            (-20.0..=-13.0).contains(&rms_off),
+            "{kind} RMS/HPF-off {rms_off:.2} dB outside [-20,-13]"
+        );
+        assert!(
+            (-8.0..=-4.0).contains(&rms_on),
+            "{kind} RMS/HPF-on {rms_on:.2} dB outside [-8,-4]"
+        );
         // Both kinds: the -24 dB detector sits below the -20 threshold, so
         // gain reduction vanishes and output equals the -6 dB input.
-        assert!((-8.0..=-4.0).contains(&peak_on), "{kind} Peak/HPF-on {peak_on:.2} dB outside [-8,-4]");
+        assert!(
+            (-8.0..=-4.0).contains(&peak_on),
+            "{kind} Peak/HPF-on {peak_on:.2} dB outside [-8,-4]"
+        );
         assert!(
             peak_on - peak_off >= MIN_GR_SEPARATION_DB,
             "{kind} Peak separation below 6 dB (on={peak_on:.2}, off={peak_off:.2})"
@@ -452,20 +642,71 @@ fn compressor_detector_state_and_preset_json_roundtrip_both_kinds() {
     for kind in ["Compressor", "MultibandCompressor"] {
         for document in [false, true] {
             let mut source = DetectorHandle::create(kind, "{}");
-            assert_eq!(source.set_normalized("sidechain_hpf_hz", 0.6), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(source.set_normalized("sidechain_hpf_order", 1.0), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(source.set_normalized("detection_mode", 1.0), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(source.set_normalized("sidechain_hpf_enabled", 1.0), 0, "{kind}: {}", detector_last_error());
-            assert_eq!(source.set_normalized("threshold", 0.5), 0, "{kind}: {}", detector_last_error());
+            assert_eq!(
+                source.set_normalized("sidechain_hpf_hz", 0.6),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                source.set_normalized("sidechain_hpf_order", 1.0),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                source.set_normalized("detection_mode", 1.0),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                source.set_normalized("sidechain_hpf_enabled", 1.0),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                source.set_normalized("threshold", 0.5),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
             let saved = source.save();
-            let json: serde_json::Value = serde_json::from_slice(&saved).expect("state must be JSON");
-            assert_eq!(json["sidechain_hpf_hz"], serde_json::json!(120.0), "{kind} hz must persist typed");
-            assert_eq!(json["sidechain_hpf_order"], serde_json::json!(1), "{kind} order must persist typed");
-            assert_eq!(json["detection_mode"], serde_json::json!(1), "{kind} detection must persist typed");
-            assert_eq!(json["sidechain_hpf_enabled"], serde_json::json!(true), "{kind} enable must persist typed");
+            let json: serde_json::Value =
+                serde_json::from_slice(&saved).expect("state must be JSON");
+            assert_eq!(
+                json["sidechain_hpf_hz"],
+                serde_json::json!(120.0),
+                "{kind} hz must persist typed"
+            );
+            assert_eq!(
+                json["sidechain_hpf_order"],
+                serde_json::json!(1),
+                "{kind} order must persist typed"
+            );
+            assert_eq!(
+                json["detection_mode"],
+                serde_json::json!(1),
+                "{kind} detection must persist typed"
+            );
+            assert_eq!(
+                json["sidechain_hpf_enabled"],
+                serde_json::json!(true),
+                "{kind} enable must persist typed"
+            );
             let mut target = DetectorHandle::create(kind, "{}");
-            assert_eq!(target.load(&saved, document), 0, "{kind} document={document}: {}", detector_last_error());
-            assert_eq!(target.save(), saved, "{kind} document={document} state must round-trip");
+            assert_eq!(
+                target.load(&saved, document),
+                0,
+                "{kind} document={document}: {}",
+                detector_last_error()
+            );
+            assert_eq!(
+                target.save(),
+                saved,
+                "{kind} document={document} state must round-trip"
+            );
             assert!((target.get_normalized("sidechain_hpf_hz") - 0.6).abs() < 1e-12);
             assert!((target.get_normalized("sidechain_hpf_order") - 1.0).abs() < 1e-12);
             assert!((target.get_normalized("detection_mode") - 1.0).abs() < 1e-12);
@@ -474,8 +715,15 @@ fn compressor_detector_state_and_preset_json_roundtrip_both_kinds() {
             target.reset();
             let input = probe_signal(8192);
             let output = target.process(&input);
-            assert_eq!(output, source.process(&input), "{kind} document={document} audio must match");
-            assert!(output.iter().any(|sample| sample.abs() > 0.01), "{kind} restored audio must be nonzero");
+            assert_eq!(
+                output,
+                source.process(&input),
+                "{kind} document={document} audio must match"
+            );
+            assert!(
+                output.iter().any(|sample| sample.abs() > 0.01),
+                "{kind} restored audio must be nonzero"
+            );
         }
     }
 }
@@ -500,12 +748,26 @@ fn compressor_bad_detector_config_refused_with_twin_continuation() {
             let mut twin = DetectorHandle::create(kind, "{}");
             for twin_handle in [&mut handle, &mut twin] {
                 configure_static_oracle(twin_handle, kind);
-                assert_eq!(twin_handle.set_normalized("sidechain_hpf_hz", 0.6), 0, "{kind}: {}", detector_last_error());
-                assert_eq!(twin_handle.set_normalized("sidechain_hpf_enabled", 1.0), 0, "{kind}: {}", detector_last_error());
+                assert_eq!(
+                    twin_handle.set_normalized("sidechain_hpf_hz", 0.6),
+                    0,
+                    "{kind}: {}",
+                    detector_last_error()
+                );
+                assert_eq!(
+                    twin_handle.set_normalized("sidechain_hpf_enabled", 1.0),
+                    0,
+                    "{kind}: {}",
+                    detector_last_error()
+                );
             }
             // Engage detector/envelope history identically on both handles.
             let engage = probe_signal(16384);
-            assert_eq!(twin.process(&engage), handle.process(&engage), "{kind} twins must start identical");
+            assert_eq!(
+                twin.process(&engage),
+                handle.process(&engage),
+                "{kind} twins must start identical"
+            );
             let saved = handle.save();
             assert_eq!(twin.save(), saved);
 
@@ -521,8 +783,16 @@ fn compressor_bad_detector_config_refused_with_twin_continuation() {
                 br#"{"sidechain_hpf_hz":120.0"#, // malformed
             ];
             for bad in bad_cases {
-                assert_ne!(handle.load(bad, document), 0, "{kind} document={document} must refuse {bad:?}");
-                assert_eq!(handle.save(), saved, "{kind} document={document} refused state must roll back");
+                assert_ne!(
+                    handle.load(bad, document),
+                    0,
+                    "{kind} document={document} must refuse {bad:?}"
+                );
+                assert_eq!(
+                    handle.save(),
+                    saved,
+                    "{kind} document={document} refused state must roll back"
+                );
             }
             if kind == "Compressor" {
                 // Broadband advertises the legacy sidechain controls but the
@@ -538,8 +808,15 @@ fn compressor_bad_detector_config_refused_with_twin_continuation() {
                         "{kind} live set of {legacy} must refuse"
                     );
                     let error = detector_last_error();
-                    assert!(error.contains(legacy), "{kind} {legacy} refusal must name the refused key: {error}");
-                    assert_eq!(handle.save(), saved, "{kind} {legacy} refusal must roll back");
+                    assert!(
+                        error.contains(legacy),
+                        "{kind} {legacy} refusal must name the refused key: {error}"
+                    );
+                    assert_eq!(
+                        handle.save(),
+                        saved,
+                        "{kind} {legacy} refusal must roll back"
+                    );
                 }
             }
             // A preset document for another family refuses at the envelope.
@@ -559,7 +836,11 @@ fn compressor_bad_detector_config_refused_with_twin_continuation() {
                 assert_eq!(handle.save(), saved, "{kind} foreign preset must roll back");
             }
             // Continued renders stay bit-identical to the untouched twin.
-            assert_eq!(twin.process(&engage), handle.process(&engage), "{kind} document={document} history must survive refusal");
+            assert_eq!(
+                twin.process(&engage),
+                handle.process(&engage),
+                "{kind} document={document} history must survive refusal"
+            );
 
             // Finite out-of-range cutoff refuses on the state path: the
             // validating trait route range-checks before the inherent
@@ -569,15 +850,31 @@ fn compressor_bad_detector_config_refused_with_twin_continuation() {
                 0,
                 "{kind} document={document} must refuse out-of-range cutoff"
             );
-            assert_eq!(handle.save(), saved, "{kind} document={document} out-of-range refusal must roll back");
-            assert_eq!(twin.process(&engage), handle.process(&engage), "{kind} document={document} history must survive range refusal");
+            assert_eq!(
+                handle.save(),
+                saved,
+                "{kind} document={document} out-of-range refusal must roll back"
+            );
+            assert_eq!(
+                twin.process(&engage),
+                handle.process(&engage),
+                "{kind} document={document} history must survive range refusal"
+            );
 
             // Valid restore after refusal adopts and renders nonzero audio.
-            assert_eq!(handle.load(&saved, document), 0, "{kind}: {}", detector_last_error());
+            assert_eq!(
+                handle.load(&saved, document),
+                0,
+                "{kind}: {}",
+                detector_last_error()
+            );
             assert_eq!(handle.save(), saved);
             assert!((handle.get_normalized("sidechain_hpf_hz") - 0.6).abs() < 1e-12);
             let output = handle.process(&engage);
-            assert!(output.iter().any(|sample| sample.abs() > 0.01), "{kind} restored handle must render nonzero audio");
+            assert!(
+                output.iter().any(|sample| sample.abs() > 0.01),
+                "{kind} restored handle must render nonzero audio"
+            );
         }
     }
 }

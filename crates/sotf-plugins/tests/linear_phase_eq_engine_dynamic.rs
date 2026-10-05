@@ -14,11 +14,11 @@
 // Native (`plugins-nih`) and FFI (`plugins-ffi`) ordinary setters stay
 // structural until their own adoption. M1 accuracy stays open separately.
 
+use sotf_plugins::plugin::TailLength;
 use sotf_plugins::plugin_linear_phase_eq::dynamic_host::{
     LinearPhaseEqControlHandle, LinearPhaseEqDynamicPlugin,
 };
 use sotf_plugins::plugin_linear_phase_eq::{BandConfig, LinearPhaseEqPlugin};
-use sotf_plugins::plugin::TailLength;
 use sotf_plugins::{DawHost, Host, ParameterId, ParameterValue};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -113,8 +113,13 @@ fn pattern(frames: usize) -> Vec<f32> {
 fn host_with(bands: &[BandConfig], mix: f32) -> DawHost {
     let mut host = DawHost::new(CHANNELS, RATE);
     host.add_plugin(
-        sotf_plugins::create_plugin("linear_phase_eq", &eq_parameters(bands, mix), CHANNELS, RATE)
-            .expect("facade must create linear_phase_eq"),
+        sotf_plugins::create_plugin(
+            "linear_phase_eq",
+            &eq_parameters(bands, mix),
+            CHANNELS,
+            RATE,
+        )
+        .expect("facade must create linear_phase_eq"),
     )
     .unwrap();
     host.build().unwrap();
@@ -160,9 +165,13 @@ fn facade_factory_returns_dynamic_wrapper_with_static_parity() {
         band("Peak", 1000.0, 1.0, 0.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let mut plugin =
-        sotf_plugins::create_plugin("linear_phase_eq", &eq_parameters(&bands, 1.0), CHANNELS, RATE)
-            .expect("facade must create linear_phase_eq");
+    let mut plugin = sotf_plugins::create_plugin(
+        "linear_phase_eq",
+        &eq_parameters(&bands, 1.0),
+        CHANNELS,
+        RATE,
+    )
+    .expect("facade must create linear_phase_eq");
     assert!(plugin.as_any().is_some());
     let dynamic = plugin
         .as_any_mut()
@@ -173,10 +182,7 @@ fn facade_factory_returns_dynamic_wrapper_with_static_parity() {
     assert_eq!(plugin.parameters().len(), 5 + bands.len() * 6);
     // Generic band setter stays structural.
     let err = plugin
-        .set_parameter(
-            ParameterId::from("band_0_gain"),
-            ParameterValue::Float(6.0),
-        )
+        .set_parameter(ParameterId::from("band_0_gain"), ParameterValue::Float(6.0))
         .expect_err("generic band setter must stay structural");
     assert!(err.contains("structural"), "{err}");
     // Host route renders static nonzero audio allocation-free.
@@ -224,12 +230,9 @@ fn run_host_automation_once(block: usize) -> Vec<f32> {
     std::thread::scope(|s| {
         let barrier_ref = &barrier;
         s.spawn(move || {
-            let prepared = LinearPhaseEqPlugin::prepare_band_update(
-                &base,
-                0,
-                band("Peak", 1000.0, 1.0, 9.0),
-            )
-            .expect("prepare");
+            let prepared =
+                LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 9.0))
+                    .expect("prepare");
             tx.send(prepared).expect("ack");
             barrier_ref.wait();
         });
@@ -285,8 +288,7 @@ fn host_dynamic_update_exact_zero_partitions_eof_and_final() {
         };
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
-            let expected =
-                f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
+            let expected = f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
             assert!(
                 (f64::from(output[index]) - expected).abs() < 1e-5,
                 "frame{frame} ch{ch}"
@@ -321,12 +323,9 @@ fn host_dynamic_update_exact_zero_partitions_eof_and_final() {
     std::thread::scope(|s| {
         let barrier_ref = &barrier;
         s.spawn(move || {
-            let prepared = LinearPhaseEqPlugin::prepare_band_update(
-                &base,
-                0,
-                band("Peak", 1000.0, 1.0, 9.0),
-            )
-            .expect("prepare");
+            let prepared =
+                LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 9.0))
+                    .expect("prepare");
             tx.send(prepared).expect("ack");
             barrier_ref.wait();
         });

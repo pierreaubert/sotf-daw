@@ -1500,7 +1500,10 @@ fn conventional_ratio_matches_settled_audio_at_multiple_rates_and_channels() {
                 );
                 let mut buffer = vec![input; rate as usize * channels / 2];
                 plugin
-                    .process_in_place(&mut buffer, &ProcessContext::new(f64::from(rate), rate as usize / 2))
+                    .process_in_place(
+                        &mut buffer,
+                        &ProcessContext::new(f64::from(rate), rate as usize / 2),
+                    )
                     .unwrap();
                 for sample in &buffer[buffer.len() - channels..] {
                     let actual = 20.0 * (*sample as f64).abs().log10();

@@ -4,9 +4,9 @@ pub mod snapshot;
 
 use crate::params::PARAMS as HP;
 use crate::profile::{
-    LINK_LABELS, PROFILE_FLOOR_MIN_DB, profile_format_version,
-    PROFILE_THRESHOLD_MARGIN_DB, CaptureState, LINK_INDEPENDENT, LINK_LINKED, NoiseProfileData,
-    ReductionCurve, SpectralProfileData,
+    CaptureState, LINK_INDEPENDENT, LINK_LABELS, LINK_LINKED, NoiseProfileData,
+    PROFILE_FLOOR_MIN_DB, PROFILE_THRESHOLD_MARGIN_DB, ReductionCurve, SpectralProfileData,
+    profile_format_version,
 };
 use crate::snapshot::{ProfilePublishMeta, ProfileSnapshot};
 use plugins_denoiser::hiss::HissReducer;
@@ -306,14 +306,15 @@ impl HissReducerPlugin {
             // only the capture rate engages per-bin comparison, other
             // rates fall back to the floors.
             if data.floor_db_per_channel.len() == channels {
-                plugin.profile_floor_db.copy_from_slice(&data.floor_db_per_channel);
+                plugin
+                    .profile_floor_db
+                    .copy_from_slice(&data.floor_db_per_channel);
                 plugin.has_profile = true;
                 plugin.profile_sample_rate = data.sample_rate;
                 plugin.profile_cutoff_hz = data.measurement_cutoff_hz;
                 plugin.profile_frames = data.frames_analyzed;
                 if let Some(spectral) = &data.spectral
-                    && spectral.power_per_channel_bin.len()
-                        == channels * SPECTRAL_HISS_NUM_BINS
+                    && spectral.power_per_channel_bin.len() == channels * SPECTRAL_HISS_NUM_BINS
                 {
                     plugin
                         .profile_spectrum
@@ -558,12 +559,10 @@ impl HissReducerPlugin {
 
     fn refresh_backend_params(&mut self) {
         let effective = self.effective_threshold_db();
-        self.reducer.set_params(
-            self.params.frequency_hz,
-            effective,
-            self.params.strength,
-        );
-        self.reducer.set_linked(self.params.link_mode == LINK_LINKED);
+        self.reducer
+            .set_params(self.params.frequency_hz, effective, self.params.strength);
+        self.reducer
+            .set_linked(self.params.link_mode == LINK_LINKED);
         self.refresh_curve_gains();
         self.spectral_reducer.set_params(
             self.params.frequency_hz,
@@ -615,8 +614,7 @@ impl HissReducerPlugin {
         self.profile_spectrum.fill(0.0);
         self.profile_frames = 0;
         self.profile_spectral_hops = 0;
-        self.snapshot
-            .set_capture_progress(false, 0.0);
+        self.snapshot.set_capture_progress(false, 0.0);
         self.refresh_backend_params();
         self.publish_profile_snapshot();
     }
@@ -638,11 +636,8 @@ impl HissReducerPlugin {
             use_flag: self.params.use_captured_profile,
             processing_rate: self.sample_rate,
         };
-        self.snapshot.publish_profile(
-            &meta,
-            &self.profile_floor_db,
-            &self.profile_spectrum,
-        );
+        self.snapshot
+            .publish_profile(&meta, &self.profile_floor_db, &self.profile_spectrum);
     }
 
     /// Publishes live use/rate flags without copying the payload.
@@ -651,10 +646,8 @@ impl HissReducerPlugin {
     /// inputs stay consistent with the payload. Never allocates, frees,
     /// locks, logs, or waits.
     fn publish_snapshot_live_flags(&mut self) {
-        self.snapshot.publish_live_flags(
-            self.params.use_captured_profile,
-            self.sample_rate,
-        );
+        self.snapshot
+            .publish_live_flags(self.params.use_captured_profile, self.sample_rate);
     }
 
     /// Publishes current capture activity to the shared snapshot.
@@ -913,9 +906,7 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
             "strength" => Some(ParameterValue::Float(self.params.strength)),
             "spectral_mode" => Some(ParameterValue::Bool(self.params.spectral_mode)),
             "learn_noise" => Some(ParameterValue::Bool(self.capture.is_active())),
-            "use_captured_profile" => {
-                Some(ParameterValue::Bool(self.params.use_captured_profile))
-            }
+            "use_captured_profile" => Some(ParameterValue::Bool(self.params.use_captured_profile)),
             "clear_profile" => Some(ParameterValue::Bool(false)),
             "curve_low" => Some(ParameterValue::Float(self.params.curve_low)),
             "curve_mid" => Some(ParameterValue::Float(self.params.curve_mid)),

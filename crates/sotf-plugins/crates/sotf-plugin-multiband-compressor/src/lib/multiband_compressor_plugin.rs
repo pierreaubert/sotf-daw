@@ -507,7 +507,9 @@ impl MultibandCompressorPlugin {
             sidechain_hpf_biquads: (0..nb)
                 .map(|_| {
                     (0..channels)
-                        .map(|_| Self::make_hpf_bank(sidechain_hpf_hz, sidechain_hpf_order_index, sr))
+                        .map(|_| {
+                            Self::make_hpf_bank(sidechain_hpf_hz, sidechain_hpf_order_index, sr)
+                        })
                         .collect()
                 })
                 .collect(),
@@ -997,7 +999,9 @@ impl MultibandCompressorPlugin {
         let dimensions_match = self.sidechain_hpf_biquads.len() == self.num_bands
             && self.sidechain_hpf_biquads.iter().all(|band| {
                 band.len() == self.channels
-                    && band.iter().all(|sections| sections.len() == Self::MAX_HPF_SECTIONS)
+                    && band
+                        .iter()
+                        .all(|sections| sections.len() == Self::MAX_HPF_SECTIONS)
             });
         if !dimensions_match {
             let hz = self.sidechain_hpf_hz;
@@ -1021,7 +1025,11 @@ impl MultibandCompressorPlugin {
         let order_is_4th = HPF_ORDERS
             .get(self.sidechain_hpf_order_index)
             .is_some_and(|label| label.eq_ignore_ascii_case("4th"));
-        let fc = self.sidechain_hpf_hz.max(1.0).min(self.sample_rate.max(1.0) as f32 * 0.45).max(1.0) as f64;
+        let fc = self
+            .sidechain_hpf_hz
+            .max(1.0)
+            .min(self.sample_rate.max(1.0) as f32 * 0.45)
+            .max(1.0) as f64;
         for band in &mut self.sidechain_hpf_biquads {
             for sections in band {
                 for (index, section) in sections.iter_mut().enumerate() {

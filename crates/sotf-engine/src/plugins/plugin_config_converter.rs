@@ -866,7 +866,9 @@ mod tests {
             .expect("factory constructs configured shelf bands");
         let mut peak = create_plugin("dynamic_eq", &peak_config.parameters, 2, 48_000)
             .expect("factory constructs the Peak control");
-        shelf.initialize(48_000.0).expect("shelf plugin initializes");
+        shelf
+            .initialize(48_000.0)
+            .expect("shelf plugin initializes");
         peak.initialize(48_000.0).expect("Peak plugin initializes");
 
         let frames = 8_192;
@@ -981,7 +983,9 @@ mod tests {
 
         let mut placed =
             create_plugin("dynamic_eq", &config.parameters, 2, 48_000).expect("factory builds");
-        placed.initialize(48_000.0).expect("placed plugin initializes");
+        placed
+            .initialize(48_000.0)
+            .expect("placed plugin initializes");
         assert_eq!(
             placed.get_parameter(&ParameterId::from("band_0_placement")),
             Some(ParameterValue::Int(1))
@@ -1011,7 +1015,9 @@ mod tests {
             .expect("stereo control converts");
         let mut stereo = create_plugin("dynamic_eq", &stereo_config.parameters, 2, 48_000)
             .expect("stereo control builds");
-        stereo.initialize(48_000.0).expect("stereo control initializes");
+        stereo
+            .initialize(48_000.0)
+            .expect("stereo control initializes");
 
         // Default settings carry no pairs; the converter emits explicit
         // null, which the factory reads as the legacy default.
@@ -1031,10 +1037,8 @@ mod tests {
         let input: Vec<f32> = (0..frames)
             .flat_map(|frame| {
                 let time = frame as f64 / 48_000.0;
-                let left =
-                    (0.22 * (std::f64::consts::TAU * 250.0 * time).sin()) as f32;
-                let right =
-                    (0.22 * (std::f64::consts::TAU * 6_000.0 * time).sin()) as f32;
+                let left = (0.22 * (std::f64::consts::TAU * 250.0 * time).sin()) as f32;
+                let right = (0.22 * (std::f64::consts::TAU * 6_000.0 * time).sin()) as f32;
                 [left, right]
             })
             .collect();
@@ -1094,10 +1098,7 @@ mod tests {
             filter
         }
 
-        fn render(
-            plugin: &mut Box<dyn sotf_plugins::Plugin>,
-            input: &[f32],
-        ) -> Vec<f32> {
+        fn render(plugin: &mut Box<dyn sotf_plugins::Plugin>, input: &[f32]) -> Vec<f32> {
             let mut output = vec![f32::NAN; input.len()];
             let frames = input.len() / 2;
             for block_start in (0..frames).step_by(256) {
@@ -1144,9 +1145,8 @@ mod tests {
             config.parameters["stereo_pairs"],
             serde_json::json!([[0, 1]])
         );
-        let mut placed_plugin =
-            create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
-                .expect("placed filters build");
+        let mut placed_plugin = create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
+            .expect("placed filters build");
         placed_plugin
             .initialize(48_000.0)
             .expect("placed filters initialize");
@@ -1229,10 +1229,7 @@ mod tests {
             config.parameters["filters"][0]["placement"],
             serde_json::Value::Null
         );
-        assert_eq!(
-            config.parameters["stereo_pairs"],
-            serde_json::Value::Null
-        );
+        assert_eq!(config.parameters["stereo_pairs"], serde_json::Value::Null);
         // Old presets omit the new keys entirely and still load.
         let mut old_preset = serde_json::to_value(&legacy).unwrap();
         let fields = old_preset["LinearPhaseEq"].as_object_mut().unwrap();
@@ -1255,7 +1252,10 @@ mod tests {
         let stereo_config = registry
             .convert("linear_phase_eq", &stereo, 48_000.0)
             .expect("stereo settings convert");
-        assert_eq!(stereo_config.parameters["filters"][0]["placement"], "stereo");
+        assert_eq!(
+            stereo_config.parameters["filters"][0]["placement"],
+            "stereo"
+        );
 
         let frames = 8_192;
         let input: Vec<f32> = (0..frames)
@@ -1266,9 +1266,8 @@ mod tests {
                 [left, right]
             })
             .collect();
-        let mut legacy_plugin =
-            create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
-                .expect("legacy null placement builds");
+        let mut legacy_plugin = create_plugin("linear_phase_eq", &config.parameters, 2, 48_000)
+            .expect("legacy null placement builds");
         legacy_plugin
             .initialize(48_000.0)
             .expect("legacy plugin initializes");

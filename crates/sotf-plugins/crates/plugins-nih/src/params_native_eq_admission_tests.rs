@@ -16,8 +16,8 @@ use plugins_bridge::param_bridge::{BridgedParamInfo, ParamBridge};
 use sotf_host::parameters::ParameterValue;
 
 use super::{
-    DynamicParams, EQ_NATIVE_STATE_FIELD, EqPairRoute, ParamKind, eq_state_restore_allows_audio_thread,
-    native_eq_pair_route_param_infos,
+    DynamicParams, EQ_NATIVE_STATE_FIELD, EqPairRoute, ParamKind,
+    eq_state_restore_allows_audio_thread, native_eq_pair_route_param_infos,
 };
 
 crate::sotf_nih_plugin!(
@@ -199,7 +199,10 @@ fn eq_hook_refuses_every_restore_shape_without_mutation() {
             "{name} EQ state must not restore on the audio thread"
         );
         // The admission check itself must not migrate, annotate, or lock.
-        assert_eq!(serde_json::to_value(&state).expect("state serializes"), before);
+        assert_eq!(
+            serde_json::to_value(&state).expect("state serializes"),
+            before
+        );
     }
 }
 
@@ -260,7 +263,11 @@ fn audio_thread_refusal_leaves_populated_instance_untouched() {
             state_before,
             "{name} refusal must not mutate the state object"
         );
-        assert_eq!(param_snapshot(&params), values_before, "{name} params moved");
+        assert_eq!(
+            param_snapshot(&params),
+            values_before,
+            "{name} params moved"
+        );
         assert_eq!(route_snapshot(&params), route_before, "{name} route moved");
     }
 }

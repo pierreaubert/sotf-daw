@@ -348,19 +348,19 @@ mod admission_tests {
     //! `try_recv` that may allocate (documented `FIXME`), and control-thread
     //! JSON parsing may also allocate.
 
-    use super::{ParamValue, PluginState, deserialize_json, deserialize_object};
+    use super::{deserialize_json, deserialize_object, ParamValue, PluginState};
+    use crate::params::smoothing::SmoothingStyle;
     use crate::prelude::{
         AudioIOLayout, AuxiliaryBuffers, BoolParam, Buffer, FloatParam, FloatRange, IntParam,
         IntRange, Param, ParamPtr, Params, Plugin, ProcessContext, ProcessMode, ProcessStatus,
     };
-    use crate::params::smoothing::SmoothingStyle;
     #[cfg(not(feature = "assert_process_allocs"))]
     use std::alloc::{GlobalAlloc, Layout, System};
     use std::collections::BTreeMap;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     #[cfg(not(feature = "assert_process_allocs"))]
     use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     struct DummyParams;
 
@@ -403,7 +403,8 @@ mod admission_tests {
                         min: 0.0f32,
                         max: 1.0f32,
                     },
-                ).with_smoother(SmoothingStyle::Linear(1_000.0)),
+                )
+                .with_smoother(SmoothingStyle::Linear(1_000.0)),
                 int: IntParam::new("Int", 1, IntRange::Linear { min: 0, max: 3 }),
                 flag: BoolParam::new("Flag", true),
                 validate_calls: AtomicUsize::new(0),
@@ -489,7 +490,12 @@ mod admission_tests {
         // SAFETY: the Arc owns all pointers in `map` for this call.
         let restored = unsafe {
             deserialize_object::<CompatPlugin>(
-                &mut state, params.clone(), getter, Some(&config), true, true,
+                &mut state,
+                params.clone(),
+                getter,
+                Some(&config),
+                true,
+                true,
             )
         };
         assert!(restored);
@@ -511,7 +517,12 @@ mod admission_tests {
         // SAFETY: the Arc owns all pointers in `map` for this call.
         let restored = unsafe {
             deserialize_object::<CompatPlugin>(
-                &mut state, params.clone(), getter, Some(&config), true, true,
+                &mut state,
+                params.clone(),
+                getter,
+                Some(&config),
+                true,
+                true,
             )
         };
         assert!(!restored);

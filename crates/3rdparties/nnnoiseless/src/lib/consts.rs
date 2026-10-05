@@ -6,7 +6,10 @@ use once_cell::sync::OnceCell;
 
 const SECOND_CHECK: [usize; 16] = [0, 0, 3, 2, 3, 2, 5, 2, 3, 2, 3, 2, 5, 2, 3, 2];
 
-#[expect(clippy::too_many_arguments, reason = "preserve the upstream pitch-search call contract")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "preserve the upstream pitch-search call contract"
+)]
 pub(crate) fn remove_doubling(
     x: &[f32],
     mut max_period: usize,
@@ -57,7 +60,11 @@ pub(crate) fn remove_doubling(
         }
         // Look for another strong correlation at t1b
         let t1b = if k == 2 {
-            if t1 + t0 > max_period { t0 } else { t0 + t1 }
+            if t1 + t0 > max_period {
+                t0
+            } else {
+                t0 + t1
+            }
         } else {
             (2 * second_check * t0 + k) / (2 * k)
         };
@@ -317,7 +324,11 @@ mod tests {
                 _ => (0.0, 0.0),
             };
             assert!((value.re - expected_re).abs() < 2e-5, "real bin {}", bin);
-            assert!((value.im - expected_im).abs() < 2e-5, "imaginary bin {}", bin);
+            assert!(
+                (value.im - expected_im).abs() < 2e-5,
+                "imaginary bin {}",
+                bin
+            );
         }
 
         let mut output = [0.0; WINDOW_SIZE];

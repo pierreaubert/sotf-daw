@@ -456,8 +456,7 @@ fn long_periodic_multiband_process_drain_reset_allocate_nothing() {
             let mut input = vec![0.0; frames * channels];
             for frame in 0..frames {
                 for ch in 0..channels {
-                    input[frame * channels + ch] =
-                        (frame as f32 * 0.07 + ch as f32).sin() * 0.25;
+                    input[frame * channels + ch] = (frame as f32 * 0.07 + ch as f32).sin() * 0.25;
                 }
             }
             for click in (100..frames).step_by(100) {

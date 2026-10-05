@@ -589,18 +589,14 @@ impl DelayPlugin {
         let y_2 = self.read_buffer(r2, ch);
         let (sub_weight, ring_part) = if int_delay == 0 {
             // The future tap is extrapolated as the current frame value.
-            (
-                weights[0] + weights[1],
-                weights[2] * y_1 + weights[3] * y_2,
-            )
+            (weights[0] + weights[1], weights[2] * y_1 + weights[3] * y_2)
         } else {
             (
                 weights[0],
                 weights[1] * self.read_buffer(r0, ch) + weights[2] * y_1 + weights[3] * y_2,
             )
         };
-        let current =
-            (input + loop_const + loop_gain * ring_part) / (1.0 - loop_gain * sub_weight);
+        let current = (input + loop_const + loop_gain * ring_part) / (1.0 - loop_gain * sub_weight);
         sub_weight * current + ring_part
     }
 
@@ -1134,10 +1130,9 @@ impl DelayPlugin {
 
         self.validate_stream_buffer(buffer.len(), num_frames)?;
 
-        let lfo_active =
-            self.modulation.rate_hz > 0.0
-                && self.modulation.depth_ms > 0.0
-                && self.sample_rate > 0.0;
+        let lfo_active = self.modulation.rate_hz > 0.0
+            && self.modulation.depth_ms > 0.0
+            && self.sample_rate > 0.0;
         let lfo_phase_inc = if lfo_active {
             self.modulation.rate_hz / self.sample_rate as f32
         } else {

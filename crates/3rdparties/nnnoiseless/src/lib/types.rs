@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use super::consts::FRAME_SIZE;
 use super::consts::NB_BANDS;
+use std::sync::Arc;
 
 pub(super) type Complex = num_complex::Complex<f32>;
 

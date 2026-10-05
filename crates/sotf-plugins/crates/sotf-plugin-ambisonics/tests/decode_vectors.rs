@@ -161,10 +161,8 @@ fn mode_matching_preserves_vectors_over_full_sphere() {
                 assert!(energy < 100.0, "unbounded energy {energy}");
 
                 let direction = cartesian(azimuth, elevation);
-                let energy_cosine =
-                    cosine(energy_vector(&output, &layout), direction);
-                let velocity_cosine =
-                    cosine(velocity_vector(&output, &layout), direction);
+                let energy_cosine = cosine(energy_vector(&output, &layout), direction);
+                let velocity_cosine = cosine(velocity_vector(&output, &layout), direction);
                 worst_energy = worst_energy.min(energy_cosine);
                 worst_velocity = worst_velocity.min(velocity_cosine);
             }
@@ -194,10 +192,7 @@ fn allrad_prefers_source_hemisphere_on_octahedron() {
         (0.0, -90.0, 5, 4),
     ];
     for (azimuth_deg, elevation_deg, source, opposite) in axes {
-        let input = foa_encode(
-            azimuth_deg.to_radians(),
-            elevation_deg.to_radians(),
-        );
+        let input = foa_encode(azimuth_deg.to_radians(), elevation_deg.to_radians());
         let mut output = [0.0_f32; 6];
         matrix.decode_frame(&input, &mut output);
         assert!(output.iter().all(|sample| sample.is_finite()));
@@ -230,8 +225,7 @@ fn conditioning_matches_spherical_design_theory() {
     // Icosahedron order 2: spherical 5-design spans all 9 harmonics.
     let icosahedron = icosahedron();
     for max_re in [false, true] {
-        let matrix =
-            DecodeMatrix::build_for_custom(2, &icosahedron, max_re).unwrap();
+        let matrix = DecodeMatrix::build_for_custom(2, &icosahedron, max_re).unwrap();
         assert_eq!(matrix.quality().rank, 9, "max_re={max_re}");
         assert!(
             matrix.quality().condition_number < 4.0,

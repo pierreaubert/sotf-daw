@@ -222,9 +222,7 @@ impl CommitRefusal {
             Self::BandIndexOutOfRange { .. } => "band index exceeds live bands",
             Self::PlacementMismatch => "prepared update placement does not match the live route",
             Self::TopologyMismatch => "prepared update topology does not match the live route",
-            Self::FirLengthMismatch => {
-                "prepared update FIR length does not match the live route"
-            }
+            Self::FirLengthMismatch => "prepared update FIR length does not match the live route",
             Self::NoStage => "prepared update carries no convolution stage",
             Self::TargetNotFresh => "prepared update target is not fresh; prepare again",
             Self::InvalidBand => "prepared update band parameters are invalid",

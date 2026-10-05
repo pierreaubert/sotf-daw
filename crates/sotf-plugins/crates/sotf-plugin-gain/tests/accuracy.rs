@@ -115,7 +115,11 @@ fn render_one_block(plugin: &mut GainPlugin, sample_rate: u32, input: &[f32]) ->
     let frames = input.len() / channels;
     let mut output = vec![0.0f32; input.len()];
     let processed = plugin
-        .process(input, &mut output, &ProcessContext::new(sample_rate, frames))
+        .process(
+            input,
+            &mut output,
+            &ProcessContext::new(sample_rate, frames),
+        )
         .unwrap();
     assert_eq!(processed, frames);
     output
@@ -196,7 +200,8 @@ fn settled_per_channel_gain_matches_f64_reference() {
     let mut worst_score = 0.0f64;
     let mut worst_case = (0usize, 0.0f32);
     for (index, (&actual, &sample)) in output.iter().zip(input.iter()).enumerate() {
-        let expected = f64::from(sample) * db_to_linear_f64(CHANNEL_GAINS[index % CHANNEL_GAINS.len()]);
+        let expected =
+            f64::from(sample) * db_to_linear_f64(CHANNEL_GAINS[index % CHANNEL_GAINS.len()]);
         let diff = (f64::from(actual) - expected).abs();
         let allowed = CONVERSION_REL_TOL * expected.abs() + SUBNORMAL_ABS_FLOOR;
         let score = diff / allowed;
@@ -205,12 +210,7 @@ fn settled_per_channel_gain_matches_f64_reference() {
             worst_case = (index, sample);
         }
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "sample[{index}]={sample} ch={}: actual={actual} expected={expected}",
             index % CHANNEL_GAINS.len()
         );
@@ -250,12 +250,7 @@ fn settled_stereo_per_channel_gain_matches_f64_reference() {
             worst_case = (index, sample);
         }
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "sample[{index}]={sample}: actual={actual} expected={expected}"
         );
     }
@@ -295,12 +290,7 @@ fn large_block_matches_f64_reference() {
             worst_case = (index, sample);
         }
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "sample[{index}]: actual={actual} expected={expected}"
         );
     }
@@ -401,7 +391,10 @@ fn per_channel_event_applies_at_exact_sample_offset() {
     for frame in 0..POST_FRAMES {
         let left = post[frame * 2];
         let right = post[frame * 2 + 1];
-        assert_eq!(left, 1.0, "untouched channel stays bit-exact at frame {frame}");
+        assert_eq!(
+            left, 1.0,
+            "untouched channel stays bit-exact at frame {frame}"
+        );
         let expected = target + decay * (1.0 - target);
         let diff = (f64::from(right) - expected).abs();
         if diff > worst {
@@ -590,7 +583,9 @@ fn unity_gain_is_bit_exact_passthrough() {
         "global unity must pass samples through bit-exactly"
     );
     let mut per_channel = GainPlugin::new_per_channel_with_smoothing(vec![0.0, 0.0], 0.0).unwrap();
-    per_channel.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+    per_channel
+        .plugin_initialize(f64::from(SAMPLE_RATE))
+        .unwrap();
     assert_eq!(
         render_one_block(&mut per_channel, SAMPLE_RATE, &input),
         input,
@@ -611,12 +606,7 @@ fn minimum_gain_attenuates_without_hidden_gate() {
     for (index, (&actual, &sample)) in output.iter().zip(INPUTS.iter()).enumerate() {
         let expected = f64::from(sample) * gain;
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "sample[{index}]={sample}: actual={actual} expected={expected}"
         );
         assert_ne!(
@@ -639,12 +629,7 @@ fn maximum_gain_applies_without_hidden_clamp() {
     for (index, (&actual, &sample)) in output.iter().zip(INPUTS.iter()).enumerate() {
         let expected = f64::from(sample) * gain;
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "sample[{index}]={sample}: actual={actual} expected={expected}"
         );
     }
@@ -765,9 +750,10 @@ fn parameter_snapshot_round_trip_preserves_values_and_audio() {
 
     let mut global = GainPlugin::with_smoothing(2, -6.0, 25.0);
     global.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
-    let mut per_channel =
-        GainPlugin::new_per_channel_with_smoothing(vec![-6.0, 3.0], 5.0).unwrap();
-    per_channel.plugin_initialize(f64::from(SAMPLE_RATE)).unwrap();
+    let mut per_channel = GainPlugin::new_per_channel_with_smoothing(vec![-6.0, 3.0], 5.0).unwrap();
+    per_channel
+        .plugin_initialize(f64::from(SAMPLE_RATE))
+        .unwrap();
 
     for original in [&mut global, &mut per_channel] {
         let snapshot = original.current_values();
@@ -962,12 +948,7 @@ fn host_automation_chain_matches_f64_reference() {
             worst_case = (index, sample);
         }
         assert!(
-            within_tolerance(
-                actual,
-                expected,
-                CONVERSION_REL_TOL,
-                SUBNORMAL_ABS_FLOOR
-            ),
+            within_tolerance(actual, expected, CONVERSION_REL_TOL, SUBNORMAL_ABS_FLOOR),
             "host sample[{index}]={sample}: actual={actual} expected={expected}"
         );
     }

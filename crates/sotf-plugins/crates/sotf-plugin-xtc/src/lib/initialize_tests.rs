@@ -136,7 +136,9 @@ fn rejected_matrix_initialization_retains_uninitialized_live_and_partial_eof_epo
                     }
                     _ => "sample rate",
                 };
-                let error = actual.initialize(f64::from(requested_rate)).expect_err(failure);
+                let error = actual
+                    .initialize(f64::from(requested_rate))
+                    .expect_err(failure);
                 assert!(error.contains(expected_error), "{failure}: {error}");
                 assert_eq!(
                     before,

@@ -500,7 +500,7 @@ impl BufferManager {
 #[cfg(any(miri, test))]
 mod miri {
     use super::*;
-    use crate::prelude::{PortNames, new_nonzero_u32};
+    use crate::prelude::{new_nonzero_u32, PortNames};
 
     const BUFFER_SIZE: usize = 512;
     const NUM_MAIN_INPUT_CHANNELS: usize = 1;
@@ -650,12 +650,10 @@ mod miri {
             for output in buffers.aux_outputs.iter() {
                 assert_eq!(output.channels(), NUM_AUX_CHANNELS);
                 assert_eq!(output.samples(), 0);
-                assert!(
-                    output
-                        .as_slice_immutable()
-                        .iter()
-                        .all(|channel| channel.is_empty())
-                );
+                assert!(output
+                    .as_slice_immutable()
+                    .iter()
+                    .all(|channel| channel.is_empty()));
             }
         };
 
@@ -684,26 +682,19 @@ mod miri {
         };
         assert_eq!(buffers.aux_outputs[0].samples(), FRAMES);
         assert_eq!(buffers.aux_outputs[0].channels(), NUM_AUX_CHANNELS);
-        assert!(
-            buffers.aux_outputs[0]
-                .as_slice_immutable()
-                .iter()
-                .all(|channel| channel.len() == FRAMES
-                    && channel.iter().all(|sample| *sample == 0.0))
-        );
+        assert!(buffers.aux_outputs[0]
+            .as_slice_immutable()
+            .iter()
+            .all(|channel| channel.len() == FRAMES && channel.iter().all(|sample| *sample == 0.0)));
         assert_eq!(buffers.aux_outputs[1].samples(), 0);
-        assert!(
-            buffers.aux_outputs[1]
-                .as_slice_immutable()
-                .iter()
-                .all(|channel| channel.is_empty())
-        );
+        assert!(buffers.aux_outputs[1]
+            .as_slice_immutable()
+            .iter()
+            .all(|channel| channel.is_empty()));
         drop(buffers);
-        assert!(
-            aux_output_storage[0]
-                .iter()
-                .all(|channel| channel.iter().all(|sample| *sample == 0.0))
-        );
+        assert!(aux_output_storage[0]
+            .iter()
+            .all(|channel| channel.iter().all(|sample| *sample == 0.0)));
 
         let buffers = unsafe {
             manager.create_buffers(0, FRAMES, |sources| {
@@ -798,11 +789,9 @@ mod miri {
                 } else {
                     &output_storage[channel]
                 };
-                assert!(
-                    storage[SAMPLE_OFFSET..SAMPLE_OFFSET + FRAMES]
-                        .iter()
-                        .all(|sample| *sample == -(channel as f32 + 1.0))
-                );
+                assert!(storage[SAMPLE_OFFSET..SAMPLE_OFFSET + FRAMES]
+                    .iter()
+                    .all(|sample| *sample == -(channel as f32 + 1.0)));
                 if aliased {
                     for frame in 0..SAMPLE_OFFSET {
                         assert_eq!(storage[frame], channel as f32 * 10.0 + frame as f32);
@@ -811,16 +800,12 @@ mod miri {
                         assert_eq!(storage[frame], channel as f32 * 10.0 + frame as f32);
                     }
                 } else {
-                    assert!(
-                        storage[..SAMPLE_OFFSET]
-                            .iter()
-                            .all(|sample| *sample == -1.0)
-                    );
-                    assert!(
-                        storage[SAMPLE_OFFSET + FRAMES..]
-                            .iter()
-                            .all(|sample| *sample == -1.0)
-                    );
+                    assert!(storage[..SAMPLE_OFFSET]
+                        .iter()
+                        .all(|sample| *sample == -1.0));
+                    assert!(storage[SAMPLE_OFFSET + FRAMES..]
+                        .iter()
+                        .all(|sample| *sample == -1.0));
                 }
             }
             for channel in OUTPUTS..INPUTS {
@@ -909,16 +894,12 @@ mod miri {
                 &output_storage[channel][FULL_OFFSET..FULL_OFFSET + MAX_FRAMES],
                 &input_storage[channel][FULL_OFFSET..FULL_OFFSET + MAX_FRAMES]
             );
-            assert!(
-                output_storage[channel][..FULL_OFFSET]
-                    .iter()
-                    .all(|sample| *sample == -1.0)
-            );
-            assert!(
-                output_storage[channel][FULL_OFFSET + MAX_FRAMES..]
-                    .iter()
-                    .all(|sample| *sample == -1.0)
-            );
+            assert!(output_storage[channel][..FULL_OFFSET]
+                .iter()
+                .all(|sample| *sample == -1.0));
+            assert!(output_storage[channel][FULL_OFFSET + MAX_FRAMES..]
+                .iter()
+                .all(|sample| *sample == -1.0));
         }
 
         // A shorter callback with fewer input channels must clear absent scratch channels instead

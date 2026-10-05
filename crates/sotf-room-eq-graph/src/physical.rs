@@ -343,9 +343,11 @@ mod tests {
                     routes: vec![route(0, 0), route(0, 1), route(1, 1)],
                 };
                 let graph = build_physical_room_eq_graph(&physical, &[]).unwrap();
-                assert!(graph.edges.iter().all(|edge| {
-                    edge.kind == sotf_audio::engine::PluginGraphEdgeKind::Audio
-                }));
+                assert!(
+                    graph.edges.iter().all(|edge| {
+                        edge.kind == sotf_audio::engine::PluginGraphEdgeKind::Audio
+                    })
+                );
                 let mut host = DawHost::new(2, sample_rate);
                 let mut ids = std::collections::HashMap::new();
                 for node in &graph.nodes {

@@ -100,7 +100,9 @@ static CLAP_HOST_PARAMS: clap_host_params = clap_host_params {
 
 unsafe extern "C" fn rescan_clap_params(host: *const clap_host, flags: clap_param_rescan_flags) {
     let state = unsafe { clap_host_state(host) };
-    state.param_rescan_flags.store(flags as usize, Ordering::Release);
+    state
+        .param_rescan_flags
+        .store(flags as usize, Ordering::Release);
     state.param_rescans.fetch_add(1, Ordering::AcqRel);
 }
 
@@ -975,7 +977,14 @@ impl NativeVst3 {
             {
                 // SAFETY: `changes` owns the input event graph through this synchronous process
                 // callback, and the event queues retain all point storage for the same lifetime.
-                data.input_param_changes = unsafe { std::mem::transmute::<*mut *mut nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChangesVTable, nih_plug::wrapper::vst3::vst3_sys::utils::StaticVstPtr<dyn nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChanges>>(changes.as_ptr()) };
+                data.input_param_changes = unsafe {
+                    std::mem::transmute::<
+                        *mut *mut nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChangesVTable,
+                        nih_plug::wrapper::vst3::vst3_sys::utils::StaticVstPtr<
+                            dyn nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChanges,
+                        >,
+                    >(changes.as_ptr())
+                };
             }
             // SAFETY: bus pointers and backing buffers remain valid through this call.
             assert_eq!(unsafe { self.processor.process(&mut data) }, kResultOk);
@@ -1958,12 +1967,7 @@ fn initialize_generated_with_max_frames(
         process_mode: ProcessMode::Realtime,
     };
     let mut context = super::TestContext;
-    assert!(NihPlugin::initialize(
-        plugin,
-        layout,
-        &config,
-        &mut context
-    ));
+    assert!(NihPlugin::initialize(plugin, layout, &config, &mut context));
 }
 
 fn render_generated_complete(
@@ -2395,7 +2399,10 @@ fn clap_state_stream_handles_short_reads_and_rejects_untrusted_lengths() {
         "successful state load must notify the host of changed parameter values"
     );
     assert_eq!(
-        subject._host_state.param_rescan_flags.load(Ordering::Acquire) as u32,
+        subject
+            ._host_state
+            .param_rescan_flags
+            .load(Ordering::Acquire) as u32,
         CLAP_PARAM_RESCAN_VALUES
     );
     assert!(matches!(

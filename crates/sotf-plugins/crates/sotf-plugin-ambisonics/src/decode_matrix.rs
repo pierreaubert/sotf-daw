@@ -1015,9 +1015,7 @@ mod tests {
         // `TARGET_LAYOUTS` also carries the user-geometry key, which has no
         // static config; custom quality is covered by the custom builders'
         // own bounded-or-reject tests. Pin the skip so it cannot go stale.
-        assert!(
-            crate::params::TARGET_LAYOUTS.contains(&crate::custom_layout::CUSTOM_LAYOUT_KEY)
-        );
+        assert!(crate::params::TARGET_LAYOUTS.contains(&crate::custom_layout::CUSTOM_LAYOUT_KEY));
         for layout in crate::params::TARGET_LAYOUTS
             .iter()
             .filter(|layout| **layout != crate::custom_layout::CUSTOM_LAYOUT_KEY)
@@ -1078,8 +1076,7 @@ mod tests {
         for order in [0, crate::spherical_harmonics::MAX_ORDER + 1] {
             let mode_matching = DecodeMatrix::build_for_custom(order, &layout, false).unwrap_err();
             assert!(mode_matching.contains("between 1 and"), "{mode_matching}");
-            let allrad =
-                DecodeMatrix::build_allrad_for_custom(order, &layout, false).unwrap_err();
+            let allrad = DecodeMatrix::build_allrad_for_custom(order, &layout, false).unwrap_err();
             assert!(allrad.contains("between 1 and"), "{allrad}");
         }
     }

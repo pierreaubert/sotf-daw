@@ -13,7 +13,11 @@ unsafe extern "C" fn no_extension(_: *const clap_host, _: *const c_char) -> *con
 
 unsafe extern "C" fn no_request(_: *const clap_host) {}
 
-fn assert_roundtrip<P: Plugin + ClapPlugin>(name: &str, initial: f64, max_ulps: Option<u32>) -> String {
+fn assert_roundtrip<P: Plugin + ClapPlugin>(
+    name: &str,
+    initial: f64,
+    max_ulps: Option<u32>,
+) -> String {
     let host = Box::new(clap_host {
         clap_version: clap_sys::version::CLAP_VERSION,
         host_data: std::ptr::null_mut(),
@@ -54,7 +58,9 @@ fn assert_roundtrip<P: Plugin + ClapPlugin>(name: &str, initial: f64, max_ulps: 
                 display.as_mut_ptr(),
                 display.len() as u32,
             ));
-            CStr::from_ptr(display.as_ptr()).to_string_lossy().into_owned()
+            CStr::from_ptr(display.as_ptr())
+                .to_string_lossy()
+                .into_owned()
         };
         let first = to_text(initial);
         let display = CString::new(first.as_str()).unwrap();
@@ -73,7 +79,9 @@ fn assert_roundtrip<P: Plugin + ClapPlugin>(name: &str, initial: f64, max_ulps: 
         );
         if let Some(max_ulps) = max_ulps {
             // All twelve validator failures in run #559 moved one normalized f32 ULP.
-            let distance = (initial as f32).to_bits().abs_diff((parsed as f32).to_bits());
+            let distance = (initial as f32)
+                .to_bits()
+                .abs_diff((parsed as f32).to_bits());
             assert!(
                 distance <= max_ulps,
                 "{name}: normalized value moved {distance} f32 ULPs"
@@ -99,7 +107,11 @@ fn crossfeed_frequency_text_is_stable() {
     for value in [0.0, f32::EPSILON as f64, 0.25, 0.5, 0.75, 1.0] {
         assert_roundtrip::<crate::plugin::SotfCrossfeed>("MB Mid/High Freq", value, None);
     }
-    assert_roundtrip::<crate::plugin::SotfCrossfeed>("MB Mid/High Freq", 0.8686868686868687, Some(8));
+    assert_roundtrip::<crate::plugin::SotfCrossfeed>(
+        "MB Mid/High Freq",
+        0.8686868686868687,
+        Some(8),
+    );
 }
 
 #[cfg(feature = "upmixer")]
@@ -206,11 +218,13 @@ impl ClapPlugin for TextPlugin {
 
 #[test]
 fn clap_unit_and_custom_formatter_roundtrip_through_extension() {
-    let normalized = f64::from(FloatRange::Linear {
-        min: 20.0,
-        max: 20_000.0,
-    }
-    .normalize(440.0));
+    let normalized = f64::from(
+        FloatRange::Linear {
+            min: 20.0,
+            max: 20_000.0,
+        }
+        .normalize(440.0),
+    );
     let unit_text = assert_roundtrip::<TextPlugin>("Unit Frequency", normalized, Some(8));
     assert!(unit_text.ends_with(" Hz"));
     let custom_text = assert_roundtrip::<TextPlugin>("Custom Frequency", normalized, Some(8));

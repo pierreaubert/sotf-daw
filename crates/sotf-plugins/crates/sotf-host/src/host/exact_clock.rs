@@ -25,7 +25,11 @@ impl ExactRate {
         } else {
             fraction | (1_u64 << 52)
         };
-        let mut binary_exponent = (if exponent == 0 { -1022 } else { exponent - 1023 }) - 52;
+        let mut binary_exponent = (if exponent == 0 {
+            -1022
+        } else {
+            exponent - 1023
+        }) - 52;
         if binary_exponent < 0 {
             let common_twos = significand.trailing_zeros().min((-binary_exponent) as u32);
             significand >>= common_twos;
@@ -43,12 +47,16 @@ impl ExactRate {
             let shift = (-binary_exponent) as u32;
             (
                 u128::from(significand),
-                1_u128.checked_shl(shift).filter(|value| *value != 0).ok_or_else(|| {
-                    format!("Graph sample rate {rate} exceeds exact clock range")
-                })?,
+                1_u128
+                    .checked_shl(shift)
+                    .filter(|value| *value != 0)
+                    .ok_or_else(|| format!("Graph sample rate {rate} exceeds exact clock range"))?,
             )
         };
-        Ok(Self { numerator, denominator })
+        Ok(Self {
+            numerator,
+            denominator,
+        })
     }
 }
 
@@ -107,8 +115,7 @@ impl ExactClock {
     pub fn ticks_to_frames_ceil(&self, ticks: u128, rate: ExactRate) -> Result<usize, String> {
         let period = self.ticks_per_sample(rate)?;
         let frames = ticks.div_ceil(period);
-        usize::try_from(frames)
-            .map_err(|_| "Graph latency exceeds addressable frames".to_owned())
+        usize::try_from(frames).map_err(|_| "Graph latency exceeds addressable frames".to_owned())
     }
 
     pub fn convert_position(

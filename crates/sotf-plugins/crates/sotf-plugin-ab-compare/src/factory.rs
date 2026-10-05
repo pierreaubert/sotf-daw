@@ -488,7 +488,10 @@ fn build_graph(
                 .get(&nodes[up].id)
                 .copied()
                 .expect("topological construction resolves upstream input clocks first");
-            upstream.push(native_output_rate(upstream_plugin.as_ref(), upstream_input)?);
+            upstream.push(native_output_rate(
+                upstream_plugin.as_ref(),
+                upstream_input,
+            )?);
         }
         let mut rate = sample_rate;
         if let Some((&first, rest)) = upstream.split_first() {

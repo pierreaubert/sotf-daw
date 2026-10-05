@@ -383,12 +383,11 @@ impl Plugin for SpectrumAnalyzerPlugin {
                 let v = value
                     .as_float()
                     .ok_or_else(|| "max_freq must be a float".to_string())?;
-                if !v.is_finite()
-                    || v < 1000.0
-                    || v > 22050.0
-                    || v <= self.config.min_freq
-                {
-                    return Err("max_freq must be finite, within the declared range, and above min_freq".into());
+                if !v.is_finite() || v < 1000.0 || v > 22050.0 || v <= self.config.min_freq {
+                    return Err(
+                        "max_freq must be finite, within the declared range, and above min_freq"
+                            .into(),
+                    );
                 }
                 if v == self.config.max_freq {
                     return Ok(());
@@ -676,7 +675,14 @@ mod tests {
             plugin.get_parameter(&ParameterId::from("max_freq")),
             Some(ParameterValue::Float(20_000.0))
         );
-        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 16_000.0));
+        assert!(
+            plugin
+                .cache
+                .load()
+                .frequencies
+                .iter()
+                .all(|f| *f <= 16_000.0)
+        );
     }
 
     #[test]
@@ -698,7 +704,14 @@ mod tests {
         drop(high);
 
         plugin.initialize(8_000.0).unwrap();
-        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
+        assert!(
+            plugin
+                .cache
+                .load()
+                .frequencies
+                .iter()
+                .all(|f| *f <= 4_000.0)
+        );
     }
 
     #[test]
@@ -713,17 +726,32 @@ mod tests {
         )
         .unwrap();
         plugin
-            .set_parameter(ParameterId::from("max_freq"), ParameterValue::Float(20_000.0))
+            .set_parameter(
+                ParameterId::from("max_freq"),
+                ParameterValue::Float(20_000.0),
+            )
             .unwrap();
         assert_eq!(
             plugin.get_parameter(&ParameterId::from("max_freq")),
             Some(ParameterValue::Float(20_000.0))
         );
-        assert!(plugin.cache.load().frequencies.iter().all(|f| *f <= 4_000.0));
+        assert!(
+            plugin
+                .cache
+                .load()
+                .frequencies
+                .iter()
+                .all(|f| *f <= 4_000.0)
+        );
         plugin.initialize(8_000.0).unwrap();
-        assert!(plugin
-            .set_parameter(ParameterId::from("max_freq"), ParameterValue::Float(19_000.0))
-            .is_err());
+        assert!(
+            plugin
+                .set_parameter(
+                    ParameterId::from("max_freq"),
+                    ParameterValue::Float(19_000.0)
+                )
+                .is_err()
+        );
     }
 
     #[test]

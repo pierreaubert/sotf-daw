@@ -344,16 +344,15 @@ fn verify_loaded_compressor_route(
         }
         tail
     };
-    let mut default_loaded =
-        ExternalPlugin::from_placeholder_state(&saved_state, SAMPLE_RATE)
-            .expect("reload default twin");
+    let mut default_loaded = ExternalPlugin::from_placeholder_state(&saved_state, SAMPLE_RATE)
+        .expect("reload default twin");
     let default_tail = tail_peak(&mut default_loaded);
     let detector_tail = tail_peak(&mut detector);
-    println!(
-        "{instance} loaded LF tails: default={default_tail:.4} detector={detector_tail:.4}"
-    );
-    let separation_db =
-        20.0 * (detector_tail / default_tail.max(1.0e-9)).max(1.0e-9).log10();
+    println!("{instance} loaded LF tails: default={default_tail:.4} detector={detector_tail:.4}");
+    let separation_db = 20.0
+        * (detector_tail / default_tail.max(1.0e-9))
+            .max(1.0e-9)
+            .log10();
     assert!(
         separation_db > 3.0,
         "{instance} loaded detector separation too small: {separation_db:.2} dB"

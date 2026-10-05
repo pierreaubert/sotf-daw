@@ -76,9 +76,7 @@ fn count_allocs(op: impl FnOnce()) -> (usize, usize) {
 }
 
 fn lcg(state: &mut u32) -> f32 {
-    *state = state
-        .wrapping_mul(1_664_525)
-        .wrapping_add(1_013_904_223);
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     (*state as f32 / u32::MAX as f32) * 2.0 - 1.0
 }
 
@@ -144,12 +142,7 @@ fn render_hiss(
 }
 
 fn channel(signal: &[f32], channels: usize, ch: usize) -> Vec<f32> {
-    signal
-        .iter()
-        .skip(ch)
-        .step_by(channels)
-        .copied()
-        .collect()
+    signal.iter().skip(ch).step_by(channels).copied().collect()
 }
 
 fn interleave(left: &[f32], right: &[f32]) -> Vec<f32> {
@@ -346,16 +339,14 @@ fn spectral_curve_shapes_reduction_per_bin_and_preserves_tones() {
     let frames = SR as usize * 2;
     let hiss = spectral_hiss_fixture(frames, 0x51ab_0001);
     let tone = sine_tone(frames, TONE_AMPLITUDE, TONE_HZ);
-    let input: Vec<f32> = hiss
-        .iter()
-        .zip(tone.iter())
-        .map(|(h, t)| h + t)
-        .collect();
+    let input: Vec<f32> = hiss.iter().zip(tone.iter()).map(|(h, t)| h + t).collect();
 
     let mut reducer = SpectralHissReducer::new(1);
     reducer.initialize(SR).unwrap();
     reducer.set_params(1_000.0, -20.0, 1.0);
-    reducer.set_curve_gains(&log_curve_gains(0.0, 0.5, 1.0)).unwrap();
+    reducer
+        .set_curve_gains(&log_curve_gains(0.0, 0.5, 1.0))
+        .unwrap();
     let output = render_spectral(&mut reducer, 1, &input, &PARTITIONS);
 
     let out_start = SR as usize;
@@ -392,9 +383,7 @@ fn spectral_curve_shapes_reduction_per_bin_and_preserves_tones() {
         "curve did not separate bands: low {low_db:.2} dB, high {high_db:.2} dB"
     );
 
-    let tone_db = power_db(
-        goertzel_power(out_win, tone_bin) / goertzel_power(in_win, tone_bin),
-    );
+    let tone_db = power_db(goertzel_power(out_win, tone_bin) / goertzel_power(in_win, tone_bin));
     assert!(
         tone_db.abs() < 1.0,
         "tonal bin changed by {tone_db:.2} dB under the curve"
@@ -406,7 +395,9 @@ fn spectral_defaults_are_bit_exact_under_explicit_flat_settings() {
     let hiss = spectral_hiss_fixture(SR as usize, 0x51ab_0001);
     let mut default = spectral_reducer((4_000.0, -30.0, 0.85));
     let mut explicit = spectral_reducer((4_000.0, -30.0, 0.85));
-    explicit.set_curve_gains(&[1.0; SPECTRAL_HISS_NUM_BINS]).unwrap();
+    explicit
+        .set_curve_gains(&[1.0; SPECTRAL_HISS_NUM_BINS])
+        .unwrap();
     explicit.set_external_noise(true, &[-40.0]).unwrap();
     explicit.set_external_noise(false, &[-40.0]).unwrap();
     assert_eq!(
@@ -703,7 +694,11 @@ fn realtime_paths_do_not_allocate() {
         hiss.reset();
         hiss.process(&mut block);
     });
-    assert_eq!((allocs, frees), (0, 0), "time-domain realtime path allocated");
+    assert_eq!(
+        (allocs, frees),
+        (0, 0),
+        "time-domain realtime path allocated"
+    );
 }
 
 fn amplitude_db(ratio: f64) -> f64 {
@@ -730,10 +725,7 @@ fn impulse_train(
 fn peak_near(signal: &[f32], center: usize, before: usize, after: usize) -> f32 {
     let lo = center.saturating_sub(before);
     let hi = (center + after).min(signal.len());
-    signal[lo..hi]
-        .iter()
-        .map(|s| s.abs())
-        .fold(0.0, f32::max)
+    signal[lo..hi].iter().map(|s| s.abs()).fold(0.0, f32::max)
 }
 
 /// Bit-exact equality with a concise first-difference diagnostic.
@@ -841,11 +833,7 @@ fn spectral_profile_preserves_quiet_tone_and_suppresses_hiss() {
     let hiss = spectral_hiss_fixture(frames, 0x51ab_0001);
     let floor = power_db(one_pole_high_power(&hiss[..SR as usize], 4_000.0, RATE)) as f32;
     let tone = sine_tone(frames, TONE_AMPLITUDE, TONE_HZ);
-    let input: Vec<f32> = hiss
-        .iter()
-        .zip(tone.iter())
-        .map(|(h, t)| h + t)
-        .collect();
+    let input: Vec<f32> = hiss.iter().zip(tone.iter()).map(|(h, t)| h + t).collect();
 
     let mut live = spectral_reducer((4_000.0, -20.0, 0.85));
     let mut profiled = spectral_reducer((4_000.0, -20.0, 0.85));
@@ -1063,14 +1051,10 @@ fn spectral_link_toggle_converges_without_clicks() {
     let mut toggled = SpectralHissReducer::new(2);
     toggled.initialize(SR).unwrap();
     toggled.set_params(4_000.0, -30.0, 0.85);
-    let (output, at) = render_spectral_with_toggle(
-        &mut toggled,
-        2,
-        &stereo,
-        &PARTITIONS,
-        SR as usize,
-        |r| r.set_linked(true),
-    );
+    let (output, at) =
+        render_spectral_with_toggle(&mut toggled, 2, &stereo, &PARTITIONS, SR as usize, |r| {
+            r.set_linked(true)
+        });
     assert!(output.iter().all(|s| s.is_finite()));
     // No new discontinuity: the inter-sample jump at the toggle frame
     // stays within the reference render's natural jumps per channel.
@@ -1104,11 +1088,7 @@ fn spectral_curve_reshape_converges_without_clicks() {
     let frames = SR as usize * 2;
     let hiss = spectral_hiss_fixture(frames, 0x51ab_0001);
     let tone = sine_tone(frames, TONE_AMPLITUDE, TONE_HZ);
-    let input: Vec<f32> = hiss
-        .iter()
-        .zip(tone.iter())
-        .map(|(h, t)| h + t)
-        .collect();
+    let input: Vec<f32> = hiss.iter().zip(tone.iter()).map(|(h, t)| h + t).collect();
     let shaped = log_curve_gains(0.0, 0.5, 1.0);
 
     let mut reference = SpectralHissReducer::new(1);
@@ -1121,16 +1101,10 @@ fn spectral_curve_reshape_converges_without_clicks() {
     reshaped.initialize(SR).unwrap();
     reshaped.set_params(1_000.0, -20.0, 1.0);
     let reshaped_table = shaped.clone();
-    let (output, at) = render_spectral_with_toggle(
-        &mut reshaped,
-        1,
-        &input,
-        &PARTITIONS,
-        SR as usize,
-        |r| {
+    let (output, at) =
+        render_spectral_with_toggle(&mut reshaped, 1, &input, &PARTITIONS, SR as usize, |r| {
             r.set_curve_gains(&reshaped_table).unwrap();
-        },
-    );
+        });
     assert!(output.iter().all(|s| s.is_finite()));
     let jump_here = (output[at] - output[at - 1]).abs();
     assert!(
@@ -1156,31 +1130,19 @@ fn spectral_profile_toggle_converges_without_clicks() {
     reference.set_external_noise(true, &[floor]).unwrap();
     let expected_on = render_spectral(&mut reference, 1, &hiss, &PARTITIONS);
     let mut enabling = spectral_reducer((4_000.0, -30.0, 0.85));
-    let (output_on, at_on) = render_spectral_with_toggle(
-        &mut enabling,
-        1,
-        &hiss,
-        &PARTITIONS,
-        SR as usize,
-        |r| {
+    let (output_on, at_on) =
+        render_spectral_with_toggle(&mut enabling, 1, &hiss, &PARTITIONS, SR as usize, |r| {
             r.set_external_noise(true, &[floor]).unwrap();
-        },
-    );
+        });
 
     let mut live_ref = spectral_reducer((4_000.0, -30.0, 0.85));
     let expected_off = render_spectral(&mut live_ref, 1, &hiss, &PARTITIONS);
     let mut disabling = spectral_reducer((4_000.0, -30.0, 0.85));
     disabling.set_external_noise(true, &[floor]).unwrap();
-    let (output_off, at_off) = render_spectral_with_toggle(
-        &mut disabling,
-        1,
-        &hiss,
-        &PARTITIONS,
-        SR as usize,
-        |r| {
+    let (output_off, at_off) =
+        render_spectral_with_toggle(&mut disabling, 1, &hiss, &PARTITIONS, SR as usize, |r| {
             r.set_external_noise(false, &[floor]).unwrap();
-        },
-    );
+        });
 
     for (name, output, expected, at) in [
         ("enable", &output_on, &expected_on, at_on),
@@ -1197,10 +1159,7 @@ fn spectral_profile_toggle_converges_without_clicks() {
         );
         let conv = SR as usize + SR as usize / 2;
         let got = power_db(mean_power(&output[conv..]) / mean_power(&expected[conv..]));
-        assert!(
-            got.abs() < 1.0,
-            "{name}: did not converge: {got:.2} dB"
-        );
+        assert!(got.abs() < 1.0, "{name}: did not converge: {got:.2} dB");
     }
 }
 
@@ -1224,14 +1183,10 @@ fn spectral_guard_toggle_converges_without_clicks() {
     let expected = render_spectral(&mut reference, 1, &input, &PARTITIONS);
 
     let mut toggled = spectral_reducer((4_000.0, -30.0, 0.85));
-    let (output, at) = render_spectral_with_toggle(
-        &mut toggled,
-        1,
-        &input,
-        &PARTITIONS,
-        SR as usize,
-        |r| r.set_transient_guard(true),
-    );
+    let (output, at) =
+        render_spectral_with_toggle(&mut toggled, 1, &input, &PARTITIONS, SR as usize, |r| {
+            r.set_transient_guard(true)
+        });
     assert!(output.iter().all(|s| s.is_finite()));
     let jump_here = (output[at] - output[at - 1]).abs();
     assert!(
@@ -1240,7 +1195,10 @@ fn spectral_guard_toggle_converges_without_clicks() {
     );
     let conv = SR as usize + SR as usize / 2;
     let got = power_db(mean_power(&output[conv..]) / mean_power(&expected[conv..]));
-    assert!(got.abs() < 1.0, "guard toggle did not converge: {got:.2} dB");
+    assert!(
+        got.abs() < 1.0,
+        "guard toggle did not converge: {got:.2} dB"
+    );
 }
 
 #[test]
@@ -1361,9 +1319,7 @@ fn cold_realtime_paths_do_not_allocate() {
     let curve = log_curve_gains(0.0, 0.5, 1.0);
     let mut block = vec![0.01f32; 4096 * 2];
     let (allocs, frees) = count_allocs(|| {
-        spectral
-            .set_external_noise(true, &[-40.0, -42.0])
-            .unwrap();
+        spectral.set_external_noise(true, &[-40.0, -42.0]).unwrap();
         spectral.set_curve_gains(&curve).unwrap();
         spectral.set_linked(true);
         spectral.set_transient_guard(true);

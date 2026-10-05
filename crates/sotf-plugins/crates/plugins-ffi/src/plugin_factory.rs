@@ -181,7 +181,10 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
         let Ok(index) = index.parse::<usize>() else {
             continue;
         };
-        if !matches!(field, "type" | "freq" | "q" | "gain" | "active" | "placement") {
+        if !matches!(
+            field,
+            "type" | "freq" | "q" | "gain" | "active" | "placement"
+        ) {
             continue;
         }
         if index >= num_filters {
@@ -210,8 +213,7 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
                 band.insert("active".to_string(), active.into());
             }
             "placement" => {
-                const PLACEMENT_LABELS: [&str; 5] =
-                    ["stereo", "left", "right", "mid", "side"];
+                const PLACEMENT_LABELS: [&str; 5] = ["stereo", "left", "right", "mid", "side"];
                 let placement_index = value
                     .as_u64()
                     .and_then(|value| usize::try_from(value).ok())
@@ -497,9 +499,9 @@ pub(crate) fn merge_dynamic_eq_state_into_config(
                     let valid = pair.as_array().is_some_and(|pair| {
                         pair.len() == 2
                             && pair.iter().all(|channel| {
-                                channel.as_u64().is_some_and(|channel| {
-                                    usize::try_from(channel).is_ok()
-                                })
+                                channel
+                                    .as_u64()
+                                    .is_some_and(|channel| usize::try_from(channel).is_ok())
                             })
                     });
                     if !valid {
@@ -611,9 +613,7 @@ pub(crate) fn merge_eq_state_into_config(
                 .parse::<usize>()
                 .ok()
                 .filter(|index| *index < MAX_FILTERS)
-                .ok_or_else(|| {
-                    format!("EQ state parameter '{key}' has an invalid band index")
-                })?;
+                .ok_or_else(|| format!("EQ state parameter '{key}' has an invalid band index"))?;
             if index_text != index.to_string() {
                 return Err(format!(
                     "EQ state parameter '{key}' has a noncanonical band index"
@@ -634,9 +634,7 @@ pub(crate) fn merge_eq_state_into_config(
                 .parse::<usize>()
                 .ok()
                 .filter(|index| *index < MAX_FILTERS)
-                .ok_or_else(|| {
-                    format!("EQ state parameter '{key}' has an invalid filter index")
-                })?;
+                .ok_or_else(|| format!("EQ state parameter '{key}' has an invalid filter index"))?;
             if index_text != index.to_string() {
                 return Err(format!(
                     "EQ state parameter '{key}' has a noncanonical filter index"
@@ -645,9 +643,7 @@ pub(crate) fn merge_eq_state_into_config(
             state[key]
                 .as_i64()
                 .filter(|placement| (0..=5).contains(placement))
-                .ok_or_else(|| {
-                    format!("EQ state '{key}' must be a placement index in 0..=5")
-                })?;
+                .ok_or_else(|| format!("EQ state '{key}' must be a placement index in 0..=5"))?;
             continue;
         }
         // Legacy tolerance: bridge state loads ignore unknown keys, so the
@@ -723,9 +719,7 @@ pub(crate) fn merge_eq_state_into_config(
                 );
             }
             _ => {
-                return Err(
-                    "EQ state 'channel_filters' must be an array or null".to_string(),
-                );
+                return Err("EQ state 'channel_filters' must be an array or null".to_string());
             }
         }
     }
@@ -802,7 +796,9 @@ pub(crate) fn merge_de_esser_state_into_config(
     ] {
         if let Some(value) = state.get(state_key) {
             if !value.as_f64().is_some_and(f64::is_finite) {
-                return Err(format!("DeEsser state '{state_key}' must be a finite number"));
+                return Err(format!(
+                    "DeEsser state '{state_key}' must be a finite number"
+                ));
             }
             config.insert(config_key.to_string(), value.clone());
         }
@@ -1201,16 +1197,15 @@ pub(crate) fn create_unprepared_plugin(
     // DeEsser (its input bus is program + key). Other routes take input width.
     // Validate both actual buses so inconsistent sidechain/band counts cannot
     // bypass the requested FFI layout.
-    let constructor_channels = if matches!(
-        plugin_type,
-        "BandMerge" | "band_merge" | "Gate" | "gate"
-    ) || (matches!(plugin_type, "DeEsser" | "de_esser")
-        && de_esser_config_is_external_sidechain(&plugin_config))
-    {
-        output_channels
-    } else {
-        input_channels
-    };
+    let constructor_channels =
+        if matches!(plugin_type, "BandMerge" | "band_merge" | "Gate" | "gate")
+            || (matches!(plugin_type, "DeEsser" | "de_esser")
+                && de_esser_config_is_external_sidechain(&plugin_config))
+        {
+            output_channels
+        } else {
+            input_channels
+        };
     let plugin = plugins_bridge::create_plugin(
         plugin_type,
         constructor_channels,
@@ -1386,7 +1381,8 @@ mod tests {
     #[test]
     fn linear_phase_eq_adapter_latency_uses_negotiated_callback_quantum() {
         let config = r#"{"num_filters":1,"fir_length_index":0,"filters":[]}"#;
-        let mut inner = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, config).unwrap();
+        let mut inner =
+            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, config).unwrap();
         inner.initialize(48_000.0).unwrap();
         let inner_latency = inner.latency_samples();
 

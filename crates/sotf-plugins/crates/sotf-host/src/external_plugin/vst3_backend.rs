@@ -1125,31 +1125,32 @@ impl NativeExternalPluginBackend for Vst3Backend {
                     "read structural parameter metadata",
                 )?;
                 let info = info.assume_init();
-                let (slot, expected_steps, minimum_value, maximum_value, key) =
-                    if info.id == order_id {
-                        (&mut order, 6, 1.0, 7.0, "order")
-                    } else if info.id == target_layout_id {
-                        // Legacy binaries expose seven steps (named targets
-                        // 0..=7); custom-capable binaries expose eight
-                        // (0..=8). Values stay bounded by the advertised
-                        // maximum either way.
-                        if info.step_count != 7 && info.step_count != 8 {
-                            return Err(format!(
-                                "VST3 plugin '{}' structural parameter 'target_layout' has incompatible metadata",
-                                self.metadata.name
-                            ));
-                        }
-                        let maximum_value = if info.step_count == 8 { 8.0 } else { 7.0 };
-                        (
-                            &mut target_layout,
-                            info.step_count,
-                            0.0,
-                            maximum_value,
-                            "target_layout",
-                        )
-                    } else {
-                        continue;
-                    };
+                let (slot, expected_steps, minimum_value, maximum_value, key) = if info.id
+                    == order_id
+                {
+                    (&mut order, 6, 1.0, 7.0, "order")
+                } else if info.id == target_layout_id {
+                    // Legacy binaries expose seven steps (named targets
+                    // 0..=7); custom-capable binaries expose eight
+                    // (0..=8). Values stay bounded by the advertised
+                    // maximum either way.
+                    if info.step_count != 7 && info.step_count != 8 {
+                        return Err(format!(
+                            "VST3 plugin '{}' structural parameter 'target_layout' has incompatible metadata",
+                            self.metadata.name
+                        ));
+                    }
+                    let maximum_value = if info.step_count == 8 { 8.0 } else { 7.0 };
+                    (
+                        &mut target_layout,
+                        info.step_count,
+                        0.0,
+                        maximum_value,
+                        "target_layout",
+                    )
+                } else {
+                    continue;
+                };
                 if slot.is_some() {
                     return Err(format!(
                         "VST3 plugin '{}' reports duplicate structural parameter id for '{key}'",
@@ -1345,7 +1346,10 @@ impl NativeExternalPluginBackend for Vst3Backend {
             ));
         }
         let (order, arrangement, output_permutation) = match setup {
-            NativePluginAudioSetup::Ambisonics { order, target_layout } => (
+            NativePluginAudioSetup::Ambisonics {
+                order,
+                target_layout,
+            } => (
                 *order,
                 target_layout.vst3_speaker_arrangement(),
                 target_layout.vst3_bus_to_sotf_permutation().to_vec(),
@@ -2367,8 +2371,13 @@ mod output_bus_layout_tests {
             num_bands: 2,
             output_layout: NativeBandSplitOutputLayout::Vst3Buses,
         };
-        let mut backend = Vst3Backend::load(&descriptor, f64::from(SAMPLE_RATE), 128, Some(&initial_setup))
-            .expect("load the exported BandSplit VST3 backend");
+        let mut backend = Vst3Backend::load(
+            &descriptor,
+            f64::from(SAMPLE_RATE),
+            128,
+            Some(&initial_setup),
+        )
+        .expect("load the exported BandSplit VST3 backend");
         backend.test_output_bus_observer = Some(inspect_process_output_buses);
 
         let input = (0..FRAMES * 2)
@@ -2917,8 +2926,7 @@ fn prepare_vst3_events(
             }
         };
         let ppq = context.transport.ppq_position
-            + midi.sample_offset as f64 / context.sample_rate * context.transport.bpm
-                / 60.0;
+            + midi.sample_offset as f64 / context.sample_rate * context.transport.bpm / 60.0;
         events.push(Event {
             bus_index: 0,
             sample_offset: midi.sample_offset as i32,
@@ -3179,15 +3187,13 @@ unsafe fn initialize_component(
                         requested.name
                     ));
                 }
-                let (input_channels, output_channels) =
-                    NativePluginAudioSetup::AmbisonicsCustom {
-                        order: *order,
-                        custom: custom.clone(),
-                    }
-                    .channel_counts()?;
+                let (input_channels, output_channels) = NativePluginAudioSetup::AmbisonicsCustom {
+                    order: *order,
+                    custom: custom.clone(),
+                }
+                .channel_counts()?;
                 input_arrangement = ambisonics_speaker_arrangement(*order)?;
-                output_arrangements[0] =
-                    custom.vst3_arrangement(*order).map(|(mask, _)| mask)?;
+                output_arrangements[0] = custom.vst3_arrangement(*order).map(|(mask, _)| mask)?;
                 (
                     input_channels,
                     output_channels,
@@ -3312,8 +3318,7 @@ unsafe fn initialize_component(
                 )
             }
         };
-        let sidechain_route =
-            matches!(audio_setup, Some(NativePluginAudioSetup::Sidechain { .. }));
+        let sidechain_route = matches!(audio_setup, Some(NativePluginAudioSetup::Sidechain { .. }));
         let input_bus_count = if sidechain_route {
             2
         } else {

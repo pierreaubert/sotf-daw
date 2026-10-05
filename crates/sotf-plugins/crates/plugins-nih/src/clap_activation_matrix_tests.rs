@@ -54,7 +54,8 @@ fn activation_outcomes<P: Plugin + ClapPlugin>() -> Vec<(f64, bool, bool)> {
         // activation is deactivated before dropping its fresh wrapper.
         let (initialized, activated) = unsafe {
             let initialized = ((*plugin).init.unwrap())(plugin);
-            let activated = initialized && ((*plugin).activate.unwrap())(plugin, sample_rate, 1, 256);
+            let activated =
+                initialized && ((*plugin).activate.unwrap())(plugin, sample_rate, 1, 256);
             if activated {
                 ((*plugin).deactivate.unwrap())(plugin);
             }
@@ -98,9 +99,21 @@ activation_matrix_test!("de-esser", de_esser_activation_matrix, SotfDeEsser);
 activation_matrix_test!("downmix", downmix_activation_matrix, SotfDownmix);
 activation_matrix_test!("dynamic-eq", dynamic_eq_activation_matrix, SotfDynamicEQ);
 activation_matrix_test!("eq", eq_activation_matrix, SotfEQ);
-activation_matrix_test!("hiss-reducer", hiss_reducer_activation_matrix, SotfHissReducer);
-activation_matrix_test!("linear-phase-eq", linear_phase_eq_activation_matrix, SotfLinearPhaseEQ);
-activation_matrix_test!("mono-to-stereo", mono_to_stereo_activation_matrix, SotfMonoToStereo);
+activation_matrix_test!(
+    "hiss-reducer",
+    hiss_reducer_activation_matrix,
+    SotfHissReducer
+);
+activation_matrix_test!(
+    "linear-phase-eq",
+    linear_phase_eq_activation_matrix,
+    SotfLinearPhaseEQ
+);
+activation_matrix_test!(
+    "mono-to-stereo",
+    mono_to_stereo_activation_matrix,
+    SotfMonoToStereo
+);
 activation_matrix_test!(
     "multiband-compressor",
     multiband_compressor_activation_matrix,
@@ -117,5 +130,9 @@ activation_matrix_test!(
     speech_denoiser_activation_matrix,
     SotfSpeechDenoiser
 );
-activation_matrix_test!("stereo-imager", stereo_imager_activation_matrix, SotfStereoImager);
+activation_matrix_test!(
+    "stereo-imager",
+    stereo_imager_activation_matrix,
+    SotfStereoImager
+);
 activation_matrix_test!("upmixer", upmixer_activation_matrix, SotfUpmixer);

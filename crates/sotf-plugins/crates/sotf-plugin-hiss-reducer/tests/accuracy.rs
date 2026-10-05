@@ -23,9 +23,7 @@ fn ctx_at(rate: u32, frames: usize) -> ProcessContext<'static> {
 }
 
 fn lcg(state: &mut u32) -> f32 {
-    *state = state
-        .wrapping_mul(1_664_525)
-        .wrapping_add(1_013_904_223);
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     (*state as f32 / u32::MAX as f32) * 2.0 - 1.0
 }
 
@@ -65,9 +63,7 @@ fn render_partitioned(
     while offset < input.len() {
         let count = partitions[part % partitions.len()].min(input.len() - offset);
         let mut block = input[offset..offset + count].to_vec();
-        plugin
-            .process_in_place(&mut block, &ctx(count))
-            .unwrap();
+        plugin.process_in_place(&mut block, &ctx(count)).unwrap();
         output.extend(block);
         offset += count;
         part += 1;
@@ -139,10 +135,7 @@ fn spectral_hiss_only_suppression_and_tone_only_loss_are_separate() {
         .map(|s| f64::from(*s) * f64::from(*s))
         .sum();
     let loss = power_db(tone_out / tone_in);
-    assert!(
-        loss.abs() < 1.0,
-        "wanted tone changed by {loss:.2} dB"
-    );
+    assert!(loss.abs() < 1.0, "wanted tone changed by {loss:.2} dB");
 }
 
 #[test]
@@ -341,17 +334,8 @@ fn strength_law_is_monotonic_and_rate_consistent() {
         }
         let skip = rate as usize * 2;
         power_db(
-            oracle_band_power(
-                &output[skip..],
-                f64::from(cutoff_hz),
-                f64::from(rate),
-                true,
-            ) / oracle_band_power(
-                &input[skip..],
-                f64::from(cutoff_hz),
-                f64::from(rate),
-                true,
-            ),
+            oracle_band_power(&output[skip..], f64::from(cutoff_hz), f64::from(rate), true)
+                / oracle_band_power(&input[skip..], f64::from(cutoff_hz), f64::from(rate), true),
         )
     }
 

@@ -55,7 +55,13 @@ fn specs(quality: ResamplerQuality) -> (usize, usize, f64) {
 /// Integer source-anchor steps select phase zero of the polyphase table;
 /// agreement tests therefore use integer-step ratios (0.5, 0.25), where no
 /// inter-phase interpolation occurs.
-fn analytic_gain(taps: usize, phases: usize, ratio_scale: f64, freq_hz: f64, input_rate: u32) -> f64 {
+fn analytic_gain(
+    taps: usize,
+    phases: usize,
+    ratio_scale: f64,
+    freq_hz: f64,
+    input_rate: u32,
+) -> f64 {
     let cutoff = f64::from(
         calculate_cutoff::<f32>(taps, WindowFunction::BlackmanHarris2) * ratio_scale as f32,
     );
@@ -118,7 +124,11 @@ fn render_static(
         let block_frames = block.len() / channels;
         let mut cell = vec![f32::NAN; plugin.output_frames_for_input(block_frames) * channels];
         let written = plugin
-            .process(block, &mut cell, &ProcessContext::new(input_rate, block_frames))
+            .process(
+                block,
+                &mut cell,
+                &ProcessContext::new(input_rate, block_frames),
+            )
             .unwrap();
         output.extend_from_slice(&cell[..written * channels]);
         assert!(cell[written * channels..].iter().all(|x| x.is_nan()));
@@ -197,15 +207,19 @@ fn analytic_model_quantifies_transition_width_ripple_and_stopband() {
             let mut ripple: f64 = 0.0;
             for point in 0..24 {
                 let fraction = 0.05 * (flat / 0.05).powf(point as f64 / 23.0);
-                let gain =
-                    analytic_db(taps, phases, ratio.min(1.0), fraction * out_nyquist, input_rate);
+                let gain = analytic_db(
+                    taps,
+                    phases,
+                    ratio.min(1.0),
+                    fraction * out_nyquist,
+                    input_rate,
+                );
                 ripple = ripple.max(gain.abs());
             }
             let steps = 4000;
             let mut cross3: Option<f64> = None;
             let mut cross60: Option<f64> = None;
-            let mut previous =
-                analytic_db(taps, phases, ratio.min(1.0), 0.0, input_rate);
+            let mut previous = analytic_db(taps, phases, ratio.min(1.0), 0.0, input_rate);
             for step in 1..=steps {
                 let freq = f64::from(input_rate) / 2.0 * step as f64 / steps as f64;
                 let gain = analytic_db(taps, phases, ratio.min(1.0), freq, input_rate);

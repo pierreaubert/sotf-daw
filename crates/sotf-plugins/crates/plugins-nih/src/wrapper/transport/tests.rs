@@ -467,7 +467,8 @@ fn native_clap_fractional_rate_reaches_dsp_and_transport_without_integer_roundin
         let mut host = Host::with_rate_and_tail_extension(1, false, sample_rate);
         host.process(17, Some(&native(0.0, 0.0)));
         let mut fallback = native(0.0, 0.0);
-        fallback.flags &= !(CLAP_TRANSPORT_HAS_SECONDS_TIMELINE | CLAP_TRANSPORT_HAS_BEATS_TIMELINE);
+        fallback.flags &=
+            !(CLAP_TRANSPORT_HAS_SECONDS_TIMELINE | CLAP_TRANSPORT_HAS_BEATS_TIMELINE);
         host.process(63, Some(&fallback));
 
         let log = host.log.lock().unwrap();
@@ -493,9 +494,15 @@ fn native_clap_rejects_invalid_rates_before_plugin_initialization() {
         for sample_rate in [0.0, -1.0, f64::NAN, f64::INFINITY] {
             assert!(!((*plugin).activate.unwrap())(plugin, sample_rate, 1, 1024));
         }
-        assert_eq!(INITIALIZE_CALLS.with(Cell::get), initialized_before_invalid_rates);
+        assert_eq!(
+            INITIALIZE_CALLS.with(Cell::get),
+            initialized_before_invalid_rates
+        );
         assert!(((*plugin).activate.unwrap())(plugin, 48_000.0, 1, 1024));
-        assert_eq!(INITIALIZE_CALLS.with(Cell::get), initialized_before_invalid_rates + 1);
+        assert_eq!(
+            INITIALIZE_CALLS.with(Cell::get),
+            initialized_before_invalid_rates + 1
+        );
         assert!(((*plugin).start_processing.unwrap())(plugin));
     }
 }
@@ -647,7 +654,10 @@ fn malformed_values_preroll_and_overflow_keep_fallback_bounded() {
     assert_eq!(second.transport.time_signature, TimeSignature::default());
     assert_eq!(second.transport.loop_range, None);
     assert_eq!(
-        tracker.context(native, 48_000.0, 1).transport.sample_position,
+        tracker
+            .context(native, 48_000.0, 1)
+            .transport
+            .sample_position,
         7
     );
     native.sample_position = Some(i64::MAX - 1);

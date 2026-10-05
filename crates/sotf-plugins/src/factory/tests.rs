@@ -856,35 +856,49 @@ fn resampler_facade_factory_honors_cutoff_smoothing_and_renders() {
     }
     let frames = 512;
     let input: Vec<f32> = (0..frames * 2)
-        .map(|n| {
-            (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
-        })
+        .map(|n| (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5)
         .collect();
     let render = |plugin: &mut Box<dyn sotf_host::Plugin>| {
         // Dynamic unity-rate conversion uses the sinc backend. Its first
         // short callback buffers input and truthfully produces zero frames.
         let capacity = plugin.output_frames_for_input(frames);
         let mut scratch = vec![f32::NAN; capacity * 2 + 4];
-        let written = plugin.process(&input, &mut scratch,
-            &sotf_host::ProcessContext::new(48_000, frames)).unwrap();
+        let written = plugin
+            .process(
+                &input,
+                &mut scratch,
+                &sotf_host::ProcessContext::new(48_000, frames),
+            )
+            .unwrap();
         assert_eq!(written, 0, "sub-chunk input must stay buffered");
         assert!(scratch[written * 2..].iter().all(|sample| sample.is_nan()));
         let mut output = scratch[..written * 2].to_vec();
-        let calls = plugin.drain_call_bound().expect("finite resampler drain bound").get();
+        let calls = plugin
+            .drain_call_bound()
+            .expect("finite resampler drain bound")
+            .get();
         let mut complete = false;
         for _ in 0..calls {
             scratch = vec![f32::NAN; plugin.drain_output_frames_max() * 2 + 4];
-            let result = plugin.drain(&mut scratch,
-                &sotf_host::ProcessContext::new(48_000, 0)).unwrap();
+            let result = plugin
+                .drain(&mut scratch, &sotf_host::ProcessContext::new(48_000, 0))
+                .unwrap();
             output.extend_from_slice(&scratch[..result.frames * 2]);
-            assert!(scratch[result.frames * 2..].iter().all(|sample| sample.is_nan()));
+            assert!(
+                scratch[result.frames * 2..]
+                    .iter()
+                    .all(|sample| sample.is_nan())
+            );
             if result.complete {
                 complete = true;
                 break;
             }
         }
         assert!(complete, "drain must finish inside its declared bound");
-        assert!(output.len() >= input.len(), "retain the signal and interpolation suffix");
+        assert!(
+            output.len() >= input.len(),
+            "retain the signal and interpolation suffix"
+        );
         output
     };
     let legacy_out = render(&mut legacy);
@@ -894,7 +908,10 @@ fn resampler_facade_factory_honors_cutoff_smoothing_and_renders() {
     assert!(smoothed_out.iter().all(|sample| sample.is_finite()));
     assert!(legacy_out.iter().any(|sample| *sample != 0.0));
     assert!(smoothed_out.iter().any(|sample| *sample != 0.0));
-    assert_eq!(legacy_out, smoothed_out, "smoothing is inert at a fixed ratio");
+    assert_eq!(
+        legacy_out, smoothed_out,
+        "smoothing is inert at a fixed ratio"
+    );
 }
 
 #[test]

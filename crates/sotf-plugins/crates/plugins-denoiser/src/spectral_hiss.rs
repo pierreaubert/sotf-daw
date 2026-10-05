@@ -1190,10 +1190,7 @@ mod tests {
         // Finite inputs clamp exactly as before.
         reducer.set_params(10.0, -200.0, 2.0);
         assert_eq!(reducer.cutoff_hz, 20.0);
-        assert_eq!(
-            reducer.threshold_linear,
-            10.0_f32.powf(-120.0 / 20.0)
-        );
+        assert_eq!(reducer.threshold_linear, 10.0_f32.powf(-120.0 / 20.0));
         assert_eq!(reducer.strength, 1.0);
         reducer.set_params(4_000.0, -30.0, 0.65);
         assert_eq!(reducer.cutoff_hz, 4_000.0);

@@ -2501,7 +2501,9 @@ mod tests {
             for bands in [1, 2, 3] {
                 for center in [80.0, 4000.0, 12_000.0, f32::NAN] {
                     let mut crossover = Crossover::new(2);
-                    crossover.set_config(f64::from(rate), center, bands).unwrap();
+                    crossover
+                        .set_config(f64::from(rate), center, bands)
+                        .unwrap();
                     let mut scratch = vec![0.0; 2 * MAX_BANDS];
                     let mut worst = 0.0_f32;
                     for frame in 0..512 {

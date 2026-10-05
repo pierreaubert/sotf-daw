@@ -280,9 +280,7 @@ impl Plugin for FirFixture {
     }
 
     fn begin_drain(&mut self, context: &ProcessContext) -> Result<(), String> {
-        if context.num_frames != 0
-            || context.sample_rate != f64::from(self.expected_input_rate())
-        {
+        if context.num_frames != 0 || context.sample_rate != f64::from(self.expected_input_rate()) {
             return Err("AUD137 FIR fixture drain requires a zero-frame 48 kHz context".into());
         }
         if self.count_drain_calls {

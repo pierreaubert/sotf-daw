@@ -71,9 +71,7 @@ fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> u
         } => {
             if target_layout == "custom" {
                 match custom_layout {
-                    Some(layout) if valid_ambisonics_custom_layout(layout) => {
-                        layout.speakers.len()
-                    }
+                    Some(layout) if valid_ambisonics_custom_layout(layout) => layout.speakers.len(),
                     // Missing or invalid custom geometry is an impossible
                     // route (External precedent: 0 output channels), never a
                     // silent named fallback. The factory rejects it
@@ -2704,9 +2702,7 @@ mod tests {
 
     #[test]
     fn test_output_channels_ambisonics_custom_geometry() {
-        use crate::plugins::{
-            AmbisonicsCustomLayoutSettings, AmbisonicsCustomSpeakerSettings,
-        };
+        use crate::plugins::{AmbisonicsCustomLayoutSettings, AmbisonicsCustomSpeakerSettings};
 
         fn stereo() -> AmbisonicsCustomLayoutSettings {
             AmbisonicsCustomLayoutSettings {
@@ -2750,13 +2746,7 @@ mod tests {
         chain.add_plugin(&PluginType::AmbisonicsDecoder).unwrap();
         set_custom(&mut chain, "custom", Some(stereo()));
         assert_eq!(chain.output_channels_for_input(4), 2);
-        assert!(
-            chain
-                .get_plugin_mut(0)
-                .unwrap()
-                .validate()
-                .is_ok()
-        );
+        assert!(chain.get_plugin_mut(0).unwrap().validate().is_ok());
 
         // Missing geometry is an impossible route, never a silent fallback.
         set_custom(&mut chain, "custom", None);
@@ -2775,13 +2765,7 @@ mod tests {
         dup.speakers[1].label = "FL".to_string();
         set_custom(&mut chain, "custom", Some(dup));
         assert_eq!(chain.output_channels_for_input(4), 0);
-        assert!(
-            chain
-                .get_plugin_mut(0)
-                .unwrap()
-                .validate()
-                .is_err()
-        );
+        assert!(chain.get_plugin_mut(0).unwrap().validate().is_err());
 
         // Above the engine cap (17 speakers) is rejected even though the
         // DSP ceiling is 64. The error names the engine output-channel ceiling.
@@ -2796,11 +2780,7 @@ mod tests {
             .collect();
         set_custom(&mut chain, "custom", Some(wide));
         assert_eq!(chain.output_channels_for_input(4), 0);
-        let cap_error = chain
-            .get_plugin_mut(0)
-            .unwrap()
-            .validate()
-            .unwrap_err();
+        let cap_error = chain.get_plugin_mut(0).unwrap().validate().unwrap_err();
         assert!(
             cap_error.contains("17 speakers")
                 && cap_error.contains("16")
@@ -2811,13 +2791,7 @@ mod tests {
         // A named layout ignores any stale custom payload.
         set_custom(&mut chain, "5.1", Some(stereo()));
         assert_eq!(chain.output_channels_for_input(4), 6);
-        assert!(
-            chain
-                .get_plugin_mut(0)
-                .unwrap()
-                .validate()
-                .is_ok()
-        );
+        assert!(chain.get_plugin_mut(0).unwrap().validate().is_ok());
 
         // Full chain: engine settings convert to factory JSON that decodes.
         set_custom(&mut chain, "custom", Some(stereo()));
@@ -2825,7 +2799,13 @@ mod tests {
         let config = settings.to_plugin_config(48_000.0);
         assert_eq!(config.parameters["target_layout"], "custom");
         assert_eq!(config.parameters["custom_layout"]["name"], "stereo");
-        assert_eq!(config.parameters["custom_layout"]["speakers"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            config.parameters["custom_layout"]["speakers"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
         let mut plugin =
             sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 4, 48_000)
                 .unwrap();
@@ -2930,8 +2910,14 @@ mod tests {
         let wide_warnings = wide_loaded
             .load_from_file(fixture.path(), "wide-custom")
             .unwrap();
-        assert_eq!(wide_loaded.plugins.iter().filter(|p| !p.permanent).count(), 0);
-        assert_eq!(wide_loaded.plugins.iter().filter(|p| p.permanent).count(), 4);
+        assert_eq!(
+            wide_loaded.plugins.iter().filter(|p| !p.permanent).count(),
+            0
+        );
+        assert_eq!(
+            wide_loaded.plugins.iter().filter(|p| p.permanent).count(),
+            4
+        );
         assert_eq!(wide_warnings.len(), 1);
         assert!(
             wide_warnings[0].contains("17 speakers")
@@ -3030,7 +3016,11 @@ mod tests {
             .unwrap();
         let user_plugins: Vec<_> = loaded.plugins.iter().filter(|p| !p.permanent).collect();
         assert_eq!(user_plugins.len(), 2);
-        assert!(user_plugins.iter().all(|p| p.plugin_type() == PluginType::Gain));
+        assert!(
+            user_plugins
+                .iter()
+                .all(|p| p.plugin_type() == PluginType::Gain)
+        );
         assert_eq!(loaded.plugins.iter().filter(|p| p.permanent).count(), 4);
         assert_eq!(warnings.len(), 1);
         assert!(
@@ -3089,16 +3079,19 @@ mod tests {
             let mut output = vec![f32::NAN; frames];
             for block_start in (0..frames).step_by(1024) {
                 let block_end = (block_start + 1024).min(frames);
-                host.process(&input[block_start..block_end], &mut output[block_start..block_end])
-                    .unwrap();
+                host.process(
+                    &input[block_start..block_end],
+                    &mut output[block_start..block_end],
+                )
+                .unwrap();
             }
             output
         }
 
         // Wet-only 100 ms delay with zero feedback: one echo, clean tail.
         let chain = delay_chain();
-        let (mut host, _) = build_plugin_host(&host_configs(&chain), 48_000, 1)
-            .expect("delay chain builds");
+        let (mut host, _) =
+            build_plugin_host(&host_configs(&chain), 48_000, 1).expect("delay chain builds");
         let output = render_impulse(&mut host);
         assert!(output.iter().all(|sample| sample.is_finite()));
         assert!(
@@ -3125,7 +3118,9 @@ mod tests {
         let fixture = tempfile::tempdir().unwrap();
         chain.save_to_file(fixture.path(), "delay-echo").unwrap();
         let mut reloaded = PluginChain::new();
-        let warnings = reloaded.load_from_file(fixture.path(), "delay-echo").unwrap();
+        let warnings = reloaded
+            .load_from_file(fixture.path(), "delay-echo")
+            .unwrap();
         assert!(warnings.is_empty());
         let (mut reloaded_host, _) =
             build_plugin_host(&host_configs(&reloaded), 48_000, 1).expect("reloaded chain builds");
@@ -3140,9 +3135,8 @@ mod tests {
         {
             *feedback = 0.96;
         }
-        let (mut degraded_host, warnings) =
-            build_plugin_host(&host_configs(&bad_chain), 48_000, 1)
-                .expect("failed plugins degrade to warnings, not build errors");
+        let (mut degraded_host, warnings) = build_plugin_host(&host_configs(&bad_chain), 48_000, 1)
+            .expect("failed plugins degrade to warnings, not build errors");
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].message.contains("delay"));
         let dry_output = render_impulse(&mut degraded_host);
@@ -3156,9 +3150,8 @@ mod tests {
             "skipped delay emits no echo, got {}",
             dry_output[4800]
         );
-        let (mut fresh_host, fresh_warnings) =
-            build_plugin_host(&host_configs(&chain), 48_000, 1)
-                .expect("accepted chain still builds after rejection");
+        let (mut fresh_host, fresh_warnings) = build_plugin_host(&host_configs(&chain), 48_000, 1)
+            .expect("accepted chain still builds after rejection");
         assert!(fresh_warnings.is_empty());
         assert_eq!(render_impulse(&mut fresh_host), output);
     }

@@ -35,9 +35,7 @@
 //! [`Ordering::SeqCst`]: std::sync::atomic::Ordering::SeqCst
 
 // Rust guideline compliant 2026-10-21
-use crate::profile::{
-    NoiseProfileData, SpectralProfileData, profile_format_version,
-};
+use crate::profile::{NoiseProfileData, SpectralProfileData, profile_format_version};
 use plugins_denoiser::spectral_profile::{
     SPECTRAL_PROFILE_FFT_SIZE, SPECTRAL_PROFILE_HOP_SIZE, SPECTRAL_PROFILE_NUM_BINS,
     SPECTRAL_PROFILE_WINDOW,
@@ -341,8 +339,11 @@ impl ProfileSnapshot {
         let use_flag = self.use_flag.load(Ordering::SeqCst) != 0;
         let capture_rate = f64::from_bits(self.capture_rate.load(Ordering::SeqCst));
         let processing_rate = f64::from_bits(self.processing_rate.load(Ordering::SeqCst));
-        let engaged =
-            use_flag && present && spectral && capture_rate == processing_rate && capture_rate != 0.0;
+        let engaged = use_flag
+            && present
+            && spectral
+            && capture_rate == processing_rate
+            && capture_rate != 0.0;
         let fallback = if !use_flag || !present {
             ProfileFallback::Disabled
         } else if engaged {

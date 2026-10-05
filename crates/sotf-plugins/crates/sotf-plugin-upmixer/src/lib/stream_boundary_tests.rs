@@ -2128,10 +2128,7 @@ fn aud132_tagged_hr_impulse_hits_source_latency_and_compares_legacy_samples() {
                         .param_smoothers
                         .safety_cap_db_smoother
                         .set_target(3.0);
-                    plugin
-                        .param_smoothers
-                        .safety_cap_db_smoother
-                        .next_n(4_096);
+                    plugin.param_smoothers.safety_cap_db_smoother.next_n(4_096);
                     plugin.update_safety_cap_cache();
                 }
                 plugin.params.enable_hr_direct = true;
@@ -2319,7 +2316,11 @@ fn aud132_tagged_hr_impulse_hits_source_latency_and_compares_legacy_samples() {
             if fft_size == 8_192 {
                 let cap = tagged.safety.safety_cap_linear;
                 let combined_peak = |samples: &[f32]| {
-                    samples.iter().copied().map(f32::abs).fold(0.0_f32, f32::max)
+                    samples
+                        .iter()
+                        .copied()
+                        .map(f32::abs)
+                        .fold(0.0_f32, f32::max)
                 };
                 let tagged_peak = combined_peak(&tagged_output);
                 let legacy_peak = combined_peak(&legacy_output);

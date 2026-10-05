@@ -56,15 +56,12 @@ pub const SPECTRAL_PROFILE_WINDOW: &str = "hann-periodic";
 pub const SPECTRAL_PROFILE_WINDOW_ENERGY_MEAN: f64 = 0.375;
 
 // Compile-time locks against live-WOLA convention drift.
-const _ASSERT_FFT_SIZE: () = assert!(
-    SPECTRAL_PROFILE_FFT_SIZE == crate::spectral_hiss::SPECTRAL_HISS_FFT_SIZE
-);
-const _ASSERT_NUM_BINS: () = assert!(
-    SPECTRAL_PROFILE_NUM_BINS == crate::spectral_hiss::SPECTRAL_HISS_NUM_BINS
-);
-const _ASSERT_HOP: () = assert!(
-    SPECTRAL_PROFILE_HOP_SIZE == crate::spectral_hiss::SPECTRAL_HISS_FFT_SIZE / 4
-);
+const _ASSERT_FFT_SIZE: () =
+    assert!(SPECTRAL_PROFILE_FFT_SIZE == crate::spectral_hiss::SPECTRAL_HISS_FFT_SIZE);
+const _ASSERT_NUM_BINS: () =
+    assert!(SPECTRAL_PROFILE_NUM_BINS == crate::spectral_hiss::SPECTRAL_HISS_NUM_BINS);
+const _ASSERT_HOP: () =
+    assert!(SPECTRAL_PROFILE_HOP_SIZE == crate::spectral_hiss::SPECTRAL_HISS_FFT_SIZE / 4);
 
 /// Summary of a completed spectral capture.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -168,7 +165,11 @@ impl SpectralCapture {
     /// # Errors
     ///
     /// Returns an error for a zero channel count, sample rate, or target.
-    pub fn start<S: Into<f64>>(&mut self, sample_rate: S, target_frames: u64) -> Result<(), String> {
+    pub fn start<S: Into<f64>>(
+        &mut self,
+        sample_rate: S,
+        target_frames: u64,
+    ) -> Result<(), String> {
         let sample_rate = sample_rate.into();
         if self.channels == 0 {
             return Err("spectral capture requires at least one channel".to_string());
@@ -379,9 +380,7 @@ mod tests {
             let mut state = 0x1234_5678u32;
             let mut input = Vec::with_capacity(48_000);
             for _ in 0..48_000 {
-                state = state
-                    .wrapping_mul(1_664_525)
-                    .wrapping_add(1_013_904_223);
+                state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
                 input.push((state as f32 / u32::MAX as f32) * 2.0 - 1.0);
             }
             let mut offset = 0;

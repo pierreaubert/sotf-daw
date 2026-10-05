@@ -29,8 +29,7 @@ pub enum DynEqShape {
 }
 
 impl DynEqShape {
-    pub const CHOICE_LABELS: [&'static str; 4] =
-        ["Peak", "Low Shelf", "High Shelf", "Tilt"];
+    pub const CHOICE_LABELS: [&'static str; 4] = ["Peak", "Low Shelf", "High Shelf", "Tilt"];
 
     pub const fn choice_index(self) -> i32 {
         match self {
@@ -70,8 +69,7 @@ pub enum DynEqPlacement {
 }
 
 impl DynEqPlacement {
-    pub const CHOICE_LABELS: [&'static str; 5] =
-        ["Stereo", "Left", "Right", "Mid", "Side"];
+    pub const CHOICE_LABELS: [&'static str; 5] = ["Stereo", "Left", "Right", "Mid", "Side"];
 
     pub const fn choice_index(self) -> i32 {
         match self {
