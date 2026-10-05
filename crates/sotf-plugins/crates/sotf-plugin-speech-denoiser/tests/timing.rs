@@ -192,6 +192,8 @@ fn empty_calls_do_not_choose_the_first_audio_bypass_state() {
 #[test]
 fn errors_reset_and_reinitialize_preserve_current_settings_and_history_contract() {
     let enabled = ParameterId::from("enabled");
+    let mut supported = SpeechDenoiserPlugin::new(1);
+    supported.initialize(44_100.0).unwrap();
     let mut uninitialized = SpeechDenoiserPlugin::new(1);
     let mut sentinel = [1234.];
     assert!(
@@ -212,7 +214,7 @@ fn errors_reset_and_reinitialize_preserve_current_settings_and_history_contract(
                 process(&mut p, &input, channels, &[137]),
                 process(&mut twin, &input, channels, &[137])
             );
-            assert!(p.initialize(44100.0).is_err());
+            assert!(p.initialize(f64::NAN).is_err());
             let mut sentinel = vec![1234.; channels];
             assert!(
                 p.process_in_place(&mut sentinel, &ProcessContext::new(96000, 1))
