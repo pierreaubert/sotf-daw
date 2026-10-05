@@ -2097,8 +2097,11 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
-        const MIN_SAMPLE_RATE: u32 = 8_000;
-        const MAX_SAMPLE_RATE: u32 = 384_000;
+        // The fixed-size FFT and channel buffers do not grow with the host
+        // clock. The loudness meter accepts this entire range, including the
+        // validator's fractional low rates and 768 kHz stress rate.
+        const MIN_SAMPLE_RATE: u32 = 1_000;
+        const MAX_SAMPLE_RATE: u32 = 768_000;
 
         if !sample_rate.is_finite()
             || sample_rate < f64::from(MIN_SAMPLE_RATE)

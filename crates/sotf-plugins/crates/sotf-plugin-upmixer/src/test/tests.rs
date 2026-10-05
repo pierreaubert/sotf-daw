@@ -5,6 +5,88 @@ mod upmixer_tests {
     use sotf_host::ProcessContext;
     use sotf_host::*;
 
+    #[global_allocator]
+    static ALLOCATOR: CountingAlloc = CountingAlloc;
+
+    fn rate_probe() -> UpmixerPlugin {
+        UpmixerPlugin::new(
+            2048, "5.1", 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 1.0, 1.0, false, 0.5,
+        )
+    }
+
+    #[test]
+    fn upmixer_initializes_and_processes_at_all_validator_sample_rates() {
+        // The original 13 validator rates, plus the newly admitted lower bound.
+        let rates = [
+            8_000.0, 22_050.0, 44_100.0, 48_000.0, 88_200.0, 96_000.0, 192_000.0,
+            384_000.0, 768_000.0, 1_234.567_8, 12_345.678, 45_678.901, 123_456.78,
+            1_000.0,
+        ];
+        for rate in rates {
+            let mut plugin = rate_probe();
+            plugin.initialize(rate).unwrap_or_else(|error| panic!("{rate}: {error}"));
+            assert_eq!(plugin.core.sample_rate, rate);
+            let frames = 2048;
+            let input: Vec<f32> = (0..frames)
+                .flat_map(|frame| {
+                    let sample = (2.0 * std::f64::consts::PI * 440.0 * frame as f64 / rate)
+                        .sin() as f32 * 0.2;
+                    [sample, sample]
+                })
+                .collect();
+            let mut output = vec![0.0; frames * plugin.output_channels()];
+            // The first block may be entirely startup latency. Observe steady
+            // output after several fixed FFT windows have been accepted.
+            for _ in 0..4 {
+                let written = plugin
+                    .process(&input, &mut output, &ProcessContext::new(rate, frames))
+                    .unwrap_or_else(|error| panic!("{rate}: {error}"));
+                assert_eq!(written, frames, "{rate}");
+            }
+            assert!(output.iter().all(|sample| sample.is_finite()), "{rate}");
+            assert!(output.iter().any(|sample| sample.abs() > 1.0e-5), "{rate}");
+        }
+    }
+
+    #[test]
+    fn unsupported_sample_rate_refusal_preserves_prepared_state() {
+        let mut plugin = rate_probe();
+        plugin.initialize(48_000.0).unwrap();
+        let old_rate = plugin.core.sample_rate;
+        let old_bands = plugin.steering.erb_bands.clone();
+        for invalid in [f64::NAN, f64::INFINITY, 0.0, -1.0, 999.0, 768_001.0] {
+            assert!(plugin.initialize(invalid).is_err());
+            assert_eq!(plugin.core.sample_rate, old_rate);
+            assert_eq!(plugin.steering.erb_bands, old_bands);
+        }
+        let input = vec![0.1_f32; 2048 * 2];
+        let mut output = vec![0.0_f32; 2048 * plugin.output_channels()];
+        assert_eq!(
+            plugin
+                .process(&input, &mut output, &ProcessContext::new(48_000.0, 2048))
+                .unwrap(),
+            2048
+        );
+        assert!(output.iter().all(|sample| sample.is_finite()));
+    }
+
+    #[test]
+    fn low_and_high_rate_prepared_processing_allocates_nothing() {
+        for rate in [1_234.567_8, 48_000.0, 768_000.0] {
+            let mut plugin = rate_probe();
+            plugin.initialize(rate).unwrap();
+            let frames = 2048;
+            let input = vec![0.1_f32; frames * 2];
+            let mut output = vec![0.0_f32; frames * plugin.output_channels()];
+            let context = ProcessContext::new(rate, frames);
+            plugin.process(&input, &mut output, &context).unwrap();
+            assert_no_allocs("Upmixer prepared process", || {
+                plugin.process(&input, &mut output, &context).unwrap();
+            });
+            assert!(output.iter().all(|sample| sample.is_finite()));
+        }
+    }
+
     #[test]
     fn test_upmixer_creation_5_1() {
         let plugin = UpmixerPlugin::new(
