@@ -7785,8 +7785,7 @@ dependencies = [
 [[package]]
 name = "realfft"
 version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
+source = "git+https://github.com/pierreaubert/realfft.git?rev=482810f819e0821b37123c51d6fc4dfdbfd3e0e0#482810f819e0821b37123c51d6fc4dfdbfd3e0e0"
 dependencies = [
  "rustfft",
 ]
