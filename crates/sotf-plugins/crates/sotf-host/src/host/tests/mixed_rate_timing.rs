@@ -52,6 +52,62 @@ fn fractional_host_rate_reaches_both_clocks_without_integer_rounding() {
     assert!(valid.load(Ordering::Relaxed));
 }
 
+struct MutableOutputRate(Arc<AtomicU64>);
+
+impl Plugin for MutableOutputRate {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Mutable output clock", "1", "test")
+    }
+    fn input_channels(&self) -> usize {
+        1
+    }
+    fn output_channels(&self) -> usize {
+        1
+    }
+    fn parameters(&self) -> Vec<Parameter> {
+        Vec::new()
+    }
+    fn set_parameter(&mut self, _: ParameterId, _: ParameterValue) -> Result<(), String> {
+        Err("No parameters".into())
+    }
+    fn get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+        None
+    }
+    fn output_sample_rate(&self, _: f64) -> f64 {
+        f64::from_bits(self.0.load(Ordering::Relaxed))
+    }
+    fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        output.copy_from_slice(input);
+        Ok(context.num_frames)
+    }
+}
+
+#[test]
+fn identity_graph_queries_live_output_rate_without_allocating() {
+    let input_rate = 1_234.567_8_f64;
+    let rate = Arc::new(AtomicU64::new(input_rate.to_bits()));
+    let mut host = DawHost::new(1, input_rate);
+    host.add_plugin(Box::new(MutableOutputRate(Arc::clone(&rate))))
+        .unwrap();
+    host.build().unwrap();
+    assert!(host.cached_rate_identity);
+    crate::assert_no_allocs("identity graph output clock", || {
+        assert_eq!(host.output_sample_rate(input_rate).unwrap(), input_rate);
+        assert!(host.all_output_sample_rates_equal(input_rate, input_rate));
+    });
+    rate.store(f64::NAN.to_bits(), Ordering::Relaxed);
+    assert!(host.output_sample_rate(input_rate).is_err());
+    assert!(!host.all_output_sample_rates_equal(input_rate, input_rate));
+    rate.store(48_000.0_f64.to_bits(), Ordering::Relaxed);
+    assert_eq!(host.output_sample_rate(input_rate).unwrap(), 48_000.0);
+    assert!(!host.all_output_sample_rates_equal(input_rate, input_rate));
+}
+
 #[test]
 fn removed_node_clock_does_not_constrain_the_rebuilt_graph() {
     let valid = Arc::new(AtomicBool::new(true));
