@@ -84,7 +84,11 @@ impl ExactClock {
     }
 
     pub fn ticks_per_sample(&self, rate: ExactRate) -> Result<u128, String> {
-        if self.ticks_per_second % rate.numerator != 0 {
+        assert_ne!(
+            rate.numerator, 0,
+            "exact sample rate numerator must be nonzero"
+        );
+        if !self.ticks_per_second.is_multiple_of(rate.numerator) {
             return Err("Graph rate is absent from the exact clock".to_owned());
         }
         (self.ticks_per_second / rate.numerator)
@@ -177,6 +181,26 @@ mod tests {
         assert_eq!(ticks / clock.ticks_per_sample(source).unwrap(), 17);
         assert!(clock.convert_position(17, source, target).unwrap() > 17);
         assert_eq!(clock.convert_position(441, other, target).unwrap(), 480);
+    }
+
+    #[test]
+    fn absent_rate_returns_error() {
+        let absent = ExactRate::new(44_100.0).unwrap();
+        let clock = ExactClock::new([ExactRate::new(48_000.0).unwrap()]).unwrap();
+        assert!(clock.ticks_per_sample(absent).is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "exact sample rate numerator must be nonzero")]
+    fn zero_rate_numerator_panics_before_division() {
+        let clock = ExactClock {
+            ticks_per_second: 1,
+        };
+        let zero_numerator = ExactRate {
+            numerator: 0,
+            denominator: 1,
+        };
+        let _ = clock.ticks_per_sample(zero_numerator);
     }
 
     #[test]

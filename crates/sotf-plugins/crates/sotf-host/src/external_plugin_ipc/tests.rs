@@ -97,7 +97,7 @@ fn test_secure_plugin_shared_memory_roundtrip() {
 
 #[test]
 fn ipc_layout_preserves_fractional_native_plugin_clock() {
-    for rate in [1_234.5678_f64, 12_345.678, 48_000.0] {
+    for rate in [1_234.567_8_f64, 12_345.678, 48_000.0] {
         let layout = PluginIpcLayout::new(rate, 128, 2, 2).unwrap();
         let shared = SecurePluginSharedMemory::create(layout).unwrap();
         let worker = SecurePluginSharedMemory::open_existing(shared.path()).unwrap();
