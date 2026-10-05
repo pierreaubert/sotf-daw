@@ -252,7 +252,11 @@ fn invalid_runtime_clock_returns_error_and_retires_the_host() {
         Err(mpsc::RecvTimeoutError::Disconnected)
     ));
     let result = worker.thread.take().unwrap().join().unwrap();
-    assert!(result.unwrap_err().contains("unsupported native output sample rate"));
+    let error = result.unwrap_err();
+    assert!(
+        error.contains("returned invalid output sample rate NaN"),
+        "expected the live plugin rate to be rejected before native conversion: {error}"
+    );
     let mut retired_invalid_host = false;
     for _ in 0..4 {
         match worker._gc_rx.recv_timeout(WAIT) {
