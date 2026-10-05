@@ -225,7 +225,8 @@ fn bridge_normalized_roundtrips_cover_float_bool_and_model_choice() {
 #[test]
 fn bridge_structural_live_edit_fails_without_touching_saved_state() {
     let bridge = bridge();
-    let mut plugin = create_plugin("AnalogLimiter", 2, f64::from(RATE), r#"{"lookahead": 2.0}"#).unwrap();
+    let mut plugin =
+        create_plugin("AnalogLimiter", 2, f64::from(RATE), r#"{"lookahead": 2.0}"#).unwrap();
     plugin.initialize(f64::from(RATE)).unwrap();
     let saved = plugins_bridge::state::save_state(plugin.as_ref());
     // Lookahead is structural: post-init changes must fail ...
@@ -353,7 +354,8 @@ fn bridge_state_roundtrip_and_standalone_render_bit_identical() {
                 input[2047 * channels + channel] = -0.001 * (channel + 1) as f32;
             }
             let config = r#"{"threshold": -12.0, "lookahead": 2.0, "analog_model": "Tape", "analog_color": 0.0}"#;
-            let mut direct = create_plugin("AnalogLimiter", channels, f64::from(rate), config).unwrap();
+            let mut direct =
+                create_plugin("AnalogLimiter", channels, f64::from(rate), config).unwrap();
             direct.initialize(f64::from(rate)).unwrap();
             let mut standalone = prepare_standalone_plugin(
                 create_plugin("analog_limiter", channels, f64::from(rate), config).unwrap(),
@@ -368,7 +370,8 @@ fn bridge_state_roundtrip_and_standalone_render_bit_identical() {
             let saved: serde_json::Value = serde_json::from_slice(&state).unwrap();
             assert_eq!(saved["threshold"], -12.0);
             assert_eq!(saved["analog_model"], "Tape");
-            let mut restored = create_plugin("AnalogLimiter", channels, f64::from(rate), "{}").unwrap();
+            let mut restored =
+                create_plugin("AnalogLimiter", channels, f64::from(rate), "{}").unwrap();
             plugins_bridge::state::load_state(restored.as_mut(), &state).unwrap();
             restored = prepare_standalone_plugin(restored, 257).unwrap();
             restored.initialize(f64::from(rate)).unwrap();

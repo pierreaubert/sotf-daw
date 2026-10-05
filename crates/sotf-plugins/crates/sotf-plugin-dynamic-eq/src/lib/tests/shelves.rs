@@ -1,4 +1,4 @@
-use super::super::dyn_eq_band::{design_shelf_coefficients, DynEqBand};
+use super::super::dyn_eq_band::{DynEqBand, design_shelf_coefficients};
 use super::super::dyn_eq_band_params::DynEqBandParams;
 use super::super::dynamic_eq_plugin::DynamicEqPlugin;
 use super::super::dynamic_eq_plugin_params::DynamicEqPluginParams;
@@ -800,9 +800,11 @@ fn public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection() {
             .unwrap();
         assert_eq!(actual.len(), input.len());
         assert!(actual.iter().all(|sample| sample.is_finite()));
-        assert!(plugin.monitoring_gr[..3]
-            .iter()
-            .all(|value| value.is_finite()));
+        assert!(
+            plugin.monitoring_gr[..3]
+                .iter()
+                .all(|value| value.is_finite())
+        );
         assert!(
             plugin.monitoring_gr[..3].iter().all(|value| *value > 0.1),
             "linked={linked}: mixed Peak/LowShelf/HighShelf overrides did not all engage: {:?}",
@@ -993,10 +995,12 @@ fn populated_mixed_shelf_reset_and_dry_to_wet_epochs_match_fresh_state() {
             .process_in_place(&mut warmup, &ProcessContext::new(sample_rate, frames))
             .unwrap();
         assert!(warmup.iter().all(|sample| sample.is_finite()));
-        assert!(warmup
-            .iter()
-            .zip(&input)
-            .any(|(wet, dry)| (wet - dry).abs() > 1.0e-3));
+        assert!(
+            warmup
+                .iter()
+                .zip(&input)
+                .any(|(wet, dry)| (wet - dry).abs() > 1.0e-3)
+        );
 
         populated.reset();
         let mut after_reset = input.clone();
@@ -1195,20 +1199,26 @@ fn shape_specific_detector_passes_its_side_and_rejects_the_other_side() {
 fn shelf_parameters_are_structural_and_zero_gain_boundary_is_preserved() {
     let mut plugin =
         make_dynamic_shelf(1, false, DynEqShape::Peak, 6.0, -30.0, 4.0, 0.0, 1.0, 40.0);
-    assert!(plugin
-        .set_parameter(ParameterId::from("band_0_shape"), ParameterValue::Int(1),)
-        .is_err());
+    assert!(
+        plugin
+            .set_parameter(ParameterId::from("band_0_shape"), ParameterValue::Int(1),)
+            .is_err()
+    );
     assert_eq!(plugin.bands[0].shape, DynEqShape::Peak);
     assert_eq!(plugin.bands[0].shelf_slope, 0.5);
-    assert!(plugin
-        .set_parameter(ParameterId::from("band_0_shape"), ParameterValue::Int(3),)
-        .is_err());
-    assert!(plugin
-        .set_parameter(
-            ParameterId::from("band_0_shelf_slope"),
-            ParameterValue::Float(0.5),
-        )
-        .is_err());
+    assert!(
+        plugin
+            .set_parameter(ParameterId::from("band_0_shape"), ParameterValue::Int(3),)
+            .is_err()
+    );
+    assert!(
+        plugin
+            .set_parameter(
+                ParameterId::from("band_0_shelf_slope"),
+                ParameterValue::Float(0.5),
+            )
+            .is_err()
+    );
     assert_eq!(plugin.bands[0].shape, DynEqShape::Peak);
     assert_eq!(plugin.bands[0].shelf_slope, 0.5);
 

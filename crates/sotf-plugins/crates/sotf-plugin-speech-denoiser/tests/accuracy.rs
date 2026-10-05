@@ -102,7 +102,10 @@ fn run_with_telemetry(
 
 /// Mean of the 22 smoothed band gains in one analyzer snapshot.
 fn mean_band_gain(data: &SpeechDenoiserData) -> f64 {
-    data.band_gains.iter().map(|gain| f64::from(*gain)).sum::<f64>()
+    data.band_gains
+        .iter()
+        .map(|gain| f64::from(*gain))
+        .sum::<f64>()
         / data.band_gains.len() as f64
 }
 
@@ -134,17 +137,14 @@ fn aligned_pair(output: &[f32], input: &[f32], channels: usize) -> (Vec<f32>, Ve
 /// ahead of the reference and invalidates the baseline (a 0 dB-SNR mixture
 /// then misreads near -34 dB); `harness_baseline_matches_mixing_snr` pins
 /// this distinction.
-fn coincident_pair(
-    estimate: &[f32],
-    reference: &[f32],
-    channels: usize,
-) -> (Vec<f32>, Vec<f32>) {
+fn coincident_pair(estimate: &[f32], reference: &[f32], channels: usize) -> (Vec<f32>, Vec<f32>) {
     let frames = estimate.len() / channels;
     assert_eq!(reference.len(), estimate.len());
     assert!(frames > LATENCY + WARMUP_FRAMES);
     let steady = frames - LATENCY - WARMUP_FRAMES;
     let estimate = estimate[WARMUP_FRAMES * channels..(WARMUP_FRAMES + steady) * channels].to_vec();
-    let reference = reference[WARMUP_FRAMES * channels..(WARMUP_FRAMES + steady) * channels].to_vec();
+    let reference =
+        reference[WARMUP_FRAMES * channels..(WARMUP_FRAMES + steady) * channels].to_vec();
     assert_eq!(estimate.len(), reference.len());
     (estimate, reference)
 }
@@ -388,10 +388,8 @@ fn single_speaker_denoising_improves_sisdr() {
             (clean_mono.clone(), noisy)
         } else {
             let clean = to_stereo_diotic(&clean_mono);
-            let noise = to_stereo_independent(
-                &white_noise(frames, 0x1E77),
-                &white_noise(frames, 0x9177),
-            );
+            let noise =
+                to_stereo_independent(&white_noise(frames, 0x1E77), &white_noise(frames, 0x9177));
             let noisy = mix_at_snr_db(&clean, &noise, 0.0);
             (clean, noisy)
         };
@@ -697,12 +695,20 @@ fn corpus_wav_pairs_si_sdr() {
         .map(|entry| entry.unwrap().file_name())
         .collect();
     entries.sort();
-    assert!(!entries.is_empty(), "no corpus files in {}", clean_dir.display());
+    assert!(
+        !entries.is_empty(),
+        "no corpus files in {}",
+        clean_dir.display()
+    );
     let mut deltas = Vec::new();
     for file_name in entries {
         let clean = read_mono_48k(&clean_dir.join(&file_name));
         let noisy = read_mono_48k(&noisy_dir.join(&file_name));
-        assert_eq!(clean.len(), noisy.len(), "pair length mismatch: {file_name:?}");
+        assert_eq!(
+            clean.len(),
+            noisy.len(),
+            "pair length mismatch: {file_name:?}"
+        );
         if clean.len() <= LATENCY + WARMUP_FRAMES {
             println!("{file_name:?}: skipped (shorter than latency plus warmup)");
             continue;
@@ -719,13 +725,21 @@ fn corpus_wav_pairs_si_sdr() {
         deltas.push(output_sisdr - input_sisdr);
     }
     let mean = deltas.iter().sum::<f64>() / deltas.len() as f64;
-    println!("corpus mean SI-SDR delta: {mean:.2} dB over {} files", deltas.len());
+    println!(
+        "corpus mean SI-SDR delta: {mean:.2} dB over {} files",
+        deltas.len()
+    );
 }
 
 fn read_mono_48k(path: &std::path::Path) -> Vec<f32> {
     let mut reader = hound::WavReader::open(path).unwrap();
     let spec = reader.spec();
-    assert_eq!(spec.sample_rate, RATE, "{}: expected 48 kHz", path.display());
+    assert_eq!(
+        spec.sample_rate,
+        RATE,
+        "{}: expected 48 kHz",
+        path.display()
+    );
     assert_eq!(spec.channels, 1, "{}: expected mono", path.display());
     reader
         .samples::<i16>()

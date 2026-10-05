@@ -224,7 +224,15 @@ fn test_rebuild_fir_reuses_design_scratch_vectors() {
     assert!(initial_freq_capacity >= plugin.design_freqs.len());
     assert!(initial_mag_capacity >= plugin.design_magnitudes_db.len());
 
-    plugin.bands[0].update(BiquadFilterType::Peak, 1_000.0, 1.0, 6.0, true, None, 48_000.0);
+    plugin.bands[0].update(
+        BiquadFilterType::Peak,
+        1_000.0,
+        1.0,
+        6.0,
+        true,
+        None,
+        48_000.0,
+    );
     plugin.rebuild_fir();
 
     assert_eq!(plugin.design_freqs.capacity(), initial_freq_capacity);

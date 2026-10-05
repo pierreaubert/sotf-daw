@@ -2,7 +2,9 @@
 
 // Rust guideline compliant 2026-02-21
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
-use rubato::{Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction};
+use rubato::{
+    Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction,
+};
 use sotf_host::sofa::SofaFile;
 
 // Bound both FFT grids before Rubato allocates its plans and scratch. Each FFT
@@ -43,9 +45,7 @@ pub fn resample_sofa<S: Into<f64>>(sofa: &mut SofaFile, target_rate: S) -> Resul
         return Ok(());
     }
 
-    if source_rate_exact.fract() != 0.0
-        || target_rate.fract() != 0.0
-    {
+    if source_rate_exact.fract() != 0.0 || target_rate.fract() != 0.0 {
         return resample_sofa_fractional(sofa, source_rate_exact, target_rate, source_samples);
     }
     let source_rate = source_rate_exact as u32;
@@ -61,8 +61,11 @@ pub fn resample_sofa<S: Into<f64>>(sofa: &mut SofaFile, target_rate: S) -> Resul
     if source_samples == 0 {
         new_impulse_responses = Vec::new();
     } else {
-        let (input_frames, output_frames) =
-            fft_geometry(sofa.ir_length, source_rate as usize, target_rate_integer as usize)?;
+        let (input_frames, output_frames) = fft_geometry(
+            sofa.ir_length,
+            source_rate as usize,
+            target_rate_integer as usize,
+        )?;
         let delay = output_frames / 2;
         let crop_end = delay
             .checked_add(new_ir_length)
@@ -191,7 +194,10 @@ fn resample_sofa_fractional(
         )
         .map_err(|e| format!("Failed to create exact-rate HRTF resampler: {e}"))?;
         let output_capacity = resampler.process_all_needed_output_len(sofa.ir_length);
-        let mut output = [zero_samples(output_capacity)?, zero_samples(output_capacity)?];
+        let mut output = [
+            zero_samples(output_capacity)?,
+            zero_samples(output_capacity)?,
+        ];
         for (source, destination) in sofa
             .impulse_responses
             .chunks_exact(2 * sofa.ir_length)

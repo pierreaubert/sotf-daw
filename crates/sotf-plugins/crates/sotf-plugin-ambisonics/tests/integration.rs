@@ -348,9 +348,11 @@ fn order_seven_basis_impulses_match_each_public_decoder_matrix_column() {
         let mut invalid = vec![0.0_f32; 64];
         invalid[63] = f32::NAN;
         let mut sentinel = [3.25_f32; 16];
-        assert!(plugin
-            .process(&invalid, &mut sentinel, &ProcessContext::new(48_000, 1),)
-            .is_err());
+        assert!(
+            plugin
+                .process(&invalid, &mut sentinel, &ProcessContext::new(48_000, 1),)
+                .is_err()
+        );
         assert_eq!(sentinel, [3.25; 16]);
     }
 }

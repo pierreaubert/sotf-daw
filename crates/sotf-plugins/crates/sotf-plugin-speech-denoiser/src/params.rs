@@ -21,26 +21,30 @@ pub const PARAMS: &[ParamSpec] = &[
     ParamSpec::float("Strength", "strength", 1.0, 0.0, 1.0, 0.01, "%", "General")
         .scaled(100.0)
         .doc("Suppression strength: full wet at 100%, delayed dry at 0%"),
-    ParamSpec::choice("Model", "model", DEFAULT_MODEL_INDEX, MODEL_LABELS, "General")
-        .structural()
-        .setup()
-        .doc("Bundled inference model identity"),
+    ParamSpec::choice(
+        "Model",
+        "model",
+        DEFAULT_MODEL_INDEX,
+        MODEL_LABELS,
+        "General",
+    )
+    .structural()
+    .setup()
+    .doc("Bundled inference model identity"),
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[],
-    main: &[
-        ControlGroup::new(
-            "SPEECH",
-            "SPEECH",
-            &[
-                ControlSpec::toggle(0),
-                ControlSpec::knob(1),
-                ControlSpec::choice(2),
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-    ],
+    main: &[ControlGroup::new(
+        "SPEECH",
+        "SPEECH",
+        &[
+            ControlSpec::toggle(0),
+            ControlSpec::knob(1),
+            ControlSpec::choice(2),
+        ],
+    )
+    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
     output: &[],
     tabs: &[],
     visualizations: &[],

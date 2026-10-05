@@ -5,8 +5,8 @@ use super::types::DitherPluginParams;
 use crate::params::Params;
 use rustfft::{FftPlanner, num_complex::Complex};
 use sotf_host::ParametricInPlacePlugin;
-use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::parameters::{ParameterId, ParameterValue};
+use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::plugin::ProcessContext;
 use sotf_host::plugin_params::PluginParamDef;
 
@@ -707,9 +707,7 @@ const MOMENT_SAMPLES_PER_CASE: usize = 262_144;
 
 /// DC input levels in LSB units: signed, fractional, and sub-LSB
 /// (|level| < 0.5) cases, all far from the saturation rails.
-const MOMENT_LEVELS_LSB: [f64; 9] = [
-    -64.75, -1.5, -0.4, -0.1, 0.0, 0.1, 0.4, 1.5, 64.75,
-];
+const MOMENT_LEVELS_LSB: [f64; 9] = [-64.75, -1.5, -0.4, -0.1, 0.0, 0.1, 0.4, 1.5, 64.75];
 
 /// Exposed bit-depth routes as (choice index, bits) pairs.
 const BIT_DEPTHS_UNDER_TEST: [(usize, i32); 3] = [(0, 16), (1, 20), (2, 24)];
@@ -1082,8 +1080,9 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                     },
                 );
                 plugin.initialize(48_000.0).unwrap();
-                let mut inputs: Vec<f32> =
-                    (0..1024).map(|i| -1.0 + 2.0 * (i as f32) / 1023.0).collect();
+                let mut inputs: Vec<f32> = (0..1024)
+                    .map(|i| -1.0 + 2.0 * (i as f32) / 1023.0)
+                    .collect();
                 for sub_lsb in [0.1_f64, 0.25, 0.4, 0.6] {
                     inputs.push((sub_lsb / scale) as f32);
                     inputs.push((-sub_lsb / scale) as f32);
@@ -1121,7 +1120,9 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                 );
                 plugin.initialize(48_000.0).unwrap();
                 let mut buffer = vec![input];
-                plugin.process_in_place(&mut buffer, &make_context(1)).unwrap();
+                plugin
+                    .process_in_place(&mut buffer, &make_context(1))
+                    .unwrap();
                 assert_eq!(export_signed_pcm(buffer[0], bits), expected);
                 assert_eq!(buffer[0], expected as f32 / 2.0_f32.powi(bits - 1));
             }
@@ -1162,8 +1163,7 @@ fn quantization_grid_covers_all_depths_and_rounding_modes() {
             plugin.initialize(48_000.0).unwrap();
             // Full-scale sweep, half-LSB tie points, and exact endpoints.
             let scale = 2.0_f64.powi(bits - 1);
-            let mut inputs: Vec<f32> =
-                (0..512).map(|i| -1.0 + 2.0 * (i as f32) / 511.0).collect();
+            let mut inputs: Vec<f32> = (0..512).map(|i| -1.0 + 2.0 * (i as f32) / 511.0).collect();
             for tie in -3..3 {
                 inputs.push(((f64::from(tie) + 0.5) / scale) as f32);
             }
@@ -1215,8 +1215,9 @@ fn preset_routes_accept_labels_defaults_and_reject_invalid_state() {
 
     // Out-of-range indices, unknown labels, and negative choices are
     // rejected transactionally at parse time.
-    assert!(serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": 3}))
-        .is_err());
+    assert!(
+        serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": 3})).is_err()
+    );
     assert!(
         serde_json::from_value::<DitherPluginParams>(serde_json::json!({"bit_depth": "32"}))
             .is_err()
@@ -1494,7 +1495,10 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     // Final stored samples: every output exports to a saturated 16-bit
     // code with bit-exact grid membership, and nonzero audio produces a
     // spread of codes rather than a stuck rail.
-    let mut codes: Vec<i32> = buffer.iter().map(|sample| export_signed_pcm(*sample, 16)).collect();
+    let mut codes: Vec<i32> = buffer
+        .iter()
+        .map(|sample| export_signed_pcm(*sample, 16))
+        .collect();
     for (sample, code) in buffer.iter().zip(codes.iter()) {
         assert!((-32_768..=32_767).contains(code));
         assert_eq!(f64::from(*sample) * 32768.0, f64::from(*code));
@@ -1516,7 +1520,10 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     let params_json = serde_json::to_value(Params::default()).unwrap();
     let params_reloaded: Params = serde_json::from_value(params_json).unwrap();
     assert_eq!(params_reloaded.bit_depth, Params::default().bit_depth);
-    assert_eq!(params_reloaded.noise_shaping, Params::default().noise_shaping);
+    assert_eq!(
+        params_reloaded.noise_shaping,
+        Params::default().noise_shaping
+    );
     assert_eq!(params_reloaded.dither_type, Params::default().dither_type);
     let mut restored = DitherPlugin::from_params(CHANNELS, reloaded);
     restored.initialize(48_000.0).unwrap();
@@ -1552,7 +1559,8 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
         .process_in_place(&mut prefix, &make_context(prefix_frames))
         .unwrap();
     let mut twin_prefix = gained[..prefix_frames * CHANNELS].to_vec();
-    twin.process_in_place(&mut twin_prefix, &make_context(prefix_frames)).unwrap();
+    twin.process_in_place(&mut twin_prefix, &make_context(prefix_frames))
+        .unwrap();
     assert!(
         candidate
             .set_parameter(ParameterId::from("unknown"), ParameterValue::Float(0.0))
@@ -1576,6 +1584,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
         .process_in_place(&mut suffix, &make_context(suffix_frames))
         .unwrap();
     let mut twin_suffix = gained[prefix_frames * CHANNELS..].to_vec();
-    twin.process_in_place(&mut twin_suffix, &make_context(suffix_frames)).unwrap();
+    twin.process_in_place(&mut twin_suffix, &make_context(suffix_frames))
+        .unwrap();
     assert_eq!(suffix, twin_suffix);
 }

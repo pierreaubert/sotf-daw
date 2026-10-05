@@ -57,9 +57,7 @@ static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
 fn tones(frames: usize, frequency: f64) -> Vec<f32> {
     (0..frames)
-        .map(|frame| {
-            (0.5 * (TAU * frequency * frame as f64 / f64::from(RATE)).sin()) as f32
-        })
+        .map(|frame| (0.5 * (TAU * frequency * frame as f64 / f64::from(RATE)).sin()) as f32)
         .collect()
 }
 
@@ -72,8 +70,7 @@ fn typed_refusals_are_allocation_free_and_transactional() {
     ] {
         let (counts, refused, control) = std::thread::spawn(move || {
             // Setup with tracking off: construction allocates backend tables.
-            let mut refused =
-                ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
+            let mut refused = ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
             refused.initialize(f64::from(RATE)).unwrap();
             refused
                 .set_parameter(
@@ -82,8 +79,7 @@ fn typed_refusals_are_allocation_free_and_transactional() {
                 )
                 .unwrap();
             refused.try_set_cutoff_smoothing(true).unwrap();
-            let mut control =
-                ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
+            let mut control = ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
             control.initialize(f64::from(RATE)).unwrap();
             control
                 .set_parameter(
@@ -94,18 +90,15 @@ fn typed_refusals_are_allocation_free_and_transactional() {
             control.try_set_cutoff_smoothing(true).unwrap();
             let music = tones(512, 997.0);
             for plugin in [&mut refused, &mut control] {
-                let mut block =
-                    vec![0.0; plugin.output_frames_for_input(512)];
+                let mut block = vec![0.0; plugin.output_frames_for_input(512)];
                 plugin
                     .process(&music, &mut block, &ProcessContext::new(RATE, 512))
                     .unwrap();
             }
             // Preallocate drain buffers before tracking; every `vec!` inside
             // the tracked region would count as an allocation.
-            let mut drain_refused =
-                vec![0.0; refused.drain_output_frames_max().max(1)];
-            let mut drain_control =
-                vec![0.0; control.drain_output_frames_max().max(1)];
+            let mut drain_refused = vec![0.0; refused.drain_output_frames_max().max(1)];
+            let mut drain_control = vec![0.0; control.drain_output_frames_max().max(1)];
             // Valid typed updates allocate nothing.
             ALLOCATIONS.set(0);
             DEALLOCATIONS.set(0);
@@ -156,9 +149,10 @@ fn typed_refusals_are_allocation_free_and_transactional() {
             // proven allocation-free, and this keeps the comparison exact).
             let mut refused_out = Vec::new();
             let mut control_out = Vec::new();
-            for (plugin, out) in
-                [(&mut refused, &mut refused_out), (&mut control, &mut control_out)]
-            {
+            for (plugin, out) in [
+                (&mut refused, &mut refused_out),
+                (&mut control, &mut control_out),
+            ] {
                 loop {
                     let mut block = vec![0.0; plugin.drain_output_frames_max().max(1)];
                     let result = plugin
@@ -181,8 +175,7 @@ fn typed_refusals_are_allocation_free_and_transactional() {
         );
         // Dynamic-disabled typed refusal on a fresh non-dynamic instance.
         let counts = std::thread::spawn(move || {
-            let mut plugin =
-                ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
+            let mut plugin = ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
             ALLOCATIONS.set(0);
             DEALLOCATIONS.set(0);
             TRACKING.set(true);
@@ -218,8 +211,7 @@ fn typed_and_string_apis_agree_on_messages() {
         ResamplerQuality::High,
     ] {
         // Dynamic-disabled.
-        let mut plugin =
-            ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
+        let mut plugin = ResamplerPlugin::with_quality(1, RATE, RATE, CHUNK, quality).unwrap();
         let string_err = plugin.set_ratio(1.5, true).unwrap_err();
         let typed_err = plugin.try_set_ratio(1.5, true).unwrap_err();
         assert_eq!(string_err, typed_err.to_string());

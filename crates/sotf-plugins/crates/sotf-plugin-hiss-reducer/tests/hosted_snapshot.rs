@@ -162,11 +162,17 @@ fn fractional_clock_capture_publishes_v3_snapshot_and_restores_exact_rate() {
     let mut restored = HissReducerPlugin::new(1);
     restored.initialize(rate).unwrap();
     restored.restore_profile(&export.profile).unwrap();
-    assert_eq!(restored.persisted_params().captured_profile, Some(export.profile.clone()));
+    assert_eq!(
+        restored.persisted_params().captured_profile,
+        Some(export.profile.clone())
+    );
     let mut invalid = export.profile.clone();
     invalid.sample_rate = f64::NAN;
     assert!(restored.restore_profile(&invalid).is_err());
-    assert_eq!(restored.persisted_params().captured_profile, Some(export.profile));
+    assert_eq!(
+        restored.persisted_params().captured_profile,
+        Some(export.profile)
+    );
 }
 
 #[test]

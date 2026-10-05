@@ -1,5 +1,5 @@
 use crate::{
-    CEPS_MEM, Complex, FRAME_SIZE, FREQ_SIZE, NB_BANDS, NB_DELTA_CEPS, NB_FEATURES, PITCH_BUF_SIZE,
+    Complex, CEPS_MEM, FRAME_SIZE, FREQ_SIZE, NB_BANDS, NB_DELTA_CEPS, NB_FEATURES, PITCH_BUF_SIZE,
     PITCH_FRAME_SIZE, PITCH_MAX_PERIOD, PITCH_MIN_PERIOD, WINDOW_SIZE,
 };
 
@@ -125,7 +125,6 @@ impl DenoiseScratch {
         scratch.interpolated_gains.fill(1.0);
         scratch
     }
-
 }
 
 pub struct DenoiseState {
@@ -246,7 +245,11 @@ impl DenoiseState {
     }
 }
 
-fn frame_analysis(core: &mut DenoiseCore, scratch: &mut DenoiseScratch, fft_scratch: &mut [Complex]) {
+fn frame_analysis(
+    core: &mut DenoiseCore,
+    scratch: &mut DenoiseScratch,
+    fft_scratch: &mut [Complex],
+) {
     let buf = &mut scratch.analysis_window;
     buf[..FRAME_SIZE].copy_from_slice(&core.analysis_mem);
     for i in 0..crate::FRAME_SIZE {

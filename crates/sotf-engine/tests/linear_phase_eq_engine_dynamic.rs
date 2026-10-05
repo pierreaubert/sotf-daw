@@ -14,8 +14,8 @@
 // structural until their own adoption. M1 accuracy stays open separately.
 
 use sotf_audio::{EmbeddedAudioEngine, EngineConfig, PluginConfig};
-use sotf_plugins::plugin_linear_phase_eq::{BandConfig, CommitRefusal, LinearPhaseEqPlugin};
 use sotf_plugins::ParameterValue;
+use sotf_plugins::plugin_linear_phase_eq::{BandConfig, CommitRefusal, LinearPhaseEqPlugin};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use std::sync::{Barrier, mpsc};
@@ -205,12 +205,9 @@ fn run_engine_automation_once(block: usize) -> Vec<f32> {
     std::thread::scope(|s| {
         let barrier_ref = &barrier;
         s.spawn(move || {
-            let prepared = LinearPhaseEqPlugin::prepare_band_update(
-                &base,
-                0,
-                band("Peak", 1000.0, 1.0, 9.0),
-            )
-            .expect("prepare");
+            let prepared =
+                LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 9.0))
+                    .expect("prepare");
             tx.send(prepared).expect("ack");
             barrier_ref.wait();
         });
@@ -270,8 +267,7 @@ fn engine_gain_automation_exact_zero_final_and_partitions() {
         };
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
-            let expected =
-                f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
+            let expected = f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
             assert!(
                 (f64::from(output[index]) - expected).abs() < 1e-5,
                 "frame{frame} ch{ch}"
@@ -281,7 +277,11 @@ fn engine_gain_automation_exact_zero_final_and_partitions() {
     let reference = run_engine_automation_once(1);
     assert_eq!(output, reference);
     for block in [63, 512] {
-        assert_eq!(run_engine_automation_once(block), reference, "block {block}");
+        assert_eq!(
+            run_engine_automation_once(block),
+            reference,
+            "block {block}"
+        );
     }
 }
 
@@ -476,12 +476,14 @@ fn engine_stale_topology_and_reset_retain_accepted() {
     // so no fresh submit is attempted in this retention-focused leg.
     // Topology refusal at prepare time keeps live intact (engine request).
     let mut placed = band("Peak", 1000.0, 1.0, 6.0);
-    placed.placement =
-        Some(sotf_plugins::plugin_linear_phase_eq::LinearPhaseEqBandPlacement::Left);
+    placed.placement = Some(sotf_plugins::plugin_linear_phase_eq::LinearPhaseEqBandPlacement::Left);
     let err = engine
         .linear_phase_eq_request(0, 0, placed)
         .expect_err("placement must stay structural");
-    assert!(err.contains("structural") || err.contains("placement"), "{err}");
+    assert!(
+        err.contains("structural") || err.contains("placement"),
+        "{err}"
+    );
     assert_eq!(engine.linear_phase_eq_band_gain(0, 0).unwrap(), 6.0);
     // Transport reset preserves accepted gains and stays usable.
     engine.reset_transport(clock);
@@ -514,20 +516,13 @@ fn engine_queue_saturation_dry_alignment_and_reclaim_tracking() {
     let base = engine.linear_phase_eq_snapshot(0).unwrap();
     let handle = engine.linear_phase_eq_handle(0).unwrap();
     for gain in [4.0, 5.0] {
-        let prepared = LinearPhaseEqPlugin::prepare_band_update(
-            &base,
-            0,
-            band("Peak", 1000.0, 1.0, gain),
-        )
-        .unwrap();
+        let prepared =
+            LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, gain))
+                .unwrap();
         handle.try_submit(prepared).expect("mailbox room");
     }
-    let overflow = LinearPhaseEqPlugin::prepare_band_update(
-        &base,
-        0,
-        band("Peak", 1000.0, 1.0, 6.0),
-    )
-    .unwrap();
+    let overflow =
+        LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 6.0)).unwrap();
     let err = handle
         .try_submit(overflow)
         .expect_err("third concurrent submit must report full");

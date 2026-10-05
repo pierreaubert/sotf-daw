@@ -116,10 +116,7 @@ mod legacy_head {
                 smoothed_gain: vec![vec![1.0; NUM_BINS]; channels],
                 high_band_noise: vec![0.0; channels],
                 current_min: vec![vec![f32::INFINITY; NUM_BINS]; channels],
-                minimum_history: vec![
-                    vec![f32::INFINITY; MIN_HISTORY_SLOTS * NUM_BINS];
-                    channels
-                ],
+                minimum_history: vec![vec![f32::INFINITY; MIN_HISTORY_SLOTS * NUM_BINS]; channels],
                 history_slot: 0,
                 hops_in_slot: 0,
             }
@@ -199,10 +196,9 @@ mod legacy_head {
 
         fn process_hop(&mut self) {
             let scale = 1.0 / (LEGACY_FFT_SIZE as f32 * 1.5);
-            let cutoff_bin =
-                ((self.cutoff_hz * LEGACY_FFT_SIZE as f32 / self.sample_rate as f32).ceil()
-                    as usize)
-                    .min(NUM_BINS - 1);
+            let cutoff_bin = ((self.cutoff_hz * LEGACY_FFT_SIZE as f32 / self.sample_rate as f32)
+                .ceil() as usize)
+                .min(NUM_BINS - 1);
             for ch in 0..self.channels {
                 for i in 0..LEGACY_FFT_SIZE {
                     let source = (self.input_write + i) & (LEGACY_FFT_SIZE - 1);
@@ -345,9 +341,8 @@ mod legacy_head {
                 for ch in 0..self.channels {
                     let dry_index = self.dry_pos + ch;
                     let dry = self.dry_delay[dry_index];
-                    self.dry_delay[dry_index] =
-                        self.input[ch][(self.input_write + LEGACY_FFT_SIZE - 1)
-                            & (LEGACY_FFT_SIZE - 1)];
+                    self.dry_delay[dry_index] = self.input[ch]
+                        [(self.input_write + LEGACY_FFT_SIZE - 1) & (LEGACY_FFT_SIZE - 1)];
                     let wet = if startup {
                         0.0
                     } else {
@@ -508,8 +503,8 @@ mod legacy_head {
             }
 
             for frame in buffer.chunks_mut(self.channels) {
-                self.alpha =
-                    self.target_alpha + self.alpha_smoothing_coeff * (self.alpha - self.target_alpha);
+                self.alpha = self.target_alpha
+                    + self.alpha_smoothing_coeff * (self.alpha - self.target_alpha);
                 if (self.alpha - self.target_alpha).abs() < 1e-8 {
                     self.alpha = self.target_alpha;
                 }
@@ -623,9 +618,7 @@ const TONE_HZ: f64 = 213.0 * 48_000.0 / 1024.0;
 const PARTITIONS: [usize; 5] = [1, 64, 511, 73, 997];
 
 fn lcg(state: &mut u32) -> f32 {
-    *state = state
-        .wrapping_mul(1_664_525)
-        .wrapping_add(1_013_904_223);
+    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
     (*state as f32 / u32::MAX as f32) * 2.0 - 1.0
 }
 
@@ -663,11 +656,7 @@ fn interleave(left: &[f32], right: &[f32]) -> Vec<f32> {
     out
 }
 
-fn render_process(
-    process: &mut dyn FnMut(&mut [f32]),
-    channels: usize,
-    input: &[f32],
-) -> Vec<f32> {
+fn render_process(process: &mut dyn FnMut(&mut [f32]), channels: usize, input: &[f32]) -> Vec<f32> {
     let mut output = Vec::with_capacity(input.len());
     let mut offset = 0;
     let mut part = 0;
@@ -771,9 +760,7 @@ fn spectral_engaged_defaults_match_head_baseline_bit_exactly() {
     engaged.set_params(4_000.0, -30.0, 0.65);
     let output = render_process(&mut |b| engaged.process(b), 1, &hiss);
     let start = SR as usize / 2 + LATENCY;
-    let suppression = power_db(
-        mean_power(&output[start..]) / mean_power(&hiss[start - LATENCY..]),
-    );
+    let suppression = power_db(mean_power(&output[start..]) / mean_power(&hiss[start - LATENCY..]));
     assert!(
         suppression < -2.0,
         "baseline fixture did not engage: {suppression:.2} dB"
@@ -872,5 +859,3 @@ fn spectral_transient_defaults_match_head_baseline_bit_exactly() {
         "guard-off transient defaults diverged from HEAD"
     );
 }
-
-

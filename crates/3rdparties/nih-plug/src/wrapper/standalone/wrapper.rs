@@ -288,10 +288,14 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
             .map(|editor| Arc::new(Mutex::new(editor)));
 
         // Before initializing the plugin, make sure all smoothers are set the the default values
-        let prepared: Option<Vec<_>> = wrapper.param_id_to_ptr.values().map(|param| {
-            unsafe { param.prepare_smoother(wrapper.buffer_config.sample_rate) }
-                .map(|steps| (*param, steps))
-        }).collect();
+        let prepared: Option<Vec<_>> = wrapper
+            .param_id_to_ptr
+            .values()
+            .map(|param| {
+                unsafe { param.prepare_smoother(wrapper.buffer_config.sample_rate) }
+                    .map(|steps| (*param, steps))
+            })
+            .collect();
         let Some(prepared) = prepared else {
             return Err(WrapperError::InitializationFailed);
         };
@@ -575,7 +579,8 @@ impl<P: Plugin, B: Backend<P>> Wrapper<P, B> {
                         self.unprocessed_param_changes.pop()
                     {
                         let Some(changed) = (unsafe {
-                            param_ptr.set_normalized_value_prepared(normalized_value, Some(sample_rate))
+                            param_ptr
+                                .set_normalized_value_prepared(normalized_value, Some(sample_rate))
                         }) else {
                             return false;
                         };

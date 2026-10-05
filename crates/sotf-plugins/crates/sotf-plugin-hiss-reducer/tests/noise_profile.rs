@@ -40,21 +40,29 @@ fn profile_versions_preserve_integer_json_and_accept_exact_fractional_capture_ra
 
     let mut measured = legacy.clone();
     measured.format_version = 2;
-    measured.spectral = Some(SpectralProfileData {
-        fft_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_FFT_SIZE,
-        hop_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_HOP_SIZE,
-        window: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_WINDOW.to_string(),
-        sample_rate: f64::from(RATE),
-        channels: 1,
-        num_bins: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS,
-        power_per_channel_bin: vec![0.0; plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS],
-        hops_analyzed: 1,
-    });
+    measured.spectral =
+        Some(SpectralProfileData {
+            fft_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_FFT_SIZE,
+            hop_size: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_HOP_SIZE,
+            window: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_WINDOW.to_string(),
+            sample_rate: f64::from(RATE),
+            channels: 1,
+            num_bins: plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS,
+            power_per_channel_bin:
+                vec![0.0; plugins_denoiser::spectral_profile::SPECTRAL_PROFILE_NUM_BINS],
+            hops_analyzed: 1,
+        });
     measured.validate().unwrap();
     let measured_json = serde_json::to_value(&measured).unwrap();
     assert_eq!(measured_json["sample_rate"].as_u64(), Some(u64::from(RATE)));
-    assert_eq!(measured_json["spectral"]["sample_rate"].as_u64(), Some(u64::from(RATE)));
-    assert_eq!(serde_json::from_value::<NoiseProfileData>(measured_json).unwrap(), measured);
+    assert_eq!(
+        measured_json["spectral"]["sample_rate"].as_u64(),
+        Some(u64::from(RATE))
+    );
+    assert_eq!(
+        serde_json::from_value::<NoiseProfileData>(measured_json).unwrap(),
+        measured
+    );
 
     let fractional_rate = 12_345.678_f64;
     let mut fractional = measured;
@@ -63,9 +71,18 @@ fn profile_versions_preserve_integer_json_and_accept_exact_fractional_capture_ra
     fractional.spectral.as_mut().unwrap().sample_rate = fractional_rate;
     fractional.validate().unwrap();
     let fractional_json = serde_json::to_value(&fractional).unwrap();
-    assert_eq!(fractional_json["sample_rate"].as_f64(), Some(fractional_rate));
-    assert_eq!(fractional_json["spectral"]["sample_rate"].as_f64(), Some(fractional_rate));
-    assert_eq!(serde_json::from_value::<NoiseProfileData>(fractional_json).unwrap(), fractional);
+    assert_eq!(
+        fractional_json["sample_rate"].as_f64(),
+        Some(fractional_rate)
+    );
+    assert_eq!(
+        fractional_json["spectral"]["sample_rate"].as_f64(),
+        Some(fractional_rate)
+    );
+    assert_eq!(
+        serde_json::from_value::<NoiseProfileData>(fractional_json).unwrap(),
+        fractional
+    );
 
     let mut fractional_floors = fractional.clone();
     fractional_floors.spectral = None;
@@ -95,9 +112,7 @@ fn lcg_noise(frames: usize, amplitude: f32, seed: u32) -> Vec<f32> {
     let mut state = seed;
     (0..frames)
         .map(|_| {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             amplitude * ((state as f32 / u32::MAX as f32) * 2.0 - 1.0)
         })
         .collect()
@@ -277,7 +292,10 @@ fn capture_restart_and_cancel_semantics() {
     let noise = lcg_noise(1000, 0.05, 0x9);
     process_all(&mut plugin, &noise, 1, &[1000]);
     plugin
-        .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(false))
+        .set_parameter(
+            ParameterId::from("learn_noise"),
+            ParameterValue::Bool(false),
+        )
         .unwrap();
     assert!(!plugin.is_capturing());
     assert_eq!(plugin.capture_progress(), 0.0);
@@ -294,7 +312,10 @@ fn capture_restart_and_cancel_semantics() {
     process_all(&mut plugin, &noise, 1, &[997]);
     assert!(plugin.is_capturing());
     plugin
-        .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(false))
+        .set_parameter(
+            ParameterId::from("learn_noise"),
+            ParameterValue::Bool(false),
+        )
         .unwrap();
     let after = plugin.persisted_params().captured_profile.unwrap();
     assert_eq!(before, after);
@@ -353,7 +374,10 @@ fn profile_persists_through_json_round_trip() {
     )
     .unwrap();
     assert!(!legacy.use_captured_profile);
-    assert_eq!((legacy.curve_low, legacy.curve_mid, legacy.curve_high), (1.0, 1.0, 1.0));
+    assert_eq!(
+        (legacy.curve_low, legacy.curve_mid, legacy.curve_high),
+        (1.0, 1.0, 1.0)
+    );
     assert_eq!(legacy.link_mode, 0);
     assert!(!legacy.transient_guard);
     assert!(legacy.captured_profile.is_none());
@@ -557,8 +581,7 @@ fn profile_threshold_modulation_suppresses_loud_hiss() {
     let frames = RATE as usize * 2;
     let mut mixed = Vec::with_capacity(frames);
     for (index, &hiss) in hiss_only.iter().enumerate() {
-        let tone =
-            0.12 * (2.0 * std::f32::consts::PI * 750.0 * index as f32 / RATE as f32).sin();
+        let tone = 0.12 * (2.0 * std::f32::consts::PI * 750.0 * index as f32 / RATE as f32).sin();
         mixed.push(tone + hiss);
     }
 
@@ -577,8 +600,7 @@ fn profile_threshold_modulation_suppresses_loud_hiss() {
     let skip = RATE as usize;
     let input_high = oracle_high_band_power(&mixed[skip..], 4000.0, f64::from(RATE));
     let plain_high = oracle_high_band_power(&plain_output[skip..], 4000.0, f64::from(RATE));
-    let profiled_high =
-        oracle_high_band_power(&profiled_output[skip..], 4000.0, f64::from(RATE));
+    let profiled_high = oracle_high_band_power(&profiled_output[skip..], 4000.0, f64::from(RATE));
     let plain_db = 10.0 * (plain_high / input_high).log10();
     let profiled_db = 10.0 * (profiled_high / input_high).log10();
     assert!(
@@ -593,8 +615,7 @@ fn profile_threshold_modulation_suppresses_loud_hiss() {
     // The wanted low-band tone survives in both paths.
     let input_low = oracle_low_band_power(&mixed[skip..], 4000.0, f64::from(RATE));
     let plain_low = oracle_low_band_power(&plain_output[skip..], 4000.0, f64::from(RATE));
-    let profiled_low =
-        oracle_low_band_power(&profiled_output[skip..], 4000.0, f64::from(RATE));
+    let profiled_low = oracle_low_band_power(&profiled_output[skip..], 4000.0, f64::from(RATE));
     assert!(
         (10.0 * (plain_low / input_low).log10()).abs() < 0.5,
         "plain tone changed"
@@ -652,8 +673,7 @@ fn stereo_threshold_following_uses_loudest_channel_floor() {
     let frames = RATE as usize * 2;
     let mut mixed = Vec::with_capacity(frames * 2);
     for index in 0..frames {
-        let tone =
-            0.022 * (2.0 * std::f32::consts::PI * 8000.0 * index as f32 / RATE as f32).sin();
+        let tone = 0.022 * (2.0 * std::f32::consts::PI * 8000.0 * index as f32 / RATE as f32).sin();
         mixed.push(0.0);
         mixed.push(tone);
     }
@@ -808,7 +828,10 @@ fn triggers_never_fire_from_batch_updates() {
 
     // Named setters fire; clear reads back false and learn reads active.
     plugin
-        .set_parameter(ParameterId::from("clear_profile"), ParameterValue::Bool(true))
+        .set_parameter(
+            ParameterId::from("clear_profile"),
+            ParameterValue::Bool(true),
+        )
         .unwrap();
     assert!(!plugin.has_captured_profile());
     assert_eq!(

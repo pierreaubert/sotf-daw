@@ -175,8 +175,7 @@ fn process_mid_side_stage(
     mid_selected: bool,
 ) {
     for [left, right] in pairs {
-        let (Some(&left_sample), Some(&right_sample)) =
-            (frame.get(*left), frame.get(*right))
+        let (Some(&left_sample), Some(&right_sample)) = (frame.get(*left), frame.get(*right))
         else {
             continue;
         };
@@ -266,8 +265,7 @@ pub(super) fn channel_cascade_response(
     if !frequency_hz.is_finite() || frequency_hz < 0.0 || frequency_hz > sample_rate * 0.5 {
         return None;
     }
-    let stream_angle =
-        -std::f64::consts::TAU * frequency_hz * streaming_delay as f64 / sample_rate;
+    let stream_angle = -std::f64::consts::TAU * frequency_hz * streaming_delay as f64 / sample_rate;
     let stream = Complex::new(stream_angle.cos(), stream_angle.sin());
     let identity_response = stage_dtft(identity, frequency_hz, sample_rate) * stream;
     // Single-channel excitation: the probed channel starts at unity, every

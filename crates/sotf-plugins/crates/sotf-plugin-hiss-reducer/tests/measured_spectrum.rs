@@ -12,11 +12,11 @@
 
 // Rust guideline compliant 2026-02-21
 use plugins_denoiser::spectral_hiss::SPECTRAL_HISS_NUM_BINS;
+use sotf_host::CountingAlloc;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 use sotf_host::test_utils::measure_heap_activity;
-use sotf_host::CountingAlloc;
 use sotf_plugin_hiss_reducer::profile::{NoiseProfileData, SpectralProfileData};
 use sotf_plugin_hiss_reducer::{HissReducerPlugin, HissReducerPluginParams};
 
@@ -43,9 +43,7 @@ fn lcg_noise(frames: usize, amplitude: f32, seed: u32) -> Vec<f32> {
     let mut state = seed;
     (0..frames)
         .map(|_| {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             amplitude * ((state as f32 / u32::MAX as f32) * 2.0 - 1.0)
         })
         .collect()
@@ -445,8 +443,7 @@ fn original_2pole6k_pair_retained_as_capture_accuracy_diagnostic() {
     let high_oracle = assert_capture_matches_oracle(&high_spectrum, &high, "original-high");
 
     // Regional ratios, production vs oracle (bins 86-149 / 341-490).
-    let ratio_low =
-        regional_mean(&low_spectrum, 86, 149) / regional_mean(&high_spectrum, 86, 149);
+    let ratio_low = regional_mean(&low_spectrum, 86, 149) / regional_mean(&high_spectrum, 86, 149);
     let ratio_high =
         regional_mean(&low_spectrum, 341, 490) / regional_mean(&high_spectrum, 341, 490);
     let oracle_ratio_low =
@@ -537,14 +534,10 @@ fn separated_cutoff_pair_meets_4x_and_suppresses_regionally() {
         oracle_high_ratio < 0.15,
         "oracle high-region ratio {oracle_high_ratio:.4} above 0.15x qualification"
     );
-    let ratio_low =
-        regional_mean(&low_spectrum, 86, 149) / regional_mean(&high_spectrum, 86, 149);
+    let ratio_low = regional_mean(&low_spectrum, 86, 149) / regional_mean(&high_spectrum, 86, 149);
     let ratio_high =
         regional_mean(&low_spectrum, 341, 490) / regional_mean(&high_spectrum, 341, 490);
-    assert!(
-        ratio_low > 4.0,
-        "low-region ratio {ratio_low:.2} below 4x"
-    );
+    assert!(ratio_low > 4.0, "low-region ratio {ratio_low:.2} below 4x");
     assert!(
         ratio_high < 0.25,
         "high-region ratio {ratio_high:.4} above 0.25x"
@@ -554,8 +547,7 @@ fn separated_cutoff_pair_meets_4x_and_suppresses_regionally() {
     // Flat white test hiss (same seed 0x7e57 as the original test) isolates
     // the profile as the only difference.
     let test_hiss = lcg_noise(RATE as usize, 0.04, 0x7e57);
-    let test_floor =
-        10.0 * oracle_high_band_power(&test_hiss, 4000.0, f64::from(RATE)).log10();
+    let test_floor = 10.0 * oracle_high_band_power(&test_hiss, 4000.0, f64::from(RATE)).log10();
     assert!(
         test_floor < -30.0,
         "test hiss must clear the gate, got {test_floor:.2} dB"
@@ -686,7 +678,8 @@ fn wanted_tone_loss_vs_colored_suppression_separated() {
     let window_out = &tone_out_full[1024..16384];
     assert_eq!(window_in.len(), window_out.len());
     let tone_bin = (TONE_HZ * window_in.len() as f64 / 48_000.0).round() as usize;
-    let loss_db = 10.0 * (goertzel_power(window_out, tone_bin) / goertzel_power(window_in, tone_bin)).log10();
+    let loss_db =
+        10.0 * (goertzel_power(window_out, tone_bin) / goertzel_power(window_in, tone_bin)).log10();
     assert!(
         loss_db.abs() < 1.0,
         "tone loss {loss_db:.2} dB exceeds 1 dB"
@@ -718,7 +711,10 @@ fn capture_partitions_and_partial_spectral_identity() {
     process_all(&mut plugin, &noise[..4096], 1, &[997]);
     assert!(plugin.is_capturing());
     plugin
-        .set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(false))
+        .set_parameter(
+            ParameterId::from("learn_noise"),
+            ParameterValue::Bool(false),
+        )
         .unwrap();
     assert!(!plugin.is_capturing());
     assert!(plugin.has_measured_spectrum());
@@ -922,10 +918,7 @@ fn reset_preserves_spectral_and_eof_matches_endpoint() {
         output.extend(drain_all(&mut eof_plugin, 1));
         let total = RATE as usize + marker_frames;
         assert_eq!(output.len(), end(total), "phase={phase}");
-        assert!(
-            output.iter().all(|s| s.is_finite()),
-            "phase={phase} finite"
-        );
+        assert!(output.iter().all(|s| s.is_finite()), "phase={phase} finite");
     }
 }
 
@@ -979,10 +972,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
     assert_eq!(plugin.overall_profile_floor_db(), Some(-40.0));
     plugin.restore_profile(&v2).unwrap();
     assert!(plugin.has_measured_spectrum());
-    assert_eq!(
-        plugin.persisted_params().captured_profile.unwrap(),
-        v2
-    );
+    assert_eq!(plugin.persisted_params().captured_profile.unwrap(), v2);
 
     // Every malformed spectral candidate rejects transactionally, keeping
     // the accepted v2 profile and its audio bit-exactly.
@@ -996,8 +986,7 @@ fn v2_roundtrip_v1_restore_and_invalid_rollback() {
     let reference = process_all(&mut plugin, &segment, 1, &[997, 64]);
     let base_spectral = v2.spectral.clone().unwrap();
     let mut candidates: Vec<(&'static str, NoiseProfileData)> = Vec::new();
-    let mut push_variant =
-        |label: &'static str, mutate: &dyn Fn(&mut SpectralProfileData)| {
+    let mut push_variant = |label: &'static str, mutate: &dyn Fn(&mut SpectralProfileData)| {
         let mut spectral = base_spectral.clone();
         mutate(&mut spectral);
         candidates.push((
@@ -1187,10 +1176,8 @@ fn cross_rate_falls_back_to_floors_and_cutoff_keeps_spectral() {
             ParameterValue::Bool(true),
         )
         .unwrap();
-    let spectral_out =
-        process_all_at_rate(&mut spectral_96k, &segment_96k, 1, &[4096], RATE_96K);
-    let fallback_out =
-        process_all_at_rate(&mut fallback_96k, &segment_96k, 1, &[4096], RATE_96K);
+    let spectral_out = process_all_at_rate(&mut spectral_96k, &segment_96k, 1, &[4096], RATE_96K);
+    let fallback_out = process_all_at_rate(&mut fallback_96k, &segment_96k, 1, &[4096], RATE_96K);
     assert_eq!(
         spectral_out, fallback_out,
         "cross-rate v2 must equal v1 white-spread fallback"
@@ -1222,7 +1209,10 @@ fn cross_rate_falls_back_to_floors_and_cutoff_keeps_spectral() {
         )
         .unwrap();
     cutoff_plugin
-        .set_parameter(ParameterId::from("frequency_hz"), ParameterValue::Float(8000.0))
+        .set_parameter(
+            ParameterId::from("frequency_hz"),
+            ParameterValue::Float(8000.0),
+        )
         .unwrap();
     assert!(
         cutoff_plugin.profile_uses_spectral(),
@@ -1237,7 +1227,10 @@ fn cross_rate_falls_back_to_floors_and_cutoff_keeps_spectral() {
         )
         .unwrap();
     cutoff_fallback
-        .set_parameter(ParameterId::from("frequency_hz"), ParameterValue::Float(8000.0))
+        .set_parameter(
+            ParameterId::from("frequency_hz"),
+            ParameterValue::Float(8000.0),
+        )
         .unwrap();
     let segment = lcg_noise(16384, 0.04, 0xc470);
     let spectral_cutoff = process_all(&mut cutoff_plugin, &segment, 1, &[4096]);
@@ -1318,7 +1311,11 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
         signal[base] += 1.0;
     }
     let bases = settled_bases(frames, RATE as usize + 100, 4864);
-    assert!(bases.len() >= 10, "need settled impulses, got {}", bases.len());
+    assert!(
+        bases.len() >= 10,
+        "need settled impulses, got {}",
+        bases.len()
+    );
 
     let mut profiler = HissReducerPlugin::from_params(
         1,
@@ -1364,7 +1361,10 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
         let out_on = render_leg(blob, true);
         assert!(out_off.iter().all(|s| s.is_finite()));
         assert!(out_on.iter().all(|s| s.is_finite()));
-        assert_ne!(out_off, out_on, "{label}: guard must act on settled impulses");
+        assert_ne!(
+            out_off, out_on,
+            "{label}: guard must act on settled impulses"
+        );
 
         let (loss_off, _) = impulse_peak_stats(&signal, &out_off, &bases);
         let (loss_on, per_on) = impulse_peak_stats(&signal, &out_on, &bases);
@@ -1380,7 +1380,9 @@ fn v1_guard_fixture_retained_and_measured_guard_meets_bounds() {
         let worst_on = per_on.iter().copied().fold(f64::INFINITY, f64::min);
         let best_on = per_on.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         println!("{label} guard-on per-impulse losses (dB): {per_on:.2?}");
-        println!("{label} guard-on worst {worst_on:.2} dB, best {best_on:.2} dB, mean {loss_on:.2} dB");
+        println!(
+            "{label} guard-on worst {worst_on:.2} dB, best {best_on:.2} dB, mean {loss_on:.2} dB"
+        );
         assert!(
             worst_on > -3.0,
             "{label}: guard-on worst settled peak lost ({worst_on:.2} dB, mean {loss_on:.2} dB)"

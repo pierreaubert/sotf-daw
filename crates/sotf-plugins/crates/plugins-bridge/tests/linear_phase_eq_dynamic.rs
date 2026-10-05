@@ -120,9 +120,16 @@ fn pattern(frames: usize) -> Vec<f32> {
 }
 
 fn create(bands: &[BandConfig], mix: f32) -> Box<dyn Plugin> {
-    let mut plugin = create_plugin("LinearPhaseEQ", CHANNELS, f64::from(RATE), &config_json(bands, mix))
-        .expect("bridge factory must create LinearPhaseEQ");
-    plugin.initialize(f64::from(RATE)).expect("initialize must succeed");
+    let mut plugin = create_plugin(
+        "LinearPhaseEQ",
+        CHANNELS,
+        f64::from(RATE),
+        &config_json(bands, mix),
+    )
+    .expect("bridge factory must create LinearPhaseEQ");
+    plugin
+        .initialize(f64::from(RATE))
+        .expect("initialize must succeed");
     plugin
 }
 
@@ -199,10 +206,7 @@ fn factory_static_parity_and_generic_refusal_preserved() {
     assert!(rms(&output) > 1e-4, "static output must be nonzero");
     // Generic band automation still refuses structurally (preserved).
     let err = plugin
-        .set_parameter(
-            ParameterId::from("band_0_gain"),
-            ParameterValue::Float(6.0),
-        )
+        .set_parameter(ParameterId::from("band_0_gain"), ParameterValue::Float(6.0))
         .expect_err("generic band automation must stay structural");
     assert!(err.contains("structural"), "{err}");
     assert_eq!(get_gain(&*plugin, 0), 0.0);
@@ -322,8 +326,7 @@ fn worker_gain_automation_exact_zero_and_final_reference() {
         };
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
-            let expected =
-                f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
+            let expected = f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
             assert!(
                 (f64::from(output[index]) - expected).abs() < 1e-5,
                 "frame{frame} ch{ch}: {} vs {expected} (w={w})",
@@ -340,7 +343,12 @@ fn worker_gain_automation_exact_zero_and_final_reference() {
     // Full EOF after an update: finite tail, exact length, idempotent drain.
     let mut plugin = create(&old_bands, 1.0);
     let mut out = vec![0.0; input.len()];
-    process_into(&mut *plugin, &input[..commit_at * CHANNELS], &mut out[..commit_at * CHANNELS], 64);
+    process_into(
+        &mut *plugin,
+        &input[..commit_at * CHANNELS],
+        &mut out[..commit_at * CHANNELS],
+        64,
+    );
     as_dynamic(&mut *plugin)
         .request_band_update(0, band("Peak", 1000.0, 1.0, 9.0))
         .unwrap();
@@ -410,12 +418,9 @@ fn two_edits_during_blend_eventually_applied_after_retirement() {
     std::thread::scope(|s| {
         let barrier_ref = &barrier;
         s.spawn(move || {
-            let prepared = LinearPhaseEqPlugin::prepare_band_update(
-                &base,
-                0,
-                band("Peak", 1000.0, 1.0, -6.0),
-            )
-            .expect("prepare first");
+            let prepared =
+                LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, -6.0))
+                    .expect("prepare first");
             tx.send(prepared).expect("ack");
             barrier_ref.wait();
         });
@@ -542,7 +547,12 @@ fn reset_cancel_reprepare_stale_and_topology_retain_accepted() {
     // first update completes before the stale probe runs.
     let input = pattern(2700);
     let mut output = vec![0.0; input.len()];
-    process_into(&mut *plugin, &input[..2048 * CHANNELS], &mut output[..2048 * CHANNELS], 64);
+    process_into(
+        &mut *plugin,
+        &input[..2048 * CHANNELS],
+        &mut output[..2048 * CHANNELS],
+        64,
+    );
     // Snapshot a base, then advance live with a first edit.
     let stale_base = as_dynamic(&mut *plugin).snapshot_for_update();
     as_dynamic(&mut *plugin)
@@ -614,12 +624,9 @@ fn reset_cancel_reprepare_stale_and_topology_retain_accepted() {
     std::thread::scope(|s| {
         let barrier_ref = &barrier;
         s.spawn(move || {
-            let prepared = LinearPhaseEqPlugin::prepare_band_update(
-                &base,
-                1,
-                band("Peak", 3000.0, 1.0, -6.0),
-            )
-            .expect("fresh prepare");
+            let prepared =
+                LinearPhaseEqPlugin::prepare_band_update(&base, 1, band("Peak", 3000.0, 1.0, -6.0))
+                    .expect("fresh prepare");
             tx.send(prepared).expect("ack");
             barrier_ref.wait();
         });
@@ -641,7 +648,10 @@ fn reset_cancel_reprepare_stale_and_topology_retain_accepted() {
     let err = as_dynamic(&mut *plugin)
         .request_band_update(0, placed)
         .expect_err("placement must stay structural");
-    assert!(err.contains("structural") || err.contains("placement"), "{err}");
+    assert!(
+        err.contains("structural") || err.contains("placement"),
+        "{err}"
+    );
     assert_eq!(as_dynamic(&mut *plugin).pending_len(), 0);
     assert_eq!(get_gain(&*plugin, 0), 6.0);
     // Invalid band refusal at prepare time keeps live intact.
@@ -707,22 +717,19 @@ fn saturated_queue_and_off_thread_reclamation_tracking() {
     // completes before the stale probe runs.
     let input = pattern(2700);
     let mut output = vec![0.0; input.len()];
-    process_into(&mut *plugin, &input[..2048 * CHANNELS], &mut output[..2048 * CHANNELS], 64);
+    process_into(
+        &mut *plugin,
+        &input[..2048 * CHANNELS],
+        &mut output[..2048 * CHANNELS],
+        64,
+    );
     // Fill both slots from the same fresh base (same intent twice is fine for
     // saturation; the queue, not the DSP, enforces the bound).
     let base = as_dynamic(&mut *plugin).snapshot_for_update();
-    let first = LinearPhaseEqPlugin::prepare_band_update(
-        &base,
-        0,
-        band("Peak", 1000.0, 1.0, 4.0),
-    )
-    .unwrap();
-    let second = LinearPhaseEqPlugin::prepare_band_update(
-        &base,
-        0,
-        band("Peak", 1000.0, 1.0, 5.0),
-    )
-    .unwrap();
+    let first =
+        LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 4.0)).unwrap();
+    let second =
+        LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 5.0)).unwrap();
     as_dynamic(&mut *plugin)
         .submit_prepared_update(first)
         .unwrap();
@@ -731,12 +738,8 @@ fn saturated_queue_and_off_thread_reclamation_tracking() {
         .unwrap();
     assert_eq!(as_dynamic(&mut *plugin).pending_len(), 2);
     // Third submit fails full and drops its payload on control (off audio).
-    let third = LinearPhaseEqPlugin::prepare_band_update(
-        &base,
-        0,
-        band("Peak", 1000.0, 1.0, 6.0),
-    )
-    .unwrap();
+    let third =
+        LinearPhaseEqPlugin::prepare_band_update(&base, 0, band("Peak", 1000.0, 1.0, 6.0)).unwrap();
     let err = as_dynamic(&mut *plugin)
         .submit_prepared_update(third)
         .expect_err("third concurrent update must report full");
@@ -800,7 +803,12 @@ fn saturated_queue_and_off_thread_reclamation_tracking() {
     let total = 2000;
     let dry_in = pattern(total);
     let mut dry_out = vec![0.0; dry_in.len()];
-    process_into(&mut *dry, &dry_in[..500 * CHANNELS], &mut dry_out[..500 * CHANNELS], 63);
+    process_into(
+        &mut *dry,
+        &dry_in[..500 * CHANNELS],
+        &mut dry_out[..500 * CHANNELS],
+        63,
+    );
     as_dynamic(&mut *dry)
         .request_band_update(0, band("Peak", 1000.0, 1.0, 12.0))
         .unwrap();

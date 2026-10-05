@@ -128,7 +128,8 @@ fn limiter_factory_state_roundtrip_and_standalone_have_one_oversampling_stage() 
                     serde_json::from_slice::<serde_json::Value>(&state).unwrap()["oversampling"],
                     choice
                 );
-                let mut restored = create_plugin("Limiter", channels, f64::from(rate), "{}").unwrap();
+                let mut restored =
+                    create_plugin("Limiter", channels, f64::from(rate), "{}").unwrap();
                 plugins_bridge::state::load_state(restored.as_mut(), &state).unwrap();
                 restored = prepare_standalone_plugin(restored, 257).unwrap();
                 restored.initialize(f64::from(rate)).unwrap();

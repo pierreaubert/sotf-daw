@@ -2,9 +2,9 @@
 
 // Rust guideline compliant 2026-02-21
 use super::{CoordinateSystem, SofaFile, SourcePosition};
+use crate::fractional_delay::fractional_delay_coefficients;
 use sofa_reader::{AttrValue, Hdf5File};
 use std::path::Path;
-use crate::fractional_delay::fractional_delay_coefficients;
 
 // Bound amplification from tiny files carrying enormous delay values. This is a
 // dataset capability limit for nonzero-delay materialization, independent of

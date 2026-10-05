@@ -162,9 +162,8 @@ impl SpectralProfileData {
         if self.hops_analyzed == 0 {
             return Err("spectral profile analyzed zero hops".to_string());
         }
-        validate_spectrum_slice(&self.power_per_channel_bin, self.channels).map_err(|error| {
-            format!("spectral profile powers invalid: {error}")
-        })?;
+        validate_spectrum_slice(&self.power_per_channel_bin, self.channels)
+            .map_err(|error| format!("spectral profile powers invalid: {error}"))?;
         let expected = self.channels * self.num_bins;
         if self.power_per_channel_bin.len() != expected {
             return Err(format!(
@@ -258,9 +257,7 @@ impl NoiseProfileData {
             return Err("noise profile cutoff must be finite and positive".to_string());
         }
         for (index, floor) in self.floor_db_per_channel.iter().enumerate() {
-            if !floor.is_finite()
-                || *floor < PROFILE_FLOOR_MIN_DB
-                || *floor > PROFILE_FLOOR_MAX_DB
+            if !floor.is_finite() || *floor < PROFILE_FLOOR_MIN_DB || *floor > PROFILE_FLOOR_MAX_DB
             {
                 return Err(format!(
                     "noise profile floor {index} is out of range: {floor}"
@@ -279,9 +276,9 @@ impl NoiseProfileData {
             (None, PROFILE_FORMAT_VERSION) => {
                 Err("noise profile format 2 requires a spectral payload".to_string())
             }
-            (Some(_), PROFILE_FORMAT_VERSION_V1) => Err(
-                "noise profile format 1 must not carry a spectral payload".to_string(),
-            ),
+            (Some(_), PROFILE_FORMAT_VERSION_V1) => {
+                Err("noise profile format 1 must not carry a spectral payload".to_string())
+            }
             _ => Err(format!(
                 "unsupported noise profile format version {}",
                 self.format_version
@@ -356,19 +353,9 @@ impl ReductionCurve {
             return self.high;
         }
         let (lo_f, hi_f, lo_g, hi_g) = if freq_hz < CURVE_ANCHOR_HZ[1] {
-            (
-                CURVE_ANCHOR_HZ[0],
-                CURVE_ANCHOR_HZ[1],
-                self.low,
-                self.mid,
-            )
+            (CURVE_ANCHOR_HZ[0], CURVE_ANCHOR_HZ[1], self.low, self.mid)
         } else {
-            (
-                CURVE_ANCHOR_HZ[1],
-                CURVE_ANCHOR_HZ[2],
-                self.mid,
-                self.high,
-            )
+            (CURVE_ANCHOR_HZ[1], CURVE_ANCHOR_HZ[2], self.mid, self.high)
         };
         let position =
             (f64::from(freq_hz) / f64::from(lo_f)).ln() / (f64::from(hi_f) / f64::from(lo_f)).ln();
@@ -457,8 +444,7 @@ impl CaptureState {
         }
         .min(rate * 0.45)
         .max(20.0);
-        let target_frames =
-            ((CAPTURE_SECONDS * sample_rate).round() as u64).max(1);
+        let target_frames = ((CAPTURE_SECONDS * sample_rate).round() as u64).max(1);
         self.spectral.start(sample_rate, target_frames)?;
         self.sample_rate = sample_rate;
         self.cutoff_hz = cutoff;

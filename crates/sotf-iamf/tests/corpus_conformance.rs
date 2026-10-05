@@ -14,7 +14,10 @@ use sotf_iamf::types::{AudioElementType, CodecId, IamfChannelLayout};
 use std::io::Cursor;
 
 fn data(name: &str) -> Vec<u8> {
-    let path = format!("{}/../../../symphonia-add-ons/symphonia-iamf-core/tests/data/{name}", env!("CARGO_MANIFEST_DIR"));
+    let path = format!(
+        "{}/../../../symphonia-add-ons/symphonia-iamf-core/tests/data/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    );
     std::fs::read(&path).unwrap_or_else(|_| panic!("missing corpus file {path}"))
 }
 

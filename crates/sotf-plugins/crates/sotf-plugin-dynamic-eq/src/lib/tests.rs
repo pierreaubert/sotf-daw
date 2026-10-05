@@ -10,12 +10,12 @@ use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 
 mod misc;
+#[path = "tests/routing.rs"]
+mod routing;
 #[path = "tests/shelves.rs"]
 mod shelves;
 #[path = "tests/tilt.rs"]
 mod tilt;
-#[path = "tests/routing.rs"]
-mod routing;
 
 #[test]
 fn test_parameter_roundtrip() {

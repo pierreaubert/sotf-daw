@@ -2499,8 +2499,13 @@ fn test_update_lookahead_delay() {
 fn test_compute_bin_to_band() {
     use super::spectral_state::SpectralState;
 
-    let bin_to_band =
-        SpectralState::compute_bin_to_band(1024, 513, 48000.0, &[300.0, 3000.0, 8000.0, 12000.0], 5);
+    let bin_to_band = SpectralState::compute_bin_to_band(
+        1024,
+        513,
+        48000.0,
+        &[300.0, 3000.0, 8000.0, 12000.0],
+        5,
+    );
 
     assert_eq!(bin_to_band[0], 0); // DC bin -> lowest band
     assert_eq!(bin_to_band[10], 1); // ~469 Hz -> above 300 Hz crossover
@@ -2771,7 +2776,10 @@ fn conventional_ratio_matches_single_and_multiband_settled_audio() {
                 unity.initialize(f64::from(rate)).unwrap();
                 let mut unity_output = vec![input; frames * channels];
                 unity
-                    .process_in_place(&mut unity_output, &ProcessContext::new(f64::from(rate), frames))
+                    .process_in_place(
+                        &mut unity_output,
+                        &ProcessContext::new(f64::from(rate), frames),
+                    )
                     .unwrap();
                 let filtered_input = unity_output[unity_output.len() - 1] as f64;
                 assert!((20.0 * (filtered_input / input as f64).log10()).abs() < 0.01);

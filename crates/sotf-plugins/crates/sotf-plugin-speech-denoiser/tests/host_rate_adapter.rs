@@ -9,8 +9,8 @@ use sotf_plugin_speech_denoiser::{
 static ALLOCATOR: CountingAlloc = CountingAlloc;
 
 const VALIDATOR_RATES: [f64; 13] = [
-    8_000.0, 22_050.0, 44_100.0, 48_000.0, 88_200.0, 96_000.0, 192_000.0,
-    384_000.0, 768_000.0, 1_234.5678, 12_345.678, 45_678.901, 123_456.78,
+    8_000.0, 22_050.0, 44_100.0, 48_000.0, 88_200.0, 96_000.0, 192_000.0, 384_000.0, 768_000.0,
+    1_234.5678, 12_345.678, 45_678.901, 123_456.78,
 ];
 
 fn strength_zero(rate: f64, channels: usize, enabled: bool) -> SpeechDenoiserPlugin {
@@ -44,7 +44,9 @@ fn process_stream(plugin: &mut SpeechDenoiserPlugin, rate: f64, source: &[f32]) 
     for chunk in source.chunks(137) {
         let mut block = chunk.to_vec();
         assert_eq!(
-            plugin.process_in_place(&mut block, &ProcessContext::new(rate, chunk.len())).unwrap(),
+            plugin
+                .process_in_place(&mut block, &ProcessContext::new(rate, chunk.len()))
+                .unwrap(),
             chunk.len()
         );
         output.extend_from_slice(&block);
@@ -67,7 +69,9 @@ fn render(
         let frames = partitions[call % partitions.len()].min(source.len() / channels - offset);
         let mut block = source[offset * channels..(offset + frames) * channels].to_vec();
         assert_eq!(
-            plugin.process_in_place(&mut block, &ProcessContext::new(rate, frames)).unwrap(),
+            plugin
+                .process_in_place(&mut block, &ProcessContext::new(rate, frames))
+                .unwrap(),
             frames,
         );
         output.extend_from_slice(&block);
@@ -83,8 +87,13 @@ fn render(
     // A broken drain must fail this test instead of hanging the remote QA job.
     for call in 0..100_000 {
         let mut tail = vec![0.0; 64 * channels];
-        let result = plugin.drain(&mut tail, &ProcessContext::new(rate, 0)).unwrap();
-        assert!(result.frames <= 64, "drain over-reported output on call {call}");
+        let result = plugin
+            .drain(&mut tail, &ProcessContext::new(rate, 0))
+            .unwrap();
+        assert!(
+            result.frames <= 64,
+            "drain over-reported output on call {call}"
+        );
         output.extend_from_slice(&tail[..result.frames * channels]);
         if result.complete {
             return output;
@@ -111,7 +120,14 @@ fn all_validator_rates_preserve_full_band_at_zero_strength_and_exact_host_latenc
                     }
                 }
                 source[17 * channels] = 1.0;
-                let output = render(&mut plugin, rate, &source, channels, &[1, 17, 63, 137], None);
+                let output = render(
+                    &mut plugin,
+                    rate,
+                    &source,
+                    channels,
+                    &[1, 17, 63, 137],
+                    None,
+                );
                 if enabled && rate != 48_000.0 {
                     assert!(output.len() > (frames + latency) * channels);
                 } else {
@@ -123,7 +139,9 @@ fn all_validator_rates_preserve_full_band_at_zero_strength_and_exact_host_latenc
                     source.as_slice()
                 );
                 assert!(
-                    output[(latency + frames) * channels..].iter().all(|&sample| sample == 0.0),
+                    output[(latency + frames) * channels..]
+                        .iter()
+                        .all(|&sample| sample == 0.0),
                     "{rate} Hz zero-strength tail contains audio"
                 );
             }
@@ -143,14 +161,20 @@ fn adapted_output_is_independent_of_host_callback_partition() {
         let mut large = disabled(rate, 1);
         let a = render(&mut small, rate, &source, 1, &[1, 7, 65], None);
         let b = render(&mut large, rate, &source, 1, &[511], None);
-        assert_eq!(a, b, "{rate} Hz disabled dry path changed with callback partition");
+        assert_eq!(
+            a, b,
+            "{rate} Hz disabled dry path changed with callback partition"
+        );
         let mut wet_small = SpeechDenoiserPlugin::new(1);
         wet_small.initialize(rate).unwrap();
         let mut wet_large = SpeechDenoiserPlugin::new(1);
         wet_large.initialize(rate).unwrap();
         let a = render(&mut wet_small, rate, &source, 1, &[1, 7, 65], Some(2));
         let b = render(&mut wet_large, rate, &source, 1, &[511], Some(2));
-        assert_eq!(a, b, "{rate} Hz enabled wet path changed with callback partition");
+        assert_eq!(
+            a, b,
+            "{rate} Hz enabled wet path changed with callback partition"
+        );
     }
 }
 
@@ -161,7 +185,9 @@ fn adapted_process_has_no_heap_allocation_after_preparation() {
         let mut block = [0.25_f32; 128];
         let dry_label = format!("{rate} Hz speech adapter disabled process");
         assert_no_allocs(&dry_label, || {
-            plugin.process_in_place(&mut block, &ProcessContext::new(rate, 64)).unwrap();
+            plugin
+                .process_in_place(&mut block, &ProcessContext::new(rate, 64))
+                .unwrap();
         });
         let mut enabled = SpeechDenoiserPlugin::new(2);
         enabled.initialize(rate).unwrap();
@@ -181,7 +207,10 @@ fn adapted_process_has_no_heap_allocation_after_preparation() {
                     .unwrap();
             }
         });
-        assert!(model_frames(&enabled) >= 2, "{rate} Hz missed RNNoise processing");
+        assert!(
+            model_frames(&enabled) >= 2,
+            "{rate} Hz missed RNNoise processing"
+        );
     }
 }
 
@@ -205,13 +234,18 @@ fn failed_rate_reinitialization_retains_active_backend_and_adapter() {
             };
             let frames = plugin.latency_samples() + 512.max((rate * 0.03).ceil() as usize);
             let input: Vec<f32> = (0..frames)
-                .map(|frame| ((frame as f64 * 440.0 * std::f64::consts::TAU / rate).sin() * 0.2) as f32)
+                .map(|frame| {
+                    ((frame as f64 * 440.0 * std::f64::consts::TAU / rate).sin() * 0.2) as f32
+                })
                 .collect();
             let first = process_stream(&mut plugin, rate, &input);
             let expected_first = process_stream(&mut reference, rate, &input);
             assert_eq!(first, expected_first, "{rate} Hz enabled={enabled} prefix");
             if enabled {
-                assert!(model_frames(&plugin) >= 2, "{rate} Hz prefix missed RNNoise processing");
+                assert!(
+                    model_frames(&plugin) >= 2,
+                    "{rate} Hz prefix missed RNNoise processing"
+                );
             }
             for invalid_rate in [f64::NAN, 0.0, f64::MIN_POSITIVE, f64::MAX] {
                 assert!(
@@ -221,9 +255,15 @@ fn failed_rate_reinitialization_retains_active_backend_and_adapter() {
             }
             let next = process_stream(&mut plugin, rate, &input);
             let expected_next = process_stream(&mut reference, rate, &input);
-            assert_eq!(next, expected_next, "{rate} Hz enabled={enabled} retained state");
+            assert_eq!(
+                next, expected_next,
+                "{rate} Hz enabled={enabled} retained state"
+            );
             if enabled {
-                assert!(model_frames(&plugin) >= 4, "{rate} Hz suffix missed RNNoise processing");
+                assert!(
+                    model_frames(&plugin) >= 4,
+                    "{rate} Hz suffix missed RNNoise processing"
+                );
             }
         }
     }
@@ -253,7 +293,10 @@ fn enabled_adapted_stream_emits_bounded_tail_and_then_stays_complete() {
                 "{rate} Hz adapted backend tail length"
             );
         }
-        assert!(output.iter().all(|value| value.is_finite()), "{rate} Hz nonfinite output");
+        assert!(
+            output.iter().all(|value| value.is_finite()),
+            "{rate} Hz nonfinite output"
+        );
         let mut offset = 0;
         let mut call = 0;
         let partitions = [1, 17, 63, 137];
@@ -263,7 +306,11 @@ fn enabled_adapted_stream_emits_bounded_tail_and_then_stays_complete() {
             continued
                 .process_in_place(&mut block, &ProcessContext::new(rate, count))
                 .unwrap();
-            assert_eq!(block, output[offset..offset + count], "{rate} Hz input prefix");
+            assert_eq!(
+                block,
+                output[offset..offset + count],
+                "{rate} Hz input prefix"
+            );
             offset += count;
             call += 1;
         }
@@ -280,9 +327,15 @@ fn enabled_adapted_stream_emits_bounded_tail_and_then_stays_complete() {
                 .unwrap();
             continued_tail.extend_from_slice(&zeros);
         }
-        assert_eq!(continued_tail, output[source.len()..], "{rate} Hz drain continuation");
+        assert_eq!(
+            continued_tail,
+            output[source.len()..],
+            "{rate} Hz drain continuation"
+        );
         let mut tail = [f32::NAN; 64];
-        let done = plugin.drain(&mut tail, &ProcessContext::new(rate, 0)).unwrap();
+        let done = plugin
+            .drain(&mut tail, &ProcessContext::new(rate, 0))
+            .unwrap();
         assert_eq!(done.frames, 0, "{rate} Hz extra drain frames");
         assert!(done.complete, "{rate} Hz drain did not complete");
     }

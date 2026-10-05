@@ -34,7 +34,9 @@ fn integration_default_parameters() {
 
     let v = plugin.get_parameter(&ParameterId::from("enabled")).unwrap();
     assert_eq!(v, ParameterValue::Bool(true));
-    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    let v = plugin
+        .get_parameter(&ParameterId::from("strength"))
+        .unwrap();
     assert_eq!(v, ParameterValue::Float(1.0));
     let v = plugin.get_parameter(&ParameterId::from("model")).unwrap();
     assert_eq!(v, ParameterValue::Int(0));
@@ -59,7 +61,9 @@ fn integration_parameter_roundtrip_and_validation() {
     plugin
         .set_parameter(ParameterId::from("strength"), ParameterValue::Float(0.5))
         .unwrap();
-    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    let v = plugin
+        .get_parameter(&ParameterId::from("strength"))
+        .unwrap();
     assert_eq!(v, ParameterValue::Float(0.5));
 
     // The bundled model accepts its index and label as no-ops.
@@ -231,7 +235,9 @@ fn integration_from_params_applies_initial_state() {
     );
     let v = plugin.get_parameter(&ParameterId::from("enabled")).unwrap();
     assert_eq!(v, ParameterValue::Bool(false));
-    let v = plugin.get_parameter(&ParameterId::from("strength")).unwrap();
+    let v = plugin
+        .get_parameter(&ParameterId::from("strength"))
+        .unwrap();
     assert_eq!(v, ParameterValue::Float(0.5));
     let v = plugin.get_parameter(&ParameterId::from("model")).unwrap();
     assert_eq!(v, ParameterValue::Int(0));
@@ -372,10 +378,7 @@ fn factory_parameter_json_is_strict_and_backward_compatible() {
     assert_eq!(legacy.model, SpeechDenoiserModel::RnnoiseLegacyLq);
     let indexed_legacy: SpeechDenoiserPluginParams =
         serde_json::from_str(r#"{"model":2}"#).unwrap();
-    assert_eq!(
-        indexed_legacy.model,
-        SpeechDenoiserModel::RnnoiseLegacySh
-    );
+    assert_eq!(indexed_legacy.model, SpeechDenoiserModel::RnnoiseLegacySh);
     assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"enabled":1}"#).is_err());
     assert!(serde_json::from_str::<SpeechDenoiserPluginParams>(r#"{"strength":"full"}"#).is_err());
     assert!(

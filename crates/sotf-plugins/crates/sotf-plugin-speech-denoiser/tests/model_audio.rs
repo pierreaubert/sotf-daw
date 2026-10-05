@@ -96,9 +96,7 @@ fn signal(frames: usize, channels: usize, seed: u32) -> Vec<f32> {
     for frame in 0..frames {
         let voice = (frame as f32 * 0.061).sin() * 0.25 + (frame as f32 * 0.122).sin() * 0.12;
         for _ in 0..channels {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             let noise = (state as f32 / u32::MAX as f32 - 0.5) * 0.3;
             out.push((voice + noise).clamp(-0.9, 0.9));
         }
@@ -117,7 +115,10 @@ fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
 fn registry_identity_matches_backend_verbatim() {
     assert_eq!(MODEL_LABELS.len(), 3);
     assert_eq!(MODEL_LABELS[0], "RNNoise Full");
-    assert_eq!(SpeechDenoiserModel::default(), SpeechDenoiserModel::RnnoiseFull);
+    assert_eq!(
+        SpeechDenoiserModel::default(),
+        SpeechDenoiserModel::RnnoiseFull
+    );
     assert_eq!(SpeechDenoiserModel::default().index(), 0);
     let backend = available_models();
     assert_eq!(backend.len(), MODEL_LABELS.len());
@@ -141,7 +142,10 @@ fn alternate_selection_changes_nonzero_audio() {
         let mut bundled = configured(channels, true, 1.0, SpeechDenoiserModel::RnnoiseFull);
         let reference = process(&mut bundled, &input, channels, &[137, 1]);
         let mut alternates = Vec::new();
-        for model in [SpeechDenoiserModel::RnnoiseLegacyLq, SpeechDenoiserModel::RnnoiseLegacySh] {
+        for model in [
+            SpeechDenoiserModel::RnnoiseLegacyLq,
+            SpeechDenoiserModel::RnnoiseLegacySh,
+        ] {
             let mut plugin = configured(channels, true, 1.0, model);
             let output = process(&mut plugin, &input, channels, &[137, 1]);
             assert!(output.iter().all(|s| s.is_finite()), "{model:?}");
@@ -170,10 +174,7 @@ fn bypass_reset_partitions_eof_latency_hold_per_model() {
             let expected: Vec<f32> = input
                 .iter()
                 .enumerate()
-                .map(|(i, _)| {
-                    i.checked_sub(LATENCY * channels)
-                        .map_or(0.0, |j| input[j])
-                })
+                .map(|(i, _)| i.checked_sub(LATENCY * channels).map_or(0.0, |j| input[j]))
                 .collect();
             assert_eq!(bypassed_out, expected, "{model:?}");
             // Odd partitions match one continuous stream bit-exactly.
@@ -198,7 +199,12 @@ fn bypass_reset_partitions_eof_latency_hold_per_model() {
             let mut actual = process(&mut draining, &input, channels, &[137, 1]);
             let mut expected = process(&mut zeros, &input, channels, &[137, 1]);
             actual.extend(drain_to_end(&mut draining, channels));
-            expected.extend(process(&mut zeros, &vec![0.0; LATENCY * channels], channels, &[17]));
+            expected.extend(process(
+                &mut zeros,
+                &vec![0.0; LATENCY * channels],
+                channels,
+                &[17],
+            ));
             assert_eq!(actual, expected, "{model:?}");
             assert_eq!(
                 draining.parametric_get_parameter(&ParameterId::from("model")),

@@ -464,7 +464,10 @@ fn same_rate_latency_change_prepares_an_aligned_crossfade() {
     current_host.build().unwrap();
     candidate_host.build().unwrap();
     assert_eq!(current_host.output_sample_rate(48_000.0).unwrap(), 48_000.0);
-    assert_eq!(candidate_host.output_sample_rate(48_000.0).unwrap(), 48_000.0);
+    assert_eq!(
+        candidate_host.output_sample_rate(48_000.0).unwrap(),
+        48_000.0
+    );
     assert_ne!(
         current_host.total_latency_samples(),
         candidate_host.total_latency_samples()

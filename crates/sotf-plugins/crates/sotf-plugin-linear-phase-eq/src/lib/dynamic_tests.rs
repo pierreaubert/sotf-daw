@@ -158,8 +158,7 @@ fn run_blend_case(
         };
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
-            let expected =
-                f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
+            let expected = f64::from(old_out[index]) * (1.0 - w) + f64::from(new_out[index]) * w;
             let got = actual_out[index];
             assert!(
                 (f64::from(got) - expected).abs() < 1e-5,
@@ -433,16 +432,15 @@ fn refused_updates_retain_config_and_audio() {
     let committed = plugin.snapshot_config();
     let remaining = plugin.xfade_remaining;
     // The twin takes the same update without any refusal attempt.
-    twin
-        .commit_prepared_update(
-            LinearPhaseEqPlugin::prepare_band_update(
-                &twin.snapshot_config(),
-                0,
-                band("Peak", 1000.0, 1.0, 6.0, None),
-            )
-            .unwrap(),
+    twin.commit_prepared_update(
+        LinearPhaseEqPlugin::prepare_band_update(
+            &twin.snapshot_config(),
+            0,
+            band("Peak", 1000.0, 1.0, 6.0, None),
         )
-        .unwrap();
+        .unwrap(),
+    )
+    .unwrap();
     let retry = LinearPhaseEqPlugin::prepare_band_update(
         &committed,
         1,
@@ -714,10 +712,7 @@ fn cached_parameter_layout_matches_commit_indices() {
     let schema = plugin.parameter_schema();
     assert_eq!(schema.len(), 5 + 2 * 6);
     assert_eq!(schema[5 + 6 + 3].id.as_str(), "band_1_gain");
-    assert_eq!(
-        schema[5 + 6 + 3].default_value,
-        ParameterValue::Float(4.5)
-    );
+    assert_eq!(schema[5 + 6 + 3].default_value, ParameterValue::Float(4.5));
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("band_1_placement")),
         Some(ParameterValue::Int(0))
@@ -842,8 +837,7 @@ fn long_prefix_legacy_update_matches_direct_convolution_after_blend() {
         for ch in 0..CHANNELS {
             let value = f64::from(input[frame * CHANNELS + ch]);
             for (tap, &coefficient) in coefficients.iter().enumerate() {
-                expected[(frame + 32 + tap) * CHANNELS + ch] +=
-                    value * f64::from(coefficient);
+                expected[(frame + 32 + tap) * CHANNELS + ch] += value * f64::from(coefficient);
             }
         }
     }
@@ -1076,16 +1070,15 @@ fn realtime_transient_refusals_retain_and_retry_without_allocating() {
     let mut first_slot = Some(first);
     plugin.try_commit_prepared_update(&mut first_slot).unwrap();
     assert!(first_slot.is_none());
-    twin
-        .commit_prepared_update(
-            LinearPhaseEqPlugin::prepare_band_update(
-                &twin.snapshot_config(),
-                0,
-                band("Peak", 1000.0, 1.0, 6.0, None),
-            )
-            .unwrap(),
+    twin.commit_prepared_update(
+        LinearPhaseEqPlugin::prepare_band_update(
+            &twin.snapshot_config(),
+            0,
+            band("Peak", 1000.0, 1.0, 6.0, None),
         )
-        .unwrap();
+        .unwrap(),
+    )
+    .unwrap();
     let committed = plugin.snapshot_config();
     let history_len = plugin.history_len;
     let mut retry = Some(
@@ -1096,8 +1089,7 @@ fn realtime_transient_refusals_retain_and_retry_without_allocating() {
         )
         .unwrap(),
     );
-    let ((allocs, frees), refusal) =
-        count_allocs(|| plugin.try_commit_prepared_update(&mut retry));
+    let ((allocs, frees), refusal) = count_allocs(|| plugin.try_commit_prepared_update(&mut retry));
     assert_eq!((allocs, frees), (0, 0));
     assert_eq!(refusal, Err(CommitRefusal::UpdateInProgress));
     assert!(retry.is_some(), "refusal must retain the prepared update");
@@ -1221,20 +1213,15 @@ fn realtime_transient_refusals_retain_and_retry_without_allocating() {
     assert_eq!(plugin.history_len, history_len);
     drop(outdated);
     let mut fresh = Some(
-        LinearPhaseEqPlugin::prepare_band_update(
-            &current,
-            1,
-            band("Peak", 3000.0, 1.0, 6.0, None),
-        )
-        .unwrap(),
+        LinearPhaseEqPlugin::prepare_band_update(&current, 1, band("Peak", 3000.0, 1.0, 6.0, None))
+            .unwrap(),
     );
     plugin.try_commit_prepared_update(&mut fresh).unwrap();
     assert!(fresh.is_none());
 
     // Empty slot refusal is also allocation-free.
     let mut empty: Option<crate::PreparedBandUpdate> = None;
-    let ((allocs, frees), refusal) =
-        count_allocs(|| plugin.try_commit_prepared_update(&mut empty));
+    let ((allocs, frees), refusal) = count_allocs(|| plugin.try_commit_prepared_update(&mut empty));
     assert_eq!((allocs, frees), (0, 0));
     assert_eq!(refusal, Err(CommitRefusal::NoPreparedUpdate));
 }
@@ -1304,12 +1291,7 @@ fn realtime_topology_and_invalid_refusals_retain_without_allocating() {
 
     // Invalid band parameters: non-finite frequency, out-of-range Q/gain, and
     // an unknown filter-type index each refuse without allocating.
-    for mutate in [
-        "frequency",
-        "q",
-        "gain",
-        "filter_type",
-    ] {
+    for mutate in ["frequency", "q", "gain", "filter_type"] {
         let mut plugin = setup();
         let before = plugin.snapshot_config();
         let mut invalid = Some(prepare_valid(&plugin));
@@ -1479,16 +1461,15 @@ fn retry_after_inflight_refusal_uses_same_retained_update() {
         .unwrap(),
     );
     plugin.try_commit_prepared_update(&mut first).unwrap();
-    twin
-        .commit_prepared_update(
-            LinearPhaseEqPlugin::prepare_band_update(
-                &twin.snapshot_config(),
-                0,
-                band("Peak", 1000.0, 1.0, 6.0, None),
-            )
-            .unwrap(),
+    twin.commit_prepared_update(
+        LinearPhaseEqPlugin::prepare_band_update(
+            &twin.snapshot_config(),
+            0,
+            band("Peak", 1000.0, 1.0, 6.0, None),
         )
-        .unwrap();
+        .unwrap(),
+    )
+    .unwrap();
     // Directly attempt the second update while blending: no preflight.
     let mut slot = Some(
         LinearPhaseEqPlugin::prepare_band_update(
@@ -1498,8 +1479,7 @@ fn retry_after_inflight_refusal_uses_same_retained_update() {
         )
         .unwrap(),
     );
-    let ((allocs, frees), refusal) =
-        count_allocs(|| plugin.try_commit_prepared_update(&mut slot));
+    let ((allocs, frees), refusal) = count_allocs(|| plugin.try_commit_prepared_update(&mut slot));
     assert_eq!((allocs, frees), (0, 0));
     assert_eq!(refusal, Err(CommitRefusal::UpdateInProgress));
     assert!(slot.is_some());
@@ -1524,16 +1504,15 @@ fn retry_after_inflight_refusal_uses_same_retained_update() {
     // rendered the same first blend, so its retired route is also unclaimed
     // and must be reclaimed before its second commit (same lifecycle rule).
     assert!(twin.take_retired_route().is_some());
-    twin
-        .commit_prepared_update(
-            LinearPhaseEqPlugin::prepare_band_update(
-                &twin.snapshot_config(),
-                1,
-                band("Peak", 3000.0, 2.0, -9.0, None),
-            )
-            .unwrap(),
+    twin.commit_prepared_update(
+        LinearPhaseEqPlugin::prepare_band_update(
+            &twin.snapshot_config(),
+            1,
+            band("Peak", 3000.0, 2.0, -9.0, None),
         )
-        .unwrap();
+        .unwrap(),
+    )
+    .unwrap();
     let tail = pattern(1200);
     let actual = stream_partitioned(&mut plugin, &tail, RATE, 64);
     let expected = stream_partitioned(&mut twin, &tail, RATE, 64);

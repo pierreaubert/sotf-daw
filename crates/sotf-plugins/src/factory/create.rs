@@ -33,16 +33,15 @@ use crate::{
     DownmixPluginParams, DynamicEqPlugin, DynamicEqPluginParams, EqPlugin, EqPluginParams,
     ExpanderPlugin, ExpanderPluginParams, GainPlugin, GainPluginParams, GatePlugin,
     GatePluginParams, HissReducerPlugin, HissReducerPluginParams, LimiterPlugin,
-    LimiterPluginParams, LinearPhaseEqPluginParams,
-    LoudnessCompensationPlugin, LoudnessCompensationPluginParams, LoudnessMonitorPlugin,
-    MatrixPlugin, MonoToStereoPlugin, MonoToStereoPluginParams, MultibandCompressorPlugin,
-    MultibandCompressorPluginParams, MultibandExpanderPlugin, MultibandExpanderPluginParams,
-    ParametricInPlacePluginAdapter, ParametricPluginAdapter, Plugin, PndPlugin, PndPluginParams,
-    ResamplerPlugin, SaturationPlugin, SaturationPluginParams, SpectralCompressorPlugin,
-    SpectralCompressorPluginParams, SpectrumAnalyzerPlugin, SpectrumConfig, SpeechDenoiserPlugin,
-    SpeechDenoiserPluginParams, StereoImagerPlugin, StereoImagerPluginParams,
-    TransientShaperPlugin, TransientShaperPluginParams, UpmixerPlugin, UpmixerPluginParams,
-    XtcPlugin, XtcPluginParams,
+    LimiterPluginParams, LinearPhaseEqPluginParams, LoudnessCompensationPlugin,
+    LoudnessCompensationPluginParams, LoudnessMonitorPlugin, MatrixPlugin, MonoToStereoPlugin,
+    MonoToStereoPluginParams, MultibandCompressorPlugin, MultibandCompressorPluginParams,
+    MultibandExpanderPlugin, MultibandExpanderPluginParams, ParametricInPlacePluginAdapter,
+    ParametricPluginAdapter, Plugin, PndPlugin, PndPluginParams, ResamplerPlugin, SaturationPlugin,
+    SaturationPluginParams, SpectralCompressorPlugin, SpectralCompressorPluginParams,
+    SpectrumAnalyzerPlugin, SpectrumConfig, SpeechDenoiserPlugin, SpeechDenoiserPluginParams,
+    StereoImagerPlugin, StereoImagerPluginParams, TransientShaperPlugin,
+    TransientShaperPluginParams, UpmixerPlugin, UpmixerPluginParams, XtcPlugin, XtcPluginParams,
 };
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::{
@@ -104,7 +103,9 @@ fn create_plugin_inner(
     allow_external_key_bus: bool,
 ) -> Result<Box<dyn Plugin>, String> {
     if !sample_rate.is_finite() || sample_rate <= 0.0 {
-        return Err(format!("Plugin sample rate must be finite and positive, got {sample_rate}"));
+        return Err(format!(
+            "Plugin sample rate must be finite and positive, got {sample_rate}"
+        ));
     }
     let plugin_type = catalog_entry(plugin_type)
         .map(|entry| entry.canonical_type)
@@ -741,9 +742,8 @@ fn create_plugin_inner(
                 == sotf_plugin_ambisonics::custom_layout::CUSTOM_LAYOUT_KEY
             {
                 let custom: sotf_plugin_ambisonics::CustomDecoderConfig =
-                    serde_json::from_value(parameters.clone()).map_err(|e| {
-                        format!("Failed to parse custom ambisonics layout: {e}")
-                    })?;
+                    serde_json::from_value(parameters.clone())
+                        .map_err(|e| format!("Failed to parse custom ambisonics layout: {e}"))?;
                 sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new_custom(&custom)?
             } else {
                 sotf_plugin_ambisonics::AmbisonicsDecoderPlugin::new(&routing)?
@@ -1015,7 +1015,9 @@ pub fn create_plugin_with_sandbox_options<S: Into<f64>>(
 ) -> Result<Box<dyn Plugin>, String> {
     let sample_rate = sample_rate.into();
     if !sample_rate.is_finite() || sample_rate <= 0.0 {
-        return Err(format!("Plugin sample rate must be finite and positive, got {sample_rate}"));
+        return Err(format!(
+            "Plugin sample rate must be finite and positive, got {sample_rate}"
+        ));
     }
     if catalog_entry(plugin_type).is_some_and(|entry| entry.canonical_type == "external") {
         create_external_plugin_with_sandbox_options(parameters, channels, sample_rate, options)

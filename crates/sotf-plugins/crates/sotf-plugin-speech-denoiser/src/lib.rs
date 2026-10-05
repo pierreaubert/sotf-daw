@@ -458,7 +458,10 @@ impl SpeechDenoiserPlugin {
             let end = start + chunk_frames * self.channels;
             let mut dry = [0.0_f32; 128];
             {
-                let adapter = self.rate_adapter.as_mut().ok_or("speech adapter is missing")?;
+                let adapter = self
+                    .rate_adapter
+                    .as_mut()
+                    .ok_or("speech adapter is missing")?;
                 adapter.process_chunk(
                     &mut buffer[start..end],
                     &mut dry[..chunk_frames * self.channels],
@@ -587,7 +590,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
             Some(RateAdapter::new(sample_rate, self.channels)?)
         };
         let strength_frames = (sample_rate * 0.01).round();
-        if !strength_frames.is_finite() || strength_frames < 1.0
+        if !strength_frames.is_finite()
+            || strength_frames < 1.0
             || strength_frames >= f32::MAX as f64
         {
             return Err("Speech denoiser strength horizon is unsupported".into());
@@ -694,7 +698,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
 
     fn drain_output_frames_max(&self) -> usize {
         // Structural capacity must be available before wrapper preparation feeds input.
-        if self.rate_adapter.is_some() { 64 } else { SPEECH_DENOISER_FRAME_SIZE }
+        if self.rate_adapter.is_some() {
+            64
+        } else {
+            SPEECH_DENOISER_FRAME_SIZE
+        }
     }
 
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
@@ -705,7 +713,13 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
             self.drain_remaining.unwrap_or_else(|| {
                 self.rate_adapter.as_ref().map_or_else(
                     || self.latency_samples(),
-                    |adapter| if self.enabled { adapter.drain_frames() } else { adapter.latency() },
+                    |adapter| {
+                        if self.enabled {
+                            adapter.drain_frames()
+                        } else {
+                            adapter.latency()
+                        }
+                    },
                 )
             })
         };
@@ -732,7 +746,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         }
         if self.rate_adapter.is_some() {
             let total = self.rate_adapter.as_ref().unwrap();
-            let total = if self.enabled { total.drain_frames() } else { total.latency() };
+            let total = if self.enabled {
+                total.drain_frames()
+            } else {
+                total.latency()
+            };
             let remaining = self.drain_remaining.unwrap_or(total);
             if remaining == 0 {
                 return Ok(PluginDrainResult::COMPLETE);
@@ -753,7 +771,10 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
                 }
                 self.strength_current = self.strength_target;
             }
-            return Ok(PluginDrainResult { frames, complete: next == 0 });
+            return Ok(PluginDrainResult {
+                frames,
+                complete: next == 0,
+            });
         }
         let remaining = self.drain_remaining.unwrap_or(self.latency_samples());
         if remaining == 0 {
@@ -803,9 +824,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     /// processing chains and misalignment with other latency-compensated
     /// tracks.
     fn latency_samples(&self) -> usize {
-        self.rate_adapter.as_ref().map_or_else(
-            || self.inner.latency_samples(),
-            RateAdapter::latency,
-        )
+        self.rate_adapter
+            .as_ref()
+            .map_or_else(|| self.inner.latency_samples(), RateAdapter::latency)
     }
 }

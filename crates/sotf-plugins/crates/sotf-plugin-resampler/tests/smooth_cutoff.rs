@@ -121,8 +121,8 @@ fn finish(plugin: &mut ResamplerPlugin, channels: usize, output: &mut Vec<f32>) 
 }
 
 fn rms_db(samples: &[f32]) -> f64 {
-    let energy = samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>()
-        / samples.len().max(1) as f64;
+    let energy =
+        samples.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>() / samples.len().max(1) as f64;
     10.0 * (energy / (AMPLITUDE * AMPLITUDE / 2.0)).log10()
 }
 
@@ -166,7 +166,12 @@ fn smoothing_preserves_counts_clocks_and_completion() {
     // never alter the emitted clock, so every smoothed stream matches its
     // instant twin sample-for-sample in length, and fixed trajectories keep
     // the exact legacy count ceil(S*r) + floor(L*r/2).
-    let schedules: &[&[(f64, bool)]] = &[&[], &[(0.5, false), (2.0, true)], &[(2.0, false), (0.5, false)], &[(0.5, false), (2.0, true), (1.0, false)]];
+    let schedules: &[&[(f64, bool)]] = &[
+        &[],
+        &[(0.5, false), (2.0, true)],
+        &[(2.0, false), (0.5, false)],
+        &[(0.5, false), (2.0, true), (1.0, false)],
+    ];
     for quality in QUALITIES {
         let taps = match quality {
             ResamplerQuality::Fast => 64,
@@ -250,11 +255,21 @@ fn downward_narrowing_is_bit_exact_with_smoothing_enabled() {
     let mut moved_actual = Vec::new();
     let mut moved_expected = Vec::new();
     feed(&mut moved_smooth, &music[..1024], 1024, &mut moved_actual);
-    feed(&mut moved_instant, &music[..1024], 1024, &mut moved_expected);
+    feed(
+        &mut moved_instant,
+        &music[..1024],
+        1024,
+        &mut moved_expected,
+    );
     moved_smooth.set_ratio(0.5, false).unwrap();
     moved_instant.set_ratio(0.5, false).unwrap();
     feed(&mut moved_smooth, &music[1024..], 1024, &mut moved_actual);
-    feed(&mut moved_instant, &music[1024..], 1024, &mut moved_expected);
+    feed(
+        &mut moved_instant,
+        &music[1024..],
+        1024,
+        &mut moved_expected,
+    );
     finish(&mut moved_smooth, 1, &mut moved_actual);
     finish(&mut moved_instant, 1, &mut moved_expected);
     assert!(
@@ -302,8 +317,7 @@ fn upward_widening_acts_on_audio_then_converges() {
             }
         }
         // Post-ramp transition blocks differ materially on HF content.
-        let transition_smooth: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let transition_instant: Vec<f32> =
             instant_blocks[9..13].iter().flatten().copied().collect();
         let peak = transition_smooth
@@ -383,12 +397,7 @@ fn smoothed_transitions_are_partition_invariant() {
             if frames == 0 {
                 break;
             }
-            feed(
-                &mut narrow,
-                &input[offset..offset + frames],
-                frames,
-                &mut a,
-            );
+            feed(&mut narrow, &input[offset..offset + frames], frames, &mut a);
             offset += frames;
         }
         feed(&mut wide, &input[2048..], 2048, &mut b);
@@ -404,8 +413,7 @@ fn smoothed_transitions_are_partition_invariant() {
 #[test]
 fn cold_smoothed_changes_process_drain_and_reset_do_not_allocate_or_free() {
     for quality in QUALITIES {
-        let mut plugin =
-            ResamplerPlugin::with_quality(2, RATE, 44_100, CHUNK, quality).unwrap();
+        let mut plugin = ResamplerPlugin::with_quality(2, RATE, 44_100, CHUNK, quality).unwrap();
         plugin.initialize(f64::from(RATE)).unwrap();
         let nominal = plugin.ratio();
         let dynamic_id = ParameterId::from("dynamic_ratio");
@@ -453,7 +461,11 @@ fn cold_smoothed_changes_process_drain_and_reset_do_not_allocate_or_free() {
         })
         .join()
         .unwrap();
-        assert_eq!(counts, (0, 0), "{quality:?}: callback allocation/free counts");
+        assert_eq!(
+            counts,
+            (0, 0),
+            "{quality:?}: callback allocation/free counts"
+        );
     }
 }
 

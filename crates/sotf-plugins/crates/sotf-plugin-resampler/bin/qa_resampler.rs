@@ -277,9 +277,9 @@ fn main() {
         }
         let input: Vec<f32> = (0..256)
             .map(|frame| {
-                (0.5
-                    * (2.0 * std::f64::consts::PI * 18_000.0 * (position + frame) as f64 / 48_000.0)
-                        .sin()) as f32
+                (0.5 * (2.0 * std::f64::consts::PI * 18_000.0 * (position + frame) as f64
+                    / 48_000.0)
+                    .sin()) as f32
             })
             .collect();
         position += 256;
@@ -302,10 +302,8 @@ fn main() {
     }
     // Canonical transition window 9..13 (ranks 1..4), shared with the
     // integration suites (P2-8); the same 3 dB bound applies.
-    let transition_smooth: Vec<f32> =
-        smooth_blocks[9..13].iter().flatten().copied().collect();
-    let transition_instant: Vec<f32> =
-        instant_blocks[9..13].iter().flatten().copied().collect();
+    let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
+    let transition_instant: Vec<f32> = instant_blocks[9..13].iter().flatten().copied().collect();
     let peak = transition_smooth
         .iter()
         .zip(&transition_instant)
@@ -327,7 +325,10 @@ fn main() {
     }
     let mut drain_smooth = Vec::new();
     let mut drain_instant = Vec::new();
-    for (plugin, out) in [(&mut smooth, &mut drain_smooth), (&mut instant, &mut drain_instant)] {
+    for (plugin, out) in [
+        (&mut smooth, &mut drain_smooth),
+        (&mut instant, &mut drain_instant),
+    ] {
         loop {
             let mut cell = vec![0.0; plugin.drain_output_frames_max().max(1)];
             let result = plugin

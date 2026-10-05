@@ -1048,10 +1048,7 @@ mod tests {
 
             assert!(
                 configured
-                    .set_parameter(
-                        ParameterId::from("not_a_param"),
-                        ParameterValue::Float(1.0)
-                    )
+                    .set_parameter(ParameterId::from("not_a_param"), ParameterValue::Float(1.0))
                     .is_err(),
                 "{alias}"
             );
@@ -1392,10 +1389,7 @@ mod tests {
                 "{alias}"
             );
             assert!(output.iter().all(|sample| sample.is_finite()), "{alias}");
-            assert!(
-                output.iter().any(|sample| sample.abs() > 1e-7),
-                "{alias}"
-            );
+            assert!(output.iter().any(|sample| sample.abs() > 1e-7), "{alias}");
 
             // Bit-identical to direct construction (mirrors the facade test,
             // so facade == direct and bridge == direct imply facade == bridge;
@@ -1444,10 +1438,7 @@ mod tests {
                 "{alias}"
             );
             assert!(repeat.iter().all(|sample| sample.is_finite()), "{alias}");
-            assert!(
-                repeat.iter().any(|sample| sample.abs() > 1e-7),
-                "{alias}"
-            );
+            assert!(repeat.iter().any(|sample| sample.abs() > 1e-7), "{alias}");
         }
     }
 
@@ -1456,7 +1447,13 @@ mod tests {
         assert!(create_plugin("AAE", 2, 48_000.0, r#"{"speaker_config":"2.0"}"#).is_err());
         assert!(create_plugin("AAE", 2, 48_000.0, r#"{"input_diffusion":2.0}"#).is_err());
         assert!(
-            create_plugin("AAE", 2, 48_000.0, r#"{"solo_early":true,"solo_late":true}"#,).is_err()
+            create_plugin(
+                "AAE",
+                2,
+                48_000.0,
+                r#"{"solo_early":true,"solo_late":true}"#,
+            )
+            .is_err()
         );
     }
 

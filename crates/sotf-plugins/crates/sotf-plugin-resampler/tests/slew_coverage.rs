@@ -122,7 +122,9 @@ fn nominal_half_smoothed_schedule_preserves_counts_and_reconverges() {
                 smoothed.set_ratio(1.0, true).unwrap();
                 instant.set_ratio(1.0, true).unwrap();
             }
-            let input: Vec<f32> = (0..256).map(|n| ((position + n) % 23) as f32 / 128.0).collect();
+            let input: Vec<f32> = (0..256)
+                .map(|n| ((position + n) % 23) as f32 / 128.0)
+                .collect();
             position += 256;
             let mut a = Vec::new();
             let mut b = Vec::new();
@@ -145,8 +147,7 @@ fn nominal_half_smoothed_schedule_preserves_counts_and_reconverges() {
                 );
             }
         }
-        let transition_smooth: Vec<f32> =
-            smooth_blocks[9..13].iter().flatten().copied().collect();
+        let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
         let transition_instant: Vec<f32> =
             instant_blocks[9..13].iter().flatten().copied().collect();
         let peak = peak_difference(&transition_smooth, &transition_instant);
@@ -288,7 +289,9 @@ fn smoothing_covers_eight_channels_and_ninety_six_khz() {
     // P1-4e: one 8 ch run at 48 kHz and one 96 kHz run. Structural asserts
     // only (counts, bit-exactness, reconvergence); energy bounds stay in the
     // 48 kHz artifact suite where the 18 kHz probe sits in transition.
-    let eight = [997.0, 2_000.0, 5_000.0, 8_000.0, 11_000.0, 14_000.0, 17_000.0, 18_000.0];
+    let eight = [
+        997.0, 2_000.0, 5_000.0, 8_000.0, 11_000.0, 14_000.0, 17_000.0, 18_000.0,
+    ];
     let mut smoothed = make_rate(48_000, 48_000, 8, 256, ResamplerQuality::High, true);
     let mut instant = make_rate(48_000, 48_000, 8, 256, ResamplerQuality::High, false);
     smoothed.set_ratio(0.5, false).unwrap();
@@ -318,10 +321,8 @@ fn smoothing_covers_eight_channels_and_ninety_six_khz() {
             assert!(a == b, "8ch block {index}: converged must be bit-exact");
         }
     }
-    let transition_smooth: Vec<f32> =
-        smooth_blocks[9..13].iter().flatten().copied().collect();
-    let transition_instant: Vec<f32> =
-        instant_blocks[9..13].iter().flatten().copied().collect();
+    let transition_smooth: Vec<f32> = smooth_blocks[9..13].iter().flatten().copied().collect();
+    let transition_instant: Vec<f32> = instant_blocks[9..13].iter().flatten().copied().collect();
     let peak = peak_difference(&transition_smooth, &transition_instant);
     assert!(peak > 1e-6, "8ch slew must act on audio, peak {peak}");
     let mut drain_smooth = Vec::new();
@@ -329,8 +330,7 @@ fn smoothing_covers_eight_channels_and_ninety_six_khz() {
     finish_rate(&mut smoothed, 8, &mut drain_smooth, 48_000);
     finish_rate(&mut instant, 8, &mut drain_instant, 48_000);
     assert!(drain_smooth == drain_instant, "8ch drain must reconverge");
-    let len_smooth: usize =
-        smooth_blocks.iter().map(Vec::len).sum::<usize>() + drain_smooth.len();
+    let len_smooth: usize = smooth_blocks.iter().map(Vec::len).sum::<usize>() + drain_smooth.len();
     let len_instant: usize =
         instant_blocks.iter().map(Vec::len).sum::<usize>() + drain_instant.len();
     eprintln!("SLEW-COVERAGE 8ch lengths {len_smooth}");
@@ -361,24 +361,28 @@ fn smoothing_covers_eight_channels_and_ninety_six_khz() {
     }
     for (index, (a, b)) in smooth96.iter().zip(&instant96b).enumerate() {
         if index <= 8 {
-            assert!(a == b, "96kHz block {index}: pre-widening must be bit-exact");
+            assert!(
+                a == b,
+                "96kHz block {index}: pre-widening must be bit-exact"
+            );
         }
         if index >= 17 {
             assert!(a == b, "96kHz block {index}: converged must be bit-exact");
         }
     }
     let transition96_smooth: Vec<f32> = smooth96[9..13].iter().flatten().copied().collect();
-    let transition96_instant: Vec<f32> =
-        instant96b[9..13].iter().flatten().copied().collect();
+    let transition96_instant: Vec<f32> = instant96b[9..13].iter().flatten().copied().collect();
     let peak96 = peak_difference(&transition96_smooth, &transition96_instant);
     assert!(peak96 > 1e-6, "96kHz slew must act on audio, peak {peak96}");
     let mut drain96_smooth = Vec::new();
     let mut drain96_instant = Vec::new();
     finish_rate(&mut smoothed96, 2, &mut drain96_smooth, 96_000);
     finish_rate(&mut instant96, 2, &mut drain96_instant, 96_000);
-    assert!(drain96_smooth == drain96_instant, "96kHz drain must reconverge");
-    let len96_smooth: usize =
-        smooth96.iter().map(Vec::len).sum::<usize>() + drain96_smooth.len();
+    assert!(
+        drain96_smooth == drain96_instant,
+        "96kHz drain must reconverge"
+    );
+    let len96_smooth: usize = smooth96.iter().map(Vec::len).sum::<usize>() + drain96_smooth.len();
     let len96_instant: usize =
         instant96b.iter().map(Vec::len).sum::<usize>() + drain96_instant.len();
     eprintln!("SLEW-COVERAGE 96kHz lengths {len96_smooth}");
@@ -431,10 +435,8 @@ fn upward_preempted_by_downward_is_bit_exact_from_preemption() {
                 );
             }
         }
-        let preempt_smooth: Vec<f32> =
-            smooth_blocks[9..11].iter().flatten().copied().collect();
-        let preempt_instant: Vec<f32> =
-            instant_blocks[9..11].iter().flatten().copied().collect();
+        let preempt_smooth: Vec<f32> = smooth_blocks[9..11].iter().flatten().copied().collect();
+        let preempt_instant: Vec<f32> = instant_blocks[9..11].iter().flatten().copied().collect();
         let peak = peak_difference(&preempt_smooth, &preempt_instant);
         assert!(
             peak > 1e-6,
@@ -559,10 +561,8 @@ fn latency_and_signal_delay_ignore_smoothing() {
         ] {
             let nominal = f64::from(output_rate) / f64::from(input_rate);
             for ratio in [nominal, nominal * 0.5, nominal * 2.0] {
-                let mut smoothed =
-                    make_rate(input_rate, output_rate, 2, 256, quality, true);
-                let mut instant =
-                    make_rate(input_rate, output_rate, 2, 256, quality, false);
+                let mut smoothed = make_rate(input_rate, output_rate, 2, 256, quality, true);
+                let mut instant = make_rate(input_rate, output_rate, 2, 256, quality, false);
                 smoothed.set_ratio(ratio, false).unwrap();
                 instant.set_ratio(ratio, false).unwrap();
                 assert_eq!(

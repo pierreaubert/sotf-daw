@@ -983,33 +983,22 @@ fn compressor_detector_engine_chain_processes_audio() {
         let mut program = vec![0.0f32; frames * 2];
         for frame in 0..frames {
             let t = frame as f64 / 48_000.0;
-            let sample = (10.0f64.powf(-3.0 / 20.0)
-                * (2.0 * std::f64::consts::PI * 50.0 * t).sin()
-                + 10.0f64.powf(-24.0 / 20.0)
-                    * (2.0 * std::f64::consts::PI * 1000.0 * t).sin())
+            let sample = (10.0f64.powf(-3.0 / 20.0) * (2.0 * std::f64::consts::PI * 50.0 * t).sin()
+                + 10.0f64.powf(-24.0 / 20.0) * (2.0 * std::f64::consts::PI * 1000.0 * t).sin())
                 as f32;
             program[frame * 2] = sample;
             program[frame * 2 + 1] = sample * 0.5;
         }
         let render = |config: &crate::engine::PluginConfig| {
-            let mut plugin = sotf_plugins::create_plugin(
-                &config.plugin_type,
-                &config.parameters,
-                2,
-                48_000,
-            )
-            .unwrap();
+            let mut plugin =
+                sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+                    .unwrap();
             plugin.initialize(48_000.0).unwrap();
             let mut output = vec![0.0f32; program.len()];
-            for (input_block, output_block) in
-                program.chunks(2048).zip(output.chunks_mut(2048))
-            {
+            for (input_block, output_block) in program.chunks(2048).zip(output.chunks_mut(2048)) {
                 let block_frames = input_block.len() / 2;
-                let context =
-                    sotf_plugins::ProcessContext::new(48_000, block_frames);
-                let written = plugin
-                    .process(input_block, output_block, &context)
-                    .unwrap();
+                let context = sotf_plugins::ProcessContext::new(48_000, block_frames);
+                let written = plugin.process(input_block, output_block, &context).unwrap();
                 assert_eq!(written, block_frames, "{kind:?}");
             }
             assert!(
@@ -1025,8 +1014,7 @@ fn compressor_detector_engine_chain_processes_audio() {
         // Independent 50 Hz component level (dB peak) on the settled last
         // 4800 frames of the left channel (exactly 5 LF cycles).
         let lf_component_db = |output: &[f32]| {
-            let left: Vec<f64> = output
-                [output.len() - 9600..]
+            let left: Vec<f64> = output[output.len() - 9600..]
                 .iter()
                 .step_by(2)
                 .map(|sample| f64::from(*sample))
@@ -1046,10 +1034,7 @@ fn compressor_detector_engine_chain_processes_audio() {
         // Default detector: legacy 80 Hz stored but inactive, Peak.
         let config = settings.to_plugin_config(48_000.0);
         assert_eq!(config.parameters["sidechain_hpf_hz"], 80.0, "{kind:?}");
-        assert_eq!(
-            config.parameters["sidechain_hpf_order"], "2nd",
-            "{kind:?}"
-        );
+        assert_eq!(config.parameters["sidechain_hpf_order"], "2nd", "{kind:?}");
         assert_eq!(config.parameters["detection_mode"], "Peak", "{kind:?}");
         assert_eq!(
             config.parameters["sidechain_hpf_enabled"], false,
@@ -1116,8 +1101,7 @@ fn compressor_detector_engine_chain_processes_audio() {
         for key in new_keys {
             fields.remove(*key);
         }
-        let legacy_settings: PluginSettings =
-            serde_json::from_value(old_preset).unwrap();
+        let legacy_settings: PluginSettings = serde_json::from_value(old_preset).unwrap();
         let legacy_config = legacy_settings.to_plugin_config(48_000.0);
         let current_config = current_no_opt_in.to_plugin_config(48_000.0);
         assert_eq!(render(&legacy_config), render(&current_config));
@@ -1138,15 +1122,11 @@ fn compressor_unsupported_legacy_settings_serialize_populated_on_factory_rejecti
     settings.set_param_value(13, 1.0);
     let config = settings.to_plugin_config(48_000.0);
     assert_eq!(config.parameters["program_dependent_release"], true);
-    let error = match sotf_plugins::create_plugin(
-        &config.plugin_type,
-        &config.parameters,
-        2,
-        48_000,
-    ) {
-        Ok(_) => panic!("program-dependent release must fail loudly"),
-        Err(error) => error,
-    };
+    let error =
+        match sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000) {
+            Ok(_) => panic!("program-dependent release must fail loudly"),
+            Err(error) => error,
+        };
     assert!(
         error.contains("unsupported legacy sidechain control"),
         "unexpected rejection: {error}"
@@ -1163,8 +1143,7 @@ fn compressor_unsupported_legacy_settings_serialize_populated_on_factory_rejecti
         .as_object_mut()
         .unwrap()
         .remove("program_dependent_release");
-    let plugin =
-        sotf_plugins::create_plugin(&config.plugin_type, &fixed, 2, 48_000).unwrap();
+    let plugin = sotf_plugins::create_plugin(&config.plugin_type, &fixed, 2, 48_000).unwrap();
     assert_eq!(
         plugin.get_parameter(&sotf_plugins::ParameterId::from("threshold")),
         Some(sotf_plugins::ParameterValue::Float(-20.0))
@@ -1356,9 +1335,7 @@ fn de_esser_lookahead_topology_and_modes_survive_presets_accessors_and_factory()
     assert!(sotf_plugins::create_plugin(&config.plugin_type, &bad, 2, 48_000).is_err());
     let mut bad_topology = internal_params.clone();
     bad_topology["split_topology"] = serde_json::json!("Nope");
-    assert!(
-        sotf_plugins::create_plugin(&config.plugin_type, &bad_topology, 2, 48_000).is_err()
-    );
+    assert!(sotf_plugins::create_plugin(&config.plugin_type, &bad_topology, 2, 48_000).is_err());
     let rebuilt =
         sotf_plugins::create_plugin(&config.plugin_type, &internal_params, 2, 48_000).unwrap();
     assert_eq!(
@@ -1630,17 +1607,19 @@ fn de_esser_lookahead_latency_and_wideband_audio_reach_factory() {
     let mut plain_settings = PluginSettings::default_for(&PluginType::DeEsser).unwrap();
     plain_settings.set_param_value(6, 0.0);
     let plain_config = plain_settings.to_plugin_config(48_000.0);
-    let mut plain =
-        sotf_plugins::create_plugin(&plain_config.plugin_type, &plain_config.parameters, 2, 48_000)
-            .unwrap();
+    let mut plain = sotf_plugins::create_plugin(
+        &plain_config.plugin_type,
+        &plain_config.parameters,
+        2,
+        48_000,
+    )
+    .unwrap();
     plain.initialize(48_000.0).unwrap();
     assert_eq!(plugin.latency_samples() - plain.latency_samples(), 240);
 
     let frames = 1024;
     let input: Vec<f32> = (0..frames * 2)
-        .map(|n| {
-            (2.0 * std::f32::consts::PI * 7000.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
-        })
+        .map(|n| (2.0 * std::f32::consts::PI * 7000.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5)
         .collect();
     let mut output = vec![f32::NAN; input.len()];
     assert_eq!(
@@ -1670,9 +1649,7 @@ fn declick_legacy_audio_and_repair_latency_reach_factory() {
 
     let frames = 1024;
     let input: Vec<f32> = (0..frames * 2)
-        .map(|n| {
-            (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
-        })
+        .map(|n| (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5)
         .collect();
     let mut output = vec![f32::NAN; input.len()];
     assert_eq!(
@@ -1699,13 +1676,9 @@ fn declick_legacy_audio_and_repair_latency_reach_factory() {
         48_000,
     )
     .unwrap();
-    let wide_plugin = sotf_plugins::create_plugin(
-        &wide_config.plugin_type,
-        &wide_config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let wide_plugin =
+        sotf_plugins::create_plugin(&wide_config.plugin_type, &wide_config.parameters, 2, 48_000)
+            .unwrap();
     assert!(wide_plugin.latency_samples() > narrow_plugin.latency_samples());
 }
 
@@ -1784,8 +1757,7 @@ fn hiss_transient_guard_reaches_factory_audio_and_survives_reload() {
     assert_eq!(reloaded["transient_guard"], true);
     let second = render(&reloaded);
     assert_eq!(first, second);
-    let rebuilt =
-        sotf_plugins::create_plugin(&config.plugin_type, &reloaded, 1, 48_000).unwrap();
+    let rebuilt = sotf_plugins::create_plugin(&config.plugin_type, &reloaded, 1, 48_000).unwrap();
     assert_eq!(
         rebuilt.get_parameter(&ParameterId::from("transient_guard")),
         Some(ParameterValue::Bool(true))
@@ -1794,7 +1766,13 @@ fn hiss_transient_guard_reaches_factory_audio_and_survives_reload() {
     // Old-state JSON without the key constructs guard-off and renders the
     // legacy path bit-identically to an explicit guard:false build.
     let mut legacy = config.parameters.clone();
-    assert!(legacy.as_object_mut().unwrap().remove("transient_guard").is_some());
+    assert!(
+        legacy
+            .as_object_mut()
+            .unwrap()
+            .remove("transient_guard")
+            .is_some()
+    );
     let legacy_out = render(&legacy);
     let mut explicit_off = config.parameters.clone();
     explicit_off["transient_guard"] = serde_json::json!(false);
@@ -1821,24 +1799,16 @@ fn speech_strength_zero_emits_delayed_dry_through_factory() {
     let mut dry_settings = PluginSettings::default_for(&PluginType::SpeechDenoiser).unwrap();
     dry_settings.set_param_value(1, 0.0);
     let dry_config = dry_settings.to_plugin_config(48_000.0);
-    let mut dry = sotf_plugins::create_plugin(
-        &dry_config.plugin_type,
-        &dry_config.parameters,
-        1,
-        48_000,
-    )
-    .unwrap();
+    let mut dry =
+        sotf_plugins::create_plugin(&dry_config.plugin_type, &dry_config.parameters, 1, 48_000)
+            .unwrap();
     dry.initialize(48_000.0).unwrap();
 
     let wet_settings = PluginSettings::default_for(&PluginType::SpeechDenoiser).unwrap();
     let wet_config = wet_settings.to_plugin_config(48_000.0);
-    let mut wet = sotf_plugins::create_plugin(
-        &wet_config.plugin_type,
-        &wet_config.parameters,
-        1,
-        48_000,
-    )
-    .unwrap();
+    let mut wet =
+        sotf_plugins::create_plugin(&wet_config.plugin_type, &wet_config.parameters, 1, 48_000)
+            .unwrap();
     wet.initialize(48_000.0).unwrap();
 
     // Three 480-frame model windows; the first 960 frames are delay fill.
@@ -1849,13 +1819,21 @@ fn speech_strength_zero_emits_delayed_dry_through_factory() {
     let mut dry_output = vec![f32::NAN; input.len()];
     let mut wet_output = vec![f32::NAN; input.len()];
     assert_eq!(
-        dry.process(&input, &mut dry_output, &ProcessContext::new(48_000, frames))
-            .unwrap(),
+        dry.process(
+            &input,
+            &mut dry_output,
+            &ProcessContext::new(48_000, frames)
+        )
+        .unwrap(),
         frames
     );
     assert_eq!(
-        wet.process(&input, &mut wet_output, &ProcessContext::new(48_000, frames))
-            .unwrap(),
+        wet.process(
+            &input,
+            &mut wet_output,
+            &ProcessContext::new(48_000, frames)
+        )
+        .unwrap(),
         frames
     );
     assert!(dry_output.iter().all(|sample| sample.is_finite()));
@@ -1905,9 +1883,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
 
     let frames = 1024;
     let input: Vec<f32> = (0..frames * 2)
-        .map(|n| {
-            (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5
-        })
+        .map(|n| (2.0 * std::f32::consts::PI * 440.0 * (n / 2) as f32 / 48_000.0).sin() * 0.5)
         .collect();
     let render = |plugin: &mut Box<dyn sotf_plugins::Plugin>| {
         let mut output = vec![f32::NAN; input.len()];
@@ -2028,8 +2004,14 @@ fn crossfeed_old_save_without_yaw_defaults_to_zero_and_renders_legacy_audio() {
         .step_by(2)
         .map(|sample| sample.abs())
         .fold(0.0, f32::max);
-    assert!(left_peak > 1e-6, "direct path must stay nonzero: {left_peak}");
-    assert!(right_peak > 1e-6, "crossfeed must stay nonzero: {right_peak}");
+    assert!(
+        left_peak > 1e-6,
+        "direct path must stay nonzero: {left_peak}"
+    );
+    assert!(
+        right_peak > 1e-6,
+        "crossfeed must stay nonzero: {right_peak}"
+    );
 
     // Contract-derived direct-path level (replaces the invalid unity
     // oracle): a settled DC step leaves only the LR4 low band active, so
@@ -2125,13 +2107,8 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
     let config = settings.to_plugin_config(48_000.0);
     assert_eq!(config.parameters["head_yaw_deg"], 45.0);
 
-    let mut plugin = sotf_plugins::create_plugin(
-        &config.plugin_type,
-        &config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut plugin =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
     plugin.initialize(48_000.0).unwrap();
     assert_eq!(
         plugin.get_parameter(&ParameterId::from("head_yaw_deg")),
@@ -2147,21 +2124,13 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
     let zero_config = zero_settings.to_plugin_config(48_000.0);
     let mut reference_params = zero_config.parameters.clone();
     reference_params["head_yaw_deg"] = serde_json::json!(45.0);
-    let mut reference = sotf_plugins::create_plugin(
-        &zero_config.plugin_type,
-        &reference_params,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut reference =
+        sotf_plugins::create_plugin(&zero_config.plugin_type, &reference_params, 2, 48_000)
+            .unwrap();
     reference.initialize(48_000.0).unwrap();
-    let mut zero_plugin = sotf_plugins::create_plugin(
-        &zero_config.plugin_type,
-        &zero_config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut zero_plugin =
+        sotf_plugins::create_plugin(&zero_config.plugin_type, &zero_config.parameters, 2, 48_000)
+            .unwrap();
     zero_plugin.initialize(48_000.0).unwrap();
 
     let frames = 4096;
@@ -2181,9 +2150,7 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
             .skip(1)
             .step_by(2)
             .enumerate()
-            .max_by(|(_, left), (_, right)| {
-                left.abs().partial_cmp(&right.abs()).unwrap()
-            })
+            .max_by(|(_, left), (_, right)| left.abs().partial_cmp(&right.abs()).unwrap())
             .map(|(index, _)| index)
             .unwrap()
     };
@@ -2203,8 +2170,14 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
         .step_by(2)
         .map(|sample| sample.abs())
         .fold(0.0, f32::max);
-    assert!(left_peak > 1e-6, "direct path must stay nonzero: {left_peak}");
-    assert!(right_peak > 1e-6, "yaw crossfeed must stay nonzero: {right_peak}");
+    assert!(
+        left_peak > 1e-6,
+        "direct path must stay nonzero: {left_peak}"
+    );
+    assert!(
+        right_peak > 1e-6,
+        "yaw crossfeed must stay nonzero: {right_peak}"
+    );
 
     // Contract-derived direct-path level (replaces the invalid unity
     // oracle): a settled DC step leaves only the LR4 low band active, so
@@ -2218,13 +2191,9 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
     let expected_norm = constant_power_norm(low_feed_db);
     let expected_cross = expected_norm * 10f64.powf(low_feed_db / 20.0);
     let settled_dc = |config: &crate::PluginConfig| {
-        let mut step_plugin = sotf_plugins::create_plugin(
-            &config.plugin_type,
-            &config.parameters,
-            2,
-            48_000,
-        )
-        .unwrap();
+        let mut step_plugin =
+            sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000)
+                .unwrap();
         step_plugin.initialize(48_000.0).unwrap();
         let step_frames = 8192;
         let mut step_input = vec![0.0f32; step_frames * 2];
@@ -2278,7 +2247,10 @@ fn crossfeed_nonzero_yaw_renders_intended_itd_through_settings_path() {
     assert_ne!(yaw_out, zero_out);
     let peak_zero = right_peak_index(&zero_out);
     let peak_yaw = right_peak_index(&yaw_out);
-    assert!(peak_yaw > peak_zero, "positive yaw must delay L-to-R arrival");
+    assert!(
+        peak_yaw > peak_zero,
+        "positive yaw must delay L-to-R arrival"
+    );
     let shift = peak_yaw - peak_zero;
     assert!(
         (6..=11).contains(&shift),
@@ -2293,13 +2265,8 @@ fn crossfeed_yaw_save_reload_preserves_audio() {
     let mut settings = PluginSettings::default_for(&PluginType::Crossfeed).unwrap();
     settings.set_param_value(17, 45.0);
     let config = settings.to_plugin_config(48_000.0);
-    let mut plugin = sotf_plugins::create_plugin(
-        &config.plugin_type,
-        &config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut plugin =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
     plugin.initialize(48_000.0).unwrap();
 
     let frames = 4096;
@@ -2337,13 +2304,8 @@ fn crossfeed_nonfinite_yaw_rejected_without_poisoning_accepted_audio() {
     let mut settings = PluginSettings::default_for(&PluginType::Crossfeed).unwrap();
     settings.set_param_value(17, 45.0);
     let config = settings.to_plugin_config(48_000.0);
-    let mut accepted = sotf_plugins::create_plugin(
-        &config.plugin_type,
-        &config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut accepted =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
     accepted.initialize(48_000.0).unwrap();
 
     let frames = 4096;
@@ -2363,26 +2325,19 @@ fn crossfeed_nonfinite_yaw_rejected_without_poisoning_accepted_audio() {
     // yaw serializes to JSON null, which the factory rejects.
     settings.set_param_value(17, f64::NAN);
     let bad_config = settings.to_plugin_config(48_000.0);
-    assert_eq!(bad_config.parameters["head_yaw_deg"], serde_json::Value::Null);
+    assert_eq!(
+        bad_config.parameters["head_yaw_deg"],
+        serde_json::Value::Null
+    );
     assert!(
-        sotf_plugins::create_plugin(
-            &bad_config.plugin_type,
-            &bad_config.parameters,
-            2,
-            48_000
-        )
-        .is_err(),
+        sotf_plugins::create_plugin(&bad_config.plugin_type, &bad_config.parameters, 2, 48_000)
+            .is_err(),
         "non-finite yaw must fail factory admission"
     );
 
     // The accepted config rebuilds with identical audio.
-    let mut rebuilt = sotf_plugins::create_plugin(
-        &config.plugin_type,
-        &config.parameters,
-        2,
-        48_000,
-    )
-    .unwrap();
+    let mut rebuilt =
+        sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
     rebuilt.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut rebuilt), accepted_out);
 }

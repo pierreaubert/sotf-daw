@@ -1,4 +1,4 @@
-use super::super::dyn_eq_band::{design_tilt_coefficients, DynEqBand};
+use super::super::dyn_eq_band::{DynEqBand, design_tilt_coefficients};
 use super::super::dyn_eq_band_params::DynEqBandParams;
 use super::super::dynamic_eq_plugin::DynamicEqPlugin;
 use super::super::dynamic_eq_plugin_params::DynamicEqPluginParams;
@@ -69,12 +69,7 @@ fn digital_response(
 /// Independent analog tilt prototype evaluated through the exact bilinear
 /// frequency mapping. This never builds digital coefficients, so it does
 /// not reuse the production coefficient algebra.
-fn analog_tilt_response(
-    gain_db: f64,
-    pivot: f64,
-    frequency: f64,
-    sample_rate: f64,
-) -> Complex {
+fn analog_tilt_response(gain_db: f64, pivot: f64, frequency: f64, sample_rate: f64) -> Complex {
     let gain = 10.0_f64.powf(gain_db / 20.0);
     let warped_pivot = 2.0 * sample_rate * (std::f64::consts::PI * pivot / sample_rate).tan();
     let warped_signal = 2.0 * sample_rate * (std::f64::consts::PI * frequency / sample_rate).tan();
@@ -252,19 +247,16 @@ fn tilt_coefficients_match_independent_analog_prototype() {
         let maximum_pivot = (sample_rate * 0.475).min(20_000.0);
         for pivot in [20.0, 997.0_f64.min(maximum_pivot), maximum_pivot] {
             for gain_db in gains {
-                let coefficients =
-                    design_tilt_coefficients(pivot, sample_rate, gain_db).unwrap_or_else(|| {
-                        panic!(
-                            "tilt design rejected Fs={sample_rate}, pivot={pivot}, G={gain_db}"
-                        )
+                let coefficients = design_tilt_coefficients(pivot, sample_rate, gain_db)
+                    .unwrap_or_else(|| {
+                        panic!("tilt design rejected Fs={sample_rate}, pivot={pivot}, G={gain_db}")
                     });
                 assert_eq!(coefficients.b2, 0.0);
                 assert_eq!(coefficients.a2, 0.0);
                 assert!(coefficients.a1.abs() < 1.0);
 
                 for index in 1..=256 {
-                    let frequency =
-                        0.1 * ((sample_rate * 0.499 / 0.1).powf(index as f64 / 256.0));
+                    let frequency = 0.1 * ((sample_rate * 0.499 / 0.1).powf(index as f64 / 256.0));
                     let actual = digital_response(&coefficients, frequency, sample_rate);
                     let expected = analog_tilt_response(gain_db, pivot, frequency, sample_rate);
                     assert!(actual.re.is_finite() && actual.im.is_finite());
@@ -282,8 +274,10 @@ fn tilt_coefficients_match_independent_analog_prototype() {
                     * digital_response(&coefficients, 0.0, sample_rate)
                         .magnitude()
                         .log10();
-                let pivot_db =
-                    20.0 * digital_response(&coefficients, pivot, sample_rate).magnitude().log10();
+                let pivot_db = 20.0
+                    * digital_response(&coefficients, pivot, sample_rate)
+                        .magnitude()
+                        .log10();
                 let nyquist_db = 20.0
                     * digital_response(&coefficients, sample_rate * 0.5, sample_rate)
                         .magnitude()
@@ -355,8 +349,7 @@ fn held_tilt_proportions_match_independent_recurrence() {
     }
 
     for target_gain_db in [-12.0_f64, 12.0] {
-        let coefficients =
-            independent_tilt_coefficients(pivot, sample_rate as f64, target_gain_db);
+        let coefficients = independent_tilt_coefficients(pivot, sample_rate as f64, target_gain_db);
         for proportion in proportions {
             let mut band =
                 DynEqBand::new(channels, sample_rate, pivot as f32, 0.707, 0.0, 3.0, 80.0);
@@ -616,26 +609,22 @@ fn tilt_absolute_threshold_sweep_matches_static_law() {
             let measure_frames = 4_096;
             let mut measure = vec![amplitude as f32; measure_frames];
             plugin
-                .process_in_place(&mut measure, &ProcessContext::new(sample_rate, measure_frames))
+                .process_in_place(
+                    &mut measure,
+                    &ProcessContext::new(sample_rate, measure_frames),
+                )
                 .unwrap();
             assert!(measure.iter().all(|sample| sample.is_finite()));
 
-            let static_gr = reference_compression_gain_reduction(
-                amplitude_db,
-                threshold_db,
-                ratio,
-                0.0,
-            );
+            let static_gr =
+                reference_compression_gain_reduction(amplitude_db, threshold_db, ratio, 0.0);
             let applied = static_gr.clamp(0.0, target_gain_db) * signed_target.signum();
             let full = 10.0_f64.powf(signed_target / 20.0);
             let desired = 10.0_f64.powf(applied / 20.0);
             let proportion = ((desired - 1.0) / (full - 1.0)).clamp(0.0, 1.0);
             // At DC the tilt section gain is exactly the signed target gain.
             let expected = amplitude * (1.0 + proportion * (full - 1.0));
-            let measured: f64 = measure
-                .iter()
-                .map(|sample| f64::from(*sample))
-                .sum::<f64>()
+            let measured: f64 = measure.iter().map(|sample| f64::from(*sample)).sum::<f64>()
                 / measure_frames as f64;
             let relative_error = ((measured - expected) / expected.max(1.0e-9)).abs();
             assert!(
@@ -733,16 +722,15 @@ fn tilt_dc_step_attack_release_timing() {
         .process_in_place(&mut silence, &ProcessContext::new(sample_rate, 4_096))
         .unwrap();
     let step_level = 0.5_f32;
-    let static_gr = reference_compression_gain_reduction(
-        20.0 * (step_level as f64).log10(),
-        -20.0,
-        20.0,
-        0.0,
-    ) as f32;
+    let static_gr =
+        reference_compression_gain_reduction(20.0 * (step_level as f64).log10(), -20.0, 20.0, 0.0)
+            as f32;
     let mut attack_trajectory = Vec::new();
     for _ in 0..(sample_rate as usize / 4) {
         let mut frame = vec![step_level];
-        plugin.process_in_place(&mut frame, &ProcessContext::new(sample_rate, 1)).unwrap();
+        plugin
+            .process_in_place(&mut frame, &ProcessContext::new(sample_rate, 1))
+            .unwrap();
         attack_trajectory.push(plugin.monitoring_gr[0]);
     }
     assert!(attack_trajectory.iter().all(|value| value.is_finite()));
@@ -773,7 +761,9 @@ fn tilt_dc_step_attack_release_timing() {
     let mut release_trajectory = Vec::new();
     for _ in 0..(sample_rate as usize) {
         let mut frame = vec![0.0_f32];
-        plugin.process_in_place(&mut frame, &ProcessContext::new(sample_rate, 1)).unwrap();
+        plugin
+            .process_in_place(&mut frame, &ProcessContext::new(sample_rate, 1))
+            .unwrap();
         release_trajectory.push(plugin.monitoring_gr[0]);
     }
     assert!(release_trajectory.iter().all(|value| value.is_finite()));
@@ -814,7 +804,15 @@ fn tilt_dc_step_attack_release_timing_confirmed_on_emitted_audio() {
     // audio crossings land near the configured ms (predicted 8.8/89 ms,
     // both inside the 25% window) through the documented blend law.
     let mut plugin = make_tilt_plugin(
-        1, false, 12.0, -24.0, 8.0, 0.0, attack_ms, release_ms, sample_rate,
+        1,
+        false,
+        12.0,
+        -24.0,
+        8.0,
+        0.0,
+        attack_ms,
+        release_ms,
+        sample_rate,
     );
 
     let mut silence = vec![0.0_f32; 4_096];
@@ -825,12 +823,8 @@ fn tilt_dc_step_attack_release_timing_confirmed_on_emitted_audio() {
     // Attack: loud DC step. Deviation from dry must rise monotonically to
     // the full-blend DC law and cross 63% near the configured attack time.
     let step_level = 0.5_f32;
-    let static_target = reference_compression_gain_reduction(
-        20.0 * f64::from(step_level).log10(),
-        -24.0,
-        8.0,
-        0.0,
-    );
+    let static_target =
+        reference_compression_gain_reduction(20.0 * f64::from(step_level).log10(), -24.0, 8.0, 0.0);
     assert!(
         static_target > 12.0,
         "test config must saturate the blend: {static_target}"
@@ -930,8 +924,7 @@ fn tilt_dc_step_attack_release_timing_confirmed_on_emitted_audio() {
         .iter()
         .position(|value| *value <= reference * 0.368)
         .unwrap();
-    let release_37_ms =
-        (search_start + release_offset) as f32 / sample_rate as f32 * 1000.0;
+    let release_37_ms = (search_start + release_offset) as f32 / sample_rate as f32 * 1000.0;
     assert!(
         (release_37_ms - release_ms).abs() / release_ms < 0.25,
         "release 37% audio at {release_37_ms} ms, configured {release_ms} ms"

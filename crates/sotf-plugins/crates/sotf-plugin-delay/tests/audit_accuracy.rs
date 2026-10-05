@@ -21,12 +21,7 @@ use sotf_plugin_delay::{DelayPlugin, DelayPluginParams};
 use std::f64::consts::PI;
 
 /// Render `input` through `plugin` in mono, cycling `blocks` (frame counts).
-fn render_blocks(
-    plugin: &mut DelayPlugin,
-    rate: u32,
-    input: &[f32],
-    blocks: &[usize],
-) -> Vec<f32> {
+fn render_blocks(plugin: &mut DelayPlugin, rate: u32, input: &[f32], blocks: &[usize]) -> Vec<f32> {
     let mut output = input.to_vec();
     let mut offset = 0;
     let mut step = 0;
@@ -315,8 +310,7 @@ fn closed_loop_echoes_decay_geometrically_at_integer_delays() {
             );
         }
         for (n, sample) in output.iter().enumerate() {
-            let is_echo =
-                n % DELAY_SAMPLES == 0 && (1..=ECHOES).contains(&(n / DELAY_SAMPLES));
+            let is_echo = n % DELAY_SAMPLES == 0 && (1..=ECHOES).contains(&(n / DELAY_SAMPLES));
             if !is_echo {
                 assert!(
                     sample.abs() < SILENCE_TOL,
@@ -645,14 +639,10 @@ fn bounded_instances_reject_automation_beyond_declared_range() {
         Some(ParameterValue::Float(10.0))
     );
 
-    let mut routing =
-        DelayPlugin::new_per_channel_with_max_delay(vec![5.0, 8.0], 10.0).unwrap();
+    let mut routing = DelayPlugin::new_per_channel_with_max_delay(vec![5.0, 8.0], 10.0).unwrap();
     routing.initialize(48_000.0).unwrap();
     let error = routing
-        .set_parameter(
-            ParameterId::from("delay_ms_1"),
-            ParameterValue::Float(12.0),
-        )
+        .set_parameter(ParameterId::from("delay_ms_1"), ParameterValue::Float(12.0))
         .unwrap_err();
     assert!(error.contains("delay_ms_1"), "unexpected error: {error}");
     assert_eq!(
@@ -681,12 +671,42 @@ fn per_channel_mode_rejects_every_effect_control() {
     };
     DelayPlugin::from_params(2, base()).unwrap();
     let violations = [
-        ("feedback", DelayPluginParams { feedback: 0.1, ..base() }),
+        (
+            "feedback",
+            DelayPluginParams {
+                feedback: 0.1,
+                ..base()
+            },
+        ),
         ("mix", DelayPluginParams { mix: 0.5, ..base() }),
-        ("lfo_rate", DelayPluginParams { lfo_rate_hz: 1.0, ..base() }),
-        ("lfo_depth", DelayPluginParams { lfo_depth_ms: 1.0, ..base() }),
-        ("pitch", DelayPluginParams { pitch_preserving: true, ..base() }),
-        ("allpass", DelayPluginParams { allpass_feedback: true, ..base() }),
+        (
+            "lfo_rate",
+            DelayPluginParams {
+                lfo_rate_hz: 1.0,
+                ..base()
+            },
+        ),
+        (
+            "lfo_depth",
+            DelayPluginParams {
+                lfo_depth_ms: 1.0,
+                ..base()
+            },
+        ),
+        (
+            "pitch",
+            DelayPluginParams {
+                pitch_preserving: true,
+                ..base()
+            },
+        ),
+        (
+            "allpass",
+            DelayPluginParams {
+                allpass_feedback: true,
+                ..base()
+            },
+        ),
     ];
     for (name, params) in violations {
         let error = match DelayPlugin::from_params(2, params) {
@@ -832,13 +852,7 @@ fn causal_stencil_reference(
     let mut frames = Vec::with_capacity(input.len());
     let mut delayed = Vec::with_capacity(input.len());
     for (n, &sample) in input.iter().enumerate() {
-        let past = |lag: usize| -> f64 {
-            if lag > n {
-                0.0
-            } else {
-                frames[n - lag]
-            }
-        };
+        let past = |lag: usize| -> f64 { if lag > n { 0.0 } else { frames[n - lag] } };
         let (sub, ring) = if int_delay == 0 {
             (
                 weights[0] + weights[1],
@@ -970,10 +984,7 @@ fn per_channel_mode_rejects_runtime_effect_writes() {
     let violations: Vec<(ParameterId, ParameterValue)> = vec![
         (ParameterId::from("feedback"), ParameterValue::Float(0.5)),
         (ParameterId::from("mix"), ParameterValue::Float(0.5)),
-        (
-            ParameterId::from("lfo_rate_hz"),
-            ParameterValue::Float(1.0),
-        ),
+        (ParameterId::from("lfo_rate_hz"), ParameterValue::Float(1.0)),
         (
             ParameterId::from("lfo_depth_ms"),
             ParameterValue::Float(1.0),
@@ -1019,14 +1030,8 @@ fn per_channel_mode_rejects_runtime_effect_writes() {
     // Batch path: a batch mixing a valid delay change with a deviating
     // effect value is rejected as a whole (transactional).
     let mut poisoned = ParameterSet::new();
-    poisoned.insert(
-        ParameterId::from("delay_ms_0"),
-        ParameterValue::Float(6.0),
-    );
-    poisoned.insert(
-        ParameterId::from("feedback"),
-        ParameterValue::Float(0.5),
-    );
+    poisoned.insert(ParameterId::from("delay_ms_0"), ParameterValue::Float(6.0));
+    poisoned.insert(ParameterId::from("feedback"), ParameterValue::Float(0.5));
     let error = dut.apply_values(poisoned).unwrap_err();
     assert!(
         error.contains("pure routing delay"),
@@ -1066,16 +1071,9 @@ fn per_channel_mode_rejects_runtime_effect_writes() {
     dut.apply_values(reapplied).unwrap();
     // A pure delay change still applies.
     let mut retune = ParameterSet::new();
-    retune.insert(
-        ParameterId::from("delay_ms_0"),
-        ParameterValue::Float(6.0),
-    );
+    retune.insert(ParameterId::from("delay_ms_0"), ParameterValue::Float(6.0));
     dut.apply_values(retune).unwrap();
-    twin
-        .set_parameter(
-            ParameterId::from("delay_ms_0"),
-            ParameterValue::Float(6.0),
-        )
+    twin.set_parameter(ParameterId::from("delay_ms_0"), ParameterValue::Float(6.0))
         .unwrap();
     assert_eq!(
         dut.get_parameter(&ParameterId::from("delay_ms_0")),

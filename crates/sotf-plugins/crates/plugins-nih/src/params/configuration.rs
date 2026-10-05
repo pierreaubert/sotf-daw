@@ -182,16 +182,9 @@ pub fn create_native_eq_plugin(
             "EQ native input width {selected_input_channels} is outside 1..=16"
         ));
     }
-    let config = crate::wrapper::eq_config_json_with_native_route(
-        |id| params.value(id),
-        route,
-    )?;
-    let mut plugin = plugins_bridge::create_plugin(
-        "EQ",
-        selected_input_channels,
-        sample_rate,
-        &config,
-    )?;
+    let config = crate::wrapper::eq_config_json_with_native_route(|id| params.value(id), route)?;
+    let mut plugin =
+        plugins_bridge::create_plugin("EQ", selected_input_channels, sample_rate, &config)?;
     crate::wrapper::apply_eq_structural(plugin.as_mut(), |id| params.value(id))?;
     let actual = (plugin.input_channels(), plugin.output_channels());
     if actual != (selected_input_channels, selected_input_channels) {
@@ -384,12 +377,7 @@ fn unsupported_legacy_default(
     id: &str,
     value: &ParameterValue,
 ) -> Result<bool, String> {
-    if name != "Compressor"
-        || !matches!(
-            id,
-            "program_dependent_release" | "sidechain_external"
-        )
-    {
+    if name != "Compressor" || !matches!(id, "program_dependent_release" | "sidechain_external") {
         return Ok(false);
     }
     let default = crate::wrapper::get_param_specs(name)
@@ -507,7 +495,7 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
                 }
                 None => {
                     return Err(
-                        "Ambisonics target layout 8 requires staged custom geometry".to_string(),
+                        "Ambisonics target layout 8 requires staged custom geometry".to_string()
                     );
                 }
             }
@@ -576,9 +564,9 @@ fn dynamic_eq_constructor_value(field: &str, value: ParameterValue) -> Result<Va
         ("placement", ParameterValue::Int(2)) => Ok(Value::from("right")),
         ("placement", ParameterValue::Int(3)) => Ok(Value::from("mid")),
         ("placement", ParameterValue::Int(4)) => Ok(Value::from("side")),
-        ("placement", ParameterValue::Int(index)) => {
-            Err(format!("DynamicEQ placement choice {index} is outside 0..=4"))
-        }
+        ("placement", ParameterValue::Int(index)) => Err(format!(
+            "DynamicEQ placement choice {index} is outside 0..=4"
+        )),
         ("placement", _) => Err("DynamicEQ placement choice must be an integer".to_string()),
         _ => unreachable!("guarded by the field check above"),
     }

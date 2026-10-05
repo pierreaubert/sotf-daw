@@ -34,14 +34,12 @@ impl KeyHandle {
     fn create(config: &str, inputs: usize, outputs: usize) -> Self {
         let kind = CString::new("DeEsser").unwrap();
         let config = CString::new(config).unwrap();
-        let handle = plugin_create(
-            kind.as_ptr(),
-            config.as_ptr(),
-            SAMPLE_RATE,
-            inputs,
-            outputs,
+        let handle = plugin_create(kind.as_ptr(), config.as_ptr(), SAMPLE_RATE, inputs, outputs);
+        assert!(
+            !handle.is_null(),
+            "DeEsser construction failed: {err}",
+            err = last_error()
         );
-        assert!(!handle.is_null(), "DeEsser construction failed: {err}", err = last_error());
         Self { pointer: handle }
     }
 
@@ -78,7 +76,11 @@ impl KeyHandle {
         let name = CString::new(name).unwrap();
         let mut len = 0;
         let document = plugin_export_preset_json(self.pointer, name.as_ptr(), &mut len);
-        assert!(!document.is_null(), "preset export failed: {err}", err = last_error());
+        assert!(
+            !document.is_null(),
+            "preset export failed: {err}",
+            err = last_error()
+        );
         // SAFETY: The FFI owns exactly len initialized bytes until freed below.
         let saved = unsafe { std::slice::from_raw_parts(document, len) }.to_vec();
         plugin_free_state(document, len);
@@ -101,7 +103,11 @@ impl KeyHandle {
         let inputs = self.inner().input_channels;
         let outputs = self.inner().output_channels;
         let frames = input.len() / inputs;
-        assert_eq!(input.len() % inputs, 0, "complete interleaved frames required");
+        assert_eq!(
+            input.len() % inputs,
+            0,
+            "complete interleaved frames required"
+        );
         assert!((1..=self.inner().max_callback_frames).contains(&callback_frames));
         // NaN poisoning proves the callback overwrites every output sample.
         let mut output = vec![f32::NAN; frames * outputs];
@@ -140,7 +146,9 @@ fn last_error() -> String {
         return String::new();
     }
     // SAFETY: The current thread owns this valid diagnostic until its next call.
-    unsafe { CStr::from_ptr(error) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(error) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// 4-channel interleaved input: 8 kHz program on [0, 1], independent
@@ -313,11 +321,7 @@ fn ffi_deesser_key_flip_refusal_preserves_engaged_history() {
     let before_state = live.save();
     let before_config = live.config_json();
     let flip = serde_json::to_vec(&serde_json::json!({"sidechain_external": false})).unwrap();
-    assert_ne!(
-        live.load(&flip),
-        0,
-        "bus-changing key flip must be refused"
-    );
+    assert_ne!(live.load(&flip), 0, "bus-changing key flip must be refused");
     let error = last_error();
     assert!(
         error.to_ascii_lowercase().contains("layout")
@@ -325,7 +329,11 @@ fn ffi_deesser_key_flip_refusal_preserves_engaged_history() {
         "refusal must name the bus mismatch, got: {error}"
     );
     assert_eq!(live.save(), before_state, "refusal preserves state");
-    assert_eq!(live.config_json(), before_config, "refusal preserves config");
+    assert_eq!(
+        live.config_json(),
+        before_config,
+        "refusal preserves config"
+    );
 
     // Malformed state is refused with the same preservation.
     assert_ne!(live.load(b"{not json"), 0, "garbage state must fail");
@@ -335,7 +343,10 @@ fn ffi_deesser_key_flip_refusal_preserves_engaged_history() {
     let continued_input = keyed_input(FRAMES, PROGRAM_PEAK, KEY_PEAK);
     let continued_live = live.process(&continued_input);
     let continued_twin = twin.process(&continued_input);
-    assert_eq!(continued_live, continued_twin, "refusal must not disturb history");
+    assert_eq!(
+        continued_live, continued_twin,
+        "refusal must not disturb history"
+    );
     assert!(
         continued_live.iter().any(|sample| sample.abs() > 1.0e-3),
         "rejected restore must leave the populated route processing"
@@ -450,5 +461,9 @@ fn ffi_deesser_preset_format_round_trips_external_config() {
         0,
         "tampered bus flip must be refused"
     );
-    assert_eq!(fresh.save(), before_state, "tampered import preserves state");
+    assert_eq!(
+        fresh.save(),
+        before_state,
+        "tampered import preserves state"
+    );
 }

@@ -19,7 +19,9 @@ impl AutoGainClock {
         delay_frames: usize,
     ) -> Result<Self, String> {
         if !sample_rate.is_finite() || !(16.0..=2_822_400.0).contains(&sample_rate) {
-            return Err("EQ AutoGain clock sample rate must be finite and in 16..=2822400 Hz".to_string());
+            return Err(
+                "EQ AutoGain clock sample rate must be finite and in 16..=2822400 Hz".to_string(),
+            );
         }
         let prepared_samples = |frames: usize| {
             frames

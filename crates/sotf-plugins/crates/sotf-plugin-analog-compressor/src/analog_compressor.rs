@@ -523,8 +523,7 @@ impl ParametricInPlacePlugin for AnalogCompressorPlugin {
         } else {
             self.range_db
         };
-        let hold_samples =
-            (f64::from(self.hold_ms) * self.sample_rate / 1000.0).round() as usize;
+        let hold_samples = (f64::from(self.hold_ms) * self.sample_rate / 1000.0).round() as usize;
         // Compressor core first, then the analog color stage, both in place.
         for frame in 0..frames {
             // Linked detection: hottest channel drives one shared envelope.

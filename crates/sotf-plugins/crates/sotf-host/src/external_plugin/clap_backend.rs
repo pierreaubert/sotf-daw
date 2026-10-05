@@ -1724,8 +1724,7 @@ unsafe fn query_audio_channels(
             }
             validate_ambisonics_ports(plugin, ports, metadata, *order, *target_layout)?;
         }
-        if let Some(NativePluginAudioSetup::AmbisonicsCustom { order, custom }) = audio_setup
-        {
+        if let Some(NativePluginAudioSetup::AmbisonicsCustom { order, custom }) = audio_setup {
             let (expected_input, expected_output) = NativePluginAudioSetup::AmbisonicsCustom {
                 order: *order,
                 custom: custom.clone(),
@@ -2557,12 +2556,11 @@ fn clap_transport(context: &crate::plugin::ProcessContext) -> clap_event_transpo
     if transport.looping {
         flags |= CLAP_TRANSPORT_IS_LOOP_ACTIVE;
     }
-    let samples_to_seconds = |sample: u64| {
-        (sample as f64 / context.sample_rate * CLAP_SECTIME_FACTOR as f64) as i64
-    };
+    let samples_to_seconds =
+        |sample: u64| (sample as f64 / context.sample_rate * CLAP_SECTIME_FACTOR as f64) as i64;
     let samples_to_beats = |sample: u64| {
-        (sample as f64 / context.sample_rate * transport.bpm / 60.0
-            * CLAP_BEATTIME_FACTOR as f64) as i64
+        (sample as f64 / context.sample_rate * transport.bpm / 60.0 * CLAP_BEATTIME_FACTOR as f64)
+            as i64
     };
     let (loop_start_beats, loop_end_beats, loop_start_seconds, loop_end_seconds) =
         transport.loop_range.map_or((0, 0, 0, 0), |range| {

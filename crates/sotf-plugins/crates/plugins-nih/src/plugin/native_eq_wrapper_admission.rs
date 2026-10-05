@@ -315,7 +315,10 @@ fn assert_audio_differs(left: &[Vec<f32>; 2], right: &[Vec<f32>; 2]) {
 fn assert_param_f32(state: &PluginState, key: &str, expected: f32, message: &str) {
     match state.params.get(key) {
         Some(ParamValue::F32(actual)) => {
-            assert!(*actual == expected, "{message}: expected {expected}, got {actual}")
+            assert!(
+                *actual == expected,
+                "{message}: expected {expected}, got {actual}"
+            )
         }
         other => panic!("{message}: expected F32({expected}), got {other:?}"),
     }

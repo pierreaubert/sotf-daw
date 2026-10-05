@@ -305,7 +305,9 @@ fn band_split_merge_roundtrip_at_5_1_and_7_1_4_is_finite() {
                 SAMPLE_RATE,
             )
             .map_err(|e| format!("band_split create: {e}"))?;
-            split.initialize(f64::from(SAMPLE_RATE)).map_err(|e| e.to_string())?;
+            split
+                .initialize(f64::from(SAMPLE_RATE))
+                .map_err(|e| e.to_string())?;
 
             let input = interleaved_sine(channels, FRAMES);
             let split_output_channels = split.output_channels();
@@ -329,7 +331,9 @@ fn band_split_merge_roundtrip_at_5_1_and_7_1_4_is_finite() {
                 SAMPLE_RATE,
             )
             .map_err(|e| format!("band_merge create: {e}"))?;
-            merge.initialize(f64::from(SAMPLE_RATE)).map_err(|e| e.to_string())?;
+            merge
+                .initialize(f64::from(SAMPLE_RATE))
+                .map_err(|e| e.to_string())?;
 
             let merge_output_channels = merge.output_channels();
             let mut merge_output = vec![0.0f32; merge_output_channels * FRAMES];

@@ -810,7 +810,14 @@ impl DynamicEqPlugin {
                 }
                 let band = &mut self.bands[band_idx];
                 apply_routed_eq(
-                    band, placement, frame, nc, left_ch, right_ch, proportion, &mut *buffer,
+                    band,
+                    placement,
+                    frame,
+                    nc,
+                    left_ch,
+                    right_ch,
+                    proportion,
+                    &mut *buffer,
                 );
             }
         } else {
@@ -826,12 +833,8 @@ impl DynamicEqPlugin {
                 let band = &mut self.bands[band_idx];
                 let filtered = band.apply_sidechain_bp(state_ch, sample) as f32;
                 let level_db = DB_CONVERSION_FACTOR * fast_log10(filtered.abs().max(EPSILON));
-                let gr = band.cores[state_ch].calculate_gain_reduction(
-                    level_db,
-                    threshold,
-                    band_ratio,
-                    knee,
-                );
+                let gr = band.cores[state_ch]
+                    .calculate_gain_reduction(level_db, threshold, band_ratio, knee);
                 let smoothed = band.cores[state_ch].apply_envelope(0, gr);
                 let proportion = DynEqBand::modulation_proportion(target_gain_db, smoothed);
                 if first {
@@ -839,7 +842,14 @@ impl DynamicEqPlugin {
                     first = false;
                 }
                 apply_routed_eq(
-                    band, placement, frame, nc, left_ch, right_ch, proportion, &mut *buffer,
+                    band,
+                    placement,
+                    frame,
+                    nc,
+                    left_ch,
+                    right_ch,
+                    proportion,
+                    &mut *buffer,
                 );
             }
             self.monitoring_gr[band_idx] = first_envelope;

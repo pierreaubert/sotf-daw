@@ -1,7 +1,7 @@
 //! Utilities to handle smoothing parameter changes over time.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::Arc;
 
 // Re-exported here because it's sued in `SmoothingStyle`.
 pub use atomic_float::AtomicF32;
@@ -94,8 +94,11 @@ impl SmoothingStyle {
             Self::Linear(time) | Self::Logarithmic(time) | Self::Exponential(time) => {
                 let time = f64::from(*time);
                 let steps = (sample_rate * time / 1000.0).round();
-                if !time.is_finite() || time < 0.0 || !steps.is_finite()
-                    || steps < 0.0 || steps >= 2_f64.powi(i32::BITS as i32 - 1)
+                if !time.is_finite()
+                    || time < 0.0
+                    || !steps.is_finite()
+                    || steps < 0.0
+                    || steps >= 2_f64.powi(i32::BITS as i32 - 1)
                 {
                     return None;
                 }
@@ -592,7 +595,10 @@ mod tests {
         smoother.reset(0.25);
         assert!(smoother.set_target(48_000.0, 0.75));
         assert_eq!(smoother.steps_left(), 48_000);
-        assert_eq!(smoother.style.checked_num_steps(i32::MAX as f64), Some(i32::MAX));
+        assert_eq!(
+            smoother.style.checked_num_steps(i32::MAX as f64),
+            Some(i32::MAX)
+        );
         assert_eq!(smoother.style.checked_num_steps(2_147_483_648.0), None);
 
         for rate in [0.0, f64::NAN, f64::INFINITY, 2_147_483_648.0] {

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use sotf_host::define_choice_string_deserializer;
 #[cfg(test)]
 use sotf_host::param_specs::ParamType;
-use sotf_host::param_specs::{find_by_key as pk, ParamSpec};
+use sotf_host::param_specs::{ParamSpec, find_by_key as pk};
 use sotf_host::plugin_layout::*;
 use sotf_host::plugin_params::PluginParamDef;
 
@@ -251,15 +251,7 @@ mod tests {
         assert_eq!(
             TARGET_LAYOUTS,
             &[
-                "5.1",
-                "7.1",
-                "5.1.2",
-                "5.1.4",
-                "7.1.2",
-                "7.1.4",
-                "9.1.4",
-                "9.1.6",
-                "custom",
+                "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6", "custom",
             ]
         );
     }

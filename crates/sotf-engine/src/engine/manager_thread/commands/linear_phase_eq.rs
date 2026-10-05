@@ -14,11 +14,8 @@ fn fetch_handle(
     plugin_index: usize,
 ) -> Result<Arc<LinearPhaseEqControlHandle>, String> {
     match GetPluginDataCommand(plugin_index).execute(ctx) {
-        ManagerResponse::PluginData(data) => {
-            Arc::downcast::<LinearPhaseEqControlHandle>(data).map_err(|_| {
-                format!("plugin index {plugin_index} is not a linear-phase EQ")
-            })
-        }
+        ManagerResponse::PluginData(data) => Arc::downcast::<LinearPhaseEqControlHandle>(data)
+            .map_err(|_| format!("plugin index {plugin_index} is not a linear-phase EQ")),
         ManagerResponse::Error(reason) => Err(reason),
         _ => Err(format!(
             "unexpected plugin-data response for plugin index {plugin_index}"

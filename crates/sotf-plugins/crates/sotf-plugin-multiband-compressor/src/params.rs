@@ -170,12 +170,12 @@ pub const PARAMS: &[ParamSpec] = &[
 /// suggesting an audible operation.
 pub const SINGLE_BAND_LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::toggle(8),           // link_channels
-        ControlSpec::toggle(18),          // sidechain_hpf_enabled
-        ControlSpec::knob(9),             // sidechain_hpf_hz
-        ControlSpec::selector(10),        // sidechain_hpf_order
-        ControlSpec::selector(11),        // detection_mode
-        ControlSpec::toggle(15).hide(),   // sidechain_external
+        ControlSpec::toggle(8),         // link_channels
+        ControlSpec::toggle(18),        // sidechain_hpf_enabled
+        ControlSpec::knob(9),           // sidechain_hpf_hz
+        ControlSpec::selector(10),      // sidechain_hpf_order
+        ControlSpec::selector(11),      // detection_mode
+        ControlSpec::toggle(15).hide(), // sidechain_external
     ],
     main: &[
         ControlGroup::new(
@@ -425,17 +425,17 @@ pub const BAND_TEMPLATE: &[ParamSpec] = &[
 /// 22=sidechain_hpf_enabled
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::knob(0),     // num_bands
-        ControlSpec::selector(1), // crossover_preset
-        ControlSpec::knob(2),     // crossover_freq_1
-        ControlSpec::knob(3),     // crossover_freq_2
-        ControlSpec::knob(4),     // crossover_freq_3
-        ControlSpec::knob(5),     // crossover_freq_4
-        ControlSpec::toggle(12),  // link_channels (kept for backward compat)
-        ControlSpec::slider(16),  // link_amount
-        ControlSpec::slider(15),  // sidechain_tilt_db
-        ControlSpec::toggle(22),  // sidechain_hpf_enabled
-        ControlSpec::knob(19),    // sidechain_hpf_hz
+        ControlSpec::knob(0),      // num_bands
+        ControlSpec::selector(1),  // crossover_preset
+        ControlSpec::knob(2),      // crossover_freq_1
+        ControlSpec::knob(3),      // crossover_freq_2
+        ControlSpec::knob(4),      // crossover_freq_3
+        ControlSpec::knob(5),      // crossover_freq_4
+        ControlSpec::toggle(12),   // link_channels (kept for backward compat)
+        ControlSpec::slider(16),   // link_amount
+        ControlSpec::slider(15),   // sidechain_tilt_db
+        ControlSpec::toggle(22),   // sidechain_hpf_enabled
+        ControlSpec::knob(19),     // sidechain_hpf_hz
         ControlSpec::selector(20), // sidechain_hpf_order
         ControlSpec::selector(21), // detection_mode
     ],

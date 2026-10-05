@@ -2,8 +2,8 @@
 
 use atomic_float::AtomicF32;
 use std::fmt::{Debug, Display};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::Arc;
 
 use super::internals::ParamPtr;
 use super::range::IntRange;

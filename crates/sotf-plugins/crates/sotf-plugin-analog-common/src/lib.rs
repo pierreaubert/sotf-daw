@@ -159,8 +159,7 @@ impl AnalogColorStage {
         let sample_rate = sample_rate.into();
         if !sample_rate.is_finite() || sample_rate <= 0.0 || sample_rate > f64::from(f32::MAX) {
             return Err(
-                "analog stage sample rate must be finite and positive within f32 range"
-                    .to_string(),
+                "analog stage sample rate must be finite and positive within f32 range".to_string(),
             );
         }
         if max_block_frames == 0 {

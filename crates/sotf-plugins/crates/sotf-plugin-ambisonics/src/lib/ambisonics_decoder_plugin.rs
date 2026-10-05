@@ -60,9 +60,7 @@ impl AmbisonicsDecoderPlugin {
         let input_ch = channel_count(order);
 
         if config.target_layout == CUSTOM_LAYOUT_KEY {
-            return Err(
-                "Custom Ambisonics target requires geometry: use new_custom()".to_owned(),
-            );
+            return Err("Custom Ambisonics target requires geometry: use new_custom()".to_owned());
         }
 
         let speaker_config = get_speaker_config(&config.target_layout).ok_or_else(|| {
@@ -195,13 +193,11 @@ impl AmbisonicsDecoderPlugin {
                 1,
                 super::spherical_harmonics::MAX_ORDER as i32,
             )
-                .with_update_mode(pk(PARAMS, "order").update_mode)
-                .with_group("Ambisonics")
-                .with_importance(ParameterImportance::Critical)
-                .with_description(
-                    "1=FOA(4ch), 2=SOA(9ch), 3=TOA(16ch), 4=25ch, 5=36ch, 6=49ch, 7=64ch",
-                )
-                .build(),
+            .with_update_mode(pk(PARAMS, "order").update_mode)
+            .with_group("Ambisonics")
+            .with_importance(ParameterImportance::Critical)
+            .with_description("1=FOA(4ch), 2=SOA(9ch), 3=TOA(16ch), 4=25ch, 5=36ch, 6=49ch, 7=64ch")
+            .build(),
             Parameter::new_int(
                 "target_layout",
                 "Target Layout",

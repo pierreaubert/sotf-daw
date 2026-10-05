@@ -3,26 +3,26 @@ use std::ffi::c_void;
 use std::mem::{self, MaybeUninit};
 use std::num::NonZeroU32;
 use std::ptr::NonNull;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use vst3_com::vst::{DataEvent, IProcessContextRequirementsFlags, ProcessModes};
-use vst3_sys::VST3;
+use vst3_sys::base::{kInvalidArgument, kNoInterface, kResultFalse, kResultOk, tresult, TBool};
 use vst3_sys::base::{IBStream, IPluginBase, IUnknown};
-use vst3_sys::base::{TBool, kInvalidArgument, kNoInterface, kResultFalse, kResultOk, tresult};
 use vst3_sys::utils::SharedVstPtr;
 use vst3_sys::vst::{
-    Event, EventTypes, IAudioProcessor, IComponent, IEditController, IEventList, IMidiMapping,
-    INoteExpressionController, IParamValueQueue, IParameterChanges, IProcessContextRequirements,
-    IUnitInfo, LegacyMidiCCOutEvent, NoteExpressionTypeInfo, NoteExpressionValueDescription,
-    NoteOffEvent, NoteOnEvent, ParameterFlags, PolyPressureEvent, ProgramListInfo, TChar, UnitInfo,
-    kNoParamId, kNoParentUnitId, kNoProgramListId, kRootUnitId,
+    kNoParamId, kNoParentUnitId, kNoProgramListId, kRootUnitId, Event, EventTypes, IAudioProcessor,
+    IComponent, IEditController, IEventList, IMidiMapping, INoteExpressionController,
+    IParamValueQueue, IParameterChanges, IProcessContextRequirements, IUnitInfo,
+    LegacyMidiCCOutEvent, NoteExpressionTypeInfo, NoteExpressionValueDescription, NoteOffEvent,
+    NoteOnEvent, ParameterFlags, PolyPressureEvent, ProgramListInfo, TChar, UnitInfo,
 };
+use vst3_sys::VST3;
 use widestring::U16CStr;
 
 use super::inner::{ProcessEvent, WrapperInner};
 use super::note_expressions::{self, NoteExpressionController};
 use super::util::{
-    VST3_MIDI_CCS, VST3_MIDI_NUM_PARAMS, VST3_MIDI_PARAMS_START, VstPtr, u16strlcpy,
+    u16strlcpy, VstPtr, VST3_MIDI_CCS, VST3_MIDI_NUM_PARAMS, VST3_MIDI_PARAMS_START,
 };
 use super::util::{VST3_MIDI_CHANNELS, VST3_MIDI_PARAMS_END};
 use super::view::WrapperView;
@@ -33,7 +33,7 @@ use crate::prelude::{
 use crate::util::permit_alloc;
 use crate::wrapper::state;
 use crate::wrapper::util::buffer_management::{
-    BufferManager, ChannelPointers, audio_layout_bus_channels, audio_layout_bus_count,
+    audio_layout_bus_channels, audio_layout_bus_count, BufferManager, ChannelPointers,
 };
 use crate::wrapper::util::{clamp_input_event_timing, clamp_output_event_timing, process_wrapper};
 
@@ -556,10 +556,15 @@ impl<P: Vst3Plugin> IComponent for Wrapper<P> {
         // custom channel layout overrides we need to initialize here.
         match (state != 0, self.inner.current_buffer_config.load()) {
             (true, Some(buffer_config)) => {
-                let prepared: Option<Vec<_>> = self.inner.param_by_hash.values().map(|param| {
-                    unsafe { param.prepare_smoother(buffer_config.sample_rate) }
-                        .map(|steps| (*param, steps))
-                }).collect();
+                let prepared: Option<Vec<_>> = self
+                    .inner
+                    .param_by_hash
+                    .values()
+                    .map(|param| {
+                        unsafe { param.prepare_smoother(buffer_config.sample_rate) }
+                            .map(|steps| (*param, steps))
+                    })
+                    .collect();
                 let Some(prepared) = prepared else {
                     return kInvalidArgument;
                 };

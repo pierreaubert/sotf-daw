@@ -34,7 +34,8 @@ fn closed_form_gain(curve: &ReductionCurve, freq_hz: f64) -> f64 {
         return gains[2];
     }
     let segment = if freq_hz < anchors[1] { 0 } else { 1 };
-    let position = (freq_hz / anchors[segment]).ln() / (anchors[segment + 1] / anchors[segment]).ln();
+    let position =
+        (freq_hz / anchors[segment]).ln() / (anchors[segment + 1] / anchors[segment]).ln();
     gains[segment] + position * (gains[segment + 1] - gains[segment])
 }
 
@@ -170,7 +171,10 @@ fn preset_struct_covers_triggers_curve_and_link() {
     assert!(!legacy.learn_noise);
     assert!(!legacy.use_captured_profile);
     assert!(!legacy.clear_profile);
-    assert_eq!((legacy.curve_low, legacy.curve_mid, legacy.curve_high), (1.0, 1.0, 1.0));
+    assert_eq!(
+        (legacy.curve_low, legacy.curve_mid, legacy.curve_high),
+        (1.0, 1.0, 1.0)
+    );
     assert_eq!(legacy.link_mode, LINK_INDEPENDENT);
     assert!(!legacy.transient_guard);
 }

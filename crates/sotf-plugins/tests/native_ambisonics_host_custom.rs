@@ -12,9 +12,9 @@
 #![cfg(all(feature = "external-plugin-clap", feature = "external-plugin-vst3"))]
 
 use sotf_host::external_plugin::{
-    ExternalPlugin, ExternalPluginSandboxMode, ExternalPluginState,
-    NativeAmbisonicsCustomGeometry, NativeAmbisonicsTargetLayout, NativePluginAudioSetup,
-    PluginDescriptor, PluginFormat, PluginScanStatus,
+    ExternalPlugin, ExternalPluginSandboxMode, ExternalPluginState, NativeAmbisonicsCustomGeometry,
+    NativeAmbisonicsTargetLayout, NativePluginAudioSetup, PluginDescriptor, PluginFormat,
+    PluginScanStatus,
 };
 use sotf_host::plugin::{Plugin, ProcessContext, TailLength};
 use sotf_host::serialization::SerializablePlugin;
@@ -428,7 +428,9 @@ fn direct_custom_decoder(
     let layout_json = serde_json::to_value(custom).expect("typed geometry serializes");
     let custom_layout: CustomLayout =
         serde_json::from_value(layout_json).expect("DSP layout parses");
-    custom_layout.validate().expect("reference geometry validates");
+    custom_layout
+        .validate()
+        .expect("reference geometry validates");
     let config = CustomDecoderConfig {
         params: AmbisonicsDecoderConfig {
             order,
@@ -441,7 +443,9 @@ fn direct_custom_decoder(
     };
     let mut plugin =
         AmbisonicsDecoderPlugin::new_custom(&config).expect("build direct custom reference");
-    plugin.initialize(f64::from(SAMPLE_RATE)).expect("initialize reference");
+    plugin
+        .initialize(f64::from(SAMPLE_RATE))
+        .expect("initialize reference");
     plugin
 }
 
@@ -521,20 +525,12 @@ fn native_state_custom_geometry(
     format: PluginFormat,
 ) -> Option<serde_json::Value> {
     let state = native_state_json(opaque_state, format)?;
-    let encoded = state
-        .get("fields")?
-        .get(CUSTOM_STATE_FIELD)?
-        .as_str()?;
+    let encoded = state.get("fields")?.get(CUSTOM_STATE_FIELD)?.as_str()?;
     serde_json::from_str(encoded).ok()
 }
 
 fn set_native_state_bool(opaque_state: &mut Vec<u8>, format: PluginFormat, id: &str, value: bool) {
-    set_native_state_param(
-        opaque_state,
-        format,
-        id,
-        serde_json::json!({"bool": value}),
-    );
+    set_native_state_param(opaque_state, format, id, serde_json::json!({"bool": value}));
 }
 
 fn set_native_state_param(
@@ -613,11 +609,7 @@ fn mutate_native_state_json(
 /// Silence threshold for loaded drain proofs, matching the nonzero threshold.
 const DRAIN_QUIET_PEAK: f32 = 1.0e-6;
 
-fn test_descriptor(
-    format: PluginFormat,
-    library_env: &str,
-    plugin_id: &str,
-) -> PluginDescriptor {
+fn test_descriptor(format: PluginFormat, library_env: &str, plugin_id: &str) -> PluginDescriptor {
     let library_path = PathBuf::from(
         std::env::var_os(library_env).unwrap_or_else(|| panic!("{library_env} must be set")),
     );
@@ -781,9 +773,7 @@ fn lcg_partitions(total: usize, seed: u32) -> Vec<usize> {
     let mut sizes = Vec::new();
     let mut remaining = total;
     while remaining > 0 {
-        state = state
-            .wrapping_mul(1_664_525)
-            .wrapping_add(1_013_904_223);
+        state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
         let size = (1 + (state as usize % remaining.min(17))).min(remaining);
         sizes.push(size);
         remaining -= size;
@@ -846,8 +836,13 @@ fn render_partitions_to_eof_loaded(
             spec.sample_rate,
             spec.drain_block,
         );
-        let actual =
-            render_sized_block(plugin, &zeros, spec.outputs, spec.sample_rate, spec.drain_block);
+        let actual = render_sized_block(
+            plugin,
+            &zeros,
+            spec.outputs,
+            spec.sample_rate,
+            spec.drain_block,
+        );
         assert_matches_reference(
             &actual,
             &expected,
@@ -1093,8 +1088,8 @@ fn verify_loaded_format_rejections_clap(
     );
     let mut plugin = ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE)
         .expect("load accepted dual custom");
-    let mut twin = ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE)
-        .expect("load twin");
+    let mut twin =
+        ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE).expect("load twin");
     let history = sparse_acn_stream(128, INPUT_CHANNELS, 0x6198_0001);
     let rendered = render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
     let twinned = render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
@@ -1156,13 +1151,9 @@ fn verify_loaded_format_rejections_clap(
     // set_state; a disagreeing valid field is refused with host
     // agreement guarding the commit.
     let mut swapped = accepted_state.clone();
-    let swapped_json = serde_json::to_string(&custom_moved_lfe_9_1_6_geometry())
-        .expect("swap fixture serializes");
-    set_native_state_custom_field(
-        &mut swapped.opaque_state,
-        PluginFormat::Clap,
-        &swapped_json,
-    );
+    let swapped_json =
+        serde_json::to_string(&custom_moved_lfe_9_1_6_geometry()).expect("swap fixture serializes");
+    set_native_state_custom_field(&mut swapped.opaque_state, PluginFormat::Clap, &swapped_json);
     assert!(
         plugin.load_opaque_state(&swapped.opaque_state).is_err(),
         "live-state path must refuse disagreeing CLAP geometry"
@@ -1177,10 +1168,8 @@ fn verify_loaded_format_rejections_clap(
     );
 
     // Retained populated history renders bit-exact against the twin.
-    let retained =
-        render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
-    let untouched =
-        render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
+    let retained = render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
+    let untouched = render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
     assert_eq!(
         retained, untouched,
         "rejected restores must leave populated dual history unchanged"
@@ -1221,8 +1210,8 @@ fn verify_loaded_format_rejections_vst3(
     );
     let mut plugin = ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE)
         .expect("load accepted dual custom");
-    let mut twin = ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE)
-        .expect("load twin");
+    let mut twin =
+        ExternalPlugin::from_placeholder_state(&accepted_state, SAMPLE_RATE).expect("load twin");
     let history = sparse_acn_stream(128, INPUT_CHANNELS, 0x6198_0002);
     let rendered = render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
     let twinned = render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
@@ -1298,21 +1287,15 @@ fn verify_loaded_format_rejections_vst3(
     );
 
     // Retained populated history renders bit-exact against the twin.
-    let retained =
-        render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
-    let untouched =
-        render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
+    let retained = render_sized_block(&mut plugin, &history, expected_outputs, SAMPLE_RATE, 128);
+    let untouched = render_sized_block(&mut twin, &history, expected_outputs, SAMPLE_RATE, 128);
     assert_eq!(
         retained, untouched,
         "rejected restores must leave populated dual history unchanged"
     );
 }
 
-fn verify_native_named_10ch_route(
-    format: PluginFormat,
-    library_env: &str,
-    plugin_id: &str,
-) {
+fn verify_native_named_10ch_route(format: PluginFormat, library_env: &str, plugin_id: &str) {
     for (target_layout, name, index) in [
         (NativeAmbisonicsTargetLayout::FiveOneFour, "5.1.4", 3),
         (NativeAmbisonicsTargetLayout::SevenOneTwo, "7.1.2", 4),
@@ -1395,6 +1378,11 @@ fn verify_native_named_10ch_route(
         let input = sparse_acn_stream(FRAMES, 9, 0x4410_0000 + index as usize);
         let expected = render_sized_block(&mut reference, &input, 10, CROSS_RATE, FRAMES);
         let actual = render_sized_block(&mut plugin, &input, 10, CROSS_RATE, FRAMES);
-        assert_matches_reference(&actual, &expected, 10, &format!("named {name} order-2 44.1k"));
+        assert_matches_reference(
+            &actual,
+            &expected,
+            10,
+            &format!("named {name} order-2 44.1k"),
+        );
     }
 }

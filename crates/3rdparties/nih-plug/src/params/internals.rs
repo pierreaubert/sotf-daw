@@ -22,14 +22,20 @@ mod checked_horizon_tests {
 
     #[test]
     fn refused_float_automation_preserves_value_modulation_and_smoother() {
-        let param = super::super::FloatParam::new(
-            "float", 0.25, FloatRange::Linear { min: 0.0, max: 1.0 },
-        ).with_smoother(SmoothingStyle::Linear(1_000.0));
+        let param =
+            super::super::FloatParam::new("float", 0.25, FloatRange::Linear { min: 0.0, max: 1.0 })
+                .with_smoother(SmoothingStyle::Linear(1_000.0));
         param.smoothed.reset(0.25);
         let ptr = ParamPtr::FloatParam(&param);
         let invalid_rate = Some(2_147_483_648.0);
-        assert_eq!(unsafe { ptr.set_normalized_value_prepared(0.75, invalid_rate) }, None);
-        assert_eq!(unsafe { ptr.modulate_value_prepared(0.1, invalid_rate) }, None);
+        assert_eq!(
+            unsafe { ptr.set_normalized_value_prepared(0.75, invalid_rate) },
+            None
+        );
+        assert_eq!(
+            unsafe { ptr.modulate_value_prepared(0.1, invalid_rate) },
+            None
+        );
         assert_eq!(param.value(), 0.25);
         assert_eq!(param.modulated_normalized_value(), 0.25);
         assert_eq!(param.smoothed.steps_left(), 0);
@@ -38,14 +44,19 @@ mod checked_horizon_tests {
 
     #[test]
     fn refused_integer_automation_preserves_value_modulation_and_smoother() {
-        let param = super::super::IntParam::new(
-            "int", 2, IntRange::Linear { min: 0, max: 10 },
-        ).with_smoother(SmoothingStyle::Linear(1_000.0));
+        let param = super::super::IntParam::new("int", 2, IntRange::Linear { min: 0, max: 10 })
+            .with_smoother(SmoothingStyle::Linear(1_000.0));
         param.smoothed.reset(2);
         let ptr = ParamPtr::IntParam(&param);
         let invalid_rate = Some(2_147_483_648.0);
-        assert_eq!(unsafe { ptr.set_normalized_value_prepared(0.8, invalid_rate) }, None);
-        assert_eq!(unsafe { ptr.modulate_value_prepared(0.1, invalid_rate) }, None);
+        assert_eq!(
+            unsafe { ptr.set_normalized_value_prepared(0.8, invalid_rate) },
+            None
+        );
+        assert_eq!(
+            unsafe { ptr.modulate_value_prepared(0.1, invalid_rate) },
+            None
+        );
         assert_eq!(param.value(), 2);
         assert_eq!(param.modulated_normalized_value(), 0.2);
         assert_eq!(param.smoothed.steps_left(), 0);

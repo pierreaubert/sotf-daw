@@ -21,7 +21,9 @@
 // these tests use 48 kHz passing-case bands only.
 
 use serial_test::serial;
-use sotf_audio::engine::{AudioEngine, AudioEngineState, EngineConfig, PlaybackState, PluginConfig};
+use sotf_audio::engine::{
+    AudioEngine, AudioEngineState, EngineConfig, PlaybackState, PluginConfig,
+};
 use sotf_plugins::plugin_linear_phase_eq::dynamic_host::{
     LinearPhaseEqControlHandle, LinearPhaseEqControlStatus,
 };
@@ -155,7 +157,9 @@ fn write_source_wav(path: &std::path::Path, frames: usize) {
             - dither;
         for sample in [left, right] {
             let quantized = (sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
-            writer.write_sample(quantized).expect("wav sample must write");
+            writer
+                .write_sample(quantized)
+                .expect("wav sample must write");
         }
     }
     writer.finalize().expect("wav must finalize");
@@ -481,10 +485,7 @@ fn manager_request_commits_during_playback_and_reaches_eof() {
     assert_eq!(direct.accepted_generation, status.accepted_generation);
     assert_eq!(direct.last_refusal, status.last_refusal);
     // Fixed latency survives the dynamic commit.
-    assert_eq!(
-        engine.get_state().plugin_latency_samples,
-        EXPECTED_LATENCY
-    );
+    assert_eq!(engine.get_state().plugin_latency_samples, EXPECTED_LATENCY);
 
     // Pause mid-stream for a deterministic nonzero-peak observation window,
     // then resume to natural EOF.
@@ -624,8 +625,7 @@ fn manager_rebuild_orphans_old_handle() {
     let (wav_path, _wav_temp) = make_source();
     let bands = initial_bands();
 
-    let engine =
-        AudioEngine::new(manager_config(&device, &bands)).expect("engine must start");
+    let engine = AudioEngine::new(manager_config(&device, &bands)).expect("engine must start");
     await_latency(&engine, EXPECTED_LATENCY);
     let old_handle: Arc<LinearPhaseEqControlHandle> = await_handle(&engine, EQ_INDEX);
     engine

@@ -615,16 +615,15 @@ pub(super) fn handle_processing_command(
                 output_sample_rate,
                 previous_latency_samples,
                 latency_samples,
-            ) =
-                match state.commit_host_update(update) {
-                    Ok(notification) => notification,
-                    Err(reason) => {
-                        response_tx
-                            .send(ProcessingResponse::Error(reason.to_string()))
-                            .ok();
-                        return CommandOutcome::Continue;
-                    }
-                };
+            ) = match state.commit_host_update(update) {
+                Ok(notification) => notification,
+                Err(reason) => {
+                    response_tx
+                        .send(ProcessingResponse::Error(reason.to_string()))
+                        .ok();
+                    return CommandOutcome::Continue;
+                }
+            };
             response_tx
                 .send(ProcessingResponse::PluginChainUpdated {
                     generation,
@@ -678,17 +677,18 @@ pub(super) fn handle_processing_command(
                     );
                     let output_channels = state.host.output_channels();
                     state.channels = output_channels;
-                    let output_sample_rate = match state.host.output_sample_rate_native(state.sample_rate) {
-                        Ok(rate) => rate,
-                        Err(error) => {
-                            response_tx
-                                .send(ProcessingResponse::Error(format!(
-                                    "Plugin parameter produced an invalid output clock: {error}"
-                                )))
-                                .ok();
-                            return CommandOutcome::Continue;
-                        }
-                    };
+                    let output_sample_rate =
+                        match state.host.output_sample_rate_native(state.sample_rate) {
+                            Ok(rate) => rate,
+                            Err(error) => {
+                                response_tx
+                                    .send(ProcessingResponse::Error(format!(
+                                        "Plugin parameter produced an invalid output clock: {error}"
+                                    )))
+                                    .ok();
+                                return CommandOutcome::Continue;
+                            }
+                        };
                     response_tx
                         .send(ProcessingResponse::ParameterUpdated {
                             output_channels,
@@ -1051,8 +1051,7 @@ pub(super) fn run_processing_thread(
                                         || checked_processing_rate!(
                                             'processing,
                                             state.output_sample_rate(state.sample_rate)
-                                        )
-                                            != output_sample_rate
+                                        ) != output_sample_rate
                                     {
                                         if let Some(ProcessingMessage::Frame(frame)) =
                                             pending_msg.take()
@@ -1179,8 +1178,7 @@ pub(super) fn run_processing_thread(
                                         || checked_processing_rate!(
                                             'processing,
                                             state.output_sample_rate(state.sample_rate)
-                                        )
-                                            != output_sample_rate;
+                                        ) != output_sample_rate;
                                     if (outcome != CommandOutcome::Continue
                                         || state.bypassed
                                         || format_changed)

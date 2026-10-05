@@ -57,13 +57,8 @@ fn fractional_outer_clock_runs_two_sink_free_paths_without_truncation() {
         auto_gain_enabled: false,
         ..ABComparePluginParams::default()
     };
-    let mut plugin = ABComparePlugin::from_params_with_factory(
-        CHANNELS,
-        rate,
-        params,
-        ab087_factory,
-    )
-    .unwrap();
+    let mut plugin =
+        ABComparePlugin::from_params_with_factory(CHANNELS, rate, params, ab087_factory).unwrap();
     plugin.initialize(rate).unwrap();
     let input = vec![0.25_f32; CHANNELS * 17];
     let mut output = vec![0.0_f32; input.len()];
@@ -304,7 +299,10 @@ impl Plugin for DecimatorTwoFixture {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         DEC_DRAIN_CALLS.with(|count| count.set(count.get() + 1));
-        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
+        if !self.draining
+            || context.num_frames != 0
+            || context.sample_rate != f64::from(SAMPLE_RATE)
+        {
             return Err("AB087 decimator was not prepared for drain".into());
         }
         if output.len() != self.channels {
@@ -515,7 +513,10 @@ impl Plugin for BurstFixture {
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
         BURST_DRAIN_CALLS.with(|count| count.set(count.get() + 1));
-        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
+        if !self.draining
+            || context.num_frames != 0
+            || context.sample_rate != f64::from(SAMPLE_RATE)
+        {
             return Err("AB087 burst fixture was not prepared for drain".into());
         }
         let required = self.chunk * self.channels;
@@ -881,7 +882,10 @@ impl Plugin for DrainLyingFixture {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
+        if !self.draining
+            || context.num_frames != 0
+            || context.sample_rate != f64::from(SAMPLE_RATE)
+        {
             return Err("AB087 drain-lying fixture was not prepared for drain".into());
         }
         if output.len() != 2 * self.channels {
@@ -1058,7 +1062,10 @@ impl Plugin for EchoTailFixture {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<PluginDrainResult, String> {
-        if !self.draining || context.num_frames != 0 || context.sample_rate != f64::from(SAMPLE_RATE) {
+        if !self.draining
+            || context.num_frames != 0
+            || context.sample_rate != f64::from(SAMPLE_RATE)
+        {
             return Err("AB087 echo-tail fixture was not prepared for drain".into());
         }
         if output.len() != self.channels {
@@ -2050,7 +2057,10 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
     let mut host =
         build_path_from_config_with_factory(&config, CHANNELS, SAMPLE_RATE, Some(ab087_factory))
             .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
+    assert_eq!(
+        host.output_sample_rate(SAMPLE_RATE).unwrap(),
+        f64::from(SAMPLE_RATE)
+    );
     assert!(
         host.total_latency_samples() > 0,
         "nested plus converter latency must be observed"
@@ -2074,7 +2084,10 @@ fn graph_path_host_tracks_rate_eof_and_repeated_build() {
             // Repeated mid-stream rebuild: the composed clock and negotiated
             // state must be untouched.
             host.build().unwrap();
-            assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
+            assert_eq!(
+                host.output_sample_rate(SAMPLE_RATE).unwrap(),
+                f64::from(SAMPLE_RATE)
+            );
         }
         let capacity = host.output_frames_for_input(frames);
         let mut block = vec![f32::NAN; capacity * CHANNELS];
@@ -2728,7 +2741,10 @@ fn graph_builtin_construction_uses_resolved_input_rate() {
         Some(recording_factory),
     )
     .unwrap();
-    assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(SAMPLE_RATE));
+    assert_eq!(
+        host.output_sample_rate(SAMPLE_RATE).unwrap(),
+        f64::from(SAMPLE_RATE)
+    );
     let rates = CONSTRUCTION_RATES.with(|rates| rates.borrow().clone());
     assert_eq!(
         rates,
@@ -2878,7 +2894,10 @@ fn decimator_child_drains_independently_with_exact_counts() {
         host.add_plugin(Box::new(DecimatorTwoFixture::new(CHANNELS).unwrap()))
             .unwrap();
         host.build().unwrap();
-        assert_eq!(host.output_sample_rate(SAMPLE_RATE).unwrap(), f64::from(HALF_RATE));
+        assert_eq!(
+            host.output_sample_rate(SAMPLE_RATE).unwrap(),
+            f64::from(HALF_RATE)
+        );
 
         let input_frames = input.len() / CHANNELS;
         let mut chunks = vec![1_usize, 64, 137, 7];

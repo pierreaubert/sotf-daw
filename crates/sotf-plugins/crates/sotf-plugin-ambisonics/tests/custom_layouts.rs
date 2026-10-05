@@ -106,10 +106,8 @@ fn custom_replica_matches_named_5_1_matrix() {
     let replica = replica_5_1();
     for order in 1..=7 {
         for max_re in [false, true] {
-            let named =
-                DecodeMatrix::build(order, named_config, max_re).unwrap();
-            let custom =
-                DecodeMatrix::build_for_custom(order, &replica, max_re).unwrap();
+            let named = DecodeMatrix::build(order, named_config, max_re).unwrap();
+            let custom = DecodeMatrix::build_for_custom(order, &replica, max_re).unwrap();
             assert_eq!(custom.ambi_channels, named.ambi_channels);
             assert_eq!(custom.speaker_count, named.speaker_count);
             assert_eq!(custom.quality().rank, named.quality().rank);
@@ -119,8 +117,7 @@ fn custom_replica_matches_named_5_1_matrix() {
                 "order={order}, max_re={max_re}: matrix error {error}"
             );
 
-            let named_allrad =
-                DecodeMatrix::build_allrad(order, named_config, max_re).unwrap();
+            let named_allrad = DecodeMatrix::build_allrad(order, named_config, max_re).unwrap();
             let custom_allrad =
                 DecodeMatrix::build_allrad_for_custom(order, &replica, max_re).unwrap();
             assert_eq!(
@@ -553,9 +550,8 @@ fn ill_conditioned_custom_new_custom_rejection_preserves_running_decoder() {
             }
         }
     }
-    let (order, layout) = rejected.expect(
-        "the separation scan must find at least one ill-conditioned geometry",
-    );
+    let (order, layout) =
+        rejected.expect("the separation scan must find at least one ill-conditioned geometry");
 
     let running_config = custom_config(1, replica_5_1(), true, false, "mode_matching");
     let mut plugin = AmbisonicsDecoderPlugin::new_custom(&running_config).unwrap();
@@ -608,10 +604,7 @@ fn replica_9_1_6_conditioning_orders_3_through_7_is_bounded_with_expected_rank_l
             let custom_allrad =
                 DecodeMatrix::build_allrad_for_custom(order, &replica, max_re).unwrap();
             let named_allrad = DecodeMatrix::build_allrad(order, named_config, max_re).unwrap();
-            assert_eq!(
-                custom_allrad.quality().rank,
-                named_allrad.quality().rank
-            );
+            assert_eq!(custom_allrad.quality().rank, named_allrad.quality().rank);
             assert_eq!(
                 custom_allrad.quality().rank,
                 ambi_channels,
@@ -669,10 +662,7 @@ fn custom_dual_band_tail_drain_reset_and_partition() {
         let mut chunked = AmbisonicsDecoderPlugin::new_custom(&config).unwrap();
         chunked.initialize(48_000.0).unwrap();
         let mut chunked_out = vec![0.0_f32; frames * 6];
-        for (piece, out) in input
-            .chunks(64 * 4)
-            .zip(chunked_out.chunks_mut(64 * 6))
-        {
+        for (piece, out) in input.chunks(64 * 4).zip(chunked_out.chunks_mut(64 * 6)) {
             chunked
                 .process(piece, out, &ProcessContext::new(48_000, 64))
                 .unwrap();

@@ -75,8 +75,7 @@ fn mixed_program() -> Vec<f32> {
         .map(|n| {
             let t = n as f64 / f64::from(SAMPLE_RATE);
             (lf * (2.0 * std::f64::consts::PI * 50.0 * t).sin()
-                + hf * (2.0 * std::f64::consts::PI * 1000.0 * t).sin())
-                as f32
+                + hf * (2.0 * std::f64::consts::PI * 1000.0 * t).sin()) as f32
         })
         .collect()
 }
@@ -85,8 +84,7 @@ fn mixed_program() -> Vec<f32> {
 /// resonator (no production FFT/filter reuse). The caller passes a window
 /// with an integer cycle count for exact tone measurement.
 fn goertzel_peak_db(samples: &[f32], target_freq: f64) -> f64 {
-    let omega =
-        2.0 * std::f64::consts::PI * target_freq / f64::from(SAMPLE_RATE);
+    let omega = 2.0 * std::f64::consts::PI * target_freq / f64::from(SAMPLE_RATE);
     let coefficient = 2.0 * omega.cos();
     let (mut s1, mut s2) = (0.0f64, 0.0f64);
     for &sample in samples {
@@ -106,8 +104,7 @@ fn settled_window(output: &[f32]) -> &[f32] {
 }
 
 fn render(params: MultibandCompressorPluginParams, input: &[f32]) -> Vec<f32> {
-    let mut plugin =
-        MultibandCompressorPlugin::try_from_params(1, params, SAMPLE_RATE).unwrap();
+    let mut plugin = MultibandCompressorPlugin::try_from_params(1, params, SAMPLE_RATE).unwrap();
     plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
     let mut output = vec![0.0f32; input.len()];
     for (input_block, output_block) in input.chunks(1024).zip(output.chunks_mut(1024)) {
@@ -126,10 +123,8 @@ fn render(params: MultibandCompressorPluginParams, input: &[f32]) -> Vec<f32> {
 #[test]
 fn requested_legacy_default_bit_exact_mixed_program() {
     let program = mixed_program();
-    let default_params: MultibandCompressorPluginParams = serde_json::from_str(
-        r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0}"#,
-    )
-    .unwrap();
+    let default_params: MultibandCompressorPluginParams =
+        serde_json::from_str(r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0}"#).unwrap();
     let legacy_params: MultibandCompressorPluginParams = serde_json::from_str(
         r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0,"sidechain_hpf_hz":80.0,"sidechain_hpf_order":"2nd","detection_mode":"Peak"}"#,
     )
@@ -198,10 +193,8 @@ fn requested_enabled_120hz_4th_rms_lf_separation() {
 #[test]
 fn requested_enabled_zero_hz_matches_disabled() {
     let program = mixed_program();
-    let disabled: MultibandCompressorPluginParams = serde_json::from_str(
-        r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0}"#,
-    )
-    .unwrap();
+    let disabled: MultibandCompressorPluginParams =
+        serde_json::from_str(r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0}"#).unwrap();
     let zero_enabled: MultibandCompressorPluginParams = serde_json::from_str(
         r#"{"num_bands":1,"threshold_db":-20.0,"ratio":6.0,"sidechain_hpf_hz":0.0,"sidechain_hpf_enabled":true}"#,
     )
@@ -247,9 +240,7 @@ fn supplemental_pure_tone_rms_hpf_isolation_ratio20() {
     let lf_hpf = compressed_peak(50.0, Some(120.0));
     let lf_gr_open = -6.0 - lf_open;
     let lf_gr_hpf = -6.0 - lf_hpf;
-    println!(
-        "50 Hz RMS GR: disabled={lf_gr_open:.2} dB enabled-120-4th={lf_gr_hpf:.2} dB"
-    );
+    println!("50 Hz RMS GR: disabled={lf_gr_open:.2} dB enabled-120-4th={lf_gr_hpf:.2} dB");
     assert!(
         lf_gr_open > DISABLED_GR_FLOOR_DB,
         "50 Hz RMS without HPF compressed only {lf_gr_open:.2} dB"

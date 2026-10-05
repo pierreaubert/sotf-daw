@@ -327,7 +327,10 @@ mod tests {
             handle.send_features(&[0.0; FEATURE_SIZE]);
             handle.reset();
         }
-        assert!(handle.read_v_prob().is_none(), "reset must hide stale results");
+        assert!(
+            handle.read_v_prob().is_none(),
+            "reset must hide stale results"
+        );
 
         // A full ring may still contain pre-reset frames. Confirm that one
         // post-reset frame is accepted before testing worker recovery.

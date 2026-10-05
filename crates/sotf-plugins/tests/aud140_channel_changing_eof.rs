@@ -841,7 +841,10 @@ fn ambisonics_identity_geometry_covers_successful_single_and_dual_band_paths() {
             let mut plugin = AmbisonicsDecoderPlugin::new(&config).unwrap();
             plugin.initialize(f64::from(sample_rate)).unwrap();
             assert!(plugin.guarantees_identity_frame_geometry());
-            assert_eq!(plugin.output_sample_rate(f64::from(sample_rate)), f64::from(sample_rate));
+            assert_eq!(
+                plugin.output_sample_rate(f64::from(sample_rate)),
+                f64::from(sample_rate)
+            );
             assert_eq!(plugin.tail_length(), expected_tail);
 
             for frames in [0, 1, 19, 257] {

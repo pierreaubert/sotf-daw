@@ -71,7 +71,10 @@ fn shelf_shape_and_slope_are_visible_manual_restart_controls() {
         );
         assert!(placement.requires_restart, "{placement_id}");
         let flags = params.int_params[placement.index].flags();
-        assert!(flags.contains(ParamFlags::NON_AUTOMATABLE), "{placement_id}");
+        assert!(
+            flags.contains(ParamFlags::NON_AUTOMATABLE),
+            "{placement_id}"
+        );
         assert!(
             flags.contains(ParamFlags::REQUIRES_RESTART),
             "{placement_id}"

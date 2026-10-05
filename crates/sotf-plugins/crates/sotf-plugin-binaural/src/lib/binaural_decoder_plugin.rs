@@ -1968,8 +1968,8 @@ impl BinauralDecoderPlugin {
         // Recursive reverb has no finite support. This is an explicit render
         // cap, not a guaranteed residual level or an exact completion time.
         let reverb_tail = if self.config.late_reverb_enabled {
-            (3.0 * f64::from(self.config.late_reverb_rt60) * self.config.sample_rate)
-                .ceil() as usize
+            (3.0 * f64::from(self.config.late_reverb_rt60) * self.config.sample_rate).ceil()
+                as usize
         } else {
             0
         };

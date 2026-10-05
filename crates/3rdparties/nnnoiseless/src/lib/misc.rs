@@ -1,4 +1,3 @@
-
 pub(super) fn inner_prod(xs: &[f32], ys: &[f32], n: usize) -> f32 {
     let mut sum0 = 0.0;
     let mut sum1 = 0.0;

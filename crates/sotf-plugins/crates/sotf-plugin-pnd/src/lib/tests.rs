@@ -72,7 +72,10 @@ fn drift_smoothing_is_elapsed_time_and_sample_rate_invariant() {
 
     let at_96k = smooth_drift_ratio(current, target, tau, 2048, 96_000.0);
     assert!((once - at_96k).abs() < 1e-12);
-    assert_eq!(smooth_drift_ratio(current, target, tau, 0, 48_000.0), current);
+    assert_eq!(
+        smooth_drift_ratio(current, target, tau, 0, 48_000.0),
+        current
+    );
 }
 
 #[test]

@@ -221,10 +221,7 @@ fn install_snapshot(params: &DynamicParams, plugin: &dyn Plugin) {
     params.install_hiss_snapshot(snapshot);
 }
 
-fn construction_config(
-    params: &DynamicParams,
-    profile: Option<&NoiseProfileData>,
-) -> String {
+fn construction_config(params: &DynamicParams, profile: Option<&NoiseProfileData>) -> String {
     let bool_value = |id: &str| match params.value(id) {
         Some(ParameterValue::Bool(v)) => v,
         _ => panic!("missing Hiss bool {id}"),
@@ -259,9 +256,13 @@ fn construction_config(
 #[test]
 fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
     let source_params = hiss_params();
-    let mut source =
-        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true, "strength": 0.85}"#)
-            .unwrap();
+    let mut source = plugins_bridge::create_plugin(
+        "HissReducer",
+        2,
+        f64::from(RATE_48K),
+        r#"{"spectral_mode": true, "strength": 0.85}"#,
+    )
+    .unwrap();
     source.initialize(f64::from(RATE_48K)).unwrap();
     apply_incoming_params(
         &source_params,
@@ -323,10 +324,7 @@ fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
         .unwrap();
     apply_incoming_params(
         &source_params,
-        &BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(true),
-        )]),
+        &BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(true))]),
     );
     let saved = current_state(&source_params);
     assert!(
@@ -347,8 +345,7 @@ fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
         .fields
         .get(HISS_PROFILE_STATE_FIELD)
         .expect("Hiss field must save");
-    let (generation, blob) =
-        decode_hiss_field(encoded, HISS_NATIVE_CHANNELS).unwrap();
+    let (generation, blob) = decode_hiss_field(encoded, HISS_NATIVE_CHANNELS).unwrap();
     assert_eq!(generation % 2, 0);
     let blob = blob.expect("capture must save a profile");
     assert_eq!(blob, export.profile);
@@ -364,7 +361,8 @@ fn hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof() {
     assert_eq!(carried, export.profile);
     let config = construction_config(&fresh_params, Some(&carried));
     let mut fresh_attempt = HissProfileRestoreAttempt::new(fresh_params.clone());
-    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    let mut fresh =
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
     fresh.initialize(f64::from(RATE_48K)).unwrap();
     fresh_params.complete_hiss_profile_restore();
     fresh_attempt.commit();
@@ -436,10 +434,7 @@ fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
     let encoded = encode_hiss_field(7, Some(&v1));
     let incoming = PluginState {
         version: "hiss-v1".to_owned(),
-        params: BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(true),
-        )]),
+        params: BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(true))]),
         fields: BTreeMap::from([(HISS_PROFILE_STATE_FIELD.to_string(), encoded)]),
     };
     assert!(source_params.validate_state(&incoming, false, false, Some(48_000.0)));
@@ -475,7 +470,8 @@ fn hiss_native_time_domain_v1_capture_roundtrip_zero_tail() {
         .expect("fresh v1 must carry");
     let config = construction_config(&fresh_params, Some(&carried));
     let mut fresh_attempt = HissProfileRestoreAttempt::new(fresh_params.clone());
-    let mut fresh = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
+    let mut fresh =
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), &config).unwrap();
     fresh.initialize(f64::from(RATE_48K)).unwrap();
     fresh_params.complete_hiss_profile_restore();
     fresh_attempt.commit();
@@ -596,10 +592,7 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
 
     let v1_state = PluginState {
         version: "hiss-v1".to_owned(),
-        params: BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(true),
-        )]),
+        params: BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(true))]),
         fields: BTreeMap::from([(
             HISS_PROFILE_STATE_FIELD.to_string(),
             encode_hiss_field(17, Some(&v1)),
@@ -624,10 +617,7 @@ fn hiss_native_partial_omission_null_clear_and_use_off_retain() {
         .unwrap();
     apply_incoming_params(
         &params,
-        &BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(false),
-        )]),
+        &BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(false))]),
     );
     let saved = current_state(&params);
     let (_, retained) = decode_hiss_field(
@@ -652,9 +642,13 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     let input = interleave_dual_mono(&lcg_noise(16384, 0.04, 0x96c0));
 
     let params_v2 = hiss_params();
-    let mut with_v2 =
-        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), r#"{"spectral_mode": true}"#)
-            .unwrap();
+    let mut with_v2 = plugins_bridge::create_plugin(
+        "HissReducer",
+        2,
+        f64::from(RATE_96K),
+        r#"{"spectral_mode": true}"#,
+    )
+    .unwrap();
     with_v2.initialize(f64::from(RATE_96K)).unwrap();
     install_snapshot(&params_v2, &*with_v2);
     apply_incoming_params(
@@ -678,7 +672,8 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     let mut attempt = HissProfileRestoreAttempt::new(params_v2.clone());
     let carried = params_v2.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params_v2, Some(&carried));
-    with_v2 = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
+    with_v2 =
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
     with_v2.initialize(f64::from(RATE_96K)).unwrap();
     params_v2.complete_hiss_profile_restore();
     attempt.commit();
@@ -702,9 +697,13 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     );
 
     let params_v1 = hiss_params();
-    let mut with_v1 =
-        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), r#"{"spectral_mode": true}"#)
-            .unwrap();
+    let mut with_v1 = plugins_bridge::create_plugin(
+        "HissReducer",
+        2,
+        f64::from(RATE_96K),
+        r#"{"spectral_mode": true}"#,
+    )
+    .unwrap();
     with_v1.initialize(f64::from(RATE_96K)).unwrap();
     install_snapshot(&params_v1, &*with_v1);
     apply_incoming_params(
@@ -728,7 +727,8 @@ fn hiss_native_crossrate_v2_matches_explicit_v1_fallback() {
     let mut attempt = HissProfileRestoreAttempt::new(params_v1.clone());
     let carried = params_v1.hiss_profile_for_construction().unwrap().unwrap();
     let config = construction_config(&params_v1, Some(&carried));
-    with_v1 = plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
+    with_v1 =
+        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_96K), &config).unwrap();
     with_v1.initialize(f64::from(RATE_96K)).unwrap();
     params_v1.complete_hiss_profile_restore();
     attempt.commit();
@@ -843,11 +843,11 @@ fn hiss_native_malformed_rejected_live_retained() {
         );
     }
 
-    assert_eq!(serde_json::to_value(current_state(&params)).unwrap(), before_saved);
     assert_eq!(
-        params.hiss_profile_for_construction().unwrap().unwrap(),
-        v2
+        serde_json::to_value(current_state(&params)).unwrap(),
+        before_saved
     );
+    assert_eq!(params.hiss_profile_for_construction().unwrap().unwrap(), v2);
     assert_eq!(
         hiss_snapshot(&*plugin)
             .unwrap()
@@ -943,10 +943,7 @@ fn hiss_native_no_action_replay_and_momentaries_excluded() {
         params.value("clear_profile"),
         Some(ParameterValue::Bool(false))
     );
-    assert_eq!(
-        params.value("strength"),
-        Some(ParameterValue::Float(0.75))
-    );
+    assert_eq!(params.value("strength"), Some(ParameterValue::Float(0.75)));
     let kept = params.hiss_profile_for_construction().unwrap().unwrap();
     assert_eq!(kept, v2);
     let mut attempt = HissProfileRestoreAttempt::new(params.clone());
@@ -1033,10 +1030,7 @@ fn hiss_native_busy_never_drops_blob() {
     );
     let good = PluginState {
         version: "hiss-good".to_owned(),
-        params: BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(true),
-        )]),
+        params: BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(true))]),
         fields: BTreeMap::from([(
             HISS_PROFILE_STATE_FIELD.to_string(),
             encode_hiss_field(43, Some(&v2)),
@@ -1089,9 +1083,13 @@ fn hiss_native_busy_never_drops_blob() {
 #[test]
 fn hiss_native_process_path_allocates_and_locks_nothing() {
     let params = hiss_params();
-    let mut plugin =
-        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true}"#)
-            .unwrap();
+    let mut plugin = plugins_bridge::create_plugin(
+        "HissReducer",
+        2,
+        f64::from(RATE_48K),
+        r#"{"spectral_mode": true}"#,
+    )
+    .unwrap();
     plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     let v2 = seeded_v2(2, RATE_48K);
@@ -1130,10 +1128,7 @@ fn hiss_native_process_path_allocates_and_locks_nothing() {
     });
     assert!(output.iter().all(|v| v.is_finite()));
     assert!(peak(&output) > 1e-6);
-    assert_eq!(
-        params.hiss_profile_for_construction().unwrap().unwrap(),
-        v2
-    );
+    assert_eq!(params.hiss_profile_for_construction().unwrap().unwrap(), v2);
 }
 
 crate::sotf_nih_plugin!(
@@ -1233,9 +1228,13 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     let params = hiss_params();
-    let mut plugin =
-        plugins_bridge::create_plugin("HissReducer", 2, f64::from(RATE_48K), r#"{"spectral_mode": true}"#)
-            .unwrap();
+    let mut plugin = plugins_bridge::create_plugin(
+        "HissReducer",
+        2,
+        f64::from(RATE_48K),
+        r#"{"spectral_mode": true}"#,
+    )
+    .unwrap();
     plugin.initialize(f64::from(RATE_48K)).unwrap();
     install_snapshot(&params, &*plugin);
     let prime = current_state(&params);
@@ -1261,12 +1260,17 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
     let mut saw_busy = false;
     for _ in 0..200 {
         let fields = params.serialize_fields();
-        let encoded = fields.get(HISS_PROFILE_STATE_FIELD).expect("field must save");
+        let encoded = fields
+            .get(HISS_PROFILE_STATE_FIELD)
+            .expect("field must save");
         match decode_hiss_field(encoded, HISS_NATIVE_CHANNELS) {
             Ok((_, None)) => saw_null = true,
             Ok((_, Some(_))) => panic!("no blob may appear from absence, even under churn"),
             Err(error) => {
-                assert!(error.contains("busy"), "unknown error must name contention: {error}");
+                assert!(
+                    error.contains("busy"),
+                    "unknown error must name contention: {error}"
+                );
                 saw_busy = true;
             }
         }
@@ -1284,17 +1288,16 @@ fn hiss_native_busy_with_no_known_profile_emits_retry_marker() {
     assert!(!params.validate_state(&busy, false, false, Some(48_000.0)));
     assert!(params.hiss_profile_for_construction().unwrap().is_none());
     let after = current_state(&params);
-    match decode_hiss_field(&after.fields[HISS_PROFILE_STATE_FIELD], HISS_NATIVE_CHANNELS) {
+    match decode_hiss_field(
+        &after.fields[HISS_PROFILE_STATE_FIELD],
+        HISS_NATIVE_CHANNELS,
+    ) {
         Ok((_, None)) => {}
         Ok((_, Some(_))) => panic!("busy restore must not invent a blob"),
         Err(error) => assert!(error.contains("busy"), "{error}"),
     }
 
-    let colored = interleave_dual_mono(&first_difference_hiss(
-        RATE_48K as usize,
-        0.035,
-        0xb5e,
-    ));
+    let colored = interleave_dual_mono(&first_difference_hiss(RATE_48K as usize, 0.035, 0xb5e));
     hiss_start_capture(plugin.as_mut()).unwrap();
     process_blocks(plugin.as_mut(), &colored, RATE_48K, 256);
     let captured = current_state(&params);
@@ -1348,11 +1351,7 @@ fn hiss_native_wrapper_capture_save_restore_renders_bitexact() {
     hiss_wiring_initialize(&mut source, 48_000.0);
     let live_inner = source.inner.as_mut().expect("wrapper must hold live DSP");
     hiss_capture_control(live_inner.as_mut(), HissCaptureAction::Start).unwrap();
-    let colored = interleave_dual_mono(&first_difference_hiss(
-        RATE_48K as usize,
-        0.035,
-        0xe940c,
-    ));
+    let colored = interleave_dual_mono(&first_difference_hiss(RATE_48K as usize, 0.035, 0xe940c));
     hiss_wiring_process_blocks(&mut source, &colored, 256);
     let entry = source.params.param_map.get("use_captured_profile").unwrap();
     source.params.bool_params[entry.index].set_plain_value_for_initialization(true);
@@ -1446,7 +1445,10 @@ fn hiss_native_wrapper_malformed_preserves_history() {
     );
     assert_eq!(params.hiss_profile_for_construction().unwrap().unwrap(), v2);
     <HissWiringWrapper as nih_plug::prelude::Plugin>::reset(&mut wrapper);
-    assert_eq!(hiss_wiring_process_blocks(&mut wrapper, &input, 256), reference);
+    assert_eq!(
+        hiss_wiring_process_blocks(&mut wrapper, &input, 256),
+        reference
+    );
 }
 
 #[test]
@@ -1511,15 +1513,10 @@ fn hiss_native_host_action_capture_save_restore_bitexact_full_eof() {
     );
     hiss_wiring_initialize(&mut source, 48_000.0);
     set_hiss_toggle(&source.params, "learn_noise", true);
-    let colored = interleave_dual_mono(&first_difference_hiss(
-        RATE_48K as usize,
-        0.035,
-        0xe940c,
-    ));
+    let colored = interleave_dual_mono(&first_difference_hiss(RATE_48K as usize, 0.035, 0xe940c));
     let half = colored.len() / 2;
     hiss_wiring_process_blocks(&mut source, &colored[..half], 256);
-    let snapshot =
-        hiss_snapshot(source.inner.as_ref().expect("live DSP").as_ref()).unwrap();
+    let snapshot = hiss_snapshot(source.inner.as_ref().expect("live DSP").as_ref()).unwrap();
     let (active, progress) = snapshot.capture_state();
     assert!(active, "capture must run after the host checks Learn");
     assert!(
@@ -1548,11 +1545,7 @@ fn hiss_native_host_action_capture_save_restore_bitexact_full_eof() {
         profile.spectral.as_ref().unwrap().hops_analyzed,
         HISS_HOPS_48K
     );
-    let powers = &profile
-        .spectral
-        .as_ref()
-        .unwrap()
-        .power_per_channel_bin;
+    let powers = &profile.spectral.as_ref().unwrap().power_per_channel_bin;
     for ch in 0..2 {
         let band = &powers[ch * 513..(ch + 1) * 513];
         let ratio = regional_mean(band, 86, 149) / regional_mean(band, 341, 490);
@@ -1671,10 +1664,7 @@ fn hiss_native_host_action_clear_reports_explicit_null() {
     hiss_wiring_initialize(&mut source, 48_000.0);
     let good = PluginState {
         version: "hiss-good".to_owned(),
-        params: BTreeMap::from([(
-            "use_captured_profile".to_string(),
-            ParamValue::Bool(true),
-        )]),
+        params: BTreeMap::from([("use_captured_profile".to_string(), ParamValue::Bool(true))]),
         fields: BTreeMap::from([(
             HISS_PROFILE_STATE_FIELD.to_string(),
             encode_hiss_field(71, Some(&v2)),
@@ -1779,8 +1769,7 @@ fn hiss_native_host_action_momentaries_never_replay_or_rebuild() {
         wrapper.params.non_restartable_structural_fingerprint(),
         non_restartable
     );
-    let snapshot =
-        hiss_snapshot(wrapper.inner.as_ref().expect("live DSP").as_ref()).unwrap();
+    let snapshot = hiss_snapshot(wrapper.inner.as_ref().expect("live DSP").as_ref()).unwrap();
     let (active, _) = snapshot.capture_state();
     assert!(!active, "toggles left off must idle the capture");
     assert!(snapshot.try_export().unwrap().is_none());
@@ -1835,8 +1824,7 @@ fn hiss_native_host_action_edges_allocate_nothing() {
             )
             .unwrap();
     });
-    let snapshot =
-        hiss_snapshot(wrapper.inner.as_ref().expect("live DSP").as_ref()).unwrap();
+    let snapshot = hiss_snapshot(wrapper.inner.as_ref().expect("live DSP").as_ref()).unwrap();
     assert!(snapshot.try_export().unwrap().is_none());
     set_hiss_toggle(&wrapper.params, "learn_noise", false);
     assert_no_alloc::assert_no_alloc(|| {

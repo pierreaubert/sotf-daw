@@ -24,8 +24,7 @@ pub const PHASE_MODE_OPTIONS: &[&str] = &["Linear", "Minimum"];
 pub const MAX_FILTERS: usize = 10;
 /// Per-band placement choices, parallel to `placement_to_index`:
 /// 0 inherits the legacy stereo-linked route, then Stereo/Left/Right/Mid/Side.
-pub const BAND_PLACEMENT_OPTIONS: &[&str] =
-    &["Legacy", "Stereo", "Left", "Right", "Mid", "Side"];
+pub const BAND_PLACEMENT_OPTIONS: &[&str] = &["Legacy", "Stereo", "Left", "Right", "Mid", "Side"];
 
 // ============================================================================
 // Parameter Specifications
@@ -109,15 +108,9 @@ pub const BAND_TEMPLATE: &[ParamSpec] = &[
     ParamSpec::bool_param("Active", "active", true, "Band")
         .structural()
         .doc("Enable this band"),
-    ParamSpec::choice(
-        "Placement",
-        "placement",
-        0,
-        BAND_PLACEMENT_OPTIONS,
-        "Band",
-    )
-    .structural()
-    .doc("Channel routing for this band (Legacy keeps the stereo-linked route)"),
+    ParamSpec::choice("Placement", "placement", 0, BAND_PLACEMENT_OPTIONS, "Band")
+        .structural()
+        .doc("Channel routing for this band (Legacy keeps the stereo-linked route)"),
 ];
 
 // ============================================================================

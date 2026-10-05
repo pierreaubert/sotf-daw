@@ -145,7 +145,9 @@ pub fn read_stream(stream: &clap_istream, mut slice: impl ByteReadBuffer) -> boo
 /// Read a length-prefixed CLAP state without trusting its declared size for allocation.
 /// A host may supply malformed or truncated state data, so memory grows only after
 /// each chunk has actually arrived.
-pub fn read_length_prefixed_state(mut read_exact: impl FnMut(&mut [u8]) -> bool) -> Option<Vec<u8>> {
+pub fn read_length_prefixed_state(
+    mut read_exact: impl FnMut(&mut [u8]) -> bool,
+) -> Option<Vec<u8>> {
     let mut length_bytes = [0u8; 8];
     if !read_exact(&mut length_bytes) {
         return None;

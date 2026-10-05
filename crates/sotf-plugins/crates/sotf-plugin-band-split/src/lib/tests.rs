@@ -380,7 +380,10 @@ fn phase_compensated_multiband_reset_matches_fresh_target_state() {
             let mut fresh_flat = fresh_bands.map(|band| band[0]);
             reset.compensate_intermediate_bands(&mut reset_flat, 4, 1);
             fresh.compensate_intermediate_bands(&mut fresh_flat, 4, 1);
-            assert_eq!(reset_flat, fresh_flat, "slope index {slope_index}, frame {frame}");
+            assert_eq!(
+                reset_flat, fresh_flat,
+                "slope index {slope_index}, frame {frame}"
+            );
         }
     }
 }

@@ -1055,8 +1055,7 @@ impl LinearPhaseEqPlugin {
             // Cascaded stages extend the support additively; every band slot
             // occupies a stage (identity when inactive) so the count is
             // stable across dynamic updates.
-            let per_stage =
-                NUPC_REALTIME_QUANTUM_FRAMES + self.fir_length().saturating_sub(1);
+            let per_stage = NUPC_REALTIME_QUANTUM_FRAMES + self.fir_length().saturating_sub(1);
             (per_stage * self.ordered_stages.len()).max(self.latency_samples())
         } else {
             // FIR support is coefficient length minus one, plus NUPC's fixed
@@ -1259,11 +1258,7 @@ impl LinearPhaseEqPlugin {
         // completion always retires into an empty slot.
         debug_assert!(self.route_retired.is_none());
         if self.is_ordered_route() {
-            for (live, new) in self
-                .ordered_stages
-                .iter_mut()
-                .zip(target.stages.iter_mut())
-            {
+            for (live, new) in self.ordered_stages.iter_mut().zip(target.stages.iter_mut()) {
                 std::mem::swap(&mut live.engines, &mut new.engines);
             }
         } else if let Some(stage) = target.stages.first_mut() {
@@ -1393,11 +1388,7 @@ impl LinearPhaseEqPlugin {
 
     /// Group delay in samples via central phase difference of
     /// [`Self::channel_complex_response`]. Control-thread only.
-    pub fn channel_group_delay_samples(
-        &self,
-        channel: usize,
-        frequency_hz: f64,
-    ) -> Option<f64> {
+    pub fn channel_group_delay_samples(&self, channel: usize, frequency_hz: f64) -> Option<f64> {
         let sr = self.sample_rate;
         if sr <= 0.0 {
             return None;
@@ -1630,10 +1621,7 @@ impl LinearPhaseEqPlugin {
         }
         let sample_rate = self.sample_rate;
         let max_frequency = (sample_rate * 0.5 * 0.99).min(20_000.0);
-        if !new.frequency.is_finite()
-            || new.frequency < 20.0
-            || new.frequency > max_frequency
-        {
+        if !new.frequency.is_finite() || new.frequency < 20.0 || new.frequency > max_frequency {
             return false;
         }
         if !new.q.is_finite() || !(0.1..=10.0).contains(&new.q) {
@@ -1833,10 +1821,7 @@ impl LinearPhaseEqPlugin {
     /// Returns the same descriptive messages as the realtime refusal variants,
     /// as an allocated `String`. All errors are transactional for live state;
     /// only the owned `prepared` value is consumed by this wrapper.
-    pub fn commit_prepared_update(
-        &mut self,
-        prepared: PreparedBandUpdate,
-    ) -> Result<(), String> {
+    pub fn commit_prepared_update(&mut self, prepared: PreparedBandUpdate) -> Result<(), String> {
         let mut slot = Some(prepared);
         match self.try_commit_prepared_update(&mut slot) {
             Ok(()) => Ok(()),

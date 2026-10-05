@@ -77,7 +77,10 @@ fn drive_backend(input: &[f32], channels: usize, bypass: bool, blocks: &[usize])
     while offset < input.len() / channels {
         let frames = blocks[call % blocks.len()].min(input.len() / channels - offset);
         let mut block = input[offset * channels..(offset + frames) * channels].to_vec();
-        assert_eq!(backend.process(&mut block, frames, channels, bypass), frames);
+        assert_eq!(
+            backend.process(&mut block, frames, channels, bypass),
+            frames
+        );
         output.extend_from_slice(&block);
         offset += frames;
         call += 1;
@@ -89,9 +92,7 @@ fn signal(frames: usize, channels: usize, seed: u32) -> Vec<f32> {
     let mut state = seed;
     (0..frames * channels)
         .map(|_| {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             (state as f32 / u32::MAX as f32 - 0.5) * 1.4
         })
         .collect()
@@ -184,7 +185,12 @@ fn constant_strength_is_partition_invariant() {
             let mut continuous = configured(channels, true, strength);
             let mut partitioned = configured(channels, true, strength);
             assert_eq!(
-                process(&mut partitioned, &input, channels, &[1, 137, 479, 481, 1024]),
+                process(
+                    &mut partitioned,
+                    &input,
+                    channels,
+                    &[1, 137, 479, 481, 1024]
+                ),
                 process(&mut continuous, &input, channels, &[8193]),
                 "channels={channels} strength={strength}"
             );
@@ -292,7 +298,9 @@ fn rejected_strength_writes_retain_config_and_audio() {
             ParameterValue::String("full".to_string()),
         ] {
             assert!(
-                plugin.parametric_set_parameter(id.clone(), invalid).is_err(),
+                plugin
+                    .parametric_set_parameter(id.clone(), invalid)
+                    .is_err(),
                 "channels={channels}"
             );
         }
@@ -352,7 +360,9 @@ fn model_selection_validates_and_continues_on_failure() {
             ParameterValue::Bool(true),
         ] {
             assert!(
-                plugin.parametric_set_parameter(id.clone(), invalid).is_err(),
+                plugin
+                    .parametric_set_parameter(id.clone(), invalid)
+                    .is_err(),
                 "channels={channels}"
             );
         }
@@ -580,11 +590,16 @@ fn fresh_restore_matches_live_configured_twin() {
             live.initialize(f64::from(RATE)).unwrap();
             // Snapshot restore through the borrowed realtime path.
             let mut snapshot = SpeechDenoiserPlugin::new(channels);
-            snapshot.apply_values_realtime(&from_factory.current_values()).unwrap();
+            snapshot
+                .apply_values_realtime(&from_factory.current_values())
+                .unwrap();
             snapshot.initialize(f64::from(RATE)).unwrap();
             let expected = process(&mut from_factory, &input, channels, &[137, 1]);
             assert_eq!(process(&mut live, &input, channels, &[137, 1]), expected);
-            assert_eq!(process(&mut snapshot, &input, channels, &[137, 1]), expected);
+            assert_eq!(
+                process(&mut snapshot, &input, channels, &[137, 1]),
+                expected
+            );
         }
     }
 }

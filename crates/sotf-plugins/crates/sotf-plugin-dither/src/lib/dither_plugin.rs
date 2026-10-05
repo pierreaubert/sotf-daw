@@ -120,11 +120,7 @@ impl DitherPlugin {
         // hence this guard changes no supported output.
         let seed = 0xDEAD_BEEF_CAFE_0001_u64
             .wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
-        if seed == 0 {
-            1
-        } else {
-            seed
-        }
+        if seed == 0 { 1 } else { seed }
     }
 
     pub(super) fn update_scales(&mut self) {
@@ -190,9 +186,7 @@ impl DitherPlugin {
     fn configure_noise_shaping_rate(&mut self, sample_rate: f64) -> PluginResult<()> {
         const REFERENCE_SAMPLE_RATE: f32 = 44_100.0;
         const MAX_SUPPORTED_SAMPLE_RATE: f64 = 768_000.0;
-        if !sample_rate.is_finite()
-            || sample_rate <= 0.0
-            || sample_rate > MAX_SUPPORTED_SAMPLE_RATE
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || sample_rate > MAX_SUPPORTED_SAMPLE_RATE
         {
             return Err(format!(
                 "Dither sample rate must be in 1..={MAX_SUPPORTED_SAMPLE_RATE}, got {sample_rate}"

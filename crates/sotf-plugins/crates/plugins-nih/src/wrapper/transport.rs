@@ -59,9 +59,8 @@ impl TransportTracker {
             .filter(|bpm| bpm.is_finite() && *bpm > 0.0)
             .unwrap_or(self.previous.bpm);
         let sample = native.sample_position.unwrap_or(self.next_sample);
-        let beat_delta = (i128::from(sample) - i128::from(self.next_sample)) as f64
-            / sample_rate
-            * (bpm / 60.0);
+        let beat_delta =
+            (i128::from(sample) - i128::from(self.next_sample)) as f64 / sample_rate * (bpm / 60.0);
         let estimated_ppq = finite_or(self.next_ppq + beat_delta, self.next_ppq);
         let ppq = native
             .ppq_position
@@ -99,8 +98,7 @@ impl TransportTracker {
             0
         };
         self.next_sample = sample.saturating_add(advance);
-        let elapsed = (i128::from(self.next_sample) - i128::from(sample)) as f64
-            / sample_rate;
+        let elapsed = (i128::from(self.next_sample) - i128::from(sample)) as f64 / sample_rate;
         self.next_ppq = finite_or(ppq + elapsed * (bpm / 60.0), ppq);
         self.previous = transport;
         ProcessContext::new(sample_rate, frames).with_transport(transport)

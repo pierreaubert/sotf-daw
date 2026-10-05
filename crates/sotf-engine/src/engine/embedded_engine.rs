@@ -145,9 +145,7 @@ impl EmbeddedAudioEngine {
                     sotf_plugins::plugin_linear_phase_eq::dynamic_host::LinearPhaseEqDynamicPlugin,
                 >()
             })
-            .ok_or_else(|| {
-                format!("plugin index {plugin_index} is not a linear-phase EQ")
-            })?;
+            .ok_or_else(|| format!("plugin index {plugin_index} is not a linear-phase EQ"))?;
         Ok(wrapper.snapshot_for_update())
     }
 
@@ -168,9 +166,7 @@ impl EmbeddedAudioEngine {
     ) -> Result<(), String> {
         let handle = self
             .linear_phase_eq_handle(plugin_index)
-            .ok_or_else(|| {
-                format!("plugin index {plugin_index} is not a linear-phase EQ")
-            })?;
+            .ok_or_else(|| format!("plugin index {plugin_index} is not a linear-phase EQ"))?;
         handle.try_submit(prepared)
     }
 
@@ -190,8 +186,7 @@ impl EmbeddedAudioEngine {
         new_band: BandConfig,
     ) -> Result<(), String> {
         let base = self.linear_phase_eq_snapshot(plugin_index)?;
-        let prepared =
-            LinearPhaseEqPlugin::prepare_band_update(&base, band_index, new_band)?;
+        let prepared = LinearPhaseEqPlugin::prepare_band_update(&base, band_index, new_band)?;
         self.linear_phase_eq_submit(plugin_index, prepared)
     }
 
@@ -210,10 +205,7 @@ impl EmbeddedAudioEngine {
     /// Control thread only. Reads the wrapper record through the existing
     /// `get_plugin` plus `as_any` `&self` pattern without locking. Returns
     /// `None` when no refusal is recorded or the plugin is unavailable.
-    pub fn linear_phase_eq_last_refusal(
-        &self,
-        plugin_index: usize,
-    ) -> Option<CommitRefusal> {
+    pub fn linear_phase_eq_last_refusal(&self, plugin_index: usize) -> Option<CommitRefusal> {
         let plugin: &dyn Plugin = self.host.get_plugin(plugin_index)?;
         plugin
             .as_any()
