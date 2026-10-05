@@ -1,0 +1,1028 @@
+{
+  "cases": [
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "44100-2ch-stereo.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "44100-2ch-left.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "44100-2ch-right.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "44100-2ch-mid.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "44100-2ch-side.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "44100-2ch-left-mid.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "44100-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "44100-2ch-mid-left.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "44100-5ch-stereo.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "44100-5ch-left.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "44100-5ch-right.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "44100-5ch-mid.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "44100-5ch-side.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "44100-5ch-left-mid.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "44100-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "44100-5ch-mid-left.f64le",
+      "sample_rate": 44100
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "48000-2ch-stereo.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "48000-2ch-left.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "48000-2ch-right.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "48000-2ch-mid.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "48000-2ch-side.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "48000-2ch-left-mid.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "48000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "48000-2ch-mid-left.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "48000-5ch-stereo.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "48000-5ch-left.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "48000-5ch-right.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "48000-5ch-mid.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "48000-5ch-side.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "48000-5ch-left-mid.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "48000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "48000-5ch-mid-left.f64le",
+      "sample_rate": 48000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "96000-2ch-stereo.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "96000-2ch-left.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "96000-2ch-right.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "96000-2ch-mid.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "96000-2ch-side.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "96000-2ch-left-mid.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 2,
+      "frames": 4096,
+      "input": "96000-2ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "96000-2ch-mid-left.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "stereo"
+      ],
+      "reference": "96000-5ch-stereo.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left"
+      ],
+      "reference": "96000-5ch-left.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "right"
+      ],
+      "reference": "96000-5ch-right.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid"
+      ],
+      "reference": "96000-5ch-mid.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "side"
+      ],
+      "reference": "96000-5ch-side.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "left",
+        "mid"
+      ],
+      "reference": "96000-5ch-left-mid.f64le",
+      "sample_rate": 96000
+    },
+    {
+      "channels": 5,
+      "frames": 4096,
+      "input": "96000-5ch-input.f32le",
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "placements": [
+        "mid",
+        "left"
+      ],
+      "reference": "96000-5ch-mid-left.f64le",
+      "sample_rate": 96000
+    }
+  ],
+  "equation": "RBJ peaking; y=b0*x+b1*x1+b2*x2-a1*y1-a2*y2; mid=(L+R)/2, side=(L-R)/2",
+  "files": [
+    {
+      "bytes": 32768,
+      "name": "44100-2ch-input.f32le",
+      "sha256": "7bdcb70b670c74e30c21cdba72f6f9d2168ee19f55b1479a178fd44746a89523"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-stereo.f64le",
+      "sha256": "1e203ff865f3422b80ffdc094bdf3c0c9124ac09e88bb959c9faffd177e6270c"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-left.f64le",
+      "sha256": "1ded473032a33ae5289e81c8f36ecd6fe010b1bc14de63ac23237ec2cf33ab00"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-right.f64le",
+      "sha256": "7bc83194a382d940f8c1a8ae8e1fc452e30d39b5b8c6d10a661ebc43e36b106e"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-mid.f64le",
+      "sha256": "b82309768540eb2a110428af533cfb312fae7fbb75542c85f7632d18e821390f"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-side.f64le",
+      "sha256": "d8474c6da3586a0381e031107b4a30accadba2c70a3542e90bcb74d27ebb6e67"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-left-mid.f64le",
+      "sha256": "fdd9d72715d09408ab2c706f57a95a0ffcb6a1ae34dbaaa2b0319b940fae0a70"
+    },
+    {
+      "bytes": 65536,
+      "name": "44100-2ch-mid-left.f64le",
+      "sha256": "7db7a9dab35d11f6771e22f49faacc056696d2ee86d0089777b2e3ebe59bf0fa"
+    },
+    {
+      "bytes": 81920,
+      "name": "44100-5ch-input.f32le",
+      "sha256": "4bfac0798c4c5263a4c634380592d363c5f6d63a86cf285f2182de8748ca44a1"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-stereo.f64le",
+      "sha256": "69c160dcb8ae516925b97c65979c19097f1542ebbe64daa9c89103c53d2c8601"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-left.f64le",
+      "sha256": "2996f87e995ef0c7b765db0f7519e7f6fe7700016cf57eeed1f29f86ec142b33"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-right.f64le",
+      "sha256": "7099433fcee14e9d76deb6cb248678032d2739a829695fae13aa83ae044fc60f"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-mid.f64le",
+      "sha256": "8af6e5374c7287562ce5ca8975e4ad10be95c2fb6345523246cad139962e980a"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-side.f64le",
+      "sha256": "d97bf120016438ccb5c2f3a78764a88dbddfc4631590baa6575d08b80e09c95e"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-left-mid.f64le",
+      "sha256": "dbf87ad0780722e4bd2f8e671d12348401fc311b5d878bc4e10a8576d768733e"
+    },
+    {
+      "bytes": 163840,
+      "name": "44100-5ch-mid-left.f64le",
+      "sha256": "34450b7b2f77489d973c631420f1196c9efc9a5bf2a57136a553a4038c682e8d"
+    },
+    {
+      "bytes": 32768,
+      "name": "48000-2ch-input.f32le",
+      "sha256": "852de52df4a6c3e71b530f95db2bfcadb7eef596b662b30c804d8397f9db44cd"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-stereo.f64le",
+      "sha256": "d5f99a2510511d7d3ceafb158603b17d4242210339f89f2a3b6957031f9a875a"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-left.f64le",
+      "sha256": "24381736833774d55ea523cdeafb04bc0e30f4ebf96a9a35ed4e25c879ee0de8"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-right.f64le",
+      "sha256": "66e381d8369b0b2fa46f7c36140e9fcf8d1518019bcbefa02088abca9514ef71"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-mid.f64le",
+      "sha256": "43599bd31cb2b73322a575e201053dc2a42bcad6f92d8fe86037f6ea94bb975a"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-side.f64le",
+      "sha256": "87f26a2ffb5704396afe8f7ab5c99ca1bdb734d4c5e3cdd85f7a97dff90e457b"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-left-mid.f64le",
+      "sha256": "ce8e1b0c685c95cf2bb7285694abe8f2ef05e00b26a510577032d9b107435695"
+    },
+    {
+      "bytes": 65536,
+      "name": "48000-2ch-mid-left.f64le",
+      "sha256": "7cda4782de30f0e3c719821e59a021f226067b2062e5e11d22f3b2ec334ddc29"
+    },
+    {
+      "bytes": 81920,
+      "name": "48000-5ch-input.f32le",
+      "sha256": "a646f1bba4cb8250d11a7becd320b1e56917473fcde72c52d75d9063b8c3eb3e"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-stereo.f64le",
+      "sha256": "17389521421d3141d584910675e2dc3c40db65a0a5ba4dcad010be95bae8eaec"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-left.f64le",
+      "sha256": "200a88823e510590bfe77552fc7932c3a429be779f0312dd194ec20f0eeec24e"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-right.f64le",
+      "sha256": "37af7f8aeb23aeeaab639d3ad3bfab19483618dbe0e87f5814d3b6a498d19409"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-mid.f64le",
+      "sha256": "4d005163d1bc465ca8cd6f29209caf144bddf466129530770e133ed01428f733"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-side.f64le",
+      "sha256": "11942615ea4d21e64cb8e703d541c4a8b30b3bf72ab2d4d47893b274cd3b521b"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-left-mid.f64le",
+      "sha256": "ebfad8c03dc91f87bcf50794b11beee6731c67903ae2fc37756f4e66ae0a87b2"
+    },
+    {
+      "bytes": 163840,
+      "name": "48000-5ch-mid-left.f64le",
+      "sha256": "d0103e762423b4872ceca6f6d83bb8f0181ff9a1e215c0f4dee6e115a3e87ea3"
+    },
+    {
+      "bytes": 32768,
+      "name": "96000-2ch-input.f32le",
+      "sha256": "2dbac9cc21a3bef41f116498adaee83187b49bb395686b138b90529daa4fd14b"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-stereo.f64le",
+      "sha256": "e4cd5d7c884c7ddd1280d6c41bc20a5cbe8fb9c72e7c4e38a5311dada2bb5f0e"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-left.f64le",
+      "sha256": "74bc3d6ee2f5f9a3a7565b555894c4d4670ce4f95d37d356f6fd0435fe2fc546"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-right.f64le",
+      "sha256": "d0c628f3b3ffaba276eea73d651e2c72d346adc1e2d4b7566fc12c6528e9876a"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-mid.f64le",
+      "sha256": "9eb6c468ed0c9b6c224869b2603a023112a9e23de7fc1ce14207bf39e78277c5"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-side.f64le",
+      "sha256": "e82480df3c4c29ea713f9ceed42b6271d91d1c82cbf7f56d3903d230b3bbd71c"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-left-mid.f64le",
+      "sha256": "64339bcf79ea744b07bf3cd32538fd95f6b5fa5507964bf3214bce9bb154bef8"
+    },
+    {
+      "bytes": 65536,
+      "name": "96000-2ch-mid-left.f64le",
+      "sha256": "d9e1f76e45fe73dd363f91cac2eab938f4c86f6844ecad55ab46360df9e817a4"
+    },
+    {
+      "bytes": 81920,
+      "name": "96000-5ch-input.f32le",
+      "sha256": "6ef3e8ae65e4a4248955cdc18cc649fc9bf37daa621b058db35066b4c3d2e5e2"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-stereo.f64le",
+      "sha256": "18fc3630155a273d888456cf9a5360a688d1833e2ddd22fbc3ae3db5db8e43b6"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-left.f64le",
+      "sha256": "fadf054a3bec520626e41568244536c9ac7ab7c8da839954bb095e10f1d60bc4"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-right.f64le",
+      "sha256": "d308caced81d245fe1d7de3a9028142f1fd96aa6e2a25c76715c48ecf55550ad"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-mid.f64le",
+      "sha256": "d6f0b96f63881ecae4d94cba20fc2dfdc706678c7519f75f7631255095ba30b3"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-side.f64le",
+      "sha256": "c6824f04968ddc365c7044bae8e68e36f682defdc06dd746c7ff243fd0e26385"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-left-mid.f64le",
+      "sha256": "534e278bd7837b3054d79b4d7bff722d78f857afe3e9ed4e6b095816b1bf8f63"
+    },
+    {
+      "bytes": 163840,
+      "name": "96000-5ch-mid-left.f64le",
+      "sha256": "257a9cf5734c742b0a14b1ce638cd248b0ac633feedf29a75b4cb4a6bbfd6cc0"
+    }
+  ],
+  "filter": {
+    "frequency": 1379.0,
+    "gain_db": 7.0,
+    "order": 2,
+    "q": 0.83,
+    "type": "peak"
+  },
+  "generator_sha256": "b595231e814123e8c5134a24edde15ecc303a5b55066af4960133c2f32c8dd76",
+  "input": "t=n/rate, phase=(channel+1)*0.2718281828459045; x=0.31*sin(2*pi*173*t+phase)+0.19*sin(2*pi*1379*t+0.7*phase)+0.11*cos(2*pi*5033*t-1.3*phase)+I[n=0]*0.17*(-1 if channel odd else 1); each sample rounded once to IEEE754 binary32 little-endian; no PRNG",
+  "mathematical_source": "https://www.w3.org/TR/2021/NOTE-audio-eq-cookbook-20210608/",
+  "origin": "new independent Python model; original r1 bytes unavailable",
+  "schema": "aud145-analytical-reference-r2",
+  "seed": null
+}

@@ -387,7 +387,7 @@ fn test_process_zero_frames_does_not_panic() {
 
 fn aud145_placement_fixture_root() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../audit/artifacts/aud145-placement-reference-r1")
+        .join("../../audit/artifacts/aud145-analytical-reference-r2")
 }
 
 fn read_f32le_samples(path: &std::path::Path, expected_count: usize) -> Vec<f32> {

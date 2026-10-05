@@ -3,7 +3,7 @@
 //! Run the independent base-rate capture explicitly with
 //! `AUD145_PLACEMENT_CAPTURE_DIR=... cargo test -p sotf-plugin-eq --test
 //! aud145_ordered_route capture_base_rate_placement_matrix -- --ignored` and
-//! compare it with `audit/artifacts/aud145-placement-reference-r1/compare.py`.
+//! compare it with `audit/reference-tools/aud145_compare_r2.py`.
 
 use sotf_host::{AutoGainParams, ParameterId, ParameterValue, ParametricPlugin, ProcessContext};
 use sotf_plugin_eq::{
@@ -267,7 +267,7 @@ fn channel_bytes(samples: &[f32], channels: usize, channel: usize) -> Vec<u8> {
 }
 
 fn reference_root() -> PathBuf {
-    repository_root().join("audit/artifacts/aud145-placement-reference-r1")
+    repository_root().join("audit/artifacts/aud145-analytical-reference-r2")
 }
 
 /// Produces all 42 exact public-API vectors consumed by the independent f64 oracle.
@@ -342,7 +342,7 @@ fn capture_multirate_prefix_placement_matrix() {
     };
     fs::create_dir_all(&capture_dir).expect("create multirate capture directory");
 
-    let reference_root = repository_root().join("audit/artifacts/aud145-placement-reference-r1");
+    let reference_root = repository_root().join("audit/artifacts/aud145-analytical-reference-r2");
     for factor in [2u32, 4] {
         for sample_rate in SAMPLE_RATES {
             for (channels, stereo_pairs) in [
