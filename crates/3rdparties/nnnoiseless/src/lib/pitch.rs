@@ -23,12 +23,14 @@ pub(super) fn pitch_xcorr(xs: &[f32], ys: &[f32], xcorr: &mut [f32]) {
         let mut c2 = 0.0;
         let mut c3 = 0.0;
 
-        let mut y0 = ys[i + 0];
+        let mut y0 = ys[i];
         let mut y1 = ys[i + 1];
         let mut y2 = ys[i + 2];
         let mut y3 = ys[i + 3];
 
-        for (x, y) in xs.chunks_exact(4).zip(ys[(i + 4)..].chunks_exact(4)) {
+        let (x_chunks, _) = xs.as_chunks::<4>();
+        let (y_chunks, _) = ys[(i + 4)..].as_chunks::<4>();
+        for (x, y) in x_chunks.iter().zip(y_chunks) {
             c0 += x[0] * y0;
             c1 += x[0] * y1;
             c2 += x[0] * y2;
@@ -56,12 +58,12 @@ pub(super) fn pitch_xcorr(xs: &[f32], ys: &[f32], xcorr: &mut [f32]) {
         }
 
         for j in xs_len_4..xs.len() {
-            c0 += xs[j] * ys[i + 0 + j];
+            c0 += xs[j] * ys[i + j];
             c1 += xs[j] * ys[i + 1 + j];
             c2 += xs[j] * ys[i + 2 + j];
             c3 += xs[j] * ys[i + 3 + j];
         }
-        xcorr[i + 0] = c0;
+        xcorr[i] = c0;
         xcorr[i + 1] = c1;
         xcorr[i + 2] = c2;
         xcorr[i + 3] = c3;
@@ -98,10 +100,10 @@ pub(crate) fn pitch_search(
     for j in 0..y_lp4.len() {
         y_lp4[j] = y[2 * j];
     }
-    pitch_xcorr(&x_lp4, &y_lp4, &mut xcorr[0..(max_pitch / 4)]);
+    pitch_xcorr(x_lp4, y_lp4, &mut xcorr[0..(max_pitch / 4)]);
 
     let (best_pitch, second_best_pitch) =
-        find_best_pitch(&xcorr[0..(max_pitch / 4)], &y_lp4, len / 4);
+        find_best_pitch(&xcorr[0..(max_pitch / 4)], y_lp4, len / 4);
 
     /* Finer search with 2x decimation */
     for i in 0..(max_pitch as isize / 2) {
@@ -118,7 +120,7 @@ pub(crate) fn pitch_search(
         xcorr[i as usize] = sum.max(-1.0);
     }
 
-    let (best_pitch, _) = find_best_pitch(&xcorr, &y, len / 2);
+    let (best_pitch, _) = find_best_pitch(xcorr, y, len / 2);
 
     /* Refine by pseudo-interpolation */
     let offset: isize = if best_pitch > 0 && best_pitch < (max_pitch / 2) - 1 {
@@ -162,15 +164,16 @@ pub(crate) fn pitch_downsample(
     // Noise floor -40 dB
     ac[0] *= 1.0001;
     // Lag windowing
-    for i in 1..5 {
-        ac[i] -= ac[i] * (0.008 * i as f32) * (0.008 * i as f32);
+    for (i, sample) in ac[1..5].iter_mut().enumerate() {
+        let lag = (i + 1) as f32;
+        *sample -= *sample * (0.008 * lag) * (0.008 * lag);
     }
 
     celt_lpc(lpc, ac);
     let mut tmp = 1.0;
-    for i in 0..4 {
+    for sample in &mut lpc[..4] {
         tmp *= 0.9;
-        lpc[i] *= tmp;
+        *sample *= tmp;
     }
     // Add a zero
     lpc2[0] = lpc[0] + 0.8;

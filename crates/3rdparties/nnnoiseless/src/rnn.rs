@@ -30,10 +30,10 @@ const TANSIG_TABLE: [f32; 201] = [
 
 fn tansig_approx(x: f32) -> f32 {
     // Tests are reversed to catch NaNs
-    if !(x < 8.0) {
+    if !matches!(x.partial_cmp(&8.0), Some(std::cmp::Ordering::Less)) {
         return 1.0;
     }
-    if !(x > -8.0) {
+    if !matches!(x.partial_cmp(&-8.0), Some(std::cmp::Ordering::Greater)) {
         return -1.0;
     }
 
@@ -190,7 +190,9 @@ fn inner_p(xs: &[i8], ys: &[f32]) -> f32 {
     let mut sum3 = 0.0;
 
     let n_4 = n - n % 4;
-    for (x, y) in xs[..n_4].chunks_exact(4).zip(ys[..n_4].chunks_exact(4)) {
+    let (x_chunks, _) = xs[..n_4].as_chunks::<4>();
+    let (y_chunks, _) = ys[..n_4].as_chunks::<4>();
+    for (x, y) in x_chunks.iter().zip(y_chunks) {
         sum0 += x[0] as f32 * y[0];
         sum1 += x[1] as f32 * y[1];
         sum2 += x[2] as f32 * y[2];
@@ -208,26 +210,26 @@ fn compute_dense(layer: &DenseLayer, output: &mut [f32], input: &[f32]) {
     let m = layer.nb_inputs;
     let n = layer.nb_neurons;
 
-    for i in 0..n {
+    for (i, sample) in output[..n].iter_mut().enumerate() {
         // Compute update gate.
         let sum =
             layer.bias[i] as f32 + inner_p(&layer.input_weights[(i * m)..((i + 1) * m)], input);
-        output[i] = WEIGHTS_SCALE * sum;
+        *sample = WEIGHTS_SCALE * sum;
     }
     match layer.activation {
         Activation::Sigmoid => {
-            for i in 0..n {
-                output[i] = sigmoid_approx(output[i]);
+            for sample in &mut output[..n] {
+                *sample = sigmoid_approx(*sample);
             }
         }
         Activation::Tanh => {
-            for i in 0..n {
-                output[i] = tansig_approx(output[i]);
+            for sample in &mut output[..n] {
+                *sample = tansig_approx(*sample);
             }
         }
         Activation::Relu => {
-            for i in 0..n {
-                output[i] = relu(output[i]);
+            for sample in &mut output[..n] {
+                *sample = relu(*sample);
             }
         }
     }
@@ -244,12 +246,12 @@ fn compute_gru(
     let m = gru.nb_inputs;
     let n = gru.nb_neurons;
 
-    for i in 0..n {
+    for (i, update) in z[..n].iter_mut().enumerate() {
         // Compute update gate.
         let sum = gru.bias[i] as f32
             + inner_p(&gru.input_weights[(i * m)..((i + 1) * m)], input)
             + inner_p(&gru.recurrent_weights[(i * n)..((i + 1) * n)], state);
-        z[i] = sigmoid_approx(WEIGHTS_SCALE * sum);
+        *update = sigmoid_approx(WEIGHTS_SCALE * sum);
     }
     for i in 0..n {
         // Compute reset gate.

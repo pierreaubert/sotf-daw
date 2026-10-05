@@ -6,7 +6,9 @@ pub(super) fn inner_prod(xs: &[f32], ys: &[f32], n: usize) -> f32 {
     let mut sum3 = 0.0;
 
     let n_4 = n - n % 4;
-    for (x, y) in xs[..n_4].chunks_exact(4).zip(ys[..n_4].chunks_exact(4)) {
+    let (x_chunks, _) = xs[..n_4].as_chunks::<4>();
+    let (y_chunks, _) = ys[..n_4].as_chunks::<4>();
+    for (x, y) in x_chunks.iter().zip(y_chunks) {
         sum0 += x[0] * y[0];
         sum1 += x[1] * y[1];
         sum2 += x[2] * y[2];
@@ -91,4 +93,3 @@ pub(super) fn fir5(x: &[f32], num: &[f32], y: &mut [f32], mem: &mut [f32]) {
     mem[3] = mem3;
     mem[4] = mem4;
 }
-

@@ -6,6 +6,7 @@ use once_cell::sync::OnceCell;
 
 const SECOND_CHECK: [usize; 16] = [0, 0, 3, 2, 3, 2, 5, 2, 3, 2, 3, 2, 5, 2, 3, 2];
 
+#[expect(clippy::too_many_arguments, reason = "preserve the upstream pitch-search call contract")]
 pub(crate) fn remove_doubling(
     x: &[f32],
     mut max_period: usize,
@@ -49,7 +50,7 @@ pub(crate) fn remove_doubling(
     let mut g = g0;
 
     // Look for any pitch at T/k */
-    for k in 2..=15 {
+    for (k, &second_check) in SECOND_CHECK.iter().enumerate().take(16).skip(2) {
         let t1 = (2 * t0 + k) / (2 * k);
         if t1 < min_period {
             break;
@@ -58,7 +59,7 @@ pub(crate) fn remove_doubling(
         let t1b = if k == 2 {
             if t1 + t0 > max_period { t0 } else { t0 + t1 }
         } else {
-            (2 * SECOND_CHECK[k] * t0 + k) / (2 * k)
+            (2 * second_check * t0 + k) / (2 * k)
         };
         xy = inner_prod(&x[max_period..], &x[(max_period - t1)..], n);
         let xy2 = inner_prod(&x[max_period..], &x[(max_period - t1b)..], n);
@@ -185,9 +186,9 @@ fn common() -> &'static CommonState {
     if COMMON.get().is_none() {
         let pi = std::f64::consts::PI;
         let mut half_window = [0.0; FRAME_SIZE];
-        for i in 0..FRAME_SIZE {
+        for (i, sample) in half_window.iter_mut().enumerate() {
             let sin = (0.5 * pi * (i as f64 + 0.5) / FRAME_SIZE as f64).sin();
-            half_window[i] = (0.5 * pi * sin * sin).sin() as f32;
+            *sample = (0.5 * pi * sin * sin).sin() as f32;
         }
 
         let mut dct_table = [0.0; NB_BANDS * NB_BANDS];
@@ -229,12 +230,12 @@ pub(crate) fn fft_scratch_len() -> usize {
 /// A brute-force DCT (discrete cosine transform) of size NB_BANDS.
 pub(crate) fn dct(out: &mut [f32], x: &[f32]) {
     let c = common();
-    for i in 0..NB_BANDS {
+    for (i, sample) in out[..NB_BANDS].iter_mut().enumerate() {
         let mut sum = 0.0;
-        for j in 0..NB_BANDS {
-            sum += x[j] * c.dct_table[j * NB_BANDS + i];
+        for (j, &input) in x[..NB_BANDS].iter().enumerate() {
+            sum += input * c.dct_table[j * NB_BANDS + i];
         }
-        out[i] = (sum as f64 * (2.0 / NB_BANDS as f64).sqrt()) as f32;
+        *sample = (sum as f64 * (2.0 / NB_BANDS as f64).sqrt()) as f32;
     }
 }
 
@@ -315,20 +316,20 @@ mod tests {
                 SINE_BIN => (0.0, -0.375),
                 _ => (0.0, 0.0),
             };
-            assert!((value.re - expected_re).abs() < 2e-5, "real bin {bin}");
-            assert!((value.im - expected_im).abs() < 2e-5, "imaginary bin {bin}");
+            assert!((value.re - expected_re).abs() < 2e-5, "real bin {}", bin);
+            assert!((value.im - expected_im).abs() < 2e-5, "imaginary bin {}", bin);
         }
 
         let mut output = [0.0; WINDOW_SIZE];
         inverse_transform(&mut output, &spectrum, &mut fft_input, &mut fft_scratch);
         for (sample, (actual, expected)) in output.iter().zip(input).enumerate() {
-            assert!((actual - expected).abs() < 2e-5, "sample {sample}");
+            assert!((actual - expected).abs() < 2e-5, "sample {}", sample);
         }
     }
 
     fn to_f32(bytes: &[u8]) -> Vec<f32> {
         let mut ret = Vec::with_capacity(bytes.len() / 2);
-        for x in bytes.chunks_exact(2) {
+        for x in bytes.as_chunks::<2>().0 {
             ret.push(i16::from_le_bytes([x[0], x[1]]) as f32);
         }
         ret
@@ -336,7 +337,7 @@ mod tests {
 
     fn to_i16(bytes: &[u8]) -> Vec<i16> {
         let mut ret = Vec::with_capacity(bytes.len() / 2);
-        for x in bytes.chunks_exact(2) {
+        for x in bytes.as_chunks::<2>().0 {
             ret.push(i16::from_le_bytes([x[0], x[1]]));
         }
         ret
@@ -350,7 +351,7 @@ mod tests {
         let mut out_buf = [0.0; FRAME_SIZE];
         let mut state = DenoiseState::new();
         let mut first = true;
-        for chunk in reference_input.chunks_exact(FRAME_SIZE) {
+        for chunk in reference_input.as_chunks::<FRAME_SIZE>().0 {
             state.process_frame(&mut out_buf[..], chunk);
             if !first {
                 output.extend_from_slice(&out_buf[..]);

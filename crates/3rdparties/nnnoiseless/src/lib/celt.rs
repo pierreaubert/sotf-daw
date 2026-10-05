@@ -22,7 +22,7 @@ pub(super) fn celt_lpc(lpc: &mut [f32], ac: &[f32]) {
         let r = -rr / error;
         // Update LPC coefficients and total error
         lpc[i] = r;
-        for j in 0..((i + 1) / 2) {
+        for j in 0..i.div_ceil(2) {
             let tmp1 = lpc[j];
             let tmp2 = lpc[i - 1 - j];
             lpc[j] = tmp1 + r * tmp2;
@@ -53,4 +53,3 @@ pub(super) fn celt_autocorr(x: &[f32], ac: &mut [f32]) {
         ac[k] += d;
     }
 }
-

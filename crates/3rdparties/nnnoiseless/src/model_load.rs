@@ -685,7 +685,7 @@ mod tests {
             text.push('\n');
         };
         for (layer, code) in LAYERS.iter().zip(activations.iter()) {
-            write!(text, "{} {} {}\n", layer.inputs, layer.neurons, code).unwrap();
+            writeln!(text, "{} {} {}", layer.inputs, layer.neurons, code).unwrap();
             if layer.gru {
                 let wide = 3 * layer.neurons;
                 push_values(&mut text, layer.inputs * wide, &mut position);
@@ -785,7 +785,7 @@ mod tests {
             text.push('\n');
         };
         for (layer, code) in LAYERS.iter().zip(activations.iter()) {
-            write!(text, "{} {} {}\n", layer.inputs, layer.neurons, code).unwrap();
+            writeln!(text, "{} {} {}", layer.inputs, layer.neurons, code).unwrap();
             if layer.gru {
                 let wide = 3 * layer.neurons;
                 push_values(&mut text, layer.inputs * wide, &mut weight_position, weight);
