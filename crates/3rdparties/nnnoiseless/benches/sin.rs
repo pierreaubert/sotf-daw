@@ -12,7 +12,10 @@ pub fn bench_sin(c: &mut Criterion) {
     c.bench_function("nnnoiseless sin/440/1", |b| {
         b.iter(|| {
             let mut state = nnnoiseless::DenoiseState::new();
-            for chunk in input.chunks_exact(nnnoiseless::DenoiseState::FRAME_SIZE) {
+            for chunk in input
+                .as_chunks::<{ nnnoiseless::DenoiseState::FRAME_SIZE }>()
+                .0
+            {
                 state.process_frame(&mut output[..], chunk);
             }
         })
