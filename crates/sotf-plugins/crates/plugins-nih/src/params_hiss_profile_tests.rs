@@ -1845,3 +1845,69 @@ fn hiss_native_host_action_edges_allocate_nothing() {
         Some(ParameterValue::Bool(false))
     );
 }
+
+#[test]
+fn hiss_native_legacy_generation_preserves_nonempty_profile_with_canonical_save() {
+    for profile in [seeded_v1(2, RATE_48K), seeded_v2(2, RATE_48K)] {
+        let mut envelope: serde_json::Value =
+            serde_json::from_str(&encode_hiss_field(0, Some(&profile))).unwrap();
+        envelope["generation"] = serde_json::json!(37);
+        let legacy = envelope.to_string();
+        let (generation, decoded) = decode_hiss_field(&legacy, 2).unwrap();
+        assert_eq!(generation, 37);
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            serde_json::to_value(&profile).unwrap()
+        );
+        let params = hiss_params();
+        let incoming = PluginState {
+            version: "legacy-generation".to_owned(),
+            params: BTreeMap::new(),
+            fields: BTreeMap::from([(HISS_PROFILE_STATE_FIELD.to_string(), legacy)]),
+        };
+        assert!(params.validate_state(&incoming, false, false, Some(48_000.0)));
+        assert_eq!(
+            params
+                .hiss_profile_state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .pending_generation,
+            Some(37)
+        );
+        let saved = params.serialize_fields();
+        let (saved_generation, saved_profile) =
+            decode_hiss_field(&saved[HISS_PROFILE_STATE_FIELD], 2).unwrap();
+        assert_eq!(saved_generation, 0);
+        assert_eq!(
+            serde_json::to_value(saved_profile).unwrap(),
+            serde_json::to_value(&profile).unwrap()
+        );
+        assert!(params.validate_state(
+            &PluginState {
+                fields: saved,
+                ..incoming
+            },
+            false,
+            false,
+            Some(48_000.0)
+        ));
+    }
+}
+
+#[test]
+fn hiss_native_clear_runtime_revision_preserves_semantic_empty_state() {
+    let params = hiss_params();
+    let mut plugin = plugins_bridge::create_plugin("HissReducer", 2, 48_000.0, "{}").unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    install_snapshot(&params, &*plugin);
+    let before = params.serialize_fields();
+    hiss_clear_profile(plugin.as_mut()).unwrap();
+    let after = params.serialize_fields();
+    assert_eq!(
+        before, after,
+        "clearing an already empty profile changes no persisted content"
+    );
+    assert_eq!(after, hiss_params().serialize_fields());
+}

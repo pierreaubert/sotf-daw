@@ -7,7 +7,7 @@
 //! only; none is called from the realtime `process` callback.
 //!
 //! The field value is a JSON object with three keys: `version` (always 1),
-//! `generation` (the source snapshot export generation for Busy coherence),
+//! `generation` (canonical zero; legacy source revisions remain readable),
 //! and `captured_profile` (the exact profile object or explicit null for a
 //! pending clear). A missing field preserves the accepted profile; explicit
 //! null clears it; malformed blobs reject before any mutation.
@@ -67,10 +67,11 @@ pub(crate) fn is_hiss_momentary_id(id: &str) -> bool {
     matches!(id, "learn_noise" | "clear_profile")
 }
 
-/// Encodes a generation-tagged Hiss profile field.
+/// Encodes semantic Hiss profile content with a stable v1 envelope.
 ///
 /// Serializes `profile` exactly (v1 floors-only or v2 with spectrum) with
-/// its source `generation`. A `None` profile encodes explicit null for a
+/// a canonical zero revision. Runtime `generation` stays in the live store.
+/// A `None` profile encodes explicit null for a
 /// pending clear. Runs on control threads only; allocates the JSON string.
 ///
 /// # Examples
@@ -79,14 +80,18 @@ pub(crate) fn is_hiss_momentary_id(id: &str) -> bool {
 /// let encoded = encode_hiss_field(42, None);
 /// assert!(encoded.contains("\"captured_profile\":null"));
 /// ```
-pub(crate) fn encode_hiss_field(generation: u64, profile: Option<&NoiseProfileData>) -> String {
+pub(crate) fn encode_hiss_field(_generation: u64, profile: Option<&NoiseProfileData>) -> String {
     let profile = match profile {
         Some(data) => serde_json::to_value(data).unwrap_or(serde_json::Value::Null),
         None => serde_json::Value::Null,
     };
     serde_json::json!({
         "version": HISS_STATE_VERSION,
-        "generation": generation,
+        // Retain the v1 envelope for existing readers. Runtime revisions describe
+        // snapshot synchronization, not semantic profile identity; persisting
+        // them makes identical process/flush states differ. Legacy revisions
+        // remain accepted by the decoder and runtime tracking stays unchanged.
+        "generation": 0,
         "captured_profile": profile,
     })
     .to_string()
