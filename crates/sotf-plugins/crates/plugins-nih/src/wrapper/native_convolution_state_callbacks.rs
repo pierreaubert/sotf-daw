@@ -23,7 +23,7 @@ use clap_sys::plugin::clap_plugin;
 use clap_sys::process::{CLAP_PROCESS_ERROR, clap_process};
 use clap_sys::stream::{clap_istream, clap_ostream};
 use nih_plug::prelude::{
-    AuxiliaryBuffers, Buffer, BufferConfig, ClapPlugin, Plugin as NihPlugin, ProcessMode,
+    AuxiliaryBuffers, Buffer, BufferConfig, ClapPlugin, Params, Plugin as NihPlugin, ProcessMode,
     ProcessStatus,
 };
 use nih_plug::wrapper::clap::Wrapper;
@@ -1574,15 +1574,14 @@ struct ImpulseFile(PathBuf);
 
 impl ImpulseFile {
     fn write_true_stereo(samples: [[i16; 4]; 3]) -> Self {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "sotf-native-convolution-state-{}-{unique}.wav",
-            std::process::id()
-        ));
-        write_pcm16_wav(&path, &samples);
+        let (path, mut file) = reserve_impulse_file().unwrap();
+        if let Err(error) = write_pcm16_wav_to(&mut file, &samples) {
+            drop(file);
+            let _ = std::fs::remove_file(&path);
+            panic!("failed to finalize owned impulse fixture: {error}");
+        }
+        // The encoder flushed this exclusive handle before readers open the file.
+        drop(file);
         Self(path)
     }
 
@@ -1605,7 +1604,32 @@ impl Drop for ImpulseFile {
     }
 }
 
+fn reserve_impulse_file() -> std::io::Result<(PathBuf, std::fs::File)> {
+    static NEXT_FIXTURE_ID: AtomicUsize = AtomicUsize::new(0);
+    loop {
+        let id = NEXT_FIXTURE_ID.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "sotf-native-convolution-state-{}-{id}.wav",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(file) => return Ok((path, file)),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    }
+}
+
 fn write_pcm16_wav(path: &Path, samples: &[[i16; 4]]) {
+    let mut file = std::fs::File::create(path).unwrap();
+    write_pcm16_wav_to(&mut file, samples).unwrap();
+}
+
+fn write_pcm16_wav_to(file: &mut std::fs::File, samples: &[[i16; 4]]) -> std::io::Result<()> {
     const CHANNELS: u16 = 4;
     const SAMPLE_RATE_HZ: u32 = 48_000;
     let data_bytes = u32::try_from(samples.len() * usize::from(CHANNELS) * 2).unwrap();
@@ -1627,7 +1651,8 @@ fn write_pcm16_wav(path: &Path, samples: &[[i16; 4]]) {
             bytes.extend_from_slice(&sample.to_le_bytes());
         }
     }
-    std::fs::write(path, bytes).unwrap();
+    std::io::Write::write_all(file, &bytes)?;
+    std::io::Write::flush(file)
 }
 
 #[cfg(target_os = "linux")]
@@ -3044,4 +3069,627 @@ fn vst3_embedded_convolution_editor_defers_retries_and_reloads_selected_ir() {
     );
     old_control.deactivate();
     reloaded.deactivate();
+}
+
+fn inactive_clap_scalar_value(plugin: &NativeClap, name: &str) -> f64 {
+    let pointer = plugin.plugin();
+    // SAFETY: the callback table belongs to this live wrapper, and get_value
+    // writes synchronously into the local scalar on the host control thread.
+    unsafe {
+        let extension = ((*pointer).get_extension.unwrap())(pointer, CLAP_EXT_PARAMS.as_ptr())
+            .cast::<clap_plugin_params>();
+        assert!(!extension.is_null());
+        let mut value = 0.0;
+        assert!(((*extension).get_value.unwrap())(
+            pointer,
+            plugin.parameter_id(name),
+            &mut value
+        ));
+        value
+    }
+}
+
+#[test]
+fn native_convolution_inactive_scalar_restore_publishes_host_values_transactionally() {
+    let subject = NativeClap::new();
+    let mut state = subject.new_state();
+    state
+        .params
+        .insert("mix".into(), ParamValue::F32(0.39488834));
+    state
+        .params
+        .insert("gain_db".into(), ParamValue::F32(-12.0));
+    assert!(subject.load_state(&state));
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Mix"),
+        f64::from(0.39488834_f32)
+    );
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Gain"),
+        f64::from(0.2_f32)
+    );
+    let accepted = subject.save_state();
+    let fresh = NativeClap::new();
+    assert!(fresh.load_stream(&accepted));
+    assert_eq!(
+        inactive_clap_scalar_value(&fresh, "Mix"),
+        f64::from(0.39488834_f32)
+    );
+    assert_eq!(
+        inactive_clap_scalar_value(&fresh, "Gain"),
+        f64::from(0.2_f32)
+    );
+    assert_eq!(fresh.save_state(), accepted);
+    for invalid in [
+        {
+            let mut invalid = state.clone();
+            invalid.params.insert("mix".into(), ParamValue::F32(2.0));
+            invalid
+                .params
+                .insert("gain_db".into(), ParamValue::F32(7.0));
+            invalid
+        },
+        {
+            let mut invalid = state.clone();
+            invalid.fields.insert(
+                IR_RESOURCE_FIELD.into(),
+                r#"{"version":99,"path":""}"#.into(),
+            );
+            invalid.params.insert("mix".into(), ParamValue::F32(0.9));
+            invalid
+        },
+        {
+            let mut invalid = state.clone();
+            invalid.fields.insert(
+                IR_RESOURCE_FIELD.into(),
+                r#"{"version":1,"path":"/nonexistent/sotf-restore-invalid.wav"}"#.into(),
+            );
+            invalid
+                .params
+                .insert("gain_db".into(), ParamValue::F32(7.0));
+            invalid
+        },
+    ] {
+        assert!(!fresh.load_state(&invalid));
+        assert_eq!(
+            inactive_clap_scalar_value(&fresh, "Mix"),
+            f64::from(0.39488834_f32)
+        );
+        assert_eq!(
+            inactive_clap_scalar_value(&fresh, "Gain"),
+            f64::from(0.2_f32)
+        );
+        assert_eq!(fresh.save_state(), accepted);
+    }
+}
+
+fn inactive_clap_scalar_flush(plugin: &NativeClap, name: &str, value: f64) {
+    let event = clap_event_param_value {
+        header: clap_event_header {
+            size: std::mem::size_of::<clap_event_param_value>() as u32,
+            time: 0,
+            space_id: CLAP_CORE_EVENT_SPACE_ID,
+            type_: CLAP_EVENT_PARAM_VALUE,
+            flags: 0,
+        },
+        param_id: plugin.parameter_id(name),
+        cookie: ptr::null_mut(),
+        note_id: -1,
+        port_index: -1,
+        channel: -1,
+        key: -1,
+        value,
+    };
+    let mut events = std::slice::from_ref(&event);
+    let input = clap_input_events {
+        ctx: (&mut events as *mut &[clap_event_param_value]).cast(),
+        size: Some(native_param_event_count),
+        get: Some(native_param_event_at),
+    };
+    let pointer = plugin.plugin();
+    // SAFETY: this inactive wrapper and borrowed event list remain live for
+    // the synchronous host control-thread flush; no output events are requested.
+    unsafe {
+        let params = ((*pointer).get_extension.unwrap())(pointer, CLAP_EXT_PARAMS.as_ptr())
+            .cast::<clap_plugin_params>();
+        ((*params).flush.unwrap())(pointer, &input, ptr::null());
+    }
+}
+
+#[test]
+fn native_convolution_fresh_failure_rollback_owns_only_unedited_scalar_revisions() {
+    for mode in ["untouched", "echo", "away-and-back", "later-edit"] {
+        let resource = ImpulseFile::write_true_stereo([
+            [16384, 0, 0, 16384],
+            [1024, 0, 0, -512],
+            [0, 0, 0, 0],
+        ]);
+        let mut subject = NativeClap::new();
+        inactive_clap_scalar_flush(&subject, "Mix", 0.8);
+        inactive_clap_scalar_flush(&subject, "Gain", 0.7);
+        let prior = (
+            inactive_clap_scalar_value(&subject, "Mix"),
+            inactive_clap_scalar_value(&subject, "Gain"),
+        );
+        let mut state = ir_state(&subject, &resource.absolute_path());
+        state
+            .params
+            .insert("gain_db".into(), ParamValue::F32(-12.0));
+        assert!(subject.load_state(&state));
+        assert_eq!(
+            inactive_clap_scalar_value(&subject, "Mix"),
+            f64::from(0.65_f32)
+        );
+        assert_eq!(
+            inactive_clap_scalar_value(&subject, "Gain"),
+            f64::from(0.2_f32)
+        );
+        if mode == "away-and-back" {
+            inactive_clap_scalar_flush(&subject, "Mix", 0.9);
+            inactive_clap_scalar_flush(&subject, "Gain", 0.1);
+        }
+        if mode == "echo" || mode == "away-and-back" {
+            inactive_clap_scalar_flush(&subject, "Mix", f64::from(0.65_f32));
+            inactive_clap_scalar_flush(&subject, "Gain", f64::from(0.2_f32));
+        }
+        if mode == "later-edit" {
+            inactive_clap_scalar_flush(&subject, "Mix", 0.37);
+            inactive_clap_scalar_flush(&subject, "Gain", 0.4);
+        }
+        let edited = (
+            inactive_clap_scalar_value(&subject, "Mix"),
+            inactive_clap_scalar_value(&subject, "Gain"),
+        );
+        let snapshot = decoded_state(&subject.save_state());
+        assert!(
+            matches!(snapshot.params.get("mix"), Some(ParamValue::F32(value)) if f64::from(*value) == edited.0)
+        );
+        resource.remove();
+        assert!(!subject.try_activate());
+        let expected = if mode == "untouched" || mode == "echo" {
+            prior
+        } else {
+            edited
+        };
+        assert_eq!(
+            (
+                inactive_clap_scalar_value(&subject, "Mix"),
+                inactive_clap_scalar_value(&subject, "Gain")
+            ),
+            expected,
+            "rollback mode {mode}"
+        );
+        let saved = decoded_state(&subject.save_state());
+        assert!(
+            matches!(saved.params.get("mix"), Some(ParamValue::F32(value)) if f64::from(*value) == expected.0)
+        );
+        let field: serde_json::Value =
+            serde_json::from_str(&saved.fields[IR_RESOURCE_FIELD]).unwrap();
+        assert_eq!(field["path"], "");
+    }
+}
+
+#[test]
+fn native_convolution_successful_fresh_init_uses_latest_flushed_scalars() {
+    let resource =
+        ImpulseFile::write_true_stereo([[16384, 0, 0, 16384], [1024, 0, 0, -512], [0, 0, 0, 0]]);
+    let mut subject = NativeClap::new();
+    let state = ir_state(&subject, &resource.absolute_path());
+    assert!(subject.load_state(&state));
+    inactive_clap_scalar_flush(&subject, "Mix", 0.37);
+    inactive_clap_scalar_flush(&subject, "Gain", 0.4);
+    let accepted = subject.save_state();
+    let mut control = NativeClap::new();
+    assert!(control.load_stream(&accepted));
+    subject.activate();
+    control.activate();
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Mix"),
+        f64::from(0.37_f32)
+    );
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Gain"),
+        f64::from(0.4_f32)
+    );
+    assert_eq!(
+        subject.process(&input_sequence(1307)),
+        control.process(&input_sequence(1307))
+    );
+    assert_eq!(subject.save_state(), control.save_state());
+}
+
+#[test]
+fn native_convolution_active_valid_replacement_refuses_without_scalar_or_history_change() {
+    let old =
+        ImpulseFile::write_true_stereo([[16384, 0, 0, 16384], [1024, 0, 0, -512], [0, 0, 0, 0]]);
+    let new = ImpulseFile::write_true_stereo([
+        [8192, 1024, -2048, 12288],
+        [512, 0, 0, 256],
+        [0, 0, 0, 0],
+    ]);
+    let mut subject = NativeClap::new();
+    assert!(subject.load_state(&ir_state(&subject, &old.absolute_path())));
+    let accepted = subject.save_state();
+    let mut control = NativeClap::new();
+    assert!(control.load_stream(&accepted));
+    subject.activate();
+    control.activate();
+    assert_eq!(
+        subject.process(&input_sequence(1207)),
+        control.process(&input_sequence(1207))
+    );
+    let mut replacement = ir_state(&subject, &new.absolute_path());
+    replacement
+        .params
+        .insert("mix".into(), ParamValue::F32(0.37));
+    replacement
+        .params
+        .insert("gain_db".into(), ParamValue::F32(-4.0));
+    assert!(!subject.load_state(&replacement));
+    assert_eq!(subject.save_state(), accepted);
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Mix"),
+        f64::from(0.65_f32)
+    );
+    assert_eq!(inactive_clap_scalar_value(&subject, "Gain"), 0.5);
+    assert_eq!(
+        subject.process(&input_sequence(257)),
+        control.process(&input_sequence(257))
+    );
+    subject.deactivate();
+    assert!(subject.load_state(&replacement));
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Mix"),
+        f64::from(0.37_f32)
+    );
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Gain"),
+        f64::from(0.4_f32)
+    );
+    assert_state_resource(&subject.save_state(), &new.absolute_path(), 0.37);
+}
+
+#[test]
+fn native_convolution_configured_constructor_failure_preserves_old_scalars_and_history() {
+    let old =
+        ImpulseFile::write_true_stereo([[16384, 0, 0, 16384], [1024, 0, 0, -512], [0, 0, 0, 0]]);
+    let new = ImpulseFile::write_true_stereo([
+        [8192, 1024, -2048, 12288],
+        [512, 0, 0, 256],
+        [0, 0, 0, 0],
+    ]);
+    let native = NativeClap::new();
+    let initial = ir_state(&native, &old.absolute_path());
+    let mut subject = NativeConvolutionStateProbe::default();
+    let mut control = NativeConvolutionStateProbe::default();
+    for plugin in [&mut subject, &mut control] {
+        assert!(plugin.params.validate_state(&initial, false, false, None));
+        plugin.params.deserialize_fields(&initial.fields);
+        initialize_generated_with_max_frames(plugin, MAX_FRAMES);
+    }
+    assert_eq!(
+        process_generated_sequence(&mut subject, &input_sequence(1207), 31),
+        process_generated_sequence(&mut control, &input_sequence(1207), 31)
+    );
+    let before_fields = subject.params.serialize_fields();
+    let before_mix = subject.params.value("mix");
+    let before_gain = subject.params.value("gain_db");
+    let mut replacement = ir_state(&native, &new.absolute_path());
+    replacement
+        .params
+        .insert("mix".into(), ParamValue::F32(0.37));
+    replacement
+        .params
+        .insert("gain_db".into(), ParamValue::F32(-4.0));
+    assert!(
+        subject
+            .params
+            .validate_state(&replacement, false, false, Some(SAMPLE_RATE))
+    );
+    subject.params.deserialize_fields(&replacement.fields);
+    assert_eq!(subject.params.value("mix"), before_mix);
+    assert_eq!(subject.params.value("gain_db"), before_gain);
+    new.remove();
+    let layout = <NativeConvolutionStateProbe as ClapPlugin>::clap_audio_io_layouts()
+        .iter()
+        .next()
+        .unwrap();
+    let config = BufferConfig {
+        sample_rate: SAMPLE_RATE,
+        min_buffer_size: Some(1),
+        max_buffer_size: MAX_FRAMES as u32,
+        process_mode: ProcessMode::Realtime,
+    };
+    let mut context = super::TestContext;
+    assert!(!NihPlugin::initialize(
+        &mut subject,
+        layout,
+        &config,
+        &mut context
+    ));
+    assert_eq!(subject.params.value("mix"), before_mix);
+    assert_eq!(subject.params.value("gain_db"), before_gain);
+    assert_eq!(subject.params.serialize_fields(), before_fields);
+    assert_eq!(
+        process_generated_sequence(&mut subject, &input_sequence(257), 31),
+        process_generated_sequence(&mut control, &input_sequence(257), 31)
+    );
+}
+
+#[test]
+fn native_convolution_superseded_fresh_load_failure_returns_committed_tuple_and_host_edits() {
+    for mode in ["untouched", "before", "before-away-back", "after"] {
+        let first = ImpulseFile::write_true_stereo([
+            [16384, 0, 0, 16384],
+            [1024, 0, 0, -512],
+            [0, 0, 0, 0],
+        ]);
+        let second = ImpulseFile::write_true_stereo([
+            [8192, 1024, -2048, 12288],
+            [512, 0, 0, 256],
+            [0, 0, 0, 0],
+        ]);
+        let mut subject = NativeClap::new();
+        let defaults = decoded_state(&subject.save_state());
+        let mut first_state = ir_state(&subject, &first.absolute_path());
+        first_state
+            .params
+            .insert("gain_db".into(), ParamValue::F32(-12.0));
+        assert!(subject.load_state(&first_state));
+        if mode == "before" || mode == "before-away-back" {
+            inactive_clap_scalar_flush(&subject, "Mix", 0.91);
+            inactive_clap_scalar_flush(&subject, "Gain", 0.73);
+        }
+        if mode == "before-away-back" {
+            inactive_clap_scalar_flush(&subject, "Mix", f64::from(0.65_f32));
+            inactive_clap_scalar_flush(&subject, "Gain", f64::from(0.2_f32));
+        }
+        let edited_before = (
+            inactive_clap_scalar_value(&subject, "Mix"),
+            inactive_clap_scalar_value(&subject, "Gain"),
+        );
+        let mut second_state = ir_state(&subject, &second.absolute_path());
+        second_state
+            .params
+            .insert("mix".into(), ParamValue::F32(0.37));
+        second_state
+            .params
+            .insert("gain_db".into(), ParamValue::F32(-4.0));
+        assert!(subject.load_state(&second_state));
+        if mode == "after" {
+            inactive_clap_scalar_flush(&subject, "Mix", 0.91);
+            inactive_clap_scalar_flush(&subject, "Gain", 0.73);
+        }
+        let edited_after = (
+            inactive_clap_scalar_value(&subject, "Mix"),
+            inactive_clap_scalar_value(&subject, "Gain"),
+        );
+        second.remove();
+        assert!(!subject.try_activate());
+        let expected = match mode {
+            "untouched" => (1.0, 0.5),
+            "before" | "before-away-back" => edited_before,
+            "after" => edited_after,
+            _ => unreachable!(),
+        };
+        assert_eq!(
+            (
+                inactive_clap_scalar_value(&subject, "Mix"),
+                inactive_clap_scalar_value(&subject, "Gain")
+            ),
+            expected,
+            "mode {mode}"
+        );
+        let saved = subject.save_state();
+        let decoded = decoded_state(&saved);
+        assert_eq!(
+            decoded.fields, defaults.fields,
+            "pending A never committed: {mode}"
+        );
+        for id in ["head_taps", "true_stereo", "use_nupc", "zero_latency_head"] {
+            assert_eq!(
+                serde_json::to_value(decoded.params.get(id)).unwrap(),
+                serde_json::to_value(defaults.params.get(id)).unwrap()
+            );
+        }
+        let mut control = NativeClap::new();
+        assert!(control.load_stream(&saved));
+        assert_eq!(control.save_state(), saved);
+        subject.activate();
+        control.activate();
+        assert_eq!(
+            subject.process(&input_sequence(1307)),
+            control.process(&input_sequence(1307))
+        );
+        assert_eq!(subject.save_state(), control.save_state());
+    }
+}
+
+#[test]
+fn native_convolution_successful_second_commit_then_failed_third_preserves_committed_second() {
+    let first =
+        ImpulseFile::write_true_stereo([[16384, 0, 0, 16384], [1024, 0, 0, -512], [0, 0, 0, 0]]);
+    let second = ImpulseFile::write_true_stereo([
+        [8192, 1024, -2048, 12288],
+        [512, 0, 0, 256],
+        [0, 0, 0, 0],
+    ]);
+    let third = ImpulseFile::write_true_stereo([[4096, 0, 0, 4096], [0, 0, 0, 0], [0, 0, 0, 0]]);
+    let native = NativeClap::new();
+    let first_state = ir_state(&native, &first.absolute_path());
+    let mut second_state = ir_state(&native, &second.absolute_path());
+    second_state
+        .params
+        .insert("mix".into(), ParamValue::F32(0.37));
+    second_state
+        .params
+        .insert("gain_db".into(), ParamValue::F32(-4.0));
+    for commit_second in [false, true] {
+        let mut subject = NativeConvolutionStateProbe::default();
+        assert!(
+            subject
+                .params
+                .validate_state(&first_state, false, false, None)
+        );
+        subject.params.deserialize_fields(&first_state.fields);
+        initialize_generated_with_max_frames(&mut subject, MAX_FRAMES);
+        if commit_second {
+            assert!(
+                subject
+                    .params
+                    .validate_state(&second_state, false, false, Some(SAMPLE_RATE))
+            );
+            subject.params.deserialize_fields(&second_state.fields);
+            initialize_generated_with_max_frames(&mut subject, MAX_FRAMES);
+        }
+        let committed = if commit_second {
+            &second_state
+        } else {
+            &first_state
+        };
+        let mut control = NativeConvolutionStateProbe::default();
+        assert!(control.params.validate_state(committed, false, false, None));
+        control.params.deserialize_fields(&committed.fields);
+        initialize_generated_with_max_frames(&mut control, MAX_FRAMES);
+        for plugin in [&subject, &control] {
+            assert!(
+                plugin
+                    .params
+                    .native_float_param("mix")
+                    .unwrap()
+                    .set_plain_value_for_initialization(0.91)
+            );
+            assert!(
+                plugin
+                    .params
+                    .native_float_param("gain_db")
+                    .unwrap()
+                    .set_plain_value_for_initialization(9.2)
+            );
+        }
+        assert_eq!(
+            process_generated_sequence(&mut subject, &input_sequence(1207), 31),
+            process_generated_sequence(&mut control, &input_sequence(1207), 31)
+        );
+        if !commit_second {
+            // Warm equal committed A histories before entering the deactivated
+            // pending-B transition; inactive pending state must not process.
+            assert!(
+                subject
+                    .params
+                    .validate_state(&second_state, false, false, Some(SAMPLE_RATE))
+            );
+            subject.params.deserialize_fields(&second_state.fields);
+            assert_eq!(subject.params.value("mix"), control.params.value("mix"));
+            assert_eq!(
+                subject.params.value("gain_db"),
+                control.params.value("gain_db")
+            );
+        }
+        let before_fields = control.params.serialize_fields();
+        let before_mix = subject.params.value("mix");
+        let before_gain = subject.params.value("gain_db");
+        let mut third_state = ir_state(&native, &third.absolute_path());
+        third_state
+            .params
+            .insert("mix".into(), ParamValue::F32(0.2));
+        assert!(
+            subject
+                .params
+                .validate_state(&third_state, false, false, Some(SAMPLE_RATE))
+        );
+        subject.params.deserialize_fields(&third_state.fields);
+        // Remove only after admission, preserving the constructor-failure boundary.
+        let missing = third.0.with_extension(format!("missing-{commit_second}"));
+        std::fs::rename(&third.0, &missing).unwrap();
+        let layout = <NativeConvolutionStateProbe as ClapPlugin>::clap_audio_io_layouts()
+            .iter()
+            .next()
+            .unwrap();
+        let config = BufferConfig {
+            sample_rate: SAMPLE_RATE,
+            min_buffer_size: Some(1),
+            max_buffer_size: MAX_FRAMES as u32,
+            process_mode: ProcessMode::Realtime,
+        };
+        let mut context = super::TestContext;
+        assert!(!NihPlugin::initialize(
+            &mut subject,
+            layout,
+            &config,
+            &mut context
+        ));
+        std::fs::rename(&missing, &third.0).unwrap();
+        assert_eq!(subject.params.value("mix"), before_mix);
+        assert_eq!(subject.params.value("gain_db"), before_gain);
+        assert_eq!(subject.params.serialize_fields(), before_fields);
+        assert_eq!(
+            process_generated_sequence(&mut subject, &input_sequence(257), 31),
+            process_generated_sequence(&mut control, &input_sequence(257), 31)
+        );
+    }
+}
+
+#[test]
+fn native_convolution_deactivated_second_commit_and_rejected_third_keep_host_state_coherent() {
+    let first =
+        ImpulseFile::write_true_stereo([[16384, 0, 0, 16384], [1024, 0, 0, -512], [0, 0, 0, 0]]);
+    let second = ImpulseFile::write_true_stereo([
+        [8192, 1024, -2048, 12288],
+        [512, 0, 0, 256],
+        [0, 0, 0, 0],
+    ]);
+    let third = ImpulseFile::write_true_stereo([[4096, 0, 0, 4096], [0, 0, 0, 0], [0, 0, 0, 0]]);
+    let mut subject = NativeClap::new();
+    assert!(subject.load_state(&ir_state(&subject, &first.absolute_path())));
+    subject.activate();
+    subject.process(&input_sequence(257));
+    subject.deactivate();
+    let mut replacement = ir_state(&subject, &second.absolute_path());
+    replacement
+        .params
+        .insert("mix".into(), ParamValue::F32(0.37));
+    replacement
+        .params
+        .insert("gain_db".into(), ParamValue::F32(-4.0));
+    assert!(subject.load_state(&replacement));
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Mix"),
+        f64::from(0.37_f32)
+    );
+    assert_eq!(
+        inactive_clap_scalar_value(&subject, "Gain"),
+        f64::from(0.4_f32)
+    );
+    inactive_clap_scalar_flush(&subject, "Mix", 0.91);
+    inactive_clap_scalar_flush(&subject, "Gain", 0.73);
+    let accepted = subject.save_state();
+    let accepted_values = (
+        inactive_clap_scalar_value(&subject, "Mix"),
+        inactive_clap_scalar_value(&subject, "Gain"),
+    );
+    let mut rejected = ir_state(&subject, &third.absolute_path());
+    rejected.params.insert("mix".into(), ParamValue::F32(0.2));
+    third.remove();
+    // Native CLAP load rejects a missing resource during admission. The generated
+    // probe separately exercises disappearance after successful admission.
+    assert!(!subject.load_state(&rejected));
+    assert_eq!(subject.save_state(), accepted);
+    assert_eq!(
+        (
+            inactive_clap_scalar_value(&subject, "Mix"),
+            inactive_clap_scalar_value(&subject, "Gain")
+        ),
+        accepted_values
+    );
+    let mut control = NativeClap::new();
+    assert!(control.load_stream(&accepted));
+    assert_eq!(control.save_state(), accepted);
+    subject.activate();
+    control.activate();
+    assert_eq!(
+        subject.process(&input_sequence(1307)),
+        control.process(&input_sequence(1307))
+    );
+    assert_eq!(subject.save_state(), control.save_state());
 }
