@@ -34,7 +34,9 @@ capture log is `/tmp/sotf-aud132-preedit-render-capture4.log` (SHA256
 `9650582bac82f6689591629e99545980272ecb0fe4fd78bd4c6a4a9dd98ccf32`).
 
 The pre-edit N=2, 256, and 512 outputs have complete digests. The post-edit
-control test reproduces them exactly:
+control test reproduces them exactly on x86. See the
+[cross-architecture control audit](upmixer-retained-control-portability.md)
+for recovered full-vector fixtures and the strict ARM64 numerical comparison:
 
 | N | HR disabled FNV-1a | HR enabled FNV-1a | Emitted frames, off/on |
 |---:|---:|---:|---:|

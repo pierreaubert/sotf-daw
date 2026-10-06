@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "provenance": {
+    "source_revision": "ce7b549feee25c7a312c9026470960bcea686ee7",
+    "aggregate_revision": "be829da42dcc7603669b3c72058f07eb7a46dd74",
+    "ci_run": "http://192.168.1.32:3001/pierre/all_of_sotf/actions/runs/938",
+    "artifact_sha256": "f66b2e403f9fc3adb03b94642f745df97c045ea3efc392ab5dfbacc18cb990b5",
+    "target": "x86_64-unknown-linux-gnu",
+    "rustc": "1.99.0",
+    "cargo_lock_sha256": "2c617997ce829d8bb56ad1ea0b8c34a0f59f3d55d03a3c44c4b8b587f1a395ca"
+  },
+  "input": {
+    "file": "n2_pre_edit_control_input.f32le",
+    "sha256": "704cbc984e7b54376aa3896be26902bc249c0d500c0babb56d3455b9174f05f1",
+    "fnv1a_f32le": "9472a42f24a8c44e",
+    "stereo_frames": 4096,
+    "sample_rate_hz": 48000
+  },
+  "limits": {
+    "maximum_absolute_delta": "f32::EPSILON",
+    "rms_delta": "f32::EPSILON / 8"
+  },
+  "outputs": [
+    {
+      "file": "n2_pre_edit_hr_off_full.f32le",
+      "fft_size": 2,
+      "hr_enabled": false,
+      "stereo_frames": 4609,
+      "sha256": "138ea3fcba40dfaa4792ba47cd0e4a69579ebc7986c561c525523f0c636f648e",
+      "original_fnv1a_f32le": "02ddc52702cb7e9f"
+    },
+    {
+      "file": "n2_pre_edit_hr_on_full.f32le",
+      "fft_size": 2,
+      "hr_enabled": true,
+      "stereo_frames": 4864,
+      "sha256": "eea185139c35033fa2d934d34050ee6e07512aab46183e0e159d8885084d7d00",
+      "original_fnv1a_f32le": "5605bd821b4857ee"
+    },
+    {
+      "file": "n256_pre_edit_hr_off_full.f32le",
+      "fft_size": 256,
+      "hr_enabled": false,
+      "stereo_frames": 4736,
+      "sha256": "c2758b5e0633a4d4776b6db1a2b44bc8cba5bb538465f1789b3d05af8d5d3d0c",
+      "original_fnv1a_f32le": "b106d5e545f3b14f"
+    },
+    {
+      "file": "n256_pre_edit_hr_on_full.f32le",
+      "fft_size": 256,
+      "hr_enabled": true,
+      "stereo_frames": 4864,
+      "sha256": "670e79d901b791d10a419cf620a98b52f22b780c18defffc5617e072627b19ab",
+      "original_fnv1a_f32le": "7aaff37f8e9d2070"
+    },
+    {
+      "file": "n512_pre_edit_hr_off_full.f32le",
+      "fft_size": 512,
+      "hr_enabled": false,
+      "stereo_frames": 4864,
+      "sha256": "7d3c3cf9d9f3c89dccf5b59f850ad9cf8dee4cd42161e959db89f4c1ca66da5b",
+      "original_fnv1a_f32le": "b6b9e4eaa0d6739b"
+    },
+    {
+      "file": "n512_pre_edit_hr_on_full.f32le",
+      "fft_size": 512,
+      "hr_enabled": true,
+      "stereo_frames": 4864,
+      "sha256": "a24c6b6ed2d55028024095e88a97fd241e012dc74609dbf247e77a31771e1674",
+      "original_fnv1a_f32le": "941ff0e437b3e7f3"
+    }
+  ]
+}

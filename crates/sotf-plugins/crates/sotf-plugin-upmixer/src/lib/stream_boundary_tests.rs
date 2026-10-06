@@ -2469,6 +2469,81 @@ fn capture_samples(fft_size: usize, route: &str, signal: &str, samples: &[f32]) 
     std::fs::write(&path, bytes).unwrap();
 }
 
+fn aud132_control_fixture(fft_size: usize, hr_enabled: bool) -> &'static [u8] {
+    match (fft_size, hr_enabled) {
+        (2, false) => {
+            include_bytes!("../../tests/data/aud132-preedit/n2_pre_edit_hr_off_full.f32le")
+        }
+        (2, true) => include_bytes!("../../tests/data/aud132-preedit/n2_pre_edit_hr_on_full.f32le"),
+        (256, false) => {
+            include_bytes!("../../tests/data/aud132-preedit/n256_pre_edit_hr_off_full.f32le")
+        }
+        (256, true) => {
+            include_bytes!("../../tests/data/aud132-preedit/n256_pre_edit_hr_on_full.f32le")
+        }
+        (512, false) => {
+            include_bytes!("../../tests/data/aud132-preedit/n512_pre_edit_hr_off_full.f32le")
+        }
+        (512, true) => {
+            include_bytes!("../../tests/data/aud132-preedit/n512_pre_edit_hr_on_full.f32le")
+        }
+        _ => unreachable!("unexpected AUD132 control size"),
+    }
+}
+
+fn aud132_control_error(actual: &[f32], expected: &[f32]) -> Result<(f64, f64), String> {
+    if actual.len() != expected.len() || actual.is_empty() {
+        return Err(format!(
+            "output sample count changed: expected={} actual={}",
+            expected.len(),
+            actual.len()
+        ));
+    }
+    let mut maximum_delta = 0.0_f64;
+    let mut squared_delta = 0.0_f64;
+    for (&actual, &expected) in actual.iter().zip(expected) {
+        if !actual.is_finite() || !expected.is_finite() {
+            return Err("non-finite control sample".to_owned());
+        }
+        let delta = (f64::from(actual) - f64::from(expected)).abs();
+        maximum_delta = maximum_delta.max(delta);
+        squared_delta += delta * delta;
+    }
+    let rms_delta = (squared_delta / actual.len() as f64).sqrt();
+    // The archived x86 vectors reproduce all original digests. ARM64's FFT
+    // arithmetic differs within one unit-scale f32 epsilon; its RMS error
+    // must also remain below one eighth epsilon. See the cross-ISA audit.
+    let maximum_limit = f64::from(f32::EPSILON);
+    let rms_limit = maximum_limit / 8.0;
+    if maximum_delta > maximum_limit || rms_delta > rms_limit {
+        return Err(format!(
+            "full-vector error max={maximum_delta:.9e} (limit={maximum_limit:.9e}) rms={rms_delta:.9e} (limit={rms_limit:.9e})"
+        ));
+    }
+    Ok((maximum_delta, rms_delta))
+}
+
+#[test]
+fn aud132_full_output_comparison_rejects_timing_tail_and_gain_errors() {
+    let expected = samples_from_f32le(aud132_control_fixture(256, true));
+    assert!(aud132_control_error(&expected, &expected).is_ok());
+
+    let mut shifted = expected.clone();
+    shifted.rotate_left(2); // One interleaved stereo frame.
+    assert!(aud132_control_error(&shifted, &expected).is_err());
+    assert!(aud132_control_error(&expected[..expected.len() - 2], &expected).is_err());
+
+    let amplified: Vec<f32> = expected.iter().map(|sample| sample * 1.000_001).collect();
+    assert!(aud132_control_error(&amplified, &expected).is_err());
+
+    // A sustained error below the maximum limit must still fail the RMS limit.
+    let biased: Vec<f32> = expected
+        .iter()
+        .map(|sample| sample + f32::EPSILON / 4.0)
+        .collect();
+    assert!(aud132_control_error(&biased, &expected).is_err());
+}
+
 #[test]
 fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
     const INPUT_FRAMES: usize = 4_096;
@@ -2520,7 +2595,18 @@ fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
                 output.len() / plugin.output_channels(),
                 plugin.latency_samples(),
             );
-            if digest != expected_digest {
+            let expected_output = samples_from_f32le(aud132_control_fixture(fft_size, hr_enabled));
+            // Verify recovered fixture bytes against the unchanged historical oracle.
+            assert_eq!(sample_digest(&expected_output), expected_digest);
+            match aud132_control_error(&output, &expected_output) {
+                Ok((maximum_delta, rms_delta)) => eprintln!(
+                    "AUD132 cross-ISA control N={fft_size} HR={hr_enabled} max_delta={maximum_delta:.9e} rms_delta={rms_delta:.9e}"
+                ),
+                Err(error) => mismatches.push(format!("N={fft_size} HR={hr_enabled}: {error}")),
+            }
+            // Retain the original bit-exact check on the architecture that
+            // reproduces it; every target checks the full archived vector above.
+            if cfg!(target_arch = "x86_64") && digest != expected_digest {
                 mismatches.push(format!(
                     "N={fft_size} HR={hr_enabled} expected={expected_digest:016x} actual={digest:016x}"
                 ));
