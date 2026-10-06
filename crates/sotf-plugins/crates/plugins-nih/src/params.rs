@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 pub(crate) const BAND_SPLIT_LAYOUT_RESTORE_MARKER: &str = "sotf_internal_band_split_layout_restore";
 pub(crate) const CROSSOVER_STATE_RESTORE_MARKER: &str = "sotf_internal_crossover_state_restore";
@@ -79,6 +79,10 @@ mod ambisonics_custom_tests;
 #[path = "params_speech_restore_tests.rs"]
 mod speech_restore_tests;
 
+#[cfg(all(test, feature = "aae"))]
+#[path = "params_aae_solo_tests.rs"]
+mod aae_solo_tests;
+
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
     float_params: Vec<FloatParam>,
@@ -89,6 +93,14 @@ pub struct DynamicParams {
     /// Stable declaration order used by the realtime sync path. Hash-map
     /// iteration would make same-frame adapter commands nondeterministic.
     sync_entries: Vec<ParamEntry>,
+    /// Precomputed AAE solo routes. The pair is admitted once per sync boundary
+    /// before setters update cached metadata without touching DSP history.
+    aae_solo_pair: Option<[ParamEntry; 2]>,
+    /// Only native AAE opts into ordered host-boundary solo canonicalization.
+    native_aae_coupled_solo: bool,
+    aae_value_refresh_generation: AtomicU64,
+    aae_value_refresh_acknowledged: AtomicU64,
+    aae_value_refresh_inflight: AtomicBool,
     /// Set after NIH restores a serialized state. The next Ambisonics
     /// initialization must compare those restored hidden values with the
     /// selected audio configuration before synchronizing the selection.
@@ -112,9 +124,12 @@ pub struct DynamicParams {
     crossover_channel_frequency_probe: Option<ParameterId>,
     crossover_state_restore_pending: AtomicBool,
     /// Convolution's externally stored IR reference and its transactionally
-    /// staged state restore. Pending values are not visible to hosts until a
-    /// candidate DSP instance has initialized successfully.
+    /// staged state restore. Fresh inactive instances publish admitted scalar
+    /// host values, while configured DSP/resource state stays transactional.
     convolution_state: Option<Mutex<ConvolutionRestoreState>>,
+    /// Mix/Gain change revisions only. Callback increments are allocation-free;
+    /// pending/rollback ownership is confined to inactive control-thread loads.
+    convolution_scalar_revisions: HashMap<usize, Arc<AtomicU64>>,
     /// Hiss captured-profile schema flag.
     hiss_schema: bool,
     /// True for the SpeechDenoiser schema; gates Speech restore preflight.
@@ -138,6 +153,21 @@ struct ConvolutionPendingRestore {
     ir_path: Option<PathBuf>,
     parameter_values: Vec<ParameterValue>,
     editor_generation: Option<u64>,
+    scalar_rollback: Vec<ConvolutionScalarRollback>,
+}
+
+struct ConvolutionScalarRollback {
+    float_index: usize,
+    previous_value: f32,
+    published_revision: Option<u64>,
+}
+
+impl ConvolutionPendingRestore {
+    fn scalar_values_published(&self) -> bool {
+        self.scalar_rollback
+            .iter()
+            .any(|scalar| scalar.published_revision.is_some())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -810,11 +840,34 @@ impl DynamicParams {
     /// when the host reinitializes its prepared DSP instance.
     #[doc(hidden)]
     pub fn from_infos_for_plugin(plugin_type: &str, infos: &[BridgedParamInfo]) -> Arc<Self> {
+        Self::build_from_infos(plugin_type, infos, false)
+    }
+
+    /// Build native parameters with ordered AAE coupled-control admission.
+    ///
+    /// The raw parameter bridge retains strict invalid-tuple rejection. Native
+    /// AAE automation instead disables the peer when either the incoming base
+    /// or effective solo value enables a control. This preserves event order,
+    /// echoed writes, host-visible state, and effective DSP exclusivity.
+    #[doc(hidden)]
+    pub fn from_infos_for_native_plugin(
+        plugin_type: &str,
+        infos: &[BridgedParamInfo],
+    ) -> Arc<Self> {
+        Self::build_from_infos(plugin_type, infos, plugin_type == "AAE")
+    }
+
+    fn build_from_infos(
+        plugin_type: &str,
+        infos: &[BridgedParamInfo],
+        native_aae_coupled_solo: bool,
+    ) -> Arc<Self> {
         let mut float_params = Vec::new();
         let mut bool_params = Vec::new();
         let mut int_params = Vec::new();
         let mut param_map = HashMap::new();
         let mut sync_entries = Vec::new();
+        let mut convolution_scalar_revisions = HashMap::new();
 
         for info in infos {
             if info.kind == BridgedParamKind::FilePath {
@@ -1059,6 +1112,17 @@ impl DynamicParams {
                 };
 
                 let mut param = FloatParam::new(&info.name, info.default_value as f32, range);
+                if plugin_type == "Convolution" && matches!(info.id.as_str(), "mix" | "gain_db") {
+                    let revision = Arc::new(AtomicU64::new(0));
+                    convolution_scalar_revisions.insert(idx, Arc::clone(&revision));
+                    // The fresh FloatParam has no prior callback to replace. NIH
+                    // invokes this only for actual changes, including edit-away-
+                    // and-back, but not same-value echoes. Wrapping requires
+                    // 2^64 changes within a single pending inactive transaction.
+                    param = param.with_callback(Arc::new(move |_| {
+                        revision.fetch_add(1, Ordering::AcqRel);
+                    }));
+                }
                 if requires_restart {
                     param = param.non_automatable().requires_restart();
                 } else if !realtime {
@@ -1088,12 +1152,26 @@ impl DynamicParams {
             None
         };
 
-        Arc::new(Self {
+        let aae_solo_pair = (plugin_type == "AAE")
+            .then(|| {
+                param_map
+                    .get("solo_early")
+                    .zip(param_map.get("solo_late"))
+                    .map(|(early, late)| [early.clone(), late.clone()])
+            })
+            .flatten();
+
+        let parameters = Self {
             float_params,
             bool_params,
             int_params,
             param_map,
             sync_entries,
+            aae_solo_pair,
+            native_aae_coupled_solo,
+            aae_value_refresh_generation: AtomicU64::new(0),
+            aae_value_refresh_acknowledged: AtomicU64::new(0),
+            aae_value_refresh_inflight: AtomicBool::new(false),
             ambisonics_state_restore_pending: AtomicBool::new(false),
             ambisonics_custom_state: (plugin_type == "AmbisonicsDecoder")
                 .then(|| Mutex::new(ambisonics_custom::AmbisonicsCustomRestoreState::default())),
@@ -1105,6 +1183,7 @@ impl DynamicParams {
             crossover_channel_frequency_probe: (plugin_type == "Crossover")
                 .then(|| ParameterId::from("channel_frequency_0")),
             crossover_state_restore_pending: AtomicBool::new(false),
+            convolution_scalar_revisions,
             convolution_state: (plugin_type == "Convolution")
                 .then(|| Mutex::new(ConvolutionRestoreState::default())),
             hiss_schema: plugin_type == "HissReducer",
@@ -1113,7 +1192,65 @@ impl DynamicParams {
                 .then(|| Mutex::new(HissProfileRestoreState::default())),
             hiss_learn_action,
             hiss_clear_action,
+        };
+        if !native_aae_coupled_solo {
+            return Arc::new(parameters);
+        }
+        Arc::new_cyclic(move |weak: &std::sync::Weak<Self>| {
+            let mut parameters = parameters;
+            if let Some(pair) = parameters.aae_solo_pair.clone() {
+                parameters.bool_params = parameters
+                    .bool_params
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, parameter)| {
+                        let peer = if index == pair[0].index {
+                            Some(pair[1].index)
+                        } else if index == pair[1].index {
+                            Some(pair[0].index)
+                        } else {
+                            None
+                        };
+                        let Some(peer) = peer else { return parameter };
+                        let owner = weak.clone();
+                        parameter.with_coupled_update_callback(Arc::new(move |base, effective| {
+                            // NIH serializes host parameter updates. The bounded
+                            // callback neither locks, queues work, nor touches DSP.
+                            // The wrapper's strong Params owner keeps this upgrade
+                            // alive throughout every parameter callback.
+                            if (base || effective)
+                                && let Some(owner) = owner.upgrade()
+                            {
+                                if owner.bool_params[peer].disable_for_coupled_control() {
+                                    owner
+                                        .aae_value_refresh_generation
+                                        .fetch_add(1, Ordering::Release);
+                                }
+                            }
+                        }))
+                    })
+                    .collect();
+            }
+            parameters
         })
+    }
+
+    fn validate_aae_solo_restore(&self, state: &PluginState) -> bool {
+        if !self.native_aae_coupled_solo {
+            return true;
+        }
+        let Some(pair) = &self.aae_solo_pair else {
+            return true;
+        };
+        let mut values = [false; 2];
+        for (index, entry) in pair.iter().enumerate() {
+            values[index] = match state.params.get(entry.id.as_str()) {
+                Some(NativeParamValue::Bool(value)) => *value,
+                Some(_) => return false,
+                None => self.bool_params[entry.index].unmodulated_plain_value(),
+            };
+        }
+        !(values[0] && values[1])
     }
 
     fn unmodulated_value(&self, entry: &ParamEntry) -> ParameterValue {
@@ -1153,6 +1290,12 @@ impl DynamicParams {
             && (pending.editor_generation.is_none() || id == "true_stereo")
             && let Some(value) = pending.parameter_values.get(index)
         {
+            if pending.scalar_values_published()
+                && self.convolution_scalar_revisions.contains_key(&entry.index)
+                && matches!(entry.kind, ParamKind::Float)
+            {
+                return Some(self.value_for_entry(entry));
+            }
             return Some(value.clone());
         }
         Some(self.value_for_entry(entry))
@@ -1539,6 +1682,7 @@ impl DynamicParams {
             ir_path,
             parameter_values,
             editor_generation: Some(generation),
+            scalar_rollback: Vec::new(),
         });
         true
     }
@@ -1558,7 +1702,14 @@ impl DynamicParams {
             return;
         };
 
+        let published_scalars = pending.scalar_values_published();
         for (entry, value) in self.sync_entries.iter().zip(pending.parameter_values) {
+            if published_scalars
+                && matches!(entry.kind, ParamKind::Float)
+                && self.convolution_scalar_revisions.contains_key(&entry.index)
+            {
+                continue;
+            }
             if pending.editor_generation.is_some() && entry.id.as_str() != "true_stereo" {
                 continue;
             }
@@ -1585,7 +1736,20 @@ impl DynamicParams {
         if let Some(state) = &self.convolution_state
             && let Ok(mut state) = state.lock()
         {
-            state.pending = None;
+            if let Some(pending) = state.pending.take() {
+                for scalar in pending.scalar_rollback {
+                    if let Some(published_revision) = scalar.published_revision
+                        && let Some(revision) =
+                            self.convolution_scalar_revisions.get(&scalar.float_index)
+                        && revision.load(Ordering::Acquire) == published_revision
+                    {
+                        // Preserve later host edits, even if they returned to the
+                        // published value. No audio thread runs during this rollback.
+                        self.float_params[scalar.float_index]
+                            .set_plain_value_for_initialization(scalar.previous_value);
+                    }
+                }
+            }
         }
     }
 
@@ -1664,10 +1828,46 @@ impl DynamicParams {
                 return false;
             }
         }
+        let scalar_rollback = if current_sample_rate.is_none() {
+            self.convolution_scalar_revisions
+                .keys()
+                .map(|&float_index| {
+                    // Pending admissions do not commit resources. Keep the original
+                    // scalar baseline until initialization commits the whole tuple.
+                    // A later host edit owns its value even when it matches a
+                    // previously published value after editing away and back.
+                    let current_revision =
+                        self.convolution_scalar_revisions[&float_index].load(Ordering::Acquire);
+                    let previous_value = restore_state
+                        .pending
+                        .as_ref()
+                        .and_then(|pending| {
+                            pending.scalar_rollback.iter().find(|scalar| {
+                                scalar.float_index == float_index
+                                    && scalar.published_revision == Some(current_revision)
+                            })
+                        })
+                        .map(|scalar| scalar.previous_value)
+                        .unwrap_or_else(|| {
+                            self.float_params[float_index].unmodulated_plain_value()
+                        });
+                    ConvolutionScalarRollback {
+                        float_index,
+                        previous_value,
+                        published_revision: None,
+                    }
+                })
+                .collect()
+        } else {
+            // Configured deactivated instances commit only after the native
+            // wrapper's existing reinitialization succeeds.
+            Vec::new()
+        };
         restore_state.pending = Some(ConvolutionPendingRestore {
             ir_path,
             parameter_values,
             editor_generation: None,
+            scalar_rollback,
         });
         true
     }
@@ -2368,6 +2568,42 @@ impl DynamicParams {
             .load(Ordering::Acquire)
     }
 
+    fn sync_aae_solo_pair(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
+        let Some(pair) = &self.aae_solo_pair else {
+            return Ok(());
+        };
+        // NIH applies host events before this audio-thread sync boundary. Read the
+        // final pair once; neither callback nor audio processing occurs between
+        // these bounded setters. Independent concurrent host writes are not a
+        // coherent pair and must be scheduled through the host event/flush path.
+        let requested = [
+            self.value_for_entry(&pair[0]),
+            self.value_for_entry(&pair[1]),
+        ];
+        let (ParameterValue::Bool(early), ParameterValue::Bool(late)) =
+            (&requested[0], &requested[1])
+        else {
+            return Err("AAE solo parameters must be booleans".into());
+        };
+        if *early && *late {
+            return Err("solo_early and solo_late cannot both be enabled".into());
+        }
+        // The AAE setters validate only booleans and mutual exclusion, then
+        // update the value and cached metadata. Disable the old solo first so a
+        // valid final pair never encounters the old conflicting intermediate
+        // tuple. No reset, resource construction, or processing occurs here.
+        for enabled in [false, true] {
+            for (entry, value) in pair.iter().zip(&requested) {
+                if value.as_bool() == Some(enabled)
+                    && plugin.get_parameter(&entry.id).as_ref() != Some(value)
+                {
+                    plugin.set_parameter(entry.id.clone(), value.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Sync realtime parameter values to a SOTF plugin.
     ///
     /// # Errors
@@ -2389,11 +2625,17 @@ impl DynamicParams {
         plugin: &mut dyn sotf_host::plugin::Plugin,
         sample_rate: Option<f64>,
     ) -> Result<(), String> {
+        self.sync_aae_solo_pair(plugin)?;
         let prepared_per_channel = self
             .crossover_channel_frequency_probe
             .as_ref()
             .is_some_and(|id| plugin.get_parameter(id).is_some());
         for entry in self.sync_entries.iter().filter(|entry| entry.realtime) {
+            if self.aae_solo_pair.is_some()
+                && matches!(entry.id.as_str(), "solo_early" | "solo_late")
+            {
+                continue;
+            }
             if self.eq_schema && is_native_eq_pair_draft_parameter(entry.id.as_str()) {
                 continue;
             }
@@ -2662,6 +2904,29 @@ unsafe impl Sync for DynamicParams {}
 // SAFETY: All parameter pointers are valid for the lifetime of DynamicParams.
 // The param_map returns stable pointers to owned fields.
 unsafe impl Params for DynamicParams {
+    fn begin_parameter_value_rescan(&self) -> Option<u64> {
+        if !self.native_aae_coupled_solo
+            || self.aae_value_refresh_generation.load(Ordering::Acquire)
+                == self.aae_value_refresh_acknowledged.load(Ordering::Acquire)
+            || self
+                .aae_value_refresh_inflight
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_err()
+        {
+            return None;
+        }
+        Some(self.aae_value_refresh_generation.load(Ordering::Acquire))
+    }
+
+    fn finish_parameter_value_rescan(&self, generation: u64, succeeded: bool) {
+        if succeeded {
+            self.aae_value_refresh_acknowledged
+                .store(generation, Ordering::Release);
+        }
+        self.aae_value_refresh_inflight
+            .store(false, Ordering::Release);
+    }
+
     fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
         let mut map = Vec::new();
         let mut append = |id: &str, entry: &ParamEntry| {
@@ -2692,7 +2957,8 @@ unsafe impl Params for DynamicParams {
         is_audio_thread: bool,
         sample_rate: Option<f64>,
     ) -> bool {
-        self.validate_eq_native_state(state)
+        self.validate_aae_solo_restore(state)
+            && self.validate_eq_native_state(state)
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
             && self.validate_hiss_restore(state, is_active, is_audio_thread)
             && self.validate_ambisonics_custom_restore(state, is_active, is_audio_thread)
@@ -2737,7 +3003,11 @@ unsafe impl Params for DynamicParams {
             // Editor selections stage only resource/routing state. Read current numeric controls
             // at save time so automation that arrives while reactivation is pending is preserved.
             // External state restores remain complete snapshots and overlay every parameter.
-            if pending.editor_generation.is_some() && entry.id.as_str() != "true_stereo" {
+            if (pending.editor_generation.is_some() && entry.id.as_str() != "true_stereo")
+                || (pending.scalar_values_published()
+                    && matches!(entry.kind, ParamKind::Float)
+                    && self.convolution_scalar_revisions.contains_key(&entry.index))
+            {
                 continue;
             }
             let value = match value {
@@ -2804,6 +3074,30 @@ unsafe impl Params for DynamicParams {
     }
 
     fn deserialize_fields(&self, serialized: &BTreeMap<String, String>) {
+        // The native codec calls this only after whole-state admission succeeds.
+        // Publish fresh inactive Mix/Gain now; configured DSPs still defer to
+        // successful initialization. Revisions bind rollback to this publication.
+        if let Some(state) = &self.convolution_state
+            && let Ok(mut state) = state.lock()
+            && let Some(pending) = &mut state.pending
+            && !pending.scalar_values_published()
+        {
+            for scalar in &mut pending.scalar_rollback {
+                let Some(index) = self.sync_entries.iter().position(|entry| {
+                    matches!(entry.kind, ParamKind::Float) && entry.index == scalar.float_index
+                }) else {
+                    continue;
+                };
+                if let Some(ParameterValue::Float(value)) = pending.parameter_values.get(index)
+                    && let Some(revision) =
+                        self.convolution_scalar_revisions.get(&scalar.float_index)
+                {
+                    self.float_params[scalar.float_index]
+                        .set_plain_value_for_initialization(*value);
+                    scalar.published_revision = Some(revision.load(Ordering::Acquire));
+                }
+            }
+        }
         if self.eq_schema {
             let restored = serialized
                 .get(EQ_NATIVE_STATE_FIELD)

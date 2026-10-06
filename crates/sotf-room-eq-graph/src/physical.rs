@@ -392,7 +392,9 @@ mod tests {
                 let ceiling = 10.0_f32.powf(-1.0 / 20.0);
                 assert!(
                     observed
-                        .chunks_exact(2)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .all(|f| f[1].is_finite() && f[1].abs() <= ceiling + 1e-6)
                 );
                 assert!(observed[2 * (1500 + latency) + 1] > 0.5);

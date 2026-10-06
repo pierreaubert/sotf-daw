@@ -1067,25 +1067,33 @@ impl DawHost {
 
     fn reanchor_node_positions(&mut self, sample_position: u64) -> Result<(), String> {
         let source = ExactRate::new(self.config.sample_rate)?;
-        let rates = self
-            .nodes
-            .keys()
-            .map(|&id| ExactRate::new(self.node_input_sample_rates[id]))
-            .collect::<Result<Vec<_>, _>>()?;
         let clock = if let Some(clock) = self.exact_clock {
             clock
         } else {
-            ExactClock::new(std::iter::once(source).chain(rates.iter().copied()))?
+            let rates = self
+                .nodes
+                .keys()
+                .map(|&id| ExactRate::new(self.node_input_sample_rates[id]))
+                .collect::<Result<Vec<_>, _>>()?;
+            ExactClock::new(std::iter::once(source).chain(rates))?
         };
-        let mut positions = self.node_input_positions.clone();
+        // Validate every conversion before changing any position, preserving
+        // the previous all-or-nothing update while avoiding a cloned Vec on
+        // the already-built graph reset path.
         for &id in self.nodes.keys() {
-            positions[id] = clock.convert_position(
+            clock.convert_position(
                 sample_position,
                 source,
                 ExactRate::new(self.node_input_sample_rates[id])?,
             )?;
         }
-        self.node_input_positions = positions;
+        for &id in self.nodes.keys() {
+            self.node_input_positions[id] = clock.convert_position(
+                sample_position,
+                source,
+                ExactRate::new(self.node_input_sample_rates[id])?,
+            )?;
+        }
         Ok(())
     }
 
@@ -4080,8 +4088,8 @@ impl DawHost {
 
         let sink_position = self.node_input_positions[sink_id];
         let sink_rate = self.node_input_sample_rates[sink_id];
-        let context = ProcessContext::new(f64::from(sink_rate), input_frames)
-            .with_sample_position(sink_position);
+        let context =
+            ProcessContext::new(sink_rate, input_frames).with_sample_position(sink_position);
         self.preflight_terminal_sink_append(sink_id, input_frames, &context)
             .map_err(SinkProcessError::RetryablePreflight)?;
         if self.terminal_sink_staging.len() < input.len() {
@@ -4535,8 +4543,7 @@ impl DawHost {
     ) -> Result<SinkQueueState, SinkFailure> {
         let sample_rate = self.node_input_sample_rates[sink_id];
         let sample_position = self.node_input_positions[sink_id];
-        let context =
-            ProcessContext::new(f64::from(sample_rate), 0).with_sample_position(sample_position);
+        let context = ProcessContext::new(sample_rate, 0).with_sample_position(sample_position);
         self.plugins[sink_id]
             .as_mut()
             .and_then(|plugin| plugin.terminal_sink_mut())
@@ -4953,7 +4960,7 @@ impl DawHost {
                 return Err("Host native drain requires nonzero rate and channels".into());
             }
             ensure_len(&mut bufs.scratch_output, drain_samples);
-            let drain_context = ProcessContext::new(f64::from(input_rate), 0)
+            let drain_context = ProcessContext::new(input_rate, 0)
                 .with_sample_position(self.node_input_positions[node_id]);
             if self.drain_state.active_node != Some(node_id) {
                 self.drain_state.active_node = Some(node_id);
@@ -5030,7 +5037,7 @@ impl DawHost {
                     let capacity = downstream.output_frames_for_input(current_frames);
                     let output_samples = capacity.saturating_mul(downstream_node.output_channels());
                     ensure_len(&mut bufs.scratch_output, output_samples);
-                    let context = ProcessContext::new(f64::from(current_rate), current_frames)
+                    let context = ProcessContext::new(current_rate, current_frames)
                         .with_sample_position(self.node_input_positions[downstream_id]);
                     current_frames = downstream.process(
                         &bufs.scratch_input[..samples],
@@ -6307,7 +6314,7 @@ impl DawHost {
                 "graph drain lost the draining phase of node {node_id}"
             ));
         };
-        let context = ProcessContext::new(f64::from(input_rate), 0)
+        let context = ProcessContext::new(input_rate, 0)
             .with_sample_position(ctx.node_input_positions[node_id]);
         if !*prepared {
             ctx.plugins[node_id]
@@ -6479,7 +6486,7 @@ impl DawHost {
             ));
         }
         let input_rate = ctx.node_input_sample_rates[node_id];
-        let context = ProcessContext::new(f64::from(input_rate), frames)
+        let context = ProcessContext::new(input_rate, frames)
             .with_sample_position(ctx.node_input_positions[node_id]);
         // The holdover and scratch borrows below are disjoint by construction:
         // rebuild the slices after the plugin borrow to satisfy the checker.
@@ -6893,8 +6900,8 @@ impl DawHost {
             .as_ref()
             .ok_or("terminal tail source plugin is missing")?
             .drain_output_frames_max();
-        let sink_context = ProcessContext::new(f64::from(sink_rate), maximum_frames)
-            .with_sample_position(sink_position);
+        let sink_context =
+            ProcessContext::new(sink_rate, maximum_frames).with_sample_position(sink_position);
         let sink = self.plugins[sink_id]
             .as_ref()
             .and_then(|plugin| plugin.terminal_sink())
@@ -6933,7 +6940,7 @@ impl DawHost {
             self.drain_state.quota_grant_tail = None;
         }
         let source_context =
-            ProcessContext::new(f64::from(source_rate), 0).with_sample_position(source_position);
+            ProcessContext::new(source_rate, 0).with_sample_position(source_position);
         if !self.drain_state.prepared {
             let prepared = self.plugins[source_id]
                 .as_mut()
@@ -7005,8 +7012,8 @@ impl DawHost {
                     self.terminal_sink_lifecycle = Some(TerminalSinkLifecycle::ResetRequired);
                     SinkDrainError::ResetRequired(error)
                 })?;
-            let append_context = ProcessContext::new(f64::from(sink_rate), result.frames)
-                .with_sample_position(sink_position);
+            let append_context =
+                ProcessContext::new(sink_rate, result.frames).with_sample_position(sink_position);
             let append = self.plugins[sink_id]
                 .as_mut()
                 .unwrap()
@@ -7375,9 +7382,8 @@ impl DawHost {
                     cf
                 } else {
                     let p = self.plugins[nid].as_mut().unwrap();
-                    let context =
-                        ProcessContext::new(f64::from(self.node_input_sample_rates[nid]), cf)
-                            .with_sample_position(self.node_input_positions[nid]);
+                    let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
+                        .with_sample_position(self.node_input_positions[nid]);
                     let mof = Self::plugin_output_frames_for_input_isolated(
                         p.as_ref(),
                         nid,
@@ -7547,9 +7553,8 @@ impl DawHost {
                 && op.kind == CompiledOpKind::AnalyzerTap
                 && !self.bypassed.get(nid).copied().unwrap_or(false)
             {
-                let context =
-                    ProcessContext::new(f64::from(self.config.sample_rate), current_frames)
-                        .with_sample_position(block_start_sample);
+                let context = ProcessContext::new(self.config.sample_rate, current_frames)
+                    .with_sample_position(block_start_sample);
                 let tap_input = match current_source {
                     CompiledLinearSource::ExternalInput => &input[..current_len],
                     CompiledLinearSource::ScratchInput => &bufs.scratch_input[..current_len],
@@ -8379,9 +8384,8 @@ impl DawHost {
                     cf
                 } else {
                     let plugin = self.plugins[nid].as_mut().unwrap();
-                    let context =
-                        ProcessContext::new(f64::from(self.node_input_sample_rates[nid]), cf)
-                            .with_sample_position(self.node_input_positions[nid]);
+                    let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
+                        .with_sample_position(self.node_input_positions[nid]);
                     let max_output_frames = Self::plugin_output_frames_for_input_isolated(
                         plugin.as_ref(),
                         nid,
@@ -8751,7 +8755,7 @@ impl DawHost {
                         cf
                     } else {
                         let plugin = plugin_slot.as_mut().unwrap();
-                        let context = ProcessContext::new(f64::from(sample_rate), cf)
+                        let context = ProcessContext::new(sample_rate, cf)
                             .with_sample_position(sample_position);
                         let max_output_frames = Self::plugin_output_frames_for_input_isolated(
                             plugin.as_ref(),
@@ -10738,5 +10742,42 @@ impl Host for DawHost {
         &mut self,
     ) -> Vec<IsolatedExternalPluginWorkerReport> {
         DawHost::ensure_isolated_external_plugin_workers_running(self)
+    }
+}
+
+#[cfg(test)]
+mod reanchor_cold_clock_tests {
+    use super::{DawHost, GraphNode};
+
+    #[test]
+    fn populated_cold_clock_reanchors_and_preserves_positions_on_late_overflow() {
+        let mut host = DawHost::new(1, 48_000);
+        host.nodes
+            .insert(0, GraphNode::new(0, "unity input".into(), 1, 1));
+        host.nodes
+            .insert(1, GraphNode::new(1, "converted input".into(), 1, 1));
+        host.node_input_sample_rates = vec![48_000.0; 2];
+        host.node_input_positions = vec![0; 2];
+
+        let traversal_order = host.nodes.keys().copied().collect::<Vec<_>>();
+        assert_eq!(traversal_order.len(), 2);
+        let later_failing_node = *traversal_order.last().unwrap();
+        for &node_id in &traversal_order[..traversal_order.len() - 1] {
+            host.node_input_sample_rates[node_id] = 48_000.0;
+        }
+        host.node_input_sample_rates[later_failing_node] = 96_000.0;
+
+        assert!(host.exact_clock.is_none());
+        host.reanchor_node_positions(101).unwrap();
+        assert!(
+            traversal_order[..traversal_order.len() - 1]
+                .iter()
+                .all(|&node_id| host.node_input_positions[node_id] == 101)
+        );
+        assert_eq!(host.node_input_positions[later_failing_node], 202);
+
+        let before = host.node_input_positions.clone();
+        assert!(host.reanchor_node_positions(u64::MAX).is_err());
+        assert_eq!(host.node_input_positions, before);
     }
 }

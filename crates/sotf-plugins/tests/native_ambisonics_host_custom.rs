@@ -724,12 +724,13 @@ fn direct_named_decoder_with_rate(
     dual_band: bool,
     sample_rate: u32,
 ) -> AmbisonicsDecoderPlugin {
-    let mut config = AmbisonicsDecoderConfig::default();
-    config.order = order;
-    config.target_layout = target_layout.to_string();
-    config.max_re_weighting = false;
-    config.dual_band = dual_band;
-    config.algorithm = "mode_matching".to_string();
+    let config = AmbisonicsDecoderConfig {
+        order,
+        target_layout: target_layout.to_string(),
+        max_re_weighting: false,
+        dual_band,
+        algorithm: "mode_matching".to_string(),
+    };
     let mut plugin = AmbisonicsDecoderPlugin::new(&config).expect("build direct named reference");
     plugin
         .initialize(f64::from(sample_rate))
@@ -744,7 +745,7 @@ fn sparse_acn_stream(frames: usize, inputs: usize, seed: usize) -> Vec<f32> {
     let mut input = vec![0.0; frames * inputs];
     for frame in 0..frames {
         for channel in 0..inputs {
-            if (frame * 31 + channel * 17 + seed * 101) % 64 == 0 {
+            if (frame * 31 + channel * 17 + seed * 101).is_multiple_of(64) {
                 input[frame * inputs + channel] = 0.001 * (channel + 1) as f32;
             }
         }

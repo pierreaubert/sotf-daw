@@ -590,6 +590,29 @@ impl<P: ClapPlugin> MainThreadExecutor<Task<P>> for Wrapper<P> {
                 None => nih_debug_assert_failure!("The host does not support parameters? What?"),
             },
         };
+        if is_gui_thread {
+            if let Some(generation) = self.params.begin_parameter_value_rescan() {
+                let host_params = self
+                    .host_params
+                    .borrow()
+                    .as_ref()
+                    .map(|params| &**params as *const clap_host_params);
+                let succeeded = if let Some(host_params) = host_params {
+                    // SAFETY: this task is executing on the host's GUI thread.
+                    unsafe_clap_call! { host_params=>rescan(&*self.host_callback, CLAP_PARAM_RESCAN_VALUES) };
+                    if self.editor_handle.lock().is_some() {
+                        if let Some(editor) = self.editor.borrow().as_ref() {
+                            editor.lock().param_values_changed();
+                        }
+                    }
+                    true
+                } else {
+                    false
+                };
+                self.params
+                    .finish_parameter_value_rescan(generation, succeeded);
+            }
+        }
     }
 }
 
@@ -643,6 +666,13 @@ impl<P: ClapPlugin> Wrapper<P> {
         // This is used to allow the plugin to restore preset data from its editor, see the comment
         // on `Self::updated_state_sender`
         let (updated_state_sender, updated_state_receiver) = channel::bounded(0);
+        // Both endpoints are still local, so no preset request can be waiting.
+        // Warm the channel's shared mutex on this control thread before audio
+        // processing can encounter its platform-specific lazy allocation.
+        assert!(matches!(
+            updated_state_receiver.try_recv(),
+            Err(channel::TryRecvError::Empty)
+        ));
 
         let plugin_descriptor: Box<PluginDescriptor> =
             Box::new(PluginDescriptor::for_plugin::<P>());

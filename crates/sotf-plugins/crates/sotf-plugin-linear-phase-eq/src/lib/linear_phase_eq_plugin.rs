@@ -190,7 +190,7 @@ impl LinearPhaseEqPlugin {
         let phase_mode_index = params.phase_mode_index.min(PHASE_MODE_OPTIONS.len() - 1);
         let fir_length = fir_length_from_index(fir_length_index);
         let num_filters = params.num_filters.clamp(1, MAX_FILTERS);
-        let sr = sample_rate as f64;
+        let sr = sample_rate;
 
         let needs_pairs = params
             .filters
@@ -284,7 +284,7 @@ impl LinearPhaseEqPlugin {
         mut bands: Vec<EqBand>,
         stereo_pairs: Vec<[usize; 2]>,
     ) -> Self {
-        let sr = sample_rate as f64;
+        let sr = sample_rate;
         // Fill bands to num_filters
         while bands.len() < num_filters {
             bands.push(EqBand::new(
@@ -508,7 +508,7 @@ impl LinearPhaseEqPlugin {
 
     /// Rebuild FIR coefficients from current band settings.
     pub(super) fn rebuild_fir(&mut self) {
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         let fir_length = self.fir_length();
         let fir = Self::design_fir_coefficients(
             sr,
@@ -537,7 +537,7 @@ impl LinearPhaseEqPlugin {
     /// enabled. Auto gain is rejected with placed bands at construction, so
     /// stages are always designed unnormalized here.
     pub(super) fn rebuild_ordered(&mut self) {
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         let fir_length = self.fir_length();
         let phase_mode_index = self.phase_mode_index;
         let count = self.num_filters.min(self.bands.len());
@@ -861,7 +861,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             self.route_retired = None;
             self.xfade_remaining = 0;
             // Rebuild all biquads at new sample rate
-            let sr = sample_rate as f64;
+            let sr = sample_rate;
             for band in &mut self.bands {
                 band.biquad =
                     Biquad::new(band.filter_type, band.frequency, sr, band.q, band.gain_db);

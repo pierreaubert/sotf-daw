@@ -391,7 +391,7 @@ impl LoudnessCompensationPlugin {
             self.begin_transition(0);
         }
         let q = 0.707;
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         let low_freq = safe_frequency(self.low_freq as f64, sr);
         let mid_freq = safe_frequency(self.mid_freq as f64, sr);
         let high_freq = safe_frequency(self.high_freq as f64, sr);
@@ -470,7 +470,7 @@ impl LoudnessCompensationPlugin {
         if self.mode_index != 0 {
             self.begin_transition(self.mode_index);
         }
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         let playback_phon = (self.playback_level_db as f64).clamp(20.0, 90.0);
         let reference_phon = (self.reference_level_db as f64).clamp(20.0, 90.0);
         self.iso_deltas = compute_iso226_delta(playback_phon, reference_phon);
@@ -529,8 +529,8 @@ impl LoudnessCompensationPlugin {
         let max_gain = if !self.headroom_normalized {
             0.0
         } else if let Some(filters) = active.filter(|filters| !filters.is_empty()) {
-            let f_lo = 20.0_f64.min(self.sample_rate as f64 * 0.1);
-            let f_hi = self.sample_rate as f64 * 0.499;
+            let f_lo = 20.0_f64.min(self.sample_rate * 0.1);
+            let f_hi = self.sample_rate * 0.499;
             let log_lo = f_lo.ln();
             let log_hi = f_hi.ln();
             let mut peak_db = 0.0_f64;

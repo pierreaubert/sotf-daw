@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut out_buf = [0.0; FRAME_SIZE];
     let mut out_bytes = [0u8; FRAME_SIZE * 2];
     let mut first = true;
-    while let Ok(_) = in_file.read_i16_into::<LittleEndian>(&mut buf[..]) {
+    while in_file.read_i16_into::<LittleEndian>(&mut buf[..]).is_ok() {
         for (i, x) in buf.iter().enumerate() {
             in_buf[i] = *x as f32;
         }

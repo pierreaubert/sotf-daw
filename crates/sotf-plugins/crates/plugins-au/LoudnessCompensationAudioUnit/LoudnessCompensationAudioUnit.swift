@@ -7,4 +7,7 @@ public class LoudnessCompensationAudioUnit: GenericRustAudioUnit {
     override public class var pluginType: String { "LoudnessCompensation" }
     override public class var pluginSubtype: String { "SOLc" }
     override public class var pluginName: String { "SOTF: Loudness Compensation" }
+    override public class var supportedChannelCapabilities: [NSNumber]? {
+        (1...32).flatMap { width in [NSNumber(value: width), NSNumber(value: width)] }
+    }
 }

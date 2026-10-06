@@ -156,7 +156,7 @@ audioadapter-buffers = "5"
 bincode = { version = "2.0.1", features = ["serde"] }
 bytemuck = { version = "1.14", features = ["derive"] }
 cbindgen = "0.28"
-chacha20poly1305 = "0.10"
+chacha20poly1305 = { version = "0.11", features = ["zeroize"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 coreaudio-rs = "0.14.2"
@@ -213,7 +213,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 serial_test = "4.0.1"
 sha2 = "0.11"
-signal-hook = "0.4"
+signal-hook = "0.3.18"
 sofa-reader = { version = "0.2", path = "../sofa-reader" }
 symphonia = { version = "0.6", default-features = false }
 symphonia-bundle-flac = "0.6"
@@ -296,8 +296,14 @@ strip = "symbols"
 
 # Vendored forks owned by this workspace.
 [patch.crates-io]
-rusty-fork = { git = "https://github.com/pierreaubert/rusty-fork.git", rev = "ee62bcd64fa6afe7fae0e52a448d716dc294e98d" }
+# SOTF owned maintenance forks; upstream 2.1.1, local version 2.1.2.
+derive_more = { path = "../math-audio/crates/3rdparties/derive_more" }
+derive_more-impl = { path = "../math-audio/crates/3rdparties/derive_more-impl" }
+
+oo7 = { path = "../gpui-toolkit/crates/3rdparties/crypto-forks/oo7" }
+# Match GPUI compatibility forks: workspace patches are not inherited.
 fontconfig-parser = { git = "https://github.com/pierreaubert/fontconfig-parser.git", rev = "d247c91f5a57edd6ba6eb26e884d4904dbfbc87e" }
+rusty-fork = { git = "https://github.com/pierreaubert/rusty-fork.git", rev = "ee62bcd64fa6afe7fae0e52a448d716dc294e98d" }
 psm = { git = "https://github.com/pierreaubert/stacker.git", rev = "48bf8e3abfb350de9387a675275a629e4daf9717" }
 nalgebra = { git = "https://github.com/pierreaubert/nalgebra.git", rev = "a42573dbc9649af62fb07b469c98c852e62720fd" }
 tract-core = { git = "https://github.com/pierreaubert/tract.git", rev = "706cccb56b2de6bfcbd0016b9c260aef183e41d7" }

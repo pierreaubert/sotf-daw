@@ -1419,7 +1419,7 @@ macro_rules! sotf_nih_plugin {
                 }
 
                 Self {
-                    params: $crate::params::DynamicParams::from_infos_for_plugin(
+                    params: $crate::params::DynamicParams::from_infos_for_native_plugin(
                         $plugin_type,
                         &infos,
                     ),

@@ -50,13 +50,26 @@ fn main() {
 
     // 2. Copy the generated C header to Apple/Xcode and SwiftPM consumers so
     //    those bridges cannot silently drift from the Rust FFI surface.
+    let plugins_au_shared = crate_path.join("..").join("plugins-au").join("Shared");
+    if target_os == "macos" {
+        // A retained Cargo target cache must still restore ignored AU headers
+        // removed by checkout cleanup before the next Xcode build.
+        for header in [
+            "sotf_audio_plugin_ffi.h",
+            "gpui_au_ffi.h",
+            "BridgingHeader.h",
+        ] {
+            println!(
+                "cargo:rerun-if-changed={}",
+                plugins_au_shared.join(header).display()
+            );
+        }
+        std::fs::create_dir_all(&plugins_au_shared)
+            .expect("Unable to create plugins-au Shared header directory");
+    }
     copy_if_parent_exists(
         &output_file,
-        &crate_path
-            .join("..")
-            .join("plugins-au")
-            .join("Shared")
-            .join("sotf_audio_plugin_ffi.h"),
+        &plugins_au_shared.join("sotf_audio_plugin_ffi.h"),
     );
     copy_if_parent_exists(
         &output_file,
@@ -74,17 +87,17 @@ fn main() {
     //    pointers (Swift OpaquePointer) and size_t (Swift Int) instead of
     //    uintptr_t (Swift UInt) to match the existing Swift code.
     if target_os == "macos" {
-        let gpui_au_header = crate_path
-            .join("..")
-            .join("plugins-au")
-            .join("Shared")
-            .join("gpui_au_ffi.h");
+        let gpui_au_header = plugins_au_shared.join("gpui_au_ffi.h");
         copy_text_if_parent_exists(&gpui_au_header, GPUI_AU_FFI_HEADER);
+        copy_text_if_parent_exists(&plugins_au_shared.join("BridgingHeader.h"), BRIDGING_HEADER);
     }
 }
 
 fn copy_if_parent_exists(src: &Path, dst: &Path) {
     if dst.parent().is_some_and(Path::exists) {
+        if files_are_identical(src, dst) {
+            return;
+        }
         std::fs::copy(src, dst).unwrap_or_else(|err| {
             panic!(
                 "Unable to copy generated header from {} to {}: {err}",
@@ -95,8 +108,18 @@ fn copy_if_parent_exists(src: &Path, dst: &Path) {
     }
 }
 
+fn files_are_identical(src: &Path, dst: &Path) -> bool {
+    match (std::fs::read(src), std::fs::read(dst)) {
+        (Ok(source), Ok(destination)) => source == destination,
+        _ => false,
+    }
+}
+
 fn copy_text_if_parent_exists(dst: &Path, text: &str) {
     if dst.parent().is_some_and(Path::exists) {
+        if std::fs::read(dst).is_ok_and(|existing| existing == text.as_bytes()) {
+            return;
+        }
         std::fs::write(dst, text)
             .unwrap_or_else(|err| panic!("Unable to write {}: {err}", dst.display()));
     }
@@ -167,4 +190,8 @@ void gpui_au_scroll_wheel(void *context, float x, float y, float dx, float dy);
 #endif
 
 #endif /* GPUI_AU_FFI_H */
+"#;
+
+const BRIDGING_HEADER: &str = r#"#include "sotf_audio_plugin_ffi.h"
+#include "gpui_au_ffi.h"
 "#;

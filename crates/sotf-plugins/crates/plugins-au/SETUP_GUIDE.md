@@ -263,7 +263,7 @@ auval -v aufx SOEQ SOTF
 |---|---|
 | `Undefined symbols for architecture arm64` | The staged staticlib is the wrong arch. Re-run `just build-au-ffi-arm64` (or `…-x86_64`) before `xcodebuild`. The `build-au-xcode-<arch>` recipe always does this for you. |
 | `lipo: can't open input file: …` | You're on an old recipe. The current pipeline does not use `lipo`. Pull the latest `Justfile` / `builds/macos.just`. |
-| `Bridging header not found` | `Shared/BridgingHeader.h` is referenced by `project.yml`. Re-run `xcodegen generate`. |
+| `Bridging header not found` | Re-run `just build-au-ffi-arm64` (or `…-x86_64`). The `plugins-ffi` build script recreates the generated `Shared` headers, including `BridgingHeader.h`, even when the Cargo target cache is retained. |
 | `Library not loaded` at runtime | The static library is meant to be **statically** linked. Check Xcode → Build Phases → "Link Binary With Libraries" and `OTHER_LDFLAGS: -lsotf_audio_plugins_ffi`. |
 
 ### Confirm the staged staticlib's arch

@@ -34,6 +34,8 @@ pub struct BoolParam {
     /// multiple times in rapid succession, and it can be run from both the GUI and the audio
     /// thread.
     value_changed: Option<Arc<dyn Fn(bool) + Send + Sync>>,
+    /// Opt-in notification of every base/effective update, including echoed values.
+    coupled_value_updated: Option<Arc<dyn Fn(bool, bool) + Send + Sync>>,
 
     /// The parameter's human readable display name.
     name: String,
@@ -188,6 +190,32 @@ impl ParamMut for BoolParam {
         // multiple times. This can be problematic when they're used to trigger expensive
         // computations when a parameter changes.
         let old_value = self.value.swap(value, Ordering::Relaxed);
+        if let Some(coupled_callback) = &self.coupled_value_updated {
+            // The opt-in coupled-control contract publishes incoming base state
+            // even when modulation leaves the effective boolean unchanged.
+            let old_normalized = self
+                .normalized_value
+                .swap(normalized_value, Ordering::Relaxed);
+            let old_unmodulated = self
+                .unmodulated_value
+                .swap(unmodulated_value, Ordering::Relaxed);
+            let old_unmodulated_normalized = self
+                .unmodulated_normalized_value
+                .swap(unmodulated_normalized_value, Ordering::Relaxed);
+            if value != old_value {
+                if let Some(callback) = &self.value_changed {
+                    callback(value);
+                }
+            }
+            coupled_callback(unmodulated_value, value);
+            // A changed base value must also notify the host/editor when the
+            // effective value is held unchanged by modulation. Same-value echoes
+            // still invoke the coupled callback, but do not claim a value change.
+            return value != old_value
+                || old_unmodulated != unmodulated_value
+                || old_normalized != normalized_value
+                || old_unmodulated_normalized != unmodulated_normalized_value;
+        }
         if value != old_value {
             self.normalized_value
                 .store(normalized_value, Ordering::Relaxed);
@@ -246,6 +274,7 @@ impl BoolParam {
 
             flags: ParamFlags::default(),
             value_changed: None,
+            coupled_value_updated: None,
 
             name: name.into(),
             poly_modulation_id: None,
@@ -280,6 +309,48 @@ impl BoolParam {
         changed
     }
 
+    /// Disable a coupled control and clear its existing modulation.
+    ///
+    /// This opt-in operation sets the plain, unmodulated, effective, and normalized
+    /// values to false and resets the modulation offset to zero. All stored values
+    /// are updated before the existing value-change callback is invoked. The
+    /// callback runs only when the effective boolean changes, as with normal
+    /// parameter updates. Parameter flags and subsequent modulation remain intact.
+    ///
+    /// Coupled-control owners must serialize this operation with host parameter
+    /// updates, just as they serialize ordinary parameter setters. This operation
+    /// does not make multiple parameter writes an atomic transaction.
+    ///
+    /// Returns whether any stored value or modulation offset changed. There are
+    /// no allocations or locks; the owner-provided callback must also be suitable
+    /// for the calling thread.
+    #[doc(hidden)]
+    pub fn disable_for_coupled_control(&self) -> bool {
+        let old_offset = self.modulation_offset.swap(0.0, Ordering::Relaxed);
+        let old_unmodulated = self.unmodulated_value.swap(false, Ordering::Relaxed);
+        let old_unmodulated_normalized = self
+            .unmodulated_normalized_value
+            .swap(0.0, Ordering::Relaxed);
+        let old_normalized = self.normalized_value.swap(0.0, Ordering::Relaxed);
+        let old_value = self.value.swap(false, Ordering::Relaxed);
+
+        if old_value {
+            if let Some(callback) = &self.value_changed {
+                callback(false);
+            }
+        }
+
+        if let Some(callback) = &self.coupled_value_updated {
+            callback(false, false);
+        }
+
+        old_value
+            || old_unmodulated
+            || old_offset != 0.0
+            || old_normalized != 0.0
+            || old_unmodulated_normalized != 0.0
+    }
+
     /// Enable polyphonic modulation for this parameter. The ID is used to uniquely identify this
     /// parameter in [`NoteEvent::PolyModulation`][crate::prelude::NoteEvent::PolyModulation]
     /// events, and must thus be unique between _all_ polyphonically modulatable parameters. See the
@@ -303,6 +374,27 @@ impl BoolParam {
     /// thread.
     pub fn with_callback(mut self, callback: Arc<dyn Fn(bool) + Send + Sync>) -> Self {
         self.value_changed = Some(callback);
+        self
+    }
+
+    /// Observe every base and effective update for an opt-in coupled control.
+    ///
+    /// The callback receives the unmodulated base value followed by the effective
+    /// value. Unlike [`Self::with_callback`], it also observes unchanged effective
+    /// values and same-value echoes. Opting in publishes incoming base and
+    /// normalized values even when modulation keeps the effective boolean fixed.
+    /// Setters report changes to any of these stored values so wrappers can notify
+    /// their host/editor. Unchanged echoes invoke this callback but return false.
+    ///
+    /// Parameter flags, ordinary change callbacks, and future modulation remain
+    /// unchanged. The callback can run on the audio thread and must not allocate
+    /// or block. Coupled owners must ignore all-false updates to avoid recursion.
+    #[doc(hidden)]
+    pub fn with_coupled_update_callback(
+        mut self,
+        callback: Arc<dyn Fn(bool, bool) + Send + Sync>,
+    ) -> Self {
+        self.coupled_value_updated = Some(callback);
         self
     }
 
@@ -366,5 +458,105 @@ impl BoolParam {
     pub fn hide_in_generic_ui(mut self) -> Self {
         self.flags.insert(ParamFlags::HIDE_IN_GENERIC_UI);
         self
+    }
+}
+
+#[cfg(test)]
+mod coupled_control_tests {
+    use super::*;
+    use std::sync::atomic::AtomicUsize;
+
+    #[test]
+    fn disabling_clears_effective_and_unmodulated_values_with_either_offset() {
+        for offset in [-1.0, -0.75, 0.0, 0.75, 1.0] {
+            let parameter = BoolParam::new("Coupled", true);
+            let flags = parameter.flags();
+            parameter.modulate_value(offset);
+            assert!(parameter.disable_for_coupled_control());
+            assert!(!parameter.value());
+            assert!(!parameter.unmodulated_plain_value());
+            assert_eq!(parameter.modulated_normalized_value(), 0.0);
+            assert_eq!(parameter.unmodulated_normalized_value(), 0.0);
+            assert_eq!(parameter.modulation_offset.load(Ordering::Relaxed), 0.0);
+            assert_eq!(parameter.flags(), flags);
+            assert!(!parameter.disable_for_coupled_control());
+            // Clearing the old offset does not disable future modulation.
+            assert!(parameter.modulate_value(0.75));
+            assert!(parameter.value());
+            assert!(!parameter.unmodulated_plain_value());
+        }
+    }
+
+    #[test]
+    fn disabling_publishes_every_field_before_the_effective_change_callback() {
+        let parameter = Arc::new_cyclic(|weak: &std::sync::Weak<BoolParam>| {
+            let weak = weak.clone();
+            BoolParam::new("Coupled", true).with_callback(Arc::new(move |value| {
+                let parameter = weak.upgrade().unwrap();
+                assert!(!value);
+                assert!(!parameter.value());
+                assert!(!parameter.unmodulated_plain_value());
+                assert_eq!(parameter.modulated_normalized_value(), 0.0);
+                assert_eq!(parameter.unmodulated_normalized_value(), 0.0);
+                assert_eq!(parameter.modulation_offset.load(Ordering::Relaxed), 0.0);
+            }))
+        });
+        assert!(parameter.disable_for_coupled_control());
+    }
+
+    #[test]
+    fn already_ineffective_peer_still_clears_plain_value_without_false_callback() {
+        let callbacks = Arc::new(AtomicUsize::new(0));
+        let observed = callbacks.clone();
+        let parameter = BoolParam::new("Coupled", true).with_callback(Arc::new(move |_| {
+            observed.fetch_add(1, Ordering::Relaxed);
+        }));
+        assert!(parameter.modulate_value(-1.0));
+        assert!(!parameter.value());
+        assert!(parameter.unmodulated_plain_value());
+        let before = callbacks.load(Ordering::Relaxed);
+        assert!(parameter.disable_for_coupled_control());
+        assert_eq!(callbacks.load(Ordering::Relaxed), before);
+        assert!(!parameter.unmodulated_plain_value());
+        assert_eq!(parameter.modulation_offset.load(Ordering::Relaxed), 0.0);
+    }
+    #[test]
+    fn opted_in_plain_updates_publish_base_under_negative_modulation_and_echo() {
+        let callbacks = Arc::new(AtomicUsize::new(0));
+        let observed = callbacks.clone();
+        let parameter = BoolParam::new("Coupled", false).with_coupled_update_callback(Arc::new(
+            move |base, effective| {
+                if base {
+                    assert!(!effective);
+                }
+                observed.fetch_add(1, Ordering::Relaxed);
+            },
+        ));
+        parameter.modulate_value(-1.0);
+        assert!(parameter.set_plain_value(true));
+        assert!(parameter.unmodulated_plain_value());
+        assert_eq!(parameter.unmodulated_normalized_value(), 1.0);
+        assert!(!parameter.value());
+        assert_eq!(parameter.modulated_normalized_value(), 0.0);
+        let before = callbacks.load(Ordering::Relaxed);
+        assert!(!parameter.set_plain_value(true));
+        assert_eq!(callbacks.load(Ordering::Relaxed), before + 1);
+    }
+
+    #[test]
+    fn ordinary_callbacks_keep_legacy_effective_change_and_echo_behavior() {
+        let callbacks = Arc::new(AtomicUsize::new(0));
+        let observed = callbacks.clone();
+        let parameter = BoolParam::new("Ordinary", false).with_callback(Arc::new(move |_| {
+            observed.fetch_add(1, Ordering::Relaxed);
+        }));
+        parameter.modulate_value(-1.0);
+        assert!(!parameter.set_plain_value(true));
+        assert!(!parameter.unmodulated_plain_value());
+        assert_eq!(callbacks.load(Ordering::Relaxed), 0);
+        parameter.modulate_value(0.0);
+        assert!(parameter.set_plain_value(true));
+        assert!(!parameter.set_plain_value(true));
+        assert_eq!(callbacks.load(Ordering::Relaxed), 1);
     }
 }

@@ -953,20 +953,8 @@ impl Plugin for DownmixPlugin {
         self.lfe_lpf = (0..self.input_ch)
             .map(|_| {
                 [
-                    Biquad::new(
-                        BiquadFilterType::Lowpass,
-                        120.0,
-                        sample_rate as f64,
-                        0.707,
-                        0.0,
-                    ),
-                    Biquad::new(
-                        BiquadFilterType::Lowpass,
-                        120.0,
-                        sample_rate as f64,
-                        0.707,
-                        0.0,
-                    ),
+                    Biquad::new(BiquadFilterType::Lowpass, 120.0, sample_rate, 0.707, 0.0),
+                    Biquad::new(BiquadFilterType::Lowpass, 120.0, sample_rate, 0.707, 0.0),
                 ]
             })
             .collect();

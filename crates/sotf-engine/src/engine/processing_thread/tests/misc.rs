@@ -390,6 +390,13 @@ fn aud145_placement_fixture_root() -> std::path::PathBuf {
         .join("../../audit/artifacts/aud145-placement-reference-r1")
 }
 
+// Portable regressions use the independently generated R2 reference packet.
+// Historical capture tooling keeps its original R1 root and cases.
+fn eq_placement_regression_fixture_root() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/aud145-analytical-reference-r2")
+}
+
 fn read_f32le_samples(path: &std::path::Path, expected_count: usize) -> Vec<f32> {
     let bytes = std::fs::read(path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
     assert_eq!(
@@ -512,7 +519,7 @@ fn capture_eq_placement_vectors_through_engine_factory_and_daw_host() {
 
 #[test]
 fn compiled_legacy_eq_host_falls_back_after_ordered_placement_event() {
-    let root = aud145_placement_fixture_root();
+    let root = eq_placement_regression_fixture_root();
     let channels = 2;
     let sample_rate = 44_100;
     let mut filter = EQFilter::new(BiquadFilterType::Peak, 1379.0, 0.83, 7.0);
@@ -593,7 +600,7 @@ fn compiled_legacy_eq_host_falls_back_after_ordered_placement_event() {
 
 #[test]
 fn rejected_all_muted_per_channel_placement_keeps_live_eq_host_unchanged() {
-    let fixture_root = aud145_placement_fixture_root();
+    let fixture_root = eq_placement_regression_fixture_root();
     let sample_rate = 44_100;
     let channels = 2;
 

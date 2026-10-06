@@ -840,14 +840,14 @@ impl MultibandCompressorPlugin {
             Biquad::new(
                 BiquadFilterType::Lowshelf,
                 1000.0,
-                sample_rate.max(1.0) as f64,
+                sample_rate.max(1.0),
                 0.707,
                 -half_tilt,
             ),
             Biquad::new(
                 BiquadFilterType::Highshelf,
                 1000.0,
-                sample_rate.max(1.0) as f64,
+                sample_rate.max(1.0),
                 0.707,
                 half_tilt,
             ),
@@ -861,14 +861,14 @@ impl MultibandCompressorPlugin {
                 low.update_params(
                     BiquadFilterType::Lowshelf,
                     1000.0,
-                    self.sample_rate.max(1.0) as f64,
+                    self.sample_rate.max(1.0),
                     0.707,
                     -half_tilt,
                 );
                 high.update_params(
                     BiquadFilterType::Highshelf,
                     1000.0,
-                    self.sample_rate.max(1.0) as f64,
+                    self.sample_rate.max(1.0),
                     0.707,
                     half_tilt,
                 );
@@ -984,7 +984,7 @@ impl MultibandCompressorPlugin {
                 Biquad::new(
                     BiquadFilterType::Highpass,
                     fc,
-                    sample_rate.max(1.0) as f64,
+                    sample_rate.max(1.0),
                     Self::hpf_section_q(section, order_is_4th),
                     0.0,
                 )
@@ -1036,7 +1036,7 @@ impl MultibandCompressorPlugin {
                     section.update_params(
                         BiquadFilterType::Highpass,
                         fc,
-                        self.sample_rate.max(1.0) as f64,
+                        self.sample_rate.max(1.0),
                         Self::hpf_section_q(index, order_is_4th),
                         0.0,
                     );
@@ -1745,7 +1745,7 @@ impl MultibandCompressorPlugin {
                 10.0_f32.powf(-range_db / 20.0)
             };
             let hold_ms = bp.and_then(|p| p.hold_ms).unwrap_or(self.hold_ms);
-            let hold_samples = (hold_ms as f64 * self.sample_rate as f64 / 1000.0).round() as usize;
+            let hold_samples = (hold_ms as f64 * self.sample_rate / 1000.0).round() as usize;
 
             let use_lookahead = self.per_band_lookahead_ms > 0.0;
             // New sidechain stages are global; hoist them out of the frame loop.

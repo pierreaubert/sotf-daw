@@ -156,22 +156,40 @@ build-nih-linux:
 	echo "Built $count/$total plugins in dist/nih-linux/ ($failed failed)"
 	[ "$failed" -eq 0 ]
 
-# Build + bundle all VST3 plugins for Linux (x86_64-linux layout)
+# Build + bundle all VST3 plugins for the native Linux architecture.
+# SOTF_LINUX_TARGET_TRIPLET may specify x86_64-linux or aarch64-linux, but
+# must match the host that produced the shared libraries.
 [group('build')]
 prod-vst3-linux: build-nih-linux _package-vst3-linux
 
 _package-vst3-linux:
 	#!/usr/bin/env bash
 	set -euo pipefail
+	[[ $(uname -s) == Linux ]] || { echo 'Linux VST3 packaging requires a Linux host' >&2; exit 2; }
+	host_arch=$(uname -m)
+	case "$host_arch" in
+		x86_64|amd64) native_triplet=x86_64-linux ;;
+		aarch64|arm64) native_triplet=aarch64-linux ;;
+		*) printf 'Unsupported Linux VST3 packaging architecture: %s\n' "$host_arch" >&2; exit 2 ;;
+	esac
+	target_triplet=${SOTF_LINUX_TARGET_TRIPLET:-$native_triplet}
+	case "$target_triplet" in
+		x86_64-linux|aarch64-linux) ;;
+		*) printf 'Unsupported Linux VST3 target triplet: %s\n' "$target_triplet" >&2; exit 2 ;;
+	esac
+	[[ "$target_triplet" == "$native_triplet" ]] || {
+		printf 'Linux VST3 target %s does not match native host %s\n' "$target_triplet" "$native_triplet" >&2
+		exit 2
+	}
 	VST3_DIR="dist/vst3-linux"
 	rm -rf "$VST3_DIR"
 	for lib in dist/nih-linux/lib*.so; do
 		base=$(basename "$lib" .so | sed 's/^lib//')
 		display=$(echo "$base" | sed 's/sotf_/SOTF /; s/_/ /g' | sed 's/\b\(.\)/\u\1/g')
 		bundle="$VST3_DIR/${display}.vst3"
-		mkdir -p "$bundle/Contents/x86_64-linux"
+		mkdir -p "$bundle/Contents/$target_triplet"
 		# VST3 Linux hosts require the shared library and bundle to have the same basename.
-		cp "$lib" "$bundle/Contents/x86_64-linux/${display}.so"
+		cp "$lib" "$bundle/Contents/$target_triplet/${display}.so"
 	done
 	echo "Bundled $(ls -d "$VST3_DIR"/*.vst3 | wc -l | tr -d ' ') VST3 plugins"
 

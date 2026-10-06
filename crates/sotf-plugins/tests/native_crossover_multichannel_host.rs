@@ -229,19 +229,19 @@ fn loaded_crossover_named_multichannel_routes_match_public_dsp_vectors() {
                 }
 
                 if let Some(root) = &capture_root {
-                    capture_case(
+                    capture_case(CaseCapture {
                         root,
-                        format_name,
-                        layout_name,
+                        format: format_name,
+                        layout: layout_name,
                         case,
-                        &native_bus_to_sotf,
-                        &loaded
+                        native_bus_to_sotf: &native_bus_to_sotf,
+                        state: &loaded
                             .save_opaque_state()
                             .unwrap_or_else(|error| panic!("capture {} state: {error}", case.name)),
-                        &sotf_input,
-                        &expected,
-                        &actual,
-                    );
+                        input: &sotf_input,
+                        expected: &expected,
+                        actual: &actual,
+                    });
                 }
                 observed_cases += 1;
             }
@@ -1036,17 +1036,30 @@ fn assert_waveform_exact(actual: &[f32], expected: &[f32], label: &str) {
     }
 }
 
-fn capture_case(
-    root: &std::path::Path,
-    format: &str,
-    layout: &str,
+struct CaseCapture<'a> {
+    root: &'a std::path::Path,
+    format: &'a str,
+    layout: &'a str,
     case: RouteCase,
-    native_bus_to_sotf: &[usize],
-    state: &[u8],
-    input: &[f32],
-    expected: &[f32],
-    actual: &[f32],
-) {
+    native_bus_to_sotf: &'a [usize],
+    state: &'a [u8],
+    input: &'a [f32],
+    expected: &'a [f32],
+    actual: &'a [f32],
+}
+
+fn capture_case(capture: CaseCapture<'_>) {
+    let CaseCapture {
+        root,
+        format,
+        layout,
+        case,
+        native_bus_to_sotf,
+        state,
+        input,
+        expected,
+        actual,
+    } = capture;
     let path = root.join(format).join(layout).join(case.name);
     std::fs::create_dir_all(&path).unwrap();
     write_f32le(&path.join("input-sotf-order.f32le"), input);
@@ -1076,7 +1089,7 @@ fn capture_case(
 }
 
 fn write_f32le(path: &std::path::Path, values: &[f32]) {
-    let mut bytes = Vec::with_capacity(values.len() * std::mem::size_of::<f32>());
+    let mut bytes = Vec::with_capacity(std::mem::size_of_val(values));
     for value in values {
         bytes.extend_from_slice(&value.to_le_bytes());
     }

@@ -57,7 +57,7 @@ impl DynEqBand {
                 Biquad::new(
                     BiquadFilterType::Highpass,
                     f_low as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     std::f64::consts::FRAC_1_SQRT_2,
                     0.0,
                 )
@@ -69,7 +69,7 @@ impl DynEqBand {
                 Biquad::new(
                     BiquadFilterType::Lowpass,
                     f_high as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     std::f64::consts::FRAC_1_SQRT_2,
                     0.0,
                 )
@@ -81,7 +81,7 @@ impl DynEqBand {
                 Biquad::new(
                     BiquadFilterType::Peak,
                     frequency as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     q as f64,
                     0.0, // starts at 0 dB (passthrough)
                 )
@@ -175,14 +175,14 @@ impl DynEqBand {
         let valid = match self.shape {
             DynEqShape::Tilt => design_tilt_coefficients(
                 self.frequency as f64,
-                sample_rate as f64,
+                sample_rate,
                 self.target_gain_db as f64,
             )
             .is_some(),
             _ => design_shelf_coefficients(
                 self.shape,
                 self.frequency as f64,
-                sample_rate as f64,
+                sample_rate,
                 self.target_gain_db as f64,
                 self.shelf_slope as f64,
             )
@@ -213,7 +213,7 @@ impl DynEqBand {
                     *hp = Biquad::new(
                         BiquadFilterType::Highpass,
                         f_low as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         std::f64::consts::FRAC_1_SQRT_2,
                         0.0,
                     );
@@ -222,7 +222,7 @@ impl DynEqBand {
                     *lp = Biquad::new(
                         BiquadFilterType::Lowpass,
                         f_high as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         std::f64::consts::FRAC_1_SQRT_2,
                         0.0,
                     );
@@ -233,7 +233,7 @@ impl DynEqBand {
                     *lp = Biquad::new(
                         BiquadFilterType::Lowpass,
                         self.frequency as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         std::f64::consts::FRAC_1_SQRT_2,
                         0.0,
                     );
@@ -244,7 +244,7 @@ impl DynEqBand {
                     *hp = Biquad::new(
                         BiquadFilterType::Highpass,
                         self.frequency as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         std::f64::consts::FRAC_1_SQRT_2,
                         0.0,
                     );
@@ -266,7 +266,7 @@ impl DynEqBand {
                     *eq = Biquad::new(
                         BiquadFilterType::Peak,
                         self.frequency as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         self.q as f64,
                         self.target_gain_db as f64,
                     );
@@ -275,7 +275,7 @@ impl DynEqBand {
             DynEqShape::Tilt => {
                 self.non_peak_coefficients = design_tilt_coefficients(
                     self.frequency as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     self.target_gain_db as f64,
                 );
                 // These Biquads carry per-channel recurrence state. Tilt
@@ -284,7 +284,7 @@ impl DynEqBand {
                     *eq = Biquad::new(
                         BiquadFilterType::Peak,
                         self.frequency as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         self.q as f64,
                         0.0,
                     );
@@ -294,7 +294,7 @@ impl DynEqBand {
                 self.non_peak_coefficients = design_shelf_coefficients(
                     shape,
                     self.frequency as f64,
-                    sample_rate as f64,
+                    sample_rate,
                     self.target_gain_db as f64,
                     self.shelf_slope as f64,
                 );
@@ -304,7 +304,7 @@ impl DynEqBand {
                     *eq = Biquad::new(
                         BiquadFilterType::Peak,
                         self.frequency as f64,
-                        sample_rate as f64,
+                        sample_rate,
                         self.q as f64,
                         0.0,
                     );

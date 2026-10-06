@@ -172,6 +172,13 @@ build-au-xcode-arm64: sync-au-versions build-au-ffi-arm64
 		ARCHS=arm64 \
 		ONLY_ACTIVE_ARCH=NO \
 		build
+	APP="{{au_dir}}/build/au-arm64/Build/Products/Release/SOTFAudioUnits.app"
+	if [ ! -d "$APP" ]; then
+		echo "Xcode did not create the arm64 AU app bundle at $APP" >&2
+		exit 1
+	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	echo "✅ All Audio Units built for arm64: build/au-arm64/Build/Products/Release/SOTFAudioUnits.app"
 
 # Build all AU extensions for x86_64 (Xcode, isolated DerivedData).
@@ -191,6 +198,13 @@ build-au-xcode-x86_64: sync-au-versions build-au-ffi-x86_64
 		ARCHS=x86_64 \
 		ONLY_ACTIVE_ARCH=NO \
 		build
+	APP="{{au_dir}}/build/au-x86_64/Build/Products/Release/SOTFAudioUnits.app"
+	if [ ! -d "$APP" ]; then
+		echo "Xcode did not create the x86_64 AU app bundle at $APP" >&2
+		exit 1
+	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	echo "✅ All Audio Units built for x86_64: build/au-x86_64/Build/Products/Release/SOTFAudioUnits.app"
 
 # ----------------------------------------------------------------------
@@ -264,8 +278,18 @@ build-au-ios: build-au-ios-device build-au-ios-simulator
 validate-au-all:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	SUBTYPES=("SOEQ" "SOCP" "SOLM" "SOGT" "SOGN" "SODY" "SOAE" "SOBS" "SOBM" "SOEc" "SOBF" "SOLP" "SOSC" "SOLu" "SOSa" "SOAm")
-	NAMES=("EQ" "Compressor" "Limiter" "Gate" "Gain" "Delay" "AAE" "BandSplit" "BandMerge" "AEC" "Beamformer" "LinearPhaseEQ" "SpectralCompressor" "LoudnessMonitor" "SpectrumAnalyzer" "Ambisonics")
+	# All macOS extensions embedded by project.yml; the iOS EQ target is separate.
+	SUBTYPES=("SOEQ" "SOCP" "SOLM" "SOGT" "SOGN" "SODY" "SOEx" "SOCf" "SOSt" "SODn" "SODm" "SOM2" "SOSi" "SOTs" "SODs" "SODq" "SOMc" "SOMe" "SOCv" "SOFm" "SOLc" "SOCs" "SOUp" "SOXt" "SOBn" "SOMx" "SOPn" "SOAb" "SOCx" "SOAE" "SOBS" "SOBM" "SOEc" "SOBF" "SOLP" "SOSC" "SOLu" "SOSa" "SOAm" "SODc" "SOHr" "SOSd" "SODt")
+	NAMES=("EQ" "Compressor" "Limiter" "Gate" "Gain" "Delay" "Expander" "Crossfeed" "Saturation" "Denoiser" "Downmix" "MonoToStereo" "StereoImager" "TransientShaper" "DeEsser" "DynamicEQ" "MultibandCompressor" "MultibandExpander" "Convolution" "FletcherMunson" "LoudnessCompensation" "ChannelMuteSolo" "Upmixer" "XTC" "Binaural" "Matrix" "PND" "ABCompare" "Crossover" "AAE" "BandSplit" "BandMerge" "AEC" "Beamformer" "LinearPhaseEQ" "SpectralCompressor" "LoudnessMonitor" "SpectrumAnalyzer" "Ambisonics" "Declick" "HissReducer" "SpeechDenoiser" "Dither")
+	if [ "${#SUBTYPES[@]}" -ne 43 ] || [ "${#NAMES[@]}" -ne 43 ]; then
+		echo "Expected exactly 43 macOS AU components" >&2
+		exit 1
+	fi
+	UNIQUE_COUNT=$(printf '%s\n' "${SUBTYPES[@]}" | sort -u | wc -l | tr -d ' ')
+	if [ "$UNIQUE_COUNT" -ne 43 ]; then
+		echo "Expected 43 unique macOS AU subtype identifiers" >&2
+		exit 1
+	fi
 	FAILED=0
 	for i in "${!SUBTYPES[@]}"; do
 		echo "--- Validating ${NAMES[$i]} (${SUBTYPES[$i]}) ---"
@@ -300,6 +324,8 @@ sign-au-arm64:
 		echo "No app bundle at $APP — run 'just build-au-all-arm64' first"
 		exit 1
 	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	if [ -z "${DEVELOPER_ID:-}" ]; then
 		echo "DEVELOPER_ID not set. Usage:"
 		echo "  export DEVELOPER_ID='Developer ID Application: Your Name (TEAMID)'"
@@ -325,6 +351,8 @@ sign-au-x86_64:
 		echo "No app bundle at $APP — run 'just build-au-all-x86_64' first"
 		exit 1
 	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	if [ -z "${DEVELOPER_ID:-}" ]; then
 		echo "DEVELOPER_ID not set. Usage:"
 		echo "  export DEVELOPER_ID='Developer ID Application: Your Name (TEAMID)'"
@@ -490,6 +518,8 @@ dist-au-arm64:
 		echo "No app bundle at $APP — run 'just build-au-all-arm64' first"
 		exit 1
 	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	BUNDLE_ID=$(/usr/bin/plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")
 	if ! codesign --verify --strict "$APP" 2>/dev/null; then
 		echo "WARNING: arm64 bundle is not signed. Run 'just sign-au-arm64' first for distribution."
@@ -536,6 +566,8 @@ dist-au-x86_64:
 		echo "No app bundle at $APP — run 'just build-au-all-x86_64' first"
 		exit 1
 	fi
+	source scripts/lib/nnnoiseless_model_notices.sh
+	stage_nnnoiseless_model_notices . "$APP/Contents/Resources"
 	BUNDLE_ID=$(/usr/bin/plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist")
 	if ! codesign --verify --strict "$APP" 2>/dev/null; then
 		echo "WARNING: x86_64 bundle is not signed. Run 'just sign-au-x86_64' first for distribution."

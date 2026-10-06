@@ -2,6 +2,7 @@ use super::calculate::calculate_panning_gain;
 use super::calculate::calculate_panning_gain_with_wraparound;
 use super::get::get_available_configs;
 use super::get::get_speaker_config;
+use super::get::get_speaker_config_by_channels;
 use super::misc::normalize_gains_l2;
 use super::source_position::SourcePosition;
 use super::source_position::compute_vbap_matrix;
@@ -78,6 +79,34 @@ fn test_get_speaker_config() {
     assert!(get_speaker_config("5.1").is_some());
     assert!(get_speaker_config("7.1.4").is_some());
     assert!(get_speaker_config("invalid").is_none());
+}
+
+#[test]
+fn coreaudio_atmos_source_layouts_are_explicit_and_do_not_change_width_defaults() {
+    let five_one_two = get_speaker_config("coreaudio_atmos_5.1.2").unwrap();
+    assert_eq!(five_one_two.total_channels, 8);
+    assert_eq!(five_one_two.speakers[6].label, "TML");
+    assert_eq!(five_one_two.speakers[6].azimuth, 90.0);
+    assert_eq!(five_one_two.speakers[6].elevation, 45.0);
+
+    let seven_one_two = get_speaker_config("coreaudio_atmos_7.1.2").unwrap();
+    assert_eq!(seven_one_two.total_channels, 10);
+    assert_eq!(seven_one_two.speakers[8].label, "TML");
+    assert_eq!(seven_one_two.speakers[8].azimuth, 90.0);
+
+    let nine_one_six = get_speaker_config("coreaudio_atmos_9.1.6").unwrap();
+    assert_eq!(nine_one_six.total_channels, 16);
+    assert_eq!(nine_one_six.speakers[10].label, "TFL");
+    assert_eq!(nine_one_six.speakers[12].label, "TML");
+    assert_eq!(nine_one_six.speakers[12].azimuth, 90.0);
+    assert_eq!(nine_one_six.speakers[14].label, "TBL");
+
+    assert!(!get_available_configs().contains(&"coreaudio_atmos_5.1.2"));
+    assert!(!get_available_configs().contains(&"coreaudio_atmos_7.1.2"));
+    assert!(!get_available_configs().contains(&"coreaudio_atmos_9.1.6"));
+    assert_eq!(get_speaker_config_by_channels(8).unwrap().id, "7.1");
+    assert_eq!(get_speaker_config_by_channels(10).unwrap().id, "5.1.4");
+    assert_eq!(get_speaker_config_by_channels(16).unwrap().id, "9.1.6");
 }
 
 #[test]

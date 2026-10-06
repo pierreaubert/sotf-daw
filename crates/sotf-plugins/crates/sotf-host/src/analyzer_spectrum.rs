@@ -978,7 +978,7 @@ mod tests {
             let max_freq = (sample_rate as f32 * 0.5).min(20_000.0);
             let mut plugin = SpectrumAnalyzerPlugin::with_config_at_sample_rate(
                 1,
-                f64::from(sample_rate),
+                sample_rate,
                 SpectrumConfig {
                     num_bins: 120,
                     min_freq: 10.0,
@@ -987,7 +987,7 @@ mod tests {
                 },
             )
             .unwrap();
-            plugin.initialize(f64::from(sample_rate)).unwrap();
+            plugin.initialize(sample_rate).unwrap();
             let input = vec![0.0; FFT_SIZE];
             let mut output = input.clone();
             plugin
@@ -1282,7 +1282,7 @@ mod tests {
             },
         )
         .unwrap();
-        plugin.initialize(f64::from(sample_rate)).unwrap();
+        plugin.initialize(sample_rate).unwrap();
 
         let input: Vec<f32> = (0..FFT_SIZE)
             .map(|i| if i % 2 == 0 { 1.0 } else { -1.0 })

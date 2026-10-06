@@ -1621,3 +1621,499 @@ pub const CONFIG_9_1_6: SpeakerConfig = SpeakerConfig {
     ],
     meter_groups: METER_GROUPS_9_1_6,
 };
+
+const METER_GROUPS_COREAUDIO_ATMOS_5_1_2: &[MeterGroupSpec] = &[MeterGroupSpec {
+    name: "Channels",
+    channels: &[
+        MeterChannelSpec {
+            index: 0,
+            label: "FL",
+            display_chars: &["F", "L"],
+        },
+        MeterChannelSpec {
+            index: 1,
+            label: "FR",
+            display_chars: &["F", "R"],
+        },
+        MeterChannelSpec {
+            index: 2,
+            label: "C",
+            display_chars: &["C"],
+        },
+        MeterChannelSpec {
+            index: 3,
+            label: "LFE",
+            display_chars: &["L", "F", "E"],
+        },
+        MeterChannelSpec {
+            index: 4,
+            label: "SL",
+            display_chars: &["S", "L"],
+        },
+        MeterChannelSpec {
+            index: 5,
+            label: "SR",
+            display_chars: &["S", "R"],
+        },
+        MeterChannelSpec {
+            index: 6,
+            label: "TML",
+            display_chars: &["T", "M", "L"],
+        },
+        MeterChannelSpec {
+            index: 7,
+            label: "TMR",
+            display_chars: &["T", "M", "R"],
+        },
+    ],
+}];
+
+/// Core Audio Atmos 5.1.2 channel order with SOTF's canonical speaker geometry.
+/// The SDK tag specifies channel order; it does not define speaker angles.
+pub const CONFIG_COREAUDIO_ATMOS_5_1_2: SpeakerConfig = SpeakerConfig {
+    id: "coreaudio_atmos_5.1.2",
+    name: "Core Audio Atmos 5.1.2",
+    description: "Core Audio order with top-middle height speakers",
+    total_channels: 8,
+    speakers: &[
+        SpeakerPosition {
+            label: "FL",
+            name: "Front Left",
+            azimuth: 30.0,
+            elevation: 0.0,
+            channel: 0,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "FR",
+            name: "Front Right",
+            azimuth: -30.0,
+            elevation: 0.0,
+            channel: 1,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "C",
+            name: "Center",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 2,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "LFE",
+            name: "Low Frequency Effects",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 3,
+            is_lfe: true,
+        },
+        SpeakerPosition {
+            label: "SL",
+            name: "Side Left",
+            azimuth: 110.0,
+            elevation: 0.0,
+            channel: 4,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "SR",
+            name: "Side Right",
+            azimuth: -110.0,
+            elevation: 0.0,
+            channel: 5,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TML",
+            name: "Top Middle Left",
+            azimuth: 90.0,
+            elevation: 45.0,
+            channel: 6,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TMR",
+            name: "Top Middle Right",
+            azimuth: -90.0,
+            elevation: 45.0,
+            channel: 7,
+            is_lfe: false,
+        },
+    ],
+    meter_groups: METER_GROUPS_COREAUDIO_ATMOS_5_1_2,
+};
+
+const METER_GROUPS_COREAUDIO_ATMOS_7_1_2: &[MeterGroupSpec] = &[MeterGroupSpec {
+    name: "Channels",
+    channels: &[
+        MeterChannelSpec {
+            index: 0,
+            label: "FL",
+            display_chars: &["F", "L"],
+        },
+        MeterChannelSpec {
+            index: 1,
+            label: "FR",
+            display_chars: &["F", "R"],
+        },
+        MeterChannelSpec {
+            index: 2,
+            label: "C",
+            display_chars: &["C"],
+        },
+        MeterChannelSpec {
+            index: 3,
+            label: "LFE",
+            display_chars: &["L", "F", "E"],
+        },
+        MeterChannelSpec {
+            index: 4,
+            label: "SL",
+            display_chars: &["S", "L"],
+        },
+        MeterChannelSpec {
+            index: 5,
+            label: "SR",
+            display_chars: &["S", "R"],
+        },
+        MeterChannelSpec {
+            index: 6,
+            label: "BL",
+            display_chars: &["B", "L"],
+        },
+        MeterChannelSpec {
+            index: 7,
+            label: "BR",
+            display_chars: &["B", "R"],
+        },
+        MeterChannelSpec {
+            index: 8,
+            label: "TML",
+            display_chars: &["T", "M", "L"],
+        },
+        MeterChannelSpec {
+            index: 9,
+            label: "TMR",
+            display_chars: &["T", "M", "R"],
+        },
+    ],
+}];
+
+/// Core Audio Atmos 7.1.2 channel order with SOTF's canonical speaker geometry.
+/// The SDK tag specifies channel order; it does not define speaker angles.
+pub const CONFIG_COREAUDIO_ATMOS_7_1_2: SpeakerConfig = SpeakerConfig {
+    id: "coreaudio_atmos_7.1.2",
+    name: "Core Audio Atmos 7.1.2",
+    description: "Core Audio order with top-middle height speakers",
+    total_channels: 10,
+    speakers: &[
+        SpeakerPosition {
+            label: "FL",
+            name: "Front Left",
+            azimuth: 30.0,
+            elevation: 0.0,
+            channel: 0,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "FR",
+            name: "Front Right",
+            azimuth: -30.0,
+            elevation: 0.0,
+            channel: 1,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "C",
+            name: "Center",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 2,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "LFE",
+            name: "Low Frequency Effects",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 3,
+            is_lfe: true,
+        },
+        SpeakerPosition {
+            label: "SL",
+            name: "Side Left",
+            azimuth: 90.0,
+            elevation: 0.0,
+            channel: 4,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "SR",
+            name: "Side Right",
+            azimuth: -90.0,
+            elevation: 0.0,
+            channel: 5,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "BL",
+            name: "Back Left",
+            azimuth: 150.0,
+            elevation: 0.0,
+            channel: 6,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "BR",
+            name: "Back Right",
+            azimuth: -150.0,
+            elevation: 0.0,
+            channel: 7,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TML",
+            name: "Top Middle Left",
+            azimuth: 90.0,
+            elevation: 45.0,
+            channel: 8,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TMR",
+            name: "Top Middle Right",
+            azimuth: -90.0,
+            elevation: 45.0,
+            channel: 9,
+            is_lfe: false,
+        },
+    ],
+    meter_groups: METER_GROUPS_COREAUDIO_ATMOS_7_1_2,
+};
+
+const METER_GROUPS_COREAUDIO_ATMOS_9_1_6: &[MeterGroupSpec] = &[MeterGroupSpec {
+    name: "Channels",
+    channels: &[
+        MeterChannelSpec {
+            index: 0,
+            label: "FL",
+            display_chars: &["F", "L"],
+        },
+        MeterChannelSpec {
+            index: 1,
+            label: "FR",
+            display_chars: &["F", "R"],
+        },
+        MeterChannelSpec {
+            index: 2,
+            label: "C",
+            display_chars: &["C"],
+        },
+        MeterChannelSpec {
+            index: 3,
+            label: "LFE",
+            display_chars: &["L", "F", "E"],
+        },
+        MeterChannelSpec {
+            index: 4,
+            label: "SL",
+            display_chars: &["S", "L"],
+        },
+        MeterChannelSpec {
+            index: 5,
+            label: "SR",
+            display_chars: &["S", "R"],
+        },
+        MeterChannelSpec {
+            index: 6,
+            label: "BL",
+            display_chars: &["B", "L"],
+        },
+        MeterChannelSpec {
+            index: 7,
+            label: "BR",
+            display_chars: &["B", "R"],
+        },
+        MeterChannelSpec {
+            index: 8,
+            label: "WL",
+            display_chars: &["W", "L"],
+        },
+        MeterChannelSpec {
+            index: 9,
+            label: "WR",
+            display_chars: &["W", "R"],
+        },
+        MeterChannelSpec {
+            index: 10,
+            label: "TFL",
+            display_chars: &["T", "F", "L"],
+        },
+        MeterChannelSpec {
+            index: 11,
+            label: "TFR",
+            display_chars: &["T", "F", "R"],
+        },
+        MeterChannelSpec {
+            index: 12,
+            label: "TML",
+            display_chars: &["T", "M", "L"],
+        },
+        MeterChannelSpec {
+            index: 13,
+            label: "TMR",
+            display_chars: &["T", "M", "R"],
+        },
+        MeterChannelSpec {
+            index: 14,
+            label: "TBL",
+            display_chars: &["T", "B", "L"],
+        },
+        MeterChannelSpec {
+            index: 15,
+            label: "TBR",
+            display_chars: &["T", "B", "R"],
+        },
+    ],
+}];
+
+/// Core Audio Atmos 9.1.6 channel order with SOTF's canonical speaker geometry.
+/// The SDK tag specifies channel order; it does not define speaker angles.
+pub const CONFIG_COREAUDIO_ATMOS_9_1_6: SpeakerConfig = SpeakerConfig {
+    id: "coreaudio_atmos_9.1.6",
+    name: "Core Audio Atmos 9.1.6",
+    description: "Core Audio order with top-front, top-middle, then top-rear channels",
+    total_channels: 16,
+    speakers: &[
+        SpeakerPosition {
+            label: "FL",
+            name: "Front Left",
+            azimuth: 30.0,
+            elevation: 0.0,
+            channel: 0,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "FR",
+            name: "Front Right",
+            azimuth: -30.0,
+            elevation: 0.0,
+            channel: 1,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "C",
+            name: "Center",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 2,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "LFE",
+            name: "Low Frequency Effects",
+            azimuth: 0.0,
+            elevation: 0.0,
+            channel: 3,
+            is_lfe: true,
+        },
+        SpeakerPosition {
+            label: "SL",
+            name: "Side Left",
+            azimuth: 90.0,
+            elevation: 0.0,
+            channel: 4,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "SR",
+            name: "Side Right",
+            azimuth: -90.0,
+            elevation: 0.0,
+            channel: 5,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "BL",
+            name: "Back Left",
+            azimuth: 150.0,
+            elevation: 0.0,
+            channel: 6,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "BR",
+            name: "Back Right",
+            azimuth: -150.0,
+            elevation: 0.0,
+            channel: 7,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "WL",
+            name: "Wide Left",
+            azimuth: 60.0,
+            elevation: 0.0,
+            channel: 8,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "WR",
+            name: "Wide Right",
+            azimuth: -60.0,
+            elevation: 0.0,
+            channel: 9,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TFL",
+            name: "Top Front Left",
+            azimuth: 30.0,
+            elevation: 45.0,
+            channel: 10,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TFR",
+            name: "Top Front Right",
+            azimuth: -30.0,
+            elevation: 45.0,
+            channel: 11,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TML",
+            name: "Top Middle Left",
+            azimuth: 90.0,
+            elevation: 45.0,
+            channel: 12,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TMR",
+            name: "Top Middle Right",
+            azimuth: -90.0,
+            elevation: 45.0,
+            channel: 13,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TBL",
+            name: "Top Back Left",
+            azimuth: 150.0,
+            elevation: 45.0,
+            channel: 14,
+            is_lfe: false,
+        },
+        SpeakerPosition {
+            label: "TBR",
+            name: "Top Back Right",
+            azimuth: -150.0,
+            elevation: 45.0,
+            channel: 15,
+            is_lfe: false,
+        },
+    ],
+    meter_groups: METER_GROUPS_COREAUDIO_ATMOS_9_1_6,
+};

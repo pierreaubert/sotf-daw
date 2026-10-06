@@ -23,7 +23,7 @@ use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use libloading::Library;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::path::{Path, PathBuf};
 use std::ptr;
 use std::rc::Rc;
@@ -3017,11 +3017,11 @@ unsafe fn select_audio_class(
                 continue;
             }
             let info = info.assume_init();
-            let category = bounded_i8_array(&info.category);
+            let category = bounded_c_char_array(&info.category);
             if category != "Audio Module Class" {
                 continue;
             }
-            let name = bounded_i8_array(&info.name);
+            let name = bounded_c_char_array(&info.name);
             let id = iid_string(&info.cid);
             let metadata = NativePluginMetadata {
                 id: id.clone(),
@@ -3799,13 +3799,20 @@ fn ensure_ok(result: tresult, plugin: &str, operation: &str) -> Result<(), Strin
     }
 }
 
-fn bounded_i8_array<const N: usize>(chars: &[i8; N]) -> String {
-    let nul = chars.iter().position(|value| *value == 0).unwrap_or(N);
-    let bytes = chars[..nul]
+fn bounded_c_char_array<const N: usize>(chars: &[c_char; N]) -> String {
+    let bytes = chars
         .iter()
-        .map(|value| *value as u8)
+        .map(|value| value.to_ne_bytes()[0])
         .collect::<Vec<_>>();
-    String::from_utf8_lossy(&bytes).trim().to_string()
+    bounded_utf8_bytes(&bytes)
+}
+
+fn bounded_utf8_bytes(bytes: &[u8]) -> String {
+    let nul = bytes
+        .iter()
+        .position(|value| *value == 0)
+        .unwrap_or(bytes.len());
+    String::from_utf8_lossy(&bytes[..nul]).trim().to_string()
 }
 
 fn bounded_u16_array<const N: usize>(chars: &[i16; N]) -> String {
@@ -3887,12 +3894,33 @@ fn initialize_platform_module(library: &Library, path: &Path) -> Result<(), Stri
 #[cfg(test)]
 mod lifecycle_tests {
     use super::{
-        EventTypes, Vst3BackendConstructionState, prepare_vst3_events,
-        unwind_vst3_backend_construction, unwind_vst3_component_lifecycle, vst3_process_context,
+        EventTypes, Vst3BackendConstructionState, bounded_c_char_array, bounded_utf8_bytes,
+        prepare_vst3_events, unwind_vst3_backend_construction, unwind_vst3_component_lifecycle,
+        vst3_process_context,
     };
     use crate::plugin::{MidiEvent, MidiMessage, ProcessContext, TransportInfo};
     use std::cell::RefCell;
+    use std::ffi::c_char;
     use std::rc::Rc;
+
+    #[test]
+    fn vst3_string_decoding_handles_both_signed_byte_values_and_nul() {
+        let signed = [i8::MIN, i8::MAX, 0, b'Z' as i8];
+        let bytes = signed
+            .iter()
+            .map(|value| value.to_ne_bytes()[0])
+            .collect::<Vec<_>>();
+        assert_eq!(bounded_utf8_bytes(&bytes), "�\u{7f}");
+
+        let chars = [
+            b'A' as c_char,
+            c_char::from_ne_bytes([0xff]),
+            0,
+            b'Z' as c_char,
+        ];
+        assert_eq!(bounded_c_char_array(&chars), "A�");
+        assert_eq!(bounded_utf8_bytes(b"A\0Z"), "A");
+    }
 
     #[test]
     fn construction_guard_unwinds_processing_activation_and_initialization_in_order() {

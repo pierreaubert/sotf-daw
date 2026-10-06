@@ -89,7 +89,7 @@ impl CrossfeedPlugin {
         let bauer_shelf = Biquad::new(
             math_audio_iir_fir::BiquadFilterType::Lowshelf,
             params.bauer_fcut_hz as f64,
-            sr as f64,
+            sr,
             0.707,
             -(params.bauer_feed_db as f64),
         );
@@ -108,42 +108,42 @@ impl CrossfeedPlugin {
             meier_lpf_l: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::Lowpass,
                 650.0,
-                sr as f64,
+                sr,
                 0.707,
                 0.0,
             ),
             meier_lpf_r: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::Lowpass,
                 650.0,
-                sr as f64,
+                sr,
                 0.707,
                 0.0,
             ),
             meier_allpass_l: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::AllPass,
                 1000.0,
-                sr as f64,
+                sr,
                 0.5,
                 0.0,
             ),
             meier_allpass_r: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::AllPass,
                 1000.0,
-                sr as f64,
+                sr,
                 0.5,
                 0.0,
             ),
             hrtf_shadow_l: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::Lowpass,
                 HRTF_SHADOW_CUTOFF_HZ,
-                sr as f64,
+                sr,
                 0.707,
                 0.0,
             ),
             hrtf_shadow_r: Biquad::new(
                 math_audio_iir_fir::BiquadFilterType::Lowpass,
                 HRTF_SHADOW_CUTOFF_HZ,
-                sr as f64,
+                sr,
                 0.707,
                 0.0,
             ),
@@ -382,7 +382,7 @@ impl CrossfeedPlugin {
     }
 
     pub(super) fn update_bauer_filter(&mut self) {
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         self.bauer_shelf.update_params(
             math_audio_iir_fir::BiquadFilterType::Lowshelf,
             self.params.bauer_fcut_hz as f64,
@@ -399,7 +399,7 @@ impl CrossfeedPlugin {
         self.bauer_transition_target = Biquad::new(
             math_audio_iir_fir::BiquadFilterType::Lowshelf,
             self.params.bauer_fcut_hz as f64,
-            self.sample_rate as f64,
+            self.sample_rate,
             0.707,
             -(self.params.bauer_feed_db as f64),
         )
@@ -430,7 +430,7 @@ impl CrossfeedPlugin {
             self.bauer_shelf.update_params(
                 math_audio_iir_fir::BiquadFilterType::Lowshelf,
                 self.params.bauer_fcut_hz as f64,
-                self.sample_rate as f64,
+                self.sample_rate,
                 0.707,
                 -(self.params.bauer_feed_db as f64),
             );
@@ -439,7 +439,7 @@ impl CrossfeedPlugin {
     }
 
     pub(super) fn update_meier_filters(&mut self) {
-        let sr = self.sample_rate as f64;
+        let sr = self.sample_rate;
         self.meier_lpf_l = Biquad::new(
             math_audio_iir_fir::BiquadFilterType::Lowpass,
             650.0,

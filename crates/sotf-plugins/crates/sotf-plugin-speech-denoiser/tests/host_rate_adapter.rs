@@ -9,8 +9,19 @@ use sotf_plugin_speech_denoiser::{
 static ALLOCATOR: CountingAlloc = CountingAlloc;
 
 const VALIDATOR_RATES: [f64; 13] = [
-    8_000.0, 22_050.0, 44_100.0, 48_000.0, 88_200.0, 96_000.0, 192_000.0, 384_000.0, 768_000.0,
-    1_234.5678, 12_345.678, 45_678.901, 123_456.78,
+    8_000.0,
+    22_050.0,
+    44_100.0,
+    48_000.0,
+    88_200.0,
+    96_000.0,
+    192_000.0,
+    384_000.0,
+    768_000.0,
+    1_234.567_8,
+    12_345.678,
+    45_678.901,
+    123_456.78,
 ];
 
 fn strength_zero(rate: f64, channels: usize, enabled: bool) -> SpeechDenoiserPlugin {

@@ -1679,8 +1679,10 @@ unsafe fn query_audio_channels(
                 metadata,
                 input_count,
                 output_count,
-                usize::from(*main_channels),
-                usize::from(*key_channels),
+                SidechainChannelWidths {
+                    main: usize::from(*main_channels),
+                    key: usize::from(*key_channels),
+                },
             );
         }
         if input_count > 1 || output_count > 1 {
@@ -2330,6 +2332,11 @@ unsafe fn select_sidechain_audio_setup(
     }
 }
 
+struct SidechainChannelWidths {
+    main: usize,
+    key: usize,
+}
+
 unsafe fn query_sidechain_channels(
     ports: *const clap_plugin_audio_ports,
     plugin: *const clap_plugin,
@@ -2337,9 +2344,12 @@ unsafe fn query_sidechain_channels(
     metadata: &NativePluginMetadata,
     input_count: u32,
     output_count: u32,
-    main_channels: usize,
-    key_channels: usize,
+    expected: SidechainChannelWidths,
 ) -> Result<(usize, usize), String> {
+    let SidechainChannelWidths {
+        main: main_channels,
+        key: key_channels,
+    } = expected;
     // SAFETY: Plugin is initialized and extension data is plugin-owned.
     unsafe {
         if input_count != 2 || output_count != 1 {
@@ -2629,7 +2639,10 @@ struct StateReader<'a> {
 }
 
 fn bounded_c_char_array<const N: usize>(chars: &[c_char; N]) -> Option<String> {
-    let bytes = chars.iter().map(|value| *value as u8).collect::<Vec<_>>();
+    let bytes = chars
+        .iter()
+        .map(|value| value.to_ne_bytes()[0])
+        .collect::<Vec<_>>();
     let nul = bytes
         .iter()
         .position(|byte| *byte == 0)

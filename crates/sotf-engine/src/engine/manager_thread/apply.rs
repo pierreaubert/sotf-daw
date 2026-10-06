@@ -444,7 +444,9 @@ mod tests {
     };
     use crate::engine::{GcItem, GcSender};
     use crate::plugins::PluginSettings;
+    #[cfg(target_os = "linux")]
     use sotf_plugins::plugin::TailLength;
+    #[cfg(target_os = "linux")]
     use sotf_plugins::{
         ExternalPlugin, ExternalPluginSandboxMode, ExternalPluginState, Plugin, PluginDescriptor,
         PluginFormat, PluginScanStatus, ProcessContext,
@@ -453,10 +455,13 @@ mod tests {
     use std::time::Duration;
 
     const NATIVE_ROUTE_SAMPLE_RATE: u32 = 48_000;
+    #[cfg(target_os = "linux")]
     const NATIVE_ROUTE_INPUT_CHANNELS: usize = 64;
+    #[cfg(target_os = "linux")]
     const NATIVE_ROUTE_BLOCK_FRAMES: usize = 128;
     const NATIVE_ROUTE_WAIT: Duration = Duration::from_secs(10);
     // The isolated worker reserves one maximum-size process block for IPC.
+    #[cfg(target_os = "linux")]
     const NATIVE_ROUTE_ISOLATED_LATENCY_SAMPLES: usize = 8_192;
 
     struct RunningEngineRoute {
@@ -468,6 +473,9 @@ mod tests {
         playback_command_rx: Option<Receiver<PlaybackCommand>>,
         state: Arc<ArcSwap<AudioEngineState>>,
         config_queue: ConfigUpdateQueue,
+        // Keep the event receiver alive on every platform; only the Linux
+        // native-route test reads it.
+        #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
         event_rx: crossbeam::channel::Receiver<ThreadEvent>,
         _gc_rx: crossbeam::channel::Receiver<GcItem>,
         _recycle_tx: Sender<Vec<f32>>,
@@ -596,11 +604,13 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     struct WorkerBinaryLink {
         path: std::path::PathBuf,
         remove_on_drop: bool,
     }
 
+    #[cfg(target_os = "linux")]
     impl WorkerBinaryLink {
         #[cfg(target_os = "linux")]
         fn install() -> Self {
@@ -639,6 +649,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     impl Drop for WorkerBinaryLink {
         fn drop(&mut self) {
             if self.remove_on_drop {
@@ -647,6 +658,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn old_stateful_chain() -> Vec<PluginConfig> {
         vec![
             PluginConfig::new(
@@ -720,6 +732,7 @@ mod tests {
             .sqrt()
     }
 
+    #[cfg(target_os = "linux")]
     fn ambisonics_descriptor() -> PluginDescriptor {
         PluginDescriptor {
             id: "536F7466416D6269736E696330303031".into(),
@@ -739,6 +752,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn with_order_seven_setup(state: ExternalPluginState) -> ExternalPluginState {
         let mut value = serde_json::to_value(state).expect("serialize external state");
         value["audio_setup"] = serde_json::json!({
@@ -749,10 +763,12 @@ mod tests {
         serde_json::from_value(value).expect("deserialize order-seven external state")
     }
 
+    #[cfg(target_os = "linux")]
     fn external_config(state: ExternalPluginState) -> PluginConfig {
         PluginSettings::External { state }.to_plugin_config(NATIVE_ROUTE_SAMPLE_RATE as f64)
     }
 
+    #[cfg(target_os = "linux")]
     fn native_ambisonics_state(
         opaque_state_is_order_seven: bool,
         typed_setup_is_order_seven: bool,
@@ -780,10 +796,12 @@ mod tests {
         state
     }
 
+    #[cfg(target_os = "linux")]
     fn zero_block(frames: usize, channels: usize) -> Vec<f32> {
         vec![0.0; frames * channels]
     }
 
+    #[cfg(target_os = "linux")]
     fn native_route_probe_block(start_frame: usize, frames: usize) -> Vec<f32> {
         let mut block = zero_block(frames, NATIVE_ROUTE_INPUT_CHANNELS);
         for frame in 0..frames {
@@ -799,6 +817,7 @@ mod tests {
         block
     }
 
+    #[cfg(target_os = "linux")]
     fn populate_stateful_controls(
         live: &RunningEngineRoute,
         synchronized_twin: &RunningEngineRoute,
@@ -832,6 +851,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn reject_candidate_and_check_live_history(
         live: &mut RunningEngineRoute,
         synchronized_twin: &RunningEngineRoute,
@@ -931,6 +951,7 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     fn commit_candidate_and_verify_eos(live: &mut RunningEngineRoute) {
         let valid_state = native_ambisonics_state(true, true);
         valid_state
