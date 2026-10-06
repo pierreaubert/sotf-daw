@@ -2,8 +2,8 @@
 
 use atomic_float::AtomicF32;
 use std::fmt::{Debug, Display};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use super::internals::ParamPtr;
 use super::{Param, ParamFlags, ParamMut};
@@ -150,7 +150,11 @@ impl Param for BoolParam {
 
     #[inline]
     fn preview_normalized(&self, plain: Self::Plain) -> f32 {
-        if plain { 1.0 } else { 0.0 }
+        if plain {
+            1.0
+        } else {
+            0.0
+        }
     }
 
     #[inline]

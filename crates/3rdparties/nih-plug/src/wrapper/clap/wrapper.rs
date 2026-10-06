@@ -592,7 +592,11 @@ impl<P: ClapPlugin> MainThreadExecutor<Task<P>> for Wrapper<P> {
         };
         if is_gui_thread {
             if let Some(generation) = self.params.begin_parameter_value_rescan() {
-                let host_params = self.host_params.borrow().as_ref().map(|params| &**params as *const clap_host_params);
+                let host_params = self
+                    .host_params
+                    .borrow()
+                    .as_ref()
+                    .map(|params| &**params as *const clap_host_params);
                 let succeeded = if let Some(host_params) = host_params {
                     // SAFETY: this task is executing on the host's GUI thread.
                     unsafe_clap_call! { host_params=>rescan(&*self.host_callback, CLAP_PARAM_RESCAN_VALUES) };
