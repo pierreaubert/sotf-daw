@@ -156,7 +156,7 @@ audioadapter-buffers = "5"
 bincode = { version = "2.0.1", features = ["serde"] }
 bytemuck = { version = "1.14", features = ["derive"] }
 cbindgen = "0.28"
-chacha20poly1305 = "0.10"
+chacha20poly1305 = { version = "0.11", features = ["zeroize"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 coreaudio-rs = "0.14.2"
@@ -296,6 +296,7 @@ strip = "symbols"
 
 # Vendored forks owned by this workspace.
 [patch.crates-io]
+oo7 = { path = "../gpui-toolkit/crates/3rdparties/crypto-forks/oo7" }
 # Match GPUI compatibility forks: workspace patches are not inherited.
 fontconfig-parser = { git = "https://github.com/pierreaubert/fontconfig-parser.git", rev = "d247c91f5a57edd6ba6eb26e884d4904dbfbc87e" }
 rusty-fork = { git = "https://github.com/pierreaubert/rusty-fork.git", rev = "ee62bcd64fa6afe7fae0e52a448d716dc294e98d" }

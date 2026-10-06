@@ -4,8 +4,8 @@ use super::misc::bytes_to_samples;
 use super::samples::samples_as_bytes_mut;
 use super::samples::samples_to_bytes;
 use super::samples::samples_to_bytes_into;
-use chacha20poly1305::aead::Aead;
-use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit, Nonce, Tag};
+use chacha20poly1305::aead::{Aead, AeadInOut};
+use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, Tag};
 use sha2::{Digest, Sha256};
 
 /// Audio encryption cipher using ChaCha20-Poly1305
@@ -80,10 +80,10 @@ impl AudioCipher {
         // Format: [4 bytes zero padding] [8 bytes frame_counter as big-endian]
         let mut nonce_bytes = [0u8; 12];
         nonce_bytes[4..12].copy_from_slice(&frame_counter.to_be_bytes());
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::try_from(&nonce_bytes[..]).expect("nonce length is fixed");
 
         // Encrypt with authentication
-        self.cipher.encrypt(nonce, plaintext.as_ref()).ok()
+        self.cipher.encrypt(&nonce, plaintext.as_ref()).ok()
     }
 
     /// Decrypt audio samples
@@ -98,10 +98,10 @@ impl AudioCipher {
         // Create nonce from frame counter
         let mut nonce_bytes = [0u8; 12];
         nonce_bytes[4..12].copy_from_slice(&frame_counter.to_be_bytes());
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::try_from(&nonce_bytes[..]).expect("nonce length is fixed");
 
         // Decrypt and verify authentication
-        let plaintext = self.cipher.decrypt(nonce, ciphertext).ok()?;
+        let plaintext = self.cipher.decrypt(&nonce, ciphertext).ok()?;
 
         // Convert bytes back to samples
         Some(bytes_to_samples(&plaintext))
@@ -139,12 +139,12 @@ impl AudioCipher {
         // Create nonce from frame counter
         let mut nonce_bytes = [0u8; 12];
         nonce_bytes[4..12].copy_from_slice(&frame_counter.to_be_bytes());
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::try_from(&nonce_bytes[..]).expect("nonce length is fixed");
 
         // Encrypt in place and get auth tag
         let Ok(tag) =
             self.cipher
-                .encrypt_in_place_detached(nonce, &[], &mut output[..sample_bytes])
+                .encrypt_inout_detached(&nonce, &[], (&mut output[..sample_bytes]).into())
         else {
             return None;
         };
@@ -184,10 +184,10 @@ impl AudioCipher {
         // Create nonce from frame counter
         let mut nonce_bytes = [0u8; 12];
         nonce_bytes[4..12].copy_from_slice(&frame_counter.to_be_bytes());
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::try_from(&nonce_bytes[..]).expect("nonce length is fixed");
 
         // Extract auth tag
-        let tag = Tag::from_slice(&ciphertext[sample_bytes..]);
+        let tag = Tag::try_from(&ciphertext[sample_bytes..]).ok()?;
 
         // Copy ciphertext (without tag) to output buffer as bytes, then decrypt in place
         // We need a mutable byte view of the output f32 slice
@@ -196,7 +196,7 @@ impl AudioCipher {
 
         // Decrypt in place
         self.cipher
-            .decrypt_in_place_detached(nonce, &[], output_bytes, tag)
+            .decrypt_inout_detached(&nonce, &[], output_bytes.into(), &tag)
             .ok()?;
 
         Some(sample_count)
