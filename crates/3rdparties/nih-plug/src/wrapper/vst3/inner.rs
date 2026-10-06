@@ -3,8 +3,8 @@ use crossbeam::atomic::AtomicCell;
 use crossbeam::channel::{self, SendTimeoutError};
 use parking_lot::{Mutex, RwLock};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::time::Duration;
 use vst3_sys::base::{kInvalidArgument, kResultOk, tresult};
 use vst3_sys::vst::{IComponentHandler, RestartFlags};
@@ -12,7 +12,7 @@ use vst3_sys::vst::{IComponentHandler, RestartFlags};
 use super::context::{WrapperGuiContext, WrapperInitContext, WrapperProcessContext};
 use super::note_expressions::NoteExpressionController;
 use super::param_units::ParamUnits;
-use super::util::{ObjectPtr, VstPtr, VST3_MIDI_PARAMS_END, VST3_MIDI_PARAMS_START};
+use super::util::{ObjectPtr, VST3_MIDI_PARAMS_END, VST3_MIDI_PARAMS_START, VstPtr};
 #[cfg(target_os = "linux")]
 use super::view::RunLoopEventHandler;
 use super::view::WrapperView;
@@ -255,6 +255,13 @@ impl<P: Vst3Plugin> WrapperInner<P> {
         // This is used to allow the plugin to restore preset data from its editor, see the comment
         // on `Self::updated_state_sender`
         let (updated_state_sender, updated_state_receiver) = channel::bounded(0);
+        // Both endpoints are still local, so no preset request can be waiting.
+        // Warm the channel's shared mutex on this control thread before audio
+        // processing can encounter its platform-specific lazy allocation.
+        assert!(matches!(
+            updated_state_receiver.try_recv(),
+            Err(channel::TryRecvError::Empty)
+        ));
 
         // This is a mapping from the parameter IDs specified by the plugin to pointers to those
         // parameters. These pointers are assumed to be safe to dereference as long as
@@ -919,6 +926,36 @@ impl<P: Vst3Plugin> MainThreadExecutor<Task<P>> for WrapperInner<P> {
                 },
                 None => nih_debug_assert_failure!("Can't resize a closed editor"),
             },
+        }
+        if is_gui_thread {
+            if let Some(generation) = self.params.begin_parameter_value_rescan() {
+                // Release the handler borrow before calling a reentrant host.
+                let handler = self
+                    .component_handler
+                    .borrow()
+                    .as_ref()
+                    .map(|handler| super::util::VstPtr::from(handler.to_vst3_ptr()));
+                let succeeded = if let Some(handler) = handler {
+                    // SAFETY: this task is executing on the host's GUI thread.
+                    let result = unsafe {
+                        handler.restart_component(RestartFlags::kParamValuesChanged as i32)
+                    };
+                    if result == kResultOk {
+                        if self.plug_view.read().is_some() {
+                            if let Some(editor) = self.editor.borrow().as_ref() {
+                                editor.lock().param_values_changed();
+                            }
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                self.params
+                    .finish_parameter_value_rescan(generation, succeeded);
+            }
         }
     }
 }

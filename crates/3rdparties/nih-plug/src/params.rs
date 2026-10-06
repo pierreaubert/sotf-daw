@@ -307,6 +307,24 @@ pub unsafe trait Params: 'static + Send + Sync {
     /// fine to be able to support custom reusable Params implementations.
     fn param_map(&self) -> Vec<(String, ParamPtr, String)>;
 
+    /// Claim a pending coupled-parameter refresh on the GUI thread.
+    ///
+    /// The default implementation requests no refresh. Opt-in implementations
+    /// return a generation token and prevent reentrant claims until the wrapper
+    /// calls [`Self::finish_parameter_value_rescan`]. This hook must not allocate
+    /// or block. Audio-thread parameter callbacks should only publish pending
+    /// generations; wrappers consume them during existing GUI task dispatch.
+    fn begin_parameter_value_rescan(&self) -> Option<u64> {
+        None
+    }
+
+    /// Complete a claimed coupled-parameter refresh on the GUI thread.
+    ///
+    /// A successful refresh acknowledges only `generation`. Newer changes and
+    /// unsuccessful host notifications must remain pending for a later dispatch.
+    /// The default implementation does nothing.
+    fn finish_parameter_value_rescan(&self, _generation: u64, _succeeded: bool) {}
+
     /// Validate a complete state before any parameter values are changed.
     ///
     /// Plugins with control-thread resources can use this hook to reject an
@@ -363,6 +381,15 @@ pub unsafe trait Params: 'static + Send + Sync {
 unsafe impl<P: Params> Params for Arc<P> {
     fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
         self.as_ref().param_map()
+    }
+
+    fn begin_parameter_value_rescan(&self) -> Option<u64> {
+        self.as_ref().begin_parameter_value_rescan()
+    }
+
+    fn finish_parameter_value_rescan(&self, generation: u64, succeeded: bool) {
+        self.as_ref()
+            .finish_parameter_value_rescan(generation, succeeded);
     }
 
     fn validate_state(

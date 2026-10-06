@@ -79,6 +79,10 @@ mod ambisonics_custom_tests;
 #[path = "params_speech_restore_tests.rs"]
 mod speech_restore_tests;
 
+#[cfg(all(test, feature = "aae"))]
+#[path = "params_aae_solo_tests.rs"]
+mod aae_solo_tests;
+
 /// Dynamic nih-plug Params implementation built from ParamSpec metadata.
 pub struct DynamicParams {
     float_params: Vec<FloatParam>,
@@ -89,6 +93,14 @@ pub struct DynamicParams {
     /// Stable declaration order used by the realtime sync path. Hash-map
     /// iteration would make same-frame adapter commands nondeterministic.
     sync_entries: Vec<ParamEntry>,
+    /// Precomputed AAE solo routes. The pair is admitted once per sync boundary
+    /// before setters update cached metadata without touching DSP history.
+    aae_solo_pair: Option<[ParamEntry; 2]>,
+    /// Only native AAE opts into ordered host-boundary solo canonicalization.
+    native_aae_coupled_solo: bool,
+    aae_value_refresh_generation: AtomicU64,
+    aae_value_refresh_acknowledged: AtomicU64,
+    aae_value_refresh_inflight: AtomicBool,
     /// Set after NIH restores a serialized state. The next Ambisonics
     /// initialization must compare those restored hidden values with the
     /// selected audio configuration before synchronizing the selection.
@@ -828,6 +840,28 @@ impl DynamicParams {
     /// when the host reinitializes its prepared DSP instance.
     #[doc(hidden)]
     pub fn from_infos_for_plugin(plugin_type: &str, infos: &[BridgedParamInfo]) -> Arc<Self> {
+        Self::build_from_infos(plugin_type, infos, false)
+    }
+
+    /// Build native parameters with ordered AAE coupled-control admission.
+    ///
+    /// The raw parameter bridge retains strict invalid-tuple rejection. Native
+    /// AAE automation instead disables the peer when either the incoming base
+    /// or effective solo value enables a control. This preserves event order,
+    /// echoed writes, host-visible state, and effective DSP exclusivity.
+    #[doc(hidden)]
+    pub fn from_infos_for_native_plugin(
+        plugin_type: &str,
+        infos: &[BridgedParamInfo],
+    ) -> Arc<Self> {
+        Self::build_from_infos(plugin_type, infos, plugin_type == "AAE")
+    }
+
+    fn build_from_infos(
+        plugin_type: &str,
+        infos: &[BridgedParamInfo],
+        native_aae_coupled_solo: bool,
+    ) -> Arc<Self> {
         let mut float_params = Vec::new();
         let mut bool_params = Vec::new();
         let mut int_params = Vec::new();
@@ -1118,12 +1152,26 @@ impl DynamicParams {
             None
         };
 
-        Arc::new(Self {
+        let aae_solo_pair = (plugin_type == "AAE")
+            .then(|| {
+                param_map
+                    .get("solo_early")
+                    .zip(param_map.get("solo_late"))
+                    .map(|(early, late)| [early.clone(), late.clone()])
+            })
+            .flatten();
+
+        let parameters = Self {
             float_params,
             bool_params,
             int_params,
             param_map,
             sync_entries,
+            aae_solo_pair,
+            native_aae_coupled_solo,
+            aae_value_refresh_generation: AtomicU64::new(0),
+            aae_value_refresh_acknowledged: AtomicU64::new(0),
+            aae_value_refresh_inflight: AtomicBool::new(false),
             ambisonics_state_restore_pending: AtomicBool::new(false),
             ambisonics_custom_state: (plugin_type == "AmbisonicsDecoder")
                 .then(|| Mutex::new(ambisonics_custom::AmbisonicsCustomRestoreState::default())),
@@ -1144,7 +1192,65 @@ impl DynamicParams {
                 .then(|| Mutex::new(HissProfileRestoreState::default())),
             hiss_learn_action,
             hiss_clear_action,
+        };
+        if !native_aae_coupled_solo {
+            return Arc::new(parameters);
+        }
+        Arc::new_cyclic(move |weak: &std::sync::Weak<Self>| {
+            let mut parameters = parameters;
+            if let Some(pair) = parameters.aae_solo_pair.clone() {
+                parameters.bool_params = parameters
+                    .bool_params
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, parameter)| {
+                        let peer = if index == pair[0].index {
+                            Some(pair[1].index)
+                        } else if index == pair[1].index {
+                            Some(pair[0].index)
+                        } else {
+                            None
+                        };
+                        let Some(peer) = peer else { return parameter };
+                        let owner = weak.clone();
+                        parameter.with_coupled_update_callback(Arc::new(move |base, effective| {
+                            // NIH serializes host parameter updates. The bounded
+                            // callback neither locks, queues work, nor touches DSP.
+                            // The wrapper's strong Params owner keeps this upgrade
+                            // alive throughout every parameter callback.
+                            if (base || effective)
+                                && let Some(owner) = owner.upgrade()
+                            {
+                                if owner.bool_params[peer].disable_for_coupled_control() {
+                                    owner
+                                        .aae_value_refresh_generation
+                                        .fetch_add(1, Ordering::Release);
+                                }
+                            }
+                        }))
+                    })
+                    .collect();
+            }
+            parameters
         })
+    }
+
+    fn validate_aae_solo_restore(&self, state: &PluginState) -> bool {
+        if !self.native_aae_coupled_solo {
+            return true;
+        }
+        let Some(pair) = &self.aae_solo_pair else {
+            return true;
+        };
+        let mut values = [false; 2];
+        for (index, entry) in pair.iter().enumerate() {
+            values[index] = match state.params.get(entry.id.as_str()) {
+                Some(NativeParamValue::Bool(value)) => *value,
+                Some(_) => return false,
+                None => self.bool_params[entry.index].unmodulated_plain_value(),
+            };
+        }
+        !(values[0] && values[1])
     }
 
     fn unmodulated_value(&self, entry: &ParamEntry) -> ParameterValue {
@@ -2462,16 +2568,58 @@ impl DynamicParams {
             .load(Ordering::Acquire)
     }
 
+    fn sync_aae_solo_pair(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
+        let Some(pair) = &self.aae_solo_pair else {
+            return Ok(());
+        };
+        // NIH applies host events before this audio-thread sync boundary. Read the
+        // final pair once; neither callback nor audio processing occurs between
+        // these bounded setters. Independent concurrent host writes are not a
+        // coherent pair and must be scheduled through the host event/flush path.
+        let requested = [
+            self.value_for_entry(&pair[0]),
+            self.value_for_entry(&pair[1]),
+        ];
+        let (ParameterValue::Bool(early), ParameterValue::Bool(late)) =
+            (&requested[0], &requested[1])
+        else {
+            return Err("AAE solo parameters must be booleans".into());
+        };
+        if *early && *late {
+            return Err("solo_early and solo_late cannot both be enabled".into());
+        }
+        // The AAE setters validate only booleans and mutual exclusion, then
+        // update the value and cached metadata. Disable the old solo first so a
+        // valid final pair never encounters the old conflicting intermediate
+        // tuple. No reset, resource construction, or processing occurs here.
+        for enabled in [false, true] {
+            for (entry, value) in pair.iter().zip(&requested) {
+                if value.as_bool() == Some(enabled)
+                    && plugin.get_parameter(&entry.id).as_ref() != Some(value)
+                {
+                    plugin.set_parameter(entry.id.clone(), value.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Sync realtime parameter values to a SOTF plugin.
     ///
     /// # Errors
     /// Returns the plugin's error when a parameter update is rejected.
     pub fn sync_to_plugin(&self, plugin: &mut dyn sotf_host::plugin::Plugin) -> Result<(), String> {
+        self.sync_aae_solo_pair(plugin)?;
         let prepared_per_channel = self
             .crossover_channel_frequency_probe
             .as_ref()
             .is_some_and(|id| plugin.get_parameter(id).is_some());
         for entry in self.sync_entries.iter().filter(|entry| entry.realtime) {
+            if self.aae_solo_pair.is_some()
+                && matches!(entry.id.as_str(), "solo_early" | "solo_late")
+            {
+                continue;
+            }
             if self.eq_schema && is_native_eq_pair_draft_parameter(entry.id.as_str()) {
                 continue;
             }
@@ -2727,6 +2875,29 @@ unsafe impl Sync for DynamicParams {}
 // SAFETY: All parameter pointers are valid for the lifetime of DynamicParams.
 // The param_map returns stable pointers to owned fields.
 unsafe impl Params for DynamicParams {
+    fn begin_parameter_value_rescan(&self) -> Option<u64> {
+        if !self.native_aae_coupled_solo
+            || self.aae_value_refresh_generation.load(Ordering::Acquire)
+                == self.aae_value_refresh_acknowledged.load(Ordering::Acquire)
+            || self
+                .aae_value_refresh_inflight
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_err()
+        {
+            return None;
+        }
+        Some(self.aae_value_refresh_generation.load(Ordering::Acquire))
+    }
+
+    fn finish_parameter_value_rescan(&self, generation: u64, succeeded: bool) {
+        if succeeded {
+            self.aae_value_refresh_acknowledged
+                .store(generation, Ordering::Release);
+        }
+        self.aae_value_refresh_inflight
+            .store(false, Ordering::Release);
+    }
+
     fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
         let mut map = Vec::new();
         let mut append = |id: &str, entry: &ParamEntry| {
@@ -2757,7 +2928,8 @@ unsafe impl Params for DynamicParams {
         is_audio_thread: bool,
         sample_rate: Option<f64>,
     ) -> bool {
-        self.validate_eq_native_state(state)
+        self.validate_aae_solo_restore(state)
+            && self.validate_eq_native_state(state)
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
             && self.validate_hiss_restore(state, is_active, is_audio_thread)
             && self.validate_ambisonics_custom_restore(state, is_active, is_audio_thread)
