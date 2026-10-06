@@ -10,6 +10,9 @@ use super::consts::CONFIG_7_1_2;
 use super::consts::CONFIG_7_1_4;
 use super::consts::CONFIG_9_1_4;
 use super::consts::CONFIG_9_1_6;
+use super::consts::CONFIG_COREAUDIO_ATMOS_5_1_2;
+use super::consts::CONFIG_COREAUDIO_ATMOS_7_1_2;
+use super::consts::CONFIG_COREAUDIO_ATMOS_9_1_6;
 use super::types::MeterGroupSpec;
 use super::types::SpeakerConfig;
 
@@ -28,6 +31,9 @@ pub fn get_speaker_config(id: &str) -> Option<&'static SpeakerConfig> {
         "7.1.4" => Some(&CONFIG_7_1_4),
         "9.1.4" => Some(&CONFIG_9_1_4),
         "9.1.6" => Some(&CONFIG_9_1_6),
+        "coreaudio_atmos_5.1.2" => Some(&CONFIG_COREAUDIO_ATMOS_5_1_2),
+        "coreaudio_atmos_7.1.2" => Some(&CONFIG_COREAUDIO_ATMOS_7_1_2),
+        "coreaudio_atmos_9.1.6" => Some(&CONFIG_COREAUDIO_ATMOS_9_1_6),
         _ => None,
     }
 }

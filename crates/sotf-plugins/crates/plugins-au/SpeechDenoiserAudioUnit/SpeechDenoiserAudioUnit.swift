@@ -8,6 +8,15 @@ public class SpeechDenoiserAudioUnit: GenericRustAudioUnit {
     override public class var pluginSubtype: String { "SOSd" }
     override public class var pluginName: String { "SOTF: Speech Denoiser" }
 
+    override public class var supportedChannelCapabilities: [NSNumber]? {
+        [NSNumber(value: 1), NSNumber(value: 1),
+         NSNumber(value: 2), NSNumber(value: 2)]
+    }
+
+    override public class func supportsSampleRate(_ sampleRate: Double) -> Bool {
+        sampleRate == 48_000
+    }
+
     public override var channelCapabilities: [NSNumber]? {
         [NSNumber(value: 1), NSNumber(value: 1),
          NSNumber(value: 2), NSNumber(value: 2)]

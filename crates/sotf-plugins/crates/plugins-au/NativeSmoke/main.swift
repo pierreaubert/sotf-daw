@@ -31,6 +31,21 @@ private struct DownmixLayoutCase {
     let channels: AVAudioChannelCount
     let tag: AudioChannelLayoutTag
     let labels: [String]
+    let configurationID: String?
+
+    init(
+        name: String,
+        channels: AVAudioChannelCount,
+        tag: AudioChannelLayoutTag,
+        labels: [String],
+        configurationID: String? = nil
+    ) {
+        self.name = name
+        self.channels = channels
+        self.tag = tag
+        self.labels = labels
+        self.configurationID = configurationID
+    }
 }
 
 private final class MatchingCapabilitiesAudioUnit: GainAudioUnit {
@@ -629,7 +644,14 @@ private func testFixedTopologyRejectionAndRecovery() throws {
 
     for topologyCase in cases {
         let unit = try topologyCase.construct()
-        let wrongInputChannels: AVAudioChannelCount = topologyCase.inputChannels == 1 ? 2 : 1
+        let wrongInputChannels: AVAudioChannelCount
+        switch topologyCase.name {
+        case "BandSplit", "Crossover":
+            // Both wrappers accept one input channel; 17 exceeds their pair tables.
+            wrongInputChannels = 17
+        default:
+            wrongInputChannels = topologyCase.inputChannels == 1 ? 2 : 1
+        }
         do {
             try unit.inputBusses[0].setFormat(
                 try plainFormat(sampleRate: sampleRate, channels: wrongInputChannels)
@@ -666,8 +688,14 @@ private func testFixedTopologyRejectionAndRecovery() throws {
             allowedSilentChannels: topologyCase.name == "Ambisonics" ? [3] : []
         )
 
-        let wrongOutputChannels: AVAudioChannelCount =
-            topologyCase.outputChannels == 1 ? 2 : 1
+        let wrongOutputChannels: AVAudioChannelCount
+        switch topologyCase.name {
+        case "BandMerge":
+            // Four inputs can validly merge to one output; three is not an integer ratio.
+            wrongOutputChannels = 3
+        default:
+            wrongOutputChannels = topologyCase.outputChannels == 1 ? 2 : 1
+        }
         do {
             try unit.inputBusses[0].setFormat(
                 try plainFormat(sampleRate: sampleRate, channels: topologyCase.inputChannels)
@@ -789,17 +817,23 @@ private func testDownmixLayoutMatrix() throws {
         DownmixLayoutCase(name: "7.1", channels: 8, tag: kAudioChannelLayoutTag_MPEG_7_1_C,
                           labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR"]),
         DownmixLayoutCase(name: "5.1.2", channels: 8, tag: kAudioChannelLayoutTag_Atmos_5_1_2,
-                          labels: ["FL", "FR", "C", "LFE", "SL", "SR", "TFL", "TFR"]),
+                          labels: ["FL", "FR", "C", "LFE", "SL", "SR", "TML", "TMR"],
+                          configurationID: "coreaudio_atmos_5.1.2"),
         DownmixLayoutCase(name: "5.1.4", channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4,
                           labels: ["FL", "FR", "C", "LFE", "SL", "SR", "TFL", "TFR", "TBL", "TBR"]),
         DownmixLayoutCase(name: "7.1.2", channels: 10, tag: kAudioChannelLayoutTag_Atmos_7_1_2,
-                          labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "TFL", "TFR"]),
+                          labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "TML", "TMR"],
+                          configurationID: "coreaudio_atmos_7.1.2"),
         DownmixLayoutCase(name: "7.1.4", channels: 12, tag: kAudioChannelLayoutTag_Atmos_7_1_4,
                           labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "TFL", "TFR", "TBL", "TBR"]),
         DownmixLayoutCase(name: "9.1.4", channels: 14, tag: discreteTag(14),
                           labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "WL", "WR", "TFL", "TFR", "TBL", "TBR"]),
         DownmixLayoutCase(name: "9.1.6", channels: 16, tag: discreteTag(16),
                           labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "WL", "WR", "TFL", "TFR", "TBL", "TBR", "TMiL", "TMiR"]),
+        DownmixLayoutCase(name: "Core Audio 9.1.6", channels: 16,
+                          tag: kAudioChannelLayoutTag_Atmos_9_1_6,
+                          labels: ["FL", "FR", "C", "LFE", "SL", "SR", "BL", "BR", "WL", "WR", "TFL", "TFR", "TML", "TMR", "TBL", "TBR"],
+                          configurationID: "coreaudio_atmos_9.1.6"),
     ]
     let sampleRate = 48_000.0
     let outputFormat = try stereoFormat(sampleRate: sampleRate)
@@ -818,8 +852,9 @@ private func testDownmixLayoutMatrix() throws {
             inputFormat: inputFormat,
             outputFormat: outputFormat
         )
+        let expectedConfigurationID = layoutCase.configurationID ?? layoutCase.name
         try require(
-            configuration.contains("\"input_layout\":\"\(layoutCase.name)\""),
+            configuration.contains("\"input_layout\":\"\(expectedConfigurationID)\""),
             "\(layoutCase.name): configuration lost Core Audio layout identity: \(configuration)"
         )
         try require(
@@ -873,6 +908,27 @@ private func testDownmixLayoutMatrix() throws {
             signature.append(energy)
         }
         routingSignatures[layoutCase.name] = signature
+
+        if layoutCase.name == "5.1.2" {
+            let topMiddleLeft = signature[6]
+            let topMiddleRight = signature[7]
+            try require(
+                topMiddleLeft.1 < topMiddleLeft.0 * 1.0e-4
+                    && topMiddleRight.0 < topMiddleRight.1 * 1.0e-4,
+                "Core Audio TopMiddle90 channels did not pan to their matching side"
+            )
+        }
+        if layoutCase.name == "Core Audio 9.1.6" {
+            let topMiddleLeft = signature[12]
+            let topBackLeft = signature[14]
+            let expectedRightToLeft = pow(tan(Double.pi / 8.0), 2.0)
+            let observedRightToLeft = topBackLeft.1 / max(topBackLeft.0, 1.0e-12)
+            try require(
+                topMiddleLeft.1 < topMiddleLeft.0 * 1.0e-4
+                    && abs(observedRightToLeft - expectedRightToLeft) < 0.03,
+                "Core Audio 9.1.6 top-middle/back channel order or pan geometry changed"
+            )
+        }
     }
 
 
@@ -986,6 +1042,53 @@ private func testDownmixFormatChangeAndUnsupportedLayout() throws {
         "same-instance 7.1→5.1.2 retained stale routing"
     )
 
+    let heightParameter = unit.parameterTree?.allParameters.first {
+        $0.identifier == "height_gain_db"
+    }
+    heightParameter?.setValue(-6.0, originator: nil)
+    let retainedHeightGain = unit.parameterValueForTesting(identifier: "height_gain_db") ?? .nan
+    let retainedInputWidth = unit.inputBusses[0].format.channelCount
+    let retainedInputTag = unit.inputBusses[0].format.channelLayout?.layoutTag
+    let retainedOutputWidth = unit.outputBusses[0].format.channelCount
+    let unsupportedNamedLayout = try format(
+        sampleRate: sampleRate,
+        channels: 6,
+        tag: kAudioChannelLayoutTag_MPEG_5_1_B
+    )
+    try require(
+        !unit.shouldChange(to: unsupportedNamedLayout, for: unit.inputBusses[0]),
+        "reordered MPEG 5.1 B was advertised as supported"
+    )
+    let unsupportedConfiguration = unit.pluginConfiguration(
+        inputFormat: unsupportedNamedLayout,
+        outputFormat: outputFormat
+    )
+    try require(
+        unsupportedConfiguration == "{invalid}",
+        "reordered MPEG 5.1 B did not fail closed"
+    )
+    do {
+        try unit.inputBusses[0].setFormat(unsupportedNamedLayout)
+        throw SmokeFailure.failure("reordered MPEG 5.1 B was accepted")
+    } catch let error as NSError {
+        try require(
+            error.code == Int(kAudioUnitErr_FormatNotSupported),
+            "reordered MPEG 5.1 B returned unexpected error \(error)"
+        )
+    }
+    try require(
+        unit.hasRustPlugin
+            && unit.inputBusses[0].format.channelCount == retainedInputWidth
+            && unit.inputBusses[0].format.channelLayout?.layoutTag == retainedInputTag
+            && unit.outputBusses[0].format.channelCount == retainedOutputWidth,
+        "unsupported named layout changed the live plugin or bus formats"
+    )
+    let heightGainAfterRefusal = unit.parameterValueForTesting(identifier: "height_gain_db") ?? .nan
+    try require(
+        abs(Double(heightGainAfterRefusal - retainedHeightGain)) < 1.0e-4,
+        "unsupported named layout changed Downmix parameter state"
+    )
+
     let surroundOutput = try format(
         sampleRate: sampleRate,
         channels: 6,
@@ -1035,8 +1138,8 @@ private func testDownmixFormatChangeAndUnsupportedLayout() throws {
             outputFormat: outputFormat
         )
         try require(
-            !configuration.contains("input_layout"),
-            "\(name) was accepted solely from its channel count: \(configuration)"
+            configuration == "{invalid}",
+            "\(name) did not fail closed as a named input layout: \(configuration)"
         )
     }
     do {
@@ -1078,6 +1181,49 @@ private func testDownmixFormatChangeAndUnsupportedLayout() throws {
     )
     try require(unit.hasRustPlugin, "valid format did not recover after rejection")
     try assertFiniteAudibleStereo(recoveredOutput, caseName: "post-rejection recovery")
+}
+
+private func testTaggedAtmosOrderRefusalPreservesWrapperState() throws {
+    let constructors: [(String, () throws -> GenericRustAudioUnit)] = [
+        ("AAE", { try AAEAudioUnit(componentDescription: componentDescription("SOAE")) }),
+        ("Ambisonics", { try AmbisonicsAudioUnit(componentDescription: componentDescription("SOAm")) }),
+        ("Upmixer", { try UpmixerAudioUnit(componentDescription: componentDescription("SOUp")) }),
+    ]
+    let unsupported = try format(
+        sampleRate: 48_000,
+        channels: 8,
+        tag: kAudioChannelLayoutTag_Atmos_5_1_2
+    )
+
+    for (name, construct) in constructors {
+        let unit = try construct()
+        let inputWidth = unit.inputBusses[0].format.channelCount
+        let outputWidth = unit.outputBusses[0].format.channelCount
+        guard let parameter = unit.parameterTree?.allParameters.first else {
+            throw SmokeFailure.failure("\(name): no parameter state to preserve")
+        }
+        let marker = (parameter.minValue + parameter.maxValue) * 0.5
+        parameter.setValue(marker, originator: nil)
+        let markerBefore = unit.parameterValueForTesting(identifier: parameter.identifier) ?? .nan
+        try require(unit.hasRustPlugin, "\(name): provisional Rust plugin is missing")
+        try require(
+            !unit.shouldChange(to: unsupported, for: unit.outputBusses[0]),
+            "\(name): mismatched Atmos 5.1.2 output order was advertised"
+        )
+        let configuration = unit.pluginConfiguration(
+            inputFormat: unit.inputBusses[0].format,
+            outputFormat: unsupported
+        )
+        try require(configuration == "{invalid}", "\(name): mismatched layout was accepted")
+        let markerAfter = unit.parameterValueForTesting(identifier: parameter.identifier) ?? .nan
+        try require(
+            unit.hasRustPlugin
+                && unit.inputBusses[0].format.channelCount == inputWidth
+                && unit.outputBusses[0].format.channelCount == outputWidth
+                && abs(Double(markerAfter - markerBefore)) < 1.0e-4,
+            "\(name): refused named layout changed plugin, state, or buses"
+        )
+    }
 }
 
 private func testParameterStateSurvivesFormatRecreation() throws {
@@ -1488,11 +1634,14 @@ private func testThirtyTwoChannelCapsAndRecovery() throws {
         let unit = try construct()
         try require(unit.inputBusses[0].maximumChannelCount == 32, "\(name) input cap is not 32")
         try require(unit.outputBusses[0].maximumChannelCount == 32, "\(name) output cap is not 32")
+        let renderFrames = name == "Saturation"
+            ? max(64, Int(ceil(unit.latency * 48_000)) + 64)
+            : 64
         let (_, output32) = try render(
             unit,
             inputFormat: format32,
             outputFormat: format32,
-            frames: 64
+            frames: AVAudioFrameCount(renderFrames)
         )
         try assertFiniteOverwrittenAndAudible(output32, caseName: "\(name) 32ch")
         do {
@@ -1505,7 +1654,7 @@ private func testThirtyTwoChannelCapsAndRecovery() throws {
             unit,
             inputFormat: stereo,
             outputFormat: stereo,
-            frames: 64
+            frames: AVAudioFrameCount(renderFrames)
         )
         try assertFiniteOverwrittenAndAudible(recovered, caseName: "\(name) cap recovery")
     }
@@ -2104,6 +2253,8 @@ do {
     try testDownmixLayoutMatrix()
     print("Running downmix format-change tests")
     try testDownmixFormatChangeAndUnsupportedLayout()
+    print("Running named-layout refusal preservation tests")
+    try testTaggedAtmosOrderRefusalPreservesWrapperState()
     print("Running spectrum tests")
     try testSpectrumAnalyzerNativeRender()
     print("Running LinearPhaseEQ negotiated adapter latency tests")
