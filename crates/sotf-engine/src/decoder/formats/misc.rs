@@ -5,6 +5,8 @@ use symphonia::core::formats::probe::Probe;
 /// Shared probe with all supported format readers (initialized once)
 pub(super) static PROBE: LazyLock<Probe> = LazyLock::new(|| {
     let mut probe = Probe::default();
+    // Skip leading tags, including artwork larger than the format scan limit.
+    probe.register_metadata::<symphonia_metadata::id3v2::Id3v2Reader>();
     probe.register_format::<symphonia_bundle_flac::FlacReader>();
     probe.register_format::<symphonia_bundle_mp3::MpaReader>();
     probe.register_format::<symphonia_format_riff::WavReader>();

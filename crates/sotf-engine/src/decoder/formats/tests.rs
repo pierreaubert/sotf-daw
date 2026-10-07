@@ -9,6 +9,7 @@ mod tests_decoder {
     use super::super::*;
     use super::*;
     use hound::{SampleFormat, WavSpec, WavWriter};
+    use std::io::Write;
     use tempfile::NamedTempFile;
 
     fn create_test_wav() -> NamedTempFile {
@@ -52,6 +53,66 @@ mod tests_decoder {
         assert_eq!(AudioFormat::Wav.as_str(), "WAV");
         assert_eq!(AudioFormat::Vorbis.as_str(), "Vorbis");
         assert_eq!(AudioFormat::Aiff.as_str(), "AIFF");
+    }
+
+    #[test]
+    fn test_mp3_decoding_with_large_id3_tags() {
+        let mp3 = include_bytes!("../../../tests/data/mp3/tone-1khz-stereo-44100.mp3");
+        let mut reference = None;
+        for version in [None, Some(3), Some(4)] {
+            let mut file = tempfile::Builder::new().suffix(".mp3").tempfile().unwrap();
+            if let Some(version) = version {
+                // Embedded artwork can exceed the probe's 1 MiB scan limit.
+                // Valid ID3 padding exercises tag skipping without a large fixture.
+                let tag_size = 2 * 1024 * 1024;
+                let mut header = [b'I', b'D', b'3', version, 0, 0, 0, 0, 0, 0];
+                for (index, shift) in [21, 14, 7, 0].into_iter().enumerate() {
+                    header[6 + index] = ((tag_size >> shift) & 0x7f) as u8;
+                }
+                file.write_all(&header).unwrap();
+                file.write_all(&vec![0; tag_size]).unwrap();
+            }
+            file.write_all(mp3).unwrap();
+            file.flush().unwrap();
+
+            let mut decoder = SymphoniaDecoder::new(file.path())
+                .unwrap_or_else(|error| panic!("MP3 with ID3 version {version:?}: {error}"));
+            assert_eq!(decoder.format(), AudioFormat::Mp3);
+            assert_eq!(decoder.spec().sample_rate, 44_100);
+            assert_eq!(decoder.spec().channels, 2);
+            let mut samples = Vec::new();
+            // The quarter-second fixture has fewer than 64 MPEG audio packets.
+            for _ in 0..64 {
+                match decoder.decode_next().unwrap() {
+                    Some(audio) => samples.extend(audio.samples),
+                    None => break,
+                }
+            }
+            assert!(decoder.is_eof(), "MP3 decoding must reach EOF");
+            assert!(
+                samples.len() >= 22_050,
+                "Expected a quarter second of stereo PCM"
+            );
+            assert!(samples.iter().all(|sample| sample.is_finite()));
+            let rms = (samples
+                .iter()
+                .map(|sample| f64::from(*sample).powi(2))
+                .sum::<f64>()
+                / samples.len() as f64)
+                .sqrt();
+            assert!(
+                rms > 0.01 && rms < 0.2,
+                "Expected audible, unclipped tone PCM: {rms}"
+            );
+            if let Some(reference) = &reference {
+                assert_eq!(
+                    &samples, reference,
+                    "ID3 metadata must not change decoded audio"
+                );
+            } else {
+                reference = Some(samples);
+            }
+        }
     }
 
     #[test]
