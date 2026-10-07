@@ -173,7 +173,7 @@ unchanged-ratio control, and injected-spur regression coverage live in
 The fork also corrects inverse-ratio ramp frame sizing and deferred-input history bounds.
 Its 656 upstream tests and eight additional strict regressions pass across both fixed modes,
 extreme ratios and interpolation variants. See
-[`SOTF_FORK.md`](https://github.com/pierreaubert/math-audio/blob/main/crates/3rdparties/rubato/SOTF_FORK.md) for derivations and scope.
+[`SOTF_FORK.md`](../../../../../sotf-3rdparties/rubato/SOTF_FORK.md) for derivations and scope.
 
 ### Parameter and adapter integration
 

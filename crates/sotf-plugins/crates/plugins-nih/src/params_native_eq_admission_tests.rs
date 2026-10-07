@@ -1,7 +1,7 @@
 //! Audio-thread admission for EQ native state restores.
 //!
 //! The vendor `deserialize_object` gate itself is covered by dependency-free
-//! tests in `crates/3rdparties/nih-plug/src/wrapper/state.rs`. These tests
+//! tests in `../sotf-3rdparties/nih-plug/src/wrapper/state.rs`. These tests
 //! cover this lane's side: the EQ admission hook refuses every restore shape
 //! (legacy migration and current-version validation both allocate), the
 //! generated wrappers report EQ refusal with unrelated-plugin compatibility,

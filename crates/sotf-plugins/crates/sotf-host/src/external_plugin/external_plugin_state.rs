@@ -900,7 +900,7 @@ impl NativePluginAudioSetup {
             PluginFormat::Vst3 => descriptor.id.eq_ignore_ascii_case(BAND_SPLIT_VST3_CLASS_ID),
             PluginFormat::AudioUnit => false,
         };
-        Ok(is_band_split.then_some(Self::BandSplit {
+        Ok(is_band_split.then(|| Self::BandSplit {
             num_bands: 2,
             output_layout: match descriptor.format {
                 PluginFormat::Clap => NativeBandSplitOutputLayout::ClapPacked,
@@ -1409,6 +1409,22 @@ mod ambisonics_custom_setup_tests {
             error.contains("share one VST3 speaker role"),
             "unexpected: {error}"
         );
+    }
+
+    #[test]
+    fn ordinary_plugins_do_not_receive_a_native_band_split_setup() {
+        for format in [
+            PluginFormat::Clap,
+            PluginFormat::Vst3,
+            PluginFormat::AudioUnit,
+        ] {
+            let ordinary = descriptor(format, "ordinary-effect");
+            assert_eq!(
+                NativePluginAudioSetup::for_descriptor_or_legacy_default(&ordinary, None)
+                    .expect("ordinary plugin requires no native topology override"),
+                None,
+            );
+        }
     }
 
     #[test]

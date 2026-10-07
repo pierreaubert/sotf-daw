@@ -95,7 +95,7 @@ verify the first event in a callback, equal-time ordering, multiple events,
 irregular buffer sizes, and Gain's independent 10 ms smoothing envelope.
 Gate's waveform is checked against independent sample-split DSP processing through
 its hold and smoothing periods. The pinned NIH copy in
-`crates/3rdparties/nih-plug` fixes first-event dispatch and
+`../sotf-3rdparties/nih-plug` fixes first-event dispatch and
 seconds-only transport offsets during buffer splitting; its README records
 the original commit and the exact behavioral changes.
 

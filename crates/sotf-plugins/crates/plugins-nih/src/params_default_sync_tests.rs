@@ -33,49 +33,85 @@ pub(super) fn schema_infos(name: &str) -> Vec<BridgedParamInfo> {
 fn native_band_split_constructs_with_requested_cutoff_at_fractional_low_rate() {
     let params = DynamicParams::from_infos_for_plugin("BandSplit", &schema_infos("BandSplit"));
     let cutoff = ParameterId::from("frequency");
-    assert_eq!(params.value("frequency"), Some(ParameterValue::Float(300.0)));
+    assert_eq!(
+        params.value("frequency"),
+        Some(ParameterValue::Float(300.0))
+    );
     let mut plugin = super::configuration::create_plugin("BandSplit", 1_234.567_8, &params)
         .expect("native 300 Hz cutoff must be used during construction");
     plugin.initialize(1_234.567_8).unwrap();
     params.sync_to_plugin(plugin.as_mut()).unwrap();
-    assert_eq!(plugin.get_parameter(&cutoff), Some(ParameterValue::Float(300.0)));
+    assert_eq!(
+        plugin.get_parameter(&cutoff),
+        Some(ParameterValue::Float(300.0))
+    );
     let input = vec![0.1_f32; 64 * plugin.input_channels()];
     let mut output = vec![0.0_f32; 64 * plugin.output_channels()];
     let written = plugin
-        .process(&input, &mut output, &sotf_host::ProcessContext::new(1_234.567_8, 64))
+        .process(
+            &input,
+            &mut output,
+            &sotf_host::ProcessContext::new(1_234.567_8, 64),
+        )
         .unwrap();
     assert_eq!(written, 64);
     assert!(output.iter().all(|sample| sample.is_finite()));
-    assert_eq!(params.value("frequency"), Some(ParameterValue::Float(300.0)));
+    assert_eq!(
+        params.value("frequency"),
+        Some(ParameterValue::Float(300.0))
+    );
 
     let mut at_48k = super::configuration::create_plugin("BandSplit", 48_000.0, &params).unwrap();
     at_48k.initialize(48_000.0).unwrap();
     params.sync_to_plugin(at_48k.as_mut()).unwrap();
-    assert_eq!(at_48k.get_parameter(&cutoff), Some(ParameterValue::Float(300.0)));
+    assert_eq!(
+        at_48k.get_parameter(&cutoff),
+        Some(ParameterValue::Float(300.0))
+    );
 }
 
 #[test]
 fn native_hiss_uses_effective_low_rate_cutoff_without_changing_host_request() {
     let params = DynamicParams::from_infos_for_plugin("HissReducer", &schema_infos("HissReducer"));
     let cutoff = ParameterId::from("frequency_hz");
-    assert_eq!(params.value("frequency_hz"), Some(ParameterValue::Float(4_000.0)));
+    assert_eq!(
+        params.value("frequency_hz"),
+        Some(ParameterValue::Float(4_000.0))
+    );
     let mut plugin = super::configuration::create_plugin("HissReducer", 8_000.0, &params).unwrap();
     plugin.initialize(8_000.0).unwrap();
-    params.sync_to_plugin_for_activation(plugin.as_mut(), 8_000.0).unwrap();
-    assert_eq!(plugin.get_parameter(&cutoff), Some(ParameterValue::Float(3_600.0)));
+    params
+        .sync_to_plugin_for_activation(plugin.as_mut(), 8_000.0)
+        .unwrap();
+    assert_eq!(
+        plugin.get_parameter(&cutoff),
+        Some(ParameterValue::Float(3_600.0))
+    );
     let input = vec![0.1_f32; 128];
     let mut output = vec![0.0_f32; 128];
     let written = plugin
-        .process(&input, &mut output, &sotf_host::ProcessContext::new(8_000.0, 64))
+        .process(
+            &input,
+            &mut output,
+            &sotf_host::ProcessContext::new(8_000.0, 64),
+        )
         .unwrap();
     assert_eq!(written, 64);
     assert!(output.iter().all(|sample| sample.is_finite()));
-    assert_eq!(params.value("frequency_hz"), Some(ParameterValue::Float(4_000.0)));
+    assert_eq!(
+        params.value("frequency_hz"),
+        Some(ParameterValue::Float(4_000.0))
+    );
 
     let mut at_48k = super::configuration::create_plugin("HissReducer", 48_000.0, &params).unwrap();
     at_48k.initialize(48_000.0).unwrap();
-    params.sync_to_plugin_for_activation(at_48k.as_mut(), 48_000.0).unwrap();
-    assert_eq!(at_48k.get_parameter(&cutoff), Some(ParameterValue::Float(4_000.0)));
+    params
+        .sync_to_plugin_for_activation(at_48k.as_mut(), 48_000.0)
+        .unwrap();
+    assert_eq!(
+        at_48k.get_parameter(&cutoff),
+        Some(ParameterValue::Float(4_000.0))
+    );
 }
 
 #[test]

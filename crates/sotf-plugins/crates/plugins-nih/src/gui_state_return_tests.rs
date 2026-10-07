@@ -2,7 +2,7 @@
 
 // Compile the private vendor helper directly so its deterministic scheduling
 // tests remain part of the normal wrapper gate without exposing a public API.
-#[path = "../../../../3rdparties/nih-plug/src/wrapper/gui_state_return.rs"]
+#[path = "../../../../../../sotf-3rdparties/nih-plug/src/wrapper/gui_state_return.rs"]
 mod return_path;
 
 use crossbeam::channel::bounded;

@@ -2648,8 +2648,11 @@ impl DynamicParams {
             let current = plugin.get_parameter(&entry.id);
             if self.hiss_schema
                 && entry.id.as_str() == "frequency_hz"
-                && let (Some(sample_rate), ParameterValue::Float(requested), Some(ParameterValue::Float(effective))) =
-                    (sample_rate, &value, &current)
+                && let (
+                    Some(sample_rate),
+                    ParameterValue::Float(requested),
+                    Some(ParameterValue::Float(effective)),
+                ) = (sample_rate, &value, &current)
             {
                 // HissReducer initializes its DSP with the highest usable
                 // cutoff at this rate. Keep the host's requested value for

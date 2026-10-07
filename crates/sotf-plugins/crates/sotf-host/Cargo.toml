@@ -82,8 +82,8 @@ audioadapter-buffers = { workspace = true }
 criterion = { workspace = true, optional = true }
 libloading = { workspace = true, optional = true }
 clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156", optional = true }
-vst3-sys = { git = "https://github.com/robbert-vdh/vst3-sys.git", branch = "fix/drop-box-from-raw", optional = true }
-vst3-com = { git = "https://github.com/robbert-vdh/vst3-sys.git", branch = "fix/drop-box-from-raw", optional = true }
+vst3-sys = { path = "../../../../../sotf-3rdparties/vst3-sys", optional = true }
+vst3-com = { path = "../../../../../sotf-3rdparties/vst3-sys/com", optional = true }
 
 [dev-dependencies]
 insta = { workspace = true }
