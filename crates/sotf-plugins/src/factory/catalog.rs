@@ -428,7 +428,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-gain",
             "Gain",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::Zero,
@@ -447,7 +447,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-eq",
             "EQ",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported(
@@ -468,7 +468,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-multiband-compressor",
             "Compressor",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("detector and lookahead configuration"),
@@ -487,7 +487,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-multiband-expander",
             "Expander",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("detector and lookahead configuration"),
@@ -506,7 +506,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-limiter",
             "Limiter",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("lookahead and true-peak configuration"),
@@ -525,7 +525,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-gate",
             "Gate",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("detector configuration"),
@@ -563,7 +563,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-delay",
             "Delay",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported(
@@ -584,7 +584,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-convolution",
             "Convolution",
-            Alpha,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::FrameBased("IR partition and active convolution configuration"),
@@ -603,7 +603,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-upmixer",
             "Upmixer",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STEREO_CHANNEL_WIDTH),
             PluginChannelOutputModel::Configurable {
                 description: "stereo to configured speaker layout",
@@ -647,7 +647,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-downmix",
             "Downmix",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::Fixed(2),
             PluginLatencyModel::FrameBased("WOLA mode and active downmix configuration"),
@@ -666,7 +666,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-mono-to-stereo",
             "Mono to Stereo",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(MONO_CHANNEL_WIDTH),
             PluginChannelOutputModel::Fixed(2),
             PluginLatencyModel::PluginReported("Haas/decorrelation configuration"),
@@ -917,7 +917,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-loudness-compensation",
             "Loudness Compensation",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("active filter topology"),
@@ -936,7 +936,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-loudness-compensation",
             "Fletcher-Munson",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("active ISO 226 filter topology"),
@@ -955,7 +955,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-crossfeed",
             "Crossfeed",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STEREO_CHANNEL_WIDTH),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("crossfeed delay configuration"),
@@ -996,7 +996,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-denoiser",
             "Denoiser",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::FrameBased("Wiener/MCRA analysis frame"),
@@ -1015,7 +1015,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-speech-denoiser",
             "Speech Denoiser",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(&[1, 2]),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::FrameBased("RNNoise 480-sample frame at 48 kHz"),
@@ -1034,7 +1034,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-hiss-reducer",
             "Hiss Reducer",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::Zero,
@@ -1053,7 +1053,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-declick",
             "Declick",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::Zero,
@@ -1091,7 +1091,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-binaural",
             "Binaural Decoder",
-            Alpha,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(&[1, 2, 3, 5, 6, 8, 10, 12, 14, 16]),
             PluginChannelOutputModel::Fixed(2),
             PluginLatencyModel::FrameBased("HRTF convolution partition"),
@@ -1110,7 +1110,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-crossover",
             "Crossover",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::Configurable {
                 description: "preserves input for low/high selection; input channels multiplied by compiled band count for Both",
@@ -1132,7 +1132,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-matrix",
             "Matrix Mixer",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::Configurable {
                 description: "declared matrix output width",
@@ -1154,7 +1154,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-channel-mute-solo",
             "Channel Mute/Solo",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::Zero,
@@ -1241,7 +1241,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-band-split",
             "Band Split",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::InputTimesBands,
             PluginLatencyModel::Zero,
@@ -1260,7 +1260,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-band-merge",
             "Band Merge",
-            Beta,
+            Stable,
             PluginSupportedInputLayouts::Enumerated(EVEN_BAND_CHANNEL_WIDTHS),
             PluginChannelOutputModel::InputDividedByBands,
             PluginLatencyModel::PluginReported("band count and matching split latency"),
@@ -1298,7 +1298,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-aec",
             "AEC",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(STEREO_CHANNEL_WIDTH),
             PluginChannelOutputModel::Fixed(1),
             PluginLatencyModel::FrameBased("partitioned adaptive-filter frame"),
@@ -1336,7 +1336,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         builtin_metadata!(
             "sotf-plugin-ambisonics",
             "Ambisonics Decoder",
-            Alpha,
+            Beta,
             PluginSupportedInputLayouts::Enumerated(AMBISONIC_WIDTHS),
             PluginChannelOutputModel::Configurable {
                 description: "decoder order, target speaker layout, and mode-matching or AllRAD/VBAP algorithm",
@@ -1381,7 +1381,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         PluginCatalogMetadata {
             owning_crate: "sotf-plugin-hal-input",
             exposed_name: "Systemwide HAL Input",
-            maturity: PluginMaturity::Alpha,
+            maturity: PluginMaturity::Stable,
             channel_layout: PluginChannelLayoutContract {
                 supported_inputs: PluginSupportedInputLayouts::PlatformNegotiated,
                 output: PluginChannelOutputModel::PlatformNegotiated,
@@ -1406,7 +1406,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         PluginCatalogMetadata {
             owning_crate: "sotf-plugin-hal-output",
             exposed_name: "Systemwide HAL Output",
-            maturity: PluginMaturity::Alpha,
+            maturity: PluginMaturity::Stable,
             channel_layout: PluginChannelLayoutContract {
                 supported_inputs: PluginSupportedInputLayouts::PlatformNegotiated,
                 output: PluginChannelOutputModel::PlatformNegotiated,

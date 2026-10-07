@@ -69,7 +69,7 @@ exclude = [
 resolver = "3"
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Pierre F. Aubert pierre@spinorama.org"]
 description = "SOTF DAW core: engine, plugins, MIDI, IAMF, and driver transport"
 edition = "2024"
