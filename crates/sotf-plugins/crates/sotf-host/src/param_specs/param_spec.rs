@@ -531,13 +531,15 @@ pub mod spectrum {
         ParamSpec::float(
             "Min Freq", "min_freq", 20.0, 10.0, 100.0, 1.0, "Hz", "General",
         )
+        .structural()
         .setup()
-        .doc("Lowest displayed frequency"),
+        .doc("Lowest displayed frequency; rebuilds the analyzer frequency grid"),
         ParamSpec::float(
             "Max Freq", "max_freq", 20000.0, 5000.0, 22050.0, 100.0, "Hz", "General",
         )
+        .structural()
         .setup()
-        .doc("Highest displayed frequency"),
+        .doc("Highest displayed frequency; rebuilds the analyzer frequency grid"),
         ParamSpec::float("Smoothing", "smoothing", 0.7, 0.0, 1.0, 0.01, "", "General")
             .setup()
             .doc("Temporal averaging factor"),

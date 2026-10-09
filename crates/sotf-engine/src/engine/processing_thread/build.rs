@@ -171,6 +171,114 @@ mod tests {
     use crate::engine::{PluginGraphConfig, PluginGraphNodeConfig};
 
     #[test]
+    fn retained_bypass_stage_preserves_program_gain_and_channel_order() {
+        use crate::engine::PluginGraphEdgeConfig;
+        let mut bypass = PluginGraphNodeConfig::try_new(
+            42,
+            "gain",
+            serde_json::json!({"gain_db": 20.0, "smoothing_ms": 0.0}),
+            2,
+        )
+        .unwrap();
+        bypass.bypassed = true;
+        let mut graph = PluginGraphConfig::try_new(
+            vec![
+                PluginGraphNodeConfig::try_new(
+                    7,
+                    "gain",
+                    serde_json::json!({"gain_db": -6.0, "smoothing_ms": 0.0}),
+                    2,
+                )
+                .unwrap(),
+                bypass,
+                PluginGraphNodeConfig::try_new(
+                    99,
+                    "gain",
+                    serde_json::json!({"gain_db": -3.0, "smoothing_ms": 0.0}),
+                    2,
+                )
+                .unwrap(),
+            ],
+            vec![
+                PluginGraphEdgeConfig::new(7, 42),
+                PluginGraphEdgeConfig::new(42, 99),
+            ],
+        )
+        .unwrap();
+        // Deliberately serialize sink first: control order must not depend
+        // on dependency stage order or numeric config IDs.
+        graph.nodes.rotate_right(1);
+        let (mut host, warnings) = build_plugin_graph_host(&graph, 48_000, 2).unwrap();
+        let gain_id = sotf_plugins::ParameterId::from("gain_db");
+        for (index, expected) in [-3.0f32, -6.0, 20.0].into_iter().enumerate() {
+            assert_eq!(
+                host.get_plugin(index).unwrap().get_parameter(&gain_id),
+                Some(sotf_plugins::ParameterValue::Float(expected))
+            );
+        }
+        for invalid in [vec![0, 0, 2], vec![0, 1, 99], vec![0, 1]] {
+            assert!(host.set_graph_plugin_order(&invalid).is_err());
+            assert_eq!(
+                host.get_plugin(0).unwrap().get_parameter(&gain_id),
+                Some(sotf_plugins::ParameterValue::Float(-3.0))
+            );
+        }
+        host.build().unwrap();
+        assert_eq!(
+            host.get_plugin(0).unwrap().get_parameter(&gain_id),
+            Some(sotf_plugins::ParameterValue::Float(-3.0))
+        );
+        assert!(warnings.is_empty());
+        let input: Vec<f32> = (0..256)
+            .flat_map(|frame| {
+                [
+                    0.2 * (frame as f32 * 0.17).sin(),
+                    -0.1 * (frame as f32 * 0.31).cos(),
+                ]
+            })
+            .collect();
+        let mut output = vec![0.0; input.len()];
+        let expected_gain = 10.0f32.powf(-9.0 / 20.0);
+        for _ in 0..3 {
+            assert_eq!(host.process(&input, &mut output).unwrap(), 256);
+            for (actual, source) in output.iter().zip(&input) {
+                assert!(
+                    (actual - source * expected_gain).abs() < 1e-6,
+                    "retained bypass must pass both channels without applying its saved gain"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn serialized_graph_order_refreshes_analyzer_indices() {
+        use crate::engine::PluginGraphEdgeConfig;
+        let graph = PluginGraphConfig::try_new(
+            vec![
+                PluginGraphNodeConfig::try_new(42, "loudness_monitor", serde_json::json!({}), 2)
+                    .unwrap(),
+                PluginGraphNodeConfig::try_new(99, "gain", serde_json::json!({"gain_db": -3.0}), 2)
+                    .unwrap(),
+                PluginGraphNodeConfig::try_new(7, "gain", serde_json::json!({"gain_db": -6.0}), 2)
+                    .unwrap(),
+            ],
+            vec![
+                PluginGraphEdgeConfig::new(7, 42),
+                PluginGraphEdgeConfig::new(42, 99),
+            ],
+        )
+        .unwrap();
+        let (mut host, warnings) = build_plugin_graph_host(&graph, 48_000, 2).unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(host.analyzer_indices(), &[0]);
+        assert!(host.get_plugin(0).unwrap().get_data().is_some());
+        assert!(host.get_plugin(1).unwrap().get_data().is_none());
+        host.build().unwrap();
+        assert_eq!(host.analyzer_indices(), &[0]);
+        assert!(host.get_plugin(0).unwrap().get_data().is_some());
+    }
+
+    #[test]
     fn serialized_graph_bypass_reaches_plugin_host() {
         let mut node = PluginGraphNodeConfig::try_new(7, "gain", serde_json::json!({}), 2).unwrap();
         node.bypassed = true;
@@ -367,6 +475,12 @@ pub fn build_plugin_graph_host_with_policy(
     host.build().map_err(|error| {
         PluginBuildDiagnostic::host(format!("Plugin graph host build failed: {error}"))
     })?;
+
+    // Serialized node positions are the engine's stable control/telemetry
+    // indices, independent of branch scheduling inside a processing stage.
+    let control_order: Vec<_> = config.nodes.iter().map(|node| id_map[&node.id]).collect();
+    host.set_graph_plugin_order(&control_order)
+        .map_err(PluginBuildDiagnostic::host)?;
 
     log::info!(
         "[Processing Thread] Plugin graph loaded: {} nodes, {} edges ({}ch -> {}ch), {} warnings",

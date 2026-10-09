@@ -68,6 +68,15 @@ impl FilterTransition {
     }
 }
 
+/// Cached attenuation and optional level-matching telemetry for the dense editor.
+#[derive(Debug, Clone, Default)]
+pub struct LoudnessCompensationData {
+    /// Host-owned sink attenuation actually used by the contour processor.
+    pub playback_volume_db: f32,
+    /// Auto Gain measurements; absent when level matching is disabled.
+    pub auto_gain: Option<AutoGainData>,
+}
+
 pub struct LoudnessCompensationPlugin {
     pub(super) num_channels: usize,
     pub(super) sample_rate: f64,
@@ -108,7 +117,7 @@ pub struct LoudnessCompensationPlugin {
     pub(super) auto_calibrated: bool,
     pub(super) comp_gain_smoother: Vec<Smoother>,
     transition: FilterTransition,
-    pub(super) cache: RealTimeCache<AutoGainData>,
+    pub(super) cache: RealTimeCache<LoudnessCompensationData>,
     pub(super) cached_parameters: Vec<Parameter>,
 }
 
@@ -154,7 +163,7 @@ impl LoudnessCompensationPlugin {
                 .map(|_| Smoother::new(1.0, 20.0, sr))
                 .collect(),
             transition: FilterTransition::new(num_channels),
-            cache: RealTimeCache::new(AutoGainData::default()),
+            cache: RealTimeCache::new(LoudnessCompensationData::default()),
             cached_parameters: Vec::new(),
         };
         p.rebuild_filters();
@@ -634,6 +643,10 @@ impl LoudnessCompensationPlugin {
             p.maybe_rebuild_auto_filters();
         }
         p.rebuild_cached_parameters();
+        p.cache.update(|data| {
+            data.playback_volume_db = p.playback_volume_db;
+            data.auto_gain = p.auto_gain.as_ref().map(|gain| gain.get_data());
+        });
         Ok(p)
     }
 
@@ -907,6 +920,10 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
             self.update_comp_gain_smoother();
         }
         self.rebuild_cached_parameters();
+        self.cache.update(|data| {
+            data.playback_volume_db = self.playback_volume_db;
+            data.auto_gain = self.auto_gain.as_ref().map(|gain| gain.get_data());
+        });
         Ok(())
     }
     fn initialize(&mut self, sr: f64) -> PluginResult<()> {
@@ -953,7 +970,10 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                 filter.reset();
             }
         }
-        self.cache.update(|data| *data = AutoGainData::default());
+        self.cache.update(|data| {
+            data.playback_volume_db = self.playback_volume_db;
+            data.auto_gain = self.auto_gain.as_ref().map(|_| AutoGainData::default());
+        });
         self.last_auto_volume_db = self.playback_volume_db;
     }
 
@@ -1031,7 +1051,7 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                                 data.output_peak = display.data.peak;
                             }
                         }
-                        self.cache.update(|cached| *cached = data);
+                        self.cache.update(|cached| cached.auto_gain = Some(data));
                     }
                 }
             }
@@ -1041,10 +1061,6 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         Ok(nf)
     }
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        if self.auto_gain.is_some() {
-            Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
-        } else {
-            None
-        }
+        Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
     }
 }

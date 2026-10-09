@@ -131,6 +131,7 @@ mod frame_format;
 mod graph_eos;
 mod limiter_live_mutation;
 mod misc;
+mod playback_volume;
 mod sidechain_graph;
 mod test;
 

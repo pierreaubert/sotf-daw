@@ -558,6 +558,8 @@ pub enum DecoderResponse {
 pub enum ProcessingCommand {
     /// Commit a fully validated and allocation-prepared plugin-host replacement.
     CommitHostUpdate(PreparedHostUpdate),
+    /// Update the host-owned attenuation input used by automatic loudness contours.
+    SetPlaybackVolume(f32),
     /// Set a plugin parameter
     SetParameter {
         plugin_index: usize,
@@ -582,6 +584,9 @@ impl std::fmt::Debug for ProcessingCommand {
         match self {
             Self::CommitHostUpdate(update) => {
                 f.debug_tuple("CommitHostUpdate").field(update).finish()
+            }
+            Self::SetPlaybackVolume(volume) => {
+                f.debug_tuple("SetPlaybackVolume").field(volume).finish()
             }
             Self::SetParameter {
                 plugin_index,

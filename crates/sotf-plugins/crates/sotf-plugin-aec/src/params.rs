@@ -44,7 +44,7 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[ControlSpec::toggle(2)], // post_filter_enabled
     main: &[ControlGroup::new(
         "primary",
         "",
@@ -54,13 +54,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         ],
     )
     .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
-    output: &[ControlSpec::toggle(2)], // post_filter_enabled
+    output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::main(200.0),
-        ColumnConstraint::output(120.0, 0.6),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

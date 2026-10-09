@@ -2502,12 +2502,79 @@ impl DawHost {
         }
     }
 
+    /// Assign stable control indices to every node in a pure graph host.
+    ///
+    /// Call on the control thread after building a serialized graph. Processing
+    /// stages retain dependency order; this only establishes plugin-indexed
+    /// parameter and telemetry addresses. Chain-built hosts retain their own
+    /// addressing contract and cannot use this override.
+    ///
+    /// # Errors
+    /// Returns an error for an unbuilt, chain-built, or terminal-sink host,
+    /// missing/duplicate nodes, or an incomplete list. Validation errors leave
+    /// indices unchanged. A failed plan rebuild invalidates the host as usual.
+    pub fn set_graph_plugin_order(&mut self, node_ids: &[NodeId]) -> Result<(), String> {
+        if self.chain_built || !self.built {
+            return Err("Control ordering requires a built pure graph host".into());
+        }
+        if self
+            .plugins
+            .iter()
+            .flatten()
+            .any(|plugin| plugin.terminal_sink().is_some())
+        {
+            return Err("Control ordering cannot override terminal-sink addressing".into());
+        }
+        if node_ids.len() != self.nodes.len() {
+            return Err("Control ordering must include every graph node".into());
+        }
+        let mut seen = std::collections::HashSet::with_capacity(node_ids.len());
+        for id in node_ids {
+            if !self.nodes.contains_key(id) || !seen.insert(*id) {
+                return Err("Control ordering contains a missing or duplicate graph node".into());
+            }
+        }
+        self.chain_nodes.clear();
+        self.chain_nodes.extend_from_slice(node_ids);
+        // Analyzer indices and compiled plan eligibility use this address
+        // space too. Refresh them off the realtime path before publication.
+        self.build()
+    }
+
     pub fn plugin_count(&self) -> usize {
         self.chain_nodes.len()
     }
     pub fn get_plugin(&self, index: usize) -> Option<&dyn Plugin> {
         let &nid = self.chain_nodes.get(index)?;
         self.plugins.get(nid)?.as_deref()
+    }
+
+    /// Apply sink attenuation to plugins exposing the host-owned volume input.
+    ///
+    /// Call only on the serialized control route between blocks. This includes
+    /// graph nodes outside the linear-chain address space. Setters may rebuild
+    /// contour coefficients; no native calls or work are added to processing.
+    ///
+    /// # Errors
+    /// Returns an error for invalid attenuation or a rejected plugin update.
+    pub fn set_playback_volume_db(&mut self, volume_db: f32) -> Result<(), String> {
+        // The host-owned Loudness Compensation input uses -80 dB for silence.
+        if !volume_db.is_finite() || !(-80.0..=0.0).contains(&volume_db) {
+            return Err("playback attenuation must be finite and between -80 and 0 dB".into());
+        }
+        let id = crate::parameters::ParameterId::from("playback_volume_db");
+        for plugin in self.plugins.iter_mut().flatten() {
+            if let Some(current) = plugin.get_parameter(&id)
+                && current != crate::parameters::ParameterValue::Float(volume_db)
+            {
+                plugin.set_parameter(
+                    id.clone(),
+                    crate::parameters::ParameterValue::Float(volume_db),
+                )?;
+                plugin.refresh_control_thread_metadata();
+            }
+        }
+        Ok(())
     }
 
     #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]

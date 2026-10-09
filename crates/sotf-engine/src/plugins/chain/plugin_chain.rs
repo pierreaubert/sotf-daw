@@ -88,6 +88,7 @@ pub fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) 
         PluginSettings::BinauralDecoder { .. }
         | PluginSettings::Downmix { .. }
         | PluginSettings::MonoToStereo { .. } => 2,
+        PluginSettings::Aec { .. } | PluginSettings::Beamformer { .. } => 1,
         PluginSettings::Matrix {
             output_channels, ..
         } => *output_channels,
@@ -1449,6 +1450,25 @@ mod tests {
         ExternalPluginSandboxMode, ExternalPluginState, PluginDescriptor, PluginFormat,
         PluginScanStatus,
     };
+
+    #[test]
+    fn echo_cancellation_and_beamforming_route_mono_outputs() {
+        let aec = PluginSettings::Aec {
+            echo_tail_ms: 200.0,
+            step_size: 0.5,
+            post_filter_enabled: true,
+        };
+        assert_eq!(plugin_output_channels(&aec, 2), 1);
+        for num_mics in 2..=8 {
+            let beamformer = PluginSettings::Beamformer {
+                num_mics,
+                mic_spacing_cm: 5.0,
+                steer_angle_deg: 0.0,
+                beamformer_type: 0,
+            };
+            assert_eq!(plugin_output_channels(&beamformer, num_mics), 1);
+        }
+    }
 
     #[test]
     fn test_plugin_chain() {

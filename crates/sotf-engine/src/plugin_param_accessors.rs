@@ -739,15 +739,19 @@ mod aae;
 // serde-flattened sub-structs. Keeping these in one place preserves the
 // index↔field mapping from the old monolithic variant.
 impl PluginSettings {
-    fn fletcher_munson_param_value(&self, index: usize) -> Option<f64> {
+    /// Translate a legacy preset into current Loudness Compensation settings.
+    ///
+    /// The old reference uses relative decibels around 83 dB SPL. Legacy
+    /// presets remain readable; their first edit stores the current variant.
+    /// Obsolete four-band shape/slope fields have no equivalent in the current
+    /// processor and are not carried into the edited variant.
+    pub fn legacy_fletcher_munson_settings(&self) -> Option<Self> {
         let Self::FletcherMunson {
             playback_volume_db,
             reference_level_db,
             enabled,
             band1_freq,
             band1_max_gain,
-            band2_q,
-            band2_max_gain: _,
             band3_freq,
             band3_q,
             band3_max_gain,
@@ -756,82 +760,50 @@ impl PluginSettings {
             auto_gain_enabled,
             auto_gain_max_db,
             auto_gain_smoothing_ms,
-            iso_226,
             ..
         } = self
         else {
             return None;
         };
-        match index {
-            0 => Some(*band1_freq),
-            1 => Some(*band1_max_gain),
-            2 => Some(*band4_freq),
-            3 => Some(*band4_max_gain),
-            4 => Some(b2f(*enabled)),
-            5 => Some(*band3_freq),
-            6 => Some(*band3_max_gain),
-            7 => Some((*band3_q).max(*band2_q)),
-            8 => Some(b2f(*auto_gain_enabled)),
-            9 => Some(*auto_gain_max_db),
-            10 => Some(*auto_gain_smoothing_ms),
-            11 => Some(if *auto_gain_enabled {
-                2.0
-            } else if *iso_226 {
-                1.0
-            } else {
-                0.0
-            }),
-            12 => Some(70.0),
-            13 => Some(*reference_level_db),
-            14 => Some(*playback_volume_db),
-            15 => Some(if *auto_gain_enabled { 2.0 } else { 0.0 }),
-            16 => Some(0.0),
-            17 => Some(1.0),
-            _ => None,
-        }
+        let specs = param_specs::loudness_compensation::PARAMS;
+        Some(Self::LoudnessCompensation {
+            low_freq: *band1_freq,
+            low_gain: *band1_max_gain,
+            high_freq: *band4_freq,
+            high_gain: *band4_max_gain,
+            mid_enabled: *enabled,
+            mid_freq: *band3_freq,
+            mid_gain: *band3_max_gain,
+            mid_q: *band3_q,
+            auto_gain_enabled: *auto_gain_enabled,
+            auto_gain_max_db: *auto_gain_max_db,
+            auto_gain_smoothing_ms: *auto_gain_smoothing_ms,
+            // Preserve the legacy converter's Auto-mode behavior independently
+            // of Auto Gain. Auto Gain controls level matching, not the contour.
+            mode: 2,
+            playback_level_db: specs[12].default_f64(),
+            // Legacy reference calibration is relative to 83 dB SPL.
+            reference_level_db: 83.0 + reference_level_db,
+            playback_volume_db: *playback_volume_db,
+            auto_gain_position: if *auto_gain_enabled { 2 } else { 0 },
+            headroom_normalized: false,
+            auto_calibrated: true,
+        })
+    }
+
+    fn fletcher_munson_param_value(&self, index: usize) -> Option<f64> {
+        self.legacy_fletcher_munson_settings()?.param_value(index)
     }
 
     fn fletcher_munson_set_param_value(&mut self, index: usize, value: f64) {
-        let Self::FletcherMunson {
-            reference_level_db,
-            enabled,
-            band1_freq,
-            band1_max_gain,
-            band3_freq,
-            band3_q,
-            band3_max_gain,
-            band4_freq,
-            band4_max_gain,
-            auto_gain_enabled,
-            auto_gain_max_db,
-            auto_gain_smoothing_ms,
-            iso_226,
-            ..
-        } = self
-        else {
-            return;
-        };
         let specs = param_specs::loudness_compensation::PARAMS;
-        match index {
-            0 => *band1_freq = specs[0].clamp_f64(value),
-            1 => *band1_max_gain = specs[1].clamp_f64(value),
-            2 => *band4_freq = specs[2].clamp_f64(value),
-            3 => *band4_max_gain = specs[3].clamp_f64(value),
-            4 => *enabled = f2b(value),
-            5 => *band3_freq = specs[5].clamp_f64(value),
-            6 => *band3_max_gain = specs[6].clamp_f64(value),
-            7 => *band3_q = specs[7].clamp_f64(value),
-            8 => *auto_gain_enabled = f2b(value),
-            9 => *auto_gain_max_db = specs[9].clamp_f64(value),
-            10 => *auto_gain_smoothing_ms = specs[10].clamp_f64(value),
-            11 => {
-                let mode = value as usize;
-                *iso_226 = mode == 1;
-                *auto_gain_enabled = mode == 2;
-            }
-            13 => *reference_level_db = specs[13].clamp_f64(value),
-            15 => *auto_gain_enabled = value as usize != 0,
-            _ => {}
+        // Playback attenuation is owned by the engine, not an editable control.
+        if index >= specs.len() || index == 14 || !value.is_finite() {
+            return;
+        }
+        if let Some(mut current) = self.legacy_fletcher_munson_settings() {
+            current.set_param_value(index, value);
+            *self = current;
         }
     }
 

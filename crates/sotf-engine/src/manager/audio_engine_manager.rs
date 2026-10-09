@@ -246,6 +246,24 @@ impl AudioEngineManager {
         output_channels: usize,
         position: Option<f64>,
     ) -> AudioDecoderResult<()> {
+        self.start_playback_with_graph_at(output_device, plugins, output_channels, position, None)
+    }
+
+    /// Start a source only after its processing topology is acknowledged.
+    ///
+    /// A supplied graph replaces the flat plugin chain before decoding starts.
+    ///
+    /// # Errors
+    /// Returns an error for missing sources, unavailable output, invalid graphs,
+    /// or failed engine acknowledgements. No source starts on graph failure.
+    pub fn start_playback_with_graph_at(
+        &mut self,
+        output_device: Option<String>,
+        plugins: Vec<PluginConfig>,
+        output_channels: usize,
+        position: Option<f64>,
+        graph: Option<crate::engine::PluginGraphConfig>,
+    ) -> AudioDecoderResult<()> {
         let _guard = lock_recover(&self.cmd_mutex, "cmd_mutex");
 
         let audio_info = lock_recover(&self.current_audio_info, "current_audio_info")
@@ -286,7 +304,9 @@ impl AudioEngineManager {
             input_channels: audio_info.spec.channels as usize, // Input from audio file
             output_channels,                                   // Output after plugins
             output_device, // User-specified device or None for default
-            plugins,
+            // Graph processors must not first be instantiated as a flat chain:
+            // keyed processors require buses that only the graph can supply.
+            plugins: if graph.is_some() { Vec::new() } else { plugins },
             volume,
             muted,
             config_path: None,
@@ -317,6 +337,12 @@ impl AudioEngineManager {
         let engine = AudioEngine::new(config).map_err(|e| {
             AudioDecoderError::ConfigError(format!("Failed to create engine: {}", e))
         })?;
+
+        if let Some(graph) = graph {
+            engine
+                .update_plugin_graph(graph)
+                .map_err(AudioDecoderError::IoError)?;
+        }
 
         if let Some(pos) = position {
             engine

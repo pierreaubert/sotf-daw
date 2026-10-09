@@ -65,25 +65,21 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[ControlSpec::selector(3)], // beamformer_type
     main: &[ControlGroup::new(
         "primary",
-        "Array & direction",
+        "",
         &[
-            ControlSpec::knob(0),    // num_mics
-            ControlSpec::knob(1),    // mic_spacing_cm
-            ControlSpec::knob(2),    // steer_angle_deg
-            ControlSpec::selector(3), // beamformer_type
+            ControlSpec::slider(0), // num_mics
+            ControlSpec::slider(1), // mic_spacing_cm
+            ControlSpec::slider(2), // steer_angle_deg
         ],
     )
     .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(150.0, 0.4),
-        ColumnConstraint::main(200.0),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

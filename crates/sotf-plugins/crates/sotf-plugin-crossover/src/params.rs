@@ -90,6 +90,36 @@ pub const PARAMS: &[ParamSpec] = &[
     .doc("Third ordered crossover cutoff for 4-way mode"),
 ];
 
+/// Desktop channel addresses start above the eight stable scalar controls.
+/// Each channel owns frequency at `100 + 2 * channel` and mode immediately after it.
+pub const CHANNEL_PARAM_START: usize = 100;
+
+/// Metadata for independent channel cutoff and mode controls.
+/// Runtime IDs append the zero-based channel to these engine-key prefixes.
+pub const CHANNEL_TEMPLATE: &[ParamSpec] = &[
+    ParamSpec::float(
+        "Frequency",
+        "channel_frequency",
+        1000.0,
+        20.0,
+        20000.0,
+        1.0,
+        "Hz",
+        "Channels",
+    )
+    .structural()
+    .doc("Independent input-channel crossover cutoff"),
+    ParamSpec::choice(
+        "Mode",
+        "channel_mode",
+        0,
+        &["Lowpass", "Highpass", "Mute", "Passthrough"],
+        "Channels",
+    )
+    .structural()
+    .doc("Independent input-channel filtering or routing mode"),
+];
+
 const BANDS: ParamCondition = ParamCondition::choice(4, 0);
 
 /// Crossover: indices 0–3 preserve the original family/frequency/mode/taps order.

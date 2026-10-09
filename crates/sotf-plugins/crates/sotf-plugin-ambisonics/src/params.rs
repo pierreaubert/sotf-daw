@@ -71,29 +71,18 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[
-        ControlGroup::new(
-            "decode",
-            "Decode setup",
-            &[
-                ControlSpec::knob(0),     // order
-                ControlSpec::selector(1), // target_layout
-                ControlSpec::selector(4), // algorithm
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "primary",
-            "Decode options",
-            &[ControlSpec::toggle(2), ControlSpec::toggle(3)], // max_re_weighting, dual_band
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9).keep_visible()),
+    config: &[
+        ControlSpec::selector(1), // target_layout
+        ControlSpec::toggle(2),   // max_re_weighting
+        ControlSpec::toggle(3),   // dual_band
+        ControlSpec::button_set(4, &["Mode Matching", "AllRAD"]),
     ],
+    main: &[ControlGroup::new("decode", "", &[ControlSpec::slider(0)])
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(200.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

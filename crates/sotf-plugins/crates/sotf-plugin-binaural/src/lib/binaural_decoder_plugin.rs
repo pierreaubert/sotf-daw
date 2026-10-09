@@ -174,7 +174,24 @@ struct BinauralDrain {
     remaining: Option<usize>,
 }
 
+/// Cached metadata for the decoder’s accepted HRTF resource.
+///
+/// Published after successful resource preparation. Reading this snapshot
+/// clones an Arc without allocating or reading files on the audio thread.
+#[derive(Debug, Clone, Default)]
+pub struct BinauralDecoderData {
+    /// Whether the decoder has completed initialization.
+    pub initialized: bool,
+    /// Accepted SOFA path; None when using the built-in response.
+    pub loaded_sofa_path: Option<PathBuf>,
+    /// Prepared impulse-response length after resampling and delay handling.
+    pub ir_length: usize,
+    /// Processing sample rate of the prepared response.
+    pub sample_rate: f64,
+}
+
 pub struct BinauralDecoderPlugin {
+    resource_data: Arc<BinauralDecoderData>,
     drain: BinauralDrain,
     /// Common causal offset applied to the currently active SOFA response.
     sofa_delay_rebase_seconds: Option<f64>,
@@ -198,6 +215,19 @@ pub struct BinauralDecoderPlugin {
 }
 
 impl BinauralDecoderPlugin {
+    fn publish_resource_data(&mut self, initialized: bool) {
+        let state = self.state.load_full();
+        self.resource_data = Arc::new(BinauralDecoderData {
+            initialized,
+            loaded_sofa_path: state
+                ._hrtf_data
+                .as_ref()
+                .and_then(|_| self.config.hrtf_path.clone()),
+            ir_length: state._hrtf_data.as_ref().map_or(0, |sofa| sofa.ir_length),
+            sample_rate: self.config.sample_rate,
+        });
+    }
+
     pub(super) fn validate_linear_convolution_ir(&self, ir_length: usize) -> PluginResult<()> {
         let capacity = self.config.fft_size - self.config.hop_size + 1;
         if ir_length > capacity {
@@ -292,6 +322,7 @@ impl BinauralDecoderPlugin {
         });
 
         let mut p = Self {
+            resource_data: Arc::new(BinauralDecoderData::default()),
             drain: BinauralDrain {
                 silence: vec![0.0; hop_size * input_channels],
                 has_input: false,
@@ -1426,6 +1457,7 @@ impl Plugin for BinauralDecoderPlugin {
                 self.sofa_delay_rebase_seconds = None;
             }
 
+            self.publish_resource_data(self.resource_data.initialized);
             self.rebuild_cached_parameters();
             return Ok(());
         }
@@ -1863,7 +1895,11 @@ impl Plugin for BinauralDecoderPlugin {
         self.spawn_hrtf_update_thread();
 
         self.reset_state();
+        self.publish_resource_data(true);
         Ok(())
+    }
+    fn get_data(&self) -> Option<Arc<dyn std::any::Any + Send + Sync>> {
+        Some(self.resource_data.clone())
     }
     fn reset(&mut self) {
         self.reset_state();

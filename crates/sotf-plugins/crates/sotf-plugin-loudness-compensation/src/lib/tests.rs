@@ -619,7 +619,8 @@ fn test_auto_gain_measurement_not_stale_after_one_block() {
 
     let data_arc = p.get_data().expect("auto_gain should produce data");
     let ag_data = data_arc
-        .downcast_ref::<sotf_host::auto_gain::AutoGainData>()
+        .downcast_ref::<crate::LoudnessCompensationData>()
+        .and_then(|data| data.auto_gain.as_ref())
         .expect("data should be AutoGainData");
     // After 400ms of loud audio the EBU momentary measurement must be well above
     // the plugin default of -120.0 dB.  With the old throttled code the cache
@@ -661,7 +662,8 @@ fn test_post_mode_output_measurement_after_compensation() {
 
     let data_arc = p.get_data().expect("auto_gain should produce data");
     let ag_data = data_arc
-        .downcast_ref::<sotf_host::auto_gain::AutoGainData>()
+        .downcast_ref::<crate::LoudnessCompensationData>()
+        .and_then(|data| data.auto_gain.as_ref())
         .expect("data should be AutoGainData");
 
     // Both measurements must be finite after 1 second
@@ -1313,7 +1315,8 @@ fn test_process_in_place_pre_mode() {
 
     let data_arc = p.get_data().expect("auto_gain should produce data");
     let ag_data = data_arc
-        .downcast_ref::<sotf_host::auto_gain::AutoGainData>()
+        .downcast_ref::<crate::LoudnessCompensationData>()
+        .and_then(|data| data.auto_gain.as_ref())
         .expect("data should be AutoGainData");
 
     assert!(ag_data.input_lufs.is_finite(), "input_lufs must be finite");
@@ -1376,9 +1379,14 @@ fn test_process_in_place_single_frame() {
 // ============================================================================
 
 #[test]
-fn test_get_data_none_without_auto_gain() {
+fn test_get_data_volume_without_auto_gain() {
     let p = LoudnessCompensationPlugin::new(1, 100.0, 6.0, 10000.0, 6.0);
-    assert!(p.get_data().is_none());
+    let data = p.get_data().unwrap();
+    let data = data
+        .downcast_ref::<crate::LoudnessCompensationData>()
+        .unwrap();
+    assert_eq!(data.playback_volume_db, 0.0);
+    assert!(data.auto_gain.is_none());
 }
 
 #[test]
@@ -1882,4 +1890,47 @@ fn test_rebuild_cached_parameters_updates_values() {
         low_gain_param.default_value,
         sotf_host::parameters::ParameterValue::Float(12.0)
     );
+}
+
+/// Host attenuation stays authoritative through processing and meter resets.
+#[test]
+fn playback_volume_telemetry_tracks_processor_without_auto_gain() {
+    let mut plugin = LoudnessCompensationPlugin::from_params(
+        2,
+        LoudnessCompensationPluginParams {
+            mode: 2,
+            auto_calibrated: true,
+            playback_volume_db: -18.0,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    ParametricInPlacePlugin::initialize(&mut plugin, 48000.0).unwrap();
+    for attenuation in [-20.0, -12.0412, 0.0, -80.0] {
+        plugin
+            .set_parameter(
+                ParameterId::from("playback_volume_db"),
+                ParameterValue::Float(attenuation),
+            )
+            .unwrap();
+        let mut buffer = vec![0.0; 9600];
+        plugin
+            .process_in_place(&mut buffer, &ProcessContext::new(48000, 4800))
+            .unwrap();
+        for reset in [false, true] {
+            if reset {
+                plugin.reset();
+            }
+            let snapshot = plugin.get_data().unwrap();
+            let data = snapshot
+                .downcast_ref::<crate::LoudnessCompensationData>()
+                .unwrap();
+            assert_eq!(data.playback_volume_db, attenuation);
+            assert!(data.auto_gain.is_none());
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("playback_volume_db")),
+                Some(ParameterValue::Float(attenuation))
+            );
+        }
+    }
 }

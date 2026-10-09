@@ -1,10 +1,10 @@
 //! Published contour checkpoints and independent loudness-matching oracles.
 
 // Rust guideline compliant 2026-02-21
-use sotf_host::auto_gain::AutoGainData;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
+use sotf_plugin_loudness_compensation::LoudnessCompensationData;
 use sotf_plugin_loudness_compensation::iso226::{compute_iso226_delta, iso226_spl_at_freq};
 use sotf_plugin_loudness_compensation::{
     LoudnessCompensationPlugin, LoudnessCompensationPluginParams,
@@ -130,7 +130,8 @@ fn pre_and_post_match_analytical_peak_gain_after_level_changes() {
                 );
             }
             let data = plugin.get_data().unwrap();
-            let data = data.downcast_ref::<AutoGainData>().unwrap();
+            let data = data.downcast_ref::<LoudnessCompensationData>().unwrap();
+            let data = data.auto_gain.as_ref().unwrap();
             assert!((data.gain_db + eq_gain).abs() < 0.03);
             assert!((data.output_lufs - data.input_lufs).abs() < 0.03);
         }

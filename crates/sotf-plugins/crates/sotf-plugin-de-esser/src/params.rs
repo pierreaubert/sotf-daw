@@ -160,7 +160,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(5),
                 ControlSpec::slider(8),
                 ControlSpec::slider(7),
-                ControlSpec::meter(-30.0, 0.0),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -175,7 +174,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
-    output: &[],
+    output: &[ControlSpec::meter(-30.0, 0.0)],
     tabs: &[],
     visualizations: &[],
     column_constraints: &[ColumnConstraint::main(300.0)],

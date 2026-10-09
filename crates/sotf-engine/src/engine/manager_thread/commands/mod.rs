@@ -56,6 +56,7 @@ pub use resume::ResumeCommand;
 pub use seek::SeekCommand;
 pub use set_plugin_parameter::SetPluginParameterCommand;
 pub use set_volume::SetVolumeCommand;
+pub(super) use set_volume::sync_playback_volume;
 pub use shutdown::ShutdownCommand;
 pub use stop::StopCommand;
 pub use update_plugin_chain::UpdatePluginChainCommand;

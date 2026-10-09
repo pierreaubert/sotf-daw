@@ -38,6 +38,8 @@ const CROSSFADE_DURATION_MS: u64 = 50;
 pub(super) struct ProcessingState {
     /// Current plugin host
     pub(super) host: Box<PluginHost>,
+    /// Sink attenuation retained across prepared host replacements.
+    playback_volume_db: f32,
     /// Previous host for crossfading
     pub(super) prev_host: Option<Box<PluginHost>>,
     /// Crossfade progress (0.0 to 1.0, 1.0 = current host only)
@@ -106,6 +108,7 @@ impl ProcessingState {
 
         Self {
             host: Box::new(PluginHost::new(channels, sample_rate)),
+            playback_volume_db: 0.0,
             prev_host: None,
             crossfade_progress: 1.0,
             crossfade_frames: 0,
@@ -336,7 +339,7 @@ impl ProcessingState {
 
         let PreparedHostUpdate {
             generation,
-            host: new_host,
+            host: mut new_host,
             output_channels,
             output_sample_rate,
             latency_samples,
@@ -345,6 +348,16 @@ impl ProcessingState {
             new_path_delay,
             ..
         } = update;
+        if let Err(error) = new_host.set_playback_volume_db(self.playback_volume_db) {
+            self.retire(GcItem::HostTransition {
+                host: new_host,
+                old_path_delay,
+                new_path_delay,
+            });
+            return Err(format!(
+                "prepared host rejected playback attenuation: {error}"
+            ));
+        }
         let negotiated_rate = match new_host.output_sample_rate_native(self.sample_rate) {
             Ok(rate) => rate,
             Err(error) => {
@@ -632,6 +645,31 @@ pub(super) fn handle_processing_command(
                     previous_latency_samples,
                     latency_samples,
                     latency_changed: previous_latency_samples != latency_samples,
+                })
+                .ok();
+        }
+        ProcessingCommand::SetPlaybackVolume(volume) => {
+            let result = if volume.is_finite() && (0.0..=1.0).contains(&volume) {
+                // Silence uses the canonical compensation input floor, not -infinity.
+                let db = if volume > 0.0 {
+                    (20.0 * volume.log10()).max(-80.0)
+                } else {
+                    -80.0
+                };
+                state.host.set_playback_volume_db(db).and_then(|()| {
+                    if let Some(previous) = &mut state.prev_host {
+                        previous.set_playback_volume_db(db)?;
+                    }
+                    state.playback_volume_db = db;
+                    Ok(())
+                })
+            } else {
+                Err("playback volume must be finite and between 0 and 1".into())
+            };
+            response_tx
+                .send(match result {
+                    Ok(()) => ProcessingResponse::Ok,
+                    Err(error) => ProcessingResponse::Error(error),
                 })
                 .ok();
         }

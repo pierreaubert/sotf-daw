@@ -392,6 +392,7 @@ pub(super) fn run_manager_thread(
     )?;
 
     // Set initial volume and mute
+    super::commands::sync_playback_volume(&processing_thread, config.volume)?;
     playback_thread.send_command(PlaybackCommand::SetVolume(config.volume))?;
     playback_thread.send_command(PlaybackCommand::Mute(config.muted))?;
 

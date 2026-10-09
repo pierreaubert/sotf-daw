@@ -795,6 +795,56 @@ mod tests {
             .expect("fletcher_munson converter registered");
         assert_eq!(config.plugin_type, "loudness_compensation");
         assert_eq!(config.parameters["mode"], 2);
+        assert_eq!(settings.param_value(11), Some(2.0));
+        assert_eq!(settings.param_value(13), Some(83.0));
+        assert_eq!(config.parameters["reference_level_db"], 83.0);
+        assert_eq!(config.parameters["auto_calibrated"], true);
+        assert_eq!(config.parameters["low_freq"], 60.0);
+        assert_eq!(config.parameters["low_gain"], 10.0);
+        assert_eq!(config.parameters["mid_freq"], 4000.0);
+        assert_eq!(config.parameters["high_gain"], 4.0);
+
+        // A dense-editor edit promotes the saved variant exactly once. The
+        // reference then uses absolute SPL rather than adding 83 on each edit.
+        let mut edited = settings.clone();
+        edited.set_param_value(13, 86.0);
+        assert!(matches!(
+            edited,
+            PluginSettings::LoudnessCompensation { .. }
+        ));
+        edited.set_param_value(11, 0.0);
+        edited.set_param_value(0, 150.0);
+        edited.set_param_value(3, 3.5);
+        let converted = effects::convert_loudness_compensation(&edited, 48_000.0).unwrap();
+        assert_eq!(converted.parameters["reference_level_db"], 86.0);
+        assert_eq!(converted.parameters["mode"], 0);
+        assert_eq!(converted.parameters["low_freq"], 150.0);
+        assert_eq!(converted.parameters["high_gain"], 3.5);
+        assert_eq!(converted.parameters["mid_freq"], 4000.0);
+        let processor =
+            sotf_plugins::create_plugin("loudness_compensation", &converted.parameters, 2, 48_000)
+                .unwrap();
+        for (key, expected) in [
+            ("reference_level_db", 86.0),
+            ("low_freq", 150.0),
+            ("high_gain", 3.5),
+            ("mid_freq", 4000.0),
+        ] {
+            assert_eq!(
+                processor.get_parameter(&sotf_plugins::ParameterId::from(key)),
+                Some(sotf_plugins::ParameterValue::Float(expected))
+            );
+        }
+        let serialized = serde_json::to_value(&edited).unwrap();
+        let restored: PluginSettings = serde_json::from_value(serialized.clone()).unwrap();
+        assert_eq!(serde_json::to_value(restored).unwrap(), serialized);
+
+        let before = serde_json::to_value(&settings).unwrap();
+        let mut unavailable = settings;
+        for (index, value) in [(14, -20.0), (18, 1.0), (13, f64::NAN)] {
+            unavailable.set_param_value(index, value);
+            assert_eq!(serde_json::to_value(&unavailable).unwrap(), before);
+        }
     }
 
     #[test]

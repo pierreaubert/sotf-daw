@@ -3383,6 +3383,7 @@ dependencies = [
  "gpui-design",
  "gpui-ui-kit",
  "sotf-gpui-toolkit-gpui",
+ "web-time",
 ]
 
 [[package]]

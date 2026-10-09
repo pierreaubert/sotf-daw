@@ -125,3 +125,70 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
         assert_eq!(plugin.drain_call_bound(), bound);
     }
 }
+
+#[test]
+fn resource_snapshot_tracks_accepted_load_and_survives_rejection() {
+    use crate::BinauralDecoderData;
+    use sotf_host::{ParameterId, ParameterValue};
+    let path = FixturePath(std::env::temp_dir().join(format!(
+        "binaural-resource-status-{}.sofa",
+        std::process::id()
+    )));
+    write(&path.0, 3.0);
+    let mut plugin = BinauralDecoderPlugin::new(
+        1,
+        128,
+        Some(path.0.clone()),
+        0.0,
+        0.0,
+        false,
+        120.0,
+        2.0,
+        0.0,
+        RoomModel {
+            max_order: 0,
+            ..Default::default()
+        },
+    );
+    let cold = Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap();
+    assert!(!cold.initialized);
+    assert!(cold.loaded_sofa_path.is_none());
+    plugin.initialize(48_000.0).unwrap();
+    let loaded = Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap();
+    assert!(loaded.initialized);
+    assert_eq!(loaded.loaded_sofa_path.as_ref(), Some(&path.0));
+    assert_eq!(loaded.ir_length, 19);
+    assert_eq!(loaded.sample_rate, 48_000.0);
+    assert!(Arc::ptr_eq(
+        &loaded,
+        &Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap()
+    ));
+    std::fs::write(&path.0, b"invalid SOFA content").unwrap();
+    assert!(
+        plugin
+            .set_parameter(
+                ParameterId::from("sofa_file"),
+                ParameterValue::String(path.0.to_string_lossy().into_owned())
+            )
+            .is_err()
+    );
+    assert!(Arc::ptr_eq(
+        &loaded,
+        &Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap()
+    ));
+    assert!(plugin.initialize(96_000.0).is_err());
+    assert!(Arc::ptr_eq(
+        &loaded,
+        &Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap()
+    ));
+    plugin
+        .set_parameter(
+            ParameterId::from("sofa_file"),
+            ParameterValue::String(String::new()),
+        )
+        .unwrap();
+    let builtin = Arc::downcast::<BinauralDecoderData>(plugin.get_data().unwrap()).unwrap();
+    assert!(builtin.initialized);
+    assert!(builtin.loaded_sofa_path.is_none());
+    assert_eq!(builtin.ir_length, 0);
+}

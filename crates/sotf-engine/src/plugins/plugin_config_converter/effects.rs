@@ -304,28 +304,8 @@ pub fn convert_fletcher_munson(
     settings: &PluginSettings,
     _sample_rate: f64,
 ) -> Option<PluginConfig> {
-    let PluginSettings::FletcherMunson {
-        playback_volume_db,
-        reference_level_db,
-        ..
-    } = settings
-    else {
-        return None;
-    };
-    // Backward compat: emit as loudness_compensation with mode=2 (Auto)
-    Some(PluginConfig::new(
-        "loudness_compensation",
-        json!({
-            "low_freq": sotf_plugins::param_specs::find_by_key(sotf_plugins::param_specs::loudness_compensation::PARAMS, "low_freq").default_f64(),
-            "low_gain": sotf_plugins::param_specs::find_by_key(sotf_plugins::param_specs::loudness_compensation::PARAMS, "low_gain").default_f64(),
-            "high_freq": sotf_plugins::param_specs::find_by_key(sotf_plugins::param_specs::loudness_compensation::PARAMS, "high_freq").default_f64(),
-            "high_gain": sotf_plugins::param_specs::find_by_key(sotf_plugins::param_specs::loudness_compensation::PARAMS, "high_gain").default_f64(),
-            "mode": 2,
-            "playback_volume_db": playback_volume_db,
-            "reference_level_db": 83.0 + reference_level_db,
-            "playback_level_db": sotf_plugins::param_specs::find_by_key(sotf_plugins::param_specs::loudness_compensation::PARAMS, "playback_level_db").default_f64(),
-        }),
-    ))
+    let current = settings.legacy_fletcher_munson_settings()?;
+    convert_loudness_compensation(&current, _sample_rate)
 }
 
 pub fn convert_convolution(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
@@ -785,7 +765,8 @@ mod tests {
             dc_blocker,
             use_adaa,
             ..
-        } = &mut settings else {
+        } = &mut settings
+        else {
             unreachable!()
         };
         *dynamic_amount = 0.63;

@@ -190,6 +190,7 @@ impl ProcessingThread {
         let expects_response = matches!(
             command,
             ProcessingCommand::CommitHostUpdate(_)
+                | ProcessingCommand::SetPlaybackVolume(_)
                 | ProcessingCommand::SetParameter { .. }
                 | ProcessingCommand::Bypass(_)
                 | ProcessingCommand::GetPluginData(_)
