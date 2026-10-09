@@ -115,6 +115,7 @@ pub const PARAMS: &[ParamSpec] = &[
 
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
+        ControlSpec::button_set(4, CROSSFADE_MODE_LABELS),
         ControlSpec::label(1),        // input_channels (read-only)
         ControlSpec::file_picker(13), // hrtf_database_dir
     ],
@@ -125,7 +126,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ControlSpec::file_picker(0), // sofa_file
             ControlSpec::knob(2),        // externalization
             ControlSpec::knob(3),        // near_field_strength
-            ControlSpec::selector(4),    // crossfade_mode
             ControlSpec::knob(9),        // crossfade_ms
         ],
     )

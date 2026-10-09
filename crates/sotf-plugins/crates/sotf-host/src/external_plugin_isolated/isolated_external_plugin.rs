@@ -1,8 +1,8 @@
 use super::isolated_external_plugin_config::IsolatedExternalPluginConfig;
 use super::isolated_external_plugin_config::build_worker_launch_command;
 use crate::external_plugin::{
-    ExternalPluginHostingPlan, ExternalPluginSandboxMode, ExternalPluginState,
-    NativePluginAudioSetup, PluginDescriptor, PluginDescriptorProbeCache,
+    ExternalPluginEditorData, ExternalPluginHostingPlan, ExternalPluginSandboxMode,
+    ExternalPluginState, NativePluginAudioSetup, PluginDescriptor, PluginDescriptorProbeCache,
     plan_external_plugin_hosting,
 };
 use crate::external_plugin_host::{ExternalPluginHostBlockStatus, ExternalPluginHostProxy};
@@ -19,6 +19,7 @@ use crate::plugin::{
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub struct IsolatedExternalPlugin {
@@ -39,6 +40,7 @@ pub struct IsolatedExternalPlugin {
     pub(super) state_file_path: Option<PathBuf>,
     pub(super) parameters: Vec<Parameter>,
     pub(super) parameter_values: HashMap<ParameterId, ParameterValue>,
+    editor_data: Option<Arc<ExternalPluginEditorData>>,
     pub(super) control_timeout: Duration,
     pub(super) identity_frame_geometry: bool,
     drain_zero_input: Vec<f32>,
@@ -195,6 +197,7 @@ impl IsolatedExternalPlugin {
             state_file_path,
             parameters: Vec::new(),
             parameter_values: HashMap::new(),
+            editor_data: None,
             control_timeout: config.worker_startup_timeout,
             identity_frame_geometry: false,
             drain_zero_input,
@@ -236,34 +239,63 @@ impl IsolatedExternalPlugin {
         }
 
         if config.start_worker {
-            match plugin.proxy.request_control(
-                &PluginIpcControlRequest::Describe,
-                config.worker_startup_timeout,
-            )? {
-                PluginIpcControlResponse::Description {
-                    parameters,
-                    tail_length: _,
-                    identity_frame_geometry,
-                } => {
-                    plugin.parameter_values = parameters
-                        .iter()
-                        .map(|parameter| (parameter.id.clone(), parameter.default_value.clone()))
-                        .collect();
-                    plugin.proxy.configure_parameters(
-                        parameters
-                            .iter()
-                            .map(|parameter| parameter.id.clone())
-                            .collect(),
-                    );
-                    plugin.parameters = parameters;
-                    plugin.identity_frame_geometry = identity_frame_geometry;
-                }
-                PluginIpcControlResponse::Error(error) => return Err(error),
-                _ => return Err("external-plugin worker returned invalid description".to_string()),
-            }
+            plugin.refresh_editor_data()?;
         }
 
         Ok(plugin)
+    }
+
+    /// Refresh immutable editor state between worker audio requests.
+    ///
+    /// # Errors
+    /// Returns an IPC or worker error. Cached values are cleared first so a failed
+    /// readback cannot masquerade as the result of an accepted native change.
+    pub(super) fn refresh_editor_data(&mut self) -> Result<(), String> {
+        self.editor_data = None;
+        self.parameter_values.clear();
+        match self
+            .proxy
+            .request_control(&PluginIpcControlRequest::Describe, self.control_timeout)?
+        {
+            PluginIpcControlResponse::Description {
+                parameters,
+                parameter_values,
+                identity_frame_geometry,
+                ..
+            } => {
+                self.proxy.configure_parameters(
+                    parameters
+                        .iter()
+                        .map(|parameter| parameter.id.clone())
+                        .collect(),
+                );
+                self.parameters = parameters;
+                self.parameter_values = parameter_values;
+                self.identity_frame_geometry = identity_frame_geometry;
+                let native_state = match self
+                    .proxy
+                    .request_control(&PluginIpcControlRequest::SaveState, self.control_timeout)
+                {
+                    Ok(PluginIpcControlResponse::State(bytes)) => {
+                        self.opaque_state = bytes;
+                        Ok(self.placeholder_state())
+                    }
+                    Ok(PluginIpcControlResponse::Error(error)) => Err(error),
+                    Ok(_) => Err("external-plugin worker returned invalid state response".into()),
+                    Err(error) => Err(error),
+                };
+                self.editor_data = Some(Arc::new(ExternalPluginEditorData {
+                    plugin_instance_id: self.plugin_instance_id,
+                    descriptor: self.descriptor.clone(),
+                    parameters: self.parameters.clone(),
+                    parameter_values: self.parameter_values.clone(),
+                    native_state,
+                }));
+                Ok(())
+            }
+            PluginIpcControlResponse::Error(error) => Err(error),
+            _ => Err("external-plugin worker returned invalid description".to_string()),
+        }
     }
 
     pub fn descriptor(&self) -> &PluginDescriptor {
@@ -720,6 +752,9 @@ impl Plugin for IsolatedExternalPlugin {
             ));
             return Err(error);
         }
+        if worker_is_running {
+            self.refresh_editor_data()?;
+        }
         if let Err(error) = self.proxy.reset_timeline_after_drain() {
             self.drain_failed = true;
             self.quarantine_worker(format!(
@@ -758,13 +793,21 @@ impl Plugin for IsolatedExternalPlugin {
             },
             self.control_timeout,
         )? {
-            PluginIpcControlResponse::Ack => {
-                self.parameter_values.insert(id, value);
-                Ok(())
-            }
+            PluginIpcControlResponse::Ack => self.refresh_editor_data().map_err(|error| {
+                format!("native parameter changed but editor readback failed: {error}")
+            }),
             PluginIpcControlResponse::Error(error) => Err(error),
             _ => Err("external-plugin worker returned invalid parameter response".into()),
         }
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn std::any::Any + Send + Sync>> {
+        if self.quarantined {
+            return None;
+        }
+        self.editor_data
+            .as_ref()
+            .map(|data| data.clone() as Arc<dyn std::any::Any + Send + Sync>)
     }
 
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {

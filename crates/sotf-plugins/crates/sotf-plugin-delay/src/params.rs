@@ -78,30 +78,41 @@ pub const PARAMS: &[ParamSpec] = &[
 /// Keep time, feedback, and mix together; disclose modulation and diffusion
 /// separately so secondary controls do not displace the primary delay workflow.
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[ControlGroup::new(
-        "primary",
-        "",
-        &[
-            ControlSpec::slider(0), // delay_ms
-            ControlSpec::slider(1), // feedback
-            ControlSpec::knob(2),   // mix
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    config: &[ControlSpec::toggle(7)], // pitch-preserving mode
+    main: &[
+        ControlGroup::new(
+            "primary",
+            "",
+            &[
+                ControlSpec::slider(0),
+                ControlSpec::slider(1),
+                ControlSpec::slider(2),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "MODULATION",
+            "Modulation",
+            &[
+                ControlSpec::slider(3).enabled_when(ParamCondition::bool(7, false)),
+                ControlSpec::slider(4).enabled_when(ParamCondition::bool(7, false)),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.3)),
+        ControlGroup::new(
+            "DIFFUSION",
+            "Diffusion",
+            &[
+                ControlSpec::toggle(6),
+                ControlSpec::slider(5).enabled_when(ParamCondition::bool(6, true)),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.2)),
+    ],
     output: &[],
-    tabs: &[TabSpec {
-        name: "Modulation & diffusion",
-        controls: &[
-            ControlSpec::knob(3),   // lfo_rate_hz
-            ControlSpec::knob(4),   // lfo_depth_ms
-            ControlSpec::knob(5),   // allpass_coeff
-            ControlSpec::toggle(6), // allpass_feedback
-            ControlSpec::toggle(7), // pitch_preserving
-        ],
-    }],
+    tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(200.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 
@@ -325,6 +336,5 @@ mod tests {
         let groups: Vec<_> = LAYOUT.main.iter().collect();
         let solved = solve_control_groups(&groups, 320.0).unwrap();
         assert!(solved.find("primary").unwrap().visible());
-        assert!(solved.collapsed_slots().next().is_none());
     }
 }

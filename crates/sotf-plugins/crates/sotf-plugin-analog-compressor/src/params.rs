@@ -73,7 +73,7 @@ pub const PARAMS: &[ParamSpec] = &[
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[ControlSpec::toggle(7)],
+    config: &[ControlSpec::selector(8), ControlSpec::toggle(7)],
     main: &[
         ControlGroup::new(
             "DYNAMICS",
@@ -81,37 +81,36 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             &[
                 ControlSpec::slider(0),
                 ControlSpec::slider(1),
-                ControlSpec::slider(4),
-                ControlSpec::slider(5),
                 ControlSpec::slider(2),
                 ControlSpec::slider(3),
-                ControlSpec::slider(13),
-                ControlSpec::knob(14),
+                ControlSpec::slider(5),
+                ControlSpec::slider(6),
+                ControlSpec::slider(10),
+                ControlSpec::slider(12),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "ANALOG",
-            "ANALOG",
+            "DYNAMICS ADVANCED",
+            "DYNAMICS ADVANCED",
             &[
-                ControlSpec::selector(8),
-                ControlSpec::slider(9),
-                ControlSpec::slider(10),
-                ControlSpec::slider(11),
+                ControlSpec::slider(4),
+                ControlSpec::slider(13),
+                ControlSpec::slider(14),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
-            "OUTPUT",
-            "OUTPUT",
-            &[ControlSpec::knob(6), ControlSpec::knob(12)],
+            "ANALOG",
+            "ANALOG",
+            &[ControlSpec::slider(9), ControlSpec::slider(11)],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

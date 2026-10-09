@@ -11,7 +11,7 @@ use super::native_crossover_layout::{
     NativeCrossoverTopology,
 };
 use super::plugin_descriptor::{PluginDescriptor, resolve_dynamic_library_path};
-use crate::parameters::{Parameter, ParameterId, ParameterValue};
+use crate::parameters::{Parameter, ParameterChoice, ParameterId, ParameterValue};
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::entry::clap_plugin_entry;
 use clap_sys::events::{
@@ -34,8 +34,8 @@ use clap_sys::ext::audio_ports_config::{
 };
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_plugin_latency};
 use clap_sys::ext::params::{
-    CLAP_EXT_PARAMS, CLAP_PARAM_IS_HIDDEN, CLAP_PARAM_IS_READONLY, CLAP_PARAM_IS_STEPPED,
-    clap_param_info, clap_plugin_params,
+    CLAP_EXT_PARAMS, CLAP_PARAM_IS_ENUM, CLAP_PARAM_IS_HIDDEN, CLAP_PARAM_IS_READONLY,
+    CLAP_PARAM_IS_STEPPED, clap_param_info, clap_plugin_params,
 };
 use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
 use clap_sys::ext::surround::{CLAP_EXT_SURROUND, CLAP_PORT_SURROUND, clap_plugin_surround};
@@ -730,7 +730,7 @@ impl NativeExternalPluginBackend for ClapBackend {
                     self.metadata.name
                 )
             })?;
-        self.parameters[index].validate(value).map_err(|error| {
+        validate_clap_parameter_edit(&self.parameters[index], value).map_err(|error| {
             format!(
                 "CLAP plugin '{}' rejected parameter '{id}': {error}",
                 self.metadata.name
@@ -2123,6 +2123,16 @@ fn c_string_matches(pointer: *const c_char, expected: &CStr) -> bool {
     unsafe { CStr::from_ptr(pointer) == expected }
 }
 
+fn validate_clap_parameter_edit(
+    parameter: &Parameter,
+    value: &ParameterValue,
+) -> Result<(), String> {
+    if parameter.read_only {
+        return Err(format!("CLAP parameter '{}' is read-only", parameter.id));
+    }
+    parameter.validate(value)
+}
+
 unsafe fn query_parameters(
     plugin: *const clap_plugin,
     metadata: &NativePluginMetadata,
@@ -2161,7 +2171,7 @@ unsafe fn query_parameters(
                 ));
             }
             let info = info.assume_init();
-            if info.flags & (CLAP_PARAM_IS_HIDDEN | CLAP_PARAM_IS_READONLY) != 0 {
+            if info.flags & CLAP_PARAM_IS_HIDDEN != 0 {
                 continue;
             }
             if !info.min_value.is_finite()
@@ -2185,7 +2195,7 @@ unsafe fn query_parameters(
             let is_int = info.flags & CLAP_PARAM_IS_STEPPED != 0
                 && info.min_value >= f64::from(i32::MIN)
                 && info.max_value <= f64::from(i32::MAX);
-            let (parameter, kind) = if is_bool {
+            let (mut parameter, kind) = if is_bool {
                 (
                     Parameter::new_bool(&host_id.to_string(), &name, info.default_value >= 0.5)
                         .with_group(&group),
@@ -2219,6 +2229,43 @@ unsafe fn query_parameters(
                     ClapParameterKind::Float,
                 )
             };
+            parameter.read_only = info.flags & CLAP_PARAM_IS_READONLY != 0;
+            parameter.step = (info.flags & CLAP_PARAM_IS_STEPPED != 0).then_some(1.0);
+            // Bound metadata work at construction; large enums retain typed numeric controls.
+            const MAX_ENUM_CHOICES: i64 = 256;
+            if info.flags & CLAP_PARAM_IS_ENUM != 0 && is_int {
+                let first = info.min_value.ceil() as i64;
+                let last = info.max_value.floor() as i64;
+                if last - first < MAX_ENUM_CHOICES
+                    && let Some(value_to_text) = (*params).value_to_text
+                {
+                    for native_value in first..=last {
+                        let mut label = [0 as c_char; 256];
+                        if !value_to_text(
+                            plugin,
+                            info.id,
+                            native_value as f64,
+                            label.as_mut_ptr(),
+                            label.len() as u32,
+                        ) {
+                            parameter.choices.clear();
+                            break;
+                        }
+                        let Some(label) =
+                            bounded_c_char_array(&label).filter(|label| !label.trim().is_empty())
+                        else {
+                            parameter.choices.clear();
+                            break;
+                        };
+                        let value = if is_bool {
+                            ParameterValue::Bool(native_value != 0)
+                        } else {
+                            ParameterValue::Int(native_value as i32)
+                        };
+                        parameter.choices.push(ParameterChoice { label, value });
+                    }
+                }
+            }
             parameters.push(parameter);
             bindings.push(ClapParameterBinding {
                 host_id,
@@ -2890,5 +2937,135 @@ mod lifecycle_tests {
         // this callback-table validation.
         let error = unsafe { validate_clap_lifecycle_callbacks(&plugin, "test") }.unwrap_err();
         assert!(error.contains("no stop_processing callback"), "{error}");
+    }
+}
+
+#[cfg(test)]
+mod parameter_metadata_tests {
+    use super::*;
+
+    unsafe extern "C" fn count(_: *const clap_plugin) -> u32 {
+        3
+    }
+
+    unsafe extern "C" fn info(
+        _: *const clap_plugin,
+        index: u32,
+        out: *mut clap_param_info,
+    ) -> bool {
+        if index >= 3 {
+            return false;
+        }
+        // SAFETY: The host supplies one writable parameter-info record.
+        unsafe {
+            *out = std::mem::zeroed();
+            (*out).id = index;
+            (*out).flags = CLAP_PARAM_IS_STEPPED | CLAP_PARAM_IS_ENUM;
+            if index == 1 {
+                (*out).flags |= CLAP_PARAM_IS_READONLY;
+            }
+            if index == 2 {
+                (*out).flags |= CLAP_PARAM_IS_HIDDEN;
+            }
+            (*out).min_value = -2.0;
+            (*out).max_value = 0.0;
+            (*out).default_value = -1.0;
+            (*out).name[0] = b'M' as c_char;
+        }
+        true
+    }
+
+    unsafe extern "C" fn text(
+        _: *const clap_plugin,
+        _: u32,
+        value: f64,
+        out: *mut c_char,
+        capacity: u32,
+    ) -> bool {
+        let label: &[u8] = match value as i32 {
+            -2 => b"Left\0",
+            -1 => b"Center\0",
+            0 => b"Right\0",
+            _ => return false,
+        };
+        if capacity < label.len() as u32 {
+            return false;
+        }
+        // SAFETY: The host supplies the stated buffer capacity and labels include a terminator.
+        unsafe {
+            ptr::copy_nonoverlapping(label.as_ptr().cast(), out, label.len());
+        }
+        true
+    }
+
+    unsafe extern "C" fn extension(plugin: *const clap_plugin, _: *const c_char) -> *const c_void {
+        // SAFETY: The test plugin's data points at its live params extension.
+        unsafe { (*plugin).plugin_data.cast_const() }
+    }
+
+    #[test]
+    fn native_choices_and_read_only_survive_discovery_without_hidden_parameters() {
+        let mut params = clap_plugin_params {
+            count: Some(count),
+            get_info: Some(info),
+            get_value: None,
+            value_to_text: Some(text),
+            text_to_value: None,
+            flush: None,
+        };
+        let plugin = clap_plugin {
+            desc: ptr::null(),
+            plugin_data: (&mut params as *mut clap_plugin_params).cast(),
+            init: None,
+            destroy: None,
+            activate: None,
+            deactivate: None,
+            start_processing: None,
+            stop_processing: None,
+            reset: None,
+            process: None,
+            get_extension: Some(extension),
+            on_main_thread: None,
+        };
+        let metadata = NativePluginMetadata {
+            id: "metadata".into(),
+            name: "Metadata".into(),
+            vendor: "Test".into(),
+            version: "1".into(),
+            input_channels: 2,
+            output_channels: 2,
+        };
+        // SAFETY: All extension pointers and buffers live through this synchronous query.
+        let (parameters, bindings) = unsafe { query_parameters(&plugin, &metadata) }.unwrap();
+        assert_eq!(parameters.len(), 2);
+        assert_eq!(bindings.len(), 2);
+        assert_eq!(parameters[0].step, Some(1.0));
+        assert_eq!(
+            parameters[0]
+                .choices
+                .iter()
+                .map(|choice| (choice.label.as_str(), choice.value.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("Left", ParameterValue::Int(-2)),
+                ("Center", ParameterValue::Int(-1)),
+                ("Right", ParameterValue::Int(0))
+            ]
+        );
+        assert!(!parameters[0].read_only);
+        assert!(parameters[1].read_only);
+        assert!(
+            validate_clap_parameter_edit(&parameters[1], &ParameterValue::Int(-1))
+                .unwrap_err()
+                .contains("read-only")
+        );
+        assert!(validate_clap_parameter_edit(&parameters[0], &ParameterValue::Int(-2)).is_ok());
+        assert!(validate_clap_parameter_edit(&parameters[0], &ParameterValue::Int(1)).is_err());
+        // The worker Describe wire uses the same serialized parameter metadata.
+        let roundtrip: Vec<Parameter> =
+            serde_json::from_value(serde_json::to_value(&parameters).unwrap()).unwrap();
+        assert!(roundtrip[1].read_only);
+        assert_eq!(roundtrip[0].choices[1].value, ParameterValue::Int(-1));
+        assert_eq!(roundtrip[0].choices[1].label, "Center");
     }
 }

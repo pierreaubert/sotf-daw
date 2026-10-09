@@ -65,30 +65,28 @@ pub const PARAMS: &[ParamSpec] = &[
 // UI Layout
 // ============================================================================
 
-/// Keep width, Haas delay, and frequency-dependent mode on the primary
-/// surface; disclose the decorrelation crossover frequencies separately.
+/// Keep width and Haas delay visible with the widening mode in the header.
+/// Disclose the decorrelation crossover frequencies below the primary controls.
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[ControlGroup::new(
-        "primary",
-        "",
-        &[
-            ControlSpec::slider(0), // stereo_width
-            ControlSpec::knob(1),   // haas_delay_ms
-            ControlSpec::toggle(4), // freq_dependent
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    config: &[ControlSpec::toggle(4)], // frequency-dependent widening
+    main: &[
+        ControlGroup::new(
+            "primary",
+            "",
+            &[ControlSpec::slider(0), ControlSpec::slider(1)],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "DECORRELATION",
+            "Decorrelation",
+            &[ControlSpec::slider(2), ControlSpec::slider(3)],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.2)),
+    ],
     output: &[],
-    tabs: &[TabSpec {
-        name: "Decorrelation",
-        controls: &[
-            ControlSpec::knob(2), // decor_low_hz
-            ControlSpec::knob(3), // decor_high_hz
-        ],
-    }],
+    tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(200.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

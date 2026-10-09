@@ -67,7 +67,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("Phase-align channels before mix")
         .structural(),
     ParamSpec::float(
-        "Phase Blend Low",
+        "Blend Low",
         "phase_blend_low_hz",
         500.0,
         100.0,
@@ -78,7 +78,7 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .doc("Phase correction low crossover"),
     ParamSpec::float(
-        "Phase Blend High",
+        "Blend High",
         "phase_blend_high_hz",
         2000.0,
         1000.0,
@@ -88,7 +88,7 @@ pub const PARAMS: &[ParamSpec] = &[
         "Phase",
     )
     .doc("Phase correction high crossover"),
-    ParamSpec::bool_param("ITU-R BS.775 Mode", "itu_mode", false, "Mode")
+    ParamSpec::bool_param("ITU BS.775", "itu_mode", false, "Mode")
         .doc("Use ITU standard downmix coeffs"),
     ParamSpec::bool_param("Matrix Lt/Rt", "matrix_ltrt", false, "Mode")
         .doc("Encode surrounds with a quadrature Lt/Rt matrix")
@@ -100,33 +100,37 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[ControlSpec::toggle(4)], // phase_coherence
-    main: &[ControlGroup::new(
-        "CHANNEL GAINS",
-        "CHANNEL GAINS",
-        &[
-            ControlSpec::knob(0),   // center_gain_db
-            ControlSpec::knob(1),   // surround_gain_db
-            ControlSpec::knob(2),   // height_gain_db
-            ControlSpec::knob(3),   // lfe_gain_db
-            ControlSpec::toggle(7), // itu_mode
-            ControlSpec::toggle(8), // matrix_ltrt
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
-    output: &[],
-    tabs: &[TabSpec {
-        name: "Phase",
-        controls: &[
-            ControlSpec::knob(5), // phase_blend_low_hz
-            ControlSpec::knob(6), // phase_blend_high_hz
-        ],
-    }],
-    visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(100.0, 0.5),
-        ColumnConstraint::main(300.0),
+    config: &[
+        ControlSpec::toggle(7), // standard coefficients
+        ControlSpec::toggle(4).enabled_when(ParamCondition::bool(8, false)),
+        ControlSpec::toggle(8).enabled_when(ParamCondition::bool(4, false)),
     ],
+    main: &[
+        ControlGroup::new(
+            "CHANNEL GAINS",
+            "",
+            &[
+                ControlSpec::slider(0).enabled_when(ParamCondition::bool(7, false)),
+                ControlSpec::slider(1).enabled_when(ParamCondition::bool(7, false)),
+                ControlSpec::slider(2).enabled_when(ParamCondition::bool(7, false)),
+                ControlSpec::slider(3).enabled_when(ParamCondition::bool(7, false)),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "PHASE",
+            "Phase",
+            &[
+                ControlSpec::slider(5).enabled_when(ParamCondition::bool(4, true)),
+                ControlSpec::slider(6).enabled_when(ParamCondition::bool(4, true)),
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.2)),
+    ],
+    output: &[],
+    tabs: &[],
+    visualizations: &[],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

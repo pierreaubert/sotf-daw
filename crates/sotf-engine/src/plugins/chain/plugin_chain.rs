@@ -54,7 +54,10 @@ fn crossover_output_channels(
     input_channels.saturating_mul(bands)
 }
 
-fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> usize {
+/// Resolve one plugin's output width from the same settings used by the engine
+/// chain. The editor graph uses this to keep downstream routing in sync before
+/// a structural update is submitted.
+pub fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) -> usize {
     match settings {
         PluginSettings::Upmixer {
             speaker_config,
@@ -647,6 +650,9 @@ impl PluginChain {
                                 config.parameters = serde_json::json!({
                                     "speaker_config": speaker_config,
                                 });
+                            }
+                            if self.is_output_monitor(idx) {
+                                config.parameters["spatial_enabled"] = serde_json::json!(true);
                             }
                             analyzer_plugins.push(config);
                         }
@@ -1742,7 +1748,10 @@ mod tests {
         assert_eq!(configs[1].plugin_type, "matrix"); // processing
         assert_eq!(configs[2].plugin_type, "loudness_monitor"); // output monitor
         assert_eq!(configs[0].parameters, serde_json::json!({}));
-        assert_eq!(configs[2].parameters, serde_json::json!({}));
+        assert_eq!(
+            configs[2].parameters,
+            serde_json::json!({"spatial_enabled": true})
+        );
     }
 
     #[test]
@@ -1765,7 +1774,7 @@ mod tests {
         assert_eq!(configs[0].parameters, serde_json::json!({}));
         assert_eq!(
             configs.last().unwrap().parameters,
-            serde_json::json!({"speaker_config": "7.1.4"})
+            serde_json::json!({"speaker_config": "7.1.4", "spatial_enabled": true})
         );
 
         let output_index = chain
@@ -1777,7 +1786,10 @@ mod tests {
             .insert_plugin(output_index, &PluginType::Matrix)
             .unwrap();
         let configs = chain.to_plugin_configs(48_000.0);
-        assert_eq!(configs.last().unwrap().parameters, serde_json::json!({}));
+        assert_eq!(
+            configs.last().unwrap().parameters,
+            serde_json::json!({"spatial_enabled": true})
+        );
     }
 
     #[test]

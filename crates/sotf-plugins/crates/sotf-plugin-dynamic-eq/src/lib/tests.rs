@@ -7,6 +7,7 @@ use super::misc::bandpass_edges;
 use super::params::MAX_BANDS;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
+use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::plugin::ProcessContext;
 
 mod misc;
@@ -119,6 +120,112 @@ fn test_band_threshold_ratio_overrides_can_return_to_global() {
         !plugin.bands[0].use_band_ratio,
         "setting the global ratio equal to a band ratio should clear the override"
     );
+}
+
+#[test]
+fn global_dynamics_retarget_inherited_bands_without_losing_overrides() {
+    let mut plugin = DynamicEqPlugin::new(1);
+    plugin.initialize(48_000.0).unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("band_1_threshold"),
+            ParameterValue::Float(-35.0),
+        )
+        .unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("band_1_ratio"),
+            ParameterValue::Float(8.0),
+        )
+        .unwrap();
+    plugin
+        .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-30.0))
+        .unwrap();
+    plugin
+        .set_parameter(ParameterId::from("ratio"), ParameterValue::Float(4.0))
+        .unwrap();
+    assert_eq!(plugin.bands[0].band_threshold, -30.0);
+    assert_eq!(plugin.bands[0].band_ratio, 4.0);
+    assert!(!plugin.bands[0].use_band_threshold);
+    assert!(!plugin.bands[0].use_band_ratio);
+    assert_eq!(plugin.bands[1].band_threshold, -35.0);
+    assert_eq!(plugin.bands[1].band_ratio, 8.0);
+    assert!(plugin.bands[1].use_band_threshold);
+    assert!(plugin.bands[1].use_band_ratio);
+
+    let mut serialized = DynamicEqPluginParams::default();
+    serialized.threshold = plugin.threshold_db;
+    serialized.ratio = plugin.ratio;
+    for (saved, live) in serialized.bands.iter_mut().zip(&plugin.bands) {
+        saved.band_threshold = live.band_threshold;
+        saved.band_ratio = live.band_ratio;
+    }
+    let rebuilt = DynamicEqPlugin::try_from_params_at_sample_rate(1, serialized, 48_000).unwrap();
+    for band in 0..rebuilt.bands.len() {
+        assert_eq!(
+            rebuilt.bands[band].get_effective_threshold(rebuilt.threshold_db),
+            plugin.bands[band].get_effective_threshold(plugin.threshold_db),
+        );
+        assert_eq!(
+            rebuilt.bands[band].get_effective_ratio(rebuilt.ratio),
+            plugin.bands[band].get_effective_ratio(plugin.ratio),
+        );
+    }
+
+    plugin
+        .set_parameter(ParameterId::from("threshold"), ParameterValue::Float(-35.0))
+        .unwrap();
+    plugin
+        .set_parameter(ParameterId::from("ratio"), ParameterValue::Float(8.0))
+        .unwrap();
+    assert!(!plugin.bands[1].use_band_threshold);
+    assert!(!plugin.bands[1].use_band_ratio);
+}
+
+#[test]
+fn batch_global_dynamics_preserve_inheritance_after_rebuild() {
+    let mut plugin = DynamicEqPlugin::new(1);
+    plugin.initialize(48_000.0).unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("band_1_threshold"),
+            ParameterValue::Float(-35.0),
+        )
+        .unwrap();
+    plugin
+        .set_parameter(
+            ParameterId::from("band_1_ratio"),
+            ParameterValue::Float(8.0),
+        )
+        .unwrap();
+
+    let mut batch = ParameterSet::new();
+    batch.insert(ParameterId::from("threshold"), ParameterValue::Float(-30.0));
+    batch.insert(ParameterId::from("ratio"), ParameterValue::Float(4.0));
+    plugin.apply_values(batch).unwrap();
+
+    let mut saved = DynamicEqPluginParams::default();
+    saved.threshold = plugin.threshold_db;
+    saved.ratio = plugin.ratio;
+    for (stored, live) in saved.bands.iter_mut().zip(&plugin.bands) {
+        stored.band_threshold = live.band_threshold;
+        stored.band_ratio = live.band_ratio;
+    }
+    let rebuilt = DynamicEqPlugin::try_from_params_at_sample_rate(1, saved, 48_000).unwrap();
+    for index in 0..plugin.bands.len() {
+        assert_eq!(
+            rebuilt.bands[index].get_effective_threshold(rebuilt.threshold_db),
+            plugin.bands[index].get_effective_threshold(plugin.threshold_db),
+        );
+        assert_eq!(
+            rebuilt.bands[index].get_effective_ratio(rebuilt.ratio),
+            plugin.bands[index].get_effective_ratio(plugin.ratio),
+        );
+    }
+    assert_eq!(plugin.bands[0].band_threshold, -30.0);
+    assert_eq!(plugin.bands[0].band_ratio, 4.0);
+    assert_eq!(plugin.bands[1].band_threshold, -35.0);
+    assert_eq!(plugin.bands[1].band_ratio, 8.0);
 }
 
 #[test]

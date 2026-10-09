@@ -116,6 +116,9 @@ pub enum PluginIpcTailLength {
 pub enum PluginIpcControlResponse {
     Description {
         parameters: Vec<Parameter>,
+        /// Actual worker values; absent values are not metadata defaults.
+        #[serde(default)]
+        parameter_values: std::collections::HashMap<ParameterId, ParameterValue>,
         #[serde(default)]
         tail_length: PluginIpcTailLength,
         #[serde(default)]

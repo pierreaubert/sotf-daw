@@ -1071,7 +1071,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
         Processor,
         builtin_metadata!(
             "sotf-plugin-pnd",
-            "PND Varispeed",
+            "PND Pitch Correction",
             Alpha,
             PluginSupportedInputLayouts::Enumerated(STANDARD_CHANNEL_WIDTHS),
             PluginChannelOutputModel::PreservesInput,

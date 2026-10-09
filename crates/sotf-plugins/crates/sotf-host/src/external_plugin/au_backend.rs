@@ -1,6 +1,6 @@
 use super::native_backend::{NativeExternalPluginBackend, NativePluginMetadata};
 use super::plugin_descriptor::PluginDescriptor;
-use crate::parameters::{Parameter, ParameterId, ParameterValue};
+use crate::parameters::{Parameter, ParameterChoice, ParameterId, ParameterValue};
 use objc2_audio_toolbox::{
     AURenderCallbackStruct, AudioComponent, AudioComponentCopyName, AudioComponentDescription,
     AudioComponentFindNext, AudioComponentGetDescription, AudioComponentGetVersion,
@@ -10,10 +10,10 @@ use objc2_audio_toolbox::{
     AudioUnitSetParameter, AudioUnitSetProperty, AudioUnitUninitialize, MusicDeviceMIDIEvent,
     kAudioUnitProperty_ClassInfo, kAudioUnitProperty_Latency,
     kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitProperty_ParameterInfo,
-    kAudioUnitProperty_ParameterList, kAudioUnitProperty_SetRenderCallback,
-    kAudioUnitProperty_StreamFormat, kAudioUnitScope_Global, kAudioUnitScope_Input,
-    kAudioUnitScope_Output, kAudioUnitType_Effect, kAudioUnitType_FormatConverter,
-    kAudioUnitType_MusicEffect,
+    kAudioUnitProperty_ParameterList, kAudioUnitProperty_ParameterValueStrings,
+    kAudioUnitProperty_SetRenderCallback, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Global,
+    kAudioUnitScope_Input, kAudioUnitScope_Output, kAudioUnitType_Effect,
+    kAudioUnitType_FormatConverter, kAudioUnitType_MusicEffect,
 };
 use objc2_core_audio_types::{
     AudioBuffer, AudioBufferList, AudioStreamBasicDescription, AudioTimeStamp, AudioTimeStampFlags,
@@ -21,8 +21,8 @@ use objc2_core_audio_types::{
     kAudioFormatLinearPCM,
 };
 use objc2_core_foundation::{
-    CFData, CFError, CFPropertyList, CFPropertyListCreateData, CFPropertyListCreateWithData,
-    CFPropertyListFormat, CFRetained, CFString,
+    CFArray, CFData, CFError, CFPropertyList, CFPropertyListCreateData,
+    CFPropertyListCreateWithData, CFPropertyListFormat, CFRetained, CFString, CFType,
 };
 use std::ffi::c_void;
 use std::mem::{offset_of, size_of};
@@ -50,6 +50,7 @@ struct AudioUnitParameterBinding {
     host_id: ParameterId,
     audio_unit_id: u32,
     kind: AudioUnitParameterKind,
+    read_only: bool,
 }
 
 unsafe extern "C-unwind" fn input_render_callback(
@@ -346,6 +347,9 @@ impl NativeExternalPluginBackend for AudioUnitBackend {
             .iter()
             .find(|binding| &binding.host_id == id)
             .ok_or_else(|| format!("AudioUnit parameter '{id}' is not exposed"))?;
+        if binding.read_only {
+            return Err(format!("AudioUnit parameter '{id}' is read-only"));
+        }
         let plain = audio_unit_parameter_to_plain(value, binding.kind).ok_or_else(|| {
             format!("AudioUnit parameter '{id}' received incompatible value {value}")
         })?;
@@ -719,12 +723,21 @@ fn collect_parameters(
         let readable = info
             .flags
             .contains(AudioUnitParameterOptions::Flag_IsReadable);
-        if !writable || !readable {
+        if !readable {
             release_parameter_name_if_owned(&info);
             continue;
         }
         let host_id = format!("au.{audio_unit_id}");
-        let name = bounded_c_char_array(&info.name);
+        let name = if info
+            .flags
+            .contains(AudioUnitParameterOptions::Flag_HasCFNameString)
+            && !info.cfNameString.is_null()
+        {
+            // SAFETY: ParameterInfo owns/borrows a CFString until the matching release below.
+            unsafe { &*info.cfNameString }.to_string()
+        } else {
+            bounded_c_char_array(&info.name)
+        };
         let name = if name.is_empty() {
             host_id.clone()
         } else {
@@ -736,8 +749,8 @@ fn collect_parameters(
             && info.minValue.fract() == 0.0
             && info.maxValue.fract() == 0.0
             && info.defaultValue.fract() == 0.0
-            && info.minValue >= i32::MIN as f32
-            && info.maxValue <= i32::MAX as f32
+            && f64::from(info.minValue) >= f64::from(i32::MIN)
+            && f64::from(info.maxValue) <= f64::from(i32::MAX)
         {
             AudioUnitParameterKind::Integer
         } else {
@@ -771,16 +784,130 @@ fn collect_parameters(
             }
         };
         parameter.unit = audio_unit_parameter_unit(info.unit).to_string();
+        apply_au_display_metadata(&mut parameter, info.unit, info.flags);
+        if info.unit == AudioUnitParameterUnit::Indexed {
+            parameter.choices =
+                collect_au_choices(instance, audio_unit_id, info.minValue, info.maxValue, kind);
+        }
         let parameter_id = parameter.id.clone();
         parameters.push(parameter);
         bindings.push(AudioUnitParameterBinding {
             host_id: parameter_id,
             audio_unit_id,
             kind,
+            read_only: !writable,
         });
         release_parameter_name_if_owned(&info);
     }
     Ok((parameters, bindings))
+}
+
+fn apply_au_display_metadata(
+    parameter: &mut Parameter,
+    unit: AudioUnitParameterUnit,
+    flags: AudioUnitParameterOptions,
+) {
+    parameter.read_only = !flags.contains(AudioUnitParameterOptions::Flag_IsWritable);
+    parameter.logarithmic = flags & AudioUnitParameterOptions::Flag_DisplayMask
+        == AudioUnitParameterOptions::Flag_DisplayLogarithmic;
+    parameter.step =
+        if unit == AudioUnitParameterUnit::Indexed || unit == AudioUnitParameterUnit::Boolean {
+            Some(1.0)
+        } else {
+            None
+        };
+}
+
+// Keep enumeration work bounded like CLAP discovery; missing labels preserve native numeric editing.
+const MAX_AU_CHOICES: usize = 256;
+
+fn collect_au_choices(
+    instance: AudioUnit,
+    id: u32,
+    min: f32,
+    max: f32,
+    kind: AudioUnitParameterKind,
+) -> Vec<ParameterChoice> {
+    if !min.is_finite()
+        || !max.is_finite()
+        || min.fract() != 0.0
+        || max.fract() != 0.0
+        || max < min
+        || f64::from(max) - f64::from(min) >= MAX_AU_CHOICES as f64
+    {
+        return Vec::new();
+    }
+    let mut array: *const CFArray<CFType> = ptr::null();
+    let mut size = size_of::<*const CFArray<CFType>>() as u32;
+    // SAFETY: The live AU synchronously writes one CFArray property pointer into exact-size storage.
+    let status = unsafe {
+        AudioUnitGetProperty(
+            instance,
+            kAudioUnitProperty_ParameterValueStrings,
+            kAudioUnitScope_Global,
+            id,
+            NonNull::from(&mut array).cast(),
+            NonNull::from(&mut size),
+        )
+    };
+    if status != NO_ERR || size as usize != size_of::<*const CFArray<CFType>>() {
+        return Vec::new();
+    }
+    let Some(pointer) = NonNull::new(array.cast_mut()) else {
+        return Vec::new();
+    };
+    // SAFETY: A successful, exact-size AU CF getter transfers a host-owned reference.
+    let array = unsafe { CFRetained::from_raw(pointer) };
+    choices_from_au_strings(&array, min, max, kind)
+}
+
+fn choices_from_au_strings(
+    array: &CFArray<CFType>,
+    min: f32,
+    max: f32,
+    kind: AudioUnitParameterKind,
+) -> Vec<ParameterChoice> {
+    let count = f64::from(max) - f64::from(min) + 1.0;
+    if !count.is_finite()
+        || count < 1.0
+        || count > MAX_AU_CHOICES as f64
+        || array.len() != count as usize
+        || min.fract() != 0.0
+        || max.fract() != 0.0
+    {
+        return Vec::new();
+    }
+    let mut choices = Vec::with_capacity(array.len());
+    for index in 0..array.len() {
+        let Some(string) = array
+            .get(index)
+            .and_then(|object| object.downcast::<CFString>().ok())
+        else {
+            return Vec::new();
+        };
+        // Like the CLAP text buffer, limit a single choice label before allocating.
+        if string.length() > 256 {
+            return Vec::new();
+        }
+        let label = string.to_string();
+        if label.trim().is_empty() {
+            return Vec::new();
+        }
+        let plain = f64::from(min) + index as f64;
+        let value = match kind {
+            AudioUnitParameterKind::Integer
+                if plain >= f64::from(i32::MIN) && plain <= f64::from(i32::MAX) =>
+            {
+                ParameterValue::Int(plain as i32)
+            }
+            AudioUnitParameterKind::Float if f64::from(plain as f32) == plain => {
+                ParameterValue::Float(plain as f32)
+            }
+            _ => return Vec::new(),
+        };
+        choices.push(ParameterChoice { label, value });
+    }
+    choices
 }
 
 fn release_parameter_name_if_owned(info: &AudioUnitParameterInfo) {
@@ -873,6 +1000,12 @@ fn validate_au_event_contract(
                     event.parameter_id
                 )
             })?;
+        if binding.read_only {
+            return Err(format!(
+                "AudioUnit '{plugin_name}' rejected automation of read-only parameter '{}'",
+                event.parameter_id
+            ));
+        }
         if audio_unit_parameter_to_plain(&event.value, binding.kind).is_none() {
             return Err(format!(
                 "AudioUnit '{plugin_name}' rejected automation value for '{}'",
@@ -1167,6 +1300,7 @@ mod tests {
             host_id: ParameterId::from("gain"),
             audio_unit_id: 17,
             kind: AudioUnitParameterKind::Float,
+            read_only: false,
         }];
         let midi = [MidiEvent::new(13, MidiMessage::note_on(2, 64, 99))];
         let automation = [ParameterEvent::new(
@@ -1193,6 +1327,7 @@ mod tests {
             host_id: ParameterId::from("enabled"),
             audio_unit_id: 3,
             kind: AudioUnitParameterKind::Boolean,
+            read_only: false,
         }];
         let invalid_offset = [MidiEvent::new(64, MidiMessage::note_on(0, 60, 1))];
         let context = ProcessContext::new(48_000, 64).with_midi_events(&invalid_offset);
@@ -1205,5 +1340,89 @@ mod tests {
         )];
         let context = ProcessContext::new(48_000, 64).with_parameter_events(&wrong_type);
         assert!(validate_au_event_contract(&context, &bindings, "fixture").is_err());
+    }
+    #[test]
+    fn au_display_flags_preserve_native_step_read_only_and_exact_log_mode() {
+        let mut parameter = Parameter::new_float("value", "Value", 1.0, 0.0, 2.0);
+        apply_au_display_metadata(
+            &mut parameter,
+            AudioUnitParameterUnit::Indexed,
+            AudioUnitParameterOptions::Flag_IsReadable,
+        );
+        assert!(parameter.read_only);
+        assert_eq!(parameter.step, Some(1.0));
+        let writable_log = AudioUnitParameterOptions::Flag_IsReadable
+            | AudioUnitParameterOptions::Flag_IsWritable
+            | AudioUnitParameterOptions::Flag_DisplayLogarithmic;
+        apply_au_display_metadata(&mut parameter, AudioUnitParameterUnit::Hertz, writable_log);
+        assert!(!parameter.read_only);
+        assert!(parameter.logarithmic);
+        assert_eq!(parameter.step, None);
+        apply_au_display_metadata(
+            &mut parameter,
+            AudioUnitParameterUnit::Hertz,
+            writable_log | AudioUnitParameterOptions::Flag_DisplaySquared,
+        );
+        assert!(
+            !parameter.logarithmic,
+            "a different display mode must not accidentally enable logarithmic scaling"
+        );
+    }
+
+    #[test]
+    fn au_choice_strings_preserve_offset_values_and_reject_partial_or_malformed_labels() {
+        let left = CFString::from_str("Gauche");
+        let right = CFString::from_str("Droite");
+        let labels = CFArray::<CFType>::from_objects(&[left.as_ref(), right.as_ref()]);
+        let choices = choices_from_au_strings(&labels, -2.0, -1.0, AudioUnitParameterKind::Integer);
+        assert_eq!(choices.len(), 2);
+        assert_eq!(choices[0].value, ParameterValue::Int(-2));
+        assert_eq!(choices[1].label, "Droite");
+        assert_eq!(
+            choices_from_au_strings(&labels, 0.0, 1.0, AudioUnitParameterKind::Float)[1].value,
+            ParameterValue::Float(1.0)
+        );
+        assert!(
+            choices_from_au_strings(&labels, -2.0, 0.0, AudioUnitParameterKind::Integer).is_empty()
+        );
+        assert!(
+            choices_from_au_strings(&labels, 0.25, 1.25, AudioUnitParameterKind::Float).is_empty()
+        );
+        let blank = CFString::from_str(" ");
+        let partial = CFArray::<CFType>::from_objects(&[left.as_ref(), blank.as_ref()]);
+        assert!(
+            choices_from_au_strings(&partial, 0.0, 1.0, AudioUnitParameterKind::Integer).is_empty()
+        );
+        let data = CFData::from_bytes(&[1, 2]);
+        let malformed = CFArray::<CFType>::from_objects(&[left.as_ref(), data.as_ref()]);
+        assert!(
+            choices_from_au_strings(&malformed, 0.0, 1.0, AudioUnitParameterKind::Integer)
+                .is_empty()
+        );
+        assert!(
+            choices_from_au_strings(&labels, f32::NAN, 1.0, AudioUnitParameterKind::Integer)
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn au_read_only_automation_never_reaches_native_dispatch() {
+        let bindings = [AudioUnitParameterBinding {
+            host_id: ParameterId::from("meter"),
+            audio_unit_id: 9,
+            kind: AudioUnitParameterKind::Float,
+            read_only: true,
+        }];
+        let events = [ParameterEvent::new(
+            0,
+            ParameterId::from("meter"),
+            ParameterValue::Float(-12.0),
+        )];
+        let context = ProcessContext::new(48_000, 64).with_parameter_events(&events);
+        assert!(
+            validate_au_event_contract(&context, &bindings, "fixture")
+                .unwrap_err()
+                .contains("read-only")
+        );
     }
 }

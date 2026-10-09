@@ -46,6 +46,70 @@ use vst3_sys::{ComInterface, IID, VST3};
 const MAX_FACTORY_CLASSES: i32 = 16_384;
 const MAX_PARAMETERS: i32 = 65_536;
 
+// The envelope exists only while native processor edits are queued. Raw legacy
+// component blobs remain unchanged when there are no pending edits.
+const PENDING_STATE_MAGIC: &[u8] = b"SOTF-VST3-PENDING\0\x01";
+// Bound control-thread parsing independently of native component-state size.
+const MAX_PENDING_STATE_BYTES: usize = 8 * 1024 * 1024;
+type PendingVst3Edits = Vec<(ParameterId, ParameterValue)>;
+
+fn encode_pending_vst3_state(
+    component: &[u8],
+    pending: &PendingVst3Edits,
+) -> Result<Vec<u8>, String> {
+    if pending.is_empty() {
+        return Ok(component.to_vec());
+    }
+    let encoded = serde_json::to_vec(pending)
+        .map_err(|error| format!("cannot serialize pending VST3 edits: {error}"))?;
+    if encoded.len() > MAX_PENDING_STATE_BYTES || pending.len() > MAX_PARAMETERS as usize {
+        return Err("pending VST3 state exceeds metadata limits".into());
+    }
+    let mut state =
+        Vec::with_capacity(PENDING_STATE_MAGIC.len() + 4 + encoded.len() + component.len());
+    state.extend_from_slice(PENDING_STATE_MAGIC);
+    state.extend_from_slice(&(encoded.len() as u32).to_le_bytes());
+    state.extend_from_slice(&encoded);
+    state.extend_from_slice(component);
+    Ok(state)
+}
+
+fn decode_pending_vst3_state(state: &[u8]) -> Result<(&[u8], PendingVst3Edits), String> {
+    if !state.starts_with(PENDING_STATE_MAGIC) {
+        return Ok((state, Vec::new()));
+    }
+    let payload = &state[PENDING_STATE_MAGIC.len()..];
+    let length_bytes: [u8; 4] = payload
+        .get(..4)
+        .ok_or("truncated pending VST3 state header")?
+        .try_into()
+        .map_err(|_| "invalid pending VST3 state header")?;
+    let length = u32::from_le_bytes(length_bytes) as usize;
+    if length > MAX_PENDING_STATE_BYTES {
+        return Err("pending VST3 state exceeds metadata limits".into());
+    }
+    let encoded = payload
+        .get(4..4 + length)
+        .ok_or("truncated pending VST3 state edits")?;
+    let pending: PendingVst3Edits = serde_json::from_slice(encoded)
+        .map_err(|error| format!("invalid pending VST3 state edits: {error}"))?;
+    if pending.len() > MAX_PARAMETERS as usize {
+        return Err("pending VST3 state exceeds parameter limit".into());
+    }
+    let mut ids = std::collections::HashSet::with_capacity(pending.len());
+    for (id, value) in &pending {
+        if !ids.insert(id) {
+            return Err(format!("duplicate pending VST3 parameter '{id}'"));
+        }
+        if matches!(value, ParameterValue::Float(value) if !value.is_finite())
+            || matches!(value, ParameterValue::String(_))
+        {
+            return Err(format!("invalid pending VST3 value for '{id}'"));
+        }
+    }
+    Ok((&payload[4 + length..], pending))
+}
+
 #[VST3(implements(IHostApplication, IComponentHandler))]
 struct Vst3HostApplication {
     tail_metadata_generation: Arc<AtomicU64>,
@@ -414,7 +478,61 @@ struct Vst3ParameterBinding {
     host_id: ParameterId,
     vst3_id: u32,
     kind: Vst3ParameterKind,
+    read_only: bool,
     points: Vst3ParameterPoints,
+}
+
+impl Vst3ParameterBinding {
+    fn validate_edit(&self, value: &ParameterValue) -> Result<f64, String> {
+        if self.read_only {
+            return Err(format!("VST3 parameter '{}' is read-only", self.host_id));
+        }
+        parameter_value_to_plain(value, self.kind)
+            .filter(|value| value.is_finite())
+            .ok_or_else(|| {
+                format!(
+                    "VST3 parameter '{}' received incompatible or non-finite value {value}",
+                    self.host_id
+                )
+            })
+    }
+}
+
+// Hidden was added after the pinned bindings; its SDK flag is bit 4.
+fn vst3_parameter_is_visible(flags: i32) -> bool {
+    const IS_HIDDEN: i32 = 1 << 4;
+    flags & IS_HIDDEN == 0
+}
+
+// VST3 toggles select normalized endpoints, regardless of their plain range.
+// The existing native converters remain authoritative for other types.
+fn normalized_parameter_edit(
+    kind: Vst3ParameterKind,
+    plain: f64,
+    convert: impl FnOnce(f64) -> f64,
+) -> Option<f64> {
+    if !plain.is_finite() {
+        return None;
+    }
+    let normalized = match kind {
+        Vst3ParameterKind::Boolean => plain,
+        _ => convert(plain),
+    };
+    normalized.is_finite().then(|| normalized.clamp(0.0, 1.0))
+}
+
+fn normalized_parameter_readback(
+    kind: Vst3ParameterKind,
+    normalized: f64,
+    convert: impl FnOnce(f64) -> f64,
+) -> Option<ParameterValue> {
+    if !normalized.is_finite() || !(0.0..=1.0).contains(&normalized) {
+        return None;
+    }
+    match kind {
+        Vst3ParameterKind::Boolean => Some(ParameterValue::Bool(normalized >= 0.5)),
+        _ => plain_to_parameter_value(convert(normalized), kind),
+    }
 }
 
 pub(super) struct Vst3Backend {
@@ -956,6 +1074,31 @@ impl Vst3Backend {
     /// Shared by `load_state` (which suspends and resumes around it) and
     /// Ambisonics custom reseeding (which runs between the reconfigure
     /// suspend and the arrangement renegotiation, staying deactivated).
+    fn save_component_state(&self) -> Result<Vec<u8>, String> {
+        let (stream, bytes) = Vst3MemoryStream::new(&[], true);
+        // SAFETY: Ownership of the generated IBStream object is transferred to
+        // `VstPtr`, and the component only borrows it for this synchronous call.
+        let stream = unsafe {
+            VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
+                format!(
+                    "failed to allocate state stream for '{}'",
+                    self.metadata.name
+                )
+            })?
+        };
+        // SAFETY: The component is live, and `shared_vst_ptr` preserves the
+        // stream interface pointer for the duration of the synchronous call.
+        unsafe {
+            ensure_ok(
+                self.component.get_state(shared_vst_ptr(&stream)),
+                &self.metadata.name,
+                "save component state",
+            )?;
+        }
+        drop(stream);
+        Ok(bytes.borrow().clone())
+    }
+
     fn load_component_state_bytes(&mut self, state: &[u8]) -> Result<(), String> {
         let (stream, _bytes) = Vst3MemoryStream::new(state, false);
         // SAFETY: Ownership of the generated IBStream object is transferred
@@ -1038,8 +1181,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
             .iter()
             .find(|binding| &binding.host_id == id)
             .ok_or_else(|| format!("VST3 parameter '{id}' is not exposed"))?;
-        let plain = parameter_value_to_plain(value, binding.kind)
-            .ok_or_else(|| format!("VST3 parameter '{id}' received incompatible value {value}"))?;
+        let plain = binding.validate_edit(value)?;
         let controller = self.controller.as_ref().ok_or_else(|| {
             format!(
                 "VST3 plugin '{}' has no edit controller",
@@ -1049,17 +1191,15 @@ impl NativeExternalPluginBackend for Vst3Backend {
         // SAFETY: The initialized controller owns the conversion and parameter
         // value; the normalized value is delivered to the processor on its
         // next process block through `IParameterChanges`.
-        let normalized = unsafe {
-            controller
-                .plain_param_to_normalized(binding.vst3_id, plain)
-                .clamp(0.0, 1.0)
-        };
-        if !normalized.is_finite() {
-            return Err(format!(
+        let normalized = normalized_parameter_edit(binding.kind, plain, |plain| unsafe {
+            controller.plain_param_to_normalized(binding.vst3_id, plain)
+        })
+        .ok_or_else(|| {
+            format!(
                 "VST3 plugin '{}' produced a non-finite normalized value for parameter '{id}'",
                 self.metadata.name
-            ));
-        }
+            )
+        })?;
         // SAFETY: Controller is live and normalized value is finite/in range.
         // Invalidate only after ID, value, and controller validation passed,
         // immediately before the native mutation can begin.
@@ -1089,8 +1229,9 @@ impl NativeExternalPluginBackend for Vst3Backend {
             || unsafe { controller.get_param_normalized(binding.vst3_id) },
             |(_, value)| *value,
         );
-        let plain = unsafe { controller.normalized_param_to_plain(binding.vst3_id, normalized) };
-        plain_to_parameter_value(plain, binding.kind)
+        normalized_parameter_readback(binding.kind, normalized, |normalized| unsafe {
+            controller.normalized_param_to_plain(binding.vst3_id, normalized)
+        })
     }
 
     fn ambisonics_layout_parameters(&self) -> Result<Option<(i32, i32)>, String> {
@@ -1377,12 +1518,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
             // Seed the recognized fields while suspended (without the
             // `load_state` resume) so the resume below rebuilds the custom
             // DSP. Named setups keep their derivation path untouched.
-            let saved = self.save_state()?.ok_or_else(|| {
-                format!(
-                    "VST3 plugin '{}' cannot seed custom Ambisonics state because native state is not serializable",
-                    self.metadata.name
-                )
-            })?;
+            let saved = self.save_component_state()?;
             let seeded = super::ambisonics_state_with_setup(
                 &saved,
                 super::plugin_format::PluginFormat::Vst3,
@@ -1419,12 +1555,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
         }
 
         if self.separate_controller {
-            let state = self.save_state()?.ok_or_else(|| {
-                format!(
-                    "VST3 plugin '{}' could not serialize component state while renegotiating",
-                    self.metadata.name
-                )
-            })?;
+            let state = self.save_component_state()?;
             let controller = self.controller.as_ref().ok_or_else(|| {
                 format!(
                     "VST3 plugin '{}' has no separate controller to synchronize after layout change",
@@ -1558,12 +1689,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
         self.resume_after_state_load()?;
 
         if self.separate_controller {
-            let state = self.save_state()?.ok_or_else(|| {
-                format!(
-                    "VST3 plugin '{}' could not serialize component state while renegotiating BandSplit",
-                    self.metadata.name
-                )
-            })?;
+            let state = self.save_component_state()?;
             let controller = self.controller.as_ref().ok_or_else(|| {
                 format!(
                     "VST3 plugin '{}' has no separate controller to synchronize after BandSplit layout change",
@@ -1746,12 +1872,7 @@ impl NativeExternalPluginBackend for Vst3Backend {
         }
 
         if self.separate_controller {
-            let state = self.save_state()?.ok_or_else(|| {
-                format!(
-                    "VST3 plugin '{}' could not serialize Crossover state after reconfiguration",
-                    self.metadata.name
-                )
-            })?;
+            let state = self.save_component_state()?;
             let controller = self.controller.as_ref().ok_or_else(|| {
                 format!("VST3 plugin '{}' has no separate controller to synchronize after Crossover reconfiguration", self.metadata.name)
             })?;
@@ -1948,18 +2069,18 @@ impl NativeExternalPluginBackend for Vst3Backend {
                             self.metadata.name, event.parameter_id
                         )
                     })?;
-                let plain =
-                    parameter_value_to_plain(&event.value, binding.kind).ok_or_else(|| {
-                        format!(
-                            "VST3 plugin '{}' rejected automation value for '{}'",
-                            self.metadata.name, event.parameter_id
-                        )
-                    })?;
-                let normalized = unsafe {
-                    controller
-                        .plain_param_to_normalized(binding.vst3_id, plain)
-                        .clamp(0.0, 1.0)
-                };
+                let plain = binding.validate_edit(&event.value)?;
+                // SAFETY: The initialized controller owns plain-value conversion;
+                // the helper handles toggles in VST3 normalized coordinates.
+                let normalized = normalized_parameter_edit(binding.kind, plain, |plain| unsafe {
+                    controller.plain_param_to_normalized(binding.vst3_id, plain)
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "VST3 plugin '{}' produced non-finite automation for '{}'",
+                        self.metadata.name, event.parameter_id
+                    )
+                })?;
                 let mut points = binding.points.borrow_mut();
                 if points.len() == points.capacity() {
                     return Err(format!(
@@ -2051,39 +2172,61 @@ impl NativeExternalPluginBackend for Vst3Backend {
         Ok(())
     }
 
+    fn has_pending_parameter_updates(&self) -> bool {
+        self.parameter_bindings
+            .iter()
+            .any(|binding| !binding.points.borrow().is_empty())
+    }
+
     fn save_state(&self) -> Result<Option<Vec<u8>>, String> {
-        let (stream, bytes) = Vst3MemoryStream::new(&[], true);
-        // SAFETY: Ownership of the generated IBStream object is transferred to
-        // `VstPtr`, and the component only borrows it for this synchronous call.
-        let stream = unsafe {
-            VstPtr::<dyn IBStream>::owned(Box::into_raw(stream).cast()).ok_or_else(|| {
-                format!(
-                    "failed to allocate state stream for '{}'",
-                    self.metadata.name
-                )
-            })?
-        };
-        // SAFETY: The component is live, and `shared_vst_ptr` preserves the
-        // stream interface pointer for the duration of the synchronous call.
-        unsafe {
-            ensure_ok(
-                self.component.get_state(shared_vst_ptr(&stream)),
-                &self.metadata.name,
-                "save component state",
-            )?;
-        }
-        drop(stream);
-        let state = bytes.borrow().clone();
+        let component_state = self.save_component_state()?;
+        let pending = self
+            .parameter_bindings
+            .iter()
+            .filter(|binding| !binding.points.borrow().is_empty())
+            .map(|binding| {
+                self.get_parameter(&binding.host_id)
+                    .map(|value| (binding.host_id.clone(), value))
+                    .ok_or_else(|| {
+                        format!("cannot save pending VST3 parameter '{}'", binding.host_id)
+                    })
+            })
+            .collect::<Result<PendingVst3Edits, String>>()?;
+        let state = encode_pending_vst3_state(&component_state, &pending)?;
         Ok(Some(state))
     }
 
     fn load_state(&mut self, state: &[u8]) -> Result<(), String> {
+        let (component_state, pending) = decode_pending_vst3_state(state)?;
+        // Validate the complete overlay before mutating native state.
+        for (id, value) in &pending {
+            let binding = self
+                .parameter_bindings
+                .iter()
+                .find(|binding| &binding.host_id == id)
+                .ok_or_else(|| format!("unknown pending VST3 parameter '{id}'"))?;
+            binding.validate_edit(value)?;
+            let parameter = self
+                .parameters
+                .iter()
+                .find(|parameter| &parameter.id == id)
+                .ok_or_else(|| format!("missing pending VST3 metadata for '{id}'"))?;
+            parameter
+                .validate(value)
+                .map_err(|error| error.to_string())?;
+        }
         self.cached_tail_length = crate::plugin::TailLength::Unknown;
         self.suspend_for_state_load()?;
-        let load_result = self.load_component_state_bytes(state);
+        let load_result = self.load_component_state_bytes(component_state);
         let resume_result = self.resume_after_state_load();
         match (load_result, resume_result) {
             (Ok(()), Ok(())) => {
+                for binding in &self.parameter_bindings {
+                    binding.points.borrow_mut().clear();
+                }
+                for (id, value) in pending {
+                    self.set_parameter(&id, &value)?;
+                }
                 self.refresh_tail_length_on_control_thread();
                 Ok(())
             }
@@ -2593,7 +2736,11 @@ unsafe fn collect_parameters(
                 continue;
             }
             let info = info.assume_init();
-            if info.flags & ParameterFlags::kIsReadOnly as i32 != 0 {
+            if !vst3_parameter_is_visible(info.flags)
+                || info.step_count < 0
+                || !info.default_normalized_value.is_finite()
+                || !(0.0..=1.0).contains(&info.default_normalized_value)
+            {
                 continue;
             }
             let host_id = format!("vst3.{}", info.id);
@@ -2649,12 +2796,15 @@ unsafe fn collect_parameters(
                 }
             };
             parameter.unit = unit;
+            parameter.read_only = info.flags & ParameterFlags::kIsReadOnly as i32 != 0;
+            let read_only = parameter.read_only;
             let parameter_id = parameter.id.clone();
             parameters.push(parameter);
             bindings.push(Vst3ParameterBinding {
                 host_id: parameter_id,
                 vst3_id: info.id,
                 kind,
+                read_only,
                 points: Rc::new(RefCell::new(Vec::with_capacity(1024))),
             });
         }
@@ -3902,6 +4052,142 @@ mod lifecycle_tests {
     use std::cell::RefCell;
     use std::ffi::c_char;
     use std::rc::Rc;
+
+    #[test]
+    fn pending_vst3_state_preserves_raw_legacy_and_complete_typed_edits() {
+        use crate::parameters::{ParameterId, ParameterValue};
+        let component = b"opaque native component bytes";
+        let pending = vec![
+            (ParameterId::from("vst3.1"), ParameterValue::Bool(false)),
+            (ParameterId::from("vst3.2"), ParameterValue::Float(-12.5)),
+            (ParameterId::from("vst3.3"), ParameterValue::Int(-2)),
+        ];
+        let raw = super::encode_pending_vst3_state(component, &Vec::new()).unwrap();
+        assert_eq!(raw, component);
+        let (decoded, edits) = super::decode_pending_vst3_state(&raw).unwrap();
+        assert_eq!(decoded, component);
+        assert!(edits.is_empty());
+        let encoded = super::encode_pending_vst3_state(component, &pending).unwrap();
+        let (decoded, edits) = super::decode_pending_vst3_state(&encoded).unwrap();
+        assert_eq!(decoded, component);
+        assert_eq!(edits, pending);
+        // Repeated snapshots retain the same pending overlay without draining it.
+        assert_eq!(
+            encoded,
+            super::encode_pending_vst3_state(component, &pending).unwrap()
+        );
+    }
+
+    #[test]
+    fn pending_vst3_state_rejects_malformed_lengths_and_duplicate_edits() {
+        use crate::parameters::{ParameterId, ParameterValue};
+        let pending = vec![
+            (ParameterId::from("vst3.1"), ParameterValue::Bool(false)),
+            (ParameterId::from("vst3.1"), ParameterValue::Bool(true)),
+        ];
+        let encoded = super::encode_pending_vst3_state(b"native", &pending).unwrap();
+        assert!(
+            super::decode_pending_vst3_state(&encoded)
+                .unwrap_err()
+                .contains("duplicate")
+        );
+        assert!(super::decode_pending_vst3_state(super::PENDING_STATE_MAGIC).is_err());
+        let mut truncated = super::PENDING_STATE_MAGIC.to_vec();
+        truncated.extend_from_slice(&100_u32.to_le_bytes());
+        assert!(super::decode_pending_vst3_state(&truncated).is_err());
+        let mut oversized = super::PENDING_STATE_MAGIC.to_vec();
+        oversized.extend_from_slice(&u32::MAX.to_le_bytes());
+        assert!(
+            super::decode_pending_vst3_state(&oversized)
+                .unwrap_err()
+                .contains("limits")
+        );
+    }
+
+    #[test]
+    fn vst3_visible_read_only_parameters_are_retained_but_not_editable() {
+        use super::{ParameterFlags, Vst3ParameterBinding, Vst3ParameterKind};
+        use crate::parameters::{ParameterId, ParameterValue};
+
+        assert!(super::vst3_parameter_is_visible(
+            ParameterFlags::kIsReadOnly as i32
+        ));
+        assert!(!super::vst3_parameter_is_visible(
+            ParameterFlags::kIsReadOnly as i32 | (1 << 4)
+        ));
+        let binding = Vst3ParameterBinding {
+            host_id: ParameterId::from("vst3.17"),
+            vst3_id: 17,
+            kind: Vst3ParameterKind::Float,
+            read_only: true,
+            points: Rc::new(RefCell::new(Vec::with_capacity(1))),
+        };
+        assert!(
+            binding
+                .validate_edit(&ParameterValue::Float(-12.5))
+                .unwrap_err()
+                .contains("read-only")
+        );
+        assert!(binding.points.borrow().is_empty());
+    }
+
+    #[test]
+    fn vst3_toggle_uses_normalized_endpoints_without_plain_conversion() {
+        use super::{Vst3ParameterKind, normalized_parameter_edit, normalized_parameter_readback};
+        use crate::parameters::ParameterValue;
+
+        // A native toggle may use plain endpoints 8 and 16 or descending values.
+        // Neither numeric range is the Boolean host representation.
+        for (value, normalized) in [(false, 0.0), (true, 1.0)] {
+            let plain = super::parameter_value_to_plain(
+                &ParameterValue::Bool(value),
+                Vst3ParameterKind::Boolean,
+            )
+            .unwrap();
+            assert_eq!(
+                normalized_parameter_edit(Vst3ParameterKind::Boolean, plain, |_| panic!(
+                    "toggle must not convert a fabricated plain value"
+                )),
+                Some(normalized)
+            );
+            assert_eq!(
+                normalized_parameter_readback(Vst3ParameterKind::Boolean, normalized, |_| panic!(
+                    "toggle must read its normalized endpoint"
+                )),
+                Some(ParameterValue::Bool(value))
+            );
+        }
+    }
+
+    #[test]
+    fn vst3_numeric_conversion_preserves_native_mapping_and_rejects_nonfinite_values() {
+        use super::{Vst3ParameterKind, normalized_parameter_edit, normalized_parameter_readback};
+        use crate::parameters::ParameterValue;
+
+        assert_eq!(
+            normalized_parameter_edit(Vst3ParameterKind::Float, 12.0, |plain| (plain - 8.0) / 8.0),
+            Some(0.5)
+        );
+        assert_eq!(
+            normalized_parameter_readback(Vst3ParameterKind::Float, 0.5, |normalized| 8.0
+                + 8.0 * normalized),
+            Some(ParameterValue::Float(12.0))
+        );
+        assert_eq!(
+            normalized_parameter_edit(Vst3ParameterKind::Float, f64::NAN, |_| 0.0),
+            None
+        );
+        assert_eq!(
+            normalized_parameter_edit(Vst3ParameterKind::Float, 12.0, |_| f64::NAN),
+            None
+        );
+        for value in [f64::NAN, f64::INFINITY, -0.1, 1.1] {
+            assert_eq!(
+                normalized_parameter_readback(Vst3ParameterKind::Boolean, value, |_| 1.0),
+                None
+            );
+        }
+    }
 
     #[test]
     fn vst3_string_decoding_handles_both_signed_byte_values_and_nul() {

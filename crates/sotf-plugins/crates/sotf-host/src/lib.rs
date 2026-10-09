@@ -91,10 +91,10 @@ pub use async_timeline_plugin::AsyncTimelinePlugin;
 pub use auto_gain::{AutoGain, AutoGainData, AutoGainLoudnessType, AutoGainParams};
 pub use external_plugin::{
     EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, EXTERNAL_PLUGIN_PRESET_ID, ExternalHostingBackend,
-    ExternalPlugin, ExternalPluginHostingPlan, ExternalPluginSandboxMode, ExternalPluginState,
-    NativeAmbisonicsTargetLayout, NativePluginAudioSetup, PluginDescriptor, PluginFormat,
-    PluginFormatCapability, PluginScanStatus, PluginScanStatusMode, PluginScanSummary,
-    PluginScanner, plan_external_plugin_hosting, plugin_format_capabilities,
+    ExternalPlugin, ExternalPluginEditorData, ExternalPluginHostingPlan, ExternalPluginSandboxMode,
+    ExternalPluginState, NativeAmbisonicsTargetLayout, NativePluginAudioSetup, PluginDescriptor,
+    PluginFormat, PluginFormatCapability, PluginScanStatus, PluginScanStatusMode,
+    PluginScanSummary, PluginScanner, plan_external_plugin_hosting, plugin_format_capabilities,
 };
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub use external_plugin_host::{ExternalPluginHostBlockStatus, ExternalPluginHostProxy};
@@ -150,7 +150,9 @@ pub use oversampling::{
     AutoOversampledPlugin, OversampledPlugin, Oversampler, interleaved_to_planar,
     planar_to_interleaved,
 };
-pub use parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
+pub use parameters::{
+    Parameter, ParameterChoice, ParameterId, ParameterImportance, ParameterValue,
+};
 pub use parametric_in_place_plugin::{ParametricInPlacePlugin, ParametricInPlacePluginAdapter};
 pub use parametric_plugin::{
     ParameterSchema, ParameterSet, ParametricPlugin, ParametricPluginAdapter,

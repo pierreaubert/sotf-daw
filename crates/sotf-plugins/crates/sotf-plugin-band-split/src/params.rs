@@ -60,51 +60,25 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[
+        ControlSpec::button_set(1, CROSSOVER_TYPES),
+        ControlSpec::selector(2),
+        ControlSpec::button_set(3, BAND_COUNTS),
+    ],
     main: &[
-        ControlGroup::new(
-            "CROSSOVER",
-            "CROSSOVER",
-            &[
-                ControlSpec::knob(0),
-                ControlSpec::button_set(1, CROSSOVER_TYPES),
-                ControlSpec::button_set(2, BandSplitRecombinationMode::LABELS),
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "ROUTING",
-            "ROUTING",
-            &[ControlSpec::button_set(3, BAND_COUNTS)],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9).keep_visible()),
-        // One cutoff is active with two bands. Show the second cutoff only
-        // when the selected layout actually routes three or four bands.
-        // ParamCondition intentionally supports choice equality rather than
-        // ranges, so the mutually exclusive groups represent the same control
-        // for the two valid multiband choices.
-        ControlGroup::new(
-            "CUTOFF_2_FOR_THREE_BANDS",
-            "CUTOFF 2",
-            &[ControlSpec::knob(4)],
-        )
-        .visible_when(ParamCondition::choice(3, 1))
-        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
-        ControlGroup::new(
-            "CUTOFF_2_FOR_FOUR_BANDS",
-            "CUTOFF 2",
-            &[ControlSpec::knob(4)],
-        )
-        .visible_when(ParamCondition::choice(3, 2))
-        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
-        ControlGroup::new("CUTOFF 3", "CUTOFF 3", &[ControlSpec::knob(5)])
+        ControlGroup::new("CROSSOVER", "", &[ControlSpec::slider(0)])
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("CUTOFF_2", "", &[ControlSpec::slider(4)])
+            .visible_when(ParamCondition::choice_in(3, &[1, 2]))
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("CUTOFF_3", "", &[ControlSpec::slider(5)])
             .visible_when(ParamCondition::choice(3, 2))
-            .with_layout(GroupLayoutHints::inferred().priority(0.6)),
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(200.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 
@@ -285,17 +259,17 @@ mod tests {
         );
         assert_eq!(params.num_bands, 2);
         assert_eq!(PARAMS.len(), 6);
-        assert_eq!(LAYOUT.main.len(), 5);
+        assert_eq!(LAYOUT.main.len(), 3);
         let frequency_2_groups = LAYOUT
             .main
             .iter()
             .filter(|group| group.controls[0].param_index == 4)
             .collect::<Vec<_>>();
-        assert_eq!(frequency_2_groups.len(), 2);
+        assert_eq!(frequency_2_groups.len(), 1);
         assert!(frequency_2_groups.iter().all(|group| {
             matches!(
                 group.visible_when,
-                Some(ParamCondition::Choice { param_index: 3, .. })
+                Some(ParamCondition::ChoiceIn { param_index: 3, .. })
             )
         }));
         for (bands_choice, expected_visibility) in [(0.0, false), (1.0, true), (2.0, true)] {

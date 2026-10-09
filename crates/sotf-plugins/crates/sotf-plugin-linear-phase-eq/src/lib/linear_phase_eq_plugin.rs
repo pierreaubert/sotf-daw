@@ -25,6 +25,22 @@ use super::types::PreparedBandUpdate;
 use super::types::RouteBanks;
 use super::types::StageBanks;
 use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
+
+/// The streaming latency contract shared by the DSP and its editor summary.
+/// Each ordered band occupies one NUPC convolver stage, even while bypassed.
+pub fn linear_phase_eq_latency_samples(
+    fir_length_index: usize,
+    phase_mode_index: usize,
+    stage_count: usize,
+) -> usize {
+    let fir_length = fir_length_from_index(fir_length_index.min(FIR_LENGTH_OPTIONS.len() - 1));
+    let per_stage = if phase_mode_index == 0 {
+        fir_length / 2 + 32
+    } else {
+        32
+    };
+    stage_count.max(1) * per_stage
+}
 use math_audio_iir_fir::{
     Biquad, BiquadFilterType, FirDesignConfig, FirPhase, WindowType, generate_fir_from_response,
 };
@@ -1016,12 +1032,11 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         // The ordered route stacks one stage per band slot, so its latency
         // scales with the configured band count; the legacy path keeps the
         // long-established single-stage value.
-        let per_stage = if self.phase_mode_index == 0 {
-            self.fir_length() / 2 + 32
-        } else {
-            32
-        };
-        self.ordered_stage_count() * per_stage
+        linear_phase_eq_latency_samples(
+            self.fir_length_index,
+            self.phase_mode_index,
+            self.ordered_stage_count(),
+        )
     }
 
     fn realtime_quantum_frames(&self) -> usize {

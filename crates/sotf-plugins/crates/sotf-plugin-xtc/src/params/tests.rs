@@ -98,3 +98,19 @@ fn filepath_index_is_visible_but_not_settable() {
     params.set_param_value(16, 1.0);
     assert_eq!(params.param_value(16), None);
 }
+
+#[test]
+fn scaled_geometry_and_regularization_have_explicit_display_units() {
+    let radius = PARAMS[2];
+    assert_eq!(radius.engine_key, "head_radius_m");
+    assert_eq!(radius.unit, "cm");
+    assert!((radius.default_f64() * radius.display_scale - 8.75).abs() < 1e-6);
+    let ParamType::Float { step, .. } = radius.param_type else {
+        panic!("Head radius must stay continuous");
+    };
+    assert!((step * radius.display_scale - 0.1).abs() < 1e-6);
+    let beta = PARAMS[7];
+    assert_eq!(beta.engine_key, "beta_base");
+    assert_eq!(beta.unit, "×10⁻³");
+    assert!((beta.default_f64() * beta.display_scale - 1.0).abs() < 1e-6);
+}

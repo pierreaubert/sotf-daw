@@ -62,7 +62,7 @@ fn noise_profile_actions_remain_visible_at_narrow_width() {
     let groups: Vec<_> = LAYOUT.main.iter().collect();
     for width in [320.0, 600.0] {
         let solved = sotf_host::layout_solver::solve_control_groups(&groups, width).unwrap();
-        for id in ["REDUCTION", "NOISE PROFILE"] {
+        for id in ["REDUCTION", "PROFILE"] {
             assert!(
                 solved.find(id).unwrap().visible(),
                 "{id} collapsed at width {width}"

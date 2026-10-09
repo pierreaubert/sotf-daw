@@ -453,11 +453,11 @@ pub fn default_processing_mode() -> String {
 }
 
 pub fn default_auto_makeup() -> Option<bool> {
-    Some(pk(PARAMS, "auto_makeup").default_bool())
+    None
 }
 
 pub fn default_measured_auto_makeup() -> Option<bool> {
-    Some(pk(PARAMS, "measured_auto_makeup").default_bool())
+    None
 }
 
 pub fn default_sidechain_hpf_hz() -> Option<f32> {

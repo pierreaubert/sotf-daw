@@ -819,6 +819,11 @@ fn parse_crosspoint_id(id: &str, prefix: &str) -> Result<(usize, usize), String>
 }
 
 impl Plugin for MatrixPlugin {
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Routing changes the channel width, never the number of frames.
+        true
+    }
+
     fn tail_length(&self) -> sotf_host::TailLength {
         // Gain smoothing retains coefficients, never past input samples.
         sotf_host::TailLength::Finite(0)

@@ -6,6 +6,7 @@ use super::external::external_plugin_trust;
 use super::is::is_external_plugin_type;
 use super::misc::resize_matrix;
 use super::parse::parse_external_plugin_descriptor;
+use super::parse::parse_external_plugin_instance_id;
 use super::parse::parse_external_plugin_state;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::parse::parse_isolated_external_plugin_config;
@@ -604,7 +605,7 @@ fn create_plugin_inner(
                 }
                 (None, None) => None,
             };
-            let plugin = if let Some(layout) = explicit_layout {
+            let mut plugin = if let Some(layout) = explicit_layout {
                 LoudnessMonitorPlugin::new_with_layout(channels, layout)
             } else {
                 LoudnessMonitorPlugin::new(channels)
@@ -612,6 +613,11 @@ fn create_plugin_inner(
             .map_err(|e| format!("Failed to create loudness monitor: {e}"))?
             .with_integrated_mode(integrated_mode)
             .map_err(|e| format!("Failed to configure loudness monitor: {e}"))?;
+            let spatial_enabled = match parameters.get("spatial_enabled") {
+                None => false,
+                Some(value) => value.as_bool().ok_or("spatial_enabled must be a boolean")?,
+            };
+            plugin.set_spatial_enabled(spatial_enabled);
             Ok(Box::new(plugin))
         }
 
@@ -761,6 +767,7 @@ fn create_plugin_inner(
 
         "external" => {
             validate_external_plugin_security_config(parameters)?;
+            let instance_id = parse_external_plugin_instance_id(parameters)?;
             let descriptor = parse_external_plugin_descriptor(parameters)
                 .map_err(|e| format!("Failed to parse external plugin descriptor: {e}"))?;
             let external_state = parse_external_plugin_state(parameters, &descriptor)?;
@@ -796,11 +803,14 @@ fn create_plugin_inner(
                 }
             }
 
-            let plugin = match external_state {
+            let mut plugin = match external_state {
                 Some(state) => ExternalPlugin::from_placeholder_state(&state, sample_rate),
                 None => ExternalPlugin::new(&descriptor, sample_rate),
             }
             .map_err(|e| format!("Failed to load external plugin: {e}"))?;
+            if let Some(instance_id) = instance_id {
+                plugin.bind_editor_instance(instance_id);
+            }
             Ok(Box::new(plugin))
         }
 

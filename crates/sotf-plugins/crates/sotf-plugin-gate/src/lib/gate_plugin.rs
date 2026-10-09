@@ -374,40 +374,13 @@ impl GatePlugin {
     }
 
     pub(super) fn calculate_gate_attenuation(&self, input_db: f32, threshold: f32) -> f32 {
-        let knee = self.knee_db.max(0.0);
-        // A 1 dB input decrease below threshold produces ratio dB at output.
-        let slope = self.ratio.max(1.0) - 1.0;
-
-        let atten = if knee < 0.1 {
-            // Hard knee
-            if input_db >= threshold {
-                0.0
-            } else {
-                (threshold - input_db) * slope
-            }
-        } else if input_db > threshold + knee / 2.0 {
-            // Above knee zone -- no attenuation
-            0.0
-        } else if input_db < threshold - knee / 2.0 {
-            // Below knee zone -- full gate
-            (threshold - input_db) * slope
-        } else {
-            // Within knee zone: quadratic easing from 0 dB attenuation at
-            // threshold + knee/2 to the full below-threshold slope at
-            // threshold - knee/2. The curve is continuous at both boundaries
-            // and intentionally softer near the opening point.
-            let below = threshold + knee / 2.0 - input_db;
-            let kf = below / knee;
-            kf * kf * (knee / 2.0) * slope
-        };
-
-        // A zero range is documented as unlimited. Keep a finite ceiling to
-        // avoid inf/NaN propagation when processing denormal/invalid input.
-        if self.range_db > 0.0 {
-            atten.min(self.range_db)
-        } else {
-            atten.min(240.0)
-        }
+        crate::response::downward_attenuation_db(
+            input_db,
+            threshold,
+            self.ratio,
+            self.knee_db,
+            self.range_db,
+        )
     }
 
     pub(super) fn update_coefficients(&mut self) {

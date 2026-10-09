@@ -143,54 +143,42 @@ pub const PARAMS: &[ParamSpec] = &[
 /// mode and external sidechain use 10–13.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(6),  // mode
-        ControlSpec::selector(11), // split topology
+        ControlSpec::button_set(6, MODES),
+        ControlSpec::button_set(11, SPLIT_TOPOLOGIES).enabled_when(ParamCondition::choice(6, 1)),
+        ControlSpec::toggle(12),
     ],
     main: &[
-        ControlGroup::new(
-            "detection",
-            "DETECTION",
-            &[
-                ControlSpec::slider(0),  // frequency
-                ControlSpec::slider(1),  // q
-                ControlSpec::slider(9),  // stereo link
-                ControlSpec::toggle(12), // m/s mode
-                ControlSpec::toggle(13), // external sidechain
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.85)),
-        ControlGroup::new(
-            "timing",
-            "TIMING",
-            &[ControlSpec::knob(10)], // lookahead
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
             "dynamics",
             "DYNAMICS",
             &[
-                ControlSpec::slider(2), // threshold
-                ControlSpec::slider(3), // ratio
-                ControlSpec::slider(4), // attack
-                ControlSpec::slider(5), // release
-                ControlSpec::slider(8), // range
+                ControlSpec::slider(0),
+                ControlSpec::slider(1),
+                ControlSpec::slider(2),
+                ControlSpec::slider(3),
+                ControlSpec::slider(4),
+                ControlSpec::slider(5),
+                ControlSpec::slider(8),
+                ControlSpec::slider(7),
+                ControlSpec::meter(-30.0, 0.0),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "output",
-            "OUTPUT",
-            &[ControlSpec::meter(-30.0, 0.0), ControlSpec::knob(7)],
+            "detection",
+            "DETECTION",
+            &[
+                ControlSpec::slider(9),
+                ControlSpec::slider(10),
+                ControlSpec::toggle(13),
+            ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(100.0, 0.5),
-        ColumnConstraint::main(300.0),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

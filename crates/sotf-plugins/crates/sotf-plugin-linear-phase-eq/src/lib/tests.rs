@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use super::eq_band::EqBand;
-use super::linear_phase_eq_plugin::LinearPhaseEqPlugin;
+use super::linear_phase_eq_plugin::{LinearPhaseEqPlugin, linear_phase_eq_latency_samples};
 use super::misc::{
     filter_type_to_index, fir_length_from_index, index_to_filter_type, parse_filter_type,
 };
@@ -697,4 +697,22 @@ fn legacy_choice_keys_still_parse() {
     let floats: LinearPhaseEqPluginParams =
         serde_json::from_value(serde_json::json!({"fir_length_index": 2.0})).unwrap();
     assert_eq!(floats.fir_length_index, 2);
+}
+
+#[test]
+fn editor_latency_contract_matches_single_and_ordered_dsp_routes() {
+    assert_eq!(linear_phase_eq_latency_samples(1, 0, 1), 1056);
+    assert_eq!(linear_phase_eq_latency_samples(1, 1, 1), 32);
+    assert_eq!(linear_phase_eq_latency_samples(1, 0, 3), 3168);
+    assert_eq!(linear_phase_eq_latency_samples(1, 1, 3), 96);
+
+    let legacy = LinearPhaseEqPlugin::new(2, 48_000);
+    assert_eq!(
+        legacy.latency_samples(),
+        linear_phase_eq_latency_samples(
+            legacy.fir_length_index,
+            legacy.phase_mode_index,
+            1,
+        )
+    );
 }

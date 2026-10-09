@@ -80,37 +80,34 @@ pub const PARAMS: &[ParamSpec] = &[
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[
+        ControlSpec::toggle(0),
+        ControlSpec::toggle(2),
+        ControlSpec::button_set(3, MODE_OPTIONS),
+        ControlSpec::button_set(4, BANDS_OPTIONS),
+        ControlSpec::toggle(8),
+    ],
     main: &[
         ControlGroup::new(
             "REPAIR",
             "REPAIR",
-            &[
-                ControlSpec::toggle(0),
-                ControlSpec::knob_large(1),
-                ControlSpec::toggle(2),
-                ControlSpec::selector(3),
-                ControlSpec::knob(7),
-            ],
+            &[ControlSpec::slider(1), ControlSpec::slider(7)],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "MULTIBAND",
             "MULTIBAND",
             &[
-                ControlSpec::selector(4),
-                ControlSpec::knob(5),
-                ControlSpec::knob(6),
+                ControlSpec::slider(5).enabled_when(ParamCondition::choice_in(4, &[1, 2])),
+                ControlSpec::slider(6).enabled_when(ParamCondition::choice_in(4, &[1, 2])),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
-        ControlGroup::new("MONITOR", "MONITOR", &[ControlSpec::toggle(8)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.6)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(220.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

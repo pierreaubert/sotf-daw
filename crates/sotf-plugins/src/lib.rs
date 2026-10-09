@@ -58,8 +58,8 @@ pub use sotf_host::{
 };
 pub use sotf_host::{
     EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, ExternalHostingBackend, ExternalPlugin,
-    ExternalPluginSandboxMode, ExternalPluginState, ParameterEventSender, PluginDescriptor,
-    PluginFormat, PluginFormatCapability, PluginScanStatus, PluginScanner,
+    ExternalPluginEditorData, ExternalPluginSandboxMode, ExternalPluginState, ParameterEventSender,
+    PluginDescriptor, PluginFormat, PluginFormatCapability, PluginScanStatus, PluginScanner,
     plugin_format_capabilities,
 };
 /// Parameter specifications: types from `sotf-host`, per-plugin definitions
@@ -454,7 +454,9 @@ pub use sotf_host::analyzer_spectrum::{
 };
 pub use sotf_host::auto_gain::{AutoGain, AutoGainData, AutoGainLoudnessType, AutoGainParams};
 pub use sotf_host::host::{DawHost, GraphEdge, Host};
-pub use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
+pub use sotf_host::parameters::{
+    Parameter, ParameterChoice, ParameterId, ParameterImportance, ParameterValue,
+};
 pub use sotf_host::plugin::{
     InPlacePlugin, InPlacePluginAdapter, Plugin, PluginCostClass, PluginInfo, PluginResult,
     ProcessContext,

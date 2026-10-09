@@ -32,7 +32,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.05,
         0.12,
         0.001,
-        "m",
+        "cm",
         "Geometry",
     )
     .scaled(100.0)
@@ -90,7 +90,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0001,
         0.1,
         0.001,
-        "",
+        "×10⁻³",
         "Beta",
     )
     .scaled(1000.0)
@@ -284,21 +284,23 @@ pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[],
     main: &[
         ControlGroup::new(
-            "GEOMETRY",
-            "GEOMETRY",
+            "CANCELLATION",
+            "CANCELLATION",
             &[
                 ControlSpec::knob(0),      // distance_m
                 ControlSpec::knob(1),      // speaker_angle_deg
-                ControlSpec::knob(2),      // head_radius_m
                 ControlSpec::selector(27), // head_model
+                ControlSpec::knob(7),      // beta_base
+                ControlSpec::knob(12),     // max_gain_db
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("GEOMETRY", "GEOMETRY", &[ControlSpec::knob(2)])
+            .with_layout(GroupLayoutHints::inferred().priority(0.45)),
         ControlGroup::new(
             "BETA",
             "BETA",
             &[
-                ControlSpec::knob(7), // beta_base
                 ControlSpec::knob(8), // beta_low_boost
                 ControlSpec::knob(9), // beta_high_boost
             ],
@@ -310,7 +312,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             &[
                 ControlSpec::knob(10), // shadow_cutoff
                 ControlSpec::knob(11), // shadow_slope
-                ControlSpec::knob(12), // max_gain
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.5)),

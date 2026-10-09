@@ -1969,6 +1969,54 @@ fn test_from_params_alias() {
 }
 
 #[test]
+fn rebuilt_band_range_and_hold_inheritance_follows_later_global_edits() {
+    let params = MultibandCompressorPluginParams {
+        range_db: 90.0,
+        hold_ms: 20.0,
+        bands: vec![
+            BandCompressorParams::default(),
+            BandCompressorParams {
+                range_db: Some(80.0),
+                hold_ms: Some(25.0),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let restored: MultibandCompressorPluginParams =
+        serde_json::from_value(serde_json::to_value(&params).unwrap()).unwrap();
+    let mut plugin = MultibandCompressorPlugin::from_params(2, restored);
+    for (key, expected) in [
+        ("band_0_range_db", 90.0),
+        ("band_0_hold_ms", 20.0),
+        ("band_1_range_db", 80.0),
+        ("band_1_hold_ms", 25.0),
+    ] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(key)).unwrap(),
+            ParameterValue::Float(expected)
+        );
+    }
+    plugin
+        .set_parameter(ParameterId::from("range_db"), ParameterValue::Float(70.0))
+        .unwrap();
+    plugin
+        .set_parameter(ParameterId::from("hold_ms"), ParameterValue::Float(30.0))
+        .unwrap();
+    for (key, expected) in [
+        ("band_0_range_db", 70.0),
+        ("band_0_hold_ms", 30.0),
+        ("band_1_range_db", 80.0),
+        ("band_1_hold_ms", 25.0),
+    ] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(key)).unwrap(),
+            ParameterValue::Float(expected)
+        );
+    }
+}
+
+#[test]
 fn test_get_data_returns_some() {
     let p = MultibandCompressorPlugin::new(2);
     assert!(p.get_data().is_some());

@@ -209,36 +209,41 @@ pub const PARAMS: &[ParamSpec] = &[
 
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(0), // speaker_config
-        ControlSpec::selector(6), // room_preset
+        ControlSpec::selector(0),                 // speaker_config
+        ControlSpec::button_set(6, ROOM_PRESETS), // room_preset
     ],
     main: &[
+        ControlGroup::new(
+            "primary",
+            "ROOM & LEVEL",
+            &[
+                ControlSpec::slider(1), // room_size
+                ControlSpec::slider(2), // rt60
+                ControlSpec::slider(7), // dry_level
+                ControlSpec::slider(8), // er_level
+                ControlSpec::slider(9), // late_level
+                ControlSpec::knob(18),  // safety_limit_db
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "room",
             "ROOM",
             &[
-                ControlSpec::slider(1), // room_size
-                ControlSpec::slider(2), // rt60
                 ControlSpec::slider(3), // bass_ratio
                 ControlSpec::slider(4), // treble_ratio
                 ControlSpec::slider(5), // pre_delay_ms
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
         ControlGroup::new(
             "levels",
             "LEVELS",
-            &[
-                ControlSpec::slider(8),  // er_level
-                ControlSpec::slider(9),  // late_level
-                ControlSpec::slider(10), // lfe_level
-            ],
+            &[ControlSpec::slider(10)], // lfe_level
         )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
     ],
     output: &[
-        ControlSpec::slider(7),  // dry_level
-        ControlSpec::knob(18),   // safety_limit_db
         ControlSpec::toggle(19), // auto_gain_enabled
         ControlSpec::knob(20).enabled_when(ParamCondition::bool(19, true)),
         ControlSpec::knob(21).enabled_when(ParamCondition::bool(19, true)),

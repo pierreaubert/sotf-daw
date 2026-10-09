@@ -90,33 +90,48 @@ pub const PARAMS: &[ParamSpec] = &[
     .doc("Third ordered crossover cutoff for 4-way mode"),
 ];
 
+const BANDS: ParamCondition = ParamCondition::choice(4, 0);
+
 /// Crossover: indices 0–3 preserve the original family/frequency/mode/taps order.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::button_set(0, CROSSOVER_TYPES),
-        ControlSpec::button_set(2, &["Lowpass", "Highpass", "Both"]),
+        ControlSpec::selector(0),
+        ControlSpec::button_set(2, &["Lowpass", "Highpass", "Both"]).enabled_when(BANDS),
         ControlSpec::button_set(4, &["Bands", "Per Channel"]),
-        ControlSpec::button_set(5, &["2", "3", "4"]),
+        ControlSpec::button_set(5, &["2", "3", "4"]).enabled_when(BANDS),
     ],
-    main: &[ControlGroup::new(
-        "CROSSOVER",
-        "CROSSOVER",
-        &[
-            ControlSpec::knob_large(1),
-            ControlSpec::knob(6),
-            ControlSpec::knob(7),
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    main: &[
+        ControlGroup::new("TWO_WAY", "", &[ControlSpec::slider(1).enabled_when(BANDS)])
+            .visible_when(ParamCondition::choice(5, 0))
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "THREE_WAY",
+            "",
+            &[
+                ControlSpec::slider(1).enabled_when(BANDS),
+                ControlSpec::slider(6).enabled_when(BANDS),
+            ],
+        )
+        .visible_when(ParamCondition::choice(5, 1))
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "FOUR_WAY",
+            "",
+            &[
+                ControlSpec::slider(1).enabled_when(BANDS),
+                ControlSpec::slider(6).enabled_when(BANDS),
+                ControlSpec::slider(7).enabled_when(BANDS),
+            ],
+        )
+        .visible_when(ParamCondition::choice(5, 2))
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("FIR", "", &[ControlSpec::slider(3)])
+            .visible_when(ParamCondition::choice(0, 1))
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+    ],
     output: &[],
-    tabs: &[TabSpec {
-        name: "Linear Phase",
-        controls: &[ControlSpec::knob(3)],
-    }],
+    tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(170.0, 0.65),
-        ColumnConstraint::main(300.0),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };

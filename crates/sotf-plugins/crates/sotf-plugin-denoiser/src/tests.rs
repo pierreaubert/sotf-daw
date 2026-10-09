@@ -1072,6 +1072,38 @@ fn test_clear_profile_trigger_clears_state_and_resets_value() {
     );
 }
 
+#[test]
+fn named_profile_actions_are_immediate_and_cancel_preserves_captured_profile() {
+    let mut plugin = DenoiserPlugin::from_params(1, DenoiserPluginParams::default());
+    for key in ["learn_noise", "clear_profile"] {
+        assert!(plugin.supports_immediate_momentary_control(&ParameterId::from(key)));
+    }
+    assert!(!plugin.supports_immediate_momentary_control(&ParameterId::from("low_latency")));
+    plugin.noise_profile.has_noise_profile = true;
+    plugin.noise_profile.use_captured_profile = true;
+    plugin.noise_profile.noise_profile_storage[0][0] = 0.125;
+    plugin.noise_profile.noise_profile_storage[0][1] = 0.875;
+    let stored_before = plugin.noise_profile.noise_profile_storage[0].clone();
+    plugin
+        .parametric_set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(true))
+        .unwrap();
+    assert!(plugin.noise_profile.is_learning);
+    plugin.noise_profile.learning_accumulator[0][0] = 9.0;
+    plugin.noise_profile.learning_frames_count = 3;
+    plugin
+        .parametric_set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(false))
+        .unwrap();
+    assert!(!plugin.noise_profile.is_learning);
+    assert_eq!(plugin.noise_profile.learning_frames_count, 0);
+    assert!(plugin.noise_profile.has_noise_profile);
+    assert!(plugin.noise_profile.use_captured_profile);
+    assert_eq!(plugin.noise_profile.noise_profile_storage[0], stored_before);
+    plugin
+        .parametric_set_parameter(ParameterId::from("clear_profile"), ParameterValue::Bool(true))
+        .unwrap();
+    assert!(!plugin.noise_profile.has_noise_profile);
+}
+
 /// Issue #2: Harmonic/percussive mode must NOT pull a high Wiener gain DOWN to 0.5.
 ///
 /// Old formula: `gain * (1 - 0.5 * w) + w * 0.5`

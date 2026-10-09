@@ -26,7 +26,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0,
         2.0,
         0.05,
-        "",
+        "%",
         "General",
     )
     .scaled(100.0)
@@ -61,7 +61,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .setup()
         .doc("Analyze all channels together"),
     ParamSpec::float(
-        "Confidence Threshold",
+        "Confidence",
         "confidence_threshold",
         0.5,
         0.0,
@@ -111,16 +111,16 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[ControlSpec::toggle(3), ControlSpec::toggle(6)],
     main: &[
         ControlGroup::new(
             "CORRECTION",
             "CORRECTION",
             &[
-                ControlSpec::knob(5), // reference_frequency_hz
-                ControlSpec::knob(0), // correction_strength
-                ControlSpec::knob(2), // drift_smoothing
-                ControlSpec::knob(4), // confidence_threshold
+                ControlSpec::slider(5), // reference_frequency_hz
+                ControlSpec::slider(0), // correction_strength
+                ControlSpec::slider(2), // drift_smoothing
+                ControlSpec::slider(4), // confidence_threshold
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -128,8 +128,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "ANALYSIS",
             "ANALYSIS",
             &[
-                ControlSpec::knob(1),   // analysis_window_ms
-                ControlSpec::toggle(3), // multi_channel_analysis
+                ControlSpec::slider(1), // analysis_window_ms
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.4)),
@@ -137,8 +136,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "FORMANTS",
             "FORMANTS",
             &[
-                ControlSpec::toggle(6), // formant_preservation
-                ControlSpec::knob(7),   // formant_strength
+                ControlSpec::slider(7).enabled_when(ParamCondition::bool(6, true)), // formant_strength
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.3)),

@@ -68,7 +68,7 @@ impl UpmixerPlugin {
         std::num::NonZeroU64::new(u64::try_from(calls.max(1)).ok()?)
     }
 
-    fn drain_tail_frames(&self) -> usize {
+    pub(super) fn drain_tail_frames(&self) -> usize {
         let n = self.core.fft_size;
         let hop = self.core.hop_size;
         let latency = self.output_latency_frames();

@@ -122,6 +122,7 @@ fn processing_scratch_prepares_order_seven_input_extent() {
 }
 use std::sync::Arc;
 
+mod control_metadata;
 mod crossfade_bounded;
 mod crossfade_clock;
 mod eos;

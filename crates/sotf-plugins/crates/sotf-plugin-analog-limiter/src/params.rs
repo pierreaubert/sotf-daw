@@ -88,37 +88,36 @@ pub const PARAMS: &[ParamSpec] = &[
 
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::slider(2),
+        ControlSpec::selector(6),
         ControlSpec::toggle(3),
         ControlSpec::toggle(4),
     ],
     main: &[
-        ControlGroup::new("DYNAMICS", "DYNAMICS", &[ControlSpec::slider(0)])
-            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "ANALOG",
-            "ANALOG",
+            "DYNAMICS",
+            "DYNAMICS",
             &[
-                ControlSpec::selector(6),
-                ControlSpec::slider(7),
+                ControlSpec::slider(0),
+                ControlSpec::slider(1),
+                ControlSpec::slider(5),
                 ControlSpec::slider(8),
-                ControlSpec::slider(9),
+                ControlSpec::slider(10),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9)),
-        ControlGroup::new("TIMING", "TIMING", &[ControlSpec::slider(1)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("TIMING", "TIMING", &[ControlSpec::slider(2)])
+            .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
-            "OUTPUT",
-            "OUTPUT",
-            &[ControlSpec::knob(5), ControlSpec::knob(10)],
+            "ANALOG",
+            "ANALOG",
+            &[ControlSpec::slider(7), ControlSpec::slider(9)],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

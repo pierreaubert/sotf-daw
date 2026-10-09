@@ -1924,6 +1924,25 @@ impl UpmixerPlugin {
 }
 
 impl Plugin for UpmixerPlugin {
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // WOLA startup is emitted as silence; every accepted frame has output.
+        true
+    }
+
+    fn tail_length(&self) -> sotf_host::plugin::TailLength {
+        if self.params.bypass_all_processing {
+            return sotf_host::plugin::TailLength::Finite(0);
+        }
+        if self.subharmonic.enable_subharmonic_synth
+            || self.subharmonic.subharmonic_envelope > 0.0
+            || self.subharmonic.subharmonic_amp_envelope > 0.0
+        {
+            // The oscillator drain has a render cap, not proven finite silence.
+            return sotf_host::plugin::TailLength::Unknown;
+        }
+        sotf_host::plugin::TailLength::Finite(self.drain_tail_frames() as u64)
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new(
             format!("Stereo to {} Upmixer", self.core.speaker_config.name),

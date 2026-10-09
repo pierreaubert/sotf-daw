@@ -23,22 +23,8 @@ const MAX_STALE_HOST_UPDATE_RETRIES: usize = 2;
 fn is_required_plugin_update_failure(diagnostic: &PluginBuildDiagnostic) -> bool {
     matches!(
         &diagnostic.target,
-        crate::PluginBuildTarget::ChainPlugin { .. }
-    ) && diagnostic
-        .plugin_type
-        .as_deref()
-        .is_some_and(|plugin_type| {
-            plugin_type.eq_ignore_ascii_case("external")
-                || plugin_type.eq_ignore_ascii_case("external_plugin")
-                || plugin_type.eq_ignore_ascii_case("eq")
-                || plugin_type.eq_ignore_ascii_case("equalizer")
-                // A requested compressor candidate is complete: silently
-                // skipping its failed build would commit a chain without
-                // the compressor (e.g. an unsupported legacy control must
-                // refuse loudly, never vanish from the route).
-                || plugin_type.eq_ignore_ascii_case("compressor")
-                || plugin_type.eq_ignore_ascii_case("multiband_compressor")
-        })
+        crate::PluginBuildTarget::ChainPlugin { .. } | crate::PluginBuildTarget::GraphNode { .. }
+    )
 }
 
 fn is_stale_host_update(error: &ConfigError) -> bool {
@@ -191,9 +177,8 @@ fn apply_plugin_update_once(
     // disturbing the independently-owned general engine error.
     store_plugin_build_diagnostics(state, build_diagnostics);
 
-    // Engine startup retains its documented best-effort plugin policy. A
-    // requested external or EQ route replacement is a complete candidate,
-    // however, so a skipped plugin must fail before PreparedHostUpdate is sent.
+    // Startup may build a best-effort chain, but a requested replacement is
+    // atomic: skipping any configured plugin would acknowledge the wrong route.
     if let Some(diagnostic) = failed_required_candidate {
         return Err(ConfigError::PluginBuild { diagnostic });
     }
@@ -368,7 +353,14 @@ pub(in crate::engine::manager_thread) fn apply_plugin_graph_update(
     for diagnostic in &build_diagnostics {
         log::warn!("[Manager Thread] {}", diagnostic);
     }
+    let failed_candidate = build_diagnostics
+        .iter()
+        .find(|diagnostic| is_required_plugin_update_failure(diagnostic))
+        .cloned();
     store_plugin_build_diagnostics(state, build_diagnostics);
+    if let Some(diagnostic) = failed_candidate {
+        return Err(ConfigError::PluginBuild { diagnostic });
+    }
 
     let current = state.load();
     let prepared = PreparedHostUpdate::prepare(
@@ -1237,6 +1229,19 @@ mod tests {
     }
 
     #[test]
+    fn requested_update_rejects_any_skipped_plugin_in_linear_or_graph_host() {
+        for diagnostic in [
+            PluginBuildDiagnostic::chain_plugin(1, Some(5), "gate", "missing key bus"),
+            PluginBuildDiagnostic::graph_node(9, Some(5), "saturation", "invalid node"),
+        ] {
+            assert!(is_required_plugin_update_failure(&diagnostic));
+        }
+        assert!(!is_required_plugin_update_failure(&PluginBuildDiagnostic::host(
+            "host warning"
+        )));
+    }
+
+    #[test]
     fn failed_graph_candidate_preserves_working_host_and_engine_snapshot() {
         let (mut processing, processing_commands) = ProcessingThread::command_probe();
         let (mut playback, playback_commands) = PlaybackThread::command_probe();
@@ -1310,6 +1315,54 @@ mod tests {
         assert!(matches!(
             current.plugin_build_diagnostics[0].target,
             crate::PluginBuildTarget::GraphNode { node_id: 42 }
+        ));
+    }
+
+    #[test]
+    fn skipped_gate_candidate_does_not_acknowledge_or_replace_working_host() {
+        let (mut processing, processing_commands) = ProcessingThread::command_probe();
+        let (mut playback, playback_commands) = PlaybackThread::command_probe();
+        let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+            num_channels: 2,
+            playback_channels: 2,
+            sample_rate: 48_000,
+            plugin_latency_samples: 19,
+            ..AudioEngineState::default()
+        }));
+        let mut config_queue = ConfigUpdateQueue::new();
+        let mut settings = crate::plugins::PluginSettings::default_for(
+            &crate::plugins::PluginType::Gate,
+        )
+        .unwrap();
+        let crate::plugins::PluginSettings::Gate {
+            sidechain_external,
+            ..
+        } = &mut settings else {
+            unreachable!()
+        };
+        *sidechain_external = true;
+        let error = apply_plugin_update(
+            &mut processing,
+            &mut playback,
+            &state,
+            &mut config_queue,
+            vec![settings.to_plugin_config(48_000.0)],
+            48_000,
+            2,
+            2,
+            EngineOversamplingPolicy::PluginPreferred,
+        )
+        .expect_err("skipping the requested Gate must reject the replacement");
+        assert!(error.to_string().contains("gate"), "{error}");
+        assert!(processing_commands.try_recv().is_err());
+        assert!(playback_commands.try_recv().is_err());
+        let current = state.load();
+        assert_eq!(current.num_channels, 2);
+        assert_eq!(current.plugin_latency_samples, 19);
+        assert_eq!(current.plugin_build_diagnostics.len(), 1);
+        assert!(matches!(
+            current.plugin_build_diagnostics[0].target,
+            crate::PluginBuildTarget::ChainPlugin { .. }
         ));
     }
 

@@ -74,6 +74,12 @@ impl DenoiserPlugin {
         }
     }
 
+    /// Stop a pending capture without disturbing the previously captured profile.
+    pub(super) fn cancel_learning(&mut self) {
+        self.noise_profile.is_learning = false;
+        self.noise_profile.learning_frames_count = 0;
+    }
+
     /// Clear the captured noise profile
     pub(super) fn clear_noise_profile(&mut self) {
         self.noise_profile.has_noise_profile = false;

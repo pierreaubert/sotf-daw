@@ -114,6 +114,44 @@ pub(super) fn resolve_dynamic_library_path(
     #[cfg(target_os = "macos")]
     {
         let macos_dir = descriptor.path.join("Contents").join("MacOS");
+        let plist_path = descriptor.path.join("Contents").join("Info.plist");
+        if plist_path.is_file() {
+            let metadata = plist::Value::from_file(&plist_path).map_err(|error| {
+                format!(
+                    "cannot read bundle metadata '{}': {error}",
+                    plist_path.display()
+                )
+            })?;
+            let executable = metadata
+                .as_dictionary()
+                .and_then(|dictionary| dictionary.get("CFBundleExecutable"))
+                .and_then(plist::Value::as_string)
+                .ok_or_else(|| {
+                    format!(
+                        "bundle '{}' has no CFBundleExecutable string",
+                        descriptor.path.display()
+                    )
+                })?;
+            // A bundle executable is one filename, never a relative/absolute
+            // path supplied by an untrusted plugin package.
+            let mut components = std::path::Path::new(executable).components();
+            if !matches!(components.next(), Some(std::path::Component::Normal(_)))
+                || components.next().is_some()
+            {
+                return Err(format!(
+                    "bundle '{}' has invalid CFBundleExecutable",
+                    descriptor.path.display()
+                ));
+            }
+            let executable_path = macos_dir.join(executable);
+            if !executable_path.is_file() {
+                return Err(format!(
+                    "bundle executable '{}' does not exist",
+                    executable_path.display()
+                ));
+            }
+            return Ok(executable_path);
+        }
         if !file_stem.is_empty() {
             candidates.push(macos_dir.join(&file_stem));
             for extension in dynamic_library_extensions() {
@@ -132,4 +170,68 @@ pub(super) fn resolve_dynamic_library_path(
             descriptor.path.display()
         )
     })
+}
+
+#[cfg(all(
+    test,
+    target_os = "macos",
+    any(feature = "external-plugin-clap", feature = "external-plugin-vst3")
+))]
+mod bundle_tests {
+    use super::*;
+
+    #[test]
+    fn bundle_executable_uses_declared_name_for_xml_and_binary_plists() {
+        for binary in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let bundle = root.path().join("Different Name.vst3");
+            let contents = bundle.join("Contents");
+            let macos = contents.join("MacOS");
+            std::fs::create_dir_all(&macos).unwrap();
+            let executable = macos.join("actual_native_binary");
+            std::fs::write(&executable, b"fixture is never loaded").unwrap();
+            let mut dictionary = plist::Dictionary::new();
+            dictionary.insert("CFBundleExecutable".into(), "actual_native_binary".into());
+            let metadata = plist::Value::Dictionary(dictionary);
+            let path = contents.join("Info.plist");
+            if binary {
+                metadata.to_file_binary(&path).unwrap();
+            } else {
+                metadata.to_file_xml(&path).unwrap();
+            }
+            let descriptor = descriptor(bundle.clone());
+            assert_eq!(
+                resolve_dynamic_library_path(&descriptor).unwrap(),
+                executable
+            );
+            for invalid in ["", "..", "../actual_native_binary", "/tmp/outside"] {
+                let mut dictionary = plist::Dictionary::new();
+                dictionary.insert("CFBundleExecutable".into(), invalid.into());
+                plist::Value::Dictionary(dictionary)
+                    .to_file_xml(&path)
+                    .unwrap();
+                assert!(
+                    resolve_dynamic_library_path(&descriptor)
+                        .unwrap_err()
+                        .contains("invalid CFBundleExecutable")
+                );
+            }
+        }
+    }
+
+    fn descriptor(path: PathBuf) -> PluginDescriptor {
+        PluginDescriptor {
+            id: "fixture".into(),
+            name: "Fixture".into(),
+            vendor: "SOTF".into(),
+            version: "1".into(),
+            format: PluginFormat::Vst3,
+            path,
+            audio_inputs: 2,
+            audio_outputs: 2,
+            is_instrument: false,
+            categories: vec![],
+            scan_status: PluginScanStatus::Discovered,
+        }
+    }
 }

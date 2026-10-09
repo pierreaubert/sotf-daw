@@ -191,53 +191,71 @@ pub const LAYOUT: PluginLayout = PluginLayout {
     ],
     main: &[
         ControlGroup::new(
-            "PRIMARY",
-            "PRIMARY",
-            &[
-                ControlSpec::toggle(2), // enabled
-                ControlSpec::knob(3),   // mix
-                ControlSpec::knob(12),  // itd_delay_ms
-            ],
+            "DISABLED",
+            "MODE",
+            &[ControlSpec::button_set(0, MODE_LABELS), ControlSpec::knob(3)],
         )
+        .visible_when(ParamCondition::choice(0, 0))
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "mode-selector",
-            "MODE",
+            "BAUER",
+            "BAUER",
             &[
                 ControlSpec::button_set(0, MODE_LABELS), // mode
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
-        ControlGroup::new(
-            "BAUER",
-            "BAUER",
-            &[
+                ControlSpec::knob(3), // mix
                 ControlSpec::knob(4), // bauer_fcut_hz
                 ControlSpec::knob(5), // bauer_feed_db
             ],
         )
         .visible_when(ParamCondition::choice(0, 1))
-        .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "meier",
             "MEIER",
-            &[ControlSpec::knob(6)], // meier_level
+            &[
+                ControlSpec::button_set(0, MODE_LABELS),
+                ControlSpec::knob(3), // mix
+                ControlSpec::knob(6), // meier_level
+            ],
         )
         .visible_when(ParamCondition::choice(0, 2))
-        .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "MULTIBAND",
             "MULTIBAND",
             &[
+                ControlSpec::button_set(0, MODE_LABELS), // mode
+                ControlSpec::knob(3),  // mix
                 ControlSpec::knob(7),  // mb_low_freq_hz
-                ControlSpec::knob(8),  // mb_mid_high_freq_hz
                 ControlSpec::knob(9),  // mb_low_feed_db
+            ],
+        )
+        .visible_when(ParamCondition::choice(0, 3))
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "MULTIBAND DETAIL",
+            "MULTIBAND DETAIL",
+            &[
+                ControlSpec::knob(8),  // mb_mid_high_freq_hz
                 ControlSpec::knob(10), // mb_mid_feed_db
                 ControlSpec::knob(11), // mb_high_feed_db
             ],
         )
         .visible_when(ParamCondition::choice(0, 3))
         .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        ControlGroup::new(
+            "HRTF",
+            "HRTF",
+            &[ControlSpec::button_set(0, MODE_LABELS), ControlSpec::knob(3)],
+        )
+        .visible_when(ParamCondition::choice(0, 4))
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "OPTIONS",
+            "OPTIONS",
+            &[ControlSpec::toggle(2), ControlSpec::knob(12)],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         // Head yaw steers the differential ITD in every active mode, so it
         // stays visible regardless of the selected mode.
         ControlGroup::new(

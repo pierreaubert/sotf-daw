@@ -80,6 +80,7 @@ categories = ["multimedia::audio"]
 readme = "README.md"
 
 [workspace.dependencies]
+plist = "1.10.1"
 driver-common = { path = "crates/driver-common" }
 driver-hal = { path = "crates/driver-hal" }
 sotf-capture = { path = "../sotf-capture" }
@@ -91,7 +92,7 @@ sotf-engine = { path = "crates/sotf-engine", default-features = false }
 sotf-room-eq-graph = { path = "crates/sotf-room-eq-graph" }
 sotf-host = { path = "crates/sotf-plugins/crates/sotf-host", default-features = false }
 sotf-iamf = { path = "crates/sotf-iamf" }
-symphonia-iamf-core = { path = "../symphonia-add-ons/symphonia-iamf-core" }
+symphonia-iamf-core = { git = "https://github.com/pierreaubert/symphonia-add-ons" }
 sotf-midi = { path = "crates/sotf-midi" }
 sotf-plugin-aae = { path = "crates/sotf-plugins/crates/sotf-plugin-aae" }
 sotf-plugin-ab-compare = { path = "crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
@@ -156,7 +157,7 @@ cbindgen = "0.28"
 chacha20poly1305 = { version = "0.11", features = ["zeroize"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
-coreaudio-rs = "0.14.2"
+coreaudio-rs = { version = "0.14.2", package = "sotf-coreaudio-rs", git = "https://github.com/pierreaubert/sotf-3rdparties" }
 cpal = "0.17"
 criterion = "0.8.2"
 crossbeam = "0.8"
@@ -164,7 +165,7 @@ crossterm = "0.29"
 ctrlc = { version = "3.5", features = ["termination"] }
 directories = "6"
 env_logger = "0.11"
-gpui = { package = "gpui-toolkit-gpui", version = "0.2.3", path = "../sotf-3rdparties/gpui/crates/gpui" }
+gpui = { package = "sotf-gpui-toolkit-gpui", version = "0.2.3", git = "https://github.com/pierreaubert/sotf-3rdparties" }
 gpui-au = { version = "0.9", path = "../gpui-toolkit/crates/gpui-au" }
 gpui-audio-kit = { version = "0.9", path = "../gpui-toolkit/crates/gpui-audio-kit" }
 gpui-builder = { version = "0.9", path = "../gpui-toolkit/crates/gpui-builder" }
@@ -185,9 +186,9 @@ math-iir-fir = { version = "0.5", path = "../math-audio/crates/math-iir-fir" }
 math-rir = { version = "0.5", path = "../math-audio/crates/math-rir" }
 memmap2 = "0.9.11"
 midir = "0.11"
-nalgebra = { version = "0.35", default-features = false, features = ["std"] }
+nalgebra = { package = "sotf-nalgebra", git = "https://github.com/pierreaubert/sotf-3rdparties",  version = "0.35", default-features = false, features = ["std"] }
 ndarray = { version = "0.17", default-features = false, features = ["rayon", "serde"] }
-nnnoiseless = "0.1"
+nnnoiseless = { version = "0.1", package = "sotf-nnnoiseless", git = "https://github.com/pierreaubert/sotf-3rdparties" }
 notify = { version = "8.2" }
 num-complex = "0.4"
 parking_lot = { version = "0.12", features = ["deadlock_detection"] }
@@ -202,7 +203,7 @@ reqwest = { version = "0.13", features = ["json"] }
 rtrb = "0.4"
 # Private fork of rubato 5.0.0 (exact variable-ratio sizing, prepared cutoff
 # tables); the shared DSP fork lives in sotf-3rdparties/rubato.
-rubato = { path = "../sotf-3rdparties/rubato" }
+rubato = { version = "5.0.0",  package = "sotf-rubato",  git = "https://github.com/pierreaubert/sotf-3rdparties" }
 rusqlite = { version = "0.38" }
 rustfft = "6.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -211,7 +212,7 @@ serde_yaml = "0.9"
 serial_test = "4.0.1"
 sha2 = "0.11"
 signal-hook = "0.3.18"
-sofa-reader = { version = "0.2", path = "../sofa-reader" }
+sofa-reader = { version = "0.2", git = "https://github.com/pierreaubert/sofa-reader" }
 symphonia = { version = "0.6", default-features = false }
 symphonia-bundle-flac = "0.6"
 symphonia-bundle-mp3 = "0.6"
@@ -219,7 +220,7 @@ symphonia-codec-aac = "0.6"
 symphonia-codec-alac = "0.6"
 symphonia-codec-pcm = "0.6"
 symphonia-codec-vorbis = "0.6"
-symphonia-codec-wavpack = { version = "0.1.0", path = "../symphonia-add-ons/symphonia-codec-wavpack" }
+symphonia-codec-wavpack = { version = "0.1.0", git = "https://github.com/pierreaubert/symphonia-add-ons" }
 symphonia-core = "0.6"
 symphonia-format-isomp4 = "0.6"
 symphonia-format-ogg = "0.6"
@@ -229,7 +230,7 @@ tempfile = "3.23"
 thiserror = "2.0.17"
 tokio = { version = "1", features = ["rt-multi-thread", "fs", "macros", "io-util", "process", "signal"] }
 toml = "1.1"
-tract-onnx = "0.22"
+tract-onnx = { version = "0.22", package = "sotf-tract-onnx", git = "https://github.com/pierreaubert/sotf-3rdparties" }
 url = "2"
 walkdir = "2"
 which = "8"
@@ -292,42 +293,13 @@ incremental = false
 strip = "symbols"
 
 # Vendored forks owned by this workspace.
-[patch.crates-io]
 # SOTF owned maintenance forks; upstream 2.1.1, local version 2.1.2.
-derive_more = { path = "../sotf-3rdparties/derive_more" }
-derive_more-impl = { path = "../sotf-3rdparties/derive_more-impl" }
 
-oo7 = { path = "../sotf-3rdparties/oo7" }
 # Match GPUI compatibility forks: workspace patches are not inherited.
-fontconfig-parser = { path = "../sotf-3rdparties/fontconfig-parser" }
-rusty-fork = { path = "../sotf-3rdparties/rusty-fork" }
-psm = { path = "../sotf-3rdparties/stacker/psm" }
-nalgebra = { path = "../sotf-3rdparties/nalgebra" }
-tract-core = { path = "../sotf-3rdparties/tract/core" }
-tract-data = { path = "../sotf-3rdparties/tract/data" }
-tract-hir = { path = "../sotf-3rdparties/tract/hir" }
-tract-linalg = { path = "../sotf-3rdparties/tract/linalg" }
-tract-nnef = { path = "../sotf-3rdparties/tract/nnef" }
-tract-onnx = { path = "../sotf-3rdparties/tract/onnx" }
-tract-onnx-opl = { path = "../sotf-3rdparties/tract/onnx-opl" }
-block = { path = "../sotf-3rdparties/block" }
-objc = { path = "../sotf-3rdparties/objc" }
-async-task = { path = "../sotf-3rdparties/async-task" }
-nnnoiseless = { path = "../sotf-3rdparties/nnnoiseless" }
-coreaudio-rs = { path = "../sotf-3rdparties/coreaudio-rs" }
 
 # Keep Vello's crates.io wgpu dependency on the same Zed fork used by GPUI.
 # Dependency patches are root-workspace configuration and are not inherited
 # from the gpui-toolkit git dependency.
-wgpu = { path = "../sotf-3rdparties/wgpu/wgpu" }
-wgpu-core = { path = "../sotf-3rdparties/wgpu/wgpu-core" }
-wgpu-hal = { path = "../sotf-3rdparties/wgpu/wgpu-hal" }
-wgpu-types = { path = "../sotf-3rdparties/wgpu/wgpu-types" }
-naga = { path = "../sotf-3rdparties/wgpu/naga" }
 
-[patch."https://github.com/zed-industries/font-kit"]
-zed-font-kit = { path = "../sotf-3rdparties/zed-font-kit" }
 
 # Pinned NIH with narrowly scoped CLAP event-offset and transport fixes.
-[patch."https://github.com/robbert-vdh/nih-plug.git"]
-nih_plug = { path = "../sotf-3rdparties/nih-plug" }

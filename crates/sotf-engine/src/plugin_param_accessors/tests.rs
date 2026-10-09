@@ -2341,3 +2341,32 @@ fn crossfeed_nonfinite_yaw_rejected_without_poisoning_accepted_audio() {
     rebuilt.initialize(48_000.0).unwrap();
     assert_eq!(render(&mut rebuilt), accepted_out);
 }
+
+#[test]
+fn loudness_auto_gain_alias_tracks_canonical_position_in_both_directions() {
+    let mut settings = PluginSettings::default_for(&PluginType::LoudnessCompensation).unwrap();
+    for (index, value, position, enabled) in [
+        (15, 1.0, 1, true),
+        (15, 2.0, 2, true),
+        (15, 0.0, 0, false),
+        (8, 1.0, 2, true),
+        (8, 0.0, 0, false),
+    ] {
+        settings.set_param_value(index, value);
+        assert_eq!(settings.param_value(15), Some(position as f64));
+        assert_eq!(
+            settings.param_value(8),
+            Some(if enabled { 1.0 } else { 0.0 })
+        );
+        let PluginSettings::LoudnessCompensation {
+            auto_gain_enabled,
+            auto_gain_position,
+            ..
+        } = &settings
+        else {
+            panic!("wrong plugin variant");
+        };
+        assert_eq!(*auto_gain_enabled, enabled);
+        assert_eq!(*auto_gain_position, position);
+    }
+}

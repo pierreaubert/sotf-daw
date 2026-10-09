@@ -6,6 +6,22 @@ use crate::plugin::{
 };
 use crate::serialization::{PluginPreset, SerializablePlugin};
 use std::collections::HashMap;
+use std::sync::Arc;
+
+/// Immutable hosted parameter state captured by the control-thread handshake.
+///
+/// The UI reads this snapshot through `Plugin::get_data`; it never invokes native
+/// getters or IPC from a render callback. Missing values remain unavailable,
+/// rather than being replaced by metadata defaults.
+#[derive(Debug, Clone)]
+pub struct ExternalPluginEditorData {
+    pub plugin_instance_id: Option<usize>,
+    pub descriptor: PluginDescriptor,
+    pub parameters: Vec<Parameter>,
+    pub parameter_values: HashMap<ParameterId, ParameterValue>,
+    /// Native state captured alongside these values; errors must remain visible.
+    pub native_state: Result<ExternalPluginState, String>,
+}
 
 /// Reserved engine-config parameter used to correlate a hosted worker with
 /// the persisted player plugin instance that created it.
@@ -64,6 +80,9 @@ pub struct ExternalPlugin {
     restore_error: Option<String>,
     opaque_state: Vec<u8>,
     native_backend: Option<Box<dyn NativeExternalPluginBackend>>,
+    plugin_instance_id: Option<usize>,
+    editor_data: Option<Arc<ExternalPluginEditorData>>,
+    editor_dirty: bool,
 }
 
 impl ExternalPlugin {
@@ -214,11 +233,58 @@ impl ExternalPlugin {
             restore_error: None,
             opaque_state: Vec::new(),
             native_backend: Some(native_backend),
+            plugin_instance_id: None,
+            editor_data: None,
+            editor_dirty: false,
         };
         if let Some(setup) = backend_audio_setup.as_ref() {
             plugin.validate_native_audio_setup_parameters(setup)?;
         }
         Ok(plugin)
+    }
+
+    /// Bind native editor readback to the owning persisted graph instance.
+    ///
+    /// Call from the serialized control thread after construction and restore.
+    /// This does not change native parameters or the hosting trust policy.
+    pub fn bind_editor_instance(&mut self, instance_id: usize) {
+        self.plugin_instance_id = Some(instance_id);
+        self.refresh_editor_data();
+    }
+
+    fn refresh_editor_data(&mut self) {
+        self.editor_dirty = false;
+        let Some(instance_id) = self.plugin_instance_id else {
+            return;
+        };
+        let Some(backend) = self.native_backend.as_ref() else {
+            self.editor_data = None;
+            return;
+        };
+        self.parameters = backend.parameters();
+        let parameter_values = self
+            .parameters
+            .iter()
+            .filter_map(|parameter| {
+                backend
+                    .get_parameter(&parameter.id)
+                    .map(|value| (parameter.id.clone(), value))
+            })
+            .collect();
+        let native_state = match backend.save_state() {
+            Ok(bytes) => {
+                self.opaque_state = bytes.unwrap_or_default();
+                Ok(self.placeholder_state())
+            }
+            Err(error) => Err(error),
+        };
+        self.editor_data = Some(Arc::new(ExternalPluginEditorData {
+            plugin_instance_id: Some(instance_id),
+            descriptor: self.discovery_descriptor.clone(),
+            parameters: self.parameters.clone(),
+            parameter_values,
+            native_state,
+        }));
     }
 
     /// Get the plugin descriptor.
@@ -1200,6 +1266,7 @@ impl ExternalPlugin {
         self.parameters = backend.parameters();
         self.native_backend = Some(backend);
         self.opaque_state = opaque_state;
+        self.refresh_editor_data();
     }
 
     fn replacement_backend_for_state(
@@ -1346,6 +1413,8 @@ impl ExternalPlugin {
                 self.descriptor.name, self.hosting_backend
             )
         })?;
+        let pending_updates =
+            backend.has_pending_parameter_updates() || !ctx.parameter_events.is_empty();
         backend.process(
             input,
             output,
@@ -1353,6 +1422,11 @@ impl ExternalPlugin {
             self.output_channels,
             ctx,
         )?;
+        if pending_updates {
+            // Native processor state now includes edits that could previously
+            // exist only in controller queues. Never capture it on this path.
+            self.editor_dirty = true;
+        }
         Ok(ctx.num_frames)
     }
 }
@@ -1701,6 +1775,9 @@ impl Plugin for ExternalPlugin {
         if let Some(backend) = self.native_backend.as_mut() {
             let _ = backend.refresh_tail_length();
         }
+        if self.editor_dirty {
+            self.refresh_editor_data();
+        }
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
@@ -1794,6 +1871,7 @@ impl Plugin for ExternalPlugin {
         if let Some(backend) = self.native_backend.as_mut() {
             backend.reset()?;
         }
+        self.editor_dirty = true;
         Ok(())
     }
 
@@ -1823,6 +1901,9 @@ impl Plugin for ExternalPlugin {
                 self.descriptor.name
             ));
         };
+        if parameter.read_only {
+            return Err(format!("external parameter '{id}' is read-only"));
+        }
         parameter.validate(&value)?;
         self.native_backend
             .as_mut()
@@ -1832,7 +1913,20 @@ impl Plugin for ExternalPlugin {
                     self.descriptor.name
                 )
             })?
-            .set_parameter(&id, &value)
+            .set_parameter(&id, &value)?;
+        // Setters can run in queued events and block automation. Native state
+        // capture belongs to the explicit control-thread metadata hook.
+        self.editor_dirty = true;
+        Ok(())
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn std::any::Any + Send + Sync>> {
+        if self.editor_dirty {
+            return None;
+        }
+        self.editor_data
+            .as_ref()
+            .map(|data| Arc::clone(data) as Arc<dyn std::any::Any + Send + Sync>)
     }
 
     fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
@@ -1869,6 +1963,7 @@ impl Plugin for ExternalPlugin {
 
             if state.is_empty() {
                 self.opaque_state.clear();
+                self.refresh_editor_data();
                 return Ok(());
             }
             // CLAP suspends/deactivates the installed instance before the
@@ -1887,6 +1982,7 @@ impl Plugin for ExternalPlugin {
 
         if state.is_empty() {
             self.opaque_state.clear();
+            self.refresh_editor_data();
             return Ok(());
         }
 

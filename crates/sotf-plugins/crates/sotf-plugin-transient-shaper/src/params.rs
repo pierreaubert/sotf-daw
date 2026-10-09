@@ -61,32 +61,25 @@ pub const PARAMS: &[ParamSpec] = &[
 
 /// TransientShaper: idx 0=attack, 1=sustain, 2=sensitivity, 3=output_gain, 4=mix
 ///
-/// ui.md Phase 4 rollout: the attack/sustain row is pinned visible at every
-/// width; sensitivity stays in config and mix/trim in the output slot.
+/// Shape, detection sensitivity, output gain, and mix remain directly visible.
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[
-        ControlSpec::knob(2), // sensitivity
-    ],
+    config: &[],
     main: &[ControlGroup::new(
         "SHAPE",
         "SHAPE",
         &[
             ControlSpec::slider(0), // attack
             ControlSpec::slider(1), // sustain
+            ControlSpec::slider(2), // sensitivity
+            ControlSpec::slider(3), // output_gain
+            ControlSpec::slider(4), // mix
         ],
     )
     .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
-    output: &[
-        ControlSpec::knob(3), // output_gain
-        ControlSpec::knob(4), // mix
-    ],
+    output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(100.0, 0.5),
-        ColumnConstraint::main(300.0),
-        ColumnConstraint::output(120.0, 0.6),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

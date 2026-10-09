@@ -65,15 +65,14 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[
-        ControlSpec::slider(0), // num_mics
-        ControlSpec::slider(1), // mic_spacing_cm
-    ],
+    config: &[],
     main: &[ControlGroup::new(
         "primary",
-        "",
+        "Array & direction",
         &[
-            ControlSpec::slider(2),   // steer_angle_deg
+            ControlSpec::knob(0),    // num_mics
+            ControlSpec::knob(1),    // mic_spacing_cm
+            ControlSpec::knob(2),    // steer_angle_deg
             ControlSpec::selector(3), // beamformer_type
         ],
     )

@@ -21,3 +21,7 @@ pub use gate_data::*;
 pub use gate_plugin::*;
 pub use mode::{GateMode, MODES};
 pub use types::*;
+
+mod response;
+#[doc(inline)]
+pub use response::target_gain_db;

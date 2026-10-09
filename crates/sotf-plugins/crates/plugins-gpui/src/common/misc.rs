@@ -52,8 +52,16 @@ pub(super) fn compute_transfer(
     knee_db: f64,
     is_limiter: bool,
 ) -> f64 {
-    if is_limiter {
+    if is_limiter && knee_db <= 0.0 {
         input_db.min(threshold_db)
+    } else if knee_db <= 0.0 {
+        // A hard knee has no interpolation interval. At the threshold, the
+        // soft-knee expression would divide zero by zero and poison the path.
+        if input_db <= threshold_db {
+            input_db
+        } else {
+            threshold_db + (input_db - threshold_db) / ratio
+        }
     } else if input_db < threshold_db - knee_db / 2.0 {
         input_db
     } else if input_db > threshold_db + knee_db / 2.0 {
@@ -69,6 +77,7 @@ pub(super) fn compute_transfer(
 mod tests {
 
     use super::super::{curve_endpoints, format_shortcut_label};
+    use super::compute_transfer;
 
     #[test]
     fn format_shortcut_label_highlights_after_utf8_prefix() {
@@ -78,6 +87,52 @@ mod tests {
     #[test]
     fn format_shortcut_label_highlights_unicode_key() {
         assert_eq!(format_shortcut_label("éclair", Some('é')), "[É]clair");
+    }
+
+    #[test]
+    fn hard_knee_threshold_and_sampled_curve_are_finite() {
+        // -45 dB is one of the renderer's 64 evenly spaced input samples.
+        for threshold in [-60.0, -45.0, -30.0, 0.0] {
+            assert_eq!(
+                compute_transfer(threshold, threshold, 10.0, 0.0, false),
+                threshold
+            );
+            for sample in 0..=64 {
+                let input = -60.0 + sample as f64 * 60.0 / 64.0;
+                let expected = if input <= threshold {
+                    input
+                } else {
+                    threshold + (input - threshold) / 10.0
+                };
+                let output = compute_transfer(input, threshold, 10.0, 0.0, false);
+                assert!(output.is_finite());
+                assert!((output - expected).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn soft_knee_meets_the_hard_regions_continuously() {
+        assert!((compute_transfer(-23.0, -20.0, 4.0, 6.0, false) + 23.0).abs() < 1e-12);
+        assert!((compute_transfer(-17.0, -20.0, 4.0, 6.0, false) + 19.25).abs() < 1e-12);
+        assert_eq!(
+            compute_transfer(-20.0, -20.0, f64::INFINITY, 0.0, true),
+            -20.0
+        );
+    }
+
+    #[test]
+    fn limiter_soft_knee_matches_the_one_db_gain_computer() {
+        for (input, output) in [
+            (-20.5, -20.5),
+            (-20.0, -20.125),
+            (-19.5, -20.0),
+            (-10.0, -20.0),
+        ] {
+            assert!(
+                (compute_transfer(input, -20.0, f64::INFINITY, 1.0, true) - output).abs() < 1e-12
+            );
+        }
     }
 
     #[test]

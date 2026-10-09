@@ -50,19 +50,14 @@ pub const PARAMS: &[ParamSpec] = &[
 /// Dither: idx 0=bit_depth, 1=noise_shaping, 2=dither_type
 ///
 /// Keep destination depth, quantization method, and noise shaping together
-/// on the primary surface in the order specified by ui-plugins.html.
+/// in the compact title header, without a duplicate body section.
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[ControlGroup::new(
-        "DITHER",
-        "DITHER",
-        &[
-            ControlSpec::selector(0), // bit_depth
-            ControlSpec::selector(2), // dither_type
-            ControlSpec::toggle(1),   // noise_shaping
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    config: &[
+        ControlSpec::button_set(0, BIT_DEPTH_LABELS),
+        ControlSpec::selector(2),
+        ControlSpec::toggle(1),
+    ],
+    main: &[],
     output: &[],
     tabs: &[],
     visualizations: &[],
@@ -178,20 +173,5 @@ mod tests {
         assert_eq!(p.bit_depth, pk(PARAMS, "bit_depth").default_usize());
         assert_eq!(p.noise_shaping, pk(PARAMS, "noise_shaping").default_bool());
         assert_eq!(p.dither_type, pk(PARAMS, "dither_type").default_usize());
-    }
-
-    #[test]
-    fn single_group_is_pinned_visible_at_minimum_width() {
-        use sotf_host::layout_solver::solve_control_groups;
-        use sotf_host::plugin_layout::GroupOverflow;
-
-        let group = &LAYOUT.main[0];
-        assert_eq!(group.layout.collapse_priority, 1.0);
-        assert_eq!(group.layout.overflow, GroupOverflow::KeepVisible);
-
-        let groups: Vec<_> = LAYOUT.main.iter().collect();
-        let solved = solve_control_groups(&groups, 320.0).unwrap();
-        assert!(solved.find("DITHER").unwrap().visible());
-        assert!(solved.collapsed_slots().next().is_none());
     }
 }

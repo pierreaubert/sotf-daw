@@ -80,7 +80,11 @@ pub fn convert_saturation(settings: &PluginSettings, _sample_rate: f64) -> Optio
         oversampling,
         output_gain_db,
         mix,
-        ..
+        dynamic_amount,
+        dynamic_attack_ms,
+        dynamic_release_ms,
+        dc_blocker,
+        use_adaa,
     } = settings
     else {
         return None;
@@ -101,6 +105,11 @@ pub fn convert_saturation(settings: &PluginSettings, _sample_rate: f64) -> Optio
             "oversampling": os_str,
             "output_gain_db": *output_gain_db as f32,
             "mix": *mix as f32,
+            "dynamic_amount": *dynamic_amount as f32,
+            "dynamic_attack_ms": *dynamic_attack_ms as f32,
+            "dynamic_release_ms": *dynamic_release_ms as f32,
+            "dc_blocker_enabled": dc_blocker,
+            "use_adaa": use_adaa,
         }),
     ))
 }
@@ -764,6 +773,40 @@ mod tests {
 
         let config = convert_saturation(&settings, 48_000.0).unwrap();
         assert_eq!(config.parameters["mode"], "Asymmetric");
+    }
+
+    #[test]
+    fn saturation_advanced_settings_survive_engine_rebuild() {
+        let mut settings = PluginSettings::default_for(&PluginType::Saturation).unwrap();
+        let PluginSettings::Saturation {
+            dynamic_amount,
+            dynamic_attack_ms,
+            dynamic_release_ms,
+            dc_blocker,
+            use_adaa,
+            ..
+        } = &mut settings else {
+            unreachable!()
+        };
+        *dynamic_amount = 0.63;
+        *dynamic_attack_ms = 37.0;
+        *dynamic_release_ms = 271.0;
+        *dc_blocker = false;
+        *use_adaa = false;
+
+        let config = convert_saturation(&settings, 48_000.0).unwrap();
+        assert_eq!(config.parameters["dynamic_amount"], 0.63_f32);
+        assert_eq!(config.parameters["dynamic_attack_ms"], 37.0_f32);
+        assert_eq!(config.parameters["dynamic_release_ms"], 271.0_f32);
+        assert_eq!(config.parameters["dc_blocker_enabled"], false);
+        assert_eq!(config.parameters["use_adaa"], false);
+        let rebuilt: sotf_plugins::SaturationPluginParams =
+            serde_json::from_value(config.parameters).unwrap();
+        assert_eq!(rebuilt.dynamic_amount, 0.63_f32);
+        assert_eq!(rebuilt.dynamic_attack_ms, 37.0_f32);
+        assert_eq!(rebuilt.dynamic_release_ms, 271.0_f32);
+        assert!(!rebuilt.dc_blocker_enabled);
+        assert!(!rebuilt.use_adaa);
     }
 
     #[test]

@@ -113,7 +113,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .doc("Remove DC offset from asymmetric saturation"),
     ParamSpec::bool_labeled("ADAA", "use_adaa", true, "On", "Off", "Quality")
         .structural()
-        .doc("Antiderivative anti-aliasing when oversampling is off"),
+        .doc("Antiderivative anti-aliasing for the Soft Clip algorithm"),
 ];
 
 // ============================================================================
@@ -123,13 +123,13 @@ pub const PARAMS: &[ParamSpec] = &[
 /// Saturation: idx 0=mode, 1=drive, 2=tone, 3=exciter_freq, 4=oversampling, 5=output_gain, 6=mix,
 ///             7=dynamic_amount, 8=dynamic_attack_ms, 9=dynamic_release_ms, 10=dc_blocker, 11=use_adaa
 ///
-/// ui.md Phase 4 rollout: SATURATION character/drive is pinned visible;
-/// OUTPUT mix/trim collapses last; DYNAMIC and EXCITER detail disclose first.
+/// Mode and quality choices occupy the header; primary sliders stay visible.
+/// Exciter and dynamic envelope settings appear in secondary sections.
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(4), // oversampling
-        ControlSpec::toggle(10),  // dc_blocker
-        ControlSpec::toggle(11),  // use_adaa
+        ControlSpec::button_set(4, OVERSAMPLING_OPTIONS), // oversampling
+        ControlSpec::toggle(10),                          // dc_blocker
+        ControlSpec::toggle(11).enabled_when(ParamCondition::choice(0, 0)), // use_adaa
     ],
     main: &[
         ControlGroup::new(
@@ -138,7 +138,9 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             &[
                 ControlSpec::selector(0), // mode
                 ControlSpec::slider(1),   // drive
-                ControlSpec::slider(2),   // tone
+                ControlSpec::slider(2).enabled_when(ParamCondition::choice_in(0, &[1, 4])), // tone
+                ControlSpec::slider(5),   // output_gain
+                ControlSpec::slider(6),   // mix
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -146,7 +148,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "EXCITER",
             "EXCITER",
             &[
-                ControlSpec::slider(3), // exciter_freq
+                ControlSpec::slider(3).enabled_when(ParamCondition::choice(0, 3)), // exciter_freq
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.3)),
@@ -160,23 +162,11 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.4)),
-        ControlGroup::new(
-            "OUTPUT",
-            "OUTPUT",
-            &[
-                ControlSpec::knob(5), // output_gain
-                ControlSpec::knob(6), // mix
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.9)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(100.0, 0.5),
-        ColumnConstraint::main(300.0),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 
@@ -418,15 +408,21 @@ mod tests {
     }
 
     #[test]
-    fn saturation_group_is_pinned_and_output_collapses_last() {
+    fn saturation_primary_includes_output_and_is_pinned() {
         use sotf_host::layout_solver::solve_control_groups;
         use sotf_host::plugin_layout::GroupOverflow;
 
         let saturation = &LAYOUT.main[0];
         assert_eq!(saturation.layout.collapse_priority, 1.0);
         assert_eq!(saturation.layout.overflow, GroupOverflow::KeepVisible);
-        assert!(LAYOUT.main[3].layout.collapse_priority > LAYOUT.main[1].layout.collapse_priority);
-        assert!(LAYOUT.main[3].layout.collapse_priority > LAYOUT.main[2].layout.collapse_priority);
+        let primary_indices: Vec<_> = saturation
+            .controls
+            .iter()
+            .map(|control| control.param_index)
+            .collect();
+        assert_eq!(primary_indices, [0, 1, 2, 5, 6]);
+        assert!(saturation.layout.collapse_priority > LAYOUT.main[1].layout.collapse_priority);
+        assert!(saturation.layout.collapse_priority > LAYOUT.main[2].layout.collapse_priority);
 
         let groups: Vec<_> = LAYOUT.main.iter().collect();
         let solved = solve_control_groups(&groups, 320.0).unwrap();

@@ -141,14 +141,9 @@ mod tests {
             pk(PARAMS, "lookahead_ms").default_f64() as f32
         );
         assert_eq!(p.processing_mode, "time_domain");
-        assert_eq!(
-            p.auto_makeup,
-            Some(pk(PARAMS, "auto_makeup").default_bool())
-        );
-        assert_eq!(
-            p.measured_auto_makeup,
-            Some(pk(PARAMS, "measured_auto_makeup").default_bool())
-        );
+        // Absent single-band aliases must not override explicit band 0 values.
+        assert_eq!(p.auto_makeup, None);
+        assert_eq!(p.measured_auto_makeup, None);
         assert_eq!(
             p.sidechain_hpf_hz,
             Some(pk(PARAMS, "sidechain_hpf_hz").default_f64() as f32)

@@ -134,52 +134,46 @@ pub const PARAMS: &[ParamSpec] = &[
 /// 8=mix_transition, 9=phase_invert_a, 10=phase_invert_b, 11=difference_mode,
 /// 12=band_mask_low, 13=band_mask_high, 14=path_a_config, 15=path_b_config
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[
-        ControlGroup::new(
-            "A/B MIX",
-            "A/B MIX",
-            &[
-                ControlSpec::slider(0),                         // mix (A/B)
-                ControlSpec::button_set(1, &["Pot", "Binary"]), // mix_mode
-                ControlSpec::button_set(2, &["A", "B"]),        // selected_path
-                ControlSpec::toggle(3),                         // bypass
-                ControlSpec::toggle(11),                        // difference_mode
-                ControlSpec::knob(8),                           // mix_transition_ms
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "PHASE",
-            "PHASE",
-            &[
-                ControlSpec::toggle(9),  // phase_invert_a
-                ControlSpec::toggle(10), // phase_invert_b
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
-        ControlGroup::new(
-            "AUTO GAIN",
-            "AUTO GAIN",
-            &[
-                ControlSpec::toggle(4), // auto_gain
-                ControlSpec::selector(5).enabled_when(ParamCondition::bool(4, true)),
+    config: &[
+        ControlSpec::button_set(1, &["Pot", "Binary"]),
+        // The custom Path A/B buttons own binary selection and crossfade endpoints.
+        ControlSpec {
+            hidden: true,
+            ..ControlSpec::button_set(2, &["A", "B"])
+        },
+        ControlSpec::toggle(3),
+        ControlSpec::toggle(4),
+        ControlSpec::selector(5).enabled_when(ParamCondition::bool(4, true)),
+        ControlSpec::toggle(11),
+    ],
+    main: &[ControlGroup::new(
+        "A/B MIX",
+        "A/B MIX",
+        &[ControlSpec::slider(0).enabled_when(ParamCondition::choice(1, 0))],
+    )
+    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    output: &[],
+    tabs: &[
+        TabSpec {
+            name: "Match & Timing",
+            controls: &[
                 ControlSpec::knob(6).enabled_when(ParamCondition::bool(4, true)),
                 ControlSpec::knob(7).enabled_when(ParamCondition::bool(4, true)),
+                ControlSpec::knob(8), // mix_transition_ms
             ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
+        },
+        TabSpec {
+            name: "Paths",
+            controls: &[
+                ControlSpec::toggle(9),       // phase_invert_a
+                ControlSpec::toggle(10),      // phase_invert_b
+                ControlSpec::knob(12),        // band_mask_low_hz
+                ControlSpec::knob(13),        // band_mask_high_hz
+                ControlSpec::file_picker(14), // path_a_config
+                ControlSpec::file_picker(15), // path_b_config
+            ],
+        },
     ],
-    output: &[],
-    tabs: &[TabSpec {
-        name: "Paths",
-        controls: &[
-            ControlSpec::knob(12),        // band_mask_low_hz
-            ControlSpec::knob(13),        // band_mask_high_hz
-            ControlSpec::file_picker(14), // path_a_config
-            ControlSpec::file_picker(15), // path_b_config
-        ],
-    }],
     visualizations: &[],
     column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],

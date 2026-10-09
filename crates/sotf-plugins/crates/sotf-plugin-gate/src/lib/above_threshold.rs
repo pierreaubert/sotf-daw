@@ -6,18 +6,13 @@ use math_audio_dsp::fast_math::{fast_log10, fast_pow10};
 
 impl GatePlugin {
     fn above_threshold_magnitude(&self, level_db: f32, threshold_db: f32) -> f32 {
-        let above = level_db - threshold_db;
-        let hinge = if self.knee_db < 0.1 {
-            above.max(0.0)
-        } else if above <= -self.knee_db / 2.0 {
-            0.0
-        } else if above >= self.knee_db / 2.0 {
-            above
-        } else {
-            let distance = above + self.knee_db / 2.0;
-            distance * distance / (2.0 * self.knee_db)
-        };
-        (hinge * (self.ratio - 1.0)).min(self.effect_limit())
+        crate::response::above_threshold_magnitude(
+            level_db,
+            threshold_db,
+            self.ratio,
+            self.knee_db,
+            self.effect_limit(),
+        )
     }
 
     fn effect_limit(&self) -> f32 {

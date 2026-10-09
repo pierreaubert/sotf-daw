@@ -28,6 +28,9 @@ pub struct DenoiserData {
 
     /// Whether using captured profile
     pub using_captured_profile: bool,
+
+    /// Requested use flag, including when no profile is available yet.
+    pub requested_use_profile: bool,
 }
 
 impl Clone for DenoiserData {
@@ -41,6 +44,7 @@ impl Clone for DenoiserData {
             has_captured_profile: self.has_captured_profile,
             learning_progress: self.learning_progress,
             using_captured_profile: self.using_captured_profile,
+            requested_use_profile: self.requested_use_profile,
         }
     }
 }
@@ -56,6 +60,7 @@ impl Default for DenoiserData {
             has_captured_profile: false,
             learning_progress: 0.0,
             using_captured_profile: false,
+            requested_use_profile: false,
         }
     }
 }
@@ -84,5 +89,6 @@ impl DenoiserData {
         self.has_captured_profile = other.has_captured_profile;
         self.learning_progress = other.learning_progress;
         self.using_captured_profile = other.using_captured_profile;
+        self.requested_use_profile = other.requested_use_profile;
     }
 }

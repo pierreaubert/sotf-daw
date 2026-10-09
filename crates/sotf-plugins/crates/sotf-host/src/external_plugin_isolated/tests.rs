@@ -2105,3 +2105,165 @@ fn isolated_external_plugin_rejects_capability_policy_for_process_only_backend()
 
     assert!(err.contains("cannot satisfy required policy"));
 }
+
+struct EditorReadbackPlugin {
+    value: f32,
+}
+
+impl Plugin for EditorReadbackPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Editor readback", "0.1", "test")
+    }
+    fn input_channels(&self) -> usize {
+        2
+    }
+    fn output_channels(&self) -> usize {
+        2
+    }
+    fn parameters(&self) -> Vec<Parameter> {
+        vec![
+            Parameter::new_float("value", "Value", 1.0, 0.0, 4.0),
+            Parameter::new_float("complement", "Complement", 1.0, 0.0, 4.0),
+        ]
+    }
+    fn get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        match id.as_str() {
+            "value" => Some(ParameterValue::Float(self.value)),
+            "complement" => Some(ParameterValue::Float(4.0 - self.value)),
+            _ => None,
+        }
+    }
+    fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        let value = value.as_float().ok_or("expected float")?;
+        if id.as_str() != "value" || value == 3.0 {
+            return Err("edit rejected".into());
+        }
+        self.value = (value * 4.0).round() / 4.0;
+        Ok(())
+    }
+    fn save_opaque_state(&self) -> PluginResult<Vec<u8>> {
+        Ok(self.value.to_le_bytes().to_vec())
+    }
+    fn load_opaque_state(&mut self, state: &[u8]) -> PluginResult<()> {
+        self.value = f32::from_le_bytes(state.try_into().map_err(|_| "invalid state")?);
+        Ok(())
+    }
+    fn reset(&mut self) {
+        self.value = 2.0;
+    }
+    fn process(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        output[..context.num_frames * 2].copy_from_slice(&input[..context.num_frames * 2]);
+        Ok(context.num_frames)
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn isolated_editor_snapshot_reads_actual_values_and_preserves_previous_arc() {
+    let plugin_file = tempfile::Builder::new().suffix(".clap").tempfile().unwrap();
+    let mut descriptor = descriptor();
+    descriptor.path = plugin_file.path().to_path_buf();
+    let mut plugin = IsolatedExternalPlugin::new(
+        descriptor.clone(),
+        48_000,
+        IsolatedExternalPluginConfig {
+            worker_command: ExternalPluginWorkerCommand::new("/bin/sleep").arg("30"),
+            start_worker: false,
+            plugin_instance_id: Some(42),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let shared = SecurePluginSharedMemory::open_existing(plugin.proxy.shared_path()).unwrap();
+    let worker =
+        ExternalPluginWorker::new(shared, Box::new(EditorReadbackPlugin { value: 2.5 })).unwrap();
+    let _worker_thread = TestWorkerThread::spawn(worker, None);
+    plugin.refresh_editor_data().unwrap();
+    let id = ParameterId::from("value");
+    let complement = ParameterId::from("complement");
+    let previous = plugin.get_data().unwrap();
+    let before = previous
+        .downcast_ref::<crate::external_plugin::ExternalPluginEditorData>()
+        .unwrap();
+    assert_eq!(before.plugin_instance_id, Some(42));
+    assert_eq!(before.descriptor, descriptor);
+    assert_eq!(
+        before.parameter_values.get(&id),
+        Some(&ParameterValue::Float(2.5))
+    );
+    assert_eq!(
+        before.parameters[0].default_value,
+        ParameterValue::Float(1.0)
+    );
+
+    plugin
+        .set_parameter(id.clone(), ParameterValue::Float(1.13))
+        .unwrap();
+    let current = plugin.get_data().unwrap();
+    let after = current
+        .downcast_ref::<crate::external_plugin::ExternalPluginEditorData>()
+        .unwrap();
+    assert_eq!(
+        after.parameter_values.get(&id),
+        Some(&ParameterValue::Float(1.25))
+    );
+    assert_eq!(
+        after.parameter_values.get(&complement),
+        Some(&ParameterValue::Float(2.75))
+    );
+    assert_eq!(
+        after.native_state.as_ref().unwrap().opaque_state,
+        1.25_f32.to_le_bytes()
+    );
+    assert_eq!(
+        plugin.placeholder_state().opaque_state,
+        1.25_f32.to_le_bytes()
+    );
+    assert_eq!(
+        before.native_state.as_ref().unwrap().opaque_state,
+        2.5_f32.to_le_bytes()
+    );
+    assert_eq!(
+        before.parameter_values.get(&id),
+        Some(&ParameterValue::Float(2.5))
+    );
+    assert_eq!(plugin.get_parameter(&id), Some(ParameterValue::Float(1.25)));
+    assert_no_allocs("external editor cached snapshot", || {
+        let cached = plugin.get_data().unwrap();
+        let data = cached
+            .downcast_ref::<crate::external_plugin::ExternalPluginEditorData>()
+            .unwrap();
+        assert_eq!(
+            data.parameter_values.get(&id),
+            Some(&ParameterValue::Float(1.25))
+        );
+    });
+    assert!(
+        plugin
+            .set_parameter(id.clone(), ParameterValue::Float(3.0))
+            .is_err()
+    );
+    let rejected = plugin.get_data().unwrap();
+    assert!(std::sync::Arc::ptr_eq(&current, &rejected));
+    assert_eq!(plugin.get_parameter(&id), Some(ParameterValue::Float(1.25)));
+    plugin.reset_checked().unwrap();
+    assert_eq!(plugin.get_parameter(&id), Some(ParameterValue::Float(2.0)));
+    let reset = plugin.get_data().unwrap();
+    assert_eq!(
+        reset
+            .downcast_ref::<crate::external_plugin::ExternalPluginEditorData>()
+            .unwrap()
+            .parameter_values
+            .get(&complement),
+        Some(&ParameterValue::Float(2.0))
+    );
+    plugin.quarantined = true;
+    assert_no_allocs("quarantined external editor snapshot", || {
+        assert!(plugin.get_data().is_none());
+    });
+}

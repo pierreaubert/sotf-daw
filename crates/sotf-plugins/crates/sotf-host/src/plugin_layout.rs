@@ -117,7 +117,7 @@ pub enum ControlType {
 
 /// A value-based UI condition evaluated against the plugin's parameter values.
 ///
-/// Conditions are deliberately limited to boolean and choice equality so the
+/// Conditions are deliberately limited to boolean and choice membership so the
 /// layout remains deterministic and portable across GPUI, SwiftUI, and other
 /// hosts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,6 +129,11 @@ pub enum ParamCondition {
     Choice {
         param_index: usize,
         expected_index: usize,
+    },
+    /// Match any member of a fixed set of serialized choice indices.
+    ChoiceIn {
+        param_index: usize,
+        expected_indices: &'static [usize],
     },
 }
 
@@ -147,9 +152,19 @@ impl ParamCondition {
         }
     }
 
+    /// Match any of the supplied choice indices.
+    pub const fn choice_in(param_index: usize, expected_indices: &'static [usize]) -> Self {
+        Self::ChoiceIn {
+            param_index,
+            expected_indices,
+        }
+    }
+
     pub const fn param_index(self) -> usize {
         match self {
-            Self::Bool { param_index, .. } | Self::Choice { param_index, .. } => param_index,
+            Self::Bool { param_index, .. }
+            | Self::Choice { param_index, .. }
+            | Self::ChoiceIn { param_index, .. } => param_index,
         }
     }
 
@@ -160,6 +175,9 @@ impl ParamCondition {
         match self {
             Self::Bool { expected, .. } => (*value > 0.5) == expected,
             Self::Choice { expected_index, .. } => *value as usize == expected_index,
+            Self::ChoiceIn {
+                expected_indices, ..
+            } => expected_indices.iter().any(|index| *value == *index as f64),
         }
     }
 }
@@ -636,5 +654,24 @@ impl PluginLayout {
             }
         }
         errors
+    }
+}
+
+#[cfg(test)]
+mod condition_tests {
+    use super::ParamCondition;
+
+    #[test]
+    fn choice_membership_rejects_missing_and_non_choice_values() {
+        let condition = ParamCondition::choice_in(0, &[1, 4]);
+        for value in [1.0, 4.0] {
+            assert!(condition.matches(&[value]));
+        }
+        for value in [0.0, 2.0, 3.0, 5.0, -1.0, 1.5, f64::NAN, f64::INFINITY] {
+            assert!(!condition.matches(&[value]));
+        }
+        assert!(!condition.matches(&[]));
+        assert!(!ParamCondition::choice_in(0, &[]).matches(&[1.0]));
+        assert_eq!(condition.param_index(), 0);
     }
 }

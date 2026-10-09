@@ -188,7 +188,6 @@ pub const SINGLE_BAND_LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(3), // release
                 ControlSpec::knob(5),   // makeup gain
                 ControlSpec::knob(6),   // mix
-                ControlSpec::meter(-30.0, 0.0),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -215,7 +214,7 @@ pub const SINGLE_BAND_LAYOUT: PluginLayout = PluginLayout {
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.5)),
     ],
-    output: &[],
+    output: &[ControlSpec::meter(-30.0, 0.0)],
     tabs: &[],
     visualizations: &[VizSlot::TransferCurve {
         position: VizPosition::BelowGroup("DYNAMICS"),

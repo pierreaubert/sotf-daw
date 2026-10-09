@@ -12,6 +12,54 @@ use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 
 #[test]
+fn rebuilt_band_range_and_hold_inheritance_follows_later_global_edits() {
+    let params = MultibandExpanderPluginParams {
+        range_db: 90.0,
+        hold_ms: 20.0,
+        bands: vec![
+            BandExpanderParams::default(),
+            BandExpanderParams {
+                range_db: Some(80.0),
+                hold_ms: Some(25.0),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let restored: MultibandExpanderPluginParams =
+        serde_json::from_value(serde_json::to_value(&params).unwrap()).unwrap();
+    let mut plugin = MultibandExpanderPlugin::from_params(2, restored);
+    for (key, expected) in [
+        ("band_0_range", 90.0),
+        ("band_0_hold", 20.0),
+        ("band_1_range", 80.0),
+        ("band_1_hold", 25.0),
+    ] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(key)).unwrap(),
+            ParameterValue::Float(expected)
+        );
+    }
+    plugin
+        .set_parameter(ParameterId::from("range"), ParameterValue::Float(70.0))
+        .unwrap();
+    plugin
+        .set_parameter(ParameterId::from("hold"), ParameterValue::Float(30.0))
+        .unwrap();
+    for (key, expected) in [
+        ("band_0_range", 70.0),
+        ("band_0_hold", 30.0),
+        ("band_1_range", 80.0),
+        ("band_1_hold", 25.0),
+    ] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(key)).unwrap(),
+            ParameterValue::Float(expected)
+        );
+    }
+}
+
+#[test]
 fn test_mb_exp_basic() {
     let mut p = MultibandExpanderPlugin::new(1);
     p.initialize(48000.0).unwrap();
@@ -1364,6 +1412,44 @@ fn test_set_parameter_band_bools() {
     )
     .unwrap();
     assert!(p.band_params[0].bypass);
+}
+
+#[test]
+fn omitted_single_band_makeup_aliases_preserve_explicit_band_zero() {
+    let params = MultibandExpanderPluginParams {
+        bands: vec![BandExpanderParams {
+            auto_makeup: true,
+            measured_auto_makeup: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut serialized = serde_json::to_value(&params).unwrap();
+    serialized.as_object_mut().unwrap().remove("auto_makeup");
+    serialized
+        .as_object_mut()
+        .unwrap()
+        .remove("measured_auto_makeup");
+    let decoded: MultibandExpanderPluginParams = serde_json::from_value(serialized).unwrap();
+    assert_eq!(decoded.auto_makeup, None);
+    assert_eq!(decoded.measured_auto_makeup, None);
+    let plugin = MultibandExpanderPlugin::with_params(1, decoded);
+    assert!(plugin.band_params[0].auto_makeup);
+    assert!(plugin.band_params[0].measured_auto_makeup);
+
+    let explicit_aliases = MultibandExpanderPluginParams {
+        bands: params.bands,
+        auto_makeup: Some(false),
+        measured_auto_makeup: Some(false),
+        ..Default::default()
+    };
+    let aliased = MultibandExpanderPlugin::with_params(1, explicit_aliases);
+    assert!(!aliased.band_params[0].auto_makeup);
+    assert!(!aliased.band_params[0].measured_auto_makeup);
+
+    let default_plugin = MultibandExpanderPlugin::with_params(1, Default::default());
+    assert!(!default_plugin.band_params[0].auto_makeup);
+    assert!(!default_plugin.band_params[0].measured_auto_makeup);
 }
 
 #[test]

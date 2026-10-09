@@ -518,7 +518,7 @@ pub const PARAMS: &[ParamSpec] = &[
     .secondary("Analysis")
     .doc("Source separation sensitivity"),
     // Phase 4G: SOTA addition
-    ParamSpec::bool_param("Binaural Preview", "binaural_preview", false, "Config")
+    ParamSpec::bool_param("Binaural Preview", "binaural_preview", false, "Analysis")
         .structural()
         .setup()
         .doc("Preview surround output binaurally (headphone monitoring, changes output to 2ch)"),
@@ -558,7 +558,6 @@ pub const PARAMS: &[ParamSpec] = &[
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
         ControlSpec::selector(0), // output channels / speaker_config
-        ControlSpec::toggle(43),  // binaural_preview
     ],
     main: &[
         ControlGroup::new(
@@ -633,6 +632,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::selector(36), // frequency_resolution
                 ControlSpec::toggle(41),   // multi_source_extraction
                 ControlSpec::knob(42).enabled_when(ParamCondition::bool(41, true)), // threshold
+                ControlSpec::toggle(43),   // binaural_preview
             ],
         },
         TabSpec {

@@ -34,17 +34,11 @@ pub const PARAMS: &[ParamSpec] = &[
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
-    main: &[ControlGroup::new(
-        "SPEECH",
-        "SPEECH",
-        &[
-            ControlSpec::toggle(0),
-            ControlSpec::knob(1),
-            ControlSpec::choice(2),
-        ],
-    )
-    .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
+    config: &[ControlSpec::toggle(0), ControlSpec::choice(2)],
+    main: &[
+        ControlGroup::new("SPEECH", "SPEECH", &[ControlSpec::knob(1)])
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+    ],
     output: &[],
     tabs: &[],
     visualizations: &[],

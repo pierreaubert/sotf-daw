@@ -728,19 +728,25 @@ pub(super) fn handle_processing_command(
             log::debug!("[Processing Thread] Bypass: {}", bypass);
             response_tx.send(ProcessingResponse::Ok).ok();
         }
-        ProcessingCommand::GetPluginData(index) => match state.host.get_plugin_data(index) {
-            Some(data) => {
-                response_tx.send(ProcessingResponse::PluginData(data)).ok();
-            }
-            None => {
-                response_tx
-                    .send(ProcessingResponse::Error(format!(
-                        "Plugin {} data not available",
-                        index
-                    )))
-                    .ok();
-            }
-        },
+        ProcessingCommand::GetPluginData(index) => {
+            // Commands run between blocks on the serialized control route.
+            // Refresh dirty native state after reset/automation before replying;
+            // the allocation-free bulk audio cache only clones existing data.
+            let data = state
+                .host
+                .refresh_plugin_control_thread_metadata(index)
+                .and_then(|()| {
+                    state
+                        .host
+                        .get_plugin_data(index)
+                        .ok_or_else(|| format!("Plugin {index} data not available"))
+                });
+            let response = match data {
+                Ok(data) => ProcessingResponse::PluginData(data),
+                Err(error) => ProcessingResponse::Error(error),
+            };
+            response_tx.send(response).ok();
+        }
         #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
         ProcessingCommand::PollIsolatedExternalPluginWorkers => {
             let reports = state.host.poll_isolated_external_plugin_workers();

@@ -1886,6 +1886,16 @@ impl LoudnessMonitorPlugin {
 }
 
 impl Plugin for LoudnessMonitorPlugin {
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Analysis observes the input without changing the audio frame clock.
+        true
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        // Retained measurement state never emits audio.
+        crate::plugin::TailLength::Finite(0)
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Loudness Monitor", "1.2.0", "Sotf")
     }

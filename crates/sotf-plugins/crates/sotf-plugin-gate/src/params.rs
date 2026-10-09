@@ -168,27 +168,33 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "DYNAMICS",
             "DYNAMICS",
             &[
-                ControlSpec::selector(15),                                           // mode
-                ControlSpec::slider(0),                                              // threshold
-                ControlSpec::slider(11),                                             // range_db
-                ControlSpec::slider(16).enabled_when(ParamCondition::choice(15, 1)), // upward boost
-                ControlSpec::slider(2),                                              // attack
-                ControlSpec::slider(3),                                              // hold
-                ControlSpec::slider(4),                                              // release
-                ControlSpec::knob(5),                                                // mix
+                ControlSpec::selector(15), // mode
+                ControlSpec::slider(0),    // threshold
+                ControlSpec::slider(11),   // range_db
+                ControlSpec::knob(5),      // mix
                 ControlSpec::meter(-30.0, 0.0),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new("TIMING", "Timing & lookahead", &[ControlSpec::knob(14)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.3)),
+        ControlGroup::new(
+            "TIMING",
+            "Timing & lookahead",
+            &[
+                ControlSpec::slider(2), // attack
+                ControlSpec::slider(3), // hold
+                ControlSpec::slider(4), // release
+                ControlSpec::knob(14),  // lookahead
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(0.85)),
         ControlGroup::new(
             "RESPONSE",
             "Knee & response",
             &[
-                ControlSpec::slider(1),  // ratio
+                ControlSpec::slider(1),                                              // ratio
                 ControlSpec::slider(12), // hysteresis_db
                 ControlSpec::slider(13), // knee_db
+                ControlSpec::slider(16).enabled_when(ParamCondition::choice(15, 1)), // upward boost
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.5)),
@@ -549,7 +555,7 @@ mod tests {
     }
 
     #[test]
-    fn primary_gate_envelope_is_pinned_and_timing_discloses_first() {
+    fn primary_gate_is_pinned_and_timing_has_priority_over_response() {
         use sotf_host::layout_solver::solve_control_groups;
         use sotf_host::plugin_layout::GroupOverflow;
 
@@ -560,10 +566,10 @@ mod tests {
             .filter(|control| control.param_index != usize::MAX)
             .map(|control| control.param_index)
             .collect();
-        assert_eq!(primary, vec![15, 0, 11, 16, 2, 3, 4, 5]);
+        assert_eq!(primary, vec![15, 0, 11, 5]);
         assert_eq!(dynamics.layout.collapse_priority, 1.0);
         assert_eq!(dynamics.layout.overflow, GroupOverflow::KeepVisible);
-        assert!(LAYOUT.main[2].layout.collapse_priority > LAYOUT.main[1].layout.collapse_priority);
+        assert!(LAYOUT.main[1].layout.collapse_priority > LAYOUT.main[2].layout.collapse_priority);
 
         let groups: Vec<_> = LAYOUT.main.iter().collect();
         let solved = solve_control_groups(&groups, 320.0).unwrap();

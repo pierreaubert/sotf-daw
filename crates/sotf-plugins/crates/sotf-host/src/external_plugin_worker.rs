@@ -152,6 +152,15 @@ impl ExternalPluginWorker {
                     self.plugin.refresh_control_thread_metadata();
                     PluginIpcControlResponse::Description {
                         parameters: self.parameters.clone(),
+                        parameter_values: self
+                            .parameters
+                            .iter()
+                            .filter_map(|parameter| {
+                                self.plugin
+                                    .get_parameter(&parameter.id)
+                                    .map(|value| (parameter.id.clone(), value))
+                            })
+                            .collect(),
                         tail_length: match self.plugin.tail_length() {
                             TailLength::Finite(frames) => {
                                 crate::external_plugin_ipc::PluginIpcTailLength::Finite(frames)

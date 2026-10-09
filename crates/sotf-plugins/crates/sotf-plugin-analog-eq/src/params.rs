@@ -124,14 +124,14 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[ControlSpec::selector(10)],
     main: &[
         ControlGroup::new(
             "LOW",
             "LOW",
             &[ControlSpec::slider(0), ControlSpec::slider(1)],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "LOW MID",
             "LOW MID",
@@ -141,7 +141,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(4),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "HIGH MID",
             "HIGH MID",
@@ -151,31 +151,30 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(7),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "HIGH",
             "HIGH",
             &[ControlSpec::slider(8), ControlSpec::slider(9)],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(0.8)),
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "COLOR",
+            "",
+            &[ControlSpec::slider(12), ControlSpec::slider(14)],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "ANALOG",
             "ANALOG",
-            &[
-                ControlSpec::selector(10),
-                ControlSpec::slider(11),
-                ControlSpec::slider(12),
-                ControlSpec::slider(13),
-            ],
+            &[ControlSpec::slider(11), ControlSpec::slider(13)],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new("OUTPUT", "OUTPUT", &[ControlSpec::knob(14)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.9)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

@@ -134,7 +134,7 @@ pub const PARAMS: &[ParamSpec] = &[
     .setup()
     .doc("Engine playback volume (set automatically by the engine)"),
     ParamSpec::choice(
-        "Auto Gain Position",
+        "Auto Gain",
         "auto_gain_position",
         0,
         AUTO_GAIN_POSITION_LABELS,
@@ -160,94 +160,65 @@ pub const PARAMS: &[ParamSpec] = &[
 // ============================================================================
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[
+        ControlSpec::button_set(11, MODE_LABELS),
+        ControlSpec::button_set(15, AUTO_GAIN_POSITION_LABELS),
+        ControlSpec::toggle(17),
+        ControlSpec::toggle(16),
+        ControlSpec::toggle(4).enabled_when(ParamCondition::choice(11, 0)),
+        ControlSpec::toggle(8).hide(), // Legacy alias of the canonical position control.
+    ],
     main: &[
+        ControlGroup::new("reference-level", "", &[ControlSpec::slider(13)])
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("ISO 226", "", &[ControlSpec::slider(12)])
+            .visible_when(ParamCondition::choice(11, 1))
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new("AUTO", "", &[ControlSpec::label(14)])
+            .visible_when(ParamCondition::choice(11, 2))
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "mode-selector",
+            "TONE",
             "",
             &[
-                ControlSpec::selector(11), // mode
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "ISO 226",
-            "ISO 226",
-            &[
-                ControlSpec::knob(12), // playback_level_db
-                ControlSpec::knob(13), // reference_level_db
-            ],
-        )
-        .visible_when(ParamCondition::choice(11, 1))
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "AUTO",
-            "AUTO",
-            &[
-                ControlSpec::label(14),  // playback_volume_db (engine-set, read-only)
-                ControlSpec::knob(13),   // reference_level_db (shared with ISO 226)
-                ControlSpec::toggle(17), // auto_calibrated
-            ],
-        )
-        .visible_when(ParamCondition::choice(11, 2))
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "LOW",
-            "LOW",
-            &[
-                ControlSpec::knob(0), // low_freq
-                ControlSpec::knob(1), // low_gain
+                ControlSpec::slider(1),
+                ControlSpec::slider(3),
+                ControlSpec::slider(6).enabled_when(ParamCondition::bool(4, true)),
             ],
         )
         .visible_when(ParamCondition::choice(11, 0))
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "mid-enable",
-            "",
-            &[ControlSpec::toggle(4)], // mid_enabled
+            "TONE FREQUENCIES",
+            "TONE FREQUENCIES",
+            &[ControlSpec::slider(0), ControlSpec::slider(2)],
         )
         .visible_when(ParamCondition::choice(11, 0))
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
-        ControlGroup::new(
-            "LEVEL POLICY",
-            "LEVEL POLICY",
-            &[ControlSpec::toggle(16)], // headroom_normalized
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.5)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
             "MID",
             "MID",
             &[
-                ControlSpec::knob(5).enabled_when(ParamCondition::bool(4, true)), // mid_freq
-                ControlSpec::knob(6).enabled_when(ParamCondition::bool(4, true)), // mid_gain
-                ControlSpec::knob(7).enabled_when(ParamCondition::bool(4, true)), // mid_q
+                ControlSpec::slider(5).enabled_when(ParamCondition::bool(4, true)),
+                ControlSpec::slider(7).enabled_when(ParamCondition::bool(4, true)),
             ],
         )
         .visible_when(ParamCondition::choice(11, 0))
-        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
         ControlGroup::new(
-            "HIGH",
-            "HIGH",
+            "AUTO GAIN",
+            "AUTO GAIN",
             &[
-                ControlSpec::knob(2), // high_freq
-                ControlSpec::knob(3), // high_gain
+                ControlSpec::slider(9).enabled_when(ParamCondition::bool(8, true)),
+                ControlSpec::slider(10).enabled_when(ParamCondition::bool(8, true)),
             ],
         )
-        .visible_when(ParamCondition::choice(11, 0))
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
-    output: &[
-        ControlSpec::toggle(8),    // auto_gain_enabled
-        ControlSpec::selector(15), // auto_gain_position
-        ControlSpec::knob(9),      // auto_gain_max_db
-        ControlSpec::knob(10),     // auto_gain_smoothing_ms
-    ],
+    output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::main(300.0),
-        ColumnConstraint::output(120.0, 0.6),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 
@@ -462,9 +433,9 @@ mod tests {
     #[test]
     fn each_mode_keeps_its_primary_controls_visible_at_narrow_width() {
         for (mode, required) in [
-            (0.0, vec!["mode-selector", "LOW", "HIGH", "mid-enable"]),
-            (1.0, vec!["mode-selector", "ISO 226"]),
-            (2.0, vec!["mode-selector", "AUTO"]),
+            (0.0, vec!["reference-level", "TONE"]),
+            (1.0, vec!["reference-level", "ISO 226"]),
+            (2.0, vec!["reference-level", "AUTO"]),
         ] {
             let mut values: Vec<_> = PARAMS.iter().map(|param| param.default_f64()).collect();
             values[11] = mode;

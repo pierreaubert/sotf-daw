@@ -53,8 +53,8 @@ fn test_dynamic_eq_passthrough() {
                 band_ratio: 4.0,
                 active: true,
                 solo: false,
-                    ..Default::default()
-                }],
+                ..Default::default()
+            }],
             stereo_pairs: None,
         },
     );
@@ -105,8 +105,8 @@ fn test_dynamic_eq_boosts_on_threshold() {
                 band_ratio: 10.0,
                 active: true,
                 solo: false,
-                    ..Default::default()
-                }],
+                ..Default::default()
+            }],
             stereo_pairs: None,
         },
     );
@@ -156,8 +156,8 @@ fn test_dynamic_eq_no_boost_below_threshold() {
                 band_ratio: 10.0,
                 active: true,
                 solo: false,
-                    ..Default::default()
-                }],
+                ..Default::default()
+            }],
             stereo_pairs: None,
         },
     );
@@ -206,8 +206,8 @@ fn test_dynamic_eq_frequency_selective() {
             band_ratio: 10.0,
             active: true,
             solo: false,
-                    ..Default::default()
-                }],
+            ..Default::default()
+        }],
         stereo_pairs: None,
     };
 
@@ -472,8 +472,8 @@ fn test_eq_gain_uses_proportion_blend_not_coefficient_update() {
                 band_ratio: 20.0,
                 active: true,
                 solo: false,
-                    ..Default::default()
-                }],
+                ..Default::default()
+            }],
             stereo_pairs: None,
         },
     );

@@ -20,7 +20,7 @@ use sotf_host::plugin_params::PluginParamDef;
 
 pub const PARAMS: &[ParamSpec] = &[
     // 0: Global width
-    ParamSpec::float("Width", "width", 1.0, 0.0, 2.0, 0.01, "", "Width")
+    ParamSpec::float("Width", "width", 1.0, 0.0, 2.0, 0.01, "%", "Width")
         .scaled(100.0)
         .doc("Global stereo width (0%=mono, 100%=original, 200%=wide)"),
     // 1: Low-mid crossover
@@ -55,7 +55,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0,
         2.0,
         0.01,
-        "",
+        "%",
         "Band Width",
     )
     .scaled(100.0)
@@ -68,7 +68,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0,
         2.0,
         0.01,
-        "",
+        "%",
         "Band Width",
     )
     .scaled(100.0)
@@ -81,7 +81,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0,
         2.0,
         0.01,
-        "",
+        "%",
         "Band Width",
     )
     .scaled(100.0)
@@ -103,51 +103,34 @@ pub const PARAMS: &[ParamSpec] = &[
 /// Stereo Imager: idx 0=width, 1=low_mid_freq, 2=mid_high_freq,
 /// 3=low_width, 4=mid_width, 5=high_width, 6=mono_bass, 7=mix
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[ControlSpec::toggle(6)],
     main: &[
         ControlGroup::new(
             "width",
             "WIDTH",
-            &[ControlSpec::knob_large(0)], // width
+            &[
+                ControlSpec::slider(0),                                              // width
+                ControlSpec::slider(3).enabled_when(ParamCondition::bool(6, false)), // low_width
+                ControlSpec::slider(4),                                              // mid_width
+                ControlSpec::slider(5),                                              // high_width
+                ControlSpec::slider(7),                                              // mix
+            ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "CROSSOVER",
             "CROSSOVER",
             &[
-                ControlSpec::knob(1), // low_mid_freq
-                ControlSpec::knob(2), // mid_high_freq
+                ControlSpec::slider(1), // low_mid_freq
+                ControlSpec::slider(2), // mid_high_freq
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.4)),
-        ControlGroup::new(
-            "BAND WIDTH",
-            "BAND WIDTH",
-            &[
-                ControlSpec::knob(3), // low_width
-                ControlSpec::knob(4), // mid_width
-                ControlSpec::knob(5), // high_width
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.7)),
-        ControlGroup::new(
-            "OPTIONS",
-            "OPTIONS",
-            &[
-                ControlSpec::toggle(6), // mono_bass
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(0.3)),
     ],
-    output: &[
-        ControlSpec::knob(7), // mix
-    ],
+    output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::main(300.0),
-        ColumnConstraint::output(120.0, 0.6),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

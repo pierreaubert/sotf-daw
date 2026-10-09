@@ -131,6 +131,13 @@ pub enum ParameterImportance {
     FineTuning,
 }
 
+/// One native choice label paired with its exact typed parameter value.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParameterChoice {
+    pub label: String,
+    pub value: ParameterValue,
+}
+
 /// Parameter definition with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Parameter {
@@ -154,6 +161,15 @@ pub struct Parameter {
     pub unit: String,
     /// Whether this parameter uses logarithmic scaling
     pub logarithmic: bool,
+    /// Native labeled choices; an empty list denotes a numeric or Boolean control.
+    #[serde(default)]
+    pub choices: Vec<ParameterChoice>,
+    /// Whether the native parameter is available for observation only.
+    #[serde(default)]
+    pub read_only: bool,
+    /// Native numeric increment, when the backend supplies one.
+    #[serde(default)]
+    pub step: Option<f64>,
     /// Whether the host may update this parameter on the live plugin or must
     /// rebuild the plugin from serialized configuration.
     #[serde(default)]
@@ -174,6 +190,9 @@ impl Parameter {
             max_value: Some(ParameterValue::Float(max)),
             unit: String::new(),
             logarithmic: false,
+            choices: Vec::new(),
+            read_only: false,
+            step: None,
             update_mode: UpdateMode::Realtime,
         }
     }
@@ -191,6 +210,9 @@ impl Parameter {
             max_value: Some(ParameterValue::Int(max)),
             unit: String::new(),
             logarithmic: false,
+            choices: Vec::new(),
+            read_only: false,
+            step: None,
             update_mode: UpdateMode::Realtime,
         }
     }
@@ -208,6 +230,9 @@ impl Parameter {
             max_value: None,
             unit: String::new(),
             logarithmic: false,
+            choices: Vec::new(),
+            read_only: false,
+            step: None,
             update_mode: UpdateMode::Realtime,
         }
     }
@@ -225,6 +250,9 @@ impl Parameter {
             max_value: None,
             unit: String::new(),
             logarithmic: false,
+            choices: Vec::new(),
+            read_only: false,
+            step: None,
             update_mode: UpdateMode::Realtime,
         }
     }
@@ -397,5 +425,24 @@ mod tests {
 
         assert_eq!(eq.group, "EQ");
         assert_eq!(dynamics.group, "Dynamics");
+    }
+}
+
+#[cfg(test)]
+mod metadata_compatibility_tests {
+    use super::*;
+
+    #[test]
+    fn older_parameter_payloads_keep_numeric_editing_defaults() {
+        let mut old =
+            serde_json::to_value(Parameter::new_float("gain", "Gain", 1.0, 0.0, 2.0)).unwrap();
+        for key in ["choices", "read_only", "step"] {
+            old.as_object_mut().unwrap().remove(key);
+        }
+        let parameter: Parameter = serde_json::from_value(old).unwrap();
+        assert!(parameter.choices.is_empty());
+        assert!(!parameter.read_only);
+        assert_eq!(parameter.step, None);
+        assert!(parameter.validate(&ParameterValue::Float(1.25)).is_ok());
     }
 }

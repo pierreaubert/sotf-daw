@@ -277,6 +277,70 @@ invariant_test!(
     sotf_plugin_convolution::params::Params
 );
 invariant_test!(invariants_crossfeed, sotf_plugin_crossfeed::params::Params);
+#[test]
+fn invariants_crossover_conditional_primary_groups() {
+    let layout = &sotf_plugin_crossover::params::LAYOUT;
+    let params = sotf_plugin_crossover::params::PARAMS;
+    assert_responsive_primary("crossover", layout);
+    assert_valid_param_indices("crossover", layout, params);
+    assert_control_type_compatibility("crossover", layout, params);
+
+    for (band_choice, expected_controls) in [(0, 1), (1, 2), (2, 3)] {
+        let mut values: Vec<_> = params.iter().map(ParamSpec::default_f64).collect();
+        values[5] = f64::from(band_choice);
+        let visible: Vec<_> = layout
+            .main
+            .iter()
+            .filter(|group| group.is_visible(&values))
+            .collect();
+        assert_eq!(visible.len(), 1, "band choice {band_choice}");
+        assert_eq!(visible[0].controls.len(), expected_controls);
+    }
+
+    let enabled = |values: &[f64], index: usize| {
+        layout
+            .config
+            .iter()
+            .chain(
+                layout
+                    .main
+                    .iter()
+                    .filter(|group| group.is_visible(values))
+                    .flat_map(|group| group.controls.iter()),
+            )
+            .find(|control| control.param_index == index)
+            .is_some_and(|control| control.is_enabled(values))
+    };
+    let mut values: Vec<_> = params.iter().map(ParamSpec::default_f64).collect();
+    assert!(enabled(&values, 1));
+    assert!(enabled(&values, 5));
+    assert!(!enabled(&values, 3));
+
+    values[5] = 1.0;
+    assert!(enabled(&values, 1));
+    assert!(enabled(&values, 6));
+    values[2] = 1.0;
+    assert!(enabled(&values, 1));
+    assert!(enabled(&values, 6));
+    assert!(enabled(&values, 5));
+
+    values[5] = 2.0;
+    assert!(enabled(&values, 6));
+    assert!(enabled(&values, 7));
+    values[2] = 2.0;
+    assert!(enabled(&values, 1));
+    assert!(enabled(&values, 6));
+    assert!(enabled(&values, 7));
+
+    values[4] = 1.0;
+    for index in [1, 2, 5, 6, 7] {
+        assert!(!enabled(&values, index), "dormant global index {index}");
+    }
+    assert!(enabled(&values, 0));
+    assert!(enabled(&values, 4));
+    values[0] = 1.0;
+    assert!(enabled(&values, 3));
+}
 invariant_test!(invariants_delay, sotf_plugin_delay::params::Params);
 invariant_test!(invariants_denoiser, sotf_plugin_denoiser::params::Params);
 invariant_test!(

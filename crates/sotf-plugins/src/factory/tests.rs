@@ -27,6 +27,44 @@ use tempfile::tempdir;
 mod misc;
 
 #[test]
+fn external_plugin_instance_id_is_shared_by_both_hosting_modes() {
+    use super::parse::parse_external_plugin_instance_id;
+    let key = crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER;
+    assert_eq!(
+        parse_external_plugin_instance_id(&serde_json::json!({})).unwrap(),
+        None
+    );
+    for id in [0, 37, usize::MAX] {
+        let parameters = serde_json::json!({key: id});
+        assert_eq!(
+            parse_external_plugin_instance_id(&parameters).unwrap(),
+            Some(id)
+        );
+        #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+        assert_eq!(
+            parse_isolated_external_plugin_config(&parameters, ExternalPluginTrust::Unknown)
+                .unwrap()
+                .plugin_instance_id,
+            Some(id)
+        );
+    }
+    for invalid in [
+        serde_json::json!(-1),
+        serde_json::json!(1.5),
+        serde_json::json!("37"),
+        serde_json::Value::Null,
+    ] {
+        let parameters = serde_json::json!({key: invalid});
+        assert!(parse_external_plugin_instance_id(&parameters).is_err());
+        #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+        assert!(
+            parse_isolated_external_plugin_config(&parameters, ExternalPluginTrust::Unknown)
+                .is_err()
+        );
+    }
+}
+
+#[test]
 fn band_merge_factory_rejects_invalid_or_unknown_state() {
     for (channels, parameters) in [
         (0, serde_json::json!({"bands": 2})),

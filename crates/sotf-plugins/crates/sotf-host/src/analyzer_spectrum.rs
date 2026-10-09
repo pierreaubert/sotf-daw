@@ -308,6 +308,16 @@ impl SpectrumAnalyzerPlugin {
 }
 
 impl Plugin for SpectrumAnalyzerPlugin {
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Analysis observes the input without changing the audio frame clock.
+        true
+    }
+
+    fn tail_length(&self) -> crate::plugin::TailLength {
+        // Retained measurement state never emits audio.
+        crate::plugin::TailLength::Finite(0)
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Spectrum Analyzer", "1.1.0", "Sotf")
     }

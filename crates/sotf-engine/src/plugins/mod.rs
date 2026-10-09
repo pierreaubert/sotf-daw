@@ -1,6 +1,6 @@
 //! Plugin type definitions, settings, and utilities
 
-pub use chain::PluginChain;
+pub use chain::{PluginChain, plugin_output_channels};
 pub use eq::{EQFilter, EqBandPlacement, EqFilterTopology, KautzSectionConfig};
 pub use matrix::{
     apply_matrix_preset, available_matrix_presets, detect_matrix_preset, resize_matrix,

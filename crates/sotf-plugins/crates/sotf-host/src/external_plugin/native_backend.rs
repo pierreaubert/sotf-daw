@@ -96,6 +96,14 @@ pub(super) trait NativeExternalPluginBackend: Send {
         Err("native backend does not support deliberate Crossover reconfiguration".into())
     }
 
+    /// Reports queued parameter delivery without native calls or allocation.
+    ///
+    /// The owner uses this to invalidate editor state after processor delivery;
+    /// snapshot capture remains on the serialized control thread.
+    fn has_pending_parameter_updates(&self) -> bool {
+        false
+    }
+
     fn process(
         &mut self,
         input: &[f32],

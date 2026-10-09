@@ -762,11 +762,13 @@ impl DenoiserPlugin {
                         );
                     }
                 }
-                20
-                    // learn_noise (trigger param)
-                    if value.as_bool().unwrap_or(false) => {
+                20 => {
+                    if value.as_bool().unwrap_or(false) {
                         self.start_learning();
+                    } else {
+                        self.cancel_learning();
                     }
+                }
                 22
                     // clear_profile (trigger param)
                     if value.as_bool().unwrap_or(false) => {
@@ -1144,6 +1146,7 @@ impl DenoiserPlugin {
             d.has_captured_profile = has_prof;
             d.learning_progress = progress;
             d.using_captured_profile = using_prof;
+            d.requested_use_profile = self.noise_profile.use_captured_profile;
         });
     }
 
@@ -1386,6 +1389,10 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
 
     fn parameter_schema(&self) -> ParameterSchema {
         self.ui.cached_parameters.clone()
+    }
+
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        matches!(id.as_str(), "learn_noise" | "clear_profile")
     }
 
     fn parametric_validate_parameter(

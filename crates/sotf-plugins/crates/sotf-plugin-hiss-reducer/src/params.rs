@@ -110,17 +110,19 @@ pub const PARAMS: &[ParamSpec] = &[
 ];
 
 pub const LAYOUT: PluginLayout = PluginLayout {
-    config: &[],
+    config: &[
+        ControlSpec::toggle(0),
+        ControlSpec::toggle(4),
+        ControlSpec::button_set(11, LINK_LABELS),
+    ],
     main: &[
         ControlGroup::new(
             "HISS",
             "HISS",
             &[
-                ControlSpec::toggle(0),
                 ControlSpec::knob(1),
                 ControlSpec::knob(2),
                 ControlSpec::slider(3),
-                ControlSpec::toggle(4),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -144,8 +146,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.6)),
-        ControlGroup::new("LINK", "LINK", &[ControlSpec::choice(11)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.5)),
         ControlGroup::new(
             "GUARD",
             "GUARD",

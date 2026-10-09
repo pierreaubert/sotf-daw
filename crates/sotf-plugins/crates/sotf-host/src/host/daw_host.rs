@@ -3304,7 +3304,29 @@ impl DawHost {
             param_id: super::super::parameters::ParameterId::from(id),
             value: val,
             sample_offset: 0,
-        })
+        })?;
+        self.refresh_plugin_control_thread_metadata(index)
+    }
+
+    /// Refresh native control metadata between audio blocks, never in a callback.
+    ///
+    /// # Errors
+    /// Returns an error for a missing plugin or a panicking metadata callback.
+    pub fn refresh_plugin_control_thread_metadata(&mut self, index: usize) -> Result<(), String> {
+        let &nid = self.chain_nodes.get(index).ok_or("oob")?;
+        let plugin = self
+            .plugins
+            .get_mut(nid)
+            .and_then(Option::as_mut)
+            .ok_or("plugin not found")?;
+        // Queued events and automation must never invoke this control route.
+        catch_unwind(AssertUnwindSafe(|| {
+            plugin.refresh_control_thread_metadata()
+        }))
+        .map_err(|_| {
+            format!("Plugin at index {index} panicked while refreshing control metadata")
+        })?;
+        Ok(())
     }
 
     pub(super) fn drain_parameter_events_into(&mut self, events: &mut Vec<ParameterEvent>) {

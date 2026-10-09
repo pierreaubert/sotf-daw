@@ -110,7 +110,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::slider(0),         // threshold (ceiling)
                 ControlSpec::slider(1),         // release
                 ControlSpec::toggle(4),         // true-peak detection (always visible)
-                ControlSpec::meter(-20.0, 0.0), // gain reduction (always visible)
                 ControlSpec::knob(7),           // mix
             ],
         )
@@ -137,7 +136,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.35)),
     ],
-    output: &[],
+    output: &[ControlSpec::meter(-20.0, 0.0)], // compact GR feedback above controls
     tabs: &[],
     visualizations: &[VizSlot::TransferCurve {
         position: VizPosition::BelowGroup("DYNAMICS"),

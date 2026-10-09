@@ -139,6 +139,12 @@ macro_rules! impl_param_accessors {
             /// Choice parameters are returned as their numeric index.
             #[allow(unused_variables)]
             pub fn param_value(&self, index: usize) -> Option<f64> {
+                // Position is canonical; index 8 is the legacy AutoGain alias.
+                if let Self::LoudnessCompensation { auto_gain_position, .. } = self {
+                    if index == 8 {
+                        return Some(b2f(*auto_gain_position != 0));
+                    }
+                }
                 match self {
                     $(
                         Self::$Variant { $($field,)* .. } => {
@@ -160,6 +166,24 @@ macro_rules! impl_param_accessors {
             /// Choice parameters: value is cast to the appropriate integer/enum type.
             #[allow(unused_variables)]
             pub fn set_param_value(&mut self, index: usize, value: f64) {
+                if let Self::LoudnessCompensation {
+                    auto_gain_enabled, auto_gain_position, ..
+                } = self {
+                    match index {
+                        8 => {
+                            *auto_gain_enabled = f2b(value);
+                            *auto_gain_position = if *auto_gain_enabled { 2 } else { 0 };
+                            return;
+                        }
+                        15 => {
+                            *auto_gain_position = param_specs::loudness_compensation::PARAMS[15]
+                                .clamp_f64(value) as usize;
+                            *auto_gain_enabled = *auto_gain_position != 0;
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
                 match self {
                     $(
                         Self::$Variant { $($field,)* .. } => {

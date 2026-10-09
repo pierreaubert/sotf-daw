@@ -30,14 +30,14 @@ pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[],
     main: &[ControlGroup::new(
         "merge-config",
-        "MERGE CONFIG",
-        &[ControlSpec::knob(0)], // bands
+        "",
+        &[ControlSpec::slider(0)], // bands
     )
     .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible())],
     output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[ColumnConstraint::main(200.0)],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

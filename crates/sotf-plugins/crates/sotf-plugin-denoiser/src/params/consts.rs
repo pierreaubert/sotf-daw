@@ -273,17 +273,29 @@ pub const PARAMS: &[ParamSpec] = &[
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[ControlSpec::toggle(5)],
     main: &[
+        ControlGroup::new("REDUCTION", "REDUCTION", &[ControlSpec::slider(0)])
+            .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "REDUCTION",
-            "REDUCTION",
+            "PROFILE",
+            "PROFILE",
             &[
-                ControlSpec::slider(0),
+                ControlSpec::toggle(20), // learn
+                ControlSpec::toggle(21), // use
+                ControlSpec::toggle(22), // clear
+                ControlSpec::toggle(32), // residual audition
+            ],
+        )
+        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        ControlGroup::new(
+            "REDUCTION DETAIL",
+            "REDUCTION DETAIL",
+            &[
                 ControlSpec::slider(1),
                 ControlSpec::slider(2),
                 ControlSpec::slider(11),
             ],
         )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
+        .with_layout(GroupLayoutHints::inferred().priority(0.6)),
         ControlGroup::new(
             "TIMING",
             "TIMING",
@@ -295,21 +307,11 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "SPECTRAL SUB",
             &[
                 ControlSpec::toggle(17),
-                ControlSpec::knob(18),
-                ControlSpec::knob(19),
+                ControlSpec::knob(18).enabled_when(ParamCondition::bool(17, true)),
+                ControlSpec::knob(19).enabled_when(ParamCondition::bool(17, true)),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.3)),
-        ControlGroup::new(
-            "NOISE PROFILE",
-            "NOISE PROFILE",
-            &[
-                ControlSpec::toggle(20),
-                ControlSpec::toggle(21),
-                ControlSpec::toggle(22),
-            ],
-        )
-        .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
             "CURVE",
             "CURVE",
@@ -320,8 +322,6 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.6)),
-        ControlGroup::new("MONITOR", "MONITOR", &[ControlSpec::toggle(32)])
-            .with_layout(GroupLayoutHints::inferred().priority(0.5)),
     ],
     output: &[],
     tabs: &[
@@ -330,7 +330,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             controls: &[
                 ControlSpec::toggle(6),
                 ControlSpec::toggle(12),
-                ControlSpec::knob(13),
+                ControlSpec::knob(13).enabled_when(ParamCondition::bool(12, true)),
                 ControlSpec::toggle(14),
                 ControlSpec::toggle(15),
                 ControlSpec::toggle(16),

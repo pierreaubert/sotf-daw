@@ -1,5 +1,9 @@
 #![allow(clippy::duplicate_mod)]
 pub mod params;
+#[path = "lib/response.rs"]
+mod response;
+#[doc(inline)]
+pub use response::target_band_response_db;
 
 #[path = "lib/dyn_eq_band.rs"]
 mod dyn_eq_band;

@@ -2,6 +2,10 @@ pub use sotf_host::lr4_crossover::CROSSOVER_PRESETS;
 
 pub mod params;
 
+mod response;
+#[doc(inline)]
+pub use response::target_attenuation_db;
+
 #[path = "lib/band_expander.rs"]
 mod band_expander;
 #[path = "lib/band_expander_params.rs"]

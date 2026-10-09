@@ -934,6 +934,10 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
                 .unwrap();
                 assert_eq!(legacy.latency_samples(), per_stage);
                 assert_eq!(
+                    legacy.latency_samples(),
+                    crate::linear_phase_eq_latency_samples(length_index, phase, 1)
+                );
+                assert_eq!(
                     legacy.tail_length(),
                     TailLength::Finite((32 + taps - 1).max(per_stage) as u64)
                 );
@@ -957,6 +961,10 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
                 .unwrap();
                 assert!(ordered.is_ordered_route());
                 assert_eq!(ordered.latency_samples(), num_filters * per_stage);
+                assert_eq!(
+                    ordered.latency_samples(),
+                    crate::linear_phase_eq_latency_samples(length_index, phase, num_filters)
+                );
                 assert_eq!(
                     ordered.tail_length(),
                     TailLength::Finite(

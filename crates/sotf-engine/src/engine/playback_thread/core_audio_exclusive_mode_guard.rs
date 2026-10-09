@@ -1,4 +1,7 @@
 #[cfg(target_os = "macos")]
+use coreaudio_rs as coreaudio;
+
+#[cfg(target_os = "macos")]
 use super::coreaudio_mod::coreaudio_output_device_id;
 #[cfg(target_os = "macos")]
 use crate::{OutputAccessMode, OutputAccessStatus};

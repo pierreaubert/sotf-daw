@@ -57,7 +57,7 @@ pub const PARAMS: &[ParamSpec] = &[
         0.0,
         1.0,
         0.01,
-        "",
+        "%",
         "Quality",
     )
     .scaled(100.0)
@@ -114,45 +114,40 @@ pub const PARAMS: &[ParamSpec] = &[
 /// 9=delta_listen, 10=adaptive_threshold, 11=adaptive_offset_db, 12=channel_link
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(0), // fft_size
-        ControlSpec::knob(6),     // spectral_smoothing
-        ControlSpec::selector(8), // target_mode
-        ControlSpec::toggle(9),   // delta_listen
-        ControlSpec::toggle(10),  // adaptive_threshold
-        ControlSpec::knob(11),    // adaptive_offset_db
-        ControlSpec::knob(12),    // channel_link
+        ControlSpec::button_set(0, FFT_SIZES),
+        ControlSpec::button_set(8, TARGET_MODES),
+        ControlSpec::toggle(9),
+        ControlSpec::toggle(10),
     ],
     main: &[
         ControlGroup::new(
             "DYNAMICS",
             "DYNAMICS",
             &[
-                ControlSpec::slider(1), // threshold
-                ControlSpec::slider(2), // ratio
-                ControlSpec::slider(5), // knee
+                ControlSpec::slider(1).enabled_when(ParamCondition::bool(10, false)),
+                ControlSpec::slider(2),
+                ControlSpec::slider(5),
+                ControlSpec::slider(3),
+                ControlSpec::slider(4),
+                ControlSpec::slider(7),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
         ControlGroup::new(
-            "TIMING",
-            "TIMING",
+            "ANALYSIS",
+            "ANALYSIS",
             &[
-                ControlSpec::slider(3), // attack
-                ControlSpec::slider(4), // release
+                ControlSpec::slider(6),
+                ControlSpec::slider(11).enabled_when(ParamCondition::bool(10, true)),
+                ControlSpec::slider(12),
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(0.4)),
     ],
-    output: &[
-        ControlSpec::knob(7), // mix
-    ],
+    output: &[],
     tabs: &[],
     visualizations: &[],
-    column_constraints: &[
-        ColumnConstraint::config(100.0, 0.5),
-        ColumnConstraint::main(300.0),
-        ColumnConstraint::output(80.0, 0.6),
-    ],
+    column_constraints: &[ColumnConstraint::main(300.0)],
     dynamic_sections: &[],
 };
 

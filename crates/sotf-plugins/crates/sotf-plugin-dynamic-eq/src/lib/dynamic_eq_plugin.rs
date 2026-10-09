@@ -238,7 +238,9 @@ impl DynamicEqPlugin {
                 self.threshold_db = value.clamp(-60.0, 0.0);
                 self.threshold_smoother.set_target(self.threshold_db);
                 for band in &mut self.bands {
-                    if (band.band_threshold - self.threshold_db).abs() <= 0.01 {
+                    if !band.use_band_threshold {
+                        band.band_threshold = self.threshold_db;
+                    } else if (band.band_threshold - self.threshold_db).abs() <= 0.01 {
                         band.use_band_threshold = false;
                     }
                 }
@@ -246,7 +248,9 @@ impl DynamicEqPlugin {
             RealtimeScalar::Ratio => {
                 self.ratio = value.clamp(1.0, 20.0);
                 for band in &mut self.bands {
-                    if (band.band_ratio - self.ratio).abs() <= 0.01 {
+                    if !band.use_band_ratio {
+                        band.band_ratio = self.ratio;
+                    } else if (band.band_ratio - self.ratio).abs() <= 0.01 {
                         band.use_band_ratio = false;
                     }
                 }
@@ -1050,7 +1054,9 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                     self.threshold_db = v.clamp(-60.0, 0.0);
                     self.threshold_smoother.set_target(self.threshold_db);
                     for band in &mut self.bands {
-                        if (band.band_threshold - self.threshold_db).abs() <= 0.01 {
+                        if !band.use_band_threshold {
+                            band.band_threshold = self.threshold_db;
+                        } else if (band.band_threshold - self.threshold_db).abs() <= 0.01 {
                             band.use_band_threshold = false;
                         }
                     }
@@ -1062,7 +1068,9 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                 if v.is_finite() {
                     self.ratio = v.clamp(1.0, 20.0);
                     for band in &mut self.bands {
-                        if (band.band_ratio - self.ratio).abs() <= 0.01 {
+                        if !band.use_band_ratio {
+                            band.band_ratio = self.ratio;
+                        } else if (band.band_ratio - self.ratio).abs() <= 0.01 {
                             band.use_band_ratio = false;
                         }
                     }

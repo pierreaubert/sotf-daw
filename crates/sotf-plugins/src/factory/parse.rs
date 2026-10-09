@@ -14,6 +14,28 @@ use crate::{
 use crate::{ExternalPluginState, PluginDescriptor, PluginFormat};
 use std::path::{Path, PathBuf};
 
+pub(super) fn parse_external_plugin_instance_id(
+    parameters: &serde_json::Value,
+) -> Result<Option<usize>, String> {
+    parameters
+        .get(crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER)
+        .map(|value| {
+            let value = value.as_u64().ok_or_else(|| {
+                format!(
+                    "`{}` must be a non-negative integer",
+                    crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER
+                )
+            })?;
+            usize::try_from(value).map_err(|_| {
+                format!(
+                    "`{}` is too large",
+                    crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER
+                )
+            })
+        })
+        .transpose()
+}
+
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub(super) fn parse_isolated_external_plugin_config(
     parameters: &serde_json::Value,
@@ -25,20 +47,7 @@ pub(super) fn parse_isolated_external_plugin_config(
         ..IsolatedExternalPluginConfig::default()
     };
 
-    if let Some(instance_id) = parameters.get(crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER) {
-        let instance_id = instance_id.as_u64().ok_or_else(|| {
-            format!(
-                "`{}` must be a non-negative integer",
-                crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER
-            )
-        })?;
-        config.plugin_instance_id = Some(usize::try_from(instance_id).map_err(|_| {
-            format!(
-                "`{}` is too large",
-                crate::EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER
-            )
-        })?);
-    }
+    config.plugin_instance_id = parse_external_plugin_instance_id(parameters)?;
 
     if let Some(max_block_frames) = parameters.get("max_block_frames") {
         let max_block_frames = max_block_frames
