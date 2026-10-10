@@ -40,6 +40,8 @@ pub fn audio_tokens_from_ds(ds: &DesignSystem) -> AudioDesignTokens {
         prefer_spring: ds.animation.prefer_spring,
         spring_stiffness: ds.animation.spring_stiffness,
         spring_damping: ds.animation.spring_damping,
+        // Inherit spectrum geometry from the toolkit's design-system conversion.
+        ..AudioDesignTokens::from(ds)
     }
 }
 
