@@ -1,3 +1,5 @@
+// Rust guideline compliant 2026-02-21
+
 use super::misc::ATOMIC_NONE;
 use super::misc::lock_recover;
 use super::select::select_output_sample_rate_for_channels;
@@ -35,6 +37,9 @@ pub struct AudioEngineManager {
     pub(super) current_volume: AtomicU32,
     /// Current mute state (preserved across song changes)
     pub(super) current_muted: AtomicBool,
+    /// Use the clocked null sink for ordinary file playback (test-util only).
+    #[cfg(feature = "test-util")]
+    test_output_enabled: bool,
     /// Allow output to virtual/loopback devices (needed for recording tests)
     pub(super) allow_virtual_output: bool,
     /// Last source seen during event polling (for detecting gapless transitions)
@@ -72,6 +77,8 @@ impl AudioEngineManager {
             spectrum_plugin_index: AtomicU64::new(ATOMIC_NONE),
             current_volume: AtomicU32::new(1.0f32.to_bits()),
             current_muted: AtomicBool::new(false),
+            #[cfg(feature = "test-util")]
+            test_output_enabled: false,
             allow_virtual_output: false,
             last_seen_source: Mutex::new(None),
             last_seen_stream_metadata: Mutex::new(None),
@@ -83,6 +90,34 @@ impl AudioEngineManager {
     /// Required for recording tests where the signal must go through the loopback.
     pub fn set_allow_virtual_output(&mut self, allow: bool) {
         self.allow_virtual_output = allow;
+    }
+
+    /// Select hardware-free file output for tests and development tools.
+    ///
+    /// The selection belongs to this manager and is retained across stop,
+    /// restart, and plugin-graph rebuilds. Set it while no engine is running;
+    /// it does not reroute a stream that is already open.
+    ///
+    /// # Examples
+    /// Enable the null output before loading or starting file playback:
+    ///
+    /// ```ignore
+    /// let mut manager = AudioEngineManager::new();
+    /// manager.set_test_output_enabled(true)?;
+    /// ```
+    ///
+    /// # Errors
+    /// Returns an error when an engine is active and changing the next sink
+    /// would make the selected output differ from the open stream.
+    #[cfg(feature = "test-util")]
+    pub fn set_test_output_enabled(&mut self, enabled: bool) -> AudioDecoderResult<()> {
+        if self.engine.load().is_some() {
+            return Err(AudioDecoderError::ConfigError(
+                "Stop playback before changing the test output selector".to_string(),
+            ));
+        }
+        self.test_output_enabled = enabled;
+        Ok(())
     }
 
     /// Load an audio file and prepare for streaming
@@ -268,11 +303,34 @@ impl AudioEngineManager {
 
         // Select optimal output sample rate based on device capabilities
         let file_sample_rate = audio_info.spec.sample_rate;
-        let output_sample_rate = select_output_sample_rate_for_channels(
-            file_sample_rate,
-            output_device.as_deref(),
-            output_channels,
-        );
+        #[cfg(feature = "test-util")]
+        let test_output_enabled = self.test_output_enabled;
+        #[cfg(not(feature = "test-util"))]
+        let test_output_enabled = false;
+        let output_device = if test_output_enabled {
+            None
+        } else {
+            output_device
+        };
+        let output_sample_rate = if test_output_enabled {
+            // The null sink runs at the source rate and never queries CPAL's
+            // device inventory, which may be unavailable on QA hosts.
+            file_sample_rate
+        } else {
+            select_output_sample_rate_for_channels(
+                file_sample_rate,
+                output_device.as_deref(),
+                output_channels,
+            )
+        };
+        #[cfg(feature = "test-util")]
+        let sink_type = if test_output_enabled {
+            SinkType::TestFile
+        } else {
+            SinkType::default()
+        };
+        #[cfg(not(feature = "test-util"))]
+        let sink_type = SinkType::default();
 
         // Create engine config with preserved volume
         let volume = f32::from_bits(self.current_volume.load(Ordering::Relaxed));
@@ -294,7 +352,7 @@ impl AudioEngineManager {
             watch_signals,
             driver_mode: false,
             allow_virtual_output: self.allow_virtual_output,
-            sink_type: Default::default(),
+            sink_type,
             ..EngineConfig::default()
         };
 
