@@ -1,3 +1,5 @@
+// Rust guideline compliant 2026-02-21
+
 use super::super::{
     DsdOutputMode, EngineOversamplingPolicy, LatencyCompensationMode, NetworkEndpointConfig,
     OutputAccessMode, PluginConfig, SinkType,
@@ -175,25 +177,39 @@ impl EngineConfig {
                 Self::MAX_OUTPUT_CHANNELS
             ));
         }
-        if self.sink_type == SinkType::LabNull {
-            if !self.driver_mode {
-                return Err("LabNull output requires driver mode".to_string());
+        if self.sink_type.uses_lab_output() {
+            match &self.sink_type {
+                SinkType::LabNull if !self.driver_mode => {
+                    return Err("LabNull output requires driver mode".to_string());
+                }
+                #[cfg(feature = "test-util")]
+                SinkType::TestFile if self.driver_mode => {
+                    return Err("TestFile output requires file playback mode".to_string());
+                }
+                _ => {}
             }
             if !matches!(
                 self.output_sample_rate,
                 44_100 | 48_000 | 88_200 | 96_000 | 176_400 | 192_000
             ) || self.output_channels > Self::MAX_OUTPUT_CHANNELS
             {
-                return Err(
-                    "LabNull output format is outside supported rates or channels".to_string(),
-                );
+                let message = if self.sink_type.is_test_file_output() {
+                    "TestFile output format is outside supported rates or channels"
+                } else {
+                    "LabNull output format is outside supported rates or channels"
+                };
+                return Err(message.to_string());
             }
-            if self
-                .output_device
-                .as_deref()
-                .is_some_and(|device| device != "Systemwide Lab Output")
-            {
-                return Err("LabNull cannot open a physical output device".to_string());
+            if self.sink_type == SinkType::LabNull {
+                if self
+                    .output_device
+                    .as_deref()
+                    .is_some_and(|device| device != "Systemwide Lab Output")
+                {
+                    return Err("LabNull cannot open a physical output device".to_string());
+                }
+            } else if self.output_device.is_some() {
+                return Err("TestFile output cannot open a physical output device".to_string());
             }
         }
         if !self.volume.is_finite() || !(0.0..=1.0).contains(&self.volume) {

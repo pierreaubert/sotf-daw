@@ -1,3 +1,5 @@
+// Rust guideline compliant 2026-02-21
+
 use super::audio_engine_manager::AudioEngineManager;
 use super::select::select_output_sample_rate_with_verifier;
 use super::streaming_state::StreamingState;
@@ -16,6 +18,113 @@ fn test_manager_creation() {
     let manager = AudioEngineManager::new();
     assert_eq!(manager.get_state(), StreamingState::Idle);
     assert!(manager.get_audio_info().is_none());
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn test_file_output_runs_decode_dsp_and_transport_without_hardware() {
+    use crate::PlaybackState;
+    use std::time::{Duration, Instant};
+
+    const SAMPLE_RATE: u32 = 48_000;
+    const FILE_SECONDS: usize = 4;
+    const FRAME_COUNT: usize = SAMPLE_RATE as usize * FILE_SECONDS;
+
+    let directory = tempfile::tempdir().unwrap();
+    let file_path = directory.path().join("transport-test.wav");
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate: SAMPLE_RATE,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(&file_path, spec).unwrap();
+    for frame in 0..FRAME_COUNT {
+        let phase = std::f32::consts::TAU * 440.0 * frame as f32 / SAMPLE_RATE as f32;
+        let sample = (phase.sin() * 8_000.0) as i16;
+        writer.write_sample(sample).unwrap();
+        writer.write_sample(sample).unwrap();
+    }
+    writer.finalize().unwrap();
+
+    let mut manager = AudioEngineManager::new();
+    manager.set_test_output_enabled(true).unwrap();
+    let info = manager.load_file(&file_path).unwrap();
+    assert_eq!(info.spec.sample_rate, SAMPLE_RATE);
+    // A deliberately nonexistent device must be ignored by the selected
+    // device-free output; this would fail if CPAL enumeration were reached.
+    manager
+        .start_playback(
+            Some("no physical device should be opened".to_string()),
+            vec![crate::PluginConfig::new(
+                "gain",
+                serde_json::json!({"gain_db": -6.0}),
+            )],
+            2,
+        )
+        .unwrap();
+
+    let wait_for_playback = |manager: &AudioEngineManager| {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            let state = manager.get_engine_state();
+            if state.playback_output_device.as_deref() == Some("Test File Output")
+                && state.position > 0.1
+                && state.output_peak_linear > 0.05
+            {
+                return state;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "file playback did not render: {state:?}"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    };
+    let initial = wait_for_playback(&manager);
+    assert_eq!(initial.sample_rate, SAMPLE_RATE);
+    assert_eq!(initial.playback_state, PlaybackState::Playing);
+    assert!(initial.output_peak_linear > 0.05, "DSP meter: {initial:?}");
+
+    manager.pause().unwrap();
+    assert_eq!(manager.get_playback_state(), PlaybackState::Paused);
+    let paused_position = manager.get_engine_state().position;
+    std::thread::sleep(Duration::from_millis(60));
+    assert!(
+        (manager.get_engine_state().position - paused_position).abs() < 0.03,
+        "position advanced while paused"
+    );
+
+    manager.resume().unwrap();
+    assert_eq!(manager.get_playback_state(), PlaybackState::Playing);
+    manager.seek(1.25).unwrap();
+    let sought = manager.get_engine_state();
+    assert_eq!(sought.playback_state, PlaybackState::Playing);
+    assert!(
+        (1.0..=1.6).contains(&sought.position),
+        "seek position: {sought:?}"
+    );
+
+    manager.stop().unwrap();
+    assert!(manager.engine.load().is_none());
+    // The selector belongs to this manager and applies after a restart.
+    manager
+        .start_playback_at(None, Vec::new(), 2, Some(0.5))
+        .unwrap();
+    let restarted = wait_for_playback(&manager);
+    assert_eq!(
+        restarted.playback_output_device.as_deref(),
+        Some("Test File Output")
+    );
+    assert_eq!(restarted.sample_rate, SAMPLE_RATE);
+    let processed_to_dry_peak_ratio = initial.output_peak_linear / restarted.output_peak_linear;
+    assert!(
+        (0.45..=0.55).contains(&processed_to_dry_peak_ratio),
+        "-6 dB gain should halve the measured output peak; processed={:?}, dry={:?}, ratio={processed_to_dry_peak_ratio}",
+        initial.output_peak_linear,
+        restarted.output_peak_linear
+    );
+    manager.stop().unwrap();
 }
 
 #[test]

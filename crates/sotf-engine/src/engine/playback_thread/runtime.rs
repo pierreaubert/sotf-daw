@@ -1,3 +1,5 @@
+// Rust guideline compliant 2026-02-21
+
 use super::super::{
     PlaybackCommand, PlaybackConfiguration, PlaybackReconfigureRequest, PlaybackStopAck,
     ProcessingMessage, ThreadEvent, plan_output_access,
@@ -494,7 +496,7 @@ enum RuntimeDecision {
 
 impl PlaybackRuntime {
     fn new(params: PlaybackRuntimeParams) -> Result<Self, String> {
-        if params.sink_type == SinkType::LabNull {
+        if params.sink_type.uses_lab_output() {
             return Self::new_lab(params);
         }
         let PlaybackRuntimeParams {
@@ -713,20 +715,29 @@ impl PlaybackRuntime {
             recycle_tx,
             allow_virtual_output,
             output_access,
-            sink_type: _,
+            sink_type,
             shared_output_peak_bits,
             shared_clipped_sample_count,
         } = params;
+        let output_name = if sink_type.is_test_file_output() {
+            "Test File Output"
+        } else {
+            "Systemwide Lab Output"
+        };
         if !LAB_SAMPLE_RATES.contains(&sample_rate)
             || initial_channels == 0
             || initial_channels > LAB_MAX_CHANNELS
         {
             return Err("Invalid lab playback format".to_string());
         }
-        if output_device
-            .as_deref()
-            .is_some_and(|device| device != "Systemwide Lab Output")
-        {
+        let invalid_output_device = if sink_type.is_test_file_output() {
+            output_device.is_some()
+        } else {
+            output_device
+                .as_deref()
+                .is_some_and(|device| device != "Systemwide Lab Output")
+        };
+        if invalid_output_device {
             return Err("Lab backend cannot open a physical output device".to_string());
         }
         if output_access.requires_exclusive() {
@@ -747,7 +758,7 @@ impl PlaybackRuntime {
         );
         send_playback_event(
             &event_tx,
-            ThreadEvent::PlaybackOutputDeviceChanged("Systemwide Lab Output".to_string()),
+            ThreadEvent::PlaybackOutputDeviceChanged(output_name.to_string()),
             "lab output",
         );
         send_playback_event(
@@ -771,7 +782,7 @@ impl PlaybackRuntime {
             #[cfg(target_os = "macos")]
             coreaudio_exclusive_mode: CoreAudioExclusiveModeGuard::inactive(),
             device: None,
-            device_name: "Systemwide Lab Output".to_string(),
+            device_name: output_name.to_string(),
             coreaudio_device_id: None,
             stream: None,
             config: StreamConfig {

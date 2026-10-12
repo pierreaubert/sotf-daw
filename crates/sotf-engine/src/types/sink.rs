@@ -1,5 +1,7 @@
 //! Audio output sink types.
 
+// Rust guideline compliant 2026-02-21
+
 /// Configuration for opening an audio sink.
 #[derive(Debug, Clone)]
 pub struct SinkConfig {
@@ -29,4 +31,32 @@ pub enum SinkType {
     Cpal,
     /// Device-free output for the isolated systemwide lab.
     LabNull,
+    /// Device-free output for real file playback tests.
+    ///
+    /// This test-only sink accepts 44.1, 48, 88.2, 96, 176.4, and 192 kHz.
+    /// Other source sample rates are rejected by `EngineConfig` validation.
+    #[cfg(feature = "test-util")]
+    TestFile,
+}
+
+impl SinkType {
+    pub(crate) const fn uses_lab_output(&self) -> bool {
+        match self {
+            Self::LabNull => true,
+            #[cfg(feature = "test-util")]
+            Self::TestFile => true,
+            Self::Cpal => false,
+        }
+    }
+
+    pub(crate) const fn is_test_file_output(&self) -> bool {
+        #[cfg(feature = "test-util")]
+        {
+            matches!(self, Self::TestFile)
+        }
+        #[cfg(not(feature = "test-util"))]
+        {
+            false
+        }
+    }
 }
