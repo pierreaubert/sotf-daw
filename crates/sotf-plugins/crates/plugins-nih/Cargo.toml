@@ -66,7 +66,7 @@ sotf-host = { workspace = true }
 sotf-plugins = { workspace = true }
 nih_plug = { version = "0.0.0",  package = "sotf-nih_plug",  git = "https://github.com/pierreaubert/sotf-3rdparties", features = ["assert_process_allocs"] }
 nih_plug_egui = { version = "0.0.0",  package = "sotf-nih_plug_egui",  git = "https://github.com/pierreaubert/sotf-3rdparties", optional = true }
-clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }
+clap-sys = "0.5"
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

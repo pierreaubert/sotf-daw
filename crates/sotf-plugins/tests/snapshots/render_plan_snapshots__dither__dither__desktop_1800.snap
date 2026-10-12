@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 61
 expression: plan
 ---
 {
@@ -19,55 +20,47 @@ expression: plan
     "main"
   ],
   "columns_collapsed": [],
-  "visible_group_ids": [
-    "DITHER"
-  ],
+  "visible_group_ids": [],
   "overflow_group_ids": [],
-  "config_controls": [],
-  "main_groups": [
+  "config_controls": [
     {
-      "id": "DITHER",
-      "title": "DITHER",
-      "controls": [
-        {
-          "param_index": 0,
-          "param_name": "Bit Depth",
-          "control_type": "selector",
-          "unit": "",
-          "range": [
-            0.0,
-            2.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 2,
-          "param_name": "Dither Type",
-          "control_type": "selector",
-          "unit": "",
-          "range": [
-            0.0,
-            2.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 1,
-          "param_name": "Noise Shaping",
-          "control_type": "toggle",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        }
-      ]
+      "param_index": 0,
+      "param_name": "Bit Depth",
+      "control_type": "button_set",
+      "unit": "",
+      "range": [
+        0.0,
+        2.0
+      ],
+      "read_only": false,
+      "enabled": true
+    },
+    {
+      "param_index": 2,
+      "param_name": "Dither Type",
+      "control_type": "selector",
+      "unit": "",
+      "range": [
+        0.0,
+        2.0
+      ],
+      "read_only": false,
+      "enabled": true
+    },
+    {
+      "param_index": 1,
+      "param_name": "Noise Shaping",
+      "control_type": "toggle",
+      "unit": "",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "read_only": false,
+      "enabled": true
     }
   ],
+  "main_groups": [],
   "output_controls": [],
   "tabs": [],
   "viz_slots": [],

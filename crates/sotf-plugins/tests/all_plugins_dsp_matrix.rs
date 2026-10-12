@@ -156,21 +156,14 @@ fn every_builtin_obeys_its_sample_rate_contract() {
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 process_fixture(entry.canonical_type, sample_rate, FRAMES)
             }));
-            let rnnoise_unsupported =
-                entry.canonical_type == "speech_denoiser" && sample_rate != 48_000;
 
-            match (rnnoise_unsupported, outcome) {
-                (false, Ok(Ok(()))) => {}
-                (true, Ok(Err(error))) if error.contains("48000") || error.contains("48") => {}
-                (true, Ok(Ok(()))) => failures.push(format!(
-                    "{}@{sample_rate} unexpectedly accepted RNNoise's unsupported rate",
-                    entry.canonical_type
-                )),
-                (_, Ok(Err(error))) => failures.push(format!(
+            match outcome {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => failures.push(format!(
                     "{}@{sample_rate} failed: {error}",
                     entry.canonical_type
                 )),
-                (_, Err(payload)) => failures.push(format!(
+                Err(payload) => failures.push(format!(
                     "{}@{sample_rate} panicked: {}",
                     entry.canonical_type,
                     panic_payload_description(&payload)

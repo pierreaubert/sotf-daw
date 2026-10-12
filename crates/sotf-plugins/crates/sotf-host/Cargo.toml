@@ -81,7 +81,7 @@ rubato = { workspace = true }
 audioadapter-buffers = { workspace = true }
 criterion = { workspace = true, optional = true }
 libloading = { workspace = true, optional = true }
-clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156", optional = true }
+clap-sys = { version = "0.5", optional = true }
 vst3-sys = { version = "0.1.0",  package = "sotf-vst3-sys",  git = "https://github.com/pierreaubert/sotf-3rdparties", optional = true }
 vst3-com = { version = "0.1.0",  package = "sotf-vst3-com",  git = "https://github.com/pierreaubert/sotf-3rdparties", optional = true }
 

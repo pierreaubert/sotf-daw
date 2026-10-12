@@ -232,17 +232,19 @@ fn structural_refusals_and_automation_rejections_hold() {
         assert!(error.contains("requires rebuilding"), "{id}: {error}");
     }
 
-    // No global id bypass: the denoiser shares trigger ids but opts out.
+    // Shared trigger ids stay per-plugin: the denoiser admits its profile
+    // triggers as immediate momentary controls while structural rebuilds
+    // still refuse.
     let mut denoiser = DawHost::new(1, RATE);
     let plugin = create_plugin("denoiser", &serde_json::json!({}), 1, RATE).unwrap();
     denoiser.add_plugin(plugin).unwrap();
     denoiser.build().unwrap();
-    for id in [
-        "learn_noise",
-        "clear_profile",
-        "low_latency",
-        "multi_resolution",
-    ] {
+    for id in ["learn_noise", "clear_profile"] {
+        denoiser
+            .set_plugin_parameter_immediate(0, id, ParameterValue::Bool(true))
+            .unwrap_or_else(|error| panic!("denoiser {id} must admit momentary: {error}"));
+    }
+    for id in ["low_latency", "multi_resolution"] {
         let error = denoiser
             .set_plugin_parameter_immediate(0, id, ParameterValue::Bool(true))
             .unwrap_err();

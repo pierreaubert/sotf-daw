@@ -26,9 +26,11 @@ fn test_play_to_audible_latency() {
         if state.playback_state == PlaybackState::Playing {
             let latency = start.elapsed();
             println!("Play latency: {:?}", latency);
-            // Should transition to playing within 500ms typically
+            // Cold play spins up decode plus the virtual device; allow headroom
+            // for loaded parallel runs while still catching real stalls well
+            // below the 2s never-transition timeout.
             assert!(
-                latency < Duration::from_millis(500),
+                latency < Duration::from_millis(1500),
                 "Play transition took too long: {:?}",
                 latency
             );

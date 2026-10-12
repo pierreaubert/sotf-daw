@@ -15,10 +15,6 @@ use crate::GateMode;
 /// use sotf_plugin_gate::{GateMode, target_gain_db};
 /// assert_eq!(target_gain_db(-30.0, -20.0, 2.0, 0.0, 40.0, 12.0, GateMode::Downward), Some(-10.0));
 /// ```
-#[expect(
-    clippy::too_many_arguments,
-    reason = "The target uses the seven canonical gate fields"
-)]
 pub fn target_gain_db(
     input_db: f32,
     threshold_db: f32,

@@ -187,8 +187,8 @@ fn test_engine_volume_control() {
     let config = super::common::test_engine_config();
     let engine = AudioEngine::new(config).unwrap();
 
-    // Test various volume levels
-    let volumes = [0.0, 0.5, 1.0, 1.5, 2.0];
+    // Test various volume levels within the finite 0..=1 attenuation range.
+    let volumes = [0.0, 0.5, 1.0];
 
     for &vol in &volumes {
         engine.set_volume(vol).unwrap();
@@ -196,6 +196,21 @@ fn test_engine_volume_control() {
 
         let state = engine.get_state();
         assert_eq!(state.volume, vol, "Volume should be set to {}", vol);
+    }
+
+    // Out-of-range volumes are rejected and leave the latched volume alone.
+    for &vol in &[1.5, 2.0] {
+        assert!(
+            engine.set_volume(vol).is_err(),
+            "Volume {vol} should be rejected"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+
+        let state = engine.get_state();
+        assert_eq!(
+            state.volume, 1.0,
+            "Rejected volume {vol} must not change latched state"
+        );
     }
 }
 
@@ -912,9 +927,11 @@ fn test_engine_high_gain_plugin_does_not_crash_or_error() {
 
     // Extreme gain will push samples outside [-1, 1]. The engine's output
     // path clamps before the device, so the engine must remain playable.
+    // +20 dB is the top of the gain range; on the 0.3-peak fixture it still
+    // drives samples to ~3.0, well into the clamp path.
     let plugins = vec![PluginConfig::new(
         "gain",
-        serde_json::json!({"gain_db": 30.0}),
+        serde_json::json!({"gain_db": 20.0}),
     )];
     engine.update_plugin_chain(&plugins).unwrap();
 

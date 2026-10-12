@@ -547,15 +547,30 @@ fn stress_volume_extremes() {
     let config = super::common::test_engine_config();
     let engine = AudioEngine::new(config).unwrap();
 
-    // Test extreme volume values
-    let extreme_volumes = [0.0, 0.0001, 0.001, 0.01, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0];
+    // Test extreme volume values within the finite 0..=1 attenuation range.
+    let extreme_volumes = [0.0, 0.0001, 0.001, 0.01, 0.5, 1.0];
 
     for &vol in &extreme_volumes {
-        engine.set_volume(vol).ok();
+        engine.set_volume(vol).unwrap();
         thread::sleep(Duration::from_millis(10));
 
         let state = engine.get_state();
         assert_eq!(state.volume, vol, "Volume should be set to {}", vol);
+    }
+
+    // Out-of-range volumes are rejected and leave the latched volume alone.
+    for &vol in &[1.5, 2.0, 5.0, 10.0, f32::NAN, f32::INFINITY, -1.0] {
+        assert!(
+            engine.set_volume(vol).is_err(),
+            "Volume {vol} should be rejected"
+        );
+        thread::sleep(Duration::from_millis(10));
+
+        let state = engine.get_state();
+        assert_eq!(
+            state.volume, 1.0,
+            "Rejected volume {vol} must not change latched state"
+        );
     }
 }
 

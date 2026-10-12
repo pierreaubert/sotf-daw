@@ -394,11 +394,11 @@ mod tests {
         assert!(!LAYOUT.config.iter().any(|control| control.param_index == 4));
         assert!(dynamics_params.contains(&7)); // mix
         assert!(
-            dynamics.controls.iter().any(|c| matches!(
+            LAYOUT.output.iter().any(|c| matches!(
                 c.control_type,
                 sotf_host::plugin_layout::ControlType::BarMeter { .. }
             )),
-            "gain-reduction meter must ride with the primary dynamics row"
+            "gain-reduction meter must ride in the output section above the controls"
         );
 
         // Narrow editor: primary row stays, secondary groups overflow with

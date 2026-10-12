@@ -167,8 +167,8 @@ fn sampling_rate(reader: &Hdf5File, measurements: usize) -> Result<f64, String> 
     let Some(&first) = values.first() else {
         return Err("Data.SamplingRate is empty".into());
     };
-    if !first.is_finite() || first <= 0.0 {
-        return Err("Data.SamplingRate must be positive and finite".into());
+    if !first.is_finite() || first <= 0.0 || !(first as f32).is_finite() || first as f32 <= 0.0 {
+        return Err("Data.SamplingRate must be positive, finite, and representable as f32".into());
     }
     if values.iter().any(|&value| value != first) {
         return Err("Unsupported SOFA capability: nonuniform Data.SamplingRate".into());

@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 59
 expression: plan
 ---
 {
@@ -20,10 +21,25 @@ expression: plan
   ],
   "columns_collapsed": [],
   "visible_group_ids": [
-    "primary"
+    "primary",
+    "MODULATION",
+    "DIFFUSION"
   ],
   "overflow_group_ids": [],
-  "config_controls": [],
+  "config_controls": [
+    {
+      "param_index": 7,
+      "param_name": "Pitch Preserving",
+      "control_type": "toggle",
+      "unit": "",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "read_only": false,
+      "enabled": true
+    }
+  ],
   "main_groups": [
     {
       "id": "primary",
@@ -56,7 +72,7 @@ expression: plan
         {
           "param_index": 2,
           "param_name": "Mix",
-          "control_type": "knob",
+          "control_type": "vertical_slider",
           "unit": "%",
           "range": [
             0.0,
@@ -66,17 +82,15 @@ expression: plan
           "enabled": true
         }
       ]
-    }
-  ],
-  "output_controls": [],
-  "tabs": [
+    },
     {
-      "name": "Modulation & diffusion",
+      "id": "MODULATION",
+      "title": "Modulation",
       "controls": [
         {
           "param_index": 3,
           "param_name": "LFO Rate",
-          "control_type": "knob",
+          "control_type": "vertical_slider",
           "unit": "Hz",
           "range": [
             0.0,
@@ -88,7 +102,7 @@ expression: plan
         {
           "param_index": 4,
           "param_name": "LFO Depth",
-          "control_type": "knob",
+          "control_type": "vertical_slider",
           "unit": "ms",
           "range": [
             0.0,
@@ -96,19 +110,13 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
-        },
-        {
-          "param_index": 5,
-          "param_name": "Allpass Coeff",
-          "control_type": "knob",
-          "unit": "",
-          "range": [
-            0.0,
-            0.99
-          ],
-          "read_only": false,
-          "enabled": true
-        },
+        }
+      ]
+    },
+    {
+      "id": "DIFFUSION",
+      "title": "Diffusion",
+      "controls": [
         {
           "param_index": 6,
           "param_name": "Allpass Feedback",
@@ -122,20 +130,22 @@ expression: plan
           "enabled": true
         },
         {
-          "param_index": 7,
-          "param_name": "Pitch Preserving",
-          "control_type": "toggle",
+          "param_index": 5,
+          "param_name": "Allpass Coeff",
+          "control_type": "vertical_slider",
           "unit": "",
           "range": [
             0.0,
-            1.0
+            0.99
           ],
           "read_only": false,
-          "enabled": true
+          "enabled": false
         }
       ]
     }
   ],
+  "output_controls": [],
+  "tabs": [],
   "viz_slots": [],
   "dynamic_sections": []
 }

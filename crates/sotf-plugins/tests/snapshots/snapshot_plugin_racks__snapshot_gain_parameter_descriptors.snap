@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/snapshot_plugin_racks.rs
+assertion_line: 76
 expression: params
 ---
 [
@@ -20,6 +21,9 @@ expression: params
     },
     "unit": "",
     "logarithmic": false,
+    "choices": [],
+    "read_only": false,
+    "step": null,
     "update_mode": "Realtime"
   },
   {
@@ -39,6 +43,9 @@ expression: params
     },
     "unit": "",
     "logarithmic": false,
+    "choices": [],
+    "read_only": false,
+    "step": null,
     "update_mode": "Realtime"
   },
   {
@@ -58,6 +65,9 @@ expression: params
     },
     "unit": "",
     "logarithmic": false,
+    "choices": [],
+    "read_only": false,
+    "step": null,
     "update_mode": "Realtime"
   },
   {
@@ -77,6 +87,9 @@ expression: params
     },
     "unit": "",
     "logarithmic": false,
+    "choices": [],
+    "read_only": false,
+    "step": null,
     "update_mode": "Realtime"
   }
 ]

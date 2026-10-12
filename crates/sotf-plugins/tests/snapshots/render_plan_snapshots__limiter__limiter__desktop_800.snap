@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 126
 expression: plan
 ---
 {
@@ -67,15 +68,6 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
-        },
-        {
-          "param_index": 18446744073709551615,
-          "param_name": "(meter)",
-          "control_type": "bar_meter(-20..0)",
-          "unit": "",
-          "range": null,
-          "read_only": true,
-          "enabled": false
         },
         {
           "param_index": 7,
@@ -188,7 +180,17 @@ expression: plan
       ]
     }
   ],
-  "output_controls": [],
+  "output_controls": [
+    {
+      "param_index": 18446744073709551615,
+      "param_name": "(meter)",
+      "control_type": "bar_meter(-20..0)",
+      "unit": "",
+      "range": null,
+      "read_only": true,
+      "enabled": false
+    }
+  ],
   "tabs": [],
   "viz_slots": [
     {

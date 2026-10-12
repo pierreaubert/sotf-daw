@@ -803,8 +803,10 @@ impl LoudnessMonitor {
         if channels == 0 {
             return Err("loudness monitor requires at least one channel".to_string());
         }
-        if !sr.is_finite() || sr < 10.0 {
-            return Err("loudness monitor sample rate must be at least 10 Hz".to_string());
+        if !sr.is_finite() || !(16.0..=2_822_400.0).contains(&sr) {
+            return Err(
+                "loudness monitor sample rate must be finite and in 16..=2822400 Hz".to_string(),
+            );
         }
         if let Some(layout) = &channel_layout {
             layout.validate_for_width(channels as usize)?;
@@ -1974,8 +1976,10 @@ impl Plugin for LoudnessMonitorPlugin {
         }
     }
     fn initialize(&mut self, sr: f64) -> PluginResult<()> {
-        if !sr.is_finite() || sr < 10.0 {
-            return Err("loudness monitor sample rate must be at least 10 Hz".to_string());
+        if !sr.is_finite() || !(16.0..=2_822_400.0).contains(&sr) {
+            return Err(
+                "loudness monitor sample rate must be finite and in 16..=2822400 Hz".to_string(),
+            );
         }
         // Preserve the spatial-enable bit across reinitialisation so callers
         // that opted in once don't silently lose the matrix after a sample-

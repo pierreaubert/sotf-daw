@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 49
 expression: plan
 ---
 {
@@ -27,12 +28,12 @@ expression: plan
   "main_groups": [
     {
       "id": "merge-config",
-      "title": "MERGE CONFIG",
+      "title": "",
       "controls": [
         {
           "param_index": 0,
           "param_name": "Bands",
-          "control_type": "knob",
+          "control_type": "vertical_slider",
           "unit": "",
           "range": [
             2.0,

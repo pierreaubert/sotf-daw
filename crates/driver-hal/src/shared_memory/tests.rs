@@ -890,7 +890,10 @@ fn test_load_initial_cipher_rejects_fingerprint_mismatch() {
 
 /// Default shared-memory path must be user-isolated under the expected runtime
 /// directory. Regression test for QA-SYS-001 path-bounding requirement.
+/// Serialized with the contract test, which temporarily overrides the
+/// shared-memory path environment for hermetic segment isolation.
 #[test]
+#[serial_test::serial]
 fn test_default_shared_memory_path_is_user_isolated() {
     let path = super::misc::get_shared_memory_path();
     let path_str = path.to_string_lossy();

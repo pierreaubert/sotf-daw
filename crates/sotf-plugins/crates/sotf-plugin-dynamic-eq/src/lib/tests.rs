@@ -153,9 +153,11 @@ fn global_dynamics_retarget_inherited_bands_without_losing_overrides() {
     assert!(plugin.bands[1].use_band_threshold);
     assert!(plugin.bands[1].use_band_ratio);
 
-    let mut serialized = DynamicEqPluginParams::default();
-    serialized.threshold = plugin.threshold_db;
-    serialized.ratio = plugin.ratio;
+    let mut serialized = DynamicEqPluginParams {
+        threshold: plugin.threshold_db,
+        ratio: plugin.ratio,
+        ..DynamicEqPluginParams::default()
+    };
     for (saved, live) in serialized.bands.iter_mut().zip(&plugin.bands) {
         saved.band_threshold = live.band_threshold;
         saved.band_ratio = live.band_ratio;
@@ -204,9 +206,11 @@ fn batch_global_dynamics_preserve_inheritance_after_rebuild() {
     batch.insert(ParameterId::from("ratio"), ParameterValue::Float(4.0));
     plugin.apply_values(batch).unwrap();
 
-    let mut saved = DynamicEqPluginParams::default();
-    saved.threshold = plugin.threshold_db;
-    saved.ratio = plugin.ratio;
+    let mut saved = DynamicEqPluginParams {
+        threshold: plugin.threshold_db,
+        ratio: plugin.ratio,
+        ..DynamicEqPluginParams::default()
+    };
     for (stored, live) in saved.bands.iter_mut().zip(&plugin.bands) {
         stored.band_threshold = live.band_threshold;
         stored.band_ratio = live.band_ratio;

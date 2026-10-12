@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 134
 expression: plan
 ---
 {
@@ -37,18 +38,6 @@ expression: plan
       "range": [
         0.0,
         9.0
-      ],
-      "read_only": false,
-      "enabled": true
-    },
-    {
-      "param_index": 43,
-      "param_name": "Binaural Preview",
-      "control_type": "toggle",
-      "unit": "",
-      "range": [
-        0.0,
-        1.0
       ],
       "read_only": false,
       "enabled": true
@@ -575,6 +564,18 @@ expression: plan
           ],
           "read_only": false,
           "enabled": false
+        },
+        {
+          "param_index": 43,
+          "param_name": "Binaural Preview",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
         }
       ]
     },

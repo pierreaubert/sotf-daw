@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 52
 expression: plan
 ---
 {
@@ -25,6 +26,18 @@ expression: plan
   ],
   "overflow_group_ids": [],
   "config_controls": [
+    {
+      "param_index": 4,
+      "param_name": "Crossfade Mode",
+      "control_type": "button_set",
+      "unit": "",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "read_only": false,
+      "enabled": true
+    },
     {
       "param_index": 1,
       "param_name": "Input Channels",
@@ -77,18 +90,6 @@ expression: plan
           "param_index": 3,
           "param_name": "Near-field",
           "control_type": "knob",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 4,
-          "param_name": "Crossfade Mode",
-          "control_type": "selector",
           "unit": "",
           "range": [
             0.0,

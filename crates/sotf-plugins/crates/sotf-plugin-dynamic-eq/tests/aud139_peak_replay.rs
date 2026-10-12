@@ -80,6 +80,25 @@ fn replay(params_json: &str, input: &[f32]) -> Vec<f32> {
 }
 
 #[test]
+#[ignore = "manual AUD139 pre-edit Peak audio capture"]
+fn capture_aud139_pre_edit_peak_audio() {
+    let directory = std::path::PathBuf::from(
+        std::env::var_os("SOTF_AUD139_CAPTURE_DIR")
+            .expect("set SOTF_AUD139_CAPTURE_DIR to an explicit pre-edit capture directory"),
+    );
+    std::fs::create_dir_all(&directory).unwrap();
+    let input = decode_f32le(INPUT);
+    for (name, params_json, _) in CASES {
+        let output = replay(params_json, &input);
+        let mut bytes = Vec::with_capacity(std::mem::size_of_val(output.as_slice()));
+        for sample in &output {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        std::fs::write(directory.join(format!("{name}.f32le")), bytes).unwrap();
+    }
+}
+
+#[test]
 fn aud139_peak_vectors_replay_from_tracked_fixtures() {
     let input = decode_f32le(INPUT);
     assert_eq!(input.len(), FRAMES * CHANNELS, "fixture input length");

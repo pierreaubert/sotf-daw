@@ -70,8 +70,10 @@ pub struct BeamformerPlugin {
 impl BeamformerPlugin {
     pub fn new(num_mics: usize, sample_rate: impl Into<f64>) -> PluginResult<Self> {
         let sample_rate = sample_rate.into();
-        if !sample_rate.is_finite() || sample_rate <= 0.0 {
-            return Err("Beamformer sample rate must be finite and positive".into());
+        // A zero rate is the legitimate unclocked state (TailLength::Unknown
+        // until initialize()); only negative and non-finite rates are invalid.
+        if !sample_rate.is_finite() || sample_rate < 0.0 {
+            return Err("Beamformer sample rate must be finite and non-negative".into());
         }
         if !(2..=8).contains(&num_mics) {
             return Err(format!(

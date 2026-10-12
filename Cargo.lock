@@ -693,7 +693,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "autoeq"
-version = "0.5.76"
+version = "0.5.77"
 dependencies = [
  "anyhow",
  "autoeq-artifacts",
@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "autoeq-optim"
-version = "0.5.62"
+version = "0.5.63"
 dependencies = [
  "autoeq-core",
  "autoeq-measurements",
@@ -816,10 +816,13 @@ dependencies = [
 
 [[package]]
 name = "autoeq-report-wasm"
-version = "0.5.1"
+version = "0.5.0"
 dependencies = [
+ "autoeq-core",
  "base64 0.23.1",
+ "csv",
  "gpui-d3rs 0.10.19",
+ "rustfft",
  "serde",
  "serde_json",
 ]
@@ -1375,11 +1378,6 @@ name = "clap-sys"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a76abbdb2907f6fd97fb6bc0b7be96b77d328f2dd9669d1075cc03369ed22154"
-
-[[package]]
-name = "clap-sys"
-version = "0.5.0"
-source = "git+https://github.com/micahrj/clap-sys.git?rev=25d7f53fdb6363ad63fbd80049cb7a42a97ac156#25d7f53fdb6363ad63fbd80049cb7a42a97ac156"
 
 [[package]]
 name = "clap_builder"
@@ -2098,6 +2096,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "csv"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52cd9d68cf7efc6ddfaaee42e7288d3a99d613d4b50f76ce9827ae0c6e14f938"
+dependencies = [
+ "csv-core",
+ "itoa",
+ "ryu",
+ "serde_core",
+]
+
+[[package]]
+name = "csv-core"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704a3c26996a80471189265814dbc2c257598b96b8a7feae2d31ace646bb9782"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "ctor"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2414,6 +2433,7 @@ dependencies = [
  "proptest",
  "rand 0.10.3",
  "serde_json",
+ "serial_test",
  "sha2 0.11.0",
  "sotf-plugins",
  "tempfile",
@@ -4894,7 +4914,7 @@ dependencies = [
 
 [[package]]
 name = "math-dsp"
-version = "0.5.32"
+version = "0.5.33"
 dependencies = [
  "clap",
  "hound",
@@ -6586,7 +6606,7 @@ dependencies = [
 name = "plugins-nih"
 version = "0.6.0"
 dependencies = [
- "clap-sys 0.5.0 (git+https://github.com/micahrj/clap-sys.git?rev=25d7f53fdb6363ad63fbd80049cb7a42a97ac156)",
+ "clap-sys",
  "crossbeam",
  "log",
  "parking_lot",
@@ -7562,7 +7582,7 @@ dependencies = [
 
 [[package]]
 name = "roomeq-workflow"
-version = "0.5.34"
+version = "0.5.35"
 dependencies = [
  "anyhow",
  "autoeq-artifacts",
@@ -8424,7 +8444,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-capture"
-version = "0.1.0"
+version = "0.5.1"
 dependencies = [
  "audioadapter-buffers",
  "autoeq",
@@ -8542,7 +8562,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-engine"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "arc-swap",
  "bytemuck",
@@ -9006,7 +9026,7 @@ dependencies = [
  "audioadapter-buffers",
  "chrono",
  "clap",
- "clap-sys 0.5.0 (git+https://github.com/micahrj/clap-sys.git?rev=25d7f53fdb6363ad63fbd80049cb7a42a97ac156)",
+ "clap-sys",
  "criterion",
  "gpui-builder",
  "gpui-design 0.10.7 (git+https://github.com/pierreaubert/gpui-toolkit)",
@@ -9157,7 +9177,7 @@ dependencies = [
  "backtrace",
  "bitflags 1.3.2",
  "cfg-if",
- "clap-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clap-sys",
  "core-foundation 0.9.4",
  "crossbeam",
  "libc",

@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 58
 expression: plan
 ---
 {
@@ -21,9 +22,9 @@ expression: plan
   ],
   "columns_collapsed": [],
   "visible_group_ids": [
-    "PRIMARY",
-    "mode-selector",
-    "MULTIBAND"
+    "MULTIBAND",
+    "MULTIBAND DETAIL",
+    "OPTIONS"
   ],
   "overflow_group_ids": [
     "head-tracking"
@@ -44,17 +45,17 @@ expression: plan
   ],
   "main_groups": [
     {
-      "id": "PRIMARY",
-      "title": "PRIMARY",
+      "id": "MULTIBAND",
+      "title": "MULTIBAND",
       "controls": [
         {
-          "param_index": 2,
-          "param_name": "Enabled",
-          "control_type": "toggle",
+          "param_index": 0,
+          "param_name": "Mode",
+          "control_type": "button_set",
           "unit": "",
           "range": [
             0.0,
-            1.0
+            4.0
           ],
           "read_only": false,
           "enabled": true
@@ -72,42 +73,6 @@ expression: plan
           "enabled": true
         },
         {
-          "param_index": 12,
-          "param_name": "ITD Delay",
-          "control_type": "knob",
-          "unit": "ms",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        }
-      ]
-    },
-    {
-      "id": "mode-selector",
-      "title": "MODE",
-      "controls": [
-        {
-          "param_index": 0,
-          "param_name": "Mode",
-          "control_type": "button_set",
-          "unit": "",
-          "range": [
-            0.0,
-            4.0
-          ],
-          "read_only": false,
-          "enabled": true
-        }
-      ]
-    },
-    {
-      "id": "MULTIBAND",
-      "title": "MULTIBAND",
-      "controls": [
-        {
           "param_index": 7,
           "param_name": "MB Low Freq",
           "control_type": "knob",
@@ -120,18 +85,6 @@ expression: plan
           "enabled": true
         },
         {
-          "param_index": 8,
-          "param_name": "MB Mid/High Freq",
-          "control_type": "knob",
-          "unit": "Hz",
-          "range": [
-            2000.0,
-            15000.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
           "param_index": 9,
           "param_name": "MB Low Feed",
           "control_type": "knob",
@@ -139,6 +92,24 @@ expression: plan
           "range": [
             -60.0,
             15.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "MULTIBAND DETAIL",
+      "title": "MULTIBAND DETAIL",
+      "controls": [
+        {
+          "param_index": 8,
+          "param_name": "MB Mid/High Freq",
+          "control_type": "knob",
+          "unit": "Hz",
+          "range": [
+            2000.0,
+            15000.0
           ],
           "read_only": false,
           "enabled": true
@@ -163,6 +134,36 @@ expression: plan
           "range": [
             -60.0,
             15.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "OPTIONS",
+      "title": "OPTIONS",
+      "controls": [
+        {
+          "param_index": 2,
+          "param_name": "Enabled",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 12,
+          "param_name": "ITD Delay",
+          "control_type": "knob",
+          "unit": "ms",
+          "range": [
+            0.0,
+            1.0
           ],
           "read_only": false,
           "enabled": true

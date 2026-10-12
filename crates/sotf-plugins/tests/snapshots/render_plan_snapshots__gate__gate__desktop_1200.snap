@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 125
 expression: plan
 ---
 {
@@ -22,11 +23,10 @@ expression: plan
   "visible_group_ids": [
     "DYNAMICS",
     "TIMING",
-    "RESPONSE"
-  ],
-  "overflow_group_ids": [
+    "RESPONSE",
     "DETECTOR"
   ],
+  "overflow_group_ids": [],
   "config_controls": [],
   "main_groups": [
     {
@@ -70,17 +70,32 @@ expression: plan
           "enabled": true
         },
         {
-          "param_index": 16,
-          "param_name": "Max Boost",
-          "control_type": "vertical_slider",
-          "unit": "dB",
+          "param_index": 5,
+          "param_name": "Mix",
+          "control_type": "knob",
+          "unit": "%",
           "range": [
             0.0,
-            24.0
+            1.0
           ],
           "read_only": false,
-          "enabled": false
+          "enabled": true
         },
+        {
+          "param_index": 18446744073709551615,
+          "param_name": "(meter)",
+          "control_type": "bar_meter(-30..0)",
+          "unit": "",
+          "range": null,
+          "read_only": true,
+          "enabled": false
+        }
+      ]
+    },
+    {
+      "id": "TIMING",
+      "title": "Timing & lookahead",
+      "controls": [
         {
           "param_index": 2,
           "param_name": "Attack",
@@ -117,33 +132,6 @@ expression: plan
           "read_only": false,
           "enabled": true
         },
-        {
-          "param_index": 5,
-          "param_name": "Mix",
-          "control_type": "knob",
-          "unit": "%",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 18446744073709551615,
-          "param_name": "(meter)",
-          "control_type": "bar_meter(-30..0)",
-          "unit": "",
-          "range": null,
-          "read_only": true,
-          "enabled": false
-        }
-      ]
-    },
-    {
-      "id": "TIMING",
-      "title": "Timing & lookahead",
-      "controls": [
         {
           "param_index": 14,
           "param_name": "Lookahead",
@@ -197,6 +185,18 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
+        },
+        {
+          "param_index": 16,
+          "param_name": "Max Boost",
+          "control_type": "vertical_slider",
+          "unit": "dB",
+          "range": [
+            0.0,
+            24.0
+          ],
+          "read_only": false,
+          "enabled": false
         }
       ]
     },

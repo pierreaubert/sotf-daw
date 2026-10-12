@@ -729,9 +729,8 @@ mod tests {
 
     #[test]
     fn vendored_model_matches_reference_after_workspace_reuse_refactor() {
-        let input_bytes = include_bytes!("../../../../3rdparties/nnnoiseless/tests/testing.raw");
-        let output_bytes =
-            include_bytes!("../../../../3rdparties/nnnoiseless/tests/reference_output.raw");
+        let input_bytes = include_bytes!("../tests/data/testing.raw");
+        let output_bytes = include_bytes!("../tests/data/reference_output.raw");
         let input: Vec<f32> = input_bytes
             .as_chunks::<2>()
             .0

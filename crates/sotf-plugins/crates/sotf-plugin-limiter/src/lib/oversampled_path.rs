@@ -111,7 +111,9 @@ impl OversampledPath {
             );
         }
         let high_rate = rate * f64::from(factor);
-        if !high_rate.is_finite() {
+        // The oversampled clock must fit the historical u32 domain; beyond
+        // that the downstream delay/accumulator math overflows.
+        if !high_rate.is_finite() || high_rate > u32::MAX as f64 {
             return Err("limiter oversampled rate overflow".to_string());
         }
         // Quantize once at the native clock, then use an exact integer multiple.

@@ -95,8 +95,47 @@ fn test_hal_driver_is_send() {
     assert_send::<HalDriver>();
 }
 
+/// Redirect the default shared-memory path for one scope, restoring it on drop.
+struct ScopedShmPathOverride {
+    previous: Option<std::ffi::OsString>,
+}
+
+impl ScopedShmPathOverride {
+    fn install(path: &std::path::Path) -> Self {
+        let previous = std::env::var_os("SOTF_HAL_SHARED_MEMORY_PATH");
+        // SAFETY: the only test that mutates this variable runs under
+        // #[serial], and the only other reader of the default-path
+        // environment (test_default_shared_memory_path_is_user_isolated)
+        // is serialized on the same lock, so no concurrent getenv/setenv
+        // pair on this key can occur within this test binary.
+        unsafe {
+            std::env::set_var("SOTF_HAL_SHARED_MEMORY_PATH", path);
+        }
+        Self { previous }
+    }
+}
+
+impl Drop for ScopedShmPathOverride {
+    fn drop(&mut self) {
+        // SAFETY: same serialization guarantee as install.
+        unsafe {
+            match &self.previous {
+                Some(value) => std::env::set_var("SOTF_HAL_SHARED_MEMORY_PATH", value),
+                None => std::env::remove_var("SOTF_HAL_SHARED_MEMORY_PATH"),
+            }
+        }
+    }
+}
+
 #[test]
+#[serial_test::serial]
 fn test_hal_driver_conforms_to_audio_driver_contract() {
+    // Isolate from the live per-user segment: initialize() and poll() would
+    // otherwise adopt and consume real HAL negotiation state on machines
+    // with a running daemon+driver, and the contract's quiescence assert
+    // would observe foreign config changes.
+    let dir = tempdir().expect("Failed to create temp dir");
+    let _override = ScopedShmPathOverride::install(&dir.path().join("audio.shm"));
     driver_common::test_support::assert_audio_driver_contract(HalDriver::new())
         .expect("HalDriver contract");
 }

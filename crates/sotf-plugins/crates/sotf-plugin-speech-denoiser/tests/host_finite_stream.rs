@@ -97,9 +97,33 @@ fn real_host_chain_with_strength_matches_zero_continuation() {
 }
 
 #[test]
-fn direct_host_chain_rejects_non_48khz_without_claiming_rate_conversion() {
-    assert!(matches!(
-        host(44_100),
-        Err(message) if message.contains("48 kHz")
-    ));
+fn direct_host_chain_adapts_non_48khz_through_internal_rate_conversion() {
+    let mut host_chain = host(44_100).expect("44.1 kHz host chain uses the internal rate adapter");
+    let output = process(&mut host_chain, &signal(1024));
+    assert!(
+        output.iter().all(|sample| sample.is_finite()),
+        "adapted chain must produce finite audio"
+    );
+    let mut block = vec![1234.0; DRAIN_FRAME_CAPACITY * CHANNELS];
+    let mut complete = false;
+    // The adapted tail spans the resampler supports plus the model tail
+    // (~1600 host frames at 44.1 kHz, emitted 64 per call); bound the drain
+    // well above the ~25 calls it needs so a hung drain still fails fast.
+    for _ in 0..40 {
+        let result = host_chain.drain(&mut block).unwrap();
+        assert!(
+            block[..result.frames * CHANNELS]
+                .iter()
+                .all(|sample| sample.is_finite()),
+            "adapted drain must emit finite audio"
+        );
+        if result.complete {
+            complete = true;
+            break;
+        }
+    }
+    assert!(
+        complete,
+        "adapted chain drain must complete within a bounded tail"
+    );
 }

@@ -24,13 +24,13 @@ expression: plan
   ],
   "visible_group_ids": [
     "REDUCTION",
-    "NOISE PROFILE"
+    "PROFILE"
   ],
   "overflow_group_ids": [
+    "REDUCTION DETAIL",
     "TIMING",
     "SPECTRAL SUB",
-    "CURVE",
-    "MONITOR"
+    "CURVE"
   ],
   "config_controls": [
     {
@@ -62,7 +62,67 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "PROFILE",
+      "title": "PROFILE",
+      "controls": [
+        {
+          "param_index": 20,
+          "param_name": "Learn Noise",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
         },
+        {
+          "param_index": 21,
+          "param_name": "Use Profile",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 22,
+          "param_name": "Clear Profile",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 32,
+          "param_name": "Audition Residual",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "REDUCTION DETAIL",
+      "title": "REDUCTION DETAIL",
+      "controls": [
         {
           "param_index": 1,
           "param_name": "Floor",
@@ -157,7 +217,7 @@ expression: plan
             6.0
           ],
           "read_only": false,
-          "enabled": true
+          "enabled": false
         },
         {
           "param_index": 19,
@@ -169,49 +229,7 @@ expression: plan
             0.5
           ],
           "read_only": false,
-          "enabled": true
-        }
-      ]
-    },
-    {
-      "id": "NOISE PROFILE",
-      "title": "NOISE PROFILE",
-      "controls": [
-        {
-          "param_index": 20,
-          "param_name": "Learn Noise",
-          "control_type": "toggle",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 21,
-          "param_name": "Use Profile",
-          "control_type": "toggle",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 22,
-          "param_name": "Clear Profile",
-          "control_type": "toggle",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
+          "enabled": false
         }
       ]
     },
@@ -247,24 +265,6 @@ expression: plan
           "param_index": 31,
           "param_name": "Curve High",
           "control_type": "knob",
-          "unit": "",
-          "range": [
-            0.0,
-            1.0
-          ],
-          "read_only": false,
-          "enabled": true
-        }
-      ]
-    },
-    {
-      "id": "MONITOR",
-      "title": "MONITOR",
-      "controls": [
-        {
-          "param_index": 32,
-          "param_name": "Audition Residual",
-          "control_type": "toggle",
           "unit": "",
           "range": [
             0.0,

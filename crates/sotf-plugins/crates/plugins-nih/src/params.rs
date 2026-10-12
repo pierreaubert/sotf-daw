@@ -1220,12 +1220,11 @@ impl DynamicParams {
                             // alive throughout every parameter callback.
                             if (base || effective)
                                 && let Some(owner) = owner.upgrade()
+                                && owner.bool_params[peer].disable_for_coupled_control()
                             {
-                                if owner.bool_params[peer].disable_for_coupled_control() {
-                                    owner
-                                        .aae_value_refresh_generation
-                                        .fetch_add(1, Ordering::Release);
-                                }
+                                owner
+                                    .aae_value_refresh_generation
+                                    .fetch_add(1, Ordering::Release);
                             }
                         }))
                     })
@@ -1735,19 +1734,18 @@ impl DynamicParams {
     fn discard_convolution_state_restore(&self) {
         if let Some(state) = &self.convolution_state
             && let Ok(mut state) = state.lock()
+            && let Some(pending) = state.pending.take()
         {
-            if let Some(pending) = state.pending.take() {
-                for scalar in pending.scalar_rollback {
-                    if let Some(published_revision) = scalar.published_revision
-                        && let Some(revision) =
-                            self.convolution_scalar_revisions.get(&scalar.float_index)
-                        && revision.load(Ordering::Acquire) == published_revision
-                    {
-                        // Preserve later host edits, even if they returned to the
-                        // published value. No audio thread runs during this rollback.
-                        self.float_params[scalar.float_index]
-                            .set_plain_value_for_initialization(scalar.previous_value);
-                    }
+            for scalar in pending.scalar_rollback {
+                if let Some(published_revision) = scalar.published_revision
+                    && let Some(revision) =
+                        self.convolution_scalar_revisions.get(&scalar.float_index)
+                    && revision.load(Ordering::Acquire) == published_revision
+                {
+                    // Preserve later host edits, even if they returned to the
+                    // published value. No audio thread runs during this rollback.
+                    self.float_params[scalar.float_index]
+                        .set_plain_value_for_initialization(scalar.previous_value);
                 }
             }
         }
@@ -2612,6 +2610,9 @@ impl DynamicParams {
         self.sync_to_plugin_for_rate(plugin, None)
     }
 
+    // Only referenced by feature-gated plugin wrappers and their tests; the
+    // default-feature library build has no callers.
+    #[allow(dead_code)]
     pub(crate) fn sync_to_plugin_for_activation(
         &self,
         plugin: &mut dyn sotf_host::plugin::Plugin,
@@ -2658,7 +2659,16 @@ impl DynamicParams {
                 // cutoff at this rate. Keep the host's requested value for
                 // persistence and a later higher-rate activation.
                 let maximum = (sample_rate as f32 * 0.45).min(16_000.0);
-                if *requested > maximum && *effective == maximum {
+                if *requested > maximum {
+                    if *effective != maximum {
+                        // The request exceeds this rate's usable cutoff while
+                        // the DSP sits below it (restoring a preset saved at
+                        // a higher rate, or automating back above the rate
+                        // cap). Run the DSP at the effective maximum instead
+                        // of failing the block; the host keeps the requested
+                        // value for a later higher-rate activation.
+                        plugin.set_parameter(entry.id.clone(), ParameterValue::Float(maximum))?;
+                    }
                     continue;
                 }
             }

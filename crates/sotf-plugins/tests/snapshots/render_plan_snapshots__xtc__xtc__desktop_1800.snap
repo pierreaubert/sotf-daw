@@ -1,5 +1,6 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
+assertion_line: 135
 expression: plan
 ---
 {
@@ -21,6 +22,7 @@ expression: plan
   ],
   "columns_collapsed": [],
   "visible_group_ids": [
+    "CANCELLATION",
     "GEOMETRY",
     "BETA",
     "SHADOW",
@@ -31,8 +33,8 @@ expression: plan
   "config_controls": [],
   "main_groups": [
     {
-      "id": "GEOMETRY",
-      "title": "GEOMETRY",
+      "id": "CANCELLATION",
+      "title": "CANCELLATION",
       "controls": [
         {
           "param_index": 0,
@@ -59,18 +61,6 @@ expression: plan
           "enabled": true
         },
         {
-          "param_index": 2,
-          "param_name": "Head Radius",
-          "control_type": "knob",
-          "unit": "m",
-          "range": [
-            0.05,
-            0.12
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
           "param_index": 27,
           "param_name": "Head Model",
           "control_type": "selector",
@@ -81,18 +71,12 @@ expression: plan
           ],
           "read_only": false,
           "enabled": true
-        }
-      ]
-    },
-    {
-      "id": "BETA",
-      "title": "BETA",
-      "controls": [
+        },
         {
           "param_index": 7,
           "param_name": "Beta Base",
           "control_type": "knob",
-          "unit": "",
+          "unit": "×10⁻³",
           "range": [
             0.0001,
             0.1
@@ -100,6 +84,42 @@ expression: plan
           "read_only": false,
           "enabled": true
         },
+        {
+          "param_index": 12,
+          "param_name": "Max Gain",
+          "control_type": "knob",
+          "unit": "dB",
+          "range": [
+            3.0,
+            30.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "GEOMETRY",
+      "title": "GEOMETRY",
+      "controls": [
+        {
+          "param_index": 2,
+          "param_name": "Head Radius",
+          "control_type": "knob",
+          "unit": "cm",
+          "range": [
+            0.05,
+            0.12
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "BETA",
+      "title": "BETA",
+      "controls": [
         {
           "param_index": 8,
           "param_name": "Beta Low Boost",
@@ -150,18 +170,6 @@ expression: plan
           "range": [
             0.0,
             12.0
-          ],
-          "read_only": false,
-          "enabled": true
-        },
-        {
-          "param_index": 12,
-          "param_name": "Max Gain",
-          "control_type": "knob",
-          "unit": "dB",
-          "range": [
-            3.0,
-            30.0
           ],
           "read_only": false,
           "enabled": true
