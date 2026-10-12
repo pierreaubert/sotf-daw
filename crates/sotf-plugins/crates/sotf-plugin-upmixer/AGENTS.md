@@ -52,6 +52,13 @@ src/
 cargo test -p sotf-plugin-upmixer
 ```
 
+`tests/upmixer_audio_regression.rs` compares output against golden WAVs in
+`data_generated/test-plugin-upmixer/` (gitignored; tests skip when absent).
+Regenerate with `just generate-upmixer-golden` (or
+`cargo run -p sotf-plugin-upmixer --bin generate-upmixer-golden -- --out-dir
+crates/sotf-plugins/crates/sotf-plugin-upmixer/data_generated/test-plugin-upmixer`
+from the workspace root). The generator uses fixed seeds, so output is byte-stable.
+
 ## Important Notes
 
 - This is the largest and most complex plugin in the workspace. The algorithm is split across many modules for maintainability.

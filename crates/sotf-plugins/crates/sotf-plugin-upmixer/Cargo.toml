@@ -22,6 +22,10 @@ name = "qa-upmixer"
 path = "bin/qa_upmixer.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "generate-upmixer-golden"
+path = "bin/generate_upmixer_golden.rs"
+
 [dependencies]
 sotf-host = { workspace = true }
 log = { workspace = true }
@@ -35,6 +39,8 @@ rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 hound = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

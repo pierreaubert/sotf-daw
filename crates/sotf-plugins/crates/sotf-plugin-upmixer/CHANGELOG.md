@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- New `generate-upmixer-golden` binary (moved from the retired `sotf-tools`
+  crate): regenerates the golden WAVs consumed by
+  `tests/upmixer_audio_regression.rs` via `just generate-upmixer-golden`.
+  It now drives `sotf_host` / the local `UpmixerPlugin` directly instead
+  of the `sotf-plugins` facade, with identical signals and block handling.
 - AutoGain now measures aligned input/output pairs on a fixed 100 ms active-frame clock. A target update affects the following frame, preserving the scalar smoothing law while removing callback-size and future-suffix dependence. Disabling pauses its meter/gain/clock state; reset starts a fresh epoch.
 - Align AutoGain reference input with the declared FFT latency, keep that reference warm while AutoGain is off, and prepare meter storage before processing. Native drain advances metering only when generating new cached tail frames.
 

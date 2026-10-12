@@ -103,6 +103,13 @@ qa-plugins-diagnostics:
 	{{cargo}} run --release -p sotf-plugin-transient-shaper --bin qa-transient-shaper --features qa
 	{{cargo}} run --release -p sotf-plugin-upmixer --bin qa-upmixer --features qa
 	{{cargo}} run --release -p sotf-plugin-xtc --bin qa-xtc --features qa
+
+# Regenerate the upmixer golden references consumed by
+# crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/upmixer_audio_regression.rs.
+# Output lands in the upmixer crate dir (the test's GOLDEN_DIR), not the workspace root.
+[group('qa-plugins')]
+generate-upmixer-golden:
+	{{cargo}} run --release -p sotf-plugin-upmixer --bin generate-upmixer-golden -- --out-dir crates/sotf-plugins/crates/sotf-plugin-upmixer/data_generated/test-plugin-upmixer
 	{{cargo}} run --release -p sotf-host --bin qa-host --features qa
 
 # ----------------------------------------------------------------------

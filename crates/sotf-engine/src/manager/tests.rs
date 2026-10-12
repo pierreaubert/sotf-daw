@@ -19,6 +19,55 @@ fn test_manager_creation() {
 }
 
 #[test]
+fn bypass_is_retained_without_an_engine() {
+    let mut manager = AudioEngineManager::new();
+    for bypass in [true, false, true] {
+        manager.set_bypass(bypass).unwrap();
+        manager.stop().unwrap();
+        assert_eq!(manager.current_bypassed.load(Ordering::Relaxed), bypass);
+        assert!(manager.engine.load().is_none());
+    }
+}
+
+#[test]
+fn rack_bypass_keeps_live_upmixer_engine_and_survives_restart() {
+    let mut manager = AudioEngineManager::new();
+    manager.set_bypass(true).unwrap();
+    for _ in 0..2 {
+        manager
+            .start_driver_playback_with_driver_config_and_sink(
+                None,
+                vec![crate::PluginConfig::new(
+                    "upmixer",
+                    serde_json::json!({"speaker_config": "7.1.2"}),
+                )],
+                10,
+                48_000,
+                256,
+                2,
+                crate::SinkType::LabNull,
+            )
+            .unwrap();
+        let engine = manager.engine.load_full().unwrap();
+        assert!(engine.get_state().processing_bypassed);
+        for bypass in [false, true, false, true] {
+            manager.set_bypass(bypass).unwrap();
+            let current = manager.engine.load_full().unwrap();
+            assert!(
+                Arc::ptr_eq(&engine, &current),
+                "bypass must retain the engine"
+            );
+            let state = current.get_state();
+            assert_eq!(state.processing_bypassed, bypass);
+            assert_eq!(state.num_channels, 10);
+            assert_eq!(state.sample_rate, 48_000);
+            assert!(state.last_error.is_none(), "{state:?}");
+        }
+        manager.stop().unwrap();
+    }
+}
+
+#[test]
 fn signal_watching_is_forwarded_without_enabling_file_watching() {
     let manager = AudioEngineManager::with_signal_watching(true);
     assert_eq!(manager.engine_watch_flags(), (false, true));

@@ -166,12 +166,12 @@ ctrlc = { version = "3.5", features = ["termination"] }
 directories = "6"
 env_logger = "0.11"
 gpui = { package = "sotf-gpui-toolkit-gpui", version = "0.2.3", git = "https://github.com/pierreaubert/sotf-3rdparties" }
-gpui-au = { version = "0.9", path = "../gpui-toolkit/crates/gpui-au" }
-gpui-audio-kit = { version = "0.9", path = "../gpui-toolkit/crates/gpui-audio-kit" }
-gpui-builder = { version = "0.9", path = "../gpui-toolkit/crates/gpui-builder" }
-gpui-design = { version = "0.9", path = "../gpui-toolkit/crates/gpui-design" }
-gpui-px = { version = "0.9", path = "../gpui-toolkit/crates/gpui-px" }
-gpui-ui-kit = { version = "0.9", path = "../gpui-toolkit/crates/gpui-ui-kit" }
+gpui-au = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-audio-kit = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-builder = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-design = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-px = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-ui-kit = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
 hex = "0.4"
 hound = "3.5"
 m3u8-rs = { version = "6" }

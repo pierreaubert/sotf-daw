@@ -35,6 +35,8 @@ pub struct AudioEngineManager {
     pub(super) current_volume: AtomicU32,
     /// Current mute state (preserved across song changes)
     pub(super) current_muted: AtomicBool,
+    /// Processing bypass retained across engine starts and recovery.
+    pub(super) current_bypassed: AtomicBool,
     /// Allow output to virtual/loopback devices (needed for recording tests)
     pub(super) allow_virtual_output: bool,
     /// Last source seen during event polling (for detecting gapless transitions)
@@ -72,6 +74,7 @@ impl AudioEngineManager {
             spectrum_plugin_index: AtomicU64::new(ATOMIC_NONE),
             current_volume: AtomicU32::new(1.0f32.to_bits()),
             current_muted: AtomicBool::new(false),
+            current_bypassed: AtomicBool::new(false),
             allow_virtual_output: false,
             last_seen_source: Mutex::new(None),
             last_seen_stream_metadata: Mutex::new(None),
@@ -344,6 +347,10 @@ impl AudioEngineManager {
                 .map_err(AudioDecoderError::IoError)?;
         }
 
+        engine
+            .set_bypass(self.current_bypassed.load(Ordering::Relaxed))
+            .map_err(AudioDecoderError::IoError)?;
+
         if let Some(pos) = position {
             engine
                 .play_at(audio_info.source.clone(), pos)
@@ -561,6 +568,10 @@ impl AudioEngineManager {
         let engine = AudioEngine::new(config).map_err(|e| {
             AudioDecoderError::ConfigError(format!("Failed to create driver engine: {}", e))
         })?;
+
+        engine
+            .set_bypass(self.current_bypassed.load(Ordering::Relaxed))
+            .map_err(AudioDecoderError::IoError)?;
 
         // Store engine handle lock-free
         #[allow(clippy::arc_with_non_send_sync)]
@@ -823,6 +834,23 @@ impl AudioEngineManager {
         if let Some(engine) = &*self.engine.load() {
             engine.set_mute(muted).map_err(AudioDecoderError::IoError)?;
         }
+        Ok(())
+    }
+
+    /// Bypass processing without changing channel topology or reopening the output stream.
+    ///
+    /// The setting is retained when idle and applied to subsequent engine starts.
+    ///
+    /// # Errors
+    /// Returns an error if the running engine rejects the bypass command.
+    pub fn set_bypass(&self, bypassed: bool) -> AudioDecoderResult<()> {
+        let _guard = lock_recover(&self.cmd_mutex, "cmd_mutex");
+        if let Some(engine) = &*self.engine.load() {
+            engine
+                .set_bypass(bypassed)
+                .map_err(AudioDecoderError::IoError)?;
+        }
+        self.current_bypassed.store(bypassed, Ordering::Relaxed);
         Ok(())
     }
 
