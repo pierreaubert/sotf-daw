@@ -11,6 +11,9 @@ fuzzer_output
 /.docker-target
 /tools
 
+# xcode
+SOTFAudioUnits-iOS.xcodeproj
+
 # signing certificates (NEVER commit private keys), remove everything that looks like a .env
 /certs/
 .env

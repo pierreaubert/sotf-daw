@@ -3,6 +3,7 @@ use super::catalog::catalog_entry;
 use super::external::external_plugin_isolation_requested;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::external::external_plugin_trust;
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::is::is_external_plugin_type;
 use super::misc::resize_matrix;
 use super::parse::parse_external_plugin_descriptor;
@@ -53,6 +54,7 @@ use sotf_host::{
     ChannelLayout, IntegratedLoudnessMode, ParameterId, ParameterValue, ParametricInPlacePlugin,
     ParametricPlugin,
 };
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use std::path::PathBuf;
 
 /// Create a plugin instance from its type string and JSON parameters.

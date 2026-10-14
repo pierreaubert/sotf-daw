@@ -1,5 +1,6 @@
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::consts::DEFAULT_SANDBOXED_PLUGIN_CREATION_OPTIONS;
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::PluginDescriptor;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::{
@@ -7,6 +8,7 @@ use crate::{
     PluginSandboxLifecycleMode, PluginSandboxPolicy, current_plugin_sandbox_launch_backend,
     current_plugin_sandbox_launcher_command,
 };
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use std::path::PathBuf;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use std::sync::RwLock;

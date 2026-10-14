@@ -130,6 +130,12 @@ impl PluginScanner {
 
     /// Get standard search paths for a plugin format.
     pub(super) fn search_paths(format: PluginFormat) -> Vec<PathBuf> {
+        // Every push below is platform-gated (macOS/Linux/Windows); on other
+        // targets the result is an empty vec.
+        #[cfg_attr(
+            not(any(target_os = "linux", target_os = "macos", target_os = "windows")),
+            expect(unused_mut, reason = "pushes are platform-gated; empty on this target")
+        )]
         let mut paths = Vec::new();
 
         match format {

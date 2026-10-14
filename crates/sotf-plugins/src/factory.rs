@@ -19,5 +19,6 @@ mod validate;
 pub use catalog::*;
 pub use create::*;
 pub use is::*;
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub use sandboxed_plugin_creation_options::*;
 pub use validate::*;

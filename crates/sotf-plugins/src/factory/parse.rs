@@ -12,7 +12,9 @@ use crate::{
     IsolatedExternalPluginConfig,
 };
 use crate::{ExternalPluginState, PluginDescriptor, PluginFormat};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+use std::path::PathBuf;
 
 pub(super) fn parse_external_plugin_instance_id(
     parameters: &serde_json::Value,

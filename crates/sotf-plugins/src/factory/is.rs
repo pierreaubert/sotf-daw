@@ -6,6 +6,7 @@ pub fn is_supported_plugin_type(plugin_type: &str) -> bool {
     catalog_entry(plugin_type).is_some()
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 pub(super) fn is_external_plugin_type(plugin_type: &str) -> bool {
     catalog_entry(plugin_type).is_some_and(|entry| entry.canonical_type == "external")
 }

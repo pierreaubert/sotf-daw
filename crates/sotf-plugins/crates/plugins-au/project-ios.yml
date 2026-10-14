@@ -2,20 +2,20 @@ name: SOTFAudioUnits-iOS
 options:
   bundleIdPrefix: org.spinorama
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "18.0"
   createIntermediateGroups: true
 
 settings:
-  MARKETING_VERSION: 0.8.0
+  MARKETING_VERSION: 0.8.2
   CURRENT_PROJECT_VERSION: 1
-  IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+  IPHONEOS_DEPLOYMENT_TARGET: "18.0"
   SWIFT_VERSION: "6.0"
 
 targetTemplates:
   SOTFiOSAudioUnitExtension:
     type: app-extension
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "18.0"
     sources:
       - path: GenericAU
         name: GenericAU
@@ -55,7 +55,7 @@ targets:
   SOTFAudioUnits-iOS:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "18.0"
     sources:
       - path: App-iOS
         createIntermediateGroups: true
