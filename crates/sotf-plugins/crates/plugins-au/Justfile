@@ -224,9 +224,15 @@ build-au-all-x86_64: build-au-xcode-x86_64 sync-au-versions
 build-au-all: build-au-all-arm64 build-au-all-x86_64
 	@echo "✅ AU packages built for arm64 and x86_64"
 
-# Build the iOS AUv3 container + EQ extension for a device destination.
+# Regenerate the iOS AUv3 wrappers from the desktop AU wrappers (deterministic,
+# idempotent; outputs are git-ignored, EQiOSAudioUnit is the template).
 [group('build-ios')]
-build-au-ios-device: sync-au-versions build-au-ffi-ios-arm64
+gen-ios-au:
+    python3 {{au_dir}}/scripts/gen_ios_au.py --generate
+
+# Build the iOS AUv3 container + all plugin extensions for a device destination.
+[group('build-ios')]
+build-au-ios-device: gen-ios-au sync-au-versions build-au-ffi-ios-arm64
 	#!/usr/bin/env bash
 	set -euo pipefail
 	cd {{au_dir}}
@@ -246,9 +252,9 @@ build-au-ios-device: sync-au-versions build-au-ffi-ios-arm64
 		build
 	echo "✅ iOS AUv3 device build: build/au-ios-device/Build/Products/Release-iphoneos/SOTFAudioUnits-iOS.app"
 
-# Build the iOS AUv3 container + EQ extension for the arm64 simulator.
+# Build the iOS AUv3 container + all plugin extensions for the arm64 simulator.
 [group('build-ios')]
-build-au-ios-simulator: sync-au-versions build-au-ffi-ios-simulator-arm64
+build-au-ios-simulator: gen-ios-au sync-au-versions build-au-ffi-ios-simulator-arm64
 	#!/usr/bin/env bash
 	set -euo pipefail
 	cd {{au_dir}}

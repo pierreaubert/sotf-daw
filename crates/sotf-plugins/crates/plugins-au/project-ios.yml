@@ -67,6 +67,90 @@ targets:
     dependencies:
       - target: EQiOSAudioUnit
         embed: true
+      - target: AAEiOSAudioUnit
+        embed: true
+      - target: ABCompareiOSAudioUnit
+        embed: true
+      - target: AECiOSAudioUnit
+        embed: true
+      - target: AmbisonicsiOSAudioUnit
+        embed: true
+      - target: BandMergeiOSAudioUnit
+        embed: true
+      - target: BandSplitiOSAudioUnit
+        embed: true
+      - target: BeamformeriOSAudioUnit
+        embed: true
+      - target: BinauraliOSAudioUnit
+        embed: true
+      - target: ChannelMuteSoloiOSAudioUnit
+        embed: true
+      - target: CompressoriOSAudioUnit
+        embed: true
+      - target: ConvolutioniOSAudioUnit
+        embed: true
+      - target: CrossfeediOSAudioUnit
+        embed: true
+      - target: CrossoveriOSAudioUnit
+        embed: true
+      - target: DeEsseriOSAudioUnit
+        embed: true
+      - target: DeclickiOSAudioUnit
+        embed: true
+      - target: DelayiOSAudioUnit
+        embed: true
+      - target: DenoiseriOSAudioUnit
+        embed: true
+      - target: DitheriOSAudioUnit
+        embed: true
+      - target: DownmixiOSAudioUnit
+        embed: true
+      - target: DynamicEQiOSAudioUnit
+        embed: true
+      - target: ExpanderiOSAudioUnit
+        embed: true
+      - target: FletcherMunsoniOSAudioUnit
+        embed: true
+      - target: GainiOSAudioUnit
+        embed: true
+      - target: GateiOSAudioUnit
+        embed: true
+      - target: HissReduceriOSAudioUnit
+        embed: true
+      - target: LimiteriOSAudioUnit
+        embed: true
+      - target: LinearPhaseEQiOSAudioUnit
+        embed: true
+      - target: LoudnessCompensationiOSAudioUnit
+        embed: true
+      - target: LoudnessMonitoriOSAudioUnit
+        embed: true
+      - target: MatrixiOSAudioUnit
+        embed: true
+      - target: MonoToStereoiOSAudioUnit
+        embed: true
+      - target: MultibandCompressoriOSAudioUnit
+        embed: true
+      - target: MultibandExpanderiOSAudioUnit
+        embed: true
+      - target: PNDiOSAudioUnit
+        embed: true
+      - target: SaturationiOSAudioUnit
+        embed: true
+      - target: SpectralCompressoriOSAudioUnit
+        embed: true
+      - target: SpectrumAnalyzeriOSAudioUnit
+        embed: true
+      - target: SpeechDenoiseriOSAudioUnit
+        embed: true
+      - target: StereoImageriOSAudioUnit
+        embed: true
+      - target: TransientShaperiOSAudioUnit
+        embed: true
+      - target: UpmixeriOSAudioUnit
+        embed: true
+      - target: XTCiOSAudioUnit
+        embed: true
 
   EQiOSAudioUnit:
     templates:
@@ -78,3 +162,465 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.EQAudioUnit
       INFOPLIST_FILE: EQiOSAudioUnit/Info.plist
+
+  AAEiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: AAEiOSAudioUnit
+        name: AAEiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.AAEAudioUnit
+      INFOPLIST_FILE: AAEiOSAudioUnit/Info.plist
+
+  ABCompareiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: ABCompareiOSAudioUnit
+        name: ABCompareiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.ABCompareAudioUnit
+      INFOPLIST_FILE: ABCompareiOSAudioUnit/Info.plist
+
+  AECiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: AECiOSAudioUnit
+        name: AECiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.AECAudioUnit
+      INFOPLIST_FILE: AECiOSAudioUnit/Info.plist
+
+  AmbisonicsiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: AmbisonicsiOSAudioUnit
+        name: AmbisonicsiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.AmbisonicsAudioUnit
+      INFOPLIST_FILE: AmbisonicsiOSAudioUnit/Info.plist
+
+  BandMergeiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: BandMergeiOSAudioUnit
+        name: BandMergeiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.BandMergeAudioUnit
+      INFOPLIST_FILE: BandMergeiOSAudioUnit/Info.plist
+
+  BandSplitiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: BandSplitiOSAudioUnit
+        name: BandSplitiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.BandSplitAudioUnit
+      INFOPLIST_FILE: BandSplitiOSAudioUnit/Info.plist
+
+  BeamformeriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: BeamformeriOSAudioUnit
+        name: BeamformeriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.BeamformerAudioUnit
+      INFOPLIST_FILE: BeamformeriOSAudioUnit/Info.plist
+
+  BinauraliOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: BinauraliOSAudioUnit
+        name: BinauraliOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.BinauralAudioUnit
+      INFOPLIST_FILE: BinauraliOSAudioUnit/Info.plist
+
+  ChannelMuteSoloiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: ChannelMuteSoloiOSAudioUnit
+        name: ChannelMuteSoloiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.ChannelMuteSoloAudioUnit
+      INFOPLIST_FILE: ChannelMuteSoloiOSAudioUnit/Info.plist
+
+  CompressoriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: CompressoriOSAudioUnit
+        name: CompressoriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.CompressorAudioUnit
+      INFOPLIST_FILE: CompressoriOSAudioUnit/Info.plist
+
+  ConvolutioniOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: ConvolutioniOSAudioUnit
+        name: ConvolutioniOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.ConvolutionAudioUnit
+      INFOPLIST_FILE: ConvolutioniOSAudioUnit/Info.plist
+
+  CrossfeediOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: CrossfeediOSAudioUnit
+        name: CrossfeediOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.CrossfeedAudioUnit
+      INFOPLIST_FILE: CrossfeediOSAudioUnit/Info.plist
+
+  CrossoveriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: CrossoveriOSAudioUnit
+        name: CrossoveriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.CrossoverAudioUnit
+      INFOPLIST_FILE: CrossoveriOSAudioUnit/Info.plist
+
+  DeEsseriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DeEsseriOSAudioUnit
+        name: DeEsseriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DeEsserAudioUnit
+      INFOPLIST_FILE: DeEsseriOSAudioUnit/Info.plist
+
+  DeclickiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DeclickiOSAudioUnit
+        name: DeclickiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DeclickAudioUnit
+      INFOPLIST_FILE: DeclickiOSAudioUnit/Info.plist
+
+  DelayiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DelayiOSAudioUnit
+        name: DelayiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DelayAudioUnit
+      INFOPLIST_FILE: DelayiOSAudioUnit/Info.plist
+
+  DenoiseriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DenoiseriOSAudioUnit
+        name: DenoiseriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DenoiserAudioUnit
+      INFOPLIST_FILE: DenoiseriOSAudioUnit/Info.plist
+
+  DitheriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DitheriOSAudioUnit
+        name: DitheriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DitherAudioUnit
+      INFOPLIST_FILE: DitheriOSAudioUnit/Info.plist
+
+  DownmixiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DownmixiOSAudioUnit
+        name: DownmixiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DownmixAudioUnit
+      INFOPLIST_FILE: DownmixiOSAudioUnit/Info.plist
+
+  DynamicEQiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: DynamicEQiOSAudioUnit
+        name: DynamicEQiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.DynamicEQAudioUnit
+      INFOPLIST_FILE: DynamicEQiOSAudioUnit/Info.plist
+
+  ExpanderiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: ExpanderiOSAudioUnit
+        name: ExpanderiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.ExpanderAudioUnit
+      INFOPLIST_FILE: ExpanderiOSAudioUnit/Info.plist
+
+  FletcherMunsoniOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: FletcherMunsoniOSAudioUnit
+        name: FletcherMunsoniOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.FletcherMunsonAudioUnit
+      INFOPLIST_FILE: FletcherMunsoniOSAudioUnit/Info.plist
+
+  GainiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: GainiOSAudioUnit
+        name: GainiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.GainAudioUnit
+      INFOPLIST_FILE: GainiOSAudioUnit/Info.plist
+
+  GateiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: GateiOSAudioUnit
+        name: GateiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.GateAudioUnit
+      INFOPLIST_FILE: GateiOSAudioUnit/Info.plist
+
+  HissReduceriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: HissReduceriOSAudioUnit
+        name: HissReduceriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.HissReducerAudioUnit
+      INFOPLIST_FILE: HissReduceriOSAudioUnit/Info.plist
+
+  LimiteriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: LimiteriOSAudioUnit
+        name: LimiteriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.LimiterAudioUnit
+      INFOPLIST_FILE: LimiteriOSAudioUnit/Info.plist
+
+  LinearPhaseEQiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: LinearPhaseEQiOSAudioUnit
+        name: LinearPhaseEQiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.LinearPhaseEQAudioUnit
+      INFOPLIST_FILE: LinearPhaseEQiOSAudioUnit/Info.plist
+
+  LoudnessCompensationiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: LoudnessCompensationiOSAudioUnit
+        name: LoudnessCompensationiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.LoudnessCompensationAudioUnit
+      INFOPLIST_FILE: LoudnessCompensationiOSAudioUnit/Info.plist
+
+  LoudnessMonitoriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: LoudnessMonitoriOSAudioUnit
+        name: LoudnessMonitoriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.LoudnessMonitorAudioUnit
+      INFOPLIST_FILE: LoudnessMonitoriOSAudioUnit/Info.plist
+
+  MatrixiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: MatrixiOSAudioUnit
+        name: MatrixiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.MatrixAudioUnit
+      INFOPLIST_FILE: MatrixiOSAudioUnit/Info.plist
+
+  MonoToStereoiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: MonoToStereoiOSAudioUnit
+        name: MonoToStereoiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.MonoToStereoAudioUnit
+      INFOPLIST_FILE: MonoToStereoiOSAudioUnit/Info.plist
+
+  MultibandCompressoriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: MultibandCompressoriOSAudioUnit
+        name: MultibandCompressoriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.MultibandCompressorAudioUnit
+      INFOPLIST_FILE: MultibandCompressoriOSAudioUnit/Info.plist
+
+  MultibandExpanderiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: MultibandExpanderiOSAudioUnit
+        name: MultibandExpanderiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.MultibandExpanderAudioUnit
+      INFOPLIST_FILE: MultibandExpanderiOSAudioUnit/Info.plist
+
+  PNDiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: PNDiOSAudioUnit
+        name: PNDiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.PNDAudioUnit
+      INFOPLIST_FILE: PNDiOSAudioUnit/Info.plist
+
+  SaturationiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: SaturationiOSAudioUnit
+        name: SaturationiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.SaturationAudioUnit
+      INFOPLIST_FILE: SaturationiOSAudioUnit/Info.plist
+
+  SpectralCompressoriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: SpectralCompressoriOSAudioUnit
+        name: SpectralCompressoriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.SpectralCompressorAudioUnit
+      INFOPLIST_FILE: SpectralCompressoriOSAudioUnit/Info.plist
+
+  SpectrumAnalyzeriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: SpectrumAnalyzeriOSAudioUnit
+        name: SpectrumAnalyzeriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.SpectrumAnalyzerAudioUnit
+      INFOPLIST_FILE: SpectrumAnalyzeriOSAudioUnit/Info.plist
+
+  SpeechDenoiseriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: SpeechDenoiseriOSAudioUnit
+        name: SpeechDenoiseriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.SpeechDenoiserAudioUnit
+      INFOPLIST_FILE: SpeechDenoiseriOSAudioUnit/Info.plist
+
+  StereoImageriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: StereoImageriOSAudioUnit
+        name: StereoImageriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.StereoImagerAudioUnit
+      INFOPLIST_FILE: StereoImageriOSAudioUnit/Info.plist
+
+  TransientShaperiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: TransientShaperiOSAudioUnit
+        name: TransientShaperiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.TransientShaperAudioUnit
+      INFOPLIST_FILE: TransientShaperiOSAudioUnit/Info.plist
+
+  UpmixeriOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: UpmixeriOSAudioUnit
+        name: UpmixeriOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.UpmixerAudioUnit
+      INFOPLIST_FILE: UpmixeriOSAudioUnit/Info.plist
+
+  XTCiOSAudioUnit:
+    templates:
+      - SOTFiOSAudioUnitExtension
+    sources:
+      - path: XTCiOSAudioUnit
+        name: XTCiOSAudioUnit
+        createIntermediateGroups: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: org.spinorama.SOTFAudioUnits.iOS.XTCAudioUnit
+      INFOPLIST_FILE: XTCiOSAudioUnit/Info.plist

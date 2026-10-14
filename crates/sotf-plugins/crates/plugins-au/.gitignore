@@ -2,6 +2,10 @@
 /Resources
 /Shared
 /SOTFAudioUnits.xcodeproj
+# Generated iOS AUv3 wrappers (see scripts/gen_ios_au.py + `just gen-ios-au`).
+# EQiOSAudioUnit is the hand-maintained template and stays tracked.
+/*iOSAudioUnit/
+!/EQiOSAudioUnit/
 
 
 
