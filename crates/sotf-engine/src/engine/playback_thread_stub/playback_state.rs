@@ -34,6 +34,8 @@ pub(super) struct PlaybackState {
 }
 
 impl PlaybackState {
+    // Exercised by host tests; the iOS feeder builds state inline.
+    #[cfg_attr(target_os = "ios", allow(dead_code))]
     pub(super) fn new(capacity: usize) -> Self {
         Self {
             capacity,

@@ -7,11 +7,11 @@ use sotf_host::external_plugin::{
 };
 
 #[cfg(feature = "convolution")]
-pub(crate) mod native_convolution_editor;
+pub(crate) mod convolution_editor_service;
 
 #[cfg(feature = "convolution")]
 #[doc(hidden)]
-pub type NativeConvolutionBackgroundTask = native_convolution_editor::BackgroundTask;
+pub type NativeConvolutionBackgroundTask = convolution_editor_service::BackgroundTask;
 
 #[cfg(not(feature = "convolution"))]
 #[doc(hidden)]
@@ -35,7 +35,7 @@ macro_rules! sotf_nih_task_executor {
         let params = ($params).clone();
         let service = ($service).clone();
         Box::new(move |task| {
-            $crate::wrapper::native_convolution_editor::handle_background_task(
+            $crate::wrapper::convolution_editor_service::handle_background_task(
                 &params, &service, task,
             );
         })
@@ -46,21 +46,9 @@ macro_rules! sotf_nih_task_executor {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! sotf_nih_create_editor {
-    ("Convolution", $plugin:ty, $params:expr, $service:expr, $executor:expr) => {{
-        #[cfg(feature = "convolution")]
-        {
-            $crate::wrapper::native_convolution_editor::create_editor::<$plugin>(
-                ($params).clone(),
-                ($service).clone(),
-                $executor,
-            )
-        }
-        #[cfg(not(feature = "convolution"))]
-        {
-            let _ = $executor;
-            None
-        }
-    }};
+    // No nih plugin ships a custom native editor: hosts show their generic
+    // UI. (The Convolution egui editor was removed; IR loading runs through
+    // presets and state restore.)
     ($other:literal, $plugin:ty, $params:expr, $service:expr, $executor:expr) => {{
         let _ = $executor;
         None
@@ -1305,8 +1293,8 @@ pub fn plugin_constructor_channels(plugin_type: &str) -> usize {
 
 #[cfg(feature = "convolution")]
 pub(crate) fn convolution_reactivation_is_compatible(
-    prepared_geometry: Option<native_convolution_editor::Geometry>,
-    requested_geometry: native_convolution_editor::Geometry,
+    prepared_geometry: Option<convolution_editor_service::Geometry>,
+    requested_geometry: convolution_editor_service::Geometry,
     prepared_structural_fingerprint: u64,
     requested_structural_fingerprint: u64,
     prepared_non_restartable_fingerprint: u64,
@@ -1363,10 +1351,10 @@ macro_rules! sotf_nih_plugin {
             transport: $crate::wrapper::transport::TransportTracker,
             #[cfg(feature = "convolution")]
             convolution_editor_service:
-                std::sync::Arc<$crate::wrapper::native_convolution_editor::ConvolutionEditorService>,
+                std::sync::Arc<$crate::wrapper::convolution_editor_service::ConvolutionEditorService>,
             #[cfg(feature = "convolution")]
             convolution_prepared_geometry:
-                Option<$crate::wrapper::native_convolution_editor::Geometry>,
+                Option<$crate::wrapper::convolution_editor_service::Geometry>,
         }
 
         impl Default for $struct_name {
@@ -1865,7 +1853,7 @@ macro_rules! sotf_nih_plugin {
 
                 #[cfg(feature = "convolution")]
                 let convolution_geometry =
-                    $crate::wrapper::native_convolution_editor::Geometry {
+                    $crate::wrapper::convolution_editor_service::Geometry {
                         sample_rate: candidate_sample_rate,
                         max_frames,
                         input_channels: total_inputs,
@@ -1945,7 +1933,7 @@ macro_rules! sotf_nih_plugin {
                     self.convolution_editor_service
                         .take_candidate(
                             generation,
-                            $crate::wrapper::native_convolution_editor::Geometry {
+                            $crate::wrapper::convolution_editor_service::Geometry {
                                 sample_rate: candidate_sample_rate,
                                 max_frames,
                                 input_channels: total_inputs,
@@ -2818,7 +2806,7 @@ macro_rules! sotf_nih_plugin {
 
 #[cfg(all(test, feature = "convolution"))]
 mod convolution_reactivation_tests {
-    use super::{convolution_reactivation_is_compatible, native_convolution_editor::Geometry};
+    use super::{convolution_reactivation_is_compatible, convolution_editor_service::Geometry};
 
     const GEOMETRY: Geometry = Geometry {
         sample_rate: 48_000.0,

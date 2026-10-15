@@ -8,8 +8,11 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
+#[cfg(not(target_os = "ios"))]
 use rtrb::{CopyToUninit, chunks::WriteChunkUninit};
 
+// Only the cpal input callback (absent on iOS) writes ring chunks.
+#[cfg(not(target_os = "ios"))]
 fn write_chunk_bulk(mut chunk: WriteChunkUninit<'_, f32>, data: &[f32]) {
     let (first, second) = chunk.as_mut_slices();
     let first_len = first.len().min(data.len());

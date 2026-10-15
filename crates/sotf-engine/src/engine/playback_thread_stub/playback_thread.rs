@@ -100,6 +100,38 @@ impl PlaybackThread {
         })
     }
 
+    /// Desktop constructor parity: iOS has a single CoreAudio sink, so the
+    /// selected sink is accepted and ignored (as `new` already ignores the
+    /// device/access parameters).
+    #[cfg(target_os = "ios")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_sink(
+        message_rx: Receiver<ProcessingMessage>,
+        event_tx: crossbeam::channel::Sender<ThreadEvent>,
+        sample_rate: u32,
+        buffer_ms: u32,
+        channels: usize,
+        frame_size: usize,
+        output_device: Option<String>,
+        recycle_tx: SyncSender<Vec<f32>>,
+        allow_virtual_output: bool,
+        output_access: crate::OutputAccessMode,
+        _sink_type: crate::SinkType,
+    ) -> Result<Self, String> {
+        Self::new(
+            message_rx,
+            event_tx,
+            sample_rate,
+            buffer_ms,
+            channels,
+            frame_size,
+            output_device,
+            recycle_tx,
+            allow_virtual_output,
+            output_access,
+        )
+    }
+
     pub fn send_command(&self, command: PlaybackCommand) -> Result<(), String> {
         self.command_tx
             .send(command)

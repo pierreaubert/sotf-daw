@@ -1642,6 +1642,9 @@ impl DynamicParams {
     }
 
     #[cfg(feature = "convolution")]
+    // Interactive editor removed; retained for the prepare/stage handshake
+    // exercised by the convolution service and state-callback tests.
+    #[allow(dead_code)]
     pub(crate) fn stage_convolution_editor_selection(
         &self,
         generation: u64,
@@ -2793,6 +2796,9 @@ impl DynamicParams {
     }
 
     #[cfg(feature = "convolution")]
+    // Interactive editor removed; retained for the prepare/stage handshake
+    // exercised by the convolution service and state-callback tests.
+    #[allow(dead_code)]
     pub(crate) fn convolution_editor_staged_structural_fingerprint(
         &self,
         true_stereo: bool,
@@ -2820,12 +2826,16 @@ impl DynamicParams {
     }
 
     #[cfg(feature = "convolution")]
+    // Interactive editor removed; retained for the convolution service tests.
+    #[allow(dead_code)]
     pub(crate) fn native_float_param(&self, id: &str) -> Option<&FloatParam> {
         let entry = self.param_map.get(id)?;
         matches!(entry.kind, ParamKind::Float).then(|| &self.float_params[entry.index])
     }
 
     #[cfg(feature = "convolution")]
+    // Interactive editor removed; retained for the convolution service tests.
+    #[allow(dead_code)]
     pub(crate) fn native_bool_param(&self, id: &str) -> Option<&BoolParam> {
         let entry = self.param_map.get(id)?;
         matches!(entry.kind, ParamKind::Bool).then(|| &self.bool_params[entry.index])

@@ -12,6 +12,16 @@ use crate::decoder::{AudioSpec, DecodedAudio};
 use std::path::PathBuf;
 use std::time::Duration;
 
+/// Channel barrier deadline. Ordering comes from the receipts themselves;
+/// this only bounds how long a genuinely stuck decoder may take before the
+/// test fails loud. Keep it generous: shared/loaded machines can starve a
+/// test thread for over a second, which used to false-fail these barriers.
+const BARRIER_DEADLINE: Duration = Duration::from_secs(10);
+
+/// Decoder thread exit deadline (same scheduling rationale as
+/// [`BARRIER_DEADLINE`]); the thread exits promptly once scheduled.
+const SHUTDOWN_DEADLINE: Duration = Duration::from_secs(5);
+
 #[test]
 fn decoder_scratch_and_frame_pool_prepare_sixty_four_channels() {
     let (_recycle_tx, recycle_rx) = std::sync::mpsc::sync_channel(1);
@@ -380,7 +390,7 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
     // Pause the thread so its next command wait is on the inactive path.
     command_tx.send(DecoderCommand::Pause).unwrap();
     let pause_response = response_rx
-        .recv_timeout(Duration::from_secs(1))
+        .recv_timeout(BARRIER_DEADLINE)
         .expect("pause command should be acknowledged");
     assert!(matches!(pause_response, super::super::DecoderResponse::Ok));
 
@@ -395,7 +405,7 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
     });
 
     done_rx
-        .recv_timeout(Duration::from_millis(250))
+        .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("paused decoder thread should exit after command sender is dropped");
 }
 
@@ -435,28 +445,31 @@ fn play_sends_flush_before_ack() {
         .unwrap();
     // Order pin: the FIRST message is Flush; the ack follows it.
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Flush
     ));
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
 
     // Settle: stop the now-active decoder, draining async frames until the
-    // barrier Flush (FIFO ⇒ everything before it predates the Stop).
+    // barrier Flush (FIFO ⇒ everything before it predates the Stop). Drain
+    // BEFORE reading the ack: the Stop arm enqueues its Flush before the
+    // ack (the documented invariant), so awaiting the ack first wedges
+    // against a message queue full of live frames.
     command_tx.send(DecoderCommand::Stop).unwrap();
-    assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
-        DecoderResponse::Ok
-    ));
     loop {
-        match message_rx.recv_timeout(Duration::from_secs(1)).unwrap() {
+        match message_rx.recv_timeout(BARRIER_DEADLINE).unwrap() {
             DecoderMessage::Flush => break,
             DecoderMessage::Frame(_) => continue,
             other => panic!("unexpected message before barrier Flush: {other:?}"),
         }
     }
+    assert!(matches!(
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
+        DecoderResponse::Ok
+    ));
 
     command_tx.send(DecoderCommand::Shutdown).unwrap();
     let (done_tx, done_rx) = std::sync::mpsc::channel();
@@ -465,7 +478,7 @@ fn play_sends_flush_before_ack() {
         done_tx.send(()).ok();
     });
     done_rx
-        .recv_timeout(Duration::from_millis(250))
+        .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("decoder thread should exit after Shutdown");
 }
 
@@ -542,15 +555,15 @@ fn playat_seek_failure_reverts_to_silence() {
     // Explicit failure, ordered: Flush precedes the Error ack (same arm),
     // and the DecoderError event carries the seek cause.
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Flush
     ));
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Error(message) if message == "Failed to seek during play_at"
     ));
     assert!(matches!(
-        event_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        event_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         ThreadEvent::DecoderError(message) if message.contains("Seeking not supported")
     ));
 
@@ -559,11 +572,11 @@ fn playat_seek_failure_reverts_to_silence() {
     assert!(message_rx.try_recv().is_err());
     command_tx.send(DecoderCommand::Stop).unwrap();
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Flush
     ));
     assert!(message_rx.try_recv().is_err());
@@ -577,15 +590,15 @@ fn playat_seek_failure_reverts_to_silence() {
         ))
         .unwrap();
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Flush
     ));
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Frame(_)
     ));
 
@@ -596,7 +609,7 @@ fn playat_seek_failure_reverts_to_silence() {
         done_tx.send(()).ok();
     });
     done_rx
-        .recv_timeout(Duration::from_millis(250))
+        .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("decoder thread should exit after Shutdown");
 }
 
@@ -722,7 +735,7 @@ fn mixed_stream_commands_emit_exactly_one_flush_each() {
     let expect_ok = |what: &str| {
         assert!(
             matches!(
-                response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+                response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
                 DecoderResponse::Ok
             ),
             "{what} must ack Ok"
@@ -741,7 +754,7 @@ fn mixed_stream_commands_emit_exactly_one_flush_each() {
     // Either outcome Flushes first (the arm sends before attempting),
     // so the count holds whichever path executes: Ok when the Pause
     // won the race against EOF, "No decoder" when EOF auto-stopped.
-    match response_rx.recv_timeout(Duration::from_secs(1)).unwrap() {
+    match response_rx.recv_timeout(BARRIER_DEADLINE).unwrap() {
         DecoderResponse::Ok => {}
         DecoderResponse::Error(e) if e == "No decoder" => {}
         other => panic!("Seek must ack Ok or No-decoder, got {other:?}"),
@@ -764,7 +777,7 @@ fn mixed_stream_commands_emit_exactly_one_flush_each() {
         done_tx.send(()).ok();
     });
     done_rx
-        .recv_timeout(Duration::from_millis(250))
+        .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("decoder thread should exit after Shutdown");
     drainer.join().unwrap();
 
@@ -812,7 +825,7 @@ fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
     let file = || crate::AudioSource::File(temp.path().to_path_buf());
     command_tx.send(DecoderCommand::Play(file(), 7)).unwrap();
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
     // Barrier 1: the tagged async error (queue-stuck under total
@@ -835,20 +848,30 @@ fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
     while message_rx.try_recv().is_ok() {}
     command_tx.send(DecoderCommand::Play(file(), 8)).unwrap();
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Flush
     ));
     assert!(matches!(
-        message_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        message_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderMessage::Frame(_)
     ));
     command_tx.send(DecoderCommand::Stop).unwrap();
+    // Drain to the Stop arm's Flush before reading its ack: the arm
+    // enqueues Flush first (the documented invariant), so awaiting the
+    // ack first wedges against a message queue full of live frames.
+    loop {
+        match message_rx.recv_timeout(BARRIER_DEADLINE).unwrap() {
+            DecoderMessage::Flush => break,
+            DecoderMessage::Frame(_) => continue,
+            other => panic!("unexpected message before barrier Flush: {other:?}"),
+        }
+    }
     assert!(matches!(
-        response_rx.recv_timeout(Duration::from_secs(1)).unwrap(),
+        response_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
         DecoderResponse::Ok
     ));
     assert!(async_error_rx.try_recv().is_err());
@@ -860,6 +883,6 @@ fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
         done_tx.send(()).ok();
     });
     done_rx
-        .recv_timeout(Duration::from_millis(250))
+        .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("decoder thread should exit after Shutdown");
 }

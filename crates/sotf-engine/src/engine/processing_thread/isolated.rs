@@ -1,3 +1,4 @@
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use super::super::IsolatedExternalPluginWorkerStatus;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::{

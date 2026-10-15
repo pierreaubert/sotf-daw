@@ -191,7 +191,10 @@ ndarray = { version = "0.17", default-features = false, features = ["rayon", "se
 nnnoiseless = { version = "0.1", package = "sotf-nnnoiseless", git = "https://github.com/pierreaubert/sotf-3rdparties" }
 notify = { version = "8.2" }
 num-complex = "0.4"
-parking_lot = { version = "0.12", features = ["deadlock_detection"] }
+# deadlock_detection stays off: it pulls `backtrace`, which does not compile
+# for aarch64-apple-ios (libc exports no _dyld_* there). Nothing in the
+# workspace calls the parking_lot deadlock API.
+parking_lot = { version = "0.12" }
 proc-macro2 = "1"
 proptest = "1.9"
 quote = "1"

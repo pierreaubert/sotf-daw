@@ -1,13 +1,13 @@
-//! Native egui controls and filesystem browser for the Convolution plugin.
+//! Background IR preparation service for the Convolution plugin.
+//!
+//! There is no interactive native editor: like every other nih plugin, the
+//! Convolution wrapper returns `None` from `editor()` and hosts show their
+//! generic UI. IR loading runs through presets and state restore, which drive
+//! the same prepare/stage/reactivate handshake below.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-
-use nih_plug::prelude::{AsyncExecutor, Editor, ParamSetter, Plugin};
-use nih_plug_egui::egui::{self, Context};
-use nih_plug_egui::{EguiState, create_egui_editor};
 
 use crate::params::DynamicParams;
 
@@ -34,6 +34,8 @@ pub(crate) struct Geometry {
 pub(crate) struct SelectionRequest {
     pub(crate) generation: u64,
     pub(crate) path: Option<PathBuf>,
+    // Interactive editor removed; read by the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) true_stereo: bool,
     pub(crate) geometry: Geometry,
     pub(crate) topology_fingerprint: u64,
@@ -42,6 +44,8 @@ pub(crate) struct SelectionRequest {
 
 #[derive(Default)]
 struct ServiceState {
+    // Interactive editor removed; advanced by the prepare handshake tests.
+    #[allow(dead_code)]
     next_generation: u64,
     geometry: Option<Geometry>,
     request: Option<SelectionRequest>,
@@ -85,16 +89,20 @@ impl ConvolutionEditorService {
             None
         };
         drop(stale_candidate);
-        // Initialization runs only for a host lifecycle transition, not for
-        // editor paints. Refresh an open editor after external state loads and
-        // host reconfiguration even when no editor request was pending.
+        // Initialization runs only for a host lifecycle transition.
+        // External state loads and host reconfiguration discard earlier editor
+        // selections even when no editor request was pending.
         self.resource_epoch.fetch_add(1, Ordering::AcqRel);
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn resource_epoch(&self) -> u64 {
         self.resource_epoch.load(Ordering::Acquire)
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn begin_prepare(
         &self,
         path: Option<PathBuf>,
@@ -184,6 +192,8 @@ impl ConvolutionEditorService {
         drop(stale);
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn ready_to_stage(&self, topology_fingerprint: u64) -> Option<SelectionRequest> {
         let mut state = self.state.lock().ok()?;
         let request = state.request.as_ref()?;
@@ -202,6 +212,8 @@ impl ConvolutionEditorService {
         (state.candidate.is_some() && !request.staged).then(|| request.clone())
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     fn mark_staged(&self, generation: u64) {
         if let Ok(mut state) = self.state.lock()
             && let Some(request) = state
@@ -216,6 +228,8 @@ impl ConvolutionEditorService {
 
     /// Publish the narrow old-audio exception before a structural parameter
     /// setter can become visible to the render thread.
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     fn begin_staging(
         &self,
         generation: u64,
@@ -242,6 +256,8 @@ impl ConvolutionEditorService {
         true
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn stage_selection(
         &self,
         generation: u64,
@@ -264,6 +280,8 @@ impl ConvolutionEditorService {
         true
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     fn cancel_staging(&self) {
         self.allow_old_prepared_audio
             .store(false, Ordering::Release);
@@ -271,6 +289,8 @@ impl ConvolutionEditorService {
             .store(0, Ordering::Release);
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn set_restart_result(&self, generation: u64, accepted: bool) {
         if let Ok(mut state) = self.state.lock()
             && state
@@ -286,6 +306,8 @@ impl ConvolutionEditorService {
         }
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     fn staged_generation(&self) -> Option<u64> {
         let state = self.state.lock().ok()?;
         state
@@ -362,6 +384,8 @@ impl ConvolutionEditorService {
         }
     }
 
+    // Interactive editor removed; kept for the prepare/stage handshake tests.
+    #[allow(dead_code)]
     pub(crate) fn status(&self) -> String {
         self.state
             .lock()
@@ -415,309 +439,6 @@ pub(crate) fn handle_background_task(
             service.finish_prepare(generation, geometry, topology_fingerprint, result);
         }
     }
-}
-
-struct BrowserEntry {
-    path: PathBuf,
-    name: String,
-    is_directory: bool,
-}
-
-struct ConvolutionEditorState<P: Plugin<BackgroundTask = BackgroundTask>> {
-    params: Arc<DynamicParams>,
-    service: Arc<ConvolutionEditorService>,
-    executor: AsyncExecutor<P>,
-    directory: PathBuf,
-    directory_input: String,
-    entries: Vec<BrowserEntry>,
-    selected_ir: Option<PathBuf>,
-    true_stereo_draft: bool,
-    status: String,
-    resource_epoch: u64,
-}
-
-impl<P: Plugin<BackgroundTask = BackgroundTask>> ConvolutionEditorState<P> {
-    fn new(
-        params: Arc<DynamicParams>,
-        service: Arc<ConvolutionEditorService>,
-        executor: AsyncExecutor<P>,
-    ) -> Self {
-        let initial_path = params.convolution_ir_path_for_initialization();
-        let directory = initial_path
-            .as_ref()
-            .and_then(|path| path.parent().map(Path::to_path_buf))
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
-        let true_stereo_draft = matches!(
-            params.value("true_stereo"),
-            Some(sotf_host::parameters::ParameterValue::Bool(true))
-        );
-        let resource_epoch = service.resource_epoch();
-        let mut state = Self {
-            params,
-            service,
-            executor,
-            directory_input: directory.display().to_string(),
-            directory,
-            entries: Vec::new(),
-            selected_ir: initial_path,
-            true_stereo_draft,
-            status: "Browse to an impulse response file.".to_string(),
-            resource_epoch,
-        };
-        state.refresh_directory();
-        state
-    }
-
-    fn refresh_directory(&mut self) {
-        let entries = match fs::read_dir(&self.directory) {
-            Ok(entries) => entries,
-            Err(error) => {
-                self.entries.clear();
-                self.status = format!("Cannot read {}: {error}", self.directory.display());
-                return;
-            }
-        };
-
-        let mut next_entries = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let Ok(file_type) = entry.file_type() else {
-                continue;
-            };
-            let is_directory = file_type.is_dir();
-            if !is_directory && !is_supported_ir(&path) {
-                continue;
-            }
-            next_entries.push(BrowserEntry {
-                name: entry.file_name().to_string_lossy().into_owned(),
-                path,
-                is_directory,
-            });
-        }
-        next_entries.sort_by(|left, right| {
-            right
-                .is_directory
-                .cmp(&left.is_directory)
-                .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
-        });
-        self.entries = next_entries;
-        self.directory_input = self.directory.display().to_string();
-        self.status = format!("{} impulse response entries", self.entries.len());
-    }
-
-    fn open_directory_input(&mut self) {
-        let requested = PathBuf::from(self.directory_input.trim());
-        if requested.is_dir() {
-            self.directory = requested;
-            self.refresh_directory();
-        } else {
-            self.status = format!("Not a directory: {}", requested.display());
-        }
-    }
-
-    fn show(&mut self, context: &Context, setter: &ParamSetter<'_>) {
-        let current_epoch = self.service.resource_epoch();
-        if current_epoch != self.resource_epoch {
-            self.selected_ir = self.params.convolution_ir_path_for_initialization();
-            self.true_stereo_draft = matches!(
-                self.params.value("true_stereo"),
-                Some(sotf_host::parameters::ParameterValue::Bool(true))
-            );
-            self.resource_epoch = current_epoch;
-        }
-        let mut prepare = None;
-        let mut retry_restart = None;
-        egui::CentralPanel::default().show(context, |ui| {
-            ui.heading("SOTF Convolution");
-
-            if let Some(mix) = self.params.native_float_param("mix") {
-                let mut value = mix.value();
-                if ui
-                    .add(egui::Slider::new(&mut value, 0.0..=1.0).text("Wet mix"))
-                    .changed()
-                {
-                    setter.begin_set_parameter(mix);
-                    setter.set_parameter(mix, value);
-                    setter.end_set_parameter(mix);
-                }
-            }
-
-            ui.checkbox(
-                &mut self.true_stereo_draft,
-                "True stereo (used when the selected IR is prepared)",
-            );
-
-            ui.separator();
-            ui.horizontal(|ui| {
-                ui.label("Folder");
-                let response = ui.add(
-                    egui::TextEdit::singleline(&mut self.directory_input).desired_width(400.0),
-                );
-                let open = ui.button("Open folder").clicked()
-                    || (response.lost_focus()
-                        && ui.input(|input| input.key_pressed(egui::Key::Enter)));
-                if open {
-                    self.open_directory_input();
-                }
-                if ui.button("Parent").clicked()
-                    && let Some(parent) = self.directory.parent()
-                {
-                    self.directory = parent.to_path_buf();
-                    self.refresh_directory();
-                }
-                if ui.button("Refresh").clicked() {
-                    self.refresh_directory();
-                }
-            });
-
-            ui.label(self.directory.display().to_string());
-            egui::ScrollArea::vertical()
-                .max_height(250.0)
-                .show(ui, |ui| {
-                    let mut enter_directory = None;
-                    for entry in &self.entries {
-                        let label = if entry.is_directory {
-                            format!("📁 {}/", entry.name)
-                        } else {
-                            format!("🎵 {}", entry.name)
-                        };
-                        let selected = self.selected_ir.as_ref() == Some(&entry.path);
-                        if ui.selectable_label(selected, label).clicked() {
-                            if entry.is_directory {
-                                enter_directory = Some(entry.path.clone());
-                            } else {
-                                self.selected_ir = Some(entry.path.clone());
-                                self.status = format!("Selected {}", entry.name);
-                            }
-                        }
-                    }
-                    if let Some(directory) = enter_directory {
-                        self.directory = directory;
-                        self.refresh_directory();
-                    }
-                });
-
-            ui.horizontal(|ui| {
-                if ui.button("Clear browser selection").clicked() {
-                    self.selected_ir = None;
-                    self.status = "No impulse response selected.".to_string();
-                }
-                if ui.button("Load selected IR").clicked() {
-                    prepare = Some(self.selected_ir.clone());
-                }
-                if ui.button("Load dry input").clicked() {
-                    prepare = Some(None);
-                }
-                if self.service.staged_generation().is_some()
-                    && ui.button("Retry reactivation").clicked()
-                {
-                    retry_restart = self.service.staged_generation();
-                }
-                if let Some(path) = &self.selected_ir {
-                    ui.label(path.display().to_string());
-                } else {
-                    ui.label("No impulse response selected");
-                }
-            });
-            ui.separator();
-            ui.label(self.service.status());
-            ui.label(&self.status);
-        });
-
-        if let Some(path) = prepare {
-            let canonical = match path {
-                Some(path) => match path.canonicalize() {
-                    Ok(path) if path.is_file() => Some(path),
-                    Ok(path) => {
-                        self.status = format!("Not a file: {}", path.display());
-                        return;
-                    }
-                    Err(error) => {
-                        self.status = format!("Cannot open selected IR: {error}");
-                        return;
-                    }
-                },
-                None => None,
-            };
-            let topology_fingerprint = self.params.convolution_editor_topology_fingerprint();
-            match self.service.begin_prepare(
-                canonical,
-                self.true_stereo_draft,
-                topology_fingerprint,
-            ) {
-                Ok(task) => self.executor.execute_background(task),
-                Err(error) => self.status = error,
-            }
-        }
-
-        if let Some(request) = self
-            .service
-            .ready_to_stage(self.params.convolution_editor_topology_fingerprint())
-        {
-            let topology_fingerprint = self.params.convolution_editor_topology_fingerprint();
-            let staged_structural_fingerprint = self
-                .params
-                .convolution_editor_staged_structural_fingerprint(request.true_stereo);
-            let staged = self.service.stage_selection(
-                request.generation,
-                topology_fingerprint,
-                staged_structural_fingerprint,
-                || {
-                    if !self.params.stage_convolution_editor_selection(
-                        request.generation,
-                        request.path.clone(),
-                        request.true_stereo,
-                    ) {
-                        return false;
-                    }
-                    if let Some(true_stereo) = self.params.native_bool_param("true_stereo") {
-                        setter.begin_set_parameter(true_stereo);
-                        setter.set_parameter(true_stereo, request.true_stereo);
-                        setter.end_set_parameter(true_stereo);
-                    }
-                    true
-                },
-            );
-            if staged {
-                let accepted = setter.raw_context.request_component_restart();
-                self.service
-                    .set_restart_result(request.generation, accepted);
-            } else {
-                self.status = "Convolution topology changed before the prepared IR could be applied; prepare it again.".to_string();
-            }
-        }
-
-        if let Some(generation) = retry_restart {
-            let accepted = setter.raw_context.request_component_restart();
-            self.service.set_restart_result(generation, accepted);
-        }
-    }
-}
-
-fn is_supported_ir(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            matches!(
-                extension.to_ascii_lowercase().as_str(),
-                "wav" | "wave" | "flac" | "aif" | "aiff" | "ogg" | "caf"
-            )
-        })
-}
-
-pub(crate) fn create_editor<P: Plugin<BackgroundTask = BackgroundTask> + 'static>(
-    params: Arc<DynamicParams>,
-    service: Arc<ConvolutionEditorService>,
-    async_executor: AsyncExecutor<P>,
-) -> Option<Box<dyn Editor>> {
-    let state = ConvolutionEditorState::new(params, service, async_executor);
-    create_egui_editor(
-        EguiState::from_size(720, 520),
-        state,
-        |_context, _state| {},
-        |context, setter, state| state.show(context, setter),
-    )
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 //! Exercise Convolution resource restoration through the native CLAP state callbacks.
 
-use crate::wrapper::native_convolution_editor::Geometry;
+use crate::wrapper::convolution_editor_service::Geometry;
 use clap_sys::audio_buffer::clap_audio_buffer;
 use clap_sys::events::{
     CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_PARAM_VALUE, clap_event_header, clap_event_param_value,
@@ -2034,7 +2034,7 @@ fn select_and_reactivate_generated(
         .begin_prepare(path, true_stereo, topology)
         .expect("start off-thread Convolution preparation");
     let generation = match &task {
-        crate::wrapper::native_convolution_editor::BackgroundTask::Prepare {
+        crate::wrapper::convolution_editor_service::BackgroundTask::Prepare {
             generation, ..
         } => *generation,
     };
@@ -2130,7 +2130,7 @@ fn generated_editor_candidate_reactivation_preserves_pending_audio_and_latest_mi
         .begin_prepare(Some(replacement_file.0.clone()), true, topology)
         .expect("begin replacement IR preparation");
     let generation = match &task {
-        crate::wrapper::native_convolution_editor::BackgroundTask::Prepare {
+        crate::wrapper::convolution_editor_service::BackgroundTask::Prepare {
             generation, ..
         } => *generation,
     };
@@ -2270,7 +2270,7 @@ fn generated_editor_discards_geometry_and_out_of_order_generations_before_retry(
         .begin_prepare(Some(geometry_stale_file.0.clone()), true, topology)
         .expect("start candidate under the original geometry");
     let stale_prepared_generation = match &stale_prepared_task {
-        crate::wrapper::native_convolution_editor::BackgroundTask::Prepare {
+        crate::wrapper::convolution_editor_service::BackgroundTask::Prepare {
             generation,
             sample_rate,
             max_frames,
@@ -2314,7 +2314,7 @@ fn generated_editor_discards_geometry_and_out_of_order_generations_before_retry(
         .begin_prepare(Some(geometry_stale_file.0.clone()), false, topology)
         .expect("start an old-generation task at the new geometry");
     let older_generation = match &older_completion {
-        crate::wrapper::native_convolution_editor::BackgroundTask::Prepare {
+        crate::wrapper::convolution_editor_service::BackgroundTask::Prepare {
             generation,
             max_frames,
             ..
@@ -2327,7 +2327,7 @@ fn generated_editor_discards_geometry_and_out_of_order_generations_before_retry(
         .begin_prepare(Some(fresh_file.0.clone()), true, topology)
         .expect("newer geometry-matched request supersedes unprepared work");
     let fresh_generation = match &fresh_task {
-        crate::wrapper::native_convolution_editor::BackgroundTask::Prepare {
+        crate::wrapper::convolution_editor_service::BackgroundTask::Prepare {
             generation,
             sample_rate,
             max_frames,

@@ -24,6 +24,9 @@ impl VolumeRampState {
         }
     }
 
+    // Callers live on the desktop playback path (playback_thread, harness);
+    // the iOS stub ramps with `apply` only.
+    #[cfg(not(target_os = "ios"))]
     pub(super) fn snap_to(&self, gain: f32) {
         let gain = sanitize_gain(gain);
         self.current_bits.store(gain.to_bits(), Ordering::Relaxed);
