@@ -361,7 +361,15 @@ impl SharedAudioBuffer {
         {
             use std::os::unix::fs::PermissionsExt;
             file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
-            grant_coreaudiod_shared_memory_access(path);
+            grant_coreaudiod_shared_memory_access(path).map_err(|error| {
+                io::Error::new(
+                    error.kind(),
+                    format!(
+                        "shared-memory file {} is not accessible to coreaudiod: {error}",
+                        path.display()
+                    ),
+                )
+            })?;
         }
         #[cfg(unix)]
         let backing_metadata = file.metadata()?;

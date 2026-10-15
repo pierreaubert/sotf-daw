@@ -287,6 +287,30 @@ fn test_create_or_open_clamps_file_mode_to_owner_only() {
 
 #[cfg(unix)]
 #[test]
+fn test_open_rejects_group_readable_shared_memory_file() {
+    use std::os::unix::fs::PermissionsExt;
+
+    // An existing file is opened without a mode change, so a group/other
+    // readable file left behind by older builds or same-user mistakes must be
+    // rejected instead of exposing captured system audio.
+    let dir = tempdir().expect("Failed to create temp dir");
+    let path = dir.path().join("audio.shm");
+    std::fs::write(&path, vec![0u8; 4096]).expect("Failed to create fixture");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640))
+        .expect("Failed to relax fixture permissions");
+
+    let error = match SharedAudioBuffer::open(&path) {
+        Ok(_) => panic!("0640 shm must be rejected"),
+        Err(error) => error,
+    };
+    assert!(
+        error.to_string().contains("insecure permissions"),
+        "unexpected error: {error}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
 fn test_create_or_open_creates_missing_parent_owner_only() {
     use std::os::unix::fs::PermissionsExt;
 

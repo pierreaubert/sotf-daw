@@ -1590,6 +1590,25 @@ fn factory_rejects_external_state_for_a_different_sandbox_mode() {
     assert!(error.contains("cannot restore isolated plugin"), "{error}");
 }
 
+#[cfg(unix)]
+#[test]
+fn external_plugin_descriptor_resolves_symlink_to_canonical_path() {
+    // The worker must load the same file the existence check observed: a
+    // symlinked alias resolves to its canonical target, and an
+    // unresolvable path is a loud error rather than a silent alias fallback.
+    let dir = tempdir().unwrap();
+    let target = dir.path().join("real-plugin.clap");
+    std::fs::write(&target, b"stub plugin").unwrap();
+    let link = dir.path().join("alias-plugin.clap");
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+
+    let descriptor = parse_external_plugin_descriptor(&serde_json::json!({
+        "path": link.to_string_lossy(),
+    }))
+    .unwrap();
+    assert_eq!(descriptor.path, target.canonicalize().unwrap());
+}
+
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 #[test]
 fn create_external_plugin_defaults_to_isolated_when_trust_unknown() {

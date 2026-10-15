@@ -40,7 +40,15 @@ pub(super) fn ensure_secure_parent_dir(parent: &Path) -> io::Result<()> {
         if metadata.permissions().mode() & 0o077 != 0 {
             std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700))?;
         }
-        grant_coreaudiod_shared_memory_access(parent);
+        grant_coreaudiod_shared_memory_access(parent).map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!(
+                    "shared-memory parent {} is not accessible to coreaudiod: {error}",
+                    parent.display()
+                ),
+            )
+        })?;
     }
 
     Ok(())

@@ -38,6 +38,7 @@ pub(super) fn open_existing_shared_memory_file(path: &Path) -> io::Result<std::f
 #[cfg(unix)]
 pub(super) fn validate_shared_memory_file(file: &std::fs::File, path: &Path) -> io::Result<()> {
     use std::os::unix::fs::MetadataExt;
+    use std::os::unix::fs::PermissionsExt;
 
     let metadata = file.metadata()?;
     if !metadata.file_type().is_file() {
@@ -54,6 +55,21 @@ pub(super) fn validate_shared_memory_file(file: &std::fs::File, path: &Path) -> 
                 path.display(),
                 metadata.uid(),
                 current_uid()
+            ),
+        ));
+    }
+    // The daemon creates the file mode 0600 and the parent directory mode
+    // 0700, but an existing file is opened without a mode change: reject
+    // group/other readability left behind by older builds or same-user
+    // mistakes so captured system audio is never world-readable.
+    // macOS ACL grants for `_coreaudiod` do not alter these mode bits.
+    let mode = metadata.permissions().mode() & 0o777;
+    if mode & 0o077 != 0 || mode & 0o600 != 0o600 {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            format!(
+                "{} has insecure permissions 0o{mode:o} (expected owner-only 0600)",
+                path.display(),
             ),
         ));
     }

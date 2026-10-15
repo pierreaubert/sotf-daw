@@ -181,7 +181,16 @@ pub(super) fn parse_external_plugin_descriptor(
             path.display()
         ));
     }
-    let path = path.canonicalize().unwrap_or(path);
+    // Resolve symlinks once and use the canonical path downstream so the
+    // format probe, display name, and worker load the same file the check
+    // above observed. A failed canonicalization is a loud error, never a
+    // silent fallback to the unresolved alias.
+    let path = path.canonicalize().map_err(|error| {
+        format!(
+            "Failed to resolve external plugin path {}: {error}",
+            path.display()
+        )
+    })?;
     let format = parse_external_format(seed.format, &path)?;
     let fallback_name = fallback_name_from_path(&path)?;
     let name = seed.name.unwrap_or_else(|| fallback_name.clone());
