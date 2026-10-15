@@ -473,7 +473,7 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
             PluginChannelOutputModel::PreservesInput,
             PluginLatencyModel::PluginReported("detector and lookahead configuration"),
             "runtime broadband schema (unsupported legacy sidechain controls rejected)",
-            Generated,
+            Custom,
             true,
         ),
         zero_alloc_evidence(
