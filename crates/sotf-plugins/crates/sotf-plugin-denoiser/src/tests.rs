@@ -1091,7 +1091,10 @@ fn named_profile_actions_are_immediate_and_cancel_preserves_captured_profile() {
     plugin.noise_profile.learning_accumulator[0][0] = 9.0;
     plugin.noise_profile.learning_frames_count = 3;
     plugin
-        .parametric_set_parameter(ParameterId::from("learn_noise"), ParameterValue::Bool(false))
+        .parametric_set_parameter(
+            ParameterId::from("learn_noise"),
+            ParameterValue::Bool(false),
+        )
         .unwrap();
     assert!(!plugin.noise_profile.is_learning);
     assert_eq!(plugin.noise_profile.learning_frames_count, 0);
@@ -1099,7 +1102,10 @@ fn named_profile_actions_are_immediate_and_cancel_preserves_captured_profile() {
     assert!(plugin.noise_profile.use_captured_profile);
     assert_eq!(plugin.noise_profile.noise_profile_storage[0], stored_before);
     plugin
-        .parametric_set_parameter(ParameterId::from("clear_profile"), ParameterValue::Bool(true))
+        .parametric_set_parameter(
+            ParameterId::from("clear_profile"),
+            ParameterValue::Bool(true),
+        )
         .unwrap();
     assert!(!plugin.noise_profile.has_noise_profile);
 }

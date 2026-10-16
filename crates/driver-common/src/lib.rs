@@ -31,11 +31,16 @@ pub struct DriverStatus {
     /// Whether the platform driver itself reports it is ready (kernel/HAL side initialised).
     /// On platforms with no driver concept this mirrors `driver_installed`.
     pub driver_ready: bool,
+    /// Cumulative encrypted records dropped because the shared ring was
+    /// full (HAL transport only; 0 elsewhere). Non-zero values mean the
+    /// consumer fell behind and audio was discarded.
+    pub encryption_overflow_count: u64,
 }
 
 impl DriverStatus {
     /// Construct a status snapshot without exposing the struct's full field
     /// set to downstream driver implementations.
+    #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_arguments)]
     pub const fn new(
         platform_supported: bool,
@@ -46,6 +51,7 @@ impl DriverStatus {
         buffer_frames: u32,
         driver_name: &'static str,
         driver_ready: bool,
+        encryption_overflow_count: u64,
     ) -> Self {
         Self {
             platform_supported,
@@ -56,6 +62,7 @@ impl DriverStatus {
             buffer_frames,
             driver_name,
             driver_ready,
+            encryption_overflow_count,
         }
     }
 }
@@ -485,7 +492,7 @@ impl AudioDriver for NullDriver {
     fn shutdown(&mut self) {}
 
     fn status(&self) -> DriverStatus {
-        DriverStatus::new(false, false, false, 0, 0, 0, "None", false)
+        DriverStatus::new(false, false, false, 0, 0, 0, "None", false, 0)
     }
 
     fn read_audio(&mut self, _buffer: &mut [f32]) -> usize {
@@ -534,7 +541,17 @@ mod tests {
         fn shutdown(&mut self) {}
 
         fn status(&self) -> DriverStatus {
-            DriverStatus::new(true, true, true, 48_000, 2, 512, "bad-sample-count", true)
+            DriverStatus::new(
+                true,
+                true,
+                true,
+                48_000,
+                2,
+                512,
+                "bad-sample-count",
+                true,
+                0,
+            )
         }
 
         fn read_audio(&mut self, buffer: &mut [f32]) -> usize {
@@ -577,7 +594,17 @@ mod tests {
         fn shutdown(&mut self) {}
 
         fn status(&self) -> DriverStatus {
-            DriverStatus::new(true, true, true, 48_000, 2, 512, "bad-partial-tail", true)
+            DriverStatus::new(
+                true,
+                true,
+                true,
+                48_000,
+                2,
+                512,
+                "bad-partial-tail",
+                true,
+                0,
+            )
         }
 
         fn read_audio(&mut self, buffer: &mut [f32]) -> usize {
@@ -620,7 +647,7 @@ mod tests {
         fn shutdown(&mut self) {}
 
         fn status(&self) -> DriverStatus {
-            DriverStatus::new(true, true, true, 48_000, 2, 512, "bad-read-frames", true)
+            DriverStatus::new(true, true, true, 48_000, 2, 512, "bad-read-frames", true, 0)
         }
 
         fn read_audio(&mut self, buffer: &mut [f32]) -> usize {

@@ -107,10 +107,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "DYNAMICS",
             "DYNAMICS",
             &[
-                ControlSpec::slider(0),         // threshold (ceiling)
-                ControlSpec::slider(1),         // release
-                ControlSpec::toggle(4),         // true-peak detection (always visible)
-                ControlSpec::knob(7),           // mix
+                ControlSpec::slider(0), // threshold (ceiling)
+                ControlSpec::slider(1), // release
+                ControlSpec::toggle(4), // true-peak detection (always visible)
+                ControlSpec::knob(7),   // mix
             ],
         )
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),

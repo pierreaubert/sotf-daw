@@ -1,5 +1,5 @@
 use super::consts::DAEMON_HEARTBEAT_INTERVAL;
-use super::hal_driver::{HalDriver, reset_new_daemon_mapping};
+use super::hal_driver::{HalDriver, initial_shared_memory_geometry, reset_new_daemon_mapping};
 use crate::shared_memory::SharedAudioBuffer;
 use driver_common::{AudioDriver, ConfigResult, DriverConfig};
 use std::sync::atomic::Ordering;
@@ -125,6 +125,19 @@ impl Drop for ScopedShmPathOverride {
             }
         }
     }
+}
+
+#[test]
+#[serial_test::serial]
+fn test_initial_geometry_adopts_existing_header() {
+    let dir = tempdir().expect("Failed to create temp dir");
+    let path = dir.path().join("audio.shm");
+    let buffer = SharedAudioBuffer::create_or_open(&path, 96_000, 1_024, 4)
+        .expect("Failed to create 96 kHz shared memory");
+    drop(buffer);
+
+    let _override = ScopedShmPathOverride::install(&path);
+    assert_eq!(initial_shared_memory_geometry(), (96_000, 1_024, 4));
 }
 
 #[test]

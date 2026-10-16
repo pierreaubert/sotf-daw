@@ -2806,7 +2806,7 @@ macro_rules! sotf_nih_plugin {
 
 #[cfg(all(test, feature = "convolution"))]
 mod convolution_reactivation_tests {
-    use super::{convolution_reactivation_is_compatible, convolution_editor_service::Geometry};
+    use super::{convolution_editor_service::Geometry, convolution_reactivation_is_compatible};
 
     const GEOMETRY: Geometry = Geometry {
         sample_rate: 48_000.0,

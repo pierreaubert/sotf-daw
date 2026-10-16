@@ -193,7 +193,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         ControlGroup::new(
             "DISABLED",
             "MODE",
-            &[ControlSpec::button_set(0, MODE_LABELS), ControlSpec::knob(3)],
+            &[
+                ControlSpec::button_set(0, MODE_LABELS),
+                ControlSpec::knob(3),
+            ],
         )
         .visible_when(ParamCondition::choice(0, 0))
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),
@@ -202,9 +205,9 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "BAUER",
             &[
                 ControlSpec::button_set(0, MODE_LABELS), // mode
-                ControlSpec::knob(3), // mix
-                ControlSpec::knob(4), // bauer_fcut_hz
-                ControlSpec::knob(5), // bauer_feed_db
+                ControlSpec::knob(3),                    // mix
+                ControlSpec::knob(4),                    // bauer_fcut_hz
+                ControlSpec::knob(5),                    // bauer_feed_db
             ],
         )
         .visible_when(ParamCondition::choice(0, 1))
@@ -225,9 +228,9 @@ pub const LAYOUT: PluginLayout = PluginLayout {
             "MULTIBAND",
             &[
                 ControlSpec::button_set(0, MODE_LABELS), // mode
-                ControlSpec::knob(3),  // mix
-                ControlSpec::knob(7),  // mb_low_freq_hz
-                ControlSpec::knob(9),  // mb_low_feed_db
+                ControlSpec::knob(3),                    // mix
+                ControlSpec::knob(7),                    // mb_low_freq_hz
+                ControlSpec::knob(9),                    // mb_low_feed_db
             ],
         )
         .visible_when(ParamCondition::choice(0, 3))
@@ -246,7 +249,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         ControlGroup::new(
             "HRTF",
             "HRTF",
-            &[ControlSpec::button_set(0, MODE_LABELS), ControlSpec::knob(3)],
+            &[
+                ControlSpec::button_set(0, MODE_LABELS),
+                ControlSpec::knob(3),
+            ],
         )
         .visible_when(ParamCondition::choice(0, 4))
         .with_layout(GroupLayoutHints::inferred().priority(1.0).keep_visible()),

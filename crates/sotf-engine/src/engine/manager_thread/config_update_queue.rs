@@ -1,10 +1,10 @@
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+use super::super::ProcessingCommand;
 use super::super::{
     AudioEngineState, ConfigWatcher, DecoderThread, EngineConfig, GcThread, ManagerResponse,
     PlaybackCommand, PlaybackThread, PluginDataCache, ProcessingThread, ThreadEvent,
     plan_engine_features,
 };
-#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-use super::super::ProcessingCommand;
 use super::apply::{apply_plugin_update, store_plugin_build_diagnostics};
 use super::config_error::ensure_output_channel_capacity;
 use super::config_update_metrics::ConfigUpdateMetrics;

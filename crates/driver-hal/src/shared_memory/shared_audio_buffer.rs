@@ -7,6 +7,8 @@ use super::consts::RECONFIG_QUIESCE_TIMEOUT_NS;
 use super::consts::SHARED_MEMORY_MAGIC;
 use super::consts::SHARED_MEMORY_VERSION;
 use super::consts::parse_encrypted_record_header;
+use super::consts::ring_block_count;
+use super::consts::ring_capacity_samples;
 use super::consts::write_encrypted_record_header;
 use super::current::current_unix_millis;
 use super::encrypted::encrypted_record_slots;
@@ -191,6 +193,7 @@ impl SharedAudioBuffer {
     pub(super) fn audio_layout(
         buffer_frames: u32,
         channel_count: u32,
+        sample_rate: u32,
     ) -> io::Result<(usize, usize, usize)> {
         let header_size = std::mem::size_of::<SharedAudioHeader>();
         let audio_offset = (header_size + 63) & !63;
@@ -217,9 +220,7 @@ impl SharedAudioBuffer {
             ));
         }
 
-        let audio_capacity = buffer_frames
-            .checked_mul(channel_count)
-            .and_then(|v| v.checked_mul(8))
+        let audio_capacity = ring_capacity_samples(buffer_frames, channel_count, sample_rate)
             .ok_or_else(|| {
                 io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -262,7 +263,13 @@ impl SharedAudioBuffer {
         // desynchronize KeyManager's cached cipher/fingerprint. Header
         // initialization always disables encryption, so callers outside the
         // daemon must likewise rotate the key before enabling it.
+        //
+        // `driver_ready` is HAL-owned: the Swift side publishes it once in
+        // initialize() and never republishes while connected, so a daemon
+        // re-init that cleared it would leave the transport reporting
+        // not-ready forever. Preserve it verbatim.
         let header = self.header();
+        let driver_ready = header.driver_ready.load(Ordering::Acquire);
         header.magic.store(SHARED_MEMORY_MAGIC, Ordering::Release);
         header
             .version
@@ -277,7 +284,7 @@ impl SharedAudioBuffer {
         header.read_position.store(0, Ordering::Release);
         header.active.store(0, Ordering::Release);
         header.config_changed.store(0, Ordering::Release);
-        header.driver_ready.store(0, Ordering::Release);
+        header.driver_ready.store(driver_ready, Ordering::Release);
         header.engine_ready.store(0, Ordering::Release);
         header.encrypted.store(0, Ordering::Release);
         header.key_fingerprint.store(0, Ordering::Release);
@@ -345,11 +352,17 @@ impl SharedAudioBuffer {
         max_channel_count: u32,
     ) -> io::Result<Self> {
         let path = path.as_ref();
-        let (audio_offset, _, _) = Self::audio_layout(buffer_frames, channel_count)?;
+        let (audio_offset, _, _) = Self::audio_layout(buffer_frames, channel_count, sample_rate)?;
         let max_channel_count = max_channel_count.max(channel_count);
         let max_buffer_frames = max_buffer_frames.max(buffer_frames);
-        let (_, max_audio_capacity, total_size) =
-            Self::audio_layout(max_buffer_frames, max_channel_count)?;
+        // Size for the max geometry at the deepest supported rate's ring
+        // depth: a mid-session jump to 192 kHz must never exceed the mmap,
+        // and `set_len` below also grows pre-existing smaller files.
+        let (_, max_audio_capacity, total_size) = Self::audio_layout(
+            max_buffer_frames,
+            max_channel_count,
+            super::consts::MAX_HAL_SAMPLE_RATE,
+        )?;
 
         if let Some(parent) = path.parent() {
             ensure_secure_parent_dir(parent)?;
@@ -518,6 +531,7 @@ impl SharedAudioBuffer {
 
         let buffer_frames = header.buffer_frames.load(Ordering::Acquire) as usize;
         let channel_count = header.channel_count.load(Ordering::Acquire) as usize;
+        let sample_rate = header.sample_rate.load(Ordering::Acquire);
 
         if buffer_frames == 0 || channel_count == 0 {
             return Err(io::Error::new(
@@ -539,7 +553,8 @@ impl SharedAudioBuffer {
             ));
         }
 
-        let audio_capacity = buffer_frames * channel_count * 8;
+        let audio_capacity =
+            ring_capacity_samples(buffer_frames, channel_count, sample_rate).unwrap_or(usize::MAX);
 
         let required_size = audio_offset + audio_capacity * std::mem::size_of::<f32>();
         if mmap.len() < required_size {
@@ -671,13 +686,16 @@ impl SharedAudioBuffer {
     /// Set buffer frame size via the quiesced reconfiguration protocol.
     pub fn set_buffer_frames(&mut self, buffer_frames: u32) {
         let channel_count = self.header().channel_count.load(Ordering::Acquire) as usize;
-        let new_capacity = (buffer_frames as usize) * channel_count * 8;
+        let sample_rate = self.header().sample_rate.load(Ordering::Acquire);
+        let new_capacity =
+            ring_capacity_samples(buffer_frames as usize, channel_count, sample_rate)
+                .unwrap_or(usize::MAX);
 
         if new_capacity > self.max_audio_capacity {
             log::warn!(
                 "Requested buffer_frames {} would exceed original allocation (max {}), ignoring",
                 buffer_frames,
-                self.max_audio_capacity / channel_count.max(1) / 8
+                self.max_audio_capacity / channel_count.max(1) / ring_block_count(sample_rate)
             );
             return;
         }
@@ -696,7 +714,8 @@ impl SharedAudioBuffer {
         if buffer_frames == 0 {
             return 0;
         }
-        (self.max_audio_capacity / buffer_frames / 8) as u32
+        let sample_rate = self.header().sample_rate.load(Ordering::Acquire);
+        (self.max_audio_capacity / buffer_frames / ring_block_count(sample_rate)) as u32
     }
 
     /// Set channel count via the quiesced reconfiguration protocol.
@@ -707,25 +726,24 @@ impl SharedAudioBuffer {
         }
 
         let buffer_frames = self.header().buffer_frames.load(Ordering::Acquire) as usize;
-        let new_capacity = match buffer_frames
-            .checked_mul(channel_count as usize)
-            .and_then(|v| v.checked_mul(8))
-        {
-            Some(capacity) => capacity,
-            None => {
-                log::warn!(
-                    "Requested channel_count {} overflowed capacity math",
-                    channel_count
-                );
-                return;
-            }
-        };
+        let sample_rate = self.header().sample_rate.load(Ordering::Acquire);
+        let new_capacity =
+            match ring_capacity_samples(buffer_frames, channel_count as usize, sample_rate) {
+                Some(capacity) => capacity,
+                None => {
+                    log::warn!(
+                        "Requested channel_count {} overflowed capacity math",
+                        channel_count
+                    );
+                    return;
+                }
+            };
 
         if new_capacity > self.max_audio_capacity {
             log::warn!(
                 "Requested channel_count {} would exceed original allocation (max {}), ignoring",
                 channel_count,
-                self.max_audio_capacity / buffer_frames.max(1) / 8
+                self.max_audio_capacity / buffer_frames.max(1) / ring_block_count(sample_rate)
             );
             return;
         }
@@ -746,11 +764,11 @@ impl SharedAudioBuffer {
     ) {
         let current_frames = self.header().buffer_frames.load(Ordering::Acquire) as usize;
         let current_channels = self.header().channel_count.load(Ordering::Acquire) as usize;
+        let current_rate = self.header().sample_rate.load(Ordering::Acquire);
+        let next_rate = sample_rate.unwrap_or(current_rate);
         let next_frames = buffer_frames.map_or(current_frames, |frames| frames as usize);
         let next_channels = channel_count.map_or(current_channels, |channels| channels as usize);
-        let Some(next_capacity) = next_frames
-            .checked_mul(next_channels)
-            .and_then(|value| value.checked_mul(8))
+        let Some(next_capacity) = ring_capacity_samples(next_frames, next_channels, next_rate)
         else {
             log::warn!(
                 "Rejecting shared-memory reconfiguration with overflowing geometry: {} frames, {} channels",
@@ -1011,9 +1029,8 @@ impl SharedAudioBuffer {
         let header = self.header();
         let frames = header.buffer_frames.load(Ordering::Acquire) as usize;
         let channels = header.channel_count.load(Ordering::Acquire) as usize;
-        frames
-            .checked_mul(channels)
-            .and_then(|value| value.checked_mul(8))
+        let sample_rate = header.sample_rate.load(Ordering::Acquire);
+        ring_capacity_samples(frames, channels, sample_rate)
             .filter(|capacity| *capacity > 0 && *capacity <= self.max_audio_capacity)
             .unwrap_or(0)
     }

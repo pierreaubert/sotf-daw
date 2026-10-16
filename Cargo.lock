@@ -5824,7 +5824,7 @@ dependencies = [
 
 [[package]]
 name = "plugins-nih"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "clap-sys",
  "crossbeam",
@@ -7591,7 +7591,7 @@ dependencies = [
 
 [[package]]
 name = "sotf-engine"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "arc-swap",
  "bytemuck",

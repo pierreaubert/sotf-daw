@@ -324,6 +324,20 @@ impl AudioSink for CpalSink {
             actual_format,
             self.device_name,
         );
+        // The stream config records what we *asked* for. When the device's
+        // own default rate differs, the OS silently sample-rate-converts (or
+        // clock-drifts) and the mismatch used to be invisible. Surface it.
+        match device.default_output_config() {
+            Ok(default_config) if default_config.sample_rate() != config.sample_rate => {
+                log::warn!(
+                    "[CpalSink] Device '{}' defaults to {}Hz but {}Hz was requested; expect OS-level sample-rate conversion",
+                    self.device_name,
+                    default_config.sample_rate(),
+                    config.sample_rate,
+                );
+            }
+            _ => {}
+        }
 
         self.device = Some(device);
         self.stream = Some(stream);

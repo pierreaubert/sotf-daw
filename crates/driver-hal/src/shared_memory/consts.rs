@@ -20,6 +20,43 @@ pub const MAX_HAL_CHANNEL_COUNT: u32 = 32;
 
 pub const MAX_HAL_BUFFER_FRAMES: u32 = 4096;
 
+/// Highest sample rate the transport negotiates (matches the daemon's
+/// supported-rate table). Creation sizes the file for the ring depth at
+/// this rate so a later mid-session rate increase never hits the mmap edge.
+pub const MAX_HAL_SAMPLE_RATE: u32 = 192_000;
+
+/// Ring depth in blocks at the reference rate.
+pub(super) const RING_BLOCKS_AT_REFERENCE_RATE: usize = 8;
+
+/// Reference rate for time-based ring sizing (the historical default).
+pub(super) const RING_REFERENCE_SAMPLE_RATE: u32 = 48_000;
+
+/// Ring depth in blocks so the ring holds roughly the same *duration* at
+/// any sample rate.
+///
+/// Frames are not time: 8 blocks of 512 stereo frames hold 85 ms at 48 kHz
+/// but only 42.7 ms at 96 kHz, so any daemon or decoder stall over ~43 ms
+/// lapped the ring at 96 kHz and produced scratchy drop-oldest noise. The
+/// Swift HAL computes the identical depth via `ringBufferCount(forSampleRate:)`.
+pub(super) fn ring_block_count(sample_rate: u32) -> usize {
+    let multiplier = sample_rate
+        .max(1)
+        .div_ceil(RING_REFERENCE_SAMPLE_RATE)
+        .max(1) as usize;
+    RING_BLOCKS_AT_REFERENCE_RATE * multiplier
+}
+
+/// Total ring capacity in interleaved samples for one geometry.
+pub(super) fn ring_capacity_samples(
+    buffer_frames: usize,
+    channel_count: usize,
+    sample_rate: u32,
+) -> Option<usize> {
+    buffer_frames
+        .checked_mul(channel_count)
+        .and_then(|value| value.checked_mul(ring_block_count(sample_rate)))
+}
+
 /// Bound on the spin period while waiting for the writer to observe
 /// `configuring=1`. Reconfig is rare and user-driven, so a small spin
 /// is acceptable.

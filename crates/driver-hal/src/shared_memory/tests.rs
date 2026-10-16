@@ -880,7 +880,9 @@ fn test_daemon_restart_with_geometry_change_resets_runtime_state() {
     assert_eq!(reopened.header().write_position.load(Ordering::Acquire), 0);
     assert_eq!(reopened.header().read_position.load(Ordering::Acquire), 0);
     assert_eq!(reopened.header().engine_ready.load(Ordering::Acquire), 0);
-    assert!(!reopened.driver_ready());
+    // `driver_ready` belongs to the HAL. Swift publishes it once and does not
+    // republish it while connected, so a daemon-side re-init must preserve it.
+    assert!(reopened.driver_ready());
     assert!(!reopened.is_encrypted());
     assert_eq!(reopened.key_fingerprint(), [0u8; 8]);
 }

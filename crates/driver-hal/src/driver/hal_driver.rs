@@ -24,6 +24,29 @@ pub(super) fn reset_new_daemon_mapping(buffer: &mut SharedAudioBuffer) -> Result
     }
 }
 
+/// Geometry a new daemon should adopt from an existing shared-memory header.
+///
+/// A daemon restart must not force the transport back to the compiled-in
+/// 48 kHz/512-frame/stereo defaults: doing so made a live 96 kHz interface
+/// appear to lose synchronization until the user switched devices. Missing or
+/// invalid headers retain the historical creation defaults.
+pub(super) fn initial_shared_memory_geometry() -> (u32, u32, u32) {
+    const DEFAULT_GEOMETRY: (u32, u32, u32) = (48_000, 512, DEFAULT_HAL_CHANNEL_COUNT);
+    let Ok(buffer) = SharedAudioBuffer::open_default() else {
+        return DEFAULT_GEOMETRY;
+    };
+    let geometry = (
+        buffer.sample_rate(),
+        buffer.buffer_frames(),
+        buffer.channel_count(),
+    );
+    if geometry.0 == 0 || geometry.1 == 0 || geometry.2 == 0 {
+        DEFAULT_GEOMETRY
+    } else {
+        geometry
+    }
+}
+
 /// macOS CoreAudio HAL driver.
 ///
 /// Reads audio from the shared memory region created by the Swift HAL virtual device.
@@ -152,9 +175,11 @@ impl AudioDriver for HalDriver {
 
         // The daemon owns shared-memory creation. The HAL plugin runs inside
         // coreaudiod, so it should only have to open an already-sized file from
-        // its realtime paths.
+        // its realtime paths. Adopt any live header geometry instead of
+        // resetting the transport to creation defaults on every daemon start.
+        let (sample_rate, buffer_frames, channel_count) = initial_shared_memory_geometry();
         let mut buffer =
-            SharedAudioBuffer::create_or_open_default(48_000, 512, DEFAULT_HAL_CHANNEL_COUNT)
+            SharedAudioBuffer::create_or_open_default(sample_rate, buffer_frames, channel_count)
                 .map_err(|error| {
                     DriverError::io(format!("failed to initialize HAL shared memory: {error}"))
                 })?;
@@ -194,19 +219,26 @@ impl AudioDriver for HalDriver {
     }
 
     fn status(&self) -> DriverStatus {
-        let (sample_rate, channel_count, buffer_frames, capture_active, driver_ready) =
-            if let Some(ref buf) = self.config_buffer {
-                let backing_file_is_current = buf.backing_file_is_current();
-                (
-                    buf.sample_rate(),
-                    buf.channel_count(),
-                    buf.buffer_frames(),
-                    backing_file_is_current && buf.is_active(),
-                    backing_file_is_current && buf.driver_ready(),
-                )
-            } else {
-                (0, 0, 0, false, false)
-            };
+        let (
+            sample_rate,
+            channel_count,
+            buffer_frames,
+            capture_active,
+            driver_ready,
+            encryption_overflow_count,
+        ) = if let Some(ref buf) = self.config_buffer {
+            let backing_file_is_current = buf.backing_file_is_current();
+            (
+                buf.sample_rate(),
+                buf.channel_count(),
+                buf.buffer_frames(),
+                backing_file_is_current && buf.is_active(),
+                backing_file_is_current && buf.driver_ready(),
+                buf.encryption_overflow_count(),
+            )
+        } else {
+            (0, 0, 0, false, false, 0)
+        };
 
         DriverStatus::new(
             true,
@@ -217,6 +249,7 @@ impl AudioDriver for HalDriver {
             buffer_frames,
             "macOS CoreAudio HAL",
             driver_ready,
+            encryption_overflow_count,
         )
     }
 

@@ -1236,9 +1236,9 @@ mod tests {
         ] {
             assert!(is_required_plugin_update_failure(&diagnostic));
         }
-        assert!(!is_required_plugin_update_failure(&PluginBuildDiagnostic::host(
-            "host warning"
-        )));
+        assert!(!is_required_plugin_update_failure(
+            &PluginBuildDiagnostic::host("host warning")
+        ));
     }
 
     #[test]
@@ -1330,14 +1330,12 @@ mod tests {
             ..AudioEngineState::default()
         }));
         let mut config_queue = ConfigUpdateQueue::new();
-        let mut settings = crate::plugins::PluginSettings::default_for(
-            &crate::plugins::PluginType::Gate,
-        )
-        .unwrap();
+        let mut settings =
+            crate::plugins::PluginSettings::default_for(&crate::plugins::PluginType::Gate).unwrap();
         let crate::plugins::PluginSettings::Gate {
-            sidechain_external,
-            ..
-        } = &mut settings else {
+            sidechain_external, ..
+        } = &mut settings
+        else {
             unreachable!()
         };
         *sidechain_external = true;

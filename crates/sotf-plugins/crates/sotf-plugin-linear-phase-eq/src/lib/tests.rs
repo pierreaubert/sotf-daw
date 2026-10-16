@@ -709,10 +709,6 @@ fn editor_latency_contract_matches_single_and_ordered_dsp_routes() {
     let legacy = LinearPhaseEqPlugin::new(2, 48_000);
     assert_eq!(
         legacy.latency_samples(),
-        linear_phase_eq_latency_samples(
-            legacy.fir_length_index,
-            legacy.phase_mode_index,
-            1,
-        )
+        linear_phase_eq_latency_samples(legacy.fir_length_index, legacy.phase_mode_index, 1,)
     );
 }
