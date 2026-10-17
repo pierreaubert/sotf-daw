@@ -88,6 +88,11 @@ pub(super) struct DecoderState {
     pub(super) last_hal_sample_rate: Option<u32>,
     #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) last_hal_channels: Option<usize>,
+    /// HAL device workgroup membership for the decoder thread, held from
+    /// the first successful HAL reader connection to state drop (which
+    /// happens on the decoder thread).
+    #[cfg(all(target_os = "macos", feature = "hal"))]
+    pub(super) hal_workgroup_membership: Option<super::super::rt_priority::WorkgroupMembership>,
 }
 
 impl DecoderState {
@@ -141,6 +146,8 @@ impl DecoderState {
             last_hal_sample_rate: None,
             #[cfg(all(target_os = "macos", feature = "hal"))]
             last_hal_channels: None,
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            hal_workgroup_membership: None,
         }
     }
 
@@ -936,6 +943,14 @@ impl DecoderState {
             Some(reader) => {
                 log::info!("[Decoder Thread] Connected HAL input reader");
                 self.hal_reader = Some(reader);
+                if self.hal_workgroup_membership.is_none() {
+                    self.hal_workgroup_membership =
+                        super::super::rt_priority::join_device_workgroup(
+                            Some(super::super::rt_priority::HAL_VIRTUAL_DEVICE_NAME),
+                            true,
+                            "decoder (HAL input)",
+                        );
+                }
             }
             None => {
                 log::debug!("[Decoder Thread] HAL input reader still unavailable");

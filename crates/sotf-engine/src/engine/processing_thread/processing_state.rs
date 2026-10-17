@@ -906,6 +906,17 @@ pub(super) fn run_processing_thread(
         Err(e) => log::warn!("[Processing Thread] Failed to set RT priority: {e}"),
     }
 
+    // In systemwide (HAL) builds the DSP runs against the HAL capture
+    // deadline: join that device's workgroup when it exists. In player
+    // builds the device is absent and this is a graceful no-op. Held in a
+    // binding for the thread's lifetime; dropping it leaves the workgroup.
+    #[cfg(all(target_os = "macos", feature = "hal"))]
+    let _workgroup_membership = super::super::rt_priority::join_device_workgroup(
+        Some(super::super::rt_priority::HAL_VIRTUAL_DEVICE_NAME),
+        true,
+        "processing (HAL input)",
+    );
+
     let mut state = ProcessingState::new(
         channels,
         sample_rate,

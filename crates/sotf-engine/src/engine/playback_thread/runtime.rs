@@ -125,6 +125,9 @@ struct PlaybackRuntime {
     device: Option<Device>,
     device_name: String,
     coreaudio_device_id: Option<u32>,
+    /// Output-device workgroup membership for this feeder thread (macOS).
+    /// Held for the runtime's lifetime; dropped on the playback thread.
+    workgroup_membership: Option<super::super::rt_priority::WorkgroupMembership>,
     stream: Option<Stream>,
     config: StreamConfig,
     output_format: Option<SampleFormat>,
@@ -637,6 +640,14 @@ impl PlaybackRuntime {
             );
         }
 
+        // Joinable only now that the concrete output device is resolved:
+        // cooperate with its coreaudiod IO thread for the feeder deadline.
+        let workgroup_membership = super::super::rt_priority::join_device_workgroup(
+            Some(device_name.as_str()),
+            false,
+            "playback feeder",
+        );
+
         Ok(Self {
             message_rx,
             command_rx,
@@ -654,6 +665,7 @@ impl PlaybackRuntime {
             device: Some(device),
             device_name,
             coreaudio_device_id,
+            workgroup_membership,
             stream: Some(stream),
             config,
             output_format: Some(output_format),
@@ -784,6 +796,7 @@ impl PlaybackRuntime {
             device: None,
             device_name: output_name.to_string(),
             coreaudio_device_id: None,
+            workgroup_membership: None,
             stream: None,
             config: StreamConfig {
                 channels: initial_channels as u16,
@@ -1709,6 +1722,14 @@ impl PlaybackRuntime {
 
         self.device = Some(rebuilt.device);
         self.device_name = rebuilt.device_name;
+        // Re-join against the recovered device: leave the old workgroup
+        // first, since joining a second non-nesting workgroup fails.
+        self.workgroup_membership = None;
+        self.workgroup_membership = super::super::rt_priority::join_device_workgroup(
+            Some(self.device_name.as_str()),
+            false,
+            "playback feeder (recovered)",
+        );
         self.stream = Some(rebuilt.stream);
         self.producer = rebuilt.producer;
         self.state = rebuilt.state;

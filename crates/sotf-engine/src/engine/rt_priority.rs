@@ -211,6 +211,240 @@ fn nanos_to_mach_absolute_time(nanos: u64, numer: u32, denom: u32) -> Result<u32
     u32::try_from(absolute).map_err(|_| format!("mach absolute time out of range: {absolute}"))
 }
 
+/// CoreAudio device name of the SotF HAL virtual device. Used to join the
+/// workgroup of the coreaudiod IO thread that drives systemwide capture.
+pub const HAL_VIRTUAL_DEVICE_NAME: &str = "SotF Virtual Audio";
+
+/// RAII membership in a CoreAudio IO-thread workgroup (macOS).
+///
+/// Joining the device workgroup lets the kernel schedule this thread
+/// cooperatively with the device IO thread in coreaudiod: deadline-aware,
+/// performance-core placement under load, and no root requirement. The
+/// membership is bound to the joining thread; dropping it leaves the
+/// workgroup, so hold it in a binding that lives for the thread's work
+/// loop. On other platforms this is an inert placeholder.
+#[cfg(target_os = "macos")]
+pub struct WorkgroupMembership {
+    workgroup: *mut std::ffi::c_void,
+    token: workgroup_ffi::OsWorkgroupJoinToken,
+    _thread_bound: std::marker::PhantomData<std::rc::Rc<()>>,
+}
+
+#[cfg(not(target_os = "macos"))]
+pub struct WorkgroupMembership {
+    _private: (),
+}
+
+impl std::fmt::Debug for WorkgroupMembership {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("WorkgroupMembership(..)")
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl Drop for WorkgroupMembership {
+    fn drop(&mut self) {
+        unsafe {
+            workgroup_ffi::os_workgroup_leave(self.workgroup, &mut self.token);
+            workgroup_ffi::os_release(self.workgroup);
+        }
+    }
+}
+
+/// Join the calling thread to the IO-thread workgroup of the named audio
+/// device (`input` selects capture devices), or of the system default
+/// output/input device when `device_name` is None. Returns None when
+/// disabled (`SOTF_AUDIO_WORKGROUP=0`), unsupported, or unavailable; the
+/// caller simply keeps its QoS elevation in that case.
+#[cfg(target_os = "macos")]
+pub fn join_device_workgroup(
+    device_name: Option<&str>,
+    input: bool,
+    context: &str,
+) -> Option<WorkgroupMembership> {
+    if std::env::var("SOTF_AUDIO_WORKGROUP").is_ok_and(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "0" | "off" | "false"
+        )
+    }) {
+        log::debug!("[Workgroup] disabled via SOTF_AUDIO_WORKGROUP for {context}");
+        return None;
+    }
+    let device_id = workgroup_ffi::audio_device_id(device_name, input)?;
+    let workgroup = workgroup_ffi::fetch_io_thread_workgroup(device_id)?;
+    let mut token = workgroup_ffi::OsWorkgroupJoinToken { opaque: [0; 36] };
+    let status = unsafe { workgroup_ffi::os_workgroup_join(workgroup, &mut token) };
+    if status != 0 {
+        log::warn!("[Workgroup] join failed for {context} (errno={status}), keeping QoS only");
+        unsafe { workgroup_ffi::os_release(workgroup) };
+        return None;
+    }
+    log::info!(
+        "[Workgroup] {context} joined {} device workgroup (device_id={device_id})",
+        if input { "input" } else { "output" }
+    );
+    Some(WorkgroupMembership {
+        workgroup,
+        token,
+        _thread_bound: std::marker::PhantomData,
+    })
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn join_device_workgroup(
+    _device_name: Option<&str>,
+    _input: bool,
+    _context: &str,
+) -> Option<WorkgroupMembership> {
+    None
+}
+
+#[cfg(target_os = "macos")]
+mod workgroup_ffi {
+    use std::ffi::c_void;
+
+    #[repr(C)]
+    pub(super) struct OsWorkgroupJoinToken {
+        pub(super) opaque: [u8; 36],
+    }
+
+    #[repr(C)]
+    struct AudioObjectPropertyAddress {
+        selector: u32,
+        scope: u32,
+        element: u32,
+    }
+
+    const AUDIO_OBJECT_SYSTEM_OBJECT: u32 = 1;
+    const PROPERTY_SCOPE_GLOBAL: u32 = u32::from_be_bytes(*b"glob");
+    const PROPERTY_IO_THREAD_OS_WORKGROUP: u32 = u32::from_be_bytes(*b"oswg");
+    const PROPERTY_DEFAULT_OUTPUT_DEVICE: u32 = u32::from_be_bytes(*b"dOut");
+    const PROPERTY_DEFAULT_INPUT_DEVICE: u32 = u32::from_be_bytes(*b"dIn ");
+
+    #[link(name = "CoreAudio", kind = "framework")]
+    unsafe extern "C" {
+        fn AudioObjectGetPropertyData(
+            object_id: u32,
+            address: *const AudioObjectPropertyAddress,
+            qualifier_data_size: u32,
+            qualifier_data: *const c_void,
+            data_size: *mut u32,
+            data: *mut c_void,
+        ) -> i32;
+    }
+
+    unsafe extern "C" {
+        pub(super) fn os_workgroup_join(
+            workgroup: *mut c_void,
+            token_out: *mut OsWorkgroupJoinToken,
+        ) -> i32;
+        pub(super) fn os_workgroup_leave(
+            workgroup: *mut c_void,
+            token: *mut OsWorkgroupJoinToken,
+        ) -> i32;
+        pub(super) fn os_release(object: *mut c_void);
+    }
+
+    pub(super) fn audio_device_id(device_name: Option<&str>, input: bool) -> Option<u32> {
+        use coreaudio_rs::audio_unit::macos_helpers::get_device_id_from_name;
+        match device_name {
+            // The workgroup property is device-global; the scope only gates
+            // the by-name search. Virtual capture devices such as the SotF
+            // HAL present as output devices to applications, so fall back
+            // to the opposite scope instead of giving up.
+            Some(name) => get_device_id_from_name(name, input)
+                .or_else(|| get_device_id_from_name(name, !input)),
+            None => {
+                let selector = if input {
+                    PROPERTY_DEFAULT_INPUT_DEVICE
+                } else {
+                    PROPERTY_DEFAULT_OUTPUT_DEVICE
+                };
+                let address = AudioObjectPropertyAddress {
+                    selector,
+                    scope: PROPERTY_SCOPE_GLOBAL,
+                    element: 0,
+                };
+                let mut device_id: u32 = 0;
+                let mut data_size = size_of::<u32>() as u32;
+                let status = unsafe {
+                    AudioObjectGetPropertyData(
+                        AUDIO_OBJECT_SYSTEM_OBJECT,
+                        &address,
+                        0,
+                        std::ptr::null(),
+                        &mut data_size,
+                        &mut device_id as *mut u32 as *mut c_void,
+                    )
+                };
+                (status == 0 && device_id != 0).then_some(device_id)
+            }
+        }
+    }
+
+    /// Fetch the retained `os_workgroup_t` for a device's IO thread. The
+    /// caller owns the reference and must `os_release` it after leaving.
+    pub(super) fn fetch_io_thread_workgroup(device_id: u32) -> Option<*mut c_void> {
+        let address = AudioObjectPropertyAddress {
+            selector: PROPERTY_IO_THREAD_OS_WORKGROUP,
+            scope: PROPERTY_SCOPE_GLOBAL,
+            element: 0,
+        };
+        let mut workgroup: *mut c_void = std::ptr::null_mut();
+        let mut data_size = size_of::<*mut c_void>() as u32;
+        let status = unsafe {
+            AudioObjectGetPropertyData(
+                device_id,
+                &address,
+                0,
+                std::ptr::null(),
+                &mut data_size,
+                &mut workgroup as *mut *mut c_void as *mut c_void,
+            )
+        };
+        (status == 0 && !workgroup.is_null()).then_some(workgroup)
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod workgroup_tests {
+    #[test]
+    fn join_unknown_device_is_a_graceful_noop() {
+        let membership =
+            super::join_device_workgroup(Some("sotf-definitely-not-a-real-device"), false, "test");
+        assert!(membership.is_none());
+    }
+
+    /// Manual hardware probe: joining the default output device's
+    /// workgroup must succeed on a Mac with audio hardware. Run with
+    /// `cargo test -p sotf-engine --lib workgroup -- --ignored`.
+    #[test]
+    #[ignore = "requires a real CoreAudio output device"]
+    fn join_default_output_device_workgroup() {
+        let membership = super::join_device_workgroup(None, false, "test");
+        assert!(
+            membership.is_some(),
+            "expected to join the default output workgroup"
+        );
+    }
+
+    /// Manual hardware probe for systemwide installs: the SotF HAL
+    /// virtual device must expose a joinable IO-thread workgroup. Run it
+    /// from a normal (unsandboxed) terminal: sandboxed processes do not
+    /// enumerate HAL plug-in devices at all.
+    #[test]
+    #[ignore = "requires the SotF HAL driver to be installed"]
+    fn join_hal_virtual_device_workgroup() {
+        let membership =
+            super::join_device_workgroup(Some(super::HAL_VIRTUAL_DEVICE_NAME), true, "test");
+        assert!(
+            membership.is_some(),
+            "expected to join the HAL virtual device workgroup"
+        );
+    }
+}
+
 #[cfg(all(test, target_os = "macos"))]
 mod macos_tests {
     use super::{audio_period_nanos, nanos_to_mach_absolute_time};
