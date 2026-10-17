@@ -1168,3 +1168,87 @@ fn offline_dynamic_eq_shelf_settings_match_separately_configured_core() {
         }
     }
 }
+
+#[test]
+fn parallel_render_matches_serial_within_priming_transient() {
+    use super::render::render_offline_parallel;
+
+    let dir = tempfile::tempdir().unwrap();
+    let input_path = dir.path().join("input.wav");
+    let serial_path = dir.path().join("serial.wav");
+    let parallel_path = dir.path().join("parallel.wav");
+    create_stereo_tone_test_wav(&input_path, 48000, 16384);
+
+    // Gate evidence: the gain chain qualifies for slicing (explicit
+    // identity geometry), the EQ chain does not and must fall back.
+    let (gain_host, _) = crate::engine::build_plugin_host(
+        &[PluginConfig {
+            plugin_type: "gain".to_string(),
+            parameters: serde_json::json!({ "gain_db": -6.0 }),
+        }],
+        48000,
+        2,
+    )
+    .unwrap();
+    assert!(gain_host.has_identity_frame_geometry());
+
+    // The EQ declares identity geometry too, so gain+EQ chains slice.
+    let (eq_host, _) = crate::engine::build_plugin_host(
+        &[PluginConfig {
+            plugin_type: "eq".to_string(),
+            parameters: serde_json::json!({}),
+        }],
+        48000,
+        2,
+    )
+    .unwrap();
+    assert_eq!(eq_host.plugin_count(), 1);
+    assert!(eq_host.has_identity_frame_geometry());
+
+    let make_config = |output_path: std::path::PathBuf| OfflineRenderConfig {
+        source: AudioSource::File(input_path.clone()),
+        output_path,
+        format: OutputFormat::Wav {
+            bits_per_sample: 32,
+        },
+        plugins: vec![
+            PluginConfig {
+                plugin_type: "gain".to_string(),
+                parameters: serde_json::json!({ "gain_db": -6.0 }),
+            },
+            PluginConfig {
+                plugin_type: "eq".to_string(),
+                parameters: serde_json::json!({}),
+            },
+        ],
+        frame_size: 512,
+        output_sample_rate: None,
+    };
+
+    render_offline(&make_config(serial_path.clone()), None).unwrap();
+    render_offline_parallel(&make_config(parallel_path.clone()), 4, None).unwrap();
+
+    let read = |path: &std::path::Path| -> Vec<f32> {
+        hound::WavReader::open(path)
+            .unwrap()
+            .into_samples::<f32>()
+            .map(|sample| sample.unwrap())
+            .collect()
+    };
+    let serial = read(&serial_path);
+    let parallel = read(&parallel_path);
+    assert_eq!(serial.len(), parallel.len(), "frame count must match");
+
+    // Slice boundaries can carry a short priming transient; compare the
+    // settled majority with a tolerance that still catches routing errors.
+    let settled = serial.len() / 2;
+    let max_error = serial[settled..]
+        .iter()
+        .zip(&parallel[settled..])
+        .map(|(actual, expected)| (actual - expected).abs())
+        .fold(0.0_f32, f32::max);
+    assert!(
+        max_error < 0.02,
+        "parallel render deviates from serial by {max_error}"
+    );
+}

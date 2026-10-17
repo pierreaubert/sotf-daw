@@ -455,7 +455,7 @@ pub use sotf_host::analyzer_spectrum::{
     TiltReferenceFreq,
 };
 pub use sotf_host::auto_gain::{AutoGain, AutoGainData, AutoGainLoudnessType, AutoGainParams};
-pub use sotf_host::host::{DawHost, GraphEdge, Host};
+pub use sotf_host::host::{DawHost, GraphEdge, Host, HostRenderPath, HostRenderStats};
 pub use sotf_host::parameters::{
     Parameter, ParameterChoice, ParameterId, ParameterImportance, ParameterValue,
 };

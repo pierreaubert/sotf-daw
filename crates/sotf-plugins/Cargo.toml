@@ -156,3 +156,7 @@ harness = false
 [[bench]]
 name = "allocation-benchmark"
 harness = false
+
+[[bench]]
+name = "chain-scale-benchmark"
+harness = false

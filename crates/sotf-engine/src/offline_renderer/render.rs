@@ -268,6 +268,180 @@ pub fn render_offline_with_tail(
         .map_err(|e| format!("Failed to finalize output: {e}"))
 }
 
+/// Render offline in parallel across contiguous time slices.
+///
+/// Each slice runs on its own freshly built host, primed with the actual
+/// preceding programme audio (host latency plus one second, capped at the
+/// slice start) so stateful filters cross slice boundaries with only a
+/// short decaying transient instead of a cold start. Slices therefore
+/// require explicit identity frame geometry from every plugin; program
+/// that does not qualify — sample-rate conversion, variable-frame or
+/// rate-changing chains, explicit tails — falls back to
+/// [`render_offline`] unchanged. The whole programme is decoded into
+/// memory first, which is the price of slicing. Progress is reported
+/// once, coarsely, when all slices have completed.
+///
+/// # Errors
+/// Returns an error for invalid configuration, or decoder, plugin, and
+/// output-file failures, mirroring [`render_offline`].
+pub fn render_offline_parallel(
+    config: &OfflineRenderConfig,
+    num_threads: usize,
+    mut on_progress: Option<&mut dyn FnMut(&RenderProgress)>,
+) -> Result<(), String> {
+    use rayon::prelude::*;
+
+    if config.frame_size == 0 {
+        return Err("Offline render frame_size must be greater than zero".to_string());
+    }
+    if num_threads <= 1 {
+        return render_offline(config, on_progress);
+    }
+
+    let mut decoder = crate::decoder::core::create_decoder_from_source(&config.source)
+        .map_err(|e| format!("Failed to open source: {e}"))?;
+    let source_spec = decoder.spec().clone();
+    let source_rate = source_spec.sample_rate;
+    let output_rate = config.output_sample_rate.unwrap_or(source_rate);
+    let input_channels = source_spec.channels as usize;
+    if output_rate == 0 {
+        return Err("Offline render output sample rate must be greater than zero".to_string());
+    }
+    if output_rate != source_rate {
+        return render_offline(config, on_progress);
+    }
+
+    let (probe, _warnings) = build_plugin_host(&config.plugins, output_rate, input_channels)
+        .map_err(|diagnostic| diagnostic.message)?;
+    if probe.output_sample_rate(output_rate)? != f64::from(output_rate)
+        || !probe.has_identity_frame_geometry()
+    {
+        return render_offline(config, on_progress);
+    }
+    let output_channels = probe.output_channels();
+    let delay_frames = round_signal_delay(serial_signal_delay(&probe, output_rate)?)?;
+    let prime_limit = probe
+        .total_latency_samples()
+        .saturating_add(output_rate as usize);
+
+    // Decode the whole programme: slicing needs random access to it.
+    let mut program: Vec<f32> = Vec::new();
+    let mut decode_buf = DecodedAudio::new(source_spec.clone());
+    loop {
+        decode_buf.clear();
+        let decoded_frames = decoder
+            .decode_into(&mut decode_buf)
+            .map_err(|e| format!("Decode error: {e}"))?;
+        if decoded_frames == 0 {
+            break;
+        }
+        program.extend_from_slice(&decode_buf.samples[..decoded_frames * input_channels]);
+    }
+    let total_frames = program.len() / input_channels;
+    let threads = num_threads
+        .min(total_frames.div_ceil(config.frame_size))
+        .max(1);
+    if threads <= 1 || total_frames == 0 {
+        return render_offline(config, on_progress);
+    }
+    let slice_frames = total_frames.div_ceil(threads);
+    let slices: Vec<(usize, usize)> = (0..threads)
+        .map(|index| {
+            let start = index * slice_frames;
+            (start, (start + slice_frames).min(total_frames))
+        })
+        .filter(|(start, end)| start < end)
+        .collect();
+    let last_index = slices.len() - 1;
+
+    let spec = wav_spec(&config.format, output_channels, output_rate)?;
+    let rendered: Vec<Result<Vec<f32>, String>> = slices
+        .par_iter()
+        .enumerate()
+        .map(|(index, &(start, end))| {
+            let (mut host, _warnings) =
+                build_plugin_host(&config.plugins, output_rate, input_channels)
+                    .map_err(|diagnostic| diagnostic.message)?;
+            let mut scratch: Vec<f32> = Vec::new();
+            let mut emit = |host: &mut DawHost,
+                            input: &[f32],
+                            frames: usize,
+                            mut sink: Option<&mut Vec<f32>>|
+             -> Result<(), String> {
+                let mut offset = 0usize;
+                while offset < frames {
+                    let chunk = (frames - offset).min(config.frame_size);
+                    let capacity = host
+                        .output_frames_for_input(chunk)
+                        .max(chunk)
+                        .saturating_mul(output_channels);
+                    scratch.resize(capacity, 0.0);
+                    let produced = host.process(
+                        &input[offset * input_channels..(offset + chunk) * input_channels],
+                        scratch.as_mut_slice(),
+                    )?;
+                    if let Some(sink) = sink.as_deref_mut() {
+                        sink.extend_from_slice(&scratch[..produced * output_channels]);
+                    }
+                    offset += chunk;
+                }
+                Ok(())
+            };
+
+            // Prime with real preceding audio so filter state at the slice
+            // boundary matches the serial render (up to decaying transients).
+            let prime_frames = start.min(prime_limit);
+            if prime_frames > 0 {
+                emit(
+                    &mut host,
+                    &program[(start - prime_frames) * input_channels..start * input_channels],
+                    prime_frames,
+                    None,
+                )?;
+            }
+            let mut out: Vec<f32> = Vec::with_capacity((end - start) * output_channels);
+            emit(
+                &mut host,
+                &program[start * input_channels..end * input_channels],
+                end - start,
+                Some(&mut out),
+            )?;
+            if index == last_index && delay_frames > 0 {
+                // Produce the frames the global delay trim removes at the
+                // head, so the concatenated length stays exact.
+                let silence = vec![0.0_f32; delay_frames * input_channels];
+                emit(&mut host, &silence, delay_frames, Some(&mut out))?;
+            }
+            Ok(out)
+        })
+        .collect();
+
+    let mut combined: Vec<f32> = Vec::new();
+    for slice in rendered {
+        combined.extend_from_slice(&slice?);
+    }
+    if delay_frames > 0 {
+        combined.drain(..delay_frames * output_channels);
+    }
+    combined.truncate(total_frames * output_channels);
+
+    let mut writer = WavWriter::create(&config.output_path, spec)
+        .map_err(|e| format!("Failed to create output file: {e}"))?;
+    let mut dither = TpdfDither::new(OFFLINE_DITHER_SEED);
+    write_wav_samples(&mut writer, spec, &combined, &mut dither)?;
+    writer
+        .finalize()
+        .map_err(|e| format!("Failed to finalize output: {e}"))?;
+
+    if let Some(ref mut callback) = on_progress {
+        callback(&RenderProgress {
+            frames_processed: total_frames as u64,
+            total_frames: Some(total_frames as u64),
+        });
+    }
+    Ok(())
+}
+
 fn tail_duration_frames(duration: Duration, sample_rate: u32) -> Result<usize, String> {
     let frames = u128::from(duration.as_secs()) * u128::from(sample_rate)
         + (u128::from(duration.subsec_nanos()) * u128::from(sample_rate)).div_ceil(1_000_000_000);

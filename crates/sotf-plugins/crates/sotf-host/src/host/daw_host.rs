@@ -106,6 +106,14 @@ pub(super) struct DawConfig {
     pub(super) sample_rate: f64,
     pub(super) parallel_enabled: bool,
     pub(super) compiled_linear_enabled: bool,
+    /// Wrap every plugin process call in `catch_unwind` (default). Disable
+    /// only for hosts running exclusively trusted, in-process plugins: a
+    /// panicking plugin then aborts the calling thread instead of degrading
+    /// to passthrough, in exchange for removing per-call unwind setup.
+    pub(super) panic_isolation: bool,
+    /// Invoke compiled analyzer taps only every Nth block (1 = every block).
+    /// Metering does not need callback-rate updates in large sessions.
+    pub(super) analyzer_stride: usize,
     pub(super) initial_input_channels: usize,
     /// Cached worst-case plugin work quantum in host-input-rate frames.
     pub(super) realtime_quantum_frames: usize,
@@ -654,6 +662,26 @@ impl std::fmt::Display for TerminalSinkRecoveryError {
 
 impl std::error::Error for TerminalSinkRecoveryError {}
 
+/// Which process path a built graph takes, for diagnostics and benchmarks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostRenderPath {
+    Empty,
+    CompiledLinear,
+    Graph,
+}
+
+/// Compiled-plan snapshot returned by [`DawHost::render_stats`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HostRenderStats {
+    pub path: HostRenderPath,
+    pub nodes: usize,
+    pub ops: usize,
+    pub segments: usize,
+    pub bypassed_nodes: usize,
+    pub analyzer_taps: usize,
+    pub silence_skippable_ops: usize,
+}
+
 pub struct DawHost {
     pub(super) nodes: HashMap<NodeId, GraphNode>,
     /// Plugin storage indexed by NodeId — disjoint from `nodes` for borrow checker.
@@ -699,6 +727,18 @@ pub struct DawHost {
     /// in sync exclusively through `Self::set_bypass_state` so the two flags
     /// can never disagree.
     pub(super) bypassed: Vec<bool>,
+    /// Dense mirror of `nodes`, indexed by `NodeId`, rebuilt in `build()`.
+    /// Hot process loops index this instead of hashing `nodes` per plugin
+    /// per block. Kept in sync with bypass mutations via
+    /// [`Self::set_bypass_state`]; all other node fields are build-time only.
+    pub(super) nodes_by_id: Vec<Option<GraphNode>>,
+    /// Per-node frame-identity cache, indexed by `NodeId`: true when the
+    /// plugin explicitly guarantees identity frame geometry (or the node
+    /// is bypassed), so the audio path can skip the isolated per-block
+    /// geometry query. A probe at one block size is not proof enough.
+    pub(super) cached_node_frames_identity: Vec<bool>,
+    /// Monotonic compiled-plan block counter, for analyzer stride gating.
+    pub(super) compiled_block_index: u64,
     /// Per-node cumulative latency from graph inputs, computed during build().
     /// Used to calculate compensation delays at merge points.
     pub(super) node_latency_from_input: Vec<usize>,
@@ -884,6 +924,9 @@ impl DawHost {
             compiled_plan: CompiledRenderPlan::default(),
             cached_parallel_node_costs: Vec::new(),
             bypassed: Vec::new(),
+            nodes_by_id: Vec::new(),
+            cached_node_frames_identity: Vec::new(),
+            compiled_block_index: 0,
             node_latency_from_input: Vec::new(),
             node_input_sample_rates: Vec::new(),
             node_output_sample_rates: Vec::new(),
@@ -923,6 +966,8 @@ impl DawHost {
                 sample_rate,
                 parallel_enabled: true,
                 compiled_linear_enabled: true,
+                panic_isolation: true,
+                analyzer_stride: 1,
                 initial_input_channels: channels,
                 realtime_quantum_frames: 1,
                 plugin_preferred_oversampling_enabled: true,
@@ -951,6 +996,89 @@ impl DawHost {
             self.built = false;
         }
         Ok(())
+    }
+
+    /// Enable or disable per-plugin panic isolation on the audio path.
+    ///
+    /// Enabled (the default) wraps every plugin call in `catch_unwind` and
+    /// substitutes passthrough audio when a plugin panics or errors.
+    /// Disabled skips the unwind setup for trusted in-process plugins; a
+    /// panicking plugin then aborts the calling thread. Error returns keep
+    /// the passthrough substitution in both modes.
+    pub fn set_panic_isolation_enabled(&mut self, enabled: bool) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
+        self.config.panic_isolation = enabled;
+        Ok(())
+    }
+
+    /// Invoke compiled analyzer taps only every `stride` blocks.
+    ///
+    /// Analyzers are bit-transparent taps, so skipping invocations never
+    /// changes the audio; meters simply refresh less often. The default
+    /// stride of 1 preserves per-block metering.
+    pub fn set_analyzer_stride(&mut self, stride: usize) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
+        if stride == 0 {
+            return Err("analyzer stride must be at least 1".to_string());
+        }
+        self.config.analyzer_stride = stride;
+        Ok(())
+    }
+
+    /// Snapshot of the compiled render plan chosen at `build()` time.
+    ///
+    /// Lets callers (benchmarks, diagnostics, engine telemetry) verify
+    /// which process path a graph actually takes instead of assuming the
+    /// compiled linear fast path engaged.
+    pub fn render_stats(&self) -> HostRenderStats {
+        let (path, ops, segments) = match &self.compiled_plan {
+            CompiledRenderPlan::EmptyPassthrough => (HostRenderPath::Empty, 0, 0),
+            CompiledRenderPlan::LinearF32(plan) => (
+                HostRenderPath::CompiledLinear,
+                plan.ops.len(),
+                plan.segments.len(),
+            ),
+            CompiledRenderPlan::Graph(plan) => {
+                (HostRenderPath::Graph, self.nodes.len(), plan.segments.len())
+            }
+        };
+        let (bypassed_nodes, analyzer_taps, silence_skippable_ops) = match &self.compiled_plan {
+            CompiledRenderPlan::LinearF32(plan) => (
+                plan.ops
+                    .iter()
+                    .filter(|op| self.bypassed.get(op.node_id).copied().unwrap_or(false))
+                    .count(),
+                plan.ops
+                    .iter()
+                    .filter(|op| op.kind == CompiledOpKind::AnalyzerTap)
+                    .count(),
+                plan.ops
+                    .iter()
+                    .filter(|op| Self::op_is_silence_skippable(op))
+                    .count(),
+            ),
+            _ => (
+                self.bypassed.iter().filter(|bypassed| **bypassed).count(),
+                0,
+                0,
+            ),
+        };
+        HostRenderStats {
+            path,
+            nodes: self.nodes.len(),
+            ops,
+            segments,
+            bypassed_nodes,
+            analyzer_taps,
+            silence_skippable_ops,
+        }
+    }
+
+    /// A compiled op may skip its process call on a silent block when it is
+    /// linear (so zero input maps to zero output), stateless (no state to
+    /// advance or tail to emit), latency-free, and frame-preserving.
+    pub(super) fn op_is_silence_skippable(op: &CompiledOp) -> bool {
+        op.linear && !op.stateful && op.latency_samples == 0 && op.identity_frames_guaranteed
     }
 
     /// Enable or disable plugins' `preferred_oversampling()` requests.
@@ -1265,6 +1393,36 @@ impl DawHost {
                 "Invalid preferred oversampling factor {factor}: expected 2 or 4"
             ));
         }
+        if self.config.forced_oversampling_factor.is_none() {
+            // Preferred oversampling exists to give nonlinear stages
+            // headroom above Nyquist. Wrapping a stage that declares
+            // itself linear only multiplies its cost by the factor, so
+            // honour preferred requests from nonlinear/heavy classes
+            // only; a forced factor still wraps everything, as an
+            // explicit operator choice. Plugins using the default
+            // (non-linear) metadata keep the historical wrap behaviour.
+            let metadata = plugin.compile_metadata();
+            let linear_class = metadata.linear
+                && match metadata.cost_class {
+                    PluginCostClass::Scalar | PluginCostClass::Iir | PluginCostClass::Analyzer => {
+                        true
+                    }
+                    PluginCostClass::Dynamics
+                    | PluginCostClass::Fft
+                    | PluginCostClass::Convolution
+                    | PluginCostClass::External => false,
+                };
+            if linear_class {
+                crate::rate_limited_log!(
+                    warn,
+                    5,
+                    "host: plugin '{}' requested {}x oversampling but is a linear cost class; leaving unwrapped",
+                    plugin.info().name,
+                    factor
+                );
+                return Ok(plugin);
+            }
+        }
         if plugin.input_channels() != plugin.output_channels() {
             crate::rate_limited_log!(
                 warn,
@@ -1500,6 +1658,10 @@ impl DawHost {
         // Cache per-node bypass flags before computing compensation delays
         // (compensation needs to know which nodes are bypassed for latency calculation)
         self.bypassed = vec![false; num_slots];
+        self.nodes_by_id = (0..num_slots).map(|_| None).collect();
+        for (&id, node) in &self.nodes {
+            self.nodes_by_id[id] = Some(node.clone());
+        }
         self.cached_parallel_node_costs = vec![DEFAULT_PARALLEL_NODE_COST; num_slots];
         for (&id, node) in &self.nodes {
             self.bypassed[id] = node.bypassed;
@@ -1723,9 +1885,16 @@ impl DawHost {
         self.cached_rate_identity = true;
         self.cached_output_frame_ratios.clear();
         self.analyzer_indices.clear();
+        self.cached_node_frames_identity = vec![false; num_slots];
 
         for (&id, node) in &self.nodes {
             let p = self.plugins[id].as_ref().unwrap();
+            // The per-node audio-path cache requires the plugin's explicit
+            // identity guarantee (bypass is identity by construction). The
+            // host-wide flag below keeps its historical probe semantics:
+            // it only gates stage parallelism, which re-checks per block.
+            self.cached_node_frames_identity[id] =
+                node.bypassed || p.guarantees_identity_frame_geometry();
             if !node.bypassed
                 && Self::plugin_output_frames_for_input_isolated(p.as_ref(), id, &node.name, 100)
                     != 100
@@ -2123,6 +2292,7 @@ impl DawHost {
             plugin.supports_f64(),
             Self::plugin_output_frames_for_input_isolated(plugin.as_ref(), id, &node.name, 100)
                 == 100,
+            plugin.guarantees_identity_frame_geometry(),
             Self::plugin_output_sample_rate_isolated(plugin.as_ref(), id, &node.name, 48_000.0)
                 .is_ok_and(|rate| rate == 48_000.0),
         )
@@ -2135,7 +2305,63 @@ impl DawHost {
         {
             return false;
         }
-        self.is_topologically_linear_chain()
+        self.is_compiled_linear_chain()
+    }
+
+    /// Topology admitted by the compiled linear *process* path.
+    ///
+    /// Wider than [`Self::is_topologically_linear_chain`]: channel-count
+    /// changes are allowed, because the compiled loop already sizes every
+    /// op by its own output width and only gain fusion requires equal
+    /// widths (checked per op there). Widths must still chain contiguously
+    /// (each node's output width feeds the next node's input). The EOS
+    /// drain paths keep using the narrower predicate, so their contracts
+    /// are unchanged; drain never consumes the compiled plan.
+    fn is_compiled_linear_chain(&self) -> bool {
+        if self.chain_nodes.is_empty() || self.chain_nodes.len() != self.nodes.len() {
+            return false;
+        }
+        if self.input_nodes.len() != 1 || self.output_nodes.len() != 1 {
+            return false;
+        }
+        if self.input_nodes[0] != self.chain_nodes[0]
+            || self.output_nodes[0] != *self.chain_nodes.last().unwrap()
+        {
+            return false;
+        }
+        if self.edges.len() != self.chain_nodes.len().saturating_sub(1) {
+            return false;
+        }
+        for &nid in &self.chain_nodes {
+            if !self.nodes.contains_key(&nid) || self.plugins[nid].is_none() {
+                return false;
+            }
+        }
+        for pair in self.chain_nodes.windows(2) {
+            let from = pair[0];
+            let to = pair[1];
+            let (Some(from_node), Some(to_node)) = (self.nodes.get(&from), self.nodes.get(&to))
+            else {
+                return false;
+            };
+            if from_node.output_channels() != to_node.input_channels() {
+                return false;
+            }
+            let Some(edge) = self
+                .edges
+                .iter()
+                .find(|edge| edge.from_node == from && edge.to_node == to)
+            else {
+                return false;
+            };
+            if edge.edge_type != EdgeType::Audio
+                || edge.channel_map.is_some()
+                || edge.destination_offset != 0
+            {
+                return false;
+            }
+        }
+        true
     }
 
     fn is_topologically_linear_chain(&self) -> bool {
@@ -3515,6 +3741,7 @@ impl DawHost {
         input: &[f32],
         output: &mut [f32],
         context: &ProcessContext<'_>,
+        panic_isolation: bool,
     ) -> IsolatedProcessOutcome {
         let fallback = |output: &mut [f32]| {
             write_plugin_failure_passthrough(
@@ -3525,6 +3752,38 @@ impl DawHost {
                 node.output_channels(),
             )
         };
+
+        if !panic_isolation {
+            // Trusted-plugin fast path: skip unwind setup. A panic in the
+            // plugin propagates to the caller by design (see
+            // `set_panic_isolation_enabled`); errors keep the passthrough
+            // substitution and over-report reporting of the isolated path.
+            return match plugin.process(input, output, context) {
+                Ok(frames) if frames.saturating_mul(node.output_channels()) <= output.len() => {
+                    IsolatedProcessOutcome {
+                        frames,
+                        over_reported: None,
+                    }
+                }
+                Ok(frames) => IsolatedProcessOutcome {
+                    frames: fallback(output),
+                    over_reported: Some(frames),
+                },
+                Err(err) => {
+                    crate::rate_limited_log!(
+                        error,
+                        5,
+                        "host: plugin '{}' (node {}) process failed: {err}; using passthrough for this block",
+                        node.name,
+                        node.id
+                    );
+                    IsolatedProcessOutcome {
+                        frames: fallback(output),
+                        over_reported: None,
+                    }
+                }
+            };
+        }
 
         match catch_unwind(AssertUnwindSafe(|| plugin.process(input, output, context))) {
             Ok(Ok(frames)) => {
@@ -3939,6 +4198,9 @@ impl DawHost {
                 self.graph_drain_state.reset_dynamic();
             }
             node.bypassed = bypassed;
+        }
+        if let Some(slot) = self.nodes_by_id.get_mut(id).and_then(Option::as_mut) {
+            slot.bypassed = bypassed;
         }
         if id < self.bypassed.len() {
             self.bypassed[id] = bypassed;
@@ -7393,6 +7655,7 @@ impl DawHost {
                 &self.bypassed,
                 &self.cached_parallel_node_costs,
                 bufs,
+                self.config.panic_isolation,
             ) {
                 parallel_result?;
                 for &nid in &stage.nodes {
@@ -7473,12 +7736,23 @@ impl DawHost {
                     let p = self.plugins[nid].as_mut().unwrap();
                     let context = ProcessContext::new(self.node_input_sample_rates[nid], cf)
                         .with_sample_position(self.node_input_positions[nid]);
-                    let mof = Self::plugin_output_frames_for_input_isolated(
-                        p.as_ref(),
-                        nid,
-                        &node.name,
-                        cf,
-                    );
+                    let mof = if self
+                        .cached_node_frames_identity
+                        .get(nid)
+                        .copied()
+                        .unwrap_or(false)
+                    {
+                        // Proven frame-identity at build time: skip the
+                        // isolated per-block geometry query.
+                        cf
+                    } else {
+                        Self::plugin_output_frames_for_input_isolated(
+                            p.as_ref(),
+                            nid,
+                            &node.name,
+                            cf,
+                        )
+                    };
                     let ol = mof * node.output_channels();
                     // Adapters own any input-stride work storage; Plugin output
                     // always uses the declared output channel count.
@@ -7528,6 +7802,7 @@ impl DawHost {
                             &bufs.scratch_input[..in_len],
                             &mut bufs.scratch_output[..process_output_len],
                             &context,
+                            self.config.panic_isolation,
                         );
                         if let Some(returned) = outcome.over_reported {
                             return Err(format!(
@@ -7593,6 +7868,7 @@ impl DawHost {
         block_start_sample: u64,
     ) -> Result<usize, String> {
         let input_channels = plan.input_channels;
+        let panic_isolation = self.config.panic_isolation;
         let mut guard = BufferGuard::take(&mut self.process_buffers);
         let bufs = guard.get_mut();
 
@@ -7631,17 +7907,56 @@ impl DawHost {
 
             let op = &plan.ops[idx];
             let nid = op.node_id;
+            // Dense per-id lookup (built in `build()`); falls back to the
+            // authoritative map if the mirror has no slot for this id.
             let node = self
-                .nodes
-                .get(&nid)
+                .nodes_by_id
+                .get(nid)
+                .and_then(Option::as_ref)
+                .or_else(|| self.nodes.get(&nid))
                 .ok_or_else(|| format!("Missing node {nid} during compiled f32 processing"))?;
             let region_writes_final_gain = active_gain_region
                 .is_some_and(|(region_end, gain)| region_end == plan.ops.len() && gain != 1.0);
             let is_last = idx + 1 == plan.ops.len() && !region_writes_final_gain;
+            if self.bypassed.get(nid).copied().unwrap_or(false)
+                && !is_last
+                && op.input_channels == op.output_channels
+            {
+                // Bypassed ops are identity copies in a compiled chain:
+                // elide them entirely and keep the current buffer as the
+                // next op's input instead of paying a full block copy.
+                // The final op is excluded: it must still materialise
+                // into `output` through the normal path below.
+                idx += 1;
+                if let Some((region_end, gain)) = active_gain_region
+                    && idx == region_end
+                {
+                    current_source = Self::apply_compiled_region_gain(
+                        bufs,
+                        input,
+                        output,
+                        current_source,
+                        current_len,
+                        gain,
+                        region_end == plan.ops.len(),
+                    )?;
+                    active_gain_region = None;
+                }
+                continue;
+            }
             if !is_last
                 && op.kind == CompiledOpKind::AnalyzerTap
                 && !self.bypassed.get(nid).copied().unwrap_or(false)
             {
+                if !self
+                    .compiled_block_index
+                    .is_multiple_of(self.config.analyzer_stride as u64)
+                {
+                    // Analyzer taps are bit-transparent: skipping an
+                    // invocation only delays the meter refresh.
+                    idx += 1;
+                    continue;
+                }
                 let context = ProcessContext::new(self.config.sample_rate, current_frames)
                     .with_sample_position(block_start_sample);
                 let tap_input = match current_source {
@@ -7659,7 +7974,14 @@ impl DawHost {
                     continue;
                 }
             }
-            let output_frames = if self.bypassed[nid] {
+            let output_frames = if self.bypassed.get(nid).copied().unwrap_or(false)
+                || op.identity_frames_guaranteed
+            {
+                // Explicitly guaranteed identity geometry, or identity by
+                // construction (bypass): skip the per-block query. The
+                // 100-frame probe behind `same_frame_count` is NOT enough
+                // here: probe-passing plugins may still vary per block,
+                // and the query is what sizes over-report detection.
                 current_frames
             } else {
                 let plugin = self.plugins[nid].as_ref().unwrap();
@@ -7694,6 +8016,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?;
                         let produced = frames.saturating_mul(node.output_channels());
                         if produced > output.len() {
@@ -7715,6 +8039,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?
                     }
                 }
@@ -7739,6 +8065,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?;
                         let produced = frames.saturating_mul(node.output_channels());
                         if produced > output.len() {
@@ -7760,6 +8088,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?
                     }
                 }
@@ -7785,6 +8115,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?;
                         let produced = frames.saturating_mul(node.output_channels());
                         if produced > output.len() {
@@ -7806,6 +8138,8 @@ impl DawHost {
                             self.config.sample_rate,
                             block_start_sample,
                             current_frames,
+                            Self::op_is_silence_skippable(op),
+                            panic_isolation,
                         )?
                     }
                 }
@@ -7821,6 +8155,8 @@ impl DawHost {
                         self.config.sample_rate,
                         block_start_sample,
                         current_frames,
+                        Self::op_is_silence_skippable(op),
+                        panic_isolation,
                     )?;
                     current_source = CompiledLinearSource::ScratchOutput;
                     frames
@@ -7837,6 +8173,8 @@ impl DawHost {
                         self.config.sample_rate,
                         block_start_sample,
                         current_frames,
+                        Self::op_is_silence_skippable(op),
+                        panic_isolation,
                     )?;
                     current_source = CompiledLinearSource::ScratchOutput;
                     frames
@@ -7853,6 +8191,8 @@ impl DawHost {
                         self.config.sample_rate,
                         block_start_sample,
                         current_frames,
+                        Self::op_is_silence_skippable(op),
+                        panic_isolation,
                     )?;
                     current_source = CompiledLinearSource::ScratchInput;
                     frames
@@ -7887,6 +8227,7 @@ impl DawHost {
             .playback_position
             .checked_add(input.len() / input_channels)
             .ok_or("Graph playback position exceeds addressable frames")?;
+        self.compiled_block_index = self.compiled_block_index.wrapping_add(1);
         Ok(current_frames)
     }
 
@@ -8043,10 +8384,18 @@ impl DawHost {
         sample_rate: f64,
         sample_position: u64,
         num_frames: usize,
+        silence_skippable: bool,
+        panic_isolation: bool,
     ) -> Result<usize, String> {
         if bypassed {
             output[..input.len()].copy_from_slice(input);
             return Ok(num_frames);
+        }
+        if silence_skippable && input.iter().all(|sample| *sample == 0.0) {
+            // Linear, stateless, latency-free ops map silence to silence
+            // and have no state to advance: emit zeros without the call.
+            output.fill(0.0);
+            return Ok(output.len() / node.output_channels().max(1));
         }
         let context =
             ProcessContext::new(sample_rate, num_frames).with_sample_position(sample_position);
@@ -8062,8 +8411,14 @@ impl DawHost {
         }) {
             return Ok(frames);
         }
-        let outcome =
-            Self::process_plugin_f32_isolated(plugin, node, input, &mut *output, &context);
+        let outcome = Self::process_plugin_f32_isolated(
+            plugin,
+            node,
+            input,
+            &mut *output,
+            &context,
+            panic_isolation,
+        );
         if let Some(returned) = outcome.over_reported {
             let staged = output.len() / node.output_channels().max(1);
             return Err(format!(
@@ -8749,6 +9104,7 @@ impl DawHost {
         bypassed: &[bool],
         parallel_node_costs: &[u32],
         bufs: &mut ProcessBuffers<f32>,
+        panic_isolation: bool,
     ) -> Option<Result<usize, String>> {
         if !parallel_enabled
             || !Self::should_parallelize_stage(stage, cf, nodes, parallel_node_costs)
@@ -8860,6 +9216,7 @@ impl DawHost {
                             &scratch_input[..in_len],
                             &mut scratch_output[..output_len],
                             &context,
+                            panic_isolation,
                         );
                         if let Some(returned) = outcome.over_reported {
                             return Err(format!(

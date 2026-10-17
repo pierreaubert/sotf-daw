@@ -35,6 +35,7 @@ mod hetero_envelope_plan;
 mod latency_compensation;
 mod mixed_rate_timing;
 mod panicking_process_plugin;
+mod perf_paths;
 mod playback_context_recorder_plugin;
 mod prefers_oversampling_plugin;
 mod process_over_report;

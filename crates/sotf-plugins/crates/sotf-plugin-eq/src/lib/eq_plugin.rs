@@ -1375,6 +1375,12 @@ impl ParametricPlugin for EqPlugin {
         PluginCostClass::Iir
     }
 
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        // Every successful process call returns exactly `num_frames`
+        // (zero frames in, zero out); oversampling is internal only.
+        true
+    }
+
     fn input_channels(&self) -> usize {
         self.num_channels
     }

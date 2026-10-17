@@ -39,6 +39,7 @@ libc = { workspace = true }
 arc-swap = { workspace = true }
 crossbeam = { workspace = true }
 rustfft = { workspace = true }
+rayon = { workspace = true }
 realfft = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }

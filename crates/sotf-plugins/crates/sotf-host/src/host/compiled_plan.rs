@@ -46,6 +46,11 @@ pub(super) struct CompiledOp {
     pub(super) latency_samples: usize,
     pub(super) supports_f64: bool,
     pub(super) same_frame_count: bool,
+    /// Plugin explicitly guarantees identity frame geometry for every
+    /// block size (stronger than the 100-frame probe behind
+    /// `same_frame_count`); only this licenses skipping the per-block
+    /// geometry query on the audio path.
+    pub(super) identity_frames_guaranteed: bool,
     pub(super) same_sample_rate: bool,
     pub(super) barrier: Option<CompiledBarrierKind>,
 }
@@ -101,6 +106,7 @@ impl CompiledOp {
         metadata: PluginCompileMetadata,
         supports_f64: bool,
         same_frame_count: bool,
+        identity_frames_guaranteed: bool,
         same_sample_rate: bool,
     ) -> Self {
         let barrier = Self::barrier_for(node, &metadata, same_frame_count, same_sample_rate);
@@ -124,6 +130,7 @@ impl CompiledOp {
             latency_samples: metadata.latency_samples,
             supports_f64,
             same_frame_count,
+            identity_frames_guaranteed,
             same_sample_rate,
             barrier,
         }
