@@ -15,6 +15,7 @@ use std::io::Write;
 use tempfile::{NamedTempFile, tempdir};
 
 mod misc;
+mod startup_matrix;
 
 #[test]
 fn test_header_size() {

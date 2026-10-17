@@ -18,11 +18,47 @@ pub fn build_room_eq_plugin_graph_config(
         .and_then(|report| report.routing_graph.as_ref())
         .filter(|graph| !graph.routes.is_empty());
 
-    if let Some(graph) = routed_graph {
-        return build_routed_room_eq_graph(output, graph);
-    }
+    let mut config = if let Some(graph) = routed_graph {
+        build_routed_room_eq_graph(output, graph)?
+    } else {
+        build_linear_room_eq_graph(output)?
+    };
+    normalize_room_eq_delay_parameters(&mut config);
+    Ok(config)
+}
 
-    build_linear_room_eq_graph(output)
+/// RoomEQ `delay` entries are alignment (routing) delays, but the optimizer
+/// emits only `delay_ms`. Without explicit values the delay plugin falls
+/// back to its effect-style defaults (mix 0.5, feedback 0.3), which colors
+/// the corrected response with comb filtering. Fill absent effect
+/// parameters with pure-delay values; explicitly authored values are kept.
+fn normalize_room_eq_delay_parameters(config: &mut sotf_audio::engine::PluginGraphConfig) {
+    for node in &mut config.nodes {
+        if node.plugin_type != "delay" {
+            continue;
+        }
+        let Some(parameters) = node.parameters.as_object_mut() else {
+            continue;
+        };
+        parameters
+            .entry("mix".to_string())
+            .or_insert(serde_json::json!(1.0));
+        parameters
+            .entry("feedback".to_string())
+            .or_insert(serde_json::json!(0.0));
+        parameters
+            .entry("lfo_rate_hz".to_string())
+            .or_insert(serde_json::json!(0.0));
+        parameters
+            .entry("lfo_depth_ms".to_string())
+            .or_insert(serde_json::json!(0.0));
+        parameters
+            .entry("pitch_preserving".to_string())
+            .or_insert(serde_json::json!(false));
+        parameters
+            .entry("allpass_feedback".to_string())
+            .or_insert(serde_json::json!(false));
+    }
 }
 
 fn build_routed_room_eq_graph(
@@ -277,4 +313,58 @@ fn build_linear_room_eq_graph_legacy(
     }
 
     Ok(PluginGraphConfig { nodes, edges })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sotf_audio::engine::{PluginGraphConfig, PluginGraphNodeConfig};
+
+    fn node(id: usize, plugin_type: &str, parameters: serde_json::Value) -> PluginGraphNodeConfig {
+        PluginGraphNodeConfig {
+            id,
+            plugin_type: plugin_type.to_string(),
+            parameters,
+            input_channels: 2,
+            bypassed: false,
+        }
+    }
+
+    #[test]
+    fn delay_nodes_become_pure_alignment_delays() {
+        let mut config = PluginGraphConfig {
+            nodes: vec![
+                node(0, "delay", serde_json::json!({"delay_ms": 0.25})),
+                node(
+                    1,
+                    "delay",
+                    serde_json::json!({"delay_ms": 1.0, "mix": 0.75}),
+                ),
+                node(2, "gain", serde_json::json!({"gain_db": -2.0})),
+            ],
+            edges: Vec::new(),
+        };
+
+        normalize_room_eq_delay_parameters(&mut config);
+
+        let bare = &config.nodes[0].parameters;
+        assert_eq!(bare["delay_ms"], serde_json::json!(0.25));
+        assert_eq!(bare["mix"], serde_json::json!(1.0));
+        assert_eq!(bare["feedback"], serde_json::json!(0.0));
+        assert_eq!(bare["lfo_rate_hz"], serde_json::json!(0.0));
+        assert_eq!(bare["lfo_depth_ms"], serde_json::json!(0.0));
+        assert_eq!(bare["pitch_preserving"], serde_json::json!(false));
+        assert_eq!(bare["allpass_feedback"], serde_json::json!(false));
+
+        // Explicitly authored values are preserved.
+        let authored = &config.nodes[1].parameters;
+        assert_eq!(authored["mix"], serde_json::json!(0.75));
+        assert_eq!(authored["feedback"], serde_json::json!(0.0));
+
+        // Non-delay nodes are untouched.
+        assert_eq!(
+            config.nodes[2].parameters,
+            serde_json::json!({"gain_db": -2.0})
+        );
+    }
 }

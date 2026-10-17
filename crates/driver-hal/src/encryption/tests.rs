@@ -292,6 +292,53 @@ fn test_load_session_key_accepts_owned_0600_file() {
     assert_eq!(loaded, expected);
 }
 
+/// Weird key-file states a crash, a partial write, or a same-user mistake
+/// can leave behind must fail closed with an error — never a zero-filled,
+/// truncated-pad, or otherwise guessed key. An oversized file loads its
+/// first 32 bytes (the publish path writes exactly 32, so trailing bytes
+/// can only come from external tampering with the copy, which the mode
+/// and ownership checks already gate).
+#[test]
+fn test_load_session_key_weird_states_fail_closed() {
+    use super::misc::load_session_key_from_path;
+    use std::io::ErrorKind;
+
+    let dir = tempfile::tempdir().expect("tempdir");
+
+    // Missing entirely (daemon has not published yet).
+    let err = load_session_key_from_path(&dir.path().join("session.key")).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::NotFound);
+
+    // Empty and truncated files (interrupted publish).
+    for (name, contents) in [("empty.key", &[][..]), ("short.key", &[0x5Au8; 16][..])] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, contents).expect("write truncated key");
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+            .expect("chmod truncated key");
+        let err = load_session_key_from_path(&path).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::UnexpectedEof, "{name}");
+    }
+
+    // A directory where the key should be.
+    let dir_path = dir.path().join("dir.key");
+    std::fs::create_dir(&dir_path).expect("create key-shaped directory");
+    assert!(load_session_key_from_path(&dir_path).is_err());
+
+    // Oversized: first 32 bytes load, trailing bytes are ignored.
+    let big = dir.path().join("big.key");
+    let mut contents = [0x5Au8; 64];
+    contents[32..].copy_from_slice(&[0xFFu8; 32]);
+    std::fs::write(&big, contents).expect("write oversized key");
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&big, std::fs::Permissions::from_mode(0o600))
+        .expect("chmod oversized key");
+    assert_eq!(
+        load_session_key_from_path(&big).expect("oversized key"),
+        [0x5Au8; 32]
+    );
+}
+
 /// A group/other-readable key file must be refused.
 #[test]
 fn test_load_session_key_refuses_group_readable_file() {

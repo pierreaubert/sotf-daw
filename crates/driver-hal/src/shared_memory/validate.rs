@@ -16,6 +16,16 @@ pub(super) fn open_shared_memory_file(path: &Path) -> io::Result<std::fs::File> 
     }
 
     let file = options.open(path)?;
+    // The create path owns this file: repair a legacy loose mode left by an
+    // older build before validating, instead of wedging every daemon start
+    // until the user deletes the file by hand. Ownership and symlink checks
+    // in validation still fail closed. The open-only path used by readers
+    // keeps rejecting loose modes until the daemon has repaired them.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
     validate_shared_memory_file(&file, path)?;
     Ok(file)
 }
