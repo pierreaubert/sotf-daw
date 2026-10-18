@@ -15,7 +15,7 @@ use std::io::Cursor;
 
 fn data(name: &str) -> Vec<u8> {
     let path = format!(
-        "{}/../../../symphonia-add-ons/symphonia-iamf-core/tests/data/{name}",
+        "{}/tests/data/{name}",
         env!("CARGO_MANIFEST_DIR")
     );
     std::fs::read(&path).unwrap_or_else(|_| panic!("missing corpus file {path}"))

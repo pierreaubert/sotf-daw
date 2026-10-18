@@ -14,6 +14,7 @@
     "driver_ready": 48,
     "engine_ready": 52,
     "encrypted": 56,
+    "volume_scalar_bits": 60,
     "key_fingerprint": 64,
     "frame_counter": 72,
     "requested_sample_rate": 80,
@@ -23,10 +24,12 @@
     "config_status": 96,
     "config_source": 100,
     "config_error_code": 104,
+    "output_muted": 108,
     "encryption_overflow_count": 112,
     "daemon_heartbeat_ms": 120,
     "configuring": 128,
     "configuring_ack": 132,
-    "requested_channel_count": 136
+    "requested_channel_count": 136,
+    "volume_generation": 140
   }
 }

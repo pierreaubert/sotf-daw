@@ -12,7 +12,11 @@ pub(super) const SHARED_MEMORY_MAGIC: u32 = 0x534F5446;
 ///            added the `configuring` quiesce handshake flag.
 /// Version 6: Added `configuring_ack` and a separate requested channel count
 ///            so pending requests never mutate live ring geometry.
-pub(super) const SHARED_MEMORY_VERSION: u32 = 6;
+/// Version 7: Added output volume fields (`volume_scalar_bits`,
+///            `output_muted`, `volume_generation`) in former padding slots
+///            so the HAL volume control (OS media keys) and the daemon
+///            share one volume state.
+pub(super) const SHARED_MEMORY_VERSION: u32 = 7;
 
 pub const DEFAULT_HAL_CHANNEL_COUNT: u32 = 2;
 

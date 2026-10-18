@@ -379,6 +379,22 @@ impl AudioDriver for HalDriver {
         }
     }
 
+    fn output_volume(&mut self) -> Option<(f32, bool, u32)> {
+        self.ensure_config_buffer();
+        let buffer = self.config_buffer.as_ref()?;
+        let (volume, muted, generation) = buffer.output_volume();
+        if generation == 0 {
+            return None;
+        }
+        Some((volume, muted, generation))
+    }
+
+    fn set_output_volume(&mut self, volume: f32, muted: bool) -> Option<u32> {
+        self.ensure_config_buffer();
+        let buffer = self.config_buffer.as_ref()?;
+        Some(buffer.set_output_volume(volume, muted))
+    }
+
     fn set_engine_ready(&mut self, ready: bool) {
         self.ensure_config_buffer();
         if let Some(ref buf) = self.config_buffer {

@@ -40,7 +40,7 @@ fn test_header_offsets_match_swift_layout_contract() {
         .expect("shared-memory layout manifest fields must be an object");
     assert_eq!(
         fields.len(),
-        26,
+        29,
         "manifest must contain exactly every SharedAudioHeader field"
     );
 
@@ -67,6 +67,7 @@ fn test_header_offsets_match_swift_layout_contract() {
     assert_manifest_offset!("driver_ready", driver_ready);
     assert_manifest_offset!("engine_ready", engine_ready);
     assert_manifest_offset!("encrypted", encrypted);
+    assert_manifest_offset!("volume_scalar_bits", volume_scalar_bits);
     assert_manifest_offset!("key_fingerprint", key_fingerprint);
     assert_manifest_offset!("frame_counter", frame_counter);
     assert_manifest_offset!("requested_sample_rate", requested_sample_rate);
@@ -76,11 +77,13 @@ fn test_header_offsets_match_swift_layout_contract() {
     assert_manifest_offset!("config_status", config_status);
     assert_manifest_offset!("config_source", config_source);
     assert_manifest_offset!("config_error_code", config_error_code);
+    assert_manifest_offset!("output_muted", output_muted);
     assert_manifest_offset!("encryption_overflow_count", encryption_overflow_count);
     assert_manifest_offset!("daemon_heartbeat_ms", daemon_heartbeat_ms);
     assert_manifest_offset!("configuring", configuring);
     assert_manifest_offset!("configuring_ack", configuring_ack);
     assert_manifest_offset!("requested_channel_count", requested_channel_count);
+    assert_manifest_offset!("volume_generation", volume_generation);
 }
 
 #[test]
@@ -115,6 +118,33 @@ fn test_create_or_open_initializes_daemon_owned_file() {
     assert_eq!(reopened.sample_rate(), 48_000);
     assert_eq!(reopened.buffer_frames(), 512);
     assert_eq!(reopened.channel_count(), 2);
+}
+
+#[test]
+fn output_volume_defaults_to_unity_and_survives_reopen() {
+    let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+    let buffer = SharedAudioBuffer::create_or_open(temp_file.path(), 48_000, 512, 2)
+        .expect("Failed to create shared memory");
+
+    // Fresh headers publish unity gain, unmuted, at generation 1.
+    assert_eq!(buffer.output_volume(), (1.0, false, 1));
+
+    // Publications bump the generation and clamp to the CoreAudio range.
+    let generation = buffer.set_output_volume(0.25, true);
+    assert_eq!(generation, 2);
+    assert_eq!(buffer.output_volume(), (0.25, true, 2));
+    let generation = buffer.set_output_volume(2.5, false);
+    assert_eq!(buffer.output_volume(), (1.0, false, generation));
+    let generation = buffer.set_output_volume(f32::NAN, false);
+    assert_eq!(buffer.output_volume(), (1.0, false, generation));
+
+    // A daemon restart (create_or_open on the same file) preserves the
+    // published user volume instead of resetting the transport header.
+    let generation = buffer.set_output_volume(0.5, true);
+    drop(buffer);
+    let reopened = SharedAudioBuffer::create_or_open(temp_file.path(), 48_000, 512, 2)
+        .expect("Failed to reopen shared memory");
+    assert_eq!(reopened.output_volume(), (0.5, true, generation));
 }
 
 #[test]

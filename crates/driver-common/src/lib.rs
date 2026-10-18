@@ -364,6 +364,25 @@ pub trait AudioDriver: Send + 'static {
     /// Acknowledge a driver-initiated config change with the actual values used.
     fn acknowledge_config_change(&mut self, actual: DriverConfig, result: ConfigResult);
 
+    /// Current driver-side output volume as (scalar, muted, generation),
+    /// when the driver exposes an OS-visible volume control (for example a
+    /// HAL virtual device whose volume the macOS media keys adjust).
+    ///
+    /// `generation` changes on every published value so pollers can detect
+    /// updates without racing the value itself; 0 means unpublished. The
+    /// default implementation reports no volume control.
+    fn output_volume(&mut self) -> Option<(f32, bool, u32)> {
+        None
+    }
+
+    /// Publish a daemon-originated volume change to the driver's control
+    /// so OS UI (media-key OSD, sliders) stays in sync with the engine.
+    ///
+    /// Returns the new generation, or `None` when unsupported (the default).
+    fn set_output_volume(&mut self, _volume: f32, _muted: bool) -> Option<u32> {
+        None
+    }
+
     /// Signal to the driver whether the engine is ready to process audio.
     ///
     /// Calls are idempotent. Implementations must publish the ready state

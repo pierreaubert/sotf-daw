@@ -92,7 +92,7 @@ sotf-engine = { path = "crates/sotf-engine", default-features = false }
 sotf-room-eq-graph = { path = "crates/sotf-room-eq-graph" }
 sotf-host = { path = "crates/sotf-plugins/crates/sotf-host", default-features = false }
 sotf-iamf = { path = "crates/sotf-iamf" }
-symphonia-iamf-core = { git = "https://github.com/pierreaubert/symphonia-add-ons" }
+symphonia-iamf-core = { version = "0.1.0", git = "https://github.com/pierreaubert/symphonia-add-ons" }
 sotf-midi = { path = "crates/sotf-midi" }
 sotf-plugin-aae = { path = "crates/sotf-plugins/crates/sotf-plugin-aae" }
 sotf-plugin-ab-compare = { path = "crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
@@ -223,7 +223,7 @@ symphonia-codec-aac = "0.6"
 symphonia-codec-alac = "0.6"
 symphonia-codec-pcm = "0.6"
 symphonia-codec-vorbis = "0.6"
-symphonia-codec-wavpack = { version = "0.1.0", git = "https://github.com/pierreaubert/symphonia-add-ons" }
+symphonia-codec-wavpack = { version = "0.1.1", git = "https://github.com/pierreaubert/symphonia-add-ons" }
 symphonia-core = "0.6"
 symphonia-format-isomp4 = "0.6"
 symphonia-format-ogg = "0.6"

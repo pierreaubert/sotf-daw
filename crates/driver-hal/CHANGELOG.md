@@ -1,5 +1,21 @@
 # 0.1.12 (unreleased)
 
+## Shared-memory protocol version 7 (output volume)
+
+- Add `volume_scalar_bits` (offset 60), `output_muted` (108), and
+  `volume_generation` (140) in former header padding; the 144-byte header
+  size is unchanged. `SHARED_MEMORY_VERSION` moves to 7 on both the Rust
+  and Swift sides, and the layout manifest plus both offset-contract
+  tests cover the new fields.
+- `SharedAudioBuffer::output_volume`/`set_output_volume` publish and read
+  the volume with a generation counter (0 = unpublished); header
+  initialization preserves a published volume across daemon restarts and
+  only seeds unity gain on never-published headers.
+- `AudioDriver` gains defaulted `output_volume`/`set_output_volume`
+  methods (driver-common); `HalDriver` implements them over the shared
+  header so the HAL volume control driven by the macOS media keys and the
+  daemon's engine volume share one state.
+
 ## Reader staging
 
 - Hold the existing read-commit bit across staged plaintext delivery and record

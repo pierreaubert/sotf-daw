@@ -34,6 +34,7 @@ pub(super) fn create_mock_shared_memory(
         engine_ready: AtomicU32::new(0),
         // Encryption fields (version 2+)
         encrypted: AtomicU32::new(0),
+        volume_scalar_bits: AtomicU32::new(1.0f32.to_bits()),
         key_fingerprint: AtomicU64::new(0),
         frame_counter: AtomicU64::new(0),
         // Config negotiation fields (version 3+)
@@ -44,12 +45,14 @@ pub(super) fn create_mock_shared_memory(
         config_status: AtomicU32::new(0),
         config_source: AtomicU32::new(0),
         config_error_code: AtomicU32::new(0),
+        output_muted: AtomicU32::new(0),
         // Statistics
         encryption_overflow_count: AtomicU64::new(0),
         daemon_heartbeat_ms: AtomicU64::new(0),
         configuring: AtomicU32::new(0),
         configuring_ack: AtomicU32::new(0),
         requested_channel_count: AtomicU32::new(channel_count),
+        volume_generation: AtomicU32::new(1),
     };
 
     let header_bytes: &[u8] =

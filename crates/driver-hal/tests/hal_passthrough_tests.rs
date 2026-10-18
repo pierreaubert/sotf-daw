@@ -31,6 +31,7 @@ struct SharedAudioHeader {
     engine_ready: AtomicU32,
     // Encryption fields (version 2+)
     encrypted: AtomicU32,
+    volume_scalar_bits: AtomicU32,
     key_fingerprint: AtomicU64,
     frame_counter: AtomicU64,
     // Config negotiation fields (version 3+)
@@ -41,10 +42,12 @@ struct SharedAudioHeader {
     config_status: AtomicU32,
     config_source: AtomicU32,
     config_error_code: AtomicU32,
+    output_muted: AtomicU32,
     // Statistics
     encryption_overflow_count: AtomicU64,
     daemon_heartbeat_ms: AtomicU64,
     configuring: AtomicU32,
     configuring_ack: AtomicU32,
     requested_channel_count: AtomicU32,
+    volume_generation: AtomicU32,
 }

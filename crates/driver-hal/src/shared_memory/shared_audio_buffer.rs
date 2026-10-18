@@ -270,6 +270,11 @@ impl SharedAudioBuffer {
         // not-ready forever. Preserve it verbatim.
         let header = self.header();
         let driver_ready = header.driver_ready.load(Ordering::Acquire);
+        // Volume state is user state, not transport state: a daemon
+        // restart must not reset the OS-visible volume the HAL driver is
+        // still advertising. Preserve a published volume verbatim; only a
+        // never-published header (generation 0) gets unity defaults.
+        let volume_published = header.volume_generation.load(Ordering::Acquire) != 0;
         header.magic.store(SHARED_MEMORY_MAGIC, Ordering::Release);
         header
             .version
@@ -304,6 +309,13 @@ impl SharedAudioBuffer {
         header.daemon_heartbeat_ms.store(0, Ordering::Release);
         header.configuring.store(0, Ordering::Release);
         header.configuring_ack.store(0, Ordering::Release);
+        if !volume_published {
+            header
+                .volume_scalar_bits
+                .store(1.0f32.to_bits(), Ordering::Release);
+            header.output_muted.store(0, Ordering::Release);
+            header.volume_generation.store(1, Ordering::Release);
+        }
     }
 
     /// Create or open the shared memory file and initialize it when needed.
@@ -671,6 +683,50 @@ impl SharedAudioBuffer {
     /// Get sample rate
     pub fn sample_rate(&self) -> u32 {
         self.header().sample_rate.load(Ordering::Acquire)
+    }
+
+    /// Current shared output volume: (scalar, muted, generation).
+    ///
+    /// Generation 0 means neither side has published a volume yet; the
+    /// scalar/muted values are then meaningless and callers must fall back
+    /// to their own default.
+    pub fn output_volume(&self) -> (f32, bool, u32) {
+        let header = self.header();
+        let generation = header.volume_generation.load(Ordering::Acquire);
+        let bits = header.volume_scalar_bits.load(Ordering::Acquire);
+        let muted = header.output_muted.load(Ordering::Acquire) != 0;
+        (f32::from_bits(bits), muted, generation)
+    }
+
+    /// Publish an output volume change and return the new generation.
+    ///
+    /// The scalar is clamped to the finite 0.0..=1.0 range the CoreAudio
+    /// volume control exposes. The generation store is last and uses
+    /// `AcqRel`, so a reader that observes the new generation also
+    /// observes the values written before it. Generation 0 is the
+    /// "unpublished" sentinel and is skipped on wraparound.
+    pub fn set_output_volume(&self, volume: f32, muted: bool) -> u32 {
+        let clamped = if volume.is_finite() {
+            volume.clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let header = self.header();
+        header
+            .volume_scalar_bits
+            .store(clamped.to_bits(), Ordering::Release);
+        header
+            .output_muted
+            .store(u32::from(muted), Ordering::Release);
+        let generation = header
+            .volume_generation
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1);
+        if generation == 0 {
+            header.volume_generation.store(1, Ordering::Release);
+            return 1;
+        }
+        generation
     }
 
     /// Set sample rate via the quiesced reconfiguration protocol.

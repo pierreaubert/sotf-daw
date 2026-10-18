@@ -106,6 +106,11 @@ pub struct SharedAudioHeader {
     // Encryption fields (version 2+)
     /// Encryption enabled flag: 0 = disabled, 1 = enabled
     pub encrypted: AtomicU32,
+    /// Output volume scalar as `f32::to_bits` (version 7+, in the padding
+    /// before `key_fingerprint`). Written by whichever side last changed
+    /// the volume: the HAL driver for OS media keys/sliders, the daemon
+    /// for IPC `set_volume`. Meaningful only when `volume_generation != 0`.
+    pub volume_scalar_bits: AtomicU32,
     /// First 8 bytes of SHA256 hash of the encryption key, stored in
     /// big-endian byte order (so `to_be_bytes` gives the canonical 8-byte
     /// fingerprint).
@@ -128,6 +133,10 @@ pub struct SharedAudioHeader {
     pub config_source: AtomicU32,
     /// Error code if config_status=3
     pub config_error_code: AtomicU32,
+    /// Output mute flag: 0 = audible, 1 = muted (version 7+, in the
+    /// padding before `encryption_overflow_count`). Same ownership and
+    /// validity rules as `volume_scalar_bits`.
+    pub output_muted: AtomicU32,
 
     // Statistics
     /// Number of times encrypted write failed due to insufficient buffer space
@@ -145,4 +154,9 @@ pub struct SharedAudioHeader {
     /// Channel count requested by the initiator. The live `channel_count`
     /// field changes only inside `reconfigure_quiesced`.
     pub requested_channel_count: AtomicU32,
+    /// Monotonic counter bumped on every volume/mute publication
+    /// (version 7+, in the former tail padding). Zero means no volume has
+    /// been published yet; pollers compare generations to detect changes
+    /// without racing the value fields.
+    pub volume_generation: AtomicU32,
 }
