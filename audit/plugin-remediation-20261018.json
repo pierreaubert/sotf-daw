@@ -420,7 +420,7 @@
       "id": 22,
       "plugin": "Dynamic EQ",
       "audit_text": "[`dynamic_eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs):1235\u20131430 uses dry sidechain detection and blends a fixed full-gain EQ response according to the dynamics control. This reduces coefficient work but does not generally equal redesigning a biquad at the instantaneous requested dB gain. Validate the actual response against the chosen semantics. Its fixed large dry buffer is P1; cache publication every ten blocks also has block-dependent wall-clock cadence.\n\n`aud139_shelf_lifecycle.rs`, `routing_tilt_public.rs` and response/replay tests are useful, while several CPU/baseline artifacts are optional. Extend response surfaces across gain reduction, shelves/Q, link mode and first transient. Classical proportional-Q/TPT or prepared-filter approaches are alternatives only if their sound/control semantics are desired. ML can propose settings offline; the runtime gain envelope should remain transparent and bounded.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Publish dynamics meters on elapsed sample time rather than callback count.",
@@ -437,9 +437,34 @@
             "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/audit_meter_clock.rs"
           ],
           "result": "The new public meter test exposed permanently zero published GR because cache slots shared their inner Arc<Vec>. Independent cache payloads now produce nonzero GR. Cold publication and contended readers pass zero-allocation/free checks."
+        },
+        {
+          "task": "Publish causal snapshots and settle dry on the actual sample clock",
+          "status": "implemented_and_verified",
+          "evidence": "audit_meter_clock.rs reproduced a 5.9576006 dB snapshot at the 100 ms boundary despite silence until that boundary: the later mix pass published the callback-final detector envelope. A second regression reproduced 6.1227064 dB versus zero during dry settling with long versus short callbacks. Processing, dry routing, mixing and publication now advance together per accepted frame; future samples cannot alter an earlier snapshot, and settled dry publishes zero consistently at 44.1/48/96/192 kHz. Existing contended-reader/cold-publication heap guards remain green."
+        },
+        {
+          "task": "Honor small nonzero mix values across scalar and bulk control paths",
+          "status": "implemented_and_verified",
+          "evidence": "Exact zero checks replace the approximate 1e-6 dry classification in both setters and processing. The native regression proves mix=1e-7 emits the independently weighted wet contribution, and scalar/bulk retargets preserve identical populated detector/filter state. Mix and threshold clocks continue through exact dry; detector/filter re-entry retains the documented fresh-epoch reset policy."
+        },
+        {
+          "task": "Validate full held-target response surfaces and first transients independently",
+          "status": "implemented_and_verified",
+          "evidence": "audit_response_surface.rs runs 360 full waveform cases for Peak/LowShelf/HighShelf/Tilt, +/-12 dB targets, three thresholds, linked/unlinked channels, Peak Q and shelf slope variants, and 32/48/192 kHz. Its separate f64 RBJ/analog-tilt filters, standard-log detector, soft-knee compressor, attack/release recurrence and amplitude-blend law call no production DSP helpers. Inactive, partial and full activation are exercised; every emitted sample including the first transient is compared. Maximum error 0.00007688999 under the fixed 0.0002 bound. README states H_dynamic=1+p*(H_target-1), including magnitude/phase differences from redesign at instantaneous dB gain."
+        },
+        {
+          "task": "Verify prepared dry storage and actual factory/host controls",
+          "status": "implemented_and_verified",
+          "evidence": "Current source already sizes dry storage to prepared frame budget times channels. Existing constructor/preparation tests verify exact 128-frame capacity across 2/8/32/64/128 channels, overflow/oversize rejection without mutation and audio equivalence. New audit_dynamic_eq_host.rs exercises negotiated preparation, factory state, queued threshold/mix edits, causal publication, dry settling and callback-invariant audio/meter values through actual DawHost at 44.1/48/96/192 kHz. No parameter/preset schema changes."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "cargo test --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -p sotf-plugin-dynamic-eq --lib --tests: 115 passed, four historical manual CPU/artifact-capture tests ignored. Frozen tracked Peak audio replay, shelf/tilt/routing references and heap/reset tests passed; no performance claim is made from ignored CPU targets.",
+        "Two audit_dynamic_eq_host regressions plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 44 passed after final production changes.",
+        "Clippy --offline --locked --no-deps for the plugin library/tests and facade audit_dynamic_eq_host target with -D warnings passed; git diff --check passed.",
+        "Prepared filter/blend sound semantics and preset fields remain intact. Meter publication stays best-effort under retained cache-reader contention, uses prepared storage, and reports unlinked Stereo channel zero. Fully dry routing is sample-clocked; no model/ML or new filter-realization mode was introduced."
+      ]
     },
     {
       "id": 23,

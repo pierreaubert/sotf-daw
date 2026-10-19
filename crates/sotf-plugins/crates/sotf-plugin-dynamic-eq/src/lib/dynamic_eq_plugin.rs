@@ -277,8 +277,8 @@ impl DynamicEqPlugin {
             }
             RealtimeScalar::Knee => self.knee_db = value.clamp(0.0, 20.0),
             RealtimeScalar::Mix => {
-                let leaving_settled_dry = self.mix_smoother.current().abs() < 1.0e-6
-                    && self.mix_smoother.target().abs() < 1.0e-6
+                let leaving_settled_dry = self.mix_smoother.current() == 0.0
+                    && self.mix_smoother.target() == 0.0
                     && value > 0.0;
                 self.mix = value.clamp(0.0, 1.0);
                 if leaving_settled_dry {
@@ -1174,8 +1174,8 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                     .as_float()
                     .unwrap_or(pk(DQ, "mix").default_f64() as f32);
                 if v.is_finite() {
-                    let leaving_settled_dry = self.mix_smoother.current().abs() < 1.0e-6
-                        && self.mix_smoother.target().abs() < 1.0e-6
+                    let leaving_settled_dry = self.mix_smoother.current() == 0.0
+                        && self.mix_smoother.target() == 0.0
                         && v > 0.0;
                     self.mix = v.clamp(0.0, 1.0);
                     if leaving_settled_dry {
@@ -1362,15 +1362,6 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         // Save dry signal
         self.dry_buf[..total].copy_from_slice(&buffer[..total]);
 
-        // A fully dry settled state is exactly transparent. Detector and EQ
-        // state are deterministically reset before a later wet ramp begins.
-        if self.mix_smoother.current().abs() < 1.0e-6 && self.mix_smoother.target().abs() < 1.0e-6 {
-            self.monitoring_gr[..self.num_bands].fill(0.0);
-            self.advance_meter_clock(nf);
-            flush_denormals_inplace(buffer);
-            return Ok(nf);
-        }
-
         let knee = self.knee_db;
         let ratio = self.ratio;
 
@@ -1379,6 +1370,15 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
 
         for frame in 0..nf {
             let global_threshold = self.threshold_smoother.advance();
+            let mix = self.mix_smoother.advance();
+            // Enter the dry route on the actual settled sample, not at the
+            // next callback. Filter histories remain frozen until the existing
+            // dry-to-wet reset policy starts a fresh detector/filter epoch.
+            if mix == 0.0 && self.mix_smoother.target() == 0.0 {
+                self.monitoring_gr[..self.num_bands].fill(0.0);
+                self.advance_meter_clock(1);
+                continue;
+            }
             for band_idx in 0..self.num_bands {
                 let (active, solo, target_gain_db, placement) = {
                     let band = &self.bands[band_idx];
@@ -1471,11 +1471,8 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                     };
                 }
             }
-        }
-
-        // Mix dry/wet
-        for frame in 0..nf {
-            let mix = self.mix_smoother.advance();
+            // Apply this sample's mix before advancing the meter clock. Both
+            // dry routing and telemetry now follow the same accepted-frame clock.
             let dry_mix = 1.0 - mix;
             let offset = frame * nc;
             for (sample, dry) in buffer[offset..offset + nc]

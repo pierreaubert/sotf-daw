@@ -74,3 +74,30 @@ cargo test -p sotf-plugin-dynamic-eq
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+## Dynamic response and monitoring
+
+For a held detector envelope, a band has complex response
+`H_dynamic(f) = 1 + p * (H_target(f) - 1)`, with the amplitude-derived `p`
+above. Away from the peak center or shelf plateau, its magnitude and phase can
+differ from a filter redesigned at the applied dB gain. Q, shelf slope and poles
+belong to the prepared full-target curve. During attack/release the envelope
+changes per sample, so the effect is time-varying; a single static response curve
+does not describe that transient. Detection uses the original dry input for every
+band, even though the audible bands run serially.
+
+Gain-reduction snapshots publish every `floor(sample_rate / 10)` accepted frames
+and describe detector state at that boundary. Audio later in the same callback
+cannot affect an earlier snapshot. Linked Stereo mode uses the maximum detector
+level across channels; unlinked Stereo mode reports channel zero's envelope.
+Retained cache readers can defer best-effort publication without audio-thread
+allocation. Reset clears the monitoring epoch. Settling to exact dry publishes zero gain
+reduction on the same sample across callback sizes; tiny nonzero mix settings
+remain active. Mix and threshold control clocks continue during dry processing.
+
+Dry storage is sized to the prepared frame budget and channel count. The default
+is 8192 frames; setup can use `new_with_max_block_frames` or
+`prepare_max_block_frames`, and the host's negotiated maximum callback prepares
+the plugin through the shared trait. Oversized callbacks are rejected before
+samples or DSP state change. Preparation may allocate; processing and meter
+publication use existing storage.
