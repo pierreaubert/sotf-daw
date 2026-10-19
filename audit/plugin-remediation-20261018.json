@@ -70,7 +70,7 @@
       "id": 4,
       "plugin": "Ambisonics decoder",
       "audit_text": "[`ambisonics_decoder_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-ambisonics/src/lib/ambisonics_decoder_plugin.rs):376\u2013520 combines decoding matrices with optional LR4 dual-band basic/max-rE behavior. Matrix-only processing is rate independent; dual-band processing is not. The process path validates shape/finite samples but should consistently enforce the initialized sample rate for rate-sensitive modes. Recursive crossover support must not be confused with a finite zero-latency tail.\n\n`decode_vectors.rs`, `custom_layouts.rs`, `aud133_baseline.rs` and `tail_support.rs` are appropriate foundations. Extend analytic ACN/normalization and spherical-harmonic basis checks, rotation covariance, energy/vector errors and ill-conditioned speaker layouts. Classical regularized/layout-aware decoding is preferable to ML replacing the normative decoder. Learned personalization may choose an HRTF/layout correction offline, with explicit normalization and energy constraints.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Reject callback-rate mismatch before state/output mutation in dual-band mode.",
@@ -79,9 +79,34 @@
             "crates/sotf-plugins/crates/sotf-plugin-ambisonics/tests/audit_rate_contract.rs"
           ],
           "result": "Public regression failed before the guard and passed after it for AllRAD and mode-matching; samples and subsequent valid-rate history match the unchanged reference."
+        },
+        {
+          "task": "Validate all ACN/SN3D basis components and preserve polar precision",
+          "status": "implemented_and_verified",
+          "evidence": "audit_basis.rs independently differentiates the explicit Rodrigues polynomial for all 64 channels through order 7, including near-polar elevations. It reproduced a nonzero expected harmonic magnitude 4.1580668419771185e-11 being erased to zero by sqrt(1-sin^2). The recurrence now receives direct sin/cos elevation components. Final polynomial maximum error 2.3037127760972e-15 under 2e-11; degree-wise addition theorem and independent 8x16 full-sphere Gram quadrature meet 2e-12. ACN round trips and SN3D mean-square 1/(2l+1) are checked."
+        },
+        {
+          "task": "Measure rotation covariance, energy and velocity independently",
+          "status": "implemented_and_verified",
+          "evidence": "audit_rotation.rs applies analytic sine/cosine pair rotations to arbitrary HOA streams at orders 1..7 and uses independent Rodrigues scene/layout rotation for FOA. Final mode-matching yaw feed error 1.4901161e-8 and arbitrary-axis FOA feed error 5.960464477539063e-8. FOA octahedral output energy and Gerzon velocity/energy vectors match independent closed-form laws within 2e-6. AllRAD finite-grid rotation feed error is 0.005737289786338806 and relative energy error 0.0041178252346234226 in the tested FOA geometry, below fixed 0.05 feed/vector and 5% energy bounds; exact continuous covariance is explicitly not claimed for the fixed grid."
+        },
+        {
+          "task": "Verify ill-conditioned physical geometry and clarify quality diagnostics",
+          "status": "implemented_and_verified",
+          "evidence": "audit_conditioning.rs sweeps eight collapsing FOA geometries: four bounded solutions and four peak-gain rejections. Independent closed-form physical FOA reconstruction residuals match reported mode-matching diagnostics within 2.030196727532234e-8 (bound 5e-6); exact coincidence reports retained rank one, and accepted coefficients stay finite and <=8. AllRAD remains bounded but its retained rank describes the virtual sphere. DecodeQuality and README now state the physical/virtual solve distinction, retained-subspace condition number, and coefficient bound versus output-peak/coverage guarantees. Basic-decoder documentation no longer promises unconditional velocity reproduction."
+        },
+        {
+          "task": "Verify actual custom-layout factory/host processing and preserve lifecycle contracts",
+          "status": "implemented_and_verified",
+          "evidence": "audit_ambisonics_host.rs covers 36 combinations of 32/48/192 kHz, orders 1/3/7, mode matching/AllRAD and single/dual-band decoding with serialized near-polar custom geometry. Actual DawHost output matches direct processing bit-for-bit across irregular callbacks and reset; all ACN channels are exercised and moved LFE stays exactly silent. Full crate coverage retains dual-band mismatch rejection, recursive unknown support versus immediate native drain, zero fixed PDC and the frozen lower-order output baseline."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "cargo test --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -p sotf-plugin-ambisonics --lib --tests: 127 passed, one historical manual pre-edit capture ignored. Independent SVD/matrix baselines, full-sphere vectors, custom layouts, rate/tail contracts and heap tests passed.",
+        "One audit_ambisonics_host regression (36 configuration cases) plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 43 passed.",
+        "Clippy --offline --locked --no-deps for plugin library/tests and the facade audit_ambisonics_host target with -D warnings passed; git diff --check passed.",
+        "No preset/schema, matrix format, callback geometry or runtime matrix-rendering changes. Polar basis arithmetic is corrected during construction/evaluation. Geometry/normalization limits are documented; finite AllRAD-grid rotational error is measured rather than hidden, and optional learned personalization remains separate. Packaged CLAP/VST3 loaded-binary scenarios were not part of this DSP validation."
+      ]
     },
     {
       "id": 5,

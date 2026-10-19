@@ -89,3 +89,24 @@ cargo test -p sotf-plugin-ambisonics
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+## Normalization, covariance and layout diagnostics
+
+ACN channels use `l*l + l + m`, with real SN3D harmonics, positive azimuth toward
+left, and no Condon–Shortley phase. Each degree has squared basis norm one; its
+full-sphere mean-square normalization is `1/(2*l+1)`. Direct sine/cosine evaluation
+preserves small nonzero polar components that would disappear if cosine were
+reconstructed by subtracting nearly equal squared values.
+
+Mode matching is covariant when the scene and speaker geometry rotate together,
+within stored-angle/matrix/audio precision. AllRAD uses a finite world-space
+virtual grid, so its continuous rotation covariance is approximate. Directional
+energy and velocity depend on geometry, order and max-rE weighting; a bounded
+coefficient matrix alone does not establish spatial fidelity.
+
+For mode matching, rank, condition and reconstruction error describe the physical
+speaker harmonic solve. For AllRAD, they describe the virtual-sphere solve before
+VBAP projection. Full virtual rank does not certify coverage by a sparse or
+coincident physical array. Condition number excludes discarded singular modes;
+check retained rank alongside it. Peak coefficient describes the actual composed
+matrix, with a preparation bound of 8.0, and does not impose an output peak ceiling.

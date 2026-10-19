@@ -46,7 +46,15 @@ pub fn acn_to_degree_index(acn: usize) -> (i32, i32) {
 /// - `m`: index, -l..=l
 pub fn spherical_harmonic(l: i32, m: i32, azimuth: f64, elevation: f64) -> f64 {
     let sn3d = sn3d_normalization(l, m);
-    let alp = associated_legendre(l, m.unsigned_abs() as i32, elevation.sin());
+    let (sin_elevation, cos_elevation) = elevation.sin_cos();
+    // Reconstructing cosine as sqrt(1 - sin²) loses every nonzero m term
+    // near the poles when sin(elevation) rounds to +/-1.
+    let alp = associated_legendre(
+        l,
+        m.unsigned_abs() as i32,
+        sin_elevation,
+        cos_elevation.abs(),
+    );
 
     // AmbiX convention (ACN + SN3D):
     //   m >= 0: cos(m * azimuth)
@@ -87,17 +95,16 @@ fn sn3d_normalization(l: i32, m: i32) -> f64 {
 /// Associated Legendre polynomial P_l^m(x) (unnormalized, without Condon-Shortley phase).
 ///
 /// Uses stable recurrence relation for computation.
-fn associated_legendre(l: i32, m: i32, x: f64) -> f64 {
+fn associated_legendre(l: i32, m: i32, x: f64, cos_elevation: f64) -> f64 {
     debug_assert!(m >= 0);
     debug_assert!(m <= l);
 
     // Start with P_m^m
     let mut pmm = 1.0;
     if m > 0 {
-        let sqrt_1_minus_x2 = (1.0 - x * x).max(0.0).sqrt();
         let mut fact = 1.0;
         for _ in 1..=m {
-            pmm *= fact * sqrt_1_minus_x2;
+            pmm *= fact * cos_elevation;
             fact += 2.0;
         }
     }

@@ -86,22 +86,36 @@ pub struct DecoderExport {
     pub peak_coefficient: f64,
 }
 
+/// Quality of the regularized design solve and composed decoder matrix.
+///
+/// Mode matching solves the physical speaker geometry; AllRAD solves its virtual
+/// sphere before projecting to the physical speakers. Rank, singular values and
+/// reconstruction error describe that unweighted solve. A full AllRAD design
+/// rank does not certify physical layout coverage or rotation invariance.
 #[derive(Debug, Clone, Copy)]
 pub struct DecodeQuality {
+    /// Number of singular modes retained above the relative rank threshold.
     pub rank: usize,
+    /// Largest singular value of the design's spherical-harmonic matrix.
     pub largest_singular_value: f64,
+    /// Smallest retained singular value; discarded modes are excluded.
     pub smallest_retained_singular_value: f64,
+    /// Largest/smallest retained singular-value ratio; excludes discarded modes.
     pub condition_number: f64,
+    /// Normalized Frobenius residual of the unweighted regularized design solve.
     pub reconstruction_error: f64,
+    /// Largest absolute coefficient after weighting and physical composition.
+    /// This bounds individual coefficients, not summed output sample peaks.
     pub peak_coefficient: f64,
 }
 
 impl DecodeMatrix {
     /// Build a basic decode matrix (no max-rE weighting).
     ///
-    /// Preserves the velocity vector magnitude, giving accurate interaural time
-    /// difference (ITD) cues.  Appropriate for low-frequency decoding in a
-    /// dual-band setup.
+    /// Uses unweighted mode matching for low-frequency dual-band decoding.
+    /// Reproduction of velocity moments depends on the physical layout's rank
+    /// and the regularized solve; sparse or degenerate layouts cannot preserve
+    /// every three-dimensional component.
     pub fn build_basic(order: usize, speaker_config: &SpeakerConfig) -> Result<Self, String> {
         Self::build(order, speaker_config, false)
     }
