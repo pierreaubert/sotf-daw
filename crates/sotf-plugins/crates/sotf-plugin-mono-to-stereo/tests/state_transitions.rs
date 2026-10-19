@@ -88,3 +88,34 @@ fn cold_duplicate_transition_and_reset_do_not_allocate() {
     });
     assert!(output.iter().all(|sample| sample.is_finite()));
 }
+
+#[test]
+fn width_and_haas_automation_preserve_metadata_without_heap_activity() {
+    let mut plugin = duplicate_plugin();
+    let width = ParameterId::from("stereo_width");
+    let delay = ParameterId::from("haas_delay_ms");
+    let input = [0.1; 8192];
+    let mut output = [0.0; 16384];
+    let context = ProcessContext::new(48_000, 8192);
+    for (target, delay_ms) in [(1.0, 5.0), (0.0, 0.0), (0.75, 1.5)] {
+        sotf_host::test_utils::assert_no_allocs_or_deallocs(
+            "width/Haas automation and settling",
+            || {
+                plugin
+                    .set_parameter(width.clone(), ParameterValue::Float(target))
+                    .unwrap();
+                plugin
+                    .set_parameter(delay.clone(), ParameterValue::Float(delay_ms))
+                    .unwrap();
+                plugin.process(&input, &mut output, &context).unwrap();
+            },
+        );
+        let metadata = plugin.parameters();
+        for id in [&width, &delay] {
+            assert_eq!(
+                metadata.iter().find(|p| &p.id == id).unwrap().default_value,
+                plugin.get_parameter(id).unwrap()
+            );
+        }
+    }
+}

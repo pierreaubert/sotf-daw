@@ -278,10 +278,8 @@ impl MonoToStereoPlugin {
 
     #[inline]
     fn write_right(&mut self, output: &mut [f32], frame: usize, sample: f32) {
-        if self.haas_delay_samples == 0 {
-            output[frame * 2 + 1] = sample;
-            return;
-        }
+        // Keep recent right-path history even while Haas is disabled. A live
+        // delay change must not read stale audio from before an identity span.
         self.haas_delay_buf[self.haas_delay_write_pos] = sample;
         let read_pos = (self.haas_delay_write_pos + HAAS_DELAY_BUF_SIZE - self.haas_delay_samples)
             & self.haas_delay_mask;
@@ -331,8 +329,13 @@ impl Plugin for MonoToStereoPlugin {
                 id.as_str()
             ));
         }
-        param_bridge::set_parameter(MS, &id, &value, |i, v| self.set_param_value(i, v))?;
-        self.rebuild_cached_parameters();
+        let index =
+            param_bridge::set_parameter(MS, &id, &value, |i, v| self.set_param_value(i, v))?;
+        // Scalar automation changes values, not metadata. Keep the snapshot
+        // current without replacing its allocated strings and parameter list.
+        if let Some(current) = self.get_parameter(&id) {
+            self.cached_parameters[index].default_value = current;
+        }
         Ok(())
     }
 
@@ -381,6 +384,9 @@ impl Plugin for MonoToStereoPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Mono-to-Stereo callback must match the prepared sample rate".into());
+        }
         let frames = context.num_frames;
         let output_samples = frames
             .checked_mul(2)
@@ -398,15 +404,24 @@ impl Plugin for MonoToStereoPlugin {
             ));
         }
 
+        if frames == 0 {
+            return Ok(0);
+        }
+
         let settled = (self.stereo_width.current() - self.stereo_width.target()).abs() < 1.0e-5;
         let settled_width = self.stereo_width.target();
+        if settled {
+            // Match advance() on the first real sample. Later retargeting must
+            // not inherit a hidden residual from a settled processing path.
+            self.stereo_width.reset(settled_width);
+        }
         // Explicit realtime policy: non-finite input is replaced by silence
         // before it can poison the allpass/delay state (mirrors the AEC guard).
         if settled && settled_width == 0.0 && self.haas_delay_samples == 0 {
             for (frame, sample) in input[..frames].iter().copied().enumerate() {
                 let sample = if sample.is_finite() { sample } else { 0.0 };
                 output[frame * 2] = sample;
-                output[frame * 2 + 1] = sample;
+                self.write_right(output, frame, sample);
             }
             if let Some(last) = input[..frames].last() {
                 // This sample primes the allpass histories when width becomes
@@ -421,10 +436,6 @@ impl Plugin for MonoToStereoPlugin {
             return Ok(frames);
         }
 
-        if self.was_duplicate_fast_path {
-            self.prime_decorrelator(self.last_input);
-            self.was_duplicate_fast_path = false;
-        }
         for frame in 0..frames {
             let raw_sample = input[frame];
             let input_sample = if raw_sample.is_finite() {
@@ -439,11 +450,24 @@ impl Plugin for MonoToStereoPlugin {
                 {
                     self.smoothed_width_frames += 1;
                 }
-                self.stereo_width.advance()
+                let previous = self.stereo_width.current();
+                let value = self.stereo_width.advance();
+                if value == previous && value != self.stereo_width.target() {
+                    // Finish f32 rounding stagnation on the sample clock.
+                    self.stereo_width.reset(self.stereo_width.target());
+                    self.stereo_width.target()
+                } else {
+                    value
+                }
             };
             let right = if width == 0.0 {
+                self.was_duplicate_fast_path = true;
                 input_sample
             } else {
+                if self.was_duplicate_fast_path {
+                    self.prime_decorrelator(self.last_input);
+                    self.was_duplicate_fast_path = false;
+                }
                 self.decorrelate(input_sample, width)
             };
             output[frame * 2] = input_sample;

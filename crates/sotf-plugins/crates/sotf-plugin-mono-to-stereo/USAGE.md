@@ -10,7 +10,10 @@ direct. This avoids FFT circular wrap and random-bin pre-echo while retaining op
 
 ### Stereo Width Control
 
-Controls how much decorrelation is applied to the right channel. At width 0, both channels are identical (mono). At width 1, the right channel is fully decorrelated from the left, creating maximum stereo spread.
+Controls the right channel's allpass phase response. At width 0 the allpass is
+bypassed; L and R are identical when Haas delay is also zero. Width 1 selects
+the full configured phase response. Interchannel correlation still depends on
+the source spectrum and Haas delay; full width does not promise zero correlation.
 
 **Parameters:**
 
@@ -121,12 +124,12 @@ These topology controls, including `freq_dependent`, are applied by rebuilding t
   "freq_dependent": false
 }
 ```
-**Tips:** Full decorrelation — the left and right channels will be completely different. Not mono-compatible.
+**Tips:** This selects the full phase response. Check the mono fold for frequency-dependent cancellation.
 
 ## Tips & Best Practices
 
 - The causal all-pass path reports zero host-compensated latency. Haas delay remains an intentional right-channel effect.
-- Width = 0 produces perfect mono (L = R). Use this to verify the plugin is transparent.
+- Width = 0 and Haas = 0 produce exact duplication (L = R). A nonzero Haas delay still offsets the right channel at zero width.
 - Check mono compatibility when using high width values — fold to mono and listen for cancellation.
 - The decorrelation band (300-2000 Hz by default) keeps low bass highly correlated.
 - Lower the decorrelation low frequency to include more bass in the stereo field (can reduce mono compatibility).
@@ -141,3 +144,22 @@ Mono Input ───────────────→ Left (direct)
 
 Width changes the stable all-pass coefficients; width 0 uses an exact L=R duplicate fast path.
 ```
+
+The duplicate fast path requires both zero width and zero Haas delay. Delay
+history keeps running in this path so enabling Haas reads recent source audio.
+Width ramps, settling and allpass re-entry use the sample clock, independent of
+callback sizes. Empty callbacks preserve state. Processing requires the prepared
+sample rate; reset clears histories and adopts the current width target.
+
+For a steady tone with right-channel transfer `H`, normalized mono fold is
+`(1 + H) / 2`. Unit magnitude in each channel therefore does not ensure a flat
+mono sum. For example, a 5 ms Haas delay at zero width puts a fold-down notch
+near 100 Hz. Correlation follows phase and source content rather than width
+alone. The first transient remains immediate in the direct left channel; the
+right onset includes the rounded Haas delay and the causal allpass response.
+Reported latency remains zero to preserve that intentional spatial offset.
+
+`DawHost` rejects bypassing this 1-to-2 channel plugin because that would change
+graph geometry. For duplicate output, automate width to zero and disable Haas;
+the existing width ramp handles the allpass transition. Haas changes select a
+new integer delay tap immediately and can introduce a time discontinuity.

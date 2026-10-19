@@ -511,9 +511,35 @@
       "id": 33,
       "plugin": "Mono-to-stereo",
       "audit_text": "[`mono_to_stereo_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo/src/lib/mono_to_stereo_plugin.rs):343\u2013459 uses allpass/Haas decorrelation and an identity-width fast path, with priming when leaving that fast path. The earliest dry sample can have zero latency while the other channel is delayed; a single PDC number does not describe the intended stereo effect.\n\n`state_transitions.rs` is especially relevant. Extend mono-summed combing, interchannel correlation, width automation, bypass transitions and first-transient localization. Classical complementary allpass or frequency-dependent decorrelation gives controllable tradeoffs. Learned source separation would be a different, much heavier mode and is not warranted for the default effect.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Measure mono-summed combing, interchannel correlation and first-transient timing",
+          "status": "implemented_and_verified",
+          "evidence": "audit_perception.rs covers 48 static rate/width/shape/Haas configurations with independent f64 allpass/delay transfer equations, impulse FFT probes, numerator-feedthrough correlation and mono-fold energy predictions. Channel energy stays within 0.02, complex response within 0.02, mono-fold complex error within 0.01. It explicitly measures the near-100 Hz mono notch from 5 ms Haas at width zero, exact direct-left onset and causal right onset after rounded Haas delay. No perceptual listening claim is made from onset timing alone."
+        },
+        {
+          "task": "Make repeated identity/width transitions sample-clock invariant",
+          "status": "implemented_and_verified",
+          "evidence": "The public regression reproduced maximum 0.000033460557 callback-dependent sample error at 44.1 kHz. Settled paths now clear hidden residual width, f32 stagnation finishes on real samples, allpass priming occurs on the actual first decorated sample and empty callbacks leave state unchanged. Repeated width-zero/one/retarget events are bit-identical for one-frame, large and irregular callbacks at 44.1/48/96 kHz with/without Haas and frequency shaping."
+        },
+        {
+          "task": "Preserve Haas re-entry history and realtime automation",
+          "status": "implemented_and_verified",
+          "evidence": "Enabling 5 ms Haas after identity originally emitted zero instead of the previous source sample 0.1037037 at 44.1 kHz. The right ring now retains recent audio even when Haas and decorrelation are bypassed. Source-history regression passes at three rates. Width/Haas updates reuse cached metadata rather than reallocating it; guarded automation, settling and processing allocate/deallocate nothing while parameter snapshots remain current."
+        },
+        {
+          "task": "Validate bypass and sample-rate policy through public paths",
+          "status": "implemented_and_verified",
+          "evidence": "Wrong-rate callbacks originally succeeded; now fail before touching output/history. Actual factory/DawHost regression proves 1-to-2 channel host bypass is rejected without disturbing populated audio. USAGE specifies duplicate-output controls, zero PDC versus right Haas offset, spectrum-dependent correlation/mono combing, immediate integer Haas tap changes, and reset/rate/empty-callback behavior."
+        }
+      ],
+      "evidence": [
+        "Full Mono-to-Stereo crate: 65 tests passed across four suites. Final enhanced independent correlation/notch test also passed.",
+        "Factory bypass plus six facade host/finite-chain/drain/robustness/channel gates: 43 passed.",
+        "Final plugin library/tests and facade bypass target Clippy --no-deps with warnings denied passed.",
+        "No preset/schema changes. Existing exact duplicate and settled-path work-count checks remain green. Identity mode performs a bounded ring write per sample to maintain live Haas history."
+      ]
     },
     {
       "id": 34,
@@ -815,6 +841,14 @@
         10
       ],
       "result": "Reproduced 0.002559906 complex-response error at 96 kHz LR48 and fixed final cutoff adoption while preserving recursive history and the eight-sample cadence. 93 plugin tests, four Band Split facade tests and 42 additional host gates passed; Clippy clean. Optional upstream forced-setter API would remove the endpoint double coefficient design, but is not required for correctness."
+    },
+    {
+      "name": "Mono-to-Stereo transition clocks, Haas history and mono/correlation audit",
+      "state": "verified",
+      "plugin_ids": [
+        33
+      ],
+      "result": "Fixed callback-dependent width re-entry, hidden residuals, zero-frame state changes, wrong-rate acceptance and stale Haas history. Scalar automation no longer rebuilds parameter metadata. Independent allpass/mono-fold/correlation/onset checks plus 65 plugin and 43 facade tests passed; Clippy clean."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
