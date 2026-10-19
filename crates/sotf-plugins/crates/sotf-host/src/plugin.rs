@@ -453,6 +453,18 @@ pub trait Plugin: Send {
         Ok(())
     }
 
+    /// Prepare callback storage on the control thread for a maximum input block.
+    ///
+    /// The host calls this after initialization when a callback bound is negotiated.
+    /// Preparation must preserve channel, rate, frame and parameter contracts.
+    /// The default leaves plugins with their existing storage policy unchanged.
+    ///
+    /// # Errors
+    /// Returns an error when the requested capacity cannot be prepared.
+    fn prepare_max_block_frames(&mut self, _frames: usize) -> PluginResult<()> {
+        Ok(())
+    }
+
     /// Reset the plugin state (e.g., clear buffers, reset filters)
     fn reset(&mut self) {
         // Default: no-op

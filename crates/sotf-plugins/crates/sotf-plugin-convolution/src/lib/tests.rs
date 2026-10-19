@@ -1053,3 +1053,60 @@ fn host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_ca
     assert_eq!(emitted, expected_tail);
     assert!(host.drain(&mut []).unwrap().complete);
 }
+
+#[test]
+#[ignore = "release IR publication measurement; run with sotf-host/qa --ignored --nocapture"]
+fn audit_transition_timing() {
+    use std::time::Instant;
+    for case in ["first", "repeated", "stale", "retirement_full"] {
+        let mut plugin = make_delta_ir_plugin(false, false);
+        let (primary_tx, primary_rx) = std::sync::mpsc::sync_channel(8);
+        let (fallback_tx, fallback_rx) = std::sync::mpsc::sync_channel(8);
+        if case == "retirement_full" {
+            for _ in 0..8 {
+                primary_tx.try_send(empty_retired_ir_state()).unwrap();
+                fallback_tx.try_send(empty_retired_ir_state()).unwrap();
+            }
+        }
+        plugin.test_ir_reclaimers = Some((primary_tx, fallback_tx));
+        let iterations = if case == "first" { 1 } else { 10000 };
+        let frames = PARTITION_SIZE;
+        let mut buffer = vec![0.1; frames];
+        let context = ProcessContext::new(48_000, frames);
+        let mut times = Vec::with_capacity(iterations);
+        for iteration in 0..iterations {
+            let generation = iteration as u64 + 1;
+            plugin.desired_generation = generation + u64::from(case == "stale");
+            let (tx, rx) = std::sync::mpsc::channel();
+            tx.send(IrLoadCompletion {
+                generation,
+                result: Ok(make_delta_ir_result("synthetic-delta")),
+            })
+            .unwrap();
+            plugin.ir_load_result_rx = Some(rx);
+            plugin.ir_load_result_keepalive = Some(tx);
+            plugin.completion_pending = true;
+            buffer.fill(0.1);
+            let start = Instant::now();
+            let counts = sotf_host::test_utils::measure_heap_activity(|| {
+                plugin.process_in_place(&mut buffer, &context).unwrap();
+            });
+            times.push(start.elapsed().as_nanos() as u64);
+            assert_eq!(counts, (0, 0));
+            assert!(buffer.iter().all(|x| x.is_finite()));
+            if case != "retirement_full" {
+                while primary_rx.try_recv().is_ok() {}
+                while fallback_rx.try_recv().is_ok() {}
+            }
+        }
+        times.sort_unstable();
+        let p = |n: usize| times[((times.len() - 1) * n).div_ceil(1000)];
+        println!(
+            "{}",
+            serde_json::json!({"plugin":"convolution", "case":case, "rate":48000,
+            "frames":frames, "fft":FFT_SIZE, "ir_frames":1, "callbacks":iterations,
+            "p50_ns":p(500), "p95_ns":p(950), "p99_ns":p(990), "p999_ns":p(999),
+            "max_ns":times.last(), "allocations":0, "frees":0})
+        );
+    }
+}

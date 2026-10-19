@@ -2937,3 +2937,82 @@ fn malformed_room_ir_enable_is_transactional() {
     );
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+#[ignore = "release transition measurement; run with --features sotf-host/qa --ignored --nocapture"]
+fn audit_transition_timing() {
+    use std::time::Instant;
+    for case in ["first", "repeated", "stale", "retirement_full"] {
+        let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48_000).unwrap();
+        plugin.initialize(48_000.0).unwrap();
+        let filters = Arc::clone(&plugin.filter_state.cached_current_filters);
+        let update = |generation| {
+            Arc::new(PendingFilterUpdate {
+                generation,
+                filters: Arc::clone(&filters),
+                hrtf_transfer_functions: None,
+                room_reflection_cache: None,
+                room_params_hash: 0,
+            })
+        };
+        if case == "retirement_full" {
+            let mut exchange = plugin.filter_state.exchange.lock().unwrap();
+            for slot in &mut exchange.retired_updates {
+                *slot = Some(update(0));
+            }
+            for slot in &mut exchange.retired_snapshots {
+                *slot = Some(Arc::clone(&filters));
+            }
+        }
+        let frames = 128;
+        let input = vec![0.1; frames * 2];
+        let mut output = vec![0.0; frames * 2];
+        let iterations = if case == "first" { 1 } else { 10000 };
+        let mut times = Vec::with_capacity(iterations);
+        for iteration in 0..iterations {
+            let generation = iteration as u64 + 1;
+            plugin
+                .filter_state
+                .filter_update_generation
+                .store(generation + u64::from(case == "stale"), Ordering::Release);
+            plugin.filter_state.exchange.lock().unwrap().pending = Some(update(generation));
+            let start = Instant::now();
+            let counts = crate::realtime_tests::callback_counts(|| {
+                plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, frames))
+                    .unwrap();
+            });
+            times.push(start.elapsed().as_nanos() as u64);
+            assert_eq!(counts, (0, 0));
+            assert!(output.iter().all(|x| x.is_finite()));
+            if case == "retirement_full" {
+                assert!(
+                    plugin
+                        .filter_state
+                        .exchange
+                        .lock()
+                        .unwrap()
+                        .pending
+                        .is_some()
+                );
+            } else {
+                let mut exchange = plugin.filter_state.exchange.lock().unwrap();
+                for slot in &mut exchange.retired_updates {
+                    *slot = None;
+                }
+                for slot in &mut exchange.retired_snapshots {
+                    *slot = None;
+                }
+            }
+        }
+        times.sort_unstable();
+        let p = |n: usize| times[((times.len() - 1) * n).div_ceil(1000)];
+        println!(
+            "{}",
+            serde_json::json!({"plugin":"xtc", "case":case, "rate":48000,
+            "frames":frames, "fft":plugin.fft.fft_size, "callbacks":iterations,
+            "p50_ns":p(500), "p95_ns":p(950), "p99_ns":p(990), "p999_ns":p(999),
+            "max_ns":times.last(), "allocations":0, "frees":0})
+        );
+    }
+}

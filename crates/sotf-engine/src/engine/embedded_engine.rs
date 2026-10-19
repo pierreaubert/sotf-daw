@@ -28,12 +28,15 @@ impl EmbeddedAudioEngine {
         config: &EngineConfig,
     ) -> Result<(Self, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
         config.validate().map_err(PluginBuildDiagnostic::host)?;
-        let (host, diagnostics) = build_plugin_host_with_policy(
+        let (mut host, diagnostics) = build_plugin_host_with_policy(
             &config.plugins,
             config.output_sample_rate,
             config.input_channels,
             config.oversampling_policy,
         )?;
+        host.set_max_block_frames(config.frame_size)
+            .map_err(PluginBuildDiagnostic::host)?;
+        host.build().map_err(PluginBuildDiagnostic::host)?;
         Ok((
             Self {
                 host,

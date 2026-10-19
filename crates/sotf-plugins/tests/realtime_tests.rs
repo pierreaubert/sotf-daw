@@ -2,9 +2,9 @@
 // Real-Time Safety Tests
 // ============================================================================
 //
-// These tests verify that audio processing meets real-time safety requirements.
-// For professional audio, processing must complete within a specified time budget
-// (typically less than 1ms for 48kHz with 512 sample buffers).
+// Synthetic timing smoke checks. These do not establish device deadline safety.
+// A callback budget is frames / sample_rate; allocation claims belong to the
+// instrumented realtime_allocation_tests suite.
 
 use sotf_plugins::{
     GainPlugin, LimiterPlugin, ParametricInPlacePlugin, ParametricPlugin, Plugin, ProcessContext,
@@ -13,7 +13,7 @@ use sotf_plugins::{
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-const MAX_ALLOWED_LATENCY_US: u64 = 2000; // Relaxed for development machine
+const MAX_ALLOWED_LATENCY_US: u64 = TEST_BUFFER_SIZE as u64 * 1_000_000 / TEST_SAMPLE_RATE as u64;
 const ITERATIONS: usize = 100;
 const TEST_SAMPLE_RATE: u32 = 48000;
 const TEST_BUFFER_SIZE: usize = 512;
@@ -35,15 +35,14 @@ fn test_gain_plugin_timing() {
 
     let mut times = Vec::with_capacity(ITERATIONS);
 
+    let mut output = input.clone();
     for _ in 0..10 {
-        let mut output = input.clone();
-        let _ = gain.process(&input, &mut output, &context);
+        gain.process(&input, &mut output, &context).unwrap();
     }
 
     for _ in 0..ITERATIONS {
-        let mut output = input.clone();
         let start = Instant::now();
-        let _ = black_box(gain.process(&input, &mut output, &context));
+        black_box(gain.process(&input, &mut output, &context)).unwrap();
         let elapsed = start.elapsed();
         times.push(elapsed);
     }
@@ -80,22 +79,31 @@ fn test_gain_plugin_chain_timing() {
     let input = vec![0.5f32; TEST_BUFFER_SIZE * 2];
     let context = ProcessContext::new(TEST_SAMPLE_RATE, TEST_BUFFER_SIZE);
 
-    let mut gain = GainPlugin::new(2, 1.0);
-    gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
-
-    for _ in 0..2 {
-        let mut output = input.clone();
-        gain.process(&input, &mut output, &context).unwrap();
+    let mut gains = [
+        GainPlugin::new(2, 1.0),
+        GainPlugin::new(2, -2.0),
+        GainPlugin::new(2, 1.0),
+    ];
+    for gain in &mut gains {
+        gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
     }
-
+    let mut first = vec![0.0; input.len()];
+    let mut second = vec![0.0; input.len()];
+    let mut output = vec![0.0; input.len()];
     let mut times = Vec::with_capacity(ITERATIONS);
-
     for _ in 0..ITERATIONS {
-        let mut output = input.clone();
         let start = Instant::now();
-        let _ = black_box(gain.process(&input, &mut output, &context));
-        let elapsed = start.elapsed();
-        times.push(elapsed);
+        gains[0]
+            .process(black_box(&input), &mut first, &context)
+            .unwrap();
+        gains[1].process(&first, &mut second, &context).unwrap();
+        gains[2]
+            .process(&second, black_box(&mut output), &context)
+            .unwrap();
+        times.push(start.elapsed());
+    }
+    for (&actual, &expected) in output.iter().zip(&input) {
+        assert!((actual - expected).abs() < 1e-5, "three gains must cancel");
     }
 
     let p99 = percentile(&times, 99.0);
@@ -104,7 +112,7 @@ fn test_gain_plugin_chain_timing() {
     println!("  P99:  {:.3} µs", p99.as_secs_f64() * 1e6);
 
     assert!(
-        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US * 2,
+        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US,
         "GainPlugin chain P99 latency ({:.3} µs) too high",
         p99.as_secs_f64() * 1e6
     );
@@ -120,15 +128,16 @@ fn test_limiter_plugin_timing() {
 
     let mut times = Vec::with_capacity(ITERATIONS);
 
+    let mut output = input.clone();
     for _ in 0..10 {
-        let mut output = input.clone();
-        let _ = plugin.process_in_place(&mut output, &context);
+        output.copy_from_slice(&input);
+        plugin.process_in_place(&mut output, &context).unwrap();
     }
 
     for _ in 0..ITERATIONS {
-        let mut output = input.clone();
+        output.copy_from_slice(&input);
         let start = Instant::now();
-        let _ = black_box(plugin.process_in_place(&mut output, &context));
+        black_box(plugin.process_in_place(&mut output, &context)).unwrap();
         let elapsed = start.elapsed();
         times.push(elapsed);
     }
@@ -139,7 +148,7 @@ fn test_limiter_plugin_timing() {
     println!("  P99:  {:.3} µs", p99.as_secs_f64() * 1e6);
 
     assert!(
-        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US * 2,
+        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US,
         "LimiterPlugin P99 latency ({:.3} µs) too high",
         p99.as_secs_f64() * 1e6
     );
@@ -158,15 +167,14 @@ fn test_upmixer_plugin_timing() {
     let output_channels = plugin.output_channels();
     let mut times = Vec::with_capacity(ITERATIONS);
 
+    let mut output = vec![0.0f32; TEST_BUFFER_SIZE * output_channels];
     for _ in 0..10 {
-        let mut output = vec![0.0f32; TEST_BUFFER_SIZE * output_channels];
-        let _ = plugin.process(&input, &mut output, &context);
+        plugin.process(&input, &mut output, &context).unwrap();
     }
 
     for _ in 0..ITERATIONS {
-        let mut output = vec![0.0f32; TEST_BUFFER_SIZE * output_channels];
         let start = Instant::now();
-        let _ = black_box(plugin.process(&input, &mut output, &context));
+        black_box(plugin.process(&input, &mut output, &context)).unwrap();
         let elapsed = start.elapsed();
         times.push(elapsed);
     }
@@ -177,14 +185,14 @@ fn test_upmixer_plugin_timing() {
     println!("  P99:  {:.3} µs", p99.as_secs_f64() * 1e6);
 
     assert!(
-        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US * 5,
+        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US,
         "UpmixerPlugin P99 latency ({:.3} µs) too high",
         p99.as_secs_f64() * 1e6
     );
 }
 
 #[test]
-fn test_no_allocations_in_processing_loop() {
+fn test_gain_repeated_processing() {
     let mut gain = GainPlugin::new(2, 0.0);
     gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
@@ -195,11 +203,12 @@ fn test_no_allocations_in_processing_loop() {
     for _ in 0..100 {
         let mut output = input.clone();
         gain.process(&input, &mut output, &context).unwrap();
+        assert_eq!(output, input);
     }
 }
 
 #[test]
-fn test_memory_usage_stability() {
+fn test_gain_long_running_identity() {
     let mut gain = GainPlugin::new(2, 0.0);
     gain.plugin_initialize(f64::from(TEST_SAMPLE_RATE)).unwrap();
 
@@ -210,11 +219,12 @@ fn test_memory_usage_stability() {
     for _ in 0..1000 {
         let mut output = input.clone();
         gain.process(&input, &mut output, &context).unwrap();
+        assert_eq!(output, input);
     }
 }
 
 #[test]
-fn test_processing_under_load() {
+fn test_gain_steady_state_timing() {
     let mut times = Vec::with_capacity(ITERATIONS);
 
     let mut gain = GainPlugin::new(2, 0.0);
@@ -224,15 +234,14 @@ fn test_processing_under_load() {
 
     let input = vec![0.5f32; TEST_BUFFER_SIZE * 2];
 
+    let mut output = input.clone();
     for _ in 0..10 {
-        let mut output = input.clone();
-        let _ = gain.process(&input, &mut output, &context);
+        gain.process(&input, &mut output, &context).unwrap();
     }
 
     for _ in 0..ITERATIONS {
-        let mut output = input.clone();
         let start = Instant::now();
-        let _ = black_box(gain.process(&input, &mut output, &context));
+        black_box(gain.process(&input, &mut output, &context)).unwrap();
         let elapsed = start.elapsed();
         times.push(elapsed);
     }
@@ -240,13 +249,13 @@ fn test_processing_under_load() {
     let p99 = percentile(&times, 99.0);
     let mean: Duration = times.iter().sum::<Duration>() / ITERATIONS as u32;
 
-    println!("\n=== Processing Under Load ===");
+    println!("\n=== Gain steady state (isolated) ===");
     println!("  Mean: {:.3} µs", mean.as_secs_f64() * 1e6);
     println!("  P99:  {:.3} µs", p99.as_secs_f64() * 1e6);
 
     assert!(
-        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US * 2,
-        "P99 latency under load ({:.3} µs) too high",
+        p99.as_micros() as u64 <= MAX_ALLOWED_LATENCY_US,
+        "Gain steady-state P99 latency ({:.3} µs) too high",
         p99.as_secs_f64() * 1e6
     );
 }

@@ -1704,3 +1704,100 @@ fn native_gain_descriptor(format: PluginFormat, path: PathBuf) -> PluginDescript
         scan_status: PluginScanStatus::Loadable,
     }
 }
+
+#[test]
+fn queued_scalar_parameter_ids_are_not_freed_in_host_callback() {
+    let mut host = sotf_plugins::DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(ParametricPluginAdapter::new(GainPlugin::new(
+        2, 0.0,
+    ))))
+    .unwrap();
+    host.build().unwrap();
+    let input = [0.25; 256];
+    let mut output = [0.0; 256];
+    host.process(&input, &mut output).unwrap();
+    for gain in [-3.0, -1.0, -6.0] {
+        host.set_plugin_parameter_at(0, "gain_db", ParameterValue::Float(gain), 64)
+            .unwrap();
+        assert_no_alloc_or_free("queued gain ID delivery", || {
+            host.process(&input, &mut output).unwrap();
+        });
+    }
+}
+
+#[test]
+fn detached_parameter_sender_retains_scalar_ids_after_sender_drop() {
+    let mut host = sotf_plugins::DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(ParametricPluginAdapter::new(GainPlugin::new(
+        2, 0.0,
+    ))))
+    .unwrap();
+    host.build().unwrap();
+    let input = [0.25; 256];
+    let mut output = [0.0; 256];
+    host.process(&input, &mut output).unwrap();
+    let mut sender = host.take_parameter_event_sender().unwrap();
+    sender
+        .queue_plugin_parameter_at(
+            0,
+            ParameterId::from("gain_db"),
+            ParameterValue::Float(-3.0),
+            64,
+        )
+        .unwrap();
+    drop(sender);
+    host.build().unwrap();
+    assert_no_alloc_or_free("detached gain ID after rebuild", || {
+        host.process(&input, &mut output).unwrap();
+    });
+}
+
+#[test]
+fn negotiated_host_capacity_handles_cold_automation_and_rejects_oversize() {
+    let mut host = sotf_plugins::DawHost::new(2, 48_000);
+    host.set_max_block_frames(128).unwrap();
+    host.add_plugin(Box::new(sotf_plugins::ParametricInPlacePluginAdapter::new(
+        DynamicEqPlugin::new(2),
+    )))
+    .unwrap();
+    host.build().unwrap();
+    let input = [0.25; 256];
+    let mut output = [0.0; 256];
+    assert_no_alloc_or_free("negotiated cold host", || {
+        assert_eq!(host.process(&input, &mut output).unwrap(), 128);
+    });
+    host.set_plugin_parameter_at(0, "mix", ParameterValue::Float(0.5), 64)
+        .unwrap();
+    let mut too_large = [42.0; 258];
+    assert!(host.process(&[0.25; 258], &mut too_large).is_err());
+    assert_eq!(too_large, [42.0; 258]);
+    assert_eq!(host.pending_parameter_events(), 1);
+    assert_no_alloc_or_free("negotiated automation", || {
+        host.process(&input, &mut output).unwrap();
+    });
+    assert_eq!(host.pending_parameter_events(), 0);
+    let mut wide = [42.0_f64; 258];
+    assert!(host.process_f64(&[0.25; 258], &mut wide).is_err());
+    assert_eq!(wide, [42.0; 258]);
+    assert!(host.set_max_block_frames(0).is_err());
+    assert!(host.set_max_block_frames(8193).is_err());
+}
+
+#[test]
+fn negotiated_wide_host_prepares_full_channel_scratch_before_first_callback() {
+    for frames in [1, 128, 512] {
+        let mut host = sotf_plugins::DawHost::new(64, 48_000);
+        host.set_max_block_frames(frames).unwrap();
+        host.add_plugin(Box::new(sotf_plugins::ParametricInPlacePluginAdapter::new(
+            DynamicEqPlugin::new(64),
+        )))
+        .unwrap();
+        host.build().unwrap();
+        let input = vec![0.25; frames * 64];
+        let mut output = vec![0.0; input.len()];
+        assert_no_alloc_or_free("64-channel negotiated cold callback", || {
+            host.process(&input, &mut output).unwrap();
+        });
+        assert!(output.iter().all(|sample| sample.is_finite()));
+    }
+}

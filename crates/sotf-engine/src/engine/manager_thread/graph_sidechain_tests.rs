@@ -78,6 +78,7 @@ fn refused_sidechain_graph_preserves_working_host_and_engine_snapshot() {
         4,
         2,
         EngineOversamplingPolicy::PluginPreferred,
+        None,
     )
     .expect_err("a sidechain edge into a bus-less node must abort the candidate");
 

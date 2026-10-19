@@ -22,6 +22,7 @@ impl ManagerCommandHandler for UpdatePluginGraphCommand {
             ctx.config.input_channels,
             ctx.config.output_channels,
             ctx.config.oversampling_policy,
+            Some(ctx.config.frame_size),
         ) {
             Ok(()) => ManagerResponse::Ok,
             Err(e) => {

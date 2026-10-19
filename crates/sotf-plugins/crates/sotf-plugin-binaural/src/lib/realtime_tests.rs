@@ -238,3 +238,71 @@ fn completed_linear_and_spectral_fades_never_free_filters_on_callback() {
         }
     }
 }
+
+/// Run explicitly in release mode; synthetic spectra keep the fixture independent of SOFA files.
+#[test]
+#[ignore = "release transition measurement; run with --features sotf-host/qa --ignored --nocapture"]
+fn audit_transition_timing() {
+    use std::sync::Arc;
+    use std::time::Instant;
+    for mode in [0, 1] {
+        for case in ["first", "repeated", "retirement_full"] {
+            let params = serde_json::from_value(serde_json::json!({
+                "input_channels": 2, "fft_size": 4096,
+                "crossfade_mode": mode, "crossfade_ms": 100.0
+            }))
+            .unwrap();
+            let mut plugin = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
+            plugin.initialize(48_000.0).unwrap();
+            plugin.retirement.tx.take();
+            plugin.retirement.thread.take().unwrap().join().unwrap();
+            let (tx, rx) = std::sync::mpsc::sync_channel(1);
+            plugin.retirement.tx = Some(tx);
+            let original = Arc::clone(&plugin.crossfade.current_state_snapshot);
+            if case == "retirement_full" {
+                plugin
+                    .retirement
+                    .tx
+                    .as_ref()
+                    .unwrap()
+                    .try_send(Arc::clone(&original))
+                    .unwrap();
+            }
+            let frames = plugin.config.hop_size;
+            let input = vec![0.1; frames * 2];
+            let mut output = vec![0.0; frames * 2];
+            let iterations = if case == "first" { 1 } else { 10000 };
+            let mut times = Vec::with_capacity(iterations);
+            for _ in 0..iterations {
+                // A fresh publication with equal coefficients must preserve output
+                // while exercising adoption and interrupted-fade ownership.
+                plugin.state.store(Arc::new(crate::types::BinauralState {
+                    hrtf_filters_freq: original.hrtf_filters_freq.clone(),
+                    diffuse_field_eq_filter: None,
+                    _hrtf_data: None,
+                }));
+                let start = Instant::now();
+                let counts = callback_counts(|| {
+                    plugin
+                        .process(&input, &mut output, &ProcessContext::new(48_000, frames))
+                        .unwrap();
+                });
+                times.push(start.elapsed().as_nanos() as u64);
+                assert_eq!(counts, (0, 0));
+                assert!(output.iter().all(|x| x.is_finite()));
+                if case != "retirement_full" {
+                    while rx.try_recv().is_ok() {}
+                }
+            }
+            times.sort_unstable();
+            let p = |n: usize| times[((times.len() - 1) * n).div_ceil(1000)];
+            println!(
+                "{}",
+                serde_json::json!({"plugin":"binaural", "case":case, "mode":mode,
+                "fft":4096, "rate":48000, "frames":frames, "callbacks":iterations,
+                "p50_ns":p(500), "p95_ns":p(950), "p99_ns":p(990), "p999_ns":p(999),
+                "max_ns":times.last(), "allocations":0, "frees":0})
+            );
+        }
+    }
+}

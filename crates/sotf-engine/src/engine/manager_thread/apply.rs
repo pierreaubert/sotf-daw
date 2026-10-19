@@ -35,11 +35,26 @@ fn is_stale_host_update(error: &ConfigError) -> bool {
     )
 }
 
+/// Finish callback storage preparation before a host is handed to processing.
+pub(super) fn prepare_host_callback_capacity(
+    result: (PluginHost, Vec<PluginBuildDiagnostic>),
+    max_block_frames: Option<usize>,
+) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
+    let (mut host, diagnostics) = result;
+    if let Some(frames) = max_block_frames {
+        host.set_max_block_frames(frames)
+            .map_err(PluginBuildDiagnostic::host)?;
+        host.build().map_err(PluginBuildDiagnostic::host)?;
+    }
+    Ok((host, diagnostics))
+}
+
 fn build_plugin_update_host_on_worker(
     plugins: Vec<super::super::PluginConfig>,
     sample_rate: u32,
     input_channels: usize,
     oversampling_policy: EngineOversamplingPolicy,
+    max_block_frames: Option<usize>,
 ) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
     let (result_tx, result_rx) = std::sync::mpsc::sync_channel(1);
     std::thread::Builder::new()
@@ -51,6 +66,8 @@ fn build_plugin_update_host_on_worker(
                 input_channels,
                 oversampling_policy,
             );
+            let result =
+                result.and_then(|result| prepare_host_callback_capacity(result, max_block_frames));
             result_tx.send(result).ok();
         })
         .map_err(|e| {
@@ -75,6 +92,7 @@ fn build_plugin_graph_host_on_worker(
     sample_rate: u32,
     input_channels: usize,
     oversampling_policy: EngineOversamplingPolicy,
+    max_block_frames: Option<usize>,
 ) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
     let (result_tx, result_rx) = std::sync::mpsc::sync_channel(1);
     std::thread::Builder::new()
@@ -86,6 +104,8 @@ fn build_plugin_graph_host_on_worker(
                 input_channels,
                 oversampling_policy,
             );
+            let result =
+                result.and_then(|result| prepare_host_callback_capacity(result, max_block_frames));
             result_tx.send(result).ok();
         })
         .map_err(|e| {
@@ -156,6 +176,7 @@ fn apply_plugin_update_once(
         sample_rate,
         input_channels,
         oversampling_policy,
+        config_queue.max_block_frames,
     ) {
         Ok(result) => result,
         Err(diagnostic) => {
@@ -328,6 +349,7 @@ pub(in crate::engine::manager_thread) fn apply_plugin_graph_update(
     input_channels: usize,
     playback_channel_limit: usize,
     oversampling_policy: EngineOversamplingPolicy,
+    max_block_frames: Option<usize>,
 ) -> Result<(), ConfigError> {
     log::debug!(
         "[Manager Thread] apply_plugin_graph_update: {} nodes, {} edges at {}Hz",
@@ -341,6 +363,7 @@ pub(in crate::engine::manager_thread) fn apply_plugin_graph_update(
         sample_rate,
         input_channels,
         oversampling_policy,
+        max_block_frames,
     ) {
         Ok(result) => result,
         Err(diagnostic) => {
@@ -1286,6 +1309,7 @@ mod tests {
             2,
             2,
             EngineOversamplingPolicy::PluginPreferred,
+            None,
         )
         .expect_err("a requested graph node failure must abort the candidate");
 
@@ -1871,6 +1895,7 @@ mod tests {
             2,
             2,
             EngineOversamplingPolicy::PluginPreferred,
+            None,
         )
         .expect_err("a graph with a failed external node must abort the candidate");
 
@@ -2190,6 +2215,7 @@ mod tests {
                 CHANNELS,
                 2,
                 EngineOversamplingPolicy::PluginPreferred,
+                None,
             )
             .expect("accepted keyed de-esser graph must install");
             let actual = responder.join().expect("playback response thread");
@@ -2252,6 +2278,7 @@ mod tests {
             CHANNELS,
             2,
             EngineOversamplingPolicy::PluginPreferred,
+            None,
         )
         .expect_err("key-bus-less sidechain candidate must be refused");
         assert!(
@@ -2327,6 +2354,7 @@ mod tests {
             CHANNELS,
             2,
             EngineOversamplingPolicy::PluginPreferred,
+            None,
         )
         .expect("valid replacement after refusal must apply");
         let adopted_state = live.state.load();
@@ -2349,5 +2377,34 @@ mod tests {
             adoption_difference > 1.0e-4,
             "valid replacement did not audibly adopt"
         );
+    }
+}
+
+#[cfg(test)]
+mod negotiated_capacity_tests {
+    use super::*;
+
+    #[test]
+    fn worker_prepares_configured_callback_bound_before_handoff() {
+        let (mut host, diagnostics) = build_plugin_update_host_on_worker(
+            vec![super::super::super::PluginConfig::new(
+                "dynamic_eq",
+                serde_json::json!({}),
+            )],
+            48_000,
+            2,
+            EngineOversamplingPolicy::PluginPreferred,
+            Some(8),
+        )
+        .unwrap();
+        assert!(diagnostics.is_empty());
+        assert_eq!(host.process(&[0.25; 16], &mut [0.0; 16]).unwrap(), 8);
+        let mut output = [42.0; 18];
+        assert!(
+            host.process(&[0.25; 18], &mut output)
+                .unwrap_err()
+                .contains("negotiated maximum")
+        );
+        assert_eq!(output, [42.0; 18]);
     }
 }

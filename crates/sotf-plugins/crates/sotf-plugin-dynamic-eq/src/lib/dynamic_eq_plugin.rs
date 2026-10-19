@@ -337,6 +337,28 @@ impl DynamicEqPlugin {
     }
 
     pub fn new(channels: usize) -> Self {
+        Self::with_prepared_frames(channels, DEFAULT_MAX_BLOCK_FRAMES)
+    }
+
+    /// Construct with dry storage sized to the negotiated maximum callback.
+    ///
+    /// Unlike constructing and then shrinking, this avoids the default-size
+    /// temporary allocation. Call on the control thread before initialization.
+    /// Oversized process calls are rejected before changing samples or state.
+    ///
+    /// # Errors
+    /// Returns an error for zero/excessive frames or overflowing sample geometry.
+    pub fn new_with_max_block_frames(channels: usize, frames: usize) -> PluginResult<Self> {
+        if !(1..=MAX_PREPARED_BLOCK_FRAMES).contains(&frames) {
+            return Err("Dynamic EQ max block frames are out of range".into());
+        }
+        frames
+            .checked_mul(channels.max(1))
+            .ok_or_else(|| "Dynamic EQ prepared buffer size overflow".to_string())?;
+        Ok(Self::with_prepared_frames(channels, frames))
+    }
+
+    fn with_prepared_frames(channels: usize, frames: usize) -> Self {
         let sr = 44_100.0;
         let num_bands = default_num_bands();
         let attack = default_attack_ms();
@@ -382,8 +404,8 @@ impl DynamicEqPlugin {
             cache: RealTimeCache::new(DynamicEqData::new(MAX_BANDS)),
             cache_counter: 0,
 
-            dry_buf: vec![0.0; DEFAULT_MAX_BLOCK_FRAMES * channels.max(1)],
-            max_block_frames: DEFAULT_MAX_BLOCK_FRAMES,
+            dry_buf: vec![0.0; frames * channels.max(1)],
+            max_block_frames: frames,
 
             param_num_bands: ParameterId::from("num_bands"),
             param_threshold: ParameterId::from("threshold"),
@@ -1244,6 +1266,10 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         let mut values = ParameterSet::new();
         values.insert(id, value);
         self.apply_values(values)
+    }
+
+    fn prepare_max_block_frames(&mut self, frames: usize) -> PluginResult<()> {
+        DynamicEqPlugin::prepare_max_block_frames(self, frames)
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {

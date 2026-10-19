@@ -160,3 +160,7 @@ harness = false
 [[bench]]
 name = "chain-scale-benchmark"
 harness = false
+
+[[bin]]
+name = "audit-perf"
+path = "bin/audit_perf.rs"

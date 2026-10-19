@@ -88,6 +88,14 @@ pub trait ParametricInPlacePlugin: Send {
         Ok(())
     }
 
+    /// Prepare maximum callback storage on the control thread after initialization.
+    ///
+    /// # Errors
+    /// Returns an error when the requested capacity cannot be prepared.
+    fn prepare_max_block_frames(&mut self, _frames: usize) -> PluginResult<()> {
+        Ok(())
+    }
+
     /// Reset plugin state.
     fn reset(&mut self) {}
 
@@ -556,6 +564,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
             self.plugin.supports_f64(),
             sample_rate,
         )
+    }
+
+    fn prepare_max_block_frames(&mut self, frames: usize) -> PluginResult<()> {
+        self.plugin.prepare_max_block_frames(frames)
     }
 
     fn reset(&mut self) {

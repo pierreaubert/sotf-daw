@@ -1,0 +1,2 @@
+{"batched": false, "events_per_tick": 256, "max_ns": 130292, "p50_ns": 35958, "p95_ns": 39375, "p999_ns": 130292, "p99_ns": 42042, "ticks": 1000, "workload": "manager_publication"}
+{"batched": true, "events_per_tick": 256, "max_ns": 2542, "p50_ns": 666, "p95_ns": 792, "p999_ns": 2542, "p99_ns": 834, "ticks": 1000, "workload": "manager_publication"}

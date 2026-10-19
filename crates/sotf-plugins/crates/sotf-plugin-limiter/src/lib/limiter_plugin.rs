@@ -395,6 +395,10 @@ impl LimiterPlugin {
 }
 
 impl ParametricInPlacePlugin for LimiterPlugin {
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        true
+    }
+
     fn info(&self) -> PluginInfo {
         PluginInfo::new("Limiter", env!("CARGO_PKG_VERSION"), "SotF")
     }

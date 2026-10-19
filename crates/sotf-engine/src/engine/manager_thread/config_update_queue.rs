@@ -16,7 +16,6 @@ use super::consts::PLUGIN_INIT_TIMEOUT_MS;
 use super::consts::SPIN_MS_CHECK_MANAGER;
 use super::handle::handle_command;
 use super::handle::handle_config_event;
-use super::handle::handle_thread_event;
 use super::misc::initial_engine_state_from_config;
 #[cfg(feature = "streaming")]
 use super::misc::start_network_stream_server;
@@ -37,15 +36,10 @@ fn drain_thread_events(
     event_rx: &crossbeam::channel::Receiver<ThreadEvent>,
     state: &Arc<ArcSwap<AudioEngineState>>,
 ) -> usize {
-    let mut handled = 0;
-    while handled < MAX_THREAD_EVENTS_PER_TICK {
-        let Ok(event) = event_rx.try_recv() else {
-            break;
-        };
-        handle_thread_event(event, state);
-        handled += 1;
-    }
-    handled
+    super::thread_event_visitor::update_state_with_events(
+        event_rx.try_iter().take(MAX_THREAD_EVENTS_PER_TICK),
+        state,
+    )
 }
 
 /// Config update queue manager
@@ -53,6 +47,7 @@ pub(in crate::engine::manager_thread) struct ConfigUpdateQueue {
     pub(in crate::engine::manager_thread) queue: VecDeque<PendingConfigUpdate>,
     pub(in crate::engine::manager_thread) update_in_progress: bool,
     pub(in crate::engine::manager_thread) metrics: ConfigUpdateMetrics,
+    pub(super) max_block_frames: Option<usize>,
 }
 
 impl ConfigUpdateQueue {
@@ -61,6 +56,7 @@ impl ConfigUpdateQueue {
             queue: VecDeque::new(),
             update_in_progress: false,
             metrics: ConfigUpdateMetrics::new(),
+            max_block_frames: None,
         }
     }
 
@@ -208,6 +204,7 @@ pub(super) fn run_manager_thread(
 
     // Create config update queue for serializing plugin updates
     let mut config_update_queue = ConfigUpdateQueue::new();
+    config_update_queue.max_block_frames = Some(config.frame_size);
 
     // Create bounded queues for backpressure
     // Queue capacity based on buffer_ms to provide proper flow control
@@ -286,6 +283,9 @@ pub(super) fn run_manager_thread(
             config.oversampling_policy,
         );
 
+        let host_result = host_result.and_then(|result| {
+            super::apply::prepare_host_callback_capacity(result, Some(config.frame_size))
+        });
         match host_result {
             Ok((host, build_diagnostics)) => {
                 for diagnostic in &build_diagnostics {

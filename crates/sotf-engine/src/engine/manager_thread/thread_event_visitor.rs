@@ -467,11 +467,34 @@ impl ThreadEventVisitor for AudioEngineStateUpdater {
 }
 
 /// Convenience entry point used by `handle_thread_event`.
+#[cfg(test)]
 pub fn update_state_with_event(event: ThreadEvent, state: &Arc<ArcSwap<AudioEngineState>>) {
+    update_state_with_events(std::iter::once(event), state);
+}
+
+/// Apply ordered events and publish one snapshot for the manager tick.
+///
+/// No events are discarded: lifecycle, error and telemetry mutations all run
+/// in receive order against the same state. An empty batch leaves the current
+/// Arc untouched. The caller bounds the batch to preserve command responsiveness.
+/// Returns the number of events applied.
+pub fn update_state_with_events(
+    events: impl IntoIterator<Item = ThreadEvent>,
+    state: &Arc<ArcSwap<AudioEngineState>>,
+) -> usize {
+    let mut events = events.into_iter();
+    let Some(first) = events.next() else {
+        return 0;
+    };
     let mut new_state = (**state.load()).clone();
     let mut updater = AudioEngineStateUpdater;
-    visit(event, &mut new_state, &mut updater);
+    let mut count = 0;
+    for event in std::iter::once(first).chain(events) {
+        visit(event, &mut new_state, &mut updater);
+        count += 1;
+    }
     state.store(Arc::new(new_state));
+    count
 }
 
 /// Clear a seeking indicator older than the display timeout.
@@ -496,4 +519,79 @@ pub fn expire_seeking_display(state: &Arc<ArcSwap<AudioEngineState>>) {
     new_state.seeking = false;
     new_state.seeking_since = None;
     state.store(Arc::new(new_state));
+}
+
+#[cfg(test)]
+mod batch_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "release snapshot publication measurement; run explicitly with --nocapture"]
+    fn audit_publication_timing() {
+        use std::time::Instant;
+        let initial = AudioEngineState {
+            current_file: Some(std::path::PathBuf::from("synthetic-track.wav")),
+            playback_state: PlaybackState::Playing,
+            ..AudioEngineState::default()
+        };
+        for batch in [false, true] {
+            let state = Arc::new(ArcSwap::from_pointee(initial.clone()));
+            let mut times = Vec::with_capacity(1000);
+            for tick in 0..1000 {
+                let events =
+                    (0..256).map(|event| ThreadEvent::PositionUpdate((tick * 256 + event) as f64));
+                let start = Instant::now();
+                if batch {
+                    update_state_with_events(events, &state);
+                } else {
+                    for event in events {
+                        update_state_with_event(event, &state);
+                    }
+                }
+                times.push(start.elapsed().as_nanos() as u64);
+            }
+            assert_eq!(state.load().position, 255999.0);
+            times.sort_unstable();
+            let p = |n: usize| times[((times.len() - 1) * n).div_ceil(1000)];
+            println!(
+                "{}",
+                serde_json::json!({"workload":"manager_publication", "batched":batch,
+                "ticks":1000, "events_per_tick":256, "p50_ns":p(500), "p95_ns":p(950),
+                "p99_ns":p(990), "p999_ns":p(999), "max_ns":times.last()})
+            );
+        }
+    }
+
+    #[test]
+    fn batch_matches_sequential_order_and_empty_batch_keeps_snapshot() {
+        let initial = AudioEngineState {
+            playback_state: PlaybackState::Playing,
+            sample_rate: 48_000,
+            ..AudioEngineState::default()
+        };
+        let batch = Arc::new(ArcSwap::from_pointee(initial.clone()));
+        let sequential = Arc::new(ArcSwap::from_pointee(initial));
+        let events = || {
+            [
+                ThreadEvent::PositionUpdate(1.0),
+                ThreadEvent::PluginLatencyUpdate(4800),
+                ThreadEvent::PositionUpdate(4.0),
+                ThreadEvent::PlaybackUnderrun(3),
+                ThreadEvent::ProcessingError("failed".into()),
+            ]
+        };
+        for event in events() {
+            update_state_with_event(event, &sequential);
+        }
+        assert_eq!(update_state_with_events(events(), &batch), 5);
+        let actual = batch.load_full();
+        let expected = sequential.load_full();
+        assert_eq!(actual.position, expected.position);
+        assert_eq!(actual.position, 3.9);
+        assert_eq!(actual.last_error, expected.last_error);
+        assert_eq!(actual.playback_state, expected.playback_state);
+        let before = batch.load_full();
+        assert_eq!(update_state_with_events([], &batch), 0);
+        assert!(Arc::ptr_eq(&before, &batch.load_full()));
+    }
 }

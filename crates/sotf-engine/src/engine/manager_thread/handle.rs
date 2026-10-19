@@ -1,6 +1,6 @@
 use super::super::{
     AudioEngineState, ConfigEvent, DecoderThread, EngineConfig, ManagerCommand, ManagerResponse,
-    PlaybackState, PlaybackThread, ProcessingThread, ThreadEvent,
+    PlaybackState, PlaybackThread, ProcessingThread,
 };
 use super::commands;
 use super::commands::ManagerCommandHandler;
@@ -12,7 +12,11 @@ use crate::engine::worker_death::{POISON_REFUSAL, poison_refuses_command};
 use arc_swap::ArcSwap;
 use std::sync::Arc;
 
+#[cfg(test)]
+use super::super::ThreadEvent;
+
 /// Handle a thread event by dispatching it through the thread-event visitor.
+#[cfg(test)]
 pub(super) fn handle_thread_event(event: ThreadEvent, state: &Arc<ArcSwap<AudioEngineState>>) {
     super::thread_event_visitor::update_state_with_event(event, state);
 }

@@ -300,3 +300,16 @@ fn test_automation_basic() {
         "Output samples should be input * 0.75"
     );
 }
+
+#[test]
+fn pending_parameter_event_snapshot_tracks_enqueue_and_callback_consumption() {
+    let mut host = DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(GainPlugin::new(2, 1.0))).unwrap();
+    host.build().unwrap();
+    assert_eq!(host.pending_parameter_events(), 0);
+    host.set_plugin_parameter_at(0, "gain", crate::parameters::ParameterValue::Float(0.5), 0)
+        .unwrap();
+    assert_eq!(host.pending_parameter_events(), 1);
+    host.process(&[1.0; 8], &mut [0.0; 8]).unwrap();
+    assert_eq!(host.pending_parameter_events(), 0);
+}

@@ -280,3 +280,110 @@ Missing `cached_parameters` causes silent parameter rejection.
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+### Audit callback measurements
+
+`audit-perf` produces JSON Lines for real host chains, with graph-path waveform
+and finite-drain comparison before measurement. Run optimized builds:
+
+```sh
+cargo run --release -p sotf-plugins --bin audit-perf -- \
+  --channels 2,8,32,64 --rates 44100,48000,96000,192000 \
+  --blocks 1,32,64,128,512,0 --iterations 10000 > dynamics.jsonl
+cargo run --release -p sotf-plugins --bin audit-perf -- \
+  --chain spectral --channels 2 --rates 48000 --blocks 64,128,0
+cargo run --release -p sotf-plugins --bin audit-perf -- \
+  --chain spatial --channels 2 --rates 48000 --blocks 64,128,0 \
+  --cpu-workers 4 --paced
+```
+
+Block `0` selects `[1,7,31,257,512]`. Dynamics uses gain, negotiated Dynamic EQ,
+limiter and loudness monitoring; spectral uses two coincident denoisers;
+spatial uses a 4096-point 9.1.6 upmixer followed by limiting and monitoring.
+`--instances N` repeats the selected processor family to measure many-instance
+heap and callback costs. `--chain analog` selects analog compression.
+The phases cover cold first callback, steady signal, sample-offset gain
+automation, silence, denormals, reset plus processing, and finite draining.
+EOF uses the host's declared drain capacity as its budget and restarts a stream
+outside timing after each completed drain. Every processing error and every
+warning/error diagnostic fails the run, including isolated-plugin fallbacks.
+
+Each row records p50/p95/p99/p99.9/max, deadline misses, maximum budget fraction,
+callback-thread allocation/free counts, process-wide requested heap live/peak
+bytes, parameter-event queue high water and dropped events. Heap bytes exclude
+allocator overhead, thread stacks, mappings and GPU resources; they are not RSS.
+Parameter queue occupancy does not describe a device playback ring. Allocator
+instrumentation contributes to timing. A one-sample cold row cannot estimate
+tail probabilities; even 10000 callbacks provide few p99.9 observations.
+
+`--cpu-workers` creates actual competing CPU work. For externally managed GPU
+or DAW contention, record its identity with `--external-load`; that label does
+not start a workload. `--paced` sleeps between callbacks; OS/device scheduling
+still requires an engine/device benchmark. `--max-budget-fraction 0.8` enables
+an opt-in maximum-callback gate with 20% reserve. Results default to measurement
+without a machine-dependent pass/fail threshold.
+
+The host storage contract is opt-in: call `DawHost::set_max_block_frames` before
+`build()` to prepare graph scratch and opted-in plugins for a bounded input
+wave. Expanded rate-domain envelopes remain included. Oversized f32/f64 input
+calls fail before consuming automation. EmbeddedAudioEngine uses its configured
+frame size automatically. Generic hosts keep their previous policy unless the
+caller negotiates a bound. Dynamic EQ also provides
+`new_with_max_block_frames` to avoid an initial default-size temporary buffer.
+
+Prepared-filter transition measurements are explicit release tests:
+
+```sh
+cargo test --release -p sotf-plugin-binaural -p sotf-plugin-xtc -p sotf-plugin-convolution \
+  --features sotf-host/qa --lib audit_transition_timing -- --ignored --nocapture
+```
+
+These synthetic-spectrum fixtures exercise first/repeated adoption, interrupted
+crossfades, stale XTC results, and stalled retirement queues, asserting zero
+callback allocations and frees while reporting latency tails. They exclude
+filter computation and publication from callback timing; model/SOFA loading is
+control-thread work. Numerical/reference and ownership regressions remain in
+the ordinary plugin suites.
+
+Use `--legacy-capacity` for a paired memory comparison with the historical
+8192-frame host/Dynamic EQ storage. The reference render always uses that
+historical storage policy and the graph path. For example, compare both modes
+with `--instances 16 --channels 64 --rates 48000 --blocks 128 --iterations 256`.
+
+The threaded engine also carries `EngineConfig::frame_size` through initial
+host preparation and worker-built chain/graph replacements. Storage preparation
+finishes on the manager/builder thread before handoff. `--require-zero-heap`
+turns callback allocations or frees into a failed measurement gate.
+
+Recorded 2026-10-19 measurements are in `audit/perf-20261019-*.jsonl` at the
+workspace root. Each chain artifact includes its exact invocation. These runs
+used macOS 27.0.1 on aarch64, Rust/Cargo 1.99.0 and the workspace release profile.
+Builds and other test suites finished before the final chain sweep. The 96-case
+geometry sweep uses 256 callbacks per phase to bound runtime; representative
+chains use 10000. All 990640 measured chain callbacks passed the zero-heap gate.
+Deadline misses remain visible: the geometry sweep recorded 3321, the spectral
+cases 321, isolated spatial cases 2033, and CPU-contention spatial cases 2031.
+These are measurements, not a device deadline certification. GPU/device-load
+validation still needs an externally managed workload and device timing.
+
+For 16 Dynamic EQ instances at 64 channels and 128/48 kHz, requested scenario
+heap high-water growth fell from 625474972 bytes with legacy preparation to
+78470556 bytes with negotiated preparation (87.45%). This compares capacity
+policies in the same implementation, not complete historical releases. The
+synthetic 256-event manager publication benchmark measured median times of
+35958 ns per-event publication versus 666 ns for one batch publication. Filter/IR
+transition fixtures measured 100004 callbacks with no allocations or frees.
+
+Verification: host/Dynamic EQ/limiter library suites passed 878 tests with one
+ignored; the final facade/inference/streaming and performance selections passed
+185 with one ignored; manager selections passed 105 with one ignored; device-free
+integration selections passed seven. The full engine library suite retains the
+capture-to-device-free-output failure documented in the source audit (817 passed,
+one failed, five ignored). Changed DSP/harness targets pass warning-denied Clippy;
+engine-inclusive Clippy also encounters existing `too_many_arguments` in the PCM
+server and `manual_map` in the driver-capture reader. Miri is unavailable in the
+installed stable toolchain. No complete-workspace or hardware QA pass is claimed.
+
+The convolution fixture separately measures a synthetic delta IR's publication
+and retirement overhead. It does not stand in for long-IR convolution CPU cost;
+its first/repeated/stale/full-queue cases assert zero callback allocations/frees.

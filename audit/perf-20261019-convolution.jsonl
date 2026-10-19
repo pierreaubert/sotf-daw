@@ -1,0 +1,4 @@
+{"allocations":0,"callbacks":1,"case":"first","fft":2048,"frames":1024,"frees":0,"ir_frames":1,"max_ns":20083,"p50_ns":20083,"p95_ns":20083,"p999_ns":20083,"p99_ns":20083,"plugin":"convolution","rate":48000}
+{"allocations":0,"callbacks":10000,"case":"repeated","fft":2048,"frames":1024,"frees":0,"ir_frames":1,"max_ns":34417,"p50_ns":17583,"p95_ns":20208,"p999_ns":22292,"p99_ns":20750,"plugin":"convolution","rate":48000}
+{"allocations":0,"callbacks":10000,"case":"stale","fft":2048,"frames":1024,"frees":0,"ir_frames":1,"max_ns":32417,"p50_ns":15542,"p95_ns":18042,"p999_ns":19500,"p99_ns":18541,"plugin":"convolution","rate":48000}
+{"allocations":0,"callbacks":10000,"case":"retirement_full","fft":2048,"frames":1024,"frees":0,"ir_frames":1,"max_ns":34583,"p50_ns":15500,"p95_ns":17875,"p999_ns":19833,"p99_ns":18500,"plugin":"convolution","rate":48000}

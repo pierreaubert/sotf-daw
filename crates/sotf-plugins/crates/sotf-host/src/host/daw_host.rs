@@ -115,6 +115,7 @@ pub(super) struct DawConfig {
     /// Metering does not need callback-rate updates in large sessions.
     pub(super) analyzer_stride: usize,
     pub(super) initial_input_channels: usize,
+    negotiated_max_block_frames: Option<usize>,
     /// Cached worst-case plugin work quantum in host-input-rate frames.
     pub(super) realtime_quantum_frames: usize,
     /// Whether plugins may request their own preferred oversampling wrapper.
@@ -716,6 +717,8 @@ pub struct DawHost {
     pub(super) cached_output_frame_ratios: Vec<(NodeId, f64)>,
     /// Indices of plugins in chain_nodes that have analyzer data (get_data() returns Some)
     pub(super) analyzer_indices: Vec<usize>,
+    /// Control-prepared owners keep queued scalar event IDs alive after delivery.
+    parameter_id_owners: Vec<Vec<ParameterId>>,
     /// Cached total latency in samples, computed during build() and invalidated on graph changes
     pub(super) cached_latency: Option<usize>,
     pub(super) compiled_plan: CompiledRenderPlan,
@@ -920,6 +923,7 @@ impl DawHost {
             cached_rate_identity: true,
             cached_output_frame_ratios: Vec::new(),
             analyzer_indices: Vec::new(),
+            parameter_id_owners: Vec::new(),
             cached_latency: None,
             compiled_plan: CompiledRenderPlan::default(),
             cached_parallel_node_costs: Vec::new(),
@@ -969,6 +973,7 @@ impl DawHost {
                 panic_isolation: true,
                 analyzer_stride: 1,
                 initial_input_channels: channels,
+                negotiated_max_block_frames: None,
                 realtime_quantum_frames: 1,
                 plugin_preferred_oversampling_enabled: true,
                 forced_oversampling_factor: None,
@@ -1439,7 +1444,7 @@ impl DawHost {
             crate::oversampling::AutoOversampledPlugin::new_with_max_frames(
                 plugin,
                 factor,
-                Self::MAX_BLOCK_FRAMES,
+                self.prepared_block_frames(),
             )?,
         ))
     }
@@ -1495,6 +1500,31 @@ impl DawHost {
         }
         let max_id = self.nodes.keys().copied().max().unwrap_or(0);
         let num_slots = if self.nodes.is_empty() { 0 } else { max_id + 1 };
+        self.parameter_id_owners = (0..num_slots)
+            .map(|id| {
+                self.plugins.get(id).and_then(Option::as_ref).map_or_else(
+                    || Ok(Vec::new()),
+                    |plugin| {
+                        catch_unwind(AssertUnwindSafe(|| {
+                            plugin
+                                .parameters()
+                                .into_iter()
+                                .map(|p| {
+                                    self.parameter_id_owners
+                                        .get(id)
+                                        .and_then(|ids| ids.iter().find(|old| **old == p.id))
+                                        .cloned()
+                                        .unwrap_or(p.id)
+                                })
+                                .collect()
+                        }))
+                        .map_err(|_| {
+                            format!("Plugin at node {id} panicked while listing parameters")
+                        })
+                    },
+                )
+            })
+            .collect::<Result<_, _>>()?;
         self.predecessors = vec![Vec::new(); num_slots];
         self.successors = vec![Vec::new(); num_slots];
         self.predecessor_edge_indices = vec![Vec::new(); num_slots];
@@ -1599,10 +1629,10 @@ impl DawHost {
             .last()
             .and_then(|&sink_id| self.plugins[sink_id].as_ref())
             .and_then(|plugin| plugin.terminal_sink())
-            .map_or(Self::MAX_BLOCK_FRAMES, |sink| {
+            .map_or(self.prepared_block_frames(), |sink| {
                 sink.queue_state()
                     .capacity_frames
-                    .max(Self::MAX_BLOCK_FRAMES)
+                    .max(self.prepared_block_frames())
             });
         // Envelope-or-live shared scratch (F1): the live declaration
         // walks with stream state (chunk residuals), but preparation
@@ -1617,8 +1647,13 @@ impl DawHost {
                     .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames))
             })
             .max()
-            .unwrap_or(Self::MAX_BLOCK_FRAMES)
-            .max(Self::MAX_BLOCK_FRAMES);
+            .unwrap_or(self.prepared_block_frames())
+            .max(self.prepared_block_frames());
+        if self.config.negotiated_max_block_frames.is_some() {
+            for plugin in self.plugins.iter_mut().filter_map(Option::as_mut) {
+                plugin.prepare_max_block_frames(max_graph_frames)?;
+            }
+        }
         // Check the declared per-call frame horizon at each negotiated clock
         // before any block can use the plan. Later transport seeks are checked
         // against their actual position in `set_playback_position`.
@@ -1630,8 +1665,20 @@ impl DawHost {
                 ExactRate::new(rate)?,
             )?;
         }
+        let graph_channels = self
+            .nodes
+            .values()
+            .map(|node| node.input_channels().max(node.output_channels()))
+            .chain(std::iter::once(self.config.initial_input_channels))
+            .max()
+            .unwrap_or(1)
+            .max(if self.config.negotiated_max_block_frames.is_some() {
+                1
+            } else {
+                32
+            });
         let graph_scratch_samples = max_graph_frames
-            .checked_mul(32)
+            .checked_mul(graph_channels)
             .ok_or("Graph frame expansion exceeds addressable storage")?;
         // Cold-process preparation: size every node buffer for the
         // largest per-call need at MAX_BLOCK_FRAMES (see
@@ -1805,7 +1852,7 @@ impl DawHost {
             merge_buffer: vec![0.0f32; merge_scratch_samples],
             channel_map_buffer: vec![0.0f32; merge_scratch_samples],
             compensation_delays,
-            delay_scratch: vec![0.0f32; graph_scratch_samples + 32],
+            delay_scratch: vec![0.0f32; graph_scratch_samples + graph_channels],
             merge_queues,
             merge_queue_caps: merge_queue_caps.clone(),
             parallel_scratch: (0..num_slots)
@@ -1816,9 +1863,9 @@ impl DawHost {
                         // degrades absurd topologies to first-touch growth.
                         let out_frames = self.parallel_output_prep_frames(id, node);
                         (
-                            vec![0.0f32; Self::MAX_BLOCK_FRAMES * node.input_channels()],
+                            vec![0.0f32; self.prepared_block_frames() * node.input_channels()],
                             vec![0.0f32; out_frames.saturating_mul(node.output_channels())],
-                            vec![0.0f32; Self::MAX_BLOCK_FRAMES * node.input_channels()],
+                            vec![0.0f32; self.prepared_block_frames() * node.input_channels()],
                         )
                     } else {
                         (Vec::new(), Vec::new(), Vec::new())
@@ -1840,7 +1887,7 @@ impl DawHost {
             merge_buffer: vec![0.0f64; merge_scratch_samples],
             channel_map_buffer: vec![0.0f64; merge_scratch_samples],
             compensation_delays: compensation_delays_f64,
-            delay_scratch: vec![0.0f64; graph_scratch_samples + 32],
+            delay_scratch: vec![0.0f64; graph_scratch_samples + graph_channels],
             merge_queues: merge_queues_f64,
             merge_queue_caps,
             parallel_scratch: (0..num_slots)
@@ -1851,9 +1898,9 @@ impl DawHost {
                         // degrades absurd topologies to first-touch growth.
                         let out_frames = self.parallel_output_prep_frames(id, node);
                         (
-                            vec![0.0f64; Self::MAX_BLOCK_FRAMES * node.input_channels()],
+                            vec![0.0f64; self.prepared_block_frames() * node.input_channels()],
                             vec![0.0f64; out_frames.saturating_mul(node.output_channels())],
-                            vec![0.0f64; Self::MAX_BLOCK_FRAMES * node.input_channels()],
+                            vec![0.0f64; self.prepared_block_frames() * node.input_channels()],
                         )
                     } else {
                         (Vec::new(), Vec::new(), Vec::new())
@@ -2019,7 +2066,8 @@ impl DawHost {
             .map_err(|error| format!("parallel scratch slot reservation failed: {error}"))?;
         for id in 0..num_slots {
             if let Some(node) = self.nodes.get(&id) {
-                let input_samples = Self::MAX_BLOCK_FRAMES
+                let input_samples = self
+                    .prepared_block_frames()
                     .checked_mul(node.input_channels())
                     .ok_or_else(|| format!("node {id} parallel input extent overflow"))?;
                 let output_samples = self
@@ -2152,7 +2200,7 @@ impl DawHost {
             let frames = self
                 .path_output_envelope(id, prepared_sink_frames)
                 .unwrap_or_else(|| self.path_output_frames(id, prepared_sink_frames))
-                .max(Self::MAX_BLOCK_FRAMES);
+                .max(self.prepared_block_frames());
             let samples = frames
                 .checked_mul(channels)
                 .ok_or_else(|| format!("node {id} graph scratch extent overflow"))?;
@@ -2169,7 +2217,7 @@ impl DawHost {
         sink_id: NodeId,
         plan: SinkTransportRepreparePlan,
     ) -> Result<PreparedTerminalSinkBuffers, String> {
-        let prepared_sink_frames = plan.queue_capacity_frames.max(Self::MAX_BLOCK_FRAMES);
+        let prepared_sink_frames = plan.queue_capacity_frames.max(self.prepared_block_frames());
         let channels = self.nodes[&sink_id].input_channels();
         let staging_samples = plan
             .queue_capacity_frames
@@ -3106,7 +3154,7 @@ impl DawHost {
         // a downsampler, whose output can be much shorter) for ordinary
         // callbacks. A larger callback also accounts for pre-existing queued
         // waves; only that exceptional path walks the graph envelopes.
-        let frames = if input_frames <= Self::MAX_BLOCK_FRAMES {
+        let frames = if input_frames <= self.prepared_block_frames() {
             self.prepared_clock_horizon_frames
         } else {
             let current_wave = self
@@ -3239,11 +3287,11 @@ impl DawHost {
     /// makes). Propagated directly (no cached fast path: build refreshes
     /// the cache after preparing buffers). Control-thread only.
     fn max_block_process_need(&self) -> usize {
-        let mut need = Self::MAX_BLOCK_FRAMES;
+        let mut need = self.prepared_block_frames();
         for &id in &self.output_nodes {
             let path = self
-                .path_output_envelope(id, Self::MAX_BLOCK_FRAMES)
-                .unwrap_or_else(|| self.path_output_frames(id, Self::MAX_BLOCK_FRAMES));
+                .path_output_envelope(id, self.prepared_block_frames())
+                .unwrap_or_else(|| self.path_output_frames(id, self.prepared_block_frames()));
             need = need.max(path);
         }
         need
@@ -3257,24 +3305,24 @@ impl DawHost {
     /// everywhere else). Control-thread only.
     fn parallel_output_prep_frames(&self, id: NodeId, node: &GraphNode) -> usize {
         if node.bypassed {
-            return Self::MAX_BLOCK_FRAMES;
+            return self.prepared_block_frames();
         }
         let Some(plugin) = self.plugins.get(id).and_then(Option::as_ref) else {
-            return Self::MAX_BLOCK_FRAMES;
+            return self.prepared_block_frames();
         };
-        Self::MAX_BLOCK_FRAMES.max(
+        self.prepared_block_frames().max(
             Self::plugin_output_frames_envelope_isolated(
                 plugin.as_ref(),
                 id,
                 &node.name,
-                Self::MAX_BLOCK_FRAMES,
+                self.prepared_block_frames(),
             )
             .unwrap_or_else(|| {
                 Self::plugin_output_frames_for_input_isolated(
                     plugin.as_ref(),
                     id,
                     &node.name,
-                    Self::MAX_BLOCK_FRAMES,
+                    self.prepared_block_frames(),
                 )
             }),
         )
@@ -3470,6 +3518,15 @@ impl DawHost {
             return Err("Node not found".into());
         }
 
+        // Caller-created IDs otherwise become last owners in the callback and
+        // free their Arc allocation when the plugin consumes the event. Retain
+        // only declared IDs, bounded by the prepared graph's parameter schema.
+        let param_id = self
+            .parameter_id_owners
+            .get(node_id)
+            .and_then(|ids| ids.iter().find(|id| **id == param_id))
+            .cloned()
+            .unwrap_or(param_id);
         let event = ParameterEvent::new(node_id, param_id, value, sample_offset);
         let producer = self.queues.parameter_event_tx.as_mut().ok_or_else(|| {
             "parameter event sender has been taken; use the returned ParameterEventSender"
@@ -3502,9 +3559,16 @@ impl DawHost {
             .iter()
             .filter_map(|&node_id| {
                 let plugin = self.plugins.get(node_id)?.as_ref()?;
-                let parameters =
+                let mut parameters =
                     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| plugin.parameters()))
                         .ok()?;
+                if let Some(owners) = self.parameter_id_owners.get(node_id) {
+                    for parameter in &mut parameters {
+                        if let Some(owner) = owners.iter().find(|id| **id == parameter.id) {
+                            parameter.id = owner.clone();
+                        }
+                    }
+                }
                 Some((node_id, parameters))
             })
             .collect();
@@ -4078,6 +4142,14 @@ impl DawHost {
         result
     }
 
+    /// Number of parameter events currently waiting in the callback queue.
+    ///
+    /// This lock-free snapshot can become stale immediately when another thread
+    /// publishes events. It excludes events already staged for the current block.
+    pub fn pending_parameter_events(&self) -> usize {
+        self.queues.parameter_event_rx.slots()
+    }
+
     /// Number of parameter events dropped because the RT queue was full.
     pub fn dropped_parameter_events(&self) -> u64 {
         self.queue_state.dropped_parameter_events
@@ -4233,6 +4305,42 @@ impl DawHost {
         self.is_node_bypassed(nid)
     }
 
+    /// Negotiate a bounded maximum input callback size on the control thread.
+    ///
+    /// Call before `build()`. Rebuilding sizes graph scratch and opted-in plugin
+    /// storage to the declared input wave, including rate-conversion expansion.
+    /// Larger process calls return an error before consuming queued parameters.
+    /// Existing hosts retain their historical preparation policy until opted in.
+    ///
+    /// # Errors
+    /// Returns an error for zero frames, more than 8192 frames, or a sealed sink.
+    pub fn set_max_block_frames(&mut self, frames: usize) -> Result<(), String> {
+        self.ensure_sink_commands_allowed()?;
+        if !(1..=Self::MAX_BLOCK_FRAMES).contains(&frames) {
+            return Err("host maximum callback frames must be in 1..=8192".into());
+        }
+        self.config.negotiated_max_block_frames = Some(frames);
+        self.built = false;
+        Ok(())
+    }
+
+    fn prepared_block_frames(&self) -> usize {
+        self.config
+            .negotiated_max_block_frames
+            .unwrap_or(Self::MAX_BLOCK_FRAMES)
+    }
+
+    fn validate_negotiated_input_frames(&self, frames: usize) -> Result<(), String> {
+        if self
+            .config
+            .negotiated_max_block_frames
+            .is_some_and(|max| frames > max)
+        {
+            return Err("input callback exceeds negotiated maximum frames".into());
+        }
+        Ok(())
+    }
+
     /// Returns indices of plugins that have analyzer data (get_data() returns Some).
     /// Computed during build() to avoid per-frame discovery.
     pub fn analyzer_indices(&self) -> &[usize] {
@@ -4252,6 +4360,7 @@ impl DawHost {
         if !self.built {
             self.build()?;
         }
+        self.validate_negotiated_input_frames(input.len() / self.input_channels())?;
         self.preflight_process_horizon(input.len() / self.input_channels())?;
         if let Some((index, sample)) = input
             .iter()
@@ -4302,6 +4411,7 @@ impl DawHost {
         if !self.built {
             self.build()?;
         }
+        self.validate_negotiated_input_frames(input.len() / self.input_channels())?;
         self.preflight_process_horizon(input.len() / self.input_channels())?;
         if let Some((index, sample)) = input
             .iter()
@@ -4372,7 +4482,8 @@ impl DawHost {
             ));
         }
         let input_frames = input.len() / input_channels;
-        self.preflight_process_horizon(input_frames)
+        self.validate_negotiated_input_frames(input_frames)
+            .and_then(|()| self.preflight_process_horizon(input_frames))
             .map_err(|error| {
                 SinkProcessError::RetryablePreflight(SinkPreflightError::InvalidInput(error))
             })?;
@@ -8528,6 +8639,7 @@ impl DawHost {
         if !self.built {
             self.build()?;
         }
+        self.validate_negotiated_input_frames(input.len() / self.input_channels())?;
         self.preflight_process_horizon(input.len() / self.input_channels())?;
         if let Some((index, sample)) = input
             .iter()

@@ -865,3 +865,49 @@ fn test_set_parameter_band_threshold_and_ratio_roundtrip() {
     let val = plugin.get_parameter(&ParameterId::from("band_0_ratio"));
     assert_eq!(val, Some(ParameterValue::Float(8.0)));
 }
+
+#[test]
+fn negotiated_constructor_bounds_dry_storage_and_rejects_oversize_without_mutation() {
+    for channels in [2, 8, 32, 64, 128] {
+        let mut plugin = DynamicEqPlugin::new_with_max_block_frames(channels, 128).unwrap();
+        assert_eq!(plugin.dry_buf.len(), 128 * channels);
+        assert_eq!(plugin.dry_buf.capacity(), 128 * channels);
+        plugin.initialize(48_000.0).unwrap();
+        assert_eq!(plugin.dry_buf.capacity(), 128 * channels);
+        let mut output = vec![0.25; 129 * channels];
+        assert!(
+            plugin
+                .process_in_place(&mut output, &ProcessContext::new(48_000, 129))
+                .is_err()
+        );
+        assert!(output.iter().all(|value| *value == 0.25));
+        assert_eq!(plugin.dry_buf.capacity(), 128 * channels);
+    }
+    assert!(DynamicEqPlugin::new_with_max_block_frames(2, 0).is_err());
+    assert!(DynamicEqPlugin::new_with_max_block_frames(2, usize::MAX).is_err());
+    assert!(DynamicEqPlugin::new_with_max_block_frames(usize::MAX, 2).is_err());
+}
+
+#[test]
+fn negotiated_storage_preserves_dynamic_eq_output() {
+    let mut negotiated = DynamicEqPlugin::new_with_max_block_frames(2, 128).unwrap();
+    let mut default = DynamicEqPlugin::new(2);
+    for plugin in [&mut negotiated, &mut default] {
+        plugin.initialize(48_000.0).unwrap();
+        plugin
+            .set_parameter(ParameterId::from("mix"), ParameterValue::Float(0.5))
+            .unwrap();
+    }
+    let mut position = 0;
+    for frames in [1, 7, 31, 128, 64, 3].into_iter().cycle().take(256) {
+        let mut actual: Vec<f32> = (0..frames * 2)
+            .map(|i| ((position + i) as f32 * 0.1).sin() * 0.5)
+            .collect();
+        let mut expected = actual.clone();
+        let context = ProcessContext::new(48_000, frames);
+        negotiated.process_in_place(&mut actual, &context).unwrap();
+        default.process_in_place(&mut expected, &context).unwrap();
+        assert_eq!(actual, expected);
+        position += frames * 2;
+    }
+}

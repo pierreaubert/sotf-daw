@@ -39,6 +39,16 @@ impl ParameterEventSender {
         sample_offset: usize,
     ) -> Result<(), String> {
         self.validate(node_id, &param_id, &value)?;
+        // Use the prepared schema owner rather than dropping a caller-created
+        // Arc as the last owner when the callback consumes the event.
+        let param_id = self
+            .parameters
+            .iter()
+            .find(|(id, _)| *id == node_id)
+            .and_then(|(_, parameters)| parameters.iter().find(|p| p.id == param_id))
+            .expect("parameter validated above")
+            .id
+            .clone();
         let event = ParameterEvent::new(node_id, param_id, value, sample_offset);
         self.producer.push(event).map_err(|err| {
             self.dropped_events = self.dropped_events.saturating_add(1);
