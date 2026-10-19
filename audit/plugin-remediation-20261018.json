@@ -624,9 +624,30 @@
       "id": 45,
       "plugin": "Delay",
       "audit_text": "[`delay_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-delay/src/lib/delay_plugin.rs):972\u20131125 resets delay/LFO/crossfade histories and drains bounded nonrecursive support. For feedback/recursive routes, native drain can report complete rather than synthesize an unbounded tail. That may be an intentional host contract, but a renderer must not assume all audible repeats are automatically emitted at EOF.\n\n`audit_accuracy.rs`, `tail_length.rs`, `finite_stream.rs`, property and realtime parameter tests provide good foundations. Add end-to-end offline render tests with an explicit tail-duration/energy policy, feedback near its limit, delay changes and tempo discontinuities. Classical fractional delay, click-free dual taps and tape-style pitch modulation should be separate, tested modes. ML is unnecessary for the basic delay.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Test explicit offline recursive-tail duration and energy policy end to end",
+          "status": "implemented_and_verified",
+          "evidence": "Facade audit_delay_offline.rs constructs Delay with the actual factory and DawHost. Final-source impulse at 44.1/48/96 kHz, feedback \u00b10.95, fixed 10 ms energy windows and three-second cap: all samples match an independent geometric echo oracle; omitted energy <=1e-7 and total-energy error <2e-5. Irregular and large callbacks are bit-identical. A 1681-frame cap reports duration truncation exactly; native drain is separately proved to omit recursive repeats."
+        },
+        {
+          "task": "Verify abrupt tempo changes and separate tape versus stationary-tap modes",
+          "status": "implemented_and_verified",
+          "evidence": "Actual host renders caller-converted sixteenth-note delay targets for 120\u2192240\u219280 BPM at fixed absolute samples, then silence to two seconds, at 44.1/48/96 kHz. Both modes remain finite/bounded, retain audible repeats and are bit-identical across callback partitions; their different audible transition behavior is asserted. Existing unit tests independently validate full stationary-tap fades and LFO tape pitch excursions."
+        },
+        {
+          "task": "Document renderer responsibilities and headroom",
+          "status": "implemented_and_verified",
+          "evidence": "USAGE.md specifies silence continuation before native drain, maximum-duration reporting, frozen automation and echo-gap-aware observation windows; distinguishes measured static policy from a general recursive bound. Corrects the claim that the 95% feedback ceiling prevents clipping: coherent DC gain can approach 20."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-delay --lib --tests --offline --locked: 110 passed across eight suites.",
+        "cargo test -p sotf-plugins --test audit_delay_offline --offline --locked: 3 passed.",
+        "cargo clippy --no-deps -p sotf-plugins --test audit_delay_offline --offline --locked -- -D warnings: passed.",
+        "Existing production mode and drain contracts satisfied the audit; this batch adds missing end-to-end validation and corrects documentation without altering DSP or preset schemas."
+      ]
     }
   ],
   "host_analyzers_and_adapters": {
@@ -730,6 +751,14 @@
         32
       ],
       "result": "Fixed hidden smoother residuals, f32 endpoint stagnation, zero-frame state mutation, discarded tiny routes and callback-boundary route retirement; added atomic control/rate validation. 263 plugin tests and 89 host checks passed; selected Clippy clean. 35 manual optimized kernel measurements recorded with single-machine limitations."
+    },
+    {
+      "name": "Delay end-to-end offline tail policy and tempo validation",
+      "state": "verified",
+      "plugin_ids": [
+        45
+      ],
+      "result": "110 Delay tests plus three new facade host-render tests passed; new target Clippy clean. Explicit energy and duration stops, near-limit signed feedback, actual native-drain behavior, and both modes during tempo discontinuities verified. No production DSP change required."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

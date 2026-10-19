@@ -139,11 +139,37 @@ integer boundary and preserves the closed-loop DC gain.
 
 ## Tips & Best Practices
 
-- Feedback is capped at 95% to prevent infinite buildup and clipping.
+- Feedback is capped at 95%; this does not prevent overload. A coherent DC input can approach 20 times its input level at +95% feedback. Leave headroom or limit downstream.
 - For tempo-synced delays: quarter note = 60000/BPM ms, eighth note = 30000/BPM ms.
 - Use mix at 100% in a send/return configuration; use 20-50% when inserted directly.
 - Very short delays (< 30 ms) create comb filtering / chorus effects rather than distinct echoes.
 - Delay time changes are smoothed — you can automate delay time without clicks.
+
+## Offline tails and tempo changes
+
+Native `drain` emits bounded nonrecursive delay support. Once feedback has
+been used, tail metadata remains `Infinite` until reset, and native drain can
+return complete without rendering recursive repeats. Offline callers that
+want those repeats must continue normal processing with silence **before**
+native drain, under an explicit tail policy.
+
+Choose a maximum duration and report when that limit truncates the render.
+An optional energy cutoff needs an observation window covering the longest
+possible echo gap; a silent callback alone cannot establish that the tail is
+finished. Freeze automation during that check. Modulation, allpass feedback,
+longer routes and other plugins can require a larger window or a fixed-duration
+policy. For the static 10 ms impulse regression at feedback ±0.95, a 10 ms
+window with summed squared samples below `1e-8` leaves less than `1e-7`
+unrendered energy; a three-second duration cap bounds the work. This is a
+measured test policy, not a universal recursive-tail bound.
+
+Tempo conversion belongs to the caller: quarter notes use `60000 / BPM` ms
+and sixteenth notes use `15000 / BPM` ms. Set `delay_ms` at the intended
+absolute sample when tempo changes. Tape mode glides pitch as the read head
+moves; pitch-preserving mode keeps stationary heads and switches through a
+brief dip. Both modes are tested through the host across abrupt tempo changes
+and varied callback partitions. Changing modes after initialization requires
+rebuilding the plugin.
 
 ## Signal Flow
 
