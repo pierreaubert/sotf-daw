@@ -11,7 +11,8 @@
 //!   maps to its `asymmetry` control, which shares the range.
 //! - `color` — coloration amount in 0..1 (maps to the models' `amount`;
 //!   the per-model `mix` stays at 1.0 so there is exactly one blend knob).
-//! - `output_trim_db` — post-stage trim in dB, range −60..+24.
+//! - `output_trim_db` — wet-model output trim in dB, range −60..+24,
+//!   applied before the color blend. Zero color leaves this trim inaudible.
 //!
 //! Defect controls (noise, hum, crosstalk) default to zero inside
 //! `math-analog` and are intentionally left untouched: adding this stage never
@@ -51,7 +52,7 @@ pub const REFERENCE_LEVEL_DBFS: f32 = DEFAULT_REFERENCE_LEVEL_DBFS;
 /// `default` is a model id (0..5); unknown defaults fall back to Harmonics.
 pub const fn model_param_spec(default: u32, group: &'static str) -> ParamSpec {
     let max = MODEL_NAMES.len() as u32 - 1;
-    let safe = if default > max { max } else { default } as usize;
+    let safe = if default > max { 0 } else { default } as usize;
     ParamSpec::choice("Analog Model", "analog_model", safe, MODEL_NAMES, group)
         .setup()
         .doc("Analog coloration model applied after the core DSP")
@@ -117,7 +118,7 @@ pub const fn output_trim_param_spec(group: &'static str) -> ParamSpec {
         group,
     )
     .output()
-    .doc("Post-stage output trim")
+    .doc("Wet-model output trim before the color blend")
 }
 
 /// One `math-analog` model with a uniform control surface.
@@ -151,13 +152,22 @@ impl AnalogColorStage {
     }
 
     /// Prepare (or re-prepare) the stage for a fixed stream layout.
+    ///
+    /// # Errors
+    ///
+    /// Rejects rates that are not finite, positive, representable positive
+    /// `f32` values, or a zero block maximum, without changing the layout.
     pub fn prepare(
         &mut self,
         sample_rate: impl Into<f64>,
         max_block_frames: usize,
     ) -> Result<(), String> {
         let sample_rate = sample_rate.into();
-        if !sample_rate.is_finite() || sample_rate <= 0.0 || sample_rate > f64::from(f32::MAX) {
+        if !sample_rate.is_finite()
+            || sample_rate <= 0.0
+            || sample_rate > f64::from(f32::MAX)
+            || sample_rate as f32 == 0.0
+        {
             return Err(
                 "analog stage sample rate must be finite and positive within f32 range".to_string(),
             );
@@ -165,8 +175,9 @@ impl AnalogColorStage {
         if max_block_frames == 0 {
             return Err("analog stage max block size must be non-zero".to_string());
         }
-        self.spec = ProcessSpec::new(sample_rate as f32, self.spec.channels, max_block_frames);
-        self.model.prepare(self.spec).map_err(|e| e.to_string())?;
+        let spec = ProcessSpec::new(sample_rate as f32, self.spec.channels, max_block_frames);
+        self.model.prepare(spec).map_err(|e| e.to_string())?;
+        self.spec = spec;
         self.prepared = true;
         Ok(())
     }
@@ -253,6 +264,9 @@ impl AnalogColorStage {
     }
 
     /// Set coloration amount in 0..1.
+    ///
+    /// Nonzero targets use the model's 10 ms smoother. Zero takes effect
+    /// immediately, preserving dry audio while the internal model state runs.
     pub fn set_color(&mut self, value: f32) -> Result<(), String> {
         map_err(match &mut self.model {
             AnalogModel::Harmonics(m) => m.set_amount(value),
@@ -288,8 +302,10 @@ impl AnalogColorStage {
         Ok(())
     }
 
-    /// Set post-stage trim in dB (−60..+24 at the model; plugins clamp their
-    /// own narrower UI range via the parameter schema).
+    /// Set wet-model output trim in dB (−60..+24).
+    ///
+    /// Trim precedes the color blend and does not scale the dry contribution.
+    /// Plugins clamp their narrower UI range through the parameter schema.
     pub fn set_output_trim_db(&mut self, value: f32) -> Result<(), String> {
         map_err(match &mut self.model {
             AnalogModel::Harmonics(m) => m.set_output_gain_db(value),
@@ -409,7 +425,7 @@ mod tests {
         for id in 0..MODEL_NAMES.len() as u32 {
             let mut stage = prepared_stage(id, 2);
             stage.set_color(0.0).expect("color off");
-            // Let control smoothing settle past the 10 ms time constant.
+            // Zero color takes effect immediately, unlike nonzero targets.
             let mut buf = vec![0.0_f32; 2 * 4096];
             for (i, sample) in buf.iter_mut().enumerate() {
                 let t = i as f32 / 2.0;

@@ -1,0 +1,326 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-analog-common",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "models": [
+    "Harmonics",
+    "Static",
+    "Hammerstein",
+    "Tape",
+    "Transformer",
+    "Console Preamp"
+  ],
+  "math_audio_revision": "a32fd133311fbbf921a0c21d012d400b721f50a4",
+  "decay_horizon_seconds": 2,
+  "decay_is_finite_support": false,
+  "alias_base_sample_rate": 48000,
+  "alias_tone_hz": 9996.09375,
+  "alias_drive_db": 24,
+  "alias_character": 0.31,
+  "alias_color": 1,
+  "alias_trim_db": -3,
+  "alias_notes": "Coherent nonharmonic in-band power proxy; analytic input, independent f64 radix-2 DFT, ideal spectral band selection. Not a shipping resampler measurement or hardware validation. Console at 16x (768 kHz) is a nonconvergent numerical diagnostic and is excluded as an alias reference.",
+  "decay": [
+    {
+      "model": 0,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.155217573,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 1,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.1552180797,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 2,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.1163589209,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 3,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.1506396234,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 4,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.1129605174,
+      "last_100ms_residual_peak": 9.484588115e-11
+    },
+    {
+      "model": 5,
+      "sample_rate": 44100,
+      "first_100ms_residual_peak": 0.146551311,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 0,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1533188373,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 1,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1533193439,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 2,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1171603873,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 3,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1478587985,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 4,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1105714291,
+      "last_100ms_residual_peak": 9.775675408e-11
+    },
+    {
+      "model": 5,
+      "sample_rate": 48000,
+      "first_100ms_residual_peak": 0.1604918838,
+      "last_100ms_residual_peak": 1.112428039e-09
+    },
+    {
+      "model": 0,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.07503604889,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 1,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.07503633201,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 2,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.05711143464,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 3,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.08237209171,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 4,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.06188448519,
+      "last_100ms_residual_peak": 9.573515591e-11
+    },
+    {
+      "model": 5,
+      "sample_rate": 96000,
+      "first_100ms_residual_peak": 0.1235156804,
+      "last_100ms_residual_peak": 1.110983638e-09
+    },
+    {
+      "model": 0,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.1571176648,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 1,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.1571179777,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 2,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.1237739846,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 3,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.152368769,
+      "last_100ms_residual_peak": 0.0
+    },
+    {
+      "model": 4,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.114156343,
+      "last_100ms_residual_peak": 9.325142047e-11
+    },
+    {
+      "model": 5,
+      "sample_rate": 192000,
+      "first_100ms_residual_peak": 0.1914367527,
+      "last_100ms_residual_peak": 1.110284087e-09
+    }
+  ],
+  "alias": [
+    {
+      "model": 0,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.01467030031464,
+      "dbc": -18.33561
+    },
+    {
+      "model": 0,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 1.323661849517e-05,
+      "dbc": -48.782229
+    },
+    {
+      "model": 0,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 6.138612203513e-08,
+      "dbc": -72.119298
+    },
+    {
+      "model": 0,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 1.543492376481e-12,
+      "dbc": -118.114955
+    },
+    {
+      "model": 1,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.01467034336757,
+      "dbc": -18.335597
+    },
+    {
+      "model": 1,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 1.323676415774e-05,
+      "dbc": -48.782182
+    },
+    {
+      "model": 1,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 6.139187592864e-08,
+      "dbc": -72.118891
+    },
+    {
+      "model": 1,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 1.791508128739e-12,
+      "dbc": -117.467812
+    },
+    {
+      "model": 2,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.01381726843778,
+      "dbc": -18.595778
+    },
+    {
+      "model": 2,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 9.993505820147e-06,
+      "dbc": -50.002821
+    },
+    {
+      "model": 2,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 6.835647622861e-08,
+      "dbc": -71.652203
+    },
+    {
+      "model": 2,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 3.796378019882e-13,
+      "dbc": -124.206305
+    },
+    {
+      "model": 3,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.0273145727587,
+      "dbc": -15.636056
+    },
+    {
+      "model": 3,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 0.000266907472378,
+      "dbc": -35.736393
+    },
+    {
+      "model": 3,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 2.100815360346e-05,
+      "dbc": -46.776121
+    },
+    {
+      "model": 3,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 8.566733573745e-13,
+      "dbc": -120.671847
+    },
+    {
+      "model": 4,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.02174210523567,
+      "dbc": -16.626984
+    },
+    {
+      "model": 4,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 8.932400904374e-05,
+      "dbc": -40.490318
+    },
+    {
+      "model": 4,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 6.129006820187e-06,
+      "dbc": -52.126099
+    },
+    {
+      "model": 4,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 8.773814682663e-13,
+      "dbc": -120.568115
+    },
+    {
+      "model": 5,
+      "factor": 1,
+      "nonharmonic_to_fundamental_power": 0.0048838741611,
+      "dbc": -23.112355
+    },
+    {
+      "model": 5,
+      "factor": 2,
+      "nonharmonic_to_fundamental_power": 1.213467429457e-05,
+      "dbc": -49.159719
+    },
+    {
+      "model": 5,
+      "factor": 4,
+      "nonharmonic_to_fundamental_power": 6.917452255371e-07,
+      "dbc": -61.600538
+    },
+    {
+      "model": 5,
+      "factor": 16,
+      "nonharmonic_to_fundamental_power": 2.994035509828e-05,
+      "dbc": -45.237431
+    }
+  ]
+}

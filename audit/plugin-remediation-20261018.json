@@ -112,9 +112,51 @@
       "id": 5,
       "plugin": "Analog common",
       "audit_text": "[`analog-common/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-common/src/lib.rs):127 onward owns a prepared `math_audio_analog` model, rate/block specification and cached controls. This helper is shared by three effects; its behavior and cost cannot be inferred from those plugins' names. Model changes are structural. The actual analog implementations are in a sibling dependency and were not independently audited here.\n\nThe small local unit suite should be complemented by a shared conformance matrix: zero color identity, drive/trim units, maximum block, parameter transition, reset, finite input/output, alias energy and model-specific state decay. Consider WDF/state-space or Hammerstein baselines for physical targets. Learned models are appropriate only when trained and validated against identified hardware and operating levels, not as an automatic replacement for all coloration.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Preserve prepared layout on rejected preparation and honor schema model fallback",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-analog-common/src/lib.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-analog-common/tests/audit_conformance.rs"
+          ],
+          "result": "Regressions failed before fixes: unknown default returned model 5 rather than documented Harmonics 0; a positive f64 rate underflowed to f32 zero, corrupted stored layout, and caused later valid model selection to fail. Rate validation precedes mutation; layout commits after successful model preparation."
+        },
+        {
+          "task": "Validate six-model shared controls, reset, geometry, finite recovery and realtime behavior",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_conformance.rs: all six models at 44.1/48/96/192 kHz and 1/2/8 channels; 32-channel 8193-frame callbacks; exact single-frame versus chunked automation and fresh-state reset; zero-color identity with extreme wet controls; independent wet-trim dB relations and binary input gain equivalence; independent 10 ms physical-time color fade; immediate live zero; invalid controls/count overflow/short buffers preserve history; input safety reference; allocation/deallocation guards. Binary drive gains avoid reordering f32 rounding through Console input highpass; arbitrary-gain equivalence at 192 kHz is not claimed."
+        },
+        {
+          "task": "Measure coherent alias energy independently and qualify dense-rate reference limits",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-analog-common/tests/audit_alias.rs",
+            "audit/artifacts/plugin-audit-20261018/analog-common-conformance.json"
+          ],
+          "result": "Independent f64 radix-2 DFT verified against analytic sin^3 third-harmonic fold (power ratio 1/9). At 9996.09375 Hz, base 48 kHz, drive +24 dB, character .31, color 1 and trim -3 dB, native nonharmonic in-band proxy ranges -23.112355 to -15.636056 dBc. Analytic-input 2x and 4x model-rate processing with ideal band selection reduces the proxy for all six models. This is not a production resampler measurement or hardware oracle. At 16x/768 kHz, Console is nonmonotonic (-45.237431 dBc versus 4x -61.600538); retained as a diagnostic, excluded as an alias reference. Cause in its f32 recursive path was not isolated; numerical extrapolation needs separate validation."
+        },
+        {
+          "task": "Measure model-specific recursive state decay without claiming finite support",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-analog-common/tests/audit_conformance.rs",
+            "audit/artifacts/plugin-audit-20261018/analog-common-conformance.json"
+          ],
+          "result": "24 model/rate cases measure excited minus unexcited output state after a 100 ms signal burst and two seconds of zeros. Final 100 ms residual peak stays below 1e-5 (observed maximum 1.112428039e-9). This budget exceeds 16 default Transformer flux time constants (120 ms); the recursive support remains infinite. Reset and heap behavior are checked separately."
+        },
+        {
+          "task": "Document control conventions and boundaries for physical-model alternatives",
+          "status": "implemented_and_verified",
+          "evidence": "README.md, AGENTS.md and CHANGELOG.md clarify wet trim, immediate zero/nonzero smoothing, safety rails, recursive support and measured spectral limits. WDF/state-space/Hammerstein alternatives require an identified physical target; no unmeasured hardware replacement or optional learned model is introduced."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-analog-common --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture: 21 passed (8 unit + 11 conformance + 2 spectral), complete model-specific artifact recorded.",
+        "cargo test -p sotf-plugin-analog-common -p sotf-plugin-analog-eq -p sotf-plugin-analog-compressor -p sotf-plugin-analog-limiter --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast: 111 passed across 27 suites.",
+        "cargo clippy -p sotf-plugin-analog-common -p sotf-plugin-analog-eq -p sotf-plugin-analog-compressor -p sotf-plugin-analog-limiter --all-targets --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings: passed."
+      ]
     },
     {
       "id": 6,

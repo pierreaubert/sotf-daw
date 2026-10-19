@@ -28,5 +28,9 @@ cargo test -p sotf-plugin-analog-common
 - Console-preamp model maps drive→`input_gain_db` and
   character→`asymmetry` (same ranges); all other models map directly
 - Defect controls stay at zero: adding the stage never adds noise/hum
-- `set_color(0)` is bit-transparent on every model (pinned by test)
+- `set_color(0)` immediately preserves nominal dry samples on every model;
+  internal state continues running, and input safety rails still apply
+- Nonzero color changes use a 10 ms smoother; trim scales wet audio before blend
 - Blocks larger than the prepared maximum are chunked; no RT allocation
+- Shared conformance, decay and independent spectral tests are in `tests/`;
+  the 768 kHz Console diagnostic is not a converged alias reference
