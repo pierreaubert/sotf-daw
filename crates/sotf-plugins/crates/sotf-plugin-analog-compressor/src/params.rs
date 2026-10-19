@@ -56,7 +56,7 @@ pub const PARAMS: &[ParamSpec] = &[
     ParamSpec::float("Mix", "mix", 1.0, 0.0, 1.0, 0.01, "%", "Output")
         .scaled(100.0)
         .output()
-        .doc("Dry/wet parallel blend"),
+        .doc("Compression dry/wet blend before coloration; 0% still applies analog color and trim"),
     ParamSpec::bool_labeled("Auto Makeup", "auto_makeup", false, "On", "Off", "Dynamics")
         .doc("Add smoothed measured gain reduction back as makeup (capped at +24 dB)"),
     model_param_spec(0, "Analog").structural(),

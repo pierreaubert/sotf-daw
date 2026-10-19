@@ -120,9 +120,35 @@
       "id": 6,
       "plugin": "Analog compressor",
       "audit_text": "[`analog_compressor.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-compressor/src/analog_compressor.rs):440\u2013567 implements linked dynamics with hold/range behavior followed by the analog color stage. Compression dry/wet mixing occurs before coloration, so zero compression mix can still produce colored audio. Clarify this control meaning and test it. Per-frame detector/log/power work warrants profiling at high channel counts.\n\n`range_hold.rs`, `scalar_reads.rs` and integration tests address behavior and parameter access. Extend independent attack/release trajectories, knee derivative continuity, channel linking, control sweeps and startup transients. Classical VCA/opto/FET-style detector and feedback variants should have explicit semantics. A conditioned recurrent model is a reasonable optional hardware-emulation experiment; use held-out settings/material and gain-control trajectory metrics, with the 2025 compressor dataset as one external reference [Solid State Bus-Comp][R4].",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Specify and validate compression Mix before coloration, including zero Mix",
+          "status": "implemented_and_verified",
+          "evidence": "params.rs now describes Mix as the compression blend before color/trim, not a complete bypass. audit_dynamics.rs composes a clean compression/Mix core with an independent standalone AnalogColorStage and compares complete output within 2e-6 across all six models, Mix 0/0.5/1 and 44.1/48/96/192 kHz. Zero Mix must still measurably color audio. README defines peak feed-forward topology, amplitude-domain attack/release, dB-domain knee and automatic makeup, detector hold/range order and zero-latency onset overshoot; model names do not imply VCA/opto/FET detector changes or measured hardware emulation."
+        },
+        {
+          "task": "Extend independent attack/release, knee derivative, channel-link and live control-sweep validation",
+          "status": "implemented_and_verified",
+          "evidence": "audit_dynamics.rs uses independent f64 physical-time detector/hold/soft-knee/range/makeup/parallel-mix references, with no production envelope/gain helpers. Complete control sweeps cover 1/2/8 channels, changing hottest-channel assignment, auto makeup on/off and four rates; fixed normalized error <3e-4, observed maximum 1.0469435971595869e-4. Separate closed-form DC onset/release checks include sample zero. Measured steady soft-knee values and one-sided derivatives at both edges cover ratios 1/2/4/20 and widths 2/6/20 dB, including 192 kHz. Different callback partitions compare exactly."
+        },
+        {
+          "task": "Correct live control heap activity and fresh-stream initialization",
+          "status": "implemented_and_verified",
+          "evidence": "audit_controls.rs reproduced 47 allocations/47 frees in scalar validation and 0.05602435 peak fresh-versus-reinitialized output error from old detector state. Primitive numeric/Boolean controls now validate borrowed metadata, directly update prepared scalar/model targets and refresh cached values without maps/schema rebuilding. Canonical snapshots and bulk maps require no new allocations (consuming caller-owned maps may free storage). Successful initialization resets detector, hold, automatic makeup and color histories; fresh comparisons and zero-heap scalar/process/reset guards pass for all six models."
+        },
+        {
+          "task": "Verify actual host automation and quantify high-channel cost without an unsupported deadline claim",
+          "status": "implemented_and_verified",
+          "evidence": "audit_analog_compressor_host.rs applies thirteen numeric plus one Boolean queued controls in the actual prepared callback with zero allocations/frees, across all models, 2/8 channels and 44.1/48/96/192 kHz. Immediate setter/producer control-thread heap is measured separately (representative 115/115 and 14/14). Preset reload and queued controls compare exactly to native differently partitioned audio. audit_profile.rs and audit/artifacts/plugin-audit-20261018/analog-compressor-profile.json record 72 distinct 512-frame timing cases: 48/192 kHz, 2/8/32 channels, six models, color off and 70%, 64 samples after warmup. A preliminary loaded 32-channel 192 kHz Harmonics observation (p95 6.563 ms versus 2.667 ms block period; max 38.435 ms) is retained alongside the final matrix. Local wall timings are load-dependent diagnostics, not realtime certification or a portable model ranking."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-analog-compressor --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 28 reported passed, comprising 27 functional checks and one non-gating diagnostic timing test. Existing range/hold and scalar-read suites pass unchanged. The final expanded audit_profile target ran separately and its receipt was validated to contain all 72 distinct matrix cases.",
+        "cargo test -p sotf-plugins --test audit_analog_compressor_host with the same offline/locked/target flags: two actual host matrix tests passed. Strict Clippy for native all targets and facade host target (--no-deps), with -D warnings, passed. git diff --check passed.",
+        "The final 72-case local test-build timing snapshot had no measured sample/p95 exceeding its 512-frame period; its largest p95/period case was color-off Hammerstein, 32 channels at 192 kHz, p95 1.370 ms against 2.667 ms. An earlier loaded run had substantial excursions (retained explicitly in the receipt). No scheduling isolation, realtime certification, portable throughput ranking or optimization speedup is claimed; profile the intended deployment before relying on 32-channel/high-rate use.",
+        "Production detector/gain arithmetic and parameter indices/ranges/model choices/zero latency are retained. Live scalar heap use and preparation history are corrected; Mix metadata now states existing core-before-color semantics. Sibling model sources were not modified or validated against measured hardware. Full workspace/release QA was not run; optional measured-target recurrent emulation remains in the separate ML backlog."
+      ]
     },
     {
       "id": 7,
