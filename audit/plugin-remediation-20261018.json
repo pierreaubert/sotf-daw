@@ -500,9 +500,35 @@
       "id": 31,
       "plugin": "Loudness compensation / Fletcher\u2013Munson alias",
       "audit_text": "[`loudness_compensation_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-loudness-compensation/src/lib/loudness_compensation_plugin.rs):930\u20131065 combines compensation filters, playback-volume context and sample-clocked autogain measurement intervals. Electrical dBFS and a playback volume setting are not sufficient to know listener SPL; calibration assumptions must be visible to callers.\n\n`reference_accuracy.rs` and dedicated compensation tests provide an appropriate starting point. Extend independently computed response curves, rate extremes, bypass/autogain interactions and volume changes during silence. Classical calibrated equal-loudness compensation is preferable to a learned black box. ML can fit a user's preference curve from controlled listening data, with uncertainty and gain bounds; it cannot infer acoustic calibration from PCM alone.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Preserve calibrated Auto contours and discard prior rate history during preparation",
+          "status": "implemented_and_verified",
+          "evidence": "audit_lifecycle.rs reproduced an Auto/ISO maximum sample difference of 0.0047687413 after initialization and stale-rate filter history error of 0.060423687. Initialization now prepares Auto from reference SPL plus host attenuation and resets recursive/filter/gain state. Auto/ISO impulse equivalence covers 16/48/192 kHz, three volume levels and both headroom policies; repeated rate preparation matches fresh instances across all modes and AutoGain positions."
+        },
+        {
+          "task": "Expose legacy calibration assumptions to callers",
+          "status": "implemented_and_verified",
+          "evidence": "FletcherMunsonCompat::into_plugin and the actual factory retain the historical 83 dB reference mapping while publishing calibration_is_assumed=true. Full telemetry snapshots preserve this provenance and volume through cache rotations, initialization, reset and AutoGain updates. Explicit calibration confirmation clears the assumption. Native and legacy audio equivalence is verified at 16/48/192 kHz. USAGE documents calibration protocol and distinguishes PCM, electrical response and listener SPL."
+        },
+        {
+          "task": "Validate independently computed responses and silent volume changes at rate extremes",
+          "status": "implemented_and_verified",
+          "evidence": "Independent RBJ response equations agree with measured manual curves within 0.002 dB at 16/48/192 kHz. Rendered ISO contour differences match published rounded checkpoints within 1 dB at 1 kHz and 2 dB elsewhere, reflecting approximate filter fitting. Silent volume automation remains exactly silent and bit-identical across one-frame, irregular and large callbacks, with the final contour matching explicit ISO mode for all AutoGain positions."
+        },
+        {
+          "task": "Validate actual host bypass and AutoGain interaction",
+          "status": "implemented_and_verified",
+          "evidence": "audit_loudness_host.rs exercises the factory and DawHost: bypass returns bit-exact input, unbypass remains bounded and finite, and settled 1 kHz gain is within 0.05 dB of the independent 6 dB manual / 0 dB level-matched targets for disabled, pre and post AutoGain."
+        }
+      ],
+      "evidence": [
+        "Full loudness-compensation library and integration selection: 118 tests passed across five suites.",
+        "Two new factory/host regressions plus six facade finite-chain, drain, DSP, robustness and channel-count gates: 44 tests passed.",
+        "Plugin library/tests and facade audit target Clippy --no-deps with warnings denied passed; git diff --check passed.",
+        "No preset parameter changes. Calibration provenance is an additive native telemetry field; physical listening-SPL validation requires the documented external measurement. Optional ML preference fitting remains separately tracked."
+      ]
     },
     {
       "id": 32,

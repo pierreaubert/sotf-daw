@@ -75,6 +75,9 @@ pub struct LoudnessCompensationData {
     pub playback_volume_db: f32,
     /// Auto Gain measurements; absent when level matching is disabled.
     pub auto_gain: Option<AutoGainData>,
+    /// Legacy import uses an assumed reference rather than a measured calibration.
+    /// Cleared when the caller explicitly confirms `auto_calibrated=true`.
+    pub calibration_is_assumed: bool,
 }
 
 pub struct LoudnessCompensationPlugin {
@@ -98,8 +101,8 @@ pub struct LoudnessCompensationPlugin {
     pub(super) reference_level_db: f32,
     /// Engine playback volume in dB (relative, set externally). Used in Auto mode.
     pub(super) playback_volume_db: f32,
-    /// Last volume at which ISO filters were rebuilt (Auto mode). Prevents
-    /// per-frame rebuilds; filters are only rebuilt when volume changes by >0.5 dB.
+    /// Last prepared volume (Auto mode). Repeated controls do not redesign the
+    /// bank; finite changes are prepared on the control path, including silence.
     pub(super) last_auto_volume_db: f32,
     /// ISO 226 mode filters: [channel][band_index], jointly fitted biquad bank.
     /// Pre-allocated in `new()`, coefficients updated in `rebuild_iso_filters()`.
@@ -115,6 +118,7 @@ pub struct LoudnessCompensationPlugin {
     pub(super) auto_gain_position: AutoGainPosition,
     pub(super) headroom_normalized: bool,
     pub(super) auto_calibrated: bool,
+    pub(super) calibration_is_assumed: bool,
     pub(super) comp_gain_smoother: Vec<Smoother>,
     transition: FilterTransition,
     pub(super) cache: RealTimeCache<LoudnessCompensationData>,
@@ -159,6 +163,7 @@ impl LoudnessCompensationPlugin {
             auto_gain_position: AutoGainPosition::Disabled,
             headroom_normalized: false,
             auto_calibrated: false,
+            calibration_is_assumed: false,
             comp_gain_smoother: (0..num_channels)
                 .map(|_| Smoother::new(1.0, 20.0, sr))
                 .collect(),
@@ -646,6 +651,7 @@ impl LoudnessCompensationPlugin {
         p.cache.update(|data| {
             data.playback_volume_db = p.playback_volume_db;
             data.auto_gain = p.auto_gain.as_ref().map(|gain| gain.get_data());
+            data.calibration_is_assumed = p.calibration_is_assumed;
         });
         Ok(p)
     }
@@ -793,6 +799,7 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         let mut rebuild_iso = false;
         let mut rebuild_auto = false;
         let mut update_headroom = false;
+        let mut calibration_confirmed = false;
         for (id, value) in values {
             let key = id.as_str();
             if matches!(
@@ -904,6 +911,7 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                     return Err("cannot remove SPL calibration while Auto mode is active".into());
                 }
                 self.auto_calibrated = calibrated;
+                calibration_confirmed = calibrated;
             } else {
                 return Err(format!("Unknown parameter: {}", id));
             }
@@ -920,9 +928,13 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
             self.update_comp_gain_smoother();
         }
         self.rebuild_cached_parameters();
+        if calibration_confirmed {
+            self.calibration_is_assumed = false;
+        }
         self.cache.update(|data| {
             data.playback_volume_db = self.playback_volume_db;
             data.auto_gain = self.auto_gain.as_ref().map(|gain| gain.get_data());
+            data.calibration_is_assumed = self.calibration_is_assumed;
         });
         Ok(())
     }
@@ -942,8 +954,17 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         }
         self.transition.remaining = 0;
         self.rebuild_filters();
-        self.rebuild_iso_filters();
-        self.transition.remaining = 0;
+        if self.mode_index == 2 {
+            // Auto's level comes from calibration plus host attenuation, not
+            // the independent playback_level_db control used by ISO mode.
+            self.last_auto_volume_db = f32::MIN;
+            self.maybe_rebuild_auto_filters();
+        } else {
+            self.rebuild_iso_filters();
+        }
+        // Coefficient updates preserve histories during live automation, but
+        // preparation starts a new rate/transport epoch with exact gain state.
+        self.reset();
         Ok(())
     }
     fn reset(&mut self) {
@@ -973,6 +994,7 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
         self.cache.update(|data| {
             data.playback_volume_db = self.playback_volume_db;
             data.auto_gain = self.auto_gain.as_ref().map(|_| AutoGainData::default());
+            data.calibration_is_assumed = self.calibration_is_assumed;
         });
         self.last_auto_volume_db = self.playback_volume_db;
     }
@@ -1051,7 +1073,11 @@ impl ParametricInPlacePlugin for LoudnessCompensationPlugin {
                                 data.output_peak = display.data.peak;
                             }
                         }
-                        self.cache.update(|cached| cached.auto_gain = Some(data));
+                        self.cache.update(|cached| {
+                            cached.auto_gain = Some(data);
+                            cached.playback_volume_db = self.playback_volume_db;
+                            cached.calibration_is_assumed = self.calibration_is_assumed;
+                        });
                     }
                 }
             }

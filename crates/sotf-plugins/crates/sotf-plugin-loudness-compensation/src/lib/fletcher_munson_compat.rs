@@ -1,4 +1,5 @@
 use super::default::default_fm_compat_reference;
+use super::loudness_compensation_plugin::LoudnessCompensationPlugin;
 use super::types::LoudnessCompensationPluginParams;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +22,31 @@ pub struct FletcherMunsonCompat {
 }
 
 impl FletcherMunsonCompat {
-    /// Convert this backward-compat struct to a LoudnessCompensation params in Auto mode.
+    /// Convert legacy settings while exposing their assumed calibration in telemetry.
+    ///
+    /// Preserves the historical `83 + reference_level_db` mapping. The returned
+    /// processor reports `calibration_is_assumed=true` until the caller explicitly
+    /// confirms a calibration. Construction and conversion run on the control thread.
+    ///
+    /// # Errors
+    /// Returns an error for invalid channel counts or migrated parameter values.
+    pub fn into_plugin(self, channels: usize) -> Result<LoudnessCompensationPlugin, String> {
+        let mut plugin = LoudnessCompensationPlugin::from_params(
+            channels,
+            self.into_loudness_compensation_params(),
+        )?;
+        plugin.calibration_is_assumed = true;
+        plugin
+            .cache
+            .update(|data| data.calibration_is_assumed = true);
+        Ok(plugin)
+    }
+
+    /// Convert legacy settings to the compatibility parameter representation.
+    ///
+    /// The calibration flag preserves old presets' assumed 83 dB reference;
+    /// it does not establish a physical measurement. Prefer [`Self::into_plugin`]
+    /// to retain that provenance in processor telemetry.
     pub fn into_loudness_compensation_params(self) -> LoudnessCompensationPluginParams {
         let smoothing_ms = if self.smoothing_ms <= 0.0 {
             // The legacy zero value meant an immediate transition. The new

@@ -461,10 +461,7 @@ fn create_plugin_inner(
             use crate::plugin_loudness_compensation::FletcherMunsonCompat;
             let fm: FletcherMunsonCompat = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse Fletcher-Munson params: {e}"))?;
-            let plugin = LoudnessCompensationPlugin::from_params(
-                channels,
-                fm.into_loudness_compensation_params(),
-            )?;
+            let plugin = fm.into_plugin(channels)?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 

@@ -70,3 +70,30 @@ Frequencies are clamped to 45% of Nyquist-safe sample-rate space at 16–192 kHz
 Here `reference_level_db` must be the measured listener-position SPL produced by
 the actual playback chain at engine volume 0 dB. Recalibrate after changing DAC,
 OS/amp gain, speaker placement, listening distance, or headphones.
+
+Keep the reference signal, spectrum, weighting, integration time and channel
+configuration with that measurement. The model treats the reference and
+attenuation as equal-loudness contour levels; it does not measure listener SPL
+from each PCM block or guarantee equal perceived loudness for arbitrary music.
+The independent response tests validate electrical filters and selected
+published contour differences, rather than a listener-specific acoustic fit.
+
+## Legacy Fletcher–Munson imports
+
+The `fletcher_munson` factory alias preserves the old assumed mapping
+`reference SPL = 83 + legacy reference_level_db`. This compatibility assumption
+is not a microphone measurement. Its historical calibration flag remains
+accepted so saved presets load, while `LoudnessCompensationData` exposes
+`calibration_is_assumed=true`. It survives initialization and reset. Explicitly
+confirming `auto_calibrated=true` after supplying the measured reference clears
+that provenance flag. Native callers converting old settings should use
+`FletcherMunsonCompat::into_plugin` to retain the telemetry; the lower-level
+parameter conversion alone cannot retain provenance.
+
+Initialization builds Auto's contour from the reference plus current host
+attenuation, independently of ISO mode's `playback_level_db`, and starts with
+zero filter/meter histories. Changing rates starts the same fresh epoch.
+Volume changes during silence prepare and crossfade the new contour on the
+ordinary sample clock; silence stays silent and the next transient uses that
+prepared state. Host bypass skips both contour processing and AutoGain; it does
+not provide acoustic level matching.
