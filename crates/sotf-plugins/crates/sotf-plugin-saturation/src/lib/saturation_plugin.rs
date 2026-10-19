@@ -903,6 +903,9 @@ impl ParametricInPlacePlugin for SaturationPlugin {
         }
 
         self.initialized = true;
+        // Preparation starts a new stream, including DC history and controls
+        // that may still have been moving when the previous stream stopped.
+        self.reset();
 
         Ok(())
     }

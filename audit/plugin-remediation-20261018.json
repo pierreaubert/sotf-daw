@@ -729,15 +729,40 @@
       "id": 38,
       "plugin": "Saturation",
       "audit_text": "[`saturation_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-saturation/src/lib/saturation_plugin.rs):890\u20131062 prepares DC/ADAA/envelope state and requests host oversampling for selected settings. The ADAA branch applies to soft-clip/tanh; other nonlinear modes still have different antialiasing behavior. Do not infer that enabling the flag makes every mode alias-free. ADAA also changes small-signal phase/magnitude, relevant to dry/wet mixing.\n\nIntegration/unit tests should be extended with independent oversampled references, folded-alias energy versus frequency/drive, DC rejection, cold start and block-partition tests for every mode. Classical ADAA [memoryless ADAA][R1] and [stateful ADAA][R2], oversampling and carefully matched dry paths are meaningful improvements; choose per nonlinearity/state model. Neural emulation is useful for a measured nonlinear target, with alias and parameter-sweep tests rather than waveform similarity alone.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Validate cold-start Soft Clip ADAA against independent Simpson quadrature and reset reproducibility; DC rejection for all five modes with ADAA on/off",
           "status": "implemented_and_verified",
-          "evidence": "tests/audit_signal_contract.rs: 44.1/48/96 kHz; all 63 saturation tests passed. Existing parameter description and UI already restrict ADAA to Soft Clip. Frequency/drive alias sweep and independent oversampled-reference coverage remain."
+          "evidence": "tests/audit_signal_contract.rs: extended independent Simpson interval integration/reset and all-five-mode DC rejection with ADAA on/off through 192 kHz; included in the final 68-test saturation selection."
+        },
+        {
+          "task": "Reset all DSP histories and settle configured controls when preparing a stream",
+          "status": "implemented_and_verified",
+          "evidence": "audit_lifecycle.rs reproduced stale reinitialization output (peak difference 0.2145621) before the fix. Successful initialize now resets the crossover/DC/ADAA/envelope histories and configured control targets. Fresh-versus-populated reinitialization and per-frame automation/reset compare exactly across five modes, ADAA on/off, DC on/off where applicable, callback partitions 1/31/257 versus large blocks and 44.1/48/96/192 kHz."
+        },
+        {
+          "task": "Validate independent oversampled references and folded alias energy versus frequency and drive for every nonlinear mode",
+          "status": "implemented_and_verified",
+          "evidence": "audit_spectrum.rs uses independent f64 nonlinear formulas, a test-only Fourier transform and a separately derived bilinear LR4 exciter response. 32768-phase harmonic references converge against 16384 points and fold explicitly into a 4096-sample spectrum. All five modes, four coherent frequencies, drives 1/4/12 and 44.1/48/96 kHz pass a fixed 1e-5 spectral RMS bound; observed maximum 1.3942951451318178e-6. The sweep includes substantial folded distortion (maximum native folded power 0.12272575140463651), rather than treating direct processing as alias-free."
+        },
+        {
+          "task": "Specify and validate ADAA coverage and parallel dry/wet coloration",
+          "status": "implemented_and_verified",
+          "evidence": "All non-Soft-Clip modes are exactly unchanged by the ADAA flag throughout the frequency/drive sweep. Independent complex response asserts Soft Clip small-signal H=(1+z^-1)/2, including drive normalization and the current-sample dry parallel sum, for mix 0/0.5/1 through 192 kHz. High-drive/high-frequency Soft Clip cases require at least 3 dB lower folded energy with ADAA. README states coverage, fractional phase/magnitude, zero native integer latency and host-owned oversampling; no undocumented dry delay or mode/preset change is introduced."
+        },
+        {
+          "task": "Verify actual factory/host preferred oversampling and callback independence",
+          "status": "implemented_and_verified",
+          "evidence": "audit_saturation_host.rs: five modes, 44.1/48/96 kHz, two high-frequency coherent tones and drive 12 require at least 3 dB less folded distortion/fundamental with both 2x and 4x. Native host latency is zero; wrappers report positive latency. Off/2x/4x cold streams through 192 kHz compare callback partitions with a fixed 2e-6 peak bound. Folded-energy projection excludes DC and legitimate in-band harmonics; coincident folded harmonics are outside that metric, and no universal alias-free guarantee is claimed."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "cargo test -p sotf-plugin-saturation --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 68 passed, no failures or ignored tests.",
+        "cargo test -p sotf-plugins --test audit_saturation_host --test audit_ambisonics_host --test audit_crossfeed_host --test audit_dynamic_eq_host --test audit_loudness_host --test audit_stereo_image_host --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: nine host tests passed.",
+        "cargo clippy -p sotf-plugin-saturation --all-targets --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings and cargo clippy -p sotf-plugins --test audit_saturation_host --no-deps with the same offline/locked/target flags and -D warnings both passed. git diff --check passed.",
+        "Validation targets production static waveshapers and existing host oversampling; no measured analog target or ML model is introduced. Full workspace and release/platform QA were not run for this isolated lifecycle change; regression bounds are limited to the documented frequency/drive/rate grids."
+      ]
     },
     {
       "id": 39,

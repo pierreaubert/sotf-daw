@@ -28,7 +28,7 @@ fn soft_clip_adaa_matches_numerical_interval_integral_from_cold_start() {
     let input: Vec<f32> = (0..4096)
         .map(|i| (0.7 * (i as f64 * 0.731).sin()) as f32)
         .collect();
-    for rate in [44_100, 48_000, 96_000] {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
         let mut processor = plugin("Soft Clip", rate, true, false);
         let mut actual = input.clone();
         processor
@@ -60,7 +60,7 @@ fn soft_clip_adaa_matches_numerical_interval_integral_from_cold_start() {
 
 #[test]
 fn dc_blocker_removes_steady_offset_for_every_mode_and_adaa_setting() {
-    for rate in [44_100, 48_000, 96_000] {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
         for mode in ["Soft Clip", "Tube", "Tape", "Exciter", "Asymmetric"] {
             for adaa in [false, true] {
                 let mut processor = plugin(mode, rate, adaa, true);
