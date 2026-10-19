@@ -584,9 +584,35 @@
       "id": 29,
       "plugin": "Limiter",
       "audit_text": "[`limiter_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-limiter/src/lib/limiter_plugin.rs):535\u2013710 has dedicated oversampled processing and conditions for its native intersample-peak mode, including full wet/hard behavior and sufficient lookahead. Those conditions are part of the guarantee; arbitrary mix/mode changes can invalidate it. Reset and finite delay draining are explicit.\n\nThe ISP configuration, oversampling accuracy/stream/automation, release/channel and output-metering tests are strong. Extend independent reconstruction true-peak tests after the complete final chain, random phase near Nyquist and rapid parameter changes. Classical release shaping, detector oversampling and explicit headroom are appropriate improvements. ML may recommend release characteristics, but a learned model should never be the only ceiling enforcement mechanism.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Extend independent final-output reconstruction across randomized near-Nyquist phases and complete stream boundaries",
+          "status": "implemented_and_verified",
+          "evidence": "tests/support/reconstruction.rs evaluates centered f64 Hann-windowed sinc directly over zero-extended emitted channel audio, without production detectors, coefficient tables, causal histories or meter data. audit_safety.rs covers 720 deterministic random-phase cases: normalized frequencies 0.227/0.371/0.437/0.473/0.491, 1x/2x/4x audio processing, 44.1/48/96/192 kHz, link 0/0.5/1, start/final markers and complete finite drains. Fixed limits -12 dBFS plus 1e-5 dB sample and plus 0.1 dB for the existing reconstruction criterion. Maximum reconstructed level -11.999437331734324 dBTP. At 192 kHz the specified criterion is sample peaks; no ideal-sinc/DAC-universal guarantee is inferred."
+        },
+        {
+          "task": "Make invalid control batches preserve the complete accepted state and populated DSP history",
+          "status": "implemented_and_verified",
+          "evidence": "Reproduced apply_values partial mutation: dual_release became true before the same batch rejected Mix=0.5 in ISP mode. All schema values, structural restrictions and the final ISP mix/knee/lookahead combination now validate before mutation. Coupled fields commit in dependency order, permitting valid joint preparation independently of key sorting. Native safety tests cover incompatible mix/knee, non-finite/unknown fields, structural lookahead, full snapshots after EOS, rejected post-EOS edits, and unchanged positional-constructor values outside current automation ranges."
+        },
+        {
+          "task": "Validate rapid controls and rejected guarantee-breaking edits through actual final host chains",
+          "status": "implemented_and_verified",
+          "evidence": "Native batch edits every 73 frames vary threshold (-12/-18/-15 dB), release, link, dual release, input detection and compatibility topology flag while keeping hard/full-wet ISP protection. Partitioned and large callbacks compare exactly through EOF. audit_limiter_host.rs uses actual saved/reloaded factory Gain(+12 dB) -> Limiter chains at every rate/factor and independent/partial/full linking, queued controls and rejected incompatible Mix/soft edits. Both complete host stream renderings compare exactly; final channel samples/reconstruction meet the fixed -12 dB ceiling/0.1 dB criterion, with non-silence required. Observed host maximum -11.99999943258879 dBTP. The rapid-control bound uses the loosest requested threshold, not an instantaneous lower target."
+        },
+        {
+          "task": "Document exact ceiling, control, reconstruction and final-chain conditions",
+          "status": "implemented_and_verified",
+          "evidence": "README/USAGE state full-wet scope, 5 ms threshold smoothing, hard/adequate-lookahead ISP requirements, graph rebuild restrictions, transactional rejected batches, rate-dependent finite reconstruction policy and the risk of processing after protection. Streaming example enables ISP/true-peak explicitly; unsupported universal transparency and soft-saturation language removed. Existing release shaping, oversampling and deterministic safety stages are retained rather than replaced by optional learned recommendations."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-limiter --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 167 tests passed before the two final EOS cases were added. Existing native_baseline is cfg-gated to Linux x86_64 and runs zero tests on this macOS host; no frozen Linux hash claim is made.",
+        "Final targeted cargo test -p sotf-plugin-limiter --test audit_safety --test finite_stream --test oversampling_stream --test realtime_parameters with the same offline/locked/target flags: 23 passed. The strengthened positional-constructor EOF case was subsequently rerun and passed with an explicit 5 ms legacy release assertion. Coverage includes populated allocation/deallocation guards and exact partition/reset behavior.",
+        "cargo test -p sotf-plugins --test audit_limiter_host with the same offline/locked/target flags: final Gain -> Limiter host matrix passed, including finite drain and rapid queued controls.",
+        "Strict Clippy passed for the limiter all-target selection, the new facade host target, and a final combined no-deps limiter/facade target selection; git diff --check passed. Full workspace/release-platform QA was not run. Sample/reconstruction criteria remain conditional on documented ISP configuration and the existing finite interpolator; no ideal-reconstruction, DAC-universal, or instantaneous lower-target guarantee is claimed."
+      ]
     },
     {
       "id": 30,

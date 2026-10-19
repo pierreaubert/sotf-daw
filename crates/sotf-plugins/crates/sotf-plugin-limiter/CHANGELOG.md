@@ -1,5 +1,13 @@
 # Unreleased
 
+- Validate complete bulk control updates before mutation, preserving controls,
+  smoothers and populated DSP state on schema, structural or ISP rejection.
+  Joint ISP preparation now validates the final mix/knee/lookahead combination
+  independently of parameter ordering.
+- Extend independent final-output reconstruction with 720 randomized near-Nyquist
+  phase cases, rapid controls, complete finite drain and actual Gain → Limiter
+  factory/host chains across 44.1–192 kHz and all oversampling choices.
+
 ## Unreleased — prepared audio oversampling
 
 - Add structural oversampling choice at index 10 (0/1/2 = 1x/2x/4x); keep default

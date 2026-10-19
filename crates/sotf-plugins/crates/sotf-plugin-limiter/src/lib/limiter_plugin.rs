@@ -501,9 +501,28 @@ impl ParametricInPlacePlugin for LimiterPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        // Reject the new structural factor before the ordered legacy loop can
-        // retarget mix or another earlier field. Legacy-only restoration keeps
-        // its existing semantics; this is not a general transaction layer.
+        if self.drain_remaining.is_some()
+            || self
+                .oversampled
+                .as_ref()
+                .is_some_and(|path| path.is_draining())
+        {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("limiter requires reset before changing parameters after drain".into())
+            };
+        }
+        // Validate the entire snapshot before touching controls or smoothers.
+        // A rejected ISP combination must not leave earlier sorted fields live.
+        // Identical EOS snapshots above also preserve historical constructor
+        // values outside today's automation ranges without retargeting them.
+        for (id, value) in &values {
+            self.parametric_validate_parameter(id, value)?;
+        }
         if let Some(value) = values.get(&ParameterId::from("oversampling")) {
             let choice = value
                 .as_int()
@@ -514,9 +533,47 @@ impl ParametricInPlacePlugin for LimiterPlugin {
                 return Err("oversampling changes latency and requires a graph rebuild".into());
             }
         }
-        for (id, value) in values {
-            self.apply_value(id, value)?;
+        if self.initialized && values.contains_key(&self.param_lookahead) {
+            return Err("lookahead changes latency and requires a graph rebuild".into());
         }
+        let isp = values
+            .get(&self.param_isp_mode)
+            .and_then(ParameterValue::as_bool)
+            .unwrap_or(self.isp_mode);
+        let soft = values
+            .get(&self.param_soft)
+            .and_then(ParameterValue::as_bool)
+            .unwrap_or(self.soft);
+        let mix = values
+            .get(&self.param_mix)
+            .and_then(ParameterValue::as_float)
+            .unwrap_or(self.mix);
+        let lookahead = values
+            .get(&self.param_lookahead)
+            .and_then(ParameterValue::as_float)
+            .unwrap_or(self.lookahead_ms);
+        let detector_delay = Bs1770TruePeakDetector::detector_delay_samples(self.sample_rate);
+        if self.initialized && isp != self.isp_mode && detector_delay > 0 {
+            return Err("ISP mode changes latency and requires a graph rebuild".into());
+        }
+        let lookahead_frames = (lookahead * 0.001 * self.sample_rate as f32) as usize;
+        if isp && (mix < 1.0 || soft || lookahead_frames < detector_delay) {
+            return Err(format!(
+                "ISP mode requires 100% wet, hard limiting, and at least {detector_delay} lookahead samples at {} Hz",
+                self.sample_rate
+            ));
+        }
+        // All remaining setters are now infallible for this snapshot. Commit
+        // coupled ISP fields in dependency order, independent of key ordering.
+        if !isp {
+            self.isp_mode = false;
+        }
+        for (id, value) in values {
+            if id != self.param_isp_mode {
+                self.apply_value(id, value)?;
+            }
+        }
+        self.isp_mode = isp;
         Ok(())
     }
 

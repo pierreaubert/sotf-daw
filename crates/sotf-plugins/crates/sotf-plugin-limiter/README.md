@@ -2,7 +2,40 @@
 
 SOTF Limiter plugin for peak limiting.
 
-Prevents audio from exceeding a set ceiling by applying fast gain reduction to peaks, protecting downstream equipment and preventing clipping.
+Applies fast gain reduction and a final sample guard to fully wet audio.
+Optional ISP protection uses the rate-dependent reconstruction criterion below.
+
+## Ceiling and control contract
+
+Fully wet sample peaks follow the smoothed threshold. Threshold changes use a
+5 ms exponential smoother; a lower requested value is not an immediate new
+ceiling. Dry/wet blends can exceed the threshold. ISP mode requires hard mode,
+100% wet, and sufficient input lookahead. Incompatible scalar edits are rejected.
+Bulk updates validate every field, structural restriction and the final ISP
+combination before changing any controls or smoother targets. Rejected batches
+preserve the running stream. Valid joint preparation is independent of field
+ordering. Lookahead, oversampling and latency-changing ISP edits require a
+graph rebuild after initialization.
+
+ISP reconstruction uses a finite Hann-windowed sinc with a 4x grid below 96 kHz,
+2x below 192 kHz, and sample peaks at 192 kHz and above. This is a specified
+meter/protection criterion, not a guarantee against every possible DAC or
+ideal sinc reconstruction. Enable ISP on the final processing stage: effects,
+gain, mixing or conversion after it can create new peaks.
+
+`tests/audit_safety.rs` evaluates a centered f64 reconstruction independently of
+the causal detector, coefficient tables and meters. Its 720 randomized-phase
+cases cover frequencies through 0.491 times the sample rate, all audio
+oversampling choices, independent/partial/full linking, 44.1/48/96/192 kHz,
+stream start and complete finite drain. The fixed limits are the threshold plus
+0.00001 dB for sample peaks and plus 0.1 dB for the specified reconstruction.
+Rapid controls every 73 frames are checked against the loosest requested ceiling
+of -12 dB; they do not claim instantaneous settling to each lower target.
+
+`cargo test -p sotf-plugins --test audit_limiter_host` repeats final-output
+reconstruction after an actual factory Gain → Limiter chain, including queued
+threshold/release/link/detector edits, rejected incompatible controls, saved
+preset reload, callback partitions and host EOF draining.
 
 ## Finite streams
 

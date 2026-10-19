@@ -2,19 +2,24 @@
 
 ## Overview
 
-A peak limiter that prevents audio from exceeding a ceiling threshold. Use it as the last plugin in a chain to prevent clipping, or to maximize loudness without distortion. Supports lookahead for transparent peak catching and optional soft knee clipping.
+A peak limiter with lookahead and optional soft-knee onset. Place it last in the
+processing chain. Fully wet sample peaks follow the smoothed threshold; ISP
+mode additionally protects the specified reconstructed peak criterion. Limiting
+can change transient shape and add distortion when driven hard.
 
 ## Features
 
 ### Peak Limiting
 
-Applies instant-attack gain reduction when the signal exceeds the threshold. Unlike a compressor, a limiter has an effectively infinite ratio — nothing gets past the ceiling.
+Applies instant-attack gain reduction when detected peaks exceed the smoothed
+threshold. The final sample guard bounds fully wet output. Threshold edits use
+5 ms smoothing; a lower requested ceiling takes time to settle.
 
 **Parameters:**
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Threshold | -20 to 0 | -0.1 | dB | Ceiling level. Output will not exceed this value |
+| Threshold | -20 to 0 | -0.1 | dB | Target ceiling for fully wet audio; edits are smoothed |
 | Release | 10 to 1000 | 50 | ms | Time to recover from gain reduction after peaks pass |
 
 ### Lookahead
@@ -58,6 +63,13 @@ at 192 kHz or above. The plugin reports the combined input and output delay to
 the host. Audio below the ceiling passes through this delay without attenuation.
 Changing ISP Limit requires a graph rebuild when it changes latency.
 
+The reconstruction criterion is finite Hann-sinc at a 4x grid below 96 kHz,
+2x below 192 kHz, and sample peaks at 192 kHz and above. It is not a universal
+bound on arbitrary reconstruction filters. Keep processing after the limiter
+out of the protected chain. Invalid bulk edits leave the complete prior control
+state and DSP histories intact; valid joint ISP preparation checks the final
+Mix, knee and lookahead combination before committing any field.
+
 ### Audio Oversampling
 
 | Choice | JSON `oversampling` | Prepared latency in native frames |
@@ -78,14 +90,17 @@ for automation timing and finite-stream use.
 
 **Scenario:** A mastered track needs to stay below -0.1 dBFS for streaming platform compliance.
 **Before:** Occasional peaks at 0 dBTP trigger platform limiting or rejection.
-**After:** All peaks cleanly caught below -0.1 dB with no audible artifacts.
+**After:** Fully wet output is limited using the configured ISP criterion.
 **Config:**
 ```json
 {
   "threshold_db": -0.1,
   "release_ms": 100.0,
   "lookahead_ms": 5.0,
-  "soft": false
+  "soft": false,
+  "true_peak": true,
+  "isp_mode": true,
+  "mix": 1.0
 }
 ```
 
@@ -108,7 +123,7 @@ for automation timing and finite-stream use.
 
 **Scenario:** Drums or bass need limiting with a warmer, more analog character.
 **Before:** Hard limiter creates sharp transient shaping.
-**After:** Soft knee creates gradual saturation that preserves some transient character.
+**After:** A one-dB gain-computer knee changes limiting onset. It does not add an analog saturation stage.
 **Config:**
 ```json
 {
@@ -129,6 +144,8 @@ for automation timing and finite-stream use.
   "release_ms": 100.0,
   "lookahead_ms": 5.0,
   "soft": false,
+  "true_peak": true,
+  "isp_mode": true,
   "mix": 1.0
 }
 ```
