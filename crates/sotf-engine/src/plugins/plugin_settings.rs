@@ -403,6 +403,24 @@ use sotf_plugins::param_specs::xtc as xtc_specs;
 use sotf_plugins::plugin_crossover::CrossoverTopology;
 use sotf_plugins::plugin_hiss_reducer::profile::NoiseProfileData;
 
+// Resolve automatic defaults on the control thread so engine settings persist
+// the stream identity before a DSP graph is constructed or rebuilt.
+fn default_dither_seed() -> u32 {
+    rand::random_range(1..=i32::MAX as u32)
+}
+
+fn deserialize_dither_seed<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<u32, D::Error> {
+    let seed = <u32 as serde::Deserialize>::deserialize(deserializer)?;
+    if seed > i32::MAX as u32 {
+        return Err(serde::de::Error::custom(
+            "Dither seed must be in 0..=2147483647",
+        ));
+    }
+    Ok(seed)
+}
+
 fn default_true() -> bool {
     true
 }
@@ -714,6 +732,11 @@ pub enum PluginSettings {
         noise_shaping: bool,
         #[serde(default)]
         dither_type: usize,
+        #[serde(
+            default = "default_dither_seed",
+            deserialize_with = "deserialize_dither_seed"
+        )]
+        seed: u32,
     },
     Upmixer {
         #[serde(deserialize_with = "deserialize_speaker_config")]
@@ -2039,6 +2062,7 @@ impl PluginSettings {
                 bit_depth: p(dither_specs::PARAMS, "bit_depth").default_usize(),
                 noise_shaping: p(dither_specs::PARAMS, "noise_shaping").default_bool(),
                 dither_type: p(dither_specs::PARAMS, "dither_type").default_usize(),
+                seed: default_dither_seed(),
             },
             PluginType::Upmixer => {
                 let u = upmixer_specs::PARAMS;

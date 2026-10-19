@@ -239,13 +239,30 @@
       "id": 20,
       "plugin": "Dither",
       "audit_text": "[`dither_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-dither/src/lib/dither_plugin.rs):354\u2013469 uses per-channel deterministic PRNG state, TPDF construction, quantization/clamping and shaped error feedback. Reset reproducibility is useful for offline renders, but repeated identical seeds must not accidentally correlate independently mixed instances/channels. The intended final quantization stage matters more than another effect's output level.\n\n`error_moments.rs`, realtime parameter and integration tests are meaningful. Extend independent histogram, autocorrelation/cross-channel correlation, low-level sine linearity and shaped-noise PSD checks at all supported rates. Verify saturation behavior separately from ordinary dither statistics. Classical TPDF and stable rate-appropriate shaping are sufficient; ML would undermine a well-defined statistical contract.",
-      "status": "source_review_in_progress",
-      "tasks": [],
-      "evidence": [
+      "status": "partial",
+      "tasks": [
         {
-          "kind": "source_inspection",
-          "finding": "Existing source intentionally guarantees matching deterministic output across default-constructed instances and reset. Independent mixed-instance stream identity needs a compatible explicit policy; do not silently invalidate seeded render reproducibility."
+          "task": "Separate independent instance streams while retaining reproducible reset and saved renders",
+          "status": "implemented_and_verified",
+          "evidence": "Seed parameter appended at index 3. Zero draws a positive construction seed off the realtime path; export_params/get_parameter expose the resolved seed. Engine settings resolve defaults before graph construction/serialization. Seed 1 reproduces the legacy sequence. Positive seeds fan out through a 64-bit avalanche into per-channel xorshift states. Reset replays the same seed, and initialized/processed instances reject seed changes; exact noops preserve history. Finite random seed collision probability is documented."
+        },
+        {
+          "task": "Independent unshaped silence histogram and time/channel/instance correlation across supported audio rates",
+          "status": "implemented_and_verified",
+          "evidence": "stream_identity.rs checks rounded-TPDF probabilities (1/8,3/4,1/8), lag-one/cross-channel/cross-instance correlation below 0.025 for 65536 frames at 8/16/22.05/32/44.1/48/88.2/96/176.4/192/384/768 kHz using explicit fixed seeds. Four auto-created instances also demonstrate stream diversity; auto-seed export/reset replay exactly."
+        },
+        {
+          "task": "Complete low-level sine linearity and shaped-noise PSD rate matrix; keep saturation separate",
+          "status": "remaining",
+          "evidence": "Existing fixed-seed moments, whiteness, PSD, saturation and PCM export tests remain green; broader shaped-rate matrix is not yet claimed complete."
         }
+      ],
+      "evidence": [
+        "58 Dither tests passed across five suites, including historical numerical fixtures pinned explicitly to seed 1.",
+        "22 Dither-related engine tests passed, including parameter accessor mapping, legacy settings migration, malformed seed rejection and actual default-TPDF replay through settings/converter/facade.",
+        "All 88 host DSP/automation/drain/realtime allocation gates passed.",
+        "Dither Clippy --lib --tests -D warnings passed.",
+        "README documents automatic versus explicit seed semantics, finite seed collisions, old-render seed 1 and typed Rust initializer migration."
       ]
     },
     {
@@ -623,6 +640,15 @@
         42
       ],
       "result": "152 passed across 15 plugin suites; 88 host checks across six suites; Clippy --lib --tests -D warnings passed."
+    },
+    {
+      "name": "Dither independent streams and engine-persisted seeds",
+      "state": "verified",
+      "plugin_ids": [
+        20
+      ],
+      "result": "58 plugin tests, 22 engine Dither tests, 88 host checks passed; Dither Clippy warnings denied passed.",
+      "limitation": "Low-level sine and shaped-noise PSD rate-matrix extensions remain open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

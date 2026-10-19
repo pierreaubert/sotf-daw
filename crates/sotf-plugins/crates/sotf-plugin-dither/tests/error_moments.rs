@@ -30,6 +30,7 @@ fn tpdf_output_error_moments_do_not_depend_on_signal_level() {
         let mut plugin = DitherPlugin::from_params(
             CHANNELS,
             DitherPluginParams {
+                seed: 1,
                 bit_depth,
                 noise_shaping: false,
                 dither_type: 0,

@@ -1851,7 +1851,9 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
     // indices rejected); unknown keys are ignored per the lenient DSP
     // contract; direct `from_params` clamps (documented in the bridge test).
     let mut settings = PluginSettings::default_for(&PluginType::Dither).unwrap();
-    assert_eq!(settings.param_specs().len(), 3);
+    assert_eq!(settings.param_specs().len(), 4);
+    settings.set_param_value(3, 137.0);
+    assert_eq!(settings.param_value(3), Some(137.0));
     settings.set_param_value(0, 2.0);
     settings.set_param_value(1, 0.0);
     settings.set_param_value(2, 1.0);
@@ -1861,6 +1863,7 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
     assert_eq!(config.parameters["bit_depth"], 2);
     assert_eq!(config.parameters["noise_shaping"], false);
     assert_eq!(config.parameters["dither_type"], 1);
+    assert_eq!(config.parameters["seed"], 137);
 
     let mut configured =
         sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 2, 48_000).unwrap();
@@ -1895,6 +1898,22 @@ fn dither_non_default_config_reaches_facade_audio_and_survives_reload() {
     };
     let configured_out = render(&mut configured);
     let default_out = render(&mut defaulted);
+    let saved_defaults = serde_json::to_value(&default_settings).unwrap();
+    let restored_defaults: PluginSettings = serde_json::from_value(saved_defaults).unwrap();
+    let restored_config = restored_defaults.to_plugin_config(48_000.0);
+    let mut replay = sotf_plugins::create_plugin(
+        &restored_config.plugin_type,
+        &restored_config.parameters,
+        2,
+        48_000,
+    )
+    .unwrap();
+    replay.initialize(48_000.0).unwrap();
+    assert_eq!(
+        render(&mut replay),
+        default_out,
+        "engine defaults must persist their TPDF stream across save/reload"
+    );
     assert!(configured_out.iter().all(|sample| sample.is_finite()));
     assert!(configured_out.iter().any(|sample| *sample != 0.0));
     assert_ne!(configured_out, default_out);

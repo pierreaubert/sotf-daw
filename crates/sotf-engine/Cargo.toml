@@ -75,6 +75,7 @@ hound = { workspace = true }
 rubato = { workspace = true }
 id3 = { workspace = true }
 rtrb = { workspace = true }
+rand = { workspace = true }
 
 # Platform-specific: not available on iOS
 [target.'cfg(not(target_os = "ios"))'.dependencies]
@@ -90,7 +91,6 @@ coreaudio-rs = { workspace = true }
 driver-hal = { workspace = true, optional = true }
 
 [dev-dependencies]
-rand = { workspace = true }
 criterion = { workspace = true }
 serial_test = { workspace = true }
 proptest = { workspace = true }

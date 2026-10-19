@@ -22,4 +22,19 @@ pub struct DitherPluginParams {
         deserialize_with = "deserialize_dither_type"
     )]
     pub dither_type: usize,
+    /// Zero chooses a fresh stream; positive seeds reproduce saved renders.
+    #[serde(default, deserialize_with = "deserialize_seed")]
+    pub seed: u32,
+}
+
+pub(crate) fn deserialize_seed<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<u32, D::Error> {
+    let seed = u32::deserialize(deserializer)?;
+    if seed > i32::MAX as u32 {
+        return Err(serde::de::Error::custom(
+            "Dither seed must be in 0..=2147483647",
+        ));
+    }
+    Ok(seed)
 }

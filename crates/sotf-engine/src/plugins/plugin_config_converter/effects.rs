@@ -9,6 +9,7 @@ pub fn convert_dither(settings: &PluginSettings, _sample_rate: f64) -> Option<Pl
         bit_depth,
         noise_shaping,
         dither_type,
+        seed,
     } = settings
     else {
         return None;
@@ -19,6 +20,7 @@ pub fn convert_dither(settings: &PluginSettings, _sample_rate: f64) -> Option<Pl
             "bit_depth": bit_depth,
             "noise_shaping": noise_shaping,
             "dither_type": dither_type,
+            "seed": seed,
         }),
     ))
 }
@@ -736,11 +738,36 @@ mod tests {
             bit_depth: 2,
             noise_shaping: false,
             dither_type: 1,
+            seed: 137,
         };
         let config = convert_dither(&settings, 96_000.0).unwrap();
         assert_eq!(config.parameters["bit_depth"], 2);
         assert_eq!(config.parameters["noise_shaping"], false);
         assert_eq!(config.parameters["dither_type"], 1);
+        assert_eq!(config.parameters["seed"], 137);
+        assert!(default_config.parameters["seed"].as_u64().unwrap() > 0);
+        let saved = serde_json::to_value(&defaults).unwrap();
+        let restored: PluginSettings = serde_json::from_value(saved).unwrap();
+        assert_eq!(
+            convert_dither(&restored, 48_000.0).unwrap().parameters,
+            default_config.parameters
+        );
+        let legacy: PluginSettings = serde_json::from_value(json!({"Dither": {
+            "bit_depth": 0, "noise_shaping": true, "dither_type": 0
+        }}))
+        .unwrap();
+        assert!(
+            convert_dither(&legacy, 48_000.0).unwrap().parameters["seed"]
+                .as_u64()
+                .unwrap()
+                > 0
+        );
+        assert!(
+            serde_json::from_value::<PluginSettings>(json!({"Dither": {
+                "bit_depth": 0, "noise_shaping": true, "dither_type": 0, "seed": 2147483648_u64
+            }}))
+            .is_err()
+        );
     }
 
     #[test]

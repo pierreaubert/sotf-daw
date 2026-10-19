@@ -9074,6 +9074,7 @@ dependencies = [
 name = "sotf-plugin-dither"
 version = "0.5.13"
 dependencies = [
+ "rand 0.10.3",
  "rustfft",
  "serde",
  "serde_json",

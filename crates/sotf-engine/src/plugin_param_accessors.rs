@@ -26,6 +26,9 @@ macro_rules! field_to_f64 {
     ($field:expr, i32) => {
         Some(*$field as f64)
     };
+    ($field:expr, u32) => {
+        Some(f64::from(*$field))
+    };
     ($field:expr, f32) => {
         Some(*$field as f64)
     };
@@ -51,6 +54,9 @@ macro_rules! f64_to_field {
     };
     ($field:expr, $val:ident, i32) => {
         *$field = $val as i32
+    };
+    ($field:expr, $val:ident, u32) => {
+        *$field = $val as u32
     };
     ($field:expr, $val:ident, f32) => {
         *$field = $val as f32
@@ -250,7 +256,7 @@ impl_param_accessors! {
     Dither {
         params: param_specs::dither::PARAMS,
         layout: Some(&param_specs::dither::LAYOUT),
-        fields: [bit_depth: usize, noise_shaping: bool, dither_type: usize]
+        fields: [bit_depth: usize, noise_shaping: bool, dither_type: usize, seed: u32]
     },
     Compressor {
         params: param_specs::compressor::PARAMS,

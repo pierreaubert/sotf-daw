@@ -41,13 +41,17 @@ pub const PARAMS: &[ParamSpec] = &[
         "Dither",
     )
     .doc("TPDF with rounding, round-only passthrough, or truncated quantization"),
+    ParamSpec::int("Seed", "seed", 0, 0, 2_147_483_647, 1, "", "Reproducibility")
+        .setup()
+        .structural()
+        .doc("0 selects a fresh construction seed; save the resolved positive seed to reproduce renders. Seed 1 preserves the legacy sequence"),
 ];
 
 // ============================================================================
 // UI Layout
 // ============================================================================
 
-/// Dither: idx 0=bit_depth, 1=noise_shaping, 2=dither_type
+/// Dither: idx 0=bit_depth, 1=noise_shaping, 2=dither_type, 3=seed
 ///
 /// Keep destination depth, quantization method, and noise shaping together
 /// in the compact title header, without a duplicate body section.
@@ -59,7 +63,10 @@ pub const LAYOUT: PluginLayout = PluginLayout {
     ],
     main: &[],
     output: &[],
-    tabs: &[],
+    tabs: &[TabSpec {
+        name: "Reproducibility",
+        controls: &[ControlSpec::knob(3)],
+    }],
     visualizations: &[],
     column_constraints: &[ColumnConstraint::main(200.0)],
     dynamic_sections: &[],
@@ -82,6 +89,8 @@ pub struct Params {
     pub noise_shaping: bool,
     #[serde(default = "d_dither_type")]
     pub dither_type: usize,
+    #[serde(default, deserialize_with = "crate::types::deserialize_seed")]
+    pub seed: u32,
 }
 
 fn d_bit_depth() -> usize {
@@ -100,6 +109,7 @@ impl Default for Params {
             bit_depth: d_bit_depth(),
             noise_shaping: d_noise_shaping(),
             dither_type: d_dither_type(),
+            seed: 0,
         }
     }
 }
@@ -119,6 +129,7 @@ impl PluginParamDef for Params {
             0 => Some(self.bit_depth as f64),
             1 => Some(if self.noise_shaping { 1.0 } else { 0.0 }),
             2 => Some(self.dither_type as f64),
+            3 => Some(f64::from(self.seed)),
             _ => None,
         }
     }
@@ -128,6 +139,7 @@ impl PluginParamDef for Params {
             0 => self.bit_depth = PARAMS[0].clamp_f64(value) as usize,
             1 => self.noise_shaping = PARAMS[1].clamp_f64(value) > 0.5,
             2 => self.dither_type = PARAMS[2].clamp_f64(value) as usize,
+            3 => self.seed = PARAMS[3].clamp_f64(value) as u32,
             _ => {}
         }
     }

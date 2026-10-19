@@ -21,6 +21,8 @@ pub struct DitherPlugin {
     pub(super) bit_depth_index: usize,
     pub(super) noise_shaping_enabled: bool,
     pub(super) dither_type_index: usize,
+    seed: u32,
+    seed_locked: bool,
 
     // Pre-computed from parameters
     pub(super) scale: f32,
@@ -45,43 +47,40 @@ pub struct DitherPlugin {
 
 impl DitherPlugin {
     pub fn new(channels: usize) -> Self {
-        assert!(
-            channels > 0,
-            "Dither requires at least one channel, got {channels}"
-        );
-        let bit_depth_index = default_bit_depth();
-        let noise_shaping = default_noise_shaping();
-        let dither_type = default_dither_type();
-
-        let bits = BIT_DEPTHS[bit_depth_index];
-        let scale = 2.0_f32.powi(bits - 1);
-
-        let mut p = Self {
+        Self::from_params(
             channels,
-            sample_rate: 48000.0,
-            bit_depth_index,
-            noise_shaping_enabled: noise_shaping,
-            dither_type_index: dither_type,
-            scale,
-            inv_scale: 1.0 / scale,
-            noise_shaping_delays_samples: [1.0, 2.0, 3.0],
-            error_history: vec![vec![0.0; 4]; channels],
-            error_history_heads: vec![3; channels],
-            rng_state: Self::init_rng_states(channels),
-            param_bit_depth: ParameterId::from("bit_depth"),
-            param_noise_shaping: ParameterId::from("noise_shaping"),
-            param_dither_type: ParameterId::from("dither_type"),
-            cached_parameters: Vec::new(),
-        };
-        p.rebuild_cached_parameters();
-        p
+            DitherPluginParams {
+                bit_depth: default_bit_depth(),
+                noise_shaping: default_noise_shaping(),
+                dither_type: default_dither_type(),
+                seed: 0,
+            },
+        )
     }
 
+    /// Construct a renderer with a fresh or explicitly reproducible stream.
+    ///
+    /// Seed zero chooses entropy during construction. Positive seed 1 preserves
+    /// the historical sequence; export the resolved parameters for later replay.
+    ///
+    /// # Panics
+    /// Panics for zero channels or a seed above 2,147,483,647. Serde rejects
+    /// seeds outside the range before reaching this constructor.
     pub fn from_params(channels: usize, params: DitherPluginParams) -> Self {
         assert!(
             channels > 0,
             "Dither requires at least one channel, got {channels}"
         );
+        assert!(
+            params.seed <= i32::MAX as u32,
+            "Dither seed exceeds 2147483647"
+        );
+        // Entropy is obtained only during construction, never process/reset.
+        let seed = if params.seed == 0 {
+            rand::random_range(1..=i32::MAX as u32)
+        } else {
+            params.seed
+        };
         let bit_depth_index = params.bit_depth.min(BIT_DEPTHS.len() - 1);
         let bits = BIT_DEPTHS[bit_depth_index];
         let scale = 2.0_f32.powi(bits - 1);
@@ -92,12 +91,14 @@ impl DitherPlugin {
             bit_depth_index,
             noise_shaping_enabled: params.noise_shaping,
             dither_type_index: params.dither_type.min(2),
+            seed,
+            seed_locked: false,
             scale,
             inv_scale: 1.0 / scale,
             noise_shaping_delays_samples: [1.0, 2.0, 3.0],
             error_history: vec![vec![0.0; 4]; channels],
             error_history_heads: vec![3; channels],
-            rng_state: Self::init_rng_states(channels),
+            rng_state: Self::init_rng_states(channels, seed),
             param_bit_depth: ParameterId::from("bit_depth"),
             param_noise_shaping: ParameterId::from("noise_shaping"),
             param_dither_type: ParameterId::from("dither_type"),
@@ -107,12 +108,25 @@ impl DitherPlugin {
         p
     }
 
-    pub(super) fn init_rng_states(channels: usize) -> Vec<u64> {
+    pub(super) fn init_rng_states(channels: usize, seed: u32) -> Vec<u64> {
         // Seed each channel with a different non-zero value
-        (0..channels).map(Self::rng_seed).collect()
+        (0..channels)
+            .map(|channel| Self::rng_seed(channel, seed))
+            .collect()
     }
 
-    fn rng_seed(channel: usize) -> u64 {
+    fn rng_seed(channel: usize, stream_seed: u32) -> u64 {
+        if stream_seed != 1 {
+            // SplitMix64's avalanche separates stream/channel identifiers before
+            // xorshift starts. Seed 1 intentionally retains historical renders.
+            let mut value = u64::from(stream_seed)
+                .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                .wrapping_add(channel as u64);
+            value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            value ^= value >> 31;
+            return if value == 0 { 1 } else { value };
+        }
         // Wrapping arithmetic avoids debug overflow panics at high channel
         // counts. Xorshift stalls forever on a zero state, so map a derived
         // zero to 1; the raw derivation is nonzero for every supported
@@ -121,6 +135,16 @@ impl DitherPlugin {
         let seed = 0xDEAD_BEEF_CAFE_0001_u64
             .wrapping_add((channel as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
         if seed == 0 { 1 } else { seed }
+    }
+
+    /// Export construction parameters with the resolved, reproducible seed.
+    pub fn export_params(&self) -> DitherPluginParams {
+        DitherPluginParams {
+            bit_depth: self.bit_depth_index,
+            noise_shaping: self.noise_shaping_enabled,
+            dither_type: self.dither_type_index,
+            seed: self.seed,
+        }
     }
 
     pub(super) fn update_scales(&mut self) {
@@ -146,6 +170,9 @@ impl DitherPlugin {
                 0,
                 2,
             ),
+            Parameter::new_int("seed", "Seed", self.seed as i32, 0, i32::MAX)
+                .with_description("Construction seed: 0 chooses a fresh stream; save the resolved seed for reproducible renders")
+                .with_update_mode(sotf_host::param_specs::UpdateMode::Structural),
         ];
     }
 
@@ -218,7 +245,15 @@ impl DitherPlugin {
     /// known ID with a matching value type. Out-of-range ints validate
     /// here and clamp on application. Keep the two in sync.
     fn validate_value(&self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
-        if id == &self.param_bit_depth {
+        if id.as_str() == "seed" {
+            if let Some(seed) = value.as_int().filter(|&seed| seed > 0)
+                && (!self.seed_locked || seed as u32 == self.seed)
+            {
+                Ok(())
+            } else {
+                Err("Dither seed must be positive and can change only before initialize; rebuild to choose a fresh stream".into())
+            }
+        } else if id == &self.param_bit_depth {
             if value.as_int().is_some() {
                 Ok(())
             } else {
@@ -277,6 +312,10 @@ impl ParametricInPlacePlugin for DitherPlugin {
             ParameterId::from("dither_type"),
             ParameterValue::Int(self.dither_type_index as i32),
         );
+        values.insert(
+            ParameterId::from("seed"),
+            ParameterValue::Int(self.seed as i32),
+        );
         values
     }
 
@@ -296,7 +335,9 @@ impl ParametricInPlacePlugin for DitherPlugin {
     }
 
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
-        if id == &self.param_bit_depth {
+        if id.as_str() == "seed" {
+            Some(ParameterValue::Int(self.seed as i32))
+        } else if id == &self.param_bit_depth {
             Some(ParameterValue::Int(self.bit_depth_index as i32))
         } else if id == &self.param_noise_shaping {
             Some(ParameterValue::Bool(self.noise_shaping_enabled))
@@ -314,6 +355,17 @@ impl ParametricInPlacePlugin for DitherPlugin {
         id: ParameterId,
         value: ParameterValue,
     ) -> PluginResult<()> {
+        if id.as_str() == "seed" {
+            self.validate_value(&id, &value)?;
+            let seed = value.as_int().expect("validated integer seed") as u32;
+            if seed == self.seed {
+                return Ok(());
+            }
+            self.seed = seed;
+            self.reset();
+            self.cached_parameters[3].default_value = value;
+            return Ok(());
+        }
         let (index, current) = if id == self.param_bit_depth {
             if let Some(v) = value.as_int() {
                 let idx = v.clamp(0, (BIT_DEPTHS.len() - 1) as i32) as usize;
@@ -355,15 +407,16 @@ impl ParametricInPlacePlugin for DitherPlugin {
         self.configure_noise_shaping_rate(sr)?;
         self.sample_rate = sr;
         if self.rng_state.len() != self.channels {
-            self.rng_state = Self::init_rng_states(self.channels);
+            self.rng_state = Self::init_rng_states(self.channels, self.seed);
         }
         self.reset();
+        self.seed_locked = true;
         Ok(())
     }
 
     fn reset(&mut self) {
         for (channel, state) in self.rng_state.iter_mut().enumerate() {
-            *state = Self::rng_seed(channel);
+            *state = Self::rng_seed(channel, self.seed);
         }
         for h in &mut self.error_history {
             h.fill(0.0);
@@ -392,6 +445,7 @@ impl ParametricInPlacePlugin for DitherPlugin {
                 buffer.len()
             ));
         }
+        self.seed_locked |= nf > 0;
         enable_ftz_daz();
         // Keep guard bits until after quantization. At 24 bits an f32 near
         // full scale has only half an LSB of resolution: adding dither in f32

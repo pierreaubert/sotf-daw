@@ -11,6 +11,7 @@ fn main() {
     let sample_rate = 48000;
     let channels = 2;
     let params = DitherPluginParams {
+        seed: 1,
         bit_depth: 0, // 16-bit
         noise_shaping: true,
         dither_type: 0, // TPDF

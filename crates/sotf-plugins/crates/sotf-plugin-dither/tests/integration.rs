@@ -31,6 +31,7 @@ fn new_plugin_has_expected_metadata() {
 #[test]
 fn from_params_honours_supplied_values() {
     let params = DitherPluginParams {
+        seed: 1,
         bit_depth: 1,
         noise_shaping: false,
         dither_type: 2,
@@ -335,8 +336,14 @@ fn get_unknown_parameter_returns_none() {
 #[test]
 fn adapter_rejects_bad_blocks_without_advancing_dither_state() {
     let context = ProcessContext::new(SR, 8);
-    let mut tested = ParametricInPlacePluginAdapter::new(DitherPlugin::new(2));
-    let mut reference = ParametricInPlacePluginAdapter::new(DitherPlugin::new(2));
+    let mut tested = ParametricInPlacePluginAdapter::new(DitherPlugin::from_params(
+        2,
+        serde_json::from_value(serde_json::json!({"seed":1})).unwrap(),
+    ));
+    let mut reference = ParametricInPlacePluginAdapter::new(DitherPlugin::from_params(
+        2,
+        serde_json::from_value(serde_json::json!({"seed":1})).unwrap(),
+    ));
     tested.initialize(f64::from(SR)).unwrap();
     reference.initialize(f64::from(SR)).unwrap();
 

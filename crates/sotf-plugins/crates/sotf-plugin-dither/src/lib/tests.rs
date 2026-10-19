@@ -31,9 +31,9 @@ fn noise_transfer_magnitude(plugin: &DitherPlugin, frequency_hz: f32) -> f32 {
 
 #[test]
 fn f_weighted_shaper_preserves_absolute_frequency_response_across_sample_rates() {
-    let mut reference = DitherPlugin::new(1);
+    let mut reference = seeded_plugin(1);
     reference.initialize(44_100.0).unwrap();
-    let mut double_rate = DitherPlugin::new(1);
+    let mut double_rate = seeded_plugin(1);
     double_rate.initialize(88_200.0).unwrap();
 
     assert_eq!(reference.noise_shaping_delays_samples, [1.0, 2.0, 3.0]);
@@ -54,7 +54,7 @@ fn f_weighted_shaper_has_a_bounded_policy_for_every_supported_rate_family() {
     for sample_rate in [
         8_000_u32, 16_000, 22_050, 32_000, 44_100, 48_000, 96_000, 192_000, 384_000, 768_000,
     ] {
-        let mut plugin = DitherPlugin::new(2);
+        let mut plugin = seeded_plugin(2);
         plugin.initialize(f64::from(sample_rate)).unwrap();
         assert!(
             plugin
@@ -74,8 +74,8 @@ fn f_weighted_shaper_has_a_bounded_policy_for_every_supported_rate_family() {
         assert!(signal.iter().all(|sample| sample.is_finite()));
     }
 
-    assert!(DitherPlugin::new(1).initialize(0.0).is_err());
-    assert!(DitherPlugin::new(1).initialize(768_001.0).is_err());
+    assert!(seeded_plugin(1).initialize(0.0).is_err());
+    assert!(seeded_plugin(1).initialize(768_001.0).is_err());
 }
 
 fn averaged_error_spectrum(noise_shaping: bool) -> Vec<f64> {
@@ -93,6 +93,7 @@ fn averaged_error_spectrum(noise_shaping: bool) -> Vec<f64> {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping,
             dither_type: 1,
@@ -155,7 +156,7 @@ fn f_weighted_noise_shaping_moves_quantization_error_out_of_the_sensitive_band()
 #[test]
 fn test_dither_basic() {
     // Process silence, verify output stays near zero
-    let mut plugin = DitherPlugin::new(2);
+    let mut plugin = seeded_plugin(2);
     plugin.initialize(48000.0).unwrap();
 
     let num_frames = 1024;
@@ -181,6 +182,7 @@ fn test_dither_quantizes_to_target_depth() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: false,
             dither_type: 1, // None (no dither, just quantize)
@@ -232,6 +234,7 @@ fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
     let mut plugin_no_ns = DitherPlugin::from_params(
         channels,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: false,
             dither_type: 0,
@@ -247,6 +250,7 @@ fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
     let mut plugin_ns = DitherPlugin::from_params(
         channels,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: true,
             dither_type: 0,
@@ -284,7 +288,7 @@ fn shaped_and_unshaped_tpdf_paths_produce_finite_nonzero_error() {
 
 #[test]
 fn test_dither_parameter_set_get() {
-    let mut plugin = DitherPlugin::new(2);
+    let mut plugin = seeded_plugin(2);
 
     // Test bit_depth
     plugin
@@ -392,7 +396,7 @@ fn test_random_f32_boundary_precision() {
 
 #[test]
 fn test_tpdf_is_independent_triangular_noise() {
-    let mut plugin = DitherPlugin::new(1);
+    let mut plugin = seeded_plugin(1);
     plugin.initialize(48000.0).unwrap();
     let samples: Vec<f64> = (0..100_000).map(|_| plugin.next_tpdf(0) as f64).collect();
     let mean = samples.iter().sum::<f64>() / samples.len() as f64;
@@ -420,6 +424,7 @@ fn test_noise_shaping_feedback_excludes_dither_term() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: true,
             dither_type: 0, // TPDF
@@ -465,7 +470,7 @@ fn test_noise_shaping_feedback_excludes_dither_term() {
 
 #[test]
 fn reset_restarts_deterministic_tpdf_sequence() {
-    let mut plugin = DitherPlugin::new(1);
+    let mut plugin = seeded_plugin(1);
     let first: Vec<f32> = (0..16).map(|_| plugin.next_tpdf(0)).collect();
     plugin.reset();
     let restarted: Vec<f32> = (0..16).map(|_| plugin.next_tpdf(0)).collect();
@@ -477,6 +482,7 @@ fn test_truncate_mode_quantizes_without_rounding() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: false,
             dither_type: 2, // Truncate
@@ -510,6 +516,7 @@ fn test_24bit_quantization_grid() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 2, // 24-bit
             noise_shaping: false,
             dither_type: 1, // None
@@ -551,6 +558,7 @@ fn signed_pcm_endpoints_are_saturated_before_error_feedback() {
         let mut plugin = DitherPlugin::from_params(
             1,
             DitherPluginParams {
+                seed: 1,
                 bit_depth,
                 noise_shaping: false,
                 dither_type: 1, // None (round)
@@ -581,6 +589,7 @@ fn signed_pcm_endpoints_are_saturated_before_error_feedback() {
         let mut shaped_plugin = DitherPlugin::from_params(
             1,
             DitherPluginParams {
+                seed: 1,
                 bit_depth,
                 noise_shaping: true,
                 dither_type: 1, // None (round)
@@ -611,6 +620,7 @@ fn test_multichannel_independent() {
     let mut plugin = DitherPlugin::from_params(
         2,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: false,
             dither_type: 0,
@@ -645,7 +655,7 @@ fn test_multichannel_independent() {
 
 #[test]
 fn short_host_buffer_returns_err_instead_of_panicking() {
-    let mut plugin = DitherPlugin::new(2);
+    let mut plugin = seeded_plugin(2);
     plugin.initialize(48_000.0).unwrap();
     let frames = 64;
     // One sample short of the required frames * channels: without the
@@ -670,7 +680,7 @@ fn short_host_buffer_returns_err_instead_of_panicking() {
 #[test]
 #[should_panic(expected = "at least one channel")]
 fn zero_channels_rejected_in_new() {
-    let _ = DitherPlugin::new(0);
+    let _ = seeded_plugin(0);
 }
 
 #[test]
@@ -679,6 +689,7 @@ fn zero_channels_rejected_in_from_params() {
     let _ = DitherPlugin::from_params(
         0,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: false,
             dither_type: 0,
@@ -725,6 +736,7 @@ fn final_quantized_error_has_zero_mean_and_quarter_lsb_second_moment() {
             let mut plugin = DitherPlugin::from_params(
                 1,
                 DitherPluginParams {
+                    seed: 1,
                     bit_depth: depth_index,
                     noise_shaping: false,
                     dither_type: 0, // TPDF
@@ -792,6 +804,7 @@ fn block_partitioning_is_bit_identical() {
         let mut plugin = DitherPlugin::from_params(
             CHANNELS,
             DitherPluginParams {
+                seed: 1,
                 bit_depth: 1, // 20-bit
                 noise_shaping: true,
                 dither_type: 0, // TPDF
@@ -874,6 +887,7 @@ fn unshaped_tpdf_final_error_is_uncorrelated_across_time() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: false,
             dither_type: 0, // TPDF
@@ -914,6 +928,7 @@ fn unshaped_tpdf_error_spectrum_is_flat() {
     let mut plugin = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: false,
             dither_type: 0, // TPDF
@@ -970,6 +985,7 @@ fn channel_errors_are_mutually_uncorrelated() {
     let mut plugin = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: false,
             dither_type: 0, // TPDF
@@ -1002,9 +1018,9 @@ fn channel_errors_are_mutually_uncorrelated() {
 
 #[test]
 fn full_output_is_deterministic_across_instances_and_reset() {
-    // Production uses fixed per-channel xorshift seeds reseeded by reset():
-    // there is no entropy source, so seeded reproducibility and production
-    // behavior coincide by design. This pins that contract on full output,
+    // Explicit seed 1 preserves the legacy per-channel sequence. Reset and
+    // seeded reproducibility remain exact while automatic instances now differ.
+    // This pins the explicit-seed contract on full output,
     // not just the raw generator.
     const CHANNELS: usize = 2;
     const FRAMES: usize = 2048;
@@ -1015,6 +1031,7 @@ fn full_output_is_deterministic_across_instances_and_reset() {
     let mut first = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0, // 16-bit
             noise_shaping: true,
             dither_type: 0, // TPDF
@@ -1024,6 +1041,7 @@ fn full_output_is_deterministic_across_instances_and_reset() {
     let mut second = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: true,
             dither_type: 0,
@@ -1074,6 +1092,7 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                 let mut plugin = DitherPlugin::from_params(
                     1,
                     DitherPluginParams {
+                        seed: 1,
                         bit_depth: depth_index,
                         noise_shaping,
                         dither_type,
@@ -1113,6 +1132,7 @@ fn exported_pcm_matches_plugin_output_bit_exactly() {
                 let mut plugin = DitherPlugin::from_params(
                     1,
                     DitherPluginParams {
+                        seed: 1,
                         bit_depth: depth_index,
                         noise_shaping: false,
                         dither_type,
@@ -1155,6 +1175,7 @@ fn quantization_grid_covers_all_depths_and_rounding_modes() {
             let mut plugin = DitherPlugin::from_params(
                 1,
                 DitherPluginParams {
+                    seed: 1,
                     bit_depth: depth_index,
                     noise_shaping: false,
                     dither_type: if truncate { 2 } else { 1 },
@@ -1237,6 +1258,7 @@ fn preset_routes_accept_labels_defaults_and_reject_invalid_state() {
     let clamped = DitherPlugin::from_params(
         1,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 99,
             noise_shaping: true,
             dither_type: 99,
@@ -1268,9 +1290,9 @@ fn preset_routes_accept_labels_defaults_and_reject_invalid_state() {
 
 #[test]
 fn schema_latency_and_values_roundtrip_through_plugin_trait() {
-    let plugin = DitherPlugin::new(2);
+    let plugin = seeded_plugin(2);
     let schema = plugin.parameter_schema();
-    assert_eq!(schema.len(), 3);
+    assert_eq!(schema.len(), 4);
     assert_eq!(schema[0].id.to_string(), "bit_depth");
     assert_eq!(schema[1].id.to_string(), "noise_shaping");
     assert_eq!(schema[2].id.to_string(), "dither_type");
@@ -1287,7 +1309,7 @@ fn schema_latency_and_values_roundtrip_through_plugin_trait() {
     assert_eq!(plugin.channels(), 2);
 
     // Out-of-range live values clamp at this layer (parse rejects instead).
-    let mut clamped = DitherPlugin::new(1);
+    let mut clamped = seeded_plugin(1);
     clamped
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(99))
         .unwrap();
@@ -1304,7 +1326,7 @@ fn schema_latency_and_values_roundtrip_through_plugin_trait() {
     );
 
     // current_values feeds apply_values on a fresh instance.
-    let mut source = DitherPlugin::new(2);
+    let mut source = seeded_plugin(2);
     source
         .set_parameter(ParameterId::from("bit_depth"), ParameterValue::Int(2))
         .unwrap();
@@ -1317,7 +1339,7 @@ fn schema_latency_and_values_roundtrip_through_plugin_trait() {
     source
         .set_parameter(ParameterId::from("dither_type"), ParameterValue::Int(1))
         .unwrap();
-    let mut target = DitherPlugin::new(2);
+    let mut target = seeded_plugin(2);
     target.apply_values(source.current_values()).unwrap();
     assert_eq!(
         target.get_parameter(&ParameterId::from("bit_depth")),
@@ -1340,7 +1362,7 @@ fn apply_values_is_transactional_on_batch_errors() {
     // (ParameterSet is a BTreeMap, so iteration order is by key; both
     // batches below place a valid entry before the invalid one and
     // therefore partially applied before the R1 fix.)
-    let mut plugin = DitherPlugin::new(2);
+    let mut plugin = seeded_plugin(2);
     plugin.initialize(48_000.0).unwrap();
     let mut prefix = vec![0.1_f32; 256 * 2];
     plugin
@@ -1415,7 +1437,7 @@ fn per_channel_rng_seeds_are_nonzero_and_stable() {
     // plus exact equality with production seeds. This also pins the
     // seeds, so an accidental reseed (an audible output change) fails.
     for channels in [1, 2, 4, 6, 8, 12] {
-        let states = DitherPlugin::init_rng_states(channels);
+        let states = DitherPlugin::init_rng_states(channels, 1);
         assert_eq!(states.len(), channels);
         for (channel, state) in states.iter().enumerate() {
             let raw = 0xDEAD_BEEF_CAFE_0001_u64
@@ -1435,6 +1457,7 @@ fn non_default_config_save_reload_reproduces_output_bit_exactly() {
     const CHANNELS: usize = 2;
     const FRAMES: usize = 1024;
     let stored = DitherPluginParams {
+        seed: 1,
         bit_depth: 1, // 20-bit
         noise_shaping: false,
         dither_type: 2, // Truncate
@@ -1481,6 +1504,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     let gained: Vec<f32> = input.iter().map(|sample| sample * UPSTREAM_GAIN).collect();
 
     let stored = DitherPluginParams {
+        seed: 1,
         bit_depth: 0, // 16-bit
         noise_shaping: true,
         dither_type: 0, // TPDF
@@ -1538,6 +1562,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     let mut candidate = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: true,
             dither_type: 0,
@@ -1547,6 +1572,7 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     let mut twin = DitherPlugin::from_params(
         CHANNELS,
         DitherPluginParams {
+            seed: 1,
             bit_depth: 0,
             noise_shaping: true,
             dither_type: 0,
@@ -1587,4 +1613,14 @@ fn gain_dither_export_chain_survives_save_reload_and_rejection() {
     twin.process_in_place(&mut twin_suffix, &make_context(suffix_frames))
         .unwrap();
     assert_eq!(suffix, twin_suffix);
+}
+
+// Accuracy fixtures explicitly pin the legacy stream; fresh instances are
+// tested separately for independence through the public API.
+fn seeded_plugin(channels: usize) -> DitherPlugin {
+    let mut plugin = DitherPlugin::new(channels);
+    plugin
+        .set_parameter(ParameterId::from("seed"), ParameterValue::Int(1))
+        .unwrap();
+    plugin
 }
