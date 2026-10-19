@@ -468,6 +468,9 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Stereo Imager callback must match the prepared sample rate".into());
+        }
         enable_ftz_daz();
 
         let nf = context.num_frames;
@@ -484,7 +487,7 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             (smoother.target() - 1.0).abs() <= f32::EPSILON
                 && (smoother.current() - 1.0).abs() <= f32::EPSILON
         };
-        if self.mono_bass_smoother.target() >= 1.0 - f32::EPSILON
+        let transparent_widths = self.mono_bass_smoother.target() >= 1.0 - f32::EPSILON
             && self.mono_bass_smoother.current() >= 1.0 - f32::EPSILON
             && unity(&self.width_smoother)
             && unity(&self.low_width_smoother)
@@ -493,17 +496,12 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             && (self.low_mid_freq_smoother.target() - self.low_mid_freq_smoother.current()).abs()
                 <= f32::EPSILON
             && (self.mid_high_freq_smoother.target() - self.mid_high_freq_smoother.current()).abs()
-                <= f32::EPSILON
-        {
-            return Ok(nf);
-        }
+                <= f32::EPSILON;
 
-        // Fully dry path: no need to allocate/copy dry buffers or run any DSP.
+        // Transparent audio still clocks the crossovers and controls, so later
+        // wet/width changes see current history rather than stale filter state.
         let mix_is_zero = self.mix_smoother.target() <= f32::EPSILON
             && self.mix_smoother.current() <= f32::EPSILON;
-        if mix_is_zero {
-            return Ok(nf);
-        }
 
         // The current input sample remains in local registers until the wet sample is
         // produced, so intermediate mix values need no callback-sized scratch buffer.
@@ -566,6 +564,9 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
 
             // Dry/wet mix
             let m = self.mix_smoother.advance();
+            if mix_is_zero || transparent_widths {
+                continue; // Preserve exact input bits on transparent routes.
+            }
             if need_dry {
                 buffer[idx] = l + (wet_l - l) * m;
                 buffer[idx + 1] = r + (wet_r - r) * m;
@@ -575,7 +576,9 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             }
         }
 
-        flush_denormals_inplace(buffer);
+        if !mix_is_zero && !transparent_widths {
+            flush_denormals_inplace(buffer);
+        }
         Ok(nf)
     }
 }

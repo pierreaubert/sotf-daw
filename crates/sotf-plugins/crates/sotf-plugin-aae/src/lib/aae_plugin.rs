@@ -1017,8 +1017,11 @@ impl Plugin for AaePlugin {
                     - self.pre_delay_transition_remaining as f32
                         / self.pre_delay_transition_samples as f32;
                 self.pre_delay_transition_remaining -= 1;
-                let angle = progress * std::f32::consts::FRAC_PI_2;
-                old_delayed * angle.cos() + new_delayed * angle.sin()
+                // Predelay taps can be fully correlated. Constant-sum weights
+                // avoid the coherent boost of equal-power mixing; smoothstep
+                // also gives zero slope at both ends of the 10 ms transition.
+                let blend = progress * progress * (3.0 - 2.0 * progress);
+                old_delayed + (new_delayed - old_delayed) * blend
             } else {
                 new_delayed
             };

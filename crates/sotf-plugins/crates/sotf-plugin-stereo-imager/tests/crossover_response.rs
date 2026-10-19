@@ -350,3 +350,62 @@ fn cold_processing_frequency_automation_and_reset_do_not_allocate() {
         plugin.process_in_place(&mut input, &context).unwrap();
     });
 }
+
+#[test]
+fn transparent_intervals_keep_crossover_history_for_wet_reentry() {
+    for neutral_width in [false, true] {
+        let reference_params = StereoImagerPluginParams {
+            low_width: 0.2,
+            ..Default::default()
+        };
+        let actual_params = if neutral_width {
+            StereoImagerPluginParams::default()
+        } else {
+            StereoImagerPluginParams {
+                mix: 0.0,
+                ..reference_params.clone()
+            }
+        };
+        let mut actual = StereoImagerPlugin::new(2, actual_params);
+        let mut reference = StereoImagerPlugin::new(2, reference_params);
+        actual.initialize(48_000.0).unwrap();
+        reference.initialize(48_000.0).unwrap();
+        let history: Vec<f32> = (0..8192)
+            .flat_map(|frame| {
+                let side = (frame as f64 * 0.013).sin() as f32 * 0.3;
+                [side, -side]
+            })
+            .collect();
+        let mut a = history.clone();
+        let mut b = history.clone();
+        process_partitioned(&mut actual, 48_000, &mut a, &[1, 7, 31, 257]);
+        process_partitioned(&mut reference, 48_000, &mut b, &[512]);
+        assert_eq!(a, history, "transparent output must remain bit-exact");
+        actual
+            .set_parameter(
+                ParameterId::from(if neutral_width { "low_width" } else { "mix" }),
+                ParameterValue::Float(if neutral_width { 0.2 } else { 1.0 }),
+            )
+            .unwrap();
+        let mut a = vec![0.0; 257 * 2];
+        let mut b = a.clone();
+        process_partitioned(&mut actual, 48_000, &mut a, &[1, 7, 31]);
+        process_partitioned(&mut reference, 48_000, &mut b, &[257]);
+        assert!(
+            b.iter().any(|sample| sample.abs() > 0.01),
+            "the oracle must exercise retained filter energy"
+        );
+        // Both width and mix use the documented 10 ms one-pole trajectory.
+        for frame in 0..257 {
+            let ramp = 1.0 - (-(frame as f64 + 1.0) / 480.0).exp();
+            for channel in 0..2 {
+                let expected = b[frame * 2 + channel] * ramp as f32;
+                assert!(
+                    (a[frame * 2 + channel] - expected).abs() < 2e-6,
+                    "neutral={neutral_width}, frame={frame}: actual={} expected={expected}",
+                    a[frame * 2 + channel]
+                );
+            }
+        }
+    }
+}

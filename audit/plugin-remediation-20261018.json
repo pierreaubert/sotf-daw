@@ -1,0 +1,538 @@
+{
+  "source": "audit-20261018.md",
+  "source_sha256": "8bec5da45e0630c47e4afbcd0eeb15b72dc327e96194eb865bb82d4ceccfd619",
+  "base_commit": "042375d",
+  "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/9",
+  "overall_status": "in_progress",
+  "research_scope": "User confirmed: implement production DSP changes and validation; track optional ML work separately. Optional proposals remain recorded per plugin and are excluded from production completion criteria.",
+  "plugins": [
+    {
+      "id": 1,
+      "plugin": "AAE \u2014 artificial ambience",
+      "audit_text": "[`aae_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-aae/src/lib/aae_plugin.rs):937\u20131070 mixes direct stereo, early reflections, allpass diffusion and an FDN late field into surround channels, with dialogue ducking and smoothed gains. Its recursive state makes silence-start, reset and tail policy central. Equal-power predelay crossfades can boost highly correlated taps; measure the transition peak rather than assuming constant amplitude. FDN work scales with output configuration and delay network complexity.\n\n`autogain_clock.rs`, `autogain_heap.rs` and integration tests exercise important control/RT behavior. Extend measured decay-time and frequency-dependent damping checks, echo density, channel decorrelation and worst-case predelay changes. Classical improvements: controlled early-reflection geometry, frequency-dependent RT60 and correlation-aware crossfades. ML is most sensible as offline fitting of these parameters to a measured room; retain a bounded deterministic renderer.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Remove coherent predelay crossfade boost without changing latency.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_predelay_transition.rs"
+          ],
+          "result": "Public regression failed at 44.1 kHz with maximum wet-signal difference 0.0007968461 (wet peak 0.0075587574). A constant-sum smoothstep crossfade passes at 44.1/48/96 kHz; full crate selection passed 95 tests."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 2,
+      "plugin": "AB Compare",
+      "audit_text": "[`abcompare_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-ab-compare/src/lib/abcompare_plugin.rs):2200\u20132400 handles nested processing paths, differing rate/frame geometry, latency alignment and queued finite tails. This is a transport/composition component as much as an effect. Two expensive chains plus alignment buffering create significant worst-case cost. A fair comparison requires equal source time, aligned latency and a stable loudness-matching policy.\n\n`aud137_composition.rs`, `aud137_finite_stream.rs`, `ab087_variable_rate.rs` and `loudness_timing.rs` provide unusually relevant coverage. Add blinded ABX selection, frozen gain matching during judged excerpts, switch-click measurements and source-change tests during partial queued output. Use classical equal-loudness/time-alignment tools; ML should not decide which sound is \u201cbetter\u201d or secretly modify either comparison path.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 3,
+      "plugin": "AEC",
+      "audit_text": "[`aec_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/aec_plugin.rs):312\u2013490 adapts a microphone/reference pair to mono output with block buffering, resettable adaptive/postfilter state and finite draining that freezes learning. It consumes pending output before accumulating the next block, which helps block partition consistency. Reference alignment and the first adaptation interval matter more than a steady-state cancellation number.\n\n`stream_boundaries.rs` and integration tests cover stream mechanics. Extend independent echo-path ground truth with delay jumps, clock drift, nonlinear loudspeaker distortion, near-end-only speech and double-talk. Report ERLE only during suitable far-end intervals, plus near-end speech distortion. Classical options include robust delay estimation, two-path adaptation and coherence-based double-talk control. A small neural residual-echo suppressor/nonlinear front end is a credible hybrid candidate [hybrid AEC research][R3]; keep adaptive cancellation and safe bypass operational without inference.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 4,
+      "plugin": "Ambisonics decoder",
+      "audit_text": "[`ambisonics_decoder_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-ambisonics/src/lib/ambisonics_decoder_plugin.rs):376\u2013520 combines decoding matrices with optional LR4 dual-band basic/max-rE behavior. Matrix-only processing is rate independent; dual-band processing is not. The process path validates shape/finite samples but should consistently enforce the initialized sample rate for rate-sensitive modes. Recursive crossover support must not be confused with a finite zero-latency tail.\n\n`decode_vectors.rs`, `custom_layouts.rs`, `aud133_baseline.rs` and `tail_support.rs` are appropriate foundations. Extend analytic ACN/normalization and spherical-harmonic basis checks, rotation covariance, energy/vector errors and ill-conditioned speaker layouts. Classical regularized/layout-aware decoding is preferable to ML replacing the normative decoder. Learned personalization may choose an HRTF/layout correction offline, with explicit normalization and energy constraints.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Reject callback-rate mismatch before state/output mutation in dual-band mode.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-ambisonics/tests/audit_rate_contract.rs"
+          ],
+          "result": "Public regression failed before the guard and passed after it for AllRAD and mode-matching; samples and subsequent valid-rate history match the unchanged reference."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 5,
+      "plugin": "Analog common",
+      "audit_text": "[`analog-common/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-common/src/lib.rs):127 onward owns a prepared `math_audio_analog` model, rate/block specification and cached controls. This helper is shared by three effects; its behavior and cost cannot be inferred from those plugins' names. Model changes are structural. The actual analog implementations are in a sibling dependency and were not independently audited here.\n\nThe small local unit suite should be complemented by a shared conformance matrix: zero color identity, drive/trim units, maximum block, parameter transition, reset, finite input/output, alias energy and model-specific state decay. Consider WDF/state-space or Hammerstein baselines for physical targets. Learned models are appropriate only when trained and validated against identified hardware and operating levels, not as an automatic replacement for all coloration.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 6,
+      "plugin": "Analog compressor",
+      "audit_text": "[`analog_compressor.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-compressor/src/analog_compressor.rs):440\u2013567 implements linked dynamics with hold/range behavior followed by the analog color stage. Compression dry/wet mixing occurs before coloration, so zero compression mix can still produce colored audio. Clarify this control meaning and test it. Per-frame detector/log/power work warrants profiling at high channel counts.\n\n`range_hold.rs`, `scalar_reads.rs` and integration tests address behavior and parameter access. Extend independent attack/release trajectories, knee derivative continuity, channel linking, control sweeps and startup transients. Classical VCA/opto/FET-style detector and feedback variants should have explicit semantics. A conditioned recurrent model is a reasonable optional hardware-emulation experiment; use held-out settings/material and gain-control trajectory metrics, with the 2025 compressor dataset as one external reference [Solid State Bus-Comp][R4].",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 7,
+      "plugin": "Analog EQ",
+      "audit_text": "[`analog_eq.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-eq/src/analog_eq.rs):372\u2013502 applies biquad EQ followed by coloration. Batch handling validates the parameter schema before mutation and refuses live model replacement. It subsequently refreshes filters/parameter metadata; the filter rebuild reuses storage when geometry is unchanged. Verify allocation behavior through each public automation route rather than assuming a steady-layout process guarantee also covers bulk setters. A partial-commit defect was not demonstrated.\n\n`scalar_reads.rs` and integration tests are useful but narrower than the main EQ family's numerical coverage. Add independent complex-frequency response, order-of-stage tests, no-color null, live coefficient-step transients, malformed-batch state preservation and allocation checks through the actual host setter. Classical topology-preserving filters or prepared crossfades can improve automation. ML fitting is useful offline for matching measured hardware response/color; it is unnecessary for ordinary parametric EQ.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 8,
+      "plugin": "Analog limiter",
+      "audit_text": "[`analog_limiter.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-limiter/src/analog_limiter.rs):452\u2013545 runs a limiter, then coloration, then a final sample clamp. The final clamp protects sample peaks but is not by itself a true-peak proof after nonlinear coloration. Tail metadata changes with color activity; this deserves host-level EOF tests.\n\n`output_ceiling.rs`, `clamp_engagement.rs`, `finite_stream.rs` and integration tests target the right risks. Extend reconstruction-based true-peak measurements at near-Nyquist frequencies, color changes during limiting, and oversampling/downsampling transitions. Classical oversampled nonlinear processing plus a final properly delayed true-peak stage is the first improvement. If neural coloration is added, keep the ceiling mechanism explicit and deterministic; learned release suggestions must never replace the safety bound.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 9,
+      "plugin": "Band merge",
+      "audit_text": "[`band_merge_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-band-merge/src/lib/band_merge_plugin.rs):351\u2013464 sums band-major inputs with smoothed gains. The exposed reconstruction error compares the weighted sum against the unweighted sum of those same input bands, not against the original pre-split signal. At unity gains it cannot diagnose a flawed splitter. Rename/qualify this diagnostic or supply an independently aligned reference.\n\n`split_merge_reconstruction.rs`, property and finite-stream tests can validate the complete chain more meaningfully than this internal meter. Extend coherent full-band sweeps, phase/group-delay checks and mismatched band-order rejection. Optimize contiguous summation/SIMD only after measuring channel/band configurations. This is deterministic routing; ML offers no useful replacement.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Qualify the self-relative diagnostic so it cannot be read as splitter reconstruction accuracy.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-band-merge/tests/integration.rs"
+          ],
+          "result": "Legacy ID retained; metadata now names gain-weighting difference and explicitly excludes splitter reconstruction. Counterexample demonstrates the meter can read -60 dB while supplied bands differ from an imagined original source. Full crate selection passed 74 tests."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 10,
+      "plugin": "Band split",
+      "audit_text": "[`band_split_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/band_split_plugin.rs):560\u2013701 has initialized-rate/shape guards, log-frequency smoothing and compensated intermediate bands. Output ordering is part of the API. Summed LR bands can preserve magnitude while retaining an allpass phase response; raw sample identity is not the right universal oracle.\n\n`aud143_phase_compensation.rs`, `aud143_compensated_lifecycle.rs`, `aud143_reset_heap.rs`, realtime parameter and property tests are strong choices. Extend moving crossover sweeps and independent complex-response comparison through the public host. The selected compensation/crossover family determines CPU and phase; avoid needless coefficient recomputation while preserving sample-time controls. Classical complementary or linear-phase options are appropriate tradeoffs; ML is unnecessary.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 11,
+      "plugin": "Beamformer",
+      "audit_text": "[`beamformer_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs):310\u2013490 supports MVDR/GSC/superdirective paths, fixed structural microphone/type configuration, resettable adaptation and bounded frozen-learning drains. Startup covariance conditioning and steering mismatch are key failure cases. Matrix operations and spectral hops dominate cost, particularly as microphone count increases.\n\n`gsc_reference.rs`, `numerical_recovery.rs`, `spectral_recovery.rs` and `stream_boundaries.rs` provide good numerical/lifecycle coverage. Add array geometry errors, microphone gain/delay mismatch, diffuse noise and moving sources; measure white-noise gain, directivity and target distortion. Classical diagonal loading and uncertainty-aware steering are priorities. Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 12,
+      "plugin": "Binaural decoder",
+      "audit_text": "[`binaural_decoder_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/binaural_decoder_plugin.rs):1907\u20132065 uses FFT streaming, asynchronous orientation updates and a tail bound including reflections and optionally three RT60 periods. The latter is a truncation policy for recursive late reverb, not exact finite mathematical support. Orientation is smoothed/thresholded by callback; motion-to-audio latency needs measurement beyond static HRIR accuracy.\n\n`sofa_resampling.rs`, decoder tests and integration tests cover important file/rate paths. Extend SOFA delay/coordinate conventions, head-turn sweeps, stale worker updates, maximum HRIR dimensions and tail cutoff audibility. Classical minimum-phase-plus-ITD interpolation, robust crossfades and individualized HRTF selection are useful. ML HRTF selection from measurements/preferences is plausible offline; online inference must not delay head tracking unpredictably.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 13,
+      "plugin": "Channel mute/solo",
+      "audit_text": "[`channel_mute_solo_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo/src/lib/channel_mute_solo_plugin.rs):645\u2013753 has settled unity/SIMD fast paths and channel gain smoothing. Reset intentionally preserves smoother state. This can avoid clicks across a transport event, but differs from fresh-instance equivalence and must be an explicit policy.\n\n`zero_tail.rs` and integration tests cover the simple audio path. Extend rapid solo/mute combinations, empty/large layouts, first-block muted state, channel mapping changes and stop/resume continuity. Test \u201cmute\u201d at the actual audible output so buffered pre-mute audio is understood. A deterministic gain ramp and explicit solo policy suffice; no ML is justified.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 14,
+      "plugin": "Convolution",
+      "audit_text": "[`convolution_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs):1610\u20131780 supports partitioned/NUPC processing, optional direct head, prepared asynchronous IR adoption, generation checks and finite tail accounting. Resource estimates and retirement machinery are substantial strengths. Peak memory/CPU can rise during old/new IR overlap, and worker/reclaimer saturation deserves testing.\n\n`direct_convolution.rs` contains a valuable f64 time-domain oracle, arbitrary callback partitions, true-stereo paths and heap checks. Two initial parallel failures disappeared serially and on the full rerun; see T1. Do not classify that observation alone as a DSP error. Extend IR update storms and maximum-size multichannel performance. Classical partition-size selection and a bounded direct head are the right optimizations. ML belongs in optional offline IR denoising/estimation, with measured response preserved and model output validated.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 15,
+      "plugin": "Crossfeed",
+      "audit_text": "[`crossfeed_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-crossfeed/src/lib/crossfeed_plugin.rs):880\u20131033 contains Bauer/Meier/multiband/HRTF modes, reset behavior and autogain. The mix interpolation has the callback partition dependence in C9. Bypass resets histories, so rapid bypass transitions need an audible continuity test.\n\n`transfer.rs`, `rate_restore.rs`, `realtime_parameters.rs` and autogain clock/heap tests provide useful coverage. Add complex transfer-function oracles for each mode, mono compatibility and moving-mix waveform comparison across blocks. Classical frequency-dependent interaural delay/attenuation and level-matched bypass are meaningful improvements. ML personalization may select settings offline; it is not needed in this low-cost deterministic path.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Verify moving-mix waveforms across callback partitions at the same absolute automation positions.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-crossfeed/tests/audit_mix_clock.rs"
+          ],
+          "result": "New regression compares sample-sized, irregular [1,7,31,257,1024] and 8192-frame callbacks for Bauer/Meier/multiband at 44.1/48/96 kHz. HRTF transfer, bypass continuity and remaining audit recommendations are still pending."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "source_inspection",
+          "finding": "Current source advances mix smoothing once per sample; full waveform partition and bypass-continuity validation remains."
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "plugin": "Crossover",
+      "audit_text": "[`crossover_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs):1415\u20131575 handles several IIR families, multiway compensation and FIR paths. The FIR route explicitly checks initialized rate; align rate-sensitive IIR entry-point contracts as well. Coefficient automation and passthrough/mute resets can produce transition artifacts even when static responses are correct.\n\n`aud141_recombination.rs`, `aud142_iir_families.rs`, `block_kernels.rs`, finite-stream and property tests are substantive. The reproduced allocation-test failure comes from a process-wide counter and passed serially, so repair test isolation before drawing an RT conclusion. Extend all-family phase/impulse checks under moving cutoff and changing topology. Classical LR/Bessel/Butterworth/linear-phase choices cover distinct use cases; ML is not needed.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Enforce prepared sample rate on IIR as well as FIR entry paths.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-crossover/tests/audit_rate_contract.rs"
+          ],
+          "result": "Public regression reproduced LR24 rate acceptance. All 13 IIR/FIR families in two-/three-way routes now reject wrong rates without mutating samples or recursive history. Existing IIR construction at its prepared default rate remains supported."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 17,
+      "plugin": "De-esser",
+      "audit_text": "[`de_esser_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-de-esser/src/lib/de_esser_plugin.rs):1210\u20131335 accounts for lookahead and FIR group delay and supports split-band behavior. LR4 recursive state and finite retained lookahead are different tail concepts. Detector channel linking and split recombination determine whether stereo image and non-sibilant material survive.\n\n`range_and_link.rs`, `realtime_parameters.rs` and native host sidechain tests are useful. Extend annotated fricatives, plosives, cymbals and bright nonspeech instruments, measuring false attenuation as well as sibilance reduction. Classical relative band-energy detection and hysteresis are sensible. A small speech-conditioned sibilance classifier could gate the existing detector; measure false positives on music and use confidence-based fallback.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 18,
+      "plugin": "Declick",
+      "audit_text": "[`declick/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-declick/src/lib.rs):480\u2013644 validates parameter batches, resets detector/repair state, distinguishes processing modes and drains retained boundary audio. Detection accuracy and repair continuity are more important than merely removing a single synthetic spike.\n\n`modes.rs`, `finite_stream.rs` and `corpus_quality.rs` are relevant; the corpus test uses externally supplied piano/rock data and returns early when it is unavailable. This audit did not supply that corpus. Extend percussion-safe precision/recall, clustered clicks, crackle and clicks straddling callback/start/EOF boundaries, with held-out clean references. Classical robust detection plus autoregressive/interpolative repair should remain the baseline. ML is sensible as a transient/click discriminator or constrained inpainting experiment, with false-positive damage measured explicitly.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 19,
+      "plugin": "Denoiser",
+      "audit_text": "[`denoiser_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs):1480\u20131635 resets substantial spectral, tonal, transient, coherence and optional multiresolution state; startup padding and frozen-learning finite drains are deliberate. Noise estimation during initial speech/music and adaptation after a noise change need separate evaluation. Multiple spectral analyses can dominate CPU.\n\n`denoiser_quality.rs` uses deterministic tones/transients/noise; `residual_audition.rs`, `reduction_curve.rs` and finite-stream tests add useful checks. Extend real held-out music/noise mixtures, stereo phase preservation and speech already present at sample zero. Classical minimum-statistics/MCRA-style estimation and Wiener/log-spectral baselines help quantify improvements. A learned music mask is plausible, but speech-trained models should not be assumed safe for arbitrary music; evaluate removal artifacts and latency against the existing path.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 20,
+      "plugin": "Dither",
+      "audit_text": "[`dither_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-dither/src/lib/dither_plugin.rs):354\u2013469 uses per-channel deterministic PRNG state, TPDF construction, quantization/clamping and shaped error feedback. Reset reproducibility is useful for offline renders, but repeated identical seeds must not accidentally correlate independently mixed instances/channels. The intended final quantization stage matters more than another effect's output level.\n\n`error_moments.rs`, realtime parameter and integration tests are meaningful. Extend independent histogram, autocorrelation/cross-channel correlation, low-level sine linearity and shaped-noise PSD checks at all supported rates. Verify saturation behavior separately from ordinary dither statistics. Classical TPDF and stable rate-appropriate shaping are sufficient; ML would undermine a well-defined statistical contract.",
+      "status": "source_review_in_progress",
+      "tasks": [],
+      "evidence": [
+        {
+          "kind": "source_inspection",
+          "finding": "Existing source intentionally guarantees matching deterministic output across default-constructed instances and reset. Independent mixed-instance stream identity needs a compatible explicit policy; do not silently invalidate seeded render reproducibility."
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "plugin": "Downmix",
+      "audit_text": "[`downmix_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-downmix/src/lib/downmix_plugin.rs):941\u20131090 supports matrix and spectral Lt/Rt behavior, LFE filtering and reset/shape/rate checks. Startup output and phase reconstruction differ between paths. Channel order, LFE convention and coherent-sum headroom need explicit tests; normalizing each channel independently is not a substitute for a correct remix matrix.\n\n`startup.rs`, `test_cola.rs` and `finite_stream.rs` address important boundaries. Extend independent matrix vectors for every layout and highly correlated full-scale inputs, then measure compatibility through downstream decoding. Classical standardized routing/phase matrices are the primary improvement. Learned source-aware remixing should be a separate optional product mode, not a hidden change to deterministic downmix.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 22,
+      "plugin": "Dynamic EQ",
+      "audit_text": "[`dynamic_eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs):1235\u20131430 uses dry sidechain detection and blends a fixed full-gain EQ response according to the dynamics control. This reduces coefficient work but does not generally equal redesigning a biquad at the instantaneous requested dB gain. Validate the actual response against the chosen semantics. Its fixed large dry buffer is P1; cache publication every ten blocks also has block-dependent wall-clock cadence.\n\n`aud139_shelf_lifecycle.rs`, `routing_tilt_public.rs` and response/replay tests are useful, while several CPU/baseline artifacts are optional. Extend response surfaces across gain reduction, shelves/Q, link mode and first transient. Classical proportional-Q/TPT or prepared-filter approaches are alternatives only if their sound/control semantics are desired. ML can propose settings offline; the runtime gain envelope should remain transparent and bounded.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Publish dynamics meters on elapsed sample time rather than callback count.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/audit_meter_clock.rs"
+          ],
+          "result": "Public regression verifies exact 100 ms boundaries at 44.1/48/96 kHz, including one-frame and irregular callbacks, and identical published values."
+        },
+        {
+          "requirement": "Prepare independent inner Arc buffers so GR meter data can actually update without copy-on-write.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/tests/audit_meter_clock.rs"
+          ],
+          "result": "The new public meter test exposed permanently zero published GR because cache slots shared their inner Arc<Vec>. Independent cache payloads now produce nonzero GR. Cold publication and contended readers pass zero-allocation/free checks."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 23,
+      "plugin": "EQ",
+      "audit_text": "[`eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs):1400\u20131520 is one entry into a broad implementation with ordered/advanced realizations, autogain and differing finite/recursive responses. The complexity calls for route-specific guarantees rather than one \u201cEQ passed\u201d label. Recursive tails and explicit finite responses have different EOF policies.\n\nThe `aud145_*` accuracy/oracle tests, property tests, realtime automation, autogain reset/clock and finite-stream tests are a strength. Extend coefficient transitions, extreme stable parameters, mixed realizations and rate changes through the host. Preserve independent frequency/impulse references rather than only replaying old output. Classical stable parameter interpolation, topology-preserving structures and explicit phase choices are appropriate. ML can fit target responses or propose bands offline; it should not replace exact filter realization.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 24,
+      "plugin": "Gain",
+      "audit_text": "[`gain/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-gain/src/lib.rs):303\u2013443 has a settled SIMD path and a per-frame smoother path. The small implementation is a useful reference component for scheduling and clock tests. The tolerance that switches to settled processing should have a bounded numerical effect independent of callback partition.\n\n`accuracy.rs`, `property_tests.rs` and `test_basic.rs` include stronger numerical checks than simple construction tests. Extend absolute-sample automation, clipping/nonfinite policy through each adapter and first-callback smoothing semantics. Classical dB-to-linear gain and a measured ramp are sufficient; ML adds no value. Use this plugin to expose C5 before testing complex effects where temporal errors are harder to isolate.",
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Validate long gain settling ramps and absolute-sample retargeting through the public host adapter",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_settling_clock.rs: bit-identical one-frame, irregular and 8192-frame callbacks at 44.1/48/96 kHz, global/per-channel, 1/2/7 channels. Shared smoother already snaps per sample; no production change needed."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 25,
+      "plugin": "Gate",
+      "audit_text": "[`gate_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/gate_plugin.rs):1071\u20131209 resets detector/HPF/RMS/hold/lookahead state and drains retained delay. Fractional positive lookahead is handled with an actual integer-sample delay and matching latency reporting. Startup envelope state determines whether the first transient is lost or attenuated.\n\n`rms_detector_accuracy.rs`, `above_threshold_audio.rs`, `soft_knee_audio.rs`, finite-stream, property and native sidechain tests are well targeted. Extend threshold-hovering chatter, hold/retrigger, sample-rate-invariant time constants and linked stereo impulses. Classical hysteresis and program-dependent release are sensible options. ML/VAD gating is useful only as an explicit speech mode with false-cut and latency evaluation, not as a replacement for a general-purpose gate.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 26,
+      "plugin": "HAL input",
+      "audit_text": "[`hal_input_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_plugin.rs):376\u2013481 enforces source geometry and initialized rate, zero-fills disconnect/recovery conditions, tracks connection/format generations and arms underrun accounting after data arrives. This is a good explicit startup distinction. Recovery/key reload is kept out of ordinary read processing.\n\nInline fake-reader tests establish local logic, but do not certify actual driver restart/key rotation or cross-process timing. Extend first frame after reconnect, format change during a partial callback, invalid frame count, writer disappearance and source-clock drift. Export missing-frame counts alongside state transitions. Classical elastic buffering/clock recovery may help where clocks differ; ML is inappropriate for transport correctness.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 27,
+      "plugin": "HAL output",
+      "audit_text": "[`hal-output/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs):1212\u20131390 implements a terminal sink with bounded pending storage, priming/service/format/key/disconnect states and separate requested/written counters. `process` can accept frames into pending storage even while nothing reaches the device; return value is not proof of audibility. Dynamic queue occupancy is distinct from the advertised target/device/safety latency.\n\nInline fake-writer/host tests exercise backpressure and finite-tail handoff. Extend real shared-memory saturation, control recovery, partial writes, drop accounting and reconnect with a changed format/key. Assert `requested = written + pending + explicitly dropped` over lifecycle changes. Prefer explicit bounded transport and clock accounting; ML has no role here.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 28,
+      "plugin": "Hiss reducer",
+      "audit_text": "[`hiss-reducer/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs):1080\u20131230 supports spectral/other backend modes and noise-profile capture with snapshot/adoption state. Reset cancels capture while preserving the learned profile, a sensible but distinct lifecycle policy. Profile commit/adoption must remain bounded and nonallocating on the processing path.\n\n`measured_spectrum.rs`, `accuracy.rs`, `noise_profile.rs`, `backend_adoption.rs`, `hosted_snapshot.rs` and transient/finite tests are substantive. Extend captures contaminated by speech, backend switches mid-profile and stale profile persistence across rates. Classical frequency-dependent floors and confidence-limited adaptation are first choices. ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 29,
+      "plugin": "Limiter",
+      "audit_text": "[`limiter_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-limiter/src/lib/limiter_plugin.rs):535\u2013710 has dedicated oversampled processing and conditions for its native intersample-peak mode, including full wet/hard behavior and sufficient lookahead. Those conditions are part of the guarantee; arbitrary mix/mode changes can invalidate it. Reset and finite delay draining are explicit.\n\nThe ISP configuration, oversampling accuracy/stream/automation, release/channel and output-metering tests are strong. Extend independent reconstruction true-peak tests after the complete final chain, random phase near Nyquist and rapid parameter changes. Classical release shaping, detector oversampling and explicit headroom are appropriate improvements. ML may recommend release characteristics, but a learned model should never be the only ceiling enforcement mechanism.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 30,
+      "plugin": "Linear-phase EQ",
+      "audit_text": "[`linear_phase_eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs):865\u20131035 uses prepared FIR/NUPC state, rejects dirty FIR processing, accounts for filter/head latency and preserves finite support. Detached preparation and generation-ticket adoption reduce real-time risk. Reset must finish/clear pending transitions consistently; frequent updates can temporarily double work.\n\n`analytic_response.rs`, `dynamic_updates.rs`, `dynamic_detached_control.rs`, `channel_placement.rs` and property tests cover key contracts. Extend response/phase accuracy through mid-stream updates, superseded worker results and tail transitions at maximum IR length. Classical mixed/minimum-phase alternatives should expose their latency/pre-ringing tradeoff. ML filter fitting can run offline; runtime filtering should remain a validated FIR operation.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 31,
+      "plugin": "Loudness compensation / Fletcher\u2013Munson alias",
+      "audit_text": "[`loudness_compensation_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-loudness-compensation/src/lib/loudness_compensation_plugin.rs):930\u20131065 combines compensation filters, playback-volume context and sample-clocked autogain measurement intervals. Electrical dBFS and a playback volume setting are not sufficient to know listener SPL; calibration assumptions must be visible to callers.\n\n`reference_accuracy.rs` and dedicated compensation tests provide an appropriate starting point. Extend independently computed response curves, rate extremes, bypass/autogain interactions and volume changes during silence. Classical calibrated equal-loudness compensation is preferable to a learned black box. ML can fit a user's preference curve from controlled listening data, with uncertainty and gain bounds; it cannot infer acoustic calibration from PCM alone.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 32,
+      "plugin": "Matrix",
+      "audit_text": "[`matrix_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-matrix/src/lib/matrix_plugin.rs):1016\u20131143 validates rates/shapes, resets gain smoothers and uses sparse active connections plus settled specialized kernels. Worst-case cost is proportional to frames and active edges; sparse and dense matrices need different performance expectations.\n\nMixing/mute, property, zero-tail and integration tests are suitable. Extend independent rectangular matrix products, all-zero rows, unusual channel counts, coherent overload and automated transitions. Benchmark a sparse/dense kernel crossover and keep routing order explicit. This is exact linear algebra; ML is unnecessary except an offline routing suggestion that remains reviewable.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 33,
+      "plugin": "Mono-to-stereo",
+      "audit_text": "[`mono_to_stereo_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo/src/lib/mono_to_stereo_plugin.rs):343\u2013459 uses allpass/Haas decorrelation and an identity-width fast path, with priming when leaving that fast path. The earliest dry sample can have zero latency while the other channel is delayed; a single PDC number does not describe the intended stereo effect.\n\n`state_transitions.rs` is especially relevant. Extend mono-summed combing, interchannel correlation, width automation, bypass transitions and first-transient localization. Classical complementary allpass or frequency-dependent decorrelation gives controllable tradeoffs. Learned source separation would be a different, much heavier mode and is not warranted for the default effect.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 34,
+      "plugin": "Multiband compressor and single-band compressor alias",
+      "audit_text": "[`multiband_compressor_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/src/lib/multiband_compressor_plugin.rs):2170\u20132350 combines crossover, linked detectors, sidechain shaping, range/hold controls and lookahead with an aligned dry path. The facade's `CompressorPlugin` is an alias of this implementation (`sotf-plugins/src/lib.rs`:374), so one-band construction/factory defaults are part of its correctness.\n\n`compressor_accuracy.rs`, `detector_scenarios.rs`, `range_hold.rs`, `lookahead_latency.rs` and finite-stream tests are strong. Extend reconstruction with no gain reduction, interband transient timing, stereo linking and near-threshold modulation. Recursive crossover tails need an explicit render policy. Classical detector topology and release/knee choices should be measured separately. ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 35,
+      "plugin": "Multiband expander and single-band expander alias",
+      "audit_text": "[`multiband_expander_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs):2040\u20132198 has time/spectral routes, lookahead/FFT latency and cached spectral drain output. Finite spectral support and recursive IIR support are different promises. Startup noise estimates/envelope state can over-suppress a quiet beginning.\n\n`soft_knee.rs`, `lookahead_latency.rs`, `spectral_finite_stream.rs`, `spectral_finite_allocations.rs` and realtime parameter tests are relevant. Extend low-level musical material, threshold chatter, band-edge transients and reconstruction at unity expansion. Classical hysteresis, bounded range and perceptual frequency grouping are useful. A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 36,
+      "plugin": "PND \u2014 pitch-drift correction",
+      "audit_text": "[`pnd_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/pnd_plugin.rs):706\u2013870 is a pitch-analysis/phase-vocoder correction path with reference-frequency checks, smoothed ratio/strength, fixed vocoder latency and frozen pitch during draining. Its actual implementation is pitch correction; its name should not be used to infer a noise/decorrelation algorithm.\n\n`finite_stream.rs`, `drain_realtime.rs` and integration tests cover retained audio and lifecycle. Extend known wow/flutter trajectories, deliberate vibrato, octave ambiguities, weak fundamentals and stereo coherence. Classical confidence-gated harmonic estimation and phase-locking are appropriate. A monophonic learned pitch estimator such as CREPE [CREPE][R5] is a candidate only for supported material; test confidence gating and do not treat it as a general polyphonic reference-frequency oracle.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 37,
+      "plugin": "Resampler",
+      "audit_text": "[`resampler_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-resampler/src/resampler_plugin.rs):733\u2013870 explicitly manages variable output, prepared capacity, residual/endpoint state, ratio changes and an exact unity path. Initialize is not equivalent to reset. Output timestamps and finite input endpoints must remain correct across changing ratios, not merely average output rate.\n\n`dynamic_endpoint.rs`, `hard_decimation.rs`, `spectral_accuracy.rs`, `slew_artifact_bounds.rs`, `smooth_cutoff.rs`, `drain_work.rs` and lifecycle tests are a strong suite. Extend long-duration rational/irrational ratios, clock drift, endpoint frame conservation and independent high-precision spectral references. Classical polyphase/sinc quality and slew policies are the right tools. ML is inappropriate for a deterministic sample-rate conversion contract.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 38,
+      "plugin": "Saturation",
+      "audit_text": "[`saturation_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-saturation/src/lib/saturation_plugin.rs):890\u20131062 prepares DC/ADAA/envelope state and requests host oversampling for selected settings. The ADAA branch applies to soft-clip/tanh; other nonlinear modes still have different antialiasing behavior. Do not infer that enabling the flag makes every mode alias-free. ADAA also changes small-signal phase/magnitude, relevant to dry/wet mixing.\n\nIntegration/unit tests should be extended with independent oversampled references, folded-alias energy versus frequency/drive, DC rejection, cold start and block-partition tests for every mode. Classical ADAA [memoryless ADAA][R1] and [stateful ADAA][R2], oversampling and carefully matched dry paths are meaningful improvements; choose per nonlinearity/state model. Neural emulation is useful for a measured nonlinear target, with alias and parameter-sweep tests rather than waveform similarity alone.",
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Validate cold-start Soft Clip ADAA against independent Simpson quadrature and reset reproducibility; DC rejection for all five modes with ADAA on/off",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_signal_contract.rs: 44.1/48/96 kHz; all 63 saturation tests passed. Existing parameter description and UI already restrict ADAA to Soft Clip. Frequency/drive alias sweep and independent oversampled-reference coverage remain."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 39,
+      "plugin": "Spectral compressor",
+      "audit_text": "[`spectral_compressor_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs):910\u20131025 uses STFT latency, resettable spectral state and bounded cached-hop draining with support based on the transform. Detection and gain smoothing occur on a different clock from sample-domain dynamics, which needs explicit timing semantics.\n\n`realtime_parameters.rs`, `finite_stream.rs` and integration tests cover mechanics. Extend independent identity/COLA tests at arbitrary boundaries, isolated tones, broadband transients, stereo linking and spectral pumping. Classical critical-band grouping, frequency smoothing and transient-preserving gain rules can reduce musical noise. A learned target mask is plausible for a separate restoration mode; compare latency and artifacts to the classical compressor first.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 40,
+      "plugin": "Speech denoiser",
+      "audit_text": "[`speech-denoiser/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/lib.rs):583\u2013755 already uses an ML backend at 48 kHz, rate adapters elsewhere, latency-aligned dry mixing and recurrent reset. A neural state's mathematical tail is not necessarily finite; retained audio can still have a bounded drain policy. Strength automation and rate adapters must not shift speech timing or leak stale state across streams.\n\n`model_audio.rs`, `strength_model.rs`, `accuracy.rs`, `host_rate_adapter.rs`, `host_finite_stream.rs` and timing tests cover meaningful integration. Extend real held-out languages/speakers/noises, speech onset at frame zero, low-SNR phonemes and music false suppression. DeepFilterNet2 [DeepFilterNet2][R6] is a credible alternative baseline, not an assumed upgrade. Compare measured quality, deadline distribution, model footprint and license/provenance before changing the existing model.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 41,
+      "plugin": "Stereo imager",
+      "audit_text": "[`stereo_imager_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-stereo-imager/src/lib/stereo_imager_plugin.rs):410\u2013565 uses complementary side-band processing, an exact all-unity route and bounded coefficient/control updates. A fully dry early return can stop filter-state evolution; verify behavior when re-enabling wet processing after a long dry interval.\n\n`crossover_response.rs` and integration tests cover static reconstruction. Extend mono compatibility, low-frequency narrowing, phase correlation, dry/wet toggles and first transients. Classical M/S processing with complementary filters and an explicit low-frequency mono policy is sufficient. ML scene classification could suggest settings offline, but real-time width decisions should remain predictable.",
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Evolve crossover/control state through fully dry and neutral-width intervals.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-stereo-imager/tests/crossover_response.rs"
+          ],
+          "result": "Public regression failed before the change and now matches a continuously running wet reference multiplied by an independent analytic 10 ms one-pole ramp. Transparent output remains bit-exact; wrong-rate processing is rejected without reinitialization."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": 42,
+      "plugin": "Transient shaper",
+      "audit_text": "[`transient_shaper_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/lib/transient_shaper_plugin.rs):371\u2013490 uses fast/slow linked envelopes, bounded gain and peak protection. Initialize updates coefficients but reset clears history; callers must not assume reinitialize resets learned envelope state. Envelope startup is particularly audible on the first hit.\n\nProperty, finite-stream and integration tests are useful. Extend isolated first hits, dense percussion, sustained tones, very quiet starts and rate-invariant envelope trajectories. Classical dual-envelope/relative-slope detection and adaptive sustain timing are reasonable options. ML onset classification can assist difficult material, but should only modulate bounded controls with an independent deterministic fallback.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 43,
+      "plugin": "Upmixer",
+      "audit_text": "[`upmixer_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-upmixer/src/lib/upmixer_plugin.rs):2409\u20132560 combines spectral/direct/ambient/height processing, multiple clocks and dynamic bypass latency. The fixed per-call HR transition coefficient is C9. Large callbacks can sample block-level controls very differently from ordinary audio callbacks; parameter changes that alter latency require synchronized host PDC updates.\n\n`stream_boundary_allocations.rs`, `small_fft.rs`, autogain tests and audio/quality regressions are valuable. `upmixer_quality_tests.rs` includes a \u201cvoice leakage\u201d test using a coherent 1 kHz sine and examines settled output; that is a useful synthetic check, not speech separation validation. Extend real speech/music, center leakage, mono/downmix compatibility and onset behavior. Classical coherence/PCA steering remains a strong baseline. ML source masks are a meaningful optional improvement only with measured extra latency, leakage/artifact metrics and graceful fallback.",
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Move HR enable envelope to the main analysis-hop clock and prevent tiny high-rate attack steps being rounded back to zero",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_hr_clock.rs: reproduced stalled 96 kHz one-frame attack and 0.00354 initial waveform error; release/reenable also reproduced 0.02038 waveform error in equal-size route. All three public regressions now pass, including 44.1/48/96/192 kHz attack, 512/2048/4096 FFT initial waveform and long release to zero/reenable with off-grid events. Restart windows now remain on the HR hop grid with zero-padded missing history; restarted equal-size streams use source-tag alignment. Full Upmixer suite passed: 192 passed, 3 ignored across 11 suites. Other smoothed controls remain callback-clocked and need separate review."
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "source_inspection",
+          "finding": "Current HR retention is scaled by elapsed frames, but a single envelope value is still adopted per callback. Full waveform invariance and hop/sample-clocked application remain to be established."
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "plugin": "XTC",
+      "audit_text": "[`xtc_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs):2001\u20132146 validates initialized rate/geometry, adopts prepared filters, freezes finite support at drain and reports FFT latency. Crosstalk cancellation is ill-conditioned at some frequencies/positions; gain limits and regularization are part of correctness, not just tonal preferences.\n\n`xtc_validation.rs`, `stream_clock.rs`, `aligned_bypass.rs`, finite/autogain tests and reference fixtures are useful. The saturation quality test measures a settled sine peak; extend first-frame gain, head displacement, room mismatch and independent acoustic transfer matrices. Classical frequency-dependent regularization, robustness regions and measured head tracking are priorities. ML can estimate position or personalize transfer functions off the critical path; constrain the inverse filter's gain and retain measured validation.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    },
+    {
+      "id": 45,
+      "plugin": "Delay",
+      "audit_text": "[`delay_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-delay/src/lib/delay_plugin.rs):972\u20131125 resets delay/LFO/crossfade histories and drains bounded nonrecursive support. For feedback/recursive routes, native drain can report complete rather than synthesize an unbounded tail. That may be an intentional host contract, but a renderer must not assume all audible repeats are automatically emitted at EOF.\n\n`audit_accuracy.rs`, `tail_length.rs`, `finite_stream.rs`, property and realtime parameter tests provide good foundations. Add end-to-end offline render tests with an explicit tail-duration/energy policy, feedback near its limit, delay changes and tempo discontinuities. Classical fractional delay, click-free dual taps and tape-style pitch modulation should be separate, tested modes. ML is unnecessary for the basic delay.",
+      "status": "not_reviewed",
+      "tasks": [],
+      "evidence": []
+    }
+  ],
+  "host_analyzers_and_adapters": {
+    "audit_text": "**Spectrum analyzer.** [`analyzer_spectrum.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_spectrum.rs):425\u2013545 enforces initialization/rate, retains a recent-sample ring and computes channel power without cancellation from summing opposite-phase channels. It analyzes the most recent window after a block; a block spanning multiple FFT windows can omit intermediate windows. That is acceptable for a display only if specified, but unsuitable for guaranteed transient/peak capture. Extend calibrated bin-centered/off-bin tones, DC/Nyquist, impulses, channel anti-phase and arbitrary callback sizes. Offer explicit amplitude/PSD normalization and max-hold semantics. No ML is needed for a calibrated spectrum.\n\n**Loudness monitor.** [`analyzer_loudness_monitor.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_loudness_monitor.rs):2029\u20132089 preserves transparent audio, validates shape/rate and finalizes true-peak state at drain. This is a stronger EOF contract than simply stopping the meter. Extend independent conformance vectors, short clips, gating discontinuities, surround channel weights, disabled/re-enabled state and final publication under cache contention. Distinguish LUFS from psychoacoustic loudness/SPL. ML quality scores may be supplementary, never a substitute for calibrated measurement.\n\n**AutoGain.** [`auto_gain.rs`](crates/sotf-plugins/crates/sotf-host/src/auto_gain.rs):281\u2013395 uses sample-clocked gain trajectories and a settled fast path. Its integration into each effect must measure the intended pre/post stages and handle silence without runaway gain or level jumps. Existing per-plugin clock/heap tests are a major strength. Extend sparse transients, prolonged silence then signal, AB switching and peak-constrained gain recovery. Classical loudness/peak-constrained matching suffices; no learned gain controller is needed by default.\n\n**External plugin factory route.** The `external`/`external_plugin` entry delegates to native formats and may use isolated workers. It inherits the scheduling, latency, parameter, state and sandbox boundaries discussed above, rather than one fixed DSP algorithm. Test process death, stale sequence, missed deadline, malformed state, latency change, instrument MIDI and output-channel changes against real AU/VST3/CLAP fixtures. Compare native and isolated audio after declared pipeline latency; fallback audio must remain distinguishable from successfully processed output. ML is not a substitute for process containment or ABI validation.\n\n**Adapters/support crates.** `plugins-bridge`, `plugins-ffi`, `plugins-nih`, `plugins-gpui`, `plugins-spatial`, `plugins-denoiser` and `plugins-inference` are not seven more standalone DSP effects. They carry ABI, native-host, UI, spatial-data and inference contracts. A plugin passing its own crate tests does not prove its AU/VST3/CLAP/FFI form has correct parameter units, sample offsets, channel negotiation, latency change notification or tail handling. Add cross-wrapper audio equivalence and lifecycle suites, and run native-feature builds on their supported platforms. Inference already uses generation-tagged bounded handoff; retain that architecture and explicitly constrain allocation/destruction and model shutdown.",
+    "status": "not_reviewed",
+    "tasks": [],
+    "evidence": []
+  },
+  "remaining_scope": "All original recommendations remain in audit_text. Completing a listed concrete task does not complete its plugin entry; further classical features, numerical/audio coverage, corpus/platform work and optional research remain to be reviewed.",
+  "work_batches": [
+    {
+      "name": "Concrete rate, history, publication and diagnostic remediation",
+      "state": "verified",
+      "branch": "feat/issue-9-plugin-audit",
+      "completed_entries": [
+        1,
+        4,
+        9,
+        16,
+        22,
+        41
+      ],
+      "limitation": "Only the listed tasks are verified; none of these six plugin entries is claimed fully complete.",
+      "host_verification": {
+        "command": "cargo test -p sotf-plugins --test realtime_allocation_tests --test all_plugins_parameter_robustness --test all_plugins_dsp_matrix --test native_drain_bounds --test finite_chain --test automation_tests --no-fail-fast (offline/locked, shared external target)",
+        "result": "88 passed, six suites"
+      },
+      "plugin_verification": {
+        "result": "701 passed, 7 ignored across 52 suites",
+        "packages": [
+          "aae",
+          "ambisonics",
+          "band-merge",
+          "crossfeed",
+          "crossover",
+          "dynamic-eq",
+          "stereo-imager"
+        ]
+      },
+      "lint_verification": "Clippy with warnings denied passed for the six production-modified packages."
+    },
+    {
+      "name": "Independent saturation and gain signal validation",
+      "state": "verified",
+      "plugin_ids": [
+        24,
+        38
+      ],
+      "result": "151 passed across 9 suites; no production DSP changes required for the checked contracts. Remaining audit recommendations stay open."
+    },
+    {
+      "name": "HR transition sample-time and restart alignment",
+      "state": "verified",
+      "plugin_ids": [
+        43
+      ],
+      "result": "192 passed, 3 ignored across 11 suites. Independent pre-correction route comparison tests retained unchanged.",
+      "limitation": "Other Upmixer callback-clocked parameter controls, latency/topology coordination and speech/music corpus work remain open."
+    }
+  ],
+  "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
+  "validation_limits": [
+    "Host automation/DSP matrix/drain/realtime allocation gates passed 88 tests before the Upmixer batch. Recheck after Upmixer was blocked before compilation by a concurrently edited sibling sotf-capture manifest referencing a missing benches/capture_callbacks.rs. No sibling files were changed by this task.",
+    "Gain and saturation validation temporarily required an offline lock resolution for a concurrent sotf-capture rustix dependency; the task-only lockfile adjustment was restored afterward.",
+    "Clippy with warnings denied passed all six initially production-modified crates plus gain, saturation and crossfeed. Final Upmixer Clippy pending workspace manifest availability."
+  ]
+}

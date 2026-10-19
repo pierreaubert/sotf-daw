@@ -94,10 +94,11 @@ pub struct BandMergePlugin {
     pub(super) band_gains_linear: [f32; MAX_BANDS],
     /// Per-band mute toggle.
     pub(super) band_mutes: [bool; MAX_BANDS],
-    /// Reconstruction error in dB (diagnostic). Measures how much the output
-    /// deviates from perfect reconstruction.
+    /// Gain-weighting difference relative to the unweighted input-band sum.
     ///
-    /// This value is refreshed when requested by the host.
+    /// The legacy parameter ID is retained for compatibility. This diagnostic
+    /// has no pre-split source reference and cannot establish reconstruction
+    /// accuracy. It is refreshed only when requested by the host.
     pub(super) reconstruction_error_db: f32,
     pub(super) reconstruction_error_requested: Cell<bool>,
     pub(super) cached_parameters: Vec<Parameter>,
@@ -202,13 +203,13 @@ impl BandMergePlugin {
         params.push(
             Parameter::new_float(
                 "reconstruction_error_db",
-                "Reconstruction Error",
+                "Gain Weighting Difference",
                 self.reconstruction_error_db,
                 -60.0,
                 60.0,
             )
             .with_description(
-                "Normalized RMS(output - unity-band sum) in dB (read-only diagnostic)",
+                "Normalized RMS(weighted output - unweighted input-band sum), in dB. Read-only; does not measure splitter reconstruction accuracy.",
             )
             .with_group("Diagnostics")
             .with_importance(ParameterImportance::FineTuning),
@@ -443,8 +444,8 @@ impl Plugin for BandMergePlugin {
             }
         }
 
-        // Compute normalized reconstruction error in dB. The floor represents
-        // exact reconstruction; the ceiling keeps a zero-reference mismatch finite.
+        // Compute normalized gain-weighting difference in dB. The floor represents
+        // equality to the unweighted input-band sum; the ceiling keeps a zero-reference mismatch finite.
         if measure_reconstruction_error {
             let total_samples = (num_frames * out_ch) as f64;
             if total_samples == 0.0 || error_energy == 0.0 {

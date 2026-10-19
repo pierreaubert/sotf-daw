@@ -431,6 +431,12 @@ impl Plugin for AmbisonicsDecoderPlugin {
             return Err("AmbisonicsDecoder input contains a non-finite sample".into());
         }
 
+        if self.dual_band && context.sample_rate != self.sample_rate {
+            return Err(
+                "AmbisonicsDecoder dual-band callback must match the initialized sample rate"
+                    .into(),
+            );
+        }
         if self.dual_band && self.crossover.is_none() {
             return Err("AmbisonicsDecoder dual-band processing requires initialize()".into());
         }

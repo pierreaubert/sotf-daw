@@ -479,8 +479,10 @@ fn test_process_does_not_reinitialize_on_sample_rate_mismatch() {
 
     let mut buffer = vec![0.5_f32; 256 * 2];
     let ctx = ProcessContext::new(44100, 256);
-    plugin.process_in_place(&mut buffer, &ctx).unwrap();
+    assert!(plugin.process_in_place(&mut buffer, &ctx).is_err());
+    assert!(buffer.iter().all(|sample| *sample == 0.5));
 
+    // Reject the mismatched clock without rebuilding or changing samples.
     // initialize() should NOT have been called, so sample_rate stays 48000
     assert_eq!(
         plugin.sample_rate, 48000.0,

@@ -337,3 +337,34 @@ fn process_with_correct_buffer_size_succeeds() {
         .unwrap();
     assert_eq!(frames, FRAMES);
 }
+
+#[test]
+fn legacy_diagnostic_id_describes_gain_weighting_not_source_reconstruction() {
+    let mut plugin = BandMergePlugin::new(1, 2).unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    let id = ParameterId::from("reconstruction_error_db");
+    let metadata = plugin
+        .parameters()
+        .into_iter()
+        .find(|parameter| parameter.id == id)
+        .unwrap();
+    assert_eq!(metadata.name, "Gain Weighting Difference");
+    assert!(
+        metadata
+            .description
+            .unwrap()
+            .contains("does not measure splitter reconstruction")
+    );
+    // These supplied bands sum to twice an imagined unit source, yet the
+    // self-relative meter must show equality when no gain/mute edits occur.
+    plugin.get_parameter(&id);
+    let mut output = [0.0];
+    plugin
+        .process(&[1.0, 1.0], &mut output, &ProcessContext::new(48_000, 1))
+        .unwrap();
+    assert_eq!(output, [2.0]);
+    assert_eq!(
+        plugin.get_parameter(&id),
+        Some(ParameterValue::Float(-60.0))
+    );
+}

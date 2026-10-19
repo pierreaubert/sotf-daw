@@ -59,7 +59,7 @@ pub struct DynamicEqPlugin {
     // Monitoring
     pub(super) monitoring_gr: Vec<f32>,
     pub(super) cache: RealTimeCache<DynamicEqData>,
-    pub(super) cache_counter: usize,
+    pub(super) cache_frames: usize,
 
     // Dry buffer for mix (pre-allocated)
     pub(super) dry_buf: Vec<f32>,
@@ -401,8 +401,11 @@ impl DynamicEqPlugin {
             threshold_smoother: Smoother::new(threshold, 5.0, sr),
 
             monitoring_gr: vec![0.0; MAX_BANDS],
-            cache: RealTimeCache::new(DynamicEqData::new(MAX_BANDS)),
-            cache_counter: 0,
+            cache: RealTimeCache::new_pair(
+                DynamicEqData::new(MAX_BANDS),
+                DynamicEqData::new(MAX_BANDS),
+            ),
+            cache_frames: 0,
 
             dry_buf: vec![0.0; frames * channels.max(1)],
             max_block_frames: frames,
@@ -443,6 +446,17 @@ impl DynamicEqPlugin {
         }
         self.max_block_frames = frames;
         Ok(())
+    }
+
+    fn advance_meter_clock(&mut self, frames: usize) {
+        // Publish at approximately 10 Hz in accepted sample time. Processing
+        // calls this per wet sample so snapshots use the exact boundary state.
+        let interval = (self.sample_rate as usize / 10).max(1);
+        self.cache_frames += frames;
+        if self.cache_frames >= interval {
+            self.cache_frames %= interval;
+            self.cache.update(|data| data.update(&self.monitoring_gr));
+        }
     }
 
     pub fn from_params(channels: usize, params: DynamicEqPluginParams) -> Self {
@@ -1310,7 +1324,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         self.monitoring_gr.fill(0.0);
         self.mix_smoother.reset(self.mix);
         self.threshold_smoother.reset(self.threshold_db);
-        self.cache_counter = 0;
+        self.cache_frames = 0;
         self.cache.update(|data| data.update(&self.monitoring_gr));
     }
 
@@ -1319,6 +1333,9 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Dynamic EQ callback must match the prepared sample rate".into());
+        }
         enable_ftz_daz();
         let nf = context.num_frames;
         let nc = self.channels;
@@ -1349,6 +1366,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
         // state are deterministically reset before a later wet ramp begins.
         if self.mix_smoother.current().abs() < 1.0e-6 && self.mix_smoother.target().abs() < 1.0e-6 {
             self.monitoring_gr[..self.num_bands].fill(0.0);
+            self.advance_meter_clock(nf);
             flush_denormals_inplace(buffer);
             return Ok(nf);
         }
@@ -1466,15 +1484,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
             {
                 *sample = *dry * dry_mix + *sample * mix;
             }
-        }
-
-        // Update diagnostic cache (throttled)
-        self.cache_counter += 1;
-        if self.cache_counter >= 10 {
-            self.cache_counter = 0;
-            self.cache.update(|d| {
-                d.update(&self.monitoring_gr);
-            });
+            self.advance_meter_clock(1);
         }
 
         flush_denormals_inplace(buffer);

@@ -1227,16 +1227,21 @@ impl UpmixerPlugin {
     }
 
     /// Start a fresh HR source timeline at the current accepted input frame.
-    /// The prefixed zeros let the first post-discard HR frame retain that source
-    /// position after an HR off/on transition.
+    /// Zero padding preserves the hop grid while excluding history before the
+    /// restart position from the resumed HR output.
     fn reset_hr_source_timeline(&mut self, source_frame: u64) {
         let startup_discard = self.hr_source_startup_discard_frames();
         let ring_mask = self.hr_buffers.hr_output_accumulator_mask;
         let source_index = usize::try_from(source_frame).expect("audio source frame fits usize");
-        let ring_position = source_index & ring_mask;
+        // Keep the restarted HR windows on their original hop grid. Prefix the
+        // missing pre-restart samples with zeros so a partial main hop cannot
+        // request an HR frame before its analysis window has been accepted.
+        let prefix_frames = source_index % (self.fft.hr_fft_size / 2);
+        let aligned_source_frame = source_frame - prefix_frames as u64;
+        let ring_position = (source_index - prefix_frames) & ring_mask;
 
         self.hr_buffers.hr_input_buffer.fill(0.0);
-        self.hr_buffers.hr_input_buffer_fill = self.fft.hr_fft_size;
+        self.hr_buffers.hr_input_buffer_fill = self.fft.hr_fft_size + prefix_frames * 2;
         self.hr_buffers.hr_delay_buffer.fill(0.0);
         self.hr_buffers.hr_delay_cursor = 0;
         // The first fresh window contains one full hop before the restart
@@ -1244,7 +1249,7 @@ impl UpmixerPlugin {
         // Discard it so pre-toggle samples cannot re-enter the resumed stream.
         self.hr_buffers.hr_startup_discard_remaining = startup_discard;
         self.hr_buffers.hr_next_add_position = ring_position;
-        self.hr_buffers.hr_next_add_source_frame = i64::try_from(source_frame)
+        self.hr_buffers.hr_next_add_source_frame = i64::try_from(aligned_source_frame)
             .expect("audio source frame fits i64")
             - startup_discard as i64;
         self.hr_buffers.hr_output_read_position = ring_position;
@@ -2540,38 +2545,6 @@ impl UpmixerPlugin {
             }
         }
 
-        // Update HR direct envelope for smooth enable/disable transitions
-        {
-            let hr_target = if self.params.enable_hr_direct {
-                1.0
-            } else {
-                0.0
-            };
-            // Express the old 0.1/0.05 per-1024-frame response as time
-            // constants, then advance by elapsed frames at the actual rate.
-            let time_seconds = if hr_target > self.hr_state.hr_direct_envelope {
-                0.202_5
-            } else {
-                0.415_9
-            };
-            let retention = (-(n as f64) / (self.core.sample_rate * time_seconds)).exp() as f32;
-            self.hr_state.hr_direct_envelope = hr_target
-                + retention * (self.hr_state.hr_direct_envelope - hr_target);
-            if self.hr_state.hr_direct_envelope < 1e-4 {
-                self.hr_state.hr_direct_envelope = 0.0;
-            }
-        }
-
-        if self.uses_hr_source_tags() {
-            if self.hr_state.hr_direct_envelope > 0.0 {
-                if !self.hr_buffers.hr_input_active {
-                    self.reset_hr_source_timeline(self.output.accepted_input_frames);
-                }
-            } else {
-                self.hr_buffers.hr_input_active = false;
-            }
-        }
-
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
             let num_frames = context.num_frames;
@@ -2616,11 +2589,27 @@ impl UpmixerPlugin {
                         ..self.main_buffers.input_buffer_fill + samples_to_copy]
                         .copy_from_slice(input_slice);
 
+                    // Start and retire HR input on source boundaries, including
+                    // an attack whose envelope is still zero before its first hop.
+                    let hr_active =
+                        self.params.enable_hr_direct || self.hr_state.hr_direct_envelope > 0.0;
+                    // Keep the test-only pre-correction renderer's historical
+                    // input scheduling intact for independent route comparisons.
+                    #[cfg(test)]
+                    let track_hr_timeline = !self.output.hr_use_pre_correction_mixer_for_test;
+                    #[cfg(not(test))]
+                    let track_hr_timeline = true;
+                    if track_hr_timeline && hr_active && !self.hr_buffers.hr_input_active {
+                        self.reset_hr_source_timeline(self.output.accepted_input_frames);
+                    } else if !hr_active {
+                        self.hr_buffers.hr_input_active = false;
+                    }
+
                     // Also add to HR input buffer if HR is enabled.
                     // First pass input through the delay buffer to temporally align
                     // the HR path with the main path (compensates for the difference
                     // in OLA latency: main_latency - hr_latency).
-                    if self.hr_state.hr_direct_envelope > 0.0 {
+                    if hr_active {
                         let delay_temp = &mut self.hr_buffers.hr_delay_temp[..samples_to_copy];
                         if self.hr_buffers.hr_delay_buffer.is_empty() {
                             delay_temp.copy_from_slice(input_slice);
@@ -2699,6 +2688,31 @@ impl UpmixerPlugin {
                 // Copy to temp buffer
                 self.main_buffers.temp_input_block[..self.core.fft_size * 2]
                     .copy_from_slice(&self.main_buffers.input_buffer[..self.core.fft_size * 2]);
+
+                // Clock the HR transition at the main analysis hop. Its prepared output
+                // gains must not depend on the size of the host callback.
+                {
+                    let n = self.core.hop_size;
+                    let hr_target = if self.params.enable_hr_direct {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    // Express the old 0.1/0.05 per-1024-frame response as time
+                    // constants, then advance by elapsed frames at the actual rate.
+                    let time_seconds = if hr_target > self.hr_state.hr_direct_envelope {
+                        0.202_5
+                    } else {
+                        0.415_9
+                    };
+                    let retention =
+                        (-(n as f64) / (self.core.sample_rate * time_seconds)).exp() as f32;
+                    self.hr_state.hr_direct_envelope =
+                        hr_target + retention * (self.hr_state.hr_direct_envelope - hr_target);
+                    if !self.params.enable_hr_direct && self.hr_state.hr_direct_envelope < 1e-4 {
+                        self.hr_state.hr_direct_envelope = 0.0;
+                    }
+                }
 
                 let temp_input = std::mem::take(&mut self.main_buffers.temp_input_block);
                 let mut output_block = std::mem::take(&mut self.output.output_block);

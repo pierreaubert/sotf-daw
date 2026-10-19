@@ -6,10 +6,11 @@ use super::UpmixerPlugin;
 use rustfft::num_complex::Complex;
 
 impl UpmixerPlugin {
-    /// Above and below the fixed HR FFT size, mix HR frames by accepted-input
-    /// source tag. The equal-size route retains its historical drain behavior.
+    /// Mix by source tag for unequal windows and after a midstream HR restart.
+    /// An uninterrupted equal-size stream retains its historical drain behavior.
     pub(super) fn uses_hr_source_tags(&self) -> bool {
-        let uses_source_tags = self.core.fft_size != self.fft.hr_fft_size;
+        let uses_source_tags = self.core.fft_size != self.fft.hr_fft_size
+            || self.output.hr_gain_resume_source_frame > 0;
         #[cfg(test)]
         {
             uses_source_tags && !self.output.hr_use_pre_correction_mixer_for_test

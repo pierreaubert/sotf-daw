@@ -1499,6 +1499,12 @@ impl Plugin for CrossoverPlugin {
             ));
         }
 
+        // IIR construction prepares the default rate; initialize() can replace
+        // it. Both IIR and FIR coefficients must follow the callback clock.
+        if context.sample_rate != self.sample_rate {
+            return Err("crossover callback must match the prepared sample rate".into());
+        }
+
         if self.kind == CrossoverKind::LinearPhase {
             if !self.initialized || context.sample_rate != self.sample_rate {
                 return Err(

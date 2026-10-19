@@ -1,0 +1,279 @@
+{
+  "scope": "Optional ML research, explicitly separated from production DSP implementation by user choice. No training, model adoption or production dependency is authorized by these backlog entries.",
+  "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/9",
+  "items": [
+    {
+      "plugin_id": 1,
+      "plugin": "AAE \u2014 artificial ambience",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML is most sensible as offline fitting of these parameters to a measured room; retain a bounded deterministic renderer."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 3,
+      "plugin": "AEC",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "A small neural residual-echo suppressor/nonlinear front end is a credible hybrid candidate [hybrid AEC research][R3]; keep adaptive cancellation and safe bypass operational without inference."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 4,
+      "plugin": "Ambisonics decoder",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Classical regularized/layout-aware decoding is preferable to ML replacing the normative decoder.",
+        "Learned personalization may choose an HRTF/layout correction offline, with explicit normalization and energy constraints."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 5,
+      "plugin": "Analog common",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Learned models are appropriate only when trained and validated against identified hardware and operating levels, not as an automatic replacement for all coloration."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 7,
+      "plugin": "Analog EQ",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML fitting is useful offline for matching measured hardware response/color; it is unnecessary for ordinary parametric EQ."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 8,
+      "plugin": "Analog limiter",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "If neural coloration is added, keep the ceiling mechanism explicit and deterministic; learned release suggestions must never replace the safety bound."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 11,
+      "plugin": "Beamformer",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 12,
+      "plugin": "Binaural decoder",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML HRTF selection from measurements/preferences is plausible offline; online inference must not delay head tracking unpredictably."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 14,
+      "plugin": "Convolution",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML belongs in optional offline IR denoising/estimation, with measured response preserved and model output validated."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 15,
+      "plugin": "Crossfeed",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML personalization may select settings offline; it is not needed in this low-cost deterministic path."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 18,
+      "plugin": "Declick",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML is sensible as a transient/click discriminator or constrained inpainting experiment, with false-positive damage measured explicitly."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 19,
+      "plugin": "Denoiser",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "A learned music mask is plausible, but speech-trained models should not be assumed safe for arbitrary music; evaluate removal artifacts and latency against the existing path."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 21,
+      "plugin": "Downmix",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Learned source-aware remixing should be a separate optional product mode, not a hidden change to deterministic downmix."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 22,
+      "plugin": "Dynamic EQ",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML can propose settings offline; the runtime gain envelope should remain transparent and bounded."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 23,
+      "plugin": "EQ",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML can fit target responses or propose bands offline; it should not replace exact filter realization."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 25,
+      "plugin": "Gate",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML/VAD gating is useful only as an explicit speech mode with false-cut and latency evaluation, not as a replacement for a general-purpose gate."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 28,
+      "plugin": "Hiss reducer",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 29,
+      "plugin": "Limiter",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML may recommend release characteristics, but a learned model should never be the only ceiling enforcement mechanism."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 30,
+      "plugin": "Linear-phase EQ",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML filter fitting can run offline; runtime filtering should remain a validated FIR operation."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 31,
+      "plugin": "Loudness compensation / Fletcher\u2013Munson alias",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Classical calibrated equal-loudness compensation is preferable to a learned black box.",
+        "ML can fit a user's preference curve from controlled listening data, with uncertainty and gain bounds; it cannot infer acoustic calibration from PCM alone."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 32,
+      "plugin": "Matrix",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "This is exact linear algebra; ML is unnecessary except an offline routing suggestion that remains reviewable."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 34,
+      "plugin": "Multiband compressor and single-band compressor alias",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 35,
+      "plugin": "Multiband expander and single-band expander alias",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 36,
+      "plugin": "PND \u2014 pitch-drift correction",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "A monophonic learned pitch estimator such as CREPE [CREPE][R5] is a candidate only for supported material; test confidence gating and do not treat it as a general polyphonic reference-frequency oracle."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 38,
+      "plugin": "Saturation",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Neural emulation is useful for a measured nonlinear target, with alias and parameter-sweep tests rather than waveform similarity alone."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 39,
+      "plugin": "Spectral compressor",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "A learned target mask is plausible for a separate restoration mode; compare latency and artifacts to the classical compressor first."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 41,
+      "plugin": "Stereo imager",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML scene classification could suggest settings offline, but real-time width decisions should remain predictable."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 42,
+      "plugin": "Transient shaper",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "Initialize updates coefficients but reset clears history; callers must not assume reinitialize resets learned envelope state.",
+        "ML onset classification can assist difficult material, but should only modulate bounded controls with an independent deterministic fallback."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 43,
+      "plugin": "Upmixer",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML source masks are a meaningful optional improvement only with measured extra latency, leakage/artifact metrics and graceful fallback."
+      ],
+      "production_requirement": false
+    },
+    {
+      "plugin_id": 44,
+      "plugin": "XTC",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": [
+        "ML can estimate position or personalize transfer functions off the critical path; constrain the inverse filter's gain and retain measured validation."
+      ],
+      "production_requirement": false
+    }
+  ]
+}
