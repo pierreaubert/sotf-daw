@@ -31,7 +31,7 @@ pub const PARAMS: &[ParamSpec] = &[
         .scaled(100.0)
         .doc("Crossfade between path A (-1) and B (+1); not a dry/wet blend"),
     ParamSpec::choice("Mix Mode", "mix_mode", 0, MIX_MODE_LABELS, "Mix")
-        .doc("Smooth pot or instant switch"),
+        .doc("Continuous crossfade or smoothed A/B switch"),
     ParamSpec::choice(
         "Selected Path",
         "selected_path",

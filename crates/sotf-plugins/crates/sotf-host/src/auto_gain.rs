@@ -341,6 +341,18 @@ impl AutoGain {
         }
     }
 
+    /// Return the current frame gain without advancing its smoothing state.
+    ///
+    /// Disabled matching returns unity. This permits comparison renderers to
+    /// freeze an excerpt's gain without a lossy dB conversion or an extra step.
+    pub fn current_gain_linear(&self) -> f32 {
+        if self.enabled {
+            self.current_gain_linear as f32
+        } else {
+            1.0
+        }
+    }
+
     pub fn current_gain_db(&self) -> f32 {
         if !self.enabled {
             0.0

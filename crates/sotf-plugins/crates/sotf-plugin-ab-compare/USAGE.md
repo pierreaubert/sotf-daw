@@ -11,7 +11,7 @@ Fair comparison between two audio processing chains with automatic loudness matc
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
 | Mix | -1.0 to +1.0 | 0.0 | — | Balance between paths: -1.0 = pure A, 0.0 = 50/50, +1.0 = pure B |
-| Mix Mode | Potentiometer / Binary | Potentiometer | — | Continuous crossfade or instant A/B switch |
+| Mix Mode | Potentiometer / Binary | Potentiometer | — | Continuous crossfade or smoothed A/B switch |
 | Selected Path | A / B | A | — | Active path when in Binary mode |
 | Bypass | On/Off | Off | — | Bypass both paths, output latency-compensated dry input |
 | Transition Time | 1 to 500 | 50 | ms | Crossfade duration for mix changes |
@@ -47,6 +47,36 @@ Automatically adjusts path B's level to match path A's loudness, ensuring fair c
 ### Latency Compensation
 
 Automatically compensates for latency differences between paths A and B using delay lines, ensuring time-aligned comparison.
+
+### Blinded ABX Trials (Rust API)
+
+Calibrate loudness on representative material first, then call `begin_abx_trial()`
+on the control thread. It randomly assigns A or B to X and freezes the current
+gain compensation for the judged excerpt. Loudness measurement and gain smoothing
+pause during the trial. Both processing paths and their latency alignment continue
+normally, including retained output and finite tails.
+
+```rust,ignore
+use sotf_plugin_ab_compare::{AbxMonitor, AbxPath};
+
+plugin.begin_abx_trial()?; // X is selected; RNG runs only here.
+plugin.select_abx_monitor(AbxMonitor::A)?;
+// Render/listen, then audition B or X through the same prepared crossfade.
+plugin.select_abx_monitor(AbxMonitor::X)?;
+let result = plugin.submit_abx_guess(AbxPath::A)?;
+// Only now does result.reference reveal the assignment; result.correct scores it.
+```
+
+`abx_monitor()` reports only the audition label. Parameters keep their ordinary
+A/B values, and diagnostic `current_mix` is redacted to zero for the entire trial
+so it cannot reveal X's identity. Parameter edits and reinitialization are rejected
+until the trial ends. `cancel_abx_trial()` discards the assignment without revealing
+it. Reset also cancels the trial and clears retained audio. Trial state is never
+stored in presets. Ordinary listening and adaptive matching resume after submission
+or cancellation. After draining, reset the graph before starting another trial.
+
+These controls are available through the concrete Rust plugin API; the normal
+Potentiometer/Binary parameter schema and existing presets remain compatible.
 
 ### Monitoring
 

@@ -27,9 +27,36 @@
       "id": 2,
       "plugin": "AB Compare",
       "audit_text": "[`abcompare_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-ab-compare/src/lib/abcompare_plugin.rs):2200\u20132400 handles nested processing paths, differing rate/frame geometry, latency alignment and queued finite tails. This is a transport/composition component as much as an effect. Two expensive chains plus alignment buffering create significant worst-case cost. A fair comparison requires equal source time, aligned latency and a stable loudness-matching policy.\n\n`aud137_composition.rs`, `aud137_finite_stream.rs`, `ab087_variable_rate.rs` and `loudness_timing.rs` provide unusually relevant coverage. Add blinded ABX selection, frozen gain matching during judged excerpts, switch-click measurements and source-change tests during partial queued output. Use classical equal-loudness/time-alignment tools; ML should not decide which sound is \u201cbetter\u201d or secretly modify either comparison path.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Add blinded ABX selection",
+          "status": "implemented_and_verified",
+          "evidence": "begin_abx_trial/select_abx_monitor/submit_abx_guess/cancel_abx_trial native Rust APIs. X assigned with control-thread RNG, private ephemeral trial state, parameter edits/reinitialization rejected during trial, current_mix telemetry redacted. Both assignments exercised deterministically and public reveal checked at 44.1/48/96 kHz."
+        },
+        {
+          "task": "Freeze gain matching during judged excerpts",
+          "status": "implemented_and_verified",
+          "evidence": "Trial captures exact non-advancing AutoGain::current_gain_linear; both measurements and gain smoother pause. Public test starts with a moving nonunity gain, proves it stays fixed and resumes after submission."
+        },
+        {
+          "task": "Measure switch discontinuity and callback dependence",
+          "status": "implemented_and_verified",
+          "evidence": "abx_trials.rs checks bit-identical reference switches across single-frame, irregular and large callbacks, plus <0.005 per-sample step for a 0.1872 path-level change with a 1 ms crossfade. Switching/rendering/submission allocate nothing."
+        },
+        {
+          "task": "Source changes during partial queued output and trial lifecycle",
+          "status": "implemented_and_verified",
+          "evidence": "ab087_variable_rate.rs ABX test begins with three frames retained on one path and corresponding output queued on the other, changes input source during A/B/X audition and verifies exact source ordering through finite drain; reset cancels trial and removes prior source audio."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-ab-compare --lib --tests --no-fail-fast: 201 passed, 4 ignored, seven suites (offline/locked shared target).",
+        "cargo test -p sotf-host auto_gain --lib: 24 passed.",
+        "Six facade host gates: 88 passed after Upmixer and ABX production changes.",
+        "Clippy warnings denied passed AB Compare and Upmixer.",
+        "USAGE.md documents calibration, frozen gain, hidden telemetry, reset/drain policy and native Rust API boundary. Existing Pot/Binary schemas/presets unchanged; no frontend UI claimed."
+      ]
     },
     {
       "id": 3,
@@ -527,12 +554,20 @@
       ],
       "result": "192 passed, 3 ignored across 11 suites. Independent pre-correction route comparison tests retained unchanged.",
       "limitation": "Other Upmixer callback-clocked parameter controls, latency/topology coordination and speech/music corpus work remain open."
+    },
+    {
+      "name": "Blinded ABX trials and fixed judged-excerpt matching",
+      "state": "verified",
+      "plugin_ids": [
+        2
+      ],
+      "result": "201 passed, 4 ignored; shared AutoGain 24 passed; facade integration gates 88 passed.",
+      "scope": "Native plugin API and DSP; frontend UI is outside this workspace."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
   "validation_limits": [
-    "Host automation/DSP matrix/drain/realtime allocation gates passed 88 tests before the Upmixer batch. Recheck after Upmixer was blocked before compilation by a concurrently edited sibling sotf-capture manifest referencing a missing benches/capture_callbacks.rs. No sibling files were changed by this task.",
     "Gain and saturation validation temporarily required an offline lock resolution for a concurrent sotf-capture rustix dependency; the task-only lockfile adjustment was restored afterward.",
-    "Clippy with warnings denied passed all six initially production-modified crates plus gain, saturation and crossfeed. Final Upmixer Clippy pending workspace manifest availability."
+    "The previous missing sibling benchmark blocker cleared. Final facade gates passed 88 tests and Upmixer Clippy passed with warnings denied. Offline dependency resolution still temporarily includes a concurrent sotf-capture rustix manifest change; only the AB Compare rand dependency is retained in this task lockfile diff."
   ]
 }

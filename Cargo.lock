@@ -8837,6 +8837,7 @@ name = "sotf-plugin-ab-compare"
 version = "0.6.0"
 dependencies = [
  "math-iir-fir",
+ "rand 0.10.3",
  "serde",
  "serde_json",
  "sotf-host",

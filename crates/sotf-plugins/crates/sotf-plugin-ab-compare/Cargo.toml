@@ -30,5 +30,6 @@ sotf-plugin-gate = { workspace = true }
 sotf-plugin-limiter = { workspace = true }
 sotf-plugin-resampler = { workspace = true }
 math-iir-fir = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

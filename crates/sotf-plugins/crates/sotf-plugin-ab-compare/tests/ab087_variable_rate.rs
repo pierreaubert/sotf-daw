@@ -6595,3 +6595,63 @@ fn converting_pair_tail_is_strict_bound_over_actual_drain() {
     );
     println!("converting-pair tail: strict bound {bound} over actual {total}");
 }
+
+#[test]
+fn abx_source_change_preserves_partial_queued_output_and_finite_tail() {
+    use sotf_plugin_ab_compare::{AbxMonitor, AbxPath};
+
+    let mut plugin = make_reporting_burst_plugin();
+    let old_source = vec![0.25; 3 * CHANNELS];
+    let mut scratch = vec![f32::NAN; old_source.len()];
+    assert_eq!(
+        plugin
+            .process(
+                &old_source,
+                &mut scratch,
+                &ProcessContext::new(SAMPLE_RATE, 3)
+            )
+            .unwrap(),
+        0
+    );
+    // A retains three input frames while B already has its corresponding
+    // output queued. Starting a trial must not discard or re-pair either side.
+    plugin.begin_abx_trial().unwrap();
+    let mut whole = Vec::new();
+    for (monitor, count) in [
+        (AbxMonitor::A, 17),
+        (AbxMonitor::B, 47),
+        (AbxMonitor::X, 73),
+    ] {
+        plugin.select_abx_monitor(monitor).unwrap();
+        let new_source = vec![-0.5; count * CHANNELS];
+        whole.extend(render_collected(&mut plugin, &new_source, &[count]));
+    }
+    let (tail, _) = drain_all_collected(&mut plugin);
+    whole.extend(tail);
+    let mut expected = old_source;
+    expected.extend(vec![-0.5; 137 * CHANNELS]);
+    assert_eq!(whole.len(), expected.len());
+    for (actual, expected) in whole.iter().zip(expected) {
+        assert!(
+            (actual - expected).abs() < 1e-7,
+            "queued source position changed during ABX: {actual} vs {expected}"
+        );
+    }
+    assert!(plugin.select_abx_monitor(AbxMonitor::A).is_err());
+    plugin.submit_abx_guess(AbxPath::A).unwrap();
+    assert!(
+        plugin.begin_abx_trial().is_err(),
+        "a drained graph needs reset before a new trial"
+    );
+    plugin.reset();
+    plugin.begin_abx_trial().unwrap();
+    plugin.reset();
+    assert_eq!(plugin.abx_monitor(), None);
+    let input = vec![0.125; 9 * CHANNELS];
+    let mut fresh = render_collected(&mut plugin, &input, &[9]);
+    fresh.extend(drain_all_collected(&mut plugin).0);
+    assert_eq!(
+        fresh, input,
+        "reset must remove all audio from the prior trial/source"
+    );
+}

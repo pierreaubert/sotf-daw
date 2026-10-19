@@ -2,7 +2,7 @@
 pub use super::config::*;
 use super::delay_line::DelayLine;
 use super::factory::{build_path_from_config, build_path_from_config_with_factory};
-use super::types::ABCompareData;
+use super::types::{ABCompareData, AbxMonitor, AbxPath, AbxResult};
 use math_audio_iir_fir::{Biquad, BiquadCoefficients, BiquadFilterType};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::auto_gain::{AutoGain, AutoGainLoudnessType, AutoGainParams};
@@ -20,6 +20,13 @@ use std::sync::Arc;
 pub(super) struct TransitionSmoothers {
     pub(super) mix: Smoother,
     pub(super) bypass: Smoother,
+}
+
+// Deliberately neither serialized nor exposed through Debug or plugin parameters.
+struct AbxTrial {
+    reference: AbxPath,
+    monitor: AbxMonitor,
+    gain_linear: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -234,6 +241,7 @@ pub struct ABComparePlugin {
     // Uses A's output as "input reference" and B's output as "output to compensate"
     // Also provides loudness and peak data for both paths
     pub(super) auto_gain: AutoGain,
+    abx_trial: Option<AbxTrial>,
 
     // State
     pub(super) mix_mode: MixMode,
@@ -313,6 +321,90 @@ pub struct ABComparePlugin {
 }
 
 impl ABComparePlugin {
+    /// Start a blinded trial with fixed loudness compensation.
+    ///
+    /// Call on the control thread after calibrating the two paths. Randomness
+    /// is obtained here, never during processing. X is selected initially;
+    /// [`Self::select_abx_monitor`] auditions A, B, or X with the existing
+    /// crossfade. Gain measurement and gain smoothing pause until the trial
+    /// ends. The hidden assignment is excluded from parameters and diagnostics.
+    /// Trials are ephemeral: reset cancels them and presets never store them.
+    ///
+    /// # Errors
+    /// Returns an error if another trial is active, drain has started, or
+    /// bypass/difference listening is active (including a bypass transition).
+    pub fn begin_abx_trial(&mut self) -> PluginResult<()> {
+        self.start_abx_trial(if rand::random() {
+            AbxPath::B
+        } else {
+            AbxPath::A
+        })
+    }
+
+    fn start_abx_trial(&mut self, reference: AbxPath) -> PluginResult<()> {
+        if self.abx_trial.is_some()
+            || self.drain_lifecycle != DrainLifecycle::Accepting
+            || self.bypass
+            || self.difference_mode
+            || self.transition_smoothers.bypass.current() != 0.0
+        {
+            return Err(
+                "ABX requires ordinary wet listening, no active trial, and no drain".into(),
+            );
+        }
+        self.abx_trial = Some(AbxTrial {
+            reference,
+            monitor: AbxMonitor::X,
+            gain_linear: self.auto_gain.current_gain_linear(),
+        });
+        // Redact a previously published crossfade immediately as well as on
+        // subsequent publication boundaries. Held pre-trial snapshots contain
+        // no information about this newly randomized assignment.
+        self.cache.update(|data| data.current_mix = 0.0);
+        Ok(())
+    }
+
+    /// Select A, B, or the hidden X without changing the trial assignment.
+    ///
+    /// Selection uses the prepared crossfade and performs no allocation or RNG.
+    /// Ordinary parameter edits are rejected until the trial ends.
+    ///
+    /// # Errors
+    /// Returns an error if there is no active trial or draining has started.
+    pub fn select_abx_monitor(&mut self, monitor: AbxMonitor) -> PluginResult<()> {
+        if self.drain_lifecycle != DrainLifecycle::Accepting {
+            return Err("ABX selection is frozen after drain begins".into());
+        }
+        let trial = self.abx_trial.as_mut().ok_or("No active ABX trial")?;
+        trial.monitor = monitor;
+        Ok(())
+    }
+
+    /// Return the audition label without revealing X's assignment.
+    pub fn abx_monitor(&self) -> Option<AbxMonitor> {
+        self.abx_trial.as_ref().map(|trial| trial.monitor)
+    }
+
+    /// End the trial and reveal its assignment after accepting the answer.
+    ///
+    /// Ordinary listening and adaptive matching resume on the next frame.
+    ///
+    /// # Errors
+    /// Returns an error if there is no active trial.
+    pub fn submit_abx_guess(&mut self, guess: AbxPath) -> PluginResult<AbxResult> {
+        let trial = self.abx_trial.take().ok_or("No active ABX trial")?;
+        Ok(AbxResult {
+            guess,
+            reference: trial.reference,
+            correct: guess == trial.reference,
+        })
+    }
+
+    /// Cancel the trial without revealing X and resume ordinary listening.
+    pub fn cancel_abx_trial(&mut self) {
+        self.abx_trial = None;
+    }
+
     const MAX_REALTIME_FRAMES: usize = 48_000;
 
     /// Per-queue retention bound in frames for same-clock variable production.
@@ -589,6 +681,7 @@ impl ABComparePlugin {
             path_a_config: params.path_a,
             path_b_config: params.path_b,
             auto_gain,
+            abx_trial: None,
             mix_mode: params.mix_mode,
             mix: params.mix,
             transition_smoothers: TransitionSmoothers {
@@ -830,6 +923,7 @@ impl ABComparePlugin {
     #[allow(dead_code)]
     pub(super) fn can_use_empty_path_fast_path(&self) -> bool {
         self.has_empty_paths()
+            && self.abx_trial.is_none()
             && self.mix_mode == MixMode::Potentiometer
             && !self.phase_invert[0]
             && !self.phase_invert[1]
@@ -889,7 +983,7 @@ impl ABComparePlugin {
         self.cache_update_counter = 0;
         // The segment has already been rendered with its previous gain target.
         // These statistics may change only the samples following this boundary.
-        if self.auto_gain.is_enabled() {
+        if self.auto_gain.is_enabled() && self.abx_trial.is_none() {
             self.auto_gain.refresh_input_measurement();
             self.auto_gain.refresh_output_measurement();
             self.last_peaks[0] = self.auto_gain.last_input_peak();
@@ -901,7 +995,11 @@ impl ABComparePlugin {
             auto_gain_db: self.auto_gain.current_gain_db(),
             peak_a: self.last_peaks[0],
             peak_b: self.last_peaks[1],
-            current_mix: self.transition_smoothers.mix.current(),
+            current_mix: if self.abx_trial.is_some() {
+                0.0
+            } else {
+                self.transition_smoothers.mix.current()
+            },
             bypass_active: self.bypass,
         };
         self.cache.update(|d| *d = data);
@@ -1307,13 +1405,27 @@ impl ABComparePlugin {
         let sign_b: f32 = if self.phase_invert[1] { -1.0 } else { 1.0 };
         let band_mask_active = self.band_mask_active();
 
-        let target_mix = match self.mix_mode {
-            MixMode::Potentiometer => self.mix,
-            MixMode::Binary => {
-                if self.selected_path == 0 {
-                    -1.0
-                } else {
-                    1.0
+        let target_mix = if let Some(trial) = &self.abx_trial {
+            match trial.monitor {
+                AbxMonitor::A => -1.0,
+                AbxMonitor::B => 1.0,
+                AbxMonitor::X => {
+                    if trial.reference == AbxPath::A {
+                        -1.0
+                    } else {
+                        1.0
+                    }
+                }
+            }
+        } else {
+            match self.mix_mode {
+                MixMode::Potentiometer => self.mix,
+                MixMode::Binary => {
+                    if self.selected_path == 0 {
+                        -1.0
+                    } else {
+                        1.0
+                    }
                 }
             }
         };
@@ -1328,14 +1440,18 @@ impl ABComparePlugin {
                 .frames_until_measurement()
                 .min(num_frames - segment_start);
             let segment_end = segment_start + count;
-            if self.auto_gain.is_enabled() {
+            if self.auto_gain.is_enabled() && self.abx_trial.is_none() {
                 let samples = segment_start * self.num_channels..segment_end * self.num_channels;
                 self.auto_gain
                     .ingest_input(&self.buffers[0][samples.clone()])?;
                 self.auto_gain.ingest_output(&self.buffers[1][samples])?;
             }
             for frame in segment_start..segment_end {
-                let gain_linear = self.auto_gain.next_gain_linear();
+                let gain_linear = if let Some(trial) = &self.abx_trial {
+                    trial.gain_linear
+                } else {
+                    self.auto_gain.next_gain_linear()
+                };
                 let current_mix = self.transition_smoothers.mix.advance();
                 let bypass_mix = self.transition_smoothers.bypass.advance();
 
@@ -1842,6 +1958,11 @@ impl Plugin for ABComparePlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if self.abx_trial.is_some() {
+            return Err(
+                "ABX trial settings are frozen; select A/B/X or end the trial first".into(),
+            );
+        }
         if self.drain_lifecycle != DrainLifecycle::Accepting {
             return Err("A/B Compare parameters are frozen until reset after drain begins".into());
         }
@@ -2058,6 +2179,9 @@ impl Plugin for ABComparePlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if self.abx_trial.is_some() {
+            return Err("End the ABX trial before changing the prepared graph".into());
+        }
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("A/B Compare graph requires a finite positive sample rate".into());
         }
@@ -2192,6 +2316,7 @@ impl Plugin for ABComparePlugin {
     }
 
     fn reset(&mut self) {
+        self.abx_trial = None;
         // Reset hosts
         self.host_a.reset();
         self.host_b.reset();
@@ -3439,5 +3564,56 @@ mod mask_proof_tests {
             "white-box deactivate-at-drain: active flush {} frames, deactivated 0",
             tail_active.len() / CHANNELS
         );
+    }
+}
+
+#[cfg(test)]
+mod abx_assignment_tests {
+    use super::*;
+
+    #[test]
+    fn both_hidden_assignments_render_their_named_reference() {
+        for reference in [AbxPath::A, AbxPath::B] {
+            let mut plugin = ABComparePlugin::from_params(
+                1,
+                ABComparePluginParams {
+                    path_b: PathConfig::Plugin {
+                        plugin_type: "gain".into(),
+                        parameters: serde_json::json!({"gain_db": -12.0}),
+                    },
+                    mix: -1.0,
+                    mix_transition_ms: 1.0,
+                    auto_gain_enabled: false,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            plugin.initialize(48_000.0).unwrap();
+            plugin.start_abx_trial(reference).unwrap();
+            let input = vec![0.25; 4096];
+            let mut output = vec![0.0; input.len()];
+            plugin
+                .process(
+                    &input,
+                    &mut output,
+                    &ProcessContext::new(48_000, input.len()),
+                )
+                .unwrap();
+            let expected = 0.25
+                * if reference == AbxPath::A {
+                    1.0
+                } else {
+                    10.0_f32.powf(-12.0 / 20.0)
+                };
+            assert!((output[output.len() - 1] - expected).abs() < 1e-6);
+            assert_eq!(
+                plugin.submit_abx_guess(reference).unwrap(),
+                AbxResult {
+                    guess: reference,
+                    reference,
+                    correct: true
+                }
+            );
+        }
     }
 }
