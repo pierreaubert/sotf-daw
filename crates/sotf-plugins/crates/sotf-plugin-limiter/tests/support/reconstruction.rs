@@ -21,6 +21,11 @@ pub fn reconstructed_peak(x: &[f32], channels: usize, ch: usize, rate: u32) -> f
     } else {
         1
     };
+    reconstructed_peak_at_factor(x, channels, ch, factor)
+}
+
+pub fn reconstructed_peak_at_factor(x: &[f32], channels: usize, ch: usize, factor: usize) -> f64 {
+    assert!([1, 2, 4].contains(&factor));
     let mut peak = sample_peak(x, channels, ch);
     if factor == 1 {
         return peak;
@@ -30,7 +35,7 @@ pub fn reconstructed_peak(x: &[f32], channels: usize, ch: usize, rate: u32) -> f
     // no detector, production coefficient table, causal history or meter data.
     let kernels: Vec<Vec<(isize, f64)>> = (1..factor)
         .map(|phase| {
-            (-radius as isize..=radius as isize + 1)
+            (-(radius as isize)..=radius as isize + 1)
                 .filter_map(|offset| {
                     let t = phase as f64 / factor as f64 - offset as f64;
                     if t.abs() > radius as f64 {

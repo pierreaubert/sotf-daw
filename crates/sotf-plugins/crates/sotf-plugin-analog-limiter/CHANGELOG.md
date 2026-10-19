@@ -1,3 +1,15 @@
+# Unreleased
+
+- Preflight live structural restrictions before any batch mutation. Rejected
+  lookahead edits no longer retarget color or invalidate finite-tail metadata.
+- Reuse prepared metadata for primitive scalar validation/setters and valid bulk
+  updates, removing callback parameter-map/schema reconstruction.
+- Extend near-Nyquist color automation reconstruction, native/oversampled host
+  EOF, and actual callback allocation checks. Validate a final delayed clean ISP
+  limiter after downsampling and document the tested protected render chain.
+- Clarify that native True Peak is input detection, colored tails need an
+  explicit render duration, and sample clamping alone is not output ISP protection.
+
 ## Unreleased r2 gate dispositions (2026-10-02)
 
 - Replaced two physically invalid Hammerstein oracles with valid tests of the

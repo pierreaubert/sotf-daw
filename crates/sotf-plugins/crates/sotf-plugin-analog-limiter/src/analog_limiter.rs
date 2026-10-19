@@ -294,6 +294,89 @@ impl AnalogLimiterPlugin {
         }
         Ok(())
     }
+    fn unchanged_update(&self, id: &ParameterId, value: &ParameterValue) -> bool {
+        if id.as_str() == "analog_model" {
+            value.as_string() == Some(self.model_name())
+        } else {
+            self.parametric_get_parameter(id).as_ref() == Some(value)
+        }
+    }
+    fn validate_update(&self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        if self.drained {
+            return if self.unchanged_update(id, value) {
+                Ok(())
+            } else {
+                Err("reset the analog limiter before changing controls after drain".into())
+            };
+        }
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|p| &p.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|e| format!("{id}: {e}"))?;
+        match id.as_str() {
+            "analog_model" => {
+                let name = value.as_string().ok_or("analog_model must be a string")?;
+                if name != self.model_name() {
+                    let new_id = model_id_for_name(name)
+                        .ok_or_else(|| format!("Unknown analog model: {name}"))?;
+                    if self.initialized && new_id != self.model_id {
+                        return Err("analog_model change requires reconstruction".into());
+                    }
+                }
+            }
+            "lookahead" if self.initialized => {
+                return Err("lookahead changes latency and requires a graph rebuild".into());
+            }
+            key if key.starts_with("analog_") => {
+                if value.as_float().is_none() {
+                    return Err(format!("{id}: expected float value"));
+                }
+            }
+            _ => self.core.parametric_validate_parameter(id, value)?,
+        }
+        Ok(())
+    }
+    fn apply_control(&mut self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        if self.drained {
+            return Ok(());
+        }
+        let key = id.as_str();
+        if key == "analog_model" {
+            let name = value.as_string().expect("validated model string");
+            if name == self.model_name() {
+                return Ok(());
+            }
+            let model_id = model_id_for_name(name).expect("validated model choice");
+            self.stage.set_model_id(model_id)?;
+            self.model_id = model_id;
+        } else if key.starts_with("analog_") {
+            self.apply_analog_float(key, value.as_float().expect("validated analog float"))?;
+        } else {
+            self.core.set_parameter(id.clone(), value.clone())?;
+            // Update mirrors only after acceptance by the core.
+            if key == "threshold" {
+                self.threshold_db = value.as_float().expect("validated threshold");
+            }
+            if key == "mix" {
+                self.mix = value.as_float().expect("validated mix");
+            }
+        }
+        let canonical = self.model_name();
+        if let Some(parameter) = self.cached_parameters.iter_mut().find(|p| &p.id == id) {
+            if key == "analog_model" {
+                if parameter.default_value.as_string() != Some(canonical) {
+                    parameter.default_value = ParameterValue::String(canonical.to_owned());
+                }
+            } else {
+                parameter.default_value = value.clone();
+            }
+        }
+        Ok(())
+    }
 }
 
 impl ParametricInPlacePlugin for AnalogLimiterPlugin {
@@ -368,85 +451,35 @@ impl ParametricInPlacePlugin for AnalogLimiterPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
-        if self.drained {
-            return if values
-                .iter()
-                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
-            {
-                Ok(())
-            } else {
-                Err("reset the analog limiter before changing controls after drain".into())
-            };
-        }
-        // Validate everything before mutating any state.
+        // Preflight both schema and runtime restrictions before color changes
+        // can invalidate the zero-color finite-tail proof.
         for (id, value) in &values {
-            let Some(parameter) = self
-                .cached_parameters
-                .iter()
-                .find(|parameter| &parameter.id == id)
-            else {
-                return Err(format!("Unknown parameter: {id}"));
-            };
-            parameter
-                .validate(value)
-                .map_err(|error| format!("{id}: {error}"))?;
-            if id.as_str() == "analog_model" {
-                let Some(name) = value.as_string() else {
-                    return Err("analog_model must be a string".to_string());
-                };
-                let Some(new_id) = model_id_for_name(name) else {
-                    return Err(format!("Unknown analog model: {name}"));
-                };
-                // Structural: replacement allocates and re-prepares the
-                // stage on the control thread, so a live change on an
-                // initialized instance is refused; adopt the model at
-                // construction or state restore instead. Repeating the
-                // committed model stays a no-op success for snapshot
-                // resends, mirroring the bridge/FFI no-op shields.
-                if self.initialized && new_id != self.model_id {
-                    return Err("analog_model change requires reconstruction".to_string());
-                }
-            }
+            self.validate_update(id, value)?;
         }
-        // Model replacement precedes target updates, so both the targets and
-        // their initial smoothing trajectories are independent of map order.
-        if let Some(value) = values.get(&ParameterId::from("analog_model"))
-            && let Some(name) = value.as_string()
-            && let Some(model_id) = model_id_for_name(name)
-        {
-            self.stage.set_model_id(model_id)?;
-            self.model_id = model_id;
+        if let Some((id, value)) = values.iter().find(|(id, _)| id.as_str() == "analog_model") {
+            self.apply_control(id, value)?;
         }
         for (id, value) in &values {
-            let key = id.as_str();
-            if key == "analog_model" {
-                continue;
-            }
-            if key.starts_with("analog_") {
-                let Some(float) = value.as_float() else {
-                    return Err(format!("{id}: expected float value"));
-                };
-                self.apply_analog_float(key, float)?;
-                continue;
-            }
-            // Limiter-core key: the core validates against its own schema,
-            // whose ranges match this plugin's carried specs.
-            self.core.set_parameter(id.clone(), value.clone())?;
-            // Mirror the accepted core targets for the final safety clamp.
-            // Validation above guarantees finite in-range floats, which the
-            // core stores as given (its mix clamp is a no-op in range).
-            if key == "threshold" {
-                if let Some(float) = value.as_float() {
-                    self.threshold_db = float;
-                }
-            } else if key == "mix"
-                && let Some(float) = value.as_float()
-            {
-                self.mix = float;
+            if id.as_str() != "analog_model" {
+                self.apply_control(id, value)?;
             }
         }
-        self.rebuild_cached_parameters();
         Ok(())
+    }
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        self.validate_update(id, value)
+    }
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.validate_update(&id, &value)?;
+        self.apply_control(&id, &value)
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {

@@ -193,9 +193,40 @@
       "id": 8,
       "plugin": "Analog limiter",
       "audit_text": "[`analog_limiter.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-limiter/src/analog_limiter.rs):452\u2013545 runs a limiter, then coloration, then a final sample clamp. The final clamp protects sample peaks but is not by itself a true-peak proof after nonlinear coloration. Tail metadata changes with color activity; this deserves host-level EOF tests.\n\n`output_ceiling.rs`, `clamp_engagement.rs`, `finite_stream.rs` and integration tests target the right risks. Extend reconstruction-based true-peak measurements at near-Nyquist frequencies, color changes during limiting, and oversampling/downsampling transitions. Classical oversampled nonlinear processing plus a final properly delayed true-peak stage is the first improvement. If neural coloration is added, keep the ceiling mechanism explicit and deterministic; learned release suggestions must never replace the safety bound.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Preserve color, exact finite-tail metadata and populated audio on rejected bulk controls",
+          "status": "implemented_and_verified",
+          "evidence": "audit_controls.rs reproduced a rejected initialized lookahead batch that still changed analog_color from 0 to 0.7, invalidating the proved zero-color finite-tail epoch. Shared validation now preflights runtime structural restrictions and schema before any model/numeric control is applied. Values, latency, finite-tail metadata and populated output remain unchanged for structural, unknown and non-finite failures across six models and four rates."
+        },
+        {
+          "task": "Remove primitive live-control heap activity while retaining core and sample-ceiling behavior",
+          "status": "implemented_and_verified",
+          "evidence": "Scalar validation originally allocated/freed 35 times through default schema/map paths. Borrowed cached validation, direct prepared core/analog scalar updates and in-place cached values now avoid live scalar allocation/deallocation. Valid bulk updates and canonical snapshots excluding structural lookahead require no new allocation, though consuming caller-owned maps may free storage. Actual host callbacks apply nine queued numeric/Boolean controls with zero heap activity across all six models. Existing sample ceiling, clamp engagement, clean-core parity and zero-color finite guards pass unchanged."
+        },
+        {
+          "task": "Extend independent post-color reconstruction through near-Nyquist phases and live color changes",
+          "status": "implemented_and_verified",
+          "evidence": "audit_reconstruction.rs uses the shared independent centered f64 reconstruction oracle, extended to allow an explicit factor while preserving the prior rate-policy helper. 360 phase/color cases cover six models, four rates, five near-Nyquist normalized frequencies through 0.491 Fs, random phases and repeated live color changes. Native samples stay at -12 dBFS; dense 4x reconstruction reached -6.786145415583993 dBTP. The test uses the independently derived interpolation L1 operator bound, not an unsupported 3 dB or strict true-peak ceiling. It explicitly demonstrates that sample clamping alone cannot certify output ISP."
+        },
+        {
+          "task": "Validate oversampled coloration followed by a properly delayed final native ISP stage",
+          "status": "implemented_and_verified",
+          "evidence": "audit_analog_limiter_host.rs builds actual saved/reloaded factory AnalogLimiter -> 1x/2x/4x processing/downsampling -> clean Limiter ISP chains, with every model, 44.1/48/96/192 kHz, live color/drive automation, callback partitions and host EOF. Final sample bound -12 dBFS+1e-5 dB and existing rate-dependent ISP criterion -12 dBTP+0.1 dB pass; observed protected maximum -11.999998057338912 dBTP versus unprotected dense maximum -6.78192511711875 dBTP. README provides the tested builder recipe; native True Peak retains detection-only semantics. The final ISP remains outside downsampling and reports its correction delay. At >=192 kHz the existing final-stage criterion is sample peaks, not dense/ideal reconstruction."
+        },
+        {
+          "task": "Prove host EOF behavior and metadata transitions without misclassifying recursive colored tails",
+          "status": "implemented_and_verified",
+          "evidence": "All model/rate/factor zero-color host drains match a fresh host rendered with ordinary zero continuation exactly; reset repeats the retained output. Native impulse delay is exact and fractional oversampled projection rounds within one native frame. Nonzero color then zero target remains Infinite until reset; metadata and guard behavior follow that policy. Colored chain tests use an explicit 1024-frame zero-input render budget before wrapper/final-ISP flushing. README states that this budget/legacy COMPLETE result does not prove recursive silence or exact support and is not an audibility/cutoff recommendation. No automatic colored-tail convergence is claimed."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-analog-limiter --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 42 passed, no ignored/failing tests. Existing final-clamp, native ceiling/parity and finite-stream guards retain their original bounds.",
+        "cargo test -p sotf-plugins --test audit_analog_limiter_host --test audit_limiter_host with the same offline/locked/target flags: four host tests passed. Final strengthened zero-color EOF impulse/latency and ordinary zero-continuation selection passed separately. cargo test -p sotf-plugin-limiter --test audit_safety: six prior oracle/control regressions passed with the shared helper extension.",
+        "Strict Clippy passed for Analog Limiter all targets, the Analog/Clean Limiter facade host targets (--no-deps), and clean limiter audit_safety (--no-deps), with the shared offline/locked/target flags and -D warnings. git diff --check passed.",
+        "The production correction is transactional/realtime control handling. Native output remains a sample-ceiling limiter with detection-only True Peak. Stronger final protection is the documented/tested composition of oversampled coloration followed by the existing delayed clean ISP limiter after downsampling. This preserves native preset fields, latency and ordinary sample-clamp arithmetic. Recursive colored decay still requires an explicit caller render budget; unsupported legacy COMPLETE is not proof of finite support or silence. Full workspace/release/platform QA and perceptual tail-cutoff/hardware-model validation were not run. Optional learned coloration/release work remains separate."
+      ]
     },
     {
       "id": 9,
