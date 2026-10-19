@@ -659,7 +659,7 @@
       "id": 41,
       "plugin": "Stereo imager",
       "audit_text": "[`stereo_imager_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-stereo-imager/src/lib/stereo_imager_plugin.rs):410\u2013565 uses complementary side-band processing, an exact all-unity route and bounded coefficient/control updates. A fully dry early return can stop filter-state evolution; verify behavior when re-enabling wet processing after a long dry interval.\n\n`crossover_response.rs` and integration tests cover static reconstruction. Extend mono compatibility, low-frequency narrowing, phase correlation, dry/wet toggles and first transients. Classical M/S processing with complementary filters and an explicit low-frequency mono policy is sufficient. ML scene classification could suggest settings offline, but real-time width decisions should remain predictable.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Evolve crossover/control state through fully dry and neutral-width intervals.",
@@ -668,9 +668,34 @@
             "crates/sotf-plugins/crates/sotf-plugin-stereo-imager/tests/crossover_response.rs"
           ],
           "result": "Public regression failed before the change and now matches a continuously running wet reference multiplied by an independent analytic 10 ms one-pole ramp. Transparent output remains bit-exact; wrong-rate processing is rejected without reinitialization."
+        },
+        {
+          "task": "Make repeated dry/wet and neutral transitions sample-clock invariant and preserve small controls",
+          "status": "implemented_and_verified",
+          "evidence": "audit_image.rs reproduced a callback-dependent 7.450581e-9 sample error at 16 kHz and discarded nonzero mix 8.940697e-8 (expected 0.25000006, actual 0.25). Exact dry/unity routing and denormal cleanup now follow individual advanced samples. Rounding-stalled one-pole controls finish at their targets on the sample clock. Repeated settling/retargeting is bit-identical across one-frame, large and irregular callbacks at 16/32/48/192 kHz; zero-frame calls leave clocks untouched, and settled transparent routes preserve input bits."
+        },
+        {
+          "task": "Measure independent first-transient, cross-channel, mono-fold and correlation behavior",
+          "status": "implemented_and_verified",
+          "evidence": "audit_image.rs checks 30 stereo impulse configurations against a closed-form bilinear one-pole response, including channel orientation and the first direct sample, with 2e-7 absolute tolerance; maximum observed error 1.0316629328599447e-8. Sixty coherent mid/side tone configurations at 32/48/192 kHz compare measured Pearson correlation against independent transfer/energy equations within 2e-6; maximum observed error 7.221982412097816e-8. Mono fold remains unchanged within 2e-7, and neutral-control Mono Bass exceeds 20 dB side attenuation at 20 Hz with correlation above 0.98."
+        },
+        {
+          "task": "Validate factory preset reload, queued host automation and bypass",
+          "status": "implemented_and_verified",
+          "evidence": "audit_stereo_image_host.rs serializes/reloads a nonneutral preset and renders actual DawHost queued mix, width, cutoff and Mono Bass edits at 16/48/192 kHz. Output matches the native factory path bit-for-bit, synchronous invalid edits preserve accepted state, host bypass is exact, and wet re-entry remains finite with preserved mono fold."
+        },
+        {
+          "task": "Document predictable stereo and bass-control tradeoffs",
+          "status": "implemented_and_verified",
+          "evidence": "README specifies M/S orientation and unchanged mono fold, negative-correlation widening tradeoff, multiplicative global/band widths without a peak ceiling, gentle first-order Mono Bass response and partial-dry bass leakage, sample-clock smoothing/control updates, current filter history through dry intervals, reset/rate preparation, zero latency and recursive decay versus finite support."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "Full stereo-imager library and tests: 60 passed across four suites; existing independent complex-response, retained-history and heap-guard tests remain green.",
+        "Factory/host regression plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 43 passed.",
+        "Stereo-imager library/tests Clippy --no-deps with warnings denied passed; final five audit regressions passed again after iterator-style corrections. Facade lint rerun is blocked by concurrent, unrelated sotf-capture compilation errors (latest: missing Arc<Continuity> argument at signal_recorder/types.rs:522). The 43 facade tests passed before the test-only iterator correction; production DSP was unchanged. git diff --check passed.",
+        "No parameters or preset schema changes. Added bounded sample-local comparisons and final target settling; crossover control rate remains one update opportunity per 16 samples. Optional ML scene suggestions remain separate."
+      ]
     },
     {
       "id": 42,

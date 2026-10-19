@@ -13,6 +13,20 @@ use sotf_host::smoothing::Smoother;
 
 const CROSSOVER_CONTROL_INTERVAL: usize = 16;
 
+// Finish one-pole controls when f32 rounding prevents further progress. This
+// keeps exact dry/unity targets reachable without a callback-level snap.
+fn advance_control(smoother: &mut Smoother) -> f32 {
+    let previous = smoother.current();
+    let next = smoother.advance();
+    if next == previous && next != smoother.target() {
+        let target = smoother.target();
+        smoother.reset(target);
+        target
+    } else {
+        next
+    }
+}
+
 // Bilinear one-pole lowpass in trapezoidal-integrator form. Its complementary
 // highpass is input - lowpass, so the sum is identity rather than an allpass.
 // f64 state avoids precision loss at low cutoffs and high sample rates.
@@ -483,31 +497,8 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
                 buffer.len()
             ));
         }
-        let unity = |smoother: &Smoother| {
-            (smoother.target() - 1.0).abs() <= f32::EPSILON
-                && (smoother.current() - 1.0).abs() <= f32::EPSILON
-        };
-        let transparent_widths = self.mono_bass_smoother.target() >= 1.0 - f32::EPSILON
-            && self.mono_bass_smoother.current() >= 1.0 - f32::EPSILON
-            && unity(&self.width_smoother)
-            && unity(&self.low_width_smoother)
-            && unity(&self.mid_width_smoother)
-            && unity(&self.high_width_smoother)
-            && (self.low_mid_freq_smoother.target() - self.low_mid_freq_smoother.current()).abs()
-                <= f32::EPSILON
-            && (self.mid_high_freq_smoother.target() - self.mid_high_freq_smoother.current()).abs()
-                <= f32::EPSILON;
-
-        // Transparent audio still clocks the crossovers and controls, so later
-        // wet/width changes see current history rather than stale filter state.
-        let mix_is_zero = self.mix_smoother.target() <= f32::EPSILON
-            && self.mix_smoother.current() <= f32::EPSILON;
-
-        // The current input sample remains in local registers until the wet sample is
-        // produced, so intermediate mix values need no callback-sized scratch buffer.
-        let need_dry = !(self.mix_smoother.target() >= 1.0 - f32::EPSILON
-            && self.mix_smoother.current() >= 1.0 - f32::EPSILON);
-
+        // Even transparent samples clock filters and controls. Route selection
+        // follows each advanced sample, so settling never depends on callbacks.
         for frame in 0..nf {
             let idx = frame * 2;
             let l = buffer[idx];
@@ -520,8 +511,8 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             // Advance targets at audio rate, but redesign crossover coefficients at a
             // bounded control rate. This retains time-based smoothing without doing
             // trigonometric filter design for every sample.
-            let low_mid_freq = self.low_mid_freq_smoother.advance();
-            let mid_high_freq = self.mid_high_freq_smoother.advance();
+            let low_mid_freq = advance_control(&mut self.low_mid_freq_smoother);
+            let mid_high_freq = advance_control(&mut self.mid_high_freq_smoother);
             if self.crossover_control_phase == 0 {
                 if (self.crossover_low.frequency() - low_mid_freq).abs() > f32::EPSILON {
                     self.crossover_low.set_frequency(low_mid_freq);
@@ -545,11 +536,11 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             let side_upper_low = self.crossover_high.process(side);
 
             // Advance smoothers (per-sample)
-            let gw = self.width_smoother.advance();
-            let lw = self.low_width_smoother.advance();
-            let mw = self.mid_width_smoother.advance();
-            let hw = self.high_width_smoother.advance();
-            let low_side_enable = self.mono_bass_smoother.advance();
+            let gw = advance_control(&mut self.width_smoother);
+            let lw = advance_control(&mut self.low_width_smoother);
+            let mw = advance_control(&mut self.mid_width_smoother);
+            let hw = advance_control(&mut self.high_width_smoother);
+            let low_side_enable = advance_control(&mut self.mono_bass_smoother);
 
             // Weighted sum of the complementary bands L, U-L, and S-U.
             // This expanded form makes neutral widths exactly transparent and
@@ -563,21 +554,22 @@ impl ParametricInPlacePlugin for StereoImagerPlugin {
             let wet_r = total_mid - total_side;
 
             // Dry/wet mix
-            let m = self.mix_smoother.advance();
-            if mix_is_zero || transparent_widths {
+            let m = advance_control(&mut self.mix_smoother);
+            let transparent_widths =
+                gw == 1.0 && lw == 1.0 && mw == 1.0 && hw == 1.0 && low_side_enable == 1.0;
+            if m == 0.0 || transparent_widths {
                 continue; // Preserve exact input bits on transparent routes.
             }
-            if need_dry {
+            if m != 1.0 {
                 buffer[idx] = l + (wet_l - l) * m;
                 buffer[idx + 1] = r + (wet_r - r) * m;
             } else {
                 buffer[idx] = wet_l;
                 buffer[idx + 1] = wet_r;
             }
-        }
-
-        if !mix_is_zero && !transparent_widths {
-            flush_denormals_inplace(buffer);
+            // Do not flush neighboring transparent samples: preserving their
+            // bits must also be independent of where a callback ends.
+            flush_denormals_inplace(&mut buffer[idx..idx + 2]);
         }
         Ok(nf)
     }

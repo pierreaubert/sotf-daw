@@ -29,6 +29,32 @@ Construction validates finite ranges and strict crossover ordering; initializati
 and automation also require the upper crossover below Nyquist. Processing performs
 bounded work per frame and uses no heap allocation or callback-sized scratch buffer.
 
+## Image and automation behavior
+
+The processor preserves `M = (L + R) / 2` and changes only
+`S = (L - R) / 2`. Consequently the mono fold is unchanged, within floating-point
+rounding, even while controls move. A mono source remains mono; widening cannot
+create independent spatial information. Increasing side energy can make measured
+L/R correlation negative. This is an intentional width tradeoff, and it does not
+mean that the mono fold gains the widened side signal.
+
+Mono Bass suppresses the low side band using the same gentle 6 dB/octave
+complementary split. With otherwise neutral controls and full wet mix, the side
+response is a first-order highpass at Low-Mid Freq: approximately -3 dB at that
+cutoff, rather than a brick-wall mono region. Partial dry mix retains some of the
+original bass side signal. Global width and band widths multiply; their maximum
+combined side gain can exceed unity, so this effect does not impose a peak ceiling.
+
+Controls follow 10 ms one-pole trajectories on the sample clock; cutoff
+coefficients update every 16 samples. Rounding-stalled controls finish at their
+exact target on a real sample. Zero-frame callbacks do not advance time. Exact
+zero mix and neutral widths preserve input bits while filter histories continue
+following the source. Tiny nonzero mix settings remain active. Changing back to
+wet therefore uses current crossover history. The first direct sample has zero
+algorithmic delay; recursive crossover decay is not finite mathematical support.
+Reset and successful rate preparation clear histories and adopt current targets.
+Host bypass is separate from the plugin's dry mix and may suspend processing.
+
 ## Architecture
 
 ```
