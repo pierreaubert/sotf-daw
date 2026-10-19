@@ -26,7 +26,8 @@ cargo test -p sotf-plugin-analog-eq
 
 - ParametricInPlacePlugin — same channel count in/out
 - Signal flow: biquad core first, analog color stage second, both in place
-- Coefficient updates are click-free (`Biquad::update_params` keeps delay state)
+- Coefficient updates retain Direct Form I history; immediate steps can create
+  transients and are not guaranteed click-free
 - Zero added latency (biquads + color stage report 0)
 - Default state is a flat EQ with color at 0% (transparent)
 - Model selection is fail-closed: unknown names are rejected, never guessed

@@ -128,9 +128,40 @@
       "id": 7,
       "plugin": "Analog EQ",
       "audit_text": "[`analog_eq.rs`](crates/sotf-plugins/crates/sotf-plugin-analog-eq/src/analog_eq.rs):372\u2013502 applies biquad EQ followed by coloration. Batch handling validates the parameter schema before mutation and refuses live model replacement. It subsequently refreshes filters/parameter metadata; the filter rebuild reuses storage when geometry is unchanged. Verify allocation behavior through each public automation route rather than assuming a steady-layout process guarantee also covers bulk setters. A partial-commit defect was not demonstrated.\n\n`scalar_reads.rs` and integration tests are useful but narrower than the main EQ family's numerical coverage. Add independent complex-frequency response, order-of-stage tests, no-color null, live coefficient-step transients, malformed-batch state preservation and allocation checks through the actual host setter. Classical topology-preserving filters or prepared crossfades can improve automation. ML fitting is useful offline for matching measured hardware response/color; it is unnecessary for ordinary parametric EQ.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Remove heap allocation from primitive scalar validation/setters and reuse prepared filters/metadata for bulk updates",
+          "status": "implemented_and_verified",
+          "evidence": "audit_automation.rs reproduced 47 allocations in one scalar validation before the correction. Analog EQ now borrows cached schema for validation, directly applies scalar controls, refreshes numeric cached values in place and avoids parameter-map/metadata reconstruction. Valid scalar validation/setters, processing and populated reset are allocation/deallocation guarded; valid bulk numeric updates and canonical same-model snapshots require no new allocations. Bulk state consumes the caller-owned map and may free that map; structural replacement and owned schema queries remain control-thread operations."
+        },
+        {
+          "task": "Add independent complex response and coefficient-step trajectory references",
+          "status": "implemented_and_verified",
+          "evidence": "audit_response.rs derives analog shelf/peak polynomials and independent bilinear transforms without production coefficient/response helpers. Actual long impulse responses at 44.1/48/96/192 kHz, mixed/extreme gain/Q profiles, 41 log-spaced frequencies and all four corners meet fixed normalized complex error |actual-reference|/(1+|reference|)<2e-5 (observed maximum 1.7372719061809003e-7). A separate time-varying f64 Direct Form I reference verifies complete state-retaining coefficient steps within 3e-6 sample error and a fixed bounded-fixture peak. No gain fitting or delay alignment; coefficient steps remain immediate, not universally click-free."
+        },
+        {
+          "task": "Prove EQ-before-color ordering and no-color null for all six models",
+          "status": "implemented_and_verified",
+          "evidence": "audit_response.rs compares actual Analog EQ against a separately composed clean EQ -> standalone AnalogColorStage sequence through 192 kHz for every model, within 2e-6 peak. The reversed sequence must measurably differ. Flat EQ/color zero/trim zero nulls with driven controls within 2e-7. This validates component order and zero-color identity, not the physical accuracy of the sibling analog models."
+        },
+        {
+          "task": "Preserve malformed-batch metadata/state and clear old histories on stream preparation",
+          "status": "implemented_and_verified",
+          "evidence": "Malformed batches (unknown fields/models, live model replacement, invalid Q/type and non-finite frequency) preserve values, serialized metadata and populated filter/color output exactly across all models/rates. This confirms the existing schema-preflight invariant; no original partial-commit defect is claimed. A new preparation regression did reproduce old recursive EQ history leaking into a new stream (0.40196997 peak error). Successful initialize now resets EQ/color history, matching fresh instances exactly across all six models and rates."
+        },
+        {
+          "task": "Check allocation and automation through the actual factory/host setter routes",
+          "status": "implemented_and_verified",
+          "evidence": "audit_analog_eq_host.rs measures immediate control-thread setter and queue producer heap activity, then requires zero allocations AND frees when the real host callback applies fourteen queued EQ/color controls, all six models, 2/8 channels and four rates. Representative control-thread counts: immediate 115 allocations/115 frees; queue producer 14/14 for fourteen events; callback 0/0. Saved/reloaded factory presets and queued live controls compare exactly with native audio under different callback sizes. README/AGENTS correct the unsupported click-free claim and explain control-thread versus callback ownership."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-analog-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 20 passed, no ignored/failing tests. Final strengthened audit_automation allocation/deallocation/reset selection: four passed.",
+        "cargo test -p sotf-plugins --test audit_analog_eq_host with the same offline/locked/target flags: two host tests passed.",
+        "cargo clippy -p sotf-plugin-analog-eq --all-targets and cargo clippy -p sotf-plugins --test audit_analog_eq_host --no-deps, with the same offline/locked/target flags and -D warnings: passed. git diff --check passed.",
+        "No sibling dependency edits or analog model substitutions. Parameter fields/ranges/model choices, zero latency and normal coefficient-step audio semantics are retained; successful reinitialization intentionally starts fresh. Immediate coefficient changes can create transients; no arbitrary-programme click-free, measured-hardware or performance/deadline guarantee is made. Full workspace/release QA was not run for these isolated changes. Optional offline ML fitting remains separate."
+      ]
     },
     {
       "id": 8,

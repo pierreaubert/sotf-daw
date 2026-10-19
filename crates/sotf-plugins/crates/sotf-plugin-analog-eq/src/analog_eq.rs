@@ -288,6 +288,54 @@ impl AnalogEqPlugin {
             }
             _ => return Err(format!("Unknown parameter: {id}")),
         }
+        if let Some(parameter) = self.cached_parameters.iter_mut().find(|p| &p.id == id) {
+            parameter.default_value = ParameterValue::Float(value);
+        }
+        Ok(())
+    }
+
+    fn validate_update(&self, id: &ParameterId, value: &ParameterValue) -> PluginResult<()> {
+        let parameter = self
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))?;
+        if id.as_str() == "analog_model" {
+            let name = value.as_string().ok_or("analog_model must be a string")?;
+            if name != self.model_name() {
+                let new_id = model_id_for_name(name)
+                    .ok_or_else(|| format!("Unknown analog model: {name}"))?;
+                if self.initialized && new_id != self.model_id {
+                    return Err("analog_model change requires reconstruction".to_string());
+                }
+            }
+        } else if value.as_float().is_none() {
+            return Err(format!("{id}: expected float value"));
+        }
+        Ok(())
+    }
+
+    fn apply_model_name(&mut self, name: &str) -> PluginResult<()> {
+        if name == self.model_name() {
+            return Ok(());
+        }
+        let model_id =
+            model_id_for_name(name).ok_or_else(|| format!("Unknown analog model: {name}"))?;
+        self.stage.set_model_id(model_id)?;
+        if model_id != self.model_id {
+            self.model_id = model_id;
+            let canonical = self.model_name();
+            if let Some(parameter) = self
+                .cached_parameters
+                .iter_mut()
+                .find(|p| p.id.as_str() == "analog_model")
+            {
+                parameter.default_value = ParameterValue::String(canonical.to_owned());
+            }
+        }
         Ok(())
     }
 }
@@ -316,6 +364,30 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
 
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        self.validate_update(id, value)
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.validate_update(&id, &value)?;
+        if id.as_str() == "analog_model" {
+            return self.apply_model_name(value.as_string().expect("validated model string"));
+        }
+        self.apply_float(&id, value.as_float().expect("validated numeric control"))?;
+        if !id.as_str().starts_with("analog_") {
+            self.rebuild_filters(self.sample_rate_for_build());
+        }
+        Ok(())
     }
 
     fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
@@ -373,42 +445,12 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
         // Validate everything before mutating any state so bulk updates are
         // all-or-nothing at the schema level.
         for (id, value) in &values {
-            let Some(parameter) = self
-                .cached_parameters
-                .iter()
-                .find(|parameter| &parameter.id == id)
-            else {
-                return Err(format!("Unknown parameter: {id}"));
-            };
-            parameter
-                .validate(value)
-                .map_err(|error| format!("{id}: {error}"))?;
-            if id.as_str() == "analog_model" {
-                let Some(name) = value.as_string() else {
-                    return Err("analog_model must be a string".to_string());
-                };
-                let Some(new_id) = model_id_for_name(name) else {
-                    return Err(format!("Unknown analog model: {name}"));
-                };
-                // Structural: replacement allocates and re-prepares the
-                // stage on the control thread, so a live change on an
-                // initialized instance is refused; adopt the model at
-                // construction or state restore instead. Repeating the
-                // committed model stays a no-op success for snapshot
-                // resends, mirroring the bridge/FFI no-op shields.
-                if self.initialized && new_id != self.model_id {
-                    return Err("analog_model change requires reconstruction".to_string());
-                }
-            }
+            self.validate_update(id, value)?;
         }
-        // Model replacement precedes target updates, so both the targets and
-        // their initial smoothing trajectories are independent of map order.
-        if let Some(value) = values.get(&ParameterId::from("analog_model"))
-            && let Some(name) = value.as_string()
-            && let Some(model_id) = model_id_for_name(name)
-        {
-            self.stage.set_model_id(model_id)?;
-            self.model_id = model_id;
+        // Structural replacement precedes numeric targets. Same-model resends
+        // reuse both prepared DSP and cached metadata.
+        if let Some((_, value)) = values.iter().find(|(id, _)| id.as_str() == "analog_model") {
+            self.apply_model_name(value.as_string().expect("validated model string"))?;
         }
         let mut bands_dirty = false;
         for (id, value) in &values {
@@ -429,7 +471,6 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
         if bands_dirty {
             self.rebuild_filters(self.sample_rate_for_build());
         }
-        self.rebuild_cached_parameters();
         Ok(())
     }
 
@@ -444,6 +485,9 @@ impl ParametricInPlacePlugin for AnalogEqPlugin {
             .map_err(|e| format!("Analog EQ stage prepare failed: {e}"))?;
         self.push_analog_state()?;
         self.initialized = true;
+        // Preparation starts a fresh stream; updating coefficients alone would
+        // retain recursive EQ history from the previous rate or source.
+        self.reset();
         Ok(())
     }
 

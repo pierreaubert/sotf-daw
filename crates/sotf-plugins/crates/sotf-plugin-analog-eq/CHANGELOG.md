@@ -1,3 +1,16 @@
+# Unreleased
+
+- Reuse prepared filters and cached metadata for scalar validation/setters and
+  valid bulk updates. Scalar automation no longer constructs a parameter map or
+  rebuilds metadata; canonical same-model snapshots remain allocation-free.
+- Clear recursive EQ and color histories on successful initialization, avoiding
+  stale audio when preparing a new stream or sample rate.
+- Add independent complex-response and coefficient-step references, all-model
+  stage-order/zero-color nulls, malformed-batch preservation, and actual host
+  setter/callback heap and partition checks through 192 kHz.
+- Document immediate state-preserving coefficient changes accurately: arbitrary
+  steps can cause transients and are not guaranteed click-free.
+
 # 0.5.0
 
 ## New
