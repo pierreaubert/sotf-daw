@@ -8,6 +8,23 @@ The plugin applies the documented matrix gains exactly and does not silently
 normalize the mix. Correlated full-scale channels can exceed 0 dBFS; reserve
 headroom or add an explicit limiter downstream.
 
+Lt/Rt uses a mono-surround sum: `Lt = L + C/sqrt(2) - j*(Ls+Rs)/sqrt(2)`
+and `Rt = R + C/sqrt(2) + j*(Ls+Rs)/sqrt(2)`. All horizontal surrounds share
+the same source polarity; Lt and Rt carry opposite encoded surround polarity.
+This preserves coherent surround content through passive sum/difference
+decoding. The previous right-surround inversion incorrectly cancelled equal
+left/right surround sources. The fixed center/surround coefficients apply in
+this mode; LFE is omitted and height routes retain their geometric matrix.
+This is not a Pro Logic II stereo-surround encoder or a certification claim.
+See [Dolby's mono-surround downmix description](https://professionalsupport.dolby.com/s/article/A-Guide-to-Dolby-Metadata?language=en_US).
+
+Custom geometric mode applies the center gain before its equal-power split,
+and the height gain before cosine elevation attenuation. ITU mode uses fixed
+center/surround gains and discards LFE. Otherwise LFE passes through two
+120 Hz lowpass biquads before its custom equal-power split; no implicit
+cinema LFE boost is applied. Unknown unnamed layouts use index panning and
+do not invent an LFE position.
+
 ## Stream boundaries
 
 Both spectral modes preload one half-window of zero history. The first

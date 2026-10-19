@@ -559,10 +559,11 @@ fn reference_ltrt_decode(
     lt: Complex<f32>,
     rt: Complex<f32>,
 ) -> (Complex<f32>, Complex<f32>) {
-    // Independent published Scheiber/Dolby matrix oracle. This deliberately
+    // Dolby mono-surround matrix oracle. This deliberately
     // does not call the plugin's routing, WOLA, or quadrature implementation.
     // The sum bus recovers an isolated centre, while +90-degree rotation of
-    // the difference bus recovers the signed mono-surround channel.
+    // the difference bus recovers the summed mono-surround channel.
+    // https://professionalsupport.dolby.com/s/article/A-Guide-to-Dolby-Metadata
     let passive_matrix_gain = 0.5_f32.sqrt();
     match role {
         ReferenceLtRtRole::Left => (lt, rt),
@@ -704,13 +705,7 @@ fn ltrt_matches_independent_decoder_oracle_across_rates_layouts_and_partitions()
                 let aligned_source_phase =
                     2.0 * std::f32::consts::PI * cycles as f32 * (analysis_start - latency) as f32
                         / ANALYSIS_FRAMES as f32;
-                let sign = if matches!(route.role, ReferenceLtRtRole::SurroundRight) {
-                    -1.0
-                } else {
-                    1.0
-                };
-                let expected =
-                    Complex::from_polar(AMPLITUDE * sign, source_phase + aligned_source_phase);
+                let expected = Complex::from_polar(AMPLITUDE, source_phase + aligned_source_phase);
                 let reconstruction_error = (decoded - expected).norm() / AMPLITUDE;
                 let rejection = rejected.norm() / AMPLITUDE;
                 assert!(

@@ -2,7 +2,10 @@
 
 ## Overview
 
-A phase-coherent surround-to-stereo downmixer that converts multichannel audio (5.1, 7.1, Atmos, etc.) to stereo. Uses speaker geometry to compute constant-power panning coefficients, with optional FFT-based phase alignment to reduce comb-filtering artifacts. Supports any speaker configuration with automatic coefficient calculation.
+A surround-to-stereo downmixer with explicit speaker layouts, geometric routing,
+fixed ITU coefficients, and optional spectral phase processing or mono-surround
+Lt/Rt encoding. Eight- and ten-channel inputs require `input_layout`; channel
+count alone cannot distinguish their horizontal and height arrangements.
 
 ## Features
 
@@ -14,22 +17,25 @@ Converts multichannel audio to stereo using speaker-aware panning coefficients. 
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Center Gain | -24 to 12 | -3 | dB | Gain applied to center channel before mixing |
-| Surround Gain | -24 to 12 | -3 | dB | Gain applied to surround channels (side + rear) |
-| Height Gain | -24 to 12 | -6 | dB | Gain applied to height/Atmos channels |
-| LFE Gain | -24 to 12 | -10 | dB | Gain applied to LFE/subwoofer channel |
+| Center Gain | -12 to 0 | -3 | dB | Custom gain before equal-power center split |
+| Surround Gain | -12 to 0 | -3 | dB | Custom gain before surround panning |
+| Height Gain | -60 to 0 | -6 | dB | Custom gain before height panning and elevation attenuation |
+| LFE Gain | -60 to 0 | -10 | dB | Custom gain before the equal-power LFE split |
 
 ### Phase Coherence
 
-Optional FFT-based phase alignment that reduces comb-filtering artifacts when multiple channels are summed. Works by aligning bin phases to the dominant source per frequency band, with a smooth crossover between direct mixing (low frequencies) and phase-aligned mixing (high frequencies).
+Optional FFT processing rotates the ordinary downmix toward energy-weighted
+input phase vectors, with confidence reduced for cancelling vectors and a
+frequency-dependent blend. It preserves each ordinary output bin's magnitude;
+it cannot restore energy already cancelled by the routing sum.
 
 **Parameters:**
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
 | Phase Coherence | On/Off | On | — | Structural mode: enable FFT-based phase alignment |
-| Phase Blend Low | 50 to 500 | 200 | Hz | Below this frequency, use direct mixing (no phase alignment) |
-| Phase Blend High | 1000 to 10000 | 5000 | Hz | Above this frequency, use full phase alignment |
+| Phase Blend Low | 100 to 1000 | 500 | Hz | Below this frequency, use direct mixing (no phase alignment) |
+| Phase Blend High | 1000 to 5000 | 2000 | Hz | Above this frequency, use the full confidence-weighted phase blend |
 
 ## Demos
 
@@ -52,8 +58,8 @@ Optional FFT-based phase alignment that reduces comb-filtering artifacts when mu
 ### Demo: Atmos to Stereo with Phase Alignment
 
 **Scenario:** A 7.1.4 Atmos mix with height channels needs stereo conversion without comb-filtering artifacts.
-**Before:** Direct summing causes phase cancellation at certain frequencies, making the mix thin.
-**After:** Phase-coherent downmix preserves fullness and spatial cues.
+**Before:** The ordinary routing matrix establishes the stereo image and any cancellations.
+**After:** Spectral processing adjusts the phase image while preserving the ordinary bin magnitudes.
 **Config:**
 ```json
 {
@@ -143,14 +149,14 @@ Optional FFT-based phase alignment that reduces comb-filtering artifacts when mu
 ## Tips & Best Practices
 
 - Phase coherence and matrix Lt/Rt each add a fixed 2048-sample latency and are mutually exclusive structural modes.
-- LFE is low-pass filtered at 120 Hz and split equally to L/R at -3 dB.
-- The plugin automatically detects speaker configurations (5.1, 7.1, 5.1.4, etc.) from channel count.
+- Custom mode low-pass filters LFE at 120 Hz before the configured gain and equal-power L/R split. ITU and Lt/Rt modes discard LFE; no implicit cinema LFE boost is applied.
+- Unambiguous channel counts select a known speaker configuration. Explicit layouts select the intended channel order, including the Core Audio Atmos orders.
 - Matrix gains are exact and are not silently normalized. Reserve downstream
   headroom or add an explicit limiter when correlated channels can sum above
   0 dBFS.
 - Supply `input_layout` for ambiguous 8- and 10-channel inputs. Unknown
   ambiguous layouts are rejected instead of guessed.
-- Constant-power panning ensures no energy loss for surround and height channels.
+- Custom surround panning is constant-power. Heights additionally receive cosine elevation attenuation; this intentionally reduces their contribution to the horizontal image.
 - For unknown channel counts without a speaker config, channels are linearly panned across the stereo field.
 
 ## Signal Flow
@@ -162,7 +168,15 @@ Simple mode (phase coherence off):
 Phase-coherent mode:
   Input (N channels) → FFT per channel → Frequency domain mixing with phase alignment
                                               ↓
-                        Per-bin: standard sum + phase-aligned sum, blended by frequency
+                        Per-bin: preserve ordinary magnitude; blend phase direction by frequency/confidence
                                               ↓
                         IFFT → Overlap-Add (50% overlap, sqrt-Hann window) → Output (stereo)
 ```
+
+Lt/Rt is a separate mono-surround encoding mode. It uses fixed center and
+surround coefficients and sums horizontal surround sources before applying
+opposite quadrature polarity in Lt and Rt. A passive decoder's sum bus recovers
+center content; its difference bus carries the mono surround in quadrature.
+Equal left/right surround content therefore survives encoding. Height channels
+retain geometric routing, and LFE is excluded. This is not a Pro Logic II
+stereo-surround encoder. See the equations and reference in [README.md](README.md).

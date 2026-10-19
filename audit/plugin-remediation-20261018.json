@@ -336,9 +336,35 @@
       "id": 21,
       "plugin": "Downmix",
       "audit_text": "[`downmix_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-downmix/src/lib/downmix_plugin.rs):941\u20131090 supports matrix and spectral Lt/Rt behavior, LFE filtering and reset/shape/rate checks. Startup output and phase reconstruction differ between paths. Channel order, LFE convention and coherent-sum headroom need explicit tests; normalizing each channel independently is not a substitute for a correct remix matrix.\n\n`startup.rs`, `test_cola.rs` and `finite_stream.rs` address important boundaries. Extend independent matrix vectors for every layout and highly correlated full-scale inputs, then measure compatibility through downstream decoding. Classical standardized routing/phase matrices are the primary improvement. Learned source-aware remixing should be a separate optional product mode, not a hidden change to deterministic downmix.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Validate independent matrix vectors and coherent headroom for every layout",
+          "status": "implemented_and_verified",
+          "evidence": "audit_matrix.rs uses frozen per-channel azimuth/elevation/LFE vectors for all 15 named layouts, including Core Audio aliases; all advertised standard IDs must be covered. Independent f64 coefficient equations validate basis vectors, signed vectors and coherent row sums at 44.1/48/96 kHz for both custom and ITU routing. Eight unnamed counts (4 through 32) verify index panning without invented LFE. Full-scale correlated 5.1/7.1.4/Core Audio 9.1.6 tones retain matrix headroom through phase-coherent WOLA within 0.1% complex amplitude."
+        },
+        {
+          "task": "Validate LFE convention and recursive response independently",
+          "status": "implemented_and_verified",
+          "evidence": "Named-layout basis vectors verify settled DC gain and ITU omission. An independent bilinear two-biquad complex response (120 Hz, Q=0.707, custom 0.707 split) matches rendered LFE tones at three frequencies and three rates within 2e-6; ITU and Lt/Rt LFE outputs are zero. README documents no implicit cinema LFE boost and existing recursive drain policy."
+        },
+        {
+          "task": "Correct Lt/Rt surround summation and validate downstream decoding",
+          "status": "implemented_and_verified",
+          "evidence": "Dolby metadata guide defines summed mono surrounds carried in opposite Lt/Rt polarity. Public regression reproduced right-surround decoded -0.099999969 instead of +0.1; equal surrounds previously cancelled. Source now uses the same quadrature source sign for all horizontal surrounds. Existing oracle incorrectly expected negative right-surround reconstruction and was corrected against the external reference. New isolated/coherent decoder tests cover 5.1/7.1 at three rates; actual factory Downmix -> native Matrix sum/difference buses through DawHost pass center/surround complex recovery and rejection bounds under irregular callbacks."
+        },
+        {
+          "task": "Make routing/phase/headroom contracts explicit",
+          "status": "implemented_and_verified",
+          "evidence": "README and USAGE document fixed ITU and mono-surround Lt/Rt routing versus custom equal-power/elevation gains, layout ambiguity, LFE policy and coherent overload. Corrected obsolete parameter ranges/defaults and the claim that magnitude-preserving phase rotation restores cancellation. No Pro Logic II or certification claim; existing finite WOLA support and preset schemas unchanged."
+        }
+      ],
+      "evidence": [
+        "Full Downmix selection: 75 passed across six suites, plus two new LFE/spectral-headroom tests passed in the expanded five-test audit suite, for 77 plugin tests total.",
+        "Factory/native passive decoder plus six facade host/finite-chain/drain/robustness/channel gates: 43 passed.",
+        "Final Downmix library/tests and facade decoder target Clippy --no-deps with warnings denied: passed.",
+        "Primary reference: https://professionalsupport.dolby.com/s/article/A-Guide-to-Dolby-Metadata?language=en_US (retrieved 2026-10-19)."
+      ]
     },
     {
       "id": 22,
@@ -849,6 +875,14 @@
         33
       ],
       "result": "Fixed callback-dependent width re-entry, hidden residuals, zero-frame state changes, wrong-rate acceptance and stale Haas history. Scalar automation no longer rebuilds parameter metadata. Independent allpass/mono-fold/correlation/onset checks plus 65 plugin and 43 facade tests passed; Clippy clean."
+    },
+    {
+      "name": "Downmix all-layout matrix/headroom/LFE audit and Lt/Rt surround-sum correction",
+      "state": "verified",
+      "plugin_ids": [
+        21
+      ],
+      "result": "Fixed the incorrect right-surround sign that inverted isolated Rs and cancelled coherent Ls/Rs. Frozen layout vectors, independent matrix/LFE oracles and native passive decoding cover the audit requirements. 77 plugin tests and 43 facade/host checks passed; Clippy clean. Optional source-aware remixing remains separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -650,15 +650,16 @@ impl DownmixPlugin {
 
     /// Matrix Lt/Rt stereo encoding (Dolby Surround / Pro Logic).
     ///
-    /// Lt = L + 0.707*C - 0.707*j*Ls + 0.707*j*Rs
-    /// Rt = R + 0.707*C + 0.707*j*Ls - 0.707*j*Rs
+    /// Lt = L + 0.707*C - 0.707*j*(Ls + Rs)
+    /// Rt = R + 0.707*C + 0.707*j*(Ls + Rs)
     ///
     /// where j is the exact unity-magnitude positive-frequency quadrature
     /// rotation implemented below in the fixed-latency WOLA path. DC and
     /// Nyquist have no real-signal quadrature component.
     ///
-    /// This matches the standard Dolby Surround matrix (Scheiber 1971) where
-    /// S = Ls - Rs: Lt contains -j*Ls and +j*Rs; Rt contains +j*Ls and -j*Rs.
+    /// The surround sources sum before encoding. Opposite polarity belongs
+    /// between Lt and Rt, not between Ls and Rs; otherwise coherent surrounds
+    /// would disappear. This is a mono-surround matrix, not Pro Logic II.
     pub(super) fn process_fft_block(&mut self) {
         let n = FFT_SIZE;
         let scale = self.output_scale;
@@ -703,14 +704,8 @@ impl DownmixPlugin {
                         self.out_freq_r[bin] += sample * ATTEN;
                     }
                 } else if self.is_surround_channel(ch).is_some() {
-                    let is_left = self
-                        .speaker_config
-                        .and_then(|cfg| cfg.speakers.iter().find(|speaker| speaker.channel == ch))
-                        .map(|speaker| speaker.azimuth > 0.0)
-                        .unwrap_or(false);
-                    let sign = if is_left { -ATTEN } else { ATTEN };
                     for (bin, &sample) in channel_fft.iter().enumerate() {
-                        let shifted = sample * quadrature * sign;
+                        let shifted = sample * quadrature * -ATTEN;
                         self.out_freq_l[bin] += shifted;
                         self.out_freq_r[bin] -= shifted;
                     }
