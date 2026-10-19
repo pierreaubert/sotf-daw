@@ -768,9 +768,35 @@
       "id": 39,
       "plugin": "Spectral compressor",
       "audit_text": "[`spectral_compressor_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs):910\u20131025 uses STFT latency, resettable spectral state and bounded cached-hop draining with support based on the transform. Detection and gain smoothing occur on a different clock from sample-domain dynamics, which needs explicit timing semantics.\n\n`realtime_parameters.rs`, `finite_stream.rs` and integration tests cover mechanics. Extend independent identity/COLA tests at arbitrary boundaries, isolated tones, broadband transients, stereo linking and spectral pumping. Classical critical-band grouping, frequency smoothing and transient-preserving gain rules can reduce musical noise. A learned target mask is plausible for a separate restoration mode; compare latency and artifacts to the classical compressor first.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Separate temporal attack/release state from median and spectral frequency smoothing",
+          "status": "implemented_and_verified",
+          "evidence": "The independent offline WOLA reference reproduced a 0.051136260397823236 peak mismatch at FFT=1024, 44.1 kHz, smoothing=0.5 and link=0.5. Median and edge-normalized box filtering now write the existing gains_scratch buffer, preserving unsmoothed per-bin temporal histories. No extra allocation/storage or parameter/preset/latency change. Active compression may sound different because repeated frequency diffusion is removed."
+        },
+        {
+          "task": "Validate complete streamed/finite output against an independent spectral dynamics model",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_dynamics.rs derives f64 full-complex FFT/WOLA, periodic Hann windows, local five-bin calibration, soft knee, channel linking, hop-rate attack/release, median/box gains and absolute-time synthesis without production DSP helpers or circular scheduling. All three FFT sizes, 44.1/48/96/192 kHz and smoothing/link endpoint/intermediate combinations exercise isolated and fractional-bin tones, level steps, broadband bursts, release, first/final impulses and arbitrary process/drain partitions. Fixed peak error bound 3e-6; observed maximum 1.9777109228069634e-7."
+        },
+        {
+          "task": "Extend independent unity/COLA, linked image and spectral pumping checks",
+          "status": "implemented_and_verified",
+          "evidence": "All FFT sizes/rates retain delayed input through arbitrary endpoints and final drain within 2e-6. Four-channel full-link cases preserve 0.1 and -0.3 channel ratios/polarity plus a silent channel while active compression is required; independent quiet channels preserve delayed identity. A modulated loud resonance must compress while a distant quiet carrier stays within 1e-5 amplitude and adjacent modulation sidebands remain below -60 dBc. This is a synthetic regression bound, not a universal programme-quality claim."
+        },
+        {
+          "task": "Document spectral timing and verify real queued host automation",
+          "status": "implemented_and_verified",
+          "evidence": "README defines N/4 detector/envelope clock, physical attack/release coefficients, overlap-add output timing, one-hop classification mask lag, per-hop threshold smoothing and per-output-frame Mix smoothing. audit_spectral_compressor_host.rs compares actual queued factory/host audio with native processing for all FFT sizes, four rates, All/Tonal/Transient, adaptive on/off and off-hop threshold/smoothing/link/Mix edits. Different callbacks compare exactly with unchanged N-frame latency."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-spectral-compressor --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 49 passed, no failures or ignored tests; includes existing populated processing/drain/reset allocation-and-deallocation guards and every first/final impulse phase. Final audit_dynamics rerun passed the tightened fixed 3e-6 peak bound.",
+        "cargo test -p sotf-plugins --test audit_spectral_compressor_host --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: one host matrix test passed (all FFT sizes, four rates, three target modes, adaptive on/off, queued off-hop controls).",
+        "cargo clippy -p sotf-plugin-spectral-compressor --all-targets and cargo clippy -p sotf-plugins --test audit_spectral_compressor_host --no-deps, both offline/locked with the shared audit target directory and -D warnings: passed. git diff --check passed.",
+        "Production correction preserves parameter fields, choices, FFT size and latency; active gain curves intentionally change because median/box gain filtering no longer recurses through temporal state. Full workspace/release QA and subjective programme-material listening were not performed; no universal transparency, deadline, or musical-noise guarantee is claimed. Optional learned restoration remains separate."
+      ]
     },
     {
       "id": 40,

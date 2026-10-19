@@ -1,5 +1,12 @@
 # Unreleased
 
+- Keep temporal attack/release history separate from median and frequency gain
+  smoothing. Previously those filters fed back into the next hop's envelope,
+  spreading attenuation across bins and changing the configured time response.
+  Active-compression output can change; preset fields and latency are unchanged.
+- Verify an independent f64 offline dynamics/WOLA reference across all FFT sizes
+  and 44.1–192 kHz, linked-channel polarity/ratios, quiet-band pumping bounds, and
+  actual queued host controls at arbitrary hop boundaries.
 - Restore unity reconstruction from the first input sample by processing three
   zero-padded negative-time windows, discarding negative synthesis, and retaining
   the reported one-FFT-frame latency independently of callback size.

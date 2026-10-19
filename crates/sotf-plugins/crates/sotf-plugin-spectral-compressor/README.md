@@ -4,14 +4,17 @@ Spectral compressor — per-bin frequency domain dynamics processing.
 
 ## What It Does
 
-Applies dynamic range compression independently to each frequency bin in the STFT domain. Unlike a multiband compressor (2-5 bands), a spectral compressor operates on hundreds of individual frequency bins, enabling extremely transparent dynamics control. Particularly effective for taming harsh resonances without affecting surrounding frequencies.
+Applies dynamic range compression to local frequency regions in the STFT domain.
+It can control resonances more selectively than a small number of crossover
+bands. Analysis windows and frequency smoothing spread attenuation to nearby
+frequencies; transient shape and phase can also change during gain transitions.
 
 ## Features
 
 - **Per-bin compression**: Independent dynamics for each frequency bin
 - **STFT-based**: Operates in the frequency domain via Short-Time Fourier Transform
-- **Transparent dynamics**: Far more granular than multiband compression
-- **Spectral taming**: Reduces resonances without coloring surrounding frequencies
+- **Fine frequency control**: More regions than a typical multiband compressor
+- **Spectral taming**: Reduces resonances with adjustable neighboring-bin smoothing
 - **Targeted processing**: All, tonal, or transient spectral components
 - **Adaptive threshold**: 500 ms programme-relative estimator with deterministic priming
 - **Channel linking**: Continuous independent-to-maximum detector linking for image stability
@@ -34,6 +37,24 @@ Adaptive threshold uses `exp(-hop/(0.5*sample_rate))`, primes from the first val
 spectrum, and reprimes on reset or enable. `channel_link` blends each independent
 gain-reduction value toward the maximum across all channels without mixing audio.
 
+## Dynamics clock
+
+With FFT length `N` and hop `H=N/4`, detectors and gain envelopes update once
+per completed analysis window. Attack/release coefficients are
+`exp(-H / (sample_rate * time_seconds))`, applied to gain reduction in dB.
+They describe the temporal envelope's exponential time constant, not a
+sample-domain peak clamp or an exact output rise time: windowing and overlap-add
+also shape the audible transition. Startup's zero-padded windows advance this
+same clock. Tonal/transient classification masks apply on the following hop.
+
+Each hop applies the three-bin median and symmetric frequency smoother to a
+scratch copy of the temporal envelope. Their result controls that hop's audio
+without feeding back into attack/release history. This prevents repeated
+frequency diffusion from silently changing the envelope trajectory. A spectral
+smoothing change immediately affects the next completed hop's gain field.
+Threshold control smoothing advances by `H` frames per hop; Mix smoothing
+advances once per output frame. Both use a 20 ms control time constant.
+
 ## Architecture
 
 ```
@@ -52,8 +73,24 @@ src/
 
 ```bash
 cargo test -p sotf-plugin-spectral-compressor
+cargo test -p sotf-plugins --test audit_spectral_compressor_host
 cargo run -p sotf-plugin-spectral-compressor --features qa --bin qa-spectral-compressor
 ```
+
+`audit_dynamics.rs` compares complete streamed and drained output with an
+independent f64, full-complex offline WOLA model. It derives periodic Hann
+windows, five-bin detector calibration, soft-knee gain, channel linking,
+hop-rate attack/release, median/box filtering and synthesis without production
+DSP helpers or the circular scheduler. All three FFT lengths and 44.1/48/96/192
+kHz cover isolated tones, fractional-bin tones, level steps, broadband bursts,
+silence boundaries and first/final impulses, with a fixed 3e-6 peak error bound.
+
+Separate tests assert delayed unity/COLA reconstruction, linked-channel ratios
+and polarity, independent quiet-channel identity, and quiet-carrier sidebands
+below -60 dBc beside a modulated distant resonance. That pumping bound applies
+to the documented synthetic case, not arbitrary programme material. The actual
+factory/host test crosses off-hop control boundaries, target modes and adaptive
+threshold settings with different callback sizes.
 
 ## License
 

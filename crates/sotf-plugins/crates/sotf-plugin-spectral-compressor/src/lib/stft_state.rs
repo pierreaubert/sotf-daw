@@ -28,7 +28,8 @@ pub(super) struct StftState {
     pub(super) input_fill: usize,
 
     // --- Per-channel, per-bin envelope state ---
-    /// [channels][num_bins] — smoothed gain reduction in dB (0 = no compression)
+    /// Temporal gain reduction in dB, before median/frequency smoothing.
+    /// Indexed [channels][num_bins]; zero means no compression.
     pub(super) bin_envelopes: Vec<Vec<f32>>,
 
     // --- OLA output accumulator ---

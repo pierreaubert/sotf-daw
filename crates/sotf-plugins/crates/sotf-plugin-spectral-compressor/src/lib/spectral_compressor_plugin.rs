@@ -314,20 +314,20 @@ impl SpectralCompressorPlugin {
                 *envelope = target_gr + coeff * (*envelope - target_gr);
             }
 
-            self.stft.gains_scratch[..num_bins]
-                .copy_from_slice(&self.stft.bin_envelopes[ch][..num_bins]);
-
             // Apply 3-bin median: for each bin k in [1..num_bins-1],
             // replace with median of (k-1, k, k+1).
             // Boundary bins use min of 2 neighbors (conservative).
+            // Frequency smoothing must not feed back into the temporal
+            // envelopes: repeated filtering otherwise diffuses reduction into
+            // neighboring bins and changes the attack/release time constants.
             if num_bins >= 2 {
-                self.stft.bin_envelopes[ch][0] =
-                    self.stft.gains_scratch[0].min(self.stft.gains_scratch[1]);
+                self.stft.gains_scratch[0] =
+                    self.stft.bin_envelopes[ch][0].min(self.stft.bin_envelopes[ch][1]);
             }
             for k in 1..num_bins.saturating_sub(1) {
-                let a = self.stft.gains_scratch[k - 1];
-                let b = self.stft.gains_scratch[k];
-                let c = self.stft.gains_scratch[k + 1];
+                let a = self.stft.bin_envelopes[ch][k - 1];
+                let b = self.stft.bin_envelopes[ch][k];
+                let c = self.stft.bin_envelopes[ch][k + 1];
                 let med = if a <= b {
                     if b <= c {
                         b
@@ -343,24 +343,24 @@ impl SpectralCompressorPlugin {
                 } else {
                     b
                 };
-                self.stft.bin_envelopes[ch][k] = med;
+                self.stft.gains_scratch[k] = med;
             }
             if num_bins >= 2 {
                 let last = num_bins - 1;
-                self.stft.bin_envelopes[ch][last] =
-                    self.stft.gains_scratch[last].min(self.stft.gains_scratch[last - 1]);
+                self.stft.gains_scratch[last] =
+                    self.stft.bin_envelopes[ch][last].min(self.stft.bin_envelopes[ch][last - 1]);
             }
 
             if spectral_smoothing > 0.001 {
                 smooth_spectral_envelope(
-                    &mut self.stft.bin_envelopes[ch],
+                    &mut self.stft.gains_scratch,
                     spectral_smoothing,
                     &mut self.stft.smoothing_prefix,
                 );
             }
 
             for k in 0..num_bins {
-                let envelope_db = self.stft.bin_envelopes[ch][k];
+                let envelope_db = self.stft.gains_scratch[k];
                 if envelope_db > 0.001 {
                     let gain_linear = 10.0_f32.powf(-envelope_db / 20.0);
                     self.stft.fft_processors[ch].freq_buffer[k] *= gain_linear;
