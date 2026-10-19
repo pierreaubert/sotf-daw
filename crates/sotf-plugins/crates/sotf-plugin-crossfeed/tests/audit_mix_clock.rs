@@ -59,8 +59,9 @@ fn mix_automation_waveform_is_invariant_to_callback_partitioning() {
         CrossfeedMode::Bauer,
         CrossfeedMode::Meier,
         CrossfeedMode::Mb,
+        CrossfeedMode::Hrtf,
     ] {
-        for rate in [44_100, 48_000, 96_000] {
+        for rate in [44_100, 48_000, 96_000, 192_000] {
             let reference = render(mode, &[1], rate);
             assert!(reference.iter().any(|sample| sample.abs() > 0.1));
             for pattern in [&[1, 7, 31, 257, 1024][..], &[8192][..]] {

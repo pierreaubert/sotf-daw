@@ -218,7 +218,7 @@
       "id": 15,
       "plugin": "Crossfeed",
       "audit_text": "[`crossfeed_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-crossfeed/src/lib/crossfeed_plugin.rs):880\u20131033 contains Bauer/Meier/multiband/HRTF modes, reset behavior and autogain. The mix interpolation has the callback partition dependence in C9. Bypass resets histories, so rapid bypass transitions need an audible continuity test.\n\n`transfer.rs`, `rate_restore.rs`, `realtime_parameters.rs` and autogain clock/heap tests provide useful coverage. Add complex transfer-function oracles for each mode, mono compatibility and moving-mix waveform comparison across blocks. Classical frequency-dependent interaural delay/attenuation and level-matched bypass are meaningful improvements. ML personalization may select settings offline; it is not needed in this low-cost deterministic path.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Verify moving-mix waveforms across callback partitions at the same absolute automation positions.",
@@ -226,14 +226,34 @@
           "evidence": [
             "crates/sotf-plugins/crates/sotf-plugin-crossfeed/tests/audit_mix_clock.rs"
           ],
-          "result": "New regression compares sample-sized, irregular [1,7,31,257,1024] and 8192-frame callbacks for Bauer/Meier/multiband at 44.1/48/96 kHz. HRTF transfer, bypass continuity and remaining audit recommendations are still pending."
+          "result": "Extended audit_mix_clock.rs covers Bauer/Meier/multiband/HRTF at 44.1/48/96/192 kHz, comparing sample-sized, irregular [1,7,31,257,1024] and 8192-frame callbacks at identical absolute automation positions. All waveform comparisons pass the unchanged 3e-6 bound."
+        },
+        {
+          "task": "Reach exact mix endpoints while preserving high-rate ramp accuracy",
+          "status": "implemented_and_verified",
+          "evidence": "audit_bypass.rs reproduced a 1.5348196e-6 residual wet error at 44.1 kHz after one second and signed-zero changes at exact dry. A first f32 stagnation-snap candidate then failed the independently fixed 2e-5 continuity bound at 192 kHz (2.207755e-5 error), so it was replaced by double-precision 20 ms control state with a one-f32-epsilon terminal snap. Settled wet output now matches the continuously running full-wet path exactly; sanitized dry bits are preserved. Worst independent closed-form ramp error is 7.728376758553424e-7 and maximum measured DC step is 0.00019343942 across all four modes and four rates. Processing is heap-guarded. Rapid 5/13/17/31/127/257-frame retargets also agree with the independent exponential clock and retain the fixed 0.001 per-sample step bound."
+        },
+        {
+          "task": "Validate complete complex transfer and mono compatibility",
+          "status": "implemented_and_verified",
+          "evidence": "Executed all transfer.rs independent RBJ/LR4/fractional-delay matrix oracles. Worst absolute complex errors: Bauer 7.383e-8, Meier 1.099e-7, multiband 1.403e-3, HRTF 2.725e-8, all below frozen 5e-3; phase errors remain below 0.05 rad. Mono/antiphase worst complex error 4.959e-4. HRTF cross-ear gain -9.002 dB, shadow rolloff -41.25 dB, rate-relative onset pins and exact L+R preservation pass."
+        },
+        {
+          "task": "Measure bypass discontinuity and validate reset re-entry explicitly",
+          "status": "implemented_and_verified",
+          "evidence": "audit_bypass.rs exercises immediate enabled reset bypass across all modes at 44.1/48/96/192 kHz with AutoGain off/on. Bypass is exact, and populated filter/delay/gain state is discarded: re-entry matches fresh processing bit-for-bit. The intentional hard-switch DC discontinuity reaches 0.43329525; this control is not claimed click-free. USAGE documents the hard reset policy, the 20 ms smoothed Mix comparison path, retained history at dry mix, and the fact that AutoGain still changes level at Mix=0. Level-controlled judged excerpts require measured, fixed comparison gains."
+        },
+        {
+          "task": "Validate production controls through factory presets and actual host automation",
+          "status": "implemented_and_verified",
+          "evidence": "audit_crossfeed_host.rs serializes/reloads every active mode and compares queued DawHost mix automation to the native factory path with different callback sizes at 48/192 kHz, with AutoGain off/on. Audio matches bit-for-bit; dry endpoints without AutoGain, immediate bypass with AutoGain and fresh-state re-entry are exact. No parameter or preset schema changes."
         }
       ],
       "evidence": [
-        {
-          "kind": "source_inspection",
-          "finding": "Current source advances mix smoothing once per sample; full waveform partition and bypass-continuity validation remains."
-        }
+        "Full crossfeed crate library/tests: 126 passed across twelve suites, including independent transfer/mono, AutoGain target/clock/heap, preset/rate restoration, realtime setter and new bypass/mix checks.",
+        "Two factory/host regressions (Crossfeed and previous stereo-imager) plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 44 passed.",
+        "Crossfeed library/tests Clippy --no-deps with warnings denied passed. Crossfeed and stereo-imager facade audit targets strict Clippy also passed after the concurrent capture dependency compile issue cleared. git diff --check passed.",
+        "Existing immediate reset bypass semantics are preserved and its discontinuity is measured/documented. Smoothed Mix is the gradual comparison control; no automatic blind level matching or measured/personalized HRTF claim is introduced. Optional ML personalization remains separately tracked."
       ]
     },
     {
@@ -693,7 +713,7 @@
       "evidence": [
         "Full stereo-imager library and tests: 60 passed across four suites; existing independent complex-response, retained-history and heap-guard tests remain green.",
         "Factory/host regression plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 43 passed.",
-        "Stereo-imager library/tests Clippy --no-deps with warnings denied passed; final five audit regressions passed again after iterator-style corrections. Facade lint rerun is blocked by concurrent, unrelated sotf-capture compilation errors (latest: missing Arc<Continuity> argument at signal_recorder/types.rs:522). The 43 facade tests passed before the test-only iterator correction; production DSP was unchanged. git diff --check passed.",
+        "Stereo-imager library/tests Clippy --no-deps with warnings denied passed; five final audit regressions passed again after iterator-style corrections. The concurrent sotf-capture compile issue subsequently cleared: audit_stereo_image_host strict facade Clippy passed, and the host regression plus six shared facade gates passed again in the 44-test Crossfeed/stereo-imager selection. git diff --check passed.",
         "No parameters or preset schema changes. Added bounded sample-local comparisons and final target settling; crossover control rate remains one update opportunity per 16 samples. Optional ML scene suggestions remain separate."
       ]
     },

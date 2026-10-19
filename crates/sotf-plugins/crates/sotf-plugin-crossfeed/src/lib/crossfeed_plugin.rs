@@ -26,6 +26,41 @@ const HRTF_SHADOW_CUTOFF_HZ: f64 = 700.0;
 const HRTF_BASE_ITD_MS: f32 = 0.25;
 const HRTF_CROSSFEED_GAIN: f32 = 0.354_813_4; // -9 dB
 
+// Double-precision control state keeps the 20 ms mix trajectory accurate even
+// at high sample rates. Snap only below one f32 epsilon of the full [0, 1] range.
+pub(super) struct MixSmoother {
+    current: f64,
+    target: f64,
+    coefficient: f64,
+}
+
+impl MixSmoother {
+    fn new(value: f32, sample_rate: f64) -> Self {
+        Self {
+            current: f64::from(value),
+            target: f64::from(value),
+            coefficient: (-1.0 / (0.020 * sample_rate)).exp(),
+        }
+    }
+
+    fn set_target(&mut self, value: f32) {
+        self.target = f64::from(value);
+    }
+
+    fn reset(&mut self, value: f32) {
+        self.current = f64::from(value);
+        self.target = self.current;
+    }
+
+    fn advance(&mut self) -> f32 {
+        self.current = self.target + self.coefficient * (self.current - self.target);
+        if (self.current - self.target).abs() < f64::from(f32::EPSILON) {
+            self.current = self.target;
+        }
+        self.current as f32
+    }
+}
+
 pub struct CrossfeedPlugin {
     pub(super) sample_rate: f64,
     initialized: bool,
@@ -76,7 +111,7 @@ pub struct CrossfeedPlugin {
     auto_gain_frames: usize,
 
     // Smoothing
-    pub(super) mix_smoother: Smoother,
+    pub(super) mix_smoother: MixSmoother,
     pub(super) yaw_smoother: Smoother,
     pub(super) cached_parameters: Vec<Parameter>,
 }
@@ -181,7 +216,7 @@ impl CrossfeedPlugin {
             )?,
             auto_gain_reference: vec![0.0; cap * 2],
             auto_gain_frames: 0,
-            mix_smoother: Smoother::new(params.mix, 20.0, sr),
+            mix_smoother: MixSmoother::new(params.mix, sr),
             yaw_smoother: Smoother::new(params.head_yaw_deg, 10.0, sr),
             cached_parameters: Vec::new(),
         };
@@ -879,7 +914,7 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         self.sample_rate = sr;
         self.initialized = true;
         self.update_filters();
-        self.mix_smoother = Smoother::new(self.params.mix, 20.0, sr);
+        self.mix_smoother = MixSmoother::new(self.params.mix, sr);
         self.yaw_smoother = Smoother::new(self.params.head_yaw_deg, 10.0, sr);
         let (itd_l, itd_r) =
             compute_differential_itd_ms(self.params.head_yaw_deg, self.params.itd_delay_ms);
@@ -991,8 +1026,18 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
         // cannot change the trajectory or its first-sample convention.
         for i in 0..nf {
             let mix = self.mix_smoother.advance();
-            self.dry_l[i] = self.dry_l[i] * (1.0 - mix) + self.wet_l[i] * mix;
-            self.dry_r[i] = self.dry_r[i] * (1.0 - mix) + self.wet_r[i] * mix;
+            if mix == 0.0 {
+                // Preserve the sanitized dry sample's exact bits. Filters still
+                // track input above, so re-entry uses current crossfeed history.
+                continue;
+            }
+            if mix == 1.0 {
+                self.dry_l[i] = self.wet_l[i];
+                self.dry_r[i] = self.wet_r[i];
+            } else {
+                self.dry_l[i] = self.dry_l[i] * (1.0 - mix) + self.wet_l[i] * mix;
+                self.dry_r[i] = self.dry_r[i] * (1.0 - mix) + self.wet_r[i] * mix;
+            }
         }
 
         interleave_stereo(&self.dry_l[..nf], &self.dry_r[..nf], buffer);

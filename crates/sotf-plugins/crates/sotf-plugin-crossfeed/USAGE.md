@@ -38,6 +38,26 @@ Five modes for different listening preferences:
 | Mode | Disable/Bauer/Meier/Multiband/HRTF | Multiband | — | Crossfeed algorithm selection |
 | Mix | 0 to 1.0 | 1.0 | — | Dry/wet blend |
 
+### Live comparison and bypass
+
+Mix follows a sample-clocked 20 ms one-pole trajectory with double-precision
+control state. Exact dry and wet endpoints are adopted once the residual is below
+one f32 epsilon of the full control range. With Auto Gain off, settled Mix = 0
+preserves sanitized input bits while filters and delays continue following the
+source; Mix = 1 emits the full wet path. Callback size does not change the ramp,
+including HRTF mode. Use Mix for gradual live comparisons.
+
+Enabled = false and Disable/Off mode retain the immediate reset bypass contract.
+They preserve the original input and clear filter, delay and AutoGain history.
+These switches can produce an audible step on nonzero audio; they are not
+click-free comparison controls. Re-entry starts with fresh processing state.
+Mix = 0 with Auto Gain on still applies the configured loudness compensation,
+so it is not an exact unity-gain bypass. For a level-controlled comparison,
+disable Auto Gain, measure the excerpt levels, and keep any comparison gains
+fixed while judging. A crossfeed algorithm can alter mono tone as well as width:
+Bauer preserves mono at zero differential ITD, compact HRTF preserves L+R, and
+Meier/multiband have their documented frequency-dependent transfer responses.
+
 ### ITD and Head Tracking
 
 The static ITD control and the head-yaw control steer a differential
