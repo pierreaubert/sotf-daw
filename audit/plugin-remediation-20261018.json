@@ -239,7 +239,7 @@
       "id": 20,
       "plugin": "Dither",
       "audit_text": "[`dither_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-dither/src/lib/dither_plugin.rs):354\u2013469 uses per-channel deterministic PRNG state, TPDF construction, quantization/clamping and shaped error feedback. Reset reproducibility is useful for offline renders, but repeated identical seeds must not accidentally correlate independently mixed instances/channels. The intended final quantization stage matters more than another effect's output level.\n\n`error_moments.rs`, realtime parameter and integration tests are meaningful. Extend independent histogram, autocorrelation/cross-channel correlation, low-level sine linearity and shaped-noise PSD checks at all supported rates. Verify saturation behavior separately from ordinary dither statistics. Classical TPDF and stable rate-appropriate shaping are sufficient; ML would undermine a well-defined statistical contract.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Separate independent instance streams while retaining reproducible reset and saved renders",
@@ -252,9 +252,14 @@
           "evidence": "stream_identity.rs checks rounded-TPDF probabilities (1/8,3/4,1/8), lag-one/cross-channel/cross-instance correlation below 0.025 for 65536 frames at 8/16/22.05/32/44.1/48/88.2/96/176.4/192/384/768 kHz using explicit fixed seeds. Four auto-created instances also demonstrate stream diversity; auto-seed export/reset replay exactly."
         },
         {
-          "task": "Complete low-level sine linearity and shaped-noise PSD rate matrix; keep saturation separate",
-          "status": "remaining",
-          "evidence": "Existing fixed-seed moments, whiteness, PSD, saturation and PCM export tests remain green; broader shaped-rate matrix is not yet claimed complete."
+          "task": "Low-level sine linearity, shaped-noise PSD rate matrix and separate saturation recovery",
+          "status": "implemented_and_verified",
+          "evidence": "audit_spectral_linearity.rs: 12 standard rates 8..768 kHz and all 16/20/24-bit outputs. 4096-point Hann / 64-record f64 periodograms agree with an independent fractional-delay NTF polynomial, with TPDF floor included (max band error 0.365905 dB, limit 0.5 dB). Coherent 0.1/0.5/2 LSB sines preserve amplitude/quadrature and second/third harmonics (worst 0.010493 LSB, bound 0.02). Overload is measured separately: signed rails, finite PCM, 50 ms/minimum 4096-frame recovery with tail bounded to 8 LSB."
+        },
+        {
+          "task": "Match actual rate preparation in constructors and reject wrong-rate callbacks before state changes",
+          "status": "implemented_and_verified",
+          "evidence": "Two regressions failed before the fix. A new 48 kHz constructor now prepares the same fractional-tap history as initialize(48000); rejected 96 kHz callback at prepared 48 kHz leaves input samples and subsequent RNG/shaping state bit-identical to a reference."
         }
       ],
       "evidence": [
@@ -262,7 +267,8 @@
         "22 Dither-related engine tests passed, including parameter accessor mapping, legacy settings migration, malformed seed rejection and actual default-TPDF replay through settings/converter/facade.",
         "All 88 host DSP/automation/drain/realtime allocation gates passed.",
         "Dither Clippy --lib --tests -D warnings passed.",
-        "README documents automatic versus explicit seed semantics, finite seed collisions, old-render seed 1 and typed Rust initializer migration."
+        "README documents automatic versus explicit seed semantics, finite seed collisions, old-render seed 1 and typed Rust initializer migration.",
+        "Final Dither suite: 63 passed across six suites; Clippy --lib --tests -D warnings passed. All 88 host DSP/automation/drain/realtime allocation checks passed after the final rate/preparation changes."
       ]
     },
     {
@@ -649,6 +655,14 @@
       ],
       "result": "58 plugin tests, 22 engine Dither tests, 88 host checks passed; Dither Clippy warnings denied passed.",
       "limitation": "Low-level sine and shaped-noise PSD rate-matrix extensions remain open."
+    },
+    {
+      "name": "Dither final-PCM spectral/linearity matrix and prepared-rate correction",
+      "state": "verified",
+      "plugin_ids": [
+        20
+      ],
+      "result": "63 Dither tests and 88 facade host checks passed; Clippy warnings denied passed. Max PSD band error 0.365905 dB; max coherent sine error 0.010493 LSB."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

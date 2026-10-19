@@ -43,6 +43,10 @@ seed is appended at index 3. Typed Rust `DitherPluginParams` initializers must n
 include the seed field. Noise shaping and dither still belong at the final intended
 PCM quantization stage.
 
+Callbacks must match the prepared rate. A new renderer is prepared for 48 kHz;
+call `initialize()` for another rate. Rejected rate mismatches leave audio and
+RNG/shaping histories unchanged.
+
 ## Testing
 
 ```bash

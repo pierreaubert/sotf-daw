@@ -96,14 +96,16 @@ impl DitherPlugin {
             scale,
             inv_scale: 1.0 / scale,
             noise_shaping_delays_samples: [1.0, 2.0, 3.0],
-            error_history: vec![vec![0.0; 4]; channels],
-            error_history_heads: vec![3; channels],
+            error_history: Vec::new(),
+            error_history_heads: Vec::new(),
             rng_state: Self::init_rng_states(channels, seed),
             param_bit_depth: ParameterId::from("bit_depth"),
             param_noise_shaping: ParameterId::from("noise_shaping"),
             param_dither_type: ParameterId::from("dither_type"),
             cached_parameters: Vec::new(),
         };
+        p.configure_noise_shaping_rate(p.sample_rate)
+            .expect("constructor sample rate is valid");
         p.rebuild_cached_parameters();
         p
     }
@@ -431,6 +433,9 @@ impl ParametricInPlacePlugin for DitherPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Dither callback must match the prepared sample rate".into());
+        }
         let nf = context.num_frames;
         let ch = self.channels;
         // Complete all frame/channel arithmetic and buffer validation before
