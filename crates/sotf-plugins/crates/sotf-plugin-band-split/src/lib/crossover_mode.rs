@@ -123,6 +123,17 @@ impl CrossoverMode {
         }
     }
 
+    pub(super) fn finish_frequency(&mut self, index: usize, frequency: f32) {
+        // The shared LR setters suppress changes smaller than 0.001/0.1 Hz.
+        // At a ramp endpoint that can leave the bank permanently short of the
+        // requested cutoff. Their API has no state-preserving forced setter.
+        // Install a distinct valid coefficient set, then the exact target;
+        // no audio runs between these calls and recursive histories survive.
+        // This bounded extra redesign happens only when the ramp finishes.
+        self.set_frequency(index, frequency * 0.5);
+        self.set_frequency(index, frequency);
+    }
+
     pub(super) fn process_frame(&mut self, input: &[f32], bands: &mut [&mut [f32]]) {
         match &mut self.crossover {
             MultibandCrossover::LR24(crossover) => crossover.process_frame(input, bands),

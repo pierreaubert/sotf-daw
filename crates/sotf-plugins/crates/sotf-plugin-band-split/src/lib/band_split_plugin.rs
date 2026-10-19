@@ -11,7 +11,7 @@ use sotf_host::plugin::{
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::{LinearSmoother, LogSmoother};
 
-/// Redesign IIR coefficients at 6 kHz rather than at audio rate. Frequency
+/// Redesign IIR coefficients every eight samples rather than at audio rate. Frequency
 /// targets still follow the per-sample logarithmic smoother; the crossover
 /// receives stable, bounded-rate snapshots whose phase persists across host
 /// callback boundaries.
@@ -649,13 +649,23 @@ impl Plugin for BandSplitPlugin {
             // coefficients only at the bounded control rate. The countdown is
             // persistent, so the trajectory is independent of host partitioning.
             for smoother in &mut self.freq_smoothers {
-                smoother.advance();
+                let previous = smoother.current();
+                let value = smoother.advance();
+                if value == previous && value != smoother.target() {
+                    // A tiny logarithmic ratio can round to unity. Finish on
+                    // the sample clock instead of retaining the prior cutoff.
+                    smoother.reset(smoother.target());
+                }
             }
             if self.coefficient_update_countdown == 0 {
                 for i in 0..self.freq_smoothers.len() {
                     let frequency = self.freq_smoothers[i].current();
                     if frequency != self.applied_frequencies[i] {
-                        self.crossover.set_frequency(i, frequency);
+                        if frequency == self.freq_smoothers[i].target() {
+                            self.crossover.finish_frequency(i, frequency);
+                        } else {
+                            self.crossover.set_frequency(i, frequency);
+                        }
                         self.applied_frequencies[i] = frequency;
                         #[cfg(test)]
                         {

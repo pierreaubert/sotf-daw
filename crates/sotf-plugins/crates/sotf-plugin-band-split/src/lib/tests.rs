@@ -1011,3 +1011,78 @@ fn legacy_crossover_type_key_still_parses() {
         serde_json::from_value(serde_json::json!({"type": 1})).unwrap();
     assert_eq!(canonical.crossover_type, "LR48");
 }
+
+#[test]
+fn exact_cutoff_adoption_preserves_populated_recursive_history() {
+    for slope in [0, 1] {
+        for mode in [
+            BandSplitRecombinationMode::LegacyCascade,
+            BandSplitRecombinationMode::PhaseCompensated,
+        ] {
+            let frequencies = [300.0, 1500.0, 6000.0];
+            let mut adopted = CrossoverMode::new(&frequencies, 96_000.0, 1, slope, mode);
+            let mut reference = CrossoverMode::new(&frequencies, 96_000.0, 1, slope, mode);
+            for frame in 0..4096 {
+                if frame == 2053 {
+                    for (index, &frequency) in frequencies.iter().enumerate() {
+                        adopted.finish_frequency(index, frequency);
+                    }
+                }
+                let input = [(frame as f32 * 0.071).sin() * 0.25];
+                let render = |bank: &mut CrossoverMode| {
+                    let mut bands = [[0.0]; 4];
+                    let [a, b, c, d] = &mut bands;
+                    bank.process_frame(&input, &mut [a, b, c, d]);
+                    let mut flat = bands.map(|x| x[0]);
+                    bank.compensate_intermediate_bands(&mut flat, 4, 1);
+                    flat
+                };
+                assert_eq!(
+                    render(&mut adopted),
+                    render(&mut reference),
+                    "slope={slope}, mode={mode:?}, frame={frame}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn tiny_live_cutoff_targets_converge_without_reset() {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for (slope, delta) in [("LR24", 0.0005_f32), ("LR48", 0.05_f32)] {
+            let target = 300.0_f32 + delta;
+            let mut moved = BandSplitPlugin::new(1, 300.0, slope).unwrap();
+            moved.initialize(f64::from(rate)).unwrap();
+            moved
+                .set_parameter(
+                    ParameterId::from("frequency"),
+                    ParameterValue::Float(target),
+                )
+                .unwrap();
+            let silence = vec![0.0; rate as usize];
+            let mut discarded = vec![0.0; silence.len() * 2];
+            moved
+                .process(
+                    &silence,
+                    &mut discarded,
+                    &ProcessContext::new(rate, silence.len()),
+                )
+                .unwrap();
+            assert_eq!(moved.freq_smoothers[0].current(), target);
+            let mut fresh = BandSplitPlugin::new(1, f64::from(target), slope).unwrap();
+            fresh.initialize(f64::from(rate)).unwrap();
+            let mut impulse = vec![0.0; 1024];
+            impulse[0] = 1.0;
+            let mut actual = vec![0.0; 2048];
+            let mut expected = actual.clone();
+            let context = ProcessContext::new(rate, 1024);
+            moved.process(&impulse, &mut actual, &context).unwrap();
+            fresh.process(&impulse, &mut expected, &context).unwrap();
+            assert_eq!(
+                actual, expected,
+                "{slope} fs={rate} must adopt the exact target coefficients"
+            );
+        }
+    }
+}

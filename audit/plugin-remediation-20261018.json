@@ -136,9 +136,30 @@
       "id": 10,
       "plugin": "Band split",
       "audit_text": "[`band_split_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-band-split/src/lib/band_split_plugin.rs):560\u2013701 has initialized-rate/shape guards, log-frequency smoothing and compensated intermediate bands. Output ordering is part of the API. Summed LR bands can preserve magnitude while retaining an allpass phase response; raw sample identity is not the right universal oracle.\n\n`aud143_phase_compensation.rs`, `aud143_compensated_lifecycle.rs`, `aud143_reset_heap.rs`, realtime parameter and property tests are strong choices. Extend moving crossover sweeps and independent complex-response comparison through the public host. The selected compensation/crossover family determines CPU and phase; avoid needless coefficient recomputation while preserving sample-time controls. Classical complementary or linear-phase options are appropriate tradeoffs; ML is unnecessary.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Extend moving crossover sweeps and independent complex response through the public host",
+          "status": "implemented_and_verified",
+          "evidence": "aud143_bandsplit_host_chain.rs adds 36 configurations: LR24/LR48, legacy/phase-compensated, 2/3/4 bands and 44.1/48/96 kHz. Log-spaced rising/falling cutoff targets arrive at 24 absolute, unaligned event frames. All output bands are bit-identical across large/irregular host callbacks. After natural silence continuation without reset, per-band stereo impulse DTFT agrees with independent bilinear LR equations at four probes within 0.002 complex error; compensated sums match allpass phase and magnitude within 0.005."
+        },
+        {
+          "task": "Correct final cutoff adoption without clearing history or redesigning every sample",
+          "status": "implemented_and_verified",
+          "evidence": "Independent host regression failed before the fix at 96 kHz LR48, final cutoff 150 Hz, probe 137 Hz: complex error 0.002559906. Shared LR setters suppress small changes and could stop short of the target. Band Split now finishes rounded logarithmic ramps on the sample clock and forces exact endpoint coefficients on its persistent eight-sample control cadence. With no shared state-preserving forced setter, endpoint adoption installs a distinct valid coefficient set then the exact target with no intervening audio; history remains intact and work remains bounded. Unit tests prove bit-identical populated-history continuation and tiny-target convergence at 44.1/48/96/192 kHz; realtime guards prove no allocation or deallocation at completion."
+        },
+        {
+          "task": "Keep phase, layout, control cadence and compatibility contracts explicit",
+          "status": "implemented_and_verified",
+          "evidence": "README distinguishes phase-compensated allpass summation from legacy unequal-delay cascades, band-major ordering and zero reported latency. Corrected the 6 kHz cadence claim to every eight samples (6 kHz only at 48 kHz). Existing binary legacy host capture still matches exactly. Preset/schema/structural parameter contracts unchanged."
+        }
+      ],
+      "evidence": [
+        "Band Split full crate selection: 93 passed, two intentional pre-fix phase gates ignored, nine suites (92 passed in full run plus the subsequently added endpoint heap test passed in its focused suite).",
+        "Facade Band Split host and factory targets: four passed, one intentional old allocation gate ignored.",
+        "Six additional facade host/finite-chain/drain/robustness/channel gates: 42 passed.",
+        "Final Clippy --no-deps for changed library/tests and facade host target with warnings denied: passed."
+      ]
     },
     {
       "id": 11,
@@ -786,6 +807,14 @@
         16
       ],
       "result": "108 new IIR family/rate/band-count configurations plus deterministic positive/negative heap guard tests. Full parallel selection: 127 passed, two manual baseline capture tests ignored; Clippy clean. Existing 324-case independent FIR convolution/support checks also passed."
+    },
+    {
+      "name": "Band Split public-host sweep/phase audit and exact endpoint adoption",
+      "state": "verified",
+      "plugin_ids": [
+        10
+      ],
+      "result": "Reproduced 0.002559906 complex-response error at 96 kHz LR48 and fixed final cutoff adoption while preserving recursive history and the eight-sample cadence. 93 plugin tests, four Band Split facade tests and 42 additional host gates passed; Clippy clean. Optional upstream forced-setter API would remove the endpoint double coefficient design, but is not required for correctness."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

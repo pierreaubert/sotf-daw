@@ -72,8 +72,12 @@ impl std::ops::Mul for Complex {
 }
 
 fn low_high_response(slope: &str, cutoff_hz: f64) -> (Complex, Complex) {
-    let normalized = (std::f64::consts::PI * PROBE_HZ / f64::from(SAMPLE_RATE)).tan()
-        / (std::f64::consts::PI * cutoff_hz / f64::from(SAMPLE_RATE)).tan();
+    response_at(slope, cutoff_hz, PROBE_HZ, SAMPLE_RATE)
+}
+
+fn response_at(slope: &str, cutoff_hz: f64, probe_hz: f64, rate: u32) -> (Complex, Complex) {
+    let normalized = (std::f64::consts::PI * probe_hz / f64::from(rate)).tan()
+        / (std::f64::consts::PI * cutoff_hz / f64::from(rate)).tan();
     let s = Complex {
         re: 0.0,
         im: normalized,
@@ -350,4 +354,199 @@ fn aud143_populated_lr48_reset_is_allocation_free_gate() {
     assert_no_allocs("AUD143 populated LR48 BandSplit reset gate", || {
         plugin.reset();
     });
+}
+
+fn host_band_response(
+    slope: &str,
+    cutoffs: &[f64],
+    probe: f64,
+    rate: u32,
+    compensated: bool,
+) -> Vec<Complex> {
+    let stages: Vec<_> = cutoffs
+        .iter()
+        .map(|&cutoff| response_at(slope, cutoff, probe, rate))
+        .collect();
+    let mut carry = Complex::ONE;
+    let mut bands = Vec::new();
+    for (i, &(low, high)) in stages.iter().enumerate() {
+        let later = if compensated {
+            stages[i + 1..]
+                .iter()
+                .fold(Complex::ONE, |p, &(l, h)| p * (l + h))
+        } else {
+            Complex::ONE
+        };
+        bands.push(carry * low * later);
+        carry = carry * high;
+    }
+    bands.push(carry);
+    bands
+}
+
+fn render_host_bands(host: &mut DawHost, input: &[f32], bands: usize, parts: &[usize]) -> Vec<f32> {
+    let frames = input.len() / 2;
+    let channels = bands * 2;
+    let mut output = vec![f32::NAN; frames * channels];
+    let mut frame = 0;
+    let mut block = 0;
+    while frame < frames {
+        let n = parts[block % parts.len()].min(frames - frame);
+        assert_eq!(
+            host.process(
+                &input[frame * 2..(frame + n) * 2],
+                &mut output[frame * channels..(frame + n) * channels]
+            )
+            .unwrap(),
+            n
+        );
+        frame += n;
+        block += 1;
+    }
+    output
+}
+
+fn swept_host_bands(
+    rate: u32,
+    slope: &str,
+    bands: usize,
+    compensated: bool,
+    parts: &[usize],
+) -> (DawHost, Vec<f32>, Vec<f64>) {
+    use sotf_plugins::{BandSplitRecombinationMode, ParameterValue};
+    let initial = &([300.0, 1_500.0, 6_000.0])[..bands - 1];
+    let mode = if compensated {
+        BandSplitRecombinationMode::PhaseCompensated
+    } else {
+        BandSplitRecombinationMode::LegacyCascade
+    };
+    let mut host = DawHost::new(2, rate);
+    host.add_plugin(Box::new(
+        BandSplitPlugin::new_multiband_with_mode(2, initial, slope, mode).unwrap(),
+    ))
+    .unwrap();
+    host.build().unwrap();
+    let frames = rate as usize / 4;
+    let mut output = Vec::new();
+    let mut targets = initial.to_vec();
+    // Log-spaced rising and falling control sweeps at absolute event frames.
+    // The event grid deliberately does not align to the eight-sample cadence.
+    let mut frame = 0;
+    for event in 0..24 {
+        let boundary = (511 + event * 197).min(frames);
+        let input: Vec<_> = (frame..boundary)
+            .flat_map(|i| {
+                let phase = std::f64::consts::TAU * i as f64 / f64::from(rate);
+                [
+                    (0.1 * (phase * 997.0).sin()) as f32,
+                    (0.07 * (phase * 3731.0 + 0.7).cos()) as f32,
+                ]
+            })
+            .collect();
+        output.extend(render_host_bands(&mut host, &input, bands, parts));
+        frame = boundary;
+        let progress = if event < 12 {
+            event as f64 / 11.0
+        } else {
+            (23 - event) as f64 / 11.0
+        };
+        let factor = 2.0_f64.powf(2.0 * progress - 1.0);
+        let next: Vec<_> = initial.iter().map(|&cutoff| cutoff * factor).collect();
+        let ids = ["frequency", "frequency_2", "frequency_3"];
+        let indices: Vec<_> = if next[0] > targets[0] {
+            (0..bands - 1).rev().collect()
+        } else {
+            (0..bands - 1).collect()
+        };
+        for i in indices {
+            host.set_plugin_parameter(0, ids[i], ParameterValue::Float(next[i] as f32))
+                .unwrap();
+        }
+        targets = next;
+    }
+    let silence = vec![0.0; (frames - frame) * 2];
+    output.extend(render_host_bands(&mut host, &silence, bands, parts));
+    (host, output, targets)
+}
+
+#[test]
+fn moving_crossovers_and_per_band_complex_response_are_verified_through_the_public_host() {
+    for rate in [44_100, 48_000, 96_000] {
+        for slope in ["LR24", "LR48"] {
+            for bands in [2, 3, 4] {
+                for compensated in [false, true] {
+                    let label = format!("{rate} {slope} {bands} bands compensated={compensated}");
+                    let (mut host, moving, cutoffs) =
+                        swept_host_bands(rate, slope, bands, compensated, &[8192]);
+                    let (_, irregular, _) =
+                        swept_host_bands(rate, slope, bands, compensated, &[1, 7, 31, 257]);
+                    assert_eq!(moving, irregular, "{label}: absolute event clock");
+                    assert!(
+                        moving.iter().all(|x| x.is_finite() && x.abs() < 1.0),
+                        "{label}"
+                    );
+                    // Settle through ordinary processing; resetting would hide a
+                    // final cutoff error or incomplete control-clock adoption.
+                    render_host_bands(&mut host, &vec![0.0; rate as usize * 2], bands, &[8192]);
+                    const FRAMES: usize = 8192;
+                    let mut impulse = vec![0.0; FRAMES * 2];
+                    impulse[0] = 1.0;
+                    impulse[3 * 2 + 1] = -0.5;
+                    let response = render_host_bands(&mut host, &impulse, bands, &[1, 31, 257]);
+                    for probe in [137.0, 997.0, 3731.0, 12_331.0] {
+                        let expected =
+                            host_band_response(slope, &cutoffs, probe, rate, compensated);
+                        let mut measured_sum = Complex { re: 0.0, im: 0.0 };
+                        for (band, expected) in expected.into_iter().enumerate() {
+                            let mut measured = [Complex { re: 0.0, im: 0.0 }; 2];
+                            for frame in 0..FRAMES {
+                                let phase =
+                                    -std::f64::consts::TAU * probe * frame as f64 / f64::from(rate);
+                                let rotation = Complex {
+                                    re: phase.cos(),
+                                    im: phase.sin(),
+                                };
+                                for (channel, sum) in measured.iter_mut().enumerate() {
+                                    let value =
+                                        f64::from(response[frame * bands * 2 + band * 2 + channel]);
+                                    *sum = *sum + rotation * Complex { re: value, im: 0.0 };
+                                }
+                            }
+                            let phase = -std::f64::consts::TAU * probe * 3.0 / f64::from(rate);
+                            let right = expected
+                                * Complex {
+                                    re: -0.5 * phase.cos(),
+                                    im: -0.5 * phase.sin(),
+                                };
+                            assert!(
+                                measured[0].distance(expected) < RESPONSE_TOLERANCE,
+                                "{label} band={band} f={probe}: measured={:?}, expected={expected:?}, error={}",
+                                measured[0],
+                                measured[0].distance(expected)
+                            );
+                            assert!(
+                                measured[1].distance(right) < RESPONSE_TOLERANCE,
+                                "{label} right band={band} f={probe}"
+                            );
+                            measured_sum = measured_sum + measured[0];
+                        }
+                        if compensated {
+                            let allpass = cutoffs.iter().fold(Complex::ONE, |p, &cutoff| {
+                                let (low, high) = response_at(slope, cutoff, probe, rate);
+                                p * (low + high)
+                            });
+                            assert!(
+                                measured_sum.distance(allpass) < RESPONSE_TOLERANCE,
+                                "{label}: allpass phase"
+                            );
+                            assert!(
+                                (measured_sum.norm() - 1.0).abs() < 0.005,
+                                "{label}: summed magnitude"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
