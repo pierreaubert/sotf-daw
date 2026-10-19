@@ -307,9 +307,29 @@
       "id": 25,
       "plugin": "Gate",
       "audit_text": "[`gate_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/gate_plugin.rs):1071\u20131209 resets detector/HPF/RMS/hold/lookahead state and drains retained delay. Fractional positive lookahead is handled with an actual integer-sample delay and matching latency reporting. Startup envelope state determines whether the first transient is lost or attenuated.\n\n`rms_detector_accuracy.rs`, `above_threshold_audio.rs`, `soft_knee_audio.rs`, finite-stream, property and native sidechain tests are well targeted. Extend threshold-hovering chatter, hold/retrigger, sample-rate-invariant time constants and linked stereo impulses. Classical hysteresis and program-dependent release are sensible options. ML/VAD gating is useful only as an explicit speech mode with false-cut and latency evaluation, not as a replacement for a general-purpose gate.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Nonvacuous threshold-hovering chatter and hysteresis validation",
+          "status": "implemented_and_verified",
+          "evidence": "audit_timing.rs uses ratio 100:1, zero hold and independent unit programme/external detector. Hysteresis retains unity above the close threshold; the same alternating detector genuinely attenuates without hysteresis. The legacy 1:1-ratio test alone could not establish this."
+        },
+        {
+          "task": "Exact hold, retrigger and rate-invariant attack/release trajectories",
+          "status": "implemented_and_verified",
+          "evidence": "44.1/48/96 kHz public audio checks exact retriggered hold boundaries, bit-identical one-frame/irregular/8192 callbacks and f64 exponential gain oracles. Measured max release error 0.007407 dB and attack error 0.006947 dB, within 0.02 dB including existing fast math."
+        },
+        {
+          "task": "Linked stereo first hits and startup mapping",
+          "status": "implemented_and_verified",
+          "evidence": "One-sided external detector on either channel, unequal programme channel amplitudes; first audible samples preserved exactly and silent remainder remains silent at all three rates."
+        }
+      ],
+      "evidence": [
+        "Gate full suite: 99 passed across ten suites; existing hysteresis/hold/sidechain/finite-stream implementation required no DSP changes for these contracts.",
+        "Clippy --lib --tests -D warnings passed.",
+        "Six facade DSP/automation/drain/realtime allocation gates passed 88 tests after this production change."
+      ]
     },
     {
       "id": 26,
@@ -458,9 +478,40 @@
       "id": 42,
       "plugin": "Transient shaper",
       "audit_text": "[`transient_shaper_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/lib/transient_shaper_plugin.rs):371\u2013490 uses fast/slow linked envelopes, bounded gain and peak protection. Initialize updates coefficients but reset clears history; callers must not assume reinitialize resets learned envelope state. Envelope startup is particularly audible on the first hit.\n\nProperty, finite-stream and integration tests are useful. Extend isolated first hits, dense percussion, sustained tones, very quiet starts and rate-invariant envelope trajectories. Classical dual-envelope/relative-slope detection and adaptive sustain timing are reasonable options. ML onset classification can assist difficult material, but should only modulate bounded controls with an independent deterministic fallback.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Independent first-hit, dense percussion, sustained tone, quiet-start and rate validation",
+          "status": "implemented_and_verified",
+          "evidence": "audit_envelopes.rs closed-form f64 piecewise step responses at 44.1/48/96 kHz, error below 2e-5, exact callback partitioning, linked stereo ratios; 997 Hz onset exceeds settled attack emphasis, and below-sensitivity tone remains bit-identical."
+        },
+        {
+          "task": "Enforce prepared sample rate before audio or envelope mutation",
+          "status": "implemented_and_verified",
+          "evidence": "Reproduced acceptance of wrong rate; new public rejection test preserves sentinel audio and subsequent reference envelope history."
+        },
+        {
+          "task": "Validate malformed bulk parameter controls atomically",
+          "status": "implemented_and_verified",
+          "evidence": "Reproduced accepted NaN batch and partial target mutation; full schema preflight now precedes all setters/cache updates."
+        },
+        {
+          "task": "Expose public diagnostics and clear reset telemetry",
+          "status": "implemented_and_verified",
+          "evidence": "Public get_data previously returned None despite internal cache updates. It now exposes immutable cache snapshots, initializes neutral gain to 1, resets published levels and preserves held snapshots."
+        },
+        {
+          "task": "Make initialize versus reset policy explicit",
+          "status": "implemented_and_verified",
+          "evidence": "Reinitialization preserves audio envelope history and updates coefficients; a cross-rate closed-form test proves it differs from reset. Diagnostic interval sample count restarts at the new rate. README documents lifecycle and bounded cache publication."
+        }
+      ],
+      "evidence": [
+        "Transient Shaper full suite: 53 passed across five suites.",
+        "Clippy --lib --tests -D warnings passed.",
+        "Optional ML onset assistance is tracked separately.",
+        "Six facade DSP/automation/drain/realtime allocation gates passed 88 tests after this production change."
+      ]
     },
     {
       "id": 43,
@@ -563,6 +614,15 @@
       ],
       "result": "201 passed, 4 ignored; shared AutoGain 24 passed; facade integration gates 88 passed.",
       "scope": "Native plugin API and DSP; frontend UI is outside this workspace."
+    },
+    {
+      "name": "Gate timing validation and Transient Shaper lifecycle/diagnostics remediation",
+      "state": "verified",
+      "plugin_ids": [
+        25,
+        42
+      ],
+      "result": "152 passed across 15 plugin suites; 88 host checks across six suites; Clippy --lib --tests -D warnings passed."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

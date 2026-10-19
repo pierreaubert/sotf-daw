@@ -18,6 +18,8 @@ use sotf_host::plugin::{
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
+use std::any::Any;
+use std::sync::Arc;
 
 pub struct TransientShaperPlugin {
     pub(super) channels: usize,
@@ -79,7 +81,10 @@ impl TransientShaperPlugin {
             sensitivity_smoother: Smoother::new(Self::sensitivity_threshold(0.0), 10.0, sr),
             output_gain_smoother: Smoother::new(Self::db_to_linear(0.0), 10.0, sr),
             mix_smoother: Smoother::new(1.0, 5.0, sr),
-            cache: RealTimeCache::new(TransientShaperData::default()),
+            cache: RealTimeCache::new(TransientShaperData {
+                gain: 1.0,
+                ..Default::default()
+            }),
             cache_samples: 0,
             monitor_peak_transient: 0.0,
             monitor_peak_sustain: 0.0,
@@ -362,6 +367,10 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
     }
 
     fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        // Validate the entire batch before changing targets or cached values.
+        for (id, value) in &values {
+            self.parametric_validate_parameter(id, value)?;
+        }
         for (id, value) in &values {
             self.apply_value_ref(id, value)?;
         }
@@ -379,6 +388,9 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         self.sensitivity_smoother.set_time(10.0, sample_rate);
         self.output_gain_smoother.set_time(10.0, sample_rate);
         self.mix_smoother.set_time(5.0, sample_rate);
+        // Keep audio envelopes continuous, but start the new rate's diagnostic
+        // interval at zero rather than reinterpreting old-rate sample counts.
+        self.cache_samples = 0;
         Ok(())
     }
 
@@ -398,6 +410,11 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         self.monitor_peak_transient = 0.0;
         self.monitor_peak_sustain = 0.0;
         self.monitor_extreme_gain = 1.0;
+        self.cache.update(|data| {
+            data.transient_level = 0.0;
+            data.sustain_level = 0.0;
+            data.gain = 1.0;
+        });
     }
 
     fn process_in_place(
@@ -405,6 +422,9 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Transient Shaper callback must match the prepared sample rate".into());
+        }
         enable_ftz_daz();
         let num_frames = context.num_frames;
         let ch = self.channels;
@@ -512,5 +532,9 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
 
         flush_denormals_inplace(&mut buffer[..sample_len]);
         Ok(num_frames)
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        Some(self.cache.load() as Arc<dyn Any + Send + Sync>)
     }
 }
