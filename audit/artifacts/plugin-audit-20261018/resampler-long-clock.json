@@ -1,0 +1,193 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-resampler",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--no-fail-fast",
+    "--",
+    "--nocapture"
+  ],
+  "passed_tests": 141,
+  "duration_seconds_per_clock_case": 60,
+  "fixed_reference": "Exact u128 binary64/rational endpoint counts; analytic output tone positions; first fit frozen for all subsequent samples.",
+  "drift_reference": "Closed-form sum of ramped reciprocal ratio, per-block support inequalities, constant-clock EOF crossing; paired irregular callback waveform including drain.",
+  "spectral_reference": "Independent 512-tap f64 directly evaluated single Blackman-Harris windowed sinc; true 2x2 quadrature fit on noncoherent irrational output grids. Amplitude comparison, not phase certification.",
+  "fixed": [
+    {
+      "quality": "Fast",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 2646037,
+      "output_frames": 2880075,
+      "rms_error": 1.7980172035e-08,
+      "peak_error": 8.190101949412e-08
+    },
+    {
+      "quality": "Fast",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 2880037,
+      "output_frames": 2646063,
+      "rms_error": 1.555591603732e-08,
+      "peak_error": 6.924514026063e-08
+    },
+    {
+      "quality": "Fast",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 2880037,
+      "output_frames": 4073033,
+      "rms_error": 1.647855582908e-08,
+      "peak_error": 9.633284897559e-08
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 2646037,
+      "output_frames": 2880110,
+      "rms_error": 1.869213262677e-08,
+      "peak_error": 7.180041254606e-08
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 2880037,
+      "output_frames": 2646092,
+      "rms_error": 1.736604146653e-08,
+      "peak_error": 8.629432166063e-08
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 2880037,
+      "output_frames": 4073078,
+      "rms_error": 1.88949765872e-08,
+      "peak_error": 1.157090974702e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 2646037,
+      "output_frames": 2880180,
+      "rms_error": 2.678053984542e-08,
+      "peak_error": 1.027434392842e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 2880037,
+      "output_frames": 2646151,
+      "rms_error": 3.00732235101e-08,
+      "peak_error": 1.293901187027e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 2880037,
+      "output_frames": 4073169,
+      "rms_error": 2.690517648404e-08,
+      "peak_error": 1.353348791922e-07
+    }
+  ],
+  "drift": [
+    {
+      "quality": "Fast",
+      "input_frames": 2880512,
+      "output_frames": 2880543,
+      "rms_error": 2.979256999487e-08,
+      "peak_error": 1.387504580674e-07
+    },
+    {
+      "quality": "Medium",
+      "input_frames": 2880512,
+      "output_frames": 2880575,
+      "rms_error": 5.793176407813e-08,
+      "peak_error": 2.30949698643e-07
+    },
+    {
+      "quality": "High",
+      "input_frames": 2880512,
+      "output_frames": 2880639,
+      "rms_error": 5.293228469539e-07,
+      "peak_error": 1.172811141564e-06
+    }
+  ],
+  "sinc": [
+    {
+      "quality": "Medium",
+      "ratio": 1.4142135623730951,
+      "frequency": 997.0,
+      "error_db": -3.255200336697e-05
+    },
+    {
+      "quality": "Medium",
+      "ratio": 1.4142135623730951,
+      "frequency": 5003.0,
+      "error_db": -3.705920634158e-05
+    },
+    {
+      "quality": "High",
+      "ratio": 1.4142135623730951,
+      "frequency": 997.0,
+      "error_db": -6.941948478057e-05
+    },
+    {
+      "quality": "High",
+      "ratio": 1.4142135623730951,
+      "frequency": 5003.0,
+      "error_db": -7.386636819398e-05
+    },
+    {
+      "quality": "Medium",
+      "ratio": 0.7071067811865475,
+      "frequency": 997.0,
+      "error_db": 4.795646566156e-05
+    },
+    {
+      "quality": "Medium",
+      "ratio": 0.7071067811865475,
+      "frequency": 5003.0,
+      "error_db": 4.340985584087e-05
+    },
+    {
+      "quality": "High",
+      "ratio": 0.7071067811865475,
+      "frequency": 997.0,
+      "error_db": -6.246640675618e-05
+    },
+    {
+      "quality": "High",
+      "ratio": 0.7071067811865475,
+      "frequency": 5003.0,
+      "error_db": -6.701063028839e-05
+    }
+  ],
+  "qa": {
+    "command": "cargo run -p sotf-plugin-resampler --features qa --bin qa-resampler --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "result": "ENGINE/OFFLINE SCHEDULING PASS",
+    "callback_count_per_quality": 10240,
+    "aggregate_p99_ms": 0.145,
+    "aggregate_max_ms": 0.45,
+    "actual_callback_deadline_misses": 16,
+    "negotiated_quantum_deadline_misses": 0,
+    "interpretation": "Local optimized dev build; this is evidence for queued engine/offline scheduling, not a direct fixed-frame callback deadline guarantee. Rate-changing plugins require a clock-domain queue."
+  },
+  "backend_source": "git+https://github.com/pierreaubert/sotf-3rdparties#d476ae9bc3165145d4a8e43b6bafbef11b196a04 (sotf-rubato 5.0.0, Cargo.lock)",
+  "clippy_command": "cargo clippy -p sotf-plugin-resampler --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+  "final_normal_suite_command": "cargo test -p sotf-plugin-resampler --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
+  "final_normal_suite_result": "141 passed, 2 ignored across 16 suites; both ignored one-hour variants separately executed and passed.",
+  "clippy_result": "Passed with warnings denied, including qa feature and all targets."
+}

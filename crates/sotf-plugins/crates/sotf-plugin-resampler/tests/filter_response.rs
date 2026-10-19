@@ -113,7 +113,7 @@ fn render_static(
     input: &[f32],
     channels: usize,
     input_rate: u32,
-    output_rate: u32,
+    output_rate: impl Into<f64>,
     quality: ResamplerQuality,
 ) -> Vec<f32> {
     let mut plugin =
@@ -397,6 +397,56 @@ fn independent_direct_sinc_reference_agrees_on_rational_ratios() {
                         "{quality:?} {input_rate}->{output_rate} {frequency:.0}Hz: {gain_db:.4} vs {expected:.4} dB"
                     );
                 }
+            }
+        }
+    }
+}
+
+#[test]
+fn irrational_ratios_agree_with_direct_f64_sinc_without_coherence_assumption() {
+    fn fitted_amplitude(samples: &[f64], rate: f64, frequency: f64) -> f64 {
+        let count = 8192;
+        let offset = samples.len() / 2 - count / 2;
+        let (mut ss, mut cc, mut sc, mut ys, mut yc) = (0.0, 0.0, 0.0, 0.0, 0.0);
+        for (i, &y) in samples[offset..offset + count].iter().enumerate() {
+            let (s, c) = (TAU * frequency * i as f64 / rate).sin_cos();
+            ss += s * s;
+            cc += c * c;
+            sc += s * c;
+            ys += y * s;
+            yc += y * c;
+        }
+        let determinant = ss * cc - sc * sc;
+        let a = (ys * cc - yc * sc) / determinant;
+        let b = (yc * ss - ys * sc) / determinant;
+        a.hypot(b)
+    }
+
+    for ratio in [2.0_f64.sqrt(), 2.0_f64.sqrt().recip()] {
+        let frequencies = [997.0, 5003.0];
+        let input = tones(&frequencies, 48_000);
+        let rate = 48_000.0 * ratio;
+        for quality in [ResamplerQuality::Medium, ResamplerQuality::High] {
+            let output = render_static(&input, 2, 48_000, rate, quality);
+            for (channel, frequency) in frequencies.into_iter().enumerate() {
+                let source: Vec<_> = input.iter().skip(channel).step_by(2).copied().collect();
+                let reference = direct_reference(&source, ratio);
+                let actual: Vec<_> = output
+                    .iter()
+                    .skip(channel)
+                    .step_by(2)
+                    .map(|x| f64::from(*x))
+                    .collect();
+                let gain = fitted_amplitude(&actual, rate, frequency);
+                let expected = fitted_amplitude(&reference, rate, frequency);
+                let error_db = 20.0 * (gain / expected).log10();
+                assert!(
+                    error_db.abs() < 0.05,
+                    "{quality:?}/{ratio}/{frequency}: {error_db} dB"
+                );
+                println!(
+                    "IRRATIONAL_SINC quality={quality:?} ratio={ratio:.16} frequency={frequency} error_db={error_db:.12e}"
+                );
             }
         }
     }

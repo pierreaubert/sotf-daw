@@ -194,3 +194,37 @@ integration (AUD087) stays with the shared clock/host owner.
 
 Run `cargo test -p sotf-plugin-resampler` and
 `cargo run -p sotf-plugin-resampler --features qa --bin qa-resampler`.
+
+### Sustained clock validation
+
+`tests/audit_long_clock.rs` renders one-minute streams for every preset at
+44.1→48 kHz, 48→44.1 kHz and 48→48√2 kHz, including irregular callbacks and a
+37-frame partial ending. Endpoint counts are checked with exact integer
+arithmetic on the binary64 ratio, plus exact rational arithmetic for the integer
+sample-rate pairs. A two-quadrature fit made near startup is then frozen for the
+rest of the stream: later windows cannot refit away cumulative phase error.
+The low-band 997 Hz tone has fixed −80 dBFS RMS and −70 dBFS peak error limits.
+
+An additional one-minute case per preset sweeps a bipolar ±100 ppm clock-drift
+triangle. It independently evaluates the quadratic sum of ramped reciprocal
+ratios, checks each block's interpolation-support inequalities and solves the
+final constant-clock endpoint. Regular and irregular callback partitions must
+produce identical samples, including the EOF waveform. Valid automation,
+processing and drain are guarded against both allocations and deallocations.
+These are sustained numerical stream checks, not wall-clock scheduling or
+unbounded-duration guarantees.
+
+`tests/filter_response.rs` extends the independent 512-tap, directly evaluated
+`f64` windowed-sinc comparison to √2 and 1/√2 conversion at 997 and 5003 Hz.
+The true 2×2 quadrature fit handles the noncoherent irrational output grids;
+Medium and High must agree with the reference amplitude within 0.05 dB. This
+amplitude comparison does not establish phase agreement with that different
+filter design. Numerical results and commands are recorded in
+`audit/artifacts/plugin-audit-20261018/resampler-long-clock.json` at the workspace
+root. No learned model is involved in the conversion contract.
+
+The explicit one-hour variants exercise the same clocks and thresholds without
+retaining the full audio stream. Run them with
+`cargo test -p sotf-plugin-resampler --test audit_long_clock -- --ignored`.
+Their separate numerical results are recorded in
+`audit/artifacts/plugin-audit-20261018/resampler-hour-clock.json`.

@@ -877,9 +877,49 @@
       "id": 37,
       "plugin": "Resampler",
       "audit_text": "[`resampler_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-resampler/src/resampler_plugin.rs):733\u2013870 explicitly manages variable output, prepared capacity, residual/endpoint state, ratio changes and an exact unity path. Initialize is not equivalent to reset. Output timestamps and finite input endpoints must remain correct across changing ratios, not merely average output rate.\n\n`dynamic_endpoint.rs`, `hard_decimation.rs`, `spectral_accuracy.rs`, `slew_artifact_bounds.rs`, `smooth_cutoff.rs`, `drain_work.rs` and lifecycle tests are a strong suite. Extend long-duration rational/irrational ratios, clock drift, endpoint frame conservation and independent high-precision spectral references. Classical polyphase/sinc quality and slew policies are the right tools. ML is inappropriate for a deterministic sample-rate conversion contract.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Validate sustained rational and irrational clocks with exact endpoint conservation",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-resampler/tests/audit_long_clock.rs",
+            "audit/artifacts/plugin-audit-20261018/resampler-long-clock.json",
+            "audit/artifacts/plugin-audit-20261018/resampler-hour-clock.json"
+          ],
+          "result": "All three presets at 44.1->48, 48->44.1 and 48->48*sqrt(2) kHz: nine one-minute and nine one-hour cases, irregular callback partitions and a 37-frame partial ending. Exact u128 multiplication/rounding of binary64 ratios and separate rational arithmetic verify final counts including the specified delay. A startup quadrature fit is frozen thereafter so timing cannot be refit away. One-hour maximum fixed-clock RMS error 4.398134346025e-8, peak 1.643443811872e-7; fixed limits 1e-4 RMS and 0.000316228 peak at the 997 Hz tone. Output rate up to 244376337 emitted frames per one-hour case; bounded test memory, allocation/deallocation guards on callbacks/drain."
+        },
+        {
+          "task": "Validate clock drift, timestamps, callback partitions and finite EOF waveform",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-resampler/tests/audit_long_clock.rs",
+            "audit/artifacts/plugin-audit-20261018/resampler-hour-clock.json"
+          ],
+          "result": "Every preset: one-minute and one-hour bipolar +/-100 ppm triangle with a ramp each 1024 input frames. Independent closed-form quadratic sums of reciprocal ratios plus interpolation-support inequalities check each output block, frozen tone fit checks waveform timing, and an independent constant-clock source-boundary crossing checks the final endpoint. Regular and irregular callbacks have bit-identical complete audio, including drain. One-hour maximum drift RMS 5.293134873038e-7, peak 1.185940345483e-6; all endpoint counts exact. This is an offline numerical stream soak, not wall-clock scheduling proof."
+        },
+        {
+          "task": "Extend independent high-precision spectral reference to irrational ratios",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-resampler/tests/filter_response.rs",
+            "audit/artifacts/plugin-audit-20261018/resampler-long-clock.json"
+          ],
+          "result": "Directly evaluated independent 512-tap f64 single Blackman-Harris windowed sinc, normalized per fractional phase, compared against Medium/High at sqrt(2) and 1/sqrt(2), 997 and 5003 Hz. True 2x2 quadrature fitting handles noncoherent grids. Eight amplitude comparisons have maximum absolute error 0.00007386636819398 dB under the fixed 0.05 dB requirement. This extends the existing rational reference and all-preset analytic DTFT/stopband/slew suites; a different reference filter is not asserted to share phase."
+        },
+        {
+          "task": "Verify existing SRC lifecycle, quality, slew and realtime contracts without replacing deterministic DSP",
+          "status": "implemented_and_verified",
+          "evidence": "All 141 normal crate tests pass, plus both explicit one-hour soak tests. Existing dynamic_endpoint, lifecycle, drain_work, hard_decimation, spectral_accuracy, filter_response, slew_artifact_bounds, slew_coverage and typed_control suites are retained and run. QA executable passes engine/offline scheduling, no-allocation, quality/channel/callback and cutoff-transition gates. No production waveform changes were required by the measured extensions. ML is inappropriate for this deterministic conversion contract."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-resampler --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast: 141 passed, 2 ignored, 16 suites. The two ignored tests are the explicitly executed hour soaks, not skipped verification.",
+        "cargo test -p sotf-plugin-resampler --test audit_long_clock --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --ignored --nocapture: 2 passed in 103.41 s, covering twelve one-hour cases.",
+        "cargo run -p sotf-plugin-resampler --features qa --bin qa-resampler --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: ENGINE/OFFLINE SCHEDULING PASS. Local optimized dev build, aggregate p99/max 0.145/0.450 ms; 16 actual-callback deadline misses, zero negotiated-quantum misses. This does not establish direct fixed-frame device callback safety; queued clock-domain scheduling remains required.",
+        "cargo clippy -p sotf-plugin-resampler --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings: passed.",
+        "README and CHANGELOG document the sustained tests, explicit hour-soak command, reference scope and timing limits; artifacts record backend git source d476ae9bc3165145d4a8e43b6bafbef11b196a04 from Cargo.lock."
+      ]
     },
     {
       "id": 38,

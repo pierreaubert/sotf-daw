@@ -1,0 +1,130 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-resampler",
+    "--test",
+    "audit_long_clock",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--ignored",
+    "--nocapture"
+  ],
+  "passed_tests": 2,
+  "duration_seconds_per_clock_case": 3600,
+  "reference": "Same independently checked integer endpoints, fixed quadrature fit, quadratic ramp timestamps, support inequalities and complete EOF waveform as the default one-minute suite. Offline numerical streaming, not real-time scheduling.",
+  "fixed": [
+    {
+      "quality": "Fast",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 158760037,
+      "output_frames": 172800075,
+      "rms_error": 4.398134346025e-08,
+      "peak_error": 1.382226683944e-07
+    },
+    {
+      "quality": "Fast",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 172800037,
+      "output_frames": 158760063,
+      "rms_error": 3.161864528672e-08,
+      "peak_error": 1.069700145961e-07
+    },
+    {
+      "quality": "Fast",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 172800037,
+      "output_frames": 244376201,
+      "rms_error": 2.302168349872e-08,
+      "peak_error": 1.125837775715e-07
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 158760037,
+      "output_frames": 172800110,
+      "rms_error": 3.820212552373e-08,
+      "peak_error": 1.372168587921e-07
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 172800037,
+      "output_frames": 158760092,
+      "rms_error": 3.106801349216e-08,
+      "peak_error": 1.240576627901e-07
+    },
+    {
+      "quality": "Medium",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 172800037,
+      "output_frames": 244376246,
+      "rms_error": 2.482584412688e-08,
+      "peak_error": 1.331229843859e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 44100,
+      "output_rate": 48000.0,
+      "input_frames": 158760037,
+      "output_frames": 172800180,
+      "rms_error": 3.102364418689e-08,
+      "peak_error": 1.332293238579e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 48000,
+      "output_rate": 44100.0,
+      "input_frames": 172800037,
+      "output_frames": 158760151,
+      "rms_error": 3.516132552956e-08,
+      "peak_error": 1.32265762981e-07
+    },
+    {
+      "quality": "High",
+      "input_rate": 48000,
+      "output_rate": 67882.25099390857,
+      "input_frames": 172800037,
+      "output_frames": 244376337,
+      "rms_error": 3.185440396102e-08,
+      "peak_error": 1.643443811872e-07
+    }
+  ],
+  "drift": [
+    {
+      "quality": "Fast",
+      "input_frames": 172800000,
+      "output_frames": 172800035,
+      "rms_error": 2.972220128168e-08,
+      "peak_error": 1.514708936612e-07
+    },
+    {
+      "quality": "Medium",
+      "input_frames": 172800000,
+      "output_frames": 172800067,
+      "rms_error": 5.754984524815e-08,
+      "peak_error": 2.30949698643e-07
+    },
+    {
+      "quality": "High",
+      "input_frames": 172800000,
+      "output_frames": 172800131,
+      "rms_error": 5.293134873038e-07,
+      "peak_error": 1.185940345483e-06
+    }
+  ],
+  "backend_source": "git+https://github.com/pierreaubert/sotf-3rdparties#d476ae9bc3165145d4a8e43b6bafbef11b196a04 (sotf-rubato 5.0.0, Cargo.lock)",
+  "execution_wall_seconds": 103.41
+}

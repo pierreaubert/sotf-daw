@@ -1,5 +1,12 @@
 # Unreleased
 
+- Validate one-minute rational/irrational clocks and bipolar ±100 ppm drift
+  against exact integer endpoints, independent quadratic timestamps and frozen
+  tone fits; verify partition equality through EOF with heap guards. Add
+  explicit one-hour variants for sustained numerical audit runs.
+- Extend independent direct `f64` sinc amplitude comparisons to √2 and 1/√2
+  conversion using a noncoherent 2×2 quadrature fit.
+
 - Add opt-in `cutoff_smoothing` (bool, default off, Realtime): upward
   cutoff widening slews one prepared table per backend chunk while
   downward narrowing jumps immediately, preserving alias protection,
