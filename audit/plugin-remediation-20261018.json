@@ -219,7 +219,7 @@
       "id": 16,
       "plugin": "Crossover",
       "audit_text": "[`crossover_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-crossover/src/crossover_plugin.rs):1415\u20131575 handles several IIR families, multiway compensation and FIR paths. The FIR route explicitly checks initialized rate; align rate-sensitive IIR entry-point contracts as well. Coefficient automation and passthrough/mute resets can produce transition artifacts even when static responses are correct.\n\n`aud141_recombination.rs`, `aud142_iir_families.rs`, `block_kernels.rs`, finite-stream and property tests are substantive. The reproduced allocation-test failure comes from a process-wide counter and passed serially, so repair test isolation before drawing an RT conclusion. Extend all-family phase/impulse checks under moving cutoff and changing topology. Classical LR/Bessel/Butterworth/linear-phase choices cover distinct use cases; ML is not needed.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Enforce prepared sample rate on IIR as well as FIR entry paths.",
@@ -228,9 +228,28 @@
             "crates/sotf-plugins/crates/sotf-plugin-crossover/tests/audit_rate_contract.rs"
           ],
           "result": "Public regression reproduced LR24 rate acceptance. All 13 IIR/FIR families in two-/three-way routes now reject wrong rates without mutating samples or recursive history. Existing IIR construction at its prepared default rate remains supported."
+        },
+        {
+          "task": "Verify allocator-test isolation before judging realtime behavior",
+          "status": "implemented_and_verified",
+          "evidence": "Current shared CountingAlloc already uses thread-local counters. block_kernels.rs now deterministically overlaps a foreign allocating/deallocating worker with the guarded interval and also proves a deliberate audio-thread allocation is caught. Full crate passes with eight test threads; no process-wide counter remains in this path."
+        },
+        {
+          "task": "Extend moving-cutoff impulse/phase checks to every IIR family and band topology",
+          "status": "implemented_and_verified",
+          "evidence": "aud142_iir_families.rs adds 108 configurations: 12 IIR families (LR12/24/48, BW6 through BW48, Bessel12), 44.1/48/96 kHz and 2/3/4 bands. Absolute-sample rising cutoffs remain finite and meet existing peak/partition bounds; structural output edits are rejected. After natural silence continuation without reset, direct complex DTFT of each impulse band matches independent analog-pole/bilinear products at five frequencies within 0.002; silent channel remains exactly zero."
+        },
+        {
+          "task": "Verify FIR phase/support and structural changes through existing independent tests",
+          "status": "implemented_and_verified",
+          "evidence": "finite_stream.rs verifies 324 FIR rate/channel/tap/split/mode/stream configurations against direct convolution, explicit finite support and delayed band sums (2e-6 tolerance). Integration tests reject initialized FIR frequency/tap edits and output topology edits, requiring rebuild; existing per-channel lifecycle tests verify structural rejection/reinitialization and fresh-state equivalence."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "Full Crossover library and integration selection with --test-threads=8: 127 passed, two manual baseline captures ignored, eleven suites.",
+        "Clippy --no-deps --lib --tests with warnings denied: passed.",
+        "Earlier prepared-rate production fix remains covered for all 13 IIR/FIR families; this batch extends missing validation without further DSP changes."
+      ]
     },
     {
       "id": 17,
@@ -759,6 +778,14 @@
         45
       ],
       "result": "110 Delay tests plus three new facade host-render tests passed; new target Clippy clean. Explicit energy and duration stops, near-limit signed feedback, actual native-drain behavior, and both modes during tempo discontinuities verified. No production DSP change required."
+    },
+    {
+      "name": "Crossover all-family moving-cutoff phase and allocation-isolation audit",
+      "state": "verified",
+      "plugin_ids": [
+        16
+      ],
+      "result": "108 new IIR family/rate/band-count configurations plus deterministic positive/negative heap guard tests. Full parallel selection: 127 passed, two manual baseline capture tests ignored; Clippy clean. Existing 324-case independent FIR convolution/support checks also passed."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

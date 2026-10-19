@@ -78,6 +78,7 @@ enum Branch {
 fn order_and_repeats(kind: &str) -> Option<(usize, usize)> {
     match kind {
         "LR12" => Some((1, 2)),
+        "LR24" => Some((2, 2)),
         "LR48" => Some((4, 2)),
         "BW6" => Some((1, 1)),
         "BW12" => Some((2, 1)),
@@ -1534,4 +1535,95 @@ fn assert_reset_matches_per_channel(
     let reset_output = render_partitioned(populated, &input, 2, 2, sample_rate, block_pattern);
     let fresh_output = render_partitioned(&mut fresh, &input, 2, 2, sample_rate, block_pattern);
     assert_eq!(reset_output, fresh_output, "per-channel reset target");
+}
+
+#[test]
+fn all_iir_families_moving_multiway_cutoffs_keep_clock_and_settle_to_impulse_oracle() {
+    for sample_rate in [44_100, 48_000, 96_000] {
+        for kind in FAMILY_TYPES.iter().copied().chain(["LR24"]) {
+            for bands in [2, 3, 4] {
+                let initial = &([300.0, 1_500.0, 5_000.0])[..bands - 1];
+                let target = &([600.0, 2_200.0, 7_000.0])[..bands - 1];
+                let mut regular = make_multiway_plugin(kind, sample_rate, initial);
+                let mut irregular = make_multiway_plugin(kind, sample_rate, initial);
+                let input = make_stereo_input(12_001, sample_rate);
+                // Rising cutoffs are applied upper first so intermediate scalar
+                // tuples remain ordered; event time is unrelated to block size.
+                let ids = ["frequency", "frequency_2", "frequency_3"];
+                let updates: Vec<_> = (0..bands - 1)
+                    .rev()
+                    .map(|i| (ids[i], target[i] as f32))
+                    .collect();
+                let moving = render_with_scalar_change(
+                    &mut regular,
+                    &input,
+                    (2, bands * 2),
+                    sample_rate,
+                    &[8192],
+                    2053,
+                    &updates,
+                );
+                let other = render_with_scalar_change(
+                    &mut irregular,
+                    &input,
+                    (2, bands * 2),
+                    sample_rate,
+                    &[1, 7, 31, 257],
+                    2053,
+                    &updates,
+                );
+                let label = format!("{kind} {bands}-way fs={sample_rate}");
+                assert_automation_limits(&input, &moving, &other, &label);
+                assert!(
+                    regular
+                        .set_parameter(
+                            ParameterId::from("mode"),
+                            ParameterValue::String("lowpass".into())
+                        )
+                        .is_err(),
+                    "{label}: output topology must require a rebuild"
+                );
+                assert_eq!(regular.output_channels(), bands * 2);
+                // Clear recursive signal history naturally while the cutoff
+                // ramp settles. Do not reset: that would hide ramp-end errors.
+                let silence = vec![0.0; sample_rate as usize * 2];
+                render_partitioned(&mut regular, &silence, 2, bands * 2, sample_rate, &[8192]);
+                const FRAMES: usize = 8192;
+                let mut impulse = vec![0.0; FRAMES * 2];
+                impulse[0] = 1.0;
+                let response = render_partitioned(
+                    &mut regular,
+                    &impulse,
+                    2,
+                    bands * 2,
+                    sample_rate,
+                    &[1, 31, 257],
+                );
+                // Direct complex DTFT of the impulse is independent of the
+                // oscillator fit used by the existing steady-tone tests.
+                for probe in [0.0, 137.0, 997.0, 3_731.0, 12_331.0] {
+                    let expected = family_band_responses(kind, target, sample_rate, probe);
+                    for (band, expected) in expected.into_iter().enumerate() {
+                        let mut measured = Complex64::ZERO;
+                        for frame in 0..FRAMES {
+                            let angle = -TAU * probe * frame as f64 / f64::from(sample_rate);
+                            let sample = f64::from(response[frame * bands * 2 + band * 2]);
+                            measured = measured
+                                .add(Complex64::new(angle.cos(), angle.sin()).scale(sample));
+                            assert_eq!(
+                                response[frame * bands * 2 + band * 2 + 1],
+                                0.0,
+                                "{label}: silent channel must remain independent"
+                            );
+                        }
+                        assert_complex_close(
+                            &format!("{label} band={band} probe={probe}"),
+                            measured,
+                            expected,
+                        );
+                    }
+                }
+            }
+        }
+    }
 }

@@ -8,6 +8,43 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 
 const SAMPLE_RATE: u32 = 48_000;
 
+#[test]
+fn block_kernel_guard_ignores_an_unrelated_allocating_thread() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    let start = Arc::new(AtomicBool::new(false));
+    let done = Arc::new(AtomicBool::new(false));
+    let worker_start = Arc::clone(&start);
+    let worker_done = Arc::clone(&done);
+    let worker = std::thread::spawn(move || {
+        while !worker_start.load(Ordering::Acquire) {
+            std::hint::spin_loop();
+        }
+        let storage = vec![0_u8; 4096];
+        std::hint::black_box(&storage);
+        drop(storage);
+        worker_done.store(true, Ordering::Release);
+    });
+    assert_no_allocs("unrelated worker isolation", || {
+        start.store(true, Ordering::Release);
+        while !done.load(Ordering::Acquire) {
+            std::hint::spin_loop();
+        }
+    });
+    worker.join().unwrap();
+}
+
+#[test]
+#[should_panic(expected = "deliberate audio allocation failed")]
+fn block_kernel_guard_still_detects_audio_thread_allocations() {
+    assert_no_allocs("deliberate audio allocation", || {
+        let storage = vec![0_u8; 4096];
+        std::hint::black_box(&storage);
+    });
+}
+
 fn signal(frames: usize, channels: usize) -> Vec<f32> {
     (0..frames * channels)
         .map(|index| {
