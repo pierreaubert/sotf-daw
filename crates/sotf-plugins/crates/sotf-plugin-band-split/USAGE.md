@@ -111,3 +111,12 @@ Example: 2-channel stereo input → 4-channel output [low-L, low-R, high-L, high
 Input (N channels) → [Lowpass LR chain] → Output channels 0..N-1 (low band)
                    → [Highpass LR chain] → Output channels N..2N-1 (high band)
 ```
+
+## High-rate crossover precision
+
+Above 96 kHz, LR24/LR48 crossover and phase-compensation sections use f64 coefficients
+and recursive state, including the carry between split stages. Routed samples
+remain f32. This avoids low-cutoff quantization errors at 192 kHz without changing
+48 kHz legacy fixtures, band layout, latency, preset fields or control clocks.
+The path is prepared at initialization and uses no additional audio-thread heap
+operations. It performs wider arithmetic; no CPU speedup is claimed.

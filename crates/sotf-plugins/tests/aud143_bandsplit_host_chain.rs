@@ -471,7 +471,7 @@ fn swept_host_bands(
 
 #[test]
 fn moving_crossovers_and_per_band_complex_response_are_verified_through_the_public_host() {
-    for rate in [44_100, 48_000, 96_000] {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
         for slope in ["LR24", "LR48"] {
             for bands in [2, 3, 4] {
                 for compensated in [false, true] {

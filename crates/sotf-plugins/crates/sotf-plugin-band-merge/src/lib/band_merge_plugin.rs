@@ -177,6 +177,35 @@ impl BandMergePlugin {
         Ok(p)
     }
 
+    /// Merge bands after checking their declared low-to-high order.
+    ///
+    /// `band_order[i]` is the original splitter band index occupying input group
+    /// `i`. Each group contains `output_channels` channels within every frame.
+    /// Only the canonical sequence `0..num_bands` is accepted; no implicit
+    /// remapping occurs. This checks caller-provided labels, not PCM content.
+    /// Untagged [`Plugin::process`] callers remain responsible for routing order.
+    ///
+    /// # Errors
+    /// Returns an error before changing output or DSP state if the labels have
+    /// the wrong length or order. Processing errors follow [`Plugin::process`].
+    pub fn process_with_band_order(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+        band_order: &[usize],
+    ) -> PluginResult<usize> {
+        if band_order.len() != self.num_bands
+            || band_order
+                .iter()
+                .enumerate()
+                .any(|(index, &band)| index != band)
+        {
+            return Err("Band Merge requires each band exactly once in low-to-high order".into());
+        }
+        self.process(input, output, context)
+    }
+
     pub(super) fn rebuild_cached_parameters(&mut self) {
         let mut params = vec![
             Parameter::new_int("bands", "Bands", self.num_bands as i32, 2, MAX_BANDS as i32)

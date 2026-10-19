@@ -119,7 +119,7 @@
       "id": 9,
       "plugin": "Band merge",
       "audit_text": "[`band_merge_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-band-merge/src/lib/band_merge_plugin.rs):351\u2013464 sums band-major inputs with smoothed gains. The exposed reconstruction error compares the weighted sum against the unweighted sum of those same input bands, not against the original pre-split signal. At unity gains it cannot diagnose a flawed splitter. Rename/qualify this diagnostic or supply an independently aligned reference.\n\n`split_merge_reconstruction.rs`, property and finite-stream tests can validate the complete chain more meaningfully than this internal meter. Extend coherent full-band sweeps, phase/group-delay checks and mismatched band-order rejection. Optimize contiguous summation/SIMD only after measuring channel/band configurations. This is deterministic routing; ML offers no useful replacement.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Qualify the self-relative diagnostic so it cannot be read as splitter reconstruction accuracy.",
@@ -128,9 +128,34 @@
             "crates/sotf-plugins/crates/sotf-plugin-band-merge/tests/integration.rs"
           ],
           "result": "Legacy ID retained; metadata now names gain-weighting difference and explicitly excludes splitter reconstruction. Counterexample demonstrates the meter can read -60 dB while supplied bands differ from an imagined original source. Full crate selection passed 74 tests."
+        },
+        {
+          "task": "Verify coherent full-band reconstruction phase and group delay independently",
+          "status": "implemented_and_verified",
+          "evidence": "audit_phase.rs renders actual BandSplit -> BandMerge impulses for LR24/LR48, 2/3/4 bands, legacy/phase-compensated modes and 32/48/96/192 kHz. A coherent logarithmic frequency grid plus half/at/double crossover probes is compared with independent bilinear analog Butterworth/LR transfer equations. No production coefficient or spectrum helpers, fitted phase, delay alignment or gain-weighting diagnostic are used. Fixed bounds: complex 0.005, phase 0.01 rad, group-delay error 50 us. Final maxima: 0.0012155789421414045 complex, 0.0009658483186173702 rad and 3.487829120404501 us. Processing and populated reset are allocation guarded."
+        },
+        {
+          "task": "Reject explicitly declared mismatched band order before mutation",
+          "status": "implemented_and_verified",
+          "evidence": "New native process_with_band_order accepts original splitter band indices and requires the canonical 0..bands sequence. audit_order.rs covers 2..8 bands, 1/2/6 channels and 32/48/192 kHz; missing/reversed/duplicate/out-of-range labels leave output sentinels, cached controls and populated gain-ramp history intact. Valid checked processing is heap-free and matches the raw path exactly. USAGE explicitly states that labels must be truthful and untagged Plugin::process/host PCM cannot infer a permutation."
+        },
+        {
+          "task": "Correct high-rate paired crossover precision exposed by the independent sweep",
+          "status": "implemented_and_verified",
+          "evidence": "The frozen complex bound reproduced 0.005471187594364395 error for the 192 kHz LR48 four-band legacy chain near its 200 Hz cutoff. Extending existing actual-host phase assertions to 192 kHz also exposed an LR24 phase failure. BandSplit now prepares f64 coefficients/state/carry and matching compensation sections above 96 kHz for both slopes, narrowing only routed samples. Conventional-rate paths and the frozen 48 kHz legacy fixture remain unchanged and pass. No preset/parameter/latency changes or sibling dependency edits."
+        },
+        {
+          "task": "Validate complete host routing and document reconstruction policy",
+          "status": "implemented_and_verified",
+          "evidence": "Extended aud143_bandsplit_host_chain.rs runs actual queued cutoff controls, complex per-band/summed responses, channel isolation and callback comparisons through 192 kHz. Existing host frozen legacy capture passes. USAGE distinguishes legacy summed magnitude/phase from compensated unity magnitude with allpass group delay, declares band-major routing responsibilities and explains the gain-weighting meter cannot certify source reconstruction. Existing measured scalar summation implementation is retained; no unmeasured SIMD optimization is introduced."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "cargo test --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -p sotf-plugin-band-merge -p sotf-plugin-band-split --lib --tests: merge 76 passed; split 93 reported passed, including one CPU test that returns without a configured benchmark variant (92 functional checks), plus two intentional historical ignored magnitude gates. No performance result is claimed for that gated CPU test.",
+        "Extended aud143_bandsplit_host_chain plus six facade host/finite-chain/drain/DSP/robustness/channel gates: 45 passed, one historical reset gate ignored; separate current plugin/paired heap guards pass.",
+        "Clippy --offline --locked --no-deps for both library/tests and the modified facade host target with -D warnings passed; final independent sweep and git diff --check passed.",
+        "Native labelled-order validation is additive. Raw PCM has no intrinsic band identity; ordinary Plugin/host callers must preserve routing order. High-rate f64 arithmetic increases internal precision and storage; its CPU cost was not benchmarked, and no speedup/deadline claim is made."
+      ]
     },
     {
       "id": 10,
@@ -152,6 +177,11 @@
           "task": "Keep phase, layout, control cadence and compatibility contracts explicit",
           "status": "implemented_and_verified",
           "evidence": "README distinguishes phase-compensated allpass summation from legacy unequal-delay cascades, band-major ordering and zero reported latency. Corrected the 6 kHz cadence claim to every eight samples (6 kHz only at 48 kHz). Existing binary legacy host capture still matches exactly. Preset/schema/structural parameter contracts unchanged."
+        },
+        {
+          "task": "Preserve paired response and phase precision at high rates",
+          "status": "implemented_and_verified",
+          "evidence": "Band Merge audit_phase.rs exposed an LR48 precision failure at 192 kHz; extended actual-host coverage exposed LR24 phase error too. The splitter now prepares f64 crossover/compensation state above 96 kHz with f64 interstage carry. Paired 32..192 kHz independent complex/phase/group-delay references, heap/reset guards, full BandSplit suite, frozen 48 kHz fixture, extended host tests and strict Clippy pass. See Band Merge entry 9 for commands, maxima, ignored historical gates and unbenchmarked CPU limitation."
         }
       ],
       "evidence": [

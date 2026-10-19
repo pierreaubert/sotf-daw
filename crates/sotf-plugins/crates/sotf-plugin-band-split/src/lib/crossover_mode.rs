@@ -2,20 +2,40 @@ use super::types::BandSplitRecombinationMode;
 use sotf_host::lr4_crossover::{Lr4Crossover, MultibandLr4Crossover};
 use sotf_host::lr8_crossover::{Lr8Crossover, MultibandLr8Crossover};
 
+// Preserve conventional-rate legacy fixtures; above 96 kHz, normalized
+// low cutoffs require wider coefficients and recursive state.
+const WIDE_PRECISION_RATE_THRESHOLD: f64 = 96_000.0;
+
 enum MultibandCrossover {
     LR24(MultibandLr4Crossover<f32>),
     LR48(MultibandLr8Crossover<f32>),
+    // At rates above 96 kHz, small normalized cutoffs expose f32 coefficient
+    // quantization. Keep the carry in f64 and narrow only routed band samples.
+    LR48Wide(Vec<Lr8Crossover<f64>>),
+    LR24Wide(Vec<Lr4Crossover<f64>>),
 }
 
 enum AllpassCrossover {
     LR24(Lr4Crossover<f32>),
     LR48(Lr8Crossover<f32>),
+    LR48Wide(Lr8Crossover<f64>),
+    LR24Wide(Lr4Crossover<f64>),
 }
 
 impl AllpassCrossover {
     fn new(frequency: f32, sample_rate: f64, channels: usize, slope_index: usize) -> Self {
         match slope_index {
+            1 if sample_rate > WIDE_PRECISION_RATE_THRESHOLD => Self::LR48Wide(Lr8Crossover::new(
+                f64::from(frequency),
+                sample_rate,
+                channels,
+            )),
             1 => Self::LR48(Lr8Crossover::new(frequency, sample_rate as f32, channels)),
+            _ if sample_rate > WIDE_PRECISION_RATE_THRESHOLD => Self::LR24Wide(Lr4Crossover::new(
+                f64::from(frequency),
+                sample_rate,
+                channels,
+            )),
             _ => Self::LR24(Lr4Crossover::new(frequency, sample_rate as f32, channels)),
         }
     }
@@ -24,6 +44,8 @@ impl AllpassCrossover {
         match self {
             Self::LR24(crossover) => crossover.set_frequency(frequency),
             Self::LR48(crossover) => crossover.set_frequency(frequency),
+            Self::LR48Wide(crossover) => crossover.set_frequency(f64::from(frequency)),
+            Self::LR24Wide(crossover) => crossover.set_frequency(f64::from(frequency)),
         }
     }
 
@@ -32,6 +54,14 @@ impl AllpassCrossover {
         let (low, high) = match self {
             Self::LR24(crossover) => crossover.process(sample, channel),
             Self::LR48(crossover) => crossover.process(sample, channel),
+            Self::LR48Wide(crossover) => {
+                let (low, high) = crossover.process(f64::from(sample), channel);
+                return (low + high) as f32;
+            }
+            Self::LR24Wide(crossover) => {
+                let (low, high) = crossover.process(f64::from(sample), channel);
+                return (low + high) as f32;
+            }
         };
         low + high
     }
@@ -40,6 +70,8 @@ impl AllpassCrossover {
         match self {
             Self::LR24(crossover) => crossover.reset(),
             Self::LR48(crossover) => crossover.reset(),
+            Self::LR48Wide(crossover) => crossover.reset(),
+            Self::LR24Wide(crossover) => crossover.reset(),
         }
     }
 
@@ -47,6 +79,8 @@ impl AllpassCrossover {
         match self {
             Self::LR24(crossover) => crossover.reset_at_frequency(frequency),
             Self::LR48(crossover) => crossover.reset_at_frequency(frequency),
+            Self::LR48Wide(crossover) => crossover.reset_at_frequency(f64::from(frequency)),
+            Self::LR24Wide(crossover) => crossover.reset_at_frequency(f64::from(frequency)),
         }
     }
 }
@@ -69,11 +103,27 @@ impl CrossoverMode {
         recombination_mode: BandSplitRecombinationMode,
     ) -> Self {
         let crossover = match slope_index {
+            1 if sample_rate > WIDE_PRECISION_RATE_THRESHOLD => MultibandCrossover::LR48Wide(
+                frequencies
+                    .iter()
+                    .map(|&frequency| {
+                        Lr8Crossover::new(f64::from(frequency), sample_rate, channels)
+                    })
+                    .collect(),
+            ),
             1 => MultibandCrossover::LR48(MultibandLr8Crossover::new(
                 frequencies,
                 sample_rate as f32,
                 channels,
             )),
+            _ if sample_rate > WIDE_PRECISION_RATE_THRESHOLD => MultibandCrossover::LR24Wide(
+                frequencies
+                    .iter()
+                    .map(|&frequency| {
+                        Lr4Crossover::new(f64::from(frequency), sample_rate, channels)
+                    })
+                    .collect(),
+            ),
             _ => MultibandCrossover::LR24(MultibandLr4Crossover::new(
                 frequencies,
                 sample_rate as f32,
@@ -111,6 +161,16 @@ impl CrossoverMode {
         match &mut self.crossover {
             MultibandCrossover::LR24(crossover) => crossover.set_frequency(index, frequency),
             MultibandCrossover::LR48(crossover) => crossover.set_frequency(index, frequency),
+            MultibandCrossover::LR48Wide(crossovers) => {
+                if let Some(crossover) = crossovers.get_mut(index) {
+                    crossover.set_frequency(f64::from(frequency));
+                }
+            }
+            MultibandCrossover::LR24Wide(crossovers) => {
+                if let Some(crossover) = crossovers.get_mut(index) {
+                    crossover.set_frequency(f64::from(frequency));
+                }
+            }
         }
 
         for (band_index, band_compensation) in self.compensation.iter_mut().enumerate() {
@@ -138,6 +198,28 @@ impl CrossoverMode {
         match &mut self.crossover {
             MultibandCrossover::LR24(crossover) => crossover.process_frame(input, bands),
             MultibandCrossover::LR48(crossover) => crossover.process_frame(input, bands),
+            MultibandCrossover::LR48Wide(crossovers) => {
+                for (channel, &sample) in input.iter().enumerate() {
+                    let mut carry = f64::from(sample);
+                    for (stage, crossover) in crossovers.iter_mut().enumerate() {
+                        let (low, high) = crossover.process(carry, channel);
+                        bands[stage][channel] = low as f32;
+                        carry = high;
+                    }
+                    bands[crossovers.len()][channel] = carry as f32;
+                }
+            }
+            MultibandCrossover::LR24Wide(crossovers) => {
+                for (channel, &sample) in input.iter().enumerate() {
+                    let mut carry = f64::from(sample);
+                    for (stage, crossover) in crossovers.iter_mut().enumerate() {
+                        let (low, high) = crossover.process(carry, channel);
+                        bands[stage][channel] = low as f32;
+                        carry = high;
+                    }
+                    bands[crossovers.len()][channel] = carry as f32;
+                }
+            }
         }
     }
 
@@ -174,6 +256,16 @@ impl CrossoverMode {
         match &mut self.crossover {
             MultibandCrossover::LR24(crossover) => crossover.reset_at_frequencies(frequencies),
             MultibandCrossover::LR48(crossover) => crossover.reset_at_frequencies(frequencies),
+            MultibandCrossover::LR48Wide(crossovers) => {
+                for (crossover, &frequency) in crossovers.iter_mut().zip(frequencies) {
+                    crossover.reset_at_frequency(f64::from(frequency));
+                }
+            }
+            MultibandCrossover::LR24Wide(crossovers) => {
+                for (crossover, &frequency) in crossovers.iter_mut().zip(frequencies) {
+                    crossover.reset_at_frequency(f64::from(frequency));
+                }
+            }
         }
         for (band_index, band) in self.compensation.iter_mut().enumerate() {
             for (offset, section) in band.iter_mut().enumerate() {

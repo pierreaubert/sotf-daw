@@ -50,9 +50,12 @@ Each output channel is the sum of all corresponding band channels.
 ## Tips & Best Practices
 
 - The band count must match the number of bands from the splitting plugin.
-- Band Merge simply sums. A two-band Linkwitz-Riley split is magnitude-
-  complementary but phase-shifted; cascaded multiband outputs have unequal group
-  delay and are not phase-perfect even without per-band processing.
+- Band Merge sums the supplied bands. A two-band Linkwitz-Riley split is
+  magnitude-complementary but phase-shifted. Band Split's legacy multiband
+  cascade has unequal branch phase and can change summed magnitude. Its
+  `phase_compensated` mode matches later crossover phase in each earlier band,
+  giving unity summed magnitude with frequency-dependent allpass group delay.
+  Neither mode reconstructs the original waveform without phase rotation.
 - No gain scaling is applied — if per-band processing added gain, the sum may clip.
 - Denormals are flushed after merging to prevent CPU spikes.
 
@@ -74,3 +77,18 @@ Input (B × N channels) → Sum per output channel:
   output[ch] = input[ch] + input[ch + N] + input[ch + 2N] + ... + input[ch + (B-1)×N]
 → Output (N channels)
 ```
+
+## Declared band-order validation
+
+The native `BandMergePlugin::process_with_band_order` entry point accepts the
+original splitter band index for each input group and rejects any sequence other
+than `0..bands`. Wrong counts, reversed/permuted groups, duplicates and out-of-range
+labels fail before output, gain smoothers or diagnostic state change. Successful
+validation and merging allocate nothing. Each group still contains the original
+output-channel order, and the caller must supply truthful labels.
+
+The ordinary `Plugin::process` interface carries untagged PCM. It cannot infer
+whether a caller swapped two bands or channels. Hosts using that interface must
+preserve the splitter's frame-interleaved, band-major layout when wiring the graph.
+The gain-weighting diagnostic cannot detect a routing permutation at unity gains;
+use the labelled entry point when routing provenance is available.
