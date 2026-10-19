@@ -12,6 +12,7 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 #[test]
 fn test_bypass() {
     let mut plugin = ChannelMuteSoloPlugin::new(2, false); // disabled
+    plugin.initialize(44_100.0).unwrap();
     let mut buffer = vec![1.0, 2.0, 3.0, 4.0]; // 2 frames, 2 channels
     let context = ProcessContext::new(44100, 2);
 

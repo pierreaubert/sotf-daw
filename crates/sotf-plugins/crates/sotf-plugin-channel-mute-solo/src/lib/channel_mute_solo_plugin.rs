@@ -379,6 +379,20 @@ impl ChannelMuteSoloPlugin {
     }
 
     #[inline]
+    fn advance_gain(smoother: &mut Smoother) -> f32 {
+        let previous = smoother.current();
+        let value = smoother.advance();
+        if value == previous && value != smoother.target() {
+            // Finish f32 rounding stagnation on the audio sample clock.
+            let target = smoother.target();
+            smoother.reset(target);
+            target
+        } else {
+            value
+        }
+    }
+
+    #[inline]
     fn smoothers_are_settled(&self) -> bool {
         self.channel_smoothers
             .iter()
@@ -425,6 +439,22 @@ impl ChannelMuteSoloPlugin {
     }
 
     fn apply_value_refs(&mut self, values: &ParameterSet) -> PluginResult<()> {
+        // Preflight scalar and JSON controls before any routing target changes.
+        for (id, value) in values {
+            self.parametric_validate_parameter(id, value)?;
+            if id == &self.param_channel_states {
+                let states: Vec<ChannelState> =
+                    serde_json::from_str(value.as_string().ok_or("channel_states must be string")?)
+                        .map_err(|error| error.to_string())?;
+                if states.len() != self.channels {
+                    return Err(format!(
+                        "channel state count mismatch: expected {}, got {}",
+                        self.channels,
+                        states.len()
+                    ));
+                }
+            }
+        }
         for (id, value) in values {
             self.apply_value_ref(id, value)?;
         }
@@ -659,6 +689,9 @@ impl ParametricInPlacePlugin for ChannelMuteSoloPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        if context.sample_rate != self.sample_rate {
+            return Err("Channel Mute/Solo callback must match the prepared sample rate".into());
+        }
         let num_frames = context.num_frames;
         let sample_len = num_frames
             .checked_mul(self.channels)
@@ -670,11 +703,19 @@ impl ParametricInPlacePlugin for ChannelMuteSoloPlugin {
             ));
         }
 
+        if num_frames == 0 {
+            return Ok(0);
+        }
         if self.smoothers_are_settled() {
-            for (gain, smoother) in self.cached_gains.iter_mut().zip(&self.channel_smoothers) {
-                // Static blocks use the exact target without advancing or
-                // otherwise mutating settled smoother state.
+            for (gain, smoother) in self
+                .cached_gains
+                .iter_mut()
+                .zip(&mut self.channel_smoothers)
+            {
+                // Match the snap that advance() would perform on this sample.
+                // Retargeting later must not inherit a hidden residual gain.
                 *gain = smoother.target();
+                smoother.reset(*gain);
             }
             #[cfg(test)]
             {
@@ -698,7 +739,7 @@ impl ParametricInPlacePlugin for ChannelMuteSoloPlugin {
                 .iter_mut()
                 .zip(&mut self.channel_smoothers)
             {
-                *gain = smoother.advance();
+                *gain = Self::advance_gain(smoother);
             }
             let offset = frame * channels;
             apply_per_channel_gain_simd(
@@ -726,6 +767,11 @@ impl ParametricInPlacePlugin for ChannelMuteSoloPlugin {
     ) -> Option<Result<usize, String>> {
         if op != PluginCompiledOp::ChannelMuteSolo {
             return None;
+        }
+        if context.sample_rate != self.sample_rate {
+            return Some(Err(
+                "Channel Mute/Solo callback must match the prepared sample rate".into(),
+            ));
         }
         let sample_len = match context.num_frames.checked_mul(self.channels) {
             Some(sample_len) => sample_len,

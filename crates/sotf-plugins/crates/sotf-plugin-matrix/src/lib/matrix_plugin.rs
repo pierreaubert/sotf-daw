@@ -346,7 +346,7 @@ impl MatrixPlugin {
                 let idx = out_ch * num_inputs + in_ch;
                 let target = self.gain_smoothers[idx].target();
                 let current = self.gain_smoothers[idx].current();
-                if target.abs() > 1e-4 || (current - target).abs() > 1e-4 {
+                if target != 0.0 || current != 0.0 {
                     self.active_connections.push((in_ch, out_ch, idx));
                     // Pre-resolve physical channel indices so the
                     // hot process() loop does not branch on channel maps per sample.
@@ -366,7 +366,7 @@ impl MatrixPlugin {
         }
         self.kernel = self.classify_kernel();
         self.coefficients_transitioning = self.active_connections.iter().any(|&(_, _, idx)| {
-            (self.gain_smoothers[idx].current() - self.gain_smoothers[idx].target()).abs() > 1e-6
+            self.gain_smoothers[idx].current() != self.gain_smoothers[idx].target()
         });
     }
 
@@ -414,13 +414,29 @@ impl MatrixPlugin {
     }
 
     #[inline]
+    fn advance_gain(smoother: &mut Smoother) -> f32 {
+        let previous = smoother.current();
+        let value = smoother.advance();
+        // f32 one-poles can stagnate above their snap threshold at high rates.
+        // Finish that last representable step on the sample clock, never at a
+        // host callback boundary. This also makes exact kernel adoption safe.
+        if value == previous && value != smoother.target() {
+            let target = smoother.target();
+            smoother.reset(target);
+            target
+        } else {
+            value
+        }
+    }
+
+    #[inline]
     fn smoothing_is_settled(&self) -> bool {
         !self.coefficients_transitioning
-            && (self.gain_smoother.current() - self.gain_smoother.target()).abs() <= 1e-6
+            && self.gain_smoother.current() == self.gain_smoother.target()
             && self
                 .channel_state_smoothers
                 .iter()
-                .all(|smoother| (smoother.current() - smoother.target()).abs() <= 1e-6)
+                .all(|smoother| smoother.current() == smoother.target())
     }
 
     fn process_settled_kernel(&self, input: &[f32], output: &mut [f32], num_frames: usize) {
@@ -684,7 +700,7 @@ impl MatrixPlugin {
         self.channel_state_processing_active = self
             .channel_state_smoothers
             .iter()
-            .any(|s| (s.current() - 1.0).abs() > 1e-4 || (s.target() - 1.0).abs() > 1e-4);
+            .any(|s| s.current() != 1.0 || s.target() != 1.0);
     }
 
     /// Apply a routing preset by setting matrix gains to standard values.
@@ -791,7 +807,7 @@ impl MatrixPlugin {
         self.channel_state_processing_active = self
             .channel_state_smoothers
             .iter()
-            .any(|s| (s.current() - 1.0).abs() > 1e-4);
+            .any(|s| s.current() != 1.0);
     }
 }
 
@@ -1088,10 +1104,10 @@ impl Plugin for MatrixPlugin {
         for frame in 0..num_frames {
             let base_out = frame * out_channels;
             let base_in = frame * in_channels;
-            let global_gain = self.gain_smoother.advance();
+            let global_gain = Self::advance_gain(&mut self.gain_smoother);
             if self.channel_state_processing_active {
                 for smoother in &mut self.channel_state_smoothers {
-                    smoother.advance();
+                    Self::advance_gain(smoother);
                 }
             }
             for (&(_logical_in, logical_out, idx), &(phys_in, phys_out)) in self
@@ -1101,7 +1117,7 @@ impl Plugin for MatrixPlugin {
             {
                 // advance() is called once per sample per connection to maintain
                 // correct per-sample gain interpolation (5 ms smoother).
-                let gain = self.gain_smoothers[idx].advance();
+                let gain = Self::advance_gain(&mut self.gain_smoothers[idx]);
                 let ch_gain = self
                     .channel_state_smoothers
                     .get(logical_out)
@@ -1114,14 +1130,12 @@ impl Plugin for MatrixPlugin {
         // Compact only after a fade reaches silence. Capacities are reserved at
         // construction, so this bounded control-cache maintenance does not allocate.
         if self.active_connections.iter().any(|&(_, _, idx)| {
-            self.gain_smoothers[idx].target().abs() <= 1e-4
-                && self.gain_smoothers[idx].current().abs() <= 1e-4
+            self.gain_smoothers[idx].target() == 0.0 && self.gain_smoothers[idx].current() == 0.0
         }) {
             self.update_active_connections();
         } else if self.coefficients_transitioning
             && self.active_connections.iter().all(|&(_, _, idx)| {
-                (self.gain_smoothers[idx].current() - self.gain_smoothers[idx].target()).abs()
-                    <= 1e-6
+                self.gain_smoothers[idx].current() == self.gain_smoothers[idx].target()
             })
         {
             self.coefficients_transitioning = false;
@@ -1131,7 +1145,7 @@ impl Plugin for MatrixPlugin {
             && self
                 .channel_state_smoothers
                 .iter()
-                .all(|s| (s.target() - 1.0).abs() <= 1e-4 && (s.current() - 1.0).abs() <= 1e-4)
+                .all(|s| s.target() == 1.0 && s.current() == 1.0)
         {
             for smoother in &mut self.channel_state_smoothers {
                 *smoother = Smoother::new(1.0, GAIN_SMOOTH_MS, self.sample_rate);
@@ -1939,5 +1953,74 @@ mod tests {
             .process(&[1.0], &mut output, &ProcessContext::new(48_000, 1))
             .unwrap();
         assert_eq!(output[0], coefficient);
+    }
+}
+
+#[cfg(test)]
+mod audit_kernel_crossover {
+    use super::*;
+    use std::{hint::black_box, time::Instant};
+
+    #[test]
+    #[ignore = "manual optimized sparse/dense crossover measurement"]
+    fn measure_identical_sparse_and_dense_kernels() {
+        // Force the actual production kernels on identical matrices. Timing is
+        // diagnostic only; no machine-dependent timing threshold gates CI.
+        const FRAMES: usize = 128;
+        println!("MATRIX-BENCH channels,density,sparse_ns_per_frame,dense_ns_per_frame");
+        for channels in [2, 8, 16, 32, 64] {
+            let edges = channels * channels;
+            for density in [0.05, 0.125, 0.25, 0.5, 0.75, 0.9, 1.0] {
+                let active = ((edges as f64 * density).ceil() as usize).max(1);
+                let matrix = (0..edges)
+                    .map(|i| if (i * 17) % edges < active { 0.25 } else { 0.0 })
+                    .collect();
+                let mut plugin = MatrixPlugin::with_matrix(channels, channels, matrix).unwrap();
+                plugin.initialize(48_000.0).unwrap();
+                let input: Vec<f32> = (0..FRAMES * channels)
+                    .map(|i| ((i * 13 % 37) as f32 - 18.0) / 32.0)
+                    .collect();
+                let mut sparse = vec![0.0; input.len()];
+                let mut dense = sparse.clone();
+                plugin.kernel = MatrixKernel::Sparse;
+                plugin.process_settled_kernel(&input, &mut sparse, FRAMES);
+                plugin.kernel = MatrixKernel::Dense;
+                plugin.process_settled_kernel(&input, &mut dense, FRAMES);
+                assert!(
+                    sparse == dense,
+                    "forced kernels disagree on identical routing"
+                );
+                let iterations = (2_000_000 / (edges * FRAMES)).max(8);
+                let mut times = [0.0; 2];
+                for (kind, kernel) in [MatrixKernel::Sparse, MatrixKernel::Dense]
+                    .into_iter()
+                    .enumerate()
+                {
+                    plugin.kernel = kernel;
+                    let mut samples = [0.0_f64; 7];
+                    for sample in &mut samples {
+                        let start = Instant::now();
+                        for _ in 0..iterations {
+                            plugin.process_settled_kernel(
+                                black_box(&input),
+                                black_box(&mut sparse),
+                                FRAMES,
+                            );
+                        }
+                        black_box(&sparse);
+                        *sample =
+                            start.elapsed().as_secs_f64() * 1e9 / (iterations * FRAMES) as f64;
+                    }
+                    samples.sort_by(f64::total_cmp);
+                    times[kind] = samples[3];
+                }
+                println!(
+                    "MATRIX-BENCH {channels},{:.6},{:.3},{:.3}",
+                    active as f64 / edges as f64,
+                    times[0],
+                    times[1]
+                );
+            }
+        }
     }
 }

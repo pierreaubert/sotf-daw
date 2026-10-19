@@ -160,9 +160,30 @@
       "id": 13,
       "plugin": "Channel mute/solo",
       "audit_text": "[`channel_mute_solo_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo/src/lib/channel_mute_solo_plugin.rs):645\u2013753 has settled unity/SIMD fast paths and channel gain smoothing. Reset intentionally preserves smoother state. This can avoid clicks across a transport event, but differs from fresh-instance equivalence and must be an explicit policy.\n\n`zero_tail.rs` and integration tests cover the simple audio path. Extend rapid solo/mute combinations, empty/large layouts, first-block muted state, channel mapping changes and stop/resume continuity. Test \u201cmute\u201d at the actual audible output so buffered pre-mute audio is understood. A deterministic gain ramp and explicit solo policy suffice; no ML is justified.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Preserve rapid mute/solo/dim automation and stop/resume continuity on the sample clock",
+          "status": "implemented_and_verified",
+          "evidence": "audit_transition_clock.rs: exact one-frame versus large/irregular callbacks for 1/7/128 channels at 44.1/48/96 kHz; transport reset preserves the in-flight ramp. Static processing now clears hidden smoother residual; f32 stagnation finishes on a real sample."
+        },
+        {
+          "task": "Validate first-block silence, routing priority, layouts and atomic controls",
+          "status": "implemented_and_verified",
+          "evidence": "Initially muted channels are silent from sample one; checked zero-channel construction and invalid channel indices/state counts fail; solo priority is tested for every channel; malformed bulk updates preserve prior controls. Wrong-rate direct and compiled processing fails before output mutation."
+        },
+        {
+          "task": "Measure mute at the audible host output",
+          "status": "implemented_and_verified",
+          "evidence": "Facade audit_mute_buffering.rs uses the real plugin factory and DawHost chain with 240-sample downstream delay. Muting preserves the already-buffered 240 samples, followed by silence; README documents this policy."
+        }
+      ],
+      "evidence": [
+        "Full selected crates: 263 tests passed across 19 suites (Gain 91, Channel Mute/Solo 73, Matrix 99).",
+        "Facade host gates including audible mute buffering: 89 passed.",
+        "Selected libraries/tests and facade audible-buffering target passed Clippy with warnings denied and --no-deps. Concurrent engine dependency changes emit a deprecation warning and prevent claiming a clean workspace-wide lint.",
+        "README documents routing, reset, gain and nonfinite policies."
+      ]
     },
     {
       "id": 14,
@@ -316,15 +337,30 @@
       "id": 24,
       "plugin": "Gain",
       "audit_text": "[`gain/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-gain/src/lib.rs):303\u2013443 has a settled SIMD path and a per-frame smoother path. The small implementation is a useful reference component for scheduling and clock tests. The tolerance that switches to settled processing should have a bounded numerical effect independent of callback partition.\n\n`accuracy.rs`, `property_tests.rs` and `test_basic.rs` include stronger numerical checks than simple construction tests. Extend absolute-sample automation, clipping/nonfinite policy through each adapter and first-callback smoothing semantics. Classical dB-to-linear gain and a measured ramp are sufficient; ML adds no value. Use this plugin to expose C5 before testing complex effects where temporal errors are harder to isolate.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Validate long gain settling ramps and absolute-sample retargeting through the public host adapter",
           "status": "implemented_and_verified",
           "evidence": "tests/audit_settling_clock.rs: bit-identical one-frame, irregular and 8192-frame callbacks at 44.1/48/96 kHz, global/per-channel, 1/2/7 channels. Shared smoother already snaps per sample; no production change needed."
+        },
+        {
+          "task": "Verify first-callback smoothing, exact endpoints and zero-frame semantics",
+          "status": "implemented_and_verified",
+          "evidence": "audit_host_policy.rs compares the first sample against a double-precision 10 ms one-pole and exact 20 dB endpoint at 44.1/48/96/192 kHz, global/per-channel, 1/7 channels. Fixes f32 stagnation and prevents empty callbacks from snapping state before retarget."
+        },
+        {
+          "task": "Document and verify clipping/nonfinite policy through every available adapter",
+          "status": "implemented_and_verified",
+          "evidence": "Raw parametric, ParametricPluginAdapter, compiled ApplyGain and f64 fallback preserve unclipped IEEE arithmetic: overrange output and NaN/Inf propagation. README makes this existing policy explicit."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "Full selected crates: 263 tests passed across 19 suites (Gain 91, Channel Mute/Solo 73, Matrix 99).",
+        "Facade host gates including audible mute buffering: 89 passed.",
+        "Selected libraries/tests and facade audible-buffering target passed Clippy with warnings denied and --no-deps. Concurrent engine dependency changes emit a deprecation warning and prevent claiming a clean workspace-wide lint.",
+        "README documents routing, reset, gain and nonfinite policies."
+      ]
     },
     {
       "id": 25,
@@ -406,9 +442,30 @@
       "id": 32,
       "plugin": "Matrix",
       "audit_text": "[`matrix_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-matrix/src/lib/matrix_plugin.rs):1016\u20131143 validates rates/shapes, resets gain smoothers and uses sparse active connections plus settled specialized kernels. Worst-case cost is proportional to frames and active edges; sparse and dense matrices need different performance expectations.\n\nMixing/mute, property, zero-tail and integration tests are suitable. Extend independent rectangular matrix products, all-zero rows, unusual channel counts, coherent overload and automated transitions. Benchmark a sparse/dense kernel crossover and keep routing order explicit. This is exact linear algebra; ML is unnecessary except an offline routing suggestion that remains reviewable.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Validate independent rectangular products, maps and coherent overload",
+          "status": "implemented_and_verified",
+          "evidence": "audit_linear_algebra.rs compares signed/zero/tiny coefficients with an independent f64 product for 1x3, 3x1, 3x5, 7x11, 31x17 and 128x3 layouts; checks physical maps, cleared unmapped outputs and coherent 7-to-1 sum without hidden normalization. Nonzero coefficients are no longer discarded below 1e-4."
+        },
+        {
+          "task": "Make automated route transitions independent of callback partition",
+          "status": "implemented_and_verified",
+          "evidence": "Exact one-frame versus large/irregular callback output at 44.1/48/96 kHz; subepsilon requested coefficients and high-rate endpoints converge. Active routes retire only at exact zero; f32 stagnation finishes on the sample clock."
+        },
+        {
+          "task": "Measure actual sparse/dense kernel crossover",
+          "status": "implemented_and_verified",
+          "evidence": "audit/matrix-kernel-crossover-20261018.json records 35 optimized measurements on identical matrices and verifies identical kernel output. Apple M4 Pro only, sampled square settled layouts; dispatch policy unchanged because timings do not establish a portable threshold."
+        }
+      ],
+      "evidence": [
+        "Full selected crates: 263 tests passed across 19 suites (Gain 91, Channel Mute/Solo 73, Matrix 99).",
+        "Facade host gates including audible mute buffering: 89 passed.",
+        "Selected libraries/tests and facade audible-buffering target passed Clippy with warnings denied and --no-deps. Concurrent engine dependency changes emit a deprecation warning and prevent claiming a clean workspace-wide lint.",
+        "README documents routing, reset, gain and nonfinite policies."
+      ]
     },
     {
       "id": 33,
@@ -663,6 +720,16 @@
         20
       ],
       "result": "63 Dither tests and 88 facade host checks passed; Clippy warnings denied passed. Max PSD band error 0.365905 dB; max coherent sine error 0.010493 LSB."
+    },
+    {
+      "name": "Gain, Channel Mute/Solo and Matrix production audit",
+      "state": "verified",
+      "plugin_ids": [
+        13,
+        24,
+        32
+      ],
+      "result": "Fixed hidden smoother residuals, f32 endpoint stagnation, zero-frame state mutation, discarded tiny routes and callback-boundary route retirement; added atomic control/rate validation. 263 plugin tests and 89 host checks passed; selected Clippy clean. 35 manual optimized kernel measurements recorded with single-machine limitations."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

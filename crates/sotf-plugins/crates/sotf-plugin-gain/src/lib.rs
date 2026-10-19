@@ -347,6 +347,21 @@ impl GainPlugin {
     }
 
     #[inline]
+    fn advance_gain(smoother: &mut Smoother) -> f32 {
+        let previous = smoother.current();
+        let value = smoother.advance();
+        // Finish f32 rounding stagnation on a real sample, so ramps reach
+        // their requested endpoint and can enter the settled SIMD path.
+        if value == previous && value != smoother.target() {
+            let target = smoother.target();
+            smoother.reset(target);
+            target
+        } else {
+            value
+        }
+    }
+
+    #[inline]
     fn smoother_is_settled(smoother: &Smoother) -> bool {
         (smoother.current() - smoother.target()).abs() < 1e-5
     }
@@ -357,6 +372,9 @@ impl GainPlugin {
         context: &ProcessContext,
     ) -> PluginResult<usize> {
         let nf = context.num_frames;
+        if nf == 0 {
+            return Ok(0);
+        }
         if self.is_per_channel() {
             if self
                 .channel_gains_smoothers
@@ -384,7 +402,8 @@ impl GainPlugin {
             }
             for frame in 0..nf {
                 for ch in 0..self.channels {
-                    self.cached_gains[ch] = self.channel_gains_smoothers[ch].advance();
+                    self.cached_gains[ch] =
+                        Self::advance_gain(&mut self.channel_gains_smoothers[ch]);
                 }
                 let off = frame * self.channels;
                 Self::apply_frame_channel_gains(
@@ -408,7 +427,7 @@ impl GainPlugin {
                 self.last_process_path = GainProcessPath::SmoothedFrames;
             }
             for frame in 0..nf {
-                let g = self.global_gain_smoother.advance();
+                let g = Self::advance_gain(&mut self.global_gain_smoother);
                 let off = frame * self.channels;
                 Self::apply_frame_gain(&mut buffer[off..off + self.channels], g);
             }

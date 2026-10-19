@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "audit_entry": 32,
+  "run_date": "2026-10-19",
+  "hardware": "Apple M4 Pro",
+  "target": "aarch64-apple-darwin",
+  "rustc": "1.99.0 (b940084d7 2026-09-28), LLVM 23.1.1",
+  "source": "crates/sotf-plugins/crates/sotf-plugin-matrix/src/lib/matrix_plugin.rs",
+  "source_sha256": "5255c40701fa05f29f15564827ad74d50c77161ade75d28f6a47c5177e028bb5",
+  "command": "cargo test -p sotf-plugin-matrix --features qa --release --lib measure_identical_sparse_and_dense_kernels --offline --locked -- --ignored --nocapture",
+  "method": "Identical matrices, inputs and prepared control state; force the actual production sparse/dense kernels. 128 frames per callback, seven timing samples, median nanoseconds per frame. No timing threshold gates CI; numerical outputs must match.",
+  "sampled_dense_winning_density": {
+    "2": 1.0,
+    "8": 0.5,
+    "16": 0.5,
+    "32": 0.25,
+    "64": 0.25
+  },
+  "limitations": [
+    "Single Apple M4 Pro host; timings include scheduler/background workload and do not establish a portable dispatch threshold.",
+    "Density grid is sampled; a crossover is bracketed, not precisely localized.",
+    "Only square unmapped matrices and settled controls are benchmarked; product/routing tests cover rectangular maps separately."
+  ],
+  "observations": [
+    {
+      "channels": 2,
+      "density": 0.25,
+      "sparse_ns_per_frame": 1.231,
+      "dense_ns_per_frame": 4.605,
+      "dense_speedup": 0.26731813246471225
+    },
+    {
+      "channels": 2,
+      "density": 0.25,
+      "sparse_ns_per_frame": 1.368,
+      "dense_ns_per_frame": 4.601,
+      "dense_speedup": 0.2973266681156271
+    },
+    {
+      "channels": 2,
+      "density": 0.25,
+      "sparse_ns_per_frame": 1.293,
+      "dense_ns_per_frame": 4.692,
+      "dense_speedup": 0.2755754475703325
+    },
+    {
+      "channels": 2,
+      "density": 0.5,
+      "sparse_ns_per_frame": 2.123,
+      "dense_ns_per_frame": 3.986,
+      "dense_speedup": 0.5326141495233316
+    },
+    {
+      "channels": 2,
+      "density": 0.75,
+      "sparse_ns_per_frame": 3.059,
+      "dense_ns_per_frame": 4.025,
+      "dense_speedup": 0.76
+    },
+    {
+      "channels": 2,
+      "density": 1.0,
+      "sparse_ns_per_frame": 4.838,
+      "dense_ns_per_frame": 4.355,
+      "dense_speedup": 1.1109070034443167
+    },
+    {
+      "channels": 2,
+      "density": 1.0,
+      "sparse_ns_per_frame": 4.158,
+      "dense_ns_per_frame": 3.539,
+      "dense_speedup": 1.1749081661486296
+    },
+    {
+      "channels": 8,
+      "density": 0.0625,
+      "sparse_ns_per_frame": 3.53,
+      "dense_ns_per_frame": 38.846,
+      "dense_speedup": 0.09087164701642383
+    },
+    {
+      "channels": 8,
+      "density": 0.125,
+      "sparse_ns_per_frame": 9.361,
+      "dense_ns_per_frame": 47.234,
+      "dense_speedup": 0.19818351187703773
+    },
+    {
+      "channels": 8,
+      "density": 0.25,
+      "sparse_ns_per_frame": 23.259,
+      "dense_ns_per_frame": 48.028,
+      "dense_speedup": 0.48428000333139004
+    },
+    {
+      "channels": 8,
+      "density": 0.5,
+      "sparse_ns_per_frame": 67.656,
+      "dense_ns_per_frame": 46.752,
+      "dense_speedup": 1.4471252566735113
+    },
+    {
+      "channels": 8,
+      "density": 0.75,
+      "sparse_ns_per_frame": 106.592,
+      "dense_ns_per_frame": 45.838,
+      "dense_speedup": 2.325406867664383
+    },
+    {
+      "channels": 8,
+      "density": 0.90625,
+      "sparse_ns_per_frame": 136.628,
+      "dense_ns_per_frame": 48.094,
+      "dense_speedup": 2.840853328897575
+    },
+    {
+      "channels": 8,
+      "density": 1.0,
+      "sparse_ns_per_frame": 149.988,
+      "dense_ns_per_frame": 44.463,
+      "dense_speedup": 3.3733216382160447
+    },
+    {
+      "channels": 16,
+      "density": 0.050781,
+      "sparse_ns_per_frame": 11.943,
+      "dense_ns_per_frame": 176.213,
+      "dense_speedup": 0.06777593026621191
+    },
+    {
+      "channels": 16,
+      "density": 0.125,
+      "sparse_ns_per_frame": 47.265,
+      "dense_ns_per_frame": 176.107,
+      "dense_speedup": 0.2683879686781332
+    },
+    {
+      "channels": 16,
+      "density": 0.25,
+      "sparse_ns_per_frame": 155.482,
+      "dense_ns_per_frame": 168.481,
+      "dense_speedup": 0.9228458995376333
+    },
+    {
+      "channels": 16,
+      "density": 0.5,
+      "sparse_ns_per_frame": 397.792,
+      "dense_ns_per_frame": 170.594,
+      "dense_speedup": 2.331805338991993
+    },
+    {
+      "channels": 16,
+      "density": 0.75,
+      "sparse_ns_per_frame": 575.964,
+      "dense_ns_per_frame": 172.889,
+      "dense_speedup": 3.3314091700455206
+    },
+    {
+      "channels": 16,
+      "density": 0.902344,
+      "sparse_ns_per_frame": 771.778,
+      "dense_ns_per_frame": 173.748,
+      "dense_speedup": 4.441938900016115
+    },
+    {
+      "channels": 16,
+      "density": 1.0,
+      "sparse_ns_per_frame": 878.666,
+      "dense_ns_per_frame": 166.357,
+      "dense_speedup": 5.281809602240964
+    },
+    {
+      "channels": 32,
+      "density": 0.050781,
+      "sparse_ns_per_frame": 110.482,
+      "dense_ns_per_frame": 620.443,
+      "dense_speedup": 0.17806954063467556
+    },
+    {
+      "channels": 32,
+      "density": 0.125,
+      "sparse_ns_per_frame": 375.824,
+      "dense_ns_per_frame": 613.433,
+      "dense_speedup": 0.6126569649823208
+    },
+    {
+      "channels": 32,
+      "density": 0.25,
+      "sparse_ns_per_frame": 856.532,
+      "dense_ns_per_frame": 615.56,
+      "dense_speedup": 1.391467931639483
+    },
+    {
+      "channels": 32,
+      "density": 0.5,
+      "sparse_ns_per_frame": 1791.949,
+      "dense_ns_per_frame": 644.683,
+      "dense_speedup": 2.7795815928138325
+    },
+    {
+      "channels": 32,
+      "density": 0.75,
+      "sparse_ns_per_frame": 2656.944,
+      "dense_ns_per_frame": 576.324,
+      "dense_speedup": 4.610156786807421
+    },
+    {
+      "channels": 32,
+      "density": 0.900391,
+      "sparse_ns_per_frame": 2951.194,
+      "dense_ns_per_frame": 624.544,
+      "dense_speedup": 4.725358021212276
+    },
+    {
+      "channels": 32,
+      "density": 1.0,
+      "sparse_ns_per_frame": 3679.406,
+      "dense_ns_per_frame": 643.424,
+      "dense_speedup": 5.718478017605809
+    },
+    {
+      "channels": 64,
+      "density": 0.050049,
+      "sparse_ns_per_frame": 685.303,
+      "dense_ns_per_frame": 2718.587,
+      "dense_speedup": 0.2520805845095265
+    },
+    {
+      "channels": 64,
+      "density": 0.125,
+      "sparse_ns_per_frame": 1770.061,
+      "dense_ns_per_frame": 2375.448,
+      "dense_speedup": 0.7451482836079762
+    },
+    {
+      "channels": 64,
+      "density": 0.25,
+      "sparse_ns_per_frame": 3770.386,
+      "dense_ns_per_frame": 2451.416,
+      "dense_speedup": 1.5380441344920648
+    },
+    {
+      "channels": 64,
+      "density": 0.5,
+      "sparse_ns_per_frame": 7343.994,
+      "dense_ns_per_frame": 2773.071,
+      "dense_speedup": 2.648325268267563
+    },
+    {
+      "channels": 64,
+      "density": 0.75,
+      "sparse_ns_per_frame": 11476.644,
+      "dense_ns_per_frame": 2778.768,
+      "dense_speedup": 4.130119534988167
+    },
+    {
+      "channels": 64,
+      "density": 0.900146,
+      "sparse_ns_per_frame": 13157.349,
+      "dense_ns_per_frame": 2670.695,
+      "dense_speedup": 4.926563684733749
+    },
+    {
+      "channels": 64,
+      "density": 1.0,
+      "sparse_ns_per_frame": 15140.584,
+      "dense_ns_per_frame": 2660.848,
+      "dense_speedup": 5.690134874295714
+    }
+  ]
+}
