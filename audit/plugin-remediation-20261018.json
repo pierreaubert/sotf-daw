@@ -395,9 +395,26 @@
       "id": 14,
       "plugin": "Convolution",
       "audit_text": "[`convolution_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs):1610\u20131780 supports partitioned/NUPC processing, optional direct head, prepared asynchronous IR adoption, generation checks and finite tail accounting. Resource estimates and retirement machinery are substantial strengths. Peak memory/CPU can rise during old/new IR overlap, and worker/reclaimer saturation deserves testing.\n\n`direct_convolution.rs` contains a valuable f64 time-domain oracle, arbitrary callback partitions, true-stereo paths and heap checks. Two initial parallel failures disappeared serially and on the full rerun; see T1. Do not classify that observation alone as a DSP error. Extend IR update storms and maximum-size multichannel performance. Classical partition-size selection and a bounded direct head are the right optimizations. ML belongs in optional offline IR denoising/estimation, with measured response preserved and model output validated.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Resolve parallel finite-stream fixture interference without changing DSP or assertions",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/finite_stream.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-fixture-isolation.json"
+          ],
+          "result": "Timestamp-only filenames collided between parallel IR fixtures: retained original run reproduces missing file; exclusive-create diagnostic reproduces AlreadyExists on attempt 8. Atomic per-process sequence and exclusive creation prevent overwrite/deletion between fixtures. Forty parallel runs pass (280 test executions), affected shared/FIR/convolution/crossover combined run 366 passed, 8 existing ignored, strict convolution all-targets Clippy passes. Production DSP and numerical/tail assertions unchanged."
+        },
+        {
+          "task": "Extend IR-update storms, worker/reclaimer saturation and maximum-size multichannel validation",
+          "status": "pending",
+          "evidence": "Original audit requirements remain; fixture isolation alone does not complete Convolution."
+        }
+      ],
+      "evidence": [
+        "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45."
+      ]
     },
     {
       "id": 15,
@@ -954,7 +971,8 @@
         "Current affected integration: 5 factory + 2 facade/DawHost + 6 embedded-engine tests pass. Real-manager consumer compiles only; unavailable ALSA-null playback gate not counted. Core all-targets and scoped factory/facade/engine --no-deps Clippy checks pass with -D warnings; prior broader streaming-dependency lint failure remains recorded, not suppressed.",
         "Opaque accepted revision/owner fencing closes ABA/no-op and foreign-graph acceptance, preserving zero-heap refusals, retained ownership and live audio. In-memory snapshot API extension and RevisionExhausted are documented; serialized settings, FIR behavior/latency and bounds unchanged. Same-current-base request ordering follows existing queue/cancel semantics. Full-load/native deadlines and deferred FIR-M1 remain pending. Entry stays partial; overall complete count is 29/45.",
         "Load follow-up: two full 108-row release measurements intentionally exit 1; data and rejected candidate retained. No production DSP runtime change accepted in this follow-up. Static QA reporting corrected. Final restored shared/FIR/convolution/crossover verification recorded separately; legacy ignored capture/replay inventory preserved and required AUD134 replay folders absent (not regenerated).",
-        "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log."
+        "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log.",
+        "Follow-up resolves the previous combined Convolution failure: timestamp-only parallel fixture names collided. Exclusive-create diagnostic proves AlreadyExists; sequence IDs plus exclusive creation pass 40 parallel suites and final four-crate regression 366 passed/8 existing ignored. See convolution-fixture-isolation.json. Full-load deadline and FIR-M1 limits remain unchanged."
       ]
     },
     {

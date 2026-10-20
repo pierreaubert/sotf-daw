@@ -287,5 +287,13 @@
     "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-comparison.json",
     "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-checks.json"
   ],
-  "load_followup_regression_limit": "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log."
+  "load_followup_regression_limit": "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log.",
+  "load_followup_regression_resolution": {
+    "cause": "Convolution test fixture timestamp filename collision; DSP unchanged",
+    "evidence": "convolution-fixture-isolation.json",
+    "combined_passed": 366,
+    "combined_failed": 0,
+    "existing_ignored": 8,
+    "parallel_repeats_passed": 40
+  }
 }

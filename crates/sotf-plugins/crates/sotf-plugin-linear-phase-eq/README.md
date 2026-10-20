@@ -244,8 +244,10 @@ cargo run -p sotf-plugin-linear-phase-eq --release --features qa --bin qa-dynami
 
 Part of the SOTF (Sound of the Future) project.
 
-The final combined shared/FIR/Convolution/Crossover regression run recorded
-365 passed, one failed and eight existing ignored tests. The unchanged
-Convolution finite-stream test returned 2,044 extra tail frames in the combined
-run while isolated reruns passed. This remains unresolved; see the load-checks
-artifact and full regression log. Scoped shared/FIR QA Clippy passes.
+The initial combined regression recorded a Convolution fixture race: parallel
+tests reused timestamp-only WAV paths, causing overwritten/deleted IR files.
+Exclusive creation reproduced the collision. Unique sequence IDs plus exclusive
+creation resolve it: 40 parallel suites and the final combined shared/FIR/
+Convolution/Crossover run pass (366 passed, eight existing ignored). Historical
+failures are preserved; see `convolution-fixture-isolation.json`. FIR load
+deadline and response limitations above remain open.

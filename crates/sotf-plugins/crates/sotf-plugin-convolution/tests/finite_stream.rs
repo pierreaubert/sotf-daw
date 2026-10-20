@@ -3,7 +3,9 @@
 // Rust guideline compliant 2026-02-21
 use sotf_host::{ParametricInPlacePlugin, ProcessContext};
 use sotf_plugin_convolution::{ConvolutionPlugin, ConvolutionPluginParams};
+use std::io::Write;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -67,12 +69,16 @@ impl Drop for ImpulseFile {
 }
 
 fn write_impulse(channels: &[Vec<i16>], sample_rate: u32) -> ImpulseFile {
+    // Wall-clock timestamps can repeat across parallel tests. The counter keeps
+    // each live fixture distinct, and exclusive creation prevents overwriting.
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let sequence = NEXT.fetch_add(1, Ordering::Relaxed);
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
     let path = std::env::temp_dir().join(format!(
-        "sotf-convolution-oracle-{}-{unique}.wav",
+        "sotf-convolution-oracle-{}-{unique}-{sequence}.wav",
         std::process::id()
     ));
     let channel_count = channels.len() as u16;
@@ -96,7 +102,12 @@ fn write_impulse(channels: &[Vec<i16>], sample_rate: u32) -> ImpulseFile {
             bytes.extend_from_slice(&channel[frame].to_le_bytes());
         }
     }
-    std::fs::write(&path, bytes).unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .unwrap();
+    file.write_all(&bytes).unwrap();
     ImpulseFile(path)
 }
 

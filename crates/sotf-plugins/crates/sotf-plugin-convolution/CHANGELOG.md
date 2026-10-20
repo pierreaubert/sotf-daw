@@ -2,6 +2,10 @@
 
 ## Changes
 
+- Isolate parallel finite-stream WAV fixtures using sequence IDs and exclusive
+  creation, preventing timestamp collisions from corrupting tail validation.
+  Production DSP and existing audio/length assertions are unchanged.
+
 - Add opt-in true-stereo LL/LR/RL/RR routing for stereo plugins using four-channel impulse responses across uniform, nonuniform and direct-head backends.
 - Carry true-stereo configuration through factories, engine settings and transactional C ABI state restoration; preserve legacy IR routing by default.
 
