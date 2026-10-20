@@ -41,7 +41,7 @@ unsafe impl GlobalAlloc for CallbackAllocator {
 static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
 #[test]
-fn automated_gain_clock_and_partial_hop_reset_have_no_heap_activity() {
+fn automated_analysis_clocks_and_partial_hop_reset_have_no_heap_activity() {
     for fft in [2, 512, 4096] {
         for hr in [false, true] {
             let params = serde_json::from_value(serde_json::json!({"fft_size":fft,
@@ -55,6 +55,15 @@ fn automated_gain_clock_and_partial_hop_reset_have_no_heap_activity() {
                     sotf_host::ParameterValue::Float(0.2),
                 )
                 .unwrap();
+            for (key, target) in [
+                ("lfe_cutoff_hz", 180.0),
+                ("bandpass_hz", 200.0),
+                ("height_hf_cap_hz", 8000.0),
+            ] {
+                plugin
+                    .set_parameter(key.into(), sotf_host::ParameterValue::Float(target))
+                    .unwrap();
+            }
             let input = vec![0.02; 257 * 2];
             let mut output = vec![0.0; 257 * plugin.output_channels()];
             let counts = std::thread::spawn(move || {

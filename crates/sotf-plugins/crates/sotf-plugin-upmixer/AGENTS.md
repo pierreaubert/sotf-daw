@@ -70,8 +70,11 @@ from the workspace root). The generator uses fixed seeds, so output is byte-stab
   empty calls must not snap or shift the grid. Keep it independent of HR enable.
 - Preserve old-clock elapsed gain time on reset/reinitialization. HR input
   chunks must clock controls before HR analysis; disabled HR still advances
-  through the same fixed quanta. Crossover tables and final output safety
-  are separate callback-timing limitations, not covered by this invariant.
+  through the same fixed quanta. Frequency tables share that grid through
+  `table_clock.rs`, with separate pending frames. Gain events must not flush
+  table time. Flush changed table targets and lifecycle transitions using the
+  old clock; preserve table thresholds and prepared storage. Safety-cap control
+  and final output safety still have separate callback-timing limitations.
 - Realtime scalar setters refresh only their indexed cached value using the
   canonical DSP getter. Preserve PARAMS/cache order, coercions and clamping;
   never rebuild the metadata vector in a realtime setter. Resource controls,

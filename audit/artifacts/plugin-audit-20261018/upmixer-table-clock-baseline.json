@@ -1,0 +1,26 @@
+{
+  "base_commit": "2de57046f9e7b26ebf559206a638e460a3d6074a",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_gain_clock",
+    "frequency_table_controls_match",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntable_clock key=lfe_cutoff_hz pattern=[8192] error=7.878322e-3\ntable_clock key=lfe_cutoff_hz pattern=[7, 31, 257, 1024] error=1.5141251e-3\ntable_clock key=bandpass_hz pattern=[8192] error=1.6931444e-4\ntable_clock key=bandpass_hz pattern=[7, 31, 257, 1024] error=1.06872525e-4\ntable_clock key=height_hf_cap_hz pattern=[8192] error=8.2365e-6\ntable_clock key=height_hf_cap_hz pattern=[7, 31, 257, 1024] error=2.3268512e-6\ntest frequency_table_controls_match_across_callback_partitions ... FAILED\n\nfailures:\n\nfailures:\n    frequency_table_controls_match_across_callback_partitions\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.28s\n\n",
+  "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 2.69s\n     Running tests/audit_gain_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_gain_clock-2c5a121b5c8f8452)\n\nthread 'frequency_table_controls_match_across_callback_partitions' (327963807) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_gain_clock.rs:261:5:\n[0.007878322, 0.0015141251, 0.00016931444, 0.000106872525, 8.2365e-6, 2.3268512e-6]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --test audit_gain_clock`\n"
+}

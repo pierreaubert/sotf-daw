@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Clock LFE/upmix crossovers and height HF tables on the common main/HR source
+  analysis grid. Preserve interrupted old-target time separately from gains,
+  including no-op snapshots, reset, reinitialization, raw bypass and EOF.
+  Retain frequency responses, table thresholds, parameter policies and latency.
+- Add all-three-table waveform, recorded-input, one-pole/lifecycle and active
+  table-rebuild heap regressions. Safety-cap automation and final capping still
+  require their separate output-clock remediation.
+
 - Refresh realtime scalar parameter values in place from canonical DSP state,
   removing 143 metadata allocations/frees per public update. Preserve typed,
   clamped values and structural rebuilds; classify ML enable as structural

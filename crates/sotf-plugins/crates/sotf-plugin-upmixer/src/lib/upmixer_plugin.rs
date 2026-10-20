@@ -98,6 +98,8 @@ pub(super) struct UpmixerParams {
 }
 
 pub(super) struct UpmixerParamSmoothers {
+    /// Accepted source frames not yet committed to the frequency-table smoothers.
+    pub(super) table_pending_frames: usize,
     /// Smoother for lfe_cutoff_hz to prevent clicks when changing crossover frequency
     pub(super) lfe_cutoff_hz_smoother: Smoother,
     /// Smoother for bandpass_hz to prevent clicks when changing upmix crossover
@@ -708,6 +710,7 @@ impl UpmixerPlugin {
         };
 
         let param_smoothers = UpmixerParamSmoothers {
+            table_pending_frames: 0,
             lfe_cutoff_hz_smoother: Smoother::new(lfe_cutoff_hz, 5.0, sample_rate),
 
             bandpass_hz_smoother: Smoother::new(bandpass_hz, 5.0, sample_rate),
@@ -1481,6 +1484,11 @@ impl UpmixerPlugin {
             // position before a sub-hop retarget. Repeated snapshots do nothing.
             self.flush_gain_clock();
         }
+        if Self::is_table_clock_parameter(index)
+            && self.param_value(index) != Some(f64::from(UP[index].clamp_f64(value) as f32))
+        {
+            self.flush_table_clock();
+        }
         match index {
             // 0 => speaker_config -- handled as side effect in set_parameter
             0 => {} // no-op, side effect handles this
@@ -2154,6 +2162,7 @@ impl Plugin for UpmixerPlugin {
         }
 
         self.flush_gain_clock();
+        self.flush_table_clock();
         self.core.sample_rate = sample_rate;
 
         // Calculate ERB bands
@@ -2297,6 +2306,7 @@ impl Plugin for UpmixerPlugin {
 
     fn reset(&mut self) {
         self.flush_gain_clock();
+        self.flush_table_clock();
         self.gains.clock_phase = 0;
         self.drain.reset();
         // Clear buffers
@@ -2517,41 +2527,17 @@ impl UpmixerPlugin {
             return Ok(0);
         }
 
-        // Update frequency/table-generating parameter smoothers and regenerate tables if changed
-        {
-            let prev_lfe = self.params.lfe_cutoff_hz;
-            let prev_bp = self.params.bandpass_hz;
-            let prev_hf = self.height.height_hf_cap_hz;
-            let prev_sc = self.safety.safety_cap_db;
-
-            let new_lfe = self.param_smoothers.lfe_cutoff_hz_smoother.next_n(n);
-            let new_bp = self.param_smoothers.bandpass_hz_smoother.next_n(n);
-            let new_hf = self.param_smoothers.height_hf_cap_hz_smoother.next_n(n);
-            let new_sc = self.param_smoothers.safety_cap_db_smoother.next_n(n);
-
-            if (new_lfe - prev_lfe).abs() > 0.01 {
-                self.params.lfe_cutoff_hz = new_lfe;
-                self.update_crossover_gains();
-                self.recache_bin_indices();
-            }
-            if (new_bp - prev_bp).abs() > 0.01 {
-                self.params.bandpass_hz = new_bp;
-                self.precompute_height_freq_weights();
-                self.recache_bin_indices();
-            }
-            if (new_hf - prev_hf).abs() > 0.1 {
-                self.height.height_hf_cap_hz = new_hf;
-                self.precompute_height_freq_weights();
-            }
-            if (new_sc - prev_sc).abs() > 0.001 {
-                self.safety.safety_cap_db = new_sc;
-                self.update_safety_cap_cache();
-            }
+        // Safety-cap automation still uses the existing callback clock. Frequency
+        // tables advance separately on the common source analysis grid.
+        let new_sc = self.param_smoothers.safety_cap_db_smoother.next_n(n);
+        if (new_sc - self.safety.safety_cap_db).abs() > 0.001 {
+            self.safety.safety_cap_db = new_sc;
+            self.update_safety_cap_cache();
         }
 
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
-            self.advance_gain_clock(n);
+            self.advance_analysis_clock(n);
             let num_frames = context.num_frames;
             for i in 0..num_frames {
                 let left = input[i * 2];
@@ -2651,7 +2637,7 @@ impl UpmixerPlugin {
                             self.hr_buffers.hr_input_buffer_fill += hr_chunk;
                             hr_input_offset += hr_chunk;
                             remaining_hr_samples -= hr_chunk;
-                            self.advance_gain_clock(hr_chunk / 2);
+                            self.advance_analysis_clock(hr_chunk / 2);
 
                             // Process HR block if buffer is full
                             if self.hr_buffers.hr_input_buffer_fill >= self.fft.hr_fft_size * 2 {
@@ -2678,7 +2664,7 @@ impl UpmixerPlugin {
                             }
                         }
                     } else {
-                        self.advance_gain_clock(samples_to_copy / 2);
+                        self.advance_analysis_clock(samples_to_copy / 2);
                     }
 
                     self.main_buffers.input_buffer_fill += samples_to_copy;

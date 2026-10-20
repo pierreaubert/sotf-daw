@@ -25,11 +25,21 @@ recorded speech/violin input. The recorded cases establish automation timing,
 not speech separation, localization or perceptual quality. Source attribution
 remains in the speech-denoiser and de-esser fixture manifests.
 
-`lfe_cutoff_hz`, `bandpass_hz`, `height_hf_cap_hz`, and `safety_cap_db` still
-use their existing callback-level table/update paths. Active final output
-capping also remains callback-dependent. The gain-clock guarantee does not
-cover those automation paths or imply host PDC synchronization on raw-bypass
-latency changes.
+`lfe_cutoff_hz`, `bandpass_hz`, and `height_hf_cap_hz` now use the same fixed
+analysis grid. Their pending elapsed time is separate from gain controls;
+only a changed table target flushes partial table time. Reset/reinitialization
+commit it with the old coefficient, raw bypass advances it, and native EOF
+continues it through the established generated-zero timeline. The existing
+smoothing law, frequency response, thresholds and structural update policies
+are preserved. Table rebuilds reuse prepared storage; unchanged tables do not
+rebuild at grid boundaries.
+
+Each table control has a measured nonzero rendering effect and matches exactly
+across large/irregular callbacks versus one-frame calls, including recorded
+speech/violin and full tails. These cases establish timing, not perceptual
+separation quality. `safety_cap_db` automation and active final output capping
+still remain callback-dependent. These guarantees do not imply host PDC
+synchronization on raw-bypass latency changes.
 
 
 ### AutoGain reference and timing
@@ -54,4 +64,4 @@ is structural because enabling it can start inference resources. Optional ML
 models and backends are tracked separately and are not validated by these tests.
 Parameter enumeration and invalid-input error construction are control-thread
 operations. Zero-heap setters do not establish a device deadline guarantee or
-resolve the table, final-cap and PDC timing limitations above.
+resolve the safety-cap and PDC timing limitations above.

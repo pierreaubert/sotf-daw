@@ -22,6 +22,7 @@ mod setup;
 #[cfg(test)]
 #[path = "lib/stream_boundary_tests.rs"]
 mod stream_boundary_tests;
+mod table_clock;
 #[cfg(test)]
 mod test;
 

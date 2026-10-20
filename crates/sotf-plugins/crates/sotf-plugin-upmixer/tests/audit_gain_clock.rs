@@ -232,3 +232,117 @@ fn recorded_speech_and_instrument_control_changes_match() {
         }
     }
 }
+
+const TABLE_CONTROLS: [(&str, f32); 3] = [
+    ("lfe_cutoff_hz", 180.0),
+    ("bandpass_hz", 150.0),
+    ("height_hf_cap_hz", 8000.0),
+];
+
+#[test]
+fn frequency_table_controls_match_across_callback_partitions() {
+    let mut errors = Vec::new();
+    for (key, target) in TABLE_CONTROLS {
+        let case = Case {
+            rate: 48_000,
+            fft: 2048,
+            hr: true,
+            recording: None,
+        };
+        let reference = render(key, target, case, &[1], false);
+        assert!(reference.iter().any(|v| v.abs() > 1e-4));
+        let unchanged = match key {
+            "lfe_cutoff_hz" => 120.0,
+            "bandpass_hz" => 250.0,
+            "height_hf_cap_hz" => 16000.0,
+            _ => unreachable!(),
+        };
+        let effect = difference(&reference, &render(key, unchanged, case, &[1], false));
+        println!("table_effect key={key} difference={effect:e}");
+        assert!(effect > 1e-7, "{key} did not affect the rendered signal");
+        for pattern in [&[8192][..], &[7, 31, 257, 1024][..]] {
+            let actual = render(key, target, case, pattern, false);
+            let error = difference(&actual, &reference);
+            println!("table_clock key={key} pattern={pattern:?} error={error:e}");
+            errors.push(error);
+        }
+    }
+    assert!(errors.iter().all(|e| *e < 2e-6), "{errors:?}");
+}
+
+#[test]
+fn table_clock_matches_across_rates_fft_hr_routes_and_snapshots() {
+    for rate in [44_100, 48_000, 192_000] {
+        for fft in [512, 4096] {
+            for hr in [false, true] {
+                let case = Case {
+                    rate,
+                    fft,
+                    hr,
+                    recording: None,
+                };
+                for (key, target) in TABLE_CONTROLS {
+                    let reference = render(key, target, case, &[1], false);
+                    for pattern in [&[8192][..], &[7, 31, 257, 1024][..]] {
+                        let actual = render(key, target, case, pattern, false);
+                        let error = difference(&actual, &reference);
+                        println!(
+                            "table_route key={key} rate={rate} fft={fft} hr={hr} pattern={pattern:?} error={error:e}"
+                        );
+                        assert!(error < 2e-6);
+                    }
+                }
+            }
+        }
+    }
+    let case = Case {
+        rate: 48_000,
+        fft: 2048,
+        hr: true,
+        recording: None,
+    };
+    for (key, target) in TABLE_CONTROLS {
+        assert_eq!(
+            render(key, target, case, &[7, 31, 257], false),
+            render(key, target, case, &[7, 31, 257], true)
+        );
+    }
+}
+
+#[test]
+fn recorded_frequency_table_automation_matches() {
+    let recordings = [
+        (
+            "speech",
+            include_bytes!(
+                "../../sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-0.pcm"
+            )
+            .as_slice(),
+        ),
+        (
+            "violin",
+            include_bytes!("../../sotf-plugin-de-esser/tests/fixtures/recorded/violin.pcm")
+                .as_slice(),
+        ),
+    ];
+    for (name, bytes) in recordings {
+        for hr in [false, true] {
+            let case = Case {
+                rate: 48_000,
+                fft: 2048,
+                hr,
+                recording: Some(bytes),
+            };
+            for (key, target) in TABLE_CONTROLS {
+                let reference = render(key, target, case, &[1], false);
+                for pattern in [&[8192][..], &[7, 31, 257, 1024][..]] {
+                    let error = difference(&render(key, target, case, pattern, false), &reference);
+                    println!(
+                        "recorded_table name={name} key={key} hr={hr} pattern={pattern:?} error={error:e}"
+                    );
+                    assert!(error < 2e-6);
+                }
+            }
+        }
+    }
+}

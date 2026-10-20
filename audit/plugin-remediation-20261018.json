@@ -2137,6 +2137,20 @@
             "audit/artifacts/plugin-audit-20261018/upmixer-scalar-cache-validation.json"
           ],
           "result": "Baseline reproduced 143 allocations/frees per scalar update. Refreshing the indexed cached value from the canonical DSP getter removes all heap activity in 544 changed/no-op setter calls and 544 following audio calls across 34 controls and 8 rate/FFT/layout routes. Cache metadata, accepted types/clamps and rejected state are preserved. ML enable is now structural because its existing side effect may start inference resources. Full release suite: 203 passed, 3 existing ignored; strict all-target QA Clippy passes. Four existing golden comparisons still skip absent fixtures. Optional ML models/backends are separate and unvalidated."
+        },
+        {
+          "requirement": "Clock frequency-table controls on accepted source analysis time rather than callback endpoints.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/table_clock.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/gain_clock.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/lib/upmixer_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_gain_clock.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/stream_boundary_allocations.rs",
+            "audit/artifacts/plugin-audit-20261018/upmixer-table-clock-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upmixer-table-clock-validation.json"
+          ],
+          "result": "Reproduced LFE 0.007878322, upmix crossover 0.00016931444 and height-HF 0.0000082365 callback waveform differences. All three table controls now use the common main/HR grid with separate pending source time, old-target flushes and no observation on unrelated gain events or repeated targets. Existing table equations, thresholds, structural policies and latency retained. All 102 comparisons are exact across each control, 12 rate/FFT/HR routes and recorded speech/violin through complete tails; each control measurably affects the output. Nine independent trajectories and interrupted/lifecycle/grid tests pass. Six active table/gain process/reset routes are zero-heap. 211 release tests, strict all-target QA Clippy and standard QA pass; representative steady 5s audio reports 18.14ms, not worst/device automation deadline evidence. Existing missing golden comparisons/ignored tests unchanged."
         }
       ],
       "evidence": [
@@ -2153,10 +2167,15 @@
           "kind": "validated_scalar_cache",
           "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-scalar-cache-validation.json",
           "finding": "All 34 initialized realtime scalar setters are zero-heap with retained parameter ID owners; canonical cache state preserved. Does not establish deadlines, structural realtime safety, or table/output-cap timing."
+        },
+        {
+          "kind": "validated_table_clock",
+          "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-table-clock-validation.json",
+          "finding": "Three frequency-table controls are deterministic on the source analysis grid, with unchanged response equations and update policies. Safety-cap automation/final capping, PDC and perception/deadline work remain open."
         }
       ],
       "remaining": [
-        "Move crossover/table controls and output safety-cap control/measurement to their correct source/output clocks; active final capping can still make whole output depend on callback size.",
+        "Move safety-cap automation and output safety-cap measurement/release to their correct analysis/output clocks; active final capping can still make whole output depend on callback size.",
         "Validate latency/PDC synchronization on bypass or structural changes; structural preparation remains outside realtime setters.",
         "Extend real recorded speech/music center leakage, mono/downmix compatibility and onset/perceptual quality; current recorded automation probes do not establish separation or localization quality.",
         "Measure worst-layout and frequent-control-update deadline distribution under device load; representative standard steady QA is insufficient."
@@ -2651,6 +2670,15 @@
       ],
       "result": "143 allocations/frees per update removed; all 34 realtime controls, 544 updates and following audio calls are zero-heap across 8 routes. Canonical types/clamps and rejection checks pass. 203 release tests and strict Clippy pass; overall stays 35/45.",
       "limitations": "Structural preparation, optional ML backends, table/output-cap clocks, PDC and real-material separation/perceptual quality remain open. Missing golden fixtures and existing ignored tests are disclosed."
+    },
+    {
+      "name": "Upmixer source-clock frequency tables",
+      "state": "verified_partial",
+      "plugin_ids": [
+        43
+      ],
+      "result": "Three reproduced table timing defects fixed; 102 exact waveform comparisons, one-pole/interrupted/lifecycle/grid invariants and six active processing heap cases. 211 release tests, strict Clippy and representative standard QA pass. Overall stays 35/45.",
+      "limitations": "Safety-cap clocks, host PDC, recorded separation/perception and worst-layout/device deadlines remain open. Structural metadata preparations, absent golden fixtures and existing ignored tests remain disclosed."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -8,7 +8,7 @@ impl UpmixerPlugin {
         matches!(index, 1..=5 | 8 | 12..=13 | 16..=17 | 23..=28)
     }
 
-    pub(super) fn advance_gain_clock(&mut self, mut frames: usize) {
+    pub(super) fn advance_analysis_clock(&mut self, mut frames: usize) {
         // Both FFT hops are powers of two. The smaller hop is their common
         // analysis quantum, even while HR is disabled. A target event may
         // split a quantum but never moves this grid.
@@ -16,10 +16,12 @@ impl UpmixerPlugin {
         while frames > 0 {
             let step = frames.min(quantum - self.gains.clock_phase);
             self.gains.pending_frames += step;
+            self.param_smoothers.table_pending_frames += step;
             self.gains.clock_phase += step;
             frames -= step;
             if self.gains.clock_phase == quantum {
                 self.flush_gain_clock();
+                self.flush_table_clock();
                 self.gains.clock_phase = 0;
             }
         }
@@ -114,7 +116,7 @@ mod tests {
             for (index, target) in indices.into_iter().zip(target) {
                 p.set_param_value(index, f64::from(target));
             }
-            p.advance_gain_clock(256);
+            p.advance_analysis_clock(256);
             for (i, s) in smoothers(&mut p).into_iter().enumerate() {
                 let expected = f64::from(target[i])
                     + coefficient(rate).powi(256) * f64::from(initial[i] - target[i]);
@@ -142,7 +144,7 @@ mod tests {
         for rate in [44_100.0, 48_000.0, 192_000.0] {
             let mut p = processor(rate);
             p.set_param_value(1, 0.0);
-            p.advance_gain_clock(37);
+            p.advance_analysis_clock(37);
             assert_eq!(p.gains.gain_front_direct.current(), 1.0);
             p.process(&[], &mut [], &ProcessContext::new(rate, 0))
                 .unwrap();
@@ -156,10 +158,10 @@ mod tests {
             let first = coefficient(rate).powi(37);
             assert!((f64::from(p.gains.gain_front_direct.current()) - first).abs() < 2e-6);
             assert_eq!((p.gains.clock_phase, p.gains.pending_frames), (37, 0));
-            p.advance_gain_clock(19);
+            p.advance_analysis_clock(19);
             p.set_param_value(1, 0.5); // Same target is not an observation boundary.
             assert_eq!((p.gains.clock_phase, p.gains.pending_frames), (56, 19));
-            p.advance_gain_clock(200);
+            p.advance_analysis_clock(200);
             let expected = 0.5 + coefficient(rate).powi(219) * (first - 0.5);
             assert!((f64::from(p.gains.gain_front_direct.current()) - expected).abs() < 2e-6);
             assert_eq!((p.gains.clock_phase, p.gains.pending_frames), (0, 0));
@@ -170,18 +172,18 @@ mod tests {
     fn reset_and_new_clock_commit_elapsed_frames_with_the_old_coefficient() {
         let mut p = processor(48_000.0);
         p.set_param_value(1, 0.0);
-        p.advance_gain_clock(37);
+        p.advance_analysis_clock(37);
         assert!(p.initialize(f64::NAN).is_err());
         assert_eq!((p.gains.clock_phase, p.gains.pending_frames), (37, 37));
         p.reset();
         let first = coefficient(48_000.0).powi(37);
         assert!((f64::from(p.gains.gain_front_direct.current()) - first).abs() < 2e-6);
         assert_eq!((p.gains.clock_phase, p.gains.pending_frames), (0, 0));
-        p.advance_gain_clock(19);
+        p.advance_analysis_clock(19);
         p.initialize(96_000.0).unwrap();
         let before_new = coefficient(48_000.0).powi(56);
         assert!((f64::from(p.gains.gain_front_direct.current()) - before_new).abs() < 2e-6);
-        p.advance_gain_clock(256);
+        p.advance_analysis_clock(256);
         let expected = before_new * coefficient(96_000.0).powi(256);
         // The retained f32 powi helper uses rounded repeated squaring. Bound
         // its accumulated arithmetic error by gamma_n instead of treating
