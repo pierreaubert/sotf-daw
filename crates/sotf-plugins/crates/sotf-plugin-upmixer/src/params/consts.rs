@@ -493,6 +493,7 @@ pub const PARAMS: &[ParamSpec] = &[
     // 40: enable_ml_detection
     ParamSpec::bool_param("ML Detection", "enable_ml_detection", false, "Diagnostics")
         .diagnostic()
+        .structural()
         .doc("Use ML model for source detect"),
     // Analysis & Source Extraction
     // 41: multi_source_extraction

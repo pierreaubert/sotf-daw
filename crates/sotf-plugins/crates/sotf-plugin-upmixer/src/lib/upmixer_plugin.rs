@@ -2119,7 +2119,15 @@ impl Plugin for UpmixerPlugin {
             }
             _ => {}
         }
-        self.rebuild_cached_parameters();
+        if UP[idx].update_mode == sotf_host::param_specs::UpdateMode::Realtime {
+            // PARAMS and the cache share index order. Refresh from accepted DSP state
+            // so coercion and clamping match get_parameter without rebuilding metadata.
+            self.core.cached_parameters[idx].default_value =
+                param_bridge::get_parameter(UP, &id, |i| self.param_value(i))
+                    .expect("validated realtime parameter has a value");
+        } else {
+            self.rebuild_cached_parameters();
+        }
         Ok(())
     }
 

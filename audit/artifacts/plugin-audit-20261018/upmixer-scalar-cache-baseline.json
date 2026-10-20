@@ -1,0 +1,27 @@
+{
+  "base_commit": "5163b4f9dfd756a5f4baf40c221b15a0b4ee1a80",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "stream_boundary_allocations",
+    "realtime_scalar_updates",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nSCALAR_HEAP rate=48000 fft=512 layout=2.0 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=48000 fft=512 layout=9.1.6 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=48000 fft=4096 layout=2.0 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=48000 fft=4096 layout=9.1.6 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=192000 fft=512 layout=2.0 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=192000 fft=512 layout=9.1.6 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=192000 fft=4096 layout=2.0 controls=34 setter=(143, 143) audio=(0, 0)\nSCALAR_HEAP rate=192000 fft=4096 layout=9.1.6 controls=34 setter=(143, 143) audio=(0, 0)\ntest realtime_scalar_updates_and_first_audio_have_no_heap_activity ... FAILED\n\nfailures:\n\nfailures:\n    realtime_scalar_updates_and_first_audio_have_no_heap_activity\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 4.07s\n     Running tests/stream_boundary_allocations.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/stream_boundary_allocations-9207ba38755f5300)\n\nthread 'realtime_scalar_updates_and_first_audio_have_no_heap_activity' (327921511) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/stream_boundary_allocations.rs:254:5:\n[((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0)), ((143, 143), (0, 0))]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --test stream_boundary_allocations`\n",
+  "scope": "34 realtime scalar controls, explicitly excluding enable_ml_detection before its structural reclassification; held ParameterId owners, changed/no-op values, 8 rate/FFT/layout routes. The regression intentionally fails on original metadata cache rebuilding."
+}

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Refresh realtime scalar parameter values in place from canonical DSP state,
+  removing 143 metadata allocations/frees per public update. Preserve typed,
+  clamped values and structural rebuilds; classify ML enable as structural
+  because it can start inference resources. Add all-34-control changed/no-op,
+  cache-consistency, rejection and cold following-audio heap checks.
+
 - Advance sixteen gain/routing smoothers on the common main/HR analysis grid
   instead of advancing an entire callback before analysis. Correct interrupted
   sub-hop targets, no-op snapshots, raw bypass and reset/reinitialization clocks

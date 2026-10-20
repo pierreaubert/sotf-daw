@@ -2125,6 +2125,18 @@
             "audit/artifacts/plugin-audit-20261018/upmixer-gain-clock-validation.json"
           ],
           "result": "Reproduced 0.021299165 gain_front_direct waveform difference across callback partitions. Sixteen gain/routing controls now advance at fixed min(main_hop,HR_hop) quanta, with elapsed old-target time flushed before real sub-hop target changes; repeated snapshots and empty calls do not move the grid. Reset/new clock commit elapsed time with the old coefficient, raw bypass retains control time, native EOF retains zero continuation. All 76 waveform comparisons are exact across individual controls, 18 rate/FFT/HR routes (including FFT2), and four recorded-source routes through full tails. Forty-eight independent one-pole trajectories ensure every field advances, and six cold automated/reset cases allocate/free nothing. 200 release tests, strict all-target QA Clippy and standard QA pass; representative 5s steady audio took reported 18.01ms, not a full workload/device deadline claim. Existing four absent golden comparisons and three ignored rejected candidates remain unchanged."
+        },
+        {
+          "requirement": "Remove metadata cache allocations from initialized realtime scalar setters and keep canonical accepted values.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/lib/upmixer_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/params/consts.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/stream_boundary_allocations.rs",
+            "audit/artifacts/plugin-audit-20261018/upmixer-scalar-cache-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upmixer-scalar-cache-validation.json"
+          ],
+          "result": "Baseline reproduced 143 allocations/frees per scalar update. Refreshing the indexed cached value from the canonical DSP getter removes all heap activity in 544 changed/no-op setter calls and 544 following audio calls across 34 controls and 8 rate/FFT/layout routes. Cache metadata, accepted types/clamps and rejected state are preserved. ML enable is now structural because its existing side effect may start inference resources. Full release suite: 203 passed, 3 existing ignored; strict all-target QA Clippy passes. Four existing golden comparisons still skip absent fixtures. Optional ML models/backends are separate and unvalidated."
         }
       ],
       "evidence": [
@@ -2136,11 +2148,16 @@
           "kind": "validated_gain_clock",
           "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-gain-clock-validation.json",
           "finding": "Gain/routing timing corrected; callback-level tables, final cap, setter metadata allocation and host PDC work remain explicitly open."
+        },
+        {
+          "kind": "validated_scalar_cache",
+          "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-scalar-cache-validation.json",
+          "finding": "All 34 initialized realtime scalar setters are zero-heap with retained parameter ID owners; canonical cache state preserved. Does not establish deadlines, structural realtime safety, or table/output-cap timing."
         }
       ],
       "remaining": [
         "Move crossover/table controls and output safety-cap control/measurement to their correct source/output clocks; active final capping can still make whole output depend on callback size.",
-        "Remove scalar setter metadata-cache allocation before claiming realtime automation; validate latency/PDC synchronization on bypass or structural changes.",
+        "Validate latency/PDC synchronization on bypass or structural changes; structural preparation remains outside realtime setters.",
         "Extend real recorded speech/music center leakage, mono/downmix compatibility and onset/perceptual quality; current recorded automation probes do not establish separation or localization quality.",
         "Measure worst-layout and frequent-control-update deadline distribution under device load; representative standard steady QA is insufficient."
       ]
@@ -2625,6 +2642,15 @@
       ],
       "result": "Fixes a reproduced 0.021299165 callback-dependent gain error. Sixteen controls, 76 exact waveform comparisons, 48 one-pole trajectories, lifecycle and zero-heap checks. 200 release tests, strict Clippy and representative standard QA pass. Overall stays 35/45.",
       "limitations": "Four table controls, active final safety cap, setter allocations, PDC and real-material separation/perceptual quality remain open; missing golden fixtures are disclosed."
+    },
+    {
+      "name": "Upmixer allocation-free realtime scalar cache",
+      "state": "verified_partial",
+      "plugin_ids": [
+        43
+      ],
+      "result": "143 allocations/frees per update removed; all 34 realtime controls, 544 updates and following audio calls are zero-heap across 8 routes. Canonical types/clamps and rejection checks pass. 203 release tests and strict Clippy pass; overall stays 35/45.",
+      "limitations": "Structural preparation, optional ML backends, table/output-cap clocks, PDC and real-material separation/perceptual quality remain open. Missing golden fixtures and existing ignored tests are disclosed."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

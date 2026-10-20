@@ -29,7 +29,7 @@ remains in the speech-denoiser and de-esser fixture manifests.
 use their existing callback-level table/update paths. Active final output
 capping also remains callback-dependent. The gain-clock guarantee does not
 cover those automation paths or imply host PDC synchronization on raw-bypass
-latency changes. Public setters retain the existing metadata-cache allocation.
+latency changes.
 
 
 ### AutoGain reference and timing
@@ -38,4 +38,20 @@ AutoGain compares the raw output with stereo source delayed by the declared FFT 
 
 The target updates every `sample_rate / 10` enabled frames and first affects the following frame, using the existing scalar smoothing. Disable/enable pauses/resumes meter, gain and clock state; reset starts fresh. During native drain the reference and meter advance once per generated tail frame, including the final partial block, and not when cached frames are copied to a smaller destination. Scratch is bounded even for callbacks above 8192 frames.
 
-The raw renderer and final safety-cap behavior are unchanged. An active final cap still measures a whole callback and can make final output depend on callback size; the AutoGain timing guarantee does not remove that separate limitation. Public parameter setters also retain the existing metadata-cache rebuild, while processing immediately after prepared enable remains allocation-free.
+The raw renderer and final safety-cap behavior are unchanged. An active final cap still measures a whole callback and can make final output depend on callback size; the AutoGain timing guarantee does not remove that separate limitation. Processing immediately after prepared enable remains allocation-free.
+
+
+### Realtime scalar updates
+
+After initialization, the 34 realtime scalar setters update cached values in
+place without allocating or freeing heap memory. Cached values use the accepted
+DSP state, including coercion and clamping. Changed targets, repeated snapshots
+and the following audio calls are checked at 48/192 kHz, FFT512/4096 and stereo/
+9.1.6 output. Hosts retain ownership of parameter IDs across realtime calls.
+
+Structural controls retain their preparation/rebuild paths. `enable_ml_detection`
+is structural because enabling it can start inference resources. Optional ML
+models and backends are tracked separately and are not validated by these tests.
+Parameter enumeration and invalid-input error construction are control-thread
+operations. Zero-heap setters do not establish a device deadline guarantee or
+resolve the table, final-cap and PDC timing limitations above.

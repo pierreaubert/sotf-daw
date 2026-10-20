@@ -72,6 +72,10 @@ from the workspace root). The generator uses fixed seeds, so output is byte-stab
   chunks must clock controls before HR analysis; disabled HR still advances
   through the same fixed quanta. Crossover tables and final output safety
   are separate callback-timing limitations, not covered by this invariant.
+- Realtime scalar setters refresh only their indexed cached value using the
+  canonical DSP getter. Preserve PARAMS/cache order, coercions and clamping;
+  never rebuild the metadata vector in a realtime setter. Resource controls,
+  including ML enable, remain structural. Realtime ID owners belong to the host.
 - Speaker configurations are defined in `params.rs` (`SPEAKER_CONFIGS`) and reference `SpeakerConfig` from sotf-host.
 - Output channel count changes dynamically based on selected speaker configuration. The engine must handle channel count changes between plugins.
 - VBAP uses triangulated speaker layouts for 3D panning (including height channels).
