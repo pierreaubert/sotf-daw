@@ -1,3 +1,13 @@
+## Unreleased explicit recursive rendering
+
+- Add native `set_recursive_tail_render_frames` job policy for a chosen recursive
+  wet-tail cutoff, with bounded zero continuation and reset-required EOS.
+- Keep Infinite mathematical support and legacy default behavior; exact finite
+  one-band/dry support takes precedence. Presets and live DSP are unchanged.
+- Freeze the chosen render extent through wet-to-dry settling, preserving drain
+  capacity metadata. Validate 216 geometry/cutoff cases, lifecycle and adapter
+  forwarding with zero heap activity on measured successful callbacks.
+
 ## Unreleased detector stages (2026-10-01, fix-compat revision)
 
 - Implement RMS detection (10 ms window) and sidechain HPF (0..200 Hz,

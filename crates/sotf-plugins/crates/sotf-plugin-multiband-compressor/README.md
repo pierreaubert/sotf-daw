@@ -21,15 +21,41 @@ sub-sample request. Lookahead metadata uses the actual ring delay. A target of
 zero during a wet-to-dry fade does not establish finite support.
 
 Multiband wet audio includes recursive crossover response even with ratio 1 or
-per-band bypass. It reports `TailLength::Infinite`; its existing zero-frame
-COMPLETE drain behavior is retained; automatic recursive completion remains
-unresolved (AUD073). This finite-case implementation does not recover those recursive
-wet tails. Callers that need a chosen wet-tail duration can continue processing
-zero input before EOS. Detector, gain and smoothing state evolves normally
-while supported finite audio is drained.
+per-band bypass and reports `TailLength::Infinite`. The default retains its
+legacy zero-frame COMPLETE drain behavior. Native Rust render jobs can choose
+an explicit cutoff before wrapping the plugin or starting drain:
+
+```rust
+use sotf_plugin_multiband_compressor::MultibandCompressorPlugin;
+
+let mut plugin = MultibandCompressorPlugin::new(2);
+plugin.set_recursive_tail_render_frames(Some(48_000)).unwrap();
+```
+
+At 48 kHz that requests 48,000 zero-input output frames after the final input.
+The budget includes remaining lookahead, then deliberately truncates the
+recursive response at the selected frame. Zero explicitly discards the recursive
+wet tail; `None` restores the legacy policy. Choose the cutoff and any final
+fade at the render-job level. This is not a silence detector or a proof of finite
+IIR support: mathematical metadata remains Infinite while recursive wet audio
+can contribute. Exact one-band and settled-dry support takes precedence over
+this recursive-only policy.
+
+The first valid supported nonempty drain freezes the selected extent, including
+while mix settles dry. Reset/reinitialization rearm EOS and retain the configured
+frame count; a rate change does not rescale it. Identical policy writes after
+EOS are allowed and changed policies require reset. Rejected rate/capacity
+calls do not start EOS. The option is native job configuration, separate from
+serialized parameters, factories and FFI preset restoration. Existing presets
+retain their behavior. Detector, gain and smoothing state evolves normally
+through the chosen zero continuation.
 
 `drain_output_frames_max` is a per-call capacity; `tail_length` is a bound from
 the last input and does not count down. Queries are allocation-free. The generic
 in-place adapter can copy input to output before an inner `process` error;
 processing errors do not promise destination preservation. Drain capacity
 errors and direct/compiled EOS preflight retain their transactional guarantees.
+
+The native adapter and a same-width DawHost chain are verified to emit the
+selected extent. Host paths requiring finite mathematical metadata, including
+channel-changing drain, retain their existing Infinite-tail restrictions.

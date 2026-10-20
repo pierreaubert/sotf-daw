@@ -45,6 +45,8 @@ pub struct MultibandCompressorPlugin {
     pub(super) sample_rate: f64,
     has_input: bool,
     drain_remaining: Option<usize>,
+    drain_total_frames: Option<usize>,
+    recursive_tail_render_frames: Option<usize>,
     pub(super) num_bands: usize,
     pub(super) _crossover_preset: i32,
     pub(super) crossover_frequencies: Vec<f32>,
@@ -477,6 +479,8 @@ impl MultibandCompressorPlugin {
             sample_rate: sr,
             has_input: false,
             drain_remaining: None,
+            drain_total_frames: None,
+            recursive_tail_render_frames: None,
             num_bands: nb,
             _crossover_preset: params.crossover_preset,
             crossover_frequencies: xfs.clone(),
@@ -1576,6 +1580,48 @@ impl MultibandCompressorPlugin {
 }
 
 impl MultibandCompressorPlugin {
+    /// Choose an explicit output-frame cutoff for recursive wet-tail rendering.
+    ///
+    /// `Some(frames)` renders that many zero-input frames after the final input,
+    /// including any remaining lookahead, then deliberately truncates the recursive
+    /// response. Zero explicitly discards it. `None` retains legacy zero-frame
+    /// completion. Exact finite one-band and settled-dry support takes precedence.
+    /// Mathematical `tail_length()` remains infinite for recursive wet processing.
+    ///
+    /// Configure through the native Rust API before wrapping the plugin or before
+    /// draining. This is a render-job policy, not a serialized audio parameter.
+    /// Reset/reinitialization retain the frame count; a new sample rate does not
+    /// rescale it. Once a nonempty EOS begins, only an identical policy is accepted.
+    ///
+    /// # Errors
+    /// Returns an error if a different policy is requested after EOS begins.
+    pub fn set_recursive_tail_render_frames(&mut self, frames: Option<usize>) -> PluginResult<()> {
+        if self.drain_remaining.is_some() && frames != self.recursive_tail_render_frames {
+            return Err(
+                "reset the multiband compressor before changing its tail render policy".into(),
+            );
+        }
+        self.recursive_tail_render_frames = frames;
+        Ok(())
+    }
+
+    /// Return the configured recursive-tail render cutoff in output frames.
+    pub fn recursive_tail_render_frames(&self) -> Option<usize> {
+        self.recursive_tail_render_frames
+    }
+
+    fn render_response_frames(&self) -> Option<usize> {
+        if !self.initialized {
+            return None;
+        }
+        // Freeze the selected extent during EOS even if a wet-to-dry smoother
+        // settles while rendering. Per-call capacity must not become zero early.
+        self.drain_total_frames.or_else(|| {
+            self.finite_response_frames()
+                .or(self.recursive_tail_render_frames)
+        })
+    }
+
     /// Exact audio support when no recursive wet path can contribute.
     fn finite_response_frames(&self) -> Option<usize> {
         if !self.initialized {
@@ -2169,6 +2215,7 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
     fn reset(&mut self) {
         self.has_input = false;
         self.drain_remaining = None;
+        self.drain_total_frames = None;
         for x in &mut self.crossover_points {
             x.reset();
         }
@@ -2274,7 +2321,7 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
     }
 
     fn drain_output_frames_max(&self) -> usize {
-        self.finite_response_frames()
+        self.render_response_frames()
             .map_or(0, |frames| frames.min(MAX_DRAIN_FRAMES))
     }
 
@@ -2283,14 +2330,13 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
             return None;
         }
         let remaining = if self.has_input {
-            self.finite_response_frames()
+            self.render_response_frames()
                 .map_or(0, |support| self.drain_remaining.unwrap_or(support))
         } else {
             0
         };
-        // Eligible finite paths publish up to 256 frames per full-capacity
-        // call with no separate output cache. Unsupported wet paths retain
-        // their existing immediate COMPLETE policy, which costs one call.
+        // Exact finite paths and explicitly cut recursive renders publish up
+        // to 256 frames per call. Legacy recursive completion costs one call.
         std::num::NonZeroU64::new(remaining.div_ceil(MAX_DRAIN_FRAMES).max(1) as u64)
     }
 
@@ -2308,13 +2354,14 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         if !self.has_input || self.drain_remaining == Some(0) {
             return Ok(PluginDrainResult::COMPLETE);
         }
-        let Some(bound) = self.finite_response_frames() else {
-            // Preserve legacy EOS behavior for recursive wet paths. A finite
-            // rendering policy remains unresolved; metadata never claims zero.
+        let Some(bound) = self.render_response_frames() else {
+            // Preserve the legacy default for recursive wet paths. A caller
+            // chooses a render cutoff explicitly; mathematical support is infinite.
             return Ok(PluginDrainResult::COMPLETE);
         };
         let remaining = self.drain_remaining.unwrap_or(bound);
         if remaining == 0 {
+            self.drain_total_frames = Some(bound);
             self.drain_remaining = Some(0);
             return Ok(PluginDrainResult::COMPLETE);
         }
@@ -2329,6 +2376,7 @@ impl ParametricInPlacePlugin for MultibandCompressorPlugin {
         let mut drain_context = *context;
         drain_context.num_frames = frames;
         self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_total_frames = Some(bound);
         self.drain_remaining = Some(remaining - frames);
         Ok(PluginDrainResult {
             frames,

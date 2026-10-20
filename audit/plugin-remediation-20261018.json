@@ -1135,9 +1135,32 @@
       "id": 34,
       "plugin": "Multiband compressor and single-band compressor alias",
       "audit_text": "[`multiband_compressor_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/src/lib/multiband_compressor_plugin.rs):2170\u20132350 combines crossover, linked detectors, sidechain shaping, range/hold controls and lookahead with an aligned dry path. The facade's `CompressorPlugin` is an alias of this implementation (`sotf-plugins/src/lib.rs`:374), so one-band construction/factory defaults are part of its correctness.\n\n`compressor_accuracy.rs`, `detector_scenarios.rs`, `range_hold.rs`, `lookahead_latency.rs` and finite-stream tests are strong. Extend reconstruction with no gain reduction, interband transient timing, stereo linking and near-threshold modulation. Recursive crossover tails need an explicit render policy. Classical detector topology and release/knee choices should be measured separately. ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Provide explicit native recursive wet-tail render policy with truthful support metadata",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/src/lib/multiband_compressor_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/tests/recursive_render.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-compressor-recursive-render.json"
+          ],
+          "result": "Native set_recursive_tail_render_frames(Some(N)) chooses N zero-input output frames then explicit recursive truncation. Default None preserves legacy behavior; mathematical recursive TailLength remains Infinite, exact one-band/dry support wins. Freeze chosen extent and reset-required EOS, including wet-to-dry settling; reset/reinit retain frame units, rejected preflight does not freeze. Native adapter forwards bounded drain/call metadata. 216 rate/channel/band/lookahead/cutoff cases match ordinary zero continuation bit exactly with sentinel/heap checks;6 new tests pass debug/release, including a real same-width DawHost chain emitting513 frames with Infinite node metadata. Full crate170 passed,0 ignored; strict all-targets QA Clippy passes. Native job setting is separate from presets/factory/FFI; no live compression/parameter defaults change. Host paths requiring finite mathematical metadata retain their restrictions; no broader graph topology support claim."
+        },
+        {
+          "task": "Extend no-reduction reconstruction, interband transient timing, stereo-link and near-threshold modulation validation",
+          "status": "pending",
+          "evidence": "Existing compressor_accuracy/detector/range/hold/lookahead suites pass but recommended additional multiband coverage remains to implement."
+        },
+        {
+          "task": "Verify single-band alias/factory defaults and separately measured detector/release/knee behavior for audit completion",
+          "status": "pending",
+          "evidence": "Facade alias and factory paths still require source/consumer review; optional offline ML remains excluded from production scope."
+        }
+      ],
+      "evidence": [
+        "Explicit native recursive rendering is implemented and validated; no claim of exact finite IIR support or automatic cutoff. Entry34 partial; overall29/45 complete."
+      ]
     },
     {
       "id": 35,
