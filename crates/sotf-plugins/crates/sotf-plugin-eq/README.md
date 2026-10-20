@@ -57,3 +57,15 @@ reference across 144 combinations of 44.1/48/96/192 kHz, 1/2/6 channels, orders
 ramps cover Q 0.1–20 and gain -18 to +18 dB, with stable interpolated poles, finite
 output and zero measured setter/callback heap operations. This does not establish
 all advanced realizations, oversampled automation or host sample-rate changes.
+
+Oversampled automation is a known open audit failure. Run the explicit gate with
+`cargo run -p sotf-plugin-eq --example qa_eq_transitions --release --features qa`.
+The retained 576-case result fails callback-partition equality at both 2x and 4x,
+in cold and warmed streams; 288 static-filter controls are bit-identical.
+Public-callback transition retirement at five milliseconds does not prove that
+the buffered audio receives the same coefficient trajectory. The gate exits
+nonzero, retains its original equality requirement, and checks finite audio plus
+zero measured scalar-setter/process heap activity. See
+`audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json` at the
+workspace root. This gate is separate from ordinary crate tests and is not an
+ignored passing regression.

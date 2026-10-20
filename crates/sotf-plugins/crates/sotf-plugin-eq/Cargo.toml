@@ -42,3 +42,8 @@ sotf-midi = { workspace = true, optional = true }
 [dev-dependencies]
 proptest = { workspace = true }
 serde_json = { workspace = true }
+
+[[example]]
+name = "qa_eq_transitions"
+path = "examples/qa_eq_transitions.rs"
+required-features = ["qa"]

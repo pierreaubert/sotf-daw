@@ -795,10 +795,20 @@
         {
           "task": "Extend host sample-rate change coverage and review finite versus recursive tail guarantees",
           "status": "pending"
+        },
+        {
+          "task": "Resolve measured oversampled automation callback dependence with buffered source-time controls",
+          "status": "pending",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/examples/qa_eq_transitions.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json"
+          ],
+          "result": "Explicit release gate fails all 576 cold/warm 2x/4x cases; maximum absolute waveform difference 1.12667965143919. All 288 static controls are bit-identical, outputs finite and measured scalar setters/process calls have zero heap operations. Existing duration tests only inspect transition retirement. Correct scheduling must preserve controls for buffered source audio, rather than adjusting the clock after callback processing. Full ordinary EQ suite remains 159 passed/11 existing ignored and strict all-targets QA Clippy passes. No production fix or weakened assertion accepted."
         }
       ],
       "evidence": [
-        "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate."
+        "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate.",
+        "Oversampled automation has a reproduced required-gate failure, retained with an executable full-matrix QA harness and positive controls. EQ remains partial and overall completion remains 32/45."
       ]
     },
     {
