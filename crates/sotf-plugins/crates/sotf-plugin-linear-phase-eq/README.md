@@ -197,25 +197,55 @@ The existing explicitly deferred `FIR-M1` diagnostic remains failing when
 run: 96 kHz / 1024 taps / 500 Hz multiband error `-0.2457439959` dB versus the
 unchanged `0.05` dB bound. It remains ignored in the regular suite under
 `audit/RELEASE-DEFERRED.md`; no taps, phase, tolerances or case changed.
-The original local QA run reported 25 physical callback deadline misses; the
-latest run reported 30. Both reported zero negotiated-work-horizon misses. Local test-profile dynamic commit timing
-also reached 14.927 ms in the original checkpoint; a follow-up release run
-reached 8.351 ms for synchronous replay. Incremental calls in the tested
-variable-budget release matrix reached 1.127 ms. A concurrent full-test run
-observed 18.899 ms synchronous and 5.254 ms incremental calls. These runs use
-different budgets and scheduling conditions; none establishes a portable
-worst-case bound or complete callback deadline. The release default-host matrix measured complete 128-frame callbacks at
-up to 0.423 ms with zero physical misses for the tested two-channel/two-stage
-routes at 48 kHz. This is a local observation; full channel/stage/rate-load and
-native direct-callback compliance remain open. Settings, commands and measurements are recorded in
-`audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json`.
+The historical static QA used a four-times-horizon scheduler-jitter threshold;
+its old "negotiated-quantum misses" count referred to that relaxed threshold,
+not the raw reported horizon. It now prints physical, raw horizon and 4x
+threshold misses separately, retaining the historical assertions. It no longer
+claims engine queued-work compliance from the relaxed diagnostic. A local
+final run observed 23 physical misses, zero raw horizon misses and zero 4x
+threshold misses for its static single-stage matrix; native compliance remains
+unproven.
+
+The dedicated `qa-dynamic-linear-phase-eq` target measures complete default-host
+callbacks at 48/96/192 kHz, 2/8/12 channels, 1/2/10 ordered stages, both phases,
+and 128/512-frame callbacks (108 rows, 8192 taps per stage). Earlier stages
+process Stereo and the last processes Mid through explicit disjoint pairs.
+It populates full history, then separates steady-before, priming/acceptance,
+blend and steady-after p50/p95/p99/max timings. Warm-up elapsed times are not
+counted as deadline observations; allocation/free and finite checks cover them.
+Each steady leg spans at least one 8192-frame partition cycle. The target
+prints every row as JSON and returns nonzero if any physical/raw-horizon
+deadline, heap, replay-budget, output-finiteness or settlement check fails.
+No jitter multiplier is applied.
+
+The full release baseline **fails**: 49/108 rows and 14635 callbacks missed
+physical/raw-horizon deadlines, including steady processing at heavy layouts.
+All heap, finite-output, replay-bound and completion checks passed. The
+shared-head branch-removal experiment remained failing (51/108 rows) with only
+about 1–2% typical local p50 changes, so it was discarded and the shared source
+was fully restored. Both measurement sets and reproducible experiment patches
+are retained. These results do not establish full-load or native direct-callback
+compliance; the small two-channel/two-stage release result is not a substitute.
+See `audit/artifacts/plugin-audit-20261018/linear-phase-eq-load.json`,
+`linear-phase-eq-load-ring-spans.json`, `linear-phase-eq-load-comparison.json`
+and `linear-phase-eq-load-checks.json` for commands, rows and verification.
+The ignored legacy convolution array replay was not executed: its preserved
+pre-edit baseline directories are absent, and no replacement arrays were made.
 
 ## Testing
 
 ```bash
 cargo test -p sotf-plugin-linear-phase-eq
+# Explicit load diagnostic; all rows print before a failing exit status.
+cargo run -p sotf-plugin-linear-phase-eq --release --features qa --bin qa-dynamic-linear-phase-eq
 ```
 
 ## License
 
 Part of the SOTF (Sound of the Future) project.
+
+The final combined shared/FIR/Convolution/Crossover regression run recorded
+365 passed, one failed and eight existing ignored tests. The unchanged
+Convolution finite-stream test returned 2,044 extra tail frames in the combined
+run while isolated reruns passed. This remains unresolved; see the load-checks
+artifact and full regression log. Scoped shared/FIR QA Clippy passes.

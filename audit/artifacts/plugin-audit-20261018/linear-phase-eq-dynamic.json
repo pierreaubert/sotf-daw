@@ -87,7 +87,7 @@
     {
       "name": "Commit priming work",
       "observed_local_test_profile_commit_max_ms": 14.927,
-      "result": "Default host now uses sample-clock bounded priming with published pending progress. Two-channel/two-stage release callbacks verified; full channel/stage/rate-load and native direct-callback compliance remain open."
+      "result": "Full 108-row raw-deadline release matrix is now executed and fails: 49 baseline rows/14635 callbacks miss physical/reported horizons, including steady heavy layouts. Functional/heap/replay/completion checks pass. Ring-span candidate fails 51 rows and is discarded; shared runtime restored. Capacity mitigation and native direct-callback compliance remain open. Historical static 4x jitter threshold is now labeled accurately, not a queued-work pass."
     },
     {
       "name": "Native/FFI integration",
@@ -105,7 +105,8 @@
     "actual_callback_deadline_misses": 30,
     "negotiated_quantum_misses": 0,
     "aggregate_max_ms": 5.434125,
-    "result": "Engine queued-work contract passes with zero negotiated-quantum misses; direct callback compliance explicitly unresolved (30 physical misses). Static matrix excludes dynamic priming."
+    "result": "Engine queued-work contract passes with zero negotiated-quantum misses; direct callback compliance explicitly unresolved (30 physical misses). Static matrix excludes dynamic priming.",
+    "historical_timing_interpretation": "The original binary counted its field named negotiated_quantum_misses against 4x the reported horizon. That historical zero is not an unmultiplied horizon measurement. The final corrected static diagnostic reports physical/raw-horizon/4x counts separately; see linear-phase-eq-load-checks.json."
   },
   "clippy": {
     "command": "rtk cargo clippy -p sotf-plugin-linear-phase-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
@@ -183,7 +184,8 @@
     "actual_callback_deadline_misses": 25,
     "negotiated_quantum_misses": 0,
     "aggregate_max_ms": 3.775042,
-    "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost."
+    "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost.",
+    "historical_timing_interpretation": "The original binary counted its field named negotiated_quantum_misses against 4x the reported horizon. That historical zero is not an unmultiplied horizon measurement. The final corrected static diagnostic reports physical/raw-horizon/4x counts separately; see linear-phase-eq-load-checks.json."
   },
   "checkpoint_3280828_passed_tests": 136,
   "default_host_followup": {
@@ -278,5 +280,12 @@
   },
   "revision_followup_artifact": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json",
   "checkpoint_94be59f_passed_tests": 139,
-  "latest_validation_artifact": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json"
+  "latest_validation_artifact": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json",
+  "load_followup_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load.json",
+    "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-ring-spans.json",
+    "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-comparison.json",
+    "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-checks.json"
+  ],
+  "load_followup_regression_limit": "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log."
 }

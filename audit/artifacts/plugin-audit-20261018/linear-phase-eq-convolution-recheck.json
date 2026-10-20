@@ -1,0 +1,57 @@
+{
+  "original_multi_package_exit": 101,
+  "original_error": "convolution finite_stream target failed; original first failure detail was not retained in the truncated aggregate tail",
+  "isolated_cargo_target_exit": 0,
+  "isolated_cargo_target_passed": 7,
+  "same_feature_binary_runs": [
+    {
+      "attempt": 1,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 2,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 3,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 4,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 5,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 6,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s\n\n"
+    },
+    {
+      "attempt": 7,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    },
+    {
+      "attempt": 8,
+      "command": "rtk proxy /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc --nocapture",
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n"
+    }
+  ],
+  "note": "Explicit diagnostic reruns do not erase the initial aggregate failure; no convolution runtime or test source changed."
+}

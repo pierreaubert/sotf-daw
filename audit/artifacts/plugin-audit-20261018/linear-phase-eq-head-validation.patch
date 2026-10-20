@@ -1,0 +1,110 @@
+--- a/crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs
+@@ -5,7 +5,7 @@
+ use std::sync::Arc;
+ 
+ pub(super) struct TimeDomainHead {
+-    /// First N samples of the IR (reversed for direct convolution)
++    /// First N impulse-response samples in convolution order.
+     pub(super) ir_taps: Arc<[f32]>,
+     /// Circular input history buffer
+     pub(super) history: Vec<f32>,
+@@ -48,3 +48,98 @@
+         self.pos = 0;
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    // Direct finite convolution with explicit zero prehistory, independent of
++    // any ring cursor. Accumulate f32 products in coefficient order to freeze
++    // the established rounding order, including signed zero and infinity.
++    fn reference(taps: &[f32], input: &[f32], frame: usize) -> f32 {
++        let mut sum = 0.0_f32;
++        for (tap, &coefficient) in taps.iter().enumerate() {
++            let sample = frame.checked_sub(tap).map_or(0.0, |i| input[i]);
++            sum += coefficient * sample;
++        }
++        sum
++    }
++
++    #[test]
++    fn head_matches_ordered_convolution_at_every_wrap_and_after_reset() {
++        for n in [1, 2, 3, 7, 16, 31, 32, 33, 63, 64, 127] {
++            let taps: Vec<f32> = (0..n)
++                .map(|i| ((i * 7919 % 104729) as f32 / 104729.0 - 0.5) * 0.7)
++                .collect();
++            let mut input: Vec<f32> = (0..8 * n + 17)
++                .map(|i| ((i * 15427 % 65521) as f32 / 65521.0 - 0.5) * 0.7)
++                .collect();
++            for (i, &x) in [
++                0.0,
++                -0.0,
++                1e-38,
++                -1e-38,
++                f32::MAX / 1000.0,
++                -f32::MAX / 1000.0,
++            ]
++            .iter()
++            .enumerate()
++            {
++                input[i] = x;
++            }
++            let mut head = TimeDomainHead::from_taps(Arc::from(taps.clone()));
++            for (frame, &x) in input.iter().enumerate() {
++                assert_eq!(
++                    head.process_sample(x).to_bits(),
++                    reference(&taps, &input, frame).to_bits(),
++                    "n={n} frame={frame}"
++                );
++            }
++            for prefix in [n - 1, n, n + 3] {
++                for &x in &input[..prefix] {
++                    head.process_sample(x);
++                }
++                head.reset();
++                for (frame, &x) in input.iter().enumerate() {
++                    assert_eq!(
++                        head.process_sample(x).to_bits(),
++                        reference(&taps, &input, frame).to_bits(),
++                        "reset n={n} frame={frame}"
++                    );
++                }
++            }
++        }
++    }
++
++    #[test]
++    fn head_preserves_nonfinite_convolution_classification() {
++        let taps = [0.0, 0.25, -0.5, 1.0, -0.0, 0.0, 0.125];
++        let input = [
++            0.0,
++            f32::INFINITY,
++            0.5,
++            f32::NEG_INFINITY,
++            1.0,
++            f32::NAN,
++            0.25,
++            0.0,
++            1.0,
++            -0.0,
++            0.2,
++            0.3,
++            0.1,
++            0.2,
++            0.4,
++        ];
++        let mut head = TimeDomainHead::from_taps(Arc::from(taps));
++        for (frame, &x) in input.iter().enumerate() {
++            let expected = reference(&taps, &input, frame);
++            let actual = head.process_sample(x);
++            if expected.is_nan() {
++                assert!(actual.is_nan());
++            } else {
++                assert_eq!(actual.to_bits(), expected.to_bits());
++            }
++        }
++    }
++}

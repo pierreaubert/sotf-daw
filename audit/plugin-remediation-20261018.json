@@ -926,9 +926,22 @@
           "result": "Before fix, delayed A->B->A worker accepted as generation 3 instead of retaining 2; a fresh foreign-graph payload changed destination generation 0->1/gain 0->9 dB. Live snapshots now carry opaque per-plugin identity plus accepted generation. Exact token and configuration validation precede synchronous/budgeted priming; accepted no-op edits and real rate changes consume revisions. Both phases cover ABA/no-op stale refusal, retained controls/audio and off-audio cancel. Foreign payload refuses before replay, even after origin drop. Terminal 63-bit revision and seqlock publication tested: no wrap, zero-heap retained RevisionExhausted refusal, transactional rate refusal, DSP/detached snapshot alignment. Existing same-current-base queue/cancel policy remains; no latest-request-wins claim. In-memory Rust snapshot gains revision and refusal enum adds one variant; serialized presets/params/FIR/latency unchanged."
         },
         {
-          "task": "Resolve realtime deadline evidence for large synchronous priming and direct callbacks",
+          "task": "Measure full dynamic host load and report actual deadline criteria without hiding failures",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load.json",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-ring-spans.json",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-comparison.json",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-load-checks.json"
+          ],
+          "result": "New explicit 108-row release QA spans 48/96/192 kHz, 2/8/12 channels, 1/2/10 ordered stages, both phases and 128/512 frames at 8192 taps. Full matrix coverage verified. Raw deadline margin 1.0; every row retained, nonzero on misses. Baseline fails 49 rows/14635 callbacks (1056 steady-before,12460 priming,70 blend,1049 steady-after), with zero heap/finite/replay/settlement failures. Shared-ring rewrite was numerically compatible but not a useful capacity fix (51 failed rows; ~1-2% typical local p50 change), so removed. Exact experiment/validation patches preserve reproducibility without adding an arithmetic-order production requirement. Static QA now distinguishes raw horizon from historical 4x jitter threshold; its gate is unchanged and unsupported queued-work pass claim removed."
+        },
+        {
+          "task": "Address measured full-load deadline failures and native callback compliance",
           "status": "pending",
-          "evidence": "Default host budgeted adoption/progress publication is complete. The two-channel/two-stage 8192-tap release callback matrix measured 423 us max at 128 frames/48 kHz with zero physical misses. Full channel/stage/rate-load release validation and loaded native/FFI direct-callback adaptation remain open. Existing plain-DSP static QA recorded 30 physical misses and zero negotiated-quantum misses. Synchronous direct callers retain an explicit API; no portable deadline bound claimed."
+          "evidence": "Full-load measurement is complete but capacity remains failing: baseline strict 108-row release matrix misses in 49 rows/14635 callbacks; high-load medians can exceed budgets even before updates. Do not infer broad support from earlier two-channel/two-stage zero-miss runs. The tested micro-optimization was rejected and source restored. No quantum/deadline/tolerance/matrix reduction. Structural workload/convolution scheduling mitigation and loaded native/FFI device gates remain outstanding."
         },
         {
           "task": "Resolve deferred FIR-M1 response limitation without weakening contracts",
@@ -939,7 +952,9 @@
       "evidence": [
         "Current full FIR crate: 143 passed; existing FIR-M1 accuracy diagnostic and illustrative doctest remain ignored, with no new ignore or weakened tolerance. Release lib + detached host suites: 102 passed, no ignored tests.",
         "Current affected integration: 5 factory + 2 facade/DawHost + 6 embedded-engine tests pass. Real-manager consumer compiles only; unavailable ALSA-null playback gate not counted. Core all-targets and scoped factory/facade/engine --no-deps Clippy checks pass with -D warnings; prior broader streaming-dependency lint failure remains recorded, not suppressed.",
-        "Opaque accepted revision/owner fencing closes ABA/no-op and foreign-graph acceptance, preserving zero-heap refusals, retained ownership and live audio. In-memory snapshot API extension and RevisionExhausted are documented; serialized settings, FIR behavior/latency and bounds unchanged. Same-current-base request ordering follows existing queue/cancel semantics. Full-load/native deadlines and deferred FIR-M1 remain pending. Entry stays partial; overall complete count is 29/45."
+        "Opaque accepted revision/owner fencing closes ABA/no-op and foreign-graph acceptance, preserving zero-heap refusals, retained ownership and live audio. In-memory snapshot API extension and RevisionExhausted are documented; serialized settings, FIR behavior/latency and bounds unchanged. Same-current-base request ordering follows existing queue/cancel semantics. Full-load/native deadlines and deferred FIR-M1 remain pending. Entry stays partial; overall complete count is 29/45.",
+        "Load follow-up: two full 108-row release measurements intentionally exit 1; data and rejected candidate retained. No production DSP runtime change accepted in this follow-up. Static QA reporting corrected. Final restored shared/FIR/convolution/crossover verification recorded separately; legacy ignored capture/replay inventory preserved and required AUD134 replay folders absent (not regenerated).",
+        "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log."
       ]
     },
     {

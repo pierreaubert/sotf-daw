@@ -1,0 +1,6 @@
+{
+  "binary": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc",
+  "cwd": "crates/sotf-plugins/crates/sotf-plugin-convolution",
+  "exit_code": 0,
+  "output": "\nrunning 1 test\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.09s\n\n"
+}

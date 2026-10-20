@@ -1,0 +1,104 @@
+{
+  "checks": [
+    {
+      "command": "rtk proxy cargo test -p plugins-spatial time_domain_head --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "exit_code": 0,
+      "result_lines": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s"
+      ],
+      "scope": "Experimental numerical validation patch applied; not a test present in final source. Apply preserved patch to reproduce."
+    },
+    {
+      "command": "rtk proxy cargo run -p sotf-plugin-linear-phase-eq --features qa --bin qa-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "exit_code": 0,
+      "result_lines": [
+        "  aggregate p50/p95/p99/max: 70.208\u00b5s/1.384459ms/2.219417ms/8.668583ms; actual-callback misses: 23; reported-horizon misses: 0; 4x-jitter-threshold misses: 0",
+        "  local 4x-jitter timing diagnostic: PASS (zero allocations; this threshold does not prove the reported work horizon)",
+        "  direct-callback status: UNRESOLVED (23 measured physical-deadline misses); AU/NIH require an approved fixed-rate adapter",
+        "[LOCAL 4X TIMING DIAGNOSTIC COMPLETE; WORK-HORIZON/DIRECT-CALLBACK COMPLIANCE UNRESOLVED] LinearPhaseEQ QA Complete."
+      ]
+    },
+    {
+      "command": "rtk proxy cargo clippy -p plugins-spatial -p sotf-plugin-linear-phase-eq --all-targets --features sotf-plugin-linear-phase-eq/qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "exit_code": 0,
+      "result_lines": []
+    },
+    {
+      "command": "rtk proxy cargo test -p plugins-spatial -p sotf-plugin-linear-phase-eq -p sotf-plugin-convolution -p sotf-plugin-crossover --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
+      "exit_code": 0,
+      "passed": 368,
+      "ignored": 8,
+      "scope": "Intermediate check with experimental numerical validation tests still applied; superseded by final_workspace_tests below."
+    }
+  ],
+  "note": "Runtime ring-span candidate discarded and shared source restored exactly to HEAD. Independent numerical experiment tests retained only in reproducible validation patch. Static 4x threshold unchanged, now correctly labeled; strict dynamic QA remains failing.",
+  "final_workspace_tests": {
+    "command": "rtk proxy cargo test -p plugins-spatial -p sotf-plugin-linear-phase-eq -p sotf-plugin-convolution -p sotf-plugin-crossover --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
+    "exit_code": 101,
+    "passed": 359,
+    "ignored": 8,
+    "scope": "Final workspace: shared source identical to HEAD; experimental validation tests only preserved as artifacts. No ignored baseline-capture/replay/measurement, FIR-M1 or doctest gate altered.",
+    "failure_output": "d; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 21 tests\ntest detached_initial_accepted_base_matches_params ... ok\ntest detached_reset_retirement_and_eof_preserve_accepted ... ok\ntest detached_queue_full_retains_live_without_alloc ... ok\ntest detached_concurrent_submitters_bound_loudly ... ok\ntest detached_old_rate_payload_refuses_then_cancel_reprepare_recovers ... ok\ntest detached_stale_base_refuses_and_reprepare_recovers ... ok\ntest detached_orphan_handle_cannot_touch_new_graph ... ok\ntest fresh_worker_from_an_identical_other_graph_is_refused_before_priming ... ok\ntest detached_rate_reinit_republishes_without_touching_bands ... ok\ntest detached_cancel_evicts_stale_head_and_fresh_applies ... ok\ntest detached_retired_holding_slot_mirror_reports_third_unclaimed ... ok\ntest detached_cancel_defers_when_outbox_full_then_recovers ... ok\ntest detached_second_edit_during_blend_applies_after_retirement ... ok\ntest host_priming_progress_is_unaccepted_and_f64_matches_the_f32_clock ... ok\ntest cancelling_or_invalidating_host_priming_never_accepts_a_partial_target ... ok\ntest wrong_clock_render_does_not_accept_a_queued_worker_result ... ok\ntest detached_worker_submit_commits_once_with_exact_blend ... ok\ntest returning_to_the_same_controls_does_not_revive_an_old_worker_result ... ok\ntest detached_seqlock_soak_never_tears ... ok\ntest maximum_ordered_worker_results_refuse_superseded_base_and_reset_cleanly ... ok\ntest maximum_ordered_host_priming_and_blend_are_sample_clock_partition_invariant ... ok\n\ntest result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s\n\n\nrunning 5 tests\ntest updated_stream_drain_length_is_exact_publicly ... ok\ntest prepare_commit_reclaim_flow_updates_live_config ... ok\ntest realtime_commit_retains_prepared_on_refusal_publicly ... ok\ntest stale_and_drain_commits_are_refused_publicly ... ok\ntest updated_stream_matches_fresh_reference_without_steps ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 14 tests\ntest dry_wet_mix_aligns_dry_with_linear_phase_latency ... ok\ntest wet_impulse_peak_matches_reported_even_tap_latency ... ok\ntest unknown_parameter_is_rejected ... ok\ntest dry_mix_passthrough ... ok\ntest plugin_info_and_channels ... ok\ntest parameter_roundtrip ... ok\ntest reset_then_process_is_stable ... ok\ntest latency_matches_fir_length ... ok\ntest invalid_parameter_value_is_rejected ... ok\ntest minimum_phase_processes_finite_audio ... ok\ntest plugin_processes_silence_and_sine ... ok\ntest realtime_quantum_reports_tail_fft_work_budget ... ok\ntest eq_boost_changes_amplitude ... ok\ntest mix_automation_is_block_partition_invariant ... ok\n\ntest result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n\nrunning 7 tests\ntest roundtrip_mix ... ok\ntest process_finite_output_default ... ok\ntest linear_phase_latency_matches_fir_length ... ok\ntest process_finite_output_with_active_band ... ok\ntest dry_mix_passthrough ... ok\ntest inactive_bands_approximately_passthrough_after_latency ... ok\ntest minimum_phase_latency_is_zero ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\ntest crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs - dynamic_host (line 52) ... ignored\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nall doctests ran in 0.14s; merged doctests compilation took 0.13s\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1.55s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/plugins_spatial-6c5493250362fad3)\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-c7a1ad89c5461efc)\n     Running tests/direct_convolution.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/direct_convolution-637d4cf3a35d460f)\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-164314124b74c9fc)\nerror: test failed, to rerun pass `-p sotf-plugin-convolution --test finite_stream`\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-9661c9909a25204e)\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_crossover-5f4cf210f6c20401)\n     Running tests/aud141_baselines.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud141_baselines-c3430332c4eb19a8)\n     Running tests/aud141_realtime.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud141_realtime-dced0be0d9da7516)\n     Running tests/aud141_recombination.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud141_recombination-210ce1bcd3f179af)\n     Running tests/aud142_iir_families.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud142_iir_families-cba940f7990e6243)\n     Running tests/aud142_preedit_baselines.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud142_preedit_baselines-f57e927d9c7614e2)\n     Running tests/audit_rate_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_rate_contract-47188f50e23d14f6)\n     Running tests/block_kernels.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/block_kernels-dca148775c90ec9c)\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-fd1853dda48584bf)\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-426409048955544e)\n     Running tests/property_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/property_tests-b85e070dfbac8b41)\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_linear_phase_eq-6c4b99d0af60dd86)\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/analytic_response-6516af16ccad112e)\n     Running tests/audit_dynamic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_dynamic_response-851fa384c0089432)\n     Running tests/channel_placement.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/channel_placement-3b532cd292891540)\n     Running tests/dynamic_detached_control.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/dynamic_detached_control-8422bb7fa1c851cd)\n     Running tests/dynamic_updates.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/dynamic_updates-35015fd5cef24c73)\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-c5845dd99e3e363e)\n     Running tests/property_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/property_tests-b6d398fdb38c941b)\n   Doc-tests plugins_spatial\n   Doc-tests sotf_plugin_convolution\n   Doc-tests sotf_plugin_crossover\n   Doc-tests sotf_plugin_linear_phase_eq\nerror: 1 target failed:\n    `-p sotf-plugin-convolution --test finite_stream`\n"
+  },
+  "final_workspace_repeat": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "-p",
+      "sotf-plugin-linear-phase-eq",
+      "-p",
+      "sotf-plugin-convolution",
+      "-p",
+      "sotf-plugin-crossover",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-fail-fast"
+    ],
+    "exit_code": 101,
+    "passed": 365,
+    "failed": 1,
+    "ignored": 8,
+    "full_output": "linear-phase-eq-final-regression.txt",
+    "note": "Original aggregate exit 101 is preserved. Isolated target and eight exact-binary reruns passed; original failure cause remains unexplained.",
+    "failure_detail": {
+      "test": "capacity_partitions_and_midstream_controls_match_zero_padded_reference",
+      "case": "nupc=false, head=false, capacity=1",
+      "actual_interleaved_samples": 44246,
+      "expected_interleaved_samples": 40158,
+      "overlap_samples_equal": true,
+      "extra_tail_frames": 2044,
+      "status": "Unresolved aggregate-only convolution tail-length failure; exact test also passes in package working directory. No convolution code or test changes in this checkpoint."
+    }
+  },
+  "final_clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "plugins-spatial",
+      "-p",
+      "sotf-plugin-linear-phase-eq",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "output": "    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Checking sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 2.51s\n"
+  }
+}

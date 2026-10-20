@@ -1,0 +1,54 @@
+{
+  "steady_before": {
+    "paired_p50_ratio_median": 0.9911253678673986,
+    "paired_p50_ratio_geomean": 0.9993129627158697,
+    "baseline_callbacks": 6912,
+    "baseline_physical_misses": 1056,
+    "candidate_physical_misses": 1003
+  },
+  "priming_or_acceptance": {
+    "paired_p50_ratio_median": 0.9877624917358083,
+    "paired_p50_ratio_geomean": 0.9887289907855824,
+    "baseline_callbacks": 18864,
+    "baseline_physical_misses": 12460,
+    "candidate_physical_misses": 12424
+  },
+  "blend": {
+    "paired_p50_ratio_median": 0.9758106312030137,
+    "paired_p50_ratio_geomean": 0.9827294111800001,
+    "baseline_callbacks": 270,
+    "baseline_physical_misses": 70,
+    "candidate_physical_misses": 70
+  },
+  "steady_after": {
+    "paired_p50_ratio_median": 0.9821859646368418,
+    "paired_p50_ratio_geomean": 0.9846393359602427,
+    "baseline_callbacks": 6912,
+    "baseline_physical_misses": 1049,
+    "candidate_physical_misses": 1013
+  },
+  "decision": "Rejected runtime ring-span rewrite: only ~1-2% typical local timing difference and no deadline-gate improvement. Shared source fully restored; independent experiment tests preserved as a reproducible patch rather than imposing a new production arithmetic-order contract.",
+  "baseline_summary": {
+    "deadline_margin": 1.0,
+    "failed_rows": 49,
+    "physical_misses": 14635,
+    "reported_misses": 14635,
+    "rows": 108,
+    "timing_scope": "complete default-host callbacks, local wall-clock observation"
+  },
+  "candidate_summary": {
+    "deadline_margin": 1.0,
+    "failed_rows": 51,
+    "physical_misses": 14510,
+    "reported_misses": 14510,
+    "rows": 108,
+    "timing_scope": "complete default-host callbacks, local wall-clock observation"
+  },
+  "functional_failures_baseline": 0,
+  "functional_failures_candidate": 0,
+  "unexecuted_legacy_replay": "Convolution aud134_preedit_full_audio_arrays_match_legacy_and_diagonal_routes remains ignored; its required render-baseline and legacy-four-channel-baseline folders are absent under crates/sotf-plugins/target/audit-artifacts/aud134-preedit-9302797. Capture tests not invoked and no legacy arrays regenerated.",
+  "notes": "Different sequential wall-clock runs; small p50 differences do not establish a causal or portable speedup. Baseline/candidate use identical matrix, sampling and margin 1.0; initial warm-up elapsed excluded from deadline counts but heap/finite checks included.",
+  "numerical_validation_patch": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-head-validation.patch",
+  "runtime_candidate_patch": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-ring-spans.patch",
+  "restored_source_sha256": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872"
+}

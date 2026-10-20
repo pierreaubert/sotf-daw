@@ -79,3 +79,15 @@ cargo test -p sotf-plugin-linear-phase-eq
   come from live snapshots, not settings, serde or hand-assembled literals.
 - Accepted-revision fencing does not implement newest-intent request ordering:
   same-base jobs follow the existing queue policy. Keep that distinction explicit.
+
+- `qa-dynamic-linear-phase-eq` is an explicit 108-row maximum-tap load diagnostic,
+  not part of the existing Justfile's static diagnostic list. It uses raw
+  physical/reported deadlines (margin 1.0), retains every row and exits nonzero
+  on any missed deadline or invariant. Do not trim cases or inflate the quantum.
+- Static `qa-linear-phase-eq` preserves its old 4x local jitter gate but labels
+  it as such and reports raw horizon misses separately. Never infer queued-work
+  or native callback compliance from that relaxed diagnostic.
+- Full-load evidence currently fails; numerical/heap correctness does not close
+  capacity. The ring-span experiment was discarded and its shared runtime is
+  restored. Numerical experiment tests and candidate code are artifact patches,
+  not extra production arithmetic-order requirements.

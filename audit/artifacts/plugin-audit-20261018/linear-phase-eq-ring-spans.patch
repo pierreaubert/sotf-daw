@@ -1,0 +1,31 @@
+--- a/crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs
+@@ -30,16 +30,19 @@
+     pub(super) fn process_sample(&mut self, sample: f32) -> f32 {
+         self.history[self.pos] = sample;
+         let mut output = 0.0;
+-        let mut read = self.pos;
+-        for &tap in self.ir_taps.iter() {
+-            output += tap * self.history[read];
+-            if read == 0 {
+-                read = self.n_taps - 1;
+-            } else {
+-                read -= 1;
+-            }
++        // Split once at the ring boundary instead of branching per tap.
++        // Preserve coefficient and addition order exactly: newest through
++        // history[0], then history[N-1] through the remaining older samples.
++        let split = self.pos + 1;
++        let (recent, older) = self.history.split_at(split);
++        let (first, rest) = self.ir_taps.split_at(split);
++        for (&tap, &input) in first.iter().zip(recent.iter().rev()) {
++            output += tap * input;
+         }
+-        self.pos = (self.pos + 1) % self.n_taps;
++        for (&tap, &input) in rest.iter().zip(older.iter().rev()) {
++            output += tap * input;
++        }
++        self.pos = if split == self.n_taps { 0 } else { split };
+         output
+     }
+ 

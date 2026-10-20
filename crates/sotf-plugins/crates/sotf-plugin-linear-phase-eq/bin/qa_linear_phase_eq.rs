@@ -71,12 +71,13 @@ fn main() {
     println!("\n[Test 5] Partitioned-convolution layout/block matrix");
     const WARMUP_CALLBACKS: usize = 128;
     const SAMPLED_CALLBACKS: usize = 256;
-    // This benchmark is not executed under a real-time scheduler. Keep the
-    // negotiated quantum visible, but allow normal wall-clock scheduler jitter.
+    // Historical local diagnostic threshold, not a work-horizon guarantee.
+    // Count the unmultiplied physical and reported deadlines separately.
     const SCHEDULER_JITTER_MARGIN: f64 = 4.0;
     let mut aggregate = Vec::new();
     let mut actual_callback_misses = 0usize;
-    let mut scheduler_quantum_misses = 0usize;
+    let mut reported_quantum_misses = 0usize;
+    let mut jitter_threshold_misses = 0usize;
     for channels in [1, 2, 8, 12] {
         for fir_length_index in 0..4 {
             let mut candidate = LinearPhaseEqPlugin::from_params(
@@ -132,7 +133,8 @@ fn main() {
                     candidate.process_in_place(&mut audio, &context).unwrap();
                     let elapsed = started.elapsed();
                     actual_callback_misses += usize::from(elapsed >= actual_deadline);
-                    scheduler_quantum_misses += usize::from(elapsed >= scheduler_budget);
+                    reported_quantum_misses += usize::from(elapsed >= scheduler_deadline);
+                    jitter_threshold_misses += usize::from(elapsed >= scheduler_budget);
                     samples.push(elapsed);
                 }
                 samples.sort_unstable();
@@ -150,15 +152,15 @@ fn main() {
     }
     aggregate.sort_unstable();
     println!(
-        "  aggregate p50/p95/p99/max: {:?}/{:?}/{:?}/{:?}; actual-callback misses: {actual_callback_misses}; negotiated-quantum misses: {scheduler_quantum_misses}",
+        "  aggregate p50/p95/p99/max: {:?}/{:?}/{:?}/{:?}; actual-callback misses: {actual_callback_misses}; reported-horizon misses: {reported_quantum_misses}; 4x-jitter-threshold misses: {jitter_threshold_misses}",
         nearest_rank(&aggregate, 50),
         nearest_rank(&aggregate, 95),
         nearest_rank(&aggregate, 99),
         aggregate[aggregate.len() - 1]
     );
-    assert_eq!(scheduler_quantum_misses, 0);
+    assert_eq!(jitter_threshold_misses, 0);
     println!(
-        "  engine queued-work contract: PASS (all cases zero-allocation and below the reported work horizon)"
+        "  local 4x-jitter timing diagnostic: PASS (zero allocations; this threshold does not prove the reported work horizon)"
     );
     if actual_callback_misses == 0 {
         println!(
@@ -171,7 +173,7 @@ fn main() {
     }
 
     println!(
-        "\n[ENGINE QUEUED-CONTRACT PASS; DIRECT-CALLBACK COMPLIANCE UNRESOLVED] LinearPhaseEQ QA Complete."
+        "\n[LOCAL 4X TIMING DIAGNOSTIC COMPLETE; WORK-HORIZON/DIRECT-CALLBACK COMPLIANCE UNRESOLVED] LinearPhaseEQ QA Complete."
     );
 }
 

@@ -1,5 +1,12 @@
 # Unreleased
 
+- Add an explicit full-load default-host QA target with all 108 rows retained,
+  raw deadline budgets, phase timings and allocation/free/invariant checks.
+  The observed high-load deadline gate remains failing; no runtime optimization
+  or workload restriction is accepted from this experiment.
+- Correct static QA reporting: distinguish raw horizon misses from its existing
+  4x scheduler-jitter threshold and remove the unsupported queued-work pass claim.
+
 - Bind worker snapshots to an opaque plugin identity and accepted revision.
   Refuse stale A→B→A/no-op results and foreign-graph payloads before priming,
   retaining ownership and audio state. Detached snapshots use the same token.
