@@ -407,13 +407,24 @@
           "result": "Timestamp-only filenames collided between parallel IR fixtures: retained original run reproduces missing file; exclusive-create diagnostic reproduces AlreadyExists on attempt 8. Atomic per-process sequence and exclusive creation prevent overwrite/deletion between fixtures. Forty parallel runs pass (280 test executions), affected shared/FIR/convolution/crossover combined run 366 passed, 8 existing ignored, strict convolution all-targets Clippy passes. Production DSP and numerical/tail assertions unchanged."
         },
         {
-          "task": "Extend IR-update storms, worker/reclaimer saturation and maximum-size multichannel validation",
+          "task": "Bound IR request storms and cancel superseded worker preparation while preserving control state on refusal",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/loader_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-bounded-loader.json"
+          ],
+          "result": "Global unbounded request queue replaced by sixteen pending slots with at most four existing workers. Nonblocking full/disconnected refusal preserves prior mailbox/generation/status/live IR; refused rate initialization restores prior clock before smoother changes. Weak lifetime cancels queued stale work before decoding/planning and suppresses publication after cancellation during an in-flight build. Clear/drop/successful synchronous replacement cancel older workers; synchronous failure preserves them. Six deterministic tests include 1024 overflow refusals, paused concurrent worker/backlog, current failure adoption with zero heap work, and synchronous replacement ownership. Full shared/Convolution regression 102 passed/4 existing ignored; six release loader tests pass with qa instrumentation; all-targets QA Clippy -D warnings passes. Initial release-without-qa compile failure preserved as instrumentation setup evidence; no production DSP/preset/latency changes."
+        },
+        {
+          "task": "Validate maximum-size multichannel performance and sustained mixed-instance loading",
           "status": "pending",
-          "evidence": "Original audit requirements remain; fixture isolation alone does not complete Convolution."
+          "evidence": "Worker request-count bounds/cancellation and deterministic saturation/refusal tests are implemented; original maximum-size CPU/memory measurements and sustained mixed-instance validation remain open."
         }
       ],
       "evidence": [
-        "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45."
+        "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45.",
+        "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45."
       ]
     },
     {

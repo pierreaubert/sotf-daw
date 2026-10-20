@@ -42,6 +42,23 @@ requests are generation-tagged; failed or stale replacements leave the last-know
 Old large states are reclaimed in the background. Use `load_status()` to distinguish idle, loading,
 ready, and failed states.
 
+The shared asynchronous loader permits at most four active workers and sixteen
+queued, unprepared requests. IR selection and rate-change submission run on the
+control thread. A full queue returns a retryable error immediately; an unavailable
+loader also returns an error. Both refusals preserve the preceding request,
+mailbox, generation, load status and live IR. Rejected rate initialization keeps
+the preceding prepared clock and smoother timing. Callers must retry a refused
+selection; it has not replaced the prior pending selection.
+
+A later accepted selection, clear, successful synchronous `load_ir`, or plugin
+destruction cancels earlier work. Workers skip cancelled queued requests before
+file decoding or FFT planning. Preparation already underway may finish, then its
+cancelled result is destroyed on that worker. The bounded queue can remain full
+until a worker becomes available to remove cancelled requests. This bounds the
+request backlog, not aggregate memory across arbitrary plugin instances; active
+and prepared IRs still use the existing per-IR resource checks. Cancellation
+never drops worker tokens or completion storage in process/drain/reset.
+
 WAV, FLAC, and AIFF IRs are supported. The loader requires valid sample-rate metadata and enforces
 32 channels, 30 seconds, and a 512 MiB estimated realtime-backend budget.
 

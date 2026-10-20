@@ -26,7 +26,7 @@ use std::any::Any;
 use std::path::Path;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex, Weak, mpsc};
 use symphonia::core::audio::{Audio, GenericAudioBufferRef};
 use symphonia::core::codecs::CodecParameters;
 use symphonia::core::codecs::audio::AudioDecoderOptions;
@@ -46,9 +46,30 @@ struct IrLoadRequest {
     head_taps: usize,
     true_stereo: bool,
     result_tx: std::sync::mpsc::Sender<IrLoadCompletion>,
+    lifetime: Weak<()>,
 }
 
-static IR_LOADER: OnceLock<mpsc::Sender<IrLoadRequest>> = OnceLock::new();
+impl IrLoadRequest {
+    fn complete(self, build: impl FnOnce(&Self) -> Result<IrLoadResult, String>) {
+        // A superseded or destroyed plugin must not decode/plan queued work.
+        // Do not hold a strong token while building: cancellation can arrive
+        // during preparation, in which case the result is destroyed here.
+        if self.lifetime.strong_count() == 0 {
+            return;
+        }
+        let result = build(&self);
+        if self.lifetime.strong_count() != 0 {
+            let _ = self.result_tx.send(IrLoadCompletion {
+                generation: self.generation,
+                result,
+            });
+        }
+    }
+}
+
+static IR_LOADER: OnceLock<mpsc::SyncSender<IrLoadRequest>> = OnceLock::new();
+// Four pending slots per maximum worker; queued requests hold no prepared DSP.
+const IR_LOAD_QUEUE_CAPACITY: usize = 16;
 const MAX_IR_CHANNELS: usize = 32;
 const MAX_IR_SECONDS: usize = 30;
 pub(super) const MAX_IR_MEMORY_BYTES: usize = 512 * 1024 * 1024;
@@ -65,9 +86,9 @@ pub(super) struct IrValidationOptions {
     pub(super) head_taps: usize,
 }
 
-fn get_ir_loader() -> &'static mpsc::Sender<IrLoadRequest> {
+fn get_ir_loader() -> &'static mpsc::SyncSender<IrLoadRequest> {
     IR_LOADER.get_or_init(|| {
-        let (tx, rx) = mpsc::channel::<IrLoadRequest>();
+        let (tx, rx) = mpsc::sync_channel::<IrLoadRequest>(IR_LOAD_QUEUE_CAPACITY);
         // Bound the pool so rapid IR switches do not exhaust the OS thread budget.
         let num_workers = rayon::current_num_threads().clamp(1, 4);
         let rx = Arc::new(Mutex::new(rx));
@@ -81,18 +102,16 @@ fn get_ir_loader() -> &'static mpsc::Sender<IrLoadRequest> {
                             Ok(req) => req,
                             Err(_) => break,
                         };
-                        let result = ConvolutionPlugin::build_ir_state_with_routing(
-                            &req.path,
-                            req.channels,
-                            req.sample_rate,
-                            req.use_nupc,
-                            req.zero_latency_head,
-                            req.head_taps,
-                            req.true_stereo,
-                        );
-                        let _ = req.result_tx.send(IrLoadCompletion {
-                            generation: req.generation,
-                            result,
+                        req.complete(|req| {
+                            ConvolutionPlugin::build_ir_state_with_routing(
+                                &req.path,
+                                req.channels,
+                                req.sample_rate,
+                                req.use_nupc,
+                                req.zero_latency_head,
+                                req.head_taps,
+                                req.true_stereo,
+                            )
                         });
                     }
                 })
@@ -212,6 +231,7 @@ pub struct IrRuntimeState {
     /// operations or plugin destruction, never by process, drain, or reset.
     pub(super) ir_load_result_keepalive: Option<std::sync::mpsc::Sender<IrLoadCompletion>>,
     pub(super) desired_generation: u64,
+    ir_load_lifetime: Option<Arc<()>>,
     pub(super) load_status: AtomicU8,
     pub(super) retired_pending: Option<RetiredIrState>,
     pub(super) failed_error_pending: Option<String>,
@@ -662,6 +682,7 @@ impl ConvolutionPlugin {
                 completion_pending: false,
                 ir_load_result_keepalive: None,
                 desired_generation: 0,
+                ir_load_lifetime: None,
                 load_status: AtomicU8::new(ConvolutionLoadStatus::Idle as u8),
                 retired_pending: None,
                 failed_error_pending: None,
@@ -774,16 +795,21 @@ impl ConvolutionPlugin {
     }
 
     fn begin_async_load(&mut self, path: String) -> PluginResult<()> {
-        self.desired_generation = self.desired_generation.wrapping_add(1);
-        let generation = self.desired_generation;
+        self.enqueue_ir_load(path, get_ir_loader())
+    }
+
+    fn enqueue_ir_load(
+        &mut self,
+        path: String,
+        loader: &mpsc::SyncSender<IrLoadRequest>,
+    ) -> PluginResult<()> {
+        let generation = self.desired_generation.wrapping_add(1);
         let (result_tx, result_rx) = std::sync::mpsc::channel();
-        self.ir_load_result_rx = Some(result_rx);
-        self.completion_pending = true;
-        self.ir_load_result_keepalive = Some(result_tx.clone());
-        self.load_status
-            .store(ConvolutionLoadStatus::Loading as u8, Ordering::Release);
-        get_ir_loader()
-            .send(IrLoadRequest {
+        let lifetime = Arc::new(());
+        // Submission is control-thread work. On refusal, drop only the new
+        // request and leave the prior mailbox, generation and status intact.
+        loader
+            .try_send(IrLoadRequest {
                 generation,
                 path,
                 channels: self.channels,
@@ -792,14 +818,33 @@ impl ConvolutionPlugin {
                 zero_latency_head: self.zero_latency_head,
                 head_taps: self.head_taps,
                 true_stereo: self.true_stereo,
-                result_tx,
+                result_tx: result_tx.clone(),
+                lifetime: Arc::downgrade(&lifetime),
             })
-            .map_err(|e| {
-                self.completion_pending = false;
-                self.load_status
-                    .store(ConvolutionLoadStatus::Failed as u8, Ordering::Release);
-                format!("Failed to enqueue IR load: {e}")
-            })
+            .map_err(|error| match error {
+                mpsc::TrySendError::Full(_) => {
+                    "Convolution IR load queue is full; retry later".to_string()
+                }
+                mpsc::TrySendError::Disconnected(_) => {
+                    "Convolution IR loader is unavailable".to_string()
+                }
+            })?;
+        self.desired_generation = generation;
+        self.ir_load_lifetime = Some(lifetime);
+        self.ir_load_result_rx = Some(result_rx);
+        self.ir_load_result_keepalive = Some(result_tx);
+        self.completion_pending = true;
+        self.load_status
+            .store(ConvolutionLoadStatus::Loading as u8, Ordering::Release);
+        Ok(())
+    }
+
+    fn cancel_ir_load(&mut self) {
+        self.desired_generation = self.desired_generation.wrapping_add(1);
+        self.ir_load_lifetime = None;
+        self.ir_load_result_rx = None;
+        self.ir_load_result_keepalive = None;
+        self.completion_pending = false;
     }
 
     fn queue_retired(&mut self, retired: RetiredIrState) {
@@ -851,10 +896,7 @@ impl ConvolutionPlugin {
         self.retain_tail_for_replacement();
         self.transition_from.copy_from_slice(&self.last_output);
         self.transition_remaining = TRANSITION_SAMPLES;
-        self.desired_generation = self.desired_generation.wrapping_add(1);
-        self.ir_load_result_rx = None;
-        self.completion_pending = false;
-        self.ir_load_result_keepalive = None;
+        self.cancel_ir_load();
         let retired = RetiredIrState {
             state: std::mem::replace(&mut self.ir_runtime.state, Arc::new(None)),
             nupc_engines: std::mem::take(&mut self.nupc_engines),
@@ -1187,6 +1229,7 @@ impl ConvolutionPlugin {
             self.head_taps,
             self.true_stereo,
         )?;
+        self.cancel_ir_load();
         self.apply_ir_state(result);
         self.rebuild_cached_parameters();
         Ok(())
@@ -1567,11 +1610,15 @@ impl ParametricInPlacePlugin for ConvolutionPlugin {
         }
         let old_sr = self.sample_rate;
         self.sample_rate = sr;
+        if old_sr != sr
+            && !self.ir_file.is_empty()
+            && let Err(error) = self.begin_async_load(self.ir_file.clone())
+        {
+            self.sample_rate = old_sr;
+            return Err(error);
+        }
         self.mix.set_time(20.0, sr);
         self.gain_linear.set_time(20.0, sr);
-        if old_sr != sr && !self.ir_file.is_empty() {
-            self.begin_async_load(self.ir_file.clone())?;
-        }
         // Preserve ordinary initialization's existing history behavior. When
         // rearming EOS, clear signal history and counters together.
         if self.drain_remaining.is_some() {
@@ -2071,3 +2118,7 @@ impl ConvolutionPlugin {
         Ok(nf)
     }
 }
+
+#[cfg(test)]
+#[path = "loader_tests.rs"]
+mod loader_tests;

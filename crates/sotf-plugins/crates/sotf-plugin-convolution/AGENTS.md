@@ -51,3 +51,16 @@ cargo test -p sotf-plugin-convolution
 - Channel mapping: if IR has fewer channels than input, channels are mapped cyclically.
 - Never drop a replaced backend or error string on the callback; use the retirement queues.
 - Preserve the configured latency in inactive/loading/failed/cleared states.
+
+## Asynchronous loader backpressure
+
+- The shared loader has up to four active workers and sixteen queued unprepared
+  requests. Use nonblocking control-thread submission and propagate retry errors.
+- Refused submission must preserve the prior pending mailbox, generation, status
+  and live IR; a refused initialization also restores the previous clock.
+- A per-request lifetime token skips cancelled work before preparation and prevents
+  publication after cancellation during preparation. Retain its strong owner through
+  callbacks/drain/reset; release it only on control-thread replacement/clear/teardown.
+- Successful synchronous IR loads cancel pending async work; failed loads preserve it.
+- `src/lib/loader_tests.rs` covers bounded storms, busy-worker cancellation,
+  full/disconnected refusal, clear/drop, and synchronous replacement ownership.

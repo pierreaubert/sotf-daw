@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Bound asynchronous IR loading to sixteen queued requests and at most four
+  workers. Skip superseded queued preparation and discard cancelled results on
+  workers. Queue refusal preserves the prior request/status/live IR; callers retry.
+- Cancel older async requests after successful synchronous IR replacement, while
+  preserving them on synchronous failure. Restore the old clock if rate-change
+  reload submission is refused. Callback DSP, latency and preset schema are unchanged.
+
 - Isolate parallel finite-stream WAV fixtures using sequence IDs and exclusive
   creation, preventing timestamp collisions from corrupting tail validation.
   Production DSP and existing audio/length assertions are unchanged.
