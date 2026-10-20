@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "sotf-plugin-xtc",
+        "--release",
+        "first_transient_uses_one_gain",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\nerror[E0432]: unresolved import `sotf_host::assert_no_allocs`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/tests.rs:17:5\n    |\n 17 | use sotf_host::assert_no_allocs;\n    |     ^^^^^^^^^^^----------------\n    |                |\n    |                no `assert_no_allocs` in the root\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:70\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                                                                      ^^^^^^^^^^^^^^^^\n\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/realtime_tests.rs:26:29\n    |\n 26 |         unsafe { sotf_host::CountingAlloc.alloc(layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/realtime_tests.rs:36:29\n    |\n 36 |         unsafe { sotf_host::CountingAlloc.dealloc(ptr, layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nSome errors have detailed explanations: E0425, E0432.\nFor more information about an error, try `rustc --explain E0425`.\nerror: could not compile `sotf-plugin-xtc` (lib test) due to 3 previous errors\nwarning: build failed, waiting for other jobs to finish...\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "sotf-plugin-xtc",
+        "--release",
+        "--features",
+        "qa",
+        "first_transient_uses_one_gain",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "stdout": "\nrunning 1 test\nrate=44100 channels=2 linked_error=6.680395e-1 peak=1\ntest xtc_plugin::limiter_tests::first_transient_uses_one_gain_for_every_output_channel ... FAILED\n\nfailures:\n\nfailures:\n    xtc_plugin::limiter_tests::first_transient_uses_one_gain_for_every_output_channel\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 163 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 40.34s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-a34f0a3dd7a496cb)\n\nthread 'xtc_plugin::limiter_tests::first_transient_uses_one_gain_for_every_output_channel' (327397713) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/limiter_tests.rs:25:13:\nfirst transient changed interchannel ratios: 0.6680395\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+    }
+  ],
+  "regression_source": "//! First-frame and linked-channel safety of the post-render wet limiter.\n\n// Rust guideline compliant 2026-02-21\nuse super::*;\nuse crate::initialize_tests::MatrixFile;\nuse crate::realtime_tests::callback_counts;\n\n#[test]\nfn finite_extreme_transients_preserve_ratios_and_diagnostic_bypass() {\n    let mut plugin = XtcPlugin::new(XtcPluginParams::default(), 48_000).unwrap();\n    plugin.initialize(48_000.0).unwrap();\n    for peak in [\n        1.0 + f32::EPSILON,\n        1.001,\n        2.0,\n        3.0,\n        127.0,\n        32768.0,\n        f32::MAX,\n    ] {\n        for sign in [-1.0, 1.0] {\n            plugin.reset();\n            let source = [sign * peak, -sign * peak * 0.125];\n            let mut output = source;\n            assert_eq!(\n                callback_counts(|| plugin.apply_wet_limiter(&mut output, 1)),\n                (0, 0)\n            );\n            assert!(output.iter().all(|v| v.is_finite() && v.abs() <= 1.0));\n            assert!((output[1] + output[0] * 0.125).abs() < 2e-7);\n            assert!(output[0].signum() == source[0].signum());\n        }\n    }\n    plugin.reset();\n    let mut quiet = [0.125, -0.25];\n    plugin.apply_wet_limiter(&mut quiet, 1);\n    assert_eq!(quiet, [0.125, -0.25]);\n    plugin.params.bypass_xtc_filters = true;\n    let mut bypass = [4.0, -1.0];\n    plugin.apply_wet_limiter(&mut bypass, 1);\n    assert_eq!(bypass, [4.0, -1.0]);\n    assert_eq!(plugin.dynamics.limiter_envelope, 1.0);\n}\n\n#[test]\nfn first_transient_uses_one_gain_for_every_output_channel() {\n    for rate in [44_100, 48_000, 96_000, 192_000] {\n        for channels in [2, 4, 8] {\n            let fixture = MatrixFile::new(rate, channels);\n            let mut plugin = XtcPlugin::new(fixture.params(), rate).unwrap();\n            plugin.initialize(f64::from(rate)).unwrap();\n            let source: Vec<f32> = (0..channels)\n                .map(|ch| if ch == 0 { 4.0 } else { -1.0 / ch as f32 })\n                .collect();\n            let mut output = source.clone();\n            assert_eq!(\n                callback_counts(|| plugin.apply_wet_limiter(&mut output, 1)),\n                (0, 0)\n            );\n            let gain = output[0] / source[0];\n            let error = output\n                .iter()\n                .zip(&source)\n                .map(|(a, b)| (a - b * gain).abs())\n                .fold(0.0_f32, f32::max);\n            println!(\n                \"rate={rate} channels={channels} linked_error={error:e} peak={}\",\n                output.iter().map(|v| v.abs()).fold(0.0_f32, f32::max)\n            );\n            assert!(\n                output\n                    .iter()\n                    .all(|sample| sample.is_finite() && sample.abs() <= 1.0)\n            );\n            assert!(\n                error < 2e-7,\n                \"first transient changed interchannel ratios: {error}\"\n            );\n            assert!(gain > 0.0 && gain <= 0.25);\n        }\n    }\n}\n\n#[test]\nfn transient_limiter_is_partition_invariant_and_resettable() {\n    for rate in [44_100, 48_000, 96_000, 192_000] {\n        for channels in [2, 4, 8] {\n            let fixture = MatrixFile::new(rate, channels);\n            let make = || {\n                let mut plugin = XtcPlugin::new(fixture.params(), rate).unwrap();\n                plugin.initialize(f64::from(rate)).unwrap();\n                plugin\n            };\n            let mut whole = make();\n            let mut split = make();\n            let source: Vec<f32> = (0..4097)\n                .flat_map(|frame| {\n                    (0..channels).map(move |ch| {\n                        let scale = match frame % 517 {\n                            0 => 16.0,\n                            1 => -8.0,\n                            _ => 0.1,\n                        };\n                        scale / (ch + 1) as f32\n                    })\n                })\n                .collect();\n            let mut expected = source.clone();\n            whole.apply_wet_limiter(&mut expected, 4097);\n            for shape in [1, 73, 1024] {\n                split.reset();\n                let mut actual = source.clone();\n                for chunk in actual.chunks_mut(shape * channels) {\n                    let frames = chunk.len() / channels;\n                    assert_eq!(\n                        callback_counts(|| split.apply_wet_limiter(chunk, frames)),\n                        (0, 0)\n                    );\n                }\n                assert_eq!(actual, expected);\n                for (out, input) in actual\n                    .chunks_exact(channels)\n                    .zip(source.chunks_exact(channels))\n                {\n                    let gain = out[0] / input[0];\n                    for (&a, &b) in out.iter().zip(input) {\n                        assert!(a.abs() <= 1.0);\n                        assert!((a - b * gain).abs() < 2e-7);\n                    }\n                }\n            }\n        }\n    }\n}\n",
+  "source_note": "Final regression source includes an additional finite-extreme test. Reproduced baseline first-frame function is unchanged except rustfmt."
+}

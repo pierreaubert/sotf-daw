@@ -2997,12 +2997,8 @@ fn audit_transition_timing() {
                 );
             } else {
                 let mut exchange = plugin.filter_state.exchange.lock().unwrap();
-                for slot in &mut exchange.retired_updates {
-                    *slot = None;
-                }
-                for slot in &mut exchange.retired_snapshots {
-                    *slot = None;
-                }
+                exchange.retired_updates.fill(None);
+                exchange.retired_snapshots.fill(None);
             }
         }
         times.sort_unstable();

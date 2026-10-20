@@ -60,6 +60,9 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - XTC filters are recomputed when geometry parameters change. A background worker publishes into a prepared bounded exchange. The callback uses `try_lock`, keeps its current filters under contention, and postpones adoption when retirement capacity is full. Filter and auxiliary-data destruction stays off the audio thread.
 - Regularization prevents excessive filter boost at frequencies where the inverse is ill-conditioned. Higher values = safer but less cancellation.
 - The built-in limiter envelope prevents output clipping that can occur with aggressive cancellation settings.
+- The finite-attack safety ceiling must use a shared gain over every output
+  channel. Independent clipping changes the speaker-drive ratios needed by XTC.
+  The final scalar clamp is only a floating-point rounding guard.
 - SIMD operations: `complex_mul_simd`, `complex_mul_add_simd`, `deinterleave_stereo`, `window_mul_simd`.
 - Head shadowing is modeled as a frequency-dependent lowpass filter based on head radius and angle.
 - Room reflection support via two methods: image source (synthetic, from geometry) or IR-based (from measured impulse responses loaded via Symphonia).

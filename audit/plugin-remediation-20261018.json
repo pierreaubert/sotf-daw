@@ -2047,9 +2047,28 @@
       "id": 44,
       "plugin": "XTC",
       "audit_text": "[`xtc_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs):2001\u20132146 validates initialized rate/geometry, adopts prepared filters, freezes finite support at drain and reports FFT latency. Crosstalk cancellation is ill-conditioned at some frequencies/positions; gain limits and regularization are part of correctness, not just tonal preferences.\n\n`xtc_validation.rs`, `stream_clock.rs`, `aligned_bypass.rs`, finite/autogain tests and reference fixtures are useful. The saturation quality test measures a settled sine peak; extend first-frame gain, head displacement, room mismatch and independent acoustic transfer matrices. Classical frequency-dependent regularization, robustness regions and measured head tracking are priorities. ML can estimate position or personalize transfer functions off the critical path; constrain the inverse filter's gain and retain measured validation.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Extend first-frame limiter gain validation and preserve speaker-drive ratios during attack overshoot.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/limiter_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json"
+          ],
+          "result": "Independent hard clamps reproduced 0.6680395 linked-ratio error for [4,-1] at 44.1 kHz. One common ceiling gain now retains every output ratio while the original 0.95 target/0.2 ms attack/50 ms release state remains. Twelve first-frame cases across four rates and 2/4/8 outputs have zero linked error. Thirty-six callback partition schedules are exact, reset restores the transfer, finite extremes through f32::MAX stay bounded, and diagnostic bypass/quiet input remain unchanged. All measured limiter kernels allocate/free nothing. 219 release tests pass; the explicit 30001-callback transition timing gate has zero heap and maximum 33125 ns for this 48 kHz/128-frame/default-FFT2048 run; strict all-target QA Clippy passes after equivalent existing timing-harness fill cleanup. Two existing ignored entries remain unchanged (timing gate run explicitly, illustrative doctest unexecuted)."
+        }
+      ],
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json"
+      ],
+      "remaining": [
+        "Independent signed acoustic transfer-matrix checks across frequency, head displacement and room mismatch; current cancellation diagnostic shares the filter design model and clamps negative degradation.",
+        "Resolve or explicitly constrain default 8 kHz ILD physical-model discrepancy: existing report shows 36.124 dB versus reference 12 dB with 20 dB tolerance despite the enclosing Rust test passing.",
+        "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
+        "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality."
+      ]
     },
     {
       "id": 45,
@@ -2430,6 +2449,15 @@
       ],
       "result": "Constant-sum FDN tap transitions remove a reproduced feedback amplitude error; 12 exact twin cases, 18 neutral T30 cases, three damping checks and eight extreme-update zero-heap cases. 99 release tests, existing acoustic-quality gate and strict all-target QA Clippy pass. Overall stays 35/45.",
       "limitations": "Stationary low-level decay and deterministic spatial metrics do not establish arbitrary dynamic, modulated, nonlinear or perceptual/corpus quality."
+    },
+    {
+      "name": "XTC linked first-transient speaker safety",
+      "state": "verified_partial",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Reproduced and fixed per-channel clipping distortion during finite-attack overshoot. Linked sample ceiling preserves all drive ratios; first-frame/extreme/partition/reset/no-heap evidence recorded. 219 release tests, explicit 30001-callback transition gate and strict all-target QA Clippy pass. Overall stays 35/45.",
+      "limitations": "Independent transfer/head/room validation and a documented existing 8 kHz ILD report failure remain open; no acoustic or true-peak completion claimed."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -41,7 +41,14 @@ This intentionally replaces immediate disabled routing and paused wet history:
 disabled output now agrees with the existing fixed N-frame latency declaration,
 and re-enabling cannot replay old programme samples. Disabled mode incurs the
 wet processor's CPU cost plus a prepared stereo delay (8N bytes, 1–128 KiB over
-the supported FFT range). The raw filter and limiter equations are unchanged.
+the supported FFT range).
+
+The wet limiter targets a 0.95 peak with a 0.2 ms attack and 50 ms release
+envelope. During finite-attack overshoot, a shared instantaneous gain keeps all
+speaker drives within a sample-peak ceiling of 1.0. This preserves interchannel
+ratios instead of independently clipping each speaker; the final clamp only
+bounds floating-point rounding. This is a sample-peak bound, not a reconstructed
+true-peak guarantee. Diagnostic `bypass_xtc_filters` skips this limiter.
 
 Stereo AutoGain ingests every frame. It compares the original input delayed by
 N frames with the uncompensated wet output, then refreshes its target every

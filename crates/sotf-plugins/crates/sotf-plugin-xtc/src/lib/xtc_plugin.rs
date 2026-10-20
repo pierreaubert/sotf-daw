@@ -68,6 +68,10 @@ pub(super) fn accumulate_ifft_channel(
     }
 }
 
+#[cfg(test)]
+#[path = "limiter_tests.rs"]
+mod limiter_tests;
+
 #[inline(always)]
 pub(super) fn drain_output_accumulator(
     accumulator: &mut [f32],
@@ -1566,12 +1570,15 @@ impl XtcPlugin {
                         + self.dynamics.limiter_release_coeff
                             * (self.dynamics.limiter_envelope - target_gr);
                 }
+                // Preserve the relative speaker drives during finite-attack
+                // overshoot. Independent clipping changes the cancellation
+                // matrix; one linked safety gain retains every channel ratio.
+                let ceiling_gain = if peak > 1.0 { 1.0 / peak } else { 1.0 };
+                let frame_gain = self.dynamics.limiter_envelope.min(ceiling_gain);
                 for ch in 0..output_channels {
                     let idx = base + ch;
-                    output[idx] *= self.dynamics.limiter_envelope;
-                    // Hard clamp: the one-pole envelope has finite attack time, so a
-                    // few samples can overshoot during transient onset. Clamp to ±1.0
-                    // as a safety ceiling — matches standard digital limiter practice.
+                    output[idx] *= frame_gain;
+                    // Only bound reciprocal/multiply rounding at the ceiling.
                     output[idx] = output[idx].clamp(-1.0, 1.0);
                 }
             }

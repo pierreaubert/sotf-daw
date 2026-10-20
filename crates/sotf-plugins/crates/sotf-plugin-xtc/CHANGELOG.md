@@ -1,3 +1,13 @@
+# Unreleased linked transient safety audit (2026-10-20)
+
+- Preserve speaker-drive ratios during limiter attack overshoot with one shared
+  instantaneous gain ceiling instead of independent channel hard clipping.
+- Retain the 0.95 envelope target, 0.2 ms attack, 50 ms release, diagnostic
+  filter bypass, parameters and signal latency. This limits sample peaks;
+  reconstructed true peaks and acoustic cancellation quality need separate tests.
+- Add first-frame, extreme finite value, multichannel, callback-partition,
+  reset and zero-allocation/free regressions.
+
 # Unreleased AutoGain clock audit (2026-09-28)
 
 - Fix AUD104 skipped loudness input and callback-dependent gain updates. Ingest
