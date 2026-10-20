@@ -21,10 +21,16 @@ cargo test -p sotf-plugin-multiband-expander
 
 ## Important Notes
 
-- Uses LR4 crossovers for phase-coherent band splitting
+- Uses cascaded LR4 crossovers with f64 coefficients, state and split
+  intermediates, casting final bands to f32. Preserve this precision at low
+  cutoffs/high rates. Three-plus-band sums are not generally flat all-pass
+  responses; validate against the cascade, not a flat response assumption.
 - Re-exports `CROSSOVER_PRESETS` from sotf-host for standard frequency splits
 - Each band has independent threshold, ratio, attack, release parameters
 - `expander` is a true one-band factory path; `multiband_expander` requires 2-5 bands.
 - `num_bands` and `processing_mode` are structural and must never allocate in a live setter.
 - Spectral mode is dual-Hann, 75% overlap, `N/4` hop, and `N` samples latency.
 - Sidechain HPF affects detector samples only; lookahead applies uniformly to bypassed bands.
+- `tests/audit_reconstruction.rs` uses independent f64 Tustin/DF-I references
+  for time mode and a pure delayed-input reference for spectral unity. Keep
+  fixed bounds and callback heap guards; release heap checks require QA.

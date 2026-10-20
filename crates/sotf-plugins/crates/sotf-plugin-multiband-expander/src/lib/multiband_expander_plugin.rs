@@ -70,7 +70,8 @@ pub struct MultibandExpanderPlugin {
     /// Processing mode: "time_domain" or "spectral"
     pub(super) processing_mode: String,
     pub(super) band_params: Vec<BandExpanderParams>,
-    pub(super) crossover_points: Vec<Lr4Crossover<f32>>,
+    // Double precision avoids low-cutoff coefficient quantization at high sample rates.
+    pub(super) crossover_points: Vec<Lr4Crossover<f64>>,
     pub(super) band_expanders: Vec<BandExpander>,
     pub(super) band_buffers: Vec<f32>,
     pub(super) band_levels_db: Vec<f32>,
@@ -625,8 +626,8 @@ impl MultibandExpanderPlugin {
         for i in 0..(self.num_bands - 1) {
             let f = self.xover_smoothers[i].target();
             self.crossover_points.push(Lr4Crossover::new(
-                f,
-                self.sample_rate as f32,
+                f64::from(f),
+                self.sample_rate,
                 self.channels,
             ));
         }
@@ -1583,17 +1584,17 @@ impl MultibandExpanderPlugin {
         for frame in 0..nf {
             for i in 0..self.num_bands.saturating_sub(1) {
                 let frequency = self.xover_smoothers[i].advance();
-                self.crossover_points[i].set_frequency(frequency);
+                self.crossover_points[i].set_frequency(f64::from(frequency));
             }
             for ch in 0..self.channels {
                 let idx = frame * self.channels + ch;
-                let mut rem = buffer[idx];
+                let mut rem = f64::from(buffer[idx]);
                 for xidx in 0..(self.num_bands - 1) {
                     let (low, high) = self.crossover_points[xidx].process(rem, ch);
-                    self.band_buffers[xidx * stride + idx] = low;
+                    self.band_buffers[xidx * stride + idx] = low as f32;
                     rem = high;
                 }
-                self.band_buffers[(self.num_bands - 1) * stride + idx] = rem;
+                self.band_buffers[(self.num_bands - 1) * stride + idx] = rem as f32;
             }
         }
 

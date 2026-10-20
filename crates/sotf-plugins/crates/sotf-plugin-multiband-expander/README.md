@@ -15,6 +15,23 @@ Hann STFT at 75% overlap (`hop=N/4`), `1/(1.5N)` normalization, and 1024 samples
 of latency; it accepts only linked Peak detection with zero lookahead/HPF and no
 auto makeup, so unsupported behavior is never silently ignored.
 
+Time-domain crossover coefficients, recursive state and serial split
+intermediates use f64, with f32 band buffers for dynamics. This corrects
+low-cutoff rounding error at high sample rates and changes multiband numerical
+audio. Topology, latency and parameter formats are unchanged. CPU cost of this
+precision change has not been benchmarked.
+
+The cascaded LR4 bank splits each preceding high-pass output; three-plus-band
+sums are not generally flat all-pass responses because earlier low bands lack
+the later splits' phase rotation. Unity-expansion validation uses this actual
+topology. Spectral unity is checked independently against delayed input.
+`tests/audit_reconstruction.rs` covers 120 time-domain impulse/solo configurations
+and 90 crossover-edge burst/quiet-onset configurations across both modes,
+including reset and callback partitioning. Its measured process callbacks must
+be finite and have zero heap allocations/deallocations; release heap checks
+require `--features qa`. Quiet onsets in this matrix use unity expansion;
+nonlinear quiet-material and threshold-chatter validation is a separate check.
+
 ## Soft knee and state boundaries
 
 The threshold is the center of the configured knee. With knee width `K`,

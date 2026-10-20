@@ -1,3 +1,14 @@
+## Unreleased crossover precision and reconstruction validation
+
+- Use f64 crossover coefficients, state and split intermediates, casting final
+  bands to f32 before dynamics. Correct 0.00471 complex-response error at
+  96 kHz/120 Hz against the unchanged 0.002 reference bound, and an independent
+  crossover-edge burst error above the 2e-5 sample bound.
+- Validate 210 impulse/solo/timing and crossover-adjacent burst/quiet-onset
+  configurations in time/spectral modes, with finite/zero-heap callbacks.
+- Retain cascaded topology, spectral FFT processing, parameter formats and
+  latency. Multiband numerical audio changes; CPU cost is not benchmarked.
+
 ## Unreleased finite stream audit (2026-09-28)
 
 - Recover spectral startup at every phase by including all preceding Hann

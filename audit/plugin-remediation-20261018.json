@@ -1179,9 +1179,32 @@
       "id": 35,
       "plugin": "Multiband expander and single-band expander alias",
       "audit_text": "[`multiband_expander_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs):2040\u20132198 has time/spectral routes, lookahead/FFT latency and cached spectral drain output. Finite spectral support and recursive IIR support are different promises. Startup noise estimates/envelope state can over-suppress a quiet beginning.\n\n`soft_knee.rs`, `lookahead_latency.rs`, `spectral_finite_stream.rs`, `spectral_finite_allocations.rs` and realtime parameter tests are relevant. Extend low-level musical material, threshold chatter, band-edge transients and reconstruction at unity expansion. Classical hysteresis, bounded range and perceptual frequency grouping are useful. A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Extend independent unity reconstruction and band-edge transient coverage in time/spectral modes; correct measured numerical defects",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/audit_reconstruction.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-expander-reconstruction.json"
+          ],
+          "result": "Independent f64 Tustin/DF-I time-domain cascade and delayed-input spectral references cover120 impulse/solo/timing configurations and90 crossover-adjacent burst/quiet-onset configurations. Exposed0.0047128 complex error at96k/120Hz and4.003e-5 burst sample error. Local f64 crossover coefficients/state/split intermediates fix preserves topology/f32 band buffers; no tolerance changes. All210 cases pass: worst impulse complex7.8649e-8,sample2.3144e-8,peak0frames,solo-sum1.4126e-8; burst worst8.9407e-8. All successful callbacks finite with0alloc/free. Final full crate159passed0ignored(including1doctest);release2passed;strict all-targetsQAClippy passes. Spectral delay1024, reset and callback partition invariance validated; CPU cost unbenchmarked."
+        },
+        {
+          "task": "Validate nonlinear low-level musical startup, threshold chatter and band-edge transient gain behavior against independent references",
+          "status": "pending",
+          "evidence": "New quiet-onset and burst cases use ratio1 and cannot prove nonlinear startup or chatter behavior. Existing soft-knee/hold/hysteresis tests remain relevant but audit extensions are pending."
+        },
+        {
+          "task": "Review classical hysteresis, bounded range, frequency grouping and single-band alias paths; preserve distinct spectral/IIR support promises",
+          "status": "pending",
+          "evidence": "Source has hysteresis/range and spectral bin-to-band grouping; broader adequacy review remains. Existing finite spectral support and recursive IIR behavior unchanged. Optional learned-mask mode remains separate."
+        }
+      ],
+      "evidence": [
+        "Unity reconstruction and band-edge precision correction verified. Entry35 partial; nonlinear signal and classical behavior review remain. Overall30/45 complete_production_scope."
+      ]
     },
     {
       "id": 36,
