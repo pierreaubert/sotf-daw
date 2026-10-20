@@ -53,3 +53,11 @@ cargo test -p sotf-plugin-eq
 - Q bounds are per filter type, with two ceilings (`params.rs` is the single source of truth: `Q_MIN`/`Q_MAX_STANDARD`/`Q_MAX_OPTIMIZED`/`Q_MAX_NOTCH`, `q_max_for`/`q_max_ui`/`clamp_q`): validation/loading accepts 0.1–20 for non-notch types (matching the optimizers' `max_q` ceiling) and 0.1–40 for Notch; UI knobs/drags edit within 0.1–10 for non-notch (`q_max_ui`) and 0.1–40 for Notch. The DSP mirrors the validation ceiling in `lib/consts.rs` (`Q_MAX`/`Q_MAX_NOTCH`, f32). Switching a band away from Notch re-clamps Q to 20.
 - Parameter IDs follow the pattern `band_{band}_freq`, `band_{band}_q`, `band_{band}_gain`, `band_{band}_filter_type`, `band_{band}_order`.
 - The `gpui-ui` feature adds a GPUI-based UI component (optional dependency).
+
+- Use the f64 `params::Q_MIN` directly for config/replacement validation and
+  type-change clamping. Widening an f32 0.1 rejects the exact serialized minimum;
+  narrow only at the f32 descriptor boundary. `audit_extremes.rs` preserves this
+  regression and independent standard-family bilinear/state references. The unit
+  pole matrix checks actual section denominators, covering tails beyond the
+  impulse prefix. Host rate tests assert compiled/graph paths and preserve the
+  documented legacy-history versus ordered-reset distinction and Unknown tail.

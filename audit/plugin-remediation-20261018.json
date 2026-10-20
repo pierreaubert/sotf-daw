@@ -789,11 +789,11 @@
           "result": "Exact target selection resolves a reproduced one-bit callback-partition difference without resetting history or moving storage retirement. All 144 combinations of four rates, three channel counts, three orders, two realizations and two routes match the independent reference (maximum measured error 0) and are bit-identical across partitions. Interrupted frequency/Q/gain ramps retain stable coefficients, finite output and zero measured setter/process heap activity. Full EQ suite: 159 passed, 11 existing ignored; release transition regression and strict all-targets QA Clippy pass."
         },
         {
-          "task": "Validate remaining extreme filter families and advanced mixed realizations",
+          "task": "Validate optimized/SVF/advanced filter extremes and advanced mixed realizations",
           "status": "pending"
         },
         {
-          "task": "Extend host sample-rate change coverage and review finite versus recursive tail guarantees",
+          "task": "Extend oversampled/SVF/advanced host rate changes and finish finite versus recursive tail review",
           "status": "pending"
         },
         {
@@ -808,12 +808,34 @@
             "audit/artifacts/plugin-audit-20261018/eq-oversampled-scheduling.json"
           ],
           "result": "Source-timestamped exact targets and separate delayed DSP transitions resolve all 576 cold/warm 2x/4x partition failures (now bit-identical). All 288 static controls pass; 288 independent RBJ/DF-I/TDF-II/delayed-timing cases have maximum error 1.862645149230957e-9 against unchanged 2e-5 bound. Dense wrap/coalescing reference: 32 cases x 6147 edits, error 0; all-band stress: 20 bands/6 channels/order 8, 40 edits per frame. Tested setters/process/reset remain heap-free. History 385 source instants per band; payload 616000 bytes for 20 stereo second-order bands, 39424000 for tested 32-channel/order-8 geometry. Initial over-reservation fixed without relaxing budget. EQ 164 passed/11 existing ignored; release five tests, strict host/EQ all-targets QA Clippy and 36 host oversampling tests pass. Full-host run has a separately reproduced unchanged-source loudness heap failure; no full-host green claim. CPU deadlines and other realization/rate work remain open."
+        },
+        {
+          "task": "Accept exact serialized Q minimum and validate standard-family extremes with independent references and actual pole checks",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/consts.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-standard-extremes.json"
+          ],
+          "result": "Exact JSON/replacement Q=0.1 now accepted from authoritative f64 params::Q_MIN; immediate lower f64 remains refused. Eight standard families, four rates, three frequencies, Q/gain endpoints, four orders, DF-I/TDF-II and legacy/ordered Stereo: 6144 impulse prefixes pass independent analog-polynomial/bilinear/state reference (max error 7.450580596923828e-9, unchanged bound 2e-5). Actual coefficient checks certify 3840 stable sections, minimum Jury margin 1.0757629098634425e-7. Tested process callbacks are heap-free. Full EQ 168 passed/11 existing ignored, release four tests and strict all-targets QA Clippy pass. Other families/realizations remain pending."
+        },
+        {
+          "task": "Verify retained standard 1x EQ rate changes through DawHost with populated recursive state",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-standard-extremes.json"
+          ],
+          "result": "384 real host graph rebuild cases: synthetic frame-doubling upstream declares 2x input rate, then is removed while EQ is retained. Three rate-domain pairs use base 44.1/48/96 kHz (old twice base), eight standard families, orders 2/8, both forms/routes and explicitly asserted CompiledLinear/Graph paths. Independent state reference verifies legacy history preservation and ordered reset; max error 2.3283064365386963e-10 at fixed 2e-5 bound. Post-build callbacks have zero heap work; Unknown recursive tail and zero native latency retained. Fixture is metadata/frame duplication, not a physical resampler. Oversampled/SVF/advanced host transitions remain pending."
         }
       ],
       "evidence": [
         "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate.",
         "Oversampled automation has a reproduced required-gate failure, retained with an executable full-matrix QA harness and positive controls. EQ remains partial and overall completion remains 32/45.",
-        "Oversampled scalar automation scheduling is now implemented and independently verified; original failure artifacts retained. EQ remains partial for remaining filter-family, mixed-realization and host-rate coverage. Overall stays 32/45."
+        "Oversampled scalar automation scheduling is now implemented and independently verified; original failure artifacts retained. EQ remains partial for remaining filter-family, mixed-realization and host-rate coverage. Overall stays 32/45.",
+        "Standard 1x endpoint accuracy/stability and retained DawHost rate handling are verified with a concrete Q-minimum loading fix. Other filter/realization and oversampled host-rate requirements remain open. EQ partial; overall 32/45 complete."
       ]
     },
     {

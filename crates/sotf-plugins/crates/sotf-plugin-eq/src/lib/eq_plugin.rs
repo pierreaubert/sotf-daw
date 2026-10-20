@@ -7,7 +7,6 @@ use super::consts::GAIN_MAX;
 use super::consts::GAIN_MIN;
 use super::consts::Q_MAX;
 use super::consts::Q_MAX_NOTCH;
-use super::consts::Q_MIN;
 use super::consts::TRANSITION_DURATION_SECS;
 use super::misc::band_user_q;
 use super::misc::butterworth_q;
@@ -19,6 +18,7 @@ use super::types::BiquadFilterConfig;
 use super::types::EqBandPlacement;
 use super::types::EqFilterTopology;
 use super::types::EqPluginParams;
+use crate::params::Q_MIN;
 use math_audio_iir_fir::{Biquad, BiquadFilterType, SvfFilter, SvfFilterType};
 use sotf_host::analyzer::RealTimeCache;
 use sotf_host::auto_gain::{AutoGain, AutoGainData};
@@ -534,7 +534,7 @@ impl EqPlugin {
                             &format!("band_{}_q", i),
                             "Q",
                             band_user_q(stages, order) as f32,
-                            Q_MIN,
+                            Q_MIN as f32,
                             q_max_for(f.filter_type),
                         )
                         .with_group(&group),
@@ -733,7 +733,7 @@ impl EqPlugin {
                 ));
             }
             let q_max = q_max_for(filter_type) as f64;
-            if !f.q.is_finite() || !(Q_MIN as f64..=q_max).contains(&f.q) {
+            if !f.q.is_finite() || !(Q_MIN..=q_max).contains(&f.q) {
                 return Err(format!(
                     "Invalid filter Q {}: expected {}..={q_max}",
                     f.q, Q_MIN
@@ -941,7 +941,7 @@ impl EqPlugin {
                         {
                             return Err(format!("Invalid replacement frequency {}", filter.freq));
                         }
-                        if !filter.q.is_finite() || !(Q_MIN as f64..=q_max).contains(&filter.q) {
+                        if !filter.q.is_finite() || !(Q_MIN..=q_max).contains(&filter.q) {
                             return Err(format!("Invalid replacement Q {}", filter.q));
                         }
                         if !filter.db_gain.is_finite()
@@ -2098,7 +2098,7 @@ impl EqPlugin {
                                     if let Some(filter_type) = filter_type_from_index(v as i32) {
                                         ft = filter_type;
                                         // Keep Q within the new type's accepted range.
-                                        q = q.clamp(Q_MIN as f64, q_max_for(ft) as f64);
+                                        q = q.clamp(Q_MIN, q_max_for(ft) as f64);
                                     }
                                 }
                                 _ => {}

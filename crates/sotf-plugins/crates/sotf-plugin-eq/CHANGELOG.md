@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Accept exact serialized Q=0.1 and filter-bank replacements at that endpoint
+  using the authoritative f64 minimum; keep the next lower value invalid.
+- Validate 6,144 standard-family extreme impulse prefixes against independent
+  bilinear analog references and certify 3,840 realized stable sections. Add 384
+  retained-node DawHost rate transitions with populated state, explicit compiled
+  and graph paths, history/reset policies and heap-free post-build callbacks.
+
 - Retain source-timestamped exact biquad targets across 2x/4x transport buffering
   and apply them after the upsampler delay. Preserve interrupted ramps and
   filter history independently of public-callback transition retirement.

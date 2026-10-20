@@ -85,5 +85,34 @@ Exact coefficient payload storage is `385 * total channel-stage count * 40` byte
 plus timestamps, indices and active endpoints. For 20 stereo second-order bands
 this is 616,000 payload bytes; the tested 20-band/32-channel/eighth-order case uses
 39,424,000 bytes. Native 1x allocates no history. These are prepared owned payload
-sizes, not aggregate RSS or a CPU deadline claim. Broader filter-family extremes,
-advanced mixed realizations and host rate changes remain audit work.
+sizes, not aggregate RSS or a CPU deadline claim. Optimized/SVF/advanced-family extremes, mixed realizations and oversampled
+host rate changes remain audit work.
+
+
+Exact serialized `Q = 0.1` is accepted at the documented minimum. Configuration,
+filter-bank replacement and type-change clamping use the authoritative f64
+minimum from `params.rs`; only f32 parameter descriptors narrow it. The immediately
+lower representable f64 Q remains rejected.
+
+Standard 1x extremes are checked against independent prewarped analog-polynomial
+references for peak, low/high shelf, low/high pass, notch, bandpass and allpass:
+44.1/48/96/192 kHz, 20/1000/20000 Hz, Q endpoints 0.1 and 20 (40 for notch),
+gain -24/+24 dB, orders 2/4/6/8, both direct forms and legacy/ordered Stereo
+routes. All 6,144 unit-impulse prefixes (4096 frames each) meet the fixed 2e-5
+absolute bound; measured maximum error is 7.46e-9. Direct checks certify all
+3,840 realized section denominators as strictly stable. Standard shelves keep
+their fixed-slope convention; their Q metadata does not change shelf slope.
+
+A further 384 retained-node `DawHost` cases change EQ input from twice the host
+rate to the host rate at 44.1/48/96 kHz. A synthetic upstream node duplicates
+frames and declares the doubled rate, then is removed before a control-thread
+rebuild. Independent populated-state references verify legacy history retention
+and ordered-route reset at the new rate. Compiled-linear and graph paths are
+asserted explicitly. Maximum error is 2.33e-10; measured post-build callbacks are
+heap-free. Recursive tail metadata stays `Unknown`, while the existing empty-bank
+finite-stream policy remains covered separately. The fixture validates rate
+metadata and history handling; it is not a physical resampler.
+
+These matrices cover standard 1x filters and stated endpoints. Optimized filter
+families, SVF/advanced extremes, mixed-realization trajectories, oversampled host
+rate changes and broader tail-policy review remain separate audit requirements.

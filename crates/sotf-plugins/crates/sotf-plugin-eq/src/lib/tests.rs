@@ -2762,3 +2762,56 @@ fn test_parametric_plugin_apply_values_updates_filters() {
         "gain should update to 3.0 dB"
     );
 }
+
+#[test]
+fn audit_standard_extreme_sections_have_strictly_stable_realized_poles() {
+    let mut cases = 0;
+    let mut sections = 0;
+    let mut minimum = f64::INFINITY;
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for kind in [
+            "peak",
+            "lowshelf",
+            "highshelf",
+            "lowpass",
+            "highpass",
+            "notch",
+            "bandpass",
+            "allpass",
+        ] {
+            for freq in [20.0, 1000.0, 20000.0] {
+                for q in [0.1, if kind == "notch" { 40.0 } else { 20.0 }] {
+                    for gain in [-24.0, 24.0] {
+                        for order in [2, 4, 6, 8] {
+                            let params=serde_json::from_value(serde_json::json!({"filters":[{"filter_type":kind,"freq":freq,"q":q,"db_gain":gain,"order":order}]})).unwrap();
+                            let p = EqPlugin::from_params(1, rate, params).unwrap();
+                            for stage in &p.filters[0][0] {
+                                let c = stage.coefficients();
+                                assert!(
+                                    [c.b0, c.b1, c.b2, c.a1, c.a2].iter().all(|v| v.is_finite())
+                                );
+                                // Jury conditions certify the actual normalized denominator,
+                                // including sections whose impulse tail exceeds the prefix oracle.
+                                for margin in [1.0 + c.a1 + c.a2, 1.0 - c.a1 + c.a2, 1.0 - c.a2] {
+                                    assert!(
+                                        margin > 0.0,
+                                        "unstable section {rate}/{kind}/{freq}/{q}/{gain}/{order}"
+                                    );
+                                    minimum = minimum.min(margin);
+                                }
+                                sections += 1;
+                            }
+                            cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 1536);
+    assert_eq!(sections, 3840);
+    println!(
+        "{}",
+        serde_json::json!({"case":"actual_extreme_poles","cases":cases,"sections":sections,"minimum_jury_margin":minimum})
+    );
+}

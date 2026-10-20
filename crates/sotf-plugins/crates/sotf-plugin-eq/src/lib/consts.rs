@@ -7,8 +7,6 @@ pub(super) const FREQ_MIN: f32 = 20.0;
 
 pub(super) const FREQ_MAX: f32 = 20000.0;
 
-pub(super) const Q_MIN: f32 = 0.1;
-
 /// Validation/load ceiling for every filter type except Notch. Matches the
 /// optimizers' `max_q` ceiling (20.0) so optimized chains load unclamped.
 /// The UI edit ceiling for these types is lower (10.0, see params.rs).
