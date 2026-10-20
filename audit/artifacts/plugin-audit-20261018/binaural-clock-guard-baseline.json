@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "wrong_clock_preserves_audio_controls_and_finite_stream_epoch",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 5.20s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-c88022d35d76891c)\n\nrunning 1 test\n\nthread 'head_clock_tests::wrong_clock_preserves_audio_controls_and_finite_stream_epoch' (326342233) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs:166:13:\nwrong process clock 44100\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest head_clock_tests::wrong_clock_preserves_audio_controls_and_finite_stream_epoch ... FAILED\n\nfailures:\n\nfailures:\n    head_clock_tests::wrong_clock_preserves_audio_controls_and_finite_stream_epoch\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 95 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-binaural --lib`\n",
+  "base_commit": "ba0191fbd6a1f120bd3b97129a04bec7d5d5479f"
+}

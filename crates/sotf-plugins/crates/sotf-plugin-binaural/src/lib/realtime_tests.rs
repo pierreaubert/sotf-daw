@@ -5,6 +5,38 @@ use sotf_host::plugin::{Plugin, ProcessContext};
 use std::alloc::{GlobalAlloc, Layout};
 use std::cell::Cell;
 
+#[test]
+fn first_head_mailbox_write_and_full_wakeup_are_allocation_free() {
+    for full in [false, true] {
+        let params =
+            serde_json::from_value(serde_json::json!({"input_channels":2,"fft_size":64})).unwrap();
+        let mut p = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
+        p.initialize(48_000.0).unwrap();
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        if full {
+            tx.try_send((0.0, 0.0, 0.0)).unwrap();
+        }
+        p.hrtf_update_tx = Some(tx);
+        p.smoothing.head_yaw_deg.set_target(90.0);
+        let counts = std::thread::spawn(move || {
+            let counts = callback_counts(|| {
+                p.process(
+                    &[0.125; 128],
+                    &mut [0.0; 128],
+                    &ProcessContext::new(48_000, 64),
+                )
+                .unwrap();
+            });
+            assert!(p.head_requests.snapshot().unwrap().angles.0 > 0.5);
+            counts
+        })
+        .join()
+        .unwrap();
+        assert_eq!(counts, (0, 0), "full={full}");
+        assert!(rx.try_recv().is_ok());
+    }
+}
+
 thread_local! {
     static TRACKING: Cell<bool> = const { Cell::new(false) };
     static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };

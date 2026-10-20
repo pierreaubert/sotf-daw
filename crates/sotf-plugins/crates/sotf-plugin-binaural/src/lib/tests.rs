@@ -126,7 +126,7 @@ fn compile_metadata_is_a_conservative_stateful_boundary() {
 }
 
 #[test]
-fn full_head_update_queue_retries_without_advancing_last_sent_angle() {
+fn full_head_update_queue_retains_latest_pose_without_an_audio_retry() {
     let mut plugin = BinauralDecoderPlugin::new(
         2,
         64,
@@ -149,8 +149,10 @@ fn full_head_update_queue_retries_without_advancing_last_sent_angle() {
     plugin
         .process(&input, &mut output, &ProcessContext::new(48_000, 64))
         .unwrap();
-    assert_eq!(plugin.smoothing.last_hrtf_yaw, 0.0);
-    rx.try_recv().unwrap();
+    let first = plugin.head_requests.snapshot().unwrap();
+    assert!(first.angles.0 > 0.0);
+    assert_eq!(plugin.smoothing.last_hrtf_yaw, first.angles.0);
+    assert_eq!(rx.try_recv().unwrap(), (0.0, 0.0, 0.0));
 
     let mut latest = 0.0;
     for _ in 0..200 {
@@ -158,7 +160,8 @@ fn full_head_update_queue_retries_without_advancing_last_sent_angle() {
             .process(&input, &mut output, &ProcessContext::new(48_000, 64))
             .unwrap();
         if let Ok((yaw, _, _)) = rx.try_recv() {
-            latest = yaw;
+            latest = plugin.head_requests.snapshot().unwrap().angles.0;
+            assert!(latest >= yaw);
         }
     }
     assert!(latest > 89.0, "worker mailbox stopped at {latest} degrees");
@@ -2440,9 +2443,20 @@ fn test_head_yaw_background_update_changes_state() {
         plugin.process(&input, &mut output, &context).unwrap();
     }
 
-    // Dropping the plugin joins the worker, so the assertion does not race its
-    // queued recomputation when the workspace runs under heavy parallel load.
+    // Observe actual publication before shutdown: shutdown intentionally
+    // cancels queued/in-flight work instead of publishing a retired epoch.
     let state = Arc::clone(&plugin.state);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while state.load().hrtf_filters_freq[0][..freq_size]
+        .iter()
+        .all(|c| c.norm() < 1e-3)
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "head worker did not publish"
+        );
+        std::thread::yield_now();
+    }
     drop(plugin);
     let final_state = state.load_full();
     let left_filter = &final_state.hrtf_filters_freq[0][..freq_size];

@@ -15,6 +15,11 @@ mod binaural_decoder_plugin;
 #[cfg(test)]
 #[path = "lib/drain_tests.rs"]
 mod drain_tests;
+#[path = "lib/head_tracking.rs"]
+mod head_tracking;
+#[cfg(test)]
+#[path = "lib/head_worker_tests.rs"]
+mod head_worker_tests;
 #[cfg(test)]
 #[path = "lib/realtime_tests.rs"]
 mod realtime_tests;

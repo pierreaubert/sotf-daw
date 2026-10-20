@@ -72,3 +72,11 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Advance head smoothers from accepted source samples; send requests at completed source-hop boundaries, preserving partial-hop automation timing.
 - Empty callbacks and synthetic EOF input must not advance orientation. Reset discards the pending input-hop phase.
 - `src/lib/head_clock_tests.rs` uses a deterministic request sink. It proves scheduling partition invariance, not asynchronous worker latency or stale-result rejection.
+
+## Asynchronous worker epochs
+
+- The atomic mailbox carries the latest pose; the bounded tuple channel supplies wakeups only. A full wakeup channel still accepts the latest desired pose.
+- Publish completed generations monotonically within the current epoch. New desired poses do not cancel every in-flight computation, which would starve continuous motion.
+- Reset and resource/worker changes invalidate epochs. Reject old epochs at both publication and audio adoption. Workers own immutable SOFA/config snapshots.
+- EOF retains the currently audible filter transition and excludes later publications. Process/drain clock mismatches must not mutate audio, controls or the drain budget.
+- `head_worker_tests.rs` has deterministic gated-worker tests; actual head-turn audio/latency remains separate validation.

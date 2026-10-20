@@ -137,3 +137,87 @@ fn empty_callbacks_and_partial_source_hops_do_not_send_future_angles() {
         );
     }
 }
+
+#[test]
+fn wrong_clock_preserves_audio_controls_and_finite_stream_epoch() {
+    for wrong in [
+        44_100.0,
+        96_000.0,
+        48_000.5,
+        0.0,
+        -1.0,
+        f64::NAN,
+        f64::INFINITY,
+    ] {
+        let (mut tested, _rx) = make(48_000, 256);
+        let (mut baseline, _baseline_rx) = make(48_000, 256);
+        for p in [&mut tested, &mut baseline] {
+            p.smoothing.head_yaw_deg.set_target(45.0);
+            p.process(
+                &[0.125; 26],
+                &mut [0.0; 26],
+                &ProcessContext::new(48_000, 13),
+            )
+            .unwrap();
+        }
+        let before = tested.smoothing.head_yaw_deg.current();
+        for frames in [0, 37] {
+            let mut sentinel = vec![123.0; frames * 2];
+            assert!(
+                tested
+                    .process(
+                        &vec![0.25; frames * 2],
+                        &mut sentinel,
+                        &ProcessContext::new(wrong, frames)
+                    )
+                    .is_err(),
+                "wrong process clock {wrong}"
+            );
+            assert!(sentinel.iter().all(|x| *x == 123.0));
+            assert_eq!(tested.smoothing.head_yaw_deg.current(), before);
+        }
+        assert!(
+            tested
+                .drain(&mut [123.0; 2], &ProcessContext::new(wrong, 0))
+                .is_err()
+        );
+        let mut a = [0.0; 146];
+        let mut b = [0.0; 146];
+        tested
+            .process(&[0.125; 146], &mut a, &ProcessContext::new(48_000, 73))
+            .unwrap();
+        baseline
+            .process(&[0.125; 146], &mut b, &ProcessContext::new(48_000, 73))
+            .unwrap();
+        assert_eq!(a, b);
+        let context = ProcessContext::new(48_000, 0);
+        let first_a = tested.drain(&mut a[..2], &context).unwrap();
+        let first_b = baseline.drain(&mut b[..2], &context).unwrap();
+        assert_eq!(
+            (first_a.frames, first_a.complete),
+            (first_b.frames, first_b.complete)
+        );
+        assert_eq!(a[..2], b[..2]);
+        let mut sentinel = [123.0; 146];
+        assert!(
+            tested
+                .drain(&mut sentinel, &ProcessContext::new(wrong, 0))
+                .is_err()
+        );
+        assert_eq!(sentinel, [123.0; 146]);
+        loop {
+            let x = tested.drain(&mut a, &context).unwrap();
+            let y = baseline.drain(&mut b, &context).unwrap();
+            assert_eq!((x.frames, x.complete), (y.frames, y.complete));
+            assert_eq!(a[..x.frames * 2], b[..y.frames * 2]);
+            if x.complete {
+                break;
+            }
+        }
+        assert!(
+            tested
+                .drain(&mut [], &ProcessContext::new(wrong, 0))
+                .is_err()
+        );
+    }
+}

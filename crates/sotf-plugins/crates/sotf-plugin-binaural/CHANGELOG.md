@@ -1,5 +1,15 @@
 # Unreleased
 
+- Coalesce head requests through an atomic latest-pose mailbox and bounded
+  wakeups. Publish completed generations monotonically without starving
+  continuous motion when newer desired poses arrive during preparation.
+- Reject retired reset/resource epochs at worker publication and audio adoption;
+  give each worker an immutable dataset/configuration snapshot.
+- Retain the audible filter transition through EOF and reject mismatched process/
+  drain clocks before changing output, control time or the finite-stream budget.
+- Add gated worker, coherent snapshot, counter-wrap and cold mailbox-allocation
+  regressions; update queue tests for latest-pose rather than FIFO semantics.
+
 - Advance head orientation from source samples and request HRTF updates at
   completed source hops, making request trajectories independent of callback
   partitions and respecting controls changed inside a partially filled hop.

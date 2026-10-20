@@ -1,6 +1,7 @@
 // Rust guideline compliant 2026-02-21
 pub use super::config::BinauralDecoderParams;
 pub use super::error::BinauralError;
+use super::head_tracking::{HeadRequests, run_head_worker};
 pub use super::room::{Reflection, RoomModel};
 use super::state::HrtfState;
 use super::types::BinauralState;
@@ -207,9 +208,10 @@ pub struct BinauralDecoderPlugin {
     pub(super) smoothing: BinauralSmoothing,
     pub(super) retirement: BinauralRetirement,
     /// Channel used to request head-angle HRTF recomputations from the
-    /// background thread. Capacity 1; stale requests are dropped when the
-    /// thread is still busy.
+    /// background thread. Capacity one; entries wake the worker, which reads
+    /// the latest pose from the atomic mailbox instead of the queued tuple.
     pub(super) hrtf_update_tx: Option<SyncSender<(f32, f32, f32)>>,
+    pub(super) head_requests: Arc<HeadRequests>,
     /// Background HRTF update thread handle.
     pub(super) hrtf_update_thread: Option<JoinHandle<()>>,
 }
@@ -423,6 +425,7 @@ impl BinauralDecoderPlugin {
                 thread: Some(retire_thread),
             },
             hrtf_update_tx: None,
+            head_requests: HeadRequests::new(),
             hrtf_update_thread: None,
         };
         p.rebuild_cached_parameters();
@@ -594,12 +597,23 @@ impl BinauralDecoderPlugin {
     }
 
     fn adopt_published_state(&mut self) {
+        // A finite render uses the owners audible at EOS. Worker completion
+        // time must not change which filters render synthetic tail input.
+        if self.drain.remaining.is_some() {
+            return;
+        }
         // Do not clone a newly published Arc unless it can be adopted: the
         // worker could replace it immediately, leaving our clone the final
         // owner. Contention keeps the currently audible snapshot unchanged.
         let Ok(published) = self.state.try_lock() else {
             return;
         };
+        // Hold the value lock while reading its generation, then compare to
+        // the audio-owned request epoch. This closes the publish/adopt race.
+        let (epoch, generation) = self.state.head_publication();
+        if generation != 0 && !self.head_requests.accepts_epoch(epoch) {
+            return;
+        }
         if Arc::ptr_eq(&published, &self.crossfade.current_state_snapshot) {
             return;
         }
@@ -1149,43 +1163,36 @@ impl BinauralDecoderPlugin {
         }
 
         let state = Arc::clone(&self.state);
+        // The worker owns a stable dataset/configuration for its entire epoch.
+        // A replacement cannot mix old spectra with new measurement indices.
+        let base = state.load();
         let config = self.config.clone();
         let fft_r2c = Arc::clone(&self.fft.fft_r2c);
         let lfe_channels = self.coefficients.lfe_channels.clone();
-        let prepared = {
-            let state_guard = state.load();
-            let sofa = state_guard
-                ._hrtf_data
-                .as_ref()
-                .expect("worker is spawned only with a loaded SOFA dataset");
-            Arc::new(super::hrtf::prepare_hrtf_spectra(
-                sofa,
-                config.fft_size,
-                config.sample_rate,
-                &fft_r2c,
-            ))
-        };
-
-        let (tx, rx) = sync_channel::<(f32, f32, f32)>(1);
+        let sofa = base
+            ._hrtf_data
+            .as_ref()
+            .expect("worker requires a loaded SOFA");
+        let prepared =
+            super::hrtf::prepare_hrtf_spectra(sofa, config.fft_size, config.sample_rate, &fft_r2c);
+        self.head_requests.start();
+        self.smoothing.last_hrtf_yaw = f32::INFINITY;
+        self.smoothing.last_hrtf_pitch = f32::INFINITY;
+        self.smoothing.last_hrtf_roll = f32::INFINITY;
+        let requests = Arc::clone(&self.head_requests);
+        let (tx, rx) = sync_channel(1);
         let handle = std::thread::spawn(move || {
-            while let Ok((yaw, pitch, roll)) = rx.recv() {
-                let new_state = match Self::compute_head_rotated_hrtf_state(
-                    &state,
+            run_head_worker(rx, requests, state, move |pose| {
+                Self::compute_head_rotated_hrtf_state(
+                    &base,
                     &config,
                     &prepared,
                     &lfe_channels,
-                    yaw,
-                    pitch,
-                    roll,
-                ) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        log::warn!("[BinauralDecoder] Background HRTF recompute failed: {}", e);
-                        continue;
-                    }
-                };
-                state.store(new_state);
-            }
+                    pose.angles.0,
+                    pose.angles.1,
+                    pose.angles.2,
+                )
+            });
         });
 
         self.hrtf_update_tx = Some(tx);
@@ -1193,6 +1200,7 @@ impl BinauralDecoderPlugin {
     }
 
     fn shutdown_hrtf_update_thread(&mut self) {
+        self.head_requests.stop();
         // Dropping the sender unblocks the receiver's recv() with an error,
         // causing the thread to exit cleanly.
         self.hrtf_update_tx.take();
@@ -1206,7 +1214,7 @@ impl BinauralDecoderPlugin {
     /// Recompute a new `BinauralState` for the given head angles.
     /// This is the CPU-heavy work that now runs off the audio thread.
     fn compute_head_rotated_hrtf_state(
-        state: &Arc<HrtfState>,
+        state: &Arc<BinauralState>,
         config: &BinauralConfig,
         prepared: &super::hrtf::PreparedHrtfSpectra,
         lfe_channels: &[usize],
@@ -1215,13 +1223,13 @@ impl BinauralDecoderPlugin {
         roll: f32,
     ) -> PluginResult<Arc<BinauralState>> {
         if config.sample_rate == 0.0 {
-            return Ok(state.load_full());
+            return Ok(Arc::clone(state));
         }
 
-        let state_guard = state.load();
+        let state_guard = state;
         let sofa_ref: &SofaFile = match state_guard._hrtf_data.as_ref() {
             Some(s) => s,
-            None => return Ok(state.load_full()),
+            None => return Ok(Arc::clone(state)),
         };
 
         let mut filters =
@@ -1264,7 +1272,6 @@ impl BinauralDecoderPlugin {
         let eq = state_guard.diffuse_field_eq_filter.clone();
 
         let sofa_clone = state_guard._hrtf_data.clone();
-        drop(state_guard);
 
         Ok(Arc::new(BinauralState {
             hrtf_filters_freq: filters,
@@ -1274,6 +1281,10 @@ impl BinauralDecoderPlugin {
     }
 
     pub(super) fn reset_state(&mut self) {
+        self.head_requests.invalidate();
+        self.smoothing.last_hrtf_yaw = f32::INFINITY;
+        self.smoothing.last_hrtf_pitch = f32::INFINITY;
+        self.smoothing.last_hrtf_roll = f32::INFINITY;
         self.drain.has_input = false;
         self.drain.remaining = None;
         self.input.input_fill = 0;
@@ -1878,6 +1889,9 @@ impl Plugin for BinauralDecoderPlugin {
                 diffuse_field_eq_filter: eq,
                 _hrtf_data: Some(sofa),
             });
+            // Retire the old immutable worker epoch before committing its
+            // replacement. Fallible filter preparation above retains its worker.
+            self.shutdown_hrtf_update_thread();
             self.state.store(new_state.clone());
             self.crossfade.current_state_snapshot = new_state;
             self.sofa_delay_rebase_seconds = Some(delay_rebase_seconds);
@@ -1942,6 +1956,7 @@ impl Plugin for BinauralDecoderPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
+        self.validate_clock(context)?;
         if !self.drain.has_input || self.drain.remaining == Some(0) {
             return Ok(PluginDrainResult::COMPLETE);
         }
@@ -2012,6 +2027,16 @@ impl BinauralDecoderPlugin {
         finite_tail.saturating_add(reverb_tail)
     }
 
+    fn validate_clock(&self, context: &ProcessContext) -> PluginResult<()> {
+        if context.sample_rate != self.config.sample_rate {
+            return Err(format!(
+                "BinauralDecoder sample-rate mismatch: prepared at {} Hz, context is {} Hz",
+                self.config.sample_rate, context.sample_rate
+            ));
+        }
+        Ok(())
+    }
+
     fn request_head_rotation(&mut self) {
         let yaw = self.smoothing.head_yaw_deg.current();
         let pitch = self.smoothing.head_pitch_deg.current();
@@ -2022,11 +2047,15 @@ impl BinauralDecoderPlugin {
         if angle_changed && self.drain.remaining.is_none() {
             // Request a background recomputation instead of blocking the audio
             // thread. The update thread will store the new state; process_audio_block
-            // detects the change and crossfades. If the channel is full the thread
-            // is still busy, so we drop the stale request; the smoother will send
-            // a newer angle on the next frame.
+            // detects the change and crossfades. A full wakeup channel already
+            // guarantees a worker visit; the atomic mailbox still takes the
+            // newest pose rather than retaining the queued pose.
             let sent = if let Some(tx) = &self.hrtf_update_tx {
-                tx.try_send((yaw, pitch, roll)).is_ok()
+                self.head_requests.publish((yaw, pitch, roll));
+                match tx.try_send((yaw, pitch, roll)) {
+                    Ok(()) | Err(TrySendError::Full(_)) => true,
+                    Err(TrySendError::Disconnected(_)) => false,
+                }
             } else {
                 false
             };
@@ -2044,6 +2073,7 @@ impl BinauralDecoderPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
+        self.validate_clock(context)?;
         let nf = context.num_frames;
         validate_interleaved_io(
             "BinauralDecoder",

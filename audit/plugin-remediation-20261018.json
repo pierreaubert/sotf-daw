@@ -483,21 +483,51 @@
           "evidence": [
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-head-clock-baseline.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json"
           ],
           "result": "Reproduced empty callback jumping yaw from 0 to 90 degrees and EOF padding advancing orientation. Source samples now advance the three smoothers identically, and completed source hops trigger requests. 36 schedules at 44.1/48/96 kHz and FFT 64/256/1024 are bit-identical across four callback shapes, including three-axis interruptions within a partial hop. First-hop angle matches independent 10 ms timing within 0.001 degrees; reset clears pending phase. 130 regular release tests plus the explicit transition timing test pass; strict QA all-target Clippy passes. All 40002 measured transition callbacks have zero allocations/frees."
+        },
+        {
+          "requirement": "Coalesce stale queued head poses and reject out-of-order or retired worker publications without starving continuous motion.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_tracking.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_worker_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json"
+          ],
+          "result": "Atomic single-writer pose mailbox with coherent three-axis snapshots and bounded wakeups. Gated preparation verifies queued poses 2\u2013100 collapse to 100 and 101\u2013200 to 200, while completed poses 1/100 still publish during ongoing motion. Publication generations advance monotonically within a reset/resource epoch; both completion and adoption reject retired epochs. Each real worker captures an immutable dataset/configuration; resource commits retire the old worker before replacement. Reset/shutdown, publication-before-reset/adoption, counter wrap, 100000 concurrent writes and EOF owner stability pass. Cold empty/full-wakeup writes have zero allocations/frees."
+        },
+        {
+          "requirement": "Reject callbacks/drains whose clocks differ from the prepared renderer before mutating audio, controls or finite-stream state.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-clock-guard-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json"
+          ],
+          "result": "Reproduced acceptance of a wrong-clock empty callback at 44100 Hz on a 48000 Hz renderer. Seven mismatched/invalid clocks, including a fractional rate and NaN/infinity, now reject empty/nonempty process calls and pre/during/completed drain calls transactionally. Valid continuation remains bit-identical to a correctly clocked twin. Full release suite: 138 passed; explicit transition timing test passes 40002 zero-allocation/zero-free callbacks; strict all-target QA Clippy passes."
         }
       ],
       "evidence": [
         "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs",
         "audit/artifacts/plugin-audit-20261018/binaural-head-clock-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json"
+        "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json",
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_tracking.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_worker_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/binaural-clock-guard-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json"
       ],
       "remaining_production_scope": [
-        "Stale queued/in-flight worker results, head-turn audio sweeps (including yaw wrap) and measured end-to-end motion-to-audio latency.",
-        "SOFA coordinate/delay conventions, maximum HRIR dimensions and support admission on current sources.",
-        "Recursive late-reverb truncation/cutoff audibility and robust interrupted crossfades.",
-        "Ordinary callback prepared-clock validation before mutating source/control state."
+        "Head-turn audio sweeps including yaw wrap and real SOFA replacement pose continuity; measured end-to-end motion-to-audio latency under actual preparation load.",
+        "SOFA coordinate/delay conventions, maximum HRIR dimensions, support admission and preparation storage/cost on current sources.",
+        "Recursive late-reverb truncation/cutoff audibility and robust interrupted crossfade behavior."
+      ],
+      "validation_limits": [
+        "Gated worker tests use controlled prepared filters and verify ordering/lifecycle, not HRTF spatial accuracy or a hardware tracking deadline.",
+        "The latest desired pose can be newer than the currently completed pose; monotonic completed-result publication avoids starvation during motion. Queued work is coalesced, but preparation latency is not bounded by that policy.",
+        "Transition timing is host-specific; the current run has a 2.240958 ms maximum outlier. It is not a universal callback deadline guarantee.",
+        "Optional learned HRTF selection remains separately deferred."
       ]
     },
     {
@@ -2107,6 +2137,15 @@
       ],
       "result": "Fix empty/EOF head-time advancement and callback-dependent request trajectories; 36 deterministic schedules, 130 regular release tests, explicit 40002-callback transition timing and strict Clippy pass. Overall remains 35/45.",
       "limitations": "Deterministic request sink does not prove asynchronous publication freshness or motion-to-audio latency. Coordinate/maximum-support and tail-cutoff requirements remain open; optional ML remains separate."
+    },
+    {
+      "name": "Binaural latest-pose worker epochs and transactional clock validation",
+      "state": "verified_partial",
+      "plugin_ids": [
+        12
+      ],
+      "result": "Latest-pose coalescing, monotonic completed generations, reset/resource cancellation and EOF snapshot stability are implemented. Wrong-clock baseline fixed. 138 regular release tests, explicit 40002-callback transition timing and strict Clippy pass. Overall remains 35/45.",
+      "limitations": "Freshness handoff fixtures do not prove actual head-turn spatial accuracy or motion-to-audio latency. SOFA boundaries, actual preparation cost, pose continuity and tail-cutoff audio remain open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
