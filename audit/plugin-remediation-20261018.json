@@ -1135,7 +1135,7 @@
       "id": 34,
       "plugin": "Multiband compressor and single-band compressor alias",
       "audit_text": "[`multiband_compressor_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/src/lib/multiband_compressor_plugin.rs):2170\u20132350 combines crossover, linked detectors, sidechain shaping, range/hold controls and lookahead with an aligned dry path. The facade's `CompressorPlugin` is an alias of this implementation (`sotf-plugins/src/lib.rs`:374), so one-band construction/factory defaults are part of its correctness.\n\n`compressor_accuracy.rs`, `detector_scenarios.rs`, `range_hold.rs`, `lookahead_latency.rs` and finite-stream tests are strong. Extend reconstruction with no gain reduction, interband transient timing, stereo linking and near-threshold modulation. Recursive crossover tails need an explicit render policy. Classical detector topology and release/knee choices should be measured separately. ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Provide explicit native recursive wet-tail render policy with truthful support metadata",
@@ -1159,12 +1159,20 @@
         },
         {
           "task": "Verify single-band alias/factory defaults and separately measured detector/release/knee behavior for audit completion",
-          "status": "pending",
-          "evidence": "Source review confirms facade CompressorPlugin is a type alias and canonical/bridge factories force num_bands=1; direct alias constructor still uses multiband defaults. AB Compare compressor path does not force one band and requires separate compatibility review. Three focused facade tests pass; bridge filter executes zero tests. Exported formats are not validated in this batch."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-ab-compare/src/factory.rs",
+            "crates/sotf-plugins/src/lib.rs",
+            "crates/sotf-plugins/tests/compressor_alias_defaults.rs",
+            "crates/sotf-plugins/crates/plugins-bridge/tests/compressor_factories.rs",
+            "crates/sotf-plugins/crates/plugins-bridge/tests/cross_format_comparison.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-compressor-factories.json"
+          ],
+          "result": "Corrected AB Compare built-in compressor fallback to match canonical/bridge one-band identity; explicit multiband_compressor retains serialized topology. Migration of old fallback multiband paths is documented, external injected factories unchanged. Public Rust aliases intentionally retain multiband defaults; direct broadband params explicitly select num_bands=1, documented and tested. 144 bridge/fallback plugin/rack/graph cases plus81 facade cases verify defaults/conflicting band count, identity/schema, latency and bit-identical stream audio against explicit native construction at44.1/96/192kHz and1/2/6channels. Invalid dynamics rejected; injected factory override verified. Earlier signal artifact separately measures Peak/RMS, knee, attack/release and link. Full affected suites287passed,5preexistingignored; new route release3passed; strict affected all-targets QA/facade-test Clippy passes. Existing cross-format Dither fixtures now request same seed before initialize; production unchanged and tolerance unchanged. Exported format binaries not validated or claimed."
         }
       ],
       "evidence": [
-        "Explicit recursive rendering and extended independent signal validation implemented; multiband crossover precision corrected. Entry34 remains partial pending alias/factory compatibility closure; overall29/45 complete."
+        "All production recommendations in entry34 covered by explicit native recursive rendering, independent signal validation, crossover precision correction and alias/factory compatibility closure. Optional ML remains in separate backlog. 30/45 complete_production_scope; remaining objective remains active."
       ]
     },
     {
@@ -1591,6 +1599,15 @@
         21
       ],
       "result": "Fixed the incorrect right-surround sign that inverted isolated Rs and cancelled coherent Ls/Rs. Frozen layout vectors, independent matrix/LFE oracles and native passive decoding cover the audit requirements. 77 plugin tests and 43 facade/host checks passed; Clippy clean. Optional source-aware remixing remains separate."
+    },
+    {
+      "name": "Multiband compressor signal precision, recursive rendering and factory identity closure",
+      "state": "verified",
+      "plugin_ids": [
+        34
+      ],
+      "result": "Explicit native cutoff plus independent252-case signal matrix, localized f64 crossover precision fix,144 bridge/fallback and81 facade configurations. Crate173tests and affected287tests pass;5preexistingignored. Release signal/factory tests and strict Clippy pass. AB fallback migration and direct alias multiband defaults documented.",
+      "limitations": "Cascaded multiway phase response retained; CPU cost of f64 bank not benchmarked. Exported CLAP/VST3/AU binaries not validated. Optional ML excluded from production scope."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

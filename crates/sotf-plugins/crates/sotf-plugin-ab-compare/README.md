@@ -6,6 +6,14 @@ Enables fair comparison between two audio processing chains with automatic loudn
 Supports a single plugin, full rack, or arbitrary graph per path. Path/topology and band-mask
 changes are applied through an outer-host structural rebuild so realtime processing remains bounded.
 
+The built-in fallback factory selects one band for `compressor`, matching the
+canonical and bridge factories even if the saved parameters contain a different
+`num_bands`. Select `multiband_compressor` to honor multiband topology. Earlier
+fallback paths labeled `compressor` used multiband defaults; change their type
+to `multiband_compressor` to preserve that processing. This correction can change
+the audio of those saved fallback paths. An injected external factory retains
+full control of construction, including its own identity and parameter policy.
+
 Loudness matching updates on a fixed 50 ms sample clock (`floor(sample_rate / 20)`
 frames per interval), independently of callback size. Each update uses only audio
 already rendered and changes the gain target for subsequent samples. Large callbacks

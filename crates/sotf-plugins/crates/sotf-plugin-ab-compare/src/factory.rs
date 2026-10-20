@@ -49,7 +49,7 @@ fn create_plugin(
     if let Some(factory) = external_factory {
         return factory(plugin_type, parameters, num_channels, sample_rate);
     }
-    // Fallback: built-in limited factory (6 types)
+    // Fallback: built-in limited factory.
     create_plugin_builtin(plugin_type, parameters, num_channels, sample_rate)
 }
 
@@ -73,10 +73,15 @@ fn create_plugin_builtin(
             let plugin = GainPlugin::from_params(num_channels, params)?;
             Ok(Box::new(ParametricPluginAdapter::new(plugin)))
         }
-        "compressor" => {
-            let params: MultibandCompressorPluginParams =
+        "compressor" | "multiband_compressor" => {
+            let mut params: MultibandCompressorPluginParams =
                 serde_json::from_value(parameters.clone())
                     .map_err(|e| format!("Invalid Compressor params: {}", e))?;
+            // Match canonical and bridge factory identity. Explicit multiband
+            // selection retains the serialized topology instead.
+            if plugin_type.eq_ignore_ascii_case("compressor") {
+                params.num_bands = 1;
+            }
             let plugin =
                 MultibandCompressorPlugin::try_from_params(num_channels, params, sample_rate)?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))

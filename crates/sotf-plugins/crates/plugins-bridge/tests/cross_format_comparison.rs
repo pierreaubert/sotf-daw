@@ -164,7 +164,14 @@ fn nondefault_setting(plugin_type: &str) -> (&'static str, ParameterValue) {
 }
 
 fn prepared_plugin(plugin_type: &str) -> Box<dyn Plugin> {
-    let mut plugin = create_plugin(plugin_type, CHANNELS, f64::from(SAMPLE_RATE), "{}")
+    // Independent entropy streams are intentionally different. Audio equivalence
+    // and same-seed restore require an explicit structural seed before initialize.
+    let config = if plugin_type == "Dither" {
+        r#"{"seed":12345}"#
+    } else {
+        "{}"
+    };
+    let mut plugin = create_plugin(plugin_type, CHANNELS, f64::from(SAMPLE_RATE), config)
         .unwrap_or_else(|error| panic!("{plugin_type} construction: {error}"));
     plugin
         .initialize(f64::from(SAMPLE_RATE))

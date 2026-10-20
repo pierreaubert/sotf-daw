@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Align the built-in `compressor` fallback with one-band canonical/bridge
+  semantics. Add explicit `multiband_compressor` for serialized multiband
+  topology. Existing fallback `compressor` paths can change audio; rename to
+  `multiband_compressor` to retain their earlier multiband processing. External
+  factory injection is unchanged. Validate plugin/rack/graph routes against
+  bridge and explicit native construction, including invalid presets.
+
 - Drain finite same-rate, identity-frame child chains together with path-alignment and dry-delay buffers.
 - Validate drain admission and destination capacity before mutation; require reset after drain failures and reject unsupported recursive band-mask drain.
 - Refuse mixed-clock nested paths in `process` before either child advances (loud, history-preserving); true mixed-clock composition stays an R3 shared handoff.

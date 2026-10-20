@@ -371,7 +371,17 @@ pub use plugin_binaural::{
     BinauralDecoderData, BinauralDecoderParams, BinauralDecoderPlugin, RoomModel,
 };
 pub use plugin_channel_mute_solo::{ChannelMuteSoloParams, ChannelMuteSoloPlugin, ChannelState};
+/// Compatibility alias retaining multiband constructors and defaults.
+///
+/// For broadband compression, set [`CompressorPluginParams::num_bands`] to 1
+/// before calling `try_from_params`, or use [`create_plugin`] with type
+/// `"compressor"`, which selects one band regardless of serialized band count.
+/// Calling `CompressorPlugin::new` directly retains the multiband default.
 pub type CompressorPlugin = sotf_plugin_multiband_compressor::MultibandCompressorPlugin;
+/// Shared compressor parameters; defaults retain multiband topology.
+///
+/// Set `num_bands` to 1 for direct broadband construction. Factory type
+/// `"compressor"` selects one band automatically.
 pub type CompressorPluginParams = sotf_plugin_multiband_compressor::MultibandCompressorPluginParams;
 pub type CompressorData = sotf_plugin_multiband_compressor::MultibandCompressorData;
 pub use plugin_convolution::{ConvolutionPlugin, ConvolutionPluginParams};

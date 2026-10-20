@@ -4,6 +4,12 @@ SOTF Multiband Compressor plugin for multiband dynamic range compression.
 
 Splits the signal into frequency bands and applies independent compression to each band for frequency-selective dynamics control.
 
+The facade's Rust `CompressorPlugin` and `CompressorPluginParams` are compatibility
+type aliases: direct default construction retains three bands. For direct
+broadband processing, set `num_bands = 1` before `try_from_params`. Factory type
+`compressor` selects one band automatically in the canonical, bridge and A/B
+fallback paths; `multiband_compressor` retains the configured band count.
+
 ## Crossover precision and validation
 
 Crossover coefficients, state and serial split intermediates use f64; band audio
