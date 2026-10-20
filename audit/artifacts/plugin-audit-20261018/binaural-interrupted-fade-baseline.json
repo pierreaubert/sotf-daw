@@ -1,0 +1,25 @@
+{
+  "base_commit": "3662c5ae9041261561b39efd73369399bd07f789",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "repeated_linear_publications",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 16.10s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-c88022d35d76891c)\n\nrunning 1 test\nINTERRUPTED_LINEAR rate=44100 fft=64 max_error=0.2802510798066108\n\nthread 'fade_cue_tests::repeated_linear_publications_match_direct_time_domain_transfer' (326672893) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/fade_cue_tests.rs:121:13:\ninterrupted transfer 44100/64: 0.2802510798066108\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest fade_cue_tests::repeated_linear_publications_match_direct_time_domain_transfer ... FAILED\n\nfailures:\n\nfailures:\n    fade_cue_tests::repeated_linear_publications_match_direct_time_domain_transfer\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 108 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-binaural --lib`\n",
+  "fixture_sha256": "06e39b12dd169709931d706e5f57686e4155080e52c5f305ad9f9dcc585cd180",
+  "scope": "Retirement capacity explicitly controlled with a stalled 512-slot queue; repeated synthetic mono transfers, per-ear EQ delay, independent f64 impulse superposition."
+}

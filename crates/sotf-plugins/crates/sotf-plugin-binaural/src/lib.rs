@@ -45,3 +45,7 @@ mod sofa_delay_tests;
 #[cfg(test)]
 #[path = "lib/head_clock_tests.rs"]
 mod head_clock_tests;
+
+#[cfg(test)]
+#[path = "lib/fade_cue_tests.rs"]
+mod fade_cue_tests;

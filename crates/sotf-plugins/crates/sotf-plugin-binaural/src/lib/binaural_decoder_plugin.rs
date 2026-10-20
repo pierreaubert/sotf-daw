@@ -144,6 +144,11 @@ pub(super) struct BinauralCrossfade {
     pub(super) crossfade_prev_state: Option<Arc<BinauralState>>,
     pub(super) crossfade_remaining: usize,
     pub(super) crossfade_total: usize,
+    // Effective old transfer includes diffuse-field EQ. Double buffering keeps
+    // retirement backpressure from changing the currently audible transfer.
+    pub(super) effective_previous: Vec<Vec<Complex<f32>>>,
+    pub(super) candidate_previous: Vec<Vec<Complex<f32>>>,
+    pub(super) effective_previous_active: bool,
     pub(super) crossfade_sum_left: Vec<Complex<f32>>,
     pub(super) crossfade_sum_right: Vec<Complex<f32>>,
     pub(super) rtpghi_left: Option<RtpghiProcessor>,
@@ -403,6 +408,15 @@ impl BinauralDecoderPlugin {
                 crossfade_prev_state: None,
                 crossfade_remaining: 0,
                 crossfade_total: 0,
+                effective_previous: vec![
+                    vec![Complex::new(0.0, 0.0); freq_size * 2];
+                    input_channels
+                ],
+                candidate_previous: vec![
+                    vec![Complex::new(0.0, 0.0); freq_size * 2];
+                    input_channels
+                ],
+                effective_previous_active: false,
                 crossfade_sum_left: vec![Complex::new(0.0, 0.0); freq_size],
                 crossfade_sum_right: vec![Complex::new(0.0, 0.0); freq_size],
                 rtpghi_left: None,
@@ -603,6 +617,12 @@ impl BinauralDecoderPlugin {
         if self.drain.remaining.is_some() {
             return;
         }
+        // A phase-reconstructed spectral transition is not a linear filter.
+        // Finish it before coalescing the latest publication; restarting its
+        // phase history mid-fade would not preserve the audible signal.
+        if self.config.crossfade_mode_index == 1 && self.crossfade.crossfade_remaining > 0 {
+            return;
+        }
         // Do not clone a newly published Arc unless it can be adopted: the
         // worker could replace it immediately, leaving our clone the final
         // owner. Contention keeps the currently audible snapshot unchanged.
@@ -617,6 +637,42 @@ impl BinauralDecoderPlugin {
         }
         if Arc::ptr_eq(&published, &self.crossfade.current_state_snapshot) {
             return;
+        }
+
+        let interrupted =
+            self.crossfade.crossfade_remaining > 0 && self.crossfade.crossfade_prev_state.is_some();
+        if interrupted {
+            let alpha = 1.0
+                - self.crossfade.crossfade_remaining as f32 / self.crossfade.crossfade_total as f32;
+            let old = self
+                .crossfade
+                .crossfade_prev_state
+                .as_ref()
+                .expect("checked above");
+            let current = &self.crossfade.current_state_snapshot;
+            for ch in 0..self.config.input_channels {
+                for ear in 0..2 {
+                    for k in 0..self.config.freq_size {
+                        let index = ear * self.config.freq_size + k;
+                        let previous = if self.crossfade.effective_previous_active {
+                            self.crossfade.effective_previous[ch][index]
+                        } else {
+                            old.hrtf_filters_freq[ch][index]
+                                * old
+                                    .diffuse_field_eq_filter
+                                    .as_ref()
+                                    .map_or(Complex::new(1.0, 0.0), |eq| eq[ear][k])
+                        };
+                        let destination = current.hrtf_filters_freq[ch][index]
+                            * current
+                                .diffuse_field_eq_filter
+                                .as_ref()
+                                .map_or(Complex::new(1.0, 0.0), |eq| eq[ear][k]);
+                        self.crossfade.candidate_previous[ch][index] =
+                            previous * (1.0 - alpha) + destination * alpha;
+                    }
+                }
+            }
         }
 
         // Interrupted fades must be retired before replacing their owner.
@@ -635,6 +691,13 @@ impl BinauralDecoderPlugin {
             }
         }
 
+        if interrupted {
+            std::mem::swap(
+                &mut self.crossfade.effective_previous,
+                &mut self.crossfade.candidate_previous,
+            );
+        }
+        self.crossfade.effective_previous_active = interrupted;
         let previous = std::mem::replace(
             &mut self.crossfade.current_state_snapshot,
             Arc::clone(&published),
@@ -735,7 +798,11 @@ impl BinauralDecoderPlugin {
                 );
 
                 // Old filters
-                let hrtf_old = &prev_filters[ch];
+                let hrtf_old = if self.crossfade.effective_previous_active {
+                    &self.crossfade.effective_previous[ch]
+                } else {
+                    &prev_filters[ch]
+                };
                 complex_mul_add_simd(
                     &mut self.crossfade.crossfade_sum_left,
                     &self.analysis.temp_freq_buffer,
@@ -764,7 +831,10 @@ impl BinauralDecoderPlugin {
             }
 
             // Apply diffuse field EQ to old output
-            if let Some(eq) = prev_df_eq {
+            if let Some(eq) = prev_df_eq
+                .as_ref()
+                .filter(|_| !self.crossfade.effective_previous_active)
+            {
                 for (k, (sl, sr)) in self
                     .crossfade
                     .crossfade_sum_left
@@ -1318,6 +1388,7 @@ impl BinauralDecoderPlugin {
         self.room.reflection_read_pos = 0;
         // Clear crossfade state on reset
         self.crossfade.crossfade_remaining = 0;
+        self.crossfade.effective_previous_active = false;
         self.retire_completed_crossfade_state();
         // Reset RTPGHI state so stale phase history is not carried across resets
         if let Some(ref mut rtpghi) = self.crossfade.rtpghi_left {

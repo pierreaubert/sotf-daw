@@ -182,3 +182,8 @@
 
 - Complete Phase 4: adaptive threshold, denoiser DSP, FDN reverb, binaural preview
 - First step of automatic UI generation via a set of constraints; non-regression is built in with insta
+
+- Retarget interrupted linear HRTF fades from the effective audible transfer,
+  including diffuse-field EQ, using preallocated transactional buffers.
+- Preserve spectral fade phase history by finishing the active transition and
+  coalescing the latest publication; document the resulting tracking delay.

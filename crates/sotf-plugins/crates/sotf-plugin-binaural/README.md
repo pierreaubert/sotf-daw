@@ -91,3 +91,21 @@ and complex transfer values, then 30 direct impulse responses after supported
 These held-pose synthetic fixtures do not establish continuously moving
 non-grid HRTF interpolation accuracy, a hardware motion-to-audio deadline,
 maximum dataset cost or recursive-tail cutoff audibility.
+
+### Repeated HRTF transitions
+
+Linear fades retarget from the effective complex transfer of the active fade,
+including each side's diffuse-field EQ. Two setup-allocated per-channel buffers
+retain that transfer transactionally: a full retirement queue leaves both the
+current owners and the audible transfer unchanged. This adds two stereo complex
+spectra per input channel (32 × channels × frequency bins bytes); retarget work
+is bounded by those dimensions. The fade gain advances once per source hop.
+This preserves the scheduled linear transfer; it does not establish a subjective
+click threshold for arbitrary moving HRTFs.
+
+Spectral RTPGHI fades finish before adopting the latest published state. This
+preserves their phase history and coalesces intermediate publications. Pending
+updates can wait the remaining rounded fade duration (the public setting ranges
+from 10 to 500 ms), plus publication/retirement contention; this is a documented
+tracking-latency tradeoff, not a low-latency head-motion guarantee. EOF continues
+the audible transition while excluding later publications.

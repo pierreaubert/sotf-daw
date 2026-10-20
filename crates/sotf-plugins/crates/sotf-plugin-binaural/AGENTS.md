@@ -86,3 +86,9 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Use `AngularSmoother` for head components and `angular_delta` for request thresholds. Keep canonical requested targets while smoothing the short component arc; do not replace it with raw scalar-angle interpolation.
 - Synchronous HRTF preparation must use the current smoothed pose, matching background preparation. The physical basis is forward/left/up, with positive pitch up and positive roll raising the left ear.
 - `head_cue_tests.rs` uses an independent head basis and known real-SOFA impulse cues. Held-pose tests settle a supported 10 ms crossfade before measuring transfer; they do not validate continuous-motion latency or cutoff audibility.
+
+## Retargeting fades
+
+- Interrupted linear fades use the preallocated effective previous transfer, with diffuse-field EQ already included. Do not apply the previous owner's EQ a second time.
+- Prepare a candidate transfer before retirement; commit it only after retirement succeeds. Backpressure must preserve the audible transfer and owners.
+- Spectral fades coalesce pending publications until completion to preserve nonlinear phase history. Include the remaining fade duration when assessing tracking latency.
