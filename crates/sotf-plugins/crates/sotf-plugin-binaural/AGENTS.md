@@ -102,3 +102,10 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Linear EOF must retain N-1 FIR taps after the last accepted sample, regardless of partial-hop phase. Spectral output frames can occupy 2N samples and retain their support bound across a later mode switch.
 - Drain available output through accepted source time between source hops. Feeding an entire unbounded callback first can overwrite the bounded 4N output ring.
 - The historical support diagnostic reproduces the former renderer aliasing defect. Correct convolution does not prove ideal fractional-delay timing, minimum-phase interpolation or continuous-motion cue accuracy.
+
+## Coordinate frames and shadow profile
+
+- SOFA/host/SSIR use forward/left/up and positive-left azimuth. Room x is right and room y is forward: negate the room-x lateral component when converting speaker placement and image DOA.
+- Share `azimuth_to_pan_gains` for fallback cues; positive azimuth must favor the left ear and match reflected HRTF lookup.
+- The near-field control applies a median-plane-normalized magnitude heuristic to the contralateral ear. Use lateral projection for elevation/seam consistency; do not restore angular or frequency hard gates.
+- Static world-frame tests do not prove reflection cue rotation with head pose or calibrated near-field perception.

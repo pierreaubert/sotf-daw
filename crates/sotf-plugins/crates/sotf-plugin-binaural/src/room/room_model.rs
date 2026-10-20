@@ -12,7 +12,8 @@ pub struct RoomModel {
     #[serde(default = "default_room_dimensions")]
     pub dimensions: [f32; 3],
 
-    /// Listener position in room [x, y, z] in meters from corner (0,0,0)
+    /// Listener position in room [x, y, z] in meters from corner (0,0,0).
+    /// Room axes are right/forward/up; speaker and SOFA angles are positive-left.
     #[serde(default = "default_listener_position")]
     pub listener_position: [f32; 3],
 

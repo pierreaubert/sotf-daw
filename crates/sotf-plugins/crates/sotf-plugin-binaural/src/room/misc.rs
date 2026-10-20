@@ -9,12 +9,11 @@ pub fn speaker_to_source_position(speaker: &SpeakerPosition) -> SourcePosition {
 }
 
 /// Constant-power sine-law panning from azimuth (radians).
-/// az = 0 -> front (balanced), az = +π/2 -> right, az = -π/2 -> left.
-#[allow(dead_code)]
+/// Uses SOFA azimuth: zero is front and positive angles turn toward the left.
 pub(super) fn azimuth_to_pan_gains(az: f32) -> (f32, f32) {
-    let pan = az.sin(); // -1 = left, 0 = front/back, 1 = right
-    let left = ((1.0 - pan) * 0.5).sqrt();
-    let right = ((1.0 + pan) * 0.5).sqrt();
+    let pan = az.sin(); // -1 = right, 0 = front/back, +1 = left
+    let left = ((1.0 + pan) * 0.5).sqrt();
+    let right = ((1.0 - pan) * 0.5).sqrt();
     (left, right)
 }
 

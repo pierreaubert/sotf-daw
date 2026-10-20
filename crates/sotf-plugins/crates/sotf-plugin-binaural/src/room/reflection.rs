@@ -1,3 +1,4 @@
+use super::misc::azimuth_to_pan_gains;
 use super::room_model::RoomModel;
 use super::types::Reflection;
 use math_rir::SsirResult;
@@ -27,14 +28,11 @@ pub(super) fn add_image_reflections(
             let wall_att = 1.0 - room.absorption[*wall_idx];
             let gain = dist_att * wall_att;
 
-            let az = dx.atan2(dy);
+            let az = (-dx).atan2(dy);
             let el = dz.atan2((dx * dx + dy * dy).sqrt());
-            // Standard constant-power sine-law panning.
-            // az convention: 0 = front, π/2 = right, −π/2 = left.
-            // sin(az) = -1 at left, 0 at front/back, +1 at right.
-            let pan = az.sin();
-            let left = ((1.0 - pan) * 0.5).sqrt();
-            let right = ((1.0 + pan) * 0.5).sqrt();
+            // Room x points right and room y points forward. Published DOA
+            // uses SOFA's positive-left azimuth, matching HRTF lookup.
+            let (left, right) = azimuth_to_pan_gains(az);
 
             channel_reflections.push(Reflection {
                 delay_samples,
@@ -97,12 +95,8 @@ pub(super) fn ssir_result_to_reflections(
             None => (0.0, 0.0),
         };
 
-        // Standard constant-power sine-law panning (same formula as ISM).
-        // az convention: 0 = front, π/2 = right, −π/2 = left.
-        let az_rad = azimuth_deg.to_radians();
-        let pan = az_rad.sin();
-        let left_gain = ((1.0 - pan) * 0.5).sqrt();
-        let right_gain = ((1.0 + pan) * 0.5).sqrt();
+        // math-rir DOA vectors already use forward/left/up coordinates.
+        let (left_gain, right_gain) = azimuth_to_pan_gains(azimuth_deg.to_radians());
 
         reflections.push(Reflection {
             delay_samples,

@@ -13,3 +13,6 @@ pub use misc::*;
 pub use reflection_hrtf::*;
 pub use room_model::*;
 pub use types::*;
+
+#[cfg(test)]
+mod coordinate_tests;

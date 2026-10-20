@@ -1,5 +1,11 @@
 # Unreleased
 
+- Correct room/SOFA positive-left conversions for speaker images, reflection
+  directions, fallback panning and reflected HRTF selection.
+- Apply optional extra head shadowing to the contralateral ear using a
+  continuous median-plane-normalized profile, without rear boosts or hard gates.
+- Add independent spectral/image geometry, SSIR and native ear-cue regressions.
+
 - Render complete N-sample HRTF/LFE designs with padded 2N linear convolution,
   preserving N/4 source hops and N-sample reported latency.
 - Combine diffuse EQ once during preparation; admit full N-sample source HRIRs

@@ -486,7 +486,8 @@
             "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json",
             "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Reproduced empty callback jumping yaw from 0 to 90 degrees and EOF padding advancing orientation. Source samples now advance the three smoothers identically, and completed source hops trigger requests. 36 schedules at 44.1/48/96 kHz and FFT 64/256/1024 are bit-identical across four callback shapes, including three-axis interruptions within a partial hop. First-hop angle matches independent 10 ms timing within 0.001 degrees; reset clears pending phase. 130 regular release tests plus the explicit transition timing test pass; strict QA all-target Clippy passes. All 40002 measured transition callbacks have zero allocations/frees."
         },
@@ -498,7 +499,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_worker_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Atomic single-writer pose mailbox with coherent three-axis snapshots and bounded wakeups. Gated preparation verifies queued poses 2\u2013100 collapse to 100 and 101\u2013200 to 200, while completed poses 1/100 still publish during ongoing motion. Publication generations advance monotonically within a reset/resource epoch; both completion and adoption reject retired epochs. Each real worker captures an immutable dataset/configuration; resource commits retire the old worker before replacement. Reset/shutdown, publication-before-reset/adoption, counter wrap, 100000 concurrent writes and EOF owner stability pass. Cold empty/full-wakeup writes have zero allocations/frees."
         },
@@ -510,7 +512,8 @@
             "audit/artifacts/plugin-audit-20261018/binaural-clock-guard-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-worker-validation.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Reproduced acceptance of a wrong-clock empty callback at 44100 Hz on a 48000 Hz renderer. Seven mismatched/invalid clocks, including a fractional rate and NaN/infinity, now reject empty/nonempty process calls and pre/during/completed drain calls transactionally. Valid continuation remains bit-identical to a correctly clocked twin. Full release suite: 138 passed; explicit transition timing test passes 40002 zero-allocation/zero-free callbacks; strict all-target QA Clippy passes."
         },
@@ -521,7 +524,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_cue_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Reproduced a +179 to -179 degree command taking the long way through 130.6399 degrees in its first 44100 Hz hop. AngularSmoother now rebases bounded internal state and selects the short component arc; circular 0.5-degree request distance avoids seam-only work. 36 seam cases across three axes/rates match independent 10 ms timing within 0.02 degrees over 1440 hops and preserve public targets. The 36 callback schedules now include interrupted seam crossings. This is per-axis Euler smoothing, not a simultaneous-axis quaternion geodesic."
         },
@@ -532,7 +536,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_cue_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Reproduced zero-yaw preparation at a held -90 degree pose: right DC gain 0.95 instead of 0.57. Runtime replacement and reinitialization now rotate direct speaker positions by the current smoothed pose. Independent forward/left/up basis checks cover 675 combinations (maximum Cartesian error 2.052777e-7). Fifteen held yaw/rate pairs use real 72/36-measurement SOFA files: 45 prepared level/complex-phase checks and 30 direct impulse renderings after supported 10 ms crossfades. Directional IR onsets plus shared [I,R] and genuinely varying [M,R] positive integer delays are applied exactly once. Ear delay/normalization waveform errors stay below 2e-6; prepared complex-cue errors below 2e-5. Full release selection: 142 passed; explicit transition timing 40002 zero-allocation/zero-free callbacks; strict all-target QA Clippy passes."
         },
@@ -543,7 +548,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/fade_cue_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Baseline repeated publication waveform error 0.280251 at 44100 Hz/FFT64 with deterministic retirement capacity. Linear retargeting now materializes the effective old complex transfer including each ear EQ into preallocated transactional double buffers; retirement failure leaves active transfer unchanged. Independent f64 direct FIR superposition passes 27 rate/FFT/callback-shape cases, maximum error below 1e-5 (renderer silence floor), with polarity and per-ear delay/EQ changes. Nine spectral cases retain bit-identical active-fade audio versus an uninterrupted twin and adopt the latest pending owner on the following hop. Full release suite 144 passed; explicit 40002 transition callbacks have zero allocations/frees; strict all-target QA Clippy passes."
         },
@@ -554,7 +560,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-head-storage-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-storage-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Reproduced dataset deep copies for 36/720/2048 measurements and 64/512/1024 source samples at FFT2048. Largest baseline pose allocation reached 16777216 bytes; dataset owner is now Arc<SofaFile>. Twelve poses per geometry retain identical IR storage pointers and expected shared-owner reference counts and constant-field transfer within 2e-5. Each tested pose requests 82144 allocation bytes, largest single allocation 16400, independent of measurement count. These are worker preparation measurements, not allocation-free preparation or end-to-end head latency."
         },
@@ -565,7 +572,8 @@
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-head-storage-baseline.json",
             "audit/artifacts/plugin-audit-20261018/binaural-head-storage-validation.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Checked spectra/outer-vector/onset payload arithmetic enforces a separate 256 MiB prepared-cache limit before reload/initialize state changes. Five FFT geometries test just-below/above-cap counts and usize overflow. Public native-file rejection at 9000 measurements/FFT4096 preserves dataset publication, audible owner, metadata and worker; rejected initialize also preserves the prepared clock. Explicit FFT2048/16312-measurement/16-sample boundary materializes 268430272 prepared bytes; peak tracked live requests 268438464 bytes, initial preparation 82.338 ms on this run. This is a cache-payload bound, excluding source IR and other runtime storage. Full release suite 147 passed; explicit storage and 40002 zero-heap transition callback tests pass; strict all-target QA Clippy passes."
         },
@@ -576,7 +584,8 @@
             "audit/artifacts/plugin-audit-20261018/binaural-interpolated-support-diagnostic.json",
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/linear_support_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-linear-support-baseline.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Historical independent IDFT exposed 2.59-3.30 percent design-response energy outside the former N-hop+1 convolution capacity. Native rendered audio then reproduced a 0.0039996 waveform error. Preparation now retains the full real N-sample interpolated/near-field/EQ-combined response and embeds it into 2N audio convolution; EQ is applied once before publication. N/4 source hops and N host latency are unchanged; native source HRIR admission now allows N samples. 216 native-SOFA direct-IDFT/FIR cases cover three rates, three design sizes, short/full-N HRIRs, near-field and non-flat EQ, whole/single/irregular callbacks, complete EOF and worker/reload equality. Maximum waveform error is below 1e-5 (existing output floor). This proves finite-design rendering, not ideal physical fractional-delay or minimum-phase interpolation."
         },
@@ -586,9 +595,30 @@
           "evidence": [
             "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/linear_support_tests.rs",
             "audit/artifacts/plugin-audit-20261018/binaural-linear-support-baseline.json",
-            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+            "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
           ],
           "result": "Linear drain retains N-1 FIR taps after the final accepted source sample, independent of partial-hop phase. A source-clock extent retains synthesized 2N spectral frames across switching to linear mode before EOF; four partial/complete-hop cases match zero continuation and require energy beyond the ordinary FIR bound. Oversized callback reproduction after padding showed 0.172008 waveform error for 23 hops+3 with nonzero input in completed hop 20. Draining only through accepted source time between hops now prevents future-output ring overwrite. The native 216-case oracle includes this >4N-ring-span input and a final partial-hop impulse. Full release suite:149 passed; explicit cache-boundary and 40002 zero-heap transition callbacks pass; strict all-target QA Clippy passes."
+        },
+        {
+          "requirement": "Use consistent positive-left host/SOFA/SSIR directions across static room images, fallback panning and reflected HRTF lookup.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/room/coordinate_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
+          ],
+          "result": "Baseline physical left-wall image published -73.30076 degrees and selected left/right HRTF ILD 0.50146/1. Room right/forward/up axes now explicitly bridge to forward/left/up source directions; first/second-order image DOA uses the same positive-left convention as direct HRTF and SSIR vectors. One shared constant-power panner replaces inconsistent formulas. An independent f64 image-source oracle checks 2610 paths across five layouts, three rates and two reflection orders, including delay/absorption/elevation and ear gains. SSIR vector/fallback tests cover seven directions. Native left-wall impulse tests at three rates now report +73.30076 degrees, ILD 1/0.50146 and left-dominant audio at the expected delay. These are static world-frame tests, not head-pose reflection rotation."
+        },
+        {
+          "requirement": "Apply the optional extra head-shadow magnitude profile contralaterally and continuously through angular/frequency boundaries.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/room/coordinate_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
+          ],
+          "result": "Baseline +90-degree source modified the ipsilateral left ear; the old 15-degree gate caused a 0.12387 complex jump for the test input. The new defined first-order magnitude heuristic uses the Cartesian lateral projection, shadows only the contralateral ear and normalizes to median-plane unity. Removes 15-degree/50-Hz hard gates and rear boosts; no explicit ITD or measured-distance calibration is claimed. 1755 independent f64 spectral cases cover rates/design sizes/angles/elevations/strengths (maximum complex error 6.66312e-8), unchanged ipsilateral samples, no boosts and unity at DC/median/poles. Continuity tests cover former gates and the azimuth seam; six native held head-relative poses verify prepared ear gains. Full release suite 155 passed; explicit cache boundary and 40002 zero-heap transition callbacks pass; strict all-target QA Clippy passes."
         }
       ],
       "evidence": [
@@ -612,11 +642,14 @@
         "audit/artifacts/plugin-audit-20261018/binaural-interpolated-support-diagnostic.json",
         "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/linear_support_tests.rs",
         "audit/artifacts/plugin-audit-20261018/binaural-linear-support-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json"
+        "audit/artifacts/plugin-audit-20261018/binaural-linear-support-validation.json",
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/src/room/coordinate_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/binaural-coordinate-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/binaural-coordinate-validation.json"
       ],
       "remaining_production_scope": [
-        "Continuously moving/non-grid real-SOFA head-turn audio, audible interrupted-transition behavior and measured end-to-end motion-to-audio latency under actual preparation load.",
-        "Other SOFA coordinate/delay and near-field physical-side conventions, remaining maximum-HRIR/FFT/rate preparation/runtime-cost geometries, and physical fractional-delay/late-ringing quality of non-grid interpolation.",
+        "Continuously moving/non-grid real-SOFA head-turn audio, reflection cue rotation under nonzero/changing head pose, audible interrupted-transition behavior and measured end-to-end motion-to-audio latency under actual preparation load.",
+        "Other SOFA coordinate/delay boundaries, remaining maximum-HRIR/FFT/rate preparation/runtime-cost geometries, physical fractional-delay/late-ringing quality of non-grid interpolation, and measured/perceptual calibration of the optional extra head-shadow profile.",
         "Recursive late-reverb truncation/cutoff audibility; subjective interrupted-transition audibility under real continuously moving/non-grid HRTFs."
       ],
       "validation_limits": [
@@ -626,7 +659,8 @@
         "Maximum-dimension preparation/cost and recursive-tail cutoff audibility remain open; optional learned HRTF selection stays separate.",
         "Synthetic linear FIR transfer references and spectral twin comparisons verify retarget scheduling, not perceptual click thresholds. Spectral updates wait the remaining rounded 10-500 ms configured fade plus contention; two setup buffers cost 32 * input_channels * frequency_bins bytes. Maximum-dimension costs and end-to-end tracking latency remain open.",
         "Dataset sharing and a checked 256 MiB prepared-cache payload cap are verified. Explicit near-cap testing covers FFT2048 with 16-sample IRs, not every maximum source length/FFT/rate combination, process-wide peak memory or actual head-motion latency. The historical non-grid renderer aliasing defect is corrected by complete-response padded convolution; physical interpolator late-ringing quality remains open.",
-        "N denotes design grid/host latency; audio transforms and directional spectra now use 2N padding, with higher callback/storage cost. New native-SOFA references are mono; prior multichannel/static/fade regressions also pass. The independent IDFT oracle takes the existing interpolation transfer as its input, so it proves convolution and one-time EQ, not the physical correctness of the interpolator or near-field model."
+        "N denotes design grid/host latency; audio transforms and directional spectra now use 2N padding, with higher callback/storage cost. New native-SOFA references are mono; prior multichannel/static/fade regressions also pass. The independent IDFT oracle takes the existing interpolation transfer as its input, so it proves convolution and one-time EQ, not the physical correctness of the interpolator or near-field model.",
+        "Static world-frame coordinate consistency and the defined normalized contralateral magnitude heuristic are verified. The profile is not a calibrated near-field HRTF or a complete structural head model. Image/reflection cues under nonzero or changing head pose and physical/perceptual calibration remain open."
       ]
     },
     {
@@ -2281,6 +2315,15 @@
       ],
       "result": "Corrects reproduced non-grid circular convolution and oversized-callback output-ring wrap. Separates N design from padded 2N audio transform, bakes EQ once, admits full-N source HRIRs and retains full FIR/spectral EOF support across mode changes. 216 native-SOFA direct references, 149 release tests, cache boundary, callback allocation/timing and strict Clippy pass. Overall stays 35/45.",
       "limitations": "Physical fractional-delay/late-ringing and near-field side accuracy, continuously moving real-SOFA cues/latency, remaining maximum geometry costs and perceptual transition/cutoff audibility stay open."
+    },
+    {
+      "name": "Binaural static coordinate frames and continuous extra shadowing",
+      "state": "verified_partial",
+      "plugin_ids": [
+        12
+      ],
+      "result": "Corrects reversed near-field ear and room/SOFA/SSIR sign bridges, reflected HRTF selection and fallback panning. Defined median-normalized lateral profile removes angular/frequency gates and boosts. 1755 spectral cases, 2610 image paths, SSIR vectors, six native shadow poses and three native wall impulse renders; 155 release tests plus explicit cache/timing and strict Clippy pass. Overall stays 35/45.",
+      "limitations": "Static geometry and an uncalibrated magnitude profile do not establish head-pose reflection rotation, continuously moving real-SOFA cues/latency, physical interpolation/near-field calibration or perceptual transition/cutoff audibility."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

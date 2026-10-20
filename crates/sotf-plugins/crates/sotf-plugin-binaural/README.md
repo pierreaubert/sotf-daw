@@ -161,3 +161,34 @@ fractional-delay timing: late ringing in the current interpolator, continuous
 real-SOFA motion cues/latency, and perceptual transition/cutoff audibility remain
 open validation. The earlier support diagnostic is retained as historical
 reproduction evidence for the corrected renderer defect.
+
+### Spatial coordinate consistency and extra head shadowing
+
+Host speakers, SOFA directions, and math-rir SSIR DOA vectors use forward/left/up
+coordinates with positive-left azimuth. The rectangular room uses
+right/forward/up axes. Image-source preparation explicitly converts speaker
+positions into room coordinates and image directions back to SOFA angles.
+One positive-left constant-power panner serves both ISM and SSIR fallback cues.
+This corrects reflected HRTF selection as well as the published reflection angle.
+Existing room dimensions, listener coordinates, wall ordering, and preset values
+keep their units and representation; the corrected mapping can change wet audio.
+
+`near_field_strength` remains an optional, uncalibrated extra magnitude profile.
+Its shadowed ear is contralateral to the head-relative source's lateral projection
+`q = abs(sin(azimuth) * cos(elevation))`. A first-order shelf shape with nominal
+radius 8.75 cm uses `alpha = 1.05 - 0.95*q`, normalized by the median-plane shelf:
+`gain = ((1 + (alpha*tau*omega)^2) / (1 + (1.05*tau*omega)^2))^(strength/2)`,
+where `tau = 2*radius/343`. The ipsilateral ear is unchanged. DC, median-plane
+sources and poles have unity gain; the profile attenuates without boosts or the
+former 15-degree/50-Hz hard gates. This is a project magnitude heuristic inspired
+by first-order structural head-shadow models, not a calibrated distance model or
+an implementation of the complete [Brown–Duda structural model](https://escholarship.org/uc/item/0cr9d23p).
+It adds no explicit ITD. The full finite design response is retained by the
+padded convolver, including any late ringing associated with magnitude shaping.
+
+Independent tests cover 1,755 spectral geometry cases, 2,610 image-source paths
+across five layouts/three rates, SSIR/fallback agreement, six native head-relative
+near-field preparations, and native left-wall impulse rendering at three rates.
+These establish static coordinate/ear consistency and the defined profile.
+Reflection cue rotation under nonzero/changing head pose, continuous-motion
+latency, measured near-field calibration, and perceptual validation remain open.

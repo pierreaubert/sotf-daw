@@ -12,7 +12,7 @@ fn test_front_reflection_balanced() {
 
 #[test]
 fn test_left_reflection_louder_left() {
-    let (l, r) = azimuth_to_pan_gains(-std::f32::consts::PI / 2.0);
+    let (l, r) = azimuth_to_pan_gains(std::f32::consts::PI / 2.0);
     assert!(l > r, "Left source should be louder in left ear");
     assert!((l - 1.0).abs() < 1e-6);
     assert!(r.abs() < 1e-6);
@@ -20,7 +20,7 @@ fn test_left_reflection_louder_left() {
 
 #[test]
 fn test_right_reflection_louder_right() {
-    let (l, r) = azimuth_to_pan_gains(std::f32::consts::PI / 2.0);
+    let (l, r) = azimuth_to_pan_gains(-std::f32::consts::PI / 2.0);
     assert!(r > l, "Right source should be louder in right ear");
     assert!((r - 1.0).abs() < 1e-6);
     assert!(l.abs() < 1e-6);
@@ -40,7 +40,7 @@ fn test_second_order_reflections_no_duplicates() {
             label: "L",
             name: "Left",
             channel: 0,
-            azimuth: -30.0,
+            azimuth: 30.0,
             elevation: 0.0,
             is_lfe: false,
         }]

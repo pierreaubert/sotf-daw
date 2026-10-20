@@ -1759,7 +1759,7 @@ fn test_reflection_panning_front_is_centered() {
     }
 }
 
-/// A1: Reflection panning — right source (az≈+90°) must have right>left.
+/// A1: Reflection panning — right source (az≈-90°) must have right>left.
 #[test]
 fn test_reflection_panning_right_source_is_right() {
     use room::{RoomModel, calculate_reflections};
@@ -1775,9 +1775,13 @@ fn test_reflection_panning_right_source_is_right() {
     let right_side: Vec<_> = reflections
         .iter()
         .flatten()
-        .filter(|r| r.azimuth_deg > 45.0 && r.azimuth_deg < 135.0)
+        .filter(|r| r.azimuth_deg < -45.0 && r.azimuth_deg > -135.0)
         .collect();
 
+    assert!(
+        !right_side.is_empty(),
+        "expected physical right-side reflections"
+    );
     for r in right_side {
         assert!(
             r.right_gain > r.left_gain,

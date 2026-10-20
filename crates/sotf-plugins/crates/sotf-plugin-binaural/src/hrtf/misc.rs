@@ -110,14 +110,13 @@ pub fn calculate_vbap_gains(
     }
 }
 
-/// Apply near-field head shadowing to HRTF frequency response
+/// Applies a normalized contralateral head-shadow magnitude profile.
 ///
-/// Implements frequency-dependent Interaural Level Difference (ILD) based on
-/// head shadowing models. Uses Woodworth-Schlosberg formula combined with
-/// frequency-dependent diffraction model.
-///
-/// Operates on half-spectrum (N/2+1 bins) - no need to mirror since
-/// real FFT automatically handles conjugate symmetry.
+/// Coordinates are forward/left/up: positive azimuth denotes a left source.
+/// The first-order shelf shape is inspired by structural head-shadow models,
+/// normalized to unity in the median plane. This optional extra magnitude
+/// heuristic adds no explicit ITD and is not a calibrated near-field HRTF.
+/// Preparation later retains the complete real design response for convolution.
 pub fn apply_near_field_shadowing<S: Into<f64>>(
     left_fft: &mut [Complex<f32>],
     right_fft: &mut [Complex<f32>],
@@ -128,66 +127,25 @@ pub fn apply_near_field_shadowing<S: Into<f64>>(
     near_field_strength: f32,
 ) {
     let sample_rate = sample_rate.into();
-    let freq_size = fft_size / 2 + 1;
+    // Keep the existing nominal head radius and shelf extremes. Normalize by
+    // the median-plane shelf at each frequency so shaping cannot boost an ear.
+    const HEAD_RADIUS: f64 = 0.0875;
+    const SPEED_OF_SOUND: f64 = 343.0;
+    const MEDIAN_ALPHA: f64 = 1.05;
+    const SIDE_ALPHA: f64 = 0.1;
+    const TAU: f64 = 2.0 * HEAD_RADIUS / SPEED_OF_SOUND;
 
-    // Brown-Duda spherical-head shadowing model parameters
-    const HEAD_RADIUS: f32 = 0.0875; // 8.75 cm
-    const SPEED_OF_SOUND: f32 = 343.0; // m/s at 20°C
-    const ALPHA_MIN: f32 = 0.1;
-    const TAU: f32 = 2.0 * HEAD_RADIUS / SPEED_OF_SOUND;
-
-    let az_rad = azimuth.to_radians();
-    let el_rad = elevation.to_radians();
-
-    // Determine shadowed ear (contralateral to source)
-    let (shadowed_ear, shadow_angle) = if az_rad > 0.0 {
-        // Source on right -> shadow left ear
-        (left_fft, az_rad.abs())
-    } else {
-        // Source on left -> shadow right ear
-        (right_fft, az_rad.abs())
-    };
-
-    // Only apply if angle is significant (> 15 degrees)
-    if shadow_angle < 15.0_f32.to_radians() {
-        return;
-    }
-
-    // Elevation reduces shadowing effect
-    let elevation_factor = el_rad.cos().abs();
-
-    // Incidence angle for the shadowed ear (0 = facing ear, π = opposite ear)
-    let theta_inc = if shadow_angle <= std::f32::consts::PI / 2.0 {
-        std::f32::consts::PI / 2.0 + shadow_angle
-    } else {
-        3.0 * std::f32::consts::PI / 2.0 - shadow_angle
-    };
-
-    // Brown-Duda asymptotic high-frequency gain parameter
-    let alpha = 1.0 + ALPHA_MIN / 2.0 + (1.0 - ALPHA_MIN / 2.0) * theta_inc.cos();
-
-    // Process each frequency bin (half-spectrum only, no mirroring needed for real FFT)
-    for (k, val) in shadowed_ear.iter_mut().enumerate().take(freq_size) {
-        let freq = k as f32 * sample_rate as f32 / fft_size as f32;
-        if freq < 50.0 {
-            continue;
-        }
-
-        let omega = 2.0 * std::f32::consts::PI * freq;
-        let tau_w = TAU * omega;
-        let tau_w_sq = tau_w * tau_w;
-        let alpha_tau_w_sq = (alpha * tau_w) * (alpha * tau_w);
-
-        // Magnitude squared of Brown-Duda shadowing filter H(s)=(1+alpha*tau*s)/(1+tau*s)
-        let mag_sq = (1.0 + alpha_tau_w_sq) / (1.0 + tau_w_sq);
-        let gain = mag_sq.sqrt();
-        let atten_db = 20.0 * gain.log10();
-
-        // Scale by near-field strength and elevation
-        let scaled_db = atten_db * near_field_strength * elevation_factor;
-        let final_gain = 10.0_f32.powf(scaled_db / 20.0);
-
-        *val *= final_gain;
+    let lateral = f64::from(azimuth).to_radians().sin() * f64::from(elevation).to_radians().cos();
+    let shadowed = if lateral > 0.0 { right_fft } else { left_fft };
+    let alpha = MEDIAN_ALPHA - (MEDIAN_ALPHA - SIDE_ALPHA) * lateral.abs().min(1.0);
+    // Lateral projection already includes elevation. It is zero on the
+    // front/back median plane and at either pole, without an azimuth dead zone.
+    for (k, value) in shadowed.iter_mut().enumerate().take(fft_size / 2 + 1) {
+        let omega = 2.0 * std::f64::consts::PI * k as f64 * sample_rate / fft_size as f64;
+        let x = TAU * omega;
+        let ratio = (1.0 + (alpha * x).powi(2)) / (1.0 + (MEDIAN_ALPHA * x).powi(2));
+        let gain = ratio.powf(f64::from(near_field_strength) * 0.5);
+        *value *= gain as f32;
     }
 }
 

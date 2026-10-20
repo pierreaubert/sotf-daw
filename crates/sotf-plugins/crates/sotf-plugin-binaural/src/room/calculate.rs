@@ -1,3 +1,4 @@
+use super::misc::azimuth_to_pan_gains;
 use super::misc::load_wav_channels;
 use super::reflection::add_image_reflections;
 use super::reflection::ssir_result_to_reflections;
@@ -42,7 +43,8 @@ pub fn calculate_reflections<S: Into<f64>>(
         let el_rad = speaker.elevation.to_radians();
 
         // Speaker position relative to listener
-        let spk_rel_x = dist * az_rad.sin() * el_rad.cos();
+        // Host speakers use positive-left azimuth. Room x increases right.
+        let spk_rel_x = -dist * az_rad.sin() * el_rad.cos();
         let spk_rel_y = dist * az_rad.cos() * el_rad.cos();
         let spk_rel_z = dist * el_rad.sin();
 
@@ -149,14 +151,9 @@ pub fn calculate_reflections<S: Into<f64>>(
                     let wall_att2 = 1.0 - room.absorption[*wall2_idx];
                     let gain = dist_att * wall_att1 * wall_att2;
 
-                    let az = dx.atan2(dy);
+                    let az = (-dx).atan2(dy);
                     let el = dz.atan2((dx * dx + dy * dy).sqrt());
-                    // Standard constant-power sine-law panning.
-                    // az convention: 0 = front, π/2 = right, −π/2 = left.
-                    // sin(az) = -1 at left, 0 at front/back, +1 at right.
-                    let pan = az.sin();
-                    let left = ((1.0 - pan) * 0.5).sqrt();
-                    let right = ((1.0 + pan) * 0.5).sqrt();
+                    let (left, right) = azimuth_to_pan_gains(az);
 
                     channel_reflections.push(Reflection {
                         delay_samples,
