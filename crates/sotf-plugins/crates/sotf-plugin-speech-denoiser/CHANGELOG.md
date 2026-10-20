@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Make the linked stereo neural detector invariant to L/R ordering across
+  correlation-sign changes, using a dominant-energy polarity reference and
+  deterministic equal-energy tie. Fix a 0.0333 recorded channel-swap waveform
+  error; retain original channel polarity, shared masks, model weights and latency.
+- Add attributed recorded development speech, noisy/clean onset metrics,
+  instrument false-suppression measurements and all-model spatial/lifecycle
+  checks without claiming held-out model or population/perceptual acceptance.
 - Add suppression `strength` (0..1, default full wet): latency-aligned
   `dry + s * (wet - dry)` blend with 480-frame slew and bit-exact 0/1
   endpoints, constant 960-frame latency, and allocation-free automation.

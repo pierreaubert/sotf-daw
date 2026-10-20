@@ -21,4 +21,7 @@ cargo test -p plugins-denoiser
 
 - Pure DSP: no `Plugin` trait impls live here — those are in the per-plugin crates that depend on this one.
 - Pre-allocate all working buffers in builders; never allocate on the audio path.
+- RNNoise's linked stereo detector must be permutation-invariant over complete
+  streams, including negative correlation and exact equal-energy ties. Preserve
+  the original channels when applying shared masks.
 - Each block is independently testable — keep public APIs narrow and free of plugin-host concerns.

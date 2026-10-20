@@ -29,10 +29,14 @@ cargo run -p sotf-plugin-speech-denoiser --features qa --bin qa-speech-denoiser
 ## Important Notes
 
 - Implements `ParametricInPlacePlugin` — same in/out channel count.
-- RNNoise expects 48 kHz mono frames; the wrapper handles arbitrary host
-  framing and rejects non-48-kHz formats rather than resampling.
+- RNNoise runs at 48 kHz. The prepared host-rate adapter in `rate_adapter.rs`
+  handles other validated host clocks; the wrapper supports arbitrary framing.
 - Stereo uses one polarity-aware, energy-normalized detector and applies its
   22 bounded, smoothed model gains to both original channels.
+- Detector polarity must be invariant to channel order across successive
+  frames, including negative correlation and equal-energy anti-phase ties.
+- Recorded quality tests retain onset and gain loss alongside SI-SDR. Unknown
+  training overlap and instrument suppression must not become quality claims.
 - `get_data()` publishes fixed-size band-gain/VAD diagnostics through a
   preallocated realtime cache.
 - DSP body lives in `plugins-denoiser::rnnoise`; this crate is a thin host adapter.

@@ -663,10 +663,27 @@ fn prepare_linked_stereo_detector(accum: &[Vec<f32>], detector: &mut [f32]) {
     }
     let polarity = if cross < 0.0 { -1.0 } else { 1.0 };
     let mut combined_energy = 0.0_f32;
+    let mut combined_peak = 0.0_f32;
     for (&left, &right) in accum[0].iter().zip(&accum[1]) {
         let combined = left + polarity * right;
         combined_energy += combined * combined;
+        if combined.abs() > combined_peak.abs() {
+            combined_peak = combined;
+        }
     }
+    // For negative correlation, L-R changes sign under a channel swap.
+    // Anchor the detector to the louder channel, with a positive-peak tie
+    // convention for equal energies. Both channel orders then supply exactly
+    // the same detector waveform, including across correlation sign changes.
+    // Only the neural detector is oriented; original speaker channels retain
+    // their polarity and receive the same shared model gains as before.
+    let reference_sign = if polarity < 0.0
+        && (right_energy > left_energy || (right_energy == left_energy && combined_peak < 0.0))
+    {
+        -1.0
+    } else {
+        1.0
+    };
     let target_energy = 0.5 * (left_energy + right_energy);
     let scale = if combined_energy > 1.0e-20 {
         (target_energy / combined_energy).sqrt()
@@ -674,13 +691,47 @@ fn prepare_linked_stereo_detector(accum: &[Vec<f32>], detector: &mut [f32]) {
         0.0
     };
     for ((sample, &left), &right) in detector.iter_mut().zip(&accum[0]).zip(&accum[1]) {
-        *sample = ((left + polarity * right) * scale).clamp(-1.0, 1.0) * 32768.0;
+        *sample = ((left + polarity * right) * (scale * reference_sign)).clamp(-1.0, 1.0) * 32768.0;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stereo_detector_reference_is_independent_of_channel_order() {
+        let mut state = 0x3289abcd_u32;
+        let mut random = || {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            (state as f64 / f64::from(u32::MAX) * 2.0 - 1.0) as f32 * 0.2
+        };
+        let mut source = vec![vec![0.0; RNNOISE_FRAME_SIZE]; 2];
+        let mut swapped = source.clone();
+        let mut a = vec![0.0; RNNOISE_FRAME_SIZE];
+        let mut b = a.clone();
+        for frame in 0..128 {
+            for sample in 0..RNNOISE_FRAME_SIZE {
+                let left = random();
+                source[0][sample] = left;
+                source[1][sample] = match frame % 6 {
+                    0 => -left, // Exact equal-energy negative-correlation tie.
+                    1 => left,
+                    2 => -0.25 * left,
+                    3 => -2.0 * left,
+                    4 => 0.0,
+                    _ => random(),
+                };
+                swapped[0][sample] = source[1][sample];
+                swapped[1][sample] = source[0][sample];
+            }
+            prepare_linked_stereo_detector(&source, &mut a);
+            prepare_linked_stereo_detector(&swapped, &mut b);
+            assert_eq!(a, b, "detector channel bias in frame {frame}");
+        }
+    }
 
     fn assert_linked_spectral_processing_preserves_stereo(input: &[f32]) {
         let mut backend = RnnoiseBackend::new();

@@ -19,6 +19,31 @@ anti-phase cancellation and independent channel decisions while preserving the
 original stereo relationships. Wider layouts are rejected rather than
 receiving undefined independent spatial processing.
 
+For negatively correlated stereo, the detector uses the higher-energy channel
+as its polarity reference. Exact equal-energy ties orient the combined peak
+positively. A channel swap therefore supplies the same detector waveform even
+when the correlation sign changes between frames. This changes some stereo
+inference decisions; mono processing and model weights are unchanged. Original
+channel polarity is preserved when applying the shared gains.
+
+`tests/recorded_audio.rs` evaluates all three served models on three attributed
+Mini LibriSpeech development excerpts and the existing attributed violin/cymbal
+recordings. Speech starts at source frame zero, with clean and -10/0/+10 dB
+colored-noise conditions. Complete EOF, exact strength-zero output and changed
+callback partitions are checked. Gain, projection, uncentered SI-SDR, SDR,
+correlation and first-100-ms metrics are retained; no warm-up is discarded.
+The metric oracle separately checks attenuation, orthogonal noise and silence.
+Silence has no defined SI-SDR and is reported as null. Energy denominators use
+a 1e-30 floor for finite diagnostic reporting.
+
+See `tests/fixtures/recorded/manifest.json` and `LICENSE.md` for source hashes,
+attribution and deterministic selection before inference. RNNoise training
+overlap is unknown. These English excerpts and solo instruments do not prove
+population/language coverage, intelligibility, music safety or listener quality.
+Process timing rows include ordinary 128-frame calls and a partial last call,
+under the test runner; they exclude initialization and drain timing and do not
+establish hardware callback deadlines.
+
 Bypass keeps the same 960-frame latency, continues advancing the neural model,
 and crossfades between delayed wet and dry paths over 480 samples. Non-finite
 input is replaced with silence and finite input is clamped to the model domain

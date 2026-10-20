@@ -1,0 +1,73 @@
+{
+  "source_page": "https://www.openslr.org/31/",
+  "download_url": "https://openslr.trmal.net/resources/31/dev-clean-2.tar.gz",
+  "archive_sha256": "176ec501490eced2d6c1f89f4f0ddc7dfe799e649e5322f8ba49fe3ff50c8012",
+  "dataset": "Mini LibriSpeech dev-clean-2 (LibriSpeech-derived development set)",
+  "attribution": "LibriSpeech prepared by Vassil Panayotov with assistance from Daniel Povey; original LibriVox volunteer recordings. Dataset paper: Vassil Panayotov, Guoguo Chen, Daniel Povey, Sanjeev Khudanpur. Attribution and transformation notes in LICENSE.md.",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "selection_rule": "Lexicographically first FLAC from each of first three distinct speaker IDs, chosen before model inference. Decode/resample to 48 kHz mono PCM16 with volume 0.2; crop at first absolute PCM sample >=64 and retain up to four seconds. No denoising/equalization.",
+  "training_overlap": "Unknown for each RNNoise model; dataset development split is not proof of held-out model evaluation.",
+  "format": "headerless mono signed 16-bit little-endian PCM, sample/32768",
+  "decoder": "ffmpeg version 9.0.2 Copyright (c) 2000-2026 the FFmpeg developers",
+  "decode_arguments": [
+    "ffmpeg",
+    "-v",
+    "error",
+    "-i",
+    "<selected source FLAC>",
+    "-ar",
+    "48000",
+    "-ac",
+    "1",
+    "-af",
+    "volume=0.2",
+    "-f",
+    "s16le",
+    "pipe:1"
+  ],
+  "fixtures": [
+    {
+      "id": "1272-135031-0000",
+      "speaker_id": "1272",
+      "file": "speech-0.pcm",
+      "source_member": "LibriSpeech/dev-clean-2/1272/135031/1272-135031-0000.flac",
+      "source_flac_sha256": "26cbebbdd8954104c936dc38fbb8a80958f2169ada0fa6fe46a89cfa9e3d824c",
+      "pcm_sha256": "b9304f708a85c526c3a52ec129547581ac50e5233e9122c103ee743ef6e5dc61",
+      "source_rate": 16000,
+      "sample_rate": 48000,
+      "crop_start_frame_48k": 21025,
+      "frames": 192000,
+      "first_sample": 0.003143310546875,
+      "gain": 0.2
+    },
+    {
+      "id": "1462-170142-0000",
+      "speaker_id": "1462",
+      "file": "speech-1.pcm",
+      "source_member": "LibriSpeech/dev-clean-2/1462/170142/1462-170142-0000.flac",
+      "source_flac_sha256": "08c17c6a59de702386a5c79b49b9d8f7fce1870b2d89b68607523f11d07b61ce",
+      "pcm_sha256": "0cb7de4024e244d60fa56321bc753eed361ed7077e619dacf4cf8ac6b79f00ab",
+      "source_rate": 16000,
+      "sample_rate": 48000,
+      "crop_start_frame_48k": 23845,
+      "frames": 192000,
+      "first_sample": -0.0035400390625,
+      "gain": 0.2
+    },
+    {
+      "id": "174-168635-0000",
+      "speaker_id": "174",
+      "file": "speech-2.pcm",
+      "source_member": "LibriSpeech/dev-clean-2/174/168635/174-168635-0000.flac",
+      "source_flac_sha256": "dbb765967c6a51c8e794fb0098240b1e070c6b1bf0594b218570631604aab38f",
+      "pcm_sha256": "c99ecea1a804d967807d95ea64335020d48ff96a4d0e13cb336bd8eedfc5bf22",
+      "source_rate": 16000,
+      "sample_rate": 48000,
+      "crop_start_frame_48k": 24830,
+      "frames": 192000,
+      "first_sample": -0.001983642578125,
+      "gain": 0.2
+    }
+  ]
+}

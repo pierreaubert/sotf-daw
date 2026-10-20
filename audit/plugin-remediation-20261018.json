@@ -1987,9 +1987,40 @@
       "id": 40,
       "plugin": "Speech denoiser",
       "audit_text": "[`speech-denoiser/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/lib.rs):583\u2013755 already uses an ML backend at 48 kHz, rate adapters elsewhere, latency-aligned dry mixing and recurrent reset. A neural state's mathematical tail is not necessarily finite; retained audio can still have a bounded drain policy. Strength automation and rate adapters must not shift speech timing or leak stale state across streams.\n\n`model_audio.rs`, `strength_model.rs`, `accuracy.rs`, `host_rate_adapter.rs`, `host_finite_stream.rs` and timing tests cover meaningful integration. Extend real held-out languages/speakers/noises, speech onset at frame zero, low-SNR phonemes and music false suppression. DeepFilterNet2 [DeepFilterNet2][R6] is a credible alternative baseline, not an assumed upgrade. Compare measured quality, deadline distribution, model footprint and license/provenance before changing the existing model.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Preserve linked stereo suppression decisions under channel permutation across correlation sign changes.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/plugins-denoiser/src/rnnoise.rs",
+            "crates/sotf-plugins/crates/plugins-denoiser/tests/rnnoise_timing.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/recorded_audio.rs",
+            "audit/artifacts/plugin-audit-20261018/speech-denoiser-recorded-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/speech-denoiser-recorded-validation.json"
+          ],
+          "result": "Recorded independent-speech channel swap reproduced 0.0333215 maximum waveform difference. Negative-correlation detector reference is now dominant-energy, with deterministic positive-peak exact ties, so permutation supplies the same neural waveform. 128 direct detector frames, 36 recorded polarity/level cases and three model-specific swaps pass with exact zero error. Original channels retain polarity and shared gains; no weights, parameters, latency or allocation changes. Independent model timing reference updated for the declared tie convention with exact waveform and existing fade bounds retained."
+        },
+        {
+          "requirement": "Extend real recorded speech/noise/onset and music false-suppression measurements for existing models.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/manifest.json",
+            "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/recorded_audio.rs",
+            "audit/artifacts/plugin-audit-20261018/speech-denoiser-recorded-validation.json"
+          ],
+          "result": "Three preselected attributed Mini LibriSpeech development speakers, clean/-10/0/+10 dB seeded colored noise plus existing recorded violin/cymbal, all three models: 42 mono records retain complete EOF and first 100ms without discarded warm-up. Strength-zero output is exact, changed partitions match, metric calibration distinguishes gain loss and silence. All mono quality fields match baseline. Full noisy SI-SDR delta ranges 0.819..7.334 dB, Legacy LQ -3.768..5.364, SH 1.259..8.732; cymbal power gain -14.965/-11.161/-16.571 dB. Raw timing maximum 3.240667 ms exceeds nominal 128-frame deadline 2.666667 ms in test-runner conditions, so no deadline acceptance. 218 combined release tests and strict all-target QA Clippy pass; three existing ignored entries retained. Training overlap remains unknown."
+        }
+      ],
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/speech-denoiser-recorded-validation.json"
+      ],
+      "remaining": [
+        "Extend genuinely model-held-out languages/speakers/noises and low-SNR phoneme/intelligibility/listener evaluation; current recorded set has three English speakers and unknown training overlap.",
+        "Assess speech onset loss, instrument false suppression and inference artifacts near changing detector energy/tie boundaries rather than infer safety from shared-mask/channel-swap invariance.",
+        "Establish full host-rate recorded quality and model-specific deadline distribution under controlled device load, including drain/shutdown/footprint; current raw maximum exceeds the nominal test callback horizon.",
+        "Keep optional alternative models/position-estimation research separate; no model replacement is justified by this small recorded matrix."
+      ]
     },
     {
       "id": 41,
@@ -2553,6 +2584,15 @@
       ],
       "result": "Prepared bootstrap count preserves the 48k quality observation span across FFT modes and rates, within one hop. Ten clock cases plus lifecycle/reset/EOF/partition/recorded tradeoff evidence. 118 release tests and strict all-target QA Clippy pass. Overall stays 35/45.",
       "limitations": "Longer low-latency unity warm-up exposes more startup noise and does not solve initial speech contamination or later vowel loss. No population/perceptual quality claim."
+    },
+    {
+      "name": "Speech denoiser recorded corpus and permutation-invariant neural detector",
+      "state": "verified_partial",
+      "plugin_ids": [
+        40
+      ],
+      "result": "Fixes a 0.0333215 recorded channel-swap defect with a channel-independent detector reference. 42 unchanged mono quality records, 36 exact stereo ratio cases, three exact swaps, 128 detector frames and attributed fixtures. 218 release tests and strict all-target QA Clippy pass. Overall stays 35/45.",
+      "limitations": "Training overlap unknown, English three-speaker scope, documented noisy/instrument/onset losses, and raw timing deadline overrun prevent corpus, music or realtime completion claims."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
