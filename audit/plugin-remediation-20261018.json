@@ -417,9 +417,9 @@
           "result": "Global unbounded request queue replaced by sixteen pending slots with at most four existing workers. Nonblocking full/disconnected refusal preserves prior mailbox/generation/status/live IR; refused rate initialization restores prior clock before smoother changes. Weak lifetime cancels queued stale work before decoding/planning and suppresses publication after cancellation during an in-flight build. Clear/drop/successful synchronous replacement cancel older workers; synchronous failure preserves them. Six deterministic tests include 1024 overflow refusals, paused concurrent worker/backlog, current failure adoption with zero heap work, and synchronous replacement ownership. Full shared/Convolution regression 102 passed/4 existing ignored; six release loader tests pass with qa instrumentation; all-targets QA Clippy -D warnings passes. Initial release-without-qa compile failure preserved as instrumentation setup evidence; no production DSP/preset/latency changes."
         },
         {
-          "task": "Address measured full-load callback deadline failures and validate sustained mixed-instance loading",
+          "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Admission-boundary load measurement is complete: strict release gate fails 61/63 cases with 51122 physical/reported misses across 532086 callbacks; finite/heap/retained-estimate checks pass. Do not infer capacity from the legacy short-IR QA, which has zero local misses. Production scheduling mitigation and sustained mixed-instance preparation/retirement overlap validation remain pending."
+          "evidence": "Strict maximum-admission release gate remains failing:61/63 cases,51122 physical/reported misses across532086 callbacks. Sustained mixed-instance ownership/recovery is now separately verified with 4097-frame IRs, not a full-size deadline or aggregate RSS result. No deadline, matrix or resource-bound reduction accepted."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -454,6 +454,16 @@
             "audit/artifacts/plugin-audit-20261018/convolution-maximum-load-checks.json"
           ],
           "result": "New opt-in release QA covers all 63 requested geometries: 48/96/192 kHz; 2/12/32 outputs, mono/full IRs and true stereo; UPC/NUPC/257-tap head. Binary search shares QA-only estimator and verifies actual file admission at longest accepted/next refused frames. Dense fixtures populate full history; complete adapter callbacks measure warm128 and steady128/512, >=4 largest partition periods and >=256 steady calls. Raw physical and reported horizons, margin1.0; 189 phase rows/532086 callbacks. Exit1: 61 cases fail, 51122 misses in both horizons. Zero alloc/free callbacks, all finite, all retained deltas within estimates, no boundary errors. Construction peak requested delta577422949 bytes (~551 MiB), explicitly not RSS/aggregate bound. QA-feature shared/Convolution112 passed/4 existing ignored; corrected legacyQA exit0/zero local short-IR misses; strictClippy passes. Legacy QA labels functional success separately; no historical assertion weakened. No production DSP/scheduling change or reduced matrix accepted. Capacity remains failing; entry partial."
+        },
+        {
+          "task": "Validate sustained mixed-instance IR switching and shared retirement recovery with real preparation workers",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/storm_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-worker-overlap.json"
+          ],
+          "result": "18 live instances share production factory(4 workers,16 request slots) and deterministic shared8+8 retirement queues. 128 rounds x4 bursts =9216 selections, ordinary/true stereo UPC/NUPC/257-head,2/12 outputs,48/96k with4097-frame WAVs. Blocked retirement fences live roots; queue refusals preserve generation/pending/status/state. Distinct reclaimer thread releases52 payloads; every instance adopts a current real corrupt-file failure without replacing active root, then valid final selection. Reset process and complete EOS tails bit exact against fresh targets, zero allocations/frees throughout tested callbacks. Final focused debug:1712 accepted/7558 refused; release:1851 accepted/7419 refused;3192 process/drain calls each,18 current failures each. Full affected113 passed/4 existing ignored; release lib74 passed/1 existing ignored; strictClippy passes. Factory extraction preserves production limits/lifetime; no signal/schema/latency change. Full-size deadline capacity remains open."
         }
       ],
       "evidence": [
@@ -461,7 +471,8 @@
         "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45.",
         "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete.",
         "Owned pre-admission decoded sample buffers are now bounded with per-packet enforcement and metadata refusal. Maximum-load callback timing and sustained mixed-instance/aggregate peak-memory validation remain open. Entry 14 partial; overall 29/45 complete.",
-        "Full maximum-admission load data retained including failures; constructor memory and callback invariants pass but strict deadline gate fails 61/63. Legacy short-IR zero-miss result does not prove full-size capacity. Pending scheduling and mixed-instance overlap work remains; overall 29/45 complete."
+        "Full maximum-admission load data retained including failures; constructor memory and callback invariants pass but strict deadline gate fails 61/63. Legacy short-IR zero-miss result does not prove full-size capacity. Pending scheduling and mixed-instance overlap work remains; overall 29/45 complete.",
+        "Worker/retirement overlap now verified with real bounded preparation pool and shared reclamation queues; current failed decode and recovery are exercised on all18 instances. Prior full-admission deadline failure remains pending; Convolution partial and overall29/45 complete."
       ]
     },
     {

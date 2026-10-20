@@ -92,12 +92,27 @@ pub(super) struct IrValidationOptions {
 
 fn get_ir_loader() -> &'static mpsc::SyncSender<IrLoadRequest> {
     IR_LOADER.get_or_init(|| {
-        let (tx, rx) = mpsc::sync_channel::<IrLoadRequest>(IR_LOAD_QUEUE_CAPACITY);
         // Bound the pool so rapid IR switches do not exhaust the OS thread budget.
         let num_workers = rayon::current_num_threads().clamp(1, 4);
-        let rx = Arc::new(Mutex::new(rx));
-        for i in 0..num_workers {
-            let rx = Arc::clone(&rx);
+        let (tx, _workers) = spawn_ir_loader(num_workers);
+        // Dropping the handles detaches the process-lifetime production workers.
+        tx
+    })
+}
+
+fn spawn_ir_loader(
+    num_workers: usize,
+) -> (
+    mpsc::SyncSender<IrLoadRequest>,
+    Vec<std::thread::JoinHandle<()>>,
+) {
+    let num_workers = num_workers.clamp(1, 4);
+    let (tx, rx) = mpsc::sync_channel::<IrLoadRequest>(IR_LOAD_QUEUE_CAPACITY);
+    let rx = Arc::new(Mutex::new(rx));
+    let mut workers = Vec::with_capacity(num_workers);
+    for i in 0..num_workers {
+        let rx = Arc::clone(&rx);
+        workers.push(
             std::thread::Builder::new()
                 .name(format!("convolution-ir-load-{i}"))
                 .spawn(move || {
@@ -119,10 +134,10 @@ fn get_ir_loader() -> &'static mpsc::SyncSender<IrLoadRequest> {
                         });
                     }
                 })
-                .expect("failed to spawn convolution IR loader thread");
-        }
-        tx
-    })
+                .expect("failed to spawn convolution IR loader thread"),
+        );
+    }
+    (tx, workers)
 }
 
 static IR_RECLAIMER: OnceLock<mpsc::SyncSender<RetiredIrState>> = OnceLock::new();
@@ -2158,3 +2173,7 @@ mod loader_tests;
 #[cfg(test)]
 #[path = "resource_tests.rs"]
 mod resource_tests;
+
+#[cfg(test)]
+#[path = "storm_tests.rs"]
+mod storm_tests;

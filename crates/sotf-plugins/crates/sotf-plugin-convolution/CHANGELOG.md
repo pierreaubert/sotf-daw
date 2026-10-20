@@ -2,6 +2,12 @@
 
 ## Changes
 
+- Validate real worker/retirement overlap across 18 mixed instances, including
+  shared queue saturation, current failed decoding, recovery and exact final tails.
+  Keep callback allocation/free checks active throughout.
+- Extract the private worker-pool factory for isolated real-I/O tests; preserve
+  production's four-worker maximum, sixteen-request queue and detached lifetime.
+
 - Add an opt-in strict admission-boundary load diagnostic across 63 geometries,
   including full-history callbacks, raw deadline misses and requested-memory
   construction deltas. Keep all failed cases visible and return nonzero on misses.

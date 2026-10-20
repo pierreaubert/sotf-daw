@@ -150,4 +150,24 @@ All finite-output, callback heap and retained-estimate checks pass. The highest
 construction requested-allocation delta is about 551 MiB, including temporary
 preparation beyond the persistent payload estimate. These results establish a
 measured capacity limitation; they do not justify enlarging deadlines or claiming
-native compliance. Scheduling mitigation and worker-overlap validation remain open.
+native compliance. Scheduling mitigation remains open; the worker/retirement
+overlap validation below covers ownership with shorter IRs.
+
+## Worker and retirement overlap regression
+
+`cargo test -p sotf-plugin-convolution sustained_mixed_instance_switching`
+runs 18 instances through a shared production worker pool and two shared
+retirement queues. It covers ordinary and true-stereo UPC/NUPC/direct-head
+routes, 2/12 outputs and 48/96 kHz, using real 4097-frame files. The test sends
+9,216 burst selections while retirement is blocked, checks transactional queue
+refusals and fenced live roots, then releases a separate reclaimer thread.
+Every instance adopts an actual current failed decode without replacing its
+live IR, and finally converges to a valid selected IR. Reset streams and complete
+tails match fresh instances exactly, with zero callback allocations or frees.
+
+The pool uses a dedicated instance of the production factory to isolate queue
+saturation from other unit tests. Worker and reclaimer handles are joined before
+fixture cleanup. This validates ownership and recovery; it does not establish
+full-size simultaneous RSS or deadline compliance. Debug/release outcomes are
+recorded in
+[the overlap artifact](../../../../audit/artifacts/plugin-audit-20261018/convolution-worker-overlap.json).

@@ -97,3 +97,16 @@ cargo test -p sotf-plugin-convolution
 - Peak/net construction counters report process-wide requested allocation deltas,
   not RSS or an aggregate memory bound. Record environment, source hashes and
   actual command exit status; do not infer device compliance from local timing.
+
+## Sustained shared-worker regression
+
+- `src/lib/storm_tests.rs` uses the production pool factory with an isolated
+  queue shared by 18 live instances and shared 8+8 retirement queues. Keep
+  saturation independent of other tests' global queues.
+- Preserve deterministic retirement fencing, 9,216 burst attempts, explicit
+  current corrupt-file adoption, final valid recovery and bit-exact fresh-stream
+  plus full-tail checks. Count allocations AND frees on every tested callback.
+- Reclaimer destruction runs on a distinct named thread. Close senders and join
+  all worker/reclaimer handles before removing fixture files.
+- This validates 4097-frame ownership/recovery; the maximum-admission timing
+  baseline still fails. Do not turn this soak into a deadline/RSS compliance claim.
