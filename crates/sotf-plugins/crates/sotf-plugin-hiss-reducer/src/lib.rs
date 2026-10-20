@@ -535,6 +535,17 @@ impl HissReducerPlugin {
         }
         Ok(())
     }
+    fn process_backend_frames(&mut self, buffer: &mut [f32], frames: usize) {
+        if self.params.spectral_mode {
+            self.spectral_reducer.process(buffer);
+            self.has_input |= frames > 0;
+            self.source_phase = (self.source_phase + frames % DRAIN_HOP) % DRAIN_HOP;
+        } else {
+            // Keep the detector warm during latency-matched bypass.
+            self.reducer.process(buffer);
+        }
+    }
+
     fn clear_drain(&mut self) {
         self.has_input = false;
         self.source_phase = 0;
@@ -1145,8 +1156,21 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         }
         // Capture measures the input before either reducer runs, in both DSP
         // modes. Drain input never accumulates: capture is frozen there.
-        if self.capture.is_active() && context.num_frames > 0 {
-            self.capture.accumulate(buffer);
+        let capture_frames = if self.capture.is_active() {
+            self.capture
+                .target_frames()
+                .saturating_sub(self.capture.frames_accumulated())
+                .min(context.num_frames as u64) as usize
+        } else {
+            0
+        };
+        let capture_samples = capture_frames * self.channels;
+        if capture_frames > 0 {
+            // Measure the untouched prefix, then process it with the previous
+            // profile. Adopt only after reaching the exact capture endpoint;
+            // a large callback must not apply future knowledge to its prefix.
+            self.capture.accumulate(&buffer[..capture_samples]);
+            self.process_backend_frames(&mut buffer[..capture_samples], capture_frames);
             // take_completed returns None without side effects while the
             // capture is incomplete, so no separate is_complete guard is
             // needed here.
@@ -1165,14 +1189,11 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
             }
             self.publish_capture_progress();
         }
-        if self.params.spectral_mode {
-            self.spectral_reducer.process(buffer);
-            self.has_input |= context.num_frames > 0;
-            self.source_phase = (self.source_phase + context.num_frames % DRAIN_HOP) % DRAIN_HOP;
-        } else {
-            // Keep filter and detector state warm while bypassed; HissReducer
-            // owns the click-free wet/dry transition and reaches exact dry.
-            self.reducer.process(buffer);
+        if capture_frames < context.num_frames {
+            self.process_backend_frames(
+                &mut buffer[capture_samples..],
+                context.num_frames - capture_frames,
+            );
         }
         Ok(context.num_frames)
     }

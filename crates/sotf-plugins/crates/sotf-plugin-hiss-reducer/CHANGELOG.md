@@ -1,5 +1,14 @@
 # Unreleased
 
+- Stop broadband capture exactly at its armed target, matching spectral
+  capture. Callback suffixes no longer contaminate the stored floor.
+- Adopt completed profiles after processing the capture prefix, making audio
+  and profile data independent of callback partitioning without heap activity.
+- Add exact/fractional-rate boundary, mid-capture backend refusal/reconstruction,
+  stale-bin fallback and recorded-speech contamination checks against independent
+  `f64` floor/DFT references. Manual capture still measures speech inside the
+  armed interval; that limitation is quantified separately from endpoint repair.
+
 - Fix the transient-guard proof fixtures to the derived operating points:
   stationary tone-plus-hiss runs at -20 dBFS (gate open, backend parity),
   settled/linked/toggle impulses run at the proven unit detection floor,

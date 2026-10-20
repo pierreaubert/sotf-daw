@@ -162,7 +162,8 @@
       "proposal_and_constraints": [
         "ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise."
       ],
-      "production_requirement": false
+      "production_requirement": false,
+      "baseline_evidence": "audit/artifacts/plugin-audit-20261018/hiss-capture.json: one recorded /s/ plus vowel example. Manual capture containing speech raises the measured high-band floor 24.4154 dB and spectral wanted-HF attenuation from 0.6808 to 3.7808 dB at fixed settings. The exact-window/causal-adoption production fixes exclude later callback material but do not classify speech inside the armed window. Worker-based safe-noise-interval classification must preserve explicit user intent, confidence/fallback behavior and real-time bounds; no training/inference dependency is introduced. This isolated single-speaker clip is not training/generalization evidence."
     },
     {
       "plugin_id": 29,

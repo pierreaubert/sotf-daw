@@ -44,7 +44,8 @@ pub const PARAMS: &[ParamSpec] = &[
         "Noise Profile",
     )
     .structural()
-    .doc("Trigger: capture a 1 s noise-only reference. Fired via named set_parameter; the indexed API never fires it"),
+    // Named momentary control only; indexed/batch updates never fire capture.
+    .doc("Start a 1 s manual noise capture. Play noise only; speech is also learned."),
     ParamSpec::bool_param(
         "Use Profile",
         "use_captured_profile",

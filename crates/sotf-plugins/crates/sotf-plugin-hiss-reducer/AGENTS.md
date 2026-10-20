@@ -41,3 +41,11 @@ cargo run -p sotf-plugin-hiss-reducer --features qa --bin qa-hiss-reducer
 - DSP body lives in `plugins-denoiser::hiss`; this crate is a thin host adapter.
 - Processing requires initialization and rejects context sample-rate mismatches.
 - Realtime setters and steady processing must remain allocation-free.
+- Capture stops at its exact rounded one-second target. Process its prefix
+  with the old profile before committing and processing any callback suffix.
+- Capture does not classify speech. The recorded contamination benchmark and
+  its audio license/provenance are in `tests/audit_contamination.rs` and
+  `tests/fixtures/recorded`.
+- Backend changes require reconstruction; partial capture is never exported.
+  Reinitialization cancels partial capture but keeps the completed profile;
+  per-bin data engage only at the exact stored rate, with floor fallback elsewhere.

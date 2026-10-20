@@ -1,0 +1,114 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hiss-reducer",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--no-fail-fast",
+    "--",
+    "--nocapture"
+  ],
+  "passed_tests": 131,
+  "regressions": {
+    "capture_overrun_before_fix": {
+      "sample_rate": 44100,
+      "expected_frames": 44100,
+      "actual_frames": 46149
+    },
+    "callback_dependent_output_before_fix_peak": 0.02303694,
+    "after_fix": "Exact target counts, bit-identical profiles/audio across partitions; no adoption before capture-prefix processing; no callback allocations/deallocations."
+  },
+  "fixture_manifest": "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/fixtures/recorded/manifest.json",
+  "settings": {
+    "sample_rate": 48000,
+    "channels": 1,
+    "capture_seconds": 1,
+    "frequency_hz": 4000,
+    "threshold_db": -80,
+    "strength": 1,
+    "use_captured_profile": true,
+    "noise_amplitude": 0.003,
+    "noise_capture_seed": "0x5a1789d3",
+    "noise_holdout_seed": "0x91aa753d"
+  },
+  "references": "Independent f64 exact-mapped one-pole high-band power (0.15 dB floor bound); direct f64 DFT of every full periodic-Hann 1024/256 capture window at bins 0/96/160/256/512 (1e-4 relative bound). Full/HF attenuation on repeated desired speech and independent-seed noise after one-second startup, latency aligned.",
+  "limits": "One isolated single-speaker /s/ plus vowel example, not conversational or population evidence. Manual capture measures speech inside the authorized window; no automatic noise-only classification or ML was added. Capture suffix after the exact target is excluded.",
+  "measurements": [
+    {
+      "capture_contains_speech": false,
+      "floor_db": -58.76633071899414,
+      "floor_reference_error_db": 1.1004537583403362e-06,
+      "noise_highband_attenuation_db": 5.532711087727828,
+      "selected_bin_max_relative_error": 1.0678159632298892e-07,
+      "spectral": false,
+      "wanted_fullband_attenuation_db": 9.953044886199808e-05,
+      "wanted_highband_attenuation_db": 0.0003017846263378067
+    },
+    {
+      "capture_contains_speech": false,
+      "floor_db": -58.76633071899414,
+      "floor_reference_error_db": 1.1004537583403362e-06,
+      "noise_highband_attenuation_db": 11.327409632836812,
+      "selected_bin_max_relative_error": 1.0678159632298892e-07,
+      "spectral": true,
+      "wanted_fullband_attenuation_db": 0.17883836022465588,
+      "wanted_highband_attenuation_db": 0.6807929061023115
+    },
+    {
+      "capture_contains_speech": true,
+      "floor_db": -34.35095977783203,
+      "floor_reference_error_db": 1.530590502341056e-06,
+      "noise_highband_attenuation_db": 7.862035252461016,
+      "selected_bin_max_relative_error": 4.718907487890767e-07,
+      "spectral": false,
+      "wanted_fullband_attenuation_db": 0.14998711596580028,
+      "wanted_highband_attenuation_db": 0.4315567881200571
+    },
+    {
+      "capture_contains_speech": true,
+      "floor_db": -34.35095977783203,
+      "floor_reference_error_db": 1.530590502341056e-06,
+      "noise_highband_attenuation_db": 12.994738517872555,
+      "selected_bin_max_relative_error": 4.718907487890767e-07,
+      "spectral": true,
+      "wanted_fullband_attenuation_db": 0.7612272125593746,
+      "wanted_highband_attenuation_db": 3.7808159663968253
+    }
+  ],
+  "profile_boundary_matrix": {
+    "sample_rates": [
+      44100,
+      48000,
+      96000,
+      44100.25
+    ],
+    "channels": [
+      1,
+      2,
+      8
+    ],
+    "backends": [
+      "time-domain",
+      "spectral"
+    ],
+    "results": "Exact rounded target, bit-identical floors/spectra versus a hard-trimmed prefix, bit-identical audio across callbacks, old-profile output for the capture prefix, no heap activity."
+  },
+  "mid_capture_switch_result": "Named and mixed-batch backend changes refuse transactionally; previous completed profile persists and recapture continues bit-identically to an untouched twin. Supported reconstruction loads only the old completed profile, with capture inactive.",
+  "cross_rate_chain": [
+    96000,
+    44100,
+    48000.5,
+    48000
+  ],
+  "cross_rate_result": "Reinitialize cancels partial recapture, preserves the original profile exactly, and matches an explicit v1 floor-only fallback at foreign rates. Returning to the exact capture rate restores measured-bin eligibility.",
+  "qa_command": "cargo run -p sotf-plugin-hiss-reducer --features qa --bin qa-hiss-reducer --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+  "qa_result": "Exit 0, both time-domain and spectral standard latency/no-allocation/performance checks. Local dev timings are not a general scheduling guarantee.",
+  "clippy_command": "cargo clippy -p sotf-plugin-hiss-reducer --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+  "clippy_result": "Passed"
+}

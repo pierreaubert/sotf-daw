@@ -502,12 +502,20 @@ impl CaptureState {
     /// Accumulates interleaved input frames into the measurement.
     ///
     /// Non-finite samples are measured as silence. Trailing samples that do
-    /// not form a complete frame are ignored. Does nothing while idle.
+    /// not form a complete frame are ignored. Stops exactly at the armed
+    /// target so a callback suffix cannot contaminate the broadband floor.
+    /// Does nothing while idle or awaiting collection of a completed capture.
     pub fn accumulate(&mut self, input: &[f32]) {
         if !self.active || self.channels == 0 {
             return;
         }
-        let frames = input.len() / self.channels;
+        let frames = self
+            .target_frames
+            .saturating_sub(self.frames)
+            .min((input.len() / self.channels) as u64) as usize;
+        if frames == 0 {
+            return;
+        }
         for frame in 0..frames {
             let base = frame * self.channels;
             for ch in 0..self.channels {
@@ -520,7 +528,7 @@ impl CaptureState {
             }
         }
         self.frames += frames as u64;
-        self.spectral.accumulate(input);
+        self.spectral.accumulate(&input[..frames * self.channels]);
     }
 
     /// Writes completed floors and spectrum, then disarms capture.

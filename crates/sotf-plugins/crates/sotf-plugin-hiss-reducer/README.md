@@ -58,13 +58,22 @@ reduction is active; spectral finite-stream support does not cover that mode.
 
 ## Noise profile capture (R1)
 
-`Learn Noise` captures a 1 s noise-only reference in both DSP modes,
-storing one broadband RMS floor per channel plus the per-channel measured
+`Learn Noise` manually records the input for `round(sample_rate × 1 s)` frames
+in both DSP modes. Select a noise-only interval: capture does not classify or
+reject speech. It stops exactly at the target even inside a large callback.
+It stores one broadband RMS floor per channel plus the per-channel measured
 per-bin spectrum (`NoiseProfileData`, format v2). `Use Profile` enables it;
 `Clear Profile` discards it. Capture is frozen during drain, reset discards a
 partial capture while preserving the stored profile, and all trigger/process/
 reset/completion paths are allocation-free (pre-allocated buffers and FFT
 plans, no locks/logging).
+
+The capture prefix is measured before reduction and processed with the previous
+profile. Completion then publishes/adopts the new profile before processing the
+callback suffix. Spectral use follows the next ordinary WOLA analysis; no
+callback prefix is processed with knowledge learned later in that callback.
+Floors and spectra use the same exact capture extent, and output/profile data
+are bit-identical across callback partitions.
 
 Profiles captured at an exact fractional host rate use format v3, with or
 without a measured spectrum. Formats v1/v2 retain integer sample-rate JSON
@@ -94,8 +103,8 @@ bit-identical to previous behavior.
 
 In spectral mode an enabled profile replaces the minimum-statistics
 per-bin noise with the measured per-bin power for that channel and bin at
-the capture rate. The live gate still applies, so loud program stays
-untouched. Engaging a spectral profile deepens reduction versus live minima
+the capture rate. The live level gate remains active; this does not guarantee
+preservation when wanted material has entered the noise profile. Engaging a spectral profile deepens reduction versus live minima
 estimation (the unbiased reference suppresses deeper than the bias-shallow
 minima — intended behavior); the curve remains the per-band limit. Colored
 hiss is now estimated per bin from the actual capture, never inferred from
@@ -119,6 +128,42 @@ misapplying powers. A cutoff change keeps per-bin validity (only the gated
 bin range shifts). Profiles are preserved across reinitialization
 deliberately; re-capture after changing the sample rate for critical
 spectral work, and after cutoff moves for floor-critical work.
+
+### Capture accuracy and contamination validation
+
+`tests/audit_capture_boundary.rs` checks exact target extent at 44.1/48/96 kHz
+and 44100.25 Hz with 1/2/8 channels, causal profile adoption in both backends,
+and zero allocation/deallocation on capture completion. It also checks named
+and batch backend-switch refusals during recapture, reconstruction from only
+the previous completed profile, and cancellation on reinitialization. Across
+96 kHz, 44.1 kHz, 48000.5 Hz and return to 48 kHz, the stored spectrum remains
+unchanged; foreign-rate audio matches an explicit broadband-only fallback
+bit-for-bit, and per-bin use resumes only at the exact capture rate.
+
+`tests/audit_contamination.rs` uses an attributed recorded /s/ plus vowel and
+silence. Its [fixture manifest and license](tests/fixtures/recorded/README.md)
+identify the single-speaker excerpt and transformations. The test compares
+noise-only and speech-contaminated manual captures at fixed 48 kHz, cutoff
+4 kHz, threshold −80 dB and strength 1. Independent `f64` one-pole power and
+direct periodic-Hann DFT references verify floors within 0.15 dB and selected
+bin powers within 1e-4 relative error; observed maxima are 1.54e-6 dB and
+4.72e-7 respectively.
+
+Speech in this capture raises the stored floor from −58.77 to −34.35 dBFS.
+Measured wanted 4 kHz high-band residual attenuation is:
+
+| Backend | Noise-only capture | Speech-contaminated capture |
+| --- | ---: | ---: |
+| Time-domain | 0.0003 dB | 0.432 dB |
+| Spectral | 0.681 dB | 3.781 dB |
+
+These are conditional measurements of one isolated speaker, not conversational
+or population-level preservation evidence. The fixed capture-endpoint bug no
+longer admits later callback material, but speech inside an explicitly armed
+capture is still measured as noise. Automatic noise-only classification remains
+separate optional research. Complete settings, noise seeds, wanted/noise
+attenuation and commands are in
+`audit/artifacts/plugin-audit-20261018/hiss-capture.json` at the workspace root.
 
 ### Hosted profile export
 

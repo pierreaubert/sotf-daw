@@ -1,0 +1,20 @@
+{
+  "source_page": "https://commons.wikimedia.org/wiki/File:Voiceless_alveolar_sibilant.ogg",
+  "source_title": "Voiceless_alveolar_sibilant.ogg",
+  "author": "Peter Isotalo",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "source_sha256": "8e2922dcfaa4c99bd613fbba331398f696d42ae2b774a7f7deccb9903a5ad580",
+  "normalization_gain": 0.6361536072066475,
+  "file": "speech_s.pcm",
+  "parent_pcm_sha256": "d379a1403fefe14dc20c1b9154fd2c9d0a046c590a22ef654cc5e7cfadb15e37",
+  "pcm_sha256": "ad0015f1314f58f41b5b67a0d90273d143835290445f574a9560a68715a37785",
+  "sample_rate": 48000,
+  "frames": 48000,
+  "format": "headerless mono PCM16 little-endian, sample/32768",
+  "source_crop_seconds": [
+    0,
+    1
+  ],
+  "changes": "First second of mono 48 kHz decoded, cropped and peak-normalized attributed de-esser reference; no additional signal processing. Isolated single-speaker /s/ plus vowel and silence, not conversational speech or a population corpus."
+}

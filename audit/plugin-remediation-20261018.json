@@ -780,9 +780,46 @@
       "id": 28,
       "plugin": "Hiss reducer",
       "audit_text": "[`hiss-reducer/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs):1080\u20131230 supports spectral/other backend modes and noise-profile capture with snapshot/adoption state. Reset cancels capture while preserving the learned profile, a sensible but distinct lifecycle policy. Profile commit/adoption must remain bounded and nonallocating on the processing path.\n\n`measured_spectrum.rs`, `accuracy.rs`, `noise_profile.rs`, `backend_adoption.rs`, `hosted_snapshot.rs` and transient/finite tests are substantive. Extend captures contaminated by speech, backend switches mid-profile and stale profile persistence across rates. Classical frequency-dependent floors and confidence-limited adaptation are first choices. ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Bound capture to the exact armed interval and adopt the completed profile causally",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/profile.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/audit_capture_boundary.rs"
+          ],
+          "result": "Before fixes, a 44100-frame capture accepted 46149 broadband frames from an oversized callback; callback partitioning changed time-domain output by peak 0.02303694 because the completed profile was applied to the callback prefix. Capture now stops at min(remaining target, supplied frames), sharing the exact prefix with spectral measurement. That prefix is processed with the previous profile, then completion commits before processing any suffix. Exact target, profile equality, causal prefix and bit-identical output pass at 44.1/48/96 kHz plus 44100.25 Hz, 1/2/8-channel capture and both backends; capture/adoption remain allocation/deallocation-free."
+        },
+        {
+          "task": "Extend backend switching and stale profile persistence across rates",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_capture_boundary.rs: named and mixed-batch structural backend flips during recapture reject without altering populated audio/history or the completed profile. Recapture completes bit-identically to an untouched twin. Supported reconstruction in the opposite backend exports only the previous completed profile and does not resume partial learning. Reinitialization through 96k/44.1k/48000.5/48k cancels partial capture, keeps stored data exact and matches an explicit v1 broadband-only fallback at foreign rates. Measured bins become eligible again only at the exact original clock."
+        },
+        {
+          "task": "Quantify speech-contaminated capture with independent power and DFT references",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/audit_contamination.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/fixtures/recorded/manifest.json",
+            "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/fixtures/recorded/README.md",
+            "audit/artifacts/plugin-audit-20261018/hiss-capture.json"
+          ],
+          "result": "Attributed, hashed one-second recorded /s/+vowel/silence reference with deterministic noise-only and contaminated captures at fixed settings. Independent f64 exact-mapped high-band floor oracle: maximum error 1.5306e-6 dB under fixed 0.15 dB. Direct f64 periodic-Hann DFT of every complete 1024/256 window at bins 0/96/160/256/512: maximum relative power error 4.71891e-7 under fixed 1e-4. Captured data is bit-identical between backends. Speech raises the stored floor from -58.76633 to -34.35096 dBFS; wanted HF attenuation changes from 0.000302 to 0.431557 dB (time-domain) and 0.680793 to 3.780816 dB (spectral). Holdout-noise suppression is recorded separately. This is one isolated speaker, not conversational/population evidence or automatic speech rejection."
+        },
+        {
+          "task": "Clarify manual capture guidance without adding optional ML or changing preset schemas",
+          "status": "implemented_and_verified",
+          "evidence": "Learn Noise parameter help now explicitly says to play noise only because speech is also learned. README/AGENTS/CHANGELOG document the exact boundary, WOLA adoption timing, backend/reinitialization policy, contamination measurements and separate audio license. Optional worker-based noise-only interval classification receives a baseline pointer in plugin-ml-backlog-20261018.json. No inference dependency, parameter ID/order/default, profile version or import compatibility change."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-hiss-reducer --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture: 131 passed, no ignored tests, including four capture-boundary/lifecycle and one recorded-contamination test plus all measured-spectrum, backend-adoption, hosted-snapshot, profile, transient and finite-stream suites.",
+        "cargo run -p sotf-plugin-hiss-reducer --features qa --bin qa-hiss-reducer --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: exit 0, time-domain and spectral latency/no-allocation/performance checks.",
+        "cargo clippy -p sotf-plugin-hiss-reducer --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings: passed after final source/help changes.",
+        "Recorded fixture PCM SHA256 verified against manifest; audio is CC BY-SA 3.0 with author/source/transforms identified separately from Rust licensing. No external data/decoder/network dependency at test time and no new Cargo dependencies."
+      ]
     },
     {
       "id": 29,
