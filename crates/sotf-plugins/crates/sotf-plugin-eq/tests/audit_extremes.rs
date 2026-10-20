@@ -800,3 +800,374 @@ fn native_optimized_extreme_impulses_match_independent_spectral_factors() {
         serde_json::json!({"case":"native_optimized_extremes","cases":cases,"maximum_reference_error":maximum})
     );
 }
+
+#[test]
+#[ignore = "required audit gate: accepted extreme lambda exceeds fixed accuracy bound; see eq-advanced-extremes.json"]
+fn warped_standard_extremes_match_independent_physical_analog_reference() {
+    // For a bilinear prototype s=(1-z^-1)/(k*(1+z^-1)), allpass substitution
+    // A=(z^-1-lambda)/(1-lambda*z^-1) multiplies s by (1+lambda)/(1-lambda).
+    // Prewarping the prototype corner multiplies k by the same factor.
+    // The physical transfer therefore equals the original analog prototype.
+    let mut impulse = vec![0.0; 4096];
+    impulse[0] = 1.0;
+    let mut cases = 0;
+    let mut failures = 0;
+    let mut maximum = 0.0_f64;
+    let mut worst = String::new();
+    let mut by_lambda = std::collections::BTreeMap::<String, (usize, f64)>::new();
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for kind in [
+            "peak",
+            "lowshelf",
+            "highshelf",
+            "lowpass",
+            "highpass",
+            "notch",
+            "bandpass",
+            "allpass",
+        ] {
+            for freq in [20.0, 1000.0, 20000.0] {
+                for q in [0.1, 20.0] {
+                    for gain in [-24.0, 24.0] {
+                        let d = Design {
+                            kind,
+                            freq,
+                            q,
+                            gain,
+                            order: 2,
+                        };
+                        let c = coefficients(d, rate)[0];
+                        let mut state = State::default();
+                        let expected: Vec<_> = impulse
+                            .iter()
+                            .map(|&x| state.process(f64::from(x), c, false) as f32)
+                            .collect();
+                        assert!(expected.iter().all(|x| x.is_finite()));
+                        for lambda in [
+                            Some(-0.9999),
+                            Some(-0.37),
+                            Some(0.0),
+                            Some(0.37),
+                            Some(0.9999),
+                            None,
+                        ] {
+                            for ordered in [false, true] {
+                                let mut parameters = params(d, ordered);
+                                parameters.filters[0].topology = EqFilterTopology::WarpedBiquad;
+                                parameters.filters[0].lambda = lambda;
+                                let mut plugin = EqPlugin::from_params(1, rate, parameters)
+                                    .unwrap()
+                                    .into_boxed_plugin();
+                                plugin
+                                    .set_parameter(
+                                        ParameterId::from("auto_gain_enabled"),
+                                        ParameterValue::Bool(false),
+                                    )
+                                    .unwrap();
+                                plugin.initialize(f64::from(rate)).unwrap();
+                                let actual = render(plugin.as_mut(), &impulse, rate);
+                                let error = actual
+                                    .iter()
+                                    .zip(&expected)
+                                    .map(|(&a, &b)| (f64::from(a) - f64::from(b)).abs())
+                                    .fold(0.0_f64, f64::max);
+                                if error >= 2e-5 {
+                                    failures += 1;
+                                    if failures <= 8 {
+                                        println!(
+                                            "warped failure {rate}/{kind}/{freq}/{q}/{gain}/{lambda:?}/{ordered}: {error}"
+                                        );
+                                    }
+                                }
+                                let group = by_lambda.entry(format!("{lambda:?}")).or_default();
+                                group.0 += usize::from(error >= 2e-5);
+                                group.1 = group.1.max(error);
+                                if error > maximum {
+                                    maximum = error;
+                                    worst = format!(
+                                        "{rate}/{kind}/{freq}/{q}/{gain}/{lambda:?}/{ordered}"
+                                    );
+                                }
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "{}",
+        serde_json::json!({"case":"warped_standard_extremes","cases":cases,"failures":failures,"maximum_reference_error":maximum,"worst":worst,"by_lambda":by_lambda})
+    );
+    assert_eq!(cases, 4608);
+    assert_eq!(failures, 0);
+}
+
+// Each modal basis is a second-order pole transfer preceded by the product
+// of earlier allpasses. Direct-form-I recurrence is independent of the runtime's
+// TDF-II state code. Signed modal weights are linear, and the plugin adds dry.
+struct ModalStage {
+    basis: [f64; 5],
+    allpass: [f64; 5],
+    gain: f64,
+    basis_state: State,
+    allpass_state: State,
+}
+struct ModalReference {
+    modes: Vec<ModalStage>,
+}
+impl ModalReference {
+    fn new(sections: &[sotf_plugin_eq::KautzSectionConfig], rate: u32) -> Self {
+        Self {
+            modes: sections
+                .iter()
+                .map(|s| {
+                    let radius = (-PI * s.pole_freq / (s.q * f64::from(rate)))
+                        .exp()
+                        .min(0.9999);
+                    let a1 = -2.0 * radius * (2.0 * PI * s.pole_freq / f64::from(rate)).cos();
+                    let a2 = radius * radius;
+                    assert!(1.0 + a1 + a2 > 0.0 && 1.0 - a1 + a2 > 0.0 && 1.0 - a2 > 0.0);
+                    let scale = (1.0 - a2).powf(1.5);
+                    ModalStage {
+                        basis: [scale, 0.0, 0.0, a1, a2],
+                        allpass: [a2, a1, 1.0, a1, a2],
+                        gain: s.gain,
+                        basis_state: State::default(),
+                        allpass_state: State::default(),
+                    }
+                })
+                .collect(),
+        }
+    }
+    fn process(&mut self, input: f64) -> f64 {
+        let mut chain = input;
+        let mut output = input;
+        for mode in &mut self.modes {
+            output += mode.gain * mode.basis_state.process(chain, mode.basis, false);
+            chain = mode.allpass_state.process(chain, mode.allpass, false);
+        }
+        output
+    }
+}
+
+#[test]
+fn kautz_extremes_match_independent_pole_and_allpass_chain_reference() {
+    use sotf_plugin_eq::KautzSectionConfig as Section;
+    let mut input = vec![0.0_f32; 4096];
+    input[0] = 1.0;
+    input[257] = -0.3;
+    let mut maximum = 0.0_f64;
+    let mut cases = 0;
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for freq in [20.0, 1000.0, 20000.0] {
+            for q in [0.1, 20.0] {
+                for weight in [-24.0, 0.0, 24.0] {
+                    let first = Section {
+                        pole_freq: freq,
+                        q,
+                        gain: weight,
+                    };
+                    for geometry in 0..4 {
+                        let sections = match geometry {
+                            0 | 1 => vec![first.clone()],
+                            2 => vec![
+                                first.clone(),
+                                Section {
+                                    gain: -weight * 0.5,
+                                    ..first.clone()
+                                },
+                            ],
+                            3 => vec![
+                                first.clone(),
+                                Section {
+                                    pole_freq: if freq == 20000.0 {
+                                        freq - 0.1
+                                    } else {
+                                        freq + 0.1
+                                    },
+                                    q: 0.1,
+                                    gain: weight * 0.25,
+                                },
+                            ],
+                            _ => unreachable!(),
+                        };
+                        let mut reference = ModalReference::new(&sections, rate);
+                        let expected: Vec<_> = input
+                            .iter()
+                            .map(|&x| reference.process(f64::from(x)) as f32)
+                            .collect();
+                        assert!(expected.iter().all(|x| x.is_finite()));
+                        for ordered in [false, true] {
+                            let d = Design {
+                                kind: "peak",
+                                freq,
+                                q,
+                                gain: weight,
+                                order: 2,
+                            };
+                            let mut parameters = params(d, ordered);
+                            parameters.filters[0].topology = EqFilterTopology::KautzFilter;
+                            if geometry != 0 {
+                                parameters.filters[0].kautz_sections = sections.clone();
+                            }
+                            let mut plugin = EqPlugin::from_params(1, rate, parameters)
+                                .unwrap()
+                                .into_boxed_plugin();
+                            plugin
+                                .set_parameter(
+                                    ParameterId::from("auto_gain_enabled"),
+                                    ParameterValue::Bool(false),
+                                )
+                                .unwrap();
+                            plugin.initialize(f64::from(rate)).unwrap();
+                            let actual = render(plugin.as_mut(), &input, rate);
+                            let error = actual
+                                .iter()
+                                .zip(&expected)
+                                .map(|(&a, &b)| (f64::from(a) - f64::from(b)).abs())
+                                .fold(0.0_f64, f64::max);
+                            maximum = maximum.max(error);
+                            assert!(
+                                error < 2e-5,
+                                "Kautz error {error}: {rate}/{freq}/{q}/{weight}/{geometry}/{ordered}"
+                            );
+                            cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 576);
+    println!(
+        "{}",
+        serde_json::json!({"case":"kautz_extremes","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+#[test]
+fn retained_kautz_host_rate_changes_rebuild_modal_history_against_independent_reference() {
+    use sotf_host::host::{DawHost, HostRenderPath};
+    use sotf_plugin_eq::KautzSectionConfig as Section;
+    let mut warm = vec![0.0; 512];
+    warm[0] = 0.25;
+    let duplicated: Vec<_> = warm.iter().flat_map(|&x| [x, x]).collect();
+    let mut input = vec![0.0; 1024];
+    input[7] = -0.125;
+    let mut cases = 0;
+    let mut maximum = 0.0_f64;
+    for rate in [44_100, 48_000, 96_000] {
+        for freq in [20.0, 1000.0, 20000.0] {
+            for q in [0.1, 20.0] {
+                for weight in [-24.0, 0.0, 24.0] {
+                    let first = Section {
+                        pole_freq: freq,
+                        q,
+                        gain: weight,
+                    };
+                    for geometry in 0..4 {
+                        let sections = match geometry {
+                            0 | 1 => vec![first.clone()],
+                            2 => vec![
+                                first.clone(),
+                                Section {
+                                    gain: -weight * 0.5,
+                                    ..first.clone()
+                                },
+                            ],
+                            3 => vec![
+                                first.clone(),
+                                Section {
+                                    pole_freq: if freq == 20000.0 {
+                                        freq - 0.1
+                                    } else {
+                                        freq + 0.1
+                                    },
+                                    q: 0.1,
+                                    gain: weight * 0.25,
+                                },
+                            ],
+                            _ => unreachable!(),
+                        };
+                        for ordered in [false, true] {
+                            for compiled in [false, true] {
+                                let d = Design {
+                                    kind: "peak",
+                                    freq,
+                                    q,
+                                    gain: weight,
+                                    order: 2,
+                                };
+                                let mut parameters = params(d, ordered);
+                                parameters.filters[0].topology = EqFilterTopology::KautzFilter;
+                                if geometry != 0 {
+                                    parameters.filters[0].kautz_sections = sections.clone();
+                                }
+                                let mut plugin = EqPlugin::from_params(1, rate * 2, parameters)
+                                    .unwrap()
+                                    .into_boxed_plugin();
+                                plugin
+                                    .set_parameter(
+                                        ParameterId::from("auto_gain_enabled"),
+                                        ParameterValue::Bool(false),
+                                    )
+                                    .unwrap();
+                                let mut host = DawHost::new(1, rate);
+                                host.set_parallel_enabled(false).unwrap();
+                                host.set_compiled_linear_enabled(compiled).unwrap();
+                                host.add_plugin(Box::new(RateDoubler)).unwrap();
+                                host.add_plugin(plugin).unwrap();
+                                host.build().unwrap();
+                                let mut old_reference = ModalReference::new(&sections, rate * 2);
+                                let expected_warm: Vec<_> = duplicated
+                                    .iter()
+                                    .map(|&x| old_reference.process(f64::from(x)) as f32)
+                                    .collect();
+                                maximum = maximum
+                                    .max(error(&host_render(&mut host, &warm, 2), &expected_warm));
+                                drop(host.remove_plugin(0).unwrap());
+                                host.build().unwrap();
+                                assert_eq!(host.output_sample_rate(rate).unwrap(), f64::from(rate));
+                                assert_eq!(
+                                    host.render_stats().path,
+                                    if compiled {
+                                        HostRenderPath::CompiledLinear
+                                    } else {
+                                        HostRenderPath::Graph
+                                    }
+                                );
+                                assert_eq!(host.total_latency_samples(), 0);
+                                assert_eq!(
+                                    host.get_plugin(0).unwrap().tail_length(),
+                                    sotf_host::TailLength::Unknown
+                                );
+                                // Both legacy and ordered Kautz banks rebuild at the new rate.
+                                let mut new_reference = ModalReference::new(&sections, rate);
+                                let expected: Vec<_> = input
+                                    .iter()
+                                    .map(|&x| new_reference.process(f64::from(x)) as f32)
+                                    .collect();
+                                let difference =
+                                    error(&host_render(&mut host, &input, 1), &expected);
+                                maximum = maximum.max(difference);
+                                assert!(
+                                    difference < 2e-5,
+                                    "retained Kautz error {difference}: {rate}/{freq}/{q}/{weight}/{geometry}/{ordered}/{compiled}"
+                                );
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 864);
+    assert!(maximum < 2e-5);
+    println!(
+        "{}",
+        serde_json::json!({"case":"kautz_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
+    );
+}

@@ -160,3 +160,28 @@ prefix. Tested processing callbacks have zero measured heap activity. Shared f64
 response tests verify center/endpoints, reciprocal phase and zero-gain continuity;
 this does not establish an analog bandwidth match or CPU deadline. Optimized
 transitions and actual oversampled host rate changes remain separate work.
+
+
+Independent advanced validation covers 576 Kautz endpoint cases and 864 retained
+host rate cases. The reference derives pole/basis/allpass coefficients and uses
+its own DF-I recurrence with signed linear weights plus dry. It covers omitted
+legacy sections, explicit/coincident/close modes, both routes and compiled/graph
+host rebuilds. Maximum errors are 7.46e-9 and 1.82e-12, under the fixed 2e-5 bound.
+Both routes rebuild modal history on rate changes; latency remains zero, tail
+Unknown, and measured post-build callbacks heap-free. The host rate fixture
+changes declared rate with frame duplication; it is not a physical resampler.
+
+The required Warped endpoint gate is currently failing: 104/4,608 independent
+standard-family cases exceed 2e-5 at accepted lambda -0.9999, with maximum error
+0.00078653. Debug and release agree. Other tested lambdas (-0.37, 0, 0.37, 0.9999
+and automatic) pass this matrix. The analog reference follows exact cancellation
+of the prototype prewarp and allpass frequency scale for bilinear families.
+Run the explicit red gate with:
+
+```sh
+cargo test -p sotf-plugin-eq --release --features qa --test audit_extremes warped_standard_extremes -- --ignored --nocapture
+```
+
+This is a required unresolved audit regression, separately ignored from historical
+capture tests. A green ordinary test run excludes it and does not complete the
+EQ audit. See `audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json`.

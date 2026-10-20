@@ -851,6 +851,24 @@
             "math-audio commit 63e84954eea025decafb2840f052f4a55d20db15"
           ],
           "result": "Independent red gate measured gain error 23.62412005141225 dB, nonminimum-phase zeros and tiny-cut phase discontinuity. Shared shelves use cancellation-resistant positive split; matched cuts invert minimum-phase boosts. 72 shared constraint cases pass (gain error 1.674273164553597e-8 dB, complex reciprocal error 7.267338475447238e-9), plus zero/tiny gain continuity. Public native 2304 cases max error 2.9802322387695312e-8 at fixed 2e-5 bound; 1440 actual f64 sections strictly stable/minimum phase (min Jury 1.0750193213393544e-7). Measured process callbacks heap-free. Math 385 passed/1 existing ignored, EQ 172 passed/11 existing ignored; release matrices and strict all-targets lint pass using normal dependency path. Negative-gain audio intentionally changes; preset names/fields retained. Advanced/mixed/optimized trajectories and actual oversampled host coverage remain pending."
+        },
+        {
+          "task": "Validate advanced Kautz extremes and retained host rate changes with independent modal/allpass recurrence",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json"
+          ],
+          "result": "576 standalone endpoint cases (max 7.450580596923828e-9) and 864 retained DawHost rate cases (max 1.8189894035458565e-12) pass unchanged 2e-5 bound. Signed/zero weights, legacy omitted sections, coincident/close modes, four/three rates, both routes and asserted compiled/graph rebuild paths. Independent pole/DF-I allpass-chain model, not production DSP instances. Kautz history resets in both routes; latency 0, Unknown tail and zero measured post-build callback heap work. Rate fixture duplicates frames, not a physical resampler."
+        },
+        {
+          "task": "Correct accepted Warped lambda endpoint accuracy failure without weakening response/range/history contracts",
+          "status": "required_gate_failing",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json",
+            "audit/artifacts/plugin-audit-20261018/eq-advanced-validation-commands.json"
+          ],
+          "result": "Independent physical analog reference reproduces 104 failures among 4608 Warped cases, all lambda=-0.9999. Worst max error 0.0007865293882787228 at 192 kHz/highshelf/20 Hz/Q 0.1/+24 dB. Same red result in debug and release at fixed 2e-5 bound. Other five lambda selections pass; all measured output finite and callbacks heap-free. Explicit required ignored audit regression retained with runnable command; EQ completion requires it passing. Numerical design/implicit feedback cancellation investigation is next."
         }
       ],
       "evidence": [
@@ -859,7 +877,8 @@
         "Oversampled scalar automation scheduling is now implemented and independently verified; original failure artifacts retained. EQ remains partial for remaining filter-family, mixed-realization and host-rate coverage. Overall stays 32/45.",
         "Standard 1x endpoint accuracy/stability and retained DawHost rate handling are verified with a concrete Q-minimum loading fix. Other filter/realization and oversampled host-rate requirements remain open. EQ partial; overall 32/45 complete.",
         "Current-state independent verification exposed and corrected shared SVF defects, with existing deterministic-consumer compatibility retained. SVF endpoint and retained-host coverage complete for the stated matrices. EQ remains partial; overall 32/45. Optional ML remains separate.",
-        "Native optimized f64 endpoint/phase validation complete with shared production DSP correction. EQ remains partial and overall stays 32/45. Optional ML separate."
+        "Native optimized f64 endpoint/phase validation complete with shared production DSP correction. EQ remains partial and overall stays 32/45. Optional ML separate.",
+        "Advanced Kautz independent endpoint and retained-host scope verified. New required Warped endpoint gate fails 104/4608 at accepted lambda=-0.9999; EQ remains partial and overall stays 32/45. Normal EQ suite 174 passed, 11 historical ignored plus one explicit required red gate; release 8 passed with that gate excluded; explicit release gate fails; strict all-targets QA Clippy passes."
       ]
     },
     {
@@ -1832,6 +1851,15 @@
       ],
       "result": "Shared commit 63e8495 corrects cut gain/phase; 2304 public impulses and 1440 realized sections verified, full/release/strict checks pass.",
       "limitations": "EQ partial: advanced/mixed realizations and actual oversampled host coverage remain. Optional ML separate."
+    },
+    {
+      "name": "Independent advanced Kautz validation and Warped endpoint red gate",
+      "state": "partial_with_required_gate_failure",
+      "plugin_ids": [
+        23
+      ],
+      "result": "Kautz 576 endpoints and 864 retained-host cases verified. Warped 4608-case independent matrix exposes 104 failures; explicit gate and evidence retained.",
+      "limitations": "Warped defect unresolved; mixed/oversampled advanced work remains. EQ partial, 32/45 overall, optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

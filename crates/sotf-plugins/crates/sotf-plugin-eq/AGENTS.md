@@ -77,3 +77,11 @@ cargo test -p sotf-plugin-eq
   historical fixtures. `audit_extremes.rs` covers 2,304 independent native cases;
   the unit matrix certifies all 1,440 actual section poles and zeros. These f64
   native matrices do not cover advanced/mixed or oversampled host trajectories.
+
+- Advanced independent checks are in `audit_extremes.rs`: 576 Kautz endpoint and
+  864 retained-host cases pass. The explicit `warped_standard_extremes` required
+  audit gate currently fails at accepted lambda -0.9999 (104/4,608 cases). Run
+  it with `-- --ignored --nocapture` (release also needs `--features qa`). Its
+  ignore is a known unresolved production defect, distinct from capture tests;
+  EQ completion requires passing it at the unchanged 2e-5 bound. Preserve valid
+  lambda range, mathematical transfer, history and transactional rate rebuilds.

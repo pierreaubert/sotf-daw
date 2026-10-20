@@ -2,6 +2,11 @@
 
 ## Changes
 
+- Add independent Kautz endpoint and retained-host rate references (576 and 864
+  cases), including signed/zero weights, coincident/close modes and legacy
+  omitted sections. Add an explicit required Warped endpoint audit gate: 104 of
+  4,608 cases currently fail at accepted lambda -0.9999; defect remains open.
+
 - Correct native optimized cut gain and phase through math-iir-fir (`63e8495`).
   Matched cuts invert minimum-phase boosts; optimized shelves solve their existing
   constraints without subtractive power cancellation and use minimum phase for
