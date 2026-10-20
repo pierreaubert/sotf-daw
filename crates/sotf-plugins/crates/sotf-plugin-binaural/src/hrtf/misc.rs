@@ -267,3 +267,55 @@ pub fn normalize_hrtf_gains(
         );
     }
 }
+
+/// Selects stable interpolation neighbors for horizontal or spatial datasets.
+///
+/// A single-elevation dataset contains no measured vertical variation. Use
+/// circular azimuth brackets instead of an out-of-plane triangle projection,
+/// whose third-neighbor ties can cause discontinuities. Uncovered gaps wider
+/// than a hemisphere use the nearest angular measurement.
+pub fn find_hrtf_neighbors(
+    sofa: &SofaFile,
+    target: &SourcePosition,
+) -> ([(usize, f32); 3], [f32; 3]) {
+    // One f32 elevation ULP near a pole is about 8e-6 degrees. Smaller
+    // differences cannot provide useful independent ring-elevation data.
+    const HORIZONTAL_TOLERANCE_DEG: f32 = 1e-5;
+    // Avoid ill-conditioned division between effectively identical azimuths.
+    const MIN_BRACKET_SPAN_DEG: f32 = 1e-6;
+    let horizontal = sofa.positions.first().is_some_and(|first| {
+        sofa.positions
+            .iter()
+            .all(|p| (p.elevation - first.elevation).abs() < HORIZONTAL_TOLERANCE_DEG)
+    });
+    if horizontal {
+        let mut before = None::<(usize, f32)>;
+        let mut after = None::<(usize, f32)>;
+        let mut closest = (0, f32::INFINITY);
+        for (index, position) in sofa.positions.iter().enumerate() {
+            let offset = (position.azimuth - target.azimuth + 180.0).rem_euclid(360.0) - 180.0;
+            if offset.abs() < closest.1 {
+                closest = (index, offset.abs());
+            }
+            if offset <= 0.0 && before.is_none_or(|(_, old)| offset > old) {
+                before = Some((index, offset));
+            }
+            if offset >= 0.0 && after.is_none_or(|(_, old)| offset < old) {
+                after = Some((index, offset));
+            }
+        }
+        if let (Some((a, da)), Some((b, db))) = (before, after) {
+            let span = db - da;
+            if span > MIN_BRACKET_SPAN_DEG && span <= 180.0 {
+                return (
+                    [(a, da.abs()), (b, db.abs()), (a, da.abs())],
+                    [db / span, -da / span, 0.0],
+                );
+            }
+        }
+        return ([(closest.0, closest.1); 3], [1.0, 0.0, 0.0]);
+    }
+    let near = sofa.find_three_nearest(target);
+    let gains = calculate_vbap_gains(target, &near, sofa);
+    (near, gains)
+}

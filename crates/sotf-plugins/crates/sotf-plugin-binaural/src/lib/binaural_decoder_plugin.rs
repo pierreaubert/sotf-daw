@@ -1,3 +1,4 @@
+use super::reflection_tracking::{GAIN_HOPS, ReflectionScene};
 // Rust guideline compliant 2026-02-21
 use super::angle_smoothing::{AngularSmoother, angular_delta};
 pub use super::config::BinauralDecoderParams;
@@ -19,7 +20,7 @@ use sotf_host::plugin::{
 };
 use sotf_host::simd::{complex_mul_add_simd, enable_ftz_daz};
 use sotf_host::smoothing::Smoother;
-use sotf_host::sofa::{SofaFile, load_sofa};
+use sotf_host::sofa::load_sofa;
 use sotf_host::speaker_config::{SpeakerConfig, get_speaker_config_by_channels};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -52,6 +53,7 @@ pub(super) struct BinauralConfig {
     pub(super) late_reverb_rt60: f32,
     pub(super) late_reverb_damping: f32,
     pub(super) cached_parameters: Vec<Parameter>,
+    pub(super) reflection_scene: Arc<ReflectionScene>,
 }
 
 #[derive(Clone)]
@@ -131,6 +133,13 @@ pub(super) struct BinauralRoom {
     /// audio thread so each output sample computes one delay position per
     /// group instead of one pseudo-random position per reflection.
     pub(super) reflection_groups: Vec<ReflectionDelayGroup>,
+    pub(super) reflection_base_gains: Vec<[f32; 2]>,
+    pub(super) reflection_gain_frames: Vec<Vec<[f32; 2]>>,
+    pub(super) reflection_effective: Vec<[f32; 2]>,
+    pub(super) reflection_candidate: Vec<[f32; 2]>,
+    pub(super) reflection_gain_write: usize,
+    pub(super) reflection_gain_read: usize,
+    pub(super) reflection_gain_phase: usize,
     pub(super) fdn: math_audio_dsp::fdn::Fdn,
 }
 
@@ -265,8 +274,9 @@ impl BinauralDecoderPlugin {
         lfe_level: f32,
         room_model: RoomModel,
     ) -> Self {
+        // Quarter-frame source hops require at least four design samples.
         assert!(
-            fft_size.is_power_of_two(),
+            fft_size >= 4 && fft_size.is_power_of_two() && fft_size.checked_mul(2).is_some(),
             "{}",
             BinauralError::InvalidFftSize(fft_size)
         );
@@ -329,6 +339,7 @@ impl BinauralDecoderPlugin {
         let initial_state = Arc::new(BinauralState {
             hrtf_filters_freq,
             design_diffuse_field_eq: None,
+            reflection_gains: None,
             _hrtf_data: None,
         });
 
@@ -376,6 +387,7 @@ impl BinauralDecoderPlugin {
                 late_reverb_rt60: 1.0,
                 late_reverb_damping: 0.3,
                 cached_parameters: Vec::new(),
+                reflection_scene: Arc::new(ReflectionScene::default()),
             },
             fft: BinauralFft {
                 fft_r2c,
@@ -420,6 +432,13 @@ impl BinauralDecoderPlugin {
                 reflection_delay_mask: delay_size - 1,
                 cached_reflections: vec![Vec::new(); input_channels],
                 reflection_groups: Vec::new(),
+                reflection_base_gains: Vec::new(),
+                reflection_gain_frames: vec![Vec::new(); GAIN_HOPS],
+                reflection_effective: Vec::new(),
+                reflection_candidate: Vec::new(),
+                reflection_gain_write: 0,
+                reflection_gain_read: 0,
+                reflection_gain_phase: 0,
                 fdn: math_audio_dsp::fdn::Fdn::new(8, sr),
             },
             crossfade: BinauralCrossfade {
@@ -566,11 +585,30 @@ impl BinauralDecoderPlugin {
         Arc::new(BinauralState {
             hrtf_filters_freq: filters,
             design_diffuse_field_eq: None,
+            reflection_gains: Some(Self::prepare_reflection_gains(
+                &self.config,
+                &self.fft,
+                None,
+                None,
+                (
+                    self.smoothing.head_yaw_deg.current(),
+                    self.smoothing.head_pitch_deg.current(),
+                    self.smoothing.head_roll_deg.current(),
+                ),
+            )),
             _hrtf_data: None,
         })
     }
 
     pub fn try_from_params(params: BinauralDecoderParams) -> PluginResult<Self> {
+        // A quarter-frame source hop must be nonzero and the padded transform
+        // must fit its size type before any allocation or FFT planning.
+        if params.fft_size < 4
+            || !params.fft_size.is_power_of_two()
+            || params.fft_size.checked_mul(2).is_none()
+        {
+            return Err(BinauralError::InvalidFftSize(params.fft_size).to_string());
+        }
         if !super::config::SUPPORTED_INPUT_CHANNELS.contains(&params.input_channels) {
             return Err(format!(
                 "unsupported binaural input channel count {}; supported counts are {:?}",
@@ -654,6 +692,13 @@ impl BinauralDecoderPlugin {
         if generation != 0 && !self.head_requests.accepts_epoch(epoch) {
             return;
         }
+        if published
+            .reflection_gains
+            .as_ref()
+            .is_some_and(|g| g.len() != self.room.reflection_base_gains.len())
+        {
+            return;
+        }
         if Arc::ptr_eq(&published, &self.crossfade.current_state_snapshot) {
             return;
         }
@@ -686,6 +731,36 @@ impl BinauralDecoderPlugin {
             }
         }
 
+        if interrupted {
+            let alpha = 1.0
+                - self.crossfade.crossfade_remaining as f32 / self.crossfade.crossfade_total as f32;
+            let old = self
+                .crossfade
+                .crossfade_prev_state
+                .as_ref()
+                .expect("checked above");
+            let current = &self.crossfade.current_state_snapshot;
+            for i in 0..self.room.reflection_base_gains.len() {
+                let previous = if self.crossfade.effective_previous_active {
+                    self.room.reflection_effective[i]
+                } else {
+                    old.reflection_gains
+                        .as_ref()
+                        .and_then(|g| g.get(i))
+                        .copied()
+                        .unwrap_or(self.room.reflection_base_gains[i])
+                };
+                let target = current
+                    .reflection_gains
+                    .as_ref()
+                    .and_then(|g| g.get(i))
+                    .copied()
+                    .unwrap_or(self.room.reflection_base_gains[i]);
+                self.room.reflection_candidate[i] =
+                    std::array::from_fn(|ear| previous[ear] * (1.0 - alpha) + target[ear] * alpha);
+            }
+        }
+
         // Interrupted fades must be retired before replacing their owner.
         // Backpressure postpones adoption, preserving the current fade and
         // the latest publication until the next hop can try again.
@@ -703,6 +778,10 @@ impl BinauralDecoderPlugin {
         }
 
         if interrupted {
+            std::mem::swap(
+                &mut self.room.reflection_effective,
+                &mut self.room.reflection_candidate,
+            );
             std::mem::swap(
                 &mut self.crossfade.effective_previous,
                 &mut self.crossfade.candidate_previous,
@@ -737,6 +816,7 @@ impl BinauralDecoderPlugin {
         }
         // Keep an owner in current_state_snapshot throughout this block. A
         // concurrent publication cannot make this local clone the final owner.
+        self.queue_reflection_gains();
         let new_state = Arc::clone(&self.crossfade.current_state_snapshot);
 
         let state = &new_state;
@@ -1051,6 +1131,7 @@ impl BinauralDecoderPlugin {
             if ext > 0.01 {
                 let mut rl = 0.0;
                 let mut rr = 0.0;
+                let mut gain_index = 0;
                 for group in &self.room.reflection_groups {
                     let r_pos = (self.room.reflection_read_pos + delay_mask + 1
                         - group.delay_samples)
@@ -1060,18 +1141,30 @@ impl BinauralDecoderPlugin {
                         ..(r_pos + 1) * self.config.input_channels];
                     for tap in &group.taps {
                         let source = delayed_frame[tap.channel] * ext;
-                        rl += source * tap.left_gain;
-                        rr += source * tap.right_gain;
+                        let gain = self.room.reflection_gain_frames[self.room.reflection_gain_read]
+                            .get(gain_index)
+                            .copied()
+                            .unwrap_or([tap.left_gain, tap.right_gain]);
+                        rl += source * gain[0];
+                        rr += source * gain[1];
+                        gain_index += 1;
                     }
                 }
                 output[i * 2] += rl;
                 output[i * 2 + 1] += rr;
             }
             self.room.reflection_read_pos = (self.room.reflection_read_pos + 1) & delay_mask;
+            self.room.reflection_gain_phase += 1;
+            if self.room.reflection_gain_phase == self.config.hop_size {
+                self.room.reflection_gain_phase = 0;
+                self.room.reflection_gain_read =
+                    (self.room.reflection_gain_read + 1) & (GAIN_HOPS - 1);
+            }
         }
     }
 
     pub(super) fn rebuild_reflection_groups(&mut self) {
+        self.shutdown_hrtf_update_thread();
         use std::collections::BTreeMap;
 
         let mut merged = BTreeMap::<(usize, usize), (f32, f32)>::new();
@@ -1115,6 +1208,7 @@ impl BinauralDecoderPlugin {
                     right_gain,
                 });
         }
+        self.configure_reflection_tracking();
     }
 
     fn linearize_filters(
@@ -1231,14 +1325,14 @@ impl BinauralDecoderPlugin {
     /// Spawn (or restart) the background HRTF update thread.
     ///
     /// The thread listens for head-angle triples and recomputes the HRTF state
-    /// off the audio thread. It is only started when a SOFA file has been
-    /// loaded into the current state.
+    /// off the audio thread. Native HRTFs and fallback reflection scenes both
+    /// use the immutable worker epoch.
     pub(super) fn spawn_hrtf_update_thread(&mut self) {
         self.shutdown_hrtf_update_thread();
 
-        // Only spawn if we have HRTF data to rotate. Without a SOFA the default
-        // identity filters are used and there is nothing to recompute.
-        if self.state.load()._hrtf_data.is_none() {
+        // Native HRTFs and fallback reflection panning both need head updates.
+        // The dry fallback matrix stays unchanged when no SOFA is loaded.
+        if self.state.load()._hrtf_data.is_none() && self.config.reflection_scene.rays.is_empty() {
             return;
         }
 
@@ -1249,16 +1343,14 @@ impl BinauralDecoderPlugin {
         let config = self.config.clone();
         let fft = self.fft.clone();
         let lfe_channels = self.coefficients.lfe_channels.clone();
-        let sofa = base
-            ._hrtf_data
-            .as_ref()
-            .expect("worker requires a loaded SOFA");
-        let prepared = super::hrtf::prepare_hrtf_spectra(
-            sofa,
-            config.fft_size,
-            config.sample_rate,
-            &fft.hrtf_r2c,
-        );
+        let prepared = base._hrtf_data.as_ref().map(|sofa| {
+            super::hrtf::prepare_hrtf_spectra(
+                sofa,
+                config.fft_size,
+                config.sample_rate,
+                &fft.hrtf_r2c,
+            )
+        });
         self.head_requests.start();
         self.smoothing.last_hrtf_yaw = f32::INFINITY;
         self.smoothing.last_hrtf_pitch = f32::INFINITY;
@@ -1270,7 +1362,7 @@ impl BinauralDecoderPlugin {
                 Self::compute_head_rotated_hrtf_state(
                     &base,
                     &config,
-                    &prepared,
+                    prepared.as_ref(),
                     &fft,
                     &lfe_channels,
                     pose.angles,
@@ -1282,7 +1374,7 @@ impl BinauralDecoderPlugin {
         self.hrtf_update_thread = Some(handle);
     }
 
-    fn shutdown_hrtf_update_thread(&mut self) {
+    pub(super) fn shutdown_hrtf_update_thread(&mut self) {
         self.head_requests.stop();
         // Dropping the sender unblocks the receiver's recv() with an error,
         // causing the thread to exit cleanly.
@@ -1299,7 +1391,7 @@ impl BinauralDecoderPlugin {
     pub(super) fn compute_head_rotated_hrtf_state(
         state: &Arc<BinauralState>,
         config: &BinauralConfig,
-        prepared: &super::hrtf::PreparedHrtfSpectra,
+        prepared: Option<&super::hrtf::PreparedHrtfSpectra>,
         fft: &BinauralFft,
         lfe_channels: &[usize],
         angles: (f32, f32, f32),
@@ -1310,11 +1402,17 @@ impl BinauralDecoderPlugin {
         }
 
         let state_guard = state;
-        let sofa_ref: &SofaFile = match state_guard._hrtf_data.as_ref() {
-            Some(s) => s,
-            None => return Ok(Arc::clone(state)),
+        let Some(sofa_ref) = state_guard._hrtf_data.as_deref() else {
+            return Ok(Arc::new(BinauralState {
+                hrtf_filters_freq: state.hrtf_filters_freq.clone(),
+                design_diffuse_field_eq: state.design_diffuse_field_eq.clone(),
+                reflection_gains: Some(Self::prepare_reflection_gains(
+                    config, fft, None, None, angles,
+                )),
+                _hrtf_data: None,
+            }));
         };
-
+        let prepared = prepared.expect("SOFA worker owns prepared spectra");
         let design_bins = config.fft_size / 2 + 1;
         let mut filters =
             vec![vec![Complex::new(0.0, 0.0); design_bins * 2]; config.input_channels];
@@ -1327,8 +1425,7 @@ impl BinauralDecoderPlugin {
             let (rotated_az, rotated_el) =
                 Self::rotate_speaker_position(spk.azimuth, spk.elevation, yaw, pitch, roll);
             let tgt = sotf_host::sofa::SourcePosition::new(rotated_az, rotated_el, 1.0);
-            let near = sofa_ref.find_three_nearest(&tgt);
-            let gains = super::hrtf::calculate_vbap_gains(&tgt, &near, sofa_ref);
+            let (near, gains) = super::hrtf::find_hrtf_neighbors(sofa_ref, &tgt);
             let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_prepared(
                 &near,
                 &gains,
@@ -1361,6 +1458,13 @@ impl BinauralDecoderPlugin {
         Ok(Arc::new(BinauralState {
             hrtf_filters_freq: filters,
             design_diffuse_field_eq: eq,
+            reflection_gains: Some(Self::prepare_reflection_gains(
+                config,
+                fft,
+                Some(sofa_ref),
+                Some(prepared),
+                angles,
+            )),
             _hrtf_data: sofa_clone,
         }))
     }
@@ -1385,6 +1489,7 @@ impl BinauralDecoderPlugin {
         self.room.reflection_delay_line.fill(0.0);
         self.room.reflection_write_pos = 0;
         self.room.reflection_read_pos = 0;
+        self.reset_reflection_tracking();
         // Clear crossfade state on reset
         self.crossfade.crossfade_remaining = 0;
         self.crossfade.effective_previous_active = false;
@@ -1499,8 +1604,7 @@ impl Plugin for BinauralDecoderPlugin {
                         continue;
                     }
                     let tgt = self.source_for_current_head(spk.azimuth, spk.elevation);
-                    let near = sofa.find_three_nearest(&tgt);
-                    let gains = super::hrtf::calculate_vbap_gains(&tgt, &near, &sofa);
+                    let (near, gains) = super::hrtf::find_hrtf_neighbors(&sofa, &tgt);
                     let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_frequency_domain(
                         &near,
                         &gains,
@@ -1538,6 +1642,17 @@ impl Plugin for BinauralDecoderPlugin {
                 let new_state = Arc::new(BinauralState {
                     hrtf_filters_freq: filters,
                     design_diffuse_field_eq: eq,
+                    reflection_gains: Some(Self::prepare_reflection_gains(
+                        &self.config,
+                        &self.fft,
+                        Some(&sofa),
+                        None,
+                        (
+                            self.smoothing.head_yaw_deg.current(),
+                            self.smoothing.head_pitch_deg.current(),
+                            self.smoothing.head_roll_deg.current(),
+                        ),
+                    )),
                     _hrtf_data: Some(Arc::new(sofa)),
                 });
                 // Commit only after every fallible load/resample/filter step
@@ -1554,6 +1669,7 @@ impl Plugin for BinauralDecoderPlugin {
                 self.shutdown_hrtf_update_thread();
                 self.config.hrtf_path = new_path;
                 self.state.store(self.default_hrtf_state());
+                self.spawn_hrtf_update_thread();
                 self.sofa_delay_rebase_seconds = None;
             }
 
@@ -1905,6 +2021,23 @@ impl Plugin for BinauralDecoderPlugin {
             }
         }
 
+        let head = (
+            self.smoothing.head_yaw_deg.current(),
+            self.smoothing.head_pitch_deg.current(),
+            self.smoothing.head_roll_deg.current(),
+        );
+        for reflection in self.room.cached_reflections.iter_mut().flatten() {
+            let (az, _) = Self::rotate_speaker_position(
+                reflection.azimuth_deg,
+                reflection.elevation_deg,
+                head.0,
+                head.1,
+                head.2,
+            );
+            let (left, right) = super::room::azimuth_to_pan_gains(az.to_radians());
+            reflection.left_gain = left;
+            reflection.right_gain = right;
+        }
         if let Some((sofa, delay_rebase_seconds)) = prepared_sofa {
             let design_bins = self.config.fft_size / 2 + 1;
             let mut filters =
@@ -1916,8 +2049,7 @@ impl Plugin for BinauralDecoderPlugin {
                     continue;
                 }
                 let tgt = self.source_for_current_head(spk.azimuth, spk.elevation);
-                let near = sofa.find_three_nearest(&tgt);
-                let gains = super::hrtf::calculate_vbap_gains(&tgt, &near, &sofa);
+                let (near, gains) = super::hrtf::find_hrtf_neighbors(&sofa, &tgt);
                 let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_frequency_domain(
                     &near,
                     &gains,
@@ -1956,10 +2088,15 @@ impl Plugin for BinauralDecoderPlugin {
                 if refl.hrtf_filter.is_some() {
                     continue;
                 }
-                let tgt =
-                    sotf_host::sofa::SourcePosition::new(refl.azimuth_deg, refl.elevation_deg, 1.0);
-                let near = sofa.find_three_nearest(&tgt);
-                let gains_vbap = super::hrtf::calculate_vbap_gains(&tgt, &near, &sofa);
+                let (az, el) = Self::rotate_speaker_position(
+                    refl.azimuth_deg,
+                    refl.elevation_deg,
+                    head.0,
+                    head.1,
+                    head.2,
+                );
+                let tgt = sotf_host::sofa::SourcePosition::new(az, el, 1.0);
+                let (near, gains_vbap) = super::hrtf::find_hrtf_neighbors(&sofa, &tgt);
                 let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_frequency_domain(
                     &near,
                     &gains_vbap,
@@ -1968,8 +2105,8 @@ impl Plugin for BinauralDecoderPlugin {
                     sr,
                     &self.fft.hrtf_r2c,
                     0.0, // no near-field for reflections
-                    refl.azimuth_deg,
-                    refl.elevation_deg,
+                    tgt.azimuth,
+                    tgt.elevation,
                 );
                 refl.hrtf_filter =
                     Some(super::room::ReflectionHrtf::from_freq_domain(l_fft, r_fft));
@@ -1979,6 +2116,7 @@ impl Plugin for BinauralDecoderPlugin {
             let new_state = Arc::new(BinauralState {
                 hrtf_filters_freq: filters,
                 design_diffuse_field_eq: eq,
+                reflection_gains: None,
                 _hrtf_data: Some(Arc::new(sofa)),
             });
             // Retire the old immutable worker epoch before committing its

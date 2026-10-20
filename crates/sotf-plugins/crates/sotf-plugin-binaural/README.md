@@ -119,8 +119,8 @@ publication and adoption. Sharing does not make preparation allocation-free or
 establish a motion-to-audio deadline.
 
 Before reload or initialization commits, checked arithmetic limits the prepared
-measurement cache to 256 MiB: both half spectra, outer vector storage, and onset
-arrays. This is separate from the reader's 256 MiB materialized-IR limit; allocator
+measurement cache to 256 MiB: both half spectra, cached log magnitudes, outer
+vector storage, and onset arrays. This is separate from the reader's 256 MiB materialized-IR limit; allocator
 metadata, the source dataset, FFT scratch, directional filters, and other plugin
 storage are additional. Unsupported dimensions reject transactionally. The
 explicit `audit_prepared_storage_boundary` release test materializes a cache just
@@ -190,5 +190,52 @@ Independent tests cover 1,755 spectral geometry cases, 2,610 image-source paths
 across five layouts/three rates, SSIR/fallback agreement, six native head-relative
 near-field preparations, and native left-wall impulse rendering at three rates.
 These establish static coordinate/ear consistency and the defined profile.
-Reflection cue rotation under nonzero/changing head pose, continuous-motion
+Head-relative reflection preparation is described below. Continuous-motion
 latency, measured near-field calibration, and perceptual validation remain open.
+
+### Head-relative reflection state
+
+Reflection world/capture directions retain fixed geometry, source-channel
+ownership, arrival delay, and path attenuation. Preparation rotates each path
+into the head frame, computes its fallback pan or SOFA broadband ILD, and merges
+same-delay/source gains. Direct filters and reflection gains publish together in
+one immutable worker state and share reset/resource epochs. Initialization,
+SOFA reload, and SOFA clearing prepare the current held pose. Without SOFA,
+reflection panning uses the worker; the dry fallback downmix keeps its matrix.
+
+An eight-hop setup-allocated gain ring carries each prepared transition to its
+corresponding N-latency output interval. Reflection scalar gains use the same
+hop fade fraction as the direct transition. Interrupted fades materialize their
+effective previous gains transactionally; retirement backpressure preserves the
+active transition. Reset clears ring phase without heap activity, and EOF keeps
+the adopted owners while finishing queued/fading audio. `cached_reflections`
+contains world geometry and initial diagnostic gains; live gains are in the
+prepared state and output ring. Reflection rendering still provides broadband
+ILD, not full per-reflection ITD or pinna convolution.
+
+The HRTF cache now retains log magnitudes for broadband reflection interpolation,
+so each query returns two gains without allocating complex response vectors.
+The existing 256 MiB cache cap includes these arrays and their vector storage.
+The admitted measurement count therefore depends on the complete cache payload.
+Source dataset and directional/runtime storage remain additional memory.
+
+Single-elevation datasets use circular azimuth brackets with unit-sum weights.
+This avoids a third-nearest-point switch when a horizontal triangle is projected
+outside its measurement plane. The policy does not add vertical measurements;
+gaps wider than a hemisphere use the nearest azimuth. Other datasets use the
+three-neighbor barycentric path. Physical full-sphere interpolation quality
+remains part of the audit's open work.
+
+Tests cover held/native/fallback poses, worker publications, reload/clear,
+merged paths under an independent three-axis head basis, output-hop scheduling,
+interrupted fades, callback partitions, delay-ring wrap, stale/mismatched states,
+reset and EOF publication freeze. Real-worker smoke checks observe publication
+with millisecond polling; they do not establish hardware motion-to-audio latency.
+The explicit eight-channel/second-order preparation benchmark and callback timing
+artifact report local costs for their stated geometry. Perceptual reflection
+quality, full-sphere/non-grid cue validation, and end-to-end latency under larger
+real datasets remain open.
+
+FFT design grids must be powers of two of at least four samples, with a
+representable doubled transform size. This guarantees a nonzero quarter-frame
+source hop before allocation/planning; invalid serialized grids return an error.

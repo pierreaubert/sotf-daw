@@ -1,5 +1,14 @@
 # Unreleased
 
+- Prepare reflection gains in the same head pose and worker epoch as direct
+  filters, including native/fallback scenes, SOFA reload and clearing.
+- Align reflection fades with N-latency output through a preallocated hop ring;
+  preserve effective gains under interrupted fades, backpressure, reset and EOF.
+- Cache log magnitudes within the existing 256 MiB preparation cap for broadband
+  reflection queries without complex-response allocations.
+- Use circular azimuth brackets for horizontal datasets to avoid third-neighbor
+  discontinuities, and reject zero-hop or unrepresentable padded FFT grids.
+
 - Correct room/SOFA positive-left conversions for speaker images, reflection
   directions, fallback panning and reflected HRTF selection.
 - Apply optional extra head shadowing to the contralateral ear using a

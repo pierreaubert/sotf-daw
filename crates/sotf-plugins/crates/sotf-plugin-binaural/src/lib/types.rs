@@ -3,6 +3,7 @@ use sotf_host::sofa::SofaFile;
 use std::sync::Arc;
 
 pub(super) struct BinauralState {
+    pub(super) reflection_gains: Option<Vec<[f32; 2]>>,
     pub(super) hrtf_filters_freq: Vec<Vec<Complex<f32>>>,
     // N-point preparation cache; audio spectra already contain this EQ.
     pub(super) design_diffuse_field_eq: Option<[Vec<Complex<f32>>; 2]>,

@@ -57,3 +57,10 @@ mod head_storage_tests;
 #[cfg(test)]
 #[path = "lib/linear_support_tests.rs"]
 mod linear_support_tests;
+
+#[cfg(test)]
+#[path = "lib/reflection_head_tests.rs"]
+mod reflection_head_tests;
+
+#[path = "lib/reflection_tracking.rs"]
+mod reflection_tracking;

@@ -84,6 +84,7 @@ fn finite_decoder(left_ir: &[f32], right_ir: &[f32]) -> BinauralDecoderPlugin {
     let state = Arc::new(BinauralState {
         hrtf_filters_freq: vec![response],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(Arc::clone(&state));

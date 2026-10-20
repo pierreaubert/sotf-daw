@@ -45,6 +45,7 @@ fn state(id: usize, n: usize) -> Arc<BinauralState> {
     Arc::new(BinauralState {
         hrtf_filters_freq: vec![filters],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     })
 }

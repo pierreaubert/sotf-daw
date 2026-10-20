@@ -8,7 +8,7 @@ use sotf_host::sofa::{SofaFile, SourcePosition};
 use sotf_host::{Plugin, ProcessContext};
 use std::path::PathBuf;
 
-struct Fixture {
+pub(super) struct Fixture {
     directory: PathBuf,
     path: PathBuf,
 }
@@ -17,12 +17,14 @@ impl Drop for Fixture {
         let _ = std::fs::remove_dir_all(&self.directory);
     }
 }
-fn fixture(rate: u32, length: usize) -> (Fixture, SofaFile) {
+pub(super) fn fixture(rate: u32, length: usize) -> (Fixture, SofaFile) {
+    static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let sequence = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let directory = std::env::var_os("SOTF_AUDIT_TMP")
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir)
         .join(format!(
-            "binaural-support-{}-{}",
+            "binaural-support-{}-{}-{sequence}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -178,7 +180,7 @@ fn non_grid_native_sofa_matches_complete_causal_fir_across_callbacks_and_eof() {
                                     BinauralDecoderPlugin::compute_head_rotated_hrtf_state(
                                         &loaded,
                                         &p.config,
-                                        &prepared,
+                                        Some(&prepared),
                                         &p.fft,
                                         &[],
                                         (-45.0, 0.0, 0.0),
@@ -331,6 +333,7 @@ fn spectral_frame_tail_survives_switch_to_linear_before_eof() {
             p.state.store(Arc::new(BinauralState {
                 hrtf_filters_freq: vec![filters],
                 design_diffuse_field_eq: None,
+                reflection_gains: None,
                 _hrtf_data: None,
             }));
             p

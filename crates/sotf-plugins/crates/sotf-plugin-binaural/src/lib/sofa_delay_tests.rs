@@ -79,6 +79,7 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
         let pending = Arc::new(BinauralState {
             hrtf_filters_freq: active.hrtf_filters_freq.clone(),
             design_diffuse_field_eq: active.design_diffuse_field_eq.clone(),
+            reflection_gains: None,
             _hrtf_data: active._hrtf_data.clone(),
         });
         plugin.state.store(Arc::clone(&pending));

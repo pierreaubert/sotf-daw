@@ -183,7 +183,12 @@ pub(super) fn sofa(rate: u32, measurements: usize, strength: f64) -> Fixture {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let directory = base.join(format!("binaural-cues-{}-{nonce}", std::process::id()));
+    static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let sequence = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let directory = base.join(format!(
+        "binaural-cues-{}-{nonce}-{sequence}",
+        std::process::id()
+    ));
     std::fs::create_dir(&directory).unwrap();
     let path = directory.join("fixture.sofa");
     let mut writer = SofaWriter::new();

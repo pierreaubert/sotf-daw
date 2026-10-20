@@ -57,6 +57,7 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
                 vec![Complex::new(1.0, 0.0); bins],
                 vec![Complex::new(1.0, 0.0); bins],
             ]),
+            reflection_gains: None,
             _hrtf_data: Some(dataset(measurements, length).into()),
         });
         let sofa = base._hrtf_data.as_ref().unwrap();
@@ -75,7 +76,7 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
                 BinauralDecoderPlugin::compute_head_rotated_hrtf_state(
                     &base,
                     &p.config,
-                    &prepared,
+                    Some(&prepared),
                     &p.fft,
                     &[],
                     (pose as f32 * 7.25 - 40.0, 0.0, 0.0),
@@ -97,7 +98,7 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
             let reference = BinauralDecoderPlugin::compute_head_rotated_hrtf_state(
                 &base,
                 &p.config,
-                &prepared,
+                Some(&prepared),
                 &p.fft,
                 &[],
                 (0.0, 0.0, 0.0),
@@ -129,8 +130,9 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
 fn prepared_storage_admission_checks_boundaries_and_overflow() {
     let budget = 256 * 1024 * 1024;
     for n in [64, 256, 2048, 4096, 65536] {
-        let per = 2 * (n / 2 + 1) * size_of::<Complex<f32>>()
+        let per = 2 * (n / 2 + 1) * (size_of::<Complex<f32>>() + size_of::<f32>())
             + 2 * size_of::<Vec<Complex<f32>>>()
+            + 2 * size_of::<Vec<f32>>()
             + 2 * size_of::<f32>();
         let admitted = budget / per;
         assert_eq!(
@@ -203,8 +205,9 @@ fn oversized_prepared_cache_rejects_reload_and_initialize_transactionally() {
 #[ignore = "explicit release run materializes the 256 MiB prepared-cache boundary"]
 fn audit_prepared_storage_boundary() {
     let n = 2048;
-    let per = 2 * (n / 2 + 1) * size_of::<Complex<f32>>()
+    let per = 2 * (n / 2 + 1) * (size_of::<Complex<f32>>() + size_of::<f32>())
         + 2 * size_of::<Vec<Complex<f32>>>()
+        + 2 * size_of::<Vec<f32>>()
         + 2 * size_of::<f32>();
     let measurements = (256 * 1024 * 1024) / per;
     let sofa = dataset(measurements, 16);

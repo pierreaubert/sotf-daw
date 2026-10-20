@@ -83,7 +83,7 @@ unsafe impl GlobalAlloc for CallbackAllocator {
 #[global_allocator]
 static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
-fn callback_counts(f: impl FnOnce()) -> (usize, usize) {
+pub(super) fn callback_counts(f: impl FnOnce()) -> (usize, usize) {
     ALLOCATIONS.set(0);
     DEALLOCATIONS.set(0);
     TRACKING.set(true);
@@ -180,6 +180,7 @@ fn make_state(gain: f32) -> std::sync::Arc<crate::types::BinauralState> {
     std::sync::Arc::new(crate::types::BinauralState {
         hrtf_filters_freq: vec![vec![rustfft::num_complex::Complex::new(gain, 0.0); 130]; 2],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     })
 }
@@ -192,6 +193,8 @@ fn small_plugin(mode: usize) -> crate::BinauralDecoderPlugin {
     .unwrap();
     let mut plugin = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
     plugin.initialize(48_000.0).unwrap();
+    // This fixture controls publication/retirement manually.
+    plugin.shutdown_hrtf_update_thread();
     // One-hop tests shorten the already prepared transition without changing
     // transform storage. Both linear and spectral modes are exercised.
     plugin.config.crossfade_ms = plugin.config.hop_size as f32 / 48.0;
@@ -297,6 +300,7 @@ fn audit_transition_timing() {
             .unwrap();
             let mut plugin = crate::BinauralDecoderPlugin::try_from_params(params).unwrap();
             plugin.initialize(48_000.0).unwrap();
+            plugin.shutdown_hrtf_update_thread();
             plugin.retirement.tx.take();
             plugin.retirement.thread.take().unwrap().join().unwrap();
             let (tx, rx) = std::sync::mpsc::sync_channel(1);
@@ -322,6 +326,7 @@ fn audit_transition_timing() {
                 plugin.state.store(Arc::new(crate::types::BinauralState {
                     hrtf_filters_freq: original.hrtf_filters_freq.clone(),
                     design_diffuse_field_eq: None,
+                    reflection_gains: original.reflection_gains.clone(),
                     _hrtf_data: None,
                 }));
                 let start = Instant::now();

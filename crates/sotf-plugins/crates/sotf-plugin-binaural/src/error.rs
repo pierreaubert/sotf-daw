@@ -8,7 +8,7 @@ pub enum BinauralError {
     SofaNotLoaded,
     /// Sample rate mismatch between SOFA and engine
     SampleRateMismatch { sofa_rate: u32, engine_rate: u32 },
-    /// Invalid FFT size (must be power of 2)
+    /// Invalid FFT grid (power of 2, at least 4, with representable doubled length)
     InvalidFftSize(usize),
     /// SOFA file loading failed
     SofaLoadError(String),
@@ -37,7 +37,11 @@ impl fmt::Display for BinauralError {
                 )
             }
             BinauralError::InvalidFftSize(size) => {
-                write!(f, "Invalid FFT size: {} (must be power of 2)", size)
+                write!(
+                    f,
+                    "Invalid FFT size: {} (must be power of 2, at least 4, with representable doubled length)",
+                    size
+                )
             }
             BinauralError::SofaLoadError(msg) => write!(f, "SOFA load error: {}", msg),
             BinauralError::ResamplingError(msg) => write!(f, "Resampling error: {}", msg),

@@ -109,3 +109,12 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Share `azimuth_to_pan_gains` for fallback cues; positive azimuth must favor the left ear and match reflected HRTF lookup.
 - The near-field control applies a median-plane-normalized magnitude heuristic to the contralateral ear. Use lateral projection for elevation/seam consistency; do not restore angular or frequency hard gates.
 - Static world-frame tests do not prove reflection cue rotation with head pose or calibrated near-field perception.
+
+## Prepared reflection gains
+
+- Keep world/capture geometry immutable in `ReflectionScene`; rotate every ray before SOFA lookup or fallback panning, then merge by delay/source key.
+- Production head/resource publications carry reflection gains in the same immutable state as direct filters. Reject wrong topology lengths and retired epochs before adoption.
+- The eight-hop gain ring assumes four source hops of N-sample latency and interleaved source/output processing. Keep its producer/read phases aligned across partial callbacks, reset and EOF.
+- Retarget effective previous reflection gains together with direct-filter scratch, committing both only after retirement succeeds. No gain-vector resizing or destruction belongs in callbacks.
+- Account for cached log magnitudes in the prepared-cache cap. Horizontal datasets use circular azimuth brackets; do not reintroduce projected third-neighbor ties.
+- Cached reflection metadata describes world geometry and initial gains. Live pose gains are state-owned; no full reflection ITD/pinna claim is made.

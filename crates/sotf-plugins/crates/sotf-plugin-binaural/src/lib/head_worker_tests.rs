@@ -18,6 +18,7 @@ fn filters(value: f32) -> Arc<BinauralState> {
     Arc::new(BinauralState {
         hrtf_filters_freq: vec![vec![Complex::new(value, 0.0); 66]; 2],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     })
 }
@@ -143,6 +144,7 @@ fn decoder() -> BinauralDecoderPlugin {
         serde_json::from_value(serde_json::json!({"input_channels":2,"fft_size":64})).unwrap();
     let mut plugin = BinauralDecoderPlugin::try_from_params(params).unwrap();
     plugin.initialize(48_000.0).unwrap();
+    plugin.shutdown_hrtf_update_thread();
     plugin
 }
 

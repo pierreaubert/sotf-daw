@@ -11,6 +11,8 @@ pub struct PreparedHrtfSpectra {
     right: Vec<Vec<Complex<f32>>>,
     left_itds: Vec<f32>,
     right_itds: Vec<f32>,
+    left_db: Vec<Vec<f32>>,
+    right_db: Vec<Vec<f32>>,
 }
 
 // Keep prepared spectra within the same materialized-payload budget as the
@@ -30,8 +32,8 @@ pub fn validate_prepared_hrtf_storage(
         .and_then(|n| n.checked_add(1))
         .ok_or("HRTF spectral storage dimensions overflow")?;
     let per_measurement = bins
-        .checked_mul(2 * size_of::<Complex<f32>>())
-        .and_then(|n| n.checked_add(2 * size_of::<Vec<Complex<f32>>>()))
+        .checked_mul(2 * (size_of::<Complex<f32>>() + size_of::<f32>()))
+        .and_then(|n| n.checked_add(2 * size_of::<Vec<Complex<f32>>>() + 2 * size_of::<Vec<f32>>()))
         .and_then(|n| n.checked_add(2 * size_of::<f32>()))
         .ok_or("HRTF spectral storage dimensions overflow")?;
     let bytes = measurements
@@ -57,6 +59,8 @@ pub fn prepare_hrtf_spectra<S: Into<f64>>(
         right: Vec::with_capacity(sofa.num_measurements),
         left_itds: Vec::with_capacity(sofa.num_measurements),
         right_itds: Vec::with_capacity(sofa.num_measurements),
+        left_db: Vec::with_capacity(sofa.num_measurements),
+        right_db: Vec::with_capacity(sofa.num_measurements),
     };
     for measurement in 0..sofa.num_measurements {
         let (_, left, right) = sofa
@@ -64,6 +68,32 @@ pub fn prepare_hrtf_spectra<S: Into<f64>>(
             .expect("validated SOFA measurement dimensions");
         prepared.left.push(ir_to_freq(left, fft_size, fft_r2c));
         prepared.right.push(ir_to_freq(right, fft_size, fft_r2c));
+        let log_magnitude = |h: &Complex<f32>| {
+            let magnitude = h.norm();
+            if magnitude > 1e-9 {
+                20.0 * magnitude.log10()
+            } else {
+                -200.0
+            }
+        };
+        prepared.left_db.push(
+            prepared
+                .left
+                .last()
+                .expect("just pushed")
+                .iter()
+                .map(log_magnitude)
+                .collect(),
+        );
+        prepared.right_db.push(
+            prepared
+                .right
+                .last()
+                .expect("just pushed")
+                .iter()
+                .map(log_magnitude)
+                .collect(),
+        );
         prepared.left_itds.push(detect_ir_onset(left, sample_rate));
         prepared
             .right_itds
@@ -301,4 +331,37 @@ pub fn interpolate_hrtf_frequency_domain(
     }
 
     (left_fft, right_fft)
+}
+
+/// Computes reflection broadband ILD without constructing complex responses.
+///
+/// Uses the same log-magnitude interpolation and half-spectrum energy convention
+/// as `ReflectionHrtf`, with phase-independent cached source magnitudes.
+pub fn interpolate_hrtf_broadband_prepared(
+    nearest: &[(usize, f32); 3],
+    gains: &[f32; 3],
+    prepared: &PreparedHrtfSpectra,
+) -> [f32; 2] {
+    let mut energy = [0.0_f64; 2];
+    for (ear, sources) in [&prepared.left_db, &prepared.right_db]
+        .into_iter()
+        .enumerate()
+    {
+        for (k, _) in sources[nearest[0].0].iter().enumerate() {
+            let mut db = 0.0_f32;
+            for i in 0..3 {
+                if gains[i] >= 1e-6 {
+                    db += gains[i] * sources[nearest[i].0][k];
+                }
+            }
+            let magnitude = 10.0_f32.powf(db / 20.0);
+            energy[ear] += f64::from(magnitude).powi(2);
+        }
+    }
+    let amplitude = energy.map(f64::sqrt);
+    let maximum = amplitude[0].max(amplitude[1]).max(1e-12);
+    [
+        (amplitude[0] / maximum) as f32,
+        (amplitude[1] / maximum) as f32,
+    ]
 }

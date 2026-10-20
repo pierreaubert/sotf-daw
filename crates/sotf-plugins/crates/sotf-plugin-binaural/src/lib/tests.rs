@@ -185,6 +185,7 @@ fn completed_crossfade_state_is_handed_to_background_reclaimer() {
     let old = Arc::new(BinauralState {
         hrtf_filters_freq: vec![vec![Complex::new(1.0, 0.0); 66]; 2],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     let weak = Arc::downgrade(&old);
@@ -428,6 +429,7 @@ fn render_binaural_partitioned(input: &[f32], blocks: &[usize]) -> Vec<f32> {
         },
     );
     plugin.initialize(48_000.0).unwrap();
+    plugin.shutdown_hrtf_update_thread();
     // Pin deterministic one-tap direct filters so this test isolates the
     // streaming/ring contracts from SOFA interpolation and background state.
     let filters = (0..CHANNELS)
@@ -444,6 +446,7 @@ fn render_binaural_partitioned(input: &[f32], blocks: &[usize]) -> Vec<f32> {
     let state = Arc::new(BinauralState {
         hrtf_filters_freq: filters,
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(state.clone());
@@ -784,6 +787,7 @@ fn streaming_hrtf_matches_direct_linear_convolution_across_boundaries() {
             let state = Arc::new(BinauralState {
                 hrtf_filters_freq: vec![combined],
                 design_diffuse_field_eq: None,
+                reflection_gains: None,
                 _hrtf_data: None,
             });
             plugin.state.store(state.clone());
@@ -969,6 +973,7 @@ fn test_crossfade_triggers_on_state_change() {
             plugin.config.input_channels
         ],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1011,6 +1016,7 @@ fn test_crossfade_completes() {
             plugin.config.input_channels
         ],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1130,6 +1136,7 @@ fn test_reset_clears_crossfade() {
             plugin.config.input_channels
         ],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1218,6 +1225,7 @@ fn test_crossfade_ms_parameter_set_get_and_affects_duration() {
             plugin.config.input_channels
         ],
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1547,6 +1555,7 @@ fn test_spectral_crossfade_no_tonal_shift() {
         Arc::new(BinauralState {
             hrtf_filters_freq: filters,
             design_diffuse_field_eq: None,
+            reflection_gains: None,
             _hrtf_data: None,
         })
     };
@@ -1815,7 +1824,9 @@ fn test_lfe_gain_no_sqrt2_attenuation() {
 }
 
 #[test]
-#[should_panic(expected = "Invalid FFT size: 1000 (must be power of 2)")]
+#[should_panic(
+    expected = "Invalid FFT size: 1000 (must be power of 2, at least 4, with representable doubled length)"
+)]
 fn test_constructor_rejects_non_power_of_two_fft_size() {
     let _ = BinauralDecoderPlugin::new(
         2,
@@ -2411,6 +2422,7 @@ fn test_head_yaw_background_update_changes_state() {
     let initial_state = Arc::new(BinauralState {
         hrtf_filters_freq: initial_filters,
         design_diffuse_field_eq: None,
+        reflection_gains: None,
         _hrtf_data: Some(Arc::new(sofa)),
     });
 
