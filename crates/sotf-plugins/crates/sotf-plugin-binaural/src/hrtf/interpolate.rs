@@ -13,6 +13,38 @@ pub struct PreparedHrtfSpectra {
     right_itds: Vec<f32>,
 }
 
+// Keep prepared spectra within the same materialized-payload budget as the
+// SOFA reader. Short source IRs can otherwise expand into gigabytes of FFTs.
+const MAX_PREPARED_HRTF_BYTES: usize = 256 * 1024 * 1024;
+
+/// Checks prepared spectral storage before allocating or committing a dataset.
+///
+/// # Errors
+/// Returns an error for dimension overflow or payload above 256 MiB.
+pub fn validate_prepared_hrtf_storage(
+    measurements: usize,
+    fft_size: usize,
+) -> Result<usize, String> {
+    let bins = fft_size
+        .checked_div(2)
+        .and_then(|n| n.checked_add(1))
+        .ok_or("HRTF spectral storage dimensions overflow")?;
+    let per_measurement = bins
+        .checked_mul(2 * size_of::<Complex<f32>>())
+        .and_then(|n| n.checked_add(2 * size_of::<Vec<Complex<f32>>>()))
+        .and_then(|n| n.checked_add(2 * size_of::<f32>()))
+        .ok_or("HRTF spectral storage dimensions overflow")?;
+    let bytes = measurements
+        .checked_mul(per_measurement)
+        .ok_or("HRTF spectral storage dimensions overflow")?;
+    if bytes > MAX_PREPARED_HRTF_BYTES {
+        return Err(format!(
+            "Unsupported HRTF spectral storage: {bytes} bytes exceeds {MAX_PREPARED_HRTF_BYTES} byte preparation limit"
+        ));
+    }
+    Ok(bytes)
+}
+
 pub fn prepare_hrtf_spectra<S: Into<f64>>(
     sofa: &SofaFile,
     fft_size: usize,

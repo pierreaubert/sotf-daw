@@ -41,6 +41,10 @@ thread_local! {
     static TRACKING: Cell<bool> = const { Cell::new(false) };
     static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
     static DEALLOCATIONS: Cell<usize> = const { Cell::new(0) };
+    static ALLOCATED_BYTES: Cell<usize> = const { Cell::new(0) };
+    static LARGEST_ALLOCATION: Cell<usize> = const { Cell::new(0) };
+    static LIVE_BYTES: Cell<usize> = const { Cell::new(0) };
+    static PEAK_BYTES: Cell<usize> = const { Cell::new(0) };
 }
 
 struct CallbackAllocator;
@@ -52,6 +56,12 @@ unsafe impl GlobalAlloc for CallbackAllocator {
         let _ = TRACKING.try_with(|tracking| {
             if tracking.get() {
                 ALLOCATIONS.with(|count| count.set(count.get() + 1));
+                ALLOCATED_BYTES.with(|bytes| bytes.set(bytes.get().saturating_add(layout.size())));
+                LARGEST_ALLOCATION.with(|bytes| bytes.set(bytes.get().max(layout.size())));
+                LIVE_BYTES.with(|bytes| {
+                    bytes.set(bytes.get().saturating_add(layout.size()));
+                    PEAK_BYTES.with(|peak| peak.set(peak.get().max(bytes.get())));
+                });
             }
         });
         // SAFETY: Forward the caller's valid allocation layout unchanged.
@@ -62,6 +72,7 @@ unsafe impl GlobalAlloc for CallbackAllocator {
         let _ = TRACKING.try_with(|tracking| {
             if tracking.get() {
                 DEALLOCATIONS.with(|count| count.set(count.get() + 1));
+                LIVE_BYTES.with(|bytes| bytes.set(bytes.get().saturating_sub(layout.size())));
             }
         });
         // SAFETY: Forward the original allocation pointer and layout unchanged.
@@ -337,4 +348,28 @@ fn audit_transition_timing() {
             );
         }
     }
+}
+
+/// Measures requested heap bytes on this thread, excluding returned-value destruction.
+pub(super) fn preparation_heap<R>(f: impl FnOnce() -> R) -> (R, usize, usize, usize) {
+    struct Stop;
+    impl Drop for Stop {
+        fn drop(&mut self) {
+            TRACKING.set(false);
+        }
+    }
+    ALLOCATED_BYTES.set(0);
+    LARGEST_ALLOCATION.set(0);
+    LIVE_BYTES.set(0);
+    PEAK_BYTES.set(0);
+    TRACKING.set(true);
+    let stop = Stop;
+    let result = f();
+    drop(stop);
+    (
+        result,
+        ALLOCATED_BYTES.get(),
+        LARGEST_ALLOCATION.get(),
+        PEAK_BYTES.get(),
+    )
 }

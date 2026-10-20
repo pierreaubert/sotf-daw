@@ -2404,7 +2404,7 @@ fn test_head_yaw_background_update_changes_state() {
     let initial_state = Arc::new(BinauralState {
         hrtf_filters_freq: initial_filters,
         diffuse_field_eq_filter: None,
-        _hrtf_data: Some(sofa),
+        _hrtf_data: Some(Arc::new(sofa)),
     });
 
     let mut plugin = BinauralDecoderPlugin::new(

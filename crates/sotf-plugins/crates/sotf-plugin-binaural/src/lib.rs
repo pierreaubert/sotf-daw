@@ -49,3 +49,7 @@ mod head_clock_tests;
 #[cfg(test)]
 #[path = "lib/fade_cue_tests.rs"]
 mod fade_cue_tests;
+
+#[cfg(test)]
+#[path = "lib/head_storage_tests.rs"]
+mod head_storage_tests;

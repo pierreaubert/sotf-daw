@@ -1,0 +1,24 @@
+{
+  "base_commit": "ab89934466417cfbd87775c79fcf997ada11882f",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "completed_poses_share",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 5.21s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-c88022d35d76891c)\n\nrunning 1 test\nHEAD_STORAGE measurements=36 ir=64 fft=2048 dataset_bytes=18432 prep_ns=237083 max_pose_ns=97834 max_pose_bytes=101131 largest_allocation=18432 shared=false\nHEAD_STORAGE measurements=720 ir=512 fft=2048 dataset_bytes=2949120 prep_ns=3836459 max_pose_ns=275250 max_pose_bytes=3040027 largest_allocation=2949120 shared=false\nHEAD_STORAGE measurements=2048 ir=1024 fft=2048 dataset_bytes=16777216 prep_ns=10020625 max_pose_ns=1133875 max_pose_bytes=16884059 largest_allocation=16777216 shared=false\n\nthread 'head_storage_tests::completed_poses_share_the_immutable_dataset_without_measurement_sized_allocations' (326721879) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs:72:5:\ncompleted poses must share SOFA without measurement-sized allocations\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest head_storage_tests::completed_poses_share_the_immutable_dataset_without_measurement_sized_allocations ... FAILED\n\nfailures:\n\nfailures:\n    head_storage_tests::completed_poses_share_the_immutable_dataset_without_measurement_sized_allocations\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 109 filtered out; finished in 0.03s\n\nerror: test failed, to rerun pass `-p sotf-plugin-binaural --lib`\n",
+  "scope": "Before immutable dataset sharing. Only helper visibility and allocation instrumentation changed in production module; pose transfer mathematics unchanged."
+}

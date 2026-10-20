@@ -92,3 +92,9 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Interrupted linear fades use the preallocated effective previous transfer, with diffuse-field EQ already included. Do not apply the previous owner's EQ a second time.
 - Prepare a candidate transfer before retirement; commit it only after retirement succeeds. Backpressure must preserve the audible transfer and owners.
 - Spectral fades coalesce pending publications until completion to preserve nonlinear phase history. Include the remaining fade duration when assessing tracking latency.
+
+## Dataset storage
+
+- Retain shared immutable `Arc<SofaFile>` ownership across completed poses; never deep-clone the measurement dataset per pose.
+- Validate prepared-cache storage before reload/initialize commits. The 256 MiB cache-payload limit is separate from source IR storage and total process memory.
+- Source HRIR length does not prove interpolated support. The non-grid support diagnostic records an open aliasing defect; held-pose tests do not close it.

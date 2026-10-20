@@ -1300,7 +1300,7 @@ impl BinauralDecoderPlugin {
 
     /// Recompute a new `BinauralState` for the given head angles.
     /// This is the CPU-heavy work that now runs off the audio thread.
-    fn compute_head_rotated_hrtf_state(
+    pub(super) fn compute_head_rotated_hrtf_state(
         state: &Arc<BinauralState>,
         config: &BinauralConfig,
         prepared: &super::hrtf::PreparedHrtfSpectra,
@@ -1484,6 +1484,10 @@ impl Plugin for BinauralDecoderPlugin {
                         .map_err(|e| format!("HRTF resample failed: {}", e))?;
                 }
                 self.validate_linear_convolution_ir(sofa.ir_length)?;
+                super::hrtf::validate_prepared_hrtf_storage(
+                    sofa.num_measurements,
+                    self.config.fft_size,
+                )?;
 
                 let mut filters = vec![
                     vec![Complex::new(0.0, 0.0); self.config.freq_size * 2];
@@ -1537,7 +1541,7 @@ impl Plugin for BinauralDecoderPlugin {
                 let new_state = Arc::new(BinauralState {
                     hrtf_filters_freq: filters,
                     diffuse_field_eq_filter: eq,
-                    _hrtf_data: Some(sofa),
+                    _hrtf_data: Some(Arc::new(sofa)),
                 });
                 // Commit only after every fallible load/resample/filter step
                 // succeeds. The old worker and state remain valid on error.
@@ -1785,6 +1789,10 @@ impl Plugin for BinauralDecoderPlugin {
                 super::hrtf::resample_sofa(&mut sofa, sr)?;
             }
             self.validate_linear_convolution_ir(sofa.ir_length)?;
+            super::hrtf::validate_prepared_hrtf_storage(
+                sofa.num_measurements,
+                self.config.fft_size,
+            )?;
             Some((sofa, delay_rebase_seconds))
         } else {
             None
@@ -1975,7 +1983,7 @@ impl Plugin for BinauralDecoderPlugin {
             let new_state = Arc::new(BinauralState {
                 hrtf_filters_freq: filters,
                 diffuse_field_eq_filter: eq,
-                _hrtf_data: Some(sofa),
+                _hrtf_data: Some(Arc::new(sofa)),
             });
             // Retire the old immutable worker epoch before committing its
             // replacement. Fallible filter preparation above retains its worker.

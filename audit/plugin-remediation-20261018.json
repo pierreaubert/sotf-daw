@@ -540,6 +540,34 @@
             "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-validation.json"
           ],
           "result": "Baseline repeated publication waveform error 0.280251 at 44100 Hz/FFT64 with deterministic retirement capacity. Linear retargeting now materializes the effective old complex transfer including each ear EQ into preallocated transactional double buffers; retirement failure leaves active transfer unchanged. Independent f64 direct FIR superposition passes 27 rate/FFT/callback-shape cases, maximum error below 1e-5 (renderer silence floor), with polarity and per-ear delay/EQ changes. Nine spectral cases retain bit-identical active-fade audio versus an uninterrupted twin and adopt the latest pending owner on the following hop. Full release suite 144 passed; explicit 40002 transition callbacks have zero allocations/frees; strict all-target QA Clippy passes."
+        },
+        {
+          "requirement": "Keep completed head-pose dataset ownership immutable and avoid measurement-sized copies per pose.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-storage-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-storage-validation.json"
+          ],
+          "result": "Reproduced dataset deep copies for 36/720/2048 measurements and 64/512/1024 source samples at FFT2048. Largest baseline pose allocation reached 16777216 bytes; dataset owner is now Arc<SofaFile>. Twelve poses per geometry retain identical IR storage pointers and expected shared-owner reference counts and constant-field transfer within 2e-5. Each tested pose requests 82144 allocation bytes, largest single allocation 16400, independent of measurement count. These are worker preparation measurements, not allocation-free preparation or end-to-end head latency."
+        },
+        {
+          "requirement": "Bound prepared HRTF spectral cache expansion before committing a loaded dataset and exercise the admitted storage boundary.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-storage-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-storage-validation.json"
+          ],
+          "result": "Checked spectra/outer-vector/onset payload arithmetic enforces a separate 256 MiB prepared-cache limit before reload/initialize state changes. Five FFT geometries test just-below/above-cap counts and usize overflow. Public native-file rejection at 9000 measurements/FFT4096 preserves dataset publication, audible owner, metadata and worker; rejected initialize also preserves the prepared clock. Explicit FFT2048/16312-measurement/16-sample boundary materializes 268430272 prepared bytes; peak tracked live requests 268438464 bytes, initial preparation 82.338 ms on this run. This is a cache-payload bound, excluding source IR and other runtime storage. Full release suite 147 passed; explicit storage and 40002 zero-heap transition callback tests pass; strict all-target QA Clippy passes."
+        },
+        {
+          "requirement": "Correct linear-convolution support of non-grid interpolated responses.",
+          "status": "open_defect_reproduced",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/binaural-interpolated-support-diagnostic.json"
+          ],
+          "result": "Independent f64 real IDFT of actual 50/50 onset-2/onset-3 interpolation for length-8 source HRIRs, three FFT sizes and rates, shows 2.58898%-3.29533% energy beyond N-hop+1. A late-hop source impulse can wrap prefix samples up to 0.090943. Temporary diagnostic source and output are preserved in the artifact; it is not a passing correctness claim. No causal filter/convolution correction is included in the storage batch."
         }
       ],
       "evidence": [
@@ -556,11 +584,15 @@
         "audit/artifacts/plugin-audit-20261018/binaural-head-cue-validation.json",
         "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/fade_cue_tests.rs",
         "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-validation.json"
+        "audit/artifacts/plugin-audit-20261018/binaural-interrupted-fade-validation.json",
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_storage_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/binaural-head-storage-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/binaural-head-storage-validation.json",
+        "audit/artifacts/plugin-audit-20261018/binaural-interpolated-support-diagnostic.json"
       ],
       "remaining_production_scope": [
         "Continuously moving/non-grid real-SOFA head-turn audio, audible interrupted-transition behavior and measured end-to-end motion-to-audio latency under actual preparation load.",
-        "Other SOFA coordinate/delay boundaries, maximum HRIR dimensions/storage/cost, and linear-convolution support of interpolated responses under motion.",
+        "Other SOFA coordinate/delay boundaries, remaining maximum-HRIR/FFT/rate preparation and runtime-cost geometries, and correction of the reproduced linear-convolution support defect in non-grid interpolated responses.",
         "Recursive late-reverb truncation/cutoff audibility; subjective interrupted-transition audibility under real continuously moving/non-grid HRTFs."
       ],
       "validation_limits": [
@@ -568,7 +600,8 @@
         "Synthetic held mono poses use direct rendering with room/reverb/diffuse EQ disabled; resource transitions settle before waveform probes. Real continuously moving/non-grid cue accuracy and hardware latency remain unverified.",
         "This batch verifies positive integer source-sample delays in shared and varying measurement layouts at the native renderer clock; it does not establish every SOFA coordinate/unit/delay capability.",
         "Maximum-dimension preparation/cost and recursive-tail cutoff audibility remain open; optional learned HRTF selection stays separate.",
-        "Synthetic linear FIR transfer references and spectral twin comparisons verify retarget scheduling, not perceptual click thresholds. Spectral updates wait the remaining rounded 10-500 ms configured fade plus contention; two setup buffers cost 32 * input_channels * frequency_bins bytes. Maximum-dimension costs and end-to-end tracking latency remain open."
+        "Synthetic linear FIR transfer references and spectral twin comparisons verify retarget scheduling, not perceptual click thresholds. Spectral updates wait the remaining rounded 10-500 ms configured fade plus contention; two setup buffers cost 32 * input_channels * frequency_bins bytes. Maximum-dimension costs and end-to-end tracking latency remain open.",
+        "Dataset sharing and a checked 256 MiB prepared-cache payload cap are verified. Explicit near-cap testing covers FFT2048 with 16-sample IRs, not every maximum source length/FFT/rate combination, process-wide peak memory or actual head-motion latency. Non-grid interpolation support is a reproduced open defect (see dedicated diagnostic)."
       ]
     },
     {
@@ -2205,6 +2238,15 @@
       ],
       "result": "Retarget linear fades from their effective transfer including diffuse EQ; preserve spectral phase history through completion and coalesce latest. 27 direct waveform cases and nine spectral comparisons; 144 release tests, explicit zero-heap callback timing and strict Clippy. Overall remains 35/45.",
       "limitations": "Synthetic mono audio and supported 10 ms transitions; subjective audibility and continuous real-SOFA motion latency remain open, including spectral completion delay and maximum-dimension costs."
+    },
+    {
+      "name": "Binaural immutable datasets and prepared cache admission",
+      "state": "verified_partial",
+      "plugin_ids": [
+        12
+      ],
+      "result": "Eliminates per-pose measurement IR copies; checked 256 MiB prepared-cache limit with transactional public-API rejection and a materialized near-cap run. 147 release tests plus explicit cache boundary/callback timing and strict Clippy pass. Overall stays 35/45.",
+      "limitations": "An independent non-grid interpolation diagnostic reproduces out-of-capacity response energy and potential prefix wrap. That correction, continuous-motion/cutoff audibility and remaining max geometry costs stay open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

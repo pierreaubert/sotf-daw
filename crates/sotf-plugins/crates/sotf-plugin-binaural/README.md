@@ -109,3 +109,29 @@ updates can wait the remaining rounded fade duration (the public setting ranges
 from 10 to 500 ms), plus publication/retirement contention; this is a documented
 tracking-latency tradeoff, not a low-latency head-motion guarantee. EOF continues
 the audible transition while excluding later publications.
+
+### Dataset ownership and preparation limits
+
+Completed head-pose states share an immutable `Arc<SofaFile>` with their worker's
+resource snapshot. Pose updates allocate only directional filters and copied EQ;
+they do not duplicate all measurement IRs. Reset/resource epochs still govern
+publication and adoption. Sharing does not make preparation allocation-free or
+establish a motion-to-audio deadline.
+
+Before reload or initialization commits, checked arithmetic limits the prepared
+measurement cache to 256 MiB: both half spectra, outer vector storage, and onset
+arrays. This is separate from the reader's 256 MiB materialized-IR limit; allocator
+metadata, the source dataset, FFT scratch, directional filters, and other plugin
+storage are additional. Unsupported dimensions reject transactionally. The
+explicit `audit_prepared_storage_boundary` release test materializes a cache just
+below this limit; ordinary tests check arithmetic boundaries without allocating
+that cache. This cap does not bound end-to-end preparation time.
+
+Non-grid interpolation support remains an open audit defect. The current
+log-magnitude/phase interpolator can generate energy outside the admitted source
+HRIR support. A reproduced two-onset half-sample interpolation has energy beyond
+`fft_size - hop_size + 1`, which the current renderer can wrap into earlier samples.
+The source-length check alone does not prove linear convolution of interpolated
+responses. See `binaural-interpolated-support-diagnostic.json` in the audit artifacts
+for the temporary probe and measured results. No response truncation or claimed
+causal-filter correction is included in this ownership change.

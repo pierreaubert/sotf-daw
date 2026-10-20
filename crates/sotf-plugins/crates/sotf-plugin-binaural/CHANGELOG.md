@@ -1,5 +1,10 @@
 # Unreleased
 
+- Share immutable SOFA datasets across completed head-pose states instead of
+  copying all measurements per update.
+- Reject prepared HRTF caches over 256 MiB before committing resource changes,
+  with checked dimension arithmetic and transactional rejection tests.
+
 - Smooth head components and threshold requests by circular distance across
   ±180 degrees while retaining canonical parameter targets and 10 ms timing.
 - Prepare SOFA replacement/reinitialized filters at the current smoothed head

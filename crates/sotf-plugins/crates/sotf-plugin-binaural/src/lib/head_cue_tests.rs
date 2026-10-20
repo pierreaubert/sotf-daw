@@ -164,9 +164,9 @@ fn inverse_rotation_matches_independent_forward_left_up_head_basis() {
     eprintln!("HEAD_BASIS cases=675 maximum_cartesian_error={maximum:e}");
 }
 
-struct Fixture {
+pub(super) struct Fixture {
     directory: PathBuf,
-    path: PathBuf,
+    pub(super) path: PathBuf,
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -174,7 +174,7 @@ impl Drop for Fixture {
     }
 }
 
-fn sofa(rate: u32, measurements: usize, strength: f64) -> Fixture {
+pub(super) fn sofa(rate: u32, measurements: usize, strength: f64) -> Fixture {
     let base = std::env::var_os("SOTF_AUDIT_TMP")
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
