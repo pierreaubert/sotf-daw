@@ -21,6 +21,27 @@ pilot, note, or clock reference they can detect change but cannot identify a
 constant absolute pitch offset. Set `reference_frequency_hz` to a known pilot
 or note for absolute correction; zero selects change-only tracking.
 
+With an explicit reference, coherent harmonics can support a weak fundamental.
+The bounded estimator examines the first eight harmonics, requires at least
+two material, consistent observations with coprime harmonic indices, and
+weights confidence by local prominence, noise and reference proximity. Its
+consistency budget accounts for FFT bin width and harmonic number. Lone
+octaves, even-only support and numerical sidelobes cannot establish harmonic
+consensus; otherwise the original direct-pilot estimator remains the fallback.
+This assumes coherent harmonic material around a known reference, and is not
+a general polyphonic fundamental-frequency oracle. Referenced harmonic audio
+can change; change-only tracking, parameter formats and vocoder latency are
+unchanged. CPU cost of the added bounded search has not been benchmarked.
+
+`tests/audit_estimator.rs` compares 96 known-phase static-offset, wow, flutter
+and vibrato trajectories with analytic source frequency at the analysis-window
+center, across 44.1/96 kHz, 220/440/880 Hz and four fundamental/overtone balances.
+It checks accepted-frame accuracy, confidence coverage and zero heap activity;
+six absent-reference octave/even-series cases check rejection. These are
+estimator checks, not proof of corrected-audio or stereo-coherence performance.
+Pitch trajectories alone do not reveal whether vibrato is deliberate; the
+reference and correction strength express the caller's intended correction.
+
 All channels are pitch-shifted independently with one shared correction ratio.
 With multi-channel analysis enabled, low-confidence channels are excluded and
 the remaining observations must form a confidence-weighted coherent cluster.

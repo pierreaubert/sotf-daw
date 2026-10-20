@@ -1224,9 +1224,32 @@
       "id": 36,
       "plugin": "PND \u2014 pitch-drift correction",
       "audit_text": "[`pnd_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/pnd_plugin.rs):706\u2013870 is a pitch-analysis/phase-vocoder correction path with reference-frequency checks, smoothed ratio/strength, fixed vocoder latency and frozen pitch during draining. Its actual implementation is pitch correction; its name should not be used to infer a noise/decorrelation algorithm.\n\n`finite_stream.rs`, `drain_realtime.rs` and integration tests cover retained audio and lifecycle. Extend known wow/flutter trajectories, deliberate vibrato, octave ambiguities, weak fundamentals and stereo coherence. Classical confidence-gated harmonic estimation and phase-locking are appropriate. A monophonic learned pitch estimator such as CREPE [CREPE][R5] is a candidate only for supported material; test confidence gating and do not treat it as a general polyphonic reference-frequency oracle.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Extend confidence-gated harmonic reference estimation for weak fundamentals and octave ambiguity; validate known trajectories",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/analysis.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_estimator.rs",
+            "audit/artifacts/plugin-audit-20261018/pnd-estimator-trajectories.json"
+          ],
+          "result": "96analytic known-phase offset,wow,flutter,vibrato cases at44.1/96k and220/440/880Hz with4fundamental/overtone balances. Original weakfund case52.1%coverage/max53.49cents failed. Bounded stack-only8harmonic coprime/material/bin-aware consensus plus direct-pilot fallback now gives100%settled coverage,max10.08036cents at unchanged12cent/90%gates.6lone/even-series octave cases confidence0;all measured analyze/reference calls0alloc/free. Retained initial harmonic false single-sine authority and fixed material evidence before acceptance. Full87crate tests passed0ignored,release2passed,strict all-targetsQAClippy passed. Parameter formats,zero-reference tracking andvocoder latency unchanged;referenced harmonic behavior can change. Estimator-only validation,known-reference harmonic assumption,CPUunbenchmarked."
+        },
+        {
+          "task": "Measure end-to-end corrected-audio wow/flutter trajectories and intentional vibrato preservation/control choices",
+          "status": "pending",
+          "evidence": "New estimator trajectories do not prove output correction quality or intention classification; need independent output-frequency/trajectory measurements and correction-strength cases."
+        },
+        {
+          "task": "Extend end-to-end stereo coherence,octave/weak-fundamental correction and phase-locking validation",
+          "status": "pending",
+          "evidence": "Existing unit/integration/finite-stream coverage passes; add objective output stereo/phase and ambiguous-source transition cases. Optional learned monophonic estimator remains separate."
+        }
+      ],
+      "evidence": [
+        "Weak-reference harmonic estimation and96trajectory+6negative estimator cases verified;fullgoal31/45complete. Entry36partial pending end-to-end corrected-audio/stereo coverage. Optional ML separate."
+      ]
     },
     {
       "id": 37,

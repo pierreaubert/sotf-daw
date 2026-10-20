@@ -316,9 +316,15 @@ impl PndAnalyzer {
     /// prominence within a ±10% guard band, weighted by proximity to the
     /// expected frequency. Unrelated programme energy outside that local band
     /// therefore cannot hide a low-level pilot.
+    /// Coherent coprime harmonics can establish the ratio when the fundamental
+    /// is weak. This assumes harmonic material around a known reference, not
+    /// an unconstrained polyphonic fundamental-frequency oracle.
     pub fn estimate_against_reference(&self, reference_hz: f32) -> (f32, f32) {
         if !reference_hz.is_finite() || reference_hz <= 0.0 || self.peak_scratch.is_empty() {
             return (1.0, 0.0);
+        }
+        if let Some(estimate) = self.harmonic_reference_estimate(reference_hz) {
+            return estimate;
         }
         let Some(&(frequency, magnitude)) = self.peak_scratch.iter().min_by(|a, b| {
             (a.0 - reference_hz)
@@ -354,6 +360,91 @@ impl PndAnalyzer {
             0.0
         };
         (ratio, confidence)
+    }
+
+    fn harmonic_reference_estimate(&self, reference_hz: f32) -> Option<(f32, f32)> {
+        // Eight nonoverlapping +/-5% harmonic search regions bound callback
+        // work and stack storage. Two coprime indices distinguish 2+3 support
+        // from a lone octave or an even-only harmonic series.
+        const HARMONICS: usize = 8;
+        // Budget 0.06 FFT bin per Hann peak for interpolation uncertainty.
+        // Divide by each harmonic frequency to compare ratio intervals: a fixed
+        // ratio tolerance would wrongly reject low notes at higher sample rates.
+        let bin_uncertainty = 0.06 * (self.sample_rate / self.fft_size as f64) as f32;
+        let mut observations = [(0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32); HARMONICS];
+        for (index, observation) in observations.iter_mut().enumerate() {
+            let expected = reference_hz * (index + 1) as f32;
+            let mut nearest = None;
+            let mut distance = f32::INFINITY;
+            let mut local = 0.0;
+            for &(frequency, magnitude) in &self.peak_scratch {
+                let relative = (frequency / expected - 1.0).abs();
+                if relative <= 0.1 {
+                    local += magnitude;
+                }
+                if relative <= 0.05 && relative < distance {
+                    nearest = Some((frequency, magnitude));
+                    distance = relative;
+                }
+            }
+            if let Some((frequency, magnitude)) = nearest
+                && local > f32::EPSILON
+            {
+                let confidence =
+                    (magnitude / local) * magnitude / (magnitude + 4.0 * self.last_noise_floor);
+                *observation = (
+                    frequency / expected,
+                    magnitude,
+                    confidence,
+                    bin_uncertainty / expected,
+                );
+            }
+        }
+        // Numerical sidelobes must not acquire harmonic authority when a clear
+        // pilot is the only material partial. Require -60 dB relative support
+        // per observation and a cluster containing at least half the strongest
+        // observed harmonic's magnitude.
+        let strongest = observations.iter().map(|o| o.1).fold(0.0_f32, f32::max);
+        let material_floor = strongest * 0.001;
+        let mut best = None;
+        let mut best_weight = 0.0;
+        for &(seed, magnitude, _, seed_uncertainty) in &observations {
+            if magnitude <= 0.0 || magnitude < material_floor {
+                continue;
+            }
+            let mut support = 0.0;
+            let (mut count, mut divisor) = (0, 0);
+            let (mut weight, mut ratio_sum, mut confidence_sum) = (0.0, 0.0, 0.0);
+            for (index, &(ratio, magnitude, confidence, uncertainty)) in
+                observations.iter().enumerate()
+            {
+                // The additional 0.1% permits finite-window motion/roundoff.
+                if magnitude <= 0.0
+                    || magnitude < material_floor
+                    || (ratio - seed).abs() > uncertainty + seed_uncertainty + 0.001
+                {
+                    continue;
+                }
+                count += 1;
+                support += magnitude;
+                let (mut a, mut b) = (divisor, index + 1);
+                while b != 0 {
+                    (a, b) = (b, a % b);
+                }
+                divisor = a;
+                let w = magnitude * confidence;
+                weight += w;
+                ratio_sum += ratio * w;
+                confidence_sum += confidence * w;
+            }
+            if count >= 2 && divisor == 1 && support >= strongest * 0.5 && weight > best_weight {
+                let ratio = ratio_sum / weight;
+                let proximity = (1.0 - (ratio - 1.0).abs() / 0.05).clamp(0.0, 1.0);
+                best = Some((ratio, (confidence_sum / weight * proximity).clamp(0.0, 1.0)));
+                best_weight = weight;
+            }
+        }
+        best
     }
 
     pub fn reset(&mut self) {

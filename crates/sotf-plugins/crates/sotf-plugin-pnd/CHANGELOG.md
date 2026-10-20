@@ -1,3 +1,15 @@
+## Unreleased weak-reference harmonic estimation
+
+- Add bounded, stack-only harmonic reference consensus for coherent material
+  with weak fundamentals. Require coprime harmonic support, bin-aware frequency
+  consistency and material spectral evidence; retain direct-pilot fallback.
+- Prevent numerical harmonic artefacts from overriding a clear single pilot.
+  Existing sharp-tone correction, noise, finite-stream and realtime tests pass.
+- Validate 96 known-phase offset/wow/flutter/vibrato cases and six octave-only
+  rejection cases against fixed confidence/accuracy bounds. Referenced harmonic
+  correction can change; parameter formats, change-only tracking and fixed
+  vocoder latency remain unchanged. End-to-end trajectory/stereo work continues.
+
 # 0.5.12
 
 ## Finite-stream completion
