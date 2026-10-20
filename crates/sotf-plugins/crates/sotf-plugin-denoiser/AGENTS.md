@@ -28,6 +28,9 @@ cargo test -p sotf-plugin-denoiser
 - MCRA (Minima Controlled Recursive Averaging) for noise floor estimation
 - Keep fast-adaptation history per channel. Aggregate UI learning telemetry
   must not influence another channel's estimator or depend on traversal order.
+- Prepare the bootstrap hop count from the clock; preserve the 106.6667 ms
+  reference observation span with less than one hop of rounding. This is
+  separate from signal latency and from frame-based MCRA control settings.
 - Wiener filter for noise reduction
 - Operates in STFT domain
 - FFT topology controls are setup-only; rebuild the plugin to change them.

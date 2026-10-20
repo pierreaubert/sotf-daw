@@ -1,3 +1,15 @@
+## Unreleased bootstrap-clock correction (2026-10-20)
+
+- Prepare the bootstrap observation count from sample rate and analysis hop,
+  preserving the historical 48 kHz quality-mode span of 106.6667 ms. Replace
+  the five-hop low-latency warm-up with twenty hops at that clock; retain the
+  original five hops in quality mode. Other clocks round up to whole hops.
+- Preserve signal latency, parameter/preset surface and subsequent estimator
+  formulas. Low-latency startup now passes more noise while observing the
+  initial signal; this is timing consistency, not speech/noise classification.
+- Validate fractional clocks, reset/profile/reinitialize, native EOF and
+  recorded onset/later-vowel/noise-exposure measurements.
+
 ## Unreleased channel-learning correction (2026-10-20)
 
 - Separate per-channel IMCRA fast-adaptation history from shared UI telemetry.

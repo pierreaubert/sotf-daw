@@ -1057,13 +1057,33 @@
             "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json"
           ],
           "result": "Reuses hash-verified attributed CC BY-SA single-speaker /s/ PCM, cropped at frame 12000/48k with nonzero first source sample, gain 0.2, deterministic noise step and independent slow-drift noise channel. Complete EOF renders match after reset at 1/257/4096 frames. Latency-aligned full-clip SDR input -11.3306 dB -> quality 0.8279 dB / low-latency -0.5311 dB; first-100ms clean projection 0.85246 / 0.45946. Independent noise channel settles near -20 dB gain. These are recorded diagnostics, not speech-quality acceptance or held-out population evidence."
+        },
+        {
+          "requirement": "Prepare the internal bootstrap observation span from sample rate and hop size instead of a fixed frame count.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs",
+            "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json"
+          ],
+          "result": "Preserves the historical 48 kHz quality reference: five 1024-frame hops = 106.6667 ms (correcting the old 53 ms comment). Baseline low-latency 44.1k duration 29.0249 ms now uses 19 hops/110.2948 ms; 48k low-latency uses 20 hops. Ten integer/fractional clock/FFT cases finish no sooner than reference and less than one hop later, with constant-power PSD averaging verified. Reset/profile restart preserves target and clears history; rejected initialization retains clock/partial PSD; accepted reinitialization prepares a fresh target. All 118 release tests and strict QA all-target Clippy pass, including existing EOF/realtime checks. No callback allocation or parameter/latency/tail contract added."
+        },
+        {
+          "requirement": "Retain startup-noise and later-speech tradeoffs when evaluating a longer bootstrap.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_channel_learning.rs",
+            "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json"
+          ],
+          "result": "Recorded low-latency first-100ms projection rises 0.45946 -> 0.99700, while first-100ms independent noise gain becomes -0.0119 dB (nearly unattenuated) and 100-200ms noise gain -6.2777 dB versus prior -15.1887 dB. Quality-mode first-100ms projection/SDR retain 0.85246/0.82788 dB; low-latency full-clip SDR rises -0.53114 -> 1.08366 dB. Crucially, later-vowel projection remains only 0.09458/0.12125, so onset warm-up is not classified as speech preservation or quality completion. Single-speaker and synthetic-noise limitations retained."
         }
       ],
       "evidence": [
-        "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json"
+        "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json"
       ],
       "remaining": [
-        "Investigate onset attenuation with speech already present during the fixed five-analysis-frame bootstrap, especially low-latency mode (first-100ms clean projection 0.45946 in the recorded probe); assess across sources before tuning.",
+        "Investigate speech already present during the nominal 106.6667 ms bootstrap and later vowel loss: the recorded 300-450ms clean projection is only 0.09458 quality/0.12125 low-latency. Longer low-latency warm-up improves the initial projection but passes more noise; assess across sources before estimator tuning.",
         "Extend held-out multi-speaker/music/noise mixtures with provenance, stereo phase/image metrics and nonstationary noise adaptation rather than infer quality from one isolated phoneme recording.",
         "Measure optional multi-resolution/analysis workload and validate spatial/other optional modes under the target deadline; retain deterministic Wiener/MCRA baselines and separate optional learned music-mask research."
       ]
@@ -2524,6 +2544,15 @@
       ],
       "result": "Removes shared display-to-DSP channel traversal coupling. Eight exact swap cases, 16 independent mono references, reset/profile/EOF/partition checks and recorded onset/noise metrics. 116 release tests and strict all-target QA Clippy pass. Overall stays 35/45.",
       "limitations": "Tiny reproduced public baseline difference is not an audible-improvement claim. Recorded low-latency onset suppression remains a limitation; single-speaker diagnostics do not establish held-out corpus or music quality."
+    },
+    {
+      "name": "Denoiser physical-time bootstrap and startup/noise tradeoffs",
+      "state": "verified_partial",
+      "plugin_ids": [
+        19
+      ],
+      "result": "Prepared bootstrap count preserves the 48k quality observation span across FFT modes and rates, within one hop. Ten clock cases plus lifecycle/reset/EOF/partition/recorded tradeoff evidence. 118 release tests and strict all-target QA Clippy pass. Overall stays 35/45.",
+      "limitations": "Longer low-latency unity warm-up exposes more startup noise and does not solve initial speech contamination or later vowel loss. No population/perceptual quality claim."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

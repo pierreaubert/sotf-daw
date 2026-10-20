@@ -17,21 +17,26 @@ use super::DenoiserPlugin;
 /// Small constant to prevent division by zero
 const EPSILON: f32 = 1e-10;
 
-/// Number of frames to average during the bootstrap phase.
-/// During bootstrap, gains are unity (pass-through) while the noise
-/// floor estimate converges from multiple frames.
-/// 5 frames (~53ms at 48kHz/2048-sample FFT) balances fast startup
-/// with stable noise estimation.
-const BOOTSTRAP_FRAMES: usize = 5;
+/// Preserve the historical quality-mode observation span: five 1024-frame hops
+/// at 48 kHz. This is 106.6667 ms, not the former comment's 53 ms. Preparation
+/// rounds this span up to complete hops at the current clock. It controls noise
+/// estimation warm-up, not signal latency or proof of initial speech absence.
+const BOOTSTRAP_SECONDS: f64 = 5120.0 / 48_000.0;
 
 impl DenoiserPlugin {
+    pub(super) fn bootstrap_frame_count(sample_rate: f64, hop_size: usize) -> usize {
+        (sample_rate * BOOTSTRAP_SECONDS / hop_size as f64)
+            .ceil()
+            .max(1.0) as usize
+    }
+
     /// Orchestrate noise estimation: bootstrap phase then IMCRA.
     /// Returns `true` while any channel is still bootstrapping.
     pub(super) fn update_noise_estimation(&mut self) -> bool {
         let mut any_bootstrapping = false;
 
         for ch in 0..self.config.channels {
-            if self.mcra.frame_counter[ch] < BOOTSTRAP_FRAMES {
+            if self.mcra.frame_counter[ch] < self.mcra.bootstrap_frames {
                 // Bootstrap: accumulate power into noise_psd
                 for k in 0..self.config.spectrum_size {
                     let power = self.get_power_at_bin(ch, k);
@@ -39,7 +44,7 @@ impl DenoiserPlugin {
                 }
                 self.mcra.frame_counter[ch] += 1;
 
-                if self.mcra.frame_counter[ch] >= BOOTSTRAP_FRAMES {
+                if self.mcra.frame_counter[ch] >= self.mcra.bootstrap_frames {
                     self.finalize_bootstrap(ch);
                 } else {
                     any_bootstrapping = true;
@@ -181,10 +186,77 @@ mod channel_learning_tests {
     use rustfft::num_complex::Complex;
     use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 
+    #[test]
+    fn bootstrap_observation_duration_follows_prepared_clock() {
+        for rate in [44_100.0, 48_000.0, 48_000.25, 96_000.0, 192_000.0] {
+            for low_latency in [false, true] {
+                let mut plugin = DenoiserPlugin::new(2, low_latency);
+                plugin.initialize(rate).unwrap();
+                let expected =
+                    (rate * (5120.0 / 48000.0) / plugin.config.hop_size as f64).ceil() as usize;
+                for spectrum in &mut plugin.fft.freq_domain {
+                    spectrum.fill(Complex::new(1.0, 0.0));
+                }
+                let observed = (1..=1000)
+                    .find(|_| !plugin.update_noise_estimation())
+                    .unwrap();
+                let duration = observed as f64 * plugin.config.hop_size as f64 / rate;
+                println!(
+                    "bootstrap rate={rate} low_latency={low_latency} observed_hops={observed} expected_hops={expected} duration_seconds={duration}"
+                );
+                assert_eq!(
+                    observed, expected,
+                    "bootstrap changed its physical duration"
+                );
+                assert!(duration >= 5120.0 / 48000.0);
+                assert!(duration < 5120.0 / 48000.0 + plugin.config.hop_size as f64 / rate + 1e-12);
+                for channel in 0..2 {
+                    assert_eq!(
+                        plugin.mcra.noise_psd[channel],
+                        vec![1.0; plugin.config.spectrum_size]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bootstrap_clock_survives_reset_profile_restart_and_rejected_initialization() {
+        for low_latency in [false, true] {
+            let mut plugin = DenoiserPlugin::new(2, low_latency);
+            plugin.initialize(96_000.0).unwrap();
+            let target = plugin.mcra.bootstrap_frames;
+            for spectrum in &mut plugin.fft.freq_domain {
+                spectrum.fill(Complex::new(1.0, 0.0));
+            }
+            assert!(plugin.update_noise_estimation());
+            let frames = plugin.mcra.frame_counter.clone();
+            let power = plugin.mcra.noise_psd.clone();
+            for invalid in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+                assert!(plugin.initialize(invalid).is_err());
+                assert_eq!(plugin.mcra.bootstrap_frames, target);
+                assert_eq!(plugin.mcra.frame_counter, frames);
+                assert_eq!(plugin.mcra.noise_psd, power);
+            }
+            plugin.reset();
+            assert_eq!(plugin.mcra.bootstrap_frames, target);
+            assert_eq!(plugin.mcra.frame_counter, [0, 0]);
+            plugin.start_learning();
+            assert_eq!(plugin.mcra.bootstrap_frames, target);
+            assert_eq!(plugin.mcra.frame_counter, [0, 0]);
+            plugin.initialize(48_000.0).unwrap();
+            assert_eq!(
+                plugin.mcra.bootstrap_frames,
+                if low_latency { 20 } else { 5 }
+            );
+            assert_eq!(plugin.mcra.frame_counter, [0, 0]);
+        }
+    }
+
     fn prepared(channels: usize) -> DenoiserPlugin {
         let mut plugin = DenoiserPlugin::new(channels, true);
         for channel in 0..channels {
-            plugin.mcra.frame_counter[channel] = BOOTSTRAP_FRAMES;
+            plugin.mcra.frame_counter[channel] = plugin.mcra.bootstrap_frames;
             plugin.mcra.noise_psd[channel].fill(1.0);
             plugin.mcra.smoothed_psd[channel].fill(1.0);
             plugin.mcra.min_psd[channel].fill(1.0);

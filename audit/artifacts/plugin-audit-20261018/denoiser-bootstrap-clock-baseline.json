@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--features",
+    "qa",
+    "bootstrap_observation_duration",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nbootstrap rate=44100 low_latency=false observed_hops=5 expected_hops=5 duration_seconds=0.11609977324263039\nbootstrap rate=44100 low_latency=true observed_hops=5 expected_hops=19 duration_seconds=0.029024943310657598\ntest mcra::channel_learning_tests::bootstrap_observation_duration_follows_prepared_clock ... FAILED\n\nfailures:\n\nfailures:\n    mcra::channel_learning_tests::bootstrap_observation_duration_follows_prepared_clock\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 75 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 21.26s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-ba114d82a139ffd6)\n\nthread 'mcra::channel_learning_tests::bootstrap_observation_duration_follows_prepared_clock' (327571816) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs:197:17:\nassertion `left == right` failed: bootstrap changed its physical duration\n  left: 5\n right: 19\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-denoiser --lib`\n"
+}

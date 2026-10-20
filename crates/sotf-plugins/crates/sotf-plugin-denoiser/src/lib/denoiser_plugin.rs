@@ -76,6 +76,7 @@ pub(super) struct DenoiserMcra {
     pub min_psd_b: Vec<Vec<f32>>,       // Minimum PSD tracker — window B (IMCRA)
     pub speech_presence: Vec<Vec<f32>>, // Speech presence probability (p)
     pub frame_counter: Vec<usize>,      // Per-channel frame count
+    pub bootstrap_frames: usize,        // Prepared physical-time observation span
     pub learning_active: Vec<bool>,     // Per-channel fast-adaptation history
     pub mcra_alpha_s: f32,
     pub mcra_alpha_p: f32,
@@ -415,6 +416,7 @@ impl DenoiserPlugin {
                 min_psd_b,
                 speech_presence,
                 frame_counter,
+                bootstrap_frames: Self::bootstrap_frame_count(44_100.0, hop_size),
                 learning_active: vec![true; channels],
                 mcra_alpha_s: pk(DN, "mcra_alpha_s").default_f32(),
                 mcra_alpha_p: pk(DN, "mcra_alpha_p").default_f32(),
@@ -1446,6 +1448,7 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
             return Err("Denoiser sample rate must be finite and greater than zero".to_string());
         }
         self.config.sample_rate = sample_rate;
+        self.mcra.bootstrap_frames = Self::bootstrap_frame_count(sample_rate, self.config.hop_size);
         self.noise_profile.learning_frames_target =
             (sample_rate / self.config.hop_size as f64).ceil().max(1.0) as usize;
         self.update_envelope_coefficients();

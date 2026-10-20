@@ -19,6 +19,17 @@ feed another channel's estimator. With spatial and other cross-channel modes
 disabled, changing channel order preserves the corresponding audio exactly.
 Reset and explicit noise-profile learning restart each channel's history.
 
+Bootstrap uses a prepared observation span of at least 106.6667 ms, rounded
+up to complete analysis hops. This retains the historical five-hop bootstrap
+at 48 kHz in 2048-point mode; 512-point mode now uses twenty hops there.
+The nominal observation span varies by less than one hop across clocks. WOLA
+support still gives the two FFT modes different audible gain-onset shapes.
+This longer low-latency warm-up passes more initial noise before suppression;
+it does not identify speech within the initial noise estimate. Signal latency
+and the explicit frame-based MCRA smoothing/window controls are unchanged.
+Adaptive bootstrap/IMCRA processing continues during EOF zero continuation;
+explicit captured-profile measurement remains frozen.
+
 The channel-learning audit reuses the attributed 48 kHz `/s/` recording in
 `../sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json` (Peter Isotalo,
 CC BY-SA 3.0), starting 0.25 seconds into the source PCM and applying gain 0.2.

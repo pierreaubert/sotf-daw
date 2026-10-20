@@ -181,15 +181,41 @@ fn recorded_speech_at_start_reports_aligned_quality_and_noise_tracking() {
             / onset_energy;
         assert!(input_sdr.is_finite() && output_sdr.is_finite() && projection.is_finite());
         assert!(onset_energy > 1e-6);
+        // Manifest vowel region at source 0.55..0.70 s, after this test's
+        // 0.25 s crop. Report later speech retention separately from warm-up.
+        let body_start = 14_400;
+        let body_end = 21_600;
+        let body_energy = clean[body_start..body_end]
+            .iter()
+            .map(|v| v * v)
+            .sum::<f64>();
+        let body_projection = aligned
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .skip(body_start)
+            .take(body_end - body_start)
+            .zip(&clean[body_start..body_end])
+            .map(|(frame, clean)| f64::from(frame[0]) * clean)
+            .sum::<f64>()
+            / body_energy;
+        assert!(body_energy > 1e-6 && body_projection.is_finite());
         println!(
             "{}",
             serde_json::json!({"measurement":"recorded_denoiser_onset",
             "rate":rate,"low_latency":low_latency,"latency_frames":latency,
             "input_sdr_db":input_sdr,"output_sdr_db":output_sdr,
             "first_100ms_clean_projection":projection,
+            "vowel_300_450ms_clean_projection":body_projection,
             "note":"one recorded speaker with deterministic added noise; no population or perceptual quality gate"})
         );
-        for (start, end) in [(4800, 9600), (14400, 21600), (40800, 45600)] {
+        for (start, end) in [
+            (0, 2400),
+            (0, 4800),
+            (4800, 9600),
+            (14400, 21600),
+            (40800, 45600),
+        ] {
             let energy = |source: &[f32]| {
                 source
                     .as_chunks::<2>()
