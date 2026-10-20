@@ -1,5 +1,11 @@
 # Unreleased
 
+- Add `try_commit_prepared_update_with_budget` and `PreparedUpdateProgress`
+  for incremental history catch-up without accepting controls until ready.
+  Track stream identity, reset epoch and unread ring history to refuse stale
+  partly primed targets. Preserve synchronous commits and fixed blend/latency.
+  Host adoption and callback deadline validation remain open.
+
 - Validate the prepared clock before detached worker adoption or output writes
   on both host sample formats. A wrong-clock callback now preserves accepted
   configuration, queued resources, output and audio history.

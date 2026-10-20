@@ -890,9 +890,20 @@
           "evidence": "README/AGENTS/CHANGELOG distinguish linear-phase pre-ringing and N/2+32 per-stage delay, minimum-phase 32-frame convolution delay plus frequency-dependent group delay, and nonstationary blends. Document current detached wrapper and structural ordinary setters; no mixed-phase or loaded native/FFI coverage claimed. No FIR, tap/latency, parameter, preset, dependency or tolerance change."
         },
         {
+          "task": "Provide bounded incremental history replay before update acceptance",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json"
+          ],
+          "result": "New explicit replay-frame budget and PreparedUpdateProgress preserve caller ownership and live controls/audio while pending; final catch-up starts the original crossfade. Stream identity/epoch/clock/cursor refuse lost/reset/foreign history without allocation/free. Eight dense-input maximum-tap cases including ring wrap match independent f64 convolution within 3.05564e-7 under 1e-5. Three focused regressions pass in test and release profiles; old synchronous API compatibility and all existing tests pass. No default-host adoption or deadline guarantee claimed."
+        },
+        {
           "task": "Resolve realtime deadline evidence for large synchronous priming and direct callbacks",
           "status": "pending",
-          "evidence": "Local test profile observed 14.927 ms maximum commit replay. QA exits 0 for engine queued-work horizon but reports 25 actual callback deadline misses and zero negotiated-quantum misses; static QA excludes dynamic priming. A maximum-load release-profile dynamic deadline matrix and mitigation if required remain outstanding."
+          "evidence": "Synchronous release matrix reached 8.351 ms. Incremental DSP API is implemented, but dynamic_host still calls synchronous commits: route host adoption through the new API, publish pending progress, then measure complete callbacks over maximum layout/stage/rate loads. Local variable-budget incremental release matrix reached 1.127 ms; concurrent full tests reached 5.254 ms. These are not equivalent budgets or portable worst-case bounds. Latest static QA has 30 physical misses and zero negotiated-quantum misses."
         },
         {
           "task": "Resolve remaining response and freshness limitations without weakening contracts",
@@ -901,9 +912,9 @@
         }
       ],
       "evidence": [
-        "Final complete crate: 133 passed, 1 explicitly deferred accuracy test ignored plus 1 ignored illustrative doctest. No new ignored test or weakened bound.",
-        "QA exit 0 with explicit direct callback limitations; all-targets Clippy with qa and -D warnings passes.",
-        "Scoped host-wrapper fix and deterministic references only; unrelated engine/driver/Cargo.lock changes excluded. Entry remains partial; overall complete count stays 29/45."
+        "Current complete crate: 136 passed, 1 explicitly deferred accuracy test ignored plus 1 ignored illustrative doctest. Three incremental-priming tests also pass in release. No new ignored test or weakened bound.",
+        "QA exits 0 for queued work with 30 actual-callback misses explicitly unresolved; all-targets Clippy with qa and -D warnings passes.",
+        "Scoped host clock fix plus incremental DSP replay API and deterministic references only. Default host integration, maximum-load deadlines, request-generation freshness and FIR-M1 remain pending. Unrelated engine/driver/Cargo.lock changes excluded; entry stays partial and complete count remains 29/45."
       ]
     },
     {

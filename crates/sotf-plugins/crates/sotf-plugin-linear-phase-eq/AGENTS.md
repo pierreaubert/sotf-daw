@@ -48,3 +48,15 @@ cargo test -p sotf-plugin-linear-phase-eq
 - Preserve the explicitly deferred FIR-M1 diagnostic and its 0.05 dB bound.
   Callback deadline misses and synchronous history priming remain limitations;
   bounded allocation-free work is not a portable realtime deadline guarantee.
+
+- `try_commit_prepared_update_with_budget` retains a partially primed candidate
+  in its caller-owned slot and replays at most the supplied input-frame budget.
+  Pending attempts do not accept controls or start a blend. Replay must outpace
+  arriving input to catch up. The old synchronous method remains compatible.
+- Partly primed state is tied to a stable per-plugin token, reset epoch and
+  input-clock/ring cursor. Refuse stale configuration or lost/foreign history
+  before mutation; never install stale primed state after a reset or ring loss.
+  Reprepare/drop stale candidates off audio; no new realtime allocation/free.
+- Incremental API tests do not prove host adoption: `dynamic_host.rs` still
+  calls the synchronous method. Host integration and maximum-load callback
+  timing remain open. A replay-frame budget is not a wall-clock guarantee.

@@ -143,13 +143,42 @@ pub struct BandSnapshot {
 /// `active`) may change; topology (band count, placements, pairs, FIR length,
 /// phase mode, auto gain) is fingerprinted in `base` and any drift is
 /// rejected at commit time, so phase mode and latency never change across an
-/// update.
+/// update. Incremental priming retains this value in the caller's slot; once
+/// priming starts, its target state belongs to that plugin's current stream.
+/// Cancelled or stale candidates must be dropped or replaced off the audio thread.
 pub struct PreparedBandUpdate {
     pub(crate) base: LiveFilterSnapshot,
     pub(crate) band_index: usize,
     pub(crate) new_band: BandSnapshot,
     pub(crate) new_biquad: Biquad,
     pub(crate) target: RouteBanks,
+    pub(crate) priming: Option<PreparedPriming>,
+}
+
+/// Progress of one budgeted prepared-update attempt.
+///
+/// A pending attempt retains caller ownership and leaves the live configuration
+/// and audio unchanged. Counts describe input frames across the complete target
+/// route, not individual stage/channel operations or a wall-clock guarantee.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PreparedUpdateProgress {
+    /// Whether this call installed the target and started its crossfade.
+    pub committed: bool,
+    /// Historical input frames replayed by this call, at most the supplied budget.
+    pub frames_replayed: usize,
+    /// Frames still needed to catch up to the current live input clock.
+    ///
+    /// Subsequent processing adds new frames to this lag until acceptance.
+    pub frames_remaining: usize,
+}
+
+#[derive(Debug)]
+pub(crate) struct PreparedPriming {
+    pub(crate) origin: std::sync::Arc<()>,
+    pub(crate) epoch: u64,
+    pub(crate) observed_clock: u64,
+    pub(crate) next_ring: usize,
+    pub(crate) frames_remaining: usize,
 }
 
 impl std::fmt::Debug for PreparedBandUpdate {
@@ -180,7 +209,7 @@ pub enum CommitRefusal {
     RetiredUnclaimed,
     /// The stream has drained; reset before committing.
     Drained,
-    /// The prepared base no longer matches the live configuration.
+    /// The prepared configuration or partially primed history is stale.
     StaleBase,
     /// The prepared band index is outside the live band storage.
     BandIndexOutOfRange {
@@ -217,7 +246,7 @@ impl CommitRefusal {
             }
             Self::Drained => "reset FIR EQ before committing a band update after drain",
             Self::StaleBase => {
-                "prepared update no longer matches the live configuration; snapshot again"
+                "prepared update no longer matches live configuration or history; prepare again"
             }
             Self::BandIndexOutOfRange { .. } => "band index exceeds live bands",
             Self::PlacementMismatch => "prepared update placement does not match the live route",

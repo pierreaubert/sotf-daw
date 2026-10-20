@@ -417,3 +417,243 @@ fn reset_during_blend_installs_target_with_measured_complex_response() {
         "audit reset target complex_abs={worst_complex:.12e} phase_rad={worst_phase:.12e} prototype_db={worst_magnitude_db:.12e} aligned_delay_samples={worst_delay:.12e}"
     );
 }
+
+#[test]
+fn budgeted_priming_catches_up_without_changing_live_audio_until_acceptance() {
+    let mut worst = 0.0_f64;
+    let mut max_step = std::time::Duration::ZERO;
+    let mut total_replayed = 0;
+    for rate in [44_100, 96_000] {
+        for phase in [0, 1] {
+            for ordered in [false, true] {
+                let mut plugin =
+                    LinearPhaseEqPlugin::from_params(2, rate, params(3, phase, ordered, -3.0))
+                        .unwrap();
+                let old =
+                    LinearPhaseEqPlugin::from_params(2, rate, params(3, phase, ordered, -3.0))
+                        .unwrap();
+                let target =
+                    LinearPhaseEqPlugin::from_params(2, rate, params(3, phase, ordered, 9.0))
+                        .unwrap();
+                let support = match plugin.tail_length() {
+                    TailLength::Finite(x) => x as usize,
+                    _ => panic!("finite"),
+                };
+                // This case starts after the 82230-frame input ring wrapped.
+                let prefix = if rate == 44_100 && phase == 0 && ordered {
+                    90_017
+                } else {
+                    support + 73
+                };
+                let input: Vec<f32> = (0..(prefix + support + 2048) * 2)
+                    .map(|i| ((i * 7919 % 104729) as f32 / 104729.0 - 0.5) * 0.7)
+                    .collect();
+                let expected_old = offline(&old, &input, phase);
+                let expected_target = offline(&target, &input, phase);
+                let mut output = render(&mut plugin, &input[..prefix * 2], rate, &[257]);
+                let base = plugin.snapshot_config();
+                let mut prepared = Some(
+                    LinearPhaseEqPlugin::prepare_band_update(
+                        &base,
+                        usize::from(ordered),
+                        band(9.0, if ordered { Some(Placement::Mid) } else { None }),
+                    )
+                    .unwrap(),
+                );
+                let (counts, result) = count_allocs(|| {
+                    plugin.try_commit_prepared_update_with_budget(&mut prepared, 0)
+                });
+                assert_eq!(counts, (0, 0));
+                let progress = result.unwrap();
+                assert!(!progress.committed);
+                assert_eq!(progress.frames_replayed, 0);
+                assert_eq!(progress.frames_remaining, support);
+                let mut position = prefix;
+                let mut accepted_at = None;
+                for &block in [1, 73, 257, 1024].iter().cycle() {
+                    if position == input.len() / 2 {
+                        break;
+                    }
+                    let end = (position + block).min(input.len() / 2);
+                    let budget = 2 * (end - position);
+                    if prepared.is_some() {
+                        let started = std::time::Instant::now();
+                        let (counts, result) = count_allocs(|| {
+                            plugin.try_commit_prepared_update_with_budget(&mut prepared, budget)
+                        });
+                        max_step = max_step.max(started.elapsed());
+                        assert_eq!(counts, (0, 0));
+                        let progress = result.unwrap();
+                        assert!(progress.frames_replayed <= budget);
+                        total_replayed += progress.frames_replayed;
+                        if progress.committed {
+                            assert!(prepared.is_none());
+                            assert_eq!(progress.frames_remaining, 0);
+                            assert!(accepted_at.replace(position).is_none());
+                        } else {
+                            assert!(prepared.is_some());
+                            assert!(progress.frames_remaining > 0);
+                            assert_eq!(plugin.snapshot_config(), base);
+                            assert!(!plugin.update_in_progress());
+                            assert_eq!(plugin.stage_fir(0), old.stage_fir(0));
+                        }
+                    }
+                    output.extend(render(
+                        &mut plugin,
+                        &input[position * 2..end * 2],
+                        rate,
+                        &[block],
+                    ));
+                    position = end;
+                }
+                let accepted_at = accepted_at.expect("twice-live replay budget must catch up");
+                output.extend(drain(&mut plugin, rate, &[1, 73, 257, 1024]));
+                assert!(plugin.take_retired_route().is_some());
+                for (frame, samples) in output.as_chunks::<2>().0.iter().enumerate() {
+                    let weight = (frame.saturating_sub(accepted_at) as f64 / 512.0).min(1.0);
+                    for ch in 0..2 {
+                        let expected = expected_old[frame][ch] * (1.0 - weight)
+                            + expected_target[frame][ch] * weight;
+                        let error = (f64::from(samples[ch]) - expected).abs();
+                        worst = worst.max(error);
+                        assert!(
+                            error < 1e-5,
+                            "budgeted rate={rate} phase={phase} ordered={ordered} frame={frame} ch={ch} error={error}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+    eprintln!(
+        "audit budgeted priming worst_abs={worst:.12e} total_replayed={total_replayed} max_step_us={} (local test observation)",
+        max_step.as_micros()
+    );
+}
+
+#[test]
+fn budgeted_candidate_refuses_lost_or_foreign_history_without_touching_live_state() {
+    use sotf_plugin_linear_phase_eq::CommitRefusal;
+    for case in ["reset", "overwrite", "foreign", "rate", "drain"] {
+        let mut plugin =
+            LinearPhaseEqPlugin::from_params(2, 48_000, params(3, 0, false, -3.0)).unwrap();
+        let prefix = vec![0.17; 20_000];
+        render(&mut plugin, &prefix, 48_000, &[257]);
+        let mut prepared = Some(
+            LinearPhaseEqPlugin::prepare_band_update(&plugin.snapshot_config(), 0, band(9.0, None))
+                .unwrap(),
+        );
+        let (counts, result) =
+            count_allocs(|| plugin.try_commit_prepared_update_with_budget(&mut prepared, 17));
+        assert_eq!(counts, (0, 0));
+        let progress = result.unwrap();
+        assert!(!progress.committed);
+        assert_eq!(progress.frames_replayed, 17);
+        match case {
+            "reset" => {
+                let (counts, ()) = count_allocs(|| plugin.reset());
+                assert_eq!(counts, (0, 0));
+                render(&mut plugin, &prefix, 48_000, &[257]);
+            }
+            "overwrite" => {
+                let long = vec![0.21; 180_000];
+                render(&mut plugin, &long, 48_000, &[1024]);
+            }
+            "foreign" => {
+                plugin =
+                    LinearPhaseEqPlugin::from_params(2, 48_000, params(3, 0, false, -3.0)).unwrap();
+                render(&mut plugin, &prefix, 48_000, &[257]);
+            }
+            "rate" => {
+                plugin.initialize(96_000.0).unwrap();
+            }
+            "drain" => {
+                drain(&mut plugin, 48_000, &[257]);
+            }
+            _ => unreachable!(),
+        }
+        let before = plugin.snapshot_config();
+        let pointer = prepared.as_ref().unwrap() as *const _;
+        for _ in 0..2 {
+            let (counts, result) = count_allocs(|| {
+                plugin.try_commit_prepared_update_with_budget(&mut prepared, usize::MAX)
+            });
+            assert_eq!(counts, (0, 0));
+            assert_eq!(
+                result.unwrap_err(),
+                if case == "drain" {
+                    CommitRefusal::Drained
+                } else {
+                    CommitRefusal::StaleBase
+                }
+            );
+            assert_eq!(pointer, prepared.as_ref().unwrap() as *const _);
+            assert_eq!(plugin.snapshot_config(), before);
+            assert!(!plugin.update_in_progress());
+        }
+        // Repreparing after a lost history uses fresh engines. A drained
+        // stream first requires reset, as in the synchronous API.
+        if case == "drain" {
+            plugin.reset();
+        }
+        let mut fresh = Some(
+            LinearPhaseEqPlugin::prepare_band_update(&plugin.snapshot_config(), 0, band(9.0, None))
+                .unwrap(),
+        );
+        let (counts, result) =
+            count_allocs(|| plugin.try_commit_prepared_update_with_budget(&mut fresh, usize::MAX));
+        assert_eq!(counts, (0, 0));
+        assert!(result.unwrap().committed);
+        assert!(fresh.is_none());
+    }
+}
+
+#[test]
+fn budgeted_priming_handles_empty_history_and_synchronous_finish() {
+    for channels in [0, 2] {
+        let mut plugin =
+            LinearPhaseEqPlugin::from_params(channels, 48_000, params(3, 0, false, -3.0)).unwrap();
+        let mut prepared = Some(
+            LinearPhaseEqPlugin::prepare_band_update(&plugin.snapshot_config(), 0, band(9.0, None))
+                .unwrap(),
+        );
+        let (counts, result) =
+            count_allocs(|| plugin.try_commit_prepared_update_with_budget(&mut prepared, 0));
+        assert_eq!(counts, (0, 0));
+        let progress = result.unwrap();
+        assert!(progress.committed);
+        assert_eq!(progress.frames_replayed, 0);
+        assert!(prepared.is_none());
+    }
+    // Switching to the compatibility API finishes outstanding work once,
+    // rather than re-priming already populated engines from the beginning.
+    let mut plugin = LinearPhaseEqPlugin::from_params(2, 48_000, params(3, 0, true, -3.0)).unwrap();
+    let mut reference =
+        LinearPhaseEqPlugin::from_params(2, 48_000, params(3, 0, true, 9.0)).unwrap();
+    let input: Vec<f32> = (0..40_000)
+        .map(|i| ((i * 7919 % 104729) as f32 / 104729.0 - 0.5) * 0.7)
+        .collect();
+    render(&mut plugin, &input, 48_000, &[257]);
+    render(&mut reference, &input, 48_000, &[257]);
+    let mut prepared = Some(
+        LinearPhaseEqPlugin::prepare_band_update(
+            &plugin.snapshot_config(),
+            1,
+            band(9.0, Some(Placement::Mid)),
+        )
+        .unwrap(),
+    );
+    let (counts, result) =
+        count_allocs(|| plugin.try_commit_prepared_update_with_budget(&mut prepared, 31));
+    assert_eq!(counts, (0, 0));
+    assert!(!result.unwrap().committed);
+    let (counts, result) = count_allocs(|| plugin.try_commit_prepared_update(&mut prepared));
+    assert_eq!(counts, (0, 0));
+    result.unwrap();
+    assert!(prepared.is_none());
+    let output = render(&mut plugin, &input, 48_000, &[73]);
+    let expected = render(&mut reference, &input, 48_000, &[73]);
+    for (&a, &b) in output[1026..].iter().zip(&expected[1026..]) {
+        assert!((a - b).abs() < 1e-5);
+    }
+}

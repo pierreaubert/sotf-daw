@@ -71,6 +71,26 @@ banks with `take_retired_route()` off the audio thread before the next
 commit. At commit, controls and the chart-facing response APIs report the
 target design immediately while audio morphs old-to-new over the blend.
 
+For incremental priming, use
+`try_commit_prepared_update_with_budget(&mut prepared, max_prime_frames)`.
+It returns `PreparedUpdateProgress`: input frames replayed by this call,
+frames still needed to catch the current clock, and whether acceptance occurred.
+While pending, the slot stays owned by the caller; live controls, response APIs
+and output continue to use the old filter. Replay more frames than the live
+stream advances between attempts (for example, twice each callback's frames)
+to catch up. The usual 513-frame blend starts only after catch-up and acceptance;
+signal latency does not change. A zero budget can accept when no history exists.
+Reset, rate change, foreign-plugin reuse or overwritten unread history invalidates
+a partly primed target with `StaleBase`; reprepare it off audio. Drop cancelled
+candidates off audio as well. The budget counts whole target-route input frames,
+so work still scales with channels/stages and FFT partition boundaries. It is
+not a CPU-time budget. The synchronous API can finish a partly primed target
+without replaying completed work.
+
+The host wrapper still uses synchronous priming. Routing it through the
+incremental API, publishing pending progress and validating maximum-load
+callback deadlines remain unfinished integration work.
+
 `dynamic_host::LinearPhaseEqDynamicPlugin` provides a host wrapper and a
 shared `LinearPhaseEqControlHandle` through `get_data()`. Workers prepare from
 `try_accepted_snapshot()` and submit via the bounded mailbox; audio accepts
@@ -80,7 +100,8 @@ until explicit cancellation. Bases are compared by exact configuration;
 the published accepted generation is observational. Same-base worker ordering
 and an older result arriving after a configuration returns to identical values
 require caller sequencing; there is no enforced request-generation ticket.
-Acceptance is published only on a successful commit. Both f32 and direct f64 rendering validate the prepared sample clock
+Acceptance is published only on a successful commit. Both f32 and direct f64
+rendering validate the prepared sample clock
 before consuming a mailbox result or writing output.
 
 Ordinary band parameter setters still require structural rebuilding; this
@@ -93,7 +114,9 @@ filter has constant group delay; a morph has no single stationary transfer
 function. Charts report the target immediately. Reset installs that target
 and clears history; EOF completes the blend while emitting finite support.
 Processing two banks bounds blend work to twice the convolution work, but
-commit also replays up to `stages * (N - 1 + 32)` frames to prime the target.
+a fresh synchronous commit also replays up to `stages * (N - 1 + 32)` frames
+to prime the target. Finishing a partly primed candidate can include additional
+intervening input, bounded by the retained ring capacity.
 Allocation-free and bounded work alone do not establish a callback deadline.
 
 ## Audit validation and remaining limits
@@ -118,14 +141,26 @@ The detached tests also cover out-of-order workers at maximum ordered length,
 stale refusal/cancellation, fresh recovery, and reset against a fresh twin.
 Successful commit/render/drain/reset legs assert zero allocations and frees.
 
+Eight additional incremental cases cover both phases, 44.1/96 kHz and legacy
+or maximum-length two-stage ordered routes, with dense input and an initial
+prefix beyond ring wrap. Every call checks its replay-frame budget; controls
+stay unchanged until acceptance. Worst error against independent convolution
+is `3.05565e-7` under `1e-5`. Lifecycle checks retain stale candidates without
+allocation/free after reset, overwrite, transfer, rate change and drain.
+Empty history and switching to synchronous completion are also covered.
+
 The existing explicitly deferred `FIR-M1` diagnostic remains failing when
 run: 96 kHz / 1024 taps / 500 Hz multiband error `-0.2457439959` dB versus the
 unchanged `0.05` dB bound. It remains ignored in the regular suite under
 `audit/RELEASE-DEFERRED.md`; no taps, phase, tolerances or case changed.
-The local QA run reported 25 physical callback deadline misses with zero
-negotiated-work-horizon misses. Local test-profile dynamic commit timing
-also reached 14.927 ms; this is an observation, not a portable worst-case
-bound. Direct callback compliance and maximum-load dynamic priming therefore
+The original local QA run reported 25 physical callback deadline misses; the
+latest run reported 30. Both reported zero negotiated-work-horizon misses. Local test-profile dynamic commit timing
+also reached 14.927 ms in the original checkpoint; a follow-up release run
+reached 8.351 ms for synchronous replay. Incremental calls in the tested
+variable-budget release matrix reached 1.127 ms. A concurrent full-test run
+observed 18.899 ms synchronous and 5.254 ms incremental calls. These runs use
+different budgets and scheduling conditions; none establishes a portable
+worst-case bound or complete callback deadline. Direct callback compliance and maximum-load dynamic priming therefore
 remain open. Settings, commands and measurements are recorded in
 `audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json`.
 

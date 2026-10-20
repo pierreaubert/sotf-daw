@@ -2,7 +2,7 @@
   "scope": "Audit entry 30: linear-phase EQ dynamic response, superseded workers, reset and maximum-length EOF. Partial; no general realtime or arbitrary-band accuracy claim.",
   "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture",
   "exit_code": 0,
-  "passed_tests": 133,
+  "passed_tests": 136,
   "ignored_total": 2,
   "ignored": [
     "FIR-M1 multiband accuracy diagnostic (explicitly deferred)",
@@ -87,7 +87,7 @@
     {
       "name": "Commit priming work",
       "observed_local_test_profile_commit_max_ms": 14.927,
-      "result": "Bounded synchronous history replay is not a portable callback deadline guarantee. Release/max-load dynamic measurement and mitigation remain open."
+      "result": "Incremental DSP mitigation implemented and verified, but host still uses synchronous history replay. Release default-host adoption, progress publication and maximum-load callback timing/mitigation remain open."
     },
     {
       "name": "Native/FFI integration",
@@ -102,13 +102,87 @@
     "command": "rtk proxy cargo run -p sotf-plugin-linear-phase-eq --features qa --bin qa-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
     "exit_code": 0,
     "latency_samples": 1056,
-    "actual_callback_deadline_misses": 25,
+    "actual_callback_deadline_misses": 30,
     "negotiated_quantum_misses": 0,
-    "aggregate_max_ms": 3.775042,
-    "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost."
+    "aggregate_max_ms": 5.434125,
+    "result": "Engine queued-work contract passes with zero negotiated-quantum misses; direct callback compliance explicitly unresolved (30 physical misses). Static matrix excludes dynamic priming."
   },
   "clippy": {
     "command": "rtk cargo clippy -p sotf-plugin-linear-phase-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
     "exit_code": 0
+  },
+  "previous_checkpoint_passed_tests": 133,
+  "incremental_priming_followup": {
+    "base_commit": "71d27c1",
+    "api": "LinearPhaseEqPlugin::try_commit_prepared_update_with_budget(&mut Option<PreparedBandUpdate>, max_prime_frames) -> Result<PreparedUpdateProgress, CommitRefusal>",
+    "contract": "At most the supplied replay input frames per call, across the full target route. Pending leaves accepted controls, charts, live filters and audio unchanged. Ownership retained until fully caught up, then existing crossfade begins. Existing synchronous API finishes outstanding work without re-priming completed frames. Signal latency, FIR design and blend weights unchanged.",
+    "history_safety": "Partly primed candidates retain an Arc stream-identity token, reset epoch, observed wrapping input clock and ring cursor. Stale configuration, foreign/reset history and overwritten unread history refuse before mutation using StaleBase. Drained streams refuse with Drained. Caller reclaims/reprepares off audio.",
+    "independent_cases": 8,
+    "rates_hz": [
+      44100,
+      96000
+    ],
+    "phase_modes": [
+      "linear",
+      "minimum"
+    ],
+    "taps_per_stage": 8192,
+    "routes": [
+      "legacy",
+      "ordered Left then Mid"
+    ],
+    "callback_frames": [
+      1,
+      73,
+      257,
+      1024
+    ],
+    "replay_budget": "2 * callback frames; explicit zero-budget pending also checked",
+    "wrapped_prefix_frames": 90017,
+    "ring_capacity_frames": 82230,
+    "reference": "Independent full zero-padded f64 convolution of dense input, with explicit route matrix and weights measured from actual acceptance clock. Exported FIR taps validate filtering, not independent FIR design.",
+    "sample_error_bound": 1e-05,
+    "sample_error_max": 3.055640450667e-07,
+    "total_frames_replayed_in_matrix": 188044,
+    "lifecycle_cases": [
+      "reset",
+      "unread ring overwrite",
+      "foreign-plugin transfer",
+      "rate change",
+      "drain",
+      "empty history with zero budget at 0/2 channels",
+      "synchronous finish after partial replay"
+    ],
+    "heap_result": "(0 allocations, 0 frees) for each pending or accepted attempt, each stale/drained refusal and all guarded render/drain/reset legs",
+    "tests_command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --test audit_dynamic_response budgeted --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "tests_exit_code": 0,
+    "tests_passed": 3,
+    "release_command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --release --test audit_dynamic_response budgeted --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "release_exit_code": 0,
+    "release_tests_passed": 3,
+    "release_max_incremental_step_us": 1127,
+    "baseline_release_command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --release --test audit_dynamic_response midstream_and_eof_match_independent_convolution_at_every_length_and_phase --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "baseline_release_exit_code": 0,
+    "baseline_release_max_synchronous_commit_us": 8351,
+    "local_focused_test_max_incremental_us": 1875,
+    "concurrent_full_test_max_incremental_us": 5254,
+    "concurrent_full_test_max_synchronous_us": 18899,
+    "timing_limits": "Different replay budgets and scheduler conditions. Local test/release observations do not bound complete host callback latency or prove maximum channels/stages deadline compliance.",
+    "host_adoption": "NOT implemented: dynamic_host still calls the synchronous API; integration/progress publication and complete-callback release matrix remain pending.",
+    "current_full_suite": "136 passed; 1 existing FIR-M1 diagnostic ignored and 1 ignored illustrative doctest. No added ignore or weakened tolerance.",
+    "source_sha256": {
+      "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs": "a147dd3a1d26aeca631f42728b2eecda12188858fe0535287b9babdd24cc5401",
+      "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs": "ac8a4045f89d73857b0b8c67d38aa6c0c8843cf1de12f018cd5e51e3d16ee1d0",
+      "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs": "e3ea485dae9a542bc4055bef6a4f3719e7f7e84a47adb7a7f23cc728430c1031"
+    }
+  },
+  "qa_checkpoint_71d27c1": {
+    "command": "rtk proxy cargo run -p sotf-plugin-linear-phase-eq --features qa --bin qa-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "exit_code": 0,
+    "latency_samples": 1056,
+    "actual_callback_deadline_misses": 25,
+    "negotiated_quantum_misses": 0,
+    "aggregate_max_ms": 3.775042,
+    "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost."
   }
 }

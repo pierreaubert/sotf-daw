@@ -24,6 +24,7 @@ use super::types::LiveFilterSnapshot;
 use super::types::PreparedBandUpdate;
 use super::types::RouteBanks;
 use super::types::StageBanks;
+use super::types::{PreparedPriming, PreparedUpdateProgress};
 use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
 
 /// The streaming latency contract shared by the DSP and its editor summary.
@@ -148,6 +149,11 @@ pub struct LinearPhaseEqPlugin {
     // Input frames recorded in the dry ring since the last reset, saturating
     // at the ring capacity. Used to prime committed update targets.
     pub(super) history_len: usize,
+    // Distinguish stream resets and owners while a caller retains a partly
+    // primed target. The Arc also survives moves and replacement of the plugin.
+    history_token: Arc<()>,
+    history_epoch: u64,
+    stream_clock: u64,
     // Preallocated channel-wide scratch: priming input and ordered-route /
     // crossfade working frames. Never resized after construction.
     pub(super) prime_frame: Vec<f32>,
@@ -383,6 +389,9 @@ impl LinearPhaseEqPlugin {
             xfade_remaining: 0,
             route_retired: None,
             history_len: 0,
+            history_token: Arc::new(()),
+            history_epoch: 0,
+            stream_clock: 0,
             prime_frame: vec![0.0; channels],
             xfade_frame: vec![0.0; channels],
         };
@@ -927,6 +936,8 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         }
         self.dry_delay_pos = 0;
         self.history_len = 0;
+        self.history_epoch = self.history_epoch.wrapping_add(1);
+        self.stream_clock = 0;
         self.mix_smoother = Smoother::new(self.mix_value, 20.0, self.sample_rate);
     }
 
@@ -969,6 +980,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             return Err("reset FIR EQ before processing after drain".into());
         }
         self.process_stream(&mut buffer[..total_samples], nf);
+        self.stream_clock = self.stream_clock.wrapping_add(nf as u64);
         self.has_input = true;
         Ok(nf)
     }
@@ -1019,6 +1031,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         buffer.fill(0.0);
         enable_ftz_daz();
         self.process_stream(buffer, frames);
+        self.stream_clock = self.stream_clock.wrapping_add(frames as u64);
         self.drain_remaining = Some(remaining - frames);
         Ok(PluginDrainResult {
             frames,
@@ -1283,41 +1296,60 @@ impl LinearPhaseEqPlugin {
         self.route_retired = Some(target);
     }
 
-    /// Feed recorded input history through cold target banks.
-    ///
-    /// Allocation-free: the dry ring is the history store and `prime_frame`
-    /// is preallocated. Output is discarded; convolver state is what matters.
-    /// Partitioned block-phase rounding means primed state matches a
-    /// continuously-run engine within ~1e-6, not bit-exactly.
-    fn prime_target(&mut self, target: &mut RouteBanks, prime_len: usize) {
-        let channels = self.channels;
-        if channels == 0 || prime_len == 0 || target.stages.is_empty() {
-            return;
+    /// Advance a retained target through at most `budget` historical frames.
+    fn advance_prepared_priming(
+        &mut self,
+        candidate: &mut PreparedBandUpdate,
+        budget: usize,
+    ) -> Result<PreparedUpdateProgress, CommitRefusal> {
+        let ring_len = self.dry_delay.first().map_or(1, Vec::len);
+        let state = candidate.priming.get_or_insert_with(|| {
+            let frames_remaining = if self.channels == 0 {
+                0
+            } else {
+                self.history_len.min(self.response_frames())
+            };
+            PreparedPriming {
+                origin: Arc::clone(&self.history_token),
+                epoch: self.history_epoch,
+                observed_clock: self.stream_clock,
+                next_ring: (self.dry_delay_pos + ring_len - frames_remaining) % ring_len,
+                frames_remaining,
+            }
+        });
+        // Never replay overwritten data or carry filter state across a reset,
+        // rate change, or another plugin with an otherwise identical config.
+        // Every check precedes mutation, preserving the retained candidate on Err.
+        if !Arc::ptr_eq(&state.origin, &self.history_token) || state.epoch != self.history_epoch {
+            return Err(CommitRefusal::StaleBase);
         }
-        let Some(ring_len) = self.dry_delay.first().map(Vec::len) else {
-            return;
-        };
-        if ring_len == 0 {
-            return;
-        }
-        let history = self.history_len.min(ring_len);
-        let prime_len = prime_len.min(history);
-        if prime_len == 0 {
-            return;
-        }
-        let oldest = (self.dry_delay_pos + ring_len - history) % ring_len;
-        let start = history - prime_len;
-        for j in 0..prime_len {
-            let index = (oldest + start + j) % ring_len;
-            for (ch, slot) in self.prime_frame.iter_mut().enumerate().take(channels) {
+        let arrived = usize::try_from(self.stream_clock.wrapping_sub(state.observed_clock))
+            .map_err(|_| CommitRefusal::StaleBase)?;
+        let remaining = state
+            .frames_remaining
+            .checked_add(arrived)
+            .filter(|&frames| frames <= self.history_len && frames <= ring_len)
+            .ok_or(CommitRefusal::StaleBase)?;
+        let frames = remaining.min(budget);
+        for frame in 0..frames {
+            let index = (state.next_ring + frame) % ring_len;
+            for (ch, slot) in self.prime_frame.iter_mut().enumerate().take(self.channels) {
                 *slot = self.dry_delay[ch][index];
             }
             process_route_frame(
-                &mut target.stages,
+                &mut candidate.target.stages,
                 &self.stereo_pairs,
-                &mut self.prime_frame[..channels],
+                &mut self.prime_frame[..self.channels],
             );
         }
+        state.next_ring = (state.next_ring + frames) % ring_len;
+        state.observed_clock = self.stream_clock;
+        state.frames_remaining = remaining - frames;
+        Ok(PreparedUpdateProgress {
+            committed: false,
+            frames_replayed: frames,
+            frames_remaining: state.frames_remaining,
+        })
     }
 }
 
@@ -1623,6 +1655,7 @@ impl LinearPhaseEqPlugin {
             new_band: new_snapshot,
             new_biquad,
             target,
+            priming: None,
         })
     }
 
@@ -1651,7 +1684,10 @@ impl LinearPhaseEqPlugin {
     /// Commit a prepared update on the audio thread.
     ///
     /// Realtime-safe entrypoint: validates and installs without allocating or
-    /// freeing, and retains the caller-owned prepared update on refusal. The
+    /// freeing, and retains the caller-owned prepared update on refusal. It
+    /// synchronously replays the full outstanding history; use
+    /// [`Self::try_commit_prepared_update_with_budget`] to distribute that work.
+    /// Bounded replay does not itself guarantee a callback deadline. The
     /// caller keeps `prepared` in its `Option` slot; on success the slot is
     /// taken (`None`) and the update blends, while on refusal the slot stays
     /// `Some` for correction or retry. Live band configuration, FIR data and
@@ -1664,9 +1700,11 @@ impl LinearPhaseEqPlugin {
     ///
     /// All validations run before any priming or live-state mutation, so every
     /// refusal is transactional: live configuration, populated audio history
-    /// and the prepared resources are untouched. Priming covers at most the
-    /// full cascade response support per channel (`stages * (N - 1 + 32)`
-    /// frames, or the recorded history when shorter).
+    /// and the prepared resources are untouched. A fresh target starts from at
+    /// most the full cascade support per channel (`stages * (N - 1 + 32)`
+    /// frames, or the recorded history when shorter). Finishing a partially
+    /// primed target also catches up intervening input, up to the retained ring
+    /// capacity; overwritten unread history is refused.
     ///
     /// # Errors
     ///
@@ -1679,6 +1717,40 @@ impl LinearPhaseEqPlugin {
         &mut self,
         prepared: &mut Option<PreparedBandUpdate>,
     ) -> Result<(), CommitRefusal> {
+        self.try_commit_prepared_update_with_budget(prepared, usize::MAX)
+            .map(|_| ())
+    }
+
+    /// Prime and commit a prepared update within an explicit replay-frame budget.
+    ///
+    /// Replays at most `max_prime_frames` input frames across the target route.
+    /// A pending result retains the candidate and leaves live controls, filter
+    /// output, blend state and charts unchanged. Continue processing the live
+    /// stream and retry with the same slot. To catch up, replay more frames per
+    /// interval than the live stream advances; for example, budget twice each
+    /// callback's frame count. Once caught up, this call installs the target and
+    /// starts the existing fixed crossfade. Signal latency and FIR design stay
+    /// unchanged; acceptance may be delayed while history catches up.
+    ///
+    /// This path allocates and frees nothing. The budget bounds replay frames,
+    /// not CPU time: per-frame work scales with channels and cascade stages,
+    /// and convolution partition boundaries still have their normal cost.
+    /// Final installation also copies the configured FIR taps and metadata.
+    /// Callers must measure the complete callback against their work horizon.
+    /// A zero budget can accept a fresh target when no history is required.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same ownership-preserving refusals as
+    /// [`Self::try_commit_prepared_update`]. A partially primed candidate also
+    /// returns [`CommitRefusal::StaleBase`] after reset, foreign-plugin reuse,
+    /// or loss of unread ring history. Reprepare that candidate off the audio
+    /// thread; retrying cannot repair already-invalid convolution state.
+    pub fn try_commit_prepared_update_with_budget(
+        &mut self,
+        prepared: &mut Option<PreparedBandUpdate>,
+        max_prime_frames: usize,
+    ) -> Result<PreparedUpdateProgress, CommitRefusal> {
         // Validate via a shared borrow; every error leaves `prepared` intact
         // and performs no priming, so a retained update stays pristine.
         {
@@ -1741,17 +1813,18 @@ impl LinearPhaseEqPlugin {
                 }
             }
         }
-        // All checks passed; take ownership and install. The `None` arm is
-        // unreachable after the validation above but stays refusal-typed.
-        let Some(mut owned) = prepared.take() else {
+        let progress = self.advance_prepared_priming(
+            prepared.as_mut().ok_or(CommitRefusal::NoPreparedUpdate)?,
+            max_prime_frames,
+        )?;
+        if progress.frames_remaining > 0 {
+            return Ok(progress);
+        }
+        // Catch-up is complete. Take ownership and install without repeating
+        // history work or releasing the retained resources on this thread.
+        let Some(owned) = prepared.take() else {
             return Err(CommitRefusal::NoPreparedUpdate);
         };
-        // Prime the cold target from recorded input history (bounded,
-        // allocation-free: at most the full cascade response support per
-        // channel, so multi-stage routes and the NUPC streaming delay are
-        // covered, not just one FIR length).
-        let prime_len = self.history_len.min(self.response_frames());
-        self.prime_target(&mut owned.target, prime_len);
         // Install the new design data. Lengths and placements already match;
         // copies keep every allocation on the preparation side.
         if self.is_ordered_route() {
@@ -1818,7 +1891,10 @@ impl LinearPhaseEqPlugin {
             self.xfade_target = Some(target);
             self.xfade_remaining = XFADE_FRAMES;
         }
-        Ok(())
+        Ok(PreparedUpdateProgress {
+            committed: true,
+            ..progress
+        })
     }
 
     /// Install a prepared update from a control thread.
