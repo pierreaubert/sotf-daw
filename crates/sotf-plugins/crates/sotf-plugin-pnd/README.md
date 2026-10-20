@@ -42,6 +42,21 @@ estimator checks, not proof of corrected-audio or stereo-coherence performance.
 Pitch trajectories alone do not reveal whether vibrato is deliberate; the
 reference and correction strength express the caller's intended correction.
 
+Vocoder phase and instantaneous-frequency histories use f64 while FFT samples,
+magnitudes and audio buffers remain f32. Synthesis phase is wrapped before
+oscillator evaluation. This prevents accumulated neutral-pitch phase drift
+without resetting phase at unity crossings or changing latency. Numerical
+output can change; CPU cost of this precision change is not benchmarked.
+
+`tests/audit_audio.rs` calibrates an independent analytic-signal pitch probe
+against the known source, then measures rendered static/wow/flutter/vibrato
+and stereo phase. Correction-disabled vibrato from initialization is compared
+with every delayed source sample in the measurement region. The test records
+flutter residual without claiming that all flutter is suppressed: a 96 kHz
+single-tone 6 Hz flutter case remains worse after correction and is tracked
+as an unresolved quality issue. This is separate from the corrected phase
+precision and stereo-coherence behavior.
+
 All channels are pitch-shifted independently with one shared correction ratio.
 With multi-channel analysis enabled, low-confidence channels are excluded and
 the remaining observations must form a confidence-weighted coherent cluster.

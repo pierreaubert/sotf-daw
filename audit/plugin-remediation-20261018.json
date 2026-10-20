@@ -1238,17 +1238,32 @@
         },
         {
           "task": "Measure end-to-end corrected-audio wow/flutter trajectories and intentional vibrato preservation/control choices",
-          "status": "pending",
-          "evidence": "New estimator trajectories do not prove output correction quality or intention classification; need independent output-frequency/trajectory measurements and correction-strength cases."
+          "status": "partial",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/phase_vocoder_channel.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_audio.rs",
+            "audit/artifacts/plugin-audit-20261018/pnd-audio-trajectories.json"
+          ],
+          "result": "Added calibrated f64analytic-signal outputpitch probe,16sourcecalibration and16publicPlugin rendered cases at44.1/96k withpure/weakfundharmonic stereo. Staticmax4.1514cents,slowwowresidualworstratio0.6365,correction-disabled deliberatevibrato every-frame waveformmax5.2162e-7 passunchanged8cent/0.7/2e-4gates. New red96k neutralwaveformerror0.0022845 fixedwithf64phase/frequency histories andwrappingbeforeoscillator;FFT/audio remainf32,2047latencyunchanged. However96k single-tone6Hzflutter residualamplifies3.68047to8.37912centsRMS;this remainsunachievedoutput-qualitywork. Probe calibrationmax0.058557cents,notproductiondiagnostic. Full89tests pass,release2pass,strictQAClippy pass;allnewcallbacksfinite0alloc/free,137/1024partitionsbitexact."
         },
         {
           "task": "Extend end-to-end stereo coherence,octave/weak-fundamental correction and phase-locking validation",
+          "status": "partial",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/phase_vocoder_channel.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_audio.rs",
+            "audit/artifacts/plugin-audit-20261018/pnd-audio-trajectories.json"
+          ],
+          "result": "Known-phase stereo0.7radoffset and6dBimbalance nowmeasured onrenderedstatic/wow/flutter/neutralvibrato,pureandweakfundamentals. MaxphaseRMSerror7.7209e-7rad passes0.05radboundafterphaseprecisionfix. Existingidentityphaselock/transient/formant tests passwithoutrelaxation. Addend-to-end octaveambiguous transitions andremainingcoherence cases;noarbitrarypolyphonicclaim."
+        },
+        {
+          "task": "Resolve measured 96 kHz single-tone fast-flutter residual amplification and verify output correction quality",
           "status": "pending",
-          "evidence": "Existing unit/integration/finite-stream coverage passes; add objective output stereo/phase and ambiguous-source transition cases. Optional learned monophonic estimator remains separate."
+          "evidence": "pnd-audio-trajectories.json unresolved_flutter retains input3.680466/output8.379123centsRMS at6Hz/0.3%FM. Estimator versus rendered-output cause remains to diagnose; passing phase precision/slow-wow gates is not completion."
         }
       ],
       "evidence": [
-        "Weak-reference harmonic estimation and96trajectory+6negative estimator cases verified;fullgoal31/45complete. Entry36partial pending end-to-end corrected-audio/stereo coverage. Optional ML separate."
+        "Harmonic estimator andcontinuous vocoder phase precision corrected. Independent output probe now quantifies static/slowwow/vibrato/stereo behavior. Entry36partial: fastflutter amplification andoctave-transition outputwork remain. Overall31/45complete;optionalMLseparate."
       ]
     },
     {

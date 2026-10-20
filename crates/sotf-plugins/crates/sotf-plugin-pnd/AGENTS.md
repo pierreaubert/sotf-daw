@@ -7,6 +7,9 @@ Preserve these contracts:
 - every successful callback returns and overwrites exactly `context.num_frames`;
 - device-clock correction and variable-duration SRC stay outside this plugin;
 - causal phase-vocoder latency is 2047 frames for every callback partition;
+- keep phase/frequency histories in f64 and FFT/audio/magnitudes in f32;
+  wrap synthesis phase before oscillator evaluation instead of resetting phase
+  at neutral-ratio crossings;
 - initialization owns FFT planning/allocation; process and reset allocate nothing;
 - all channels keep their order and frame count and share one correction ratio;
 - multi-channel analysis excludes low-confidence observations before consensus;
@@ -27,3 +30,7 @@ and allocation tests for behavioral changes.
 `tests/audit_estimator.rs` fixes known-trajectory accuracy/confidence gates at
 the Hann-window center and guards heap activity. Do not substitute estimator
 diagnostics for end-to-end corrected-audio/stereo validation.
+
+`tests/audit_audio.rs` calibrates its f64 analytic-signal frequency probe before
+checking rendered trajectories and stereo phase. Its fast-flutter rows are
+characterization, not a suppression pass; keep unresolved quality work visible.

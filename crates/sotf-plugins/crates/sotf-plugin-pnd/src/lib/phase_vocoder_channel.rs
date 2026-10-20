@@ -19,15 +19,15 @@ pub(super) struct PhaseVocoderChannel {
     pub(super) output_read: usize,
     pub(super) output_fill: usize,
     /// Previous frame analysis phases for phase accumulation
-    pub(super) prev_phase: Vec<f32>,
+    pub(super) prev_phase: Vec<f64>,
     /// Previous magnitudes used by the normalized spectral-flux onset detector.
     pub(super) prev_magnitude: Vec<f32>,
     /// Current positive-frequency analysis phases and instantaneous frequencies.
     pub(super) analysis_magnitude: Vec<f32>,
     /// Smoothed log-magnitude envelope for optional formant transport.
     pub(super) analysis_envelope: Vec<f32>,
-    pub(super) analysis_phase: Vec<f32>,
-    pub(super) source_frequency: Vec<f32>,
+    pub(super) analysis_phase: Vec<f64>,
+    pub(super) source_frequency: Vec<f64>,
     /// Source-bin peak regions and dominant contributors after spectral remapping.
     pub(super) source_peak_owner: Vec<usize>,
     pub(super) dominant_source: Vec<usize>,
@@ -39,12 +39,12 @@ pub(super) struct PhaseVocoderChannel {
     pub(super) transient_position: Option<usize>,
     pub(super) processed_hops: usize,
     /// Accumulated synthesis phases
-    pub(super) synth_phase: Vec<f32>,
+    pub(super) synth_phase: Vec<f64>,
     pub(super) synth_phase_initialized: Vec<bool>,
     /// Remapped positive-frequency magnitudes for the current synthesis frame.
     pub(super) synth_magnitude: Vec<f32>,
     /// Magnitude-weighted instantaneous target-bin frequency.
-    pub(super) synth_frequency_sum: Vec<f32>,
+    pub(super) synth_frequency_sum: Vec<f64>,
     /// Scratch buffers
     pub(super) fft_buf: Vec<Complex<f32>>,
     pub(super) fft_scratch: Vec<Complex<f32>>,
@@ -151,7 +151,7 @@ impl PhaseVocoderChannel {
     ) {
         let n = PV_FFT_SIZE;
         let hop = PV_HOP_SIZE;
-        let expected_phase_advance = 2.0 * std::f32::consts::PI * hop as f32 / n as f32;
+        let expected_phase_advance = std::f64::consts::TAU * hop as f64 / n as f64;
         let inv_n = 1.0 / n as f32;
 
         // Window and FFT
@@ -172,14 +172,14 @@ impl PhaseVocoderChannel {
         let mut max_magnitude = 0.0_f32;
         for bin in 0..positive_bins {
             let magnitude = self.fft_buf[bin].norm();
-            let phase = self.fft_buf[bin].arg();
+            let phase = f64::from(self.fft_buf[bin].arg());
             let phase_diff = phase - self.prev_phase[bin];
-            let deviation = phase_diff - bin as f32 * expected_phase_advance;
+            let deviation = phase_diff - bin as f64 * expected_phase_advance;
             let wrapped = wrap_phase(deviation);
 
             self.analysis_magnitude[bin] = magnitude;
             self.analysis_phase[bin] = phase;
-            self.source_frequency[bin] = bin as f32 + wrapped / expected_phase_advance;
+            self.source_frequency[bin] = bin as f64 + wrapped / expected_phase_advance;
             positive_flux += (magnitude - self.prev_magnitude[bin]).max(0.0);
             magnitude_sum += magnitude;
             max_magnitude = max_magnitude.max(magnitude);
@@ -324,9 +324,10 @@ impl PhaseVocoderChannel {
                     1.0
                 };
                 let transported_magnitude = mag * formant_gain;
-                let shifted_frequency = self.source_frequency[bin] * pitch_shift;
+                let shifted_frequency = self.source_frequency[bin] * f64::from(pitch_shift);
                 self.synth_magnitude[target_bin] += transported_magnitude;
-                self.synth_frequency_sum[target_bin] += transported_magnitude * shifted_frequency;
+                self.synth_frequency_sum[target_bin] +=
+                    f64::from(transported_magnitude) * shifted_frequency;
                 if transported_magnitude > self.dominant_magnitude[target_bin] {
                     self.dominant_magnitude[target_bin] = transported_magnitude;
                     self.dominant_source[target_bin] = bin;
@@ -361,8 +362,9 @@ impl PhaseVocoderChannel {
                 };
                 self.synth_phase_initialized[target_peak] = true;
             } else {
-                self.synth_phase[target_peak] +=
-                    self.source_frequency[source_peak] * pitch_shift * expected_phase_advance;
+                self.synth_phase[target_peak] += self.source_frequency[source_peak]
+                    * f64::from(pitch_shift)
+                    * expected_phase_advance;
             }
         }
         self.previous_target_peak_source
@@ -374,7 +376,7 @@ impl PhaseVocoderChannel {
             if magnitude <= f32::EPSILON {
                 continue;
             }
-            let shifted_frequency = self.synth_frequency_sum[bin] / magnitude;
+            let shifted_frequency = self.synth_frequency_sum[bin] / f64::from(magnitude);
             let source_bin = self.dominant_source[bin];
             let source_peak = self.source_peak_owner[source_bin];
             let target_peak = (source_peak as f32 * pitch_shift).round() as usize;
@@ -401,9 +403,12 @@ impl PhaseVocoderChannel {
             } else {
                 self.synth_phase[bin] += shifted_frequency * expected_phase_advance;
             }
+            // Bound phase and retain double precision through the oscillator;
+            // only the synthesized FFT samples return to f32.
+            self.synth_phase[bin] = wrap_phase(self.synth_phase[bin]);
             self.ifft_buf[bin] = Complex::new(
-                magnitude * self.synth_phase[bin].cos(),
-                magnitude * self.synth_phase[bin].sin(),
+                (f64::from(magnitude) * self.synth_phase[bin].cos()) as f32,
+                (f64::from(magnitude) * self.synth_phase[bin].sin()) as f32,
             );
         }
 
@@ -438,22 +443,22 @@ impl PhaseVocoderChannel {
 }
 
 #[inline]
-fn wrap_phase(phase: f32) -> f32 {
-    phase - (phase / (2.0 * std::f32::consts::PI)).round() * 2.0 * std::f32::consts::PI
+fn wrap_phase(phase: f64) -> f64 {
+    phase - (phase / std::f64::consts::TAU).round() * std::f64::consts::TAU
 }
 
 #[inline]
 fn remap_transient_phase(
-    source_phase: f32,
+    source_phase: f64,
     source_bin: usize,
     target_bin: usize,
     transient_sample: usize,
     fft_size: usize,
-) -> f32 {
-    let bin_delta = target_bin as f32 - source_bin as f32;
+) -> f64 {
+    let bin_delta = target_bin as f64 - source_bin as f64;
     wrap_phase(
         source_phase
-            - 2.0 * std::f32::consts::PI * bin_delta * transient_sample as f32 / fft_size as f32,
+            - std::f64::consts::TAU * bin_delta * transient_sample as f64 / fft_size as f64,
     )
 }
 
@@ -859,7 +864,8 @@ mod tests {
                 let output_hz = input_hz * ratio;
                 let left_phase = measured_phase(&left[start..], output_hz, sample_rate);
                 let right_phase = measured_phase(&right[start..], output_hz, sample_rate);
-                let phase_error = wrap_phase((right_phase - left_phase) - expected_offset);
+                let phase_error =
+                    wrap_phase(f64::from((right_phase - left_phase) - expected_offset));
                 assert!(
                     phase_error.abs() < 0.12,
                     "ratio {ratio}, offset {expected_offset}: independent channels lost their \

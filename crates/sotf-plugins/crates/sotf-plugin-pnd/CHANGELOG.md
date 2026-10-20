@@ -1,3 +1,14 @@
+## Unreleased continuous vocoder phase precision
+
+- Use f64 phase/frequency histories and arithmetic, casting synthesized spectra
+  back to f32. Wrap synthesis phase before oscillator evaluation. Fix accumulated
+  neutral vibrato waveform error without a unity-crossing phase reset.
+- Add calibrated independent output-pitch/stereo measurements for 16 rendered
+  cases, including weak fundamentals and correction-disabled deliberate vibrato.
+  Preserve fixed frame count, 2047-frame latency and zero callback heap activity.
+- Record the unresolved 96 kHz single-tone fast-flutter residual amplification;
+  passing neutral/slow-wow/stereo gates do not establish universal suppression.
+
 ## Unreleased weak-reference harmonic estimation
 
 - Add bounded, stack-only harmonic reference consensus for coherent material
