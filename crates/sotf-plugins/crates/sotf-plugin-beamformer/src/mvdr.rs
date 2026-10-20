@@ -13,6 +13,7 @@
 // All math is done with pre-allocated flat buffers — zero heap allocations
 // in update_noise_covariance, compute_weights, and apply_weights_into.
 
+use crate::steering::bound_white_noise_gain;
 use nalgebra::Complex;
 
 /// Maximum number of microphones supported.
@@ -292,6 +293,7 @@ impl MvdrBeamformer {
                 // Install one validated bin atomically with respect to the
                 // processing method; no partial candidate set is retained.
                 if valid {
+                    bound_white_noise_gain(&mut candidates[..m], d_vec);
                     self.weights_buf[k].copy_from_slice(&candidates[..m]);
                 } else {
                     write_steered_delay_and_sum(&mut self.weights_buf[k], d_vec);

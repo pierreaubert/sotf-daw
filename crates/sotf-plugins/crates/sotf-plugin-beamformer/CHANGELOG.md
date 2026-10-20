@@ -1,5 +1,13 @@
 # Unreleased
 
+- Bound MVDR/superdirective squared weight norm at one while preserving the
+  look response, giving physical steering a 0 dB white-noise-gain floor and
+  limiting gain/delay/geometry error amplification without realtime allocation.
+- Measure the diffuse-directivity tradeoff against an independent f64 inverse:
+  up to 4.02 dB below the unbounded loaded solution, no worse than delay-and-sum
+  in the tested matrix. GSC and moving-source uncertainty remain separate work.
+- Add 189 fixed-array, 567 perturbation and 72 learned-MVDR robustness cases.
+
 - Report native finite response bounds from the prepared active algorithm,
   verified with continuing ordinary adaptation and spectral overflow residue.
 - Preserve finite MVDR covariance through overload with whole-bin candidate

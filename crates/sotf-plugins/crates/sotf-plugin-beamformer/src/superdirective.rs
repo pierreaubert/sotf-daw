@@ -11,7 +11,7 @@
 //
 // where Γ is the diffuse noise coherence matrix and d is the steering vector.
 
-use crate::steering::{ArrayGeometry, compute_all_steering_vectors};
+use crate::steering::{ArrayGeometry, bound_white_noise_gain, compute_all_steering_vectors};
 use nalgebra::{Complex, DMatrix};
 
 /// Precomputed superdirective beamformer.
@@ -107,7 +107,9 @@ impl SuperdirectiveBeamformer {
 
                 if denom.norm_sqr() > 1e-20 {
                     let w = &gamma_inv_d / denom;
-                    (0..m).map(|i| w[(i, 0)]).collect()
+                    let mut weights: Vec<_> = (0..m).map(|i| w[(i, 0)]).collect();
+                    bound_white_noise_gain(&mut weights, &steering[k]);
+                    weights
                 } else {
                     steered_delay_and_sum(&steering[k])
                 }

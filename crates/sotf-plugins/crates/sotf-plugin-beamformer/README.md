@@ -59,6 +59,24 @@ leaves the previous bin intact, allowing subsequent ordinary learning to resume.
 Representable large covariance is retained and decays at the existing 0.95-per-hop
 rate. Recovery time therefore depends on overload magnitude; it is not immediate.
 
+## Weight robustness
+
+MVDR and superdirective weights now retain a conservative white-noise gain
+floor of 0 dB for physical unit-magnitude steering vectors. When squared weight
+norm exceeds one, shrink its component orthogonal to steering toward steered
+delay-and-sum. This preserves the look response and bounds gain, delay and
+geometry perturbation error by the perturbation's Euclidean norm. Existing
+weights below the limit retain their exact values. The calculation uses wider
+arithmetic and existing storage; MVDR weight updates remain allocation-free.
+
+This trades diffuse-noise directivity for microphone-error tolerance. The
+independent array fixtures measure up to 4.02 dB less diffuse directivity than
+the original loaded solution, while remaining no worse than delay-and-sum.
+They cover 189 fixed frequency/geometry/angle points, 567 gain/delay/position
+perturbations and 72 learned MVDR close-interference points. GSC uses its existing
+adaptive FIR policy; this spectral weight bound does not cover GSC. Moving
+sources and public mixed target/diffuse-noise streams remain audit work.
+
 ## Stream boundaries
 
 MVDR and superdirective start analysis with a half-window zero prefix and discard

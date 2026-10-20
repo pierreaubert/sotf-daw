@@ -398,9 +398,39 @@
       "id": 11,
       "plugin": "Beamformer",
       "audit_text": "[`beamformer_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs):310\u2013490 supports MVDR/GSC/superdirective paths, fixed structural microphone/type configuration, resettable adaptation and bounded frozen-learning drains. Startup covariance conditioning and steering mismatch are key failure cases. Matrix operations and spectral hops dominate cost, particularly as microphone count increases.\n\n`gsc_reference.rs`, `numerical_recovery.rs`, `spectral_recovery.rs` and `stream_boundaries.rs` provide good numerical/lifecycle coverage. Add array geometry errors, microphone gain/delay mismatch, diffuse noise and moving sources; measure white-noise gain, directivity and target distortion. Classical diagonal loading and uncertainty-aware steering are priorities. Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Bound spectral weight sensitivity to microphone gain, delay and geometry errors while preserving look response.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs",
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json"
+          ],
+          "result": "Reproduced 0.09469 target-response error from a gain perturbation norm of 0.08149 at 2 microphones/1 cm/30 degrees/187.5 Hz. MVDR/superdirective now cap squared weight norm at one by preserving the steering-parallel component and shrinking the orthogonal component. 189 fixed points, 567 physical perturbations and 72 learned MVDR points pass. Minimum WNG is 0 dB to numeric tolerance; maximum tested target error is 0.09992. Diffuse directivity remains no worse than uniform delay-and-sum, with up to 4.015552 dB loss versus the original loaded solution."
+        },
+        {
+          "requirement": "Preserve bounded realtime, reset, startup, numerical recovery and finite-drain behavior.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json"
+          ],
+          "result": "92 full release QA-feature tests pass, including preallocated weight updates, covariance recovery, frozen drains, native tail bounds and cold allocation checks. Strict all-target QA Clippy passes; no public parameter schema or latency change."
+        }
+      ],
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs",
+        "audit/artifacts/plugin-audit-20261018/beamformer-wng-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json",
+        "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json"
+      ],
+      "remaining_production_scope": [
+        "Public moving-source and diffuse-noise mixtures, including gain/delay/geometry mismatch across all three algorithms.",
+        "GSC target distortion and adaptive sensitivity under uncertainty.",
+        "Broader sample rates, startup covariance and source-motion measurements beyond the focused 48 kHz frequency-domain matrix."
+      ]
     },
     {
       "id": 12,
@@ -1990,6 +2020,15 @@
       ],
       "result": "60 independent cases with onset/recovery/initial-convergence gates; 63 release tests and strict Clippy pass. Two reproduced production failures corrected. Overall 34/45.",
       "limitations": "Bounded in-tail tracking with a 3 dB drift floor; noise fixtures do not establish speech-corpus or perceptual performance. Optional ML remains separate."
+    },
+    {
+      "name": "Beamformer spectral white-noise-gain robustness",
+      "state": "verified_partial",
+      "plugin_ids": [
+        11
+      ],
+      "result": "Bound MVDR and superdirective weight norms without changing look response; independent mismatch/directivity fixtures plus 92 release tests and strict Clippy pass. Overall remains 34/45.",
+      "limitations": "Up to 4.02 dB diffuse-directivity tradeoff. Moving-source and public diffuse-mixture/GSC uncertainty work remains open; optional neural masks remain separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

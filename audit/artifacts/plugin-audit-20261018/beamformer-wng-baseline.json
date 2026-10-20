@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-beamformer",
+    "--release",
+    "--features",
+    "qa",
+    "--test",
+    "audit_array_robustness",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "    Finished `release` profile [optimized] target(s) in 0.20s\n     Running tests/audit_array_robustness.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_array_robustness-b4ea071afd876165)\n\nrunning 1 test\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=93.75 wng_db=3.010300 diffuse_di_db=0.000107\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=187.5 wng_db=3.010300 diffuse_di_db=0.000427\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=468.75 wng_db=3.010300 diffuse_di_db=0.002668\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=1031.25 wng_db=3.010300 diffuse_di_db=0.012911\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=1968.75 wng_db=3.010300 diffuse_di_db=0.047020\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=4031.25 wng_db=3.010300 diffuse_di_db=0.196422\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=7968.75 wng_db=3.010300 diffuse_di_db=0.755055\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=93.75 wng_db=0.679275 diffuse_di_db=0.031600\n\nthread 'superdirective_weights_bound_white_noise_and_steering_error' (326023825) panicked at crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs:78:25:\nuncertainty amplification 2/0.01/30/187.5: 0.0946900672371958 > 0.08148735797216915\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest superdirective_weights_bound_white_noise_and_steering_error ... FAILED\n\nfailures:\n\nfailures:\n    superdirective_weights_bound_white_noise_and_steering_error\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-beamformer --test audit_array_robustness`\n"
+}

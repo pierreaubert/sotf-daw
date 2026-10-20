@@ -65,6 +65,47 @@ impl ArrayGeometry {
 
 const SPEED_OF_SOUND: f32 = 343.0; // m/s at 20°C
 
+/// Bound white-noise amplification while preserving the current look response.
+pub(crate) fn bound_white_noise_gain(weights: &mut [Complex<f32>], steering: &[Complex<f32>]) {
+    let wide = |x: Complex<f32>| Complex::new(f64::from(x.re), f64::from(x.im));
+    let energy: f64 = weights.iter().map(|&x| wide(x).norm_sqr()).sum();
+    // A unit-norm cap gives at least 0 dB WNG for a unit look response.
+    // By Cauchy-Schwarz it also bounds gain/delay/geometry perturbation error
+    // by the perturbation's Euclidean norm. Ordinary low-norm weights stay exact.
+    if energy <= 1.0 {
+        return;
+    }
+    let direction_energy: f64 = steering.iter().map(|&d| wide(d).norm_sqr()).sum();
+    if !energy.is_finite() {
+        for (weight, &direction) in weights.iter_mut().zip(steering) {
+            *weight = direction / direction_energy as f32;
+        }
+        return;
+    }
+    let response: Complex<f64> = weights
+        .iter()
+        .zip(steering)
+        .map(|(&w, &d)| wide(d).conj() * wide(w))
+        .sum();
+    let parallel_scale = response / direction_energy;
+    let parallel_energy = response.norm_sqr() / direction_energy;
+    let perpendicular_energy: f64 = weights
+        .iter()
+        .zip(steering)
+        .map(|(&w, &d)| (wide(w) - wide(d) * parallel_scale).norm_sqr())
+        .sum();
+    // Shrink only the component orthogonal to steering. The distortionless
+    // constraint survives; the zero component is the steered uniform fallback.
+    let scale = ((1.0 - parallel_energy).max(0.0) / perpendicular_energy.max(1e-30))
+        .sqrt()
+        .min(1.0);
+    for (weight, &direction) in weights.iter_mut().zip(steering) {
+        let parallel = wide(direction) * parallel_scale;
+        let bounded = parallel + (wide(*weight) - parallel) * scale;
+        *weight = Complex::new(bounded.re as f32, bounded.im as f32);
+    }
+}
+
 /// Compute the steering vector for a plane wave from a given direction.
 ///
 /// # Arguments
