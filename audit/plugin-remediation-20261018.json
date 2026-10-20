@@ -2058,13 +2058,33 @@
             "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json"
           ],
           "result": "Independent hard clamps reproduced 0.6680395 linked-ratio error for [4,-1] at 44.1 kHz. One common ceiling gain now retains every output ratio while the original 0.95 target/0.2 ms attack/50 ms release state remains. Twelve first-frame cases across four rates and 2/4/8 outputs have zero linked error. Thirty-six callback partition schedules are exact, reset restores the transfer, finite extremes through f32::MAX stay bounded, and diagnostic bypass/quiet input remain unchanged. All measured limiter kernels allocate/free nothing. 219 release tests pass; the explicit 30001-callback transition timing gate has zero heap and maximum 33125 ns for this 48 kHz/128-frame/default-FFT2048 run; strict all-target QA Clippy passes after equivalent existing timing-harness fill cleanup. Two existing ignored entries remain unchanged (timing gate run explicitly, illustrative doctest unexecuted)."
+        },
+        {
+          "requirement": "Remove frequency-region discontinuity in the default analytical head-shadow transfer.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/head.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json"
+          ],
+          "result": "Baseline first failure: magnitude difference 0.06470293 around ka=2 at 30 degrees/radius 0.07m; at 120 degrees the limiting jump is 0.125 to 0.5. Transition now blends existing low/high curves with smoothstep and uses the same ka/4 high-curve exponent throughout. Forty-two two-sided join cases span three radii, seven incidence angles and both frequency boundaries; maximum difference 7.033348e-6 under unchanged 2e-4 gate. Exterior formulas, parameter/schema/latency unchanged; this is continuity, not human HRTF calibration."
+        },
+        {
+          "requirement": "Add independent regularized-inverse ground truth and signed head-displacement/room-mismatch measurements.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/transfer_audit_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json"
+          ],
+          "result": "324 independent f64 geometric-plant/Cholesky comparisons versus production f32 explicit inverse: maximum complex error 1.651192e-5 under 2e-4. 360 signed ear residual rows retained for fixed nominal inverse across lateral displacement, yaw and one-echo mismatch. Filter coefficients remain below configured gain 4 (observed max 2.495644), but 106 cases worsen crosstalk, worst -12.577155 dB; best 76.114321 dB. These are controlled core inverse measurements, not native-file or end-to-end rendered acoustic evidence."
         }
       ],
       "evidence": [
-        "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json"
+        "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json"
       ],
       "remaining": [
-        "Independent signed acoustic transfer-matrix checks across frequency, head displacement and room mismatch; current cancellation diagnostic shares the filter design model and clamps negative degradation.",
+        "Extend the new controlled signed transfer-matrix evidence to measured HRTF/native rendering and a robust design across head displacement/room mismatch; nominal inverse worsens 106/360 controlled ear cases, worst -12.5772 dB. Current public cancellation diagnostic still shares the design model and clamps negative degradation.",
         "Resolve or explicitly constrain default 8 kHz ILD physical-model discrepancy: existing report shows 36.124 dB versus reference 12 dB with 20 dB tolerance despite the enclosing Rust test passing.",
         "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
         "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality."
@@ -2458,6 +2478,15 @@
       ],
       "result": "Reproduced and fixed per-channel clipping distortion during finite-attack overshoot. Linked sample ceiling preserves all drive ratios; first-frame/extreme/partition/reset/no-heap evidence recorded. 219 release tests, explicit 30001-callback transition gate and strict all-target QA Clippy pass. Overall stays 35/45.",
       "limitations": "Independent transfer/head/room validation and a documented existing 8 kHz ILD report failure remain open; no acoustic or true-peak completion claimed."
+    },
+    {
+      "name": "XTC continuous analytical head-shadow joins and independent inverse/mismatch evidence",
+      "state": "verified_partial",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Removes a reproduced frequency-region magnitude discontinuity; 42 join checks, 324 independent inverse cases and 360 raw signed mismatch rows. 222 release QA tests and strict all-target Clippy pass. Overall stays 35/45.",
+      "limitations": "Fixed nominal inverse is not robust across the tested mismatches, and existing 8 kHz physical ILD calibration and measured/native head/room validation remain open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -1,3 +1,13 @@
+# Unreleased analytical continuity audit (2026-10-20)
+
+- Remove the default head-shadow magnitude discontinuity at ka=2. Blend the
+  existing low/high curves with smoothstep and use a consistent high-frequency
+  exponent; keep the exterior frequency-region formulas and parameter surface.
+- Add independent f64 geometric-plant/Cholesky inverse comparisons and signed
+  head-displacement/room-mismatch measurements with bounded inverse gain.
+- Retain the unresolved 8 kHz ILD physical-model discrepancy; continuity and
+  controlled inverse tests do not establish measured HRTF or room accuracy.
+
 # Unreleased linked transient safety audit (2026-10-20)
 
 - Preserve speaker-drive ratios during limiter attack overshoot with one shared

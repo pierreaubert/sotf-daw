@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--release",
+    "--features",
+    "qa",
+    "head_shadow_frequency_joins",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nradius=0.07 angle=0 ka=0.5 lo=1 hi=1 jump=0e0\nradius=0.07 angle=0 ka=2 lo=1 hi=1 jump=0e0\nradius=0.07 angle=30 ka=0.5 lo=0.98750013 hi=0.98749983 jump=2.9802322e-7\nradius=0.07 angle=30 ka=2 lo=0.9012226 hi=0.9659255 jump=6.470293e-2\ntest filters::head::continuity_tests::head_shadow_frequency_joins_are_continuous ... FAILED\n\nfailures:\n\nfailures:\n    filters::head::continuity_tests::head_shadow_frequency_joins_are_continuous\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 167 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 34.64s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-a34f0a3dd7a496cb)\n\nthread 'filters::head::continuity_tests::head_shadow_frequency_joins_are_continuous' (327453790) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/head.rs:120:21:\nhead-shadow branch discontinuity: 0.06470293\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+}

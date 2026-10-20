@@ -50,6 +50,20 @@ ratios instead of independently clipping each speaker; the final clamp only
 bounds floating-point rounding. This is a sample-peak bound, not a reconstructed
 true-peak guarantee. Diagnostic `bypass_xtc_filters` skips this limiter.
 
+The default analytical head-shadow surrogate blends its low/high-frequency
+curves with a smoothstep over `ka=0.5..2`, where `ka=2*pi*f*head_radius/343`.
+It uses the same high-frequency exponent throughout the blend and above it,
+removing the former magnitude jump at `ka=2`. Responses below `ka=0.5` and at
+or above `ka=2` retain their existing formulas. This continuity correction
+does not calibrate the surrogate to measured human HRTFs; its existing 8 kHz
+ILD reference discrepancy remains unresolved.
+
+Independent inverse tests use f64 point-source geometry and a Cholesky solve
+against the production f32 determinant solver. They include lateral head
+displacement, yaw and a single reflected path, plus signed residuals when a
+fixed design is evaluated in a changed scene. These are controlled numerical
+plants, not measured head/room or end-to-end audio validation.
+
 Stereo AutoGain ingests every frame. It compares the original input delayed by
 N frames with the uncompensated wet output, then refreshes its target every
 `max(1, floor(sample_rate/10))` frames. Each refresh affects the following frame

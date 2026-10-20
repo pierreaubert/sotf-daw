@@ -22,16 +22,20 @@ pub(crate) fn head_shadowing_woodworth(freq: f32, angle_rad: f32, head_radius: f
         1.0 - 0.05 * ka * theta.sin()
     } else if ka < 2.0 {
         // Transition region: gradual shadowing
-        let t = (ka - 0.5) / 1.5; // 0 to 1 over transition
+        let position = (ka - 0.5) / 1.5; // 0 to 1 over transition
+        let t = position * position * (3.0 - 2.0 * position);
         let shadow_factor = (1.0 + theta.cos()) / 2.0;
         let low_freq = 1.0 - 0.05 * ka * theta.sin();
-        let high_freq = shadow_factor.powf(0.5 + t);
+        // Use the same high-frequency curve on both sides of ka=2. The
+        // former exponent 0.5+t approached 1.5 here, then jumped to 0.5.
+        // Smoothstep also joins the two endpoint slopes without a kink.
+        let high_freq = shadow_factor.powf(ka / 4.0);
         low_freq * (1.0 - t) + high_freq * t
     } else {
         // High frequency: significant head shadow
         // Shadow increases with angle from direct path
         let shadow_factor = (1.0 + theta.cos()) / 2.0; // 1 at 0°, 0 at 180°
-        // Scaled exponent aligned with validation reference data
+        // Legacy high-frequency exponent; physical ILD calibration is separate.
         let exponent = (ka / 4.0).min(3.0);
         shadow_factor.powf(exponent)
     }
@@ -101,4 +105,35 @@ pub(crate) fn head_shadowing_brown_duda(freq: f32, angle_rad: f32, head_radius: 
     let phase = -w * tau; // negative phase = delay
 
     (magnitude, phase)
+}
+
+#[cfg(test)]
+mod continuity_tests {
+    use super::*;
+
+    #[test]
+    fn head_shadow_frequency_joins_are_continuous() {
+        for radius in [0.07, 0.0875, 0.11] {
+            for angle in [0.0_f32, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0] {
+                for boundary in [0.5, 2.0] {
+                    let frequency = boundary * SPEED_OF_SOUND / (2.0 * PI * radius);
+                    let lo = head_shadowing_woodworth(
+                        frequency * (1.0 - 1e-5),
+                        angle.to_radians(),
+                        radius,
+                    );
+                    let hi = head_shadowing_woodworth(
+                        frequency * (1.0 + 1e-5),
+                        angle.to_radians(),
+                        radius,
+                    );
+                    let jump = (hi - lo).abs();
+                    println!(
+                        "radius={radius} angle={angle} ka={boundary} lo={lo} hi={hi} jump={jump:e}"
+                    );
+                    assert!(jump < 2e-4, "head-shadow branch discontinuity: {jump}");
+                }
+            }
+        }
+    }
 }

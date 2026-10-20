@@ -24,6 +24,10 @@ use rustfft::num_complex::Complex;
 use std::f32::consts::PI;
 use std::sync::Arc;
 
+#[cfg(test)]
+#[path = "transfer_audit_tests.rs"]
+mod transfer_audit_tests;
+
 /// Return the head-shadow magnitude used by the plant model.
 ///
 /// Geometric path length supplies the relative delay for every analytical

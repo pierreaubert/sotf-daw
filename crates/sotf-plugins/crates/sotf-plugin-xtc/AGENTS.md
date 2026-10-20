@@ -65,6 +65,10 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
   The final scalar clamp is only a floating-point rounding guard.
 - SIMD operations: `complex_mul_simd`, `complex_mul_add_simd`, `deinterleave_stereo`, `window_mul_simd`.
 - Head shadowing is modeled as a frequency-dependent lowpass filter based on head radius and angle.
+- Analytical frequency-region joins must preserve magnitude continuity; test
+  both sides of ka=0.5 and ka=2 across head radii and ear-incidence angles.
+- Independent inverse/mismatch tests must retain signed crosstalk degradation.
+  A shared design-model diagnostic is not independent acoustic validation.
 - Room reflection support via two methods: image source (synthetic, from geometry) or IR-based (from measured impulse responses loaded via Symphonia).
 - Uses a geometry cache (`compute_geometry_cache`) to avoid redundant trigonometric calculations when parameters haven't changed.
 - FFT size 2048 by default, 75% overlap (hop size 512) for overlap-add processing.
