@@ -1,10 +1,18 @@
 # Unreleased
 
+- Adopt sample-clock budgeted priming in the default dynamic host: two history
+  frames per input sample, with at most one acceptance per callback. Expose
+  pending progress separately from accepted state and refresh status after
+  render/drain. Document added control reaction time; signal latency is stable.
+- Extend host/factory/facade/embedded-engine validation for delayed acceptance,
+  exact blend and callback partition invariance, with unchanged error/heap bounds.
+
 - Add `try_commit_prepared_update_with_budget` and `PreparedUpdateProgress`
   for incremental history catch-up without accepting controls until ready.
   Track stream identity, reset epoch and unread ring history to refuse stale
   partly primed targets. Preserve synchronous commits and fixed blend/latency.
-  Host adoption and callback deadline validation remain open.
+  The default host now uses this path; full-load/native deadline validation
+  remains open.
 
 - Validate the prepared clock before detached worker adoption or output writes
   on both host sample formats. A wrong-clock callback now preserves accepted

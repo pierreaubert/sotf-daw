@@ -1,8 +1,8 @@
 {
   "scope": "Audit entry 30: linear-phase EQ dynamic response, superseded workers, reset and maximum-length EOF. Partial; no general realtime or arbitrary-band accuracy claim.",
-  "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture",
+  "command": "rtk cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
   "exit_code": 0,
-  "passed_tests": 136,
+  "passed_tests": 139,
   "ignored_total": 2,
   "ignored": [
     "FIR-M1 multiband accuracy diagnostic (explicitly deferred)",
@@ -87,7 +87,7 @@
     {
       "name": "Commit priming work",
       "observed_local_test_profile_commit_max_ms": 14.927,
-      "result": "Incremental DSP mitigation implemented and verified, but host still uses synchronous history replay. Release default-host adoption, progress publication and maximum-load callback timing/mitigation remain open."
+      "result": "Default host now uses sample-clock bounded priming with published pending progress. Two-channel/two-stage release callbacks verified; full channel/stage/rate-load and native direct-callback compliance remain open."
     },
     {
       "name": "Native/FFI integration",
@@ -168,7 +168,7 @@
     "concurrent_full_test_max_incremental_us": 5254,
     "concurrent_full_test_max_synchronous_us": 18899,
     "timing_limits": "Different replay budgets and scheduler conditions. Local test/release observations do not bound complete host callback latency or prove maximum channels/stages deadline compliance.",
-    "host_adoption": "NOT implemented: dynamic_host still calls the synchronous API; integration/progress publication and complete-callback release matrix remain pending.",
+    "host_adoption": "Historical checkpoint 3280828: not yet adopted. Superseded by default_host_followup below.",
     "current_full_suite": "136 passed; 1 existing FIR-M1 diagnostic ignored and 1 ignored illustrative doctest. No added ignore or weakened tolerance.",
     "source_sha256": {
       "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs": "a147dd3a1d26aeca631f42728b2eecda12188858fe0535287b9babdd24cc5401",
@@ -184,5 +184,96 @@
     "negotiated_quantum_misses": 0,
     "aggregate_max_ms": 3.775042,
     "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost."
+  },
+  "checkpoint_3280828_passed_tests": 136,
+  "default_host_followup": {
+    "base_commit": "3280828",
+    "behavior": "Default dynamic host uses budgeted replay before each incoming sample: at most 2 target history frames per input frame. Queue pop/cancel/retire routing occurs once per callback with at most one acceptance. Pending controls and charts remain at the old accepted base. Published counters distinguish priming from accepted blend state; status refreshes after render/drain/reset.",
+    "acceptance_clock": "For retained history H at the first eligible attempt, acceptance starts after max(0,H-2) incoming frames; invariant under callback partitioning. Existing fixed 513-frame blend then starts. Signal latency unchanged, control reaction delayed by catch-up.",
+    "max_tested_ordered_control_delay_frames": 16444,
+    "example_control_delay_ms_at_48k": 342.5833333333333,
+    "sample_formats": "Warmed f64 bridge is bit-identical to f32 and publishes identical progress/generation at each 128-frame callback. Wrong-clock f64 render during priming retains output sentinel, progress, accepted snapshot and history. No native f64 realtime support claim; first bridge growth remains amortized.",
+    "lifecycle": "Cancelled/reset/rate-changed/drained unaccepted candidates never install their partial target. Reset/rate invalidate primed state and retain the old accepted band controls; explicit cancellation and off-audio reprepare recovers. EOF preserves old-filter tail. Accepted-blend reset semantics preserved.",
+    "matrix": {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 2,
+      "taps_per_stage": 8192,
+      "phase_modes": [
+        "linear",
+        "minimum"
+      ],
+      "callback_frames": [
+        1,
+        73,
+        128,
+        257,
+        1024
+      ],
+      "renders": 10,
+      "input_frames": 35000,
+      "queue_frame": 17000,
+      "acceptance_frame": 33444,
+      "partition_output": "bit-identical across all callback sizes",
+      "reference": "Independent exact old/target output weighting at specified acceptance sample. Frozen old and target use the actual host/DSP; independent f64 convolution and prototype accuracy are separate component gates.",
+      "sample_error_bound": 1e-05,
+      "sample_error_max": 2.98023223877e-07,
+      "each_callback_heap": "0 allocations, 0 frees",
+      "each_callback_replay_bound": "<=2 * input frames"
+    },
+    "normal_host_target_command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --test dynamic_detached_control --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "normal_exit_code": 0,
+    "normal_host_target_passed": 19,
+    "normal_observed_max_128_callback_us": 752,
+    "normal_observed_128_deadline_misses": 0,
+    "release_command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --release --test dynamic_detached_control maximum_ordered_host_priming_and_blend_are_sample_clock_partition_invariant --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "release_exit_code": 0,
+    "release_observed_max_128_callback_us": 423,
+    "release_observed_128_deadline_misses": 0,
+    "physical_128_deadline_us_at_48k": 2666.6666666666665,
+    "integration_commands": [
+      {
+        "command": "rtk proxy cargo test -p plugins-bridge --test linear_phase_eq_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+        "exit_code": 0,
+        "passed": 5
+      },
+      {
+        "command": "rtk proxy cargo test -p sotf-plugins -p sotf-engine --test linear_phase_eq_engine_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture",
+        "exit_code": 0,
+        "passed": 8,
+        "breakdown": "2 facade/DawHost + 6 running EmbeddedAudioEngine; exact-zero blend, partition invariance, 1e-5 bounds, heap checks, dry alignment and recovery"
+      },
+      {
+        "command": "rtk cargo test -p sotf-engine --test linear_phase_eq_manager_dynamic --no-run --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "exit_code": 0,
+        "result": "compiled only; ALSA-null device playback gate NOT executed on macOS"
+      },
+      {
+        "command": "rtk cargo clippy -p sotf-plugin-linear-phase-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+        "exit_code": 0
+      },
+      {
+        "command": "rtk cargo clippy -p plugins-bridge --test linear_phase_eq_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+        "exit_code": 0
+      },
+      {
+        "command": "rtk cargo clippy -p sotf-plugins -p sotf-engine --test linear_phase_eq_engine_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+        "exit_code": 101,
+        "result": "Failed in untouched dependency crates/sotf-streaming/src/server/client_message.rs:18: clippy::too_many_arguments (8/7). No streaming code or lint bound changed. Edited-target --no-deps check follows separately."
+      },
+      {
+        "command": "rtk cargo clippy -p sotf-plugins -p sotf-engine --test linear_phase_eq_engine_dynamic --no-deps --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+        "exit_code": 0,
+        "result": "Edited integration targets pass with dependency linting excluded. The broader streaming dependency lint failure above remains recorded; no lint override or dependency edit."
+      }
+    ],
+    "limits": "The local two-channel/two-stage matrix does not establish full maximum channel/stage/rate-load or loaded native/FFI device compliance. Same-base/ABA per-request generation fencing remains open. Deferred FIR-M1 bound and diagnosis unchanged.",
+    "source_sha256": {
+      "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs": "c085add6d049bcc981fb358238044487e2ca6862286737069ce5ef651a4c4011",
+      "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs": "e7891c03160df0167869b7f8ea08c0df8b4ab06564d04d842260b9972d2cf5e0",
+      "crates/sotf-plugins/crates/plugins-bridge/tests/linear_phase_eq_dynamic.rs": "d4b4a63bb2c02090dff032b07e16086655a38fc5971988558bd6891ebce418d3",
+      "crates/sotf-plugins/tests/linear_phase_eq_engine_dynamic.rs": "0275284b4beb48552eb52f8cada0a29d0dcf032ab61647a29aaaed86800293ec",
+      "crates/sotf-engine/tests/linear_phase_eq_engine_dynamic.rs": "15eecc23a29f3c913ba864cbdc2dd8f5bf499d16e9031b788b8a2ff0e37422de"
+    }
   }
 }

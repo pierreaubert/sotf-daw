@@ -1,9 +1,10 @@
 //! Dynamic linear-phase EQ updates for real hosts.
 //!
 //! Shared wrapper owning the realtime-safe host path for single-band FIR
-//! updates: control snapshots, a worker prepares, audio commits once per
-//! quantum, and control reclaims. Band shape edits (`type`, `freq`, `q`,
-//! `gain`, `active`) use the prepared-crossfade API; placement, count, taps,
+//! updates: control snapshots, a worker prepares, audio accepts at most one
+//! target per callback after bounded history catch-up, and control reclaims.
+//! Band shape edits (`type`, `freq`, `q`, `gain`, `active`) use the
+//! prepared-crossfade API; placement, count, taps,
 //! phase mode and auto gain stay structural with rebuild-path refusal.
 //!
 //! Two control paths converge on the same audio slots. Same-thread callers use
@@ -11,8 +12,8 @@
 //! `submit_prepared_update`, `reclaim_retired`). Concurrent callers share the
 //! `Arc<LinearPhaseEqControlHandle>` from `get_data` (or `control_handle`):
 //! workers prepare from control snapshots and submit through the bounded
-//! lock-free mailbox; audio pops the mailbox into the retained slots before
-//! each commit, and pushes retired banks back for off-audio reclaim. No
+//! lock-free mailbox; audio pops into retained slots once per callback and
+//! pushes retired banks back for off-audio reclaim. No
 //! locks, blocking calls, allocation, free, formatting or logging run on
 //! audio. Queue-full, stale, reset and error payloads stay owned until
 //! off-audio reclaim. `set_parameter` keeps the generic structural refusal
@@ -20,8 +21,8 @@
 //! own adoption.
 //!
 //! Queue capacity is two prepared updates plus a two-slot mailbox, so two
-//! edits issued during a blend are retained and eventually applied after
-//! retirement. Further concurrent requests fail loudly with the payload
+//! edits issued during a blend are retained for later acceptance or refusal
+//! against the then-current base after retirement. Further concurrent requests fail loudly with the payload
 //! dropped on the calling control thread. A permanently refused head (stale,
 //! invalid, topology) retains until the caller explicitly cancels it via the
 //! handle; audio evicts at most one head per quantum into a bounded outbox
@@ -39,7 +40,13 @@
 //! generation and snapshot advance only inside the real audio commit, and the
 //! original exact-base stale validation is unchanged. Audio publication is a
 //! fixed handful of atomic stores per quantum: no allocation, free, lock,
-//! formatting or logging.
+//! formatting or logging. Catch-up replays at most two target-route history
+//! frames per incoming sample; accepted controls and output stay unchanged
+//! until ready. The 513-frame blend starts at that sample, independently of
+//! callback partitions. `control_status` exposes replay/remaining frame counts
+//! and a separate priming flag; pending progress never advances acceptance.
+//! Reset/rate change invalidates partly primed candidates, which retain until
+//! explicit cancellation and off-audio reprepare.
 //!
 //! ```rust,ignore
 //! // Same-thread control between renders.
@@ -63,7 +70,8 @@
 use crate::params::MAX_FILTERS;
 use crate::{
     BandConfig, BandSnapshot, CommitRefusal, LinearPhaseEqBandPlacement, LinearPhaseEqPlugin,
-    LinearPhaseEqPluginParams, LiveFilterSnapshot, PreparedBandUpdate, RouteBanks,
+    LinearPhaseEqPluginParams, LiveFilterSnapshot, PreparedBandUpdate, PreparedUpdateProgress,
+    RouteBanks,
 };
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -97,6 +105,12 @@ const CANCELLED_CAPACITY: usize = 2;
 ///
 /// Fixed small bound; no unbounded drain loops on either thread.
 const MAILBOX_POP_BOUND: usize = 4;
+/// History replay rate relative to incoming audio during catch-up.
+///
+/// Two target frames per live frame reduces retained lag by one frame while
+/// bounding extra convolution work. Advancing per sample keeps the acceptance
+/// clock independent of callback partitions. Pending targets stay unaccepted.
+const PRIME_FRAMES_PER_INPUT_FRAME: usize = 2;
 /// Bounded seqlock read attempts for accepted snapshots.
 ///
 /// One initial attempt plus this many retries; a publication overlaps a read
@@ -164,6 +178,12 @@ pub struct LinearPhaseEqControlStatus {
     /// saturate at 255; every reachable prepared update carries indices
     /// below 10, so reachable mirrors decode exactly.
     pub last_refusal: Option<CommitRefusal>,
+    /// Whether the retained head is catching up before acceptance.
+    pub priming_in_progress: bool,
+    /// Historical input frames replayed during the last render callback.
+    pub priming_frames_replayed: usize,
+    /// Unread input frames remaining at the last published render clock.
+    pub priming_frames_remaining: usize,
 }
 
 /// Seqlock contention signal for accepted snapshot reads.
@@ -344,6 +364,8 @@ pub struct LinearPhaseEqControlHandle {
     refusal_mirror: AtomicU32,
     /// Packed queue/blend/retired mirror (see `STATUS_*` bits).
     status_word: AtomicU64,
+    /// Packed replay/remaining frame counts (32 bits each).
+    priming_word: AtomicU64,
 }
 
 impl std::fmt::Debug for LinearPhaseEqControlHandle {
@@ -525,12 +547,16 @@ impl LinearPhaseEqControlHandle {
     /// direction (refusal clears before the status publish it pairs with).
     pub fn control_status(&self) -> LinearPhaseEqControlStatus {
         let word = self.status_word.load(Ordering::Relaxed);
+        let priming = self.priming_word.load(Ordering::Relaxed);
         LinearPhaseEqControlStatus {
             accepted_generation: self.accepted_generation(),
             retained_queued: (word & STATUS_RETAINED_MASK) as u8,
             blend_in_progress: word & STATUS_BLEND_BIT != 0,
             retired_held: word & STATUS_RETIRED_HOLD_BIT != 0,
             last_refusal: decode_refusal(self.refusal_mirror.load(Ordering::Relaxed)),
+            priming_in_progress: priming >> 32 > 0,
+            priming_frames_replayed: (priming & u64::from(u32::MAX)) as usize,
+            priming_frames_remaining: (priming >> 32) as usize,
         }
     }
 
@@ -617,6 +643,7 @@ pub struct LinearPhaseEqDynamicPlugin {
     cancel_ack: u64,
     last_refusal: Option<CommitRefusal>,
     scratch_f64: Vec<f32>,
+    priming_progress: Option<PreparedUpdateProgress>,
 }
 
 impl std::fmt::Debug for LinearPhaseEqDynamicPlugin {
@@ -680,6 +707,7 @@ impl LinearPhaseEqDynamicPlugin {
             }),
             refusal_mirror: AtomicU32::new(REFUSAL_NONE),
             status_word: AtomicU64::new(0),
+            priming_word: AtomicU64::new(0),
         });
         Ok(Self {
             inner,
@@ -693,6 +721,7 @@ impl LinearPhaseEqDynamicPlugin {
             cancel_ack: 0,
             last_refusal: None,
             scratch_f64: Vec::new(),
+            priming_progress: None,
         })
     }
 
@@ -822,6 +851,7 @@ impl LinearPhaseEqDynamicPlugin {
         }
         self.last_refusal = None;
         self.handle.publish_refusal(None);
+        self.priming_progress = None;
         self.publish_status();
         cancelled
     }
@@ -866,14 +896,17 @@ impl LinearPhaseEqDynamicPlugin {
     /// outbox is full), then pops the prepared mailbox into the retained
     /// slots with a fixed bound, moves retired banks toward the retired
     /// mailbox (holding on full, no drop), promotes a queued edit when
-    /// `pending` is empty, then attempts at most one
-    /// `try_commit_prepared_update`. Success clears the refusal record and
-    /// publishes the accepted band plus generation; refusal retains the slot
+    /// `pending` is empty, then makes the first budgeted priming attempt.
+    /// Further catch-up advances per incoming sample without another queue pop
+    /// or promotion in this callback. Successful catch-up clears the refusal record
+    /// and publishes the accepted band plus generation; pending catch-up keeps
+    /// old controls/audio, and refusal retains the slot
     /// and records the `Copy` reason; a head eviction acknowledges the
     /// recorded refusal. The detached queue/blend/retired mirrors publish
     /// every quantum. No allocation, free, lock, blocking call, formatting
     /// or logging.
-    fn commit_step(&mut self) {
+    fn commit_step(&mut self, num_frames: usize) {
+        self.priming_progress = None;
         let observed = self.handle.cancel_seq.load(Ordering::Acquire);
         if observed != self.cancel_ack {
             // Evict the head slot only (pending preferred), restoring to the
@@ -940,28 +973,75 @@ impl LinearPhaseEqDynamicPlugin {
         if self.pending.is_none() {
             self.pending = self.queued.take();
         }
-        if self.pending.is_some() {
-            // Copy the commit projection before the call consumes the slot on
-            // success (`BandSnapshot` is `Copy`; no allocation).
-            let projection = self
-                .pending
-                .as_ref()
-                .map(|candidate| (candidate.band_index, candidate.new_band));
-            match self.inner.try_commit_prepared_update(&mut self.pending) {
-                Ok(()) => {
-                    self.last_refusal = None;
-                    self.handle.publish_refusal(None);
-                    if let Some((band_index, shape)) = projection {
-                        self.handle.publish_accepted_band(band_index, &shape);
-                    }
+        self.advance_pending(usize::from(num_frames > 0) * PRIME_FRAMES_PER_INPUT_FRAME);
+        self.publish_status();
+    }
+
+    // Each incoming frame permits two history frames of replay, so catch-up
+    // and acceptance do not depend on callback partitioning. Queue operations
+    // still occur only once per callback; no second queued commit occurs here.
+    fn advance_pending(&mut self, budget: usize) {
+        let projection = self
+            .pending
+            .as_ref()
+            .map(|candidate| (candidate.band_index, candidate.new_band));
+        if projection.is_none() {
+            return;
+        }
+        match self
+            .inner
+            .try_commit_prepared_update_with_budget(&mut self.pending, budget)
+        {
+            Ok(mut progress) => {
+                if let Some(previous) = self.priming_progress {
+                    progress.frames_replayed += previous.frames_replayed;
                 }
-                Err(refusal) => {
-                    self.last_refusal = Some(refusal);
-                    self.handle.publish_refusal(Some(refusal));
+                self.priming_progress = Some(progress);
+                if self.last_refusal.take().is_some() {
+                    self.handle.publish_refusal(None);
+                }
+                if progress.committed
+                    && let Some((band_index, shape)) = projection
+                {
+                    self.handle.publish_accepted_band(band_index, &shape);
                 }
             }
+            Err(refusal) => {
+                self.priming_progress = None;
+                self.last_refusal = Some(refusal);
+                self.handle.publish_refusal(Some(refusal));
+            }
+        }
+    }
+
+    fn process_prepared_buffer(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let channels = self.inner.channels();
+        let mut frame = 0;
+        while frame < context.num_frames && self.priming_progress.is_some_and(|p| !p.committed) {
+            self.inner.process_in_place(
+                &mut buffer[frame * channels..(frame + 1) * channels],
+                &ProcessContext::new(context.sample_rate, 1),
+            )?;
+            frame += 1;
+            if let Some(progress) = self.priming_progress.as_mut() {
+                progress.frames_remaining += 1;
+            }
+            if frame < context.num_frames {
+                self.advance_pending(PRIME_FRAMES_PER_INPUT_FRAME);
+            }
+        }
+        if frame < context.num_frames {
+            self.inner.process_in_place(
+                &mut buffer[frame * channels..],
+                &ProcessContext::new(context.sample_rate, context.num_frames - frame),
+            )?;
         }
         self.publish_status();
+        Ok(context.num_frames)
     }
 
     /// Mirror queue, blend and holding-slot state to the handle.
@@ -975,6 +1055,15 @@ impl LinearPhaseEqDynamicPlugin {
             self.inner.update_in_progress(),
             self.retired_hold.is_some(),
         );
+        let (replayed, remaining) = self
+            .priming_progress
+            .map_or((0, 0), |p| (p.frames_replayed, p.frames_remaining));
+        // Remaining lag fits the fixed history ring. Replayed is bounded by
+        // twice a callback's frames, even if that callback exceeds the ring;
+        // saturate the diagnostic count only, never the actual work budget.
+        let word = u64::from(replayed.min(u32::MAX as usize) as u32)
+            | (u64::from(remaining.min(u32::MAX as usize) as u32) << 32);
+        self.handle.priming_word.store(word, Ordering::Relaxed);
     }
 
     fn ensure_scratch_f64(&mut self, len: usize) {
@@ -1032,6 +1121,7 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let before = self.handle.published_sample_rate();
         self.inner.initialize(sample_rate)?;
+        self.priming_progress = None;
         // A same-rate initialize may still reset stream state (completing a
         // blend); mirror the resulting queue state without touching accepted
         // generations. A real rate change republishes the accepted rate and
@@ -1045,6 +1135,7 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
 
     fn reset(&mut self) {
         self.inner.reset();
+        self.priming_progress = None;
         // Reset completes an in-flight blend instantly and preserves the
         // accepted configuration, so only the queue/blend mirror refreshes;
         // the accepted generation, snapshot and refusal record are kept.
@@ -1060,9 +1151,9 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
         let channels = self.inner.channels();
         validate_process_block_f32(input, output, context, channels, channels)?;
         self.validate_process_clock(context)?;
-        self.commit_step();
+        self.commit_step(context.num_frames);
         output.copy_from_slice(input);
-        self.inner.process_in_place(output, context)
+        self.process_prepared_buffer(output, context)
     }
 
     // Note: the f32 `process` and `drain` paths are allocation-free, but
@@ -1079,17 +1170,22 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
         let channels = self.inner.channels();
         validate_process_block_f64(input, output, context, channels, channels)?;
         self.validate_process_clock(context)?;
-        self.commit_step();
+        // Move reusable scratch out temporarily so priming can advance the
+        // wrapper as well as its DSP. Moving a Vec does not touch the heap.
         self.ensure_scratch_f64(input.len());
-        let scratch = &mut self.scratch_f64[..input.len()];
-        for (dst, &src) in scratch.iter_mut().zip(input.iter()) {
+        let mut scratch = std::mem::take(&mut self.scratch_f64);
+        for (dst, &src) in scratch[..input.len()].iter_mut().zip(input.iter()) {
             *dst = src as f32;
         }
-        let frames = self.inner.process_in_place(scratch, context)?;
-        for (dst, &src) in output.iter_mut().zip(scratch.iter()) {
-            *dst = src as f64;
+        self.commit_step(context.num_frames);
+        let result = self.process_prepared_buffer(&mut scratch[..input.len()], context);
+        if result.is_ok() {
+            for (dst, &src) in output.iter_mut().zip(scratch.iter()) {
+                *dst = src as f64;
+            }
         }
-        Ok(frames)
+        self.scratch_f64 = scratch;
+        result
     }
 
     fn latency_samples(&self) -> usize {
@@ -1125,7 +1221,10 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        self.inner.drain(output, context)
+        let result = self.inner.drain(output, context);
+        self.priming_progress = None;
+        self.publish_status();
+        result
     }
 
     fn process_compiled_f32(

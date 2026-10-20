@@ -901,9 +901,21 @@
           "result": "New explicit replay-frame budget and PreparedUpdateProgress preserve caller ownership and live controls/audio while pending; final catch-up starts the original crossfade. Stream identity/epoch/clock/cursor refuse lost/reset/foreign history without allocation/free. Eight dense-input maximum-tap cases including ring wrap match independent f64 convolution within 3.05564e-7 under 1e-5. Three focused regressions pass in test and release profiles; old synchronous API compatibility and all existing tests pass. No default-host adoption or deadline guarantee claimed."
         },
         {
+          "task": "Adopt bounded history catch-up in the default host and publish unaccepted progress",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs",
+            "crates/sotf-plugins/crates/plugins-bridge/tests/linear_phase_eq_dynamic.rs",
+            "crates/sotf-plugins/tests/linear_phase_eq_engine_dynamic.rs",
+            "crates/sotf-engine/tests/linear_phase_eq_engine_dynamic.rs"
+          ],
+          "result": "Two target replay frames per incoming sample keeps acceptance clock invariant across callback sizes; <=2*callback frame replay and zero allocations/frees are asserted. Queued controls remain unaccepted until ready, then original 513-frame blend starts. Reset/rate/EOF/cancellation preserve ownership and prevent stale partial target installation. Both sample formats produce identical warmed output/status. Both phases at two 8192-tap Left/Mid stages are bit-identical across 1/73/128/257/1024-frame blocks; independently weighted twin max error 2.98023e-7 under unchanged 1e-5. Release complete 128-frame host callbacks peaked at 423 us with 0 observed physical misses. Five factory, two facade/DawHost and six embedded-engine tests pass with exact-zero blend, dry/EOF and heap/error bounds unchanged; manager consumer compiles only (ALSA-null playback unexecuted). Control reaction time H-2 frames is documented; signal latency unchanged."
+        },
+        {
           "task": "Resolve realtime deadline evidence for large synchronous priming and direct callbacks",
           "status": "pending",
-          "evidence": "Synchronous release matrix reached 8.351 ms. Incremental DSP API is implemented, but dynamic_host still calls synchronous commits: route host adoption through the new API, publish pending progress, then measure complete callbacks over maximum layout/stage/rate loads. Local variable-budget incremental release matrix reached 1.127 ms; concurrent full tests reached 5.254 ms. These are not equivalent budgets or portable worst-case bounds. Latest static QA has 30 physical misses and zero negotiated-quantum misses."
+          "evidence": "Default host budgeted adoption/progress publication is complete. The two-channel/two-stage 8192-tap release callback matrix measured 423 us max at 128 frames/48 kHz with zero physical misses. Full channel/stage/rate-load release validation and loaded native/FFI direct-callback adaptation remain open. Existing plain-DSP static QA recorded 30 physical misses and zero negotiated-quantum misses. Synchronous direct callers retain an explicit API; no portable deadline bound claimed."
         },
         {
           "task": "Resolve remaining response and freshness limitations without weakening contracts",
@@ -912,9 +924,9 @@
         }
       ],
       "evidence": [
-        "Current complete crate: 136 passed, 1 explicitly deferred accuracy test ignored plus 1 ignored illustrative doctest. Three incremental-priming tests also pass in release. No new ignored test or weakened bound.",
-        "QA exits 0 for queued work with 30 actual-callback misses explicitly unresolved; all-targets Clippy with qa and -D warnings passes.",
-        "Scoped host clock fix plus incremental DSP replay API and deterministic references only. Default host integration, maximum-load deadlines, request-generation freshness and FIR-M1 remain pending. Unrelated engine/driver/Cargo.lock changes excluded; entry stays partial and complete count remains 29/45."
+        "Current complete FIR crate: 139 passed, 1 explicitly deferred accuracy diagnostic ignored plus 1 illustrative ignored doctest. No new ignore or weakened tolerance. Default host maximum-length partition/continuity matrix also passes in release.",
+        "Affected integration: 5 factory + 2 facade/DawHost + 6 embedded-engine tests pass. Real-manager consumer compiled only; unavailable ALSA-null device gate not counted as executed. FIR all-targets and factory-target Clippy pass. Broader integration Clippy fails in untouched streaming dependency at src/server/client_message.rs:18 (too_many_arguments); edited-target --no-deps Clippy passes with -D warnings, without overrides or dependency changes.",
+        "Default host now adopts bounded priming with genuine pending-state reporting, documented control reaction time, stable signal latency and deterministic acceptance. Full-load/native deadlines, request-generation freshness and FIR-M1 remain pending. Only scoped integration tests touched in engine/facade; unrelated engine/driver/Cargo.lock work excluded. Entry remains partial, overall 29/45 complete."
       ]
     },
     {

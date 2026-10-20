@@ -144,6 +144,30 @@ fn render_into(
     }
 }
 
+// Advance actual engine audio, retaining heap guards while a queued target
+// catches up. The acceptance bound is the 1055-frame single-stage support.
+fn advance_engine_until_accepted(
+    engine: &mut EmbeddedAudioEngine,
+    generation: u64,
+    clock: &mut u64,
+) {
+    let handle = engine.linear_phase_eq_handle(0).unwrap();
+    let input = [0.19; 128 * CHANNELS];
+    let mut output = [0.0; 128 * CHANNELS];
+    for _ in 0..11 {
+        if handle.accepted_generation() == generation {
+            return;
+        }
+        let (counts, ()) = count_allocs(|| render_into(engine, &input, &mut output, 128, clock));
+        assert_eq!(counts, (0, 0));
+        assert!(handle.control_status().priming_frames_replayed <= 256);
+    }
+    panic!(
+        "engine worker did not accept: {:?}",
+        handle.control_status()
+    );
+}
+
 fn rms(samples: &[f32]) -> f32 {
     if samples.is_empty() {
         return 0.0;
@@ -181,7 +205,7 @@ fn run_engine_automation_once(block: usize) -> Vec<f32> {
         band("Peak", 1000.0, 1.0, 0.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
+    let total = 5000;
     let commit_at = 2048;
     let input = pattern(total);
     let mut engine = engine_with(&old_bands, 1.0);
@@ -242,8 +266,8 @@ fn engine_gain_automation_exact_zero_final_and_partitions() {
         band("Peak", 1000.0, 1.0, 9.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
-    let commit_at = 2048;
+    let total = 5000;
+    let commit_at = 2048 + 1053; // support-2 frames before bounded acceptance
     let input = pattern(total);
     let output = run_engine_automation_once(256);
     let mut old_engine = engine_with(&old_bands, 1.0);
@@ -295,9 +319,9 @@ fn engine_second_edit_during_blend_eventually_applied() {
         band("Peak", 1000.0, 1.0, -12.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 4000;
+    let total = 8000;
     let first_at = 2048;
-    let second_at = 2300;
+    let second_at = 2048 + 1053 + 100;
     let input = pattern(total);
     let mut engine = engine_with(&old_bands, 1.0);
     let mut output = vec![0.0; input.len()];
@@ -429,6 +453,7 @@ fn engine_stale_topology_and_reset_retain_accepted() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_engine_until_accepted(&mut engine, 1, &mut clock);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 0).unwrap(), 6.0);
     // Stale second edit from the pre-first-commit base via worker.
     let handle = engine.linear_phase_eq_handle(0).unwrap();
@@ -538,6 +563,7 @@ fn engine_queue_saturation_dry_alignment_and_reclaim_tracking() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_engine_until_accepted(&mut engine, 1, &mut clock);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 0).unwrap(), 4.0);
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
@@ -610,12 +636,11 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
         band("Peak", 1000.0, 1.0, 6.0),
         band("Peak", 3000.0, 1.0, -6.0),
     ];
-    // Contiguous frame plan keeps twin histories identical: history 0..2048,
-    // first edit at 2048 (blend 2048..2561), stale wedge observed at 2700,
-    // fresh queued at 2764, cancel plus fresh commit at 2828 (blend to
-    // 3341), twin comparison over the settled tail 3341..3600.
+    // Continuous histories include 1053 frames of priming per update;
+    // the first blend starts at 3101, the recovered blend at 4934.
+    // Compare only the fully settled tail, keeping the 1e-5 bound.
     let mut engine = engine_with(&old_bands, 1.0);
-    let input = pattern(3600);
+    let input = pattern(6500);
     let mut output = vec![0.0; input.len()];
     let mut clock = 0;
     render_into(
@@ -634,8 +659,8 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2048 * CHANNELS..2100 * CHANNELS],
-            &mut output[2048 * CHANNELS..2100 * CHANNELS],
+            &input[2048 * CHANNELS..3153 * CHANNELS],
+            &mut output[2048 * CHANNELS..3153 * CHANNELS],
             52,
             &mut clock,
         );
@@ -665,8 +690,8 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2100 * CHANNELS..2700 * CHANNELS],
-            &mut output[2100 * CHANNELS..2700 * CHANNELS],
+            &input[3153 * CHANNELS..3753 * CHANNELS],
+            &mut output[3153 * CHANNELS..3753 * CHANNELS],
             256,
             &mut clock,
         );
@@ -676,8 +701,8 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2700 * CHANNELS..2764 * CHANNELS],
-            &mut output[2700 * CHANNELS..2764 * CHANNELS],
+            &input[3753 * CHANNELS..3817 * CHANNELS],
+            &mut output[3753 * CHANNELS..3817 * CHANNELS],
             64,
             &mut clock,
         );
@@ -690,7 +715,7 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     assert_eq!(engine.linear_phase_eq_pending_len(0), 1);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 0).unwrap(), 6.0);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 1).unwrap(), 0.0);
-    assert!(rms(&output[2700 * CHANNELS..2764 * CHANNELS]) > 1e-4);
+    assert!(rms(&output[3753 * CHANNELS..3817 * CHANNELS]) > 1e-4);
     // Queue a fresh edit behind the wedged stale head.
     let fresh_base = engine.linear_phase_eq_snapshot(0).unwrap();
     let handle = engine.linear_phase_eq_handle(0).unwrap();
@@ -715,8 +740,8 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2764 * CHANNELS..2828 * CHANNELS],
-            &mut output[2764 * CHANNELS..2828 * CHANNELS],
+            &input[3817 * CHANNELS..3881 * CHANNELS],
+            &mut output[3817 * CHANNELS..3881 * CHANNELS],
             64,
             &mut clock,
         );
@@ -728,13 +753,13 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
         Some(CommitRefusal::StaleBase)
     );
     // Explicit head cancel evicts only the stale payload; the fresh queued
-    // edit promotes and commits in the same quantum with history preserved.
+    // edit promotes, catches up, then commits with history preserved.
     assert!(engine.linear_phase_eq_request_cancel(0));
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2828 * CHANNELS..2892 * CHANNELS],
-            &mut output[2828 * CHANNELS..2892 * CHANNELS],
+            &input[3881 * CHANNELS..4998 * CHANNELS],
+            &mut output[3881 * CHANNELS..4998 * CHANNELS],
             64,
             &mut clock,
         );
@@ -744,7 +769,7 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     assert_eq!(engine.linear_phase_eq_last_refusal(0), None);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 0).unwrap(), 6.0);
     assert_eq!(engine.linear_phase_eq_band_gain(0, 1).unwrap(), -6.0);
-    assert!(rms(&output[2828 * CHANNELS..2892 * CHANNELS]) > 1e-4);
+    assert!(rms(&output[3881 * CHANNELS..4998 * CHANNELS]) > 1e-4);
     // The evicted stale payload is destroyed on a worker thread.
     let handle = engine.linear_phase_eq_handle(0).unwrap();
     let cancelled = handle.take_cancelled();
@@ -767,8 +792,8 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
     let ((allocs, frees), ()) = count_allocs(|| {
         render_into(
             &mut engine,
-            &input[2892 * CHANNELS..],
-            &mut output[2892 * CHANNELS..],
+            &input[4998 * CHANNELS..],
+            &mut output[4998 * CHANNELS..],
             256,
             &mut clock,
         );
@@ -785,7 +810,7 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
         256,
         &mut final_clock,
     );
-    for frame in 3341..3600 {
+    for frame in 5447..6500 {
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
             assert!(
@@ -794,7 +819,7 @@ fn engine_stale_head_cancel_recovers_and_applies_fresh() {
             );
         }
     }
-    assert!(rms(&output[2892 * CHANNELS..]) > 1e-4);
+    assert!(rms(&output[4998 * CHANNELS..]) > 1e-4);
     // Post-recovery wrapper state is indistinguishable from a normal success
     // (empty slots, completed blend, reclaimed retirement), so EOF follows
     // the identical drain path already proven for dynamic updates via the

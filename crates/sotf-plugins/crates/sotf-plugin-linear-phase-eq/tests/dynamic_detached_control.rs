@@ -143,6 +143,38 @@ fn process_into(plugin: &mut dyn Plugin, input: &[f32], output: &mut [f32], bloc
     }
 }
 
+// Drive genuine audio while a queued worker catches up; no sleeps or hidden
+// synchronous commits. Stop during the first accepted blend and keep the
+// heap/frame-budget checks active on every extra callback.
+fn advance_until_accepted(
+    plugin: &mut LinearPhaseEqDynamicPlugin,
+    handle: &LinearPhaseEqControlHandle,
+    generation: u64,
+    rate: u32,
+) {
+    let support = match plugin.tail_length() {
+        TailLength::Finite(x) => x as usize,
+        _ => panic!("finite support required"),
+    };
+    let input = [0.19; 128 * CHANNELS];
+    let mut output = [0.0; 128 * CHANNELS];
+    for _ in 0..support.div_ceil(128) + 2 {
+        if handle.accepted_generation() == generation {
+            return;
+        }
+        assert!(handle.accepted_generation() < generation);
+        let (counts, result) =
+            count_allocs(|| plugin.process(&input, &mut output, &ProcessContext::new(rate, 128)));
+        assert_eq!(counts, (0, 0));
+        assert_eq!(result.unwrap(), 128);
+        assert!(handle.control_status().priming_frames_replayed <= 256);
+    }
+    panic!(
+        "worker did not accept within the defined catch-up bound: {:?}",
+        handle.control_status()
+    );
+}
+
 fn get_gain(plugin: &dyn Plugin, band_index: usize) -> f32 {
     match plugin.get_parameter(&ParameterId::from(
         format!("band_{band_index}_gain").as_str(),
@@ -268,7 +300,7 @@ fn run_detached_automation_once(block: usize) -> Vec<f32> {
         band("Peak", 1000.0, 1.0, 0.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
+    let total = 5000;
     let commit_at = 2048;
     let input = pattern(total);
     let mut plugin = create(&old_bands);
@@ -328,8 +360,10 @@ fn detached_worker_submit_commits_once_with_exact_blend() {
         band("Peak", 1000.0, 1.0, 9.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
-    let commit_at = 2048;
+    let total = 5000;
+    // N-1+32 historical frames, replayed twice as fast as input, takes
+    // support-2 = 1053 incoming frames before acceptance.
+    let commit_at = 2048 + 1053;
     let input = pattern(total);
     let output = run_detached_automation_once(256);
     let mut old_plugin = create(&old_bands);
@@ -383,9 +417,9 @@ fn detached_second_edit_during_blend_applies_after_retirement() {
         band("Peak", 1000.0, 1.0, -12.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 4000;
+    let total = 8000;
     let first_at = 2048;
-    let second_at = 2300;
+    let second_at = 2048 + 1053 + 100;
     let input = pattern(total);
     let mut plugin = create(&old_bands);
     let mut output = vec![0.0; input.len()];
@@ -509,6 +543,7 @@ fn detached_stale_base_refuses_and_reprepare_recovers() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 1, RATE);
     assert_eq!(handle.accepted_generation(), 1);
     // Stale second edit prepared from the pre-first-commit base.
     let stale = prepare_on_worker(&stale_base, 1, band("Peak", 3000.0, 1.0, -6.0));
@@ -556,6 +591,7 @@ fn detached_stale_base_refuses_and_reprepare_recovers() {
         process_into(&mut plugin, &probe_in, &mut probe_out, 64);
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 2, RATE);
     assert_eq!(handle.accepted_generation(), 2);
     assert_eq!(handle.control_status().last_refusal, None);
     assert_eq!(get_gain(&plugin, 1), -6.0);
@@ -573,7 +609,7 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
         band("Peak", 3000.0, 1.0, -6.0),
     ];
     let mut plugin = create(&old_bands);
-    let input = pattern(3600);
+    let input = pattern(6500);
     let mut output = vec![0.0; input.len()];
     process_into(
         &mut plugin,
@@ -588,8 +624,8 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2048 * CHANNELS..2100 * CHANNELS],
-            &mut output[2048 * CHANNELS..2100 * CHANNELS],
+            &input[2048 * CHANNELS..3153 * CHANNELS],
+            &mut output[2048 * CHANNELS..3153 * CHANNELS],
             52,
         );
     });
@@ -600,8 +636,8 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2100 * CHANNELS..2700 * CHANNELS],
-            &mut output[2100 * CHANNELS..2700 * CHANNELS],
+            &input[3153 * CHANNELS..3753 * CHANNELS],
+            &mut output[3153 * CHANNELS..3753 * CHANNELS],
             256,
         );
     });
@@ -610,8 +646,8 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2700 * CHANNELS..2764 * CHANNELS],
-            &mut output[2700 * CHANNELS..2764 * CHANNELS],
+            &input[3753 * CHANNELS..3817 * CHANNELS],
+            &mut output[3753 * CHANNELS..3817 * CHANNELS],
             64,
         );
     });
@@ -630,21 +666,21 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2764 * CHANNELS..2828 * CHANNELS],
-            &mut output[2764 * CHANNELS..2828 * CHANNELS],
+            &input[3817 * CHANNELS..3881 * CHANNELS],
+            &mut output[3817 * CHANNELS..3881 * CHANNELS],
             64,
         );
     });
     assert_eq!((allocs, frees), (0, 0));
     assert_eq!(handle.control_status().retained_queued, 2);
     // Explicit head cancel evicts only the stale payload; the fresh queued
-    // edit promotes and commits in the same quantum.
+    // edit promotes, catches up, then commits.
     handle.request_cancel();
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2828 * CHANNELS..2892 * CHANNELS],
-            &mut output[2828 * CHANNELS..2892 * CHANNELS],
+            &input[3881 * CHANNELS..4998 * CHANNELS],
+            &mut output[3881 * CHANNELS..4998 * CHANNELS],
             64,
         );
     });
@@ -664,8 +700,8 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(
             &mut plugin,
-            &input[2892 * CHANNELS..],
-            &mut output[2892 * CHANNELS..],
+            &input[4998 * CHANNELS..],
+            &mut output[4998 * CHANNELS..],
             256,
         );
     });
@@ -674,7 +710,7 @@ fn detached_cancel_evicts_stale_head_and_fresh_applies() {
     let mut final_plugin = create(&final_bands);
     let mut final_out = vec![0.0; input.len()];
     process_into(&mut final_plugin, &input, &mut final_out, 256);
-    for frame in 3341..3600 {
+    for frame in 5447..6500 {
         for ch in 0..CHANNELS {
             let index = frame * CHANNELS + ch;
             assert!(
@@ -723,6 +759,7 @@ fn detached_queue_full_retains_live_without_alloc() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 1, RATE);
     assert_eq!(handle.accepted_generation(), 1);
     assert_eq!(get_gain(&plugin, 0), 4.0);
     // The same-base sibling can no longer match live: it refuses stale
@@ -778,6 +815,7 @@ fn detached_orphan_handle_cannot_touch_new_graph() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut graph_a, &handle_a, 1, RATE);
     assert_eq!(handle_a.accepted_generation(), 1);
     let frozen_a = handle_a
         .try_accepted_snapshot()
@@ -832,6 +870,7 @@ fn detached_orphan_handle_cannot_touch_new_graph() {
         process_into(&mut graph_b, &probe_in, &mut probe_out, 64);
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut graph_b, &handle_b, 1, RATE);
     assert_eq!(handle_b.accepted_generation(), 1);
     assert_eq!(get_gain(&graph_b, 1), -3.0);
 }
@@ -864,6 +903,7 @@ fn detached_reset_retirement_and_eof_preserve_accepted() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 1, RATE);
     assert_eq!(handle.accepted_generation(), 1);
     assert!(handle.control_status().blend_in_progress);
     // Reset completes the blend instantly and preserves acceptance.
@@ -1020,6 +1060,7 @@ fn detached_rate_reinit_republishes_without_touching_bands() {
         assert_eq!(done, 512);
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 2, 44_100);
     assert_eq!(handle.accepted_generation(), 2);
     assert_eq!(get_gain(&plugin, 0), 6.0);
 }
@@ -1110,7 +1151,7 @@ fn detached_retired_holding_slot_mirror_reports_third_unclaimed() {
         assert_eq!(base.generation, round as u64);
         let prepared = prepare_on_worker(&base, 0, band("Peak", 1000.0, 1.0, gain));
         handle.try_submit(prepared).expect("submit must queue");
-        let input = pattern(600 + 64);
+        let input = pattern(1053 + 600 + 64);
         let mut output = vec![0.0; input.len()];
         let ((allocs, frees), ()) = count_allocs(|| {
             process_into(&mut plugin, &input, &mut output, 256);
@@ -1156,7 +1197,7 @@ fn detached_cancel_defers_when_outbox_full_then_recovers() {
     // Commit A so the generation-0 base goes stale; render past the blend.
     let first = prepare_on_worker(&stale_base, 0, band("Peak", 1000.0, 1.0, 6.0));
     handle.try_submit(first).expect("first submit must queue");
-    let blend_in = pattern(600 + 64);
+    let blend_in = pattern(1053 + 600 + 64);
     let mut blend_out = vec![0.0; blend_in.len()];
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(&mut plugin, &blend_in, &mut blend_out, 256);
@@ -1243,6 +1284,7 @@ fn detached_cancel_defers_when_outbox_full_then_recovers() {
         process_into(&mut plugin, &probe_in, &mut probe_out, 64);
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut plugin, &handle, 2, RATE);
     assert_eq!(handle.accepted_generation(), 2);
     assert_eq!(get_gain(&plugin, 0), 6.0);
     assert_eq!(get_gain(&plugin, 1), -6.0);
@@ -1306,7 +1348,7 @@ fn detached_concurrent_submitters_bound_loudly() {
     // bounds the rest. The winning order is intentionally racy.
     assert!((1..=2).contains(&ok_count), "queued: {ok_count}");
     assert_eq!(ok_count + err_count, 4);
-    let input = pattern(600 + 64);
+    let input = pattern(1053 + 600 + 64);
     let mut output = vec![0.0; input.len()];
     let ((allocs, frees), ()) = count_allocs(|| {
         process_into(&mut plugin, &input, &mut output, 256);
@@ -1483,6 +1525,7 @@ fn maximum_ordered_worker_results_refuse_superseded_base_and_reset_cleanly() {
             )
         });
         assert_eq!(counts, (0, 0));
+        advance_until_accepted(&mut plugin, &handle, 2, RATE);
         assert_eq!(handle.accepted_generation(), 2);
         assert!(plugin.update_in_progress());
         assert_eq!(get_gain(&plugin, 1), 3.0);
@@ -1507,4 +1550,263 @@ fn maximum_ordered_worker_results_refuse_superseded_base_and_reset_cleanly() {
         assert!(!retired.is_empty());
         drop_on_worker(retired);
     }
+}
+
+#[test]
+fn host_priming_progress_is_unaccepted_and_f64_matches_the_f32_clock() {
+    let bands = vec![band("Peak", 1000.0, 1.0, 0.0)];
+    let mut f32_plugin = create(&bands);
+    let mut f64_plugin = create(&bands);
+    let prefix = pattern(2048);
+    let mut prefix32 = vec![0.0; prefix.len()];
+    process_into(&mut f32_plugin, &prefix, &mut prefix32, 73);
+    let prefix64: Vec<f64> = prefix.iter().map(|&v| f64::from(v)).collect();
+    let mut out64 = vec![0.0; prefix64.len()];
+    f64_plugin
+        .process_f64(&prefix64, &mut out64, &ProcessContext::new(RATE, 2048))
+        .unwrap();
+    let h32 = detached_handle(&f32_plugin);
+    let h64 = detached_handle(&f64_plugin);
+    for handle in [&h32, &h64] {
+        let base = handle.try_accepted_snapshot().unwrap();
+        handle
+            .try_submit(prepare_on_worker(&base, 0, band("Peak", 1000.0, 1.0, 9.0)))
+            .unwrap();
+    }
+    let input32 = pattern(128);
+    let input64: Vec<f64> = input32.iter().map(|&v| f64::from(v)).collect();
+    let mut output32 = vec![0.0; input32.len()];
+    let mut output64 = vec![0.0; input64.len()];
+    for callback in 0..16 {
+        let (counts, ()) = count_allocs(|| {
+            f32_plugin
+                .process(&input32, &mut output32, &ProcessContext::new(RATE, 128))
+                .unwrap();
+            f64_plugin
+                .process_f64(&input64, &mut output64, &ProcessContext::new(RATE, 128))
+                .unwrap();
+        });
+        assert_eq!(counts, (0, 0));
+        assert!(
+            output32
+                .iter()
+                .zip(&output64)
+                .all(|(&a, &b)| f64::from(a) == b)
+        );
+        let status = h32.control_status();
+        assert_eq!(status, h64.control_status());
+        assert!(status.priming_frames_replayed <= 256);
+        if callback == 0 {
+            assert_eq!(status.accepted_generation, 0);
+            assert_eq!(status.retained_queued, 1);
+            assert!(status.priming_in_progress);
+            assert!(!status.blend_in_progress);
+            assert_eq!(status.priming_frames_replayed, 256);
+            assert_eq!(status.priming_frames_remaining, 1055 - 128);
+            assert_eq!(get_gain(&f32_plugin, 0), 0.0);
+            let before = h64.try_accepted_snapshot().unwrap();
+            output64.fill(123.0);
+            f64_plugin
+                .process_f64(&input64, &mut output64, &ProcessContext::new(96_000, 128))
+                .unwrap_err();
+            assert!(output64.iter().all(|&v| v == 123.0));
+            assert_eq!(h64.control_status(), status);
+            assert_eq!(h64.try_accepted_snapshot().unwrap(), before);
+        }
+    }
+    assert_eq!(h32.accepted_generation(), 1);
+    assert_eq!(get_gain(&f32_plugin, 0), 9.0);
+    assert!(!h32.control_status().priming_in_progress);
+    assert!(!h32.control_status().blend_in_progress);
+}
+
+#[test]
+fn cancelling_or_invalidating_host_priming_never_accepts_a_partial_target() {
+    for action in ["cancel", "reset", "rate", "drain"] {
+        let bands = vec![band("Peak", 1000.0, 1.0, 0.0)];
+        let mut plugin = create(&bands);
+        let prefix = pattern(2048);
+        let mut prefix_out = vec![0.0; prefix.len()];
+        process_into(&mut plugin, &prefix, &mut prefix_out, 73);
+        let handle = detached_handle(&plugin);
+        let base = handle.try_accepted_snapshot().unwrap();
+        handle
+            .try_submit(prepare_on_worker(&base, 0, band("Peak", 1000.0, 1.0, 9.0)))
+            .unwrap();
+        let input = pattern(128);
+        let mut output = vec![0.0; input.len()];
+        let (counts, result) =
+            count_allocs(|| plugin.process(&input, &mut output, &ProcessContext::new(RATE, 128)));
+        assert_eq!(counts, (0, 0));
+        result.unwrap();
+        assert!(handle.control_status().priming_in_progress);
+        assert_eq!(handle.accepted_generation(), 0);
+        assert_eq!(handle.try_accepted_snapshot().unwrap(), base);
+        let mut rate = RATE;
+        match action {
+            "cancel" => handle.request_cancel(),
+            "reset" => {
+                let (counts, ()) = count_allocs(|| Plugin::reset(&mut plugin));
+                assert_eq!(counts, (0, 0));
+            }
+            "rate" => {
+                rate = 96_000;
+                Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
+            }
+            "drain" => {
+                let mut tail = [0.0; 257 * CHANNELS];
+                let mut done = false;
+                let (counts, ()) = count_allocs(|| {
+                    for _ in 0..10 {
+                        let r = plugin
+                            .drain(&mut tail, &ProcessContext::new(rate, 0))
+                            .unwrap();
+                        if r.complete {
+                            done = true;
+                            break;
+                        }
+                    }
+                });
+                assert_eq!(counts, (0, 0));
+                assert!(done);
+                assert_eq!(handle.accepted_generation(), 0);
+                assert_eq!(get_gain(&plugin, 0), 0.0);
+                let (counts, ()) = count_allocs(|| Plugin::reset(&mut plugin));
+                assert_eq!(counts, (0, 0));
+            }
+            _ => unreachable!(),
+        }
+        let (counts, result) =
+            count_allocs(|| plugin.process(&input, &mut output, &ProcessContext::new(rate, 128)));
+        assert_eq!(counts, (0, 0));
+        result.unwrap();
+        let status = handle.control_status();
+        assert!(!status.priming_in_progress);
+        assert_eq!(get_gain(&plugin, 0), 0.0);
+        assert_eq!(status.accepted_generation, u64::from(action == "rate"));
+        if action != "cancel" {
+            assert_eq!(status.last_refusal, Some(CommitRefusal::StaleBase));
+            assert_eq!(status.retained_queued, 1);
+            handle.request_cancel();
+            let (counts, result) = count_allocs(|| {
+                plugin.process(&input, &mut output, &ProcessContext::new(rate, 128))
+            });
+            assert_eq!(counts, (0, 0));
+            result.unwrap();
+        }
+        let cancelled = handle.take_cancelled();
+        assert_eq!(cancelled.len(), 1);
+        drop_on_worker(cancelled);
+        let fresh = handle.try_accepted_snapshot().unwrap();
+        handle
+            .try_submit(prepare_on_worker(&fresh, 0, band("Peak", 1000.0, 1.0, 6.0)))
+            .unwrap();
+        advance_until_accepted(&mut plugin, &handle, fresh.generation + 1, rate);
+        assert_eq!(get_gain(&plugin, 0), 6.0);
+        assert_eq!(handle.control_status().last_refusal, None);
+    }
+}
+
+#[test]
+fn maximum_ordered_host_priming_and_blend_are_sample_clock_partition_invariant() {
+    use sotf_plugin_linear_phase_eq::LinearPhaseEqBandPlacement as Placement;
+    let mut worst = 0.0_f64;
+    let mut max_128 = std::time::Duration::ZERO;
+    let mut misses_128 = 0;
+    for phase in [0, 1] {
+        let mut left = band("Peak", 6000.0, 0.8, -6.0);
+        left.placement = Some(Placement::Left);
+        let mut mid = band("Peak", 6000.0, 0.8, -3.0);
+        mid.placement = Some(Placement::Mid);
+        let mut params = params_for(vec![left, mid.clone()]);
+        params.fir_length_index = 3;
+        params.phase_mode_index = phase;
+        let mut new_params = params.clone();
+        new_params.filters[1].gain_db = 9.0;
+        let prefix = 17_000;
+        let acceptance = prefix + 16_446 - 2;
+        let input = pattern(35_000);
+        let mut old =
+            LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params.clone()).unwrap();
+        let mut target =
+            LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, new_params).unwrap();
+        let mut old_out = vec![0.0; input.len()];
+        let mut target_out = old_out.clone();
+        process_into(&mut old, &input, &mut old_out, 257);
+        process_into(&mut target, &input, &mut target_out, 257);
+        let mut first = None;
+        for block in [1, 73, 128, 257, 1024] {
+            let mut plugin =
+                LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params.clone()).unwrap();
+            let handle = detached_handle(&plugin);
+            let mut output = vec![0.0; input.len()];
+            process_into(
+                &mut plugin,
+                &input[..prefix * CHANNELS],
+                &mut output[..prefix * CHANNELS],
+                block,
+            );
+            let base = handle.try_accepted_snapshot().unwrap();
+            let mut new_band = mid.clone();
+            new_band.gain_db = 9.0;
+            handle
+                .try_submit(prepare_on_worker(&base, 1, new_band))
+                .unwrap();
+            let mut frame = prefix;
+            while frame < input.len() / CHANNELS {
+                let end = (frame + block).min(input.len() / CHANNELS);
+                let started = std::time::Instant::now();
+                let (counts, result) = count_allocs(|| {
+                    plugin.process(
+                        &input[frame * CHANNELS..end * CHANNELS],
+                        &mut output[frame * CHANNELS..end * CHANNELS],
+                        &ProcessContext::new(RATE, end - frame),
+                    )
+                });
+                let elapsed = started.elapsed();
+                assert_eq!(counts, (0, 0));
+                assert_eq!(result.unwrap(), end - frame);
+                let status = handle.control_status();
+                assert!(status.priming_frames_replayed <= 2 * (end - frame));
+                if end <= acceptance {
+                    assert_eq!(status.accepted_generation, 0);
+                    assert_eq!(get_gain(&plugin, 1), -3.0);
+                } else {
+                    assert_eq!(status.accepted_generation, 1);
+                }
+                if block == 128 {
+                    max_128 = max_128.max(elapsed);
+                    if elapsed.as_secs_f64() > 128.0 / f64::from(RATE) {
+                        misses_128 += 1;
+                    }
+                }
+                frame = end;
+            }
+            assert_eq!(handle.accepted_generation(), 1);
+            assert!(!plugin.update_in_progress());
+            assert!(!handle.control_status().blend_in_progress);
+            for (frame, samples) in output.as_chunks::<CHANNELS>().0.iter().enumerate() {
+                let w = (frame.saturating_sub(acceptance) as f64 / 512.0).min(1.0);
+                for (ch, &sample) in samples.iter().enumerate() {
+                    let i = frame * CHANNELS + ch;
+                    let expected = f64::from(old_out[i]) * (1.0 - w) + f64::from(target_out[i]) * w;
+                    let error = (f64::from(sample) - expected).abs();
+                    worst = worst.max(error);
+                    assert!(
+                        error < 1e-5,
+                        "phase={phase} block={block} frame={frame} error={error}"
+                    );
+                }
+            }
+            if let Some(first) = &first {
+                assert_eq!(&output, first, "phase={phase} block={block}");
+            } else {
+                first = Some(output);
+            }
+        }
+    }
+    eprintln!(
+        "audit default host worst_abs={worst:.12e} max_128_callback_us={} physical_misses_128={misses_128} (local observation)",
+        max_128.as_micros()
+    );
 }

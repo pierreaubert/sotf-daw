@@ -87,9 +87,22 @@ so work still scales with channels/stages and FFT partition boundaries. It is
 not a CPU-time budget. The synchronous API can finish a partly primed target
 without replaying completed work.
 
-The host wrapper still uses synchronous priming. Routing it through the
-incremental API, publishing pending progress and validating maximum-load
-callback deadlines remain unfinished integration work.
+The default host wrapper uses incremental priming. It permits two history
+frames before each incoming sample, keeping the acceptance sample independent
+of callback partitions. For initial retained history `H`, catch-up takes
+`max(0, H - 2)` incoming frames before the fixed blend starts. This adds control
+reaction time, not signal delay: a populated two-stage 8192-tap route at 48 kHz
+needs 16444 frames (about 343 ms) before acceptance, followed by the blend.
+The synchronous direct-DSP API remains available for explicit callers.
+
+`control_status()` reports `priming_in_progress`, `priming_frames_replayed`
+and `priming_frames_remaining` separately from accepted generation and blend
+state. Each callback replays at most twice its input-frame count. Queue pops,
+head cancellation and retirement routing occur once per callback, with at most
+one acceptance. Status refreshes after render/drain as well as control reset.
+An unaccepted candidate remains queued across EOF; it never changes the emitted
+old-filter tail. Reset/rate change before acceptance invalidates partly primed
+state, retains the old accepted band controls and requires cancellation/reprepare.
 
 `dynamic_host::LinearPhaseEqDynamicPlugin` provides a host wrapper and a
 shared `LinearPhaseEqControlHandle` through `get_data()`. Workers prepare from
@@ -141,6 +154,18 @@ The detached tests also cover out-of-order workers at maximum ordered length,
 stale refusal/cancellation, fresh recovery, and reset against a fresh twin.
 Successful commit/render/drain/reset legs assert zero allocations and frees.
 
+Default-host tests cover both sample formats (the warmed f64 bridge matches
+f32 output exactly), pending controls/progress, wrong-clock refusal during
+priming, cancellation/reset/rate/EOF recovery and off-audio disposal. For both
+phase modes at two 8192-tap Left/Mid stages, block sizes 1/73/128/257/1024 emit
+bit-identical complete streams. The independently weighted old/target twin
+reference has worst error `2.98024e-7` under `1e-5`. Factory, facade/DawHost and
+running embedded-engine tests preserve exact-zero blend start, partition
+invariance, finite EOF, dry alignment and unchanged `1e-5` bounds using the
+specified catch-up acceptance clock. The real-manager ALSA-null test was only
+compiled on this host; device playback and loaded native/FFI paths are not
+established by these checks.
+
 Eight additional incremental cases cover both phases, 44.1/96 kHz and legacy
 or maximum-length two-stage ordered routes, with dense input and an initial
 prefix beyond ring wrap. Every call checks its replay-frame budget; controls
@@ -160,8 +185,10 @@ reached 8.351 ms for synchronous replay. Incremental calls in the tested
 variable-budget release matrix reached 1.127 ms. A concurrent full-test run
 observed 18.899 ms synchronous and 5.254 ms incremental calls. These runs use
 different budgets and scheduling conditions; none establishes a portable
-worst-case bound or complete callback deadline. Direct callback compliance and maximum-load dynamic priming therefore
-remain open. Settings, commands and measurements are recorded in
+worst-case bound or complete callback deadline. The release default-host matrix measured complete 128-frame callbacks at
+up to 0.423 ms with zero physical misses for the tested two-channel/two-stage
+routes at 48 kHz. This is a local observation; full channel/stage/rate-load and
+native direct-callback compliance remain open. Settings, commands and measurements are recorded in
 `audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json`.
 
 ## Testing

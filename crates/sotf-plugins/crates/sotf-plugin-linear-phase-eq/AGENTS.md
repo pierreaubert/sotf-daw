@@ -57,6 +57,14 @@ cargo test -p sotf-plugin-linear-phase-eq
   input-clock/ring cursor. Refuse stale configuration or lost/foreign history
   before mutation; never install stale primed state after a reset or ring loss.
   Reprepare/drop stale candidates off audio; no new realtime allocation/free.
-- Incremental API tests do not prove host adoption: `dynamic_host.rs` still
-  calls the synchronous method. Host integration and maximum-load callback
-  timing remain open. A replay-frame budget is not a wall-clock guarantee.
+- `dynamic_host.rs` uses the budgeted API by default: two target history frames
+  per incoming sample. Keep queue/cancel/reclaim routing once per callback and
+  at most one acceptance; do not make catch-up acceptance block-size dependent.
+  Publish pending replay/remaining counts without advancing accepted controls.
+- Reset/rate changes invalidate unaccepted partly primed candidates; EOF must
+  emit the old-filter tail without accepting them. Retain payloads until
+  off-audio cancellation/reprepare. Accepted-blend reset semantics stay intact.
+- Factory, facade and embedded-engine tests derive their changed control
+  acceptance clock from support-2 incoming frames. Preserve exact-zero blend,
+  partition invariance, 1e-5 error and zero alloc/free bounds. Full load/native
+  deadline compliance is still open; a frame budget is not a time guarantee.

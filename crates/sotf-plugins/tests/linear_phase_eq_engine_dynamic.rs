@@ -202,7 +202,7 @@ fn run_host_automation_once(block: usize) -> Vec<f32> {
         band("Peak", 1000.0, 1.0, 0.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
+    let total = 5000;
     let commit_at = 2048;
     let input = pattern(total);
     let mut host = host_with(&old_bands, 1.0);
@@ -265,8 +265,8 @@ fn host_dynamic_update_exact_zero_partitions_eof_and_final() {
         band("Peak", 1000.0, 1.0, 9.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
-    let commit_at = 2048;
+    let total = 5000;
+    let commit_at = 2048 + 1053; // support-2 input frames of bounded catch-up
     let input = pattern(total);
     let output = run_host_automation_once(256);
     let mut old_host = host_with(&old_bands, 1.0);

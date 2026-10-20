@@ -140,6 +140,31 @@ fn as_dynamic(plugin: &mut dyn Plugin) -> &mut LinearPhaseEqDynamicPlugin {
         .expect("factory must return the dynamic wrapper")
 }
 
+// Drive the factory-created host through its actual bounded catch-up path.
+fn advance_until_accepted(plugin: &mut dyn Plugin, generation: u64) {
+    let handle = as_dynamic(plugin).control_handle();
+    let support = match plugin.tail_length() {
+        TailLength::Finite(x) => x as usize,
+        _ => panic!("finite"),
+    };
+    let input = [0.19; 128 * CHANNELS];
+    let mut output = [0.0; 128 * CHANNELS];
+    for _ in 0..support.div_ceil(128) + 2 {
+        if handle.accepted_generation() == generation {
+            return;
+        }
+        let (counts, result) =
+            count_allocs(|| plugin.process(&input, &mut output, &ProcessContext::new(RATE, 128)));
+        assert_eq!(counts, (0, 0));
+        assert_eq!(result.unwrap(), 128);
+        assert!(handle.control_status().priming_frames_replayed <= 256);
+    }
+    panic!(
+        "factory worker did not accept: {:?}",
+        handle.control_status()
+    );
+}
+
 fn get_gain(plugin: &dyn Plugin, band: usize) -> f32 {
     match plugin.get_parameter(&ParameterId::from(format!("band_{band}_gain").as_str())) {
         Some(ParameterValue::Float(gain)) => gain,
@@ -231,7 +256,7 @@ fn run_automation_once(block: usize) -> Vec<f32> {
         band("Peak", 3000.0, 1.0, 0.0),
     ];
     let new_gain = band("Peak", 1000.0, 1.0, 9.0);
-    let total = 3000;
+    let total = 5000;
     let commit_at = 2048;
     let input = pattern(total);
     let mut plugin = create(&old_bands, 1.0);
@@ -297,8 +322,8 @@ fn worker_gain_automation_exact_zero_and_final_reference() {
         band("Peak", 1000.0, 1.0, 9.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 3000;
-    let commit_at = 2048;
+    let total = 5000;
+    let commit_at = 2048 + 1053; // support-2 incoming frames before acceptance
     let input = pattern(total);
     let output = run_automation_once(64);
     // Twin references through the same factory path (no direct DSP).
@@ -399,9 +424,9 @@ fn two_edits_during_blend_eventually_applied_after_retirement() {
         band("Peak", 1000.0, 1.0, -12.0),
         band("Peak", 3000.0, 1.0, 0.0),
     ];
-    let total = 4000;
+    let total = 8000;
     let first_at = 2048;
-    let second_at = 2300;
+    let second_at = 2048 + 1053 + 100;
     let input = pattern(total);
     let mut plugin = create(&old_bands, 1.0);
     let mut output = vec![0.0; input.len()];
@@ -411,7 +436,7 @@ fn two_edits_during_blend_eventually_applied_after_retirement() {
         &mut output[..first_at * CHANNELS],
         64,
     );
-    // First edit via worker, committed on the next quantum.
+    // First worker edit catches up history before its fixed blend starts.
     let base = as_dynamic(&mut *plugin).snapshot_for_update();
     let barrier = Barrier::new(2);
     let (tx, rx) = mpsc::channel();
@@ -567,6 +592,7 @@ fn reset_cancel_reprepare_stale_and_topology_retain_accepted() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut *plugin, 1);
     assert_eq!(get_gain(&*plugin, 0), 6.0);
     // Prepare a second edit from the now-stale base on a worker.
     let barrier = Barrier::new(2);
@@ -641,6 +667,7 @@ fn reset_cancel_reprepare_stale_and_topology_retain_accepted() {
     });
     assert_eq!((allocs, frees), (0, 0));
     assert!(as_dynamic(&mut *plugin).last_refusal().is_none());
+    advance_until_accepted(&mut *plugin, 2);
     assert_eq!(get_gain(&*plugin, 1), -6.0);
     // Topology refusal: placement changes stay structural at prepare time.
     let mut placed = band("Peak", 1000.0, 1.0, 6.0);
@@ -756,6 +783,7 @@ fn saturated_queue_and_off_thread_reclamation_tracking() {
         );
     });
     assert_eq!((allocs, frees), (0, 0));
+    advance_until_accepted(&mut *plugin, 1);
     assert_eq!(get_gain(&*plugin, 0), 4.0);
     // Run past the first blend; the second stays queued (stale base, since
     // both were prepared from the pre-first-commit snapshot).
