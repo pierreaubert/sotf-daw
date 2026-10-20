@@ -1,4 +1,5 @@
 // Rust guideline compliant 2026-02-21
+use super::angle_smoothing::{AngularSmoother, angular_delta};
 pub use super::config::BinauralDecoderParams;
 pub use super::error::BinauralError;
 use super::head_tracking::{HeadRequests, run_head_worker};
@@ -155,9 +156,9 @@ pub(super) struct BinauralCrossfade {
 
 pub(super) struct BinauralSmoothing {
     pub(super) externalization: Smoother,
-    pub(super) head_yaw_deg: Smoother,
-    pub(super) head_pitch_deg: Smoother,
-    pub(super) head_roll_deg: Smoother,
+    pub(super) head_yaw_deg: AngularSmoother,
+    pub(super) head_pitch_deg: AngularSmoother,
+    pub(super) head_roll_deg: AngularSmoother,
     pub(super) last_hrtf_yaw: f32,
     pub(super) last_hrtf_pitch: f32,
     pub(super) last_hrtf_roll: f32,
@@ -413,9 +414,9 @@ impl BinauralDecoderPlugin {
             },
             smoothing: BinauralSmoothing {
                 externalization: Smoother::new(externalization, 50.0, sr),
-                head_yaw_deg: Smoother::new(0.0, 10.0, sr),
-                head_pitch_deg: Smoother::new(0.0, 10.0, sr),
-                head_roll_deg: Smoother::new(0.0, 10.0, sr),
+                head_yaw_deg: AngularSmoother::new(0.0, 10.0, sr),
+                head_pitch_deg: AngularSmoother::new(0.0, 10.0, sr),
+                head_roll_deg: AngularSmoother::new(0.0, 10.0, sr),
                 last_hrtf_yaw: 0.0,
                 last_hrtf_pitch: 0.0,
                 last_hrtf_roll: 0.0,
@@ -1081,6 +1082,21 @@ impl BinauralDecoderPlugin {
         }
     }
 
+    fn source_for_current_head(
+        &self,
+        azimuth: f32,
+        elevation: f32,
+    ) -> sotf_host::sofa::SourcePosition {
+        let (azimuth, elevation) = Self::rotate_speaker_position(
+            azimuth,
+            elevation,
+            self.smoothing.head_yaw_deg.current(),
+            self.smoothing.head_pitch_deg.current(),
+            self.smoothing.head_roll_deg.current(),
+        );
+        sotf_host::sofa::SourcePosition::new(azimuth, elevation, 1.0)
+    }
+
     /// Apply the inverse of the head rotation to a speaker's (azimuth, elevation) pair.
     ///
     /// Head rotation convention:
@@ -1090,7 +1106,7 @@ impl BinauralDecoderPlugin {
     ///
     /// To make virtual sources appear world-locked (they stay fixed while the head moves),
     /// we apply the *inverse* head rotation to the speaker positions before VBAP lookup.
-    /// The inverse rotation is R_roll^T * R_pitch^T * R_yaw^T.
+    /// The inverse projects world directions into the forward/left/up head basis.
     pub(super) fn rotate_speaker_position(
         azimuth: f32,
         elevation: f32,
@@ -1112,8 +1128,9 @@ impl BinauralDecoderPlugin {
         let z = el.sin();
 
         // Apply inverse head rotation (transpose = inverse for orthogonal matrices).
-        // Forward rotation order is Rz(yaw) * Ry(pitch) * Rx(roll).
-        // Inverse is Rx(-roll) * Ry(-pitch) * Rz(-yaw).
+        // With x forward, y left, z up, positive pitch-up is Ry(-pitch).
+        // Forward order is Rz(yaw) * Ry(-pitch) * Rx(roll); the inverse is
+        // Rx(-roll) * Ry(pitch) * Rz(-yaw).
 
         let yaw_r = yaw.to_radians();
         let pitch_r = pitch.to_radians();
@@ -1128,7 +1145,7 @@ impl BinauralDecoderPlugin {
         let y1 = -sy * x + cy * y;
         let z1 = z;
 
-        // Ry(-pitch): rotate around Y by -pitch
+        // Ry(pitch): inverse of the positive pitch-up head rotation
         let x2 = cp * x1 + sp * z1;
         let y2 = y1;
         let z2 = -sp * x1 + cp * z1;
@@ -1408,7 +1425,7 @@ impl Plugin for BinauralDecoderPlugin {
                     {
                         continue;
                     }
-                    let tgt = super::room::speaker_to_source_position(spk);
+                    let tgt = self.source_for_current_head(spk.azimuth, spk.elevation);
                     let near = sofa.find_three_nearest(&tgt);
                     let gains = super::hrtf::calculate_vbap_gains(&tgt, &near, &sofa);
                     let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_frequency_domain(
@@ -1822,7 +1839,7 @@ impl Plugin for BinauralDecoderPlugin {
                 {
                     continue;
                 }
-                let tgt = super::room::speaker_to_source_position(spk);
+                let tgt = self.source_for_current_head(spk.azimuth, spk.elevation);
                 let near = sofa.find_three_nearest(&tgt);
                 let gains = super::hrtf::calculate_vbap_gains(&tgt, &near, &sofa);
                 let (l_fft, r_fft) = super::hrtf::interpolate_hrtf_frequency_domain(
@@ -2041,9 +2058,9 @@ impl BinauralDecoderPlugin {
         let yaw = self.smoothing.head_yaw_deg.current();
         let pitch = self.smoothing.head_pitch_deg.current();
         let roll = self.smoothing.head_roll_deg.current();
-        let angle_changed = (yaw - self.smoothing.last_hrtf_yaw).abs() > 0.5
-            || (pitch - self.smoothing.last_hrtf_pitch).abs() > 0.5
-            || (roll - self.smoothing.last_hrtf_roll).abs() > 0.5;
+        let angle_changed = angular_delta(self.smoothing.last_hrtf_yaw, yaw).abs() > 0.5
+            || angular_delta(self.smoothing.last_hrtf_pitch, pitch).abs() > 0.5
+            || angular_delta(self.smoothing.last_hrtf_roll, roll).abs() > 0.5;
         if angle_changed && self.drain.remaining.is_none() {
             // Request a background recomputation instead of blocking the audio
             // thread. The update thread will store the new state; process_audio_block

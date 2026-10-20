@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "head_cue_tests",
+    "--",
+    "--nocapture"
+  ],
+  "env": {
+    "SOTF_AUDIT_TMP": "/Volumes/home_tmp/tmp/sotf-daw-audit-fixtures"
+  },
+  "exit_code": 101,
+  "output": "   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 16.05s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-c88022d35d76891c)\n\nrunning 3 tests\nHEAD_BASIS cases=675 maximum_cartesian_error=2.052776255083671e-7\ntest head_cue_tests::inverse_rotation_matches_independent_forward_left_up_head_basis ... ok\n\nthread 'head_cue_tests::component_seam_crossings_take_the_short_arc_and_keep_public_targets' (326500912) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_cue_tests.rs:68:21:\nlong-way turn 44100/0: 179 to -179 via 130.6399\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest head_cue_tests::component_seam_crossings_take_the_short_arc_and_keep_public_targets ... FAILED\nSOFA_POSE rate=44100 yaw=-180 initialize_and_replace=true left_delay=2 right_delay=5\n\nthread 'head_cue_tests::real_sofa_initialization_and_replacement_preserve_pose_and_impulse_cues' (326500914) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_cue_tests.rs:195:9:\nprepared pose -90, ear 1: 0.9499998688697815 != 0.5700000000000001\ntest head_cue_tests::real_sofa_initialization_and_replacement_preserve_pose_and_impulse_cues ... FAILED\n\nfailures:\n\nfailures:\n    head_cue_tests::component_seam_crossings_take_the_short_arc_and_keep_public_targets\n    head_cue_tests::real_sofa_initialization_and_replacement_preserve_pose_and_impulse_cues\n\ntest result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 103 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-binaural --lib`\n",
+  "base_commit": "b7d68a938a1cf2c5a1e21eb6ec88601f0b941341",
+  "scope_note": "The failures are scalar angular path and synchronously prepared DC cue errors before audio crossfade. The initial fixture bypassed its internal crossfade; final validation uses the supported public 10 ms setting and settles the transition before impulse measurement."
+}

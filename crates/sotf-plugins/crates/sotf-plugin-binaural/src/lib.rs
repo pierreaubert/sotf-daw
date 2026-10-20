@@ -10,11 +10,16 @@ pub mod hrtf_database;
 pub mod params;
 pub mod room;
 
+#[path = "lib/angle_smoothing.rs"]
+mod angle_smoothing;
 #[path = "lib/binaural_decoder_plugin.rs"]
 mod binaural_decoder_plugin;
 #[cfg(test)]
 #[path = "lib/drain_tests.rs"]
 mod drain_tests;
+#[cfg(test)]
+#[path = "lib/head_cue_tests.rs"]
+mod head_cue_tests;
 #[path = "lib/head_tracking.rs"]
 mod head_tracking;
 #[cfg(test)]

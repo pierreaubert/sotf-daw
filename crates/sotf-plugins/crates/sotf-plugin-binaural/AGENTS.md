@@ -80,3 +80,9 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Reset and resource/worker changes invalidate epochs. Reject old epochs at both publication and audio adoption. Workers own immutable SOFA/config snapshots.
 - EOF retains the currently audible filter transition and excludes later publications. Process/drain clock mismatches must not mutate audio, controls or the drain budget.
 - `head_worker_tests.rs` has deterministic gated-worker tests; actual head-turn audio/latency remains separate validation.
+
+## Angular and spatial-cue invariants
+
+- Use `AngularSmoother` for head components and `angular_delta` for request thresholds. Keep canonical requested targets while smoothing the short component arc; do not replace it with raw scalar-angle interpolation.
+- Synchronous HRTF preparation must use the current smoothed pose, matching background preparation. The physical basis is forward/left/up, with positive pitch up and positive roll raising the left ear.
+- `head_cue_tests.rs` uses an independent head basis and known real-SOFA impulse cues. Held-pose tests settle a supported 10 ms crossfade before measuring transfer; they do not validate continuous-motion latency or cutoff audibility.

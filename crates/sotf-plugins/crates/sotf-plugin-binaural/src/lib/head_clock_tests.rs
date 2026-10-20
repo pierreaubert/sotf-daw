@@ -20,6 +20,8 @@ fn render(rate: u32, fft: usize, chunks: &[usize]) -> (Vec<(f32, f32, f32)>, [f3
     for (frames, angles) in [
         (3 * fft + 7, [90.0, 30.0, -20.0]),
         (2 * fft + 3, [-60.0, -15.0, 45.0]),
+        (3 * fft + 1, [179.0, -179.0, 179.0]),
+        (2 * fft + 5, [-179.0, 179.0, -179.0]),
         (4 * fft + 11, [12.0, 5.0, 0.0]),
     ] {
         p.smoothing.head_yaw_deg.set_target(angles[0]);

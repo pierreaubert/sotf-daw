@@ -1,5 +1,13 @@
 # Unreleased
 
+- Smooth head components and threshold requests by circular distance across
+  ±180 degrees while retaining canonical parameter targets and 10 ms timing.
+- Prepare SOFA replacement/reinitialized filters at the current smoothed head
+  pose. Correct inverse-rotation documentation for positive pitch-up.
+- Add independent 675-case head-basis checks, 36 seam/timing cases, seam-aware
+  callback traces and real SOFA level/phase/impulse cues with shared and varying
+  measurement-specific delays at 44.1/48/96 kHz.
+
 - Coalesce head requests through an atomic latest-pose mailbox and bounded
   wakeups. Publish completed generations monotonically without starving
   continuous motion when newer desired poses arrive during preparation.

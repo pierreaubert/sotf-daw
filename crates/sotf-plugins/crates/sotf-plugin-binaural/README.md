@@ -66,3 +66,28 @@ ownership; it also stresses coherent snapshots during 100,000 pose writes.
 Cold empty/full-wakeup callback writes have zero allocations and frees. These
 handoff tests use controlled prepared filters and do not establish head-turn
 accuracy or a hardware motion-to-audio deadline.
+
+## Circular head angles and prepared spatial cues
+
+Yaw, pitch and roll smooth along the shorter component arc across ±180°;
+antipodal direction follows the signed component request. Reported parameter
+targets retain the requested canonical values. Rebase control updates to keep
+internal f32 angles within one extra turn, and use circular distance for the
+0.5° request threshold. This is per-axis Euler smoothing, not a promise of a
+quaternion geodesic for simultaneous multi-axis motion.
+
+SOFA replacement and rate reinitialization prepare direct filters at the current
+smoothed head pose, preventing a temporary zero-pose spatial image. Positive
+yaw looks left, positive pitch looks up and positive roll raises the left ear.
+The inverse transform is checked against an independent forward/left/up head
+basis in 675 direction/orientation combinations.
+
+`head_cue_tests.rs` checks 36 seam/timing cases and real mono SOFA cues at held
+−180/−90/0/90/180° yaw and 44.1/48/96 kHz. Two datasets have different grids and
+directional level/onset cues; shared `[I,R]` and genuinely varying `[M,R]`
+positive integer delays must be applied exactly once. It verifies prepared DC
+and complex transfer values, then 30 direct impulse responses after supported
+10 ms resource crossfades, including a short partial final hop and drain.
+These held-pose synthetic fixtures do not establish continuously moving
+non-grid HRTF interpolation accuracy, a hardware motion-to-audio deadline,
+maximum dataset cost or recursive-tail cutoff audibility.
